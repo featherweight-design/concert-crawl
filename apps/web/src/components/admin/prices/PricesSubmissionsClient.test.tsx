@@ -235,6 +235,40 @@ describe('PricesSubmissionsClient', () => {
     }
   })
 
+  it('resyncs the cache when a bulk PATCH partially fails', async () => {
+    // First PATCH lands, second rejects — the catch path must invalidate so
+    // the table reflects server truth instead of the pre-failure optimistic view.
+    mockPatch.mockReset()
+    mockPatch.mockResolvedValueOnce({}).mockRejectedValueOnce(new Error('boom'))
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    const invalidateSpy = vi.spyOn(client, 'invalidateQueries')
+    const Wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    render(
+      <PricesSubmissionsClient
+        initialSubmissions={ROWS}
+        initialTotal={ROWS.length}
+      />,
+      { wrapper: Wrapper },
+    )
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: 'Select all pending submissions on this page',
+      }),
+    )
+    const bulkApprove = await screen.findByRole('button', {
+      name: '✓ Approve 2',
+    })
+    fireEvent.click(bulkApprove)
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
+    expect(invalidateSpy).toHaveBeenCalledWith({
+      queryKey: ['admin', 'prices', 'submissions', 'history'],
+    })
+  })
+
   it('toggles sort direction when the same column header is clicked twice', () => {
     renderClient(
       <PricesSubmissionsClient

@@ -85,6 +85,26 @@ describe('useAdminPriceSubmissions', () => {
     expect(mockGet.mock.calls[1]?.[0]).toContain('offset=100')
   })
 
+  it('advances the offset by rows received so a short middle page skips nothing', async () => {
+    // 150 total across three pages where the middle page is short (30, not
+    // 100). Advancing by FETCH_PAGE_SIZE would jump to offset=200 and skip
+    // the final 20 rows; advancing by rows received keeps offsets aligned.
+    mockGet.mockImplementation((url: string) => {
+      const offset = offsetOf(url)
+      if (offset === 0)
+        return Promise.resolve({ rows: page(100, 'p0'), total: 150 })
+      if (offset === 100)
+        return Promise.resolve({ rows: page(30, 'p100'), total: 150 })
+      return Promise.resolve({ rows: page(20, 'p130'), total: 150 })
+    })
+    const { result } = renderHook(() => useAdminPriceSubmissions(), {
+      wrapper: withProvider(),
+    })
+    await waitFor(() => expect(result.current.data).toHaveLength(150))
+    expect(mockGet).toHaveBeenCalledTimes(3)
+    expect(mockGet.mock.calls[2]?.[0]).toContain('offset=130')
+  })
+
   it('stops early if a page returns no rows despite a larger reported total', async () => {
     // Defensive: a stale/racey total must not spin the loop forever.
     mockGet.mockImplementation((url: string) =>

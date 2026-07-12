@@ -50,15 +50,18 @@ async function fetchAllSubmissions(
     token,
   )
   const rows = [...first.rows]
-  let offset = FETCH_PAGE_SIZE
-  while (offset < first.total) {
+  // Advance by the rows actually received, not the requested page size: a
+  // short (non-empty) page would otherwise skip the records between
+  // offset+received and offset+FETCH_PAGE_SIZE.
+  let offset = first.rows.length
+  while (rows.length < first.total) {
     const next = await apiClient.get<CountedResponse>(
       `/v1/admin/prices/submissions?status=all&count=true&limit=${FETCH_PAGE_SIZE}&offset=${offset}`,
       token,
     )
     if (next.rows.length === 0) break
     rows.push(...next.rows)
-    offset += FETCH_PAGE_SIZE
+    offset += next.rows.length
   }
   return rows
 }

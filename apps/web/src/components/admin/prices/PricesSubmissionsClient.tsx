@@ -227,6 +227,15 @@ export const PricesSubmissionsClient = ({
             : 'Failed to update submission.'
         console.error('patchStatus error:', patchErr)
         setError(message)
+        // A partial bulk failure may have applied some PATCHes server-side,
+        // so resync the cache with server truth rather than trusting the
+        // pre-failure optimistic view.
+        void queryClient.invalidateQueries({
+          queryKey: adminPriceSubmissionsKey,
+        })
+        void queryClient.invalidateQueries({
+          queryKey: reviewQueryKeys.counts,
+        })
       }
     },
     [getToken, queryClient],
