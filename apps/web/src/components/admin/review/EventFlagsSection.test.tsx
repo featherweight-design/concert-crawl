@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { EventFlagsSection } from './EventFlagsSection'
 
@@ -43,20 +43,103 @@ const buildFlag = (overrides: Partial<EventFlag> = {}): EventFlag => ({
 
 const noop = () => {}
 
-// 25 concert flags → two pages at the default page size of 20.
-const buildConcertFlags = (count: number): EventFlag[] =>
+// A server page of concert flags starting at `start`. The component is
+// parent-controlled, so a "page" is just the slice the parent hands down —
+// tests simulate paging by re-rendering with a different slice.
+const buildPage = (start: number, count: number): EventFlag[] =>
   Array.from({ length: count }).map((_, idx) =>
-    buildFlag({ id: `flag-${idx}`, title: `Show ${idx}` }),
+    buildFlag({ id: `flag-${start + idx}`, title: `Show ${start + idx}` }),
   )
 
 const inspectorTitle = (): string =>
   screen.getByRole('heading', { level: 3 }).textContent ?? ''
 
 describe('EventFlagsSection pagination (#694)', () => {
-  it('keeps id-keyed checkbox selection when paging between pages', () => {
+  it('hides the pager when a single server page holds everything', () => {
     render(
       <EventFlagsSection
-        events={buildConcertFlags(25)}
+        events={buildPage(0, 12)}
+        page={1}
+        pageSize={20}
+        total={12}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+
+    // total <= pageSize on page 1 → no footer pager renders.
+    expect(screen.queryByRole('button', { name: 'Page 2' })).toBeNull()
+  })
+
+  it('renders the pager and delegates page changes to the parent', () => {
+    const onPageChange = vi.fn()
+    render(
+      <EventFlagsSection
+        events={buildPage(0, 20)}
+        page={1}
+        pageSize={20}
+        total={25}
+        onPageChange={onPageChange}
+        onPageSizeChange={noop}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+
+    // total > pageSize → the footer pager is mounted with a Page 2 button.
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+
+    // The component does not slice locally — it asks the parent to refetch.
+    expect(onPageChange).toHaveBeenCalledWith(2)
+  })
+
+  it('clamps the inspector to the new page first row when the parent swaps pages', () => {
+    const { rerender } = render(
+      <EventFlagsSection
+        events={buildPage(0, 20)}
+        page={1}
+        pageSize={20}
+        total={25}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+
+    // Page 1 → inspector on the first row.
+    expect(inspectorTitle()).toBe('Show 0')
+
+    // Parent refetches page 2 (rows 20–24) and bumps the page prop.
+    rerender(
+      <EventFlagsSection
+        events={buildPage(20, 5)}
+        page={2}
+        pageSize={20}
+        total={25}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+
+    // The stale active row is no longer on the page, so the inspector re-seeds
+    // to the new page's first row.
+    expect(inspectorTitle()).toBe('Show 20')
+  })
+
+  it('keeps id-keyed checkbox selection when the parent swaps pages', () => {
+    const { rerender } = render(
+      <EventFlagsSection
+        events={buildPage(0, 20)}
+        page={1}
+        pageSize={20}
+        total={25}
+        onPageChange={noop}
+        onPageSizeChange={noop}
         onApprove={noop}
         onReject={noop}
       />,
@@ -70,37 +153,30 @@ describe('EventFlagsSection pagination (#694)', () => {
     // The bulk dock proves a selection exists.
     expect(screen.getByText('selected')).toBeTruthy()
 
-    // Page forward — the selected row now lives on the previous page and is
-    // no longer rendered, but the selection must survive.
-    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
-
-    expect(screen.getByText('selected')).toBeTruthy()
-    expect(screen.getByText('✓ Approve 1')).toBeTruthy()
-  })
-
-  it('clamps the inspector to the new page first row on page change', () => {
-    render(
+    // Parent swaps to page 2 — the selected row lives on the previous page and
+    // is no longer rendered, but the id-keyed selection must survive.
+    rerender(
       <EventFlagsSection
-        events={buildConcertFlags(25)}
+        events={buildPage(20, 5)}
+        page={2}
+        pageSize={20}
+        total={25}
+        onPageChange={noop}
+        onPageSizeChange={noop}
         onApprove={noop}
         onReject={noop}
       />,
     )
 
-    // Default: page 1, inspector on the first row.
-    expect(inspectorTitle()).toBe('Show 0')
-
-    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
-
-    // Page 2 starts at index 20 → 'Show 20'.
-    expect(inspectorTitle()).toBe('Show 20')
+    expect(screen.getByText('selected')).toBeTruthy()
+    expect(screen.getByText('✓ Approve 1')).toBeTruthy()
   })
 
-  it('resets to page 1 first row after a filter change', () => {
-    // Page 1 is all non-concert, page 2 leads with a concert row. Hiding
-    // non-concert flags should re-slice and land the inspector on the first
-    // surviving row (a concert one), not keep the stale page-2 active row.
-    const nonConcert = Array.from({ length: 20 }).map((_, idx) =>
+  it('resets to the first visible row and clears selection on a filter change', () => {
+    // Page holds non-concert rows first, then concert rows. Hiding non-concert
+    // flags should re-narrow the visible page and land the inspector on the
+    // first surviving (concert) row.
+    const nonConcert = Array.from({ length: 4 }).map((_, idx) =>
       buildFlag({
         id: `nc-${idx}`,
         title: `NonConcert ${idx}`,
@@ -113,89 +189,74 @@ describe('EventFlagsSection pagination (#694)', () => {
     render(
       <EventFlagsSection
         events={[...nonConcert, ...concert]}
+        page={1}
+        pageSize={20}
+        total={9}
+        onPageChange={noop}
+        onPageSizeChange={noop}
         onApprove={noop}
         onReject={noop}
       />,
     )
 
-    // Move to page 2 so the active row is a stale non-page-1 selection.
-    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
-    expect(inspectorTitle()).toBe('Concert 0')
+    // Select a row so we can prove the filter clears the selection.
+    const [, rowCheckbox] = screen.getAllByRole('checkbox')
+    if (!rowCheckbox) throw new Error('expected a row checkbox to render')
+    fireEvent.click(rowCheckbox)
+    expect(screen.getByText('selected')).toBeTruthy()
 
-    // Hide non-concert — only the five concert rows remain, single page.
+    // Inspector starts on the first row (a non-concert one).
+    expect(inspectorTitle()).toBe('NonConcert 0')
+
     fireEvent.click(screen.getByRole('button', { name: /hide non-concert/i }))
 
+    // Only the five concert rows remain; inspector lands on the first.
     expect(inspectorTitle()).toBe('Concert 0')
     // Selection is cleared on filter change, so no bulk dock.
     expect(screen.queryByText('selected')).toBeNull()
   })
 
-  it('keeps the inspector on a visible row when approving the last row of a page', () => {
-    // 21 flags → page 2 holds a single row. Approving that lone row must land
-    // the inspector on a still-visible flag (the new last row on page 1),
-    // never emptying out while 20 flags remain. Regression for #915 review.
-    render(
+  it('keeps the inspector on a visible row after approving the last row of a page', () => {
+    // 21 flags → page 2 holds a single row. Approving that lone row empties the
+    // page; the parent clamps back to page 1, and the inspector must re-seed to
+    // a still-visible row rather than blanking. Regression for #915 review.
+    const { rerender } = render(
       <EventFlagsSection
-        events={buildConcertFlags(21)}
+        events={buildPage(20, 1)}
+        page={2}
+        pageSize={20}
+        total={21}
+        onPageChange={noop}
+        onPageSizeChange={noop}
         onApprove={noop}
         onReject={noop}
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
     expect(inspectorTitle()).toBe('Show 20')
 
-    // Approve the active (only) row on page 2. Both the row and the inspector
-    // expose an exact "Approve" button for it; either fires handleApprove.
+    // Approve the active (only) row on page 2. Row + inspector both expose an
+    // exact "Approve" button; either fires handleApprove.
     const [approveBtn] = screen.getAllByRole('button', { name: 'Approve' })
     if (!approveBtn) throw new Error('expected an approve button to render')
     fireEvent.click(approveBtn)
 
-    // Inspector clamps back to a visible row rather than the empty state.
-    expect(screen.queryByText('Select an event to inspect')).toBeNull()
-    expect(inspectorTitle()).toBe('Show 19')
-  })
-
-  it('keeps the inspector on a visible row when a bulk approve drifts the active row to an earlier page', () => {
-    // 60 flags → three pages of 20. Select all of page 1, keep the inspector
-    // on page 2's first row (Show 20 — NOT in the approved set), then bulk
-    // approve. Removing page 1 shifts Show 20 down to page 1 while the view
-    // stays on page 2, so the page-2 slice no longer contains the active row.
-    // The inspector must fall back to the current page's first row rather than
-    // blanking. Regression for #915 review round 2.
-    render(
+    // Parent refetches: page 2 is now empty, so it clamps to page 1 (20 rows).
+    rerender(
       <EventFlagsSection
-        events={buildConcertFlags(60)}
+        events={buildPage(0, 20)}
+        page={1}
+        pageSize={20}
+        total={20}
+        onPageChange={noop}
+        onPageSizeChange={noop}
         onApprove={noop}
         onReject={noop}
       />,
     )
 
-    // Select every row on page 1 via the panel select-all checkbox.
-    const [selectAll] = screen.getAllByRole('checkbox')
-    if (!selectAll)
-      throw new Error('expected the select-all checkbox to render')
-    fireEvent.click(selectAll)
-    expect(screen.getByText('selected')).toBeTruthy()
-
-    // Move to page 2 — the inspector clamps to its first row.
-    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
-    expect(inspectorTitle()).toBe('Show 20')
-
-    // Bulk approve the 20 page-1 rows. Dock + modal share the label, so the
-    // modal confirm is the last occurrence.
-    fireEvent.click(screen.getByRole('button', { name: '✓ Approve 20' }))
-    const confirmButtons = screen.getAllByRole('button', {
-      name: '✓ Approve 20',
-    })
-    const confirmButton = confirmButtons[confirmButtons.length - 1]
-    if (!confirmButton) throw new Error('expected a modal confirm button')
-    fireEvent.click(confirmButton)
-
-    // The active row (Show 20) drifted onto page 1, but the view is still on
-    // page 2 — the inspector snaps to the new page-2 first row, not empty.
     expect(screen.queryByText('Select an event to inspect')).toBeNull()
-    expect(inspectorTitle()).toBe('Show 40')
+    expect(inspectorTitle()).toBe('Show 0')
   })
 
   it('shows the inspector empty state when the filtered page has no rows', () => {
@@ -209,6 +270,11 @@ describe('EventFlagsSection pagination (#694)', () => {
     render(
       <EventFlagsSection
         events={nonConcert}
+        page={1}
+        pageSize={20}
+        total={6}
+        onPageChange={noop}
+        onPageSizeChange={noop}
         onApprove={noop}
         onReject={noop}
       />,

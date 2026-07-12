@@ -8,8 +8,6 @@ import {
   AdminButton,
   StatusBadge,
   Pagination,
-  PAGINATION_DEFAULT_PAGE_SIZE,
-  derivePagination,
 } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { EventFlagRow } from './EventFlagRow'
@@ -37,6 +35,15 @@ interface EventFlag {
 
 interface EventFlagsSectionProps {
   events: EventFlag[]
+  // Pagination is parent-controlled: `events` is a single server page already
+  // sliced to `pageSize`, and `total` is the full server-side flag count. The
+  // parent owns page state and re-fetches on page/size change, mirroring the
+  // prices/missing/all-events Review tabs.
+  page: number
+  pageSize: number
+  total: number
+  onPageChange: (next: number) => void
+  onPageSizeChange: (next: number) => void
   onApprove: (id: string) => void
   onReject: (id: string) => void
   onEdit?: (id: string) => void
@@ -44,6 +51,11 @@ interface EventFlagsSectionProps {
 
 export const EventFlagsSection = ({
   events,
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  onPageSizeChange,
   onApprove,
   onReject,
   onEdit,
@@ -51,8 +63,6 @@ export const EventFlagsSection = ({
   const [activeId, setActiveId] = useState<string | null>(events[0]?.id ?? null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [hideNonConcert, setHideNonConcert] = useState(false)
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(PAGINATION_DEFAULT_PAGE_SIZE)
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [pendingApprovalIds, setPendingApprovalIds] = useState<Set<string>>(
     new Set(),
@@ -74,29 +84,23 @@ export const EventFlagsSection = ({
       : list
     ).filter((ev) => !pendingApprovalIds.has(ev.id))
 
+  // `events` is already the server page for the current `page`/`pageSize`, so
+  // the only client-side narrowing is the hide-non-concert filter and the
+  // optimistic bulk-approve mask. No slicing — the footer pager drives fetches.
   const visibleEvents = filterVisible(events)
-  // `page` is the controlled value; derivePagination clamps it so a stale
-  // page (e.g. after approvals shrink the list) slices the last valid page.
-  // The <Pagination> footer syncs the controlled value back on the next tick.
-  const pager = derivePagination({
-    page,
-    pageSize,
-    total: visibleEvents.length,
-  })
-  const pagedEvents = visibleEvents.slice(
-    pager.offset,
-    pager.offset + pager.limit,
-  )
 
-  // The active event can drift off the current page without being removed —
-  // e.g. a bulk approve of earlier-page rows re-slices visibleEvents and
-  // shifts the still-selected inspector row onto an earlier page than `page`.
-  // When that happens `pagedEvents.find(activeId)` misses and the inspector
-  // would blank, so fall back to the current page's first row for display.
-  const activeOnPage = pagedEvents.some((ev) => ev.id === activeId)
-  const effectiveActiveId = activeOnPage
-    ? activeId
-    : (pagedEvents[0]?.id ?? null)
+  // The active event can drift off the visible list without being explicitly
+  // closed — e.g. a bulk approve masks the still-selected inspector row, or an
+  // approval on another page shifts rows. When `activeId` is set but no longer
+  // visible, fall back to the first visible row. A null `activeId` is an
+  // explicit "inspector closed" and must be preserved so the empty state can
+  // render while rows remain.
+  const effectiveActiveId =
+    activeId === null
+      ? null
+      : visibleEvents.some((ev) => ev.id === activeId)
+        ? activeId
+        : (visibleEvents[0]?.id ?? null)
 
   // Reconcile the stored selection with what the inspector actually shows so
   // the id-keyed handlers (approve/reject guards) stay in sync after a drift.
@@ -104,25 +108,32 @@ export const EventFlagsSection = ({
     if (activeId !== effectiveActiveId) setActiveId(effectiveActiveId)
   }, [activeId, effectiveActiveId])
 
-  // After removing rows (approve/reject/bulk-approve), anchor the inspector to
-  // the position the first removed row held in the *full* visible list, then
-  // clamp into the post-removal range. This advances to the row that slides
-  // into its place (or the new last row) and follows it onto whichever page it
-  // now lives — so the inspector never empties while visible flags remain.
+  // When the parent swaps in a new server page (page or pageSize changed), land
+  // the inspector on that page's first visible row. This also recovers the
+  // "approved the last row on a page" case: removal empties `activeId`, the
+  // parent clamps back to the previous page, and this re-seeds the inspector
+  // there instead of leaving it on the stale null. Keyed on page/pageSize only
+  // — an approval that refetches the *same* page must not yank the inspector.
+  useEffect(() => {
+    setActiveId(visibleEvents[0]?.id ?? null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, pageSize])
+
+  // After removing the active row (approve/reject/bulk-approve), anchor the
+  // inspector to the row that slides into the first removed slot (or the new
+  // last row) within the current visible page — so the inspector never empties
+  // while visible flags remain on this page.
   const resolveActiveAfterRemoval = (
     removedIds: Set<string>,
-  ): { activeId: string | null; page: number } => {
+  ): string | null => {
     const firstRemovedIndex = visibleEvents.findIndex((ev) =>
       removedIds.has(ev.id),
     )
     const remaining = visibleEvents.filter((ev) => !removedIds.has(ev.id))
-    if (remaining.length === 0) return { activeId: null, page: 1 }
+    if (remaining.length === 0) return null
     const anchor = firstRemovedIndex < 0 ? 0 : firstRemovedIndex
     const nextIndex = Math.min(anchor, remaining.length - 1)
-    return {
-      activeId: remaining[nextIndex]?.id ?? null,
-      page: Math.floor(nextIndex / pageSize) + 1,
-    }
+    return remaining[nextIndex]?.id ?? null
   }
 
   const handleSelect = (id: string, checked: boolean) => {
@@ -141,13 +152,13 @@ export const EventFlagsSection = ({
     if (checked) {
       setSelectedIds((prev) => {
         const next = new Set(prev)
-        for (const ev of pagedEvents) next.add(ev.id)
+        for (const ev of visibleEvents) next.add(ev.id)
         return next
       })
     } else {
       setSelectedIds((prev) => {
         const next = new Set(prev)
-        for (const ev of pagedEvents) next.delete(ev.id)
+        for (const ev of visibleEvents) next.delete(ev.id)
         return next
       })
     }
@@ -161,9 +172,7 @@ export const EventFlagsSection = ({
       return next
     })
     if (activeId === id) {
-      const next = resolveActiveAfterRemoval(new Set([id]))
-      setActiveId(next.activeId)
-      setPage(next.page)
+      setActiveId(resolveActiveAfterRemoval(new Set([id])))
     }
   }
 
@@ -175,9 +184,7 @@ export const EventFlagsSection = ({
       return next
     })
     if (activeId === id) {
-      const next = resolveActiveAfterRemoval(new Set([id]))
-      setActiveId(next.activeId)
-      setPage(next.page)
+      setActiveId(resolveActiveAfterRemoval(new Set([id])))
     }
   }
 
@@ -188,9 +195,7 @@ export const EventFlagsSection = ({
     setShowBulkModal(false)
     setSelectedIds(new Set())
     if (activeId && approving.has(activeId)) {
-      const next = resolveActiveAfterRemoval(approving)
-      setActiveId(next.activeId)
-      setPage(next.page)
+      setActiveId(resolveActiveAfterRemoval(approving))
     }
     setPendingApprovalIds(approving)
 
@@ -223,36 +228,26 @@ export const EventFlagsSection = ({
     setActiveId(null)
   }
 
-  // Page nav clamps the inspector to the new page's first row so the active
-  // event is always one the admin can see in the list. selectedIds are left
-  // untouched — checkbox selections are id-keyed and survive paging.
+  // Page nav is parent-controlled: delegate so the parent re-fetches the new
+  // server page. Once fresh `events` arrive the old active row is no longer in
+  // the visible list, so the `effectiveActiveId` fallback (and its reconcile
+  // effect) clamps the inspector to the new page's first row. We leave
+  // `activeId` non-null here precisely so that fallback fires — nulling it
+  // would be read as an explicit close and strand the inspector empty.
   const handlePageChange = (nextPage: number) => {
-    setPage(nextPage)
-    const nextPager = derivePagination({
-      page: nextPage,
-      pageSize,
-      total: visibleEvents.length,
-    })
-    const nextFirst = visibleEvents.slice(
-      nextPager.offset,
-      nextPager.offset + nextPager.limit,
-    )[0]
-    setActiveId(nextFirst?.id ?? null)
+    onPageChange(nextPage)
   }
 
   const handlePageSizeChange = (nextSize: number) => {
-    setPageSize(nextSize)
-    setPage(1)
-    setActiveId(visibleEvents.slice(0, nextSize)[0]?.id ?? null)
+    onPageSizeChange(nextSize)
   }
 
-  // A filter change re-slices the dataset: reset to page 1, drop the id-keyed
-  // checkbox selection (it can't span a re-filtered set), and land the
-  // inspector on the new page 1's first row.
+  // A filter change re-narrows the current page: drop the id-keyed checkbox
+  // selection (it can't span a re-filtered set) and land the inspector on the
+  // new first visible row.
   const handleToggleHideNonConcert = () => {
     const next = !hideNonConcert
     setHideNonConcert(next)
-    setPage(1)
     setSelectedIds(new Set())
     const nextVisible = (
       next
@@ -332,7 +327,8 @@ export const EventFlagsSection = ({
   // Select-all is scoped to the current page — the checkbox reflects whether
   // every visible row is selected, not the whole (possibly multi-page) set.
   const allSelected =
-    pagedEvents.length > 0 && pagedEvents.every((ev) => selectedIds.has(ev.id))
+    visibleEvents.length > 0 &&
+    visibleEvents.every((ev) => selectedIds.has(ev.id))
 
   const panelTitle = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -402,7 +398,7 @@ export const EventFlagsSection = ({
       >
         {/* Left: scrollable list */}
         <div style={{ overflowY: 'auto' }}>
-          {pagedEvents.map((ev) => (
+          {visibleEvents.map((ev) => (
             <EventFlagRow
               key={ev.id}
               event={ev}
@@ -418,7 +414,9 @@ export const EventFlagsSection = ({
 
         {/* Right: inspector */}
         <EventFlagInspector
-          event={pagedEvents.find((ev) => ev.id === effectiveActiveId) ?? null}
+          event={
+            visibleEvents.find((ev) => ev.id === effectiveActiveId) ?? null
+          }
           onApprove={handleApprove}
           onReject={handleReject}
           onClose={() => setActiveId(null)}
@@ -426,11 +424,14 @@ export const EventFlagsSection = ({
         />
       </div>
 
-      {(visibleEvents.length > pageSize || page > 1) && (
+      {/* Hide the pager for single-page results, but keep it mounted on
+          page > 1 so the Pagination clamp-sync effect can recover an invalid
+          deep-link (e.g. ?page=99 after the queue drains). */}
+      {(total > pageSize || page > 1) && (
         <Pagination
           page={page}
           pageSize={pageSize}
-          total={visibleEvents.length}
+          total={total}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
           itemLabel="flags"

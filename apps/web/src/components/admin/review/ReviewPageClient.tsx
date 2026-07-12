@@ -60,11 +60,7 @@ interface ReviewPageClientProps {
 }
 
 type ReviewTabKey =
-  | 'event-flags'
-  | 'prices'
-  | 'missing'
-  | 'all-events'
-  | 'contests'
+  'event-flags' | 'prices' | 'missing' | 'all-events' | 'contests'
 
 const VALID_TAB_KEYS: ReadonlySet<string> = new Set([
   'event-flags',
@@ -165,9 +161,9 @@ export const ReviewPageClient = ({
   // through a single shell (AdminReviewMobile owns the visible tab), so
   // queries stay enabled there.
   //
-  // Event Flags total is unused here because the EF surface keeps its queue
-  // shape in this PR — the paginated split-list-with-inspector treatment is
-  // tracked in #694. Tab pill count comes from /admin/review/counts instead.
+  // Event Flags is server-paginated like the other tabs (#694): the desktop
+  // split-list renders one server page and drives the footer pager off
+  // `eventFlagsTotal`. Tab pill count still comes from /admin/review/counts.
   const eventFlagsQuery = useReviewEventFlags(
     pagination,
     !isDesktop || activeTab === 'event-flags',
@@ -178,6 +174,7 @@ export const ReviewPageClient = ({
       ? all
       : all.filter((event) => !pendingRemoveFlagIds.has(event.id))
   }, [eventFlagsQuery.data, initialEvents, pendingRemoveFlagIds])
+  const eventFlagsTotal = eventFlagsQuery.data?.total ?? events.length
 
   // Missing: gated by tab activation so we don't fetch until the admin
   // looks. The mobile shell also nudges the gate via onEnterMissingTab.
@@ -766,6 +763,15 @@ export const ReviewPageClient = ({
       {activeTab === 'event-flags' && (
         <EventFlagsTabContent
           events={events}
+          page={pagination.page}
+          pageSize={pagination.pageSize}
+          total={eventFlagsTotal}
+          onPageChange={(next) =>
+            onPaginationChange({ page: next, pageSize: pagination.pageSize })
+          }
+          onPageSizeChange={(next) =>
+            onPaginationChange({ page: 1, pageSize: next })
+          }
           onApprove={approveEvent}
           onReject={rejectEvent}
           onEdit={(id) => router.push(editEventHref(id))}
