@@ -1,7 +1,10 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import { PricesSubmissionsClient } from '@/components/admin/prices/PricesSubmissionsClient'
-import { type PriceSubmissionHistoryRow } from '@/lib/queries/use-admin-price-submissions'
+import {
+  FETCH_PAGE_SIZE,
+  type PriceSubmissionHistoryRow,
+} from '@/lib/queries/use-admin-price-submissions'
 
 interface CountedResponse {
   rows: PriceSubmissionHistoryRow[]
@@ -16,10 +19,11 @@ export default async function PricesSubmissionsPage() {
 
   // First-paint seed: the client hook re-fetches the whole set (walking
   // offsets) so filtering/sorting/pagination can run in the browser. This
-  // 100-row page just gives the table something to render immediately.
+  // first page just gives the table something to render immediately. Share
+  // FETCH_PAGE_SIZE with the walker so the seed and offset steps can't drift.
   const initial = await apiClient
     .get<CountedResponse>(
-      '/v1/admin/prices/submissions?status=all&count=true&limit=100&offset=0',
+      `/v1/admin/prices/submissions?status=all&count=true&limit=${FETCH_PAGE_SIZE}&offset=0`,
       token,
     )
     .catch(() => ({ rows: [], total: 0 }) as CountedResponse)

@@ -269,6 +269,32 @@ describe('PricesSubmissionsClient', () => {
     })
   })
 
+  it('awaits every PATCH before surfacing a bulk failure', async () => {
+    // First PATCH rejects, second lands. Promise.allSettled must let both
+    // settle before we resync — Promise.all would short-circuit on the first
+    // rejection while the second request was still in flight.
+    mockPatch.mockReset()
+    mockPatch.mockRejectedValueOnce(new Error('boom')).mockResolvedValueOnce({})
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={ROWS}
+        initialTotal={ROWS.length}
+      />,
+    )
+    fireEvent.click(
+      screen.getByRole('checkbox', {
+        name: 'Select all pending submissions on this page',
+      }),
+    )
+    const bulkApprove = await screen.findByRole('button', {
+      name: '✓ Approve 2',
+    })
+    fireEvent.click(bulkApprove)
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
+    // Both PATCHes ran despite the first rejecting — no short-circuit.
+    expect(mockPatch).toHaveBeenCalledTimes(2)
+  })
+
   it('toggles sort direction when the same column header is clicked twice', () => {
     renderClient(
       <PricesSubmissionsClient

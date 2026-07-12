@@ -38,7 +38,7 @@ interface CountedResponse {
 // all run client-side (the endpoint only orders by createdAt desc and filters
 // pending|all), so the full set has to be in the browser. For beta volumes this
 // resolves in a single request.
-const FETCH_PAGE_SIZE = 100
+export const FETCH_PAGE_SIZE = 100
 
 export const adminPriceSubmissionsKey = [
   'admin',

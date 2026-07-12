@@ -195,13 +195,39 @@ export const PricesSubmissionsClient = ({
           setError(COPY.authError)
           return
         }
-        await Promise.all(
+        // allSettled (not all) so every PATCH finishes before we touch the
+        // cache — Promise.all would reject on the first failure while other
+        // requests are still in flight, racing the invalidation below.
+        const results = await Promise.allSettled(
           ids.map((id) =>
             apiClient.patch(`/v1/admin/prices/submissions/${id}`, token, {
               status,
             }),
           ),
         )
+        const rejected = results.find(
+          (result): result is PromiseRejectedResult =>
+            result.status === 'rejected',
+        )
+        if (rejected) {
+          const reason = rejected.reason
+          const message =
+            reason instanceof ApiError
+              ? reason.message
+              : 'Failed to update submission.'
+          console.error('patchStatus error:', reason)
+          setError(message)
+          // A partial bulk failure may have applied some PATCHes server-side,
+          // so resync the cache with server truth rather than trusting the
+          // pre-failure optimistic view.
+          void queryClient.invalidateQueries({
+            queryKey: adminPriceSubmissionsKey,
+          })
+          void queryClient.invalidateQueries({
+            queryKey: reviewQueryKeys.counts,
+          })
+          return
+        }
         // Optimistic: flip the affected rows in the cached full set so the
         // table + badges update without waiting on the refetch below.
         const idSet = new Set(ids)
