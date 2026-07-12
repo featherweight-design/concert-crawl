@@ -1582,6 +1582,7 @@ export const ADMIN_COPY = {
       empty: 'No pending submissions',
       deny: 'Deny',
       approve: 'Approve · award cred',
+      allSubmissionsLink: 'All submissions',
     },
 
     reviewPageClient: {
@@ -1640,6 +1641,59 @@ export const ADMIN_COPY = {
         atTheVenue: 'At the venue',
       },
     },
+  },
+
+  submissionsHistory: {
+    eyebrow: 'operations · moderation',
+    title: 'Price submissions',
+    subtitle:
+      'Every community price submission — pending, corroborated, disputed, or stale.',
+    backLink: 'Back to Review',
+    panelTitle: 'Submission history',
+    countBadge: (count: number) => `${count} total`,
+    empty: 'No price submissions yet.',
+    filterLabel: 'Status',
+    filters: {
+      all: 'All',
+      pending: 'Pending',
+      corroborated: 'Corroborated',
+      disputed: 'Disputed',
+      stale: 'Stale',
+    },
+    columns: {
+      event: 'Event',
+      price: 'Price',
+      user: 'User',
+      status: 'Status',
+      submitted: 'Submitted',
+    },
+    sort: {
+      date: 'Date',
+      event: 'Event',
+      user: 'User',
+      ariaLabel: (column: string, dir: 'asc' | 'desc') =>
+        `Sort by ${column}, currently ${
+          dir === 'asc' ? 'ascending' : 'descending'
+        }`,
+    },
+    statusLabels: {
+      pending: 'Pending',
+      corroborated: 'Corroborated',
+      disputed: 'Disputed',
+      stale: 'Stale',
+      archived: 'Archived',
+    },
+    approve: 'Approve',
+    deny: 'Deny',
+    approveAria: (event: string) => `Approve submission for ${event}`,
+    denyAria: (event: string) => `Deny submission for ${event}`,
+    selectRowAria: (event: string) => `Select submission for ${event}`,
+    selectAllAria: 'Select all pending submissions on this page',
+    ticketLinkAria: (event: string) => `Open ticket page for ${event}`,
+    truncatedNotice: (loaded: number, total: number) =>
+      `Showing ${loaded} of ${total} submissions.`,
+    anonUser: 'anonymous',
+    itemLabel: 'submissions',
   },
 
   users: {

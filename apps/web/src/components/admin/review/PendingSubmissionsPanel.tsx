@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { Panel, AdminButton, RelTime } from '@/components/admin/primitives'
-import { Check, ExternalLink, X } from 'lucide-react'
+import { Check, ChevronRight, ExternalLink, X } from 'lucide-react'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface PriceSubmission {
@@ -67,8 +68,27 @@ export const PendingSubmissionsPanel = ({
     </span>
   )
 
+  const allSubmissionsLink = (
+    <Link
+      href="/admin/prices/submissions"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 2,
+        fontSize: 12,
+        fontWeight: 600,
+        color: 'var(--accent)',
+        textDecoration: 'none',
+        fontFamily: "'Inter', sans-serif",
+      }}
+    >
+      {ADMIN_COPY.review.pendingSubmissions.allSubmissionsLink}
+      <ChevronRight size={13} />
+    </Link>
+  )
+
   return (
-    <Panel title={panelTitle} padding={0}>
+    <Panel title={panelTitle} action={allSubmissionsLink} padding={0}>
       {submissions.length === 0 ? (
         <div
           style={{
