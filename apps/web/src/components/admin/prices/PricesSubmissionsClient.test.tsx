@@ -43,6 +43,7 @@ vi.mock('@/lib/api', () => ({
 }))
 
 import { PricesSubmissionsClient } from './PricesSubmissionsClient'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 const row = (
   overrides: Partial<PriceSubmissionHistoryRow>,
@@ -427,5 +428,21 @@ describe('PricesSubmissionsClient', () => {
       <PricesSubmissionsClient initialSubmissions={[]} initialTotal={0} />,
     )
     expect(screen.getByText('No price submissions yet.')).toBeTruthy()
+  })
+
+  it('names every submission status in the page subtitle', () => {
+    // The subtitle enumerates the statuses the history view surfaces; it must
+    // stay in sync with the status filters (including archived) so the page
+    // description doesn't misrepresent what's shown.
+    const statuses: ReadonlyArray<PriceSubmissionHistoryRow['status']> = [
+      'pending',
+      'corroborated',
+      'disputed',
+      'stale',
+      'archived',
+    ]
+    for (const status of statuses) {
+      expect(ADMIN_COPY.submissionsHistory.subtitle).toContain(status)
+    }
   })
 })

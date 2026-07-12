@@ -1647,7 +1647,7 @@ export const ADMIN_COPY = {
     eyebrow: 'operations · moderation',
     title: 'Price submissions',
     subtitle:
-      'Every community price submission — pending, corroborated, disputed, or stale.',
+      'Every community price submission — pending, corroborated, disputed, stale, or archived.',
     backLink: 'Back to Review',
     panelTitle: 'Submission history',
     countBadge: (count: number) => `${count} total`,
