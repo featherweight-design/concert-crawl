@@ -455,7 +455,7 @@ git commit -m "feat(audit): sweep runner — viewport matrix, interactions, heur
   - `prepareAuditAuth(role: 'user' | 'admin'): Promise<void>` — logs the appropriate fixture user in and writes `.auth/audit-<role>.json`. Fixture user IDs live in `scripts/seed-staging/fixture-users.ts` (from PR 2); credentials come from `E2E_AUDIT_USER_EMAIL` / `E2E_AUDIT_USER_PASSWORD` / `E2E_AUDIT_ADMIN_EMAIL` / `E2E_AUDIT_ADMIN_PASSWORD` env vars.
   - New `audit-auth-setup` invocation happens as the sweep runner's first step (once per run, before the route loop) — call `prepareAuditAuth('user')` and `prepareAuditAuth('admin')` upfront if any route requires them.
 
-- [ ] **Step 1: Refactor auth helper.** Move the `page.goto → fill → click` sequence out of `globalSetup` into an exported `loginAndSave(email, password, outputPath, baseURL)` function; have `globalSetup` call it. Add a test that asserts `loginAndSave` throws when creds are missing (do not test the actual login — that requires a live Clerk).
+- [ ] **Step 1: Refactor auth helper.** Move the `page.goto → fill → click` sequence out of `globalSetup` into an exported `loginAndSave(email, password, outputPath, baseURL)`. `loginAndSave` requires both email and password — it throws if either is empty (the caller's responsibility to gate on creds). `globalSetup` must keep its current "creds-missing → warn + write empty storageState + return" behavior (`apps/e2e/src/fixtures/auth.ts:13-19`); only call `loginAndSave` when both `E2E_TEST_USER_EMAIL` and `E2E_TEST_USER_PASSWORD` are non-empty. Add unit tests for `loginAndSave` that assert both the empty-email and empty-password throws (do not exercise the actual login — that requires a live Clerk).
 
 - [ ] **Step 2: Wire `prepareAuditAuth`** on top of that helper.
 
@@ -613,7 +613,7 @@ Verify: `gh label list --repo HartiganHM/concert-crawl | grep ui-audit`.
 
 ### Task 5: Post-calibration memory update
 
-- [ ] **Step 1: Update `~/.claude/projects/-Users-huey-Projects-concert-crawl/memory/project_pickup_ui_audit_seeder.md`** to record: skill deployed, first calibration run count of findings, any adjustments made to the triage bar afterward. This memory becomes the "audit is live" pickup for future sessions.
+- [ ] **Step 1: Update the concert-crawl memory pickup file** to record: skill deployed, first calibration run count of findings, any adjustments made to the triage bar afterward. This memory becomes the "audit is live" pickup for future sessions. The file lives under Claude Code's per-project memory dir (`~/.claude/projects/<slug-of-repo-path>/memory/project_pickup_ui_audit_seeder.md`); locate the right dir by matching the concert-crawl repo path — Claude Code encodes the absolute path as the slug (e.g. `-Users-huey-Projects-concert-crawl` on this machine).
 - [ ] **Step 2: If any triage adjustments were made** (bar too tight / too loose / dedupe missed something), commit the SKILL.md edits and note the rationale in memory.
 
 **PR 4 completion criteria:**

@@ -161,7 +161,10 @@ describe('syncVenues', () => {
       dryRun: true,
     })
     expect(upsertSpy).not.toHaveBeenCalled()
-    expect(result).toEqual({ scanned: 2, upserted: 0 })
+    expect(result.scanned).toBe(2)
+    expect(result.upserted).toBe(0)
+    // Dry-run still produces a map (empty on this path — no staging re-select).
+    expect(result.venueIdMap.size).toBe(0)
   })
 })
 ```
@@ -255,7 +258,7 @@ git commit -m "feat(seed-staging): sync events with rolling window and status-aw
 - Consumes: `ProdReadonlyClient`, staging drizzle client, `venueIdMap` and `eventIdMap` from Tasks 2 + 3.
 - Produces:
   - `syncPriceRetrievalLog(deps: { prod; staging; dryRun; venueIdMap: IdMap; eventIdMap: IdMap }): Promise<{ scanned: number; upserted: number }>` — translates each row's `venueId` and `eventId` through the maps before insert; skips rows whose parent isn't in the map (log a warning with a per-run count).
-  - The `price_retrieval_log` table has no natural unique key — use `.onConflictDoNothing({ target: priceRetrievalLog.id })` on the PK. Since we regenerate ids on insert (a rewrite of prod's uuid would be nice, but Drizzle's `.values()` generates a new PK by default via `defaultRandom()` — pass the row without `id` to let staging assign one). Re-runs must be idempotent: query for a stable synthetic key (venue_id + attempted_at + source) and skip if it exists, OR clear all fixture-tagged log rows at the top and reinsert (mirror the synthetic-cleanup pattern from PR 2 Task 2). Pick the latter for simplicity — cheaper than the natural-key query and consistent with how synthetic data is handled.
+  - The `price_retrieval_log` table has no `user_id` / no fixture-tagging column, so we can't reuse PR 2's cleanup pattern. It does have the `price_log_venue_source_attempted_at_idx` on `(venue_id, source, attempted_at)` (`packages/db/src/schema/prices.ts:82-88`). Use query-and-skip on that composite: before inserting, `SELECT 1 FROM price_retrieval_log WHERE venue_id = ? AND source = ? AND attempted_at = ? LIMIT 1`; skip when a match exists. The composite is not UNIQUE (a venue can legitimately fetch the same source multiple times at the same instant across dupes), but for prod→staging sync the collision rate is effectively zero and a duplicate insert is harmless (the log is append-only, cost-negligible). Pass rows without `id` — Drizzle's `defaultRandom()` on the PK column assigns a fresh staging uuid.
 
 Rationale: spec §1a limits price sync to "venue/vendor-sourced price rows only — not user submissions." The `price_retrieval_log` table records only crawler-driven fetches (see `packages/db/src/schema/prices.ts:63-90`); `price_submissions` is user-owned and excluded from public-data sync entirely.
 
