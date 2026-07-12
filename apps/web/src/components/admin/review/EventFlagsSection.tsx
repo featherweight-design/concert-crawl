@@ -88,6 +88,22 @@ export const EventFlagsSection = ({
     pager.offset + pager.limit,
   )
 
+  // The active event can drift off the current page without being removed —
+  // e.g. a bulk approve of earlier-page rows re-slices visibleEvents and
+  // shifts the still-selected inspector row onto an earlier page than `page`.
+  // When that happens `pagedEvents.find(activeId)` misses and the inspector
+  // would blank, so fall back to the current page's first row for display.
+  const activeOnPage = pagedEvents.some((ev) => ev.id === activeId)
+  const effectiveActiveId = activeOnPage
+    ? activeId
+    : (pagedEvents[0]?.id ?? null)
+
+  // Reconcile the stored selection with what the inspector actually shows so
+  // the id-keyed handlers (approve/reject guards) stay in sync after a drift.
+  useEffect(() => {
+    if (activeId !== effectiveActiveId) setActiveId(effectiveActiveId)
+  }, [activeId, effectiveActiveId])
+
   // After removing rows (approve/reject/bulk-approve), anchor the inspector to
   // the position the first removed row held in the *full* visible list, then
   // clamp into the post-removal range. This advances to the row that slides
@@ -390,7 +406,7 @@ export const EventFlagsSection = ({
             <EventFlagRow
               key={ev.id}
               event={ev}
-              isActive={activeId === ev.id}
+              isActive={effectiveActiveId === ev.id}
               isSelected={selectedIds.has(ev.id)}
               onSelect={handleSelect}
               onActivate={setActiveId}
@@ -402,7 +418,7 @@ export const EventFlagsSection = ({
 
         {/* Right: inspector */}
         <EventFlagInspector
-          event={pagedEvents.find((ev) => ev.id === activeId) ?? null}
+          event={pagedEvents.find((ev) => ev.id === effectiveActiveId) ?? null}
           onApprove={handleApprove}
           onReject={handleReject}
           onClose={() => setActiveId(null)}

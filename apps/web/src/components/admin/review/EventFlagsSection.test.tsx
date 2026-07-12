@@ -156,6 +156,48 @@ describe('EventFlagsSection pagination (#694)', () => {
     expect(inspectorTitle()).toBe('Show 19')
   })
 
+  it('keeps the inspector on a visible row when a bulk approve drifts the active row to an earlier page', () => {
+    // 60 flags → three pages of 20. Select all of page 1, keep the inspector
+    // on page 2's first row (Show 20 — NOT in the approved set), then bulk
+    // approve. Removing page 1 shifts Show 20 down to page 1 while the view
+    // stays on page 2, so the page-2 slice no longer contains the active row.
+    // The inspector must fall back to the current page's first row rather than
+    // blanking. Regression for #915 review round 2.
+    render(
+      <EventFlagsSection
+        events={buildConcertFlags(60)}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+
+    // Select every row on page 1 via the panel select-all checkbox.
+    const [selectAll] = screen.getAllByRole('checkbox')
+    if (!selectAll)
+      throw new Error('expected the select-all checkbox to render')
+    fireEvent.click(selectAll)
+    expect(screen.getByText('selected')).toBeTruthy()
+
+    // Move to page 2 — the inspector clamps to its first row.
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    expect(inspectorTitle()).toBe('Show 20')
+
+    // Bulk approve the 20 page-1 rows. Dock + modal share the label, so the
+    // modal confirm is the last occurrence.
+    fireEvent.click(screen.getByRole('button', { name: '✓ Approve 20' }))
+    const confirmButtons = screen.getAllByRole('button', {
+      name: '✓ Approve 20',
+    })
+    const confirmButton = confirmButtons[confirmButtons.length - 1]
+    if (!confirmButton) throw new Error('expected a modal confirm button')
+    fireEvent.click(confirmButton)
+
+    // The active row (Show 20) drifted onto page 1, but the view is still on
+    // page 2 — the inspector snaps to the new page-2 first row, not empty.
+    expect(screen.queryByText('Select an event to inspect')).toBeNull()
+    expect(inspectorTitle()).toBe('Show 40')
+  })
+
   it('shows the inspector empty state when the filtered page has no rows', () => {
     const nonConcert = Array.from({ length: 6 }).map((_, idx) =>
       buildFlag({
