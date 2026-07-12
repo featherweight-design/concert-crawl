@@ -36,7 +36,6 @@ import {
   FailureCardKeptNote,
   FailureSurfaceIntro,
   TierSummaryLine,
-  failureDialogProps,
 } from './FailureSurface'
 import { ChallengeMount } from './ChallengeMount'
 
@@ -302,7 +301,6 @@ const CheckoutForm = ({
       })
       if (dismissedRef.current) return
       if (result.error) {
-        console.error('tier-picker: confirmPayment declined', result.error)
         if (result.error.type === 'validation_error') {
           // Incomplete form — the Payment Element shows its own
           // field-level errors; no decline happened. Return to the
@@ -310,13 +308,18 @@ const CheckoutForm = ({
           onSurface(CHECKOUT_SURFACE)
           return
         }
-        enterFailure(
-          mapDeclineCategory({
-            declineCode: result.error.decline_code ?? null,
-            errorCode: result.error.code ?? null,
-            errorType: result.error.type,
-          }),
-        )
+        const category = mapDeclineCategory({
+          declineCode: result.error.decline_code ?? null,
+          errorCode: result.error.code ?? null,
+          errorType: result.error.type,
+        })
+        // Raw decline codes stay out of the client entirely (the webhook
+        // records them server-side) — log only the sanitized shape.
+        console.error('tier-picker: confirmPayment declined', {
+          errorType: result.error.type,
+          category,
+        })
+        enterFailure(category)
         return
       }
       onSuccess()
@@ -333,7 +336,6 @@ const CheckoutForm = ({
 
   return (
     <div
-      {...(isFailure ? failureDialogProps(surface.category) : {})}
       style={{
         display: 'flex',
         flexDirection: 'column',

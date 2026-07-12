@@ -4,7 +4,8 @@
 // Stripe's Payment Element presents the actual bank verification in its
 // own overlay while confirmPayment is in flight — this mount is the
 // contextual frame around that moment: what's happening, who renders it,
-// and a way out. role="dialog" (a step, not an error — never alertdialog).
+// and a way out. The hosting ModalShell stays a plain dialog (a step,
+// not an error — never alertdialog), relabeled via challengeDialogProps.
 
 import { TIER_PICKER_COPY } from './definitions/copy'
 import type { ChallengeKind, TierKey } from './definitions/types'
@@ -14,6 +15,13 @@ const CHALLENGE_COPY = TIER_PICKER_COPY.challenge
 
 export const challengeHeadlineId = (kind: ChallengeKind) => `chal-h-${kind}`
 export const challengeBodyId = (kind: ChallengeKind) => `chal-d-${kind}`
+
+/** ModalShell overrides while the challenge chrome is up. */
+export const challengeDialogProps = (kind: ChallengeKind) => ({
+  role: 'dialog' as const,
+  ariaLabelledBy: challengeHeadlineId(kind),
+  ariaDescribedBy: challengeBodyId(kind),
+})
 
 const monoLabelStyle = {
   fontFamily: 'var(--font-mono)',
@@ -138,13 +146,7 @@ export const ChallengeMount = ({
   const config = CHALLENGE_COPY.kinds[kind]
 
   return (
-    <div
-      role="dialog"
-      aria-modal
-      aria-labelledby={challengeHeadlineId(kind)}
-      aria-describedby={challengeBodyId(kind)}
-      style={{ display: 'flex', flexDirection: 'column', gap: 13 }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ flex: 1 }} />

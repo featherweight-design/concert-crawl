@@ -119,7 +119,9 @@ describe('CheckoutPanel — decline → failure surface routing (PR 4.4)', () =>
         ),
       ).toBeTruthy(),
     )
-    expect(screen.getByRole('alertdialog')).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: TIER_PICKER_COPY.failure.closeLabel }),
+    ).toBeTruthy()
     // Same mount id — the card the user typed survives (freshEmpty=false).
     expect(
       screen.getByTestId('payment-element').getAttribute('data-mount'),
@@ -173,8 +175,7 @@ describe('CheckoutPanel — decline → failure surface routing (PR 4.4)', () =>
         ),
       ).toBeTruthy(),
     )
-    const dialog = screen.getByRole('alertdialog')
-    expect(dialog.textContent).not.toMatch(/fraud/i)
+    expect(document.body.textContent).not.toMatch(/fraud/i)
     // No retry-same-card affordance: no secondary, primary is a
     // different-card verb, and the element re-rendered empty.
     expect(
@@ -227,7 +228,11 @@ describe('CheckoutPanel — decline → failure surface routing (PR 4.4)', () =>
     renderPanel()
     clickPay()
     await waitFor(() => expect(mockConfirmPayment).toHaveBeenCalled())
-    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(
+      screen.queryByRole('button', {
+        name: TIER_PICKER_COPY.failure.closeLabel,
+      }),
+    ).toBeNull()
     expect(
       screen.getByRole('button', {
         name: new RegExp(TIER_PICKER_COPY.checkout.payCta),
@@ -287,7 +292,11 @@ describe('CheckoutPanel — failure surface actions', () => {
         screen.getByTestId('payment-element').getAttribute('data-mount'),
       ).not.toBe(mountBefore),
     )
-    expect(screen.getByRole('alertdialog')).toBeTruthy()
+    expect(
+      screen.getByText(
+        TIER_PICKER_COPY.failure.categories.insufficient_funds.headline,
+      ),
+    ).toBeTruthy()
     consoleSpy.mockRestore()
   })
 
@@ -326,7 +335,13 @@ describe('CheckoutPanel — failure surface actions', () => {
         name: TIER_PICKER_COPY.failure.categories.insufficient_funds.primary,
       }),
     )
-    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    await waitFor(() =>
+      expect(
+        screen.queryByText(
+          TIER_PICKER_COPY.failure.categories.insufficient_funds.headline,
+        ),
+      ).toBeNull(),
+    )
     expect(
       screen.getByRole('button', {
         name: new RegExp(TIER_PICKER_COPY.checkout.payCta),
@@ -416,8 +431,9 @@ describe('CheckoutPanel — 3DS/SCA challenge detection', () => {
     expect(
       screen.getByText(TIER_PICKER_COPY.challenge.kinds['3ds'].headline),
     ).toBeTruthy()
-    expect(screen.getByRole('dialog')).toBeTruthy()
-    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(
+      screen.getByRole('button', { name: TIER_PICKER_COPY.challenge.cancel }),
+    ).toBeTruthy()
     // The element stays mounted (hidden) while Stripe runs the challenge.
     expect(
       screen.getByTestId('payment-element').parentElement?.style.display,
@@ -462,7 +478,9 @@ describe('CheckoutPanel — 3DS/SCA challenge detection', () => {
     fireEvent.click(
       screen.getByRole('button', { name: TIER_PICKER_COPY.challenge.cancel }),
     )
-    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(
+      screen.queryByText(TIER_PICKER_COPY.challenge.kinds['3ds'].headline),
+    ).toBeNull()
     expect(
       screen.getByTestId('payment-element').parentElement?.style.display,
     ).not.toBe('none')

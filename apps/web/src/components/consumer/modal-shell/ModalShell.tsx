@@ -13,6 +13,14 @@ interface ModalShellProps {
   sheetHeight?: 'tall' | 'short'
   /** Desktop modal width in px (default 520). Wide surfaces (tier picker) pass more. */
   desktopWidth?: number
+  /**
+   * The shell is the single modal root in the accessibility tree, so
+   * surfaces that change its meaning (payment failure = alertdialog)
+   * override the role/labeling here instead of nesting a second dialog.
+   */
+  role?: 'dialog' | 'alertdialog'
+  ariaLabelledBy?: string
+  ariaDescribedBy?: string
 }
 
 export function ModalShell({
@@ -25,6 +33,9 @@ export function ModalShell({
   children,
   sheetHeight = 'tall',
   desktopWidth = 520,
+  role = 'dialog',
+  ariaLabelledBy,
+  ariaDescribedBy,
 }: ModalShellProps) {
   const [isMobile, setIsMobile] = useState(false)
 
@@ -69,9 +80,11 @@ export function ModalShell({
 
       {isMobile ? (
         <div
-          role="dialog"
+          role={role}
           aria-modal="true"
-          aria-label={ariaLabel}
+          aria-label={ariaLabelledBy === undefined ? ariaLabel : undefined}
+          aria-labelledby={ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
           style={{
             position: 'fixed',
             left: 0,
@@ -136,9 +149,11 @@ export function ModalShell({
         </div>
       ) : (
         <div
-          role="dialog"
+          role={role}
           aria-modal="true"
-          aria-label={ariaLabel}
+          aria-label={ariaLabelledBy === undefined ? ariaLabel : undefined}
+          aria-labelledby={ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
           style={{
             position: 'fixed',
             top: '50%',

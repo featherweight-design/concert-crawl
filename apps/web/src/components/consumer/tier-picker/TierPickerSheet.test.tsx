@@ -93,10 +93,16 @@ vi.mock('./CheckoutPanel', () => ({
     tierKey,
     onBack,
     onSuccess,
+    onSurfaceChange,
   }: {
     tierKey: string
     onBack: () => void
     onSuccess: () => void
+    onSurfaceChange: (surface: {
+      kind: string
+      category?: string
+      challenge?: string
+    }) => void
   }) => (
     <div data-testid="checkout-panel">
       <span data-testid="checkout-tier">{tierKey}</span>
@@ -105,6 +111,20 @@ vi.mock('./CheckoutPanel', () => ({
       </button>
       <button type="button" onClick={onSuccess}>
         mock-success
+      </button>
+      <button
+        type="button"
+        onClick={() =>
+          onSurfaceChange({ kind: 'failure', category: 'insufficient_funds' })
+        }
+      >
+        mock-fail
+      </button>
+      <button
+        type="button"
+        onClick={() => onSurfaceChange({ kind: 'challenge', challenge: '3ds' })}
+      >
+        mock-challenge
       </button>
     </div>
   ),
@@ -347,6 +367,49 @@ describe('TierPickerSheet — checkout flow', () => {
       ),
     )
     expect(screen.getByTestId('tier-card-premium')).toBeTruthy()
+  })
+
+  it('re-roles the ModalShell root as alertdialog while a failure surface is up', async () => {
+    renderSheet(planState('free'))
+    fireEvent.click(
+      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('checkout-panel')).toBeTruthy(),
+    )
+    // One modal root, plain dialog, named "Tier picker" during checkout.
+    const dialogBefore = screen.getByRole('dialog')
+    expect(dialogBefore.getAttribute('aria-label')).toBe(
+      TIER_PICKER_COPY.entry.ariaLabel,
+    )
+    fireEvent.click(screen.getByText('mock-fail'))
+    // Failure lifts the alertdialog role/labeling to the shell — never a
+    // second nested dialog.
+    const alert = screen.getByRole('alertdialog')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(alert.getAttribute('aria-modal')).toBe('true')
+    expect(alert.getAttribute('aria-label')).toBeNull()
+    expect(alert.getAttribute('aria-labelledby')).toBe(
+      'fail-h-insufficient_funds',
+    )
+    expect(alert.getAttribute('aria-describedby')).toBe(
+      'fail-d-insufficient_funds',
+    )
+  })
+
+  it('keeps the ModalShell a plain dialog relabeled by the challenge chrome', async () => {
+    renderSheet(planState('free'))
+    fireEvent.click(
+      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+    )
+    await waitFor(() =>
+      expect(screen.getByTestId('checkout-panel')).toBeTruthy(),
+    )
+    fireEvent.click(screen.getByText('mock-challenge'))
+    const dialog = screen.getByRole('dialog')
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(dialog.getAttribute('aria-labelledby')).toBe('chal-h-3ds')
+    expect(dialog.getAttribute('aria-describedby')).toBe('chal-d-3ds')
   })
 
   it('successful checkout closes the sheet and refreshes plan state', async () => {

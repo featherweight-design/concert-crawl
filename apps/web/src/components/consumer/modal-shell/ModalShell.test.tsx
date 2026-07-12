@@ -54,6 +54,27 @@ describe('ModalShell', () => {
     expect(screen.getByText('Modal Header')).toBeTruthy()
   })
 
+  it('applies role and labelledby/describedby overrides, dropping aria-label', () => {
+    render(
+      <ModalShell
+        open={true}
+        onClose={vi.fn()}
+        ariaLabel="Test"
+        header={<Header />}
+        role="alertdialog"
+        ariaLabelledBy="headline-id"
+        ariaDescribedBy="body-id"
+      >
+        <div>Content</div>
+      </ModalShell>,
+    )
+    const dialog = screen.getByRole('alertdialog')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(dialog.getAttribute('aria-label')).toBeNull()
+    expect(dialog.getAttribute('aria-labelledby')).toBe('headline-id')
+    expect(dialog.getAttribute('aria-describedby')).toBe('body-id')
+  })
+
   it('calls onClose when Escape key is pressed', () => {
     const onClose = vi.fn()
     render(

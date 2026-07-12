@@ -36,7 +36,7 @@ const Harness = ({
   onSecondary?: () => void
   onDismiss?: () => void
 }) => (
-  <div {...failureDialogProps(category)}>
+  <div>
     <FailureSurfaceIntro category={category} onDismiss={onDismiss} />
     {!FAILURE_SURFACE_BEHAVIOR[category].freshCard && <FailureCardKeptNote />}
     <FailureActions
@@ -59,16 +59,19 @@ describe.each(CATEGORIES)('FailureSurface — %s', (category) => {
     expect(screen.getByText(config.body)).toBeTruthy()
   })
 
-  it('carries the alertdialog wiring (role, modal, labelled/described by)', () => {
+  it('exposes alertdialog overrides for the ModalShell root (no nested dialog)', () => {
+    expect(failureDialogProps(category)).toEqual({
+      role: 'alertdialog',
+      ariaLabelledBy: failureHeadlineId(category),
+      ariaDescribedBy: failureBodyId(category),
+    })
     render(<Harness category={category} />)
-    const dialog = screen.getByRole('alertdialog')
-    expect(dialog.getAttribute('aria-modal')).toBe('true')
-    expect(dialog.getAttribute('aria-labelledby')).toBe(
+    // The surface itself must not create a second modal root.
+    expect(screen.queryByRole('alertdialog')).toBeNull()
+    expect(screen.getByText(config.headline).id).toBe(
       failureHeadlineId(category),
     )
-    expect(dialog.getAttribute('aria-describedby')).toBe(
-      failureBodyId(category),
-    )
+    expect(screen.getByText(config.body).id).toBe(failureBodyId(category))
   })
 
   it('announces the headline assertively', () => {

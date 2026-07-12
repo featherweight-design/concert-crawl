@@ -6,6 +6,7 @@ import {
   ChallengeMount,
   challengeHeadlineId,
   challengeBodyId,
+  challengeDialogProps,
 } from './ChallengeMount'
 import { TIER_PICKER_COPY } from './definitions/copy'
 import type { ChallengeKind } from './definitions/types'
@@ -22,15 +23,18 @@ describe.each(KINDS)('ChallengeMount — %s', (kind) => {
     return onCancel
   }
 
-  it('renders as a dialog (NOT alertdialog) with labelled/described wiring', () => {
+  it('exposes plain-dialog overrides (NOT alertdialog) for the ModalShell root', () => {
+    expect(challengeDialogProps(kind)).toEqual({
+      role: 'dialog',
+      ariaLabelledBy: challengeHeadlineId(kind),
+      ariaDescribedBy: challengeBodyId(kind),
+    })
     renderMount()
+    // The chrome itself must not create a nested modal root.
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.queryByRole('alertdialog')).toBeNull()
-    const dialog = screen.getByRole('dialog')
-    expect(dialog.getAttribute('aria-modal')).toBe('true')
-    expect(dialog.getAttribute('aria-labelledby')).toBe(
-      challengeHeadlineId(kind),
-    )
-    expect(dialog.getAttribute('aria-describedby')).toBe(challengeBodyId(kind))
+    expect(screen.getByText(config.headline).id).toBe(challengeHeadlineId(kind))
+    expect(screen.getByText(config.body).id).toBe(challengeBodyId(kind))
   })
 
   it('renders the verbatim headline and body', () => {

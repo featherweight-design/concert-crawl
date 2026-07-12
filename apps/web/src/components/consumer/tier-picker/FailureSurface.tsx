@@ -27,14 +27,14 @@ export const failureHeadlineId = (category: DeclineCategory) =>
 export const failureBodyId = (category: DeclineCategory) => `fail-d-${category}`
 
 /**
- * Aria attributes for the stable wrapper that hosts the failure layout —
+ * ModalShell overrides while the failure layout is up — the shell is the
+ * single modal root in the accessibility tree, and a failure turns it into
  * an alertdialog (error interrupt), unlike the challenge's plain dialog.
  */
 export const failureDialogProps = (category: DeclineCategory) => ({
-  role: 'alertdialog',
-  'aria-modal': true,
-  'aria-labelledby': failureHeadlineId(category),
-  'aria-describedby': failureBodyId(category),
+  role: 'alertdialog' as const,
+  ariaLabelledBy: failureHeadlineId(category),
+  ariaDescribedBy: failureBodyId(category),
 })
 
 const monoEyebrowStyle = {

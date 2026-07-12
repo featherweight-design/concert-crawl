@@ -27,6 +27,8 @@ import { TierRowMobile } from './TierRowMobile'
 import { GiftedThankYou } from './GiftedThankYou'
 import { CheckoutPanel } from './CheckoutPanel'
 import { FounderClaimTakeover } from './FounderClaimTakeover'
+import { failureDialogProps } from './FailureSurface'
+import { challengeDialogProps } from './ChallengeMount'
 import {
   CHALLENGE_DESKTOP_WIDTH,
   FAILURE_DESKTOP_WIDTH,
@@ -388,6 +390,16 @@ export const TierPickerSheet = ({
         ? CHALLENGE_DESKTOP_WIDTH
         : 560
 
+  // The shell is the one modal root in the accessibility tree — failure
+  // and challenge surfaces re-role/relabel it rather than nesting a
+  // second aria-modal dialog inside.
+  const dialogOverrides =
+    checkout !== null && checkoutSurface.kind === 'failure'
+      ? failureDialogProps(checkoutSurface.category)
+      : checkout !== null && checkoutSurface.kind === 'challenge'
+        ? challengeDialogProps(checkoutSurface.challenge)
+        : {}
+
   if (claim !== null)
     return (
       <FounderClaimTakeover
@@ -403,6 +415,7 @@ export const TierPickerSheet = ({
       open={open}
       onClose={close}
       ariaLabel={TIER_PICKER_COPY.entry.ariaLabel}
+      {...dialogOverrides}
       header={<RailHeader eyebrow={eyebrow} code={code} tone={tone} />}
       desktopWidth={
         gifted
