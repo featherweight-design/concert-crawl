@@ -21,6 +21,16 @@ const LEGAL_LINE = 'Concert Crawl · Denver, CO'
 const FONT_STACK =
   "'Inter', -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
 
+// Preheaders can carry template vars (gifter names, tier labels) — escape so
+// injected markup can't break the shell or smuggle links.
+export const escapeHtml = (value: string): string =>
+  value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+
 interface EmailShellInput {
   preheader: string
   bodyHtml: string
@@ -43,7 +53,7 @@ export const renderEmailShell = ({
 </style>
 </head>
 <body style="margin: 0; padding: 0; background-color: ${EMAIL_BACKGROUND};">
-<span style="display: none; font-size: 1px; line-height: 1px; max-height: 0; max-width: 0; opacity: 0; overflow: hidden; mso-hide: all;">${preheader}</span>
+<span style="display: none; font-size: 1px; line-height: 1px; max-height: 0; max-width: 0; opacity: 0; overflow: hidden; mso-hide: all;">${escapeHtml(preheader)}</span>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: ${EMAIL_BACKGROUND};">
 <tr>
 <td align="center" style="padding: 24px 12px;">

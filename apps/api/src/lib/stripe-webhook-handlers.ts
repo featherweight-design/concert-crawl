@@ -113,12 +113,13 @@ const DUNNING_TEMPLATE_BY_STAGE = {
 const tierDisplayName = (tier: DbSubscriptionTier | null): string | null =>
   tier !== null ? TIER_DISPLAY_NAMES[tier] : null
 
-const monthLabel = (date: Date): string =>
-  new Intl.DateTimeFormat('en-US', {
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'America/Denver',
-  }).format(date)
+const monthLabelFormatter = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  year: 'numeric',
+  timeZone: 'America/Denver',
+})
+
+const monthLabel = (date: Date): string => monthLabelFormatter.format(date)
 
 const formatUsd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
 
@@ -132,7 +133,7 @@ export const emailForInvoicePaymentSucceeded = (input: {
   seatNumber: number | null
   customerId: string
   amountPaidCents: number | null
-  chargedAt: Date
+  chargedAt: Date | null
   periodEnd: Date | null
   hostedInvoiceUrl: string | null
 }): TransactionalEmailParams | null => {
@@ -153,7 +154,9 @@ export const emailForInvoicePaymentSucceeded = (input: {
       },
     }
   }
-  if (input.invoiceId === null) return null
+  // No invoice id = no dedupe key; no created timestamp = wrong period label
+  // and charge date on the receipt — skip rather than guess.
+  if (input.invoiceId === null || input.chargedAt === null) return null
   return {
     templateKey: 'renewal_receipt_monthly',
     userId: input.userId,
@@ -413,7 +416,7 @@ export const handleInvoicePaymentSucceeded = async (
     seatNumber,
     customerId: snapshot.customer,
     amountPaidCents: invoice.amount_paid ?? null,
-    chargedAt: epochSecondsToDate(invoice.created) ?? new Date(),
+    chargedAt: epochSecondsToDate(invoice.created),
     periodEnd: epochSecondsToDate(firstItem(snapshot)?.current_period_end),
     hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
   })
@@ -422,7 +425,7 @@ export const handleInvoicePaymentSucceeded = async (
   } else {
     apiLogger.warn(
       { stripeEventId: ctx.stripeEventId, subscriptionId, tier },
-      'invoice.payment_succeeded: no email queued — missing paid tier or invoice id',
+      'invoice.payment_succeeded: no email queued — missing paid tier, invoice id, or created timestamp',
     )
   }
 

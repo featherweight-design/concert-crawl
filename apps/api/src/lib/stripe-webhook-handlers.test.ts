@@ -131,6 +131,12 @@ describe('emailForInvoicePaymentSucceeded', () => {
       emailForInvoicePaymentSucceeded({ ...succeededBase, invoiceId: null }),
     ).toBeNull()
   })
+
+  it('queues no renewal receipt when the invoice created timestamp is missing', () => {
+    expect(
+      emailForInvoicePaymentSucceeded({ ...succeededBase, chargedAt: null }),
+    ).toBeNull()
+  })
 })
 
 describe('emailForInvoicePaymentFailed', () => {

@@ -158,9 +158,16 @@ export async function sendTransactionalEmail<
       return
     }
 
-    const clerkClient = createClerkClient({
-      secretKey: process.env.CLERK_SECRET_KEY ?? '',
-    })
+    const clerkSecretKey = process.env.CLERK_SECRET_KEY
+    if (!clerkSecretKey) {
+      apiLogger.warn(
+        logContext,
+        'sendTransactionalEmail: CLERK_SECRET_KEY not set — send-log row left failed',
+      )
+      return
+    }
+
+    const clerkClient = createClerkClient({ secretKey: clerkSecretKey })
     const clerkUser = await clerkClient.users.getUser(userId)
     const primaryAddress = clerkUser.emailAddresses.find(
       (address) => address.id === clerkUser.primaryEmailAddressId,
