@@ -290,6 +290,37 @@ describe('PlanPanel — cancel-grace resubscribe (PR 4.5)', () => {
     consoleSpy.mockRestore()
   })
 
+  it('clicking the portal ghost clears a stale resubscribe error', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const assignSpy = vi.fn()
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { ...window.location, assign: assignSpy },
+    })
+    mockResubscribe.mockRejectedValue(new Error('boom'))
+    renderPanel(graceState())
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: PLAN_CARD_COPY.cancelGrace.resubscribeCta,
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.getByRole('alert').textContent).toBe(
+        PLAN_CARD_COPY.errors.resubscribe,
+      ),
+    )
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: PLAN_CARD_COPY.cancelGrace.manageCta,
+      }),
+    )
+    expect(screen.queryByRole('alert')).toBeNull()
+    await waitFor(() =>
+      expect(assignSpy).toHaveBeenCalledWith('https://stripe.test/portal'),
+    )
+    consoleSpy.mockRestore()
+  })
+
   it('a 409 (grace lapsed) still re-syncs plan state', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     mockResubscribe.mockRejectedValue(

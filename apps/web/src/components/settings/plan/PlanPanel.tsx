@@ -59,6 +59,7 @@ export const PlanPanel = ({
 
   const dispatchCta = (cta: PlanCardCta) => {
     if (cta.action === 'portal') {
+      clearResubscribeError()
       openPortal()
       return
     }

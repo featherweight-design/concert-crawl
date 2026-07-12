@@ -163,6 +163,22 @@ const findLiveSubscription = async (
   return subscriptionRow
 }
 
+// Best-effort audit — by the time an event row is written, Stripe and the
+// subscriptions mirror have already been updated, so a failed insert must
+// not 500 a response the client can act on (same pattern as billing.ts).
+const insertEventBestEffort = async (
+  values: typeof subscriptionEvents.$inferInsert,
+): Promise<void> => {
+  try {
+    await db.insert(subscriptionEvents).values(values)
+  } catch (auditErr) {
+    apiLogger.error(
+      { err: auditErr, userId: values.userId, type: values.type },
+      'billing-lifecycle: audit event insert failed',
+    )
+  }
+}
+
 const noLiveSubscriptionResponse = {
   success: false,
   code: 'no_live_subscription',
@@ -328,7 +344,7 @@ export const createBillingLifecycleRouter = (
         .update(subscriptions)
         .set({ cancelAtPeriodEnd: true, updatedAt: new Date() })
         .where(eq(subscriptions.userId, userId))
-      await db.insert(subscriptionEvents).values({
+      await insertEventBestEffort({
         userId,
         type: 'cancel_scheduled',
         metadata: {
@@ -385,7 +401,7 @@ export const createBillingLifecycleRouter = (
         .update(subscriptions)
         .set({ cancelAtPeriodEnd: false, updatedAt: new Date() })
         .where(eq(subscriptions.userId, userId))
-      await db.insert(subscriptionEvents).values({
+      await insertEventBestEffort({
         userId,
         type: 'resubscribed',
         metadata: {
@@ -485,7 +501,7 @@ export const createBillingLifecycleRouter = (
 
       // subscription_event_type has no generic tier_changed value —
       // upgraded/downgraded are the schema's tier-change events (spec §5).
-      await db.insert(subscriptionEvents).values({
+      await insertEventBestEffort({
         userId,
         type: direction === 'upgrade' ? 'upgraded' : 'downgraded',
         metadata: {
