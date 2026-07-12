@@ -104,8 +104,9 @@ git commit -m "feat(seed-staging): read-only prod client wrapper (no write surfa
 
 - Consumes: `ProdReadonlyClient` from Task 1; a staging `db` client (drizzle over `NEON_STAGING_DIRECT`).
 - Produces:
-  - `syncVenues(deps: { prod: ProdReadonlyClient; staging: DrizzleWriteDb; dryRun: boolean }): Promise<{ scanned: number; upserted: number }>`
-  - Upsert target: `venues.slug` (UNIQUE, per `packages/db/src/schema/venues.ts:38`).
+  - `type IdMap = ReadonlyMap<string, string>` — prod-uuid → staging-uuid mapping (used by Tasks 3 + 4 to translate FK references).
+  - `syncVenues(deps: { prod: ProdReadonlyClient; staging: DrizzleWriteDb; dryRun: boolean }): Promise<{ scanned: number; upserted: number; venueIdMap: IdMap }>` — after upserting, re-selects `{ id, slug }` from staging for every synced slug and returns the prod→staging id map. Callers pass this map to `syncEvents` / `syncPriceRetrievalLog` so dependent rows land on the correct staging FKs.
+  - Upsert target: `venues.slug` (UNIQUE, per `packages/db/src/schema/venues.ts:38`). Note: Postgres `ON CONFLICT DO UPDATE` cannot change the primary key of the existing row, so when staging already has a venue for a given slug the staging id wins. The id-map lookup is what keeps dependent syncs correct.
 
 - [ ] **Step 1: Write the failing test.**
 
@@ -188,11 +189,11 @@ git commit -m "feat(seed-staging): sync venues with slug upsert"
 
 **Interfaces:**
 
-- Consumes: `ProdReadonlyClient`, staging drizzle client.
+- Consumes: `ProdReadonlyClient`, staging drizzle client, `venueIdMap: IdMap` from Task 2.
 - Produces:
   - `rollingWindow(now: Date): { fromDate: string; }` — returns `{ fromDate: <YYYY-MM-DD>=today-30d> }`. The read query is `WHERE date >= fromDate`; there is no upper bound (spec: "past 30 days → all future"). Exported from `-helpers.ts` for pure-function testing.
-  - `syncEvents(deps: { prod; staging; dryRun; now: Date }): Promise<{ scanned: number; upserted: number }>`.
-  - Upsert target: `events.venueDateCanonicalTitleIdx` — partial UNIQUE on `(venue_id, date, canonical_title) WHERE status = 'upcoming'` (per `packages/db/src/schema/events.ts:158-162`). Rows with `status` in `('cancelled', 'postponed')` sit outside the index; treat them as insert-only for now. Simplest correct: for `upcoming` rows call `.onConflictDoUpdate({ target: [events.venueId, events.date, events.canonicalTitle], targetWhere: eq(events.status, 'upcoming'), set: {...} })` — `targetWhere` mirrors the partial index predicate so Postgres identifies the right unique index (mirror the canonical usage at `packages/crawler-core/src/crawl.ts:685-693`, which upserts against the same index). For `cancelled`/`postponed` rows use `.onConflictDoNothing()` via a second insert path. Split by status in the loop.
+  - `syncEvents(deps: { prod; staging; dryRun; now: Date; venueIdMap: IdMap }): Promise<{ scanned: number; upserted: number; eventIdMap: IdMap }>` — translates each prod row's `venueId` through `venueIdMap` before insert (skipping the row and recording a warning if the prod venue isn't in the map); returns a prod→staging event-id map for the price-log sync in Task 4.
+  - Upsert target: `events.venueDateCanonicalTitleIdx` — partial UNIQUE on `(venue_id, date, canonical_title) WHERE status = 'upcoming'` (per `packages/db/src/schema/events.ts:158-162`). Rows with `status` in `('cancelled', 'postponed')` sit outside the index; treat them as insert-only for now. Simplest correct: for `upcoming` rows call `.onConflictDoUpdate({ target: [events.venueId, events.date, events.canonicalTitle], targetWhere: eq(events.status, 'upcoming'), set: {...} })` — `targetWhere` mirrors the partial index predicate so Postgres identifies the right unique index (mirror the canonical usage at `packages/crawler-core/src/crawl.ts:685-693`). For `cancelled`/`postponed` rows use `.onConflictDoNothing()` via a second insert path. Split by status in the loop.
 
 - [ ] **Step 1: Write failing tests.**
 
@@ -251,10 +252,10 @@ git commit -m "feat(seed-staging): sync events with rolling window and status-aw
 
 **Interfaces:**
 
-- Consumes: `ProdReadonlyClient`, staging drizzle client.
+- Consumes: `ProdReadonlyClient`, staging drizzle client, `venueIdMap` and `eventIdMap` from Tasks 2 + 3.
 - Produces:
-  - `syncPriceRetrievalLog(deps: { prod; staging; dryRun }): Promise<{ scanned: number; upserted: number }>`.
-  - The `price_retrieval_log` table has no natural unique key — use `.onConflictDoNothing({ target: priceRetrievalLog.id })` on the PK. Rows are deterministic UUIDs from prod, so re-run == no-op.
+  - `syncPriceRetrievalLog(deps: { prod; staging; dryRun; venueIdMap: IdMap; eventIdMap: IdMap }): Promise<{ scanned: number; upserted: number }>` — translates each row's `venueId` and `eventId` through the maps before insert; skips rows whose parent isn't in the map (log a warning with a per-run count).
+  - The `price_retrieval_log` table has no natural unique key — use `.onConflictDoNothing({ target: priceRetrievalLog.id })` on the PK. Since we regenerate ids on insert (a rewrite of prod's uuid would be nice, but Drizzle's `.values()` generates a new PK by default via `defaultRandom()` — pass the row without `id` to let staging assign one). Re-runs must be idempotent: query for a stable synthetic key (venue_id + attempted_at + source) and skip if it exists, OR clear all fixture-tagged log rows at the top and reinsert (mirror the synthetic-cleanup pattern from PR 2 Task 2). Pick the latter for simplicity — cheaper than the natural-key query and consistent with how synthetic data is handled.
 
 Rationale: spec §1a limits price sync to "venue/vendor-sourced price rows only — not user submissions." The `price_retrieval_log` table records only crawler-driven fetches (see `packages/db/src/schema/prices.ts:63-90`); `price_submissions` is user-owned and excluded from public-data sync entirely.
 
@@ -332,7 +333,7 @@ describe('assertWriteHostNotProd', () => {
 
 - [ ] **Step 3: Wire the CLI entry.**
 
-Follow `scripts/2026-07-11-gifted-comps-backfill.ts:179-195` for the `pathToFileURL`-guarded invocation. Load env vars; refuse to run if `NEON_PROD_DIRECT` or `NEON_STAGING_DIRECT` is empty; call `assertWriteHostNotProd`; open prod read-only client; open staging drizzle client; run `syncVenues → syncEvents → syncPriceRetrievalLog` in that order (respecting the FK graph); print per-step counts; close both connections. FK order enforced by execution order — no explicit transaction wrap.
+Follow `scripts/2026-07-11-gifted-comps-backfill.ts:179-195` for the `pathToFileURL`-guarded invocation. Load env vars; refuse to run if `NEON_PROD_DIRECT` or `NEON_STAGING_DIRECT` is empty; call `assertWriteHostNotProd`; open prod read-only client; open staging drizzle client; then execute the FK-ordered pipeline threading the id maps forward: `const { venueIdMap } = await syncVenues(...)`, `const { eventIdMap } = await syncEvents({ ..., venueIdMap })`, `await syncPriceRetrievalLog({ ..., venueIdMap, eventIdMap })`. Print per-step counts + a summary of rows skipped for missing FK parents; close both connections. FK order enforced by execution order — no explicit transaction wrap.
 
 - [ ] **Step 4: Wire the pnpm script and human-readable docs comment at the top of the file** (mirror `2026-07-11-gifted-comps-backfill.ts:1-45` — describe usage, required env vars, and the read-only guarantee).
 
