@@ -568,7 +568,7 @@ git commit -m "feat(seed-staging): price submission + notification generators"
 
 - [ ] **Step 2: Implement `runSynthetic`.**
 
-- [ ] **Step 3: CLI entry.** Mirror `sync-prod-public-data.ts` structure — check `NEON_STAGING_DIRECT` is set; refuse to run against prod host; execute.
+- [ ] **Step 3: CLI entry.** Mirror `sync-prod-public-data.ts` structure — check `NEON_STAGING_DIRECT` is set (delete-and-regenerate against prod would be catastrophic); guard with `assertWriteHostNotProd(process.env['NEON_PROD_DIRECT'] ?? '', process.env['NEON_STAGING_DIRECT'] ?? '')` imported from `../sync-prod-public-data-helpers.js` (throws if the write host matches the prod host, per PR 1 Task 5); then execute.
 
 - [ ] **Step 4: Wire the pnpm scripts** and add a one-line summary block to the root README or CLAUDE.md if there is a natural place; otherwise commit the script wiring only.
 

@@ -167,16 +167,49 @@ git commit -m "feat(audit): initial route manifest — admin + consumer surfaces
 import { describe, it, expect } from 'vitest'
 import { collectHeuristicsScript } from './heuristics.js'
 
-const runInDom = (html: string, viewportWidthPx: number) => {
+// jsdom skips layout — clientWidth/scrollWidth/getBoundingClientRect are 0
+// by default. `runInDom` stubs each from inline styles so the heuristic
+// script (which reads real layout metrics in production) sees something
+// meaningful.
+const px = (raw: string | undefined) => parseInt(raw ?? '0', 10) || 0
+const rectFrom = (el: HTMLElement) => {
+  const [l, t, w, h] = [
+    px(el.style.left),
+    px(el.style.top),
+    px(el.style.width),
+    px(el.style.height),
+  ]
+  return {
+    left: l,
+    top: t,
+    width: w,
+    height: h,
+    right: l + w,
+    bottom: t + h,
+    x: l,
+    y: t,
+    toJSON: () => ({}),
+  } as DOMRect
+}
+const runInDom = (html: string, vw: number) => {
   document.body.innerHTML = html
   Object.defineProperty(document.documentElement, 'clientWidth', {
-    value: viewportWidthPx,
+    value: vw,
     configurable: true,
   })
+  Object.defineProperty(document.documentElement, 'scrollWidth', {
+    configurable: true,
+    get: () =>
+      Array.from(document.querySelectorAll<HTMLElement>('*')).reduce(
+        (max, el) => Math.max(max, px(el.style.left) + px(el.style.width)),
+        vw,
+      ),
+  })
+  Element.prototype.getBoundingClientRect = function () {
+    return rectFrom(this as HTMLElement)
+  }
   // eslint-disable-next-line no-new-func
-  return new Function(
-    `return (${collectHeuristicsScript})(${viewportWidthPx})`,
-  )()
+  return new Function(`return (${collectHeuristicsScript})(${vw})`)()
 }
 
 describe('collectHeuristicsScript', () => {
@@ -442,9 +475,7 @@ git commit -m "feat(audit): pnpm --filter e2e audit wiring + audit-scoped auth s
 
 - Modify: `apps/e2e/src/audit/sweep.ts` — after each `captureState`, if the heuristic snapshot's `<main>` element has fewer than 5 direct children, tag the JSON output with `"insufficientData": true`. The vision-triage stage in PR 4 keys off this to skip judgment and log "run the seeder". This heuristic is deliberately narrow — content density is the reliable signal; interactive-element counts vary too much across pages to gate the flag.
 
-- [ ] **Step 1: Extend `HeuristicSnapshot` and `collectHeuristics`** to include `contentDensity: { mainChildren: number }`. Add a heuristic test for the counts.
-
-- [ ] **Step 2: Extend `runSweep`** to compute `insufficientData` = `snapshot.contentDensity.mainChildren < 5`; store it in the JSON output.
+- [ ] **Step 1: Extend `HeuristicSnapshot` and `collectHeuristics`** to include `contentDensity: { mainChildren: number }`, add a heuristic test for the count, then extend `runSweep` to compute `insufficientData = snapshot.contentDensity.mainChildren < 5` and store it in the JSON output.
 
 - [ ] **Step 3: Commit.**
 
@@ -586,10 +617,6 @@ Verify: `gh label list --repo HartiganHM/concert-crawl | grep ui-audit`.
 
 ## Self-Review Checklist for PR 3 + PR 4
 
-- [ ] Spec §2a coverage: manifest type, route entries with tags + auth + interactions. Landed as PR 3 Tasks 1–2.
-- [ ] Spec §2b coverage: staging URLs, viewports 320×568 / 390×844 / 1440×900, capture output shape, DOM heuristics (four categories), stability rules. Landed as PR 3 Tasks 3–6.
-- [ ] Spec §2c coverage: vision triage against pure-UI-breakage bar, `balk` / `degraded` severities, dedupe (within-run + cross-run), parallel subagent dispatch. Landed as PR 4 Task 1.
-- [ ] Spec §2d coverage: report file, Hugh approval gate, orphan `ui-audit-artifacts` branch, `gh` issue creation with label bundle including new `ui-audit` label. Landed as PR 4 Tasks 1–4.
-- [ ] Failure handling: load/auth failures recorded as sweep errors, interaction failures capture as-is + flag stale, empty renders tagged `insufficientData`. Landed across PR 3 Tasks 4 + 6.
-- [ ] Testing: manifest validator, DOM heuristics against fixtures, sweep helpers pure-unit-tested, smoke sweep against known-good route. Landed as PR 3 Tasks 1, 3, 4, and PR-close steps.
+- [ ] Spec §2a–§2d all covered — manifest + interactions (PR 3 Tasks 1–2), sweep engine with viewports/heuristics/stability rules (PR 3 Tasks 3–6), vision triage + dedupe + subagent dispatch (PR 4 Task 1), report → approval → filing via orphan artifacts branch with the `ui-audit` label bundle (PR 4 Tasks 1–4).
+- [ ] Failure handling: load/auth errors recorded, interaction drift captures a `__stale` snapshot and increments `captures`, thin renders get `insufficientData`. Testing plan covers manifest validator, DOM heuristics against jsdom fixtures, pure sweep helpers, and one smoke sweep against a known-good route.
 - [ ] Type-safety rule: production code stays free of `as` value casts (heuristics narrows images with `instanceof HTMLImageElement`; manifest goes through Zod). `as const` in interaction handlers and unit-test `as any` mock shims are called out as exemptions in Global Constraints.
