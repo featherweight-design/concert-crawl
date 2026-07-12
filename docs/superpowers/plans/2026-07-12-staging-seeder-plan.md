@@ -224,7 +224,7 @@ Pure function. Subtract 30 days from `now` (`new Date(now.getTime() - 30 * 24 * 
 
 - [ ] **Step 3: Implement `syncEvents`.**
 
-Prod read filter: `db.select().from(events).where(gte(events.date, fromDate))`. Loop per row; upcoming rows use `onConflictDoUpdate` on the composite target with a `where: sql\`status = 'upcoming'\``; cancelled/postponed rows use `onConflictDoNothing` (no valid unique target for them yet — insert-once semantics are acceptable and matches the spec's read-only nature of these events).
+Prod read filter: `db.select().from(events).where(gte(events.date, fromDate))`. Loop per row; upcoming rows use `onConflictDoUpdate` on the composite target with `targetWhere: eq(events.status, 'upcoming')` (mirrors the partial-index predicate — see the "Upsert target" note above and the canonical usage at `packages/crawler-core/src/crawl.ts:685-693`); cancelled/postponed rows use `onConflictDoNothing` (no valid unique target for them yet — insert-once semantics are acceptable and match the spec's read-only nature of these events).
 
 - [ ] **Step 4: Run tests, verify they pass.**
 

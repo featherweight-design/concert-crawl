@@ -392,7 +392,8 @@ git commit -m "feat(audit): sweep runner — viewport matrix, interactions, heur
 - Modify: `apps/e2e/package.json` — add `"audit": "tsx src/audit/sweep.ts"` under `scripts`. Add `tsx` to `devDependencies` if not already available at the workspace root (check with `pnpm --filter e2e list tsx` before adding).
 - Create: `apps/e2e/audit-output/.gitkeep` (empty file, just to make the directory exist).
 - Modify: `apps/e2e/.gitignore` (create if missing) — add `audit-output/*` and `!audit-output/.gitkeep` and `.auth/audit-*.json`.
-- Modify: `apps/e2e/src/fixtures/auth.ts` (or create sibling `audit-auth.ts`) — extract the login helper into a reusable function so the audit sweep can produce `.auth/audit-user.json` and `.auth/audit-admin.json`. Do NOT change the existing e2e globalSetup default output path (`.auth/user.json`).
+- Modify: `apps/e2e/src/fixtures/auth.ts` — extract the login helper into a reusable exported `loginAndSave(email, password, outputPath, baseURL)` so both the existing `globalSetup` and the audit sweep can call it. Do NOT change the existing e2e globalSetup default output path (`.auth/user.json`).
+- Create: `apps/e2e/src/audit/audit-auth.ts` — co-located with the sweep code; wraps `loginAndSave` to produce `.auth/audit-user.json` and `.auth/audit-admin.json`.
 
 **Interfaces:**
 
@@ -422,7 +423,7 @@ git commit -m "feat(audit): pnpm --filter e2e audit wiring + audit-scoped auth s
 
 **Files:**
 
-- Modify: `apps/e2e/src/audit/sweep.ts` — after each `captureState`, if the heuristic snapshot's DOM has zero interactive elements AND zero content elements (heuristic: `<main>` has <5 direct children), tag the JSON output with `"insufficientData": true`. The vision-triage stage in PR 4 keys off this to skip judgment and log "run the seeder".
+- Modify: `apps/e2e/src/audit/sweep.ts` — after each `captureState`, if the heuristic snapshot's `<main>` element has fewer than 5 direct children, tag the JSON output with `"insufficientData": true`. The vision-triage stage in PR 4 keys off this to skip judgment and log "run the seeder". This heuristic is deliberately narrow — content density is the reliable signal; interactive-element counts vary too much across pages to gate the flag.
 
 - [ ] **Step 1: Extend `HeuristicSnapshot` and `collectHeuristics`** to include `contentDensity: { mainChildren: number }`. Add a heuristic test for the counts.
 
@@ -506,14 +507,22 @@ Document in SKILL.md the exact `gh` + `git` sequence for uploading a screenshot 
 # per-machine via the REPO env var.
 REPO="${REPO:-$HOME/Projects/concert-crawl}"
 
-# One-time per environment: verify branch exists (create if not).
-git -C "$REPO" branch --contains "$(git -C "$REPO" rev-parse ui-audit-artifacts 2>/dev/null)" 2>/dev/null || (
-  git -C "$REPO" fetch origin ui-audit-artifacts:ui-audit-artifacts 2>/dev/null || (
-    # Truly first-run: create orphan branch, empty commit.
-    git -C "$REPO" worktree add --orphan .worktrees/ui-audit-artifacts ui-audit-artifacts
-    (cd "$REPO/.worktrees/ui-audit-artifacts" && git rm -rf . 2>/dev/null; git commit --allow-empty -m "chore: init ui-audit-artifacts orphan branch")
-    (cd "$REPO/.worktrees/ui-audit-artifacts" && git push -u origin ui-audit-artifacts)
+# One-time per environment: verify branch exists (create if not). The
+# creation path uses a two-step add-worktree-then-orphan pattern that
+# works on any Git version — it does NOT rely on `git worktree add
+# --orphan`, which only exists in Git ≥ 2.42.
+git -C "$REPO" fetch origin ui-audit-artifacts:ui-audit-artifacts 2>/dev/null || (
+  # Truly first-run: land a temp worktree on any branch, orphan-checkout
+  # inside it, commit empty, push, then clean up the temp branch.
+  git -C "$REPO" worktree add -b ui-audit-artifacts-init .worktrees/ui-audit-artifacts HEAD
+  (
+    cd "$REPO/.worktrees/ui-audit-artifacts"
+    git checkout --orphan ui-audit-artifacts
+    git rm -rf . 2>/dev/null || true
+    git commit --allow-empty -m "chore: init ui-audit-artifacts orphan branch"
+    git push -u origin ui-audit-artifacts
   )
+  git -C "$REPO" branch -D ui-audit-artifacts-init
 )
 
 # Per approved-finding upload — copies the screenshot into the orphan
