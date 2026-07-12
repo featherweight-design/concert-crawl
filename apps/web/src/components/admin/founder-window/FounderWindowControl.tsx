@@ -48,7 +48,10 @@ export const FounderWindowControl = ({
   const [win, setWin] = useState<AdminFounderWindow>(initial)
   const [pending, setPending] = useState<ActionKind | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<{
+    action: ActionKind
+    message: string
+  } | null>(null)
 
   const runAction = async (
     action: ActionKind,
@@ -59,7 +62,7 @@ export const FounderWindowControl = ({
     try {
       const token = await getToken()
       if (!token) {
-        setError(COPY.errors.notAuthenticated)
+        setError({ action, message: COPY.errors.notAuthenticated })
         return
       }
       await request(token)
@@ -70,11 +73,17 @@ export const FounderWindowControl = ({
           : err instanceof Error
             ? err.message
             : COPY.errors.generic
-      setError(message)
+      setError({ action, message })
     } finally {
       setPending(null)
     }
   }
+
+  const launchError = error?.action === 'open' ? error.message : null
+  const rehearsalError =
+    error?.action === 'simulate' || error?.action === 'reset'
+      ? error.message
+      : null
 
   const openWindow = () =>
     runAction('open', async (token) => {
@@ -207,9 +216,9 @@ export const FounderWindowControl = ({
             </div>
           )}
 
-          {error && (
+          {launchError && (
             <p style={{ margin: 0, fontSize: 13, color: 'var(--danger)' }}>
-              {error}
+              {launchError}
             </p>
           )}
         </div>
@@ -247,6 +256,11 @@ export const FounderWindowControl = ({
                 : COPY.rehearsal.resetButton}
             </AdminButton>
           </div>
+          {rehearsalError && (
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--danger)' }}>
+              {rehearsalError}
+            </p>
+          )}
           {win.seatsRemainingTest <= 0 && (
             <p style={{ margin: 0, fontSize: 12, color: 'var(--warning)' }}>
               {COPY.rehearsal.exhausted}

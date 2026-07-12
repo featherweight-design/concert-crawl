@@ -145,9 +145,9 @@ founderWindowAdminRouter.post('/open', async (ctx) => {
   return ctx.json({ success: true, data })
 })
 
-// POST /simulate-claim — decrement the TEST counter only. Guarded ≥ 0 in the
-// UPDATE so concurrent clicks can't drive it negative; a no-op row count means
-// the test seats are exhausted.
+// POST /simulate-claim — decrement the TEST counter only. Guarded
+// `seats_remaining_test > 0` in the UPDATE so concurrent clicks can't drive it
+// negative; a no-op row count means the test seats are exhausted.
 founderWindowAdminRouter.post('/simulate-claim', async (ctx) => {
   const auth = getAuth(ctx)
   const updated = await db
