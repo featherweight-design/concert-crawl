@@ -139,6 +139,19 @@ git commit -m "feat(audit): initial route manifest — admin + consumer surfaces
 
 - Create: `apps/e2e/src/audit/heuristics.ts`
 - Create: `apps/e2e/src/audit/heuristics.test.ts`
+- Create: `apps/e2e/vitest.config.ts` — a package-local Vitest config so the audit unit tests can run (the existing e2e package has no Vitest today):
+
+  ```ts
+  import { defineConfig } from 'vitest/config'
+  export default defineConfig({
+    test: {
+      environment: 'jsdom',
+      include: ['src/audit/**/*.test.ts'],
+    },
+  })
+  ```
+
+- Modify: `apps/e2e/package.json` — add `vitest` and `jsdom` to `devDependencies` (jsdom is already at `apps/web/package.json:49` at `^29.1.1`; match that pin) and add a `"test:audit": "vitest run"` script.
 
 **Interfaces:**
 
@@ -148,7 +161,7 @@ git commit -m "feat(audit): initial route manifest — admin + consumer surfaces
   - `collectHeuristicsScript: string` — the stringified function body run inside the page. Written as a string so `page.evaluate` accepts it verbatim. Exported so it can be unit-tested against DOM fixtures with jsdom.
   - `collectHeuristics(page: Page, viewportWidthPx: number): Promise<HeuristicSnapshot>` — the caller-facing async wrapper.
 
-- [ ] **Step 1: Failing tests.** Use `vitest` + `happy-dom` (already available via existing test setup — verify at implementation) to construct crafted HTMLs.
+- [ ] **Step 1: Failing tests.** Run under the new `apps/e2e/vitest.config.ts` (`environment: 'jsdom'`) via `pnpm --filter e2e test:audit`. Construct crafted HTMLs inside the jsdom document:
 
 ```ts
 import { describe, it, expect } from 'vitest'
@@ -438,7 +451,7 @@ git commit -m "feat(audit): mark thin renders as insufficientData for triage ski
 
 **PR-close steps for PR 3:**
 
-- [ ] All `pnpm test:scripts` (root) + `pnpm --filter e2e typecheck` pass.
+- [ ] All `pnpm test:scripts` (root), `pnpm --filter e2e test:audit` (audit unit tests under jsdom), and `pnpm --filter e2e typecheck` pass.
 - [ ] One smoke sweep run (tag `admin`, staging) produces the expected number of PNG+JSON pairs — 3 admin-tagged routes (`admin-feedback`, `admin-contests`, `admin-events`) × 3 viewports × 1–2 states each (only `admin-feedback` declares an interaction) = 12 captures — with no unhandled errors.
 - [ ] Open PR titled `feat(audit): manifest + Playwright sweep engine` linking spec + PR 1 / PR 2.
 
