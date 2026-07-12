@@ -151,7 +151,9 @@ founderWindowAdminRouter.post('/open', async (ctx) => {
 
 // POST /simulate-claim — decrement the TEST counter only. Guarded
 // `seats_remaining_test > 0` in the UPDATE so concurrent clicks can't drive it
-// negative; a no-op row count means the test seats are exhausted.
+// negative; a no-op row count means either the seats are exhausted or the
+// singleton row is missing — disambiguated below so a mis-seeded environment
+// surfaces as a 500 instead of a misleading exhaustion 409.
 founderWindowAdminRouter.post('/simulate-claim', async (ctx) => {
   const auth = getAuth(ctx)
   const updated = await db
@@ -161,6 +163,14 @@ founderWindowAdminRouter.post('/simulate-claim', async (ctx) => {
     .returning({ seatsRemainingTest: founderWindow.seatsRemainingTest })
 
   if (updated.length === 0) {
+    const row = await readFounderWindowRow()
+    if (!row) {
+      apiLogger.error(
+        {},
+        'admin founder-window simulate: singleton row missing',
+      )
+      return ctx.json({ success: false, error: 'Internal server error' }, 500)
+    }
     return ctx.json(
       {
         success: false,
