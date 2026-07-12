@@ -167,37 +167,16 @@ git commit -m "feat(audit): initial route manifest — admin + consumer surfaces
 import { describe, it, expect } from 'vitest'
 import { collectHeuristicsScript } from './heuristics.js'
 
-// jsdom skips layout — clientWidth/scrollWidth/getBoundingClientRect are 0
-// by default. `runInDom` stubs each from inline styles so the heuristic
-// script (which reads real layout metrics in production) sees something
-// meaningful.
+// jsdom skips layout — clientWidth/scrollWidth/getBoundingClientRect are
+// 0 by default. `runInDom` stubs each from inline styles so the heuristic
+// script (which reads real layout metrics in production) sees meaningful
+// values. Extract to apps/e2e/src/audit/test-helpers.ts if reused.
 const px = (raw: string | undefined) => parseInt(raw ?? '0', 10) || 0
-const rectFrom = (el: HTMLElement) => {
-  const [l, t, w, h] = [
-    px(el.style.left),
-    px(el.style.top),
-    px(el.style.width),
-    px(el.style.height),
-  ]
-  return {
-    left: l,
-    top: t,
-    width: w,
-    height: h,
-    right: l + w,
-    bottom: t + h,
-    x: l,
-    y: t,
-    toJSON: () => ({}),
-  } as DOMRect
-}
 const runInDom = (html: string, vw: number) => {
   document.body.innerHTML = html
-  Object.defineProperty(document.documentElement, 'clientWidth', {
-    value: vw,
-    configurable: true,
-  })
-  Object.defineProperty(document.documentElement, 'scrollWidth', {
+  const de = document.documentElement
+  Object.defineProperty(de, 'clientWidth', { value: vw, configurable: true })
+  Object.defineProperty(de, 'scrollWidth', {
     configurable: true,
     get: () =>
       Array.from(document.querySelectorAll<HTMLElement>('*')).reduce(
@@ -206,7 +185,24 @@ const runInDom = (html: string, vw: number) => {
       ),
   })
   Element.prototype.getBoundingClientRect = function () {
-    return rectFrom(this as HTMLElement)
+    const el = this as HTMLElement
+    const [l, t, w, h] = [
+      px(el.style.left),
+      px(el.style.top),
+      px(el.style.width),
+      px(el.style.height),
+    ]
+    return Object.assign(Object.create(null), {
+      left: l,
+      top: t,
+      width: w,
+      height: h,
+      right: l + w,
+      bottom: t + h,
+      x: l,
+      y: t,
+      toJSON: () => ({}),
+    }) as DOMRect
   }
   // eslint-disable-next-line no-new-func
   return new Function(`return (${collectHeuristicsScript})(${vw})`)()
