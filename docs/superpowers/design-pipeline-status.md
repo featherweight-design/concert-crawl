@@ -31,7 +31,7 @@ Design brief has landed AND the visual handoff is signed off Green. Awaiting an 
 |---|---|---|---|---|
 | **#642** Calendar month/week jump picker | PR #862 (2026-07-10) | `design/design_handoff_calendar_jump_picker/` | 🟢 Green (PR #894, 2026-07-11) — one-pass audit, all 4 R-rounds Low/Nit floor | Design nailed the light-brainstorm scope in one pass. Ready for eng-planning agent. |
 | **#643** Supporting artists title separator | PR #869 (2026-07-11) | `design/design_handoff_supporting_artists_line/` | 🟢 Green (PR #903, 2026-07-11) — one-pass audit, 3 R-rounds; audit's favorite call: mono uppercase kicker above the headliner (instead of the brief's speculative italic + em-dash below), prevents opener-vs-tour row collision at overflow | Data-layer + UI workstreams. Eng-plan carries logged (aria-hidden conditional on interactive, overflow measurement strategy, fallback posture during backfill). |
-| **Concert History (Passport teaser)** | — (pre-existing handoff) | `design/design_handoff_concert_history/` | 🟢 Green (PR #916, 2026-07-12) — flip via addendum after Hugh walked the three Yellow blockers | Locked: (1) `attending_at timestamptz` on `user_events` (TS/API `attendingAt`; derive `going` from `IS NOT NULL`; `status = 'going'` not written going forward); (2) Supporter tier already resolved via PR #878; (3) Passport card scope moves to `shareable_cards` — History ships teaser link only. Ready for eng-planning agent. |
+| **Concert History (Passport teaser)** | — (pre-existing handoff) | `design/design_handoff_concert_history/` | 🟢 Green (PR #916, 2026-07-12) — flip via addendum after Hugh walked the three Yellow blockers | Locked: (1) `attending_at timestamptz` on `user_events` (TS/API `attendingAt`; derive `going` from `attending_at IS NOT NULL`; `status = 'going'` not written going forward); (2) Supporter tier already resolved via PR #878; (3) Passport card scope moves to `shareable_cards` — History ships teaser link only. Ready for eng-planning agent. |
 
 The monetization vertical (previously here) moved into active build 2026-07-11 — see `docs/superpowers/progress.md` and the execution plan (PR #854). Phases 1 → 3.2 already merged (PRs #873, #878, #879, #880, #885, #886); Phases 3.3 → 7 remaining.
 
@@ -104,11 +104,11 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-12 | — | Tracker refresh #4 — concert_history flipped 🟡 → 🟢 (this PR) |
+| 2026-07-12 | — | `design/design_handoff_concert_history/READINESS.md` addendum merged (PR #916) — 🟢 Green post-addendum verdict; all three Yellow blockers resolved (attending_at schema, Supporter tier via #878, Passport moved to shareable_cards) |
 | 2026-07-11 | — | This tracker doc refreshed post-#903 audit (PR TBD — this PR) |
 | 2026-07-11 | — | `design/design_handoff_supporting_artists_line/READINESS.md` merged (PR #903) — 🟢 Green verdict, one-pass, ready for eng-planning. Handoff files committed alongside verdict. |
 | 2026-07-11 | — | Session pickup memory `project_pickup_2026_07_11_design_track.md` written for continuity |
-| 2026-07-12 | — | Tracker refresh #4 — concert_history flipped 🟡 → 🟢 (this PR) |
-| 2026-07-12 | — | `design/design_handoff_concert_history/READINESS.md` addendum merged (PR #916) — 🟢 Green post-addendum verdict; all three Yellow blockers resolved (attending_at schema, Supporter tier via #878, Passport moved to shareable_cards) |
 | 2026-07-11 | — | Tracker refresh #3 (post-#894 audit + #893 Spotify brief, PR #899) |
 | 2026-07-11 | — | `design/design_handoff_calendar_jump_picker/READINESS.md` merged (PR #894) — 🟢 Green verdict, one-pass, ready for eng-planning |
 | 2026-07-11 | #763 | Spotify sync design brief (PR #893) — full 7-question brainstorm; 7 locked decisions; Free tier + Premium 4-feature suite |
