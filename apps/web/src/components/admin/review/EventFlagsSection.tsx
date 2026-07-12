@@ -3,7 +3,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { CheckCircle2, Filter } from 'lucide-react'
 import { toast } from 'sonner'
-import { Panel, AdminButton, StatusBadge } from '@/components/admin/primitives'
+import {
+  Panel,
+  AdminButton,
+  StatusBadge,
+  Pagination,
+  PAGINATION_DEFAULT_PAGE_SIZE,
+  derivePagination,
+} from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { EventFlagRow } from './EventFlagRow'
 import { EventFlagInspector } from './EventFlagInspector'
@@ -44,6 +51,8 @@ export const EventFlagsSection = ({
   const [activeId, setActiveId] = useState<string | null>(events[0]?.id ?? null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [hideNonConcert, setHideNonConcert] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(PAGINATION_DEFAULT_PAGE_SIZE)
   const [showBulkModal, setShowBulkModal] = useState(false)
   const [pendingApprovalIds, setPendingApprovalIds] = useState<Set<string>>(
     new Set(),
@@ -55,6 +64,29 @@ export const EventFlagsSection = ({
       if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
     }
   }, [])
+
+  const filterVisible = (list: EventFlag[]): EventFlag[] =>
+    (hideNonConcert
+      ? list.filter(
+          (ev) =>
+            !ev.genre?.some((tag) => tag.toLowerCase().includes('non-concert')),
+        )
+      : list
+    ).filter((ev) => !pendingApprovalIds.has(ev.id))
+
+  const visibleEvents = filterVisible(events)
+  // `page` is the controlled value; derivePagination clamps it so a stale
+  // page (e.g. after approvals shrink the list) slices the last valid page.
+  // The <Pagination> footer syncs the controlled value back on the next tick.
+  const pager = derivePagination({
+    page,
+    pageSize,
+    total: visibleEvents.length,
+  })
+  const pagedEvents = visibleEvents.slice(
+    pager.offset,
+    pager.offset + pager.limit,
+  )
 
   const handleSelect = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
@@ -70,9 +102,17 @@ export const EventFlagsSection = ({
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(visibleEvents.map((ev) => ev.id)))
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        for (const ev of pagedEvents) next.add(ev.id)
+        return next
+      })
     } else {
-      setSelectedIds(new Set())
+      setSelectedIds((prev) => {
+        const next = new Set(prev)
+        for (const ev of pagedEvents) next.delete(ev.id)
+        return next
+      })
     }
   }
 
@@ -84,7 +124,7 @@ export const EventFlagsSection = ({
       return next
     })
     if (activeId === id) {
-      const remaining = visibleEvents.filter((ev) => ev.id !== id)
+      const remaining = pagedEvents.filter((ev) => ev.id !== id)
       setActiveId(remaining[0]?.id ?? null)
     }
   }
@@ -97,7 +137,7 @@ export const EventFlagsSection = ({
       return next
     })
     if (activeId === id) {
-      const remaining = visibleEvents.filter((ev) => ev.id !== id)
+      const remaining = pagedEvents.filter((ev) => ev.id !== id)
       setActiveId(remaining[0]?.id ?? null)
     }
   }
@@ -110,7 +150,7 @@ export const EventFlagsSection = ({
     setSelectedIds(new Set())
     setActiveId((prev) =>
       prev && approving.has(prev)
-        ? (visibleEvents.find((ev) => !approving.has(ev.id))?.id ?? null)
+        ? (pagedEvents.find((ev) => !approving.has(ev.id))?.id ?? null)
         : prev,
     )
     setPendingApprovalIds(approving)
@@ -142,6 +182,50 @@ export const EventFlagsSection = ({
     await Promise.allSettled(Array.from(selectedIds).map((id) => onReject(id)))
     setSelectedIds(new Set())
     setActiveId(null)
+  }
+
+  // Page nav clamps the inspector to the new page's first row so the active
+  // event is always one the admin can see in the list. selectedIds are left
+  // untouched — checkbox selections are id-keyed and survive paging.
+  const handlePageChange = (nextPage: number) => {
+    setPage(nextPage)
+    const nextPager = derivePagination({
+      page: nextPage,
+      pageSize,
+      total: visibleEvents.length,
+    })
+    const nextFirst = visibleEvents.slice(
+      nextPager.offset,
+      nextPager.offset + nextPager.limit,
+    )[0]
+    setActiveId(nextFirst?.id ?? null)
+  }
+
+  const handlePageSizeChange = (nextSize: number) => {
+    setPageSize(nextSize)
+    setPage(1)
+    setActiveId(visibleEvents.slice(0, nextSize)[0]?.id ?? null)
+  }
+
+  // A filter change re-slices the dataset: reset to page 1, drop the id-keyed
+  // checkbox selection (it can't span a re-filtered set), and land the
+  // inspector on the new page 1's first row.
+  const handleToggleHideNonConcert = () => {
+    const next = !hideNonConcert
+    setHideNonConcert(next)
+    setPage(1)
+    setSelectedIds(new Set())
+    const nextVisible = (
+      next
+        ? events.filter(
+            (ev) =>
+              !ev.genre?.some((tag) =>
+                tag.toLowerCase().includes('non-concert'),
+              ),
+          )
+        : events
+    ).filter((ev) => !pendingApprovalIds.has(ev.id))
+    setActiveId(nextVisible[0]?.id ?? null)
   }
 
   if (events.length === 0) {
@@ -206,17 +290,10 @@ export const EventFlagsSection = ({
     )
   }
 
-  const visibleEvents = (
-    hideNonConcert
-      ? events.filter(
-          (ev) =>
-            !ev.genre?.some((tag) => tag.toLowerCase().includes('non-concert')),
-        )
-      : events
-  ).filter((ev) => !pendingApprovalIds.has(ev.id))
-
+  // Select-all is scoped to the current page — the checkbox reflects whether
+  // every visible row is selected, not the whole (possibly multi-page) set.
   const allSelected =
-    visibleEvents.length > 0 && selectedIds.size === visibleEvents.length
+    pagedEvents.length > 0 && pagedEvents.every((ev) => selectedIds.has(ev.id))
 
   const panelTitle = (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -266,7 +343,7 @@ export const EventFlagsSection = ({
         variant={hideNonConcert ? 'outline' : 'ghost'}
         size="sm"
         icon={Filter}
-        onClick={() => setHideNonConcert((prev) => !prev)}
+        onClick={handleToggleHideNonConcert}
       >
         {ADMIN_COPY.review.eventFlags.hideNonConcert}
       </AdminButton>
@@ -286,7 +363,7 @@ export const EventFlagsSection = ({
       >
         {/* Left: scrollable list */}
         <div style={{ overflowY: 'auto' }}>
-          {visibleEvents.map((ev) => (
+          {pagedEvents.map((ev) => (
             <EventFlagRow
               key={ev.id}
               event={ev}
@@ -302,13 +379,24 @@ export const EventFlagsSection = ({
 
         {/* Right: inspector */}
         <EventFlagInspector
-          event={visibleEvents.find((ev) => ev.id === activeId) ?? null}
+          event={pagedEvents.find((ev) => ev.id === activeId) ?? null}
           onApprove={handleApprove}
           onReject={handleReject}
           onClose={() => setActiveId(null)}
           onEdit={onEdit}
         />
       </div>
+
+      {(visibleEvents.length > pageSize || page > 1) && (
+        <Pagination
+          page={page}
+          pageSize={pageSize}
+          total={visibleEvents.length}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          itemLabel="flags"
+        />
+      )}
 
       {/* Bulk action dock */}
       {selectedIds.size > 0 && (
