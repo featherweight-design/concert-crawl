@@ -16,6 +16,15 @@ export const formatEmailDate = (isoDate: string | null): string | null => {
   return denverDateFormatter.format(parsed)
 }
 
+// User-supplied labels (e.g. gifter names) can carry newlines/control chars
+// that spoof extra lines in the plain-text rendering — collapse them once so
+// both HTML and text use the same clean value.
+export const sanitizeInlineText = (value: string): string =>
+  value
+    .replace(/[\p{Cc}\p{Cf}]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
 // Read at call time (not module load) — same convention as layout.ts, so
 // staging/local emails never link prod.
 export const planPageUrl = (): string =>

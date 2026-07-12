@@ -10,6 +10,7 @@ import {
 } from '../palette.js'
 import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
 import { planPageUrl } from './format.js'
+import { PREMIUM_UNLOCKS } from './unlocks.js'
 
 type PaidTier = EmailTemplateVars['welcome_paid']['tier']
 
@@ -22,13 +23,6 @@ interface TierCopy {
   unlocks: string[]
   outro: string
 }
-
-const PREMIUM_UNLOCKS = [
-  'Concert history — shows you attended',
-  'Calendar export — Apple + Google',
-  'Follow artists + new-show alerts',
-  'Price-drop alerts + Spotify sync',
-]
 
 const TIER_COPY: Record<PaidTier, TierCopy> = {
   premium: {

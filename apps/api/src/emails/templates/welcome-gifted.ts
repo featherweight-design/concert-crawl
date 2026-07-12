@@ -1,29 +1,26 @@
-// welcome_gifted — lifetime-ish Premium comp (#781). Names the gifter, states
-// the end date when we have one, and sets expectations for the wrap-up moment
-// with a soft add-a-card CTA. Never a hard sell.
+// welcome_gifted — time-bounded Premium comp (#781): gift may carry an end
+// date, and the account wraps back to Free when it lapses. Names the gifter,
+// states the end date when we have one, and sets expectations for the wrap-up
+// moment with a soft add-a-card CTA. Never a hard sell.
 
 import { escapeHtml, renderEmailShell, renderTextShell } from '../layout.js'
 import { EMAIL_ACCENT_PREMIUM, EMAIL_TEXT_MUTED } from '../palette.js'
 import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
-import { formatEmailDate, planPageUrl } from './format.js'
+import { formatEmailDate, planPageUrl, sanitizeInlineText } from './format.js'
+import { PREMIUM_UNLOCKS } from './unlocks.js'
 
 const SUBJECT = "Someone gifted you Premium — it's live"
 const PREHEADER =
   'Every Premium unlock is yours — concert history, calendar export, alerts, the lot.'
-
-const PREMIUM_UNLOCKS = [
-  'Concert history — shows you attended',
-  'Calendar export — Apple + Google',
-  'Follow artists + new-show alerts',
-  'Price-drop alerts + Spotify sync',
-]
 
 const GIFTER_FALLBACK = 'a friend of the crawl'
 
 export const renderWelcomeGifted: TemplateRenderer<
   EmailTemplateVars['welcome_gifted']
 > = ({ gifterName, giftEndsAt }) => {
-  const gifterLabel = gifterName ?? GIFTER_FALLBACK
+  const sanitizedGifter =
+    gifterName === null ? '' : sanitizeInlineText(gifterName)
+  const gifterLabel = sanitizedGifter === '' ? GIFTER_FALLBACK : sanitizedGifter
   const giftEndDate = formatEmailDate(giftEndsAt)
 
   const dateSentence =
