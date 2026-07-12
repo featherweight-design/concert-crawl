@@ -174,7 +174,12 @@ export const ReviewPageClient = ({
       ? all
       : all.filter((event) => !pendingRemoveFlagIds.has(event.id))
   }, [eventFlagsQuery.data, initialEvents, pendingRemoveFlagIds])
-  const eventFlagsTotal = eventFlagsQuery.data?.total ?? events.length
+  // Before the paged query resolves, fall back to the SSR pending count (not
+  // the single-page `events.length`, which would undercount and hide the pager
+  // / show a wrong badge on first paint). The query `total` is authoritative
+  // once loaded.
+  const eventFlagsTotal =
+    eventFlagsQuery.data?.total ?? initialCounts.eventFlags
 
   // Missing: gated by tab activation so we don't fetch until the admin
   // looks. The mobile shell also nudges the gate via onEnterMissingTab.
