@@ -27,7 +27,7 @@
 
 ## PR 3 — Sweep Engine (repo)
 
-**Deliverable:** `pnpm --filter e2e audit -- --tags admin` (or `--tags consumer`, or omit for full sweep) captures full-page screenshots + DOM-heuristic JSON for every (route × viewport × state) combination the tag filter selects. Output lands under `apps/e2e/audit-output/<run-id>/`.
+**Deliverable:** `pnpm --filter e2e audit -- --tags=admin` (or `--tags=consumer`, or omit for full sweep) captures full-page screenshots + DOM-heuristic JSON for every (route × viewport × state) combination the tag filter selects. Output lands under `apps/e2e/audit-output/<run-id>/`. Use the equals form (`--tags=…`) consistently — the CLI parser in Task 4 splits on `=`.
 
 ### Task 1: Manifest schema + types
 
@@ -397,7 +397,7 @@ git commit -m "feat(audit): sweep runner — viewport matrix, interactions, heur
 **Interfaces:**
 
 - Produces:
-  - `pnpm --filter e2e audit -- --tags admin` runs `tsx src/audit/sweep.ts --tags=admin`.
+  - `pnpm --filter e2e audit -- --tags=admin` runs `tsx src/audit/sweep.ts --tags=admin`.
   - `prepareAuditAuth(role: 'user' | 'admin'): Promise<void>` — logs the appropriate fixture user in and writes `.auth/audit-<role>.json`. Fixture user IDs live in `scripts/seed-staging/fixture-users.ts` (from PR 2); credentials come from `E2E_AUDIT_USER_EMAIL` / `E2E_AUDIT_USER_PASSWORD` / `E2E_AUDIT_ADMIN_EMAIL` / `E2E_AUDIT_ADMIN_PASSWORD` env vars.
   - New `audit-auth-setup` invocation happens as the sweep runner's first step (once per run, before the route loop) — call `prepareAuditAuth('user')` and `prepareAuditAuth('admin')` upfront if any route requires them.
 
@@ -466,7 +466,7 @@ git commit -m "feat(audit): mark thin renders as insufficientData for triage ski
   - **Overview** — 1-paragraph what/why.
   - **When to Use** — bullet list of triggers (Hugh says "ui audit", "check for mobile breaks", "run the audit skill"). When NOT to use (dark-mode drift, UX vibes, prod scanning).
   - **Preflight (before every run)** — verify the checked-out repo has `apps/e2e/src/audit/manifest.ts`; run `git -C <repo> pull` if stale; confirm staging is populated (query the events count via the staging API or the DB — script to be added at authoring time). If insufficient, prompt Hugh to run `pnpm db:seed:staging`.
-  - **Run the sweep** — exact command: `pnpm --filter e2e audit -- --tags=<user-supplied or "">` from `/Users/huey/Projects/concert-crawl` (or the currently active worktree). Capture the run id from stdout.
+  - **Run the sweep** — exact command: `pnpm --filter e2e audit -- --tags=<user-supplied or "">` from `"${REPO:-$HOME/Projects/concert-crawl}"` (or the currently active worktree). Capture the run id from stdout.
   - **Vision triage** — the parallel-subagent dispatch shape. One subagent per (tag section) worth of screenshots; each is given `triage-brief-template.md` + a batch of screenshots + their heuristic JSON. The subagent returns findings in a strict JSON shape (spec §2c). Orchestrator concatenates.
   - **Dedupe** — within-run collapse (same root cause across viewports/states = one finding); cross-run dedupe against open `gh issue list --label ui-audit --state open --json title,body`.
   - **Report** — write `apps/e2e/audit-output/<run-id>/REPORT.md` following `report-template.md`, present a summary table in chat.
@@ -502,13 +502,17 @@ git commit -m "feat(audit): mark thin renders as insufficientData for triage ski
 Document in SKILL.md the exact `gh` + `git` sequence for uploading a screenshot such that its `raw.githubusercontent.com` URL resolves in an issue body:
 
 ```bash
+# Resolve repo path once — defaults to the standard checkout, overridable
+# per-machine via the REPO env var.
+REPO="${REPO:-$HOME/Projects/concert-crawl}"
+
 # One-time per environment: verify branch exists (create if not).
-git -C /Users/huey/Projects/concert-crawl branch --contains "$(git -C /Users/huey/Projects/concert-crawl rev-parse ui-audit-artifacts 2>/dev/null)" 2>/dev/null || (
-  git -C /Users/huey/Projects/concert-crawl fetch origin ui-audit-artifacts:ui-audit-artifacts 2>/dev/null || (
+git -C "$REPO" branch --contains "$(git -C "$REPO" rev-parse ui-audit-artifacts 2>/dev/null)" 2>/dev/null || (
+  git -C "$REPO" fetch origin ui-audit-artifacts:ui-audit-artifacts 2>/dev/null || (
     # Truly first-run: create orphan branch, empty commit.
-    git -C /Users/huey/Projects/concert-crawl worktree add --orphan .worktrees/ui-audit-artifacts ui-audit-artifacts
-    (cd /Users/huey/Projects/concert-crawl/.worktrees/ui-audit-artifacts && git rm -rf . 2>/dev/null; git commit --allow-empty -m "chore: init ui-audit-artifacts orphan branch")
-    (cd /Users/huey/Projects/concert-crawl/.worktrees/ui-audit-artifacts && git push -u origin ui-audit-artifacts)
+    git -C "$REPO" worktree add --orphan .worktrees/ui-audit-artifacts ui-audit-artifacts
+    (cd "$REPO/.worktrees/ui-audit-artifacts" && git rm -rf . 2>/dev/null; git commit --allow-empty -m "chore: init ui-audit-artifacts orphan branch")
+    (cd "$REPO/.worktrees/ui-audit-artifacts" && git push -u origin ui-audit-artifacts)
   )
 )
 

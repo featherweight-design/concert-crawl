@@ -115,30 +115,30 @@ describe('syncVenues', () => {
       id: 'v1',
       slug: 'ogden-theatre',
       name: 'Ogden Theatre',
-      websiteUrl: 'https://…' /* …rest… */,
+      websiteUrl: 'https://…',
     },
     {
       id: 'v2',
       slug: 'bluebird',
       name: 'Bluebird Theater',
-      websiteUrl: 'https://…' /* …rest… */,
+      websiteUrl: 'https://…',
     },
   ]
   const prod = {
     select: vi.fn(async (fn) => fn({ select: () => ({ from: () => rows }) })),
     close: vi.fn(),
   }
+  const stagingFor = (upsertSpy: ReturnType<typeof vi.fn>) => ({
+    insert: () => ({
+      values: (r: unknown) => ({ onConflictDoUpdate: () => upsertSpy(r) }),
+    }),
+  })
 
   it('upserts one row per prod venue', async () => {
     const upsertSpy = vi.fn().mockResolvedValue([])
-    const staging = {
-      insert: () => ({
-        values: (r) => ({ onConflictDoUpdate: () => upsertSpy(r) }),
-      }),
-    }
     const result = await syncVenues({
       prod: prod as any,
-      staging: staging as any,
+      staging: stagingFor(upsertSpy) as any,
       dryRun: false,
     })
     expect(upsertSpy).toHaveBeenCalledTimes(2)
@@ -147,19 +147,13 @@ describe('syncVenues', () => {
 
   it('makes no writes when dryRun is true', async () => {
     const upsertSpy = vi.fn()
-    const staging = {
-      insert: () => ({
-        values: () => ({ onConflictDoUpdate: () => upsertSpy() }),
-      }),
-    }
     const result = await syncVenues({
       prod: prod as any,
-      staging: staging as any,
+      staging: stagingFor(upsertSpy) as any,
       dryRun: true,
     })
     expect(upsertSpy).not.toHaveBeenCalled()
-    expect(result.scanned).toBe(2)
-    expect(result.upserted).toBe(0)
+    expect(result).toEqual({ scanned: 2, upserted: 0 })
   })
 })
 ```
@@ -598,8 +592,6 @@ git commit -m "feat(seed-staging): synthetic orchestrator + pnpm db:seed:staging
 
 ## Self-Review Checklist for PR 1 + PR 2
 
-- [ ] Spec §1a coverage: sync scope (venues/events/prices only), prod read-only enforcement, upsert on natural keys, rolling window, dry-run flag, write-host guard. All landed above.
-- [ ] Spec §1b coverage: fixture Clerk IDs, layout-hostile shapes across all six listed table families, delete-and-regenerate idempotency, seeded RNG determinism. All landed above.
-- [ ] Env/infra: no new env vars; uses `NEON_PROD_DIRECT` / `NEON_STAGING_DIRECT` from shell; never runs from CI. Documented in Global Constraints and each script header.
-- [ ] Follow-up issue: staging crawler cron retirement — captured in PR 1 close checklist.
-- [ ] Type-safety rule: production code stays free of `as` value casts; the read-only wrapper's structural type absence enforces the prod guarantee. The `as any` uses in the unit-test snippets fall under the mock-shim exemption spelled out in Global Constraints.
+- [ ] Spec §1a (sync scope, prod read-only, natural-key upsert, rolling window, dry-run, write-host guard) and §1b (fixture Clerk IDs, layout-hostile shapes across all six tables, delete-and-regenerate idempotency, seeded RNG) all covered by the tasks above.
+- [ ] No new env vars; uses `NEON_PROD_DIRECT` / `NEON_STAGING_DIRECT` from Hugh's shell; never runs from CI. Staging-crawler-cron retirement follow-up captured in PR 1 close checklist.
+- [ ] Production code stays free of `as` value casts (the read-only wrapper enforces the prod guarantee structurally); `as any` in unit-test mock shims is the exemption spelled out in Global Constraints.
