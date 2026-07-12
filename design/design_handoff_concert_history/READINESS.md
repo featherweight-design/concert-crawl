@@ -12,9 +12,9 @@ Hugh walked the three blockers and made calls. Recording them here so the plan P
 
 ### 1. 📦 Data-contract sequencing → **Option (a): add `attending_at`**
 
-- **Decision:** Add a nullable `attending_at timestamptz` column to the existing `user_events` table. Derive `going` at read-time from `attending_at != null`. The existing `status` enum stays watching-focused; the existing `userEventUniqueIdx` on `(userId, eventId)` is preserved.
+- **Decision:** Add a nullable `attending_at timestamptz` column to the existing `user_events` table (DB column is snake_case; TS/API field is `attendingAt` per repo naming convention). Derive `going` at read-time from `attending_at IS NOT NULL`. The existing `userEventUniqueIdx` on `(userId, eventId)` is preserved.
 - **Why:** Keeps the schema flat, avoids a new join table, and matches the memory rule — Watching ≠ Attending is a *field on the same row*, not a separate concept. Retroactive "I went, actually" writes `attending_at = now()` from the settings micro-action later.
-- **Impact on plan PR:** Migration is a single `ADD COLUMN` (expand-only, safe). API surface adds `attending_at: string | null` to `UserEvent`. The handoff's `goingMarkedAt` prop maps to `attending_at` — no drawing changes required.
+- **Impact on plan PR:** Migration is a single `ADD COLUMN` (expand-only, safe). API surface adds `attendingAt: string | null` to `UserEvent`; the handoff's `goingMarkedAt` prop maps to `attendingAt` — no drawing changes required. The plan should also lock the write path: new Going commitments only set `attending_at`; `status = 'going'` is not written going forward (existing `'going'` values stay in the enum for backfill/rollback, and the plan's contract phase will migrate them into `attending_at` and drop the value from writes).
 
 ### 2. 💳 Supporter tier → **already resolved via monetization eng infra spec (PR #878)**
 
@@ -23,12 +23,16 @@ Hugh walked the three blockers and made calls. Recording them here so the plan P
 
 ### 3. 🎫 Passport scope → **moves to shareable_cards handoff**
 
-- **Decision:** Passport card (compact 320×500 + share 1080×1080) is out of scope for this build. Concert History ships with the `<PassportTeaser>` teaser link only — a small "See your Passport →" affordance at the bottom of the History page. Full Passport card design + build move to `design/design_handoff_shareable_cards/`.
+- **Decision:** Passport card (compact 320×500 + share 1080×1080) is out of scope for this build. Concert History ships with the `<PassportTeaser>` teaser link only — a small "See your Passport →" affordance at the bottom of the History page. Full Passport card design + build moves to `design/design_handoff_shareable_cards/`.
 - **Why:** Passport is the marquee share artifact for the whole app, not just History. Owning it in shareable_cards keeps concert_history's scope tight (three primary surfaces + teaser), and lets Passport get the full share-card treatment (OG image gen, download path, dimensions parity with other cards) alongside its siblings.
 - **Impact on plan PR:** Drop `<PassportCard>` from the build inventory. Keep `<PassportTeaser>` (link only). shareable_cards handoff picks up the full-card work as a new item.
 - **Downstream:** shareable_cards Readiness Review (next in Yellow → Green sequence) now inherits Passport as an added scope item — its own audit will confirm whether Design has drawn Passport to shareable-cards' fidelity bar or needs a small extension.
 
 **Plan PR unblocked as of 2026-07-12.** All prerequisites in place; the plan can enumerate: (1) `attending_at` migration, (2) `user_events` API surface update, (3) three History surfaces + teaser (no full Passport), (4) Supporter tier gate on detail view.
+
+---
+
+> ⏳ **Everything below is the original 2026-06-26 Yellow audit, preserved as historical context.** Statements about schema state (e.g., `subscription_tier` lacking `supporter`/`founder`, `attending_at` not yet existing) reflect the codebase at audit time and have since been resolved — see the Post-audit resolutions section above for current state. Do not treat the following as a live description of the system.
 
 ---
 
