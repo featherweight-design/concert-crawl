@@ -26,6 +26,26 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.8.3-beta',
+    date: 'Jul 11, 2026',
+    headline:
+      'Change your plan, cancel, or come back — all without leaving Settings.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Manage subscription grew up — one sheet now handles changing plans, updating your card, and cancelling, with a clear read on what happens and when.',
+      },
+      {
+        kind: 'added',
+        text: 'Switching tiers shows the real math before you commit — upgrades bill the prorated difference today, downgrades bank the credit toward next month.',
+      },
+      {
+        kind: 'added',
+        text: 'Cancelled but changed your mind? Resubscribe with one tap any time before your paid days run out — no new checkout, nothing lost.',
+      },
+    ],
+  },
+  {
     version: 'v0.8.2-beta',
     date: 'Jul 11, 2026',
     headline: 'Trials end. We’ll say so — once — and get out of the way.',

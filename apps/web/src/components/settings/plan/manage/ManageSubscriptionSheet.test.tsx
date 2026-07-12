@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 // Manage-subscription sheet internals (PR 4.5, #780): surface routing
-// (manage → cancel/downgrade/upgrade, founder → tier picker), tier-gated
+// (manage → cancel/downgrade/upgrade, founder → downgrade), tier-gated
 // cancel retention, proration previews, lifecycle mutations + plan-state
 // refresh, ChangesDisclosure, and the LifecycleSurface dismissal contract.
 // Panel-level wiring (which card CTA opens this sheet) lives in

@@ -35,8 +35,8 @@ const LIVE_SUBSCRIPTION_STATUSES: readonly string[] = [
 
 // Founder is claim-only (spec §1.4) — never a change-tier *target*. It IS a
 // valid *source*: #780 decision 6 routes founder's cancel retention and
-// "Change plan" into the Supporter downgrade, and the confirm copy warns the
-// grandfathered seat is forfeited, so the switch is never silent.
+// "Change plan" into the Supporter downgrade confirm flow, so the switch is
+// always an explicit confirmation, never silent.
 export type SwitchableTier = 'supporter' | 'premium'
 export type ChangeSourceTier = SwitchableTier | 'founder'
 

@@ -1,9 +1,9 @@
 'use client'
 
 // #780 Premium → Supporter downgrade confirmation (design table
-// lifecycle-flows.md). Single shape — only Premium reaches this surface
-// (Founder is claim-only and never a change-tier source; the API 409s it),
-// so the "Switch · Premium → Supporter" copy stays hardcoded verbatim.
+// lifecycle-flows.md). Single shape per the design — Premium's "Change plan"
+// and Founder's retention path (#780 decision 6) both land here, so the
+// "Switch · Premium → Supporter" copy stays hardcoded verbatim.
 // creditText is the live proration preview; the design defines no loading
 // state, so a quiet placeholder holds the slot while it lands.
 
