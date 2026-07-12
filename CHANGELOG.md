@@ -1,3 +1,18 @@
+# [1.104.0](https://github.com/HartiganHM/concert-crawl/compare/v1.103.0...v1.104.0) (2026-07-12)
+
+
+### Bug Fixes
+
+* **api:** copilot r1 — escape preheader, clerk key guard, skip receipt on missing timestamp ([28e153c](https://github.com/HartiganHM/concert-crawl/commit/28e153c38145bff8be13e67bdd6c81092f0b4531))
+* **api:** copilot r2 — env-derived email urls via allowed_origin, drop dead catch ([6fb5c34](https://github.com/HartiganHM/concert-crawl/commit/6fb5c34e18ff713756594543b95818fef11894cb))
+* **api:** copilot r3 — kill-switch flips pre-existing failed claim to suppressed ([408c703](https://github.com/HartiganHM/concert-crawl/commit/408c703757a93aefa852a6834556b6819d9aef77))
+* **api:** copilot r4 — disambiguate no-email-queued warn by billing-reason branch ([a5dcbc6](https://github.com/HartiganHM/concert-crawl/commit/a5dcbc6c3134da559ed03d4183e3d587968a2ce6))
+
+
+### Features
+
+* **api:** transactional email send pipeline + webhook trigger scaffolding ([12f8d5d](https://github.com/HartiganHM/concert-crawl/commit/12f8d5d3f66800e1cd699866b73454f0f5c7c14e))
+
 # [1.103.0](https://github.com/HartiganHM/concert-crawl/compare/v1.102.0...v1.103.0) (2026-07-12)
 
 
