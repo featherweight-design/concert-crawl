@@ -27,7 +27,7 @@
 
 ## PR 3 — Sweep Engine (repo)
 
-**Deliverable:** `pnpm --filter e2e audit -- --tags=admin` (or `--tags=consumer`, or omit for full sweep) captures full-page screenshots + DOM-heuristic JSON for every (route × viewport × state) combination the tag filter selects. Output lands under `apps/e2e/audit-output/<run-id>/`. Use the equals form (`--tags=…`) consistently — the CLI parser in Task 4 splits on `=`.
+**Deliverable:** `pnpm --filter e2e audit -- --tags=admin` (or `--tags=consumer`, or omit for full sweep) captures full-page screenshots + DOM-heuristic JSON for every (route × viewport × state) combination the tag filter selects. Output lands under `apps/e2e/audit-output/<run-id>/`. The CLI parser accepts both forms — `--tags=admin,consumer` (equals) and `--tags admin,consumer` (space-separated) — so both this deliverable and the spec's example (`--tags admin`) work. Empty `--tags=` is treated as "no tags supplied" (full sweep) — never as a single empty tag.
 
 ### Task 1: Manifest schema + types
 
@@ -518,7 +518,7 @@ git commit -m "feat(audit): mark thin renders as insufficientData for triage ski
   - **Overview** — 1-paragraph what/why.
   - **When to Use** — bullet list of triggers (Hugh says "ui audit", "check for mobile breaks", "run the audit skill"). When NOT to use (dark-mode drift, UX vibes, prod scanning).
   - **Preflight (before every run)** — verify the checked-out repo has `apps/e2e/src/audit/manifest.ts`; run `git -C <repo> pull` if stale; confirm staging is populated (query the events count via the staging API or the DB — script to be added at authoring time). If insufficient, prompt Hugh to run `pnpm db:seed:staging`.
-  - **Run the sweep** — exact command: `pnpm --filter e2e audit -- --tags=<user-supplied or "">` from `"${REPO:-$HOME/Projects/concert-crawl}"` (or the currently active worktree). Capture the run id from stdout.
+  - **Run the sweep** — exact commands from `"${REPO:-$HOME/Projects/concert-crawl}"` (or the currently active worktree): tag-scoped `pnpm --filter e2e audit -- --tags=<user-supplied>` when the user supplied tags; full-sweep `pnpm --filter e2e audit` (NO `--tags` flag) otherwise. Never send an empty `--tags=` — that used to parse as `[""]` and filter out everything. Capture the run id from stdout.
   - **Vision triage** — the parallel-subagent dispatch shape. One subagent per (tag section) worth of screenshots; each is given `triage-brief-template.md` + a batch of screenshots + their heuristic JSON. The subagent returns findings in a strict JSON shape (spec §2c). Orchestrator concatenates.
   - **Dedupe** — within-run collapse (same root cause across viewports/states = one finding); cross-run dedupe against open `gh issue list --label ui-audit --state open --json title,body`.
   - **Report** — write `apps/e2e/audit-output/<run-id>/REPORT.md` following `report-template.md`, present a summary table in chat.
@@ -558,23 +558,30 @@ Document in SKILL.md the exact `gh` + `git` sequence for uploading a screenshot 
 # per-machine via the REPO env var.
 REPO="${REPO:-$HOME/Projects/concert-crawl}"
 
-# One-time per environment: verify branch exists (create if not). The
-# creation path uses a two-step add-worktree-then-orphan pattern that
-# works on any Git version — it does NOT rely on `git worktree add
-# --orphan`, which only exists in Git ≥ 2.42.
-git -C "$REPO" fetch origin ui-audit-artifacts:ui-audit-artifacts 2>/dev/null || (
-  # Truly first-run: land a temp worktree on any branch, orphan-checkout
-  # inside it, commit empty, push, then clean up the temp branch.
-  git -C "$REPO" worktree add -b ui-audit-artifacts-init .worktrees/ui-audit-artifacts HEAD
-  (
-    cd "$REPO/.worktrees/ui-audit-artifacts"
-    git checkout --orphan ui-audit-artifacts
-    git rm -rf . 2>/dev/null || true
-    git commit --allow-empty -m "chore: init ui-audit-artifacts orphan branch"
-    git push -u origin ui-audit-artifacts
+# Step 1 — branch: make sure the local branch exists (fetch remote if
+# possible; otherwise create as an orphan via a two-step pattern that
+# works on any Git version, not just ≥ 2.42).
+if ! git -C "$REPO" show-ref --verify --quiet refs/heads/ui-audit-artifacts; then
+  git -C "$REPO" fetch origin ui-audit-artifacts:ui-audit-artifacts 2>/dev/null || (
+    git -C "$REPO" worktree add -b ui-audit-artifacts-init .worktrees/ui-audit-artifacts HEAD
+    (
+      cd "$REPO/.worktrees/ui-audit-artifacts"
+      git checkout --orphan ui-audit-artifacts
+      git rm -rf . 2>/dev/null || true
+      git commit --allow-empty -m "chore: init ui-audit-artifacts orphan branch"
+      git push -u origin ui-audit-artifacts
+    )
+    git -C "$REPO" worktree remove --force .worktrees/ui-audit-artifacts 2>/dev/null || true
+    git -C "$REPO" branch -D ui-audit-artifacts-init
   )
-  git -C "$REPO" branch -D ui-audit-artifacts-init
-)
+fi
+
+# Step 2 — worktree: always ensure a worktree at .worktrees/ui-audit-artifacts.
+# The first-run path removed the temp worktree above (branch reassigned mid-flight),
+# and on machines where the remote branch already existed we never made one.
+if ! git -C "$REPO" worktree list --porcelain | grep -q "$REPO/.worktrees/ui-audit-artifacts"; then
+  git -C "$REPO" worktree add .worktrees/ui-audit-artifacts ui-audit-artifacts
+fi
 
 # Per approved-finding upload — copies the screenshot into the orphan
 # worktree, commits, pushes. URL becomes:

@@ -28,6 +28,8 @@
 
 **Deliverable:** `pnpm db:seed:staging:sync` (add `-- --dry-run` for a preview) copies venues, events (within a rolling window: past 30 days → all future), and venue/vendor-sourced price retrieval log rows from prod to staging, idempotently. The script name is a root-level entry wired into `package.json` in Task 5 below.
 
+**Deviation from spec §1a (documented, intentional):** the spec's FK order `venues → artists → events → event-artists → prices` reflects an assumed schema that does not exist. There is no `artists` table and no `event_artists` join table in `packages/db/src/schema/` — artist is a denormalized `text` column on `events` (`packages/db/src/schema/events.ts:54`), and follows live in `user_artist_follows` (a user-facing social table, not a crawler-populated one). The plan therefore syncs `venues → events → price_retrieval_log`; artist strings ride along as event columns. This deviation follows KISS-before-new-columns (memory:feedback_kiss_before_new_columns): use the existing schema; if we ever de-normalize artists into their own table, extend this sync then.
+
 ### Task 1: Read-only prod client wrapper
 
 **Files:**
