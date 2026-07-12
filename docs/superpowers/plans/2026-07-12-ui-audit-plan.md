@@ -473,7 +473,7 @@ git commit -m "feat(audit): pnpm --filter e2e audit wiring + audit-scoped auth s
 
 - [ ] **Step 1: Extend `HeuristicSnapshot` and `collectHeuristics`** to include `contentDensity: { mainChildren: number }`, add a heuristic test for the count, then extend `runSweep` to compute `insufficientData = snapshot.contentDensity.mainChildren < 5` and store it in the JSON output.
 
-- [ ] **Step 3: Commit.**
+- [ ] **Step 2: Commit.**
 
 ```bash
 git add apps/e2e/src/audit/heuristics.ts apps/e2e/src/audit/heuristics.test.ts apps/e2e/src/audit/sweep.ts
