@@ -106,7 +106,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 |---|---|---|
 | 2026-07-12 | — | Tracker refresh #4 — concert_history flipped 🟡 → 🟢 (this PR) |
 | 2026-07-12 | — | `design/design_handoff_concert_history/READINESS.md` addendum merged (PR #916) — 🟢 Green post-addendum verdict; all three Yellow blockers resolved (attending_at schema, Supporter tier via #878, Passport moved to shareable_cards) |
-| 2026-07-11 | — | This tracker doc refreshed post-#903 audit (PR TBD — this PR) |
+| 2026-07-11 | — | Tracker refresh post-#903 audit (PR #904) |
 | 2026-07-11 | — | `design/design_handoff_supporting_artists_line/READINESS.md` merged (PR #903) — 🟢 Green verdict, one-pass, ready for eng-planning. Handoff files committed alongside verdict. |
 | 2026-07-11 | — | Session pickup memory `project_pickup_2026_07_11_design_track.md` written for continuity |
 | 2026-07-11 | — | Tracker refresh #3 (post-#894 audit + #893 Spotify brief, PR #899) |
