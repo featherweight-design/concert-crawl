@@ -130,6 +130,32 @@ describe('EventFlagsSection pagination (#694)', () => {
     expect(screen.queryByText('selected')).toBeNull()
   })
 
+  it('keeps the inspector on a visible row when approving the last row of a page', () => {
+    // 21 flags → page 2 holds a single row. Approving that lone row must land
+    // the inspector on a still-visible flag (the new last row on page 1),
+    // never emptying out while 20 flags remain. Regression for #915 review.
+    render(
+      <EventFlagsSection
+        events={buildConcertFlags(21)}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Page 2' }))
+    expect(inspectorTitle()).toBe('Show 20')
+
+    // Approve the active (only) row on page 2. Both the row and the inspector
+    // expose an exact "Approve" button for it; either fires handleApprove.
+    const [approveBtn] = screen.getAllByRole('button', { name: 'Approve' })
+    if (!approveBtn) throw new Error('expected an approve button to render')
+    fireEvent.click(approveBtn)
+
+    // Inspector clamps back to a visible row rather than the empty state.
+    expect(screen.queryByText('Select an event to inspect')).toBeNull()
+    expect(inspectorTitle()).toBe('Show 19')
+  })
+
   it('shows the inspector empty state when the filtered page has no rows', () => {
     const nonConcert = Array.from({ length: 6 }).map((_, idx) =>
       buildFlag({

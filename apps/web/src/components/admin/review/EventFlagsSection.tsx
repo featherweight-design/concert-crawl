@@ -88,6 +88,27 @@ export const EventFlagsSection = ({
     pager.offset + pager.limit,
   )
 
+  // After removing rows (approve/reject/bulk-approve), anchor the inspector to
+  // the position the first removed row held in the *full* visible list, then
+  // clamp into the post-removal range. This advances to the row that slides
+  // into its place (or the new last row) and follows it onto whichever page it
+  // now lives — so the inspector never empties while visible flags remain.
+  const resolveActiveAfterRemoval = (
+    removedIds: Set<string>,
+  ): { activeId: string | null; page: number } => {
+    const firstRemovedIndex = visibleEvents.findIndex((ev) =>
+      removedIds.has(ev.id),
+    )
+    const remaining = visibleEvents.filter((ev) => !removedIds.has(ev.id))
+    if (remaining.length === 0) return { activeId: null, page: 1 }
+    const anchor = firstRemovedIndex < 0 ? 0 : firstRemovedIndex
+    const nextIndex = Math.min(anchor, remaining.length - 1)
+    return {
+      activeId: remaining[nextIndex]?.id ?? null,
+      page: Math.floor(nextIndex / pageSize) + 1,
+    }
+  }
+
   const handleSelect = (id: string, checked: boolean) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
@@ -124,8 +145,9 @@ export const EventFlagsSection = ({
       return next
     })
     if (activeId === id) {
-      const remaining = pagedEvents.filter((ev) => ev.id !== id)
-      setActiveId(remaining[0]?.id ?? null)
+      const next = resolveActiveAfterRemoval(new Set([id]))
+      setActiveId(next.activeId)
+      setPage(next.page)
     }
   }
 
@@ -137,8 +159,9 @@ export const EventFlagsSection = ({
       return next
     })
     if (activeId === id) {
-      const remaining = pagedEvents.filter((ev) => ev.id !== id)
-      setActiveId(remaining[0]?.id ?? null)
+      const next = resolveActiveAfterRemoval(new Set([id]))
+      setActiveId(next.activeId)
+      setPage(next.page)
     }
   }
 
@@ -148,11 +171,11 @@ export const EventFlagsSection = ({
 
     setShowBulkModal(false)
     setSelectedIds(new Set())
-    setActiveId((prev) =>
-      prev && approving.has(prev)
-        ? (pagedEvents.find((ev) => !approving.has(ev.id))?.id ?? null)
-        : prev,
-    )
+    if (activeId && approving.has(activeId)) {
+      const next = resolveActiveAfterRemoval(approving)
+      setActiveId(next.activeId)
+      setPage(next.page)
+    }
     setPendingApprovalIds(approving)
 
     if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current)
