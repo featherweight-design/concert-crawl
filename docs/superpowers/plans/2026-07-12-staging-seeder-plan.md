@@ -17,7 +17,7 @@
 - Determinism is required for synthetic data. All RNG goes through a seeded PRNG so two runs produce identical rows.
 - `sync-prod-public-data.ts` must refuse to run if the resolved _write_-side host matches the prod host (belt-and-braces against swapped env vars).
 - Follow the existing `scripts/<date>-<name>.ts` + `<name>-helpers.ts` + `<name>.test.ts` pattern; tests run under `pnpm test:scripts` via `vitest.scripts.config.ts`.
-- Type safety: no `as` casts. Use Zod `safeParse` for JSON.parse-like boundaries; use type guards for narrowing.
+- Type safety in shipped code: no `as` value casts. Use Zod `safeParse` for JSON.parse-like boundaries; use type guards for narrowing. Exceptions: `as const` for readonly literal narrowing is fine (it prevents widening, it isn't a value cast); and unit-test mocks may use `as any` where reconstructing a full Drizzle client type would dwarf the test itself — the runtime spy shape is what the test actually asserts against.
 - Follow-up (not in this plan, open at implementation time): a GH issue to delete the paused staging crawler Render cron once prod→staging sync ships. Add label `type: chore`, `source: internal`, `phase: beta`, `priority: normal`.
 
 **Reference spec:** `docs/superpowers/specs/2026-07-11-ui-audit-staging-seeder-design.md` §1a, §1b, and "Env/infra notes" / "Guard rails".
@@ -602,4 +602,4 @@ git commit -m "feat(seed-staging): synthetic orchestrator + pnpm db:seed:staging
 - [ ] Spec §1b coverage: fixture Clerk IDs, layout-hostile shapes across all six listed table families, delete-and-regenerate idempotency, seeded RNG determinism. All landed above.
 - [ ] Env/infra: no new env vars; uses `NEON_PROD_DIRECT` / `NEON_STAGING_DIRECT` from shell; never runs from CI. Documented in Global Constraints and each script header.
 - [ ] Follow-up issue: staging crawler cron retirement — captured in PR 1 close checklist.
-- [ ] Type-safety rule: no `as` casts required in this plan; the read-only wrapper's structural type absence enforces the guarantee.
+- [ ] Type-safety rule: production code stays free of `as` value casts; the read-only wrapper's structural type absence enforces the prod guarantee. The `as any` uses in the unit-test snippets fall under the mock-shim exemption spelled out in Global Constraints.

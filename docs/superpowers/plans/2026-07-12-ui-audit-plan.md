@@ -17,7 +17,7 @@
 - All GitHub issues opened by the skill carry the `ui-audit` label so cross-run dedupe works. The label is created once at the start of PR 4's calibration run.
 - No CI/cron scheduling in v1. Sweep runs on demand only.
 - The audit-output directory is gitignored. Screenshots that make it into issues live on the orphan `ui-audit-artifacts` branch, never on `main`.
-- Type safety: no `as` casts. Manifest and heuristic types are Zod-parsed where they cross module boundaries.
+- Type safety in shipped code: no `as` value casts. Manifest and heuristic types are Zod-parsed where they cross module boundaries. Exceptions: `as const` for readonly literal narrowing is fine (compile-time widening prevention, not a value cast); and unit-test mocks may use `as any` where reconstructing Playwright/Drizzle types would dwarf the test.
 
 **Reference spec:** `docs/superpowers/specs/2026-07-11-ui-audit-staging-seeder-design.md` §2a–§2d, "Failure handling", "Testing", and "Build sequence".
 
@@ -212,7 +212,7 @@ describe('collectHeuristicsScript', () => {
 })
 ```
 
-- [ ] **Step 2: Implement `collectHeuristicsScript`** as a function that runs entirely inside the page (no imports). The function reads `document.documentElement.scrollWidth > document.documentElement.clientWidth`, enumerates elements via `document.querySelectorAll('*')` and skips those with `display: none`, computes `getBoundingClientRect()` for each, and returns the four arrays. For images: `(img as HTMLImageElement).naturalWidth === 0` OR `img.getAttribute('data-natural-width') === '0'` (the data-* check is only used to make tests deterministic under happy-dom; documented inline).
+- [ ] **Step 2: Implement `collectHeuristicsScript`** as a function that runs entirely inside the page (no imports). The function reads `document.documentElement.scrollWidth > document.documentElement.clientWidth`, enumerates elements via `document.querySelectorAll('*')` and skips those with `display: none`, computes `getBoundingClientRect()` for each, and returns the four arrays. For images: narrow with `img instanceof HTMLImageElement && img.naturalWidth === 0`, OR `img.getAttribute('data-natural-width') === '0'` (the data-* check is only used to make tests deterministic under happy-dom; documented inline).
 
 - [ ] **Step 3: Implement `collectHeuristics(page, viewportWidthPx)`** — `await page.evaluate(new Function(\`return (\${collectHeuristicsScript})(\${viewportWidthPx})\`))`.
 
@@ -438,7 +438,7 @@ git commit -m "feat(audit): mark thin renders as insufficientData for triage ski
 **PR-close steps for PR 3:**
 
 - [ ] All `pnpm test:scripts` (root) + `pnpm --filter e2e typecheck` pass.
-- [ ] One smoke sweep run (tag `admin`, staging) produces the expected number of PNG+JSON pairs (7 admin routes × 3 viewports × 1–2 states ≈ 21–42 captures) with no unhandled errors.
+- [ ] One smoke sweep run (tag `admin`, staging) produces the expected number of PNG+JSON pairs — 3 admin-tagged routes (`admin-feedback`, `admin-contests`, `admin-events`) × 3 viewports × 1–2 states each (only `admin-feedback` declares an interaction) = 12 captures — with no unhandled errors.
 - [ ] Open PR titled `feat(audit): manifest + Playwright sweep engine` linking spec + PR 1 / PR 2.
 
 ---
@@ -562,4 +562,4 @@ Verify: `gh label list --repo HartiganHM/concert-crawl | grep ui-audit`.
 - [ ] Spec §2d coverage: report file, Hugh approval gate, orphan `ui-audit-artifacts` branch, `gh` issue creation with label bundle including new `ui-audit` label. Landed as PR 4 Tasks 1–4.
 - [ ] Failure handling: load/auth failures recorded as sweep errors, interaction failures capture as-is + flag stale, empty renders tagged `insufficientData`. Landed across PR 3 Tasks 4 + 6.
 - [ ] Testing: manifest validator, DOM heuristics against fixtures, sweep helpers pure-unit-tested, smoke sweep against known-good route. Landed as PR 3 Tasks 1, 3, 4, and PR-close steps.
-- [ ] Type-safety rule: no `as` casts required. Manifest goes through Zod; heuristic types stay internal to the audit module.
+- [ ] Type-safety rule: production code stays free of `as` value casts (heuristics narrows images with `instanceof HTMLImageElement`; manifest goes through Zod). `as const` in interaction handlers and unit-test `as any` mock shims are called out as exemptions in Global Constraints.
