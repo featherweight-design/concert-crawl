@@ -306,44 +306,54 @@ const revokeExpiredGift = async (input: {
   userId: string
   expiresAt: Date
 }): Promise<void> => {
-  await db
-    .update(giftedComps)
-    .set({ revokedAt: new Date() })
-    .where(and(eq(giftedComps.id, input.giftId), sql`revoked_at is null`))
-
-  await repairGiftMirror(input.userId)
-
-  // Event-existence guard: at most one gift_revoked per gift (idempotent
-  // re-run). Matches the metadata-probe pattern in founder-seats.ts.
-  const [existingEvent] = await db
-    .select({ id: subscriptionEvents.id })
-    .from(subscriptionEvents)
-    .where(
-      and(
-        eq(subscriptionEvents.type, 'gift_revoked'),
-        sql`${subscriptionEvents.metadata}->>'giftId' = ${input.giftId}`,
-      ),
-    )
-    .limit(1)
-  if (existingEvent === undefined) {
-    await db.insert(subscriptionEvents).values({
-      userId: input.userId,
-      type: 'gift_revoked',
-      metadata: { giftId: input.giftId, reason: 'expired' },
-    })
-  }
-
-  // Start the 90-day clock at expiry (§5.3 clock-start rule for gift expiry).
+  // Atomic: the revoke UPDATE, the gift_revoked event, and the 90-day clock
+  // must land together. `runGiftEndingNotices` filters on `revoked_at is null`,
+  // so if the revoke committed but the event/clock did not, the gift would be
+  // skipped on every future run and the clock would be permanently missed.
+  // The transaction makes a partial failure roll the revoke back so the next
+  // run retries the whole unit.
   const premiumDataExpiresAt = new Date(
     input.expiresAt.getTime() + NINETY_DAYS_MS,
   )
-  await db
-    .insert(userBilling)
-    .values({ userId: input.userId, premiumDataExpiresAt })
-    .onConflictDoUpdate({
-      target: userBilling.userId,
-      set: { premiumDataExpiresAt, updatedAt: new Date() },
-    })
+  await db.transaction(async (tx) => {
+    await tx
+      .update(giftedComps)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(giftedComps.id, input.giftId), sql`revoked_at is null`))
+
+    // Event-existence guard: at most one gift_revoked per gift (idempotent
+    // re-run). Matches the metadata-probe pattern in founder-seats.ts.
+    const [existingEvent] = await tx
+      .select({ id: subscriptionEvents.id })
+      .from(subscriptionEvents)
+      .where(
+        and(
+          eq(subscriptionEvents.type, 'gift_revoked'),
+          sql`${subscriptionEvents.metadata}->>'giftId' = ${input.giftId}`,
+        ),
+      )
+      .limit(1)
+    if (existingEvent === undefined) {
+      await tx.insert(subscriptionEvents).values({
+        userId: input.userId,
+        type: 'gift_revoked',
+        metadata: { giftId: input.giftId, reason: 'expired' },
+      })
+    }
+
+    // Start the 90-day clock at expiry (§5.3 clock-start rule for gift expiry).
+    await tx
+      .insert(userBilling)
+      .values({ userId: input.userId, premiumDataExpiresAt })
+      .onConflictDoUpdate({
+        target: userBilling.userId,
+        set: { premiumDataExpiresAt, updatedAt: new Date() },
+      })
+  })
+
+  // Best-effort Clerk mirror repair AFTER the DB unit commits — it is an
+  // external call that self-heals on next read, so it stays outside the tx.
+  await repairGiftMirror(input.userId)
 }
 
 export const runGiftEndingNotices = async (now: Date): Promise<void> => {
@@ -737,48 +747,58 @@ export const runDunningFallbackSweep = async (
       // webhook was lost. Reconcile the mirror + write the missing events so
       // derivation falls through to free and the 90-day clock starts.
       if (liveStatus === 'canceled') {
-        await db
-          .update(subscriptions)
-          .set({ status: 'cancelled', updatedAt: new Date() })
-          .where(eq(subscriptions.userId, row.userId))
+        // Atomic: the status flip, the synthesized cancel_completed event, and
+        // the 90-day clock must land together. The outer scan matches on
+        // `status = 'past_due'`, so if the flip committed but the event/clock
+        // did not, this subscription would no longer be picked up and the
+        // missing writes would be permanently dropped. The transaction rolls
+        // the flip back on partial failure so the next run retries the unit.
+        await db.transaction(async (tx) => {
+          await tx
+            .update(subscriptions)
+            .set({ status: 'cancelled', updatedAt: new Date() })
+            .where(eq(subscriptions.userId, row.userId))
 
-        const [existing] = await db
-          .select({ id: subscriptionEvents.id })
-          .from(subscriptionEvents)
-          .where(
-            and(
-              eq(subscriptionEvents.type, 'cancel_completed'),
-              sql`${subscriptionEvents.metadata}->>'subscriptionId' = ${row.stripeSubscriptionId}`,
-            ),
-          )
-          .limit(1)
-        if (existing === undefined) {
-          await db.insert(subscriptionEvents).values({
-            userId: row.userId,
-            type: 'cancel_completed',
-            metadata: {
-              subscriptionId: row.stripeSubscriptionId,
-              tier: row.tier,
-              reconciledBy: 'billing-daily-fallback-sweep',
-            },
-          })
-        }
-
-        // Mirror handleSubscriptionDeleted: paid premium/founder tiers start the
-        // 90-day preserve-then-purge clock (#780 §5). Without this the lost
-        // webhook would leave premium_data_expires_at unset and the user would
-        // never become eligible for the §5.3 purge (task 5). Idempotent via
-        // onConflictDoUpdate, so a re-run does not extend the window.
-        if (cancellationStartsPurgeClock(row.tier)) {
-          const premiumDataExpiresAt = new Date(now.getTime() + NINETY_DAYS_MS)
-          await db
-            .insert(userBilling)
-            .values({ userId: row.userId, premiumDataExpiresAt })
-            .onConflictDoUpdate({
-              target: userBilling.userId,
-              set: { premiumDataExpiresAt, updatedAt: new Date() },
+          const [existing] = await tx
+            .select({ id: subscriptionEvents.id })
+            .from(subscriptionEvents)
+            .where(
+              and(
+                eq(subscriptionEvents.type, 'cancel_completed'),
+                sql`${subscriptionEvents.metadata}->>'subscriptionId' = ${row.stripeSubscriptionId}`,
+              ),
+            )
+            .limit(1)
+          if (existing === undefined) {
+            await tx.insert(subscriptionEvents).values({
+              userId: row.userId,
+              type: 'cancel_completed',
+              metadata: {
+                subscriptionId: row.stripeSubscriptionId,
+                tier: row.tier,
+                reconciledBy: 'billing-daily-fallback-sweep',
+              },
             })
-        }
+          }
+
+          // Mirror handleSubscriptionDeleted: paid premium/founder tiers start
+          // the 90-day preserve-then-purge clock (#780 §5). Without this the
+          // lost webhook would leave premium_data_expires_at unset and the user
+          // would never become eligible for the §5.3 purge (task 5). Idempotent
+          // via onConflictDoUpdate, so a re-run does not extend the window.
+          if (cancellationStartsPurgeClock(row.tier)) {
+            const premiumDataExpiresAt = new Date(
+              now.getTime() + NINETY_DAYS_MS,
+            )
+            await tx
+              .insert(userBilling)
+              .values({ userId: row.userId, premiumDataExpiresAt })
+              .onConflictDoUpdate({
+                target: userBilling.userId,
+                set: { premiumDataExpiresAt, updatedAt: new Date() },
+              })
+          }
+        })
         apiLogger.warn(
           { userId: row.userId, subscriptionId: row.stripeSubscriptionId },
           'billing-daily task6: reconciled lost subscription-deleted webhook — mirror set to cancelled',
