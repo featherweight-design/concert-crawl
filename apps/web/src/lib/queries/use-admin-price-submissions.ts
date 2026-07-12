@@ -17,7 +17,9 @@ export type PriceSubmissionStatus =
 export interface PriceSubmissionHistoryRow {
   id: string
   eventId: string
-  userId: string
+  // Nullable on the wire: anonymous submissions have no user_id (the column is
+  // nullable in packages/db). userDisplay/sort already treat null as anon.
+  userId: string | null
   priceMin: string | null
   priceMax: string | null
   status: PriceSubmissionStatus

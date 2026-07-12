@@ -199,6 +199,21 @@ describe('PricesSubmissionsClient', () => {
     ).toBeTruthy()
   })
 
+  it('renders anonymous for a submission with no user id', () => {
+    const anon = [row({ id: 'sub-anon', userId: null })]
+    mockUseAdminPriceSubmissions.mockReturnValue({
+      data: anon,
+      isFetching: false,
+    })
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={anon}
+        initialTotal={anon.length}
+      />,
+    )
+    expect(screen.getByText('anonymous')).toBeTruthy()
+  })
+
   it('PATCHes corroborated when a row is approved', async () => {
     renderClient(
       <PricesSubmissionsClient
