@@ -288,7 +288,7 @@ export const FounderWindowControl = ({
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {win.recentClaims.map((claim, idx) => (
               <li
-                key={`${claim.userId}-${claim.claimedAt}`}
+                key={`${claim.userId}-${claim.claimedAt}-${idx}`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',

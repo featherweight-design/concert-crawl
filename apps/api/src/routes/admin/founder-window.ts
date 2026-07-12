@@ -91,10 +91,11 @@ founderWindowAdminRouter.get('/', async (ctx) => {
   return ctx.json({ success: true, data })
 })
 
-// POST /open — the launch switch. Flips opens_at to NOW(); closes_at is a
-// generated column and follows automatically. opens_at is irreversible, so a
-// non-null value means the window has already been launched (it may now be
-// open OR closed). Refuse either way so a second click can't reset the clock.
+// POST /open — the launch switch. Stamps opens_at with the current
+// application timestamp; closes_at is a generated column and follows
+// automatically. opens_at is irreversible, so a non-null value means the
+// window has already been launched (it may now be open OR closed). Refuse
+// either way so a second click can't reset the clock.
 const ALREADY_OPENED = {
   success: false,
   error: 'The founder window has already been opened',
@@ -126,15 +127,18 @@ founderWindowAdminRouter.post('/open', async (ctx) => {
     return ctx.json(ALREADY_OPENED, 409)
   }
 
-  ctx.set('auditAction', 'founder_window.open')
-  ctx.set('auditTargetId', 'founder_window:1')
-  ctx.set('auditActorId', auth?.userId ?? 'unknown')
-  ctx.set('auditMeta', { opensAt: opensAt.toISOString() })
-
   const updated = await readFounderWindowRow()
   if (!updated) {
     return ctx.json({ success: false, error: 'Internal server error' }, 500)
   }
+
+  // Audit the stored timestamp (not the app-clock `opensAt` variable) so the
+  // audit entry matches the DB row and the response exactly.
+  const storedOpensAt = updated.opensAt ?? opensAt
+  ctx.set('auditAction', 'founder_window.open')
+  ctx.set('auditTargetId', 'founder_window:1')
+  ctx.set('auditActorId', auth?.userId ?? 'unknown')
+  ctx.set('auditMeta', { opensAt: storedOpensAt.toISOString() })
   const view = resolveFounderWindowView(updated, new Date())
   const data: AdminFounderWindow = {
     state: view.state,
