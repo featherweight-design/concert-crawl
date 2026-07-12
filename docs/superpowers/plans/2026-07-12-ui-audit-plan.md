@@ -251,9 +251,9 @@ git commit -m "feat(audit): DOM heuristics — overflow, offscreen, tap targets,
 - Consumes: `AuditManifest`, `AuditInteraction`, `collectHeuristics`, Playwright `Page`.
 - Produces:
   - `type SweepArgs = { tags?: ('consumer' | 'admin')[]; runId?: string }`
-  - `type SweepResult = { runId: string; captures: number; errors: { routeId: string; kind: 'load' | 'interaction' | 'auth'; message: string }[] }`
+  - `type SweepResult = { runId: string; captures: number; errors: { routeId?: string; kind: 'load' | 'interaction' | 'auth'; message: string }[] }` — `auth` errors are produced by the pre-loop `prepareAuditAuth('user'|'admin')` calls in Task 5 (missing creds / login failure); `routeId` is optional so pre-loop auth errors don't have to lie about a route.
   - `filterManifest(manifest: AuditManifest, tags?: readonly string[]): AuditManifest` — pure helper; if tags is empty/undefined returns full manifest, else keeps entries where any tag matches.
-  - `outputPathFor(runId: string, routeId: string, state: string, viewportLabel: string, ext: 'png' | 'json'): string` — pure helper. Returns e.g. `apps/e2e/audit-output/2026-07-12T18-04-11/admin-feedback__expand-first-card__390x844.png`.
+  - `outputPathFor(runId: string, routeId: string, state: string, viewportLabel: string, ext: 'png' | 'json'): string` — pure helper. Returns paths relative to the `apps/e2e` package root (that's the CWD when the sweep runs via `pnpm --filter e2e audit`), e.g. `audit-output/2026-07-12T18-04-11/admin-feedback__expand-first-card__390x844.png`. Do NOT prefix with `apps/e2e/` — the workspace already scopes CWD.
   - `runSweep(args: SweepArgs): Promise<SweepResult>` — the entry point.
 
 **Sweep matrix (per spec §2b):** viewports `{ label: '320x568', width: 320, height: 568 }`, `{ label: '390x844', width: 390, height: 844 }`, `{ label: '1440x900', width: 1440, height: 900 }`. Capture states = `default` (post-load) plus one capture per declared interaction.
@@ -303,7 +303,7 @@ describe('outputPathFor', () => {
         'png',
       ),
     ).toBe(
-      'apps/e2e/audit-output/2026-07-12T18-04-11/admin-feedback__expand-first-card__390x844.png',
+      'audit-output/2026-07-12T18-04-11/admin-feedback__expand-first-card__390x844.png',
     )
   })
 })

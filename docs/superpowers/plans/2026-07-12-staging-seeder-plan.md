@@ -342,8 +342,8 @@ git commit -m "feat(seed-staging): CLI entry with write-host guard and dry-run"
 
 **PR-close steps for PR 1 (do at end of PR 1 branch):**
 
-- [ ] Manual staging validation: `NEON_PROD_DIRECT=… NEON_STAGING_DIRECT=… pnpm db:seed:staging:sync --dry-run` — observe row counts printed, no writes.
-- [ ] Manual staging validation: same command without `--dry-run`; re-run and confirm counts are stable (idempotent).
+- [ ] Manual staging validation: `NEON_PROD_DIRECT=… NEON_STAGING_DIRECT=… pnpm db:seed:staging:sync -- --dry-run` — observe row counts printed, no writes. The `--` separator forwards `--dry-run` through pnpm to tsx (matches the Deliverable line above).
+- [ ] Manual staging validation: `pnpm db:seed:staging:sync` (no `-- --dry-run`); re-run and confirm counts are stable (idempotent).
 - [ ] Open a follow-up GH issue to delete the paused staging crawler Render cron. Title: `chore(infra): retire staging crawler cron — replaced by db:seed:staging:sync`. Labels: `type: chore,source: internal,phase: beta,priority: normal`.
 - [ ] Open PR titled `feat(seed-staging): prod→staging public-data sync` linking to spec.
 
