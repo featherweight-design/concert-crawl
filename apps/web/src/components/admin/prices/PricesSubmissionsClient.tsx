@@ -243,6 +243,12 @@ export const PricesSubmissionsClient = ({
   // the full set (SSR seeds the first page; initialTotal is the server count).
   const truncated = rows.length < initialTotal
 
+  // A PATCH failure (`error`) takes precedence over a background load
+  // failure — both need surfacing so a transient API error can't masquerade
+  // as a legitimate empty state (the SSR seed swallows the first-paint error).
+  const bannerMessage =
+    error ?? (submissionsQuery.isError ? COPY.loadError : null)
+
   const sectionHead = (
     <SectionHead
       eyebrow={COPY.eyebrow}
@@ -308,9 +314,12 @@ export const PricesSubmissionsClient = ({
       <button
         type="button"
         onClick={() => onSort(key)}
-        aria-label={COPY.sort.ariaLabel(label, active ? sortDir : 'asc')}
+        aria-label={COPY.sort.ariaLabel(label, active ? sortDir : null)}
         style={{
           all: 'unset',
+          // `all: unset` also wipes the UA focus ring; revert restores the
+          // browser's native :focus-visible outline for keyboard users.
+          outline: 'revert',
           cursor: 'pointer',
           display: 'inline-flex',
           alignItems: 'center',
@@ -351,8 +360,9 @@ export const PricesSubmissionsClient = ({
       {backLink}
       {sectionHead}
 
-      {error && (
+      {bannerMessage && (
         <div
+          role="alert"
           style={{
             padding: '10px 14px',
             borderRadius: 8,
@@ -364,7 +374,7 @@ export const PricesSubmissionsClient = ({
             fontFamily: "'Inter', sans-serif",
           }}
         >
-          {error}
+          {bannerMessage}
         </div>
       )}
 

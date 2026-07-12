@@ -1652,6 +1652,7 @@ export const ADMIN_COPY = {
     panelTitle: 'Submission history',
     countBadge: (count: number) => `${count} total`,
     empty: 'No price submissions yet.',
+    loadError: 'Couldn’t load submissions. Refresh to try again.',
     filterLabel: 'Status',
     filters: {
       all: 'All',
@@ -1671,10 +1672,12 @@ export const ADMIN_COPY = {
       date: 'Date',
       event: 'Event',
       user: 'User',
-      ariaLabel: (column: string, dir: 'asc' | 'desc') =>
-        `Sort by ${column}, currently ${
-          dir === 'asc' ? 'ascending' : 'descending'
-        }`,
+      ariaLabel: (column: string, dir: 'asc' | 'desc' | null) =>
+        dir === null
+          ? `Sort by ${column}`
+          : `Sort by ${column}, currently ${
+              dir === 'asc' ? 'ascending' : 'descending'
+            }`,
     },
     statusLabels: {
       pending: 'Pending',

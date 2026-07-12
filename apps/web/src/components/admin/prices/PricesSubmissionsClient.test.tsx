@@ -224,6 +224,21 @@ describe('PricesSubmissionsClient', () => {
     ).toBeTruthy()
   })
 
+  it('surfaces a load-error banner when the query fails', () => {
+    mockUseAdminPriceSubmissions.mockReturnValue({
+      data: [],
+      isFetching: false,
+      isError: true,
+    })
+    renderClient(
+      <PricesSubmissionsClient initialSubmissions={[]} initialTotal={0} />,
+    )
+    expect(screen.getByRole('alert')).toBeTruthy()
+    expect(
+      screen.getByText('Couldn’t load submissions. Refresh to try again.'),
+    ).toBeTruthy()
+  })
+
   it('renders the empty copy when there are no submissions', () => {
     mockUseAdminPriceSubmissions.mockReturnValue({
       data: [],
