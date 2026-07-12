@@ -1661,6 +1661,7 @@ export const ADMIN_COPY = {
       corroborated: 'Corroborated',
       disputed: 'Disputed',
       stale: 'Stale',
+      archived: 'Archived',
     },
     columns: {
       event: 'Event',

@@ -136,6 +136,26 @@ describe('PricesSubmissionsClient', () => {
     expect(screen.queryByText('Delta Show')).toBeNull()
   })
 
+  it('narrows to archived rows when the Archived filter is active', () => {
+    const withArchived = [
+      row({ id: 'sub-a', eventTitle: 'Archived Show', status: 'archived' }),
+      row({ id: 'sub-p', eventTitle: 'Pending Show', status: 'pending' }),
+    ]
+    mockUseAdminPriceSubmissions.mockReturnValue({
+      data: withArchived,
+      isFetching: false,
+    })
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={withArchived}
+        initialTotal={withArchived.length}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Archived' }))
+    expect(screen.getByText('Archived Show')).toBeTruthy()
+    expect(screen.queryByText('Pending Show')).toBeNull()
+  })
+
   it('shows checkboxes and approve/deny only for pending rows', () => {
     renderClient(
       <PricesSubmissionsClient

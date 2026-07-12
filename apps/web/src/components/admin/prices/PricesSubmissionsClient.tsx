@@ -34,7 +34,8 @@ import {
 
 const COPY = ADMIN_COPY.submissionsHistory
 
-type StatusFilter = 'all' | 'pending' | 'corroborated' | 'disputed' | 'stale'
+type StatusFilter =
+  'all' | 'pending' | 'corroborated' | 'disputed' | 'stale' | 'archived'
 type SortKey = 'date' | 'event' | 'user'
 type SortDir = 'asc' | 'desc'
 
@@ -44,6 +45,7 @@ const FILTER_ORDER: ReadonlyArray<StatusFilter> = [
   'corroborated',
   'disputed',
   'stale',
+  'archived',
 ]
 
 const STATUS_KIND: Record<PriceSubmissionStatus, StatusKind> = {
