@@ -115,16 +115,30 @@ export const EventFlagsSection = ({
     if (activeId !== effectiveActiveId) setActiveId(effectiveActiveId)
   }, [activeId, effectiveActiveId])
 
+  // Track the last (page, pageSize) we seeded the inspector for. Initialised to
+  // the mount page so the initial `useState(events[0])` already counts as
+  // seeded and we don't re-seed on first paint.
+  const seededPageKeyRef = useRef(`${page}:${pageSize}`)
+
   // When the parent swaps in a new server page (page or pageSize changed), land
-  // the inspector on that page's first visible row. This also recovers the
-  // "approved the last row on a page" case: removal empties `activeId`, the
-  // parent clamps back to the previous page, and this re-seeds the inspector
-  // there instead of leaving it on the stale null. Keyed on page/pageSize only
-  // — an approval that refetches the *same* page must not yank the inspector.
+  // the inspector on that page's first visible row — but only once rows for the
+  // new page have actually arrived. `useReviewEventFlags` keeps the previous
+  // page visible while refetching (`placeholderData: keepPrevious`), so right
+  // after a page change `visibleEvents` can briefly be the prior page or, if the
+  // active row was just approved and is pending-removed, empty. Seeding against
+  // that interim empty set would set `activeId` to null, which `effectiveActiveId`
+  // then preserves as an explicit close — stranding the inspector empty even
+  // once the real rows land. Guarding on the first real row avoids that, and
+  // keying on the page signal keeps a same-page approval refetch from yanking
+  // the inspector.
   useEffect(() => {
-    setActiveId(visibleEvents[0]?.id ?? null)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, pageSize])
+    const pageKey = `${page}:${pageSize}`
+    if (seededPageKeyRef.current === pageKey) return
+    const firstVisibleId = visibleEvents[0]?.id
+    if (firstVisibleId === undefined) return
+    seededPageKeyRef.current = pageKey
+    setActiveId(firstVisibleId)
+  }, [page, pageSize, visibleEvents])
 
   // After removing the active row (approve/reject/bulk-approve), anchor the
   // inspector to the row that slides into the first removed slot (or the new

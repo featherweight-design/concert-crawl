@@ -340,6 +340,63 @@ describe('EventFlagsSection pagination (#694)', () => {
     expect(screen.queryByRole('button', { name: 'Page 1' })).toBeNull()
   })
 
+  it('re-seeds the inspector when clamped page rows arrive after an empty interim', () => {
+    // placeholderData keeps the previous page visible while the new page
+    // fetches, so a clamp can momentarily hand down an empty page. The seed
+    // must wait for real rows rather than locking activeId to null.
+    const { rerender } = render(
+      <EventFlagsSection
+        events={buildPage(20, 1)}
+        page={2}
+        pageSize={20}
+        total={21}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+
+    expect(inspectorTitle()).toBe('Show 20')
+
+    // Approve the lone row — activeId drops to null.
+    const [approveBtn] = screen.getAllByRole('button', { name: 'Approve' })
+    if (!approveBtn) throw new Error('expected an approve button to render')
+    fireEvent.click(approveBtn)
+
+    // Interim: parent clamps to page 1 but the refetch is still in flight, so
+    // the page briefly arrives empty. The inspector shows its empty state and
+    // must NOT lock activeId to a permanent null.
+    rerender(
+      <EventFlagsSection
+        events={[]}
+        page={1}
+        pageSize={20}
+        total={20}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+    expect(screen.getByText('Select an event to inspect')).toBeTruthy()
+
+    // Real page-1 rows land — the inspector re-seeds on the first row.
+    rerender(
+      <EventFlagsSection
+        events={buildPage(0, 20)}
+        page={1}
+        pageSize={20}
+        total={20}
+        onPageChange={noop}
+        onPageSizeChange={noop}
+        onApprove={noop}
+        onReject={noop}
+      />,
+    )
+    expect(inspectorTitle()).toBe('Show 0')
+  })
+
   it('shows the inspector empty state when the filtered page has no rows', () => {
     const nonConcert = Array.from({ length: 6 }).map((_, idx) =>
       buildFlag({
