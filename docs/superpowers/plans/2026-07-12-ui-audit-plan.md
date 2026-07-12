@@ -158,7 +158,7 @@ git commit -m "feat(audit): initial route manifest — admin + consumer surfaces
 - Consumes: nothing external — runs inside the page context via `page.evaluate`.
 - Produces:
   - `type HeuristicSnapshot = { hasHorizontalScroll: boolean; offscreenElements: { selector: string; rightEdgePx: number }[]; smallTapTargets: { selector: string; widthPx: number; heightPx: number }[]; brokenImages: { src: string }[] }`
-  - `collectHeuristicsScript: string` — the stringified function body run inside the page. Written as a string so `page.evaluate` accepts it verbatim. Exported so it can be unit-tested against DOM fixtures with jsdom.
+  - `collectHeuristicsScript: string` — a stringified function expression (e.g. `"(vw) => { … }"`) that both `page.evaluate` (in production) and `new Function(...)` (in the jsdom unit tests) can call after wrapping. Exported so it can be unit-tested against DOM fixtures with jsdom.
   - `collectHeuristics(page: Page, viewportWidthPx: number): Promise<HeuristicSnapshot>` — the caller-facing async wrapper.
 
 - [ ] **Step 1: Failing tests.** Run under the new `apps/e2e/vitest.config.ts` (`environment: 'jsdom'`) via `pnpm --filter e2e test:audit`. Construct crafted HTMLs inside the jsdom document:
