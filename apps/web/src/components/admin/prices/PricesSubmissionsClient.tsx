@@ -22,6 +22,7 @@ import {
 import { type StatusKind } from '@/components/admin/primitives/utils'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { BulkActionDock } from '@/components/admin/review/BulkActionDock'
+import { reviewQueryKeys } from '@/lib/queries/use-admin-review'
 import {
   adminPriceSubmissionsKey,
   useAdminPriceSubmissions,
@@ -80,8 +81,9 @@ function compareRows(
   } else if (sortKey === 'user') {
     result = (left.userId ?? '').localeCompare(right.userId ?? '')
   }
-  // Stable tiebreak (also the primary key for the date sort): newest first
-  // in the ascending base order, then id so equal timestamps never swap.
+  // Stable tiebreak (also the primary key for the date sort): compare
+  // createdAt ascending (oldest first) in the base order — the sortDir
+  // inversion below flips it — then id so equal timestamps never swap.
   if (result === 0) result = left.createdAt.localeCompare(right.createdAt)
   if (result === 0) result = left.id.localeCompare(right.id)
   return sortDir === 'asc' ? result : -result
@@ -191,7 +193,10 @@ export const PricesSubmissionsClient = ({
       setError(null)
       try {
         const token = await getToken()
-        if (!token) return
+        if (!token) {
+          setError(COPY.authError)
+          return
+        }
         await Promise.all(
           ids.map((id) =>
             apiClient.patch(`/v1/admin/prices/submissions/${id}`, token, {
@@ -201,12 +206,11 @@ export const PricesSubmissionsClient = ({
         )
         // Optimistic: flip the affected rows in the cached full set so the
         // table + badges update without waiting on the refetch below.
+        const idSet = new Set(ids)
         queryClient.setQueryData<PriceSubmissionHistoryRow[]>(
           adminPriceSubmissionsKey,
           (prev) =>
-            prev?.map((row) =>
-              ids.includes(row.id) ? { ...row, status } : row,
-            ),
+            prev?.map((row) => (idSet.has(row.id) ? { ...row, status } : row)),
         )
         setSelected((prev) => {
           const next = new Set(prev)
@@ -217,7 +221,7 @@ export const PricesSubmissionsClient = ({
           queryKey: adminPriceSubmissionsKey,
         })
         void queryClient.invalidateQueries({
-          queryKey: ['admin', 'review', 'counts'],
+          queryKey: reviewQueryKeys.counts,
         })
       } catch (patchErr) {
         const message =
@@ -540,7 +544,6 @@ export const PricesSubmissionsClient = ({
           count={selectedPendingIds.length}
           onApproveAll={() => patchStatus(selectedPendingIds, 'corroborated')}
           onRejectAll={() => patchStatus(selectedPendingIds, 'disputed')}
-          onClear={() => setSelected(new Set())}
         />
       )}
     </div>

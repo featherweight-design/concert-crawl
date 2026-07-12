@@ -1653,6 +1653,7 @@ export const ADMIN_COPY = {
     countBadge: (count: number) => `${count} total`,
     empty: 'No price submissions yet.',
     loadError: 'Couldn’t load submissions. Refresh to try again.',
+    authError: 'Your session expired. Refresh and sign in to continue.',
     filterLabel: 'Status',
     filters: {
       all: 'All',

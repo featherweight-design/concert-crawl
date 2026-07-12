@@ -22,8 +22,9 @@ vi.mock('@/lib/queries/use-admin-price-submissions', () => ({
 }))
 
 // Clerk auth — the client calls getToken() before each PATCH.
+const mockGetToken = vi.fn<() => Promise<string | null>>()
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: () => Promise.resolve('test-token') }),
+  useAuth: () => ({ getToken: mockGetToken }),
 }))
 
 // apiClient.patch drives approve / deny; assert the URL + status payload.
@@ -84,6 +85,8 @@ describe('PricesSubmissionsClient', () => {
     mockUseAdminPriceSubmissions.mockReset()
     mockPatch.mockReset()
     mockPatch.mockResolvedValue({})
+    mockGetToken.mockReset()
+    mockGetToken.mockResolvedValue('test-token')
     mockUseAdminPriceSubmissions.mockReturnValue({
       data: ROWS,
       isFetching: false,
@@ -169,6 +172,26 @@ describe('PricesSubmissionsClient', () => {
       'test-token',
       { status: 'disputed' },
     )
+  })
+
+  it('surfaces an auth error and skips the PATCH when the token is missing', async () => {
+    mockGetToken.mockResolvedValue(null)
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={ROWS}
+        initialTotal={ROWS.length}
+      />,
+    )
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Approve submission for Alpha Show' }),
+    )
+    await waitFor(() => expect(screen.getByRole('alert')).toBeTruthy())
+    expect(
+      screen.getByText(
+        'Your session expired. Refresh and sign in to continue.',
+      ),
+    ).toBeTruthy()
+    expect(mockPatch).not.toHaveBeenCalled()
   })
 
   it('surfaces a bulk dock and loops PATCHes when pending rows are bulk-approved', async () => {
