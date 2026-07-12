@@ -69,12 +69,13 @@ describe('useAdminPriceSubmissions', () => {
   })
 
   it('walks offsets and accumulates the final partial page', async () => {
-    // 150 total: first page full (100), second page partial (50).
+    // 150 total: first page full (100) via count=true, second page partial
+    // (50) via the non-count path, which returns a bare rows array.
     mockGet.mockImplementation((url: string) =>
       Promise.resolve(
         offsetOf(url) === 0
           ? { rows: page(100, 'p0'), total: 150 }
-          : { rows: page(50, 'p100'), total: 150 },
+          : page(50, 'p100'),
       ),
     )
     const { result } = renderHook(() => useAdminPriceSubmissions(), {
@@ -93,9 +94,8 @@ describe('useAdminPriceSubmissions', () => {
       const offset = offsetOf(url)
       if (offset === 0)
         return Promise.resolve({ rows: page(100, 'p0'), total: 150 })
-      if (offset === 100)
-        return Promise.resolve({ rows: page(30, 'p100'), total: 150 })
-      return Promise.resolve({ rows: page(20, 'p130'), total: 150 })
+      if (offset === 100) return Promise.resolve(page(30, 'p100'))
+      return Promise.resolve(page(20, 'p130'))
     })
     const { result } = renderHook(() => useAdminPriceSubmissions(), {
       wrapper: withProvider(),
@@ -109,9 +109,7 @@ describe('useAdminPriceSubmissions', () => {
     // Defensive: a stale/racey total must not spin the loop forever.
     mockGet.mockImplementation((url: string) =>
       Promise.resolve(
-        offsetOf(url) === 0
-          ? { rows: page(100, 'p0'), total: 500 }
-          : { rows: [], total: 500 },
+        offsetOf(url) === 0 ? { rows: page(100, 'p0'), total: 500 } : [],
       ),
     )
     const { result } = renderHook(() => useAdminPriceSubmissions(), {
@@ -124,7 +122,8 @@ describe('useAdminPriceSubmissions', () => {
   it('refetches the full set on mount even when SSR initialData is fresh', async () => {
     // Reproduces the staleTime bug: with the app's 30-min staleTime the SSR
     // seed would be treated as fresh and fetchAllSubmissions would never run,
-    // stranding the page on the first page. refetchOnMount: 'always' fixes it.
+    // stranding the page on the first page. initialDataUpdatedAt: 0 marks the
+    // seed stale so the mount refetch walks the full set.
     mockGet.mockResolvedValue({ rows: page(30, 'fresh'), total: 30 })
     const seed = page(1, 'seed')
     const { result } = renderHook(() => useAdminPriceSubmissions(seed), {

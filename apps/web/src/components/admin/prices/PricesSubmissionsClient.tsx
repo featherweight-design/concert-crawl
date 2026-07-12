@@ -28,6 +28,7 @@ import {
   adminPriceSubmissionsKey,
   useAdminPriceSubmissions,
   type PriceSubmissionHistoryRow,
+  type PriceSubmissionStatus,
 } from '@/lib/queries/use-admin-price-submissions'
 
 const COPY = ADMIN_COPY.submissionsHistory
@@ -44,7 +45,7 @@ const FILTER_ORDER: ReadonlyArray<StatusFilter> = [
   'stale',
 ]
 
-const STATUS_KIND: Record<string, StatusKind> = {
+const STATUS_KIND: Record<PriceSubmissionStatus, StatusKind> = {
   pending: 'warning',
   corroborated: 'success',
   disputed: 'danger',
@@ -52,8 +53,8 @@ const STATUS_KIND: Record<string, StatusKind> = {
   archived: 'neutral',
 }
 
-function statusLabel(status: string): string {
-  return COPY.statusLabels[status as keyof typeof COPY.statusLabels] ?? status
+function statusLabel(status: PriceSubmissionStatus): string {
+  return COPY.statusLabels[status]
 }
 
 function formatPrice(min: string | null, max: string | null): string {
