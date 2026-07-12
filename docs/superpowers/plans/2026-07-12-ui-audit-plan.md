@@ -476,7 +476,7 @@ git commit -m "feat(audit): mark thin renders as insufficientData for triage ski
 
 - [ ] **Step 1: Write SKILL.md** following the above structure. Aim for <400 lines total (getting-started + reference guidance from writing-skills).
 
-- [ ] **Step 2: Write the triage-brief-template.md.** The template must forbid the subagent from filing to GitHub (defense in depth), must reference the pure-UI-breakage bar, and must specify the exact finding JSON shape:
+- [ ] **Step 2: Write the triage-brief-template.md.** The template must forbid the subagent from filing to GitHub (defense in depth), must reference the pure-UI-breakage bar, and must specify the exact finding JSON shape (`class` is one of `"overflow" | "wrap" | "overlap" | "image" | "tap-target"`; `severity` is one of `"balk" | "degraded"`):
 
 ```json
 {
@@ -486,7 +486,7 @@ git commit -m "feat(audit): mark thin renders as insufficientData for triage ski
       "viewport": "390x844",
       "state": "expand-first-card",
       "severity": "balk",
-      "class": "overflow" | "wrap" | "overlap" | "image" | "tap-target",
+      "class": "overflow",
       "oneLiner": "Context column wraps one character per line at mobile widths.",
       "screenshotPath": "apps/e2e/audit-output/<run-id>/admin-feedback__expand-first-card__390x844.png"
     }
