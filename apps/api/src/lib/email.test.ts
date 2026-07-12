@@ -10,6 +10,37 @@ vi.mock('resend', () => ({
   ),
 }))
 
+const mockGetUser = vi.fn()
+vi.mock('@clerk/backend', () => ({
+  createClerkClient: vi.fn(() => ({ users: { getUser: mockGetUser } })),
+}))
+
+const mockGetTemplateRenderer = vi.fn()
+vi.mock('../emails/registry.js', () => ({
+  getTemplateRenderer: mockGetTemplateRenderer,
+}))
+
+// Chainable Drizzle mocks — each terminal step is a named mock so tests can
+// steer results per scenario. Tables/types come from the real module.
+const mockSelectLimit = vi.fn()
+const mockInsertValues = vi.fn()
+const mockInsertReturning = vi.fn()
+const mockUpdateSet = vi.fn()
+const mockUpdateWhere = vi.fn()
+vi.mock('@concert-crawl/db', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@concert-crawl/db')>()
+  return {
+    ...actual,
+    db: {
+      select: () => ({
+        from: () => ({ where: () => ({ limit: mockSelectLimit }) }),
+      }),
+      insert: () => ({ values: mockInsertValues }),
+      update: () => ({ set: mockUpdateSet }),
+    },
+  }
+})
+
 describe('sendAdminAlertEmail', () => {
   const originalEnv = process.env
 
@@ -109,5 +140,159 @@ describe('sendAdminAlertEmail', () => {
       expect(result.reason).toBe('send_failed')
       expect((result.error as Error).message).toBe('network timeout')
     }
+  })
+})
+
+describe('sendTransactionalEmail', () => {
+  const originalEnv = process.env
+
+  const sendParams = {
+    templateKey: 'welcome_paid',
+    userId: 'user_1',
+    dedupeKey: 'sub:sub_123',
+    vars: { tier: 'premium' },
+  } as const
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.resetModules()
+    process.env = {
+      ...originalEnv,
+      RESEND_API_KEY: 're_test_key',
+      CLERK_SECRET_KEY: 'sk_test_key',
+    }
+
+    mockGetTemplateRenderer.mockReturnValue(() => ({
+      subject: 'Test subject',
+      preheader: 'Test preheader',
+      html: '<p>hi</p>',
+      text: 'hi',
+    }))
+    mockSelectLimit.mockResolvedValue([{ enabled: true }])
+    mockInsertValues.mockImplementation(() => ({
+      onConflictDoNothing: () => ({
+        returning: mockInsertReturning,
+        then: (onFulfilled?: (value: unknown) => unknown) =>
+          Promise.resolve(undefined).then(onFulfilled),
+      }),
+    }))
+    mockInsertReturning.mockResolvedValue([{ id: 'log-row-1' }])
+    mockUpdateSet.mockImplementation(() => ({ where: mockUpdateWhere }))
+    mockUpdateWhere.mockResolvedValue(undefined)
+    mockGetUser.mockResolvedValue({
+      primaryEmailAddressId: 'idn_primary',
+      emailAddresses: [
+        { id: 'idn_other', emailAddress: 'other@example.com' },
+        { id: 'idn_primary', emailAddress: 'primary@example.com' },
+      ],
+    })
+    mockSend.mockResolvedValue({ data: { id: 're_email_1' }, error: null })
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('skips an unregistered template without writing a send-log row', async () => {
+    mockGetTemplateRenderer.mockReturnValue(null)
+    const { sendTransactionalEmail } = await import('./email.js')
+
+    await sendTransactionalEmail(sendParams)
+
+    expect(mockInsertValues).not.toHaveBeenCalled()
+    expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  it('records a suppressed row and skips the send when the kill switch is off', async () => {
+    mockSelectLimit.mockResolvedValue([{ enabled: false }])
+    const { sendTransactionalEmail } = await import('./email.js')
+
+    await sendTransactionalEmail(sendParams)
+
+    expect(mockInsertValues).toHaveBeenCalledOnce()
+    expect(mockInsertValues.mock.calls[0]![0]).toMatchObject({
+      templateKey: 'welcome_paid',
+      userId: 'user_1',
+      dedupeKey: 'sub:sub_123',
+      status: 'suppressed',
+    })
+    expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  it('skips the send when the dedupe key is already consumed', async () => {
+    mockInsertReturning.mockResolvedValue([])
+    const { sendTransactionalEmail } = await import('./email.js')
+
+    await sendTransactionalEmail(sendParams)
+
+    expect(mockSend).not.toHaveBeenCalled()
+    expect(mockUpdateSet).not.toHaveBeenCalled()
+  })
+
+  it('claims the row as failed, sends to the primary Clerk email, and flips the row to sent', async () => {
+    const { sendTransactionalEmail } = await import('./email.js')
+
+    await sendTransactionalEmail(sendParams)
+
+    expect(mockInsertValues.mock.calls[0]![0]).toMatchObject({
+      templateKey: 'welcome_paid',
+      dedupeKey: 'sub:sub_123',
+      status: 'failed',
+    })
+    expect(mockSend).toHaveBeenCalledOnce()
+    const call = mockSend.mock.calls[0]![0]
+    expect(call.from).toBe('Concert Crawl <billing@concertcrawl.app>')
+    expect(call.replyTo).toBe('support@concertcrawl.app')
+    expect(call.to).toBe('primary@example.com')
+    expect(call.subject).toBe('Test subject')
+    expect(mockUpdateSet).toHaveBeenCalledOnce()
+    expect(mockUpdateSet.mock.calls[0]![0]).toMatchObject({
+      status: 'sent',
+      resendId: 're_email_1',
+    })
+  })
+
+  it('falls back to the first Clerk email address when no primary is set', async () => {
+    mockGetUser.mockResolvedValue({
+      primaryEmailAddressId: null,
+      emailAddresses: [{ id: 'idn_only', emailAddress: 'only@example.com' }],
+    })
+    const { sendTransactionalEmail } = await import('./email.js')
+
+    await sendTransactionalEmail(sendParams)
+
+    expect(mockSend.mock.calls[0]![0].to).toBe('only@example.com')
+  })
+
+  it('leaves the row failed and does not throw when Resend throws', async () => {
+    mockSend.mockRejectedValueOnce(new Error('network down'))
+    const { sendTransactionalEmail } = await import('./email.js')
+
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBeUndefined()
+    expect(mockUpdateSet).not.toHaveBeenCalled()
+  })
+
+  it('leaves the row failed when Resend returns a structured error', async () => {
+    mockSend.mockResolvedValueOnce({
+      data: null,
+      error: { message: 'invalid sender', name: 'validation_error' },
+    })
+    const { sendTransactionalEmail } = await import('./email.js')
+
+    await sendTransactionalEmail(sendParams)
+
+    expect(mockUpdateSet).not.toHaveBeenCalled()
+  })
+
+  it('leaves the row failed and does not throw when the Clerk user has no email', async () => {
+    mockGetUser.mockResolvedValue({
+      primaryEmailAddressId: null,
+      emailAddresses: [],
+    })
+    const { sendTransactionalEmail } = await import('./email.js')
+
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBeUndefined()
+    expect(mockSend).not.toHaveBeenCalled()
+    expect(mockUpdateSet).not.toHaveBeenCalled()
   })
 })

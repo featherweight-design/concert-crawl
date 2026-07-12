@@ -26,6 +26,8 @@ import {
   handleSubscriptionDeleted,
   handleSubscriptionUpdated,
 } from '../lib/stripe-webhook-handlers.js'
+import { sendTransactionalEmail } from '../lib/email.js'
+import type { TransactionalEmailParams } from '../emails/types.js'
 import { apiLogger } from '../lib/logger.js'
 
 // The exact event set the webhook endpoint registers for
@@ -93,6 +95,9 @@ export const createStripeWebhooksRouter = (
     // idempotency row back with everything else, so Stripe's retry
     // re-processes — no separate cleanup step that could itself fail.
     try {
+      // Handlers queue emails here; fired only after the transaction commits
+      // (spec §4.4) — a rollback must never leave a sent email behind.
+      const postCommitEmails: TransactionalEmailParams[] = []
       const outcome = await db.transaction(async (tx) => {
         const inserted = await tx
           .insert(processedStripeEvents)
@@ -100,7 +105,7 @@ export const createStripeWebhooksRouter = (
           .onConflictDoNothing()
           .returning({ eventId: processedStripeEvents.eventId })
         if (inserted.length === 0) return 'duplicate'
-        await dispatchEvent(event, getStripe, tx)
+        await dispatchEvent(event, getStripe, tx, postCommitEmails)
         return 'handled'
       })
       if (outcome === 'duplicate') {
@@ -109,6 +114,22 @@ export const createStripeWebhooksRouter = (
           'stripe-webhooks: duplicate event — already processed',
         )
         return ctx.json({ success: true, duplicate: true })
+      }
+      for (const emailParams of postCommitEmails) {
+        // Fire-and-forget: sendTransactionalEmail never throws, but the
+        // promise is still guarded — an email failure must never affect the
+        // webhook response.
+        void sendTransactionalEmail(emailParams).catch((err) => {
+          apiLogger.error(
+            {
+              err,
+              stripeEventId: event.id,
+              templateKey: emailParams.templateKey,
+              dedupeKey: emailParams.dedupeKey,
+            },
+            'stripe-webhooks: post-commit email send rejected',
+          )
+        })
       }
       return ctx.json({ success: true })
     } catch (err) {
@@ -127,11 +148,13 @@ const dispatchEvent = async (
   event: StripeVerifiedEvent,
   getStripe: () => BillingStripeClient,
   dbClient: DbExecutor,
+  postCommitEmails: TransactionalEmailParams[],
 ): Promise<void> => {
   const handlerContext = {
     stripe: getStripe(),
     stripeEventId: event.id,
     dbClient,
+    postCommitEmails,
   }
   switch (event.type) {
     case 'checkout.session.completed':

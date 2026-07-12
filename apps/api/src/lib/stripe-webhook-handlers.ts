@@ -2,11 +2,14 @@
 //
 // Per-event Stripe webhook handling (eng infra spec Part 2 §1.5).
 //
-// Handlers only write subscription_events rows + subscriptions/user_billing
-// state — NO email sending here (emails are Phase 5, PR 5.1). Events that
-// reference an unknown customer/subscription log a warning and resolve
-// (Stripe must not 500-retry-loop on unmatchable events); genuine processing
-// failures throw so the route 500s and Stripe retries.
+// Handlers write subscription_events rows + subscriptions/user_billing state
+// inside the webhook transaction, and QUEUE transactional emails on
+// ctx.postCommitEmails (spec §4.4 trigger map) — the route fires the queue
+// fire-and-forget only AFTER the transaction commits, so a rollback never
+// leaves a sent email behind. Events that reference an unknown
+// customer/subscription log a warning and resolve (Stripe must not
+// 500-retry-loop on unmatchable events); genuine processing failures throw
+// so the route 500s and Stripe retries.
 
 import { eq } from 'drizzle-orm'
 import {
@@ -31,6 +34,7 @@ import {
   subscriptionNeverPaid,
 } from './founder-seats.js'
 import { apiLogger } from './logger.js'
+import type { TransactionalEmailParams } from '../emails/types.js'
 
 export type DbSubscriptionStatus =
   | 'active'
@@ -88,6 +92,133 @@ export const dunningStageForAttempt = (attemptCount: number): 1 | 2 | 3 => {
   return 3
 }
 
+const TIER_DISPLAY_NAMES: Record<DbSubscriptionTier, string> = {
+  free: 'Free',
+  premium: 'Premium',
+  supporter: 'Supporter',
+  founder: 'Founder',
+}
+
+// Dunning CTA target — /settings/plan hosts the Stripe-portal entry point
+// (POST /v1/billing/portal-session); portal sessions themselves are
+// short-lived and cannot be minted into an email.
+const BILLING_PORTAL_ENTRY_URL = 'https://concertcrawl.app/settings/plan'
+
+const DUNNING_TEMPLATE_BY_STAGE = {
+  1: 'dunning_1_card_declined',
+  2: 'dunning_2_still_declined',
+  3: 'dunning_3_final_warning',
+} as const
+
+const tierDisplayName = (tier: DbSubscriptionTier | null): string | null =>
+  tier !== null ? TIER_DISPLAY_NAMES[tier] : null
+
+const monthLabel = (date: Date): string =>
+  new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'America/Denver',
+  }).format(date)
+
+const formatUsd = (cents: number): string => `$${(cents / 100).toFixed(2)}`
+
+/** welcome_paid / renewal_receipt_monthly intent (spec §4.4 rows 1 + 3). */
+export const emailForInvoicePaymentSucceeded = (input: {
+  userId: string
+  subscriptionId: string
+  invoiceId: string | null
+  billingReason: string | null
+  tier: DbSubscriptionTier | null
+  seatNumber: number | null
+  customerId: string
+  amountPaidCents: number | null
+  chargedAt: Date
+  periodEnd: Date | null
+  hostedInvoiceUrl: string | null
+}): TransactionalEmailParams | null => {
+  if (input.billingReason === 'subscription_create') {
+    const tier = input.tier
+    if (tier !== 'premium' && tier !== 'supporter' && tier !== 'founder') {
+      return null
+    }
+    return {
+      templateKey: 'welcome_paid',
+      userId: input.userId,
+      dedupeKey: `sub:${input.subscriptionId}`,
+      vars: {
+        tier,
+        ...(input.seatNumber !== null
+          ? { founderSeatNumber: input.seatNumber }
+          : {}),
+      },
+    }
+  }
+  if (input.invoiceId === null) return null
+  return {
+    templateKey: 'renewal_receipt_monthly',
+    userId: input.userId,
+    dedupeKey: `invoice:${input.invoiceId}`,
+    vars: {
+      periodLabel: monthLabel(input.chargedAt),
+      amount:
+        input.amountPaidCents !== null
+          ? formatUsd(input.amountPaidCents)
+          : null,
+      tierName: tierDisplayName(input.tier),
+      periodEnd: input.periodEnd?.toISOString() ?? null,
+      chargeDate: input.chargedAt.toISOString(),
+      customerId: input.customerId,
+      stripeReceiptUrl: input.hostedInvoiceUrl,
+    },
+  }
+}
+
+/** dunning_1/2/3 intent by attempt_count (spec §4.4 row 4, §1.5 row 3). */
+export const emailForInvoicePaymentFailed = (input: {
+  userId: string
+  invoiceId: string | null
+  attemptCount: number
+  tier: DbSubscriptionTier | null
+}): TransactionalEmailParams | null => {
+  if (input.invoiceId === null) return null
+  const stage = dunningStageForAttempt(input.attemptCount)
+  return {
+    templateKey: DUNNING_TEMPLATE_BY_STAGE[stage],
+    userId: input.userId,
+    dedupeKey: `invoice:${input.invoiceId}:attempt:${input.attemptCount}`,
+    vars: {
+      tierName: tierDisplayName(input.tier),
+      portalUrl: BILLING_PORTAL_ENTRY_URL,
+    },
+  }
+}
+
+/**
+ * cancellation_ack intent (spec §4.4 row 6). The dedupe key carries the
+ * current period end so a later cancel after a resubscribe re-acks. Skipped
+ * for account-deletion cancels, flagged via subscription metadata.
+ */
+export const emailForCancelScheduled = (input: {
+  userId: string
+  subscriptionId: string
+  tier: DbSubscriptionTier | null
+  currentPeriodEndSeconds: number | null
+  accountDeletion: boolean
+}): TransactionalEmailParams | null => {
+  if (input.accountDeletion) return null
+  return {
+    templateKey: 'cancellation_ack',
+    userId: input.userId,
+    dedupeKey: `sub:${input.subscriptionId}:${input.currentPeriodEndSeconds ?? 'unknown'}`,
+    vars: {
+      tierName: tierDisplayName(input.tier),
+      accessEndsAt:
+        epochSecondsToDate(input.currentPeriodEndSeconds)?.toISOString() ??
+        null,
+    },
+  }
+}
+
 interface HandlerContext {
   stripe: BillingStripeClient
   stripeEventId: string
@@ -96,6 +227,11 @@ interface HandlerContext {
    * the idempotency insert's transaction so a failure rolls back atomically.
    */
   dbClient: DbExecutor
+  /**
+   * Emails queued by handlers; the route fires them fire-and-forget AFTER
+   * the transaction commits (spec §4.4) — never inside it.
+   */
+  postCommitEmails: TransactionalEmailParams[]
 }
 
 const parseSubscriptionSnapshot = (
@@ -268,6 +404,28 @@ export const handleInvoicePaymentSucceeded = async (
     },
   })
 
+  const emailParams = emailForInvoicePaymentSucceeded({
+    userId,
+    subscriptionId,
+    invoiceId: invoice.id ?? null,
+    billingReason: invoice.billing_reason ?? null,
+    tier,
+    seatNumber,
+    customerId: snapshot.customer,
+    amountPaidCents: invoice.amount_paid ?? null,
+    chargedAt: epochSecondsToDate(invoice.created) ?? new Date(),
+    periodEnd: epochSecondsToDate(firstItem(snapshot)?.current_period_end),
+    hostedInvoiceUrl: invoice.hosted_invoice_url ?? null,
+  })
+  if (emailParams !== null) {
+    ctx.postCommitEmails.push(emailParams)
+  } else {
+    apiLogger.warn(
+      { stripeEventId: ctx.stripeEventId, subscriptionId, tier },
+      'invoice.payment_succeeded: no email queued — missing paid tier or invoice id',
+    )
+  }
+
   // Re-upgrade to premium-and-up clears the 90-day preserve-then-purge clock
   // (#780 §5). Supporter payments must NOT clear it — a premium→supporter
   // downgrade starts the clock (§5.3), and the user's premium data still
@@ -354,6 +512,21 @@ export const handleInvoicePaymentFailed = async (
       metadata: { subscriptionId },
     })
   }
+
+  const emailParams = emailForInvoicePaymentFailed({
+    userId,
+    invoiceId: invoice.id ?? null,
+    attemptCount,
+    tier: tierFromSnapshot(snapshot),
+  })
+  if (emailParams !== null) {
+    ctx.postCommitEmails.push(emailParams)
+  } else {
+    apiLogger.warn(
+      { stripeEventId: ctx.stripeEventId, subscriptionId, attemptCount },
+      'invoice.payment_failed: no dunning email queued — missing invoice id',
+    )
+  }
 }
 
 /** customer.subscription.updated (spec §1.5 row 4). */
@@ -400,6 +573,14 @@ export const handleSubscriptionUpdated = async (
       stripeEventId: ctx.stripeEventId,
       metadata: { subscriptionId: snapshot.id },
     })
+    const emailParams = emailForCancelScheduled({
+      userId,
+      subscriptionId: snapshot.id,
+      tier: tierFromSnapshot(snapshot),
+      currentPeriodEndSeconds: firstItem(snapshot)?.current_period_end ?? null,
+      accountDeletion: snapshot.metadata?.['accountDeletion'] === 'true',
+    })
+    if (emailParams !== null) ctx.postCommitEmails.push(emailParams)
   }
   if (previousCancelFlag && !nextCancelFlag) {
     await ctx.dbClient.insert(subscriptionEvents).values({

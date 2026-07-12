@@ -1,0 +1,75 @@
+// apps/api/src/emails/types.ts
+//
+// Template module contract (eng infra spec Part 2 §4.2) + the per-template
+// vars shapes derived from the #783 design brief's variable lists.
+
+import type { EmailTemplateKey } from '@concert-crawl/db'
+
+export interface RenderedEmail {
+  subject: string
+  preheader: string
+  html: string
+  text: string
+}
+
+export type TemplateRenderer<Vars> = (vars: Vars) => RenderedEmail
+
+// Nullable fields are vars a trigger cannot always derive (e.g. a webhook
+// payload missing the receipt URL) — templates own the fallback copy.
+export interface EmailTemplateVars {
+  welcome_paid: {
+    tier: 'premium' | 'supporter' | 'founder'
+    founderSeatNumber?: number
+  }
+  welcome_gifted: {
+    gifterName: string | null
+    giftEndsAt: string | null
+  }
+  renewal_receipt_monthly: {
+    periodLabel: string
+    amount: string | null
+    tierName: string | null
+    periodEnd: string | null
+    chargeDate: string
+    customerId: string
+    stripeReceiptUrl: string | null
+  }
+  dunning_1_card_declined: {
+    tierName: string | null
+    portalUrl: string
+  }
+  dunning_2_still_declined: {
+    tierName: string | null
+    portalUrl: string
+  }
+  dunning_3_final_warning: {
+    tierName: string | null
+    portalUrl: string
+  }
+  card_expiring_soon: {
+    tierName: string | null
+    daysRemaining: number
+  }
+  cancellation_ack: {
+    tierName: string | null
+    accessEndsAt: string | null
+  }
+  gifting_ending_notice: {
+    gifterName: string | null
+    giftEndsAt: string
+  }
+  winback: {
+    tierName: string | null
+  }
+}
+
+// Distributive union keeping templateKey ↔ vars correlated, so a queued send
+// can be stored heterogeneously (webhook post-commit queue) without casts.
+export type TransactionalEmailParams = {
+  [K in EmailTemplateKey]: {
+    templateKey: K
+    userId: string
+    dedupeKey: string
+    vars: EmailTemplateVars[K]
+  }
+}[EmailTemplateKey]

@@ -51,6 +51,9 @@ export const stripeInvoiceSchema = z.object({
   customer: stripeIdSchema.nullish(),
   billing_reason: z.string().nullish(),
   attempt_count: z.number().nullish(),
+  amount_paid: z.number().nullish(),
+  hosted_invoice_url: z.string().nullish(),
+  created: z.number().nullish(),
   subscription: stripeIdSchema.nullish(),
   parent: z
     .object({
