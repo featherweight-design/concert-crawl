@@ -27,6 +27,7 @@ const mockInsertValues = vi.fn()
 const mockInsertReturning = vi.fn()
 const mockUpdateSet = vi.fn()
 const mockUpdateWhere = vi.fn()
+const mockInsertOnConflictDoUpdate = vi.fn()
 vi.mock('@concert-crawl/db', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@concert-crawl/db')>()
   return {
@@ -175,7 +176,9 @@ describe('sendTransactionalEmail', () => {
         then: (onFulfilled?: (value: unknown) => unknown) =>
           Promise.resolve(undefined).then(onFulfilled),
       }),
+      onConflictDoUpdate: mockInsertOnConflictDoUpdate,
     }))
+    mockInsertOnConflictDoUpdate.mockResolvedValue(undefined)
     mockInsertReturning.mockResolvedValue([{ id: 'log-row-1' }])
     mockUpdateSet.mockImplementation(() => ({ where: mockUpdateWhere }))
     mockUpdateWhere.mockResolvedValue(undefined)
@@ -215,6 +218,11 @@ describe('sendTransactionalEmail', () => {
       userId: 'user_1',
       dedupeKey: 'sub:sub_123',
       status: 'suppressed',
+    })
+    // A pre-existing 'failed' claim flips to 'suppressed' on conflict.
+    expect(mockInsertOnConflictDoUpdate).toHaveBeenCalledOnce()
+    expect(mockInsertOnConflictDoUpdate.mock.calls[0]![0]).toMatchObject({
+      set: { status: 'suppressed' },
     })
     expect(mockSend).not.toHaveBeenCalled()
   })

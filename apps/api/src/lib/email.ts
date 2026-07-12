@@ -1,5 +1,5 @@
 import { Resend } from 'resend'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { createClerkClient } from '@clerk/backend'
 import {
   db,
@@ -120,11 +120,17 @@ export async function sendTransactionalEmail<
       .limit(1)
     if (config !== undefined && !config.enabled) {
       // Suppression still consumes the dedupe key — re-enabling the template
-      // must not replay every send it suppressed.
+      // must not replay every send it suppressed. A pre-existing 'failed'
+      // claim flips to 'suppressed' so the daily retry sweep skips it; a
+      // 'sent' row is never rewritten.
       await db
         .insert(emailSendLog)
         .values({ templateKey, userId, dedupeKey, status: 'suppressed' })
-        .onConflictDoNothing()
+        .onConflictDoUpdate({
+          target: [emailSendLog.templateKey, emailSendLog.dedupeKey],
+          set: { status: 'suppressed' },
+          setWhere: sql`${emailSendLog.status} = 'failed'`,
+        })
       apiLogger.info(
         logContext,
         'sendTransactionalEmail: template disabled (kill switch) — suppressed',
