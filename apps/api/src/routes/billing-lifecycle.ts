@@ -426,7 +426,7 @@ export const createBillingLifecycleRouter = (
         {
           success: false,
           code: 'invalid_body',
-          error: "Body must be { tier: 'supporter' | 'premium' }",
+          error: "Body must be { tier: 'supporter' | 'premium' | 'founder' }",
         },
         400,
       )
@@ -532,7 +532,8 @@ export const createBillingLifecycleRouter = (
         {
           success: false,
           code: 'invalid_query',
-          error: 'Query must include ?tier=supporter or ?tier=premium',
+          error:
+            'Query must include ?tier=supporter, ?tier=premium, or ?tier=founder',
         },
         400,
       )

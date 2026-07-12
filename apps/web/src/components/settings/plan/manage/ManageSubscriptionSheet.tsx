@@ -42,7 +42,7 @@ interface ManageSubscriptionSheetProps {
   open: boolean
   onClose: () => void
   tier: PaidTier
-  /** Pre-formatted current period end (e.g. "Aug 3, 2026") or null. */
+  /** Pre-formatted current period end via formatPeriodEnd (e.g. "Jul 15") or null. */
   periodEnd: string | null
 }
 
