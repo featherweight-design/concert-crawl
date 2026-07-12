@@ -4,7 +4,7 @@
 
 **Goal:** Ship `pnpm db:seed:staging` — one idempotent command that makes staging prod-like by (a) syncing public/crawled data from prod Neon to staging Neon and (b) generating deterministic, layout-hostile synthetic user data attached to a small set of staging Clerk fixture users.
 
-**Architecture:** Two tsx scripts under `scripts/seed-staging/`, driven by a thin root wrapper. Half A opens a **structurally read-only** wrapper over `NEON_PROD_DIRECT` and upserts venues/events/prices into `NEON_STAGING_DIRECT` on natural keys. Half B deletes all fixture-tagged rows for the reserved Clerk IDs and regenerates them from a seeded PRNG so two runs produce identical rows. Both halves are safe to re-run; both refuse to write to prod.
+**Architecture:** Two tsx entrypoint scripts under `scripts/seed-staging/` (`sync-prod-public-data.ts` and `seed-synthetic.ts`), each supported by co-located per-step modules + tests (sync helpers, generators, cleanup, fixture config). A thin root wrapper (`pnpm db:seed:staging`) chains them. Half A opens a **structurally read-only** wrapper over `NEON_PROD_DIRECT` and upserts venues/events/prices into `NEON_STAGING_DIRECT` on natural keys. Half B deletes all fixture-tagged rows for the reserved Clerk IDs and regenerates them from a seeded PRNG so two runs produce identical rows. Both halves are safe to re-run; both refuse to write to prod.
 
 **Tech Stack:** tsx + Drizzle ORM (upsert on natural keys), `postgres` driver connections to Neon (existing shell env vars — never checked in), Vitest for unit + one integration assertion, `pnpm` for orchestration. No new external deps.
 
@@ -16,7 +16,7 @@
 - Idempotency is required. Public-data sync uses `.onConflictDoUpdate` on natural keys; synthetic data uses "delete all fixture-tagged rows, then regenerate".
 - Determinism is required for synthetic data. All RNG goes through a seeded PRNG so two runs produce identical rows.
 - `sync-prod-public-data.ts` must refuse to run if the resolved _write_-side host matches the prod host (belt-and-braces against swapped env vars).
-- Follow the existing `scripts/<date>-<name>.ts` + `<name>-helpers.ts` + `<name>.test.ts` pattern; tests run under `pnpm test:scripts` via `vitest.scripts.config.ts`.
+- Existing `scripts/` files follow a `<date>-<name>.ts` + `<name>-helpers.ts` + `<name>.test.ts` pattern (one-shot backfills). This plan deviates by grouping the seeder's many files into a dedicated `scripts/seed-staging/` subdirectory with plain names (`sync-venues.ts`, `seed-synthetic.ts`, etc.) — the seeder is a maintained tool, not a one-shot, and a namespace keeps its files together. `<name>-helpers.ts` + `<name>.test.ts` siblings still apply within the namespace. Tests run under `pnpm test:scripts` via `vitest.scripts.config.ts` (its `include: ['scripts/**/*.test.ts']` already covers the subdirectory).
 - Type safety in shipped code: no `as` value casts. Use Zod `safeParse` for JSON.parse-like boundaries; use type guards for narrowing. Exceptions: `as const` for readonly literal narrowing is fine (it prevents widening, it isn't a value cast); and unit-test mocks may use `as any` where reconstructing a full Drizzle client type would dwarf the test itself — the runtime spy shape is what the test actually asserts against.
 - Follow-up (not in this plan, open at implementation time): a GH issue to delete the paused staging crawler Render cron once prod→staging sync ships. Add label `type: chore`, `source: internal`, `phase: beta`, `priority: normal`.
 
