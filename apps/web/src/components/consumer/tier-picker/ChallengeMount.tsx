@@ -145,54 +145,56 @@ export const ChallengeMount = ({
       aria-describedby={challengeBodyId(kind)}
       style={{ display: 'flex', flexDirection: 'column', gap: 13 }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ flex: 1 }} />
-        <button
-          type="button"
-          aria-label={CHALLENGE_COPY.closeLabel}
-          onClick={onCancel}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1 }} />
+          <button
+            type="button"
+            aria-label={CHALLENGE_COPY.closeLabel}
+            onClick={onCancel}
+            style={{
+              all: 'unset',
+              cursor: 'pointer',
+              padding: 8,
+              borderRadius: 8,
+              color: 'var(--fg-muted)',
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+              <path
+                d="M3 3 L13 13 M13 3 L3 13"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        </div>
+        <div
+          id={challengeHeadlineId(kind)}
           style={{
-            all: 'unset',
-            cursor: 'pointer',
-            padding: 8,
-            borderRadius: 8,
-            color: 'var(--fg-muted)',
+            fontWeight: 900,
+            fontSize: 23,
+            letterSpacing: '-0.03em',
+            color: 'var(--fg)',
+            marginTop: 2,
+            lineHeight: 1.1,
+            textWrap: 'balance',
           }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <path
-              d="M3 3 L13 13 M13 3 L3 13"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
-      </div>
-      <div
-        id={challengeHeadlineId(kind)}
-        style={{
-          fontWeight: 900,
-          fontSize: 23,
-          letterSpacing: '-0.03em',
-          color: 'var(--fg)',
-          marginTop: 2,
-          lineHeight: 1.1,
-          textWrap: 'balance',
-        }}
-      >
-        {config.headline}
-      </div>
-      <div
-        id={challengeBodyId(kind)}
-        style={{
-          fontWeight: 500,
-          fontSize: 13,
-          color: 'var(--fg-muted)',
-          lineHeight: 1.5,
-        }}
-      >
-        {config.body}
+          {config.headline}
+        </div>
+        <div
+          id={challengeBodyId(kind)}
+          style={{
+            fontWeight: 500,
+            fontSize: 13,
+            color: 'var(--fg-muted)',
+            lineHeight: 1.5,
+          }}
+        >
+          {config.body}
+        </div>
       </div>
       <StripeChallengeFrame />
       <TierSummaryLine tierKey={tierKey} />

@@ -28,6 +28,7 @@ interface TierRowMobileProps {
   expanded: boolean
   onToggle: () => void
   onSelect: (tierKey: TierKey, cta: TierCta) => void
+  autoFocusCta?: boolean
 }
 
 export const TierRowMobile = ({
@@ -38,6 +39,7 @@ export const TierRowMobile = ({
   expanded,
   onToggle,
   onSelect,
+  autoFocusCta = false,
 }: TierRowMobileProps) => {
   const shell = tierShell(tier.key)
   const isCurrent = state === tier.key
@@ -246,7 +248,12 @@ export const TierRowMobile = ({
           {tier.pricePromise !== undefined && (
             <TierMonoNote text={tier.pricePromise} />
           )}
-          <TierCtaButton tierKey={tier.key} cta={cta} onSelect={onSelect} />
+          <TierCtaButton
+            tierKey={tier.key}
+            cta={cta}
+            onSelect={onSelect}
+            autoFocus={autoFocusCta}
+          />
         </div>
       )}
     </div>

@@ -12,7 +12,7 @@
 // or moving the element re-creates the Stripe iframe and loses the entered
 // card. Layout pieces render as conditional siblings around the element.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { loadStripe } from '@stripe/stripe-js'
 import {
@@ -246,6 +246,19 @@ const CheckoutForm = ({
 
   const cancelChallenge = () => onSurface(CHECKOUT_SURFACE)
 
+  // Cancelling the challenge returns focus to the payment surface's
+  // primary CTA (a11y table — focus never falls to the document body).
+  const payButtonRef = useRef<HTMLButtonElement | null>(null)
+  const prevSurfaceKindRef = useRef(surface.kind)
+  useEffect(() => {
+    if (
+      prevSurfaceKindRef.current === 'challenge' &&
+      surface.kind === 'checkout'
+    )
+      payButtonRef.current?.focus()
+    prevSurfaceKindRef.current = surface.kind
+  }, [surface.kind])
+
   // Escape dismisses the failure surface to the picker, and cancels the
   // challenge chrome — before ModalShell's document listener closes the
   // whole sheet (a11y table).
@@ -306,7 +319,12 @@ const CheckoutForm = ({
   return (
     <div
       {...(isFailure ? failureDialogProps(surface.category) : {})}
-      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        // FailureBody stacks at 13 (design table); checkout keeps 14.
+        gap: isFailure ? 13 : 14,
+      }}
     >
       {isFailure && (
         <FailureSurfaceIntro
@@ -336,6 +354,7 @@ const CheckoutForm = ({
         <>
           <LegalBlock scaRegion={scaRegion} />
           <button
+            ref={payButtonRef}
             type="button"
             disabled={!stripe || submitting}
             onClick={() => void confirm()}

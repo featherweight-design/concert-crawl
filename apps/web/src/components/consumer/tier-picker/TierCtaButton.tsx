@@ -3,6 +3,7 @@
 // Shared CTA button — one visual system across the desktop card and the
 // mobile accordion (design handoff TierCtaButton).
 
+import { useEffect, useRef } from 'react'
 import { tierShell, stampColor } from './lib/tier-shell'
 import type { TierCta, TierKey } from './definitions/types'
 
@@ -10,13 +11,20 @@ interface TierCtaButtonProps {
   tierKey: TierKey
   cta: TierCta
   onSelect: (tierKey: TierKey, cta: TierCta) => void
+  /** Focus on mount — the failure-surface dismiss returns focus here. */
+  autoFocus?: boolean
 }
 
 export const TierCtaButton = ({
   tierKey,
   cta,
   onSelect,
+  autoFocus = false,
 }: TierCtaButtonProps) => {
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
+  useEffect(() => {
+    if (autoFocus) buttonRef.current?.focus()
+  }, [autoFocus])
   const shell = tierShell(tierKey)
   const stamp = stampColor(shell)
 
@@ -47,6 +55,7 @@ export const TierCtaButton = ({
 
   return (
     <button
+      ref={buttonRef}
       type="button"
       disabled={cta.disabled}
       onClick={() => onSelect(tierKey, cta)}

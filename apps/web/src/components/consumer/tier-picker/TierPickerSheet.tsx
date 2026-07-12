@@ -212,6 +212,10 @@ export const TierPickerSheet = ({
     return releasePaymentFlow
   }, [open, checkout])
 
+  // Dismissing a failure surface returns focus to the tier CTA that
+  // opened checkout (a11y table — focus never falls to the body).
+  const [returnFocusTier, setReturnFocusTier] = useState<TierKey | null>(null)
+
   // Bumped on close to invalidate any createCheckoutSession still in
   // flight — a session resolving after dismissal must be abandoned (the
   // incomplete subscription holds a founder seat), never shown on reopen.
@@ -240,11 +244,15 @@ export const TierPickerSheet = ({
     setCheckoutSurface({ kind: 'checkout' })
     setErrorText(null)
     setPendingTier(null)
+    setReturnFocusTier(null)
     onClose()
   }, [checkout, abandonSubscription, onClose])
 
   const backToTiers = useCallback(() => {
-    if (checkout !== null) abandonSubscription(checkout.subscriptionId)
+    if (checkout !== null) {
+      abandonSubscription(checkout.subscriptionId)
+      setReturnFocusTier(checkout.tierKey)
+    }
     setCheckout(null)
     setCheckoutSurface({ kind: 'checkout' })
   }, [checkout, abandonSubscription])
@@ -252,6 +260,7 @@ export const TierPickerSheet = ({
   const selectTier = useCallback(
     (tierKey: TierKey, cta: TierCta) => {
       setErrorText(null)
+      setReturnFocusTier(null)
       if (cta.action === 'sign-up') {
         router.push('/sign-up')
         return
@@ -516,6 +525,7 @@ export const TierPickerSheet = ({
                     setExpandedTier(expandedTier === tier.key ? null : tier.key)
                   }
                   onSelect={selectTier}
+                  autoFocusCta={returnFocusTier === tier.key}
                 />
               ))}
             </div>
@@ -536,6 +546,7 @@ export const TierPickerSheet = ({
                   founderWindowState={windowView.state}
                   scarcityRail={rail}
                   onSelect={selectTier}
+                  autoFocusCta={returnFocusTier === tier.key}
                 />
               ))}
             </div>

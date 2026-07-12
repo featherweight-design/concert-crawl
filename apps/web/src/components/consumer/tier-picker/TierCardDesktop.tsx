@@ -26,6 +26,7 @@ interface TierCardDesktopProps {
   founderWindowState: FounderWindowState
   scarcityRail: ScarcityRailData | null
   onSelect: (tierKey: TierKey, cta: TierCta) => void
+  autoFocusCta?: boolean
 }
 
 export const TierCardDesktop = ({
@@ -34,6 +35,7 @@ export const TierCardDesktop = ({
   founderWindowState,
   scarcityRail,
   onSelect,
+  autoFocusCta = false,
 }: TierCardDesktopProps) => {
   const shell = tierShell(tier.key)
   const isCurrent = state === tier.key
@@ -188,7 +190,12 @@ export const TierCardDesktop = ({
       )}
 
       <div style={{ marginTop: 'auto' }}>
-        <TierCtaButton tierKey={tier.key} cta={cta} onSelect={onSelect} />
+        <TierCtaButton
+          tierKey={tier.key}
+          cta={cta}
+          onSelect={onSelect}
+          autoFocus={autoFocusCta}
+        />
       </div>
     </div>
   )
