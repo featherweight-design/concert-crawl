@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@clerk/nextjs'
 import { apiClient } from '@/lib/api'
+import { FETCH_PAGE_SIZE } from './admin-price-submissions.constants'
 
 // Mirrors packages/db price_submission_status enum — the UI treats status as a
 // closed set (STATUS_KIND / statusLabels), so keep this union in sync with it.
@@ -37,8 +38,8 @@ interface CountedResponse {
 // walking offsets until it has `total` rows. Filtering, sorting and pagination
 // all run client-side (the endpoint only orders by createdAt desc and filters
 // pending|all), so the full set has to be in the browser. For beta volumes this
-// resolves in a single request.
-export const FETCH_PAGE_SIZE = 100
+// resolves in a single request. FETCH_PAGE_SIZE lives in a server-safe module
+// so the SSR seed can share it without importing from this client module.
 
 export const adminPriceSubmissionsKey = [
   'admin',

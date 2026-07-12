@@ -1,10 +1,8 @@
 import { auth, requireAdminUser } from '@/lib/auth'
 import { apiClient } from '@/lib/api'
 import { PricesSubmissionsClient } from '@/components/admin/prices/PricesSubmissionsClient'
-import {
-  FETCH_PAGE_SIZE,
-  type PriceSubmissionHistoryRow,
-} from '@/lib/queries/use-admin-price-submissions'
+import { type PriceSubmissionHistoryRow } from '@/lib/queries/use-admin-price-submissions'
+import { FETCH_PAGE_SIZE } from '@/lib/queries/admin-price-submissions.constants'
 
 interface CountedResponse {
   rows: PriceSubmissionHistoryRow[]
