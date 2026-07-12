@@ -176,7 +176,13 @@ describe('FounderWindowControl — rehearsal actions', () => {
     await waitFor(() =>
       expect(buttonByName('Reset test seats').disabled).toBe(true),
     )
+
     resolvePost({ seatsRemainingTest: 4 })
+    // Wait for the component to process the resolution and clear the pending
+    // state so no state update happens after the test/cleanup runs.
+    await waitFor(() =>
+      expect(buttonByName('Reset test seats').disabled).toBe(false),
+    )
   })
 
   it('renders a failed rehearsal error under the rehearsal panel', async () => {
