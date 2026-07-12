@@ -460,6 +460,41 @@ describe('PricesSubmissionsClient', () => {
     ).toBeTruthy()
   })
 
+  it('surfaces auth copy when the query fails with an auth error', () => {
+    mockUseAdminPriceSubmissions.mockReturnValue({
+      data: [],
+      isFetching: false,
+      isError: true,
+      error: new Error('Not authenticated'),
+    })
+    renderClient(
+      <PricesSubmissionsClient initialSubmissions={[]} initialTotal={0} />,
+    )
+    expect(
+      screen.getByText(ADMIN_COPY.submissionsHistory.authError),
+    ).toBeTruthy()
+    expect(
+      screen.queryByText(ADMIN_COPY.submissionsHistory.loadError),
+    ).toBeNull()
+  })
+
+  it('states the count as a subset of the server total while still loading', () => {
+    const firstPage = [row({ id: 'sub-1', status: 'archived' })]
+    mockUseAdminPriceSubmissions.mockReturnValue({
+      data: firstPage,
+      isFetching: true,
+    })
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={firstPage}
+        initialTotal={3}
+      />,
+    )
+    // Loaded rows (1) < server total (3): badge must not claim "1 total".
+    expect(screen.getByText('1 of 3')).toBeTruthy()
+    expect(screen.queryByText('1 total')).toBeNull()
+  })
+
   it('renders the empty copy when there are no submissions', () => {
     mockUseAdminPriceSubmissions.mockReturnValue({
       data: [],

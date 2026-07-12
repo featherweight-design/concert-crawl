@@ -24,6 +24,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { BulkActionDock } from '@/components/admin/review/BulkActionDock'
 import { formatPriceRange } from '@/components/admin/review/lib/format-price-range'
 import { isSafeHttpUrl } from './lib/is-safe-http-url'
+import { isAuthError } from './lib/is-auth-error'
 import { reviewQueryKeys } from '@/lib/queries/use-admin-review'
 import {
   adminPriceSubmissionsKey,
@@ -286,8 +287,12 @@ export const PricesSubmissionsClient = ({
   // A PATCH failure (`error`) takes precedence over a background load
   // failure — both need surfacing so a transient API error can't masquerade
   // as a legitimate empty state (the SSR seed swallows the first-paint error).
-  const bannerMessage =
-    error ?? (submissionsQuery.isError ? COPY.loadError : null)
+  const queryErrorMessage = submissionsQuery.isError
+    ? isAuthError(submissionsQuery.error)
+      ? COPY.authError
+      : COPY.loadError
+    : null
+  const bannerMessage = error ?? queryErrorMessage
 
   const sectionHead = (
     <SectionHead
@@ -390,9 +395,13 @@ export const PricesSubmissionsClient = ({
           color: 'var(--fg-muted)',
         }}
       >
-        {statusFilter === 'all'
-          ? COPY.countBadge(total)
-          : COPY.countBadgeFiltered(total, rows.length)}
+        {statusFilter !== 'all'
+          ? COPY.countBadgeFiltered(total, rows.length)
+          : truncated
+            ? // Mid-load: `total` is only the rows walked so far, so state it
+              // as a subset of the server count rather than the full "total".
+              COPY.countBadgeFiltered(total, initialTotal)
+            : COPY.countBadge(total)}
       </span>
     </span>
   )
