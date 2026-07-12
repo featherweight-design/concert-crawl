@@ -26,7 +26,7 @@
 
 ## PR 1 — Prod → Staging Public-Data Sync
 
-**Deliverable:** `pnpm --filter root exec tsx scripts/seed-staging/sync-prod-public-data.ts [--dry-run]` copies venues, events (within a rolling window: past 30 days → all future), and venue/vendor-sourced price retrieval log rows from prod to staging, idempotently.
+**Deliverable:** `pnpm db:seed:staging:sync` (add `-- --dry-run` for a preview) copies venues, events (within a rolling window: past 30 days → all future), and venue/vendor-sourced price retrieval log rows from prod to staging, idempotently. The script name is a root-level entry wired into `package.json` in Task 5 below.
 
 ### Task 1: Read-only prod client wrapper
 
@@ -191,7 +191,7 @@ git commit -m "feat(seed-staging): sync venues with slug upsert"
 - Produces:
   - `rollingWindow(now: Date): { fromDate: string; }` — returns `{ fromDate: <YYYY-MM-DD>=today-30d> }`. The read query is `WHERE date >= fromDate`; there is no upper bound (spec: "past 30 days → all future"). Exported from `-helpers.ts` for pure-function testing.
   - `syncEvents(deps: { prod; staging; dryRun; now: Date }): Promise<{ scanned: number; upserted: number }>`.
-  - Upsert target: `events.venueDateCanonicalTitleIdx` — partial UNIQUE on `(venue_id, date, canonical_title) WHERE status = 'upcoming'` (per `packages/db/src/schema/events.ts:158-162`). Rows with `status` in `('cancelled', 'postponed')` sit outside the index; treat them as insert-only for now — if a matching row exists on `(venue_id, date, canonical_title, status)` also skip. Simplest correct: use `.onConflictDoUpdate({ target: [events.venueId, events.date, events.canonicalTitle], where: sql\`status = 'upcoming'\`, set: {...} })`for upcoming rows and`.onConflictDoNothing` for cancelled/postponed via a second insert path. Split by status in the loop.
+  - Upsert target: `events.venueDateCanonicalTitleIdx` — partial UNIQUE on `(venue_id, date, canonical_title) WHERE status = 'upcoming'` (per `packages/db/src/schema/events.ts:158-162`). Rows with `status` in `('cancelled', 'postponed')` sit outside the index; treat them as insert-only for now. Simplest correct: for `upcoming` rows call `.onConflictDoUpdate({ target: [events.venueId, events.date, events.canonicalTitle], targetWhere: eq(events.status, 'upcoming'), set: {...} })` — `targetWhere` mirrors the partial index predicate so Postgres identifies the right unique index (mirror the canonical usage at `packages/crawler-core/src/crawl.ts:685-693`, which upserts against the same index). For `cancelled`/`postponed` rows use `.onConflictDoNothing()` via a second insert path. Split by status in the loop.
 
 - [ ] **Step 1: Write failing tests.**
 
