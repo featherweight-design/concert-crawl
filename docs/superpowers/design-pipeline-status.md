@@ -47,7 +47,7 @@ Handoff audit is done and the design shape is right; verdict flagged specific ga
 |---|---|---|---|
 | **`design/design_handoff_shareable_cards/`** | PR #871 (2026-07-11) | (1) tier gate for share is undefined — handoff pre-dates monetization by 6 weeks; (2) anonymous URL contract undefined — event pages live under `(protected)/(main)`; (3) README references non-existent `POSTER_TAGLINES` constant; **(4) NEW: inherits Passport card scope from concert_history (compact 320×500 + share 1080×1080)** — concert_history's Yellow → Green addendum (PR #916) moved Passport ownership here | ~30-min direct-write addendum + Passport scope confirmation |
 
-Both audits' full findings are in their respective `READINESS.md`.
+Full audit findings are in the handoff's `READINESS.md`.
 
 ---
 
@@ -104,7 +104,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
-| 2026-07-12 | — | Tracker refresh #4 — concert_history flipped 🟡 → 🟢 (this PR) |
+| 2026-07-12 | — | Tracker refresh #4 — concert_history flipped 🟡 → 🟢 (PR #918) |
 | 2026-07-12 | — | `design/design_handoff_concert_history/READINESS.md` addendum merged (PR #916) — 🟢 Green post-addendum verdict; all three Yellow blockers resolved (attending_at schema, Supporter tier via #878, Passport moved to shareable_cards) |
 | 2026-07-11 | — | Tracker refresh post-#903 audit (PR #904) |
 | 2026-07-11 | — | `design/design_handoff_supporting_artists_line/READINESS.md` merged (PR #903) — 🟢 Green verdict, one-pass, ready for eng-planning. Handoff files committed alongside verdict. |
