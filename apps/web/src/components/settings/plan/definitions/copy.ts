@@ -86,12 +86,13 @@ export const PLAN_CARD_COPY = {
         ? ` until ${periodEnd}, then you roll to Free.`
         : ` until the period ends, then you roll to Free.`) +
       " You won't be charged again.",
-    punchline: '—— Changed your mind? Manage subscription puts it right back.',
+    punchline: '—— Changed your mind? One tap puts it right back.',
     railLabel: (periodEnd: string | null) =>
       periodEnd
         ? `Auto-renew off · access ends ${periodEnd}`
         : 'Auto-renew off',
     railSub: 'Nothing else will be charged',
+    resubscribeCta: 'Resubscribe',
     manageCta: 'Manage subscription',
   },
 
@@ -159,5 +160,6 @@ export const PLAN_CARD_COPY = {
 
   errors: {
     portal: "Couldn't open subscription management. Try again in a moment.",
+    resubscribe: "Couldn't restart your plan. Refresh and try again.",
   },
 } as const

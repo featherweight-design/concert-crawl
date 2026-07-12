@@ -1,9 +1,10 @@
 'use client'
 
-// Settings "Your plan" surface (PR 3.4, #780/#781/#782): resolves the
-// lifecycle card from PlanState, dispatches its CTAs (portal navigation
-// for paid plans, tier picker for upgrades), and owns the single
-// TierPickerSheet shared by the card and the compare-plans entry.
+// Settings "Your plan" surface (PR 3.4 + PR 4.5, #780/#781/#782): resolves
+// the lifecycle card from PlanState, dispatches its CTAs (in-app manage
+// sheet for paid plans, one-tap resubscribe in cancel-grace, portal for
+// billing tooling, tier picker for upgrades), and owns the TierPickerSheet
+// + ManageSubscriptionSheet shared by the card entries.
 
 import { useState } from 'react'
 import type { PlanState } from '@concert-crawl/types'
@@ -14,9 +15,19 @@ import {
   type PlanOpenVariant,
 } from '@/components/consumer/tier-picker/lib/use-plan-open-param'
 import { PlanCard } from './PlanCard'
-import { resolvePlanCard } from './lib/resolve-plan-card'
+import { ManageSubscriptionSheet } from './manage'
+import { formatPeriodEnd, resolvePlanCard } from './lib/resolve-plan-card'
 import { usePortalNavigation } from './lib/use-portal-navigation'
+import { useResubscribe } from './lib/use-resubscribe'
 import type { PlanCardCta } from './definitions/types'
+
+const MANAGEABLE_TIERS = ['supporter', 'premium', 'founder'] as const
+type ManageableTier = (typeof MANAGEABLE_TIERS)[number]
+
+const toManageableTier = (plan: PlanState['plan']): ManageableTier | null => {
+  const match = MANAGEABLE_TIERS.find((tier) => tier === plan)
+  return match ?? null
+}
 
 export const PlanPanel = ({
   planState,
@@ -28,9 +39,17 @@ export const PlanPanel = ({
   variant?: PlanOpenVariant
 }) => {
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [manageOpen, setManageOpen] = useState(false)
   const { openPortal, portalPending, portalError, clearPortalError } =
     usePortalNavigation()
+  const {
+    resubscribe,
+    resubscribePending,
+    resubscribeError,
+    clearResubscribeError,
+  } = useResubscribe()
   const content = resolvePlanCard(planState)
+  const manageTier = toManageableTier(planState.plan)
 
   // Lifecycle nudge CTAs land on /me?plan=open (PR 4.2) — auto-open the
   // picker, then strip the param. Both PlanPanel mounts (mobile + desktop
@@ -43,19 +62,31 @@ export const PlanPanel = ({
       openPortal()
       return
     }
+    if (cta.action === 'resubscribe') {
+      clearPortalError()
+      resubscribe()
+      return
+    }
     clearPortalError()
+    clearResubscribeError()
+    if (cta.action === 'manage-sheet' && manageTier !== null) {
+      setManageOpen(true)
+      return
+    }
     setPickerOpen(true)
   }
+
+  const alertText = portalError ?? resubscribeError
 
   return (
     <div className="flex flex-col">
       <PlanCard
         content={content}
         onCtaClick={dispatchCta}
-        ctaPending={portalPending}
+        ctaPending={portalPending || resubscribePending}
       />
 
-      {portalError && (
+      {alertText && (
         <div
           role="alert"
           className="mt-2 rounded-[10px] px-3 py-2 text-[12.5px]"
@@ -68,7 +99,7 @@ export const PlanPanel = ({
             fontWeight: 600,
           }}
         >
-          {portalError}
+          {alertText}
         </div>
       )}
 
@@ -76,6 +107,7 @@ export const PlanPanel = ({
         type="button"
         onClick={() => {
           clearPortalError()
+          clearResubscribeError()
           setPickerOpen(true)
         }}
         className="mt-2 w-full rounded-[10px] border border-border bg-surface-1 px-4 py-3 text-left transition-colors hover:border-border-strong"
@@ -95,6 +127,15 @@ export const PlanPanel = ({
         planState={planState}
         scaRegion={scaRegion}
       />
+
+      {manageTier !== null && (
+        <ManageSubscriptionSheet
+          open={manageOpen}
+          onClose={() => setManageOpen(false)}
+          tier={manageTier}
+          periodEnd={formatPeriodEnd(planState.currentPeriodEnd)}
+        />
+      )}
     </div>
   )
 }

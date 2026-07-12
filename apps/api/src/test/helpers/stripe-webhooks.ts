@@ -7,7 +7,11 @@
 
 import Stripe from 'stripe'
 import { Hono } from 'hono'
-import type { BillingStripeClient } from '../../lib/stripe.js'
+import type {
+  BillingStripeClient,
+  StripeInvoicePreviewParams,
+  StripeSubscriptionUpdateParams,
+} from '../../lib/stripe.js'
 import { createStripeWebhooksRouter } from '../../routes/stripe-webhooks.js'
 
 export const TEST_WEBHOOK_SECRET = 'whsec_test_secret_for_vitest'
@@ -23,12 +27,45 @@ export interface FakeWebhookStripe {
   subscriptionsById: Map<string, Record<string, unknown>>
   cancelledSubscriptionIds: string[]
   portalSessionsCreated: { customer: string; return_url: string }[]
+  /** Recorded subscriptions.update calls (lifecycle routes, PR 4.5). */
+  subscriptionUpdateCalls: {
+    subscriptionId: string
+    params: StripeSubscriptionUpdateParams
+  }[]
+  /** Recorded invoices.createPreview calls (proration preview, PR 4.5). */
+  invoicePreviewCalls: StripeInvoicePreviewParams[]
+  /** Payload returned by invoices.createPreview — mutate per test. */
+  previewInvoice: { current: Record<string, unknown> }
+  /** Registered active price per lookup_key served by prices.list. */
+  pricesByLookupKey: Map<string, { id: string }[]>
 }
+
+/** A plausible dahlia-shape preview invoice (upgrade default). */
+export const makePreviewInvoiceObject = (
+  overrides: Record<string, unknown> = {},
+): Record<string, unknown> => ({
+  amount_due: 250,
+  currency: 'usd',
+  period_end: PERIOD_END_SECONDS,
+  lines: {
+    data: [{ amount: -150 }, { amount: 400 }],
+  },
+  ...overrides,
+})
 
 export const createFakeWebhookStripe = (): FakeWebhookStripe => {
   const subscriptionsById = new Map<string, Record<string, unknown>>()
   const cancelledSubscriptionIds: string[] = []
   const portalSessionsCreated: { customer: string; return_url: string }[] = []
+  const subscriptionUpdateCalls: {
+    subscriptionId: string
+    params: StripeSubscriptionUpdateParams
+  }[] = []
+  const invoicePreviewCalls: StripeInvoicePreviewParams[] = []
+  const previewInvoice: { current: Record<string, unknown> } = {
+    current: makePreviewInvoiceObject(),
+  }
+  const pricesByLookupKey = new Map<string, { id: string }[]>()
 
   const client: BillingStripeClient = {
     customers: {
@@ -37,8 +74,16 @@ export const createFakeWebhookStripe = (): FakeWebhookStripe => {
       },
     },
     prices: {
-      list: async () => {
-        throw new Error('fake stripe: prices.list not used in this test')
+      list: async (params) => {
+        const lookupKey = params.lookup_keys[0]
+        const registered =
+          lookupKey !== undefined ? pricesByLookupKey.get(lookupKey) : undefined
+        if (!registered) {
+          throw new Error(
+            `fake stripe: no registered price for lookup_key ${String(lookupKey)}`,
+          )
+        }
+        return { data: registered }
       },
     },
     subscriptions: {
@@ -66,6 +111,25 @@ export const createFakeWebhookStripe = (): FakeWebhookStripe => {
         })
         return subscriptionsById.get(subscriptionId)
       },
+      update: async (subscriptionId, params) => {
+        const subscription = subscriptionsById.get(subscriptionId)
+        if (!subscription) {
+          throw new Error(`fake stripe: no such subscription ${subscriptionId}`)
+        }
+        subscriptionUpdateCalls.push({ subscriptionId, params })
+        const patched: Record<string, unknown> = { ...subscription }
+        if (params.cancel_at_period_end !== undefined) {
+          patched['cancel_at_period_end'] = params.cancel_at_period_end
+        }
+        subscriptionsById.set(subscriptionId, patched)
+        return patched
+      },
+    },
+    invoices: {
+      createPreview: async (params) => {
+        invoicePreviewCalls.push(params)
+        return previewInvoice.current
+      },
     },
     billingPortal: {
       sessions: {
@@ -90,6 +154,10 @@ export const createFakeWebhookStripe = (): FakeWebhookStripe => {
     subscriptionsById,
     cancelledSubscriptionIds,
     portalSessionsCreated,
+    subscriptionUpdateCalls,
+    invoicePreviewCalls,
+    previewInvoice,
+    pricesByLookupKey,
   }
 }
 
@@ -167,6 +235,7 @@ export const makeSubscriptionObject = (
   items: {
     data: [
       {
+        id: 'si_wh_1',
         price: { id: 'price_premium', lookup_key: 'premium_monthly' },
         current_period_start: PERIOD_START_SECONDS,
         current_period_end: PERIOD_END_SECONDS,

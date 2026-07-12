@@ -177,7 +177,7 @@ describe('resolvePlanCard — trial (Decision 7)', () => {
 })
 
 describe('resolvePlanCard — cancel-at-period-end (#780)', () => {
-  it('paid plan winding down: muted chip, grace copy, portal CTA', () => {
+  it('paid plan winding down: muted chip, grace copy, one-tap Resubscribe + portal ghost', () => {
     const content = resolvePlanCard(
       state({
         plan: 'premium',
@@ -194,8 +194,18 @@ describe('resolvePlanCard — cancel-at-period-end (#780)', () => {
       PLAN_CARD_COPY.cancelGrace.headline('Premium', 'Jul 15'),
     )
     expect(content.rail?.tone).toBe('muted')
-    expect(content.ctas).toHaveLength(1)
-    expect(content.ctas[0]?.action).toBe('portal')
+    expect(content.ctas).toHaveLength(2)
+    expect(content.ctas[0]).toMatchObject({
+      label: PLAN_CARD_COPY.cancelGrace.resubscribeCta,
+      kind: 'primary',
+      action: 'resubscribe',
+      glow: true,
+    })
+    expect(content.ctas[1]).toMatchObject({
+      label: PLAN_CARD_COPY.cancelGrace.manageCta,
+      kind: 'ghost',
+      action: 'portal',
+    })
   })
 
   it('cancelAtPeriodEnd on a free plan does not render the grace card', () => {
@@ -208,7 +218,7 @@ describe('resolvePlanCard — cancel-at-period-end (#780)', () => {
 })
 
 describe('resolvePlanCard — active paid tiers', () => {
-  it('supporter: accent tone, badge, portal CTA', () => {
+  it('supporter: accent tone, badge, manage-sheet CTA', () => {
     const content = resolvePlanCard(
       state({
         plan: 'supporter',
@@ -224,7 +234,7 @@ describe('resolvePlanCard — active paid tiers', () => {
     )
     expect(content.badgeTier).toBe('supporter')
     expect(content.tone).toBe('accent')
-    expect(content.ctas[0]?.action).toBe('portal')
+    expect(content.ctas[0]?.action).toBe('manage-sheet')
   })
 
   it('premium: signal tone, renewal eyebrow', () => {
@@ -237,7 +247,7 @@ describe('resolvePlanCard — active paid tiers', () => {
     expect(content.eyebrow).toBe(
       PLAN_CARD_COPY.activePremium.eyebrow('$5', null),
     )
-    expect(content.ctas[0]?.action).toBe('portal')
+    expect(content.ctas[0]?.action).toBe('manage-sheet')
   })
 
   it('founder: gradient primary, locked-price eyebrow', () => {
@@ -255,7 +265,7 @@ describe('resolvePlanCard — active paid tiers', () => {
       PLAN_CARD_COPY.activeFounder.eyebrow('$3', 'Jul 15'),
     )
     expect(content.founderGradient).toBe(true)
-    expect(content.ctas[0]?.action).toBe('portal')
+    expect(content.ctas[0]?.action).toBe('manage-sheet')
   })
 })
 

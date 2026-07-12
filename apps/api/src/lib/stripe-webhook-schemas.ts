@@ -18,6 +18,10 @@ const metadataSchema = z.record(z.string()).nullish()
 // 2026-06-24.dahlia the current_period_* fields live on the item (moved off
 // the subscription in the 2025 basil release).
 const subscriptionItemSchema = z.object({
+  // The subscription item ID (`si_…`) — required by the change-tier price
+  // switch (subscriptions.update items[].id); nullish because webhook test
+  // fixtures and older payload slices may omit it.
+  id: z.string().nullish(),
   price: z.object({
     id: z.string(),
     lookup_key: z.string().nullish(),

@@ -30,8 +30,10 @@ const periodEndFormatter = new Intl.DateTimeFormat('en-US', {
   timeZone: DISPLAY_TIME_ZONE,
 })
 
-/** ISO timestamp → "Jul 15" in Mountain Time; null for absent/unparseable. */
-const formatPeriodEnd = (iso: string | null): string | null => {
+/** ISO timestamp → "Jul 15" in Mountain Time; null for absent/unparseable.
+ * Exported so the PlanPanel can feed the same display date to the #780
+ * manage sheet. */
+export const formatPeriodEnd = (iso: string | null): string | null => {
   if (!iso) return null
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return null
@@ -84,10 +86,13 @@ const trialDaysRemaining = (trialEndsAt: string | null, now: Date): number => {
 const clampTrialDay = (daysRemaining: number): number =>
   Math.min(Math.max(TRIAL_LENGTH_DAYS - daysRemaining, 1), TRIAL_LENGTH_DAYS)
 
-const managePortalCta = (label: string): PlanCardCta => ({
+// PR 4.5: active paid tiers open the in-app #780 manage sheet instead of
+// jumping straight to the Stripe portal (the sheet's tooling rows still
+// portal out).
+const manageSheetCta = (label: string): PlanCardCta => ({
   label,
   kind: 'primary',
-  action: 'portal',
+  action: 'manage-sheet',
 })
 
 const baseContent = {
@@ -235,8 +240,9 @@ export const resolvePlanCard = (
     }
   }
 
-  // 4 — cancel-at-period-end grace window (#780). Portal restores
-  // auto-renew (one-tap Resubscribe is the PR 4.5 in-app flow).
+  // 4 — cancel-at-period-end grace window (#780). One-tap Resubscribe
+  // flips auto-renew back on (README decision #3 — user never lost access,
+  // so no checkout trip); the ghost keeps the Stripe portal escape hatch.
   if (planState.cancelAtPeriodEnd && isPaidTier(plan)) {
     const tierDef = TIER_DEFINITIONS[plan]
     const copy = PLAN_CARD_COPY.cancelGrace
@@ -256,7 +262,15 @@ export const resolvePlanCard = (
         label: copy.railLabel(periodEnd),
         sub: copy.railSub,
       },
-      ctas: [managePortalCta(copy.manageCta)],
+      ctas: [
+        {
+          label: copy.resubscribeCta,
+          kind: 'primary',
+          action: 'resubscribe',
+          glow: true,
+        },
+        { label: copy.manageCta, kind: 'ghost', action: 'portal' },
+      ],
     }
   }
 
@@ -272,7 +286,7 @@ export const resolvePlanCard = (
       headline: copy.headline,
       body: copy.body,
       punchline: copy.punchline,
-      ctas: [managePortalCta(copy.manageCta)],
+      ctas: [manageSheetCta(copy.manageCta)],
     }
   }
   if (plan === 'founder') {
@@ -287,7 +301,7 @@ export const resolvePlanCard = (
       body: copy.body,
       punchline: copy.punchline,
       founderGradient: true,
-      ctas: [managePortalCta(copy.manageCta)],
+      ctas: [manageSheetCta(copy.manageCta)],
     }
   }
   if (plan === 'premium') {
@@ -301,7 +315,7 @@ export const resolvePlanCard = (
       headline: copy.headline,
       body: copy.body,
       punchline: copy.punchline,
-      ctas: [managePortalCta(copy.manageCta)],
+      ctas: [manageSheetCta(copy.manageCta)],
     }
   }
 

@@ -44,6 +44,25 @@ export interface StripeSubscriptionCreateParams {
   metadata: Record<string, string>
 }
 
+// Lifecycle updates (PR 4.5): cancel-schedule flips and tier changes both go
+// through subscriptions.update — one params slice covers both call shapes.
+export interface StripeSubscriptionUpdateParams {
+  cancel_at_period_end?: boolean
+  items?: { id: string; price: string }[]
+  proration_behavior?: 'always_invoice' | 'create_prorations'
+}
+
+// Upcoming-invoice preview (spec §1.4 proration-preview) — previews the
+// effect of a subscription item price change without mutating anything.
+export interface StripeInvoicePreviewParams {
+  customer: string
+  subscription: string
+  subscription_details: {
+    items: { id: string; price: string }[]
+    proration_behavior: 'always_invoice' | 'create_prorations'
+  }
+}
+
 // Minimal verified-event shape — the payload object is `unknown` on purpose;
 // handlers Zod-parse the slice of each event they consume (boundary data).
 export interface StripeVerifiedEvent {
@@ -72,6 +91,15 @@ export interface BillingStripeClient {
     // consume (boundary data never trusted structurally).
     retrieve(subscriptionId: string): Promise<unknown>
     cancel(subscriptionId: string): Promise<unknown>
+    update(
+      subscriptionId: string,
+      params: StripeSubscriptionUpdateParams,
+    ): Promise<unknown>
+  }
+  invoices: {
+    // Returns `unknown` — the lifecycle routes Zod-parse the invoice slice
+    // they consume (boundary data never trusted structurally).
+    createPreview(params: StripeInvoicePreviewParams): Promise<unknown>
   }
   billingPortal: {
     sessions: {

@@ -226,7 +226,11 @@ export const PlanCard = ({
       {/* CTAs — mobile stacks, desktop inline */}
       <div className="mt-1.5 flex flex-col flex-wrap gap-2.5 sm:flex-row">
         {content.ctas.map((cta) => {
-          const isDisabled = ctaPending && cta.action === 'portal'
+          // Only network-bound actions lock while a request is in flight;
+          // sheet/picker CTAs are instant and stay tappable.
+          const isDisabled =
+            ctaPending &&
+            (cta.action === 'portal' || cta.action === 'resubscribe')
           return (
             <button
               key={cta.label}

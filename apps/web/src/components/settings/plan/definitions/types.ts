@@ -1,9 +1,11 @@
 import type { TierKey } from '@/components/consumer/tier-picker/definitions/types'
 
-/** What tapping a Plan card CTA does (PR 3.4 scope). */
+/** What tapping a Plan card CTA does (PR 3.4 scope + PR 4.5 lifecycle). */
 export type PlanCardAction =
   | 'portal' // POST /v1/billing/portal-session → Stripe portal (paid plans only)
   | 'tier-picker' // open the #781 tier picker (upgrade path for free users)
+  | 'manage-sheet' // open the #780 in-app manage-subscription sheet (PR 4.5)
+  | 'resubscribe' // one-tap POST /v1/billing/resubscribe (cancel-grace only)
 
 export interface PlanCardCta {
   label: string
