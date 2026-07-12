@@ -23,6 +23,7 @@ const assertShellContract = (rendered: RenderedEmail): void => {
   expect(rendered.preheader.length).toBeGreaterThanOrEqual(50)
   expect(rendered.preheader.length).toBeLessThanOrEqual(100)
   expect(rendered.subject).not.toMatch(/\p{Extended_Pictographic}/u)
+  expect(rendered.subject).not.toMatch(/\[concert crawl\]/i)
   expect(rendered.html).toContain('<!doctype html>')
   expect(rendered.html).toContain('Manage emails')
   expect(rendered.text).toContain('Concert Crawl · Denver, CO')
