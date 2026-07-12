@@ -9,6 +9,7 @@
 
 import { describe, it, expect } from 'vitest'
 import {
+  cancellationStartsPurgeClock,
   cardExpiryDedupeKey,
   cardExpiryInstant,
   daysUntilCardExpiry,
@@ -225,5 +226,25 @@ describe('isPurgeEligible (guard re-check at purge time)', () => {
     }
     expect(isPurgeEligible(input)).toBe(true)
     expect(isPurgeEligible(input)).toBe(true)
+  })
+})
+
+describe('cancellationStartsPurgeClock (task-6 reconcile mirrors the webhook)', () => {
+  it.each(['premium', 'founder'])(
+    'starts the 90-day clock for a %s cancellation',
+    (tier) => {
+      expect(cancellationStartsPurgeClock(tier)).toBe(true)
+    },
+  )
+
+  it.each(['supporter', 'free'])(
+    'does not start the clock for %s (never held premium data)',
+    (tier) => {
+      expect(cancellationStartsPurgeClock(tier)).toBe(false)
+    },
+  )
+
+  it('does not start the clock for an unknown/null tier', () => {
+    expect(cancellationStartsPurgeClock(null)).toBe(false)
   })
 })

@@ -181,6 +181,16 @@ export const isPurgeEligible = (input: {
   return true
 }
 
+/**
+ * Whether a cancellation of `tier` should start the 90-day preserve-then-purge
+ * clock. Mirrors the PREMIUM_AND_UP gate in handleSubscriptionDeleted: only
+ * premium/founder held premium data worth preserving; supporter/free/unknown
+ * never did. Used by the task-6 lost-webhook reconcile so a synthesized
+ * cancellation starts the same clock the real webhook would have.
+ */
+export const cancellationStartsPurgeClock = (tier: string | null): boolean =>
+  tier !== null && PREMIUM_AND_UP.includes(tier)
+
 // ---------------------------------------------------------------------------
 // Task 1 — Card-expiry warnings
 // ---------------------------------------------------------------------------
@@ -676,6 +686,7 @@ export const runDunningFallbackSweep = async (
     .select({
       userId: subscriptions.userId,
       stripeSubscriptionId: subscriptions.stripeSubscriptionId,
+      tier: subscriptions.tier,
       updatedAt: subscriptions.updatedAt,
     })
     .from(subscriptions)
@@ -731,9 +742,26 @@ export const runDunningFallbackSweep = async (
             type: 'cancel_completed',
             metadata: {
               subscriptionId: row.stripeSubscriptionId,
+              tier: row.tier,
               reconciledBy: 'billing-daily-fallback-sweep',
             },
           })
+        }
+
+        // Mirror handleSubscriptionDeleted: paid premium/founder tiers start the
+        // 90-day preserve-then-purge clock (#780 §5). Without this the lost
+        // webhook would leave premium_data_expires_at unset and the user would
+        // never become eligible for the §5.3 purge (task 5). Idempotent via
+        // onConflictDoUpdate, so a re-run does not extend the window.
+        if (cancellationStartsPurgeClock(row.tier)) {
+          const premiumDataExpiresAt = new Date(now.getTime() + NINETY_DAYS_MS)
+          await db
+            .insert(userBilling)
+            .values({ userId: row.userId, premiumDataExpiresAt })
+            .onConflictDoUpdate({
+              target: userBilling.userId,
+              set: { premiumDataExpiresAt, updatedAt: new Date() },
+            })
         }
         apiLogger.warn(
           { userId: row.userId, subscriptionId: row.stripeSubscriptionId },
