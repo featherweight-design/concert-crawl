@@ -427,8 +427,13 @@ export const handleInvoicePaymentSucceeded = async (
     ctx.postCommitEmails.push(emailParams)
   } else {
     apiLogger.warn(
-      { stripeEventId: ctx.stripeEventId, subscriptionId, tier },
-      'invoice.payment_succeeded: no email queued — missing paid tier, invoice id, or created timestamp',
+      {
+        stripeEventId: ctx.stripeEventId,
+        subscriptionId,
+        tier,
+        billingReason: invoice.billing_reason ?? null,
+      },
+      'invoice.payment_succeeded: no email queued — non-paid tier on first invoice, or missing invoice id/created timestamp on renewal',
     )
   }
 
