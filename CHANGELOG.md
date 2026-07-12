@@ -1,3 +1,19 @@
+# [1.107.0](https://github.com/HartiganHM/concert-crawl/compare/v1.106.0...v1.107.0) (2026-07-12)
+
+
+### Bug Fixes
+
+* **admin:** [#694](https://github.com/HartiganHM/concert-crawl/issues/694) PR [#915](https://github.com/HartiganHM/concert-crawl/issues/915) R2 — badge total, filter page-reset, out-of-range pager ([2a97626](https://github.com/HartiganHM/concert-crawl/commit/2a976266b4814f2e85832218708f43d174d26fd0))
+* **admin:** [#694](https://github.com/HartiganHM/concert-crawl/issues/694) PR [#915](https://github.com/HartiganHM/concert-crawl/issues/915) R4 — SSR count as eventFlagsTotal fallback ([1db2bec](https://github.com/HartiganHM/concert-crawl/commit/1db2becb4d66dbbe879dcae38b5befd9cec029b9))
+* **admin:** [#694](https://github.com/HartiganHM/concert-crawl/issues/694) PR [#915](https://github.com/HartiganHM/concert-crawl/issues/915) R5 — seed inspector only after new page rows arrive ([e802545](https://github.com/HartiganHM/concert-crawl/commit/e802545f2a395adb28d856895b9025351ab318e6))
+* **web:** [#694](https://github.com/HartiganHM/concert-crawl/issues/694) keep inspector on a visible row when the active flag drifts pages (PR [#915](https://github.com/HartiganHM/concert-crawl/issues/915) R2) ([b15a116](https://github.com/HartiganHM/concert-crawl/commit/b15a1163f46e5623888703f3b8f5e07975b2d9ad))
+* **web:** [#694](https://github.com/HartiganHM/concert-crawl/issues/694) keep inspector on visible row when approving last row of a page (PR [#915](https://github.com/HartiganHM/concert-crawl/issues/915) R1) ([b748cb0](https://github.com/HartiganHM/concert-crawl/commit/b748cb038847c3b325d6c0678492a63acdd62799))
+
+
+### Features
+
+* **web:** [#694](https://github.com/HartiganHM/concert-crawl/issues/694) paginate admin event-flags split-list ([f485798](https://github.com/HartiganHM/concert-crawl/commit/f485798af96b44e7a3c4f3bae8781f8a77340386))
+
 # [1.106.0](https://github.com/HartiganHM/concert-crawl/compare/v1.105.0...v1.106.0) (2026-07-12)
 
 
