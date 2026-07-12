@@ -1,4 +1,4 @@
-import type { UserPlan } from '@concert-crawl/types'
+import type { DeclineCategory, UserPlan } from '@concert-crawl/types'
 
 /** The four purchasable/renderable tiers in the picker. */
 export type TierKey = 'free' | 'supporter' | 'premium' | 'founder'
@@ -42,6 +42,18 @@ export interface TierCta {
   action: CtaAction
   disabled: boolean
 }
+
+/** 3DS vs. SCA framing for the challenge mount (design table PR 4.4). */
+export type ChallengeKind = '3ds' | 'sca'
+
+/**
+ * Which layout the checkout flow is showing. The Stripe Elements provider
+ * stays mounted across all three — only the surrounding chrome changes.
+ */
+export type CheckoutSurface =
+  | { kind: 'checkout' }
+  | { kind: 'failure'; category: DeclineCategory }
+  | { kind: 'challenge'; challenge: ChallengeKind }
 
 /** Scarcity-rail view model derived from the founder-window endpoint. */
 export interface ScarcityRailData {

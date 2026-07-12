@@ -1,3 +1,7 @@
+// Stripe decline_code → 5-category mapping (spec Part 2 §1.6) — shared by
+// the API webhook handler and the web tier-picker failure surfaces.
+export * from './decline-category.js'
+
 // User roles — mirrors Clerk publicMetadata.role
 // Role always takes precedence over plan in access checks:
 //   admin/promoter/beta/sub_admin get full premium access regardless of subscription.

@@ -3,10 +3,16 @@
 // Embedded checkout — mounts Stripe's Payment Element against the
 // clientSecret from POST /v1/billing/checkout-session and confirms
 // in-surface (eng infra spec Part 2 §1.3: confirmPayment with
-// redirect: 'if_required'). The full five-surface decline flow is PR 4.1;
-// this panel surfaces Stripe's own user-facing message inline.
+// redirect: 'if_required'). Declines route to the five failure surfaces
+// (PR 4.4); 3DS/SCA next-actions get the ChallengeMount chrome while
+// Stripe presents its bank window.
+//
+// The Elements provider and the PaymentElement's tree position are STABLE
+// across checkout ↔ failure ↔ challenge layouts — remounting the provider
+// or moving the element re-creates the Stripe iframe and loses the entered
+// card. Layout pieces render as conditional siblings around the element.
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { loadStripe } from '@stripe/stripe-js'
 import {
@@ -15,21 +21,41 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js'
+import { mapDeclineCategory, type DeclineCategory } from '@concert-crawl/types'
 import { TIER_PICKER_COPY } from './definitions/copy'
-import { TIER_DEFINITIONS } from './definitions/constants'
-import type { TierKey } from './definitions/types'
+import {
+  FAILURE_SURFACE_BEHAVIOR,
+  REQUIRES_ACTION_POLL_MS,
+  TIER_DEFINITIONS,
+} from './definitions/constants'
+import type { CheckoutSurface, TierKey } from './definitions/types'
+import { watchForRequiresAction } from './lib/requires-action-detector'
+import { useEscapeCapture } from './lib/use-escape-capture'
+import {
+  FailureActions,
+  FailureCardKeptNote,
+  FailureSurfaceIntro,
+  TierSummaryLine,
+  failureDialogProps,
+} from './FailureSurface'
+import { ChallengeMount } from './ChallengeMount'
 
 const CHECKOUT_COPY = TIER_PICKER_COPY.checkout
 const PUBLISHABLE_KEY = process.env['NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY']
+
+const CHECKOUT_SURFACE: CheckoutSurface = { kind: 'checkout' }
 
 interface CheckoutPanelProps {
   tierKey: Exclude<TierKey, 'free'>
   clientSecret: string
   // Server-resolved from x-vercel-ip-country (spec §1.7) — gates the
-  // conditional SCA notice row in the legal block.
+  // conditional SCA notice row in the legal block and frames the
+  // challenge mount as SCA rather than 3DS.
   scaRegion: boolean
   onBack: () => void
   onSuccess: () => void
+  // Lets the sheet swap its rail header + modal width per surface.
+  onSurfaceChange?: (surface: CheckoutSurface) => void
 }
 
 const LegalRow = ({
@@ -175,21 +201,71 @@ const BottomMonoRail = () => (
   </div>
 )
 
+interface CheckoutFormProps {
+  tierKey: Exclude<TierKey, 'free'>
+  clientSecret: string
+  scaRegion: boolean
+  surface: CheckoutSurface
+  onSurface: (surface: CheckoutSurface) => void
+  onSuccess: () => void
+  /** Dismiss back to the tier picker (failure-surface close / Escape). */
+  onDismiss: () => void
+}
+
 const CheckoutForm = ({
   tierKey,
+  clientSecret,
   scaRegion,
+  surface,
+  onSurface,
   onSuccess,
-}: Pick<CheckoutPanelProps, 'tierKey' | 'scaRegion' | 'onSuccess'>) => {
+  onDismiss,
+}: CheckoutFormProps) => {
   const stripe = useStripe()
   const elements = useElements()
   const [submitting, setSubmitting] = useState(false)
-  const [errorText, setErrorText] = useState<string | null>(null)
+  // Bumping remounts the PaymentElement empty ("Use a different card" /
+  // freshEmpty failure entry — design table state coverage).
+  const [elementKey, setElementKey] = useState(0)
   const tier = TIER_DEFINITIONS[tierKey]
+
+  const isFailure = surface.kind === 'failure'
+  const isChallenge = surface.kind === 'challenge'
+  const behavior = isFailure ? FAILURE_SURFACE_BEHAVIOR[surface.category] : null
+  // network_timeout keeps the entered card off-screen (card-kept note in
+  // its place); the challenge hides it while Stripe's window is up.
+  const hideElement = isChallenge || (behavior !== null && !behavior.freshCard)
+
+  const enterFailure = (category: DeclineCategory) => {
+    if (FAILURE_SURFACE_BEHAVIOR[category].freshEmpty)
+      setElementKey((key) => key + 1)
+    onSurface({ kind: 'failure', category })
+  }
+
+  const resetCard = () => setElementKey((key) => key + 1)
+
+  const cancelChallenge = () => onSurface(CHECKOUT_SURFACE)
+
+  // Escape dismisses the failure surface to the picker, and cancels the
+  // challenge chrome — before ModalShell's document listener closes the
+  // whole sheet (a11y table).
+  useEscapeCapture(isFailure, onDismiss)
+  useEscapeCapture(isChallenge, cancelChallenge)
 
   const confirm = async () => {
     if (!stripe || !elements) return
     setSubmitting(true)
-    setErrorText(null)
+    // confirmPayment handles 3DS/SCA next-actions itself with no callback,
+    // so while it's in flight we watch the PaymentIntent for
+    // `requires_action` and mount the challenge chrome around Stripe's
+    // bank window the moment it flips.
+    const stopWatching = watchForRequiresAction(
+      stripe,
+      clientSecret,
+      () =>
+        onSurface({ kind: 'challenge', challenge: scaRegion ? 'sca' : '3ds' }),
+      REQUIRES_ACTION_POLL_MS,
+    )
     try {
       const result = await stripe.confirmPayment({
         elements,
@@ -200,57 +276,97 @@ const CheckoutForm = ({
       })
       if (result.error) {
         console.error('tier-picker: confirmPayment declined', result.error)
-        setErrorText(result.error.message ?? CHECKOUT_COPY.confirmError)
+        if (result.error.type === 'validation_error') {
+          // Incomplete form — the Payment Element shows its own
+          // field-level errors; no decline happened, stay put.
+          if (isChallenge) onSurface(CHECKOUT_SURFACE)
+          return
+        }
+        enterFailure(
+          mapDeclineCategory({
+            declineCode: result.error.decline_code ?? null,
+            errorCode: result.error.code ?? null,
+            errorType: result.error.type,
+          }),
+        )
         return
       }
       onSuccess()
     } catch (err) {
+      // Thrown (not returned) errors are transport-level — the card was
+      // never decided (spec §1.6 network_timeout row).
       console.error('tier-picker: confirmPayment failed', err)
-      setErrorText(CHECKOUT_COPY.confirmError)
+      enterFailure('network_timeout')
     } finally {
+      stopWatching()
       setSubmitting(false)
     }
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <PaymentElement />
-      {errorText !== null && (
-        <div
-          role="alert"
-          style={{
-            fontSize: 13,
-            fontWeight: 600,
-            color: 'var(--danger)',
-            lineHeight: 1.45,
-          }}
-        >
-          {errorText}
-        </div>
+    <div
+      {...(isFailure ? failureDialogProps(surface.category) : {})}
+      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}
+    >
+      {isFailure && (
+        <FailureSurfaceIntro
+          category={surface.category}
+          onDismiss={onDismiss}
+        />
       )}
-      <LegalBlock scaRegion={scaRegion} />
-      <button
-        type="button"
-        disabled={!stripe || submitting}
-        onClick={() => void confirm()}
-        style={{
-          cursor: !stripe || submitting ? 'default' : 'pointer',
-          textAlign: 'center',
-          padding: '12px 16px',
-          borderRadius: 10,
-          border: '1px solid transparent',
-          fontWeight: 700,
-          fontSize: 14,
-          background: 'var(--signal)',
-          color: 'var(--fg-on-accent)',
-          opacity: !stripe || submitting ? 0.6 : 1,
-        }}
+      {isFailure && <TierSummaryLine tierKey={tierKey} />}
+      {isChallenge && (
+        <ChallengeMount
+          kind={surface.challenge}
+          tierKey={tierKey}
+          onCancel={cancelChallenge}
+        />
+      )}
+      <div
+        role="group"
+        aria-label={CHECKOUT_COPY.eyebrow}
+        style={hideElement ? { display: 'none' } : undefined}
       >
-        {submitting
-          ? CHECKOUT_COPY.processing
-          : `${CHECKOUT_COPY.payCta} · ${tier.priceText}${tier.key === 'founder' ? '/mo' : tier.priceUnit}`}
-      </button>
-      <BottomMonoRail />
+        <PaymentElement key={elementKey} />
+      </div>
+      {isFailure && behavior !== null && !behavior.freshCard && (
+        <FailureCardKeptNote />
+      )}
+      {!isFailure && !isChallenge && (
+        <>
+          <LegalBlock scaRegion={scaRegion} />
+          <button
+            type="button"
+            disabled={!stripe || submitting}
+            onClick={() => void confirm()}
+            style={{
+              cursor: !stripe || submitting ? 'default' : 'pointer',
+              textAlign: 'center',
+              padding: '12px 16px',
+              borderRadius: 10,
+              border: '1px solid transparent',
+              fontWeight: 700,
+              fontSize: 14,
+              background: 'var(--signal)',
+              color: 'var(--fg-on-accent)',
+              opacity: !stripe || submitting ? 0.6 : 1,
+            }}
+          >
+            {submitting
+              ? CHECKOUT_COPY.processing
+              : `${CHECKOUT_COPY.payCta} · ${tier.priceText}${tier.key === 'founder' ? '/mo' : tier.priceUnit}`}
+          </button>
+          <BottomMonoRail />
+        </>
+      )}
+      {isFailure && (
+        <FailureActions
+          category={surface.category}
+          disabled={submitting}
+          onPrimary={() => void confirm()}
+          onSecondary={resetCard}
+        />
+      )}
     </div>
   )
 }
@@ -261,12 +377,18 @@ export const CheckoutPanel = ({
   scaRegion,
   onBack,
   onSuccess,
+  onSurfaceChange,
 }: CheckoutPanelProps) => {
   const stripePromise = useMemo(
     () => (PUBLISHABLE_KEY ? loadStripe(PUBLISHABLE_KEY) : null),
     [],
   )
   const tier = TIER_DEFINITIONS[tierKey]
+  const [surface, setSurface] = useState<CheckoutSurface>(CHECKOUT_SURFACE)
+
+  useEffect(() => {
+    onSurfaceChange?.(surface)
+  }, [surface, onSurfaceChange])
 
   if (stripePromise === null) {
     // Publishable key missing (misconfigured env) — never render a dead form.
@@ -283,54 +405,62 @@ export const CheckoutPanel = ({
       data-testid="checkout-panel"
       style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
     >
-      <button
-        type="button"
-        onClick={onBack}
-        style={{
-          alignSelf: 'flex-start',
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          padding: 0,
-          fontFamily: 'var(--font-mono)',
-          fontSize: 11,
-          fontWeight: 700,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          color: 'var(--fg-muted)',
-        }}
-      >
-        {CHECKOUT_COPY.backToTiers}
-      </button>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-        <span
+      {surface.kind === 'checkout' && (
+        <button
+          type="button"
+          onClick={onBack}
           style={{
-            fontWeight: 900,
-            fontSize: 22,
-            letterSpacing: '-0.02em',
-            color: 'var(--fg)',
+            alignSelf: 'flex-start',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+            color: 'var(--fg-muted)',
           }}
         >
-          {tier.name}
-        </span>
-        <span
-          style={{ fontWeight: 800, fontSize: 16, color: 'var(--fg-muted)' }}
-        >
-          {tier.priceText}
-          <span style={{ fontSize: 11, fontWeight: 600 }}>
-            {' '}
-            {tier.priceUnit}
+          {CHECKOUT_COPY.backToTiers}
+        </button>
+      )}
+      {surface.kind === 'checkout' && (
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+          <span
+            style={{
+              fontWeight: 900,
+              fontSize: 22,
+              letterSpacing: '-0.02em',
+              color: 'var(--fg)',
+            }}
+          >
+            {tier.name}
           </span>
-        </span>
-      </div>
+          <span
+            style={{ fontWeight: 800, fontSize: 16, color: 'var(--fg-muted)' }}
+          >
+            {tier.priceText}
+            <span style={{ fontSize: 11, fontWeight: 600 }}>
+              {' '}
+              {tier.priceUnit}
+            </span>
+          </span>
+        </div>
+      )}
       <Elements
         stripe={stripePromise}
         options={{ clientSecret, appearance: { theme: 'stripe' } }}
       >
         <CheckoutForm
           tierKey={tierKey}
+          clientSecret={clientSecret}
           scaRegion={scaRegion}
+          surface={surface}
+          onSurface={setSurface}
           onSuccess={onSuccess}
+          onDismiss={onBack}
         />
       </Elements>
     </div>

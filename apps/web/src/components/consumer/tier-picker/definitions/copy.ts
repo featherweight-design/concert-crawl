@@ -162,6 +162,80 @@ export const TIER_PICKER_COPY = {
     compare: 'Compare plans →',
     ariaLabel: 'Tier picker',
   },
+  // Payment failure surfaces (design table failure-surfaces.md, PR 4.4).
+  // Verbatim copy contract — the word "fraud" NEVER appears user-facing,
+  // and raw decline codes are never rendered.
+  failure: {
+    railEyebrow: 'Payment · declined',
+    closeLabel: 'Close and return to plans',
+    cardKeptNote: "Card on file kept — we'll reuse it on retry",
+    secondary: 'Use a different card',
+    categories: {
+      insufficient_funds: {
+        eyebrow: 'CARD DECLINED',
+        code: '01',
+        headline: 'Your bank said no.',
+        body: 'It came back as insufficient funds — nothing was charged. Try again, or drop in a different card.',
+        primary: 'Try again',
+      },
+      expired_or_incorrect_card: {
+        eyebrow: 'CARD DECLINED',
+        code: '02',
+        headline: "That card won't go through.",
+        body: "The number, expiry, or security code didn't check out — or the card's expired. Give it another look. Nothing was charged.",
+        primary: 'Try again',
+      },
+      issuer_declined: {
+        eyebrow: 'CARD DECLINED',
+        code: '03',
+        headline: 'Your bank declined it.',
+        body: "They don't tell us why — banks keep that to themselves. A different card usually does the trick. Nothing was charged.",
+        primary: 'Try a different card',
+      },
+      fraud_block: {
+        eyebrow: 'CARD FLAGGED',
+        code: '04',
+        headline: 'Your card got flagged for review.',
+        body: 'Your bank put a hold on this one — it happens, often for no real reason. Nothing was charged.',
+        primary: 'Try a different card',
+        note: "It's worth a quick call to your bank, too.",
+      },
+      network_timeout: {
+        eyebrow: 'CONNECTION HICCUP',
+        code: '05',
+        headline: "That didn't go through — but it's not your card.",
+        body: "Something dropped between us and the payment network. Your card's fine and nothing was charged.",
+        primary: 'Try again',
+        note: 'If it keeps happening, give it a minute and try again.',
+      },
+    },
+  },
+  // 3DS / SCA challenge chrome (design table CHALLENGE_CONFIG). Stripe
+  // renders the actual bank window; this is the frame around it.
+  challenge: {
+    closeLabel: 'Cancel verification and return',
+    frameLabel: 'Secure bank verification (handled by Stripe)',
+    frameTopLeft: 'Stripe · 3-D Secure',
+    frameTopRight: "your bank's window",
+    waiting: 'Waiting for your bank…',
+    frameBottom: 'Stripe renders this · Concert Crawl never sees it',
+    footerNote: "Don't close this window — it'll finish on its own",
+    cancel: 'Cancel payment',
+    kinds: {
+      '3ds': {
+        eyebrow: 'SECURE CHECK · 3DS',
+        code: '3DS',
+        headline: 'One quick step from your bank.',
+        body: "Your bank wants to confirm it's really you. It happens in their secure window below — we never see any of it.",
+      },
+      sca: {
+        eyebrow: 'SECURE CHECK · SCA',
+        code: 'SCA',
+        headline: 'Your bank needs a thumbs-up.',
+        body: "EU rules mean your bank confirms this one directly. Approve it in their secure window below and you're set.",
+      },
+    },
+  },
   // Founder post-claim seat reveal (#781 §3.3, design table Table 2).
   founderClaim: {
     eyebrow: 'Founder · claimed',

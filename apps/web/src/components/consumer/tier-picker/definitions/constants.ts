@@ -1,6 +1,7 @@
 // Tier data — prices and names are data (locked in design brief #781),
 // customer-facing prose comes from copy.ts.
 
+import type { DeclineCategory } from '@concert-crawl/types'
 import { TIER_PICKER_COPY } from './copy'
 import type { TierDefinition, TierKey } from './types'
 
@@ -82,3 +83,64 @@ export const FULL_BLEED_TAKEOVER_Z_INDEX = 110
 // Founder seat count fallback when the founder-window payload is
 // unavailable at claim time (eng infra spec Part 2 §1.4 default).
 export const FOUNDER_SEATS_TOTAL_FALLBACK = 100
+
+// ── Failure surfaces (design table failure-surfaces.md, PR 4.4) ──────────
+
+export interface FailureSurfaceBehavior {
+  /** Payment element visible in the failure body (false → card-kept note). */
+  freshCard: boolean
+  /** Payment element re-renders empty (React key bump) on surface entry. */
+  freshEmpty: boolean
+  /** "Use a different card" secondary CTA renders. */
+  hasSecondary: boolean
+  /** Note line tone: 'polite' gets aria-live, 'muted' gets none. */
+  noteTone: 'muted' | 'polite' | null
+}
+
+// State-coverage matrix, verbatim from the design table:
+//  01 keeps the entered card (error state); 02/03/04 re-render empty;
+//  05 hides the element (card kept, retried as-is).
+export const FAILURE_SURFACE_BEHAVIOR: Record<
+  DeclineCategory,
+  FailureSurfaceBehavior
+> = {
+  insufficient_funds: {
+    freshCard: true,
+    freshEmpty: false,
+    hasSecondary: true,
+    noteTone: null,
+  },
+  expired_or_incorrect_card: {
+    freshCard: true,
+    freshEmpty: true,
+    hasSecondary: true,
+    noteTone: null,
+  },
+  issuer_declined: {
+    freshCard: true,
+    freshEmpty: true,
+    hasSecondary: false,
+    noteTone: null,
+  },
+  fraud_block: {
+    freshCard: true,
+    freshEmpty: true,
+    hasSecondary: false,
+    noteTone: 'muted',
+  },
+  network_timeout: {
+    freshCard: false,
+    freshEmpty: false,
+    hasSecondary: false,
+    noteTone: 'polite',
+  },
+}
+
+// Desktop modal widths per surface (design table: 520 failure, 500
+// challenge; checkout keeps its existing 560).
+export const FAILURE_DESKTOP_WIDTH = 520
+export const CHALLENGE_DESKTOP_WIDTH = 500
+
+// How often to check the PaymentIntent for `requires_action` while
+// confirmPayment is in flight (3DS/SCA challenge detection).
+export const REQUIRES_ACTION_POLL_MS = 1200

@@ -27,7 +27,16 @@ import { TierRowMobile } from './TierRowMobile'
 import { GiftedThankYou } from './GiftedThankYou'
 import { CheckoutPanel } from './CheckoutPanel'
 import { FounderClaimTakeover } from './FounderClaimTakeover'
-import type { PickerState, TierCta, TierKey } from './definitions/types'
+import {
+  CHALLENGE_DESKTOP_WIDTH,
+  FAILURE_DESKTOP_WIDTH,
+} from './definitions/constants'
+import type {
+  CheckoutSurface,
+  PickerState,
+  TierCta,
+  TierKey,
+} from './definitions/types'
 
 const HEADER_COPY = TIER_PICKER_COPY.header
 
@@ -189,6 +198,11 @@ export const TierPickerSheet = ({
   const [checkout, setCheckout] = useState<CheckoutContext | null>(null)
   const [pendingTier, setPendingTier] = useState<TierKey | null>(null)
   const [errorText, setErrorText] = useState<string | null>(null)
+  // Which layout the checkout panel is showing (checkout / failure /
+  // challenge) — drives the sheet's rail header + desktop width (PR 4.4).
+  const [checkoutSurface, setCheckoutSurface] = useState<CheckoutSurface>({
+    kind: 'checkout',
+  })
 
   // While the embedded checkout (card entry) is mounted, mark an active
   // payment flow so the past-due banner suppresses itself (PR 4.3).
@@ -223,6 +237,7 @@ export const TierPickerSheet = ({
     checkoutActionRef.current += 1
     if (checkout !== null) abandonSubscription(checkout.subscriptionId)
     setCheckout(null)
+    setCheckoutSurface({ kind: 'checkout' })
     setErrorText(null)
     setPendingTier(null)
     onClose()
@@ -231,6 +246,7 @@ export const TierPickerSheet = ({
   const backToTiers = useCallback(() => {
     if (checkout !== null) abandonSubscription(checkout.subscriptionId)
     setCheckout(null)
+    setCheckoutSurface({ kind: 'checkout' })
   }, [checkout, abandonSubscription])
 
   const selectTier = useCallback(
@@ -298,6 +314,7 @@ export const TierPickerSheet = ({
         seatsTotal: windowView.seatsTotal,
       })
     setCheckout(null)
+    setCheckoutSurface({ kind: 'checkout' })
     if (
       checkout?.tierKey !== 'founder' ||
       checkout.founderSeatNumber === null
@@ -314,17 +331,53 @@ export const TierPickerSheet = ({
     router.refresh()
   }, [onClose, router])
 
-  const eyebrow = gifted
-    ? TIER_PICKER_COPY.gifted.eyebrow
-    : checkout !== null
-      ? TIER_PICKER_COPY.checkout.eyebrow
-      : loggedOut
-        ? HEADER_COPY.loggedOutEyebrow
-        : HEADER_COPY.eyebrow
-  const code = gifted
-    ? TIER_PICKER_COPY.gifted.code
-    : HEADER_COPY.tiersCode(tiers.length)
-  const tone = loggedOut || gifted ? 'var(--accent)' : 'var(--signal)'
+  // Failure/challenge layouts swap the sheet's rail header (design table
+  // PR 4.4: declined rail is muted, secure-check rail is signal-toned).
+  const failureRail =
+    checkout !== null && checkoutSurface.kind === 'failure'
+      ? {
+          eyebrow: TIER_PICKER_COPY.failure.railEyebrow,
+          code: TIER_PICKER_COPY.failure.categories[checkoutSurface.category]
+            .code,
+          tone: 'var(--fg-subtle)',
+        }
+      : null
+  const challengeRail =
+    checkout !== null && checkoutSurface.kind === 'challenge'
+      ? {
+          eyebrow:
+            TIER_PICKER_COPY.challenge.kinds[checkoutSurface.challenge].eyebrow,
+          code: TIER_PICKER_COPY.challenge.kinds[checkoutSurface.challenge]
+            .code,
+          tone: 'var(--signal)',
+        }
+      : null
+  const surfaceRail = failureRail ?? challengeRail
+
+  const eyebrow =
+    surfaceRail?.eyebrow ??
+    (gifted
+      ? TIER_PICKER_COPY.gifted.eyebrow
+      : checkout !== null
+        ? TIER_PICKER_COPY.checkout.eyebrow
+        : loggedOut
+          ? HEADER_COPY.loggedOutEyebrow
+          : HEADER_COPY.eyebrow)
+  const code =
+    surfaceRail?.code ??
+    (gifted
+      ? TIER_PICKER_COPY.gifted.code
+      : HEADER_COPY.tiersCode(tiers.length))
+  const tone =
+    surfaceRail?.tone ??
+    (loggedOut || gifted ? 'var(--accent)' : 'var(--signal)')
+
+  const checkoutDesktopWidth =
+    checkoutSurface.kind === 'failure'
+      ? FAILURE_DESKTOP_WIDTH
+      : checkoutSurface.kind === 'challenge'
+        ? CHALLENGE_DESKTOP_WIDTH
+        : 560
 
   if (claim !== null)
     return (
@@ -343,7 +396,13 @@ export const TierPickerSheet = ({
       ariaLabel={TIER_PICKER_COPY.entry.ariaLabel}
       header={<RailHeader eyebrow={eyebrow} code={code} tone={tone} />}
       desktopWidth={
-        gifted || checkout !== null ? 560 : tiers.length === 4 ? 1000 : 780
+        gifted
+          ? 560
+          : checkout !== null
+            ? checkoutDesktopWidth
+            : tiers.length === 4
+              ? 1000
+              : 780
       }
       footer={
         gifted || checkout !== null ? undefined : (
@@ -370,6 +429,7 @@ export const TierPickerSheet = ({
           scaRegion={scaRegion}
           onBack={backToTiers}
           onSuccess={completeCheckout}
+          onSurfaceChange={setCheckoutSurface}
         />
       ) : (
         <div

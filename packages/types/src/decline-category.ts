@@ -1,10 +1,11 @@
-// apps/api/src/lib/decline-category.ts
+// packages/types/src/decline-category.ts
 //
 // decline_code → 5-category mapping (eng infra spec Part 2 §1.6, #782 §2).
 //
-// Pure function used by the webhook handler for funnel analytics. The raw
-// decline_code is never rendered to users — it flows into
-// subscription_events.metadata (and later PostHog) only.
+// Pure function shared by the API webhook handler (funnel analytics) and the
+// web tier-picker (failure-surface routing). The raw decline_code is never
+// rendered to users — it flows into subscription_events.metadata (and later
+// PostHog) only.
 
 export type DeclineCategory =
   | 'insufficient_funds'

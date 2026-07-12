@@ -24,7 +24,7 @@ import {
   stripeSubscriptionSchema,
   type StripeSubscriptionSnapshot,
 } from './stripe-webhook-schemas.js'
-import { mapDeclineCategory } from './decline-category.js'
+import { mapDeclineCategory } from '@concert-crawl/types'
 import {
   parseFounderSeatNumber,
   restoreFounderSeat,
