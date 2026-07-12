@@ -1,3 +1,18 @@
+# [1.103.0](https://github.com/HartiganHM/concert-crawl/compare/v1.102.0...v1.103.0) (2026-07-12)
+
+
+### Bug Fixes
+
+* **billing:** copilot r1 — align 400 error copy with founder-accepting schemas, fix periodEnd doc ([6021af3](https://github.com/HartiganHM/concert-crawl/commit/6021af3a5ec0d63d22c0220df42dc7baf888123b))
+* **billing:** copilot r2 — best-effort audit inserts, clear stale resubscribe error on portal ([cd907f5](https://github.com/HartiganHM/concert-crawl/commit/cd907f5dab73f906eae0254a1c8e25f78ddb3f0b))
+* **billing:** copilot r3 — drop direction from preview response, clearer malformed portal URL error ([53d0203](https://github.com/HartiganHM/concert-crawl/commit/53d02034af3b534723f5d25d61a3e2080ece92bb))
+* **billing:** copilot r4 — restore focus outlines, gate confirm on preview, stricter preview parse ([5915b5b](https://github.com/HartiganHM/concert-crawl/commit/5915b5bff9af6b3710370222c1b5b6e1f3d86f56))
+
+
+### Features
+
+* **billing:** cancel/resubscribe/change-tier lifecycle + manage sheet flows ([#780](https://github.com/HartiganHM/concert-crawl/issues/780), PR 4.5) ([266f02d](https://github.com/HartiganHM/concert-crawl/commit/266f02d5dfdd594f7e41e64d6b587d2622fbdb9e))
+
 # [1.102.0](https://github.com/HartiganHM/concert-crawl/compare/v1.101.0...v1.102.0) (2026-07-12)
 
 
