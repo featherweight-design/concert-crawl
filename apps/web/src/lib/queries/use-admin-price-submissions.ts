@@ -74,6 +74,10 @@ export function useAdminPriceSubmissions(
       if (!token) throw new Error('Not authenticated')
       return fetchAllSubmissions(token)
     },
+    // The SSR seed is only the first page; the global 30-min staleTime would
+    // otherwise treat initialData as fresh and never walk the remaining
+    // offsets, leaving client-side filter/sort/paginate on a partial set.
+    refetchOnMount: 'always',
     ...(initialData ? { initialData } : {}),
   })
 }

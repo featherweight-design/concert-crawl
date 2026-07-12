@@ -41,9 +41,9 @@ const page = (count: number, prefix: string): PriceSubmissionHistoryRow[] =>
 const offsetOf = (url: string): number =>
   Number(new URLSearchParams(url.split('?')[1]).get('offset'))
 
-const withProvider = () => {
+const withProvider = (staleTime = 0) => {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, staleTime } },
   })
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
@@ -99,6 +99,19 @@ describe('useAdminPriceSubmissions', () => {
     })
     await waitFor(() => expect(result.current.data).toHaveLength(100))
     expect(mockGet).toHaveBeenCalledTimes(2)
+  })
+
+  it('refetches the full set on mount even when SSR initialData is fresh', async () => {
+    // Reproduces the staleTime bug: with the app's 30-min staleTime the SSR
+    // seed would be treated as fresh and fetchAllSubmissions would never run,
+    // stranding the page on the first page. refetchOnMount: 'always' fixes it.
+    mockGet.mockResolvedValue({ rows: page(30, 'fresh'), total: 30 })
+    const seed = page(1, 'seed')
+    const { result } = renderHook(() => useAdminPriceSubmissions(seed), {
+      wrapper: withProvider(30 * 60 * 1000),
+    })
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(result.current.data).toHaveLength(30))
   })
 
   it('errors when no auth token is available', async () => {

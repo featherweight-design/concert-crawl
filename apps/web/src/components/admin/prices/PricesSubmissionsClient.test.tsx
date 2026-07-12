@@ -106,6 +106,22 @@ describe('PricesSubmissionsClient', () => {
     expect(screen.getByText('Delta Show')).toBeTruthy()
   })
 
+  it('renders a single price when the max is not above the min', () => {
+    const inverted = [row({ id: 'sub-inv', priceMin: '60', priceMax: '40' })]
+    mockUseAdminPriceSubmissions.mockReturnValue({
+      data: inverted,
+      isFetching: false,
+    })
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={inverted}
+        initialTotal={inverted.length}
+      />,
+    )
+    expect(screen.getByText('$60')).toBeTruthy()
+    expect(screen.queryByText('$60–$40')).toBeNull()
+  })
+
   it('narrows to pending rows when the Pending filter is active', () => {
     renderClient(
       <PricesSubmissionsClient

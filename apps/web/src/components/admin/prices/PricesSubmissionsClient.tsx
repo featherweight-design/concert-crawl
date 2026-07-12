@@ -22,6 +22,7 @@ import {
 import { type StatusKind } from '@/components/admin/primitives/utils'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { BulkActionDock } from '@/components/admin/review/BulkActionDock'
+import { formatPriceRange } from '@/components/admin/review/lib/format-price-range'
 import { reviewQueryKeys } from '@/lib/queries/use-admin-review'
 import {
   adminPriceSubmissionsKey,
@@ -57,11 +58,7 @@ function statusLabel(status: string): string {
 
 function formatPrice(min: string | null, max: string | null): string {
   if (!min) return '—'
-  const fmtNum = (val: string) => {
-    const num = parseFloat(val)
-    return Number.isInteger(num) ? `$${num}` : `$${num.toFixed(2)}`
-  }
-  return max ? `${fmtNum(min)}–${fmtNum(max)}` : fmtNum(min)
+  return formatPriceRange(min, max)
 }
 
 function userDisplay(userId: string | null): string {
