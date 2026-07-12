@@ -1,3 +1,18 @@
+# [1.102.0](https://github.com/HartiganHM/concert-crawl/compare/v1.101.0...v1.102.0) (2026-07-12)
+
+
+### Bug Fixes
+
+* **web:** copilot r1 — guard late confirm resolve, validation error returns to checkout ([a05cdb6](https://github.com/HartiganHM/concert-crawl/commit/a05cdb66608fa61bd25e8dff2106719203d090d3))
+* **web:** copilot r2 — single modal root (shell role overrides), sanitized decline logging ([f5771be](https://github.com/HartiganHM/concert-crawl/commit/f5771bef5851524901024ff357b55d4674b106f3))
+* **web:** copilot r3 — skip setSubmitting after unmount in confirm finally ([03a5a2b](https://github.com/HartiganHM/concert-crawl/commit/03a5a2ba04c94b97ed47889aec244fb099b5c683))
+* **web:** design-review gaps — spacing, challenge header column, focus return on dismiss/cancel ([deb8994](https://github.com/HartiganHM/concert-crawl/commit/deb8994d819e484522032e7ab48cd1d1ad38a953))
+
+
+### Features
+
+* **web:** five payment failure surfaces + 3ds/sca challenge chrome + decline mapping ([5fc9a15](https://github.com/HartiganHM/concert-crawl/commit/5fc9a15e0971c9c273116e18ef126e48054e8735))
+
 # [1.101.0](https://github.com/HartiganHM/concert-crawl/compare/v1.100.0...v1.101.0) (2026-07-11)
 
 
