@@ -786,6 +786,12 @@ export const CONSUMER_COPY = {
     confirmed: 'confirmed',
     // Strip right side: "{N} to go"
     toGo: 'to go',
+    // Imminent-show tag + tooltip. Shown when the show is within the imminent
+    // window (SP_POLICY.imminentThresholdDays) and the confirm requirement is
+    // therefore bumped, so the "3 of 3" strip doesn't read as a mistake (#895).
+    imminentTag: 'Show soon',
+    imminentTooltip:
+      'This show is coming up fast, so we ask for an extra confirmation before a community price goes live.',
     // Eyebrow labels
     boxOfficeLabel: 'Box office',
     ticketsLabel: 'Tickets',

@@ -1184,6 +1184,20 @@ export function EventDetailPriceBlock({
           />
         )}
         {submitSuccessSurface}
+        {/* #895 symptom 1: the MTAddTierSuccess surface above is session-only
+            (cleared on reload). This persistent CTA is the reload-surviving
+            "submit another price" affordance. Its modal self-gates the
+            rate-limit-exhausted case via the GET on open. */}
+        {event.status !== 'cancelled' && (
+          <div className="mt-3">
+            <SubmitPriceCardCta
+              eventId={event.id}
+              artist={event.artist}
+              venueName={event.venue.name}
+              date={event.date}
+            />
+          </div>
+        )}
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
@@ -1695,6 +1709,19 @@ export function EventDetailPriceBlock({
           />
         )}
 
+        {/* #895 symptom 1: reload-surviving "submit another price" affordance
+            for the legacy pending path (this branch renders no session-only
+            MTAddTierSuccess surface). The modal self-gates the exhausted case. */}
+        {event.status !== 'cancelled' && (
+          <div className="mt-3">
+            <SubmitPriceCardCta
+              eventId={event.id}
+              artist={event.artist}
+              venueName={event.venue.name}
+              date={event.date}
+            />
+          </div>
+        )}
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {

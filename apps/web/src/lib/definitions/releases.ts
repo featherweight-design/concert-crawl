@@ -26,6 +26,25 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.8.4-beta',
+    date: 'Jul 12, 2026',
+    headline: 'Every price tier you submit sticks around — and stays clear.',
+    items: [
+      {
+        kind: 'fixed',
+        text: 'Submit three or more tiers at once and they all stay put on reload — the third one no longer vanishes when the page refreshes.',
+      },
+      {
+        kind: 'fixed',
+        text: 'A “submit another price” card now sits under your pending submissions for good, so you can add a tier any time — not just in the seconds right after you submit.',
+      },
+      {
+        kind: 'fixed',
+        text: 'Shows coming up fast now wear a “Show soon” tag that explains why they ask for an extra confirmation before a price goes live.',
+      },
+    ],
+  },
+  {
     version: 'v0.8.3-beta',
     date: 'Jul 11, 2026',
     headline:

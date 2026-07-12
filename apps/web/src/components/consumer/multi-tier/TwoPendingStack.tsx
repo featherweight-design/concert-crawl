@@ -1,9 +1,6 @@
 'use client'
 
-import {
-  PendingCardB,
-  type PendingCardBProps,
-} from '@/components/consumer/PendingCardB'
+import { PendingCardB } from '@/components/consumer/PendingCardB'
 
 // ── Props ────────────────────────────────────────────────────────
 export interface TwoPendingStackProps {
@@ -12,9 +9,9 @@ export interface TwoPendingStackProps {
 
 // ── Component ────────────────────────────────────────────────────
 export const TwoPendingStack = ({ cards }: TwoPendingStackProps) => {
-  const firstCard = cards[0] as PendingCardBProps | undefined
-  const secondCard = cards[1] as PendingCardBProps | undefined
-
+  // Render every card. The all-tiers-pending path routes batches of any
+  // size through here; capping at two silently dropped the third tier on
+  // reload.
   return (
     <div
       style={{
@@ -23,8 +20,9 @@ export const TwoPendingStack = ({ cards }: TwoPendingStackProps) => {
         gap: '12px',
       }}
     >
-      {firstCard !== undefined && <PendingCardB {...firstCard} />}
-      {secondCard !== undefined && <PendingCardB {...secondCard} />}
+      {cards.map((cardProps, idx) => (
+        <PendingCardB key={idx} {...cardProps} />
+      ))}
     </div>
   )
 }

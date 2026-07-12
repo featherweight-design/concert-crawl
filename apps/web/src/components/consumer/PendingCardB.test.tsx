@@ -65,6 +65,21 @@ describe('PendingCardB', () => {
     })
   })
 
+  describe('imminent-show tag (#895)', () => {
+    it('renders the "Show soon" tag with an explanatory tooltip when the confirm requirement is bumped (needed=3)', () => {
+      render(<PendingCardB {...buildProps({ confirms: 1, needed: 3 })} />)
+      const tag = screen.getByText('Show soon')
+      expect(tag).toBeTruthy()
+      // Tooltip is delivered via the title attribute on the tag wrapper.
+      expect(tag.getAttribute('title')).toMatch(/extra confirmation/i)
+    })
+
+    it('does not render the imminent tag for a standard 2-confirm show', () => {
+      render(<PendingCardB {...buildProps({ confirms: 1, needed: 2 })} />)
+      expect(screen.queryByText('Show soon')).toBeNull()
+    })
+  })
+
   describe('price headline', () => {
     it('renders single price when ceiling is null', () => {
       render(<PendingCardB {...buildProps({ floor: 30, ceiling: null })} />)

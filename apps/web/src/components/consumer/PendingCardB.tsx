@@ -1,5 +1,6 @@
 'use client'
 
+import { SP_POLICY } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import {
   CheckGlyph,
@@ -170,6 +171,11 @@ export const PendingCardB = ({
   const isBox = kind === 'boxoffice'
   const isSubmitter = view === 'submitter' || view === 'self-locked'
   const remaining = needed - confirms
+  // The confirm denominator is only elevated above the standard requirement
+  // when the show is imminent, so a bumped `needed` is a reliable signal —
+  // no extra prop threading needed at the call sites. Surfacing this keeps
+  // the "3 of 3 confirmed" strip from reading as a bug (#895 symptom 2).
+  const isImminent = needed > SP_POLICY.confirmsRequired
 
   // ── Card background / border ─────────────────────────────────
   const cardStyle = isBox
@@ -234,6 +240,30 @@ export const PendingCardB = ({
           <span>
             {confirms} {copy.of} {needed} {copy.confirmed}
           </span>
+          {isImminent && (
+            <span
+              title={copy.imminentTooltip}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                padding: '2px 7px',
+                borderRadius: 999,
+                background:
+                  'color-mix(in oklab, var(--warning) 12%, transparent)',
+                color: 'var(--warning)',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 9,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                cursor: 'help',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {copy.imminentTag}
+            </span>
+          )}
         </div>
 
         {/* Strip right — `view === 'other'` + admin-deferred counter renders

@@ -725,6 +725,67 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(screen.queryByText(/0\s+of\s+2\s+confirmed/i)).toBeNull()
   })
 
+  // Regression — issue #895 symptom 1. A pending price block must offer a
+  // reload-surviving "submit another price" affordance. The post-submit
+  // MTAddTierSuccess surface is session-only (cleared on refresh), so the
+  // persistent SubmitPriceCardCta ("Saw a different price?") has to render
+  // in the pending paths too — otherwise a user who reloads after batch
+  // submitting has no way to add another tier.
+  it('STATE #7 all-tiers-pending: renders the persistent SubmitPriceCardCta (#895 symptom 1)', () => {
+    const ga = makeTierBlock({
+      tier: 'GA',
+      headline: null,
+      pending: [
+        {
+          id: 'p-ga',
+          priceMin: '40',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'me',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: true,
+        },
+      ],
+    })
+    const event = buildBaseEvent({ priceByTier: [ga] })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    expect(screen.getByText('Saw a different price?')).toBeDefined()
+  })
+
+  it('legacy pending (pendingSubmissions) path renders the persistent SubmitPriceCardCta (#895 symptom 1)', () => {
+    const event = buildBaseEvent({
+      priceByTier: null,
+      pendingSubmissions: [
+        {
+          id: 'p-legacy',
+          priceMin: '40',
+          priceMax: null,
+          tier: 'General Admission',
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'me',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: true,
+        },
+      ],
+    })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+    expect(screen.getByText('Saw a different price?')).toBeDefined()
+  })
+
   // Regression — issue #831. Same bug in the mixed-tier branch (a pending-only
   // sibling tier renders via TierAlternateRow's "pending · {N}/{needed}" tell).
   it('mixed-tier: pending-only sibling tier renders "pending · 1/2" not "pending · 0/2" (submitter counts as #1, #831)', () => {
