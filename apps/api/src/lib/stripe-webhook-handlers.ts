@@ -101,8 +101,11 @@ const TIER_DISPLAY_NAMES: Record<DbSubscriptionTier, string> = {
 
 // Dunning CTA target — /settings/plan hosts the Stripe-portal entry point
 // (POST /v1/billing/portal-session); portal sessions themselves are
-// short-lived and cannot be minted into an email.
-const BILLING_PORTAL_ENTRY_URL = 'https://concertcrawl.app/settings/plan'
+// short-lived and cannot be minted into an email. Origin comes from
+// ALLOWED_ORIGIN (same convention as app.ts CORS and the portal return_url)
+// so staging/local emails never link prod.
+const billingPortalEntryUrl = (): string =>
+  `${process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000'}/settings/plan`
 
 const DUNNING_TEMPLATE_BY_STAGE = {
   1: 'dunning_1_card_declined',
@@ -191,7 +194,7 @@ export const emailForInvoicePaymentFailed = (input: {
     dedupeKey: `invoice:${input.invoiceId}:attempt:${input.attemptCount}`,
     vars: {
       tierName: tierDisplayName(input.tier),
-      portalUrl: BILLING_PORTAL_ENTRY_URL,
+      portalUrl: billingPortalEntryUrl(),
     },
   }
 }

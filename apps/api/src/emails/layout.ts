@@ -15,7 +15,10 @@ import {
   EMAIL_TEXT_MUTED,
 } from './palette.js'
 
-const MANAGE_EMAILS_URL = 'https://concertcrawl.app/settings/notifications'
+// Environment-specific web origin, same convention as app.ts CORS and the
+// billing portal return_url — staging/local emails must not link prod.
+const manageEmailsUrl = (): string =>
+  `${process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000'}/settings/notifications`
 const LEGAL_LINE = 'Concert Crawl · Denver, CO'
 
 const FONT_STACK =
@@ -66,7 +69,7 @@ ${bodyHtml}
 <tr>
 <td class="cc-footer" style="padding: 20px 40px; border-top: 1px solid ${EMAIL_BORDER}; font-family: ${FONT_STACK}; font-size: 12px; line-height: 1.5; color: ${EMAIL_TEXT_MUTED};">
 ${LEGAL_LINE}<br>
-<a href="${MANAGE_EMAILS_URL}" style="color: ${EMAIL_TEXT_MUTED}; text-decoration: underline;">Manage emails</a>
+<a href="${manageEmailsUrl()}" style="color: ${EMAIL_TEXT_MUTED}; text-decoration: underline;">Manage emails</a>
 </td>
 </tr>
 </table>
@@ -77,6 +80,6 @@ ${LEGAL_LINE}<br>
 </html>`
 
 export const renderTextShell = (bodyText: string): string =>
-  [bodyText, '', '—', LEGAL_LINE, `Manage emails: ${MANAGE_EMAILS_URL}`].join(
+  [bodyText, '', '—', LEGAL_LINE, `Manage emails: ${manageEmailsUrl()}`].join(
     '\n',
   )

@@ -116,20 +116,10 @@ export const createStripeWebhooksRouter = (
         return ctx.json({ success: true, duplicate: true })
       }
       for (const emailParams of postCommitEmails) {
-        // Fire-and-forget: sendTransactionalEmail never throws, but the
-        // promise is still guarded — an email failure must never affect the
-        // webhook response.
-        void sendTransactionalEmail(emailParams).catch((err) => {
-          apiLogger.error(
-            {
-              err,
-              stripeEventId: event.id,
-              templateKey: emailParams.templateKey,
-              dedupeKey: emailParams.dedupeKey,
-            },
-            'stripe-webhooks: post-commit email send rejected',
-          )
-        })
+        // Fire-and-forget: sendTransactionalEmail catches and logs all its
+        // own failures and never rejects, so an email failure can never
+        // affect the webhook response.
+        void sendTransactionalEmail(emailParams)
       }
       return ctx.json({ success: true })
     } catch (err) {
