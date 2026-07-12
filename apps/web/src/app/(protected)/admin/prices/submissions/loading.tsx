@@ -7,9 +7,14 @@ export default function PricesSubmissionsLoading() {
         <div className="admin-skeleton" style={{ width: 320, height: 13 }} />
       </div>
 
-      {/* Filter rail */}
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {Array.from({ length: 5 }).map((_, idx) => (
+      {/* Filter rail — one pill per status filter (All/Pending/Corroborated/
+          Disputed/Stale/Archived); keep in sync with FILTER_ORDER so the
+          skeleton doesn't reflow when the real rail mounts. */}
+      <div
+        data-testid="filter-rail-skeleton"
+        style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+      >
+        {Array.from({ length: 6 }).map((_, idx) => (
           <div
             key={idx}
             className="admin-skeleton"
