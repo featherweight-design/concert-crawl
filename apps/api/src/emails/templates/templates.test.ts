@@ -277,7 +277,7 @@ describe('cancellation_ack', () => {
       tierName: 'Premium',
       accessEndsAt: '2026-09-10T12:00:00Z',
     })
-    const winbackPattern = /discount|come back for|% off/i
+    const winbackPattern = /discount|come back|miss you|resubscribe|% off/i
     expect(rendered.subject).not.toMatch(winbackPattern)
     expect(rendered.preheader).not.toMatch(winbackPattern)
     expect(rendered.html).not.toMatch(winbackPattern)

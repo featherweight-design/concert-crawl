@@ -21,7 +21,7 @@ export const renderCancellationAck: TemplateRenderer<
     accessEndDate === null
       ? `Your ${planLabel} access continues until the end of your current billing period — nothing changes before then.`
       : `Your ${planLabel} access continues until ${accessEndDate} — nothing changes before then.`
-  const retentionSentence = `After that, your ${planLabel} data sticks around for 90 days in case you come back. If you do, it'll be right where you left it.`
+  const retentionSentence = `After that, your ${planLabel} data sticks around for 90 days before it's cleared — nothing you need to do either way.`
 
   const bodyHtml = `<h1 style="margin: 0 0 16px; font-size: 24px; line-height: 1.3; color: ${EMAIL_ACCENT_PREMIUM};">All set — cancellation confirmed</h1>
 <p style="margin: 0 0 16px;">${escapeHtml(accessSentence)}</p>
