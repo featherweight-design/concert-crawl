@@ -1,3 +1,19 @@
+# [1.108.0](https://github.com/HartiganHM/concert-crawl/compare/v1.107.0...v1.108.0) (2026-07-12)
+
+
+### Bug Fixes
+
+* address copilot review on founder-window control ([72caba4](https://github.com/HartiganHM/concert-crawl/commit/72caba4073c181b09a37b23a34a5aa8a8802a884))
+* address copilot review round 2 on founder-window control ([09f2841](https://github.com/HartiganHM/concert-crawl/commit/09f2841053baa57d5f9c969cfa1cac6dad962a65))
+* address copilot review round 3 on founder-window control ([2706350](https://github.com/HartiganHM/concert-crawl/commit/2706350b61153fc87c29711d5f8f22c3b7cfa1a8))
+* address copilot review round 5 on founder-window control ([6996f35](https://github.com/HartiganHM/concert-crawl/commit/6996f35a5992109d14c2fb14bce9e2b85d96bc32))
+* address copilot review round 7 on founder-window control ([b39187c](https://github.com/HartiganHM/concert-crawl/commit/b39187cbb94017a4a08fe34e9e4876d305f1f3a7))
+
+
+### Features
+
+* **web+api:** admin founder-window launch control (PR 6.1 of monetization epic) ([78d0696](https://github.com/HartiganHM/concert-crawl/commit/78d0696ee501ff9387697709d17e2a9e30239e8e))
+
 # [1.107.0](https://github.com/HartiganHM/concert-crawl/compare/v1.106.0...v1.107.0) (2026-07-12)
 
 
