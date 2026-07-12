@@ -105,7 +105,7 @@ git commit -m "feat(seed-staging): read-only prod client wrapper (no write surfa
 - Consumes: `ProdReadonlyClient` from Task 1; a staging `db` client (drizzle over `NEON_STAGING_DIRECT`).
 - Produces:
   - `type IdMap = ReadonlyMap<string, string>` — prod-uuid → staging-uuid mapping (used by Tasks 3 + 4 to translate FK references).
-  - `syncVenues(deps: { prod: ProdReadonlyClient; staging: DrizzleWriteDb; dryRun: boolean }): Promise<{ scanned: number; upserted: number; venueIdMap: IdMap }>` — after upserting, re-selects `{ id, slug }` from staging for every synced slug and returns the prod→staging id map. Callers pass this map to `syncEvents` / `syncPriceRetrievalLog` so dependent rows land on the correct staging FKs.
+  - `syncVenues(deps: { prod: ProdReadonlyClient; staging: DrizzleWriteDb; dryRun: boolean }): Promise<{ scanned: number; upserted: number; venueIdMap: IdMap }>` — after upserting (or, in dry-run, without writing), re-selects `{ id, slug }` from staging for every synced slug and returns the prod→staging id map. Callers pass this map to `syncEvents` / `syncPriceRetrievalLog` so dependent rows land on the correct staging FKs. **Dry-run still builds the map** — it's a read-only SELECT, no writes — so downstream dry-runs report realistic counts instead of spurious "missing parent" skips.
   - Upsert target: `venues.slug` (UNIQUE, per `packages/db/src/schema/venues.ts:38`). Note: Postgres `ON CONFLICT DO UPDATE` cannot change the primary key of the existing row, so when staging already has a venue for a given slug the staging id wins. The id-map lookup is what keeps dependent syncs correct.
 
 - [ ] **Step 1: Write the failing test.**
@@ -163,8 +163,9 @@ describe('syncVenues', () => {
     expect(upsertSpy).not.toHaveBeenCalled()
     expect(result.scanned).toBe(2)
     expect(result.upserted).toBe(0)
-    // Dry-run still produces a map (empty on this path — no staging re-select).
-    expect(result.venueIdMap.size).toBe(0)
+    // Dry-run still builds venueIdMap via a read-only SELECT against
+    // staging — the size mirrors whatever the mock staging returns.
+    expect(result.venueIdMap).toBeInstanceOf(Map)
   })
 })
 ```
