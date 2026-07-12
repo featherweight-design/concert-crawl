@@ -55,15 +55,20 @@ describe('openProdReadonly', () => {
     expect(() => openProdReadonly('')).toThrow(/NEON_PROD_DIRECT/i)
   })
 
-  it('exposes select but not insert/update/delete on the returned surface', () => {
+  it('exposes select but not insert/update/delete on the returned surface', async () => {
     const client = openProdReadonly(
       'postgres://user:pw@example/db?sslmode=require',
     )
-    expect(typeof client.select).toBe('function')
-    expect(typeof client.close).toBe('function')
-    expect('insert' in client).toBe(false)
-    expect('update' in client).toBe(false)
-    expect('delete' in client).toBe(false)
+    try {
+      expect(typeof client.select).toBe('function')
+      expect(typeof client.close).toBe('function')
+      expect('insert' in client).toBe(false)
+      expect('update' in client).toBe(false)
+      expect('delete' in client).toBe(false)
+    } finally {
+      // Close in finally so a leaked connection doesn't hang Vitest.
+      await client.close()
+    }
   })
 })
 ```
@@ -203,7 +208,7 @@ describe('rollingWindow', () => {
       fromDate: '2026-06-12',
     })
   })
-  it('normalizes to UTC midnight', () => {
+  it('returns the same fromDate for a midnight-UTC input as for the same day', () => {
     expect(rollingWindow(new Date('2026-07-12T00:00:00Z')).fromDate).toBe(
       '2026-06-12',
     )

@@ -184,6 +184,9 @@ const runInDom = (html: string, vw: number) => {
         vw,
       ),
   })
+  // Save + restore so per-test prototype mutation doesn't bleed into
+  // sibling tests via Vitest's shared JS environment.
+  const originalRect = Element.prototype.getBoundingClientRect
   Element.prototype.getBoundingClientRect = function () {
     const el = this as HTMLElement
     const [l, t, w, h] = [
@@ -204,8 +207,12 @@ const runInDom = (html: string, vw: number) => {
       toJSON: () => ({}),
     }) as DOMRect
   }
-  // eslint-disable-next-line no-new-func
-  return new Function(`return (${collectHeuristicsScript})(${vw})`)()
+  try {
+    // eslint-disable-next-line no-new-func
+    return new Function(`return (${collectHeuristicsScript})(${vw})`)()
+  } finally {
+    Element.prototype.getBoundingClientRect = originalRect
+  }
 }
 
 describe('collectHeuristicsScript', () => {
