@@ -1,11 +1,15 @@
 // Unit tests for the daily billing job's decidable logic (§5.1). These cover
 // the pure helpers — window selection, gift branch, winback gating, purge
-// guard, dedupe-key construction — without touching the DB (the default
-// vitest config excludes *.integration.test.ts; DB-touching orchestration is
-// covered by the integration harness). Idempotency of the pure guards is
-// asserted here (running the guard twice with the same inputs is stable); the
-// DB-level double-send/double-write idempotency lives in the integration suite
-// via the email dedupe keys + event-existence checks.
+// guard, clock-start decision, dedupe-key construction — without touching the
+// DB. Idempotency of the pure guards is asserted here (running a guard twice
+// with the same inputs is stable).
+//
+// NOT covered here: the DB-touching orchestration inside the run* functions
+// (queries, event-existence checks, upserts). There is no billing-daily
+// integration test yet — the run-level double-send/double-write idempotency
+// rests on the email dedupe keys + subscription_events existence checks, which
+// are exercised indirectly by the email pipeline's own tests but not by a
+// dedicated harness for this job. Follow-up: #914.
 
 import { describe, it, expect } from 'vitest'
 import {

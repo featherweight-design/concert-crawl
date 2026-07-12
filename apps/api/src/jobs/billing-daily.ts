@@ -347,7 +347,11 @@ const revokeExpiredGift = async (input: {
 }
 
 export const runGiftEndingNotices = async (now: Date): Promise<void> => {
-  // Live gifts (not revoked) with a finite expiry.
+  // Live gifts (not revoked) with a finite expiry, bounded to those already
+  // expired or ending within the 7-day window — the only two actions this task
+  // takes. Anything expiring farther out is irrelevant today, so we keep the
+  // scan bounded as gifted_comps grows (avoids a full-table read every run).
+  const endingCutoff = new Date(now.getTime() + GIFT_ENDING_WINDOW_MS)
   const rows = await db
     .select({
       giftId: giftedComps.id,
@@ -356,7 +360,13 @@ export const runGiftEndingNotices = async (now: Date): Promise<void> => {
       expiresAt: giftedComps.expiresAt,
     })
     .from(giftedComps)
-    .where(and(isNotNull(giftedComps.expiresAt), sql`revoked_at is null`))
+    .where(
+      and(
+        isNotNull(giftedComps.expiresAt),
+        lte(giftedComps.expiresAt, endingCutoff),
+        sql`revoked_at is null`,
+      ),
+    )
 
   for (const row of rows) {
     try {
@@ -378,8 +388,14 @@ export const runGiftEndingNotices = async (now: Date): Promise<void> => {
           userId: row.userId,
           dedupeKey: `gift:${row.giftId}`,
           vars: {
-            // grantedBy is an admin Clerk ID, not a display name — the template
-            // owns the fallback copy when the gifter name is unknown.
+            // GE-5 ("names the gifter") is not satisfiable from today's data
+            // model: gifted_comps.grantedBy is an admin Clerk ID (audit), not a
+            // peer gifter — surfacing it would leak an admin's name into user
+            // copy. There is no peer-gifter identity until the future gift-link
+            // flow lands (see gifted_comps.redeemedAt "future gift-link flows").
+            // Until then the template's warm fallback ("a friend of the crawl")
+            // is the intended copy. Wire gifterName through once gift-links
+            // populate a real gifter identity. Follow-up: #910.
             gifterName: null,
             giftEndsAt: expiresAt.toISOString(),
           },
