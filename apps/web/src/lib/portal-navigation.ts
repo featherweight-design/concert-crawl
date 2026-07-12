@@ -15,7 +15,14 @@ const resolvePortalUrl = async (
   const token = await getToken()
   if (!token) throw new Error('Not authenticated')
   const { url } = await createPortalSession(token)
-  const parsed = new URL(url)
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch (parseErr) {
+    throw new Error('Portal session returned a malformed URL', {
+      cause: parseErr,
+    })
+  }
   if (parsed.protocol !== 'https:') {
     throw new Error('Portal session returned a non-HTTPS URL')
   }

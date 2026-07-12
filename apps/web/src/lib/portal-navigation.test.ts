@@ -72,7 +72,7 @@ describe('navigateToPortalSession', () => {
     mockCreatePortalSession.mockResolvedValue({ url: '/relative/path' })
     await expect(
       navigateToPortalSession(() => Promise.resolve('test-token')),
-    ).rejects.toThrow()
+    ).rejects.toThrow('malformed URL')
     expect(assignSpy).not.toHaveBeenCalled()
   })
 })

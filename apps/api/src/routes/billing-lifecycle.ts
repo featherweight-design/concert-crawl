@@ -569,7 +569,7 @@ export const createBillingLifecycleRouter = (
         guard.status,
       )
     }
-    const { toTier, direction, prorationBehavior } = guard.plan
+    const { toTier, prorationBehavior } = guard.plan
 
     try {
       const stripe = getStripe()
@@ -596,7 +596,6 @@ export const createBillingLifecycleRouter = (
       return ctx.json({
         success: true,
         data: {
-          direction,
           amountDueCents: preview.amountDueCents,
           creditCents: preview.creditCents,
           currency: preview.currency,

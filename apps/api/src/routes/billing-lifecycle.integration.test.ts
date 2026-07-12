@@ -534,7 +534,6 @@ describe('GET /v1/billing/proration-preview', () => {
     expect(res.status).toBe(200)
     const body: {
       data: {
-        direction: string
         amountDueCents: number
         creditCents: number
         currency: string
@@ -542,7 +541,6 @@ describe('GET /v1/billing/proration-preview', () => {
       }
     } = await res.json()
     expect(body.data).toEqual({
-      direction: 'downgrade',
       amountDueCents: 0,
       creditCents: 320,
       currency: 'usd',
