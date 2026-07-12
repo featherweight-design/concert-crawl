@@ -52,6 +52,13 @@ export const NAV_V2: NavItem[] = [
     section: 'operations',
   },
   {
+    key: 'founder-window',
+    label: 'Founder',
+    href: '/admin/founder-window',
+    iconName: 'Rocket',
+    section: 'account',
+  },
+  {
     key: 'users',
     label: 'Users',
     href: '/admin/users',

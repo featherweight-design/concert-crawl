@@ -1890,6 +1890,67 @@ export const ADMIN_COPY = {
     },
   },
 
+  founderWindow: {
+    sectionEyebrow: 'MONETIZATION',
+    sectionTitle: 'Founder window',
+    sectionSubtitle:
+      'The one-time founder launch. Opening the window starts the countdown and lets members claim founder seats.',
+    stateLabels: {
+      'pre-launch': 'Pre-launch',
+      open: 'Open',
+      closed: 'Closed',
+    },
+    stats: {
+      state: 'Window state',
+      seatsRemaining: 'Seats remaining',
+      seatsRemainingUnit: 'left',
+      seatsRemainingHint: (total: number) => `of ${total} founder seats`,
+      testSeats: 'Test seats',
+      testSeatsUnit: 'left',
+      testSeatsHint: 'Rehearsal counter only',
+      closesAt: 'Window closes',
+      closesAtPending: 'Opens on launch',
+      windowDaysHint: (days: number) => `${days}-day window`,
+    },
+    launch: {
+      title: 'Launch control',
+      helpPreLaunch:
+        'Opening the window is the real launch. It starts the countdown and lets every member claim a founder seat immediately. There is no undo from here.',
+      helpOpen: 'The founder window is open — the launch has begun.',
+      helpClosed: 'The founder window has closed. The launch has ended.',
+      button: 'Open the founder window',
+      buttonPending: 'Opening…',
+      openedAt: (iso: string) => `Opened ${iso}`,
+      closesOn: (iso: string) => `Closes ${iso}`,
+    },
+    confirm: {
+      eyebrow: 'IRREVERSIBLE',
+      heading: 'Open the founder window?',
+      body: 'This starts the founder launch for every member immediately. The countdown begins now and cannot be undone from here. Only do this when you are ready to launch.',
+      cancel: 'Cancel',
+      confirm: 'Open the window',
+    },
+    rehearsal: {
+      title: 'Pre-launch rehearsal',
+      help: 'Simulate seat claims against a throwaway test counter. The real seat count is never touched.',
+      simulateButton: 'Simulate a claim',
+      simulatePending: 'Claiming…',
+      resetButton: 'Reset test seats',
+      resetPending: 'Resetting…',
+      exhausted: 'No test seats left — reset to run another rehearsal.',
+    },
+    claims: {
+      title: 'Recent founder claims',
+      empty: 'No founder seats claimed yet.',
+      seatLabel: (seat: number) => `Seat #${seat}`,
+      seatUnknown: 'Seat —',
+    },
+    errors: {
+      generic: 'Something went wrong. Try again.',
+      notAuthenticated: 'Not authenticated.',
+    },
+  },
+
   pagination: {
     navAriaLabel: 'Pagination',
     firstAriaLabel: 'First page',

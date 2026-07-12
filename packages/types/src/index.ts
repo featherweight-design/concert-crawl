@@ -734,6 +734,31 @@ export interface FounderWindowView {
   closesAt: string | null // ISO; null pre-launch
 }
 
+// A single founder-seat claim, surfaced in the admin control panel's
+// "recent claims" feed. seatNumber is the 1-based position (seatsTotal -
+// seatsRemaining at claim time); null if the originating event predates
+// seat-number metadata.
+export interface AdminFounderClaim {
+  userId: string
+  seatNumber: number | null
+  claimedAt: string // ISO
+}
+
+// GET /v1/admin/founder-window — full singleton view for the admin control
+// panel (execution plan PR 6.1). Unlike the public FounderWindowView, this
+// always exposes the raw seat counts plus the test-only simulation counter
+// and the recent-claims feed.
+export interface AdminFounderWindow {
+  state: FounderWindowState
+  opensAt: string | null // ISO; null while dormant (not yet launched)
+  closesAt: string | null // ISO; null while opens_at is null
+  windowDays: number
+  seatsTotal: number
+  seatsRemaining: number
+  seatsRemainingTest: number // decremented only by simulate-claim
+  recentClaims: AdminFounderClaim[]
+}
+
 // POST /v1/billing/checkout-session success payload (eng infra spec Part 2
 // §1.3) — the Payment Element mounts against `clientSecret`.
 export interface CheckoutSessionResponse {
