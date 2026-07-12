@@ -31,6 +31,7 @@ Design brief has landed AND the visual handoff is signed off Green. Awaiting an 
 |---|---|---|---|---|
 | **#642** Calendar month/week jump picker | PR #862 (2026-07-10) | `design/design_handoff_calendar_jump_picker/` | 🟢 Green (PR #894, 2026-07-11) — one-pass audit, all 4 R-rounds Low/Nit floor | Design nailed the light-brainstorm scope in one pass. Ready for eng-planning agent. |
 | **#643** Supporting artists title separator | PR #869 (2026-07-11) | `design/design_handoff_supporting_artists_line/` | 🟢 Green (PR #903, 2026-07-11) — one-pass audit, 3 R-rounds; audit's favorite call: mono uppercase kicker above the headliner (instead of the brief's speculative italic + em-dash below), prevents opener-vs-tour row collision at overflow | Data-layer + UI workstreams. Eng-plan carries logged (aria-hidden conditional on interactive, overflow measurement strategy, fallback posture during backfill). |
+| **Concert History (Passport teaser)** | — (pre-existing handoff) | `design/design_handoff_concert_history/` | 🟢 Green (PR #916, 2026-07-12) — flip via addendum after Hugh walked the three Yellow blockers | Locked: (1) `attending_at timestamptz` on `user_events` (TS/API `attendingAt`; derive `going` from `IS NOT NULL`; `status = 'going'` not written going forward); (2) Supporter tier already resolved via PR #878; (3) Passport card scope moves to `shareable_cards` — History ships teaser link only. Ready for eng-planning agent. |
 
 The monetization vertical (previously here) moved into active build 2026-07-11 — see `docs/superpowers/progress.md` and the execution plan (PR #854). Phases 1 → 3.2 already merged (PRs #873, #878, #879, #880, #885, #886); Phases 3.3 → 7 remaining.
 
@@ -44,8 +45,7 @@ Handoff audit is done and the design shape is right; verdict flagged specific ga
 
 | # / handoff | Verdict PR | Blockers to close | Effort |
 |---|---|---|---|
-| **`design/design_handoff_concert_history/`** | PR #870 (2026-07-11) | (1) schema call — `attending_at` column on `user_events` vs new `user_event_attendance` table; (2) Supporter tier depends on monetization migration adding `supporter` to `subscription_tier` enum; (3) Passport card scope boundary — owned by concert_history or shareable_cards handoff? | Hugh call + light Design addendum |
-| **`design/design_handoff_shareable_cards/`** | PR #871 (2026-07-11) | (1) tier gate for share is undefined — handoff pre-dates monetization by 6 weeks; (2) anonymous URL contract undefined — event pages live under `(protected)/(main)`; (3) README references non-existent `POSTER_TAGLINES` constant | ~30-min direct-write addendum |
+| **`design/design_handoff_shareable_cards/`** | PR #871 (2026-07-11) | (1) tier gate for share is undefined — handoff pre-dates monetization by 6 weeks; (2) anonymous URL contract undefined — event pages live under `(protected)/(main)`; (3) README references non-existent `POSTER_TAGLINES` constant; **(4) NEW: inherits Passport card scope from concert_history (compact 320×500 + share 1080×1080)** — concert_history's Yellow → Green addendum (PR #916) moved Passport ownership here | ~30-min direct-write addendum + Passport scope confirmation |
 
 Both audits' full findings are in their respective `READINESS.md`.
 
@@ -107,6 +107,8 @@ For context on session-start "what's the state of the project" reads. Full histo
 | 2026-07-11 | — | This tracker doc refreshed post-#903 audit (PR TBD — this PR) |
 | 2026-07-11 | — | `design/design_handoff_supporting_artists_line/READINESS.md` merged (PR #903) — 🟢 Green verdict, one-pass, ready for eng-planning. Handoff files committed alongside verdict. |
 | 2026-07-11 | — | Session pickup memory `project_pickup_2026_07_11_design_track.md` written for continuity |
+| 2026-07-12 | — | Tracker refresh #4 — concert_history flipped 🟡 → 🟢 (this PR) |
+| 2026-07-12 | — | `design/design_handoff_concert_history/READINESS.md` addendum merged (PR #916) — 🟢 Green post-addendum verdict; all three Yellow blockers resolved (attending_at schema, Supporter tier via #878, Passport moved to shareable_cards) |
 | 2026-07-11 | — | Tracker refresh #3 (post-#894 audit + #893 Spotify brief, PR #899) |
 | 2026-07-11 | — | `design/design_handoff_calendar_jump_picker/READINESS.md` merged (PR #894) — 🟢 Green verdict, one-pass, ready for eng-planning |
 | 2026-07-11 | #763 | Spotify sync design brief (PR #893) — full 7-question brainstorm; 7 locked decisions; Free tier + Premium 4-feature suite |
@@ -137,9 +139,9 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 ## 📋 Immediate TODOs
 
-- [ ] **#642 + #643 eng plans** — Two Green audits landed. Eng-planning agent picks up, writes implementation plans against the audited handoffs.
+- [ ] **#642 + #643 + concert_history eng plans** — Three Green audits landed. Eng-planning agent picks up, writes implementation plans against the audited handoffs. concert_history's plan enumerates: (1) `attending_at` migration, (2) `user_events` API surface update, (3) three History surfaces + PassportTeaser (no full Passport), (4) Supporter tier gate on detail view.
 - [ ] **#763 Design handoff** — Hugh routed prompt to Design 2026-07-11; awaiting handoff for audit.
-- [ ] **concert_history + shareable_cards Yellow → Green** — light Design addenda to close the flagged blockers, then re-review. Note: concert_history's Supporter-tier dependency is largely resolved now that #775 shipped (schema expand PR #878 already landed) — its blockers are down to the `attending_at` schema call + the Passport scope boundary.
+- [ ] **shareable_cards Yellow → Green** — direct-write addendum needs to close: tier gate, anonymous URL contract, `POSTER_TAGLINES` reference, **plus newly inherited Passport card scope** (full compact + share dimensions from concert_history).
 - [ ] **Backlog priority order** (after #763 handoff work): #762 Who else is watching → #764 Venue first-timer → #506 Admin Venue Form → #794 Logged-out UX
 
 ---
