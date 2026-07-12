@@ -143,6 +143,22 @@ describe('FounderWindowControl — confirmation modal gating', () => {
       ),
     )
   })
+
+  it('closes the modal and surfaces the error when open fails', async () => {
+    mockApiPost.mockRejectedValue(
+      new MockApiError(409, 'The founder window has already been opened'),
+    )
+    render(<FounderWindowControl initial={baseWindow()} />)
+
+    fireEvent.click(buttonByName('Open the founder window'))
+    fireEvent.click(buttonByName('Open the window'))
+
+    // Modal closes on failure so the error is visible, not hidden behind it.
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(
+      screen.getByText('The founder window has already been opened'),
+    ).toBeTruthy()
+  })
 })
 
 describe('FounderWindowControl — rehearsal actions', () => {

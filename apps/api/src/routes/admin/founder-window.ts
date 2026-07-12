@@ -28,8 +28,12 @@ import { apiLogger } from '../../lib/logger.js'
 const RECENT_CLAIMS_LIMIT = 20
 
 // founder_claimed metadata carries the 1-based seat number (billing.ts). Parse
-// defensively — the jsonb column is untyped, and older rows may lack it.
-const claimMetadataSchema = z.object({ seatNumber: z.number().int() })
+// defensively — the jsonb column is untyped, and older rows may lack it or
+// carry a non-positive value. `.positive()` enforces the 1-based invariant so
+// a bad row falls back to null instead of rendering "Seat #0".
+const claimMetadataSchema = z.object({
+  seatNumber: z.number().int().positive(),
+})
 
 const readFounderWindowRow = async () => {
   const [row] = await db

@@ -85,16 +85,20 @@ export const FounderWindowControl = ({
       ? error.message
       : null
 
-  const openWindow = () =>
-    runAction('open', async (token) => {
+  const openWindow = async () => {
+    await runAction('open', async (token) => {
       const data = await apiClient.post<AdminFounderWindow>(
         '/v1/admin/founder-window/open',
         token,
         {},
       )
       setWin(data)
-      setConfirmOpen(false)
     })
+    // Close on success or failure so a 409/auth error surfaces in the Launch
+    // panel instead of staying hidden behind the modal. runAction swallows
+    // errors internally, so this always runs.
+    setConfirmOpen(false)
+  }
 
   const simulateClaim = () =>
     runAction('simulate', async (token) => {
