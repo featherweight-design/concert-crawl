@@ -75,8 +75,15 @@ export const EventFlagsSection = ({
     }
   }, [])
 
-  const filterVisible = (list: EventFlag[]): EventFlag[] =>
-    (hideNonConcert
+  // Single source of truth for "what's visible on this page": the non-concert
+  // narrowing plus the optimistic bulk-approve mask. `shouldHideNonConcert`
+  // defaults to the current toggle state but can be overridden so the toggle
+  // handler can compute the *next* visible set without waiting for a re-render.
+  const filterVisible = (
+    list: EventFlag[],
+    shouldHideNonConcert: boolean = hideNonConcert,
+  ): EventFlag[] =>
+    (shouldHideNonConcert
       ? list.filter(
           (ev) =>
             !ev.genre?.some((tag) => tag.toLowerCase().includes('non-concert')),
@@ -253,16 +260,7 @@ export const EventFlagsSection = ({
     setHideNonConcert(next)
     setSelectedIds(new Set())
     if (page > 1) onPageChange(1)
-    const nextVisible = (
-      next
-        ? events.filter(
-            (ev) =>
-              !ev.genre?.some((tag) =>
-                tag.toLowerCase().includes('non-concert'),
-              ),
-          )
-        : events
-    ).filter((ev) => !pendingApprovalIds.has(ev.id))
+    const nextVisible = filterVisible(events, next)
     setActiveId(nextVisible[0]?.id ?? null)
   }
 
