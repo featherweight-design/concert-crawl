@@ -330,7 +330,7 @@ const CheckoutForm = ({
       if (!dismissedRef.current) enterFailure('network_timeout')
     } finally {
       stopWatching()
-      setSubmitting(false)
+      if (!dismissedRef.current) setSubmitting(false)
     }
   }
 
