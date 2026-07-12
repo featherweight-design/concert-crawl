@@ -1,3 +1,28 @@
+# [1.109.0](https://github.com/HartiganHM/concert-crawl/compare/v1.108.0...v1.109.0) (2026-07-12)
+
+
+### Bug Fixes
+
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R1 — sort focus outline, inactive aria, load error, hook test ([268a7f3](https://github.com/HartiganHM/concert-crawl/commit/268a7f31b3e50377a5ddc21346e4e4784ad8762b))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R10 — add archived to status filter rail ([1c9b576](https://github.com/HartiganHM/concert-crawl/commit/1c9b576d2298574f0534b841a72603ffc7ef06e6))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R11 — render six filter-pill skeletons to match rail ([9d67c13](https://github.com/HartiganHM/concert-crawl/commit/9d67c13517568dd12a8d8e849cd2e1017dbb51f0))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R12 — name archived status in page subtitle ([f73466d](https://github.com/HartiganHM/concert-crawl/commit/f73466df1de75c1cd59f4023f45620b72b353bba))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R13 — filter-aware count badge and empty state ([c424dac](https://github.com/HartiganHM/concert-crawl/commit/c424dacb36918a5edb059165ae5f4a72d0f1421d))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R14 — auth-aware banner + subset badge while loading ([4094148](https://github.com/HartiganHM/concert-crawl/commit/4094148dcfcc58eaec1fe00972d3e647a97afcdd))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R2 — surface auth error, Set membership, shared counts key ([31e0635](https://github.com/HartiganHM/concert-crawl/commit/31e06352a7f8a5cfad7a0c285e769b5ad0d7a029))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R3 — refetch full set on mount, reuse price-range helper ([a6c2f0a](https://github.com/HartiganHM/concert-crawl/commit/a6c2f0a4073bd4b72791c3dbfdfe580feb73e255))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R4 — advance offset by rows received, resync on bulk failure ([c1dcfcb](https://github.com/HartiganHM/concert-crawl/commit/c1dcfcbdc679a3fa7b8501c723e33ff8096dd5c9))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R5 — count first page only, seed stale, status union ([d622259](https://github.com/HartiganHM/concert-crawl/commit/d6222597cdbf92328c1c4871ef7d94403d26a538))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R6 — allSettled bulk PATCH, share FETCH_PAGE_SIZE with SSR seed ([ce708ac](https://github.com/HartiganHM/concert-crawl/commit/ce708accddbce06f5044dc22242a2a6707501d67))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R7 — move FETCH_PAGE_SIZE to server-safe module ([c246698](https://github.com/HartiganHM/concert-crawl/commit/c246698d9e6433ca3ec5ba7c9517520699586c54))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R8 — hide empty select-all, validate ticket URL protocol ([75afda6](https://github.com/HartiganHM/concert-crawl/commit/75afda618deb152bb48c6823330d3918d4b0d700))
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) PR [#921](https://github.com/HartiganHM/concert-crawl/issues/921) R9 — type userId as nullable to match backend ([7145011](https://github.com/HartiganHM/concert-crawl/commit/71450110f9cad04d89ea5a8d4b4b1fdd4dd143d1))
+
+
+### Features
+
+* **admin:** [#540](https://github.com/HartiganHM/concert-crawl/issues/540) add price-submissions history page ([7f455f2](https://github.com/HartiganHM/concert-crawl/commit/7f455f25bc504e27589ca3b631761d6a824ad4c8))
+
 # [1.108.0](https://github.com/HartiganHM/concert-crawl/compare/v1.107.0...v1.108.0) (2026-07-12)
 
 
