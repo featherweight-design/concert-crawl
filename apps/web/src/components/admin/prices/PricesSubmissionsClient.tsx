@@ -23,6 +23,7 @@ import { type StatusKind } from '@/components/admin/primitives/utils'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { BulkActionDock } from '@/components/admin/review/BulkActionDock'
 import { formatPriceRange } from '@/components/admin/review/lib/format-price-range'
+import { isSafeHttpUrl } from './lib/is-safe-http-url'
 import { reviewQueryKeys } from '@/lib/queries/use-admin-review'
 import {
   adminPriceSubmissionsKey,
@@ -441,14 +442,15 @@ export const PricesSubmissionsClient = ({
               <THead>
                 <tr>
                   <TH width={40}>
-                    <input
-                      type="checkbox"
-                      checked={allPendingSelected}
-                      onChange={toggleAllPending}
-                      disabled={pendingPageIds.length === 0}
-                      aria-label={COPY.selectAllAria}
-                      style={{ cursor: 'pointer' }}
-                    />
+                    {pendingPageIds.length > 0 && (
+                      <input
+                        type="checkbox"
+                        checked={allPendingSelected}
+                        onChange={toggleAllPending}
+                        aria-label={COPY.selectAllAria}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    )}
                   </TH>
                   <TH>{sortButton('event', COPY.columns.event)}</TH>
                   <TH>{COPY.columns.price}</TH>
@@ -488,7 +490,7 @@ export const PricesSubmissionsClient = ({
                           }}
                         >
                           <span style={{ fontWeight: 600 }}>{eventLine}</span>
-                          {row.ticketUrl && (
+                          {isSafeHttpUrl(row.ticketUrl) && (
                             <a
                               href={row.ticketUrl}
                               target="_blank"

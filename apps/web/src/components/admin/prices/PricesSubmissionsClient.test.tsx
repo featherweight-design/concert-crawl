@@ -154,6 +154,51 @@ describe('PricesSubmissionsClient', () => {
     ).toHaveLength(2)
   })
 
+  it('hides the select-all checkbox when the view has no pending rows', () => {
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={ROWS}
+        initialTotal={ROWS.length}
+      />,
+    )
+    // Charlie Show is corroborated — filtering to it leaves no pending rows,
+    // so neither the row checkboxes nor the select-all header render.
+    fireEvent.click(screen.getByRole('button', { name: 'Corroborated' }))
+    expect(screen.getByText('Charlie Show')).toBeTruthy()
+    expect(screen.queryByRole('checkbox')).toBeNull()
+  })
+
+  it('does not render a ticket link for a non-http(s) URL', () => {
+    const hostile = [
+      row({
+        id: 'sub-js',
+        eventTitle: 'Hostile Show',
+        ticketUrl: 'javascript:alert(1)',
+      }),
+      row({
+        id: 'sub-ok',
+        eventTitle: 'Safe Show',
+        ticketUrl: 'https://tickets.example.com/1',
+      }),
+    ]
+    mockUseAdminPriceSubmissions.mockReturnValue({
+      data: hostile,
+      isFetching: false,
+    })
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={hostile}
+        initialTotal={hostile.length}
+      />,
+    )
+    expect(
+      screen.queryByRole('link', { name: /Open ticket page for Hostile Show/ }),
+    ).toBeNull()
+    expect(
+      screen.getByRole('link', { name: /Open ticket page for Safe Show/ }),
+    ).toBeTruthy()
+  })
+
   it('PATCHes corroborated when a row is approved', async () => {
     renderClient(
       <PricesSubmissionsClient
