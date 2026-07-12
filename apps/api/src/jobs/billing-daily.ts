@@ -57,10 +57,11 @@ const GIFT_ENDING_WINDOW_MS = 7 * DAY_MS
 const DUNNING_FALLBACK_AGE_MS = 8 * DAY_MS
 const PROCESSED_EVENT_RETENTION_MS = NINETY_DAYS_MS
 
-// Card-expiry warning windows (§5.1 task 1). Order matters: the NEAREST window
-// a card currently falls into is the one we send for, so a card 6 days out
-// sends the 7-day notice (not 30/14). Descending so the first match is the
-// tightest window (see selectCardExpiryWindow).
+// Card-expiry warning windows (§5.1 task 1). A card is warned for the TIGHTEST
+// window it currently falls into, so a card 6 days out sends the 7-day notice
+// (not 30/14). This array is the set of valid window values (used for the
+// CardExpiryWindow type); the tightest-band selection is done by the explicit
+// if-ladder in selectCardExpiryWindow, not by iterating this array.
 export const CARD_EXPIRY_WINDOWS = [30, 14, 7] as const
 export type CardExpiryWindow = (typeof CARD_EXPIRY_WINDOWS)[number]
 
@@ -475,28 +476,35 @@ export const runTrialEndEvents = async (now: Date): Promise<void> => {
           ),
         )
         .limit(1)
-      if (existingEvent !== undefined) continue
-
-      await db.insert(subscriptionEvents).values({
-        userId: row.userId,
-        type: 'trial_ended',
-        metadata: { trialEndsAt: trialEndsAtIso },
-      })
 
       // Start the 90-day clock at trialEndsAt + 90d (§5.3 clock-start rule for
-      // trial end). Only set when not already set by a later event.
+      // trial end). Event insert + clock start are one transaction so a crash
+      // between them can't leave the event recorded with the clock unstarted.
+      // We do NOT `continue` when the event already exists: a prior run may have
+      // inserted the event but crashed before the clock update, so we still run
+      // the clock update (guarded by `premium_data_expires_at is null`, which
+      // makes it a no-op once a later event has set the clock).
       const premiumDataExpiresAt = new Date(
         trialEndsAt.getTime() + NINETY_DAYS_MS,
       )
-      await db
-        .update(userBilling)
-        .set({ premiumDataExpiresAt, updatedAt: new Date() })
-        .where(
-          and(
-            eq(userBilling.userId, row.userId),
-            sql`premium_data_expires_at is null`,
-          ),
-        )
+      await db.transaction(async (tx) => {
+        if (existingEvent === undefined) {
+          await tx.insert(subscriptionEvents).values({
+            userId: row.userId,
+            type: 'trial_ended',
+            metadata: { trialEndsAt: trialEndsAtIso },
+          })
+        }
+        await tx
+          .update(userBilling)
+          .set({ premiumDataExpiresAt, updatedAt: new Date() })
+          .where(
+            and(
+              eq(userBilling.userId, row.userId),
+              sql`premium_data_expires_at is null`,
+            ),
+          )
+      })
     } catch (err) {
       apiLogger.error(
         { err, userId: row.userId },
@@ -638,43 +646,52 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
         continue
       }
 
-      // Concert history (attended) — status 'going'. NEVER 'watching'.
-      const deletedHistory = await db
-        .delete(userEvents)
-        .where(
-          and(
-            eq(userEvents.userId, row.userId),
-            eq(userEvents.status, 'going'),
-          ),
-        )
-        .returning({ id: userEvents.id })
+      // Delete + audit-event insert + clock clear are one transaction: a crash
+      // between them would otherwise lose the accurate deletion counts, or clear
+      // the clock without the audit record, or (on retry) re-delete against an
+      // already-purged user and write a duplicate data_purged event with zero
+      // counts. Committing atomically makes the whole purge a single unit.
+      const purgeCounts = await db.transaction(async (tx) => {
+        // Concert history (attended) — status 'going'. NEVER 'watching'.
+        const deletedHistory = await tx
+          .delete(userEvents)
+          .where(
+            and(
+              eq(userEvents.userId, row.userId),
+              eq(userEvents.status, 'going'),
+            ),
+          )
+          .returning({ id: userEvents.id })
 
-      // Following.
-      const deletedFollows = await db
-        .delete(userArtistFollows)
-        .where(eq(userArtistFollows.userId, row.userId))
-        .returning({ id: userArtistFollows.id })
+        // Following.
+        const deletedFollows = await tx
+          .delete(userArtistFollows)
+          .where(eq(userArtistFollows.userId, row.userId))
+          .returning({ id: userArtistFollows.id })
 
-      // Alert prefs + Spotify sync state: no tables exist yet (see header).
-      // Recorded as null so the audit event shows they were not applicable.
-      const purgeCounts = {
-        attendedHistory: deletedHistory.length,
-        follows: deletedFollows.length,
-        alertPrefs: null,
-        spotifySyncState: null,
-      }
+        // Alert prefs + Spotify sync state: no tables exist yet (see header).
+        // Recorded as null so the audit event shows they were not applicable.
+        const counts = {
+          attendedHistory: deletedHistory.length,
+          follows: deletedFollows.length,
+          alertPrefs: null,
+          spotifySyncState: null,
+        }
 
-      await db.insert(subscriptionEvents).values({
-        userId: row.userId,
-        type: 'data_purged',
-        metadata: purgeCounts,
+        await tx.insert(subscriptionEvents).values({
+          userId: row.userId,
+          type: 'data_purged',
+          metadata: counts,
+        })
+
+        // Clear the clock so the user is not re-purged next run.
+        await tx
+          .update(userBilling)
+          .set({ premiumDataExpiresAt: null, updatedAt: new Date() })
+          .where(eq(userBilling.userId, row.userId))
+
+        return counts
       })
-
-      // Clear the clock so the user is not re-purged next run.
-      await db
-        .update(userBilling)
-        .set({ premiumDataExpiresAt: null, updatedAt: new Date() })
-        .where(eq(userBilling.userId, row.userId))
 
       apiLogger.info(
         { userId: row.userId, purgeCounts },
