@@ -265,6 +265,17 @@ const CheckoutForm = ({
   useEscapeCapture(isFailure, onDismiss)
   useEscapeCapture(isChallenge, cancelChallenge)
 
+  // A confirmPayment can resolve after the user has dismissed the surface
+  // (Escape / close-X unmounts this form) — without a guard the late
+  // resolve would still fire onSuccess/onSurface against a closed flow.
+  const dismissedRef = useRef(false)
+  useEffect(
+    () => () => {
+      dismissedRef.current = true
+    },
+    [],
+  )
+
   const confirm = async () => {
     if (!stripe || !elements) return
     setSubmitting(true)
@@ -275,8 +286,10 @@ const CheckoutForm = ({
     const stopWatching = watchForRequiresAction(
       stripe,
       clientSecret,
-      () =>
-        onSurface({ kind: 'challenge', challenge: scaRegion ? 'sca' : '3ds' }),
+      () => {
+        if (dismissedRef.current) return
+        onSurface({ kind: 'challenge', challenge: scaRegion ? 'sca' : '3ds' })
+      },
       REQUIRES_ACTION_POLL_MS,
     )
     try {
@@ -287,12 +300,14 @@ const CheckoutForm = ({
         confirmParams: { return_url: window.location.href },
         redirect: 'if_required',
       })
+      if (dismissedRef.current) return
       if (result.error) {
         console.error('tier-picker: confirmPayment declined', result.error)
         if (result.error.type === 'validation_error') {
           // Incomplete form — the Payment Element shows its own
-          // field-level errors; no decline happened, stay put.
-          if (isChallenge) onSurface(CHECKOUT_SURFACE)
+          // field-level errors; no decline happened. Return to the
+          // checkout layout so those field errors are visible.
+          onSurface(CHECKOUT_SURFACE)
           return
         }
         enterFailure(
@@ -309,7 +324,7 @@ const CheckoutForm = ({
       // Thrown (not returned) errors are transport-level — the card was
       // never decided (spec §1.6 network_timeout row).
       console.error('tier-picker: confirmPayment failed', err)
-      enterFailure('network_timeout')
+      if (!dismissedRef.current) enterFailure('network_timeout')
     } finally {
       stopWatching()
       setSubmitting(false)

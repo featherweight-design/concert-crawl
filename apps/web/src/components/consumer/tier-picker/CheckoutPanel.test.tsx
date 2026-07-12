@@ -313,6 +313,56 @@ describe('CheckoutPanel — failure surface actions', () => {
     consoleSpy.mockRestore()
   })
 
+  it('returns to the checkout layout when a retry hits a validation error', async () => {
+    await enterFailure(
+      'insufficient_funds',
+      TIER_PICKER_COPY.failure.categories.insufficient_funds.headline,
+    )
+    // Retry with an incomplete form — the element renders its own field
+    // errors, so the failure layout must yield back to checkout.
+    declineWith({ type: 'validation_error', message: 'incomplete' })
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: TIER_PICKER_COPY.failure.categories.insufficient_funds.primary,
+      }),
+    )
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull())
+    expect(
+      screen.getByRole('button', {
+        name: new RegExp(TIER_PICKER_COPY.checkout.payCta),
+      }),
+    ).toBeTruthy()
+    consoleSpy.mockRestore()
+  })
+
+  it('ignores a confirmPayment that resolves after the surface unmounted', async () => {
+    let resolveConfirm: (value: Record<string, unknown>) => void = () => {}
+    mockConfirmPayment.mockReturnValue(
+      new Promise((resolve) => {
+        resolveConfirm = resolve
+      }),
+    )
+    const onSuccess = vi.fn()
+    const { unmount } = render(
+      <CheckoutPanel
+        tierKey="premium"
+        clientSecret="cs_test_secret"
+        scaRegion={false}
+        onBack={vi.fn()}
+        onSuccess={onSuccess}
+        onSurfaceChange={vi.fn()}
+      />,
+    )
+    clickPay()
+    await waitFor(() => expect(mockConfirmPayment).toHaveBeenCalled())
+    unmount()
+    await act(async () => {
+      resolveConfirm({})
+    })
+    expect(onSuccess).not.toHaveBeenCalled()
+    consoleSpy.mockRestore()
+  })
+
   it('hides the checkout back-button, legal block, and pay CTA while failed', async () => {
     await enterFailure(
       'issuer_declined',
