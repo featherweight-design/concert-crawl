@@ -16,6 +16,7 @@ const PREHEADER =
 
 const AMOUNT_FALLBACK = 'See Stripe receipt'
 const PLAN_FALLBACK = 'Monthly subscription'
+const RECEIPT_FALLBACK = 'Not available for this charge'
 
 const recordRowHtml = (label: string, valueHtml: string): string =>
   `<tr>
@@ -44,14 +45,12 @@ export const renderRenewalReceiptMonthly: TemplateRenderer<
     recordRowHtml('Charge date', escapeHtml(chargeDateLabel)),
     recordRowHtml('Plan', escapeHtml(planLabel)),
     recordRowHtml('Customer ID', escapeHtml(customerId)),
-    ...(stripeReceiptUrl === null
-      ? []
-      : [
-          recordRowHtml(
-            'Receipt',
-            `<a href="${escapeHtml(stripeReceiptUrl)}" style="color: ${EMAIL_SUCCESS_GREEN};">View Stripe receipt</a>`,
-          ),
-        ]),
+    recordRowHtml(
+      'Receipt',
+      stripeReceiptUrl === null
+        ? escapeHtml(RECEIPT_FALLBACK)
+        : `<a href="${escapeHtml(stripeReceiptUrl)}" style="color: ${EMAIL_SUCCESS_GREEN};">View Stripe receipt</a>`,
+    ),
   ].join('\n')
 
   const lockedInSentence =
@@ -71,9 +70,9 @@ ${recordRows}
     `Charge date: ${chargeDateLabel}`,
     `Plan: ${planLabel}`,
     `Customer ID: ${customerId}`,
-    ...(stripeReceiptUrl === null
-      ? []
-      : [`View Stripe receipt: ${stripeReceiptUrl}`]),
+    stripeReceiptUrl === null
+      ? `Receipt: ${RECEIPT_FALLBACK}`
+      : `View Stripe receipt: ${stripeReceiptUrl}`,
     '',
     'Your subscription renewed and everything is humming along.',
     ...(lockedInSentence === null ? [] : [lockedInSentence]),
