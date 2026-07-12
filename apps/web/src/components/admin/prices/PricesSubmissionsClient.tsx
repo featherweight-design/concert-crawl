@@ -390,7 +390,9 @@ export const PricesSubmissionsClient = ({
           color: 'var(--fg-muted)',
         }}
       >
-        {COPY.countBadge(total)}
+        {statusFilter === 'all'
+          ? COPY.countBadge(total)
+          : COPY.countBadgeFiltered(total, rows.length)}
       </span>
     </span>
   )
@@ -436,7 +438,9 @@ export const PricesSubmissionsClient = ({
               fontFamily: "'Inter', sans-serif",
             }}
           >
-            {COPY.empty}
+            {statusFilter === 'all'
+              ? COPY.empty
+              : COPY.emptyFiltered(COPY.filters[statusFilter].toLowerCase())}
           </div>
         ) : (
           <>

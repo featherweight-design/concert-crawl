@@ -157,6 +157,47 @@ describe('PricesSubmissionsClient', () => {
     expect(screen.queryByText('Pending Show')).toBeNull()
   })
 
+  it('labels the count badge as a subset when a filter is active', () => {
+    const mixed = [
+      row({ id: 'sub-a', status: 'archived' }),
+      row({ id: 'sub-p1', status: 'pending' }),
+      row({ id: 'sub-p2', status: 'pending' }),
+    ]
+    mockUseAdminPriceSubmissions.mockReturnValue({
+      data: mixed,
+      isFetching: false,
+    })
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={mixed}
+        initialTotal={mixed.length}
+      />,
+    )
+    // Unfiltered: badge states the overall total.
+    expect(screen.getByText('3 total')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Archived' }))
+    // Filtered: badge states the subset out of the loaded rows, not "total".
+    expect(screen.getByText('1 of 3')).toBeTruthy()
+    expect(screen.queryByText('1 total')).toBeNull()
+  })
+
+  it('shows a filter-aware empty message when a filter matches no rows', () => {
+    const onlyPending = [row({ id: 'sub-p', status: 'pending' })]
+    mockUseAdminPriceSubmissions.mockReturnValue({
+      data: onlyPending,
+      isFetching: false,
+    })
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={onlyPending}
+        initialTotal={onlyPending.length}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Disputed' }))
+    expect(screen.getByText('No disputed price submissions.')).toBeTruthy()
+    expect(screen.queryByText('No price submissions yet.')).toBeNull()
+  })
+
   it('shows checkboxes and approve/deny only for pending rows', () => {
     renderClient(
       <PricesSubmissionsClient

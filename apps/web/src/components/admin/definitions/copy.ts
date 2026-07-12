@@ -1651,7 +1651,14 @@ export const ADMIN_COPY = {
     backLink: 'Back to Review',
     panelTitle: 'Submission history',
     countBadge: (count: number) => `${count} total`,
+    // Shown instead of countBadge when a status filter is active — `count` is
+    // then the filtered subset, so "total" would misstate it.
+    countBadgeFiltered: (shown: number, loaded: number) =>
+      `${shown} of ${loaded}`,
     empty: 'No price submissions yet.',
+    // Shown instead of `empty` when a status filter matches no rows even though
+    // submissions exist — `label` is the lowercased active filter name.
+    emptyFiltered: (label: string) => `No ${label} price submissions.`,
     loadError: 'Couldn’t load submissions. Refresh to try again.',
     authError: 'Your session expired. Refresh and sign in to continue.',
     filterLabel: 'Status',
