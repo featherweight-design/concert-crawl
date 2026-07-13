@@ -122,9 +122,15 @@ export const AdminInboxClient = ({ initialData }: AdminInboxClientProps) => {
     : null
   const bannerMessage = actionError ?? queryErrorMessage
 
-  // Mark-all only makes sense when the current view has unread items to clear.
+  // Mark-all only makes sense when the current view can show unread items to
+  // clear. The 'read' filter renders only already-read rows, so the action
+  // would be a no-op there — hide it regardless of the category's unread count.
   const markAllTargetUnread =
-    category === 'all' ? totalUnread : (unreadCounts[category] ?? 0)
+    status === 'read'
+      ? 0
+      : category === 'all'
+        ? totalUnread
+        : (unreadCounts[category] ?? 0)
 
   const emptyMessage =
     status === 'read'
