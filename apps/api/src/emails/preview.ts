@@ -27,8 +27,10 @@ const REPLY_TO = 'support@concertcrawl.app'
 const OUTPUT_DIR = join(process.cwd(), '.email-preview')
 const PORTAL_URL = 'https://billing.stripe.com/p/session/test_preview'
 
-// One representative vars set per template — mirrors the fixtures in
-// templates/templates.test.ts so the preview matches what the suite asserts.
+// One representative vars set per template — based on the fixtures in
+// src/emails/templates/templates.test.ts so the preview closely tracks what the
+// suite asserts (a few values differ, e.g. welcome_gifted uses a non-null
+// giftEndsAt here).
 // Exhaustive (non-optional) by design: adding a new EmailTemplateKey breaks
 // this at compile time until its sample vars are supplied here, so the harness
 // can never silently drop a template.

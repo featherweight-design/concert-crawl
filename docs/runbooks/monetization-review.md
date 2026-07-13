@@ -12,9 +12,10 @@ of truth for the sequence. This is the map; that is the turn-by-turn.
 
 ## 1. What shipped (by phase)
 
-Every phase below is merged to `main`, CI-green, and deployed to prod + staging.
-The code is live; most of it stays **dormant** until you flip the founder window
-open (see §3).
+Every phase below is merged to `main`, CI-green, and deployed to prod + staging —
+**except** 6.2 (Analytics), which is still in progress, and 7 (Launch day), which
+is human-owned and has no code. The shipped code is live; most of it stays
+**dormant** until you flip the founder window open (see §3).
 
 | Phase                              | What it delivers                                                                                                                            | PRs                          |
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
