@@ -6,7 +6,7 @@ import { ThemeProvider } from '@/theme'
 import { THEMES } from '@/theme/themes'
 import { cn } from '@/lib/utils'
 import { QueryProvider } from '@/components/QueryProvider'
-import { PostHogProvider } from '@/lib/analytics'
+import { PostHogProvider } from '@/lib/analytics/PostHogProvider'
 import { Toaster } from 'sonner'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
