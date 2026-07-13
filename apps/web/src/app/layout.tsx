@@ -6,6 +6,9 @@ import { ThemeProvider } from '@/theme'
 import { THEMES } from '@/theme/themes'
 import { cn } from '@/lib/utils'
 import { QueryProvider } from '@/components/QueryProvider'
+// Imported directly, not via the analytics barrel: the barrel also re-exports
+// browser-only posthog-js helpers, which must not enter this Server Component's
+// module graph.
 import { PostHogProvider } from '@/lib/analytics/PostHogProvider'
 import { Toaster } from 'sonner'
 import { SpeedInsights } from '@vercel/speed-insights/next'
