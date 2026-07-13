@@ -1,7 +1,7 @@
 # Readiness Review — Spotify Sync (R1 + R2) · Track 1 Audit
 
-**Verdict:** 🟡 Yellow — one substantive gating bug + one small copy consequence blocking Green. Everything else is tight; the design shape across both rounds is strong, follow filter is drawn to the exact behavior Hugh flagged, and Design proactively caught the gating question but implemented it wrong. Fixable in a ~15-min direct-write addendum from Design.
-**Audited:** 2026-07-12
+**Verdict:** 🟡 Yellow — two blockers (gating + locked-chip a11y contract) + six low-priority nits blocking Green. Tier-gate question **resolved 2026-07-13** by Hugh: `premium || founder`. Fixable in a ~20-min consolidated addendum from Design; verdict flips 🟢 on the second-pass audit.
+**Audited:** 2026-07-12 (initial pass) → refreshed 2026-07-13 (Copilot R1 findings folded in + gate decision recorded)
 **Auditor:** Claude (Track 2 post-handoff Readiness Review — R1 + R2 combined)
 **Audited handoff:** `design/design_handoff_spotify_sync/` (R1 delivered 2026-07-11; R2 delivered 2026-07-12)
 **Source ticket:** [#763](https://github.com/HartiganHM/concert-crawl/issues/763) (`type: design, source: internal, phase: beta, priority: normal`)
@@ -31,17 +31,41 @@ Hugh's specifically-flagged **follow filter is present and drawn to the exact be
 
 **Design flagged this themselves** in `README.md §55` and `Spotify Sync R2.html:186` — the flag reads *"this R2 brief says gate on supporter||founder, but the older entitlements doc lists Spotify features as Premium-and-up."* But the R2 brief doesn't say `supporter||founder` — it consistently says "Premium users." Design misread the brief; the older matrix and the R2 brief actually agree.
 
+**Resolution (2026-07-13):** Hugh confirmed the gate is `premium || founder`. Supporter stays badge-only per the older entitlements matrix. The two docs are already reconciled — the R2 brief consistently says "Premium users," matching the matrix.
+
 **Fix (Design addendum):**
 - Change `taste-filter.jsx:115` to `const paid = tier === "premium" || tier === "founder";`
 - Update `taste-filter.jsx:14` inline comment: `paid = premium/founder`
-- Update the upsell sheet at `taste-filter.jsx:176` — currently reads `SUPPORTER $2/MO · FOUNDER $3 LOCKED`. Correct copy should promote the actual unlocking tiers: something like `PREMIUM $5/MO · FOUNDER $3 LOCKED` (Supporter is not the entry-level tier for this feature)
-- Update `README.md §53, §55` and `Spotify Sync R2.html:178, 185, 186` prose to say `premium || founder` and drop the "reconcile" flag (it's resolved)
+- Update `taste-filter.jsx:114` default prop from `tier = "supporter"` to `tier = "premium"` so the live preview default shows a tier that actually unlocks
+- Update the upsell eyebrow at `taste-filter.jsx:158` from `TASTE FILTER · PAID` to `TASTE FILTER · PREMIUM` (names the tier the user needs to reach)
+- Update the upsell footer at `taste-filter.jsx:176` from `SUPPORTER $2/MO · FOUNDER $3 LOCKED` to `PREMIUM $5/MO · FOUNDER $3 LOCKED`
+- **Add `premium` to the Tweaks panel tier dropdown** at `Spotify Sync R2.html:133–137` — currently only offers `supporter / founder / free`, mirroring the same Premium-omission bug at the preview layer
+- Update `README.md §53, §55` and `Spotify Sync R2.html:178, 185` prose to say `premium || founder`; delete the "reconcile" callout at `README.md §55` and the on-canvas flag at `Spotify Sync R2.html:186` — resolved
+- Update `CLAUDE_CODE_PROMPT.md` lines 50–58 Gating paragraph to say `premium || founder` and drop the "⚠️ RECONCILE FIRST" preface
 
-Alternatively, if Hugh actually *wants* to upgrade Supporter to include Spotify features (deliberately override the older entitlements matrix), that decision needs an explicit brief amendment first — because it changes the whole Supporter value prop from "badge-only" to "badge + Spotify", which has knock-on effects for how Supporter is positioned in the tier picker. But even then, `premium` must be in the check.
+### 2. ♿ Locked chip a11y contract not honored
 
-### 2. 📝 Upsell copy inconsistency (falls out from #1)
+**File:** `taste-filter.jsx:37–52` (the `locked` branch of `FollowFilterChip`)
+**Current:** `<button onClick={onClick} style={{...}}>` — no `aria-disabled`, no `aria-label`.
 
-`taste-filter.jsx:167` upsell body lists three feature bullets: "Following", "Taste picks", "New-show alerts". This is accurate to the four R2 surfaces (grouping digest + push under "alerts"). But the eyebrow at line 158 reads `TASTE FILTER · PAID` — should it name the specific tier the user needs to reach? "TASTE FILTER · PREMIUM" would be clearer than the generic "PAID." Not blocking; nice-to-have alongside the #1 fix.
+The R2 A11y note (`Spotify Sync R2.html:202`) explicitly promises: *"Locked chip: aria-disabled + 'Following filter, paid' label; tap still opens the upsell (not a dead control)."* Design's code doesn't deliver either attribute — assistive tech will announce it as a plain enabled toggle. Not a full blocker on its own (behavior is correct — tap opens upsell), but it violates the A11y contract Design themselves documented and I marked ✅ on the a11y pass. Should be fixed in the same addendum.
+
+**Fix:** Add `aria-disabled="true"` and `aria-label="Following filter, paid"` to the locked-branch `<button>`.
+
+### 3. 📝 Upsell copy inconsistency (falls out from blocker #1)
+
+`taste-filter.jsx:167` upsell body lists three feature bullets: "Following", "Taste picks", "New-show alerts" — accurate to the four R2 surfaces (grouping digest + push under "alerts"). Handled by the blocker #1 fix (eyebrow rename to `TASTE FILTER · PREMIUM`).
+
+## 🌿 Nits — fold into the addendum, don't block on their own
+
+Fine-toothed pass surfaced these; small enough that a plan PR *could* proceed with them open, but cheap to fix in the same addendum:
+
+- **`README.md:3`** — the spec note claims *"the brief referenced `docs/superpowers/specs/2026-07-11-spotify-sync-design.md` — that file is not in the project (the `docs/` folder is empty)."* But the spec exists in-repo at that exact path (merged as PR #893). Design's note is a stale artifact from their sandbox environment. Delete the callout.
+- **`README.md:55` + `CLAUDE_CODE_PROMPT.md:52`** — both reference `uploads/2026-06-24-monetization-tier-states-entitlements-design.md`, a path that doesn't exist in-repo. The correct path is `docs/superpowers/specs/2026-06-24-monetization-tier-states-entitlements-design.md`. Rewrite (and the tier-gate reconciliation itself is moot post-resolution).
+- **`theme-context.jsx:2`** — header comment says *"base 3 (electric/jade/light) + 5 genre themes shipped May 10 (pulse, forge, bluenote, drip, cedar, gloss). 9 total."* That's 3 + 5 = 8 but lists 6 genre themes → 3 + 6 = 9. Change "5 genre themes" to "6 genre themes."
+- **`theme-context.jsx:76, 116`** — header comment says *"Dark themes use the bright brand green (#1ED760)"*, but Forge sets `spotify-green: "#3BE06E"` and Cedar sets `"#4ADE7B"`. Either bring these two dark themes to `#1ED760` (Design's intent per the comment) or amend the comment to describe a per-theme variant. Note the token isn't currently painted with (§36 rule reserves it for the official logo asset), so this is a documentation-vs-data consistency issue, not a visual bug.
+- **`tweaks-panel.jsx:218`** — comment labels the message check as an *"Origin gate"*, but the code only checks `e.source !== window.parent` (source, not origin). Rename the comment to `Source gate` or add `e.origin` validation to match the comment.
+- **`spotify-states.jsx:49`** — eyebrow copy lowercases "denver" while every other surface capitalizes "Denver". Case-consistency fix.
 
 ## ✅ Per-dimension findings — Green-worthy across the board
 
@@ -112,9 +136,16 @@ Alternatively, if Hugh actually *wants* to upgrade Supporter to include Spotify 
 
 ## Path to Green
 
-1. **Hugh confirms tier gate** — is Spotify gated on `premium || founder` (matches brief + older entitlements matrix, my read), OR is Hugh actually upgrading Supporter to include Spotify features (would need a brief amendment first)?
-2. **Design applies 4-line addendum** in `taste-filter.jsx` (paid check + comment + upsell copy) + prose fixes in `README.md` + `Spotify Sync R2.html` (drop the "reconcile" flag once decided).
-3. **Second-pass audit** — should be a single-round Low/Nit-floor pass to confirm the fix; the design shape doesn't change.
+1. ✅ **Hugh confirmed tier gate (2026-07-13):** `premium || founder`. Supporter stays badge-only.
+2. **Design applies the consolidated addendum:**
+   - `taste-filter.jsx` — gate check + inline comment + default prop + upsell eyebrow + upsell footer + locked-chip `aria-disabled` + `aria-label` (blockers #1 + #2)
+   - `Spotify Sync R2.html` — Tweaks tier dropdown adds `premium`; subtitle + on-canvas A11yNote prose updated; reconcile flag deleted
+   - `README.md` — §53, §55 prose to `premium || founder`; reconcile callout deleted; §3 stale spec note deleted; §55 `uploads/` path corrected
+   - `CLAUDE_CODE_PROMPT.md` — Gating paragraph rewritten, `⚠️ RECONCILE FIRST` preface dropped, entitlements path corrected
+   - `theme-context.jsx` — line 2 "5 genre themes" → "6 genre themes"; Forge + Cedar `spotify-green` reconciled to `#1ED760` (or comment amended to explain per-theme variants)
+   - `tweaks-panel.jsx:218` — "Origin gate" comment renamed to "Source gate" (or `e.origin` check added)
+   - `spotify-states.jsx:49` — "denver" → "Denver"
+3. **Second-pass audit** — single-round Low/Nit-floor pass to confirm the fixes; the design shape doesn't change.
 
 Once addendum lands, this flips 🟢 Green and the plan PR can open with the correct gate baked in from day one.
 
