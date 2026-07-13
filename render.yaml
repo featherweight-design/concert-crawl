@@ -8,6 +8,11 @@
 # (sync: false). Connection strings point at Neon — see Neon project
 # "concert-crawl" → Branches.
 #
+# For any service that runs `pnpm db:migrate` on deploy (the two API web
+# services), DATABASE_URL MUST be the DIRECT Neon URL, not the pooled
+# `-pooler` host — the migrator wraps DDL in a transaction and pooled
+# connections can behave inconsistently for that. See docs/runbooks/db-rollback.md.
+#
 # NOTE: this file is DESCRIPTIVE, not blueprint-synced. Every service was
 # created and is edited by hand in the Render dashboard. Editing this file
 # does not deploy or change any service — it just keeps a version-controlled
@@ -42,7 +47,7 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    schedule: "0 15 * * *" # 9 AM MT (UTC-7 standard / UTC-6 daylight)
+    schedule: "0 15 * * *" # 15:00 UTC = 9 AM MDT / 8 AM MST (Render runs cron in UTC)
     buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
     startCommand: pnpm --filter @concert-crawl/api exec tsx src/jobs/billing-daily.ts
     envVars:
@@ -146,7 +151,7 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    schedule: "0 15 * * *" # 9 AM MT (UTC-7 standard / UTC-6 daylight)
+    schedule: "0 15 * * *" # 15:00 UTC = 9 AM MDT / 8 AM MST (Render runs cron in UTC)
     buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
     startCommand: pnpm --filter @concert-crawl/api exec tsx src/jobs/billing-daily.ts
     envVars:

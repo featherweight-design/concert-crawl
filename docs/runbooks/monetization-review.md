@@ -16,16 +16,16 @@ Every phase below is merged to `main`, CI-green, and deployed to prod + staging.
 The code is live; most of it stays **dormant** until you flip the founder window
 open (see §3).
 
-| Phase | What it delivers | PRs |
-|-------|------------------|-----|
-| 1 — Spec | Monetization eng infra design | #873 |
-| 2 — Schema + Stripe core | DB expand, checkout-session + founder atomic claim, webhooks + portal + abandon | #878, #879, #880 |
-| 3 — Plan + entitlements + picker | `derivePlan` rewrite + entitlements package, six-state tier picker + embedded checkout, entitlement gating across surfaces | #885, #886, #887 |
+| Phase                              | What it delivers                                                                                                                            | PRs                          |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| 1 — Spec                           | Monetization eng infra design                                                                                                               | #873                         |
+| 2 — Schema + Stripe core           | DB expand, checkout-session + founder atomic claim, webhooks + portal + abandon                                                             | #878, #879, #880             |
+| 3 — Plan + entitlements + picker   | `derivePlan` rewrite + entitlements package, six-state tier picker + embedded checkout, entitlement gating across surfaces                  | #885, #886, #887             |
 | 4 — Payment + lifecycle + failures | Checkout legal microcopy, trial-end/founder-claim reveals, past-due banner, five failure surfaces + 3DS/SCA, cancel/resubscribe/change-tier | #900, #901, #902, #906, #908 |
-| 5 — Email + daily job | Dunning/reminder/winback emails + daily billing job | #912 |
-| 6 — Admin + launch prep | Admin founder-window launch control, launch runbook + gated smoke | #917, #922 |
-| 6.2 — Analytics | PostHog funnel instrumentation | _in progress_ |
-| 7 — Launch day | **Human-owned — you flip the switch** | — |
+| 5 — Email + daily job              | Dunning/reminder/winback emails + daily billing job                                                                                         | #912                         |
+| 6 — Admin + launch prep            | Admin founder-window launch control, launch runbook + gated smoke                                                                           | #917, #922                   |
+| 6.2 — Analytics                    | PostHog funnel instrumentation                                                                                                              | _in progress_                |
+| 7 — Launch day                     | **Human-owned — you flip the switch**                                                                                                       | —                            |
 
 ---
 
@@ -68,7 +68,8 @@ real account, a real key, or a human judgment call. Do them in roughly this orde
 ### C. Render — daily billing cron
 
 - [ ] Create the **`concert-crawl-billing-jobs`** cron service (prod) — Node runtime,
-      schedule `0 15 * * *` (9 AM MT), start command
+      schedule `0 15 * * *` (Render runs cron in UTC: 15:00 UTC = 9 AM MDT / 8 AM MST),
+      start command
       `pnpm --filter @concert-crawl/api exec tsx src/jobs/billing-daily.ts`.
       The full env-var list is in `render.yaml` (descriptive reference — the file
       does not auto-create the service; you add it by hand in the dashboard).
