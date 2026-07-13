@@ -7,6 +7,11 @@
 # DATABASE_URL is set manually in the Render dashboard for each service
 # (sync: false). Connection strings point at Neon — see Neon project
 # "concert-crawl" → Branches.
+#
+# NOTE: this file is DESCRIPTIVE, not blueprint-synced. Every service was
+# created and is edited by hand in the Render dashboard. Editing this file
+# does not deploy or change any service — it just keeps a version-controlled
+# record of what the live infra should look like. Keep it in sync by hand.
 
 services:
   # --- Production ---
@@ -16,7 +21,10 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
+    # db:migrate runs before build, matching staging and the live prod service
+    # config: every merged migration auto-applies to prod on deploy (render.yaml
+    # is descriptive, not blueprint-synced — see the header note above).
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm db:migrate && pnpm turbo build --filter=@concert-crawl/api
     startCommand: node apps/api/dist/index.js
     healthCheckPath: /v1/health
     envVars:
@@ -28,6 +36,32 @@ services:
         sync: false # Enter manually in Render dashboard
       - key: ALLOWED_ORIGIN
         sync: false # Set to https://concertcrawl.app
+
+  - type: cron
+    name: concert-crawl-billing-jobs
+    runtime: node
+    region: oregon
+    plan: starter
+    schedule: "0 15 * * *" # 9 AM MT (UTC-7 standard / UTC-6 daylight)
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
+    startCommand: pnpm --filter @concert-crawl/api exec tsx src/jobs/billing-daily.ts
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Neon prod branch connection string — enter manually
+      - key: STRIPE_SECRET_KEY
+        sync: false # LIVE Stripe secret (sk_live_*) — enter manually
+      - key: RESEND_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: CLERK_SECRET_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: SENTRY_DSN
+        sync: false # Enter manually in Render dashboard
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: info
 
   - type: cron
     name: concert-crawl-crawler-triggers
@@ -106,6 +140,32 @@ services:
         sync: false # Staging Clerk secret — enter manually
       - key: ALLOWED_ORIGIN
         sync: false # Set to the Vercel preview URL (e.g. https://concert-crawl-git-main-<team>.vercel.app)
+
+  - type: cron
+    name: concert-crawl-billing-jobs-staging
+    runtime: node
+    region: oregon
+    plan: starter
+    schedule: "0 15 * * *" # 9 AM MT (UTC-7 standard / UTC-6 daylight)
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
+    startCommand: pnpm --filter @concert-crawl/api exec tsx src/jobs/billing-daily.ts
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Neon staging branch connection string — enter manually
+      - key: STRIPE_SECRET_KEY
+        sync: false # TEST Stripe secret (sk_test_*) — enter manually
+      - key: RESEND_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: CLERK_SECRET_KEY
+        sync: false # Staging Clerk secret — enter manually
+      - key: SENTRY_DSN
+        sync: false # Enter manually in Render dashboard
+      - key: SENTRY_ENVIRONMENT
+        value: staging
+      - key: LOG_LEVEL
+        value: info
 
   - type: cron
     name: concert-crawl-crawler-triggers-staging
