@@ -44,7 +44,18 @@ const getClient = (): PostHog | null => {
     hostEnv === undefined || hostEnv.length === 0
       ? DEFAULT_POSTHOG_HOST
       : hostEnv
-  cachedClient = new PostHog(apiKey, { host })
+  try {
+    cachedClient = new PostHog(apiKey, { host })
+  } catch (err) {
+    // A constructor throw (invalid host, SDK regression) must never reach the
+    // caller — captureServer runs inside billing/webhook request paths. Leave
+    // analytics disabled; resolved stays true so we do not retry per event.
+    apiLogger.warn(
+      { err },
+      'analytics: PostHog client construction failed — server analytics disabled',
+    )
+    cachedClient = null
+  }
   return cachedClient
 }
 

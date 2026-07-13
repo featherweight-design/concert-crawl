@@ -105,6 +105,19 @@ describe('captureServer', () => {
       captureServer('user_1', 'founder_claim_attempted', {}),
     ).not.toThrow()
   })
+
+  it('swallows a constructor throw and disables analytics', () => {
+    process.env['POSTHOG_KEY'] = 'phc_test'
+    mockPostHogCtor.mockImplementationOnce(() => {
+      throw new Error('invalid host')
+    })
+    expect(() =>
+      captureServer('user_1', 'founder_claim_attempted', {}),
+    ).not.toThrow()
+    // Construction failed, so no capture is attempted and the failure never
+    // reaches the billing/webhook caller.
+    expect(mockCapture).not.toHaveBeenCalled()
+  })
 })
 
 describe('shutdownAnalytics', () => {
