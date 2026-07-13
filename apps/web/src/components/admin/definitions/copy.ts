@@ -1825,7 +1825,7 @@ export const ADMIN_COPY = {
       },
       stats: {
         feedback: 'Feedback',
-        watching: 'Watching',
+        watching: 'Events',
         priceSubmissions: 'Price subs',
         artistFollows: 'Artist follows',
       },
@@ -1841,8 +1841,8 @@ export const ADMIN_COPY = {
         viewIssue: 'Issue',
       },
       watching: {
-        title: 'Watchlist',
-        empty: 'Not watching any events.',
+        title: 'Tracked events',
+        empty: 'No tracked events.',
         unknownVenue: 'Unknown venue',
         columns: {
           event: 'Event',
