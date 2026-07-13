@@ -161,11 +161,13 @@ const sendPreviews = async (
         process.stderr.write(
           `${templateKey}: Resend rejected — ${JSON.stringify(response.error)}\n`,
         )
+        process.exitCode = 1
         continue
       }
       process.stdout.write(`${templateKey}: sent → ${sendTo}\n`)
     } catch (err) {
       process.stderr.write(`${templateKey}: send threw — ${String(err)}\n`)
+      process.exitCode = 1
     }
   }
 }
