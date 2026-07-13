@@ -71,9 +71,4 @@ const CHECKOUT_TIERS: readonly CheckoutTier[] = [
 // the tier from the subscription mirror where it may be 'free' or absent.
 export const asCheckoutTier = (
   value: string | null | undefined,
-): CheckoutTier | null =>
-  value !== null &&
-  value !== undefined &&
-  (CHECKOUT_TIERS as readonly string[]).includes(value)
-    ? (CHECKOUT_TIERS.find((tier) => tier === value) ?? null)
-    : null
+): CheckoutTier | null => CHECKOUT_TIERS.find((tier) => tier === value) ?? null
