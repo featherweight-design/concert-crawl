@@ -98,39 +98,8 @@ usersAdminRouter.get(
       .where(eq(userProfiles.userId, userId))
       .limit(1)
 
-    const feedbackRows = await db
-      .select({
-        id: feedback.id,
-        category: feedback.category,
-        status: feedback.status,
-        message: feedback.message,
-        pageUrl: feedback.pageUrl,
-        issueUrl: feedback.issueUrl,
-        createdAt: feedback.createdAt,
-      })
-      .from(feedback)
-      .where(eq(feedback.userId, userId))
-      .orderBy(desc(feedback.createdAt))
-      .limit(100)
-
-    const watchingRows = await db
-      .select({
-        eventId: events.id,
-        eventTitle: events.title,
-        eventDate: events.date,
-        venueName: venues.name,
-        status: userEvents.status,
-        createdAt: userEvents.createdAt,
-      })
-      .from(userEvents)
-      .innerJoin(events, eq(userEvents.eventId, events.id))
-      .leftJoin(venues, eq(events.venueId, venues.id))
-      .where(eq(userEvents.userId, userId))
-      .orderBy(desc(userEvents.createdAt))
-      .limit(100)
-
-    // Totals are counted independently of the capped list queries above so the
-    // stat cards stay accurate past the 100-row display limit.
+    // Cheap existence signals first: counts, profile, and Clerk decide the
+    // 404 before we pay for the two 100-row list+join queries below.
     const [feedbackCountRow] = await db
       .select({ value: count() })
       .from(feedback)
@@ -170,10 +139,49 @@ usersAdminRouter.get(
       return ctx.json({ success: false, error: 'User not found' }, 404)
     }
 
+    // Totals above stay accurate past this display limit; the lists only run
+    // once we know the response is a 200.
+    const feedbackRows = await db
+      .select({
+        id: feedback.id,
+        category: feedback.category,
+        status: feedback.status,
+        message: feedback.message,
+        pageUrl: feedback.pageUrl,
+        issueUrl: feedback.issueUrl,
+        createdAt: feedback.createdAt,
+      })
+      .from(feedback)
+      .where(eq(feedback.userId, userId))
+      .orderBy(desc(feedback.createdAt))
+      .limit(100)
+
+    const watchingRows = await db
+      .select({
+        eventId: events.id,
+        eventTitle: events.title,
+        eventDate: events.date,
+        venueName: venues.name,
+        status: userEvents.status,
+        createdAt: userEvents.createdAt,
+      })
+      .from(userEvents)
+      .innerJoin(events, eq(userEvents.eventId, events.id))
+      .leftJoin(venues, eq(events.venueId, venues.id))
+      .where(eq(userEvents.userId, userId))
+      .orderBy(desc(userEvents.createdAt))
+      .limit(100)
+
     const publicMeta = clerkUser?.publicMetadata as
       { role?: unknown; handle?: unknown } | undefined
     const rawRole = publicMeta?.role
-    const role: Role | null = isRole(rawRole) ? rawRole : null
+    // A live Clerk account with no explicit role is a plain 'user' (matching
+    // the list endpoint); null is reserved for deleted/missing Clerk records.
+    const role: Role | null = isRole(rawRole)
+      ? rawRole
+      : clerkUser
+        ? 'user'
+        : null
     const rawHandle = publicMeta?.handle
     const clerkHandle = typeof rawHandle === 'string' ? rawHandle : null
 

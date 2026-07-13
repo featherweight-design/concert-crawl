@@ -217,6 +217,22 @@ describe('GET /v1/admin/users/:userId', () => {
     expect(body.data.clerkAccountMissing).toBe(true)
   })
 
+  it('defaults a live Clerk user with no explicit role to user', async () => {
+    setAuth('admin')
+    clerkState.user.publicMetadata = {}
+    await seedUserProfile(TARGET_USER, { handle: 'roleless' })
+
+    const res = await getDetail()
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { role: string | null; clerkAccountMissing: boolean }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.role).toBe('user')
+    expect(body.data.clerkAccountMissing).toBe(false)
+  })
+
   it('surfaces the primary email, not the first address', async () => {
     setAuth('admin')
     clerkState.user.primaryEmailAddressId = 'email_primary'

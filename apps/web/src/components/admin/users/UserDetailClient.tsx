@@ -28,7 +28,7 @@ const FEEDBACK_STATUS_KIND: Record<FeedbackStatus, StatusKind> = {
   unread: 'signal',
   read: 'neutral',
   flagged: 'warning',
-  issue_opened: 'accent',
+  issue_opened: 'danger',
   resolved: 'success',
   archived: 'neutral',
 }

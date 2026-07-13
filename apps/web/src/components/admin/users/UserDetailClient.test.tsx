@@ -106,6 +106,28 @@ describe('UserDetailClient', () => {
     expect(screen.getByText(COPY.identity.unknownJoined)).toBeTruthy()
   })
 
+  it('renders the issue_opened feedback status with the danger token, matching the inbox', () => {
+    render(
+      <UserDetailClient
+        user={baseUser({
+          feedback: [
+            {
+              id: 'fb-2',
+              category: 'bug',
+              status: 'issue_opened',
+              message: 'Tracked bug',
+              pageUrl: 'https://concertcrawl.app/events',
+              issueUrl: null,
+              createdAt: '2026-05-01T00:00:00.000Z',
+            },
+          ],
+        })}
+      />,
+    )
+    const badge = screen.getByText('issue_opened')
+    expect(badge.style.color).toBe('var(--danger)')
+  })
+
   it('hides the deleted-account note for a live Clerk user with no email', () => {
     render(
       <UserDetailClient
