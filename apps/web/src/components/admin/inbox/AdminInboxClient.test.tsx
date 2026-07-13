@@ -93,7 +93,7 @@ describe('AdminInboxClient', () => {
 
   it('shows the mark-all button in the default unread view when unread items exist', () => {
     renderClient(<AdminInboxClient initialData={response({})} />)
-    expect(screen.getByRole('button', { name: COPY.markAllAria })).toBeTruthy()
+    expect(screen.getByRole('button', { name: COPY.markAll })).toBeTruthy()
   })
 
   it('hides the mark-all button on the read filter even when unread items exist', () => {
@@ -102,12 +102,12 @@ describe('AdminInboxClient', () => {
     // off unreadCounts (still > 0) rather than the active status filter.
     renderClient(<AdminInboxClient initialData={response({})} />)
     fireEvent.click(screen.getByRole('button', { name: COPY.status.read }))
-    expect(screen.queryByRole('button', { name: COPY.markAllAria })).toBeNull()
+    expect(screen.queryByRole('button', { name: COPY.markAll })).toBeNull()
   })
 
   it('keeps the mark-all button on the all-status filter when unread items exist', () => {
     renderClient(<AdminInboxClient initialData={response({})} />)
     fireEvent.click(screen.getByRole('button', { name: COPY.status.all }))
-    expect(screen.getByRole('button', { name: COPY.markAllAria })).toBeTruthy()
+    expect(screen.getByRole('button', { name: COPY.markAll })).toBeTruthy()
   })
 })

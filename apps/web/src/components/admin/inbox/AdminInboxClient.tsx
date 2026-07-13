@@ -291,7 +291,6 @@ export const AdminInboxClient = ({ initialData }: AdminInboxClientProps) => {
             type="button"
             onClick={onMarkAll}
             disabled={markAll.isPending}
-            aria-label={COPY.markAllAria}
             style={{
               display: 'inline-flex',
               alignItems: 'center',

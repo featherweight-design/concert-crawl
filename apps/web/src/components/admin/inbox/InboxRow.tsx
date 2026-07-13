@@ -118,7 +118,7 @@ export const InboxRow = ({ item, onMarkRead, marking }: InboxRowProps) => {
           </span>
           {!isRead && (
             <span
-              aria-label={COPY.unreadIndicator}
+              aria-hidden
               style={{
                 width: 7,
                 height: 7,

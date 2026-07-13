@@ -1735,7 +1735,6 @@ export const ADMIN_COPY = {
     markAll: 'Mark all read',
     markAllInCategory: (label: string) =>
       `Mark all ${label.toLowerCase()} read`,
-    markAllAria: 'Mark all items in the current view as read',
     readIndicator: 'Read',
     unreadIndicator: 'Unread',
     open: 'Open',
