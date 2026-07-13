@@ -5,7 +5,10 @@ import Anthropic from '@anthropic-ai/sdk'
 import { db, venues, events, crawlRuns } from '@concert-crawl/db'
 import { and, avg, count, desc, eq, gte, isNotNull, ne, not } from 'drizzle-orm'
 import { dispatch, AegSchemaError } from '@concert-crawl/crawler-core/fetchers'
-import type { PlatformProbeResult } from '@concert-crawl/types'
+import type {
+  PlatformProbeResult,
+  VenueRobotsStatus,
+} from '@concert-crawl/types'
 import { getAuthUser } from '../../middleware/auth.js'
 import { apiLogger } from '../../lib/logger.js'
 import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js'
@@ -234,6 +237,33 @@ venuesAdminRouter.get('/robots-check', async (ctx) => {
       error: 'Could not fetch robots.txt',
     })
   }
+})
+
+// GET /v1/admin/venues/robots-audit — stored robots.txt status per active venue
+venuesAdminRouter.get('/robots-audit', async (ctx) => {
+  const rows = await db
+    .select({
+      id: venues.id,
+      name: venues.name,
+      slug: venues.slug,
+      websiteUrl: venues.websiteUrl,
+      robotsTxtAllowed: venues.robotsTxtAllowed,
+      robotsTxtCheckedAt: venues.robotsTxtCheckedAt,
+    })
+    .from(venues)
+    .where(eq(venues.active, true))
+    .orderBy(venues.name)
+
+  const data: VenueRobotsStatus[] = rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    slug: row.slug,
+    websiteUrl: row.websiteUrl,
+    robotsTxtAllowed: row.robotsTxtAllowed,
+    robotsTxtCheckedAt: row.robotsTxtCheckedAt?.toISOString() ?? null,
+  }))
+
+  return ctx.json({ success: true, data })
 })
 
 // GET /v1/admin/venues/:id — get single venue with crawl health stats

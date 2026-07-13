@@ -1,0 +1,90 @@
+// @vitest-environment jsdom
+
+import { describe, it, expect, afterEach } from 'vitest'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import type { VenueRobotsStatus } from '@concert-crawl/types'
+import { RobotsAuditClient } from './RobotsAuditClient'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+
+const COPY = ADMIN_COPY.robotsAudit
+
+const venue = (overrides: Partial<VenueRobotsStatus>): VenueRobotsStatus => ({
+  id: 'venue-1',
+  name: 'Test Venue',
+  slug: 'test-venue',
+  websiteUrl: 'https://testvenue.example.com',
+  robotsTxtAllowed: true,
+  robotsTxtCheckedAt: '2026-07-01T00:00:00.000Z',
+  ...overrides,
+})
+
+const venues: VenueRobotsStatus[] = [
+  venue({
+    id: 'a',
+    name: 'Allowed Venue',
+    slug: 'allowed',
+    robotsTxtAllowed: true,
+  }),
+  venue({
+    id: 'b',
+    name: 'Blocked Venue',
+    slug: 'blocked',
+    robotsTxtAllowed: false,
+  }),
+  venue({
+    id: 'c',
+    name: 'Unchecked Venue',
+    slug: 'unchecked',
+    robotsTxtAllowed: null,
+    robotsTxtCheckedAt: null,
+  }),
+]
+
+afterEach(cleanup)
+
+describe('RobotsAuditClient', () => {
+  it('renders every active venue by default', () => {
+    render(<RobotsAuditClient venues={venues} />)
+    expect(screen.getByText('Allowed Venue')).toBeTruthy()
+    expect(screen.getByText('Blocked Venue')).toBeTruthy()
+    expect(screen.getByText('Unchecked Venue')).toBeTruthy()
+  })
+
+  it('filters to a single status when a filter pill is pressed', () => {
+    render(<RobotsAuditClient venues={venues} />)
+    fireEvent.click(screen.getByRole('button', { name: COPY.filters.blocked }))
+    expect(screen.getByText('Blocked Venue')).toBeTruthy()
+    expect(screen.queryByText('Allowed Venue')).toBeNull()
+    expect(screen.queryByText('Unchecked Venue')).toBeNull()
+  })
+
+  it('shows the empty copy when a filter matches nothing', () => {
+    render(
+      <RobotsAuditClient
+        venues={[venue({ robotsTxtAllowed: true, name: 'Only Allowed' })]}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: COPY.filters.blocked }))
+    expect(screen.getByText(COPY.empty)).toBeTruthy()
+  })
+
+  it('renders the never-checked label for venues without a check timestamp', () => {
+    render(
+      <RobotsAuditClient
+        venues={[
+          venue({
+            name: 'Never Venue',
+            robotsTxtAllowed: null,
+            robotsTxtCheckedAt: null,
+          }),
+        ]}
+      />,
+    )
+    expect(screen.getByText(COPY.neverChecked)).toBeTruthy()
+  })
+
+  it('shows a load-error banner when venues is null', () => {
+    render(<RobotsAuditClient venues={null} />)
+    expect(screen.getByRole('alert').textContent).toContain(COPY.loadError)
+  })
+})

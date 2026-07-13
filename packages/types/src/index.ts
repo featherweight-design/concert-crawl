@@ -248,6 +248,17 @@ export interface VenueWithCrawlHealth extends Venue {
   crawlHealth: CrawlHealth
 }
 
+// VenueRobotsStatus — robots.txt audit row for the admin audit page.
+// Reflects the stored crawl-time result on the venues table, not a live fetch.
+export interface VenueRobotsStatus {
+  id: string
+  name: string
+  slug: string
+  websiteUrl: string
+  robotsTxtAllowed: boolean | null
+  robotsTxtCheckedAt: string | null
+}
+
 // CrawlRun — represents the JSON-serialized API response shape.
 // 'in_progress' is a virtual status used during async crawl execution (not persisted to DB).
 export interface CrawlRun {

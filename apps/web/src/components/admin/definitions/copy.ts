@@ -608,6 +608,43 @@ export const ADMIN_COPY = {
     ariaLabel: 'Filter by status',
   },
 
+  robotsAudit: {
+    page: {
+      eyebrow: 'Venues · robots.txt',
+      title: 'robots.txt audit',
+      subtitle:
+        'Stored crawl-time robots.txt result for each active venue. Blocked or unchecked venues may need manual intervention.',
+      backButton: 'Back to venues',
+    },
+    stats: {
+      total: 'Active venues',
+      allowed: 'Allowed',
+      blocked: 'Blocked',
+      unchecked: 'Unchecked',
+    },
+    filters: {
+      all: 'All',
+      allowed: 'Allowed',
+      blocked: 'Blocked',
+      unchecked: 'Unchecked',
+      ariaLabel: 'Filter by robots.txt status',
+    },
+    table: {
+      venue: 'Venue',
+      website: 'Website',
+      status: 'robots.txt',
+      checked: 'Last checked',
+    },
+    status: {
+      allowed: 'Allowed',
+      blocked: 'Blocked',
+      unchecked: 'Unchecked',
+    },
+    neverChecked: 'Never checked',
+    empty: 'No active venues match this filter.',
+    loadError: 'Could not load the robots.txt audit. Try refreshing.',
+  },
+
   venueDetailsClient: {
     header: {
       eyebrow: 'Venues · edit',

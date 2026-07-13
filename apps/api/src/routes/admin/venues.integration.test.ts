@@ -372,3 +372,83 @@ describe('DELETE /v1/admin/venues/:id — integration (hard delete)', () => {
     expect(body.data.eventsDetached).toBe(0)
   })
 })
+
+describe('GET /v1/admin/venues/robots-audit — integration', () => {
+  beforeEach(async () => {
+    clearAuth()
+    await clearTables()
+  })
+
+  it('returns 401 when unauthenticated', async () => {
+    const res = await app.request('/v1/admin/venues/robots-audit')
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 when authenticated as user role', async () => {
+    setAuth('user')
+    const res = await app.request('/v1/admin/venues/robots-audit')
+    expect(res.status).toBe(403)
+  })
+
+  it('returns only active venues with stored robots status', async () => {
+    setAuth('admin')
+    const checkedAt = new Date('2026-07-01T12:00:00.000Z')
+    await seedVenue({
+      name: 'Allowed Venue',
+      slug: 'allowed-venue',
+      active: true,
+      robotsTxtAllowed: true,
+      robotsTxtCheckedAt: checkedAt,
+    })
+    await seedVenue({
+      name: 'Blocked Venue',
+      slug: 'blocked-venue',
+      active: true,
+      robotsTxtAllowed: false,
+      robotsTxtCheckedAt: checkedAt,
+    })
+    await seedVenue({
+      name: 'Unchecked Venue',
+      slug: 'unchecked-venue',
+      active: true,
+      robotsTxtAllowed: null,
+      robotsTxtCheckedAt: null,
+    })
+    await seedVenue({
+      name: 'Inactive Venue',
+      slug: 'inactive-venue',
+      active: false,
+      robotsTxtAllowed: true,
+      robotsTxtCheckedAt: checkedAt,
+    })
+
+    const res = await app.request('/v1/admin/venues/robots-audit')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        name: string
+        slug: string
+        websiteUrl: string
+        robotsTxtAllowed: boolean | null
+        robotsTxtCheckedAt: string | null
+      }[]
+    }
+    expect(body.success).toBe(true)
+    // Inactive venue is excluded; the three active venues are returned by name.
+    expect(body.data).toHaveLength(3)
+    expect(body.data.map((row) => row.name)).toEqual([
+      'Allowed Venue',
+      'Blocked Venue',
+      'Unchecked Venue',
+    ])
+
+    const allowed = body.data.find((row) => row.slug === 'allowed-venue')
+    expect(allowed?.robotsTxtAllowed).toBe(true)
+    expect(allowed?.robotsTxtCheckedAt).toBe(checkedAt.toISOString())
+
+    const unchecked = body.data.find((row) => row.slug === 'unchecked-venue')
+    expect(unchecked?.robotsTxtAllowed).toBeNull()
+    expect(unchecked?.robotsTxtCheckedAt).toBeNull()
+  })
+})
