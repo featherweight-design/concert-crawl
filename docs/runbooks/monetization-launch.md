@@ -52,9 +52,12 @@ infra)** are human-owned and cannot be done by an agent.
 - [ ] **(Hugh)** Cross-client render check passed (Gmail / Apple Mail / Outlook web, via
       Litmus or test inboxes) on all 10 transactional templates.
 - [ ] **(Hugh / infra)** The **`concert-crawl-billing-jobs`** Render cron is deployed on
-      prod (daily 9 AM MT, `tsx apps/api/src/jobs/billing-daily.ts`, env
-      `DATABASE_URL` / `STRIPE_SECRET_KEY` / `RESEND_API_KEY` / `CLERK_SECRET_KEY`). Until
-      it runs, **no** dunning / card-expiry / winback / 90-day-purge sends fire.
+      prod **and has been test-run at least once** — see
+      [Deploy and test the billing-jobs cron](#deploy-and-test-the-billing-jobs-cron) for
+      the full walkthrough. Schedule `0 15 * * *` (9 AM MDT / 8 AM MST), start command
+      `node apps/api/dist/jobs/billing-daily.js`, env `DATABASE_URL` / `STRIPE_SECRET_KEY` /
+      `RESEND_API_KEY` / `CLERK_SECRET_KEY`. Until it runs, **no** dunning / card-expiry /
+      winback / 90-day-purge sends fire.
 
 ### Founder window state (prod DB)
 
@@ -85,6 +88,95 @@ Expected pre-launch row: `opens_at = NULL`, `closes_at = NULL`,
       the admin UI, verify state `open`, run the post-launch smoke, then reset staging
       (`UPDATE founder_window SET opens_at = NULL WHERE id = 1;`) so staging returns to
       pre-launch. Hugh has signed off on this runbook after the rehearsal.
+
+---
+
+## Deploy and test the billing-jobs cron
+
+The daily billing job (`apps/api/src/jobs/billing-daily.ts`) runs seven independent
+sub-tasks — card-expiry warnings, gift-ending notices + expired-gift revoke, trial-end
+events, winback, the 90-day preserve-then-purge, a dunning fallback sweep (webhook-loss
+safety net), and housekeeping. None of them fire until this cron is deployed **and
+running**.
+
+### When to provision
+
+Provision it as part of launch prep, but it is **independent of the Stripe live-key
+cutover** — do it during the Phase 6→7 staging rehearsal, then repeat on prod. Timing
+is forgiving: the job is idempotent and no-ops on empty data, so it can exist and run
+harmlessly long before the founder window opens. Its real work only matters once live
+subscriptions exist, so the hard requirement is simply "deployed and verified once before
+launch."
+
+> Both services (`concert-crawl-billing-jobs`, `concert-crawl-billing-jobs-staging`) are
+> already declared in `render.yaml`. **But `render.yaml` is not blueprint-synced to live
+> Render** (the live API `buildCommand` has drifted from the file), so the cron must be
+> **created manually** in the Render dashboard/API to match the blueprint — it will not
+> appear on its own.
+
+### Create the service (Render)
+
+Mirror the existing crawler crons. Type **Cron Job**, runtime **Node**, region **Oregon**,
+plan **Starter**, branch `main`, auto-deploy on.
+
+| Setting | Value |
+|---------|-------|
+| Schedule | `0 15 * * *` — 15:00 UTC = 9 AM MDT / 8 AM MST. We deliberately **do not** chase DST; the exact send hour isn't load-bearing. If 9 AM local ever becomes a hard rule, switch to `0 16 * * *` for MST months. |
+| Build command | `npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api` |
+| Start command | `node apps/api/dist/jobs/billing-daily.js` — the **compiled** artifact from the same build as the API. Not `tsx src/…` (no `tsx` at runtime). |
+
+Env vars (all entered manually — `sync: false`; prod = **live** values, staging =
+**sandbox**):
+
+| Key | Prod value |
+|-----|-----------|
+| `NODE_ENV` | `production` |
+| `DATABASE_URL` | Neon prod branch direct connection string |
+| `STRIPE_SECRET_KEY` | live `sk_live_*` (staging: sandbox key) |
+| `RESEND_API_KEY` | Resend key |
+| `CLERK_SECRET_KEY` | Clerk prod secret (staging: staging secret) |
+| `SENTRY_DSN` | API Sentry DSN |
+| `SENTRY_ENVIRONMENT` | `production` |
+| `LOG_LEVEL` | `info` |
+
+### Test it before go-live
+
+The job is **safe to run on demand**: every task is wrapped in its own try/catch, is
+idempotent (dedupe keys on `email_send_log` + `subscription_events` existence checks),
+takes an injectable `now`, and no-ops when it finds no matching rows. A missed day catches
+up cleanly on the next run.
+
+> ⚠️ Run tests against **staging (sandbox)**, never prod. On a DB that *does* contain
+> matching rows the job really sends emails, revokes expired gifts, and starts 90-day purge
+> clocks — so only point it at a database whose state you are willing to mutate.
+
+**1 — Manual run against staging (cheapest).** From the repo root, build once, then run the
+compiled artifact with staging env:
+
+```bash
+pnpm turbo build --filter=@concert-crawl/api
+DATABASE_URL="<neon staging direct>" \
+STRIPE_SECRET_KEY="<sandbox sk>" \
+RESEND_API_KEY="<resend key>" \
+CLERK_SECRET_KEY="<staging clerk secret>" \
+node apps/api/dist/jobs/billing-daily.js
+```
+
+Each task logs `starting task` → `task complete` (or a per-row error it continues past).
+On empty staging data it finishes in seconds having sent nothing and exits `0`. Exit `1`
+means a catastrophic (setup) failure — a single failing sub-task never fails the run.
+
+**2 — Render "Trigger Run" (truest test).** Once the staging cron service exists, use the
+Render dashboard's manual **Trigger Run** on `concert-crawl-billing-jobs-staging` and read
+the run logs. This exercises the exact deploy artifact, env, and runtime prod will use —
+the highest-fidelity pre-launch check.
+
+**3 — Seed a positive case (proves a real send path).** To confirm more than the empty
+no-op, seed staging with a subscription whose card expires in ~6 days (triggers
+`card_expiring_soon`, 7-day window) or a gift expiring within 7 days (triggers
+`gifting_ending_notice`), then Trigger Run and confirm: the email lands, a row appears in
+`email_send_log`, and a **re-run sends nothing** (dedupe holds). That round-trip validates
+the send pipeline, the dedupe guard, and idempotency in one pass.
 
 ---
 
