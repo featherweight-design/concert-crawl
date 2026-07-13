@@ -37,7 +37,10 @@ import { ConfirmReportSheet } from '@/components/consumer/reporting/ConfirmRepor
 import { PriceDisplay } from '@/components/consumer/PriceDisplay'
 import { DisputedPriceCard } from '@/components/consumer/DisputedPriceCard'
 import { SoldOutPriceCard } from '@/components/consumer/SoldOutPriceCard'
-import { SubmitPriceCardCta } from '@/components/consumer/SubmitPriceCardCta'
+import {
+  SubmitPriceCardCta,
+  SubmitPriceCardButton,
+} from '@/components/consumer/SubmitPriceCardCta'
 import {
   SubmitPriceModal,
   type SubmitPriceResult,
@@ -1186,15 +1189,18 @@ export function EventDetailPriceBlock({
         {submitSuccessSurface}
         {/* #895 symptom 1: the MTAddTierSuccess surface above is session-only
             (cleared on reload). This persistent CTA is the reload-surviving
-            "submit another price" affordance. Its modal self-gates the
+            "submit another price" affordance. It routes into the shared
+            SubmitPriceModal below so a new tier updates the pending list live
+            (onSuccess) instead of only after a reload. The modal self-gates the
             rate-limit-exhausted case via the GET on open. */}
         {event.status !== 'cancelled' && (
           <div className="mt-3">
-            <SubmitPriceCardCta
-              eventId={event.id}
-              artist={event.artist}
-              venueName={event.venue.name}
-              date={event.date}
+            <SubmitPriceCardButton
+              onClick={() => {
+                setPreselectedTier(null)
+                setSubmitPriceEditMode(false)
+                setSubmitPriceOpen(true)
+              }}
             />
           </div>
         )}
@@ -1707,14 +1713,16 @@ export function EventDetailPriceBlock({
 
         {/* #895 symptom 1: reload-surviving "submit another price" affordance
             for the legacy pending path (this branch renders no session-only
-            MTAddTierSuccess surface). The modal self-gates the exhausted case. */}
+            MTAddTierSuccess surface). Routes into the shared SubmitPriceModal
+            below so a submission updates localSubmissions live (onSuccess /
+            onWithdrawSuccess). The modal self-gates the exhausted case. */}
         {event.status !== 'cancelled' && (
           <div className="mt-3">
-            <SubmitPriceCardCta
-              eventId={event.id}
-              artist={event.artist}
-              venueName={event.venue.name}
-              date={event.date}
+            <SubmitPriceCardButton
+              onClick={() => {
+                setSubmitPriceEditMode(false)
+                setSubmitPriceOpen(true)
+              }}
             />
           </div>
         )}
