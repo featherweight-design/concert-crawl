@@ -37,7 +37,13 @@ const getClient = (): PostHog | null => {
     )
     return null
   }
-  const host = process.env['POSTHOG_HOST'] ?? DEFAULT_POSTHOG_HOST
+  // Treat an empty string the same as unset — an env var that exists but has
+  // no value must not construct the SDK with an invalid host.
+  const hostEnv = process.env['POSTHOG_HOST']
+  const host =
+    hostEnv === undefined || hostEnv.length === 0
+      ? DEFAULT_POSTHOG_HOST
+      : hostEnv
   cachedClient = new PostHog(apiKey, { host })
   return cachedClient
 }

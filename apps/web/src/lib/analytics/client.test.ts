@@ -67,6 +67,17 @@ describe('web analytics client', () => {
     expect(analytics.isAnalyticsEnabled()).toBe(true)
   })
 
+  it('treats an empty NEXT_PUBLIC_POSTHOG_HOST as unset and uses the US default', async () => {
+    process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test'
+    process.env['NEXT_PUBLIC_POSTHOG_HOST'] = ''
+    const analytics = await loadModule()
+    analytics.initAnalytics()
+    expect(mockInit).toHaveBeenCalledWith(
+      'phc_test',
+      expect.objectContaining({ api_host: 'https://us.i.posthog.com' }),
+    )
+  })
+
   it('honors an explicit NEXT_PUBLIC_POSTHOG_HOST', async () => {
     process.env['NEXT_PUBLIC_POSTHOG_KEY'] = 'phc_test'
     process.env['NEXT_PUBLIC_POSTHOG_HOST'] = 'https://eu.i.posthog.com'

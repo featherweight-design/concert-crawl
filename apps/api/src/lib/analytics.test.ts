@@ -70,6 +70,15 @@ describe('captureServer', () => {
     })
   })
 
+  it('treats an empty POSTHOG_HOST as unset and defaults to the US region', () => {
+    process.env['POSTHOG_KEY'] = 'phc_test'
+    process.env['POSTHOG_HOST'] = ''
+    captureServer('user_1', 'founder_claim_attempted', {})
+    expect(mockPostHogCtor).toHaveBeenCalledWith('phc_test', {
+      host: 'https://us.i.posthog.com',
+    })
+  })
+
   it('honors an explicit POSTHOG_HOST', () => {
     process.env['POSTHOG_KEY'] = 'phc_test'
     process.env['POSTHOG_HOST'] = 'https://eu.i.posthog.com'

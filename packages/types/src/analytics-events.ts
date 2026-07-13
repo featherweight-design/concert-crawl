@@ -4,8 +4,9 @@
 // event names and property shapes. The distinct ID is always the Clerk
 // userId, so client-fired and server-fired events join into one funnel.
 //
-// Import with `import type` — this module is types-only and index.ts
-// re-exports it, so a value import would risk a circular reference.
+// This module is mostly types (use `import type` for those to avoid a
+// circular reference through index.ts), but it also exports one runtime
+// helper — `asCheckoutTier` — which callers must pull in with a value import.
 
 import type { DeclineCategory } from './decline-category.js'
 import type { UserPlan, FounderWindowState } from './index.js'

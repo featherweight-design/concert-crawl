@@ -185,11 +185,15 @@ export const TierPickerSheet = ({
   const gifted = state === 'gifted'
   const loggedOut = state === 'logged-out'
 
-  // Funnel entry (spec §8): the picker surface became visible. Fires once
-  // per open transition.
+  // Funnel entry (spec §8): the picker surface became visible. Fires once per
+  // open transition — the ref guard prevents a re-fire (double count) if
+  // `entry` or the plan changes (e.g. a refetch) while the sheet stays open.
+  const wasOpen = useRef(false)
   useEffect(() => {
-    if (!open) return
-    track('monetization_picker_viewed', { entry, plan: planState.plan })
+    if (open && !wasOpen.current) {
+      track('monetization_picker_viewed', { entry, plan: planState.plan })
+    }
+    wasOpen.current = open
   }, [open, entry, planState.plan])
 
   const [isMobile, setIsMobile] = useState(false)

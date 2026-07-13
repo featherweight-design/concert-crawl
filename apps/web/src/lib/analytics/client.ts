@@ -17,6 +17,11 @@ import type {
 
 const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com'
 
+// Treat an empty string the same as unset — an env var that exists but has no
+// value (common in preview/prod dashboards) must not pass '' to posthog.init.
+const resolveHost = (value: string | undefined): string =>
+  value === undefined || value.length === 0 ? DEFAULT_POSTHOG_HOST : value
+
 let initialized = false
 
 export const initAnalytics = (): void => {
@@ -25,7 +30,7 @@ export const initAnalytics = (): void => {
   if (apiKey === undefined || apiKey.length === 0) return
   try {
     posthog.init(apiKey, {
-      api_host: process.env['NEXT_PUBLIC_POSTHOG_HOST'] ?? DEFAULT_POSTHOG_HOST,
+      api_host: resolveHost(process.env['NEXT_PUBLIC_POSTHOG_HOST']),
       // We fire the funnel events explicitly; autocapture and pageviews would
       // only add noise to a monetization-scoped project.
       autocapture: false,
