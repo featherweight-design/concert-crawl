@@ -40,8 +40,9 @@ const WATCHING_STATUS_KIND: Record<UserEventStatus, StatusKind> = {
 }
 
 interface UserDetailClientProps {
-  // null signals an SSR load failure (deleted user or API down) — the route
-  // still renders with a recoverable banner rather than a 404 shell.
+  // A deleted/missing user is a 404 (route calls notFound()); null here means a
+  // non-404 load failure — missing token or API error — so the route renders a
+  // recoverable banner rather than a blank page or 404 shell.
   user: AdminUserDetail | null
 }
 
