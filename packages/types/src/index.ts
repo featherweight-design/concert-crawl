@@ -894,3 +894,53 @@ export interface WatchToggleResponse {
   watching: boolean
   savedPrice: number | null
 }
+
+// --- Admin user detail (GET /v1/admin/users/:userId) ---
+// Aggregates a single user's identity (Clerk + user_profiles) with their
+// feedback history and watchlist so admins can triage a "View @user" jump from
+// the feedback inbox. Identity fields are null when Clerk has no record for the
+// id (e.g. a deleted account still referenced by old feedback rows).
+
+export type FeedbackStatus =
+  'unread' | 'read' | 'flagged' | 'issue_opened' | 'resolved' | 'archived'
+export type UserEventStatus = 'going' | 'interested' | 'watching'
+
+export interface AdminUserFeedbackItem {
+  id: string
+  category: FeedbackCategory
+  status: FeedbackStatus
+  message: string
+  pageUrl: string
+  issueUrl: string | null
+  createdAt: string
+}
+
+export interface AdminUserWatchingItem {
+  eventId: string
+  eventTitle: string
+  eventDate: string // ISO YYYY-MM-DD
+  venueName: string | null
+  status: UserEventStatus
+  createdAt: string
+}
+
+export interface AdminUserDetailStats {
+  feedback: number
+  watching: number
+  priceSubmissions: number
+  artistFollows: number
+}
+
+export interface AdminUserDetail {
+  id: string
+  email: string | null
+  handle: string | null
+  city: string | null
+  theme: string | null
+  avatarColor: string | null
+  role: Role | null
+  joinedAt: string | null // Clerk account creation, ISO
+  stats: AdminUserDetailStats
+  feedback: AdminUserFeedbackItem[]
+  watching: AdminUserWatchingItem[]
+}

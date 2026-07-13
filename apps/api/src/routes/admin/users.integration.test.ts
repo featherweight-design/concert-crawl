@@ -1,0 +1,211 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+
+const { authState, clerkState } = vi.hoisted(() => ({
+  authState: {
+    current: null as {
+      userId: string
+      sessionClaims: { metadata?: { role?: string } }
+    } | null,
+  },
+  clerkState: {
+    getUserThrows: false,
+    user: {
+      id: 'user_target',
+      username: 'targetuser' as string | null,
+      emailAddresses: [{ emailAddress: 'target@example.com' }] as Array<{
+        emailAddress: string
+      }>,
+      publicMetadata: {} as { role?: string; handle?: string },
+      createdAt: new Date('2026-04-01T00:00:00Z').getTime(),
+    },
+  },
+}))
+
+vi.mock('@hono/clerk-auth', () => ({
+  clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
+    next(),
+  getAuth: () => authState.current,
+}))
+
+vi.mock('@clerk/backend', () => ({
+  createClerkClient: () => ({
+    users: {
+      getUser: vi.fn().mockImplementation(() => {
+        if (clerkState.getUserThrows) {
+          return Promise.reject(new Error('Clerk user not found'))
+        }
+        return Promise.resolve(clerkState.user)
+      }),
+    },
+  }),
+}))
+
+import { sql } from 'drizzle-orm'
+import { feedback, userArtistFollows } from '@concert-crawl/db'
+import { createApp } from '../../app.js'
+import {
+  clearTables,
+  seedVenue,
+  seedEvent,
+  seedUserEvent,
+  seedUserProfile,
+  seedPriceSubmission,
+} from '../../test/helpers/seed.js'
+import { testDb } from '../../test/helpers/db.js'
+
+const app = createApp()
+
+const TARGET_USER = 'user_target'
+
+function setAuth(role = 'admin', userId = 'admin_123'): void {
+  authState.current = { userId, sessionClaims: { metadata: { role } } }
+}
+
+function clearAuth(): void {
+  authState.current = null
+}
+
+function resetClerk(): void {
+  clerkState.getUserThrows = false
+  clerkState.user = {
+    id: TARGET_USER,
+    username: 'targetuser',
+    emailAddresses: [{ emailAddress: 'target@example.com' }],
+    publicMetadata: {},
+    createdAt: new Date('2026-04-01T00:00:00Z').getTime(),
+  }
+}
+
+async function getDetail(userId = TARGET_USER): Promise<Response> {
+  return app.request(`/v1/admin/users/${userId}`, {
+    headers: { Authorization: 'Bearer test' },
+  })
+}
+
+describe('GET /v1/admin/users/:userId', () => {
+  beforeEach(async () => {
+    clearAuth()
+    resetClerk()
+    await clearTables()
+    await testDb.execute(sql`TRUNCATE user_artist_follows RESTART IDENTITY`)
+  })
+
+  it('returns 401 without auth', async () => {
+    const res = await getDetail()
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 for non-admin users', async () => {
+    setAuth('user')
+    const res = await getDetail()
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 404 when the id maps to no Clerk record and no activity', async () => {
+    setAuth('admin')
+    clerkState.getUserThrows = true
+    const res = await getDetail('user_ghost')
+    expect(res.status).toBe(404)
+  })
+
+  it('returns the full detail shape for a user with activity', async () => {
+    setAuth('admin')
+    clerkState.user.publicMetadata = { role: 'beta' }
+    await seedUserProfile(TARGET_USER, {
+      handle: 'targethandle',
+      city: 'Denver',
+      theme: 'jade',
+      avatarColor: 'signal',
+    })
+    const venue = await seedVenue({ name: 'Ogden Theatre' })
+    const event = await seedEvent(venue.id, { title: 'Night One' })
+    await seedUserEvent(TARGET_USER, event.id, { status: 'going' })
+    await seedPriceSubmission(event.id, TARGET_USER)
+    await testDb.insert(feedback).values({
+      userId: TARGET_USER,
+      pageUrl: 'https://concertcrawl.app/events',
+      category: 'bug',
+      message: 'Something broke',
+      status: 'unread',
+    })
+    await testDb.insert(userArtistFollows).values({
+      userId: TARGET_USER,
+      artistName: 'Phoebe Bridgers',
+    })
+
+    const res = await getDetail()
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        id: string
+        email: string | null
+        handle: string | null
+        city: string | null
+        theme: string | null
+        avatarColor: string | null
+        role: string | null
+        joinedAt: string | null
+        stats: {
+          feedback: number
+          watching: number
+          priceSubmissions: number
+          artistFollows: number
+        }
+        feedback: Array<{ message: string; category: string }>
+        watching: Array<{ eventTitle: string; venueName: string | null }>
+      }
+    }
+
+    expect(body.success).toBe(true)
+    expect(body.data.id).toBe(TARGET_USER)
+    expect(body.data.email).toBe('target@example.com')
+    // Profile handle wins over the Clerk username fallback.
+    expect(body.data.handle).toBe('targethandle')
+    expect(body.data.city).toBe('Denver')
+    expect(body.data.theme).toBe('jade')
+    expect(body.data.avatarColor).toBe('signal')
+    expect(body.data.role).toBe('beta')
+    expect(body.data.joinedAt).toBe('2026-04-01T00:00:00.000Z')
+    expect(body.data.stats).toEqual({
+      feedback: 1,
+      watching: 1,
+      priceSubmissions: 1,
+      artistFollows: 1,
+    })
+    expect(body.data.feedback[0]?.message).toBe('Something broke')
+    expect(body.data.watching[0]?.eventTitle).toBe('Night One')
+    expect(body.data.watching[0]?.venueName).toBe('Ogden Theatre')
+  })
+
+  it('tolerates a deleted Clerk account when DB activity remains', async () => {
+    setAuth('admin')
+    clerkState.getUserThrows = true
+    await seedUserProfile(TARGET_USER, { handle: 'orphan' })
+    await testDb.insert(feedback).values({
+      userId: TARGET_USER,
+      pageUrl: 'https://concertcrawl.app/events',
+      category: 'praise',
+      message: 'Love it',
+      status: 'unread',
+    })
+
+    const res = await getDetail()
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        email: string | null
+        role: string | null
+        handle: string | null
+        joinedAt: string | null
+      }
+    }
+    expect(body.success).toBe(true)
+    // No Clerk record ⇒ identity fields fall back to profile / null.
+    expect(body.data.email).toBeNull()
+    expect(body.data.role).toBeNull()
+    expect(body.data.handle).toBe('orphan')
+    expect(body.data.joinedAt).toBeNull()
+  })
+})

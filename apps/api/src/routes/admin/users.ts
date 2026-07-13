@@ -3,9 +3,27 @@ import { getAuth } from '@hono/clerk-auth'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { createClerkClient } from '@clerk/backend'
+import { count, desc, eq } from 'drizzle-orm'
+import {
+  db,
+  events,
+  feedback,
+  priceSubmissions,
+  userArtistFollows,
+  userEvents,
+  userProfiles,
+  venues,
+} from '@concert-crawl/db'
 import type { AdminVariables } from './index.js'
-import type { Role } from '@concert-crawl/types'
+import type {
+  AdminUserDetail,
+  AdminUserFeedbackItem,
+  AdminUserWatchingItem,
+  Role,
+} from '@concert-crawl/types'
 import { ROLE_HIERARCHY, isRole } from '@concert-crawl/types'
+
+const userIdParamSchema = z.object({ userId: z.string().min(1).max(255) })
 
 const secretKey = process.env['CLERK_SECRET_KEY'] ?? ''
 const clerkClient = createClerkClient({ secretKey })
@@ -52,6 +70,139 @@ usersAdminRouter.get('/', async (ctx) => {
 
   return ctx.json({ success: true, data: { data, total: result.totalCount } })
 })
+
+// GET /v1/admin/users/:userId — full detail for one user: identity (Clerk +
+// profile), feedback history, and watchlist. Backs the "View @user" jump from
+// the feedback inbox. Registered before /:id/role — distinct method+shape so
+// no param-capture conflict.
+usersAdminRouter.get(
+  '/:userId',
+  zValidator('param', userIdParamSchema),
+  async (ctx) => {
+    const { userId } = ctx.req.valid('param')
+
+    // Clerk is the identity source of truth; a deleted account can still be
+    // referenced by old feedback rows, so tolerate a missing Clerk record.
+    let clerkUser: Awaited<
+      ReturnType<typeof clerkClient.users.getUser>
+    > | null = null
+    try {
+      clerkUser = await clerkClient.users.getUser(userId)
+    } catch {
+      clerkUser = null
+    }
+
+    const [profile] = await db
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId))
+      .limit(1)
+
+    const feedbackRows = await db
+      .select({
+        id: feedback.id,
+        category: feedback.category,
+        status: feedback.status,
+        message: feedback.message,
+        pageUrl: feedback.pageUrl,
+        issueUrl: feedback.issueUrl,
+        createdAt: feedback.createdAt,
+      })
+      .from(feedback)
+      .where(eq(feedback.userId, userId))
+      .orderBy(desc(feedback.createdAt))
+      .limit(100)
+
+    const watchingRows = await db
+      .select({
+        eventId: events.id,
+        eventTitle: events.title,
+        eventDate: events.date,
+        venueName: venues.name,
+        status: userEvents.status,
+        createdAt: userEvents.createdAt,
+      })
+      .from(userEvents)
+      .innerJoin(events, eq(userEvents.eventId, events.id))
+      .leftJoin(venues, eq(events.venueId, venues.id))
+      .where(eq(userEvents.userId, userId))
+      .orderBy(desc(userEvents.createdAt))
+      .limit(100)
+
+    const [priceCountRow] = await db
+      .select({ value: count() })
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.userId, userId))
+
+    const [artistCountRow] = await db
+      .select({ value: count() })
+      .from(userArtistFollows)
+      .where(eq(userArtistFollows.userId, userId))
+
+    // 404 only when the id maps to nothing at all — no Clerk record, no
+    // profile, and no activity — so a bad URL renders notFound() rather than
+    // an empty shell.
+    if (
+      !clerkUser &&
+      !profile &&
+      feedbackRows.length === 0 &&
+      watchingRows.length === 0
+    ) {
+      return ctx.json({ success: false, error: 'User not found' }, 404)
+    }
+
+    const publicMeta = clerkUser?.publicMetadata as
+      { role?: unknown; handle?: unknown } | undefined
+    const rawRole = publicMeta?.role
+    const role: Role | null = isRole(rawRole) ? rawRole : null
+    const rawHandle = publicMeta?.handle
+    const clerkHandle = typeof rawHandle === 'string' ? rawHandle : null
+
+    const feedbackHistory: AdminUserFeedbackItem[] = feedbackRows.map(
+      (row) => ({
+        id: row.id,
+        category: row.category,
+        status: row.status,
+        message: row.message,
+        pageUrl: row.pageUrl,
+        issueUrl: row.issueUrl,
+        createdAt: row.createdAt.toISOString(),
+      }),
+    )
+
+    const watching: AdminUserWatchingItem[] = watchingRows.map((row) => ({
+      eventId: row.eventId,
+      eventTitle: row.eventTitle,
+      eventDate: row.eventDate,
+      venueName: row.venueName,
+      status: row.status,
+      createdAt: row.createdAt.toISOString(),
+    }))
+
+    const data: AdminUserDetail = {
+      id: userId,
+      email: clerkUser?.emailAddresses[0]?.emailAddress ?? null,
+      handle: profile?.handle ?? clerkHandle ?? clerkUser?.username ?? null,
+      city: profile?.city ?? null,
+      theme: profile?.theme ?? null,
+      avatarColor: profile?.avatarColor ?? null,
+      role,
+      joinedAt: clerkUser?.createdAt
+        ? new Date(clerkUser.createdAt).toISOString()
+        : null,
+      stats: {
+        feedback: feedbackRows.length,
+        watching: watchingRows.length,
+        priceSubmissions: priceCountRow?.value ?? 0,
+        artistFollows: artistCountRow?.value ?? 0,
+      },
+      feedback: feedbackHistory,
+      watching,
+    }
+
+    return ctx.json({ success: true, data })
+  },
+)
 
 // PATCH /v1/admin/users/:id/role — assign a role to a Clerk user
 usersAdminRouter.patch(

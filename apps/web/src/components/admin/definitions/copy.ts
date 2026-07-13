@@ -1809,6 +1809,49 @@ export const ADMIN_COPY = {
     empty: 'No users found.',
     pagination: (shown: number, total: number) =>
       `Showing ${shown} of ${total}. Use the API limit/offset params for pagination.`,
+    detail: {
+      backButton: 'Back to users',
+      eyebrow: 'operations · users',
+      loadError:
+        'Could not load this user. They may have been deleted, or the API is unavailable.',
+      identity: {
+        noEmail: 'No email on file',
+        noHandle: 'no handle',
+        noRole: 'no role',
+        deletedNote: 'No Clerk account — showing retained activity only.',
+        joinedPrefix: 'Joined',
+        unknownJoined: 'Join date unknown',
+      },
+      stats: {
+        feedback: 'Feedback',
+        watching: 'Watching',
+        priceSubmissions: 'Price subs',
+        artistFollows: 'Artist follows',
+      },
+      feedback: {
+        title: 'Feedback history',
+        empty: 'No feedback submitted.',
+        columns: {
+          category: 'Category',
+          status: 'Status',
+          message: 'Message',
+          when: 'When',
+        },
+        viewIssue: 'Issue',
+      },
+      watching: {
+        title: 'Watchlist',
+        empty: 'Not watching any events.',
+        unknownVenue: 'Unknown venue',
+        columns: {
+          event: 'Event',
+          venue: 'Venue',
+          date: 'Date',
+          status: 'Status',
+          added: 'Added',
+        },
+      },
+    },
   },
 
   settings: {

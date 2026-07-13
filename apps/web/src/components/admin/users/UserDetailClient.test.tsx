@@ -1,0 +1,131 @@
+// @vitest-environment jsdom
+
+import { describe, it, expect, afterEach } from 'vitest'
+import { render, screen, cleanup } from '@testing-library/react'
+import type { AdminUserDetail } from '@concert-crawl/types'
+import { UserDetailClient } from './UserDetailClient'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+
+const COPY = ADMIN_COPY.users.detail
+
+const baseUser = (
+  overrides: Partial<AdminUserDetail> = {},
+): AdminUserDetail => ({
+  id: 'user_target',
+  email: 'target@example.com',
+  handle: 'targethandle',
+  city: 'Denver',
+  theme: 'jade',
+  avatarColor: 'signal',
+  role: 'beta',
+  joinedAt: '2026-04-01T00:00:00.000Z',
+  stats: { feedback: 1, watching: 1, priceSubmissions: 2, artistFollows: 3 },
+  feedback: [
+    {
+      id: 'fb-1',
+      category: 'bug',
+      status: 'unread',
+      message: 'Something broke',
+      pageUrl: 'https://concertcrawl.app/events',
+      issueUrl: 'https://github.com/HartiganHM/concert-crawl/issues/1',
+      createdAt: '2026-05-01T00:00:00.000Z',
+    },
+  ],
+  watching: [
+    {
+      eventId: 'evt-1',
+      eventTitle: 'Night One',
+      eventDate: '2026-06-01',
+      venueName: 'Ogden Theatre',
+      status: 'going',
+      createdAt: '2026-05-02T00:00:00.000Z',
+    },
+  ],
+  ...overrides,
+})
+
+afterEach(cleanup)
+
+describe('UserDetailClient', () => {
+  it('renders identity, stats, feedback, and watchlist for a full user', () => {
+    render(<UserDetailClient user={baseUser()} />)
+    expect(screen.getByText('@targethandle')).toBeTruthy()
+    expect(screen.getByText('target@example.com')).toBeTruthy()
+    expect(screen.getByText('beta')).toBeTruthy()
+    expect(screen.getByText('Something broke')).toBeTruthy()
+    expect(screen.getByText('Night One')).toBeTruthy()
+    expect(screen.getByText('Ogden Theatre')).toBeTruthy()
+  })
+
+  it('links a feedback item with an issueUrl out to the tracker', () => {
+    render(<UserDetailClient user={baseUser()} />)
+    const issueLink = screen.getByText(COPY.feedback.viewIssue).closest('a')
+    expect(issueLink).toBeTruthy()
+    expect(issueLink?.getAttribute('href')).toBe(
+      'https://github.com/HartiganHM/concert-crawl/issues/1',
+    )
+  })
+
+  it('shows empty copy when the user has no feedback or watchlist', () => {
+    render(
+      <UserDetailClient
+        user={baseUser({
+          feedback: [],
+          watching: [],
+          stats: {
+            feedback: 0,
+            watching: 0,
+            priceSubmissions: 0,
+            artistFollows: 0,
+          },
+        })}
+      />,
+    )
+    expect(screen.getByText(COPY.feedback.empty)).toBeTruthy()
+    expect(screen.getByText(COPY.watching.empty)).toBeTruthy()
+  })
+
+  it('surfaces the deleted-account note and null-email fallback', () => {
+    render(
+      <UserDetailClient
+        user={baseUser({
+          email: null,
+          role: null,
+          handle: 'orphan',
+          joinedAt: null,
+          city: null,
+        })}
+      />,
+    )
+    expect(screen.getByText(COPY.identity.deletedNote)).toBeTruthy()
+    expect(screen.getByText(COPY.identity.noEmail)).toBeTruthy()
+    expect(screen.getByText(COPY.identity.noRole)).toBeTruthy()
+    expect(screen.getByText(COPY.identity.unknownJoined)).toBeTruthy()
+  })
+
+  it('renders only the load-error banner when user is null', () => {
+    render(<UserDetailClient user={null} />)
+    expect(screen.getByRole('alert').textContent).toContain(COPY.loadError)
+    expect(screen.queryByText(COPY.feedback.title)).toBeNull()
+  })
+
+  it('falls back to the unknown-venue label when venueName is null', () => {
+    render(
+      <UserDetailClient
+        user={baseUser({
+          watching: [
+            {
+              eventId: 'evt-2',
+              eventTitle: 'Orphan Event',
+              eventDate: '2026-07-01',
+              venueName: null,
+              status: 'watching',
+              createdAt: '2026-05-03T00:00:00.000Z',
+            },
+          ],
+        })}
+      />,
+    )
+    expect(screen.getByText(COPY.watching.unknownVenue)).toBeTruthy()
+  })
+})
