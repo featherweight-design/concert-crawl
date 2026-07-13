@@ -19,6 +19,7 @@ const baseUser = (
   avatarColor: 'signal',
   role: 'beta',
   joinedAt: '2026-04-01T00:00:00.000Z',
+  clerkAccountMissing: false,
   stats: { feedback: 1, watching: 1, priceSubmissions: 2, artistFollows: 3 },
   feedback: [
     {
@@ -94,6 +95,7 @@ describe('UserDetailClient', () => {
           handle: 'orphan',
           joinedAt: null,
           city: null,
+          clerkAccountMissing: true,
         })}
       />,
     )
@@ -101,6 +103,15 @@ describe('UserDetailClient', () => {
     expect(screen.getByText(COPY.identity.noEmail)).toBeTruthy()
     expect(screen.getByText(COPY.identity.noRole)).toBeTruthy()
     expect(screen.getByText(COPY.identity.unknownJoined)).toBeTruthy()
+  })
+
+  it('hides the deleted-account note for a live Clerk user with no email', () => {
+    render(
+      <UserDetailClient
+        user={baseUser({ email: null, clerkAccountMissing: false })}
+      />,
+    )
+    expect(screen.queryByText(COPY.identity.deletedNote)).toBeNull()
   })
 
   it('renders only the load-error banner when user is null', () => {

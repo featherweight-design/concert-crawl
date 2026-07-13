@@ -1,5 +1,6 @@
+import { notFound } from 'next/navigation'
 import { auth, requireAdminUser } from '@/lib/auth'
-import { apiClient } from '@/lib/api'
+import { apiClient, ApiError } from '@/lib/api'
 import type { AdminUserDetail } from '@concert-crawl/types'
 import { UserDetailClient } from '@/components/admin/users/UserDetailClient'
 
@@ -15,12 +16,17 @@ export default async function AdminUserDetailPage({ params }: PageProps) {
   const token = await getToken()
   if (!token) return null
 
+  // A real 404 is a bad/stale id — render Next's notFound() shell. Any other
+  // failure (API down, token issue) falls back to the recoverable banner.
   const user = await apiClient
     .get<AdminUserDetail>(
       `/v1/admin/users/${encodeURIComponent(userId)}`,
       token,
     )
-    .catch(() => null)
+    .catch((err: unknown) => {
+      if (err instanceof ApiError && err.status === 404) notFound()
+      return null
+    })
 
   return <UserDetailClient user={user} />
 }

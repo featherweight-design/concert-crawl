@@ -106,7 +106,7 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
         }
       />
 
-      {!user.email && (
+      {user.clerkAccountMissing && (
         <div
           style={{
             padding: '8px 12px',

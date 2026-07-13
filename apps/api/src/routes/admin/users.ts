@@ -129,6 +129,18 @@ usersAdminRouter.get(
       .orderBy(desc(userEvents.createdAt))
       .limit(100)
 
+    // Totals are counted independently of the capped list queries above so the
+    // stat cards stay accurate past the 100-row display limit.
+    const [feedbackCountRow] = await db
+      .select({ value: count() })
+      .from(feedback)
+      .where(eq(feedback.userId, userId))
+
+    const [watchingCountRow] = await db
+      .select({ value: count() })
+      .from(userEvents)
+      .where(eq(userEvents.userId, userId))
+
     const [priceCountRow] = await db
       .select({ value: count() })
       .from(priceSubmissions)
@@ -139,14 +151,21 @@ usersAdminRouter.get(
       .from(userArtistFollows)
       .where(eq(userArtistFollows.userId, userId))
 
+    const feedbackTotal = feedbackCountRow?.value ?? 0
+    const watchingTotal = watchingCountRow?.value ?? 0
+    const priceTotal = priceCountRow?.value ?? 0
+    const artistTotal = artistCountRow?.value ?? 0
+
     // 404 only when the id maps to nothing at all — no Clerk record, no
-    // profile, and no activity — so a bad URL renders notFound() rather than
-    // an empty shell.
+    // profile, and no activity of any kind — so a bad URL renders notFound()
+    // rather than an empty shell.
     if (
       !clerkUser &&
       !profile &&
-      feedbackRows.length === 0 &&
-      watchingRows.length === 0
+      feedbackTotal === 0 &&
+      watchingTotal === 0 &&
+      priceTotal === 0 &&
+      artistTotal === 0
     ) {
       return ctx.json({ success: false, error: 'User not found' }, 404)
     }
@@ -190,11 +209,12 @@ usersAdminRouter.get(
       joinedAt: clerkUser?.createdAt
         ? new Date(clerkUser.createdAt).toISOString()
         : null,
+      clerkAccountMissing: !clerkUser,
       stats: {
-        feedback: feedbackRows.length,
-        watching: watchingRows.length,
-        priceSubmissions: priceCountRow?.value ?? 0,
-        artistFollows: artistCountRow?.value ?? 0,
+        feedback: feedbackTotal,
+        watching: watchingTotal,
+        priceSubmissions: priceTotal,
+        artistFollows: artistTotal,
       },
       feedback: feedbackHistory,
       watching,

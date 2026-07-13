@@ -146,6 +146,7 @@ describe('GET /v1/admin/users/:userId', () => {
         avatarColor: string | null
         role: string | null
         joinedAt: string | null
+        clerkAccountMissing: boolean
         stats: {
           feedback: number
           watching: number
@@ -173,6 +174,7 @@ describe('GET /v1/admin/users/:userId', () => {
       priceSubmissions: 1,
       artistFollows: 1,
     })
+    expect(body.data.clerkAccountMissing).toBe(false)
     expect(body.data.feedback[0]?.message).toBe('Something broke')
     expect(body.data.watching[0]?.eventTitle).toBe('Night One')
     expect(body.data.watching[0]?.venueName).toBe('Ogden Theatre')
@@ -199,6 +201,7 @@ describe('GET /v1/admin/users/:userId', () => {
         role: string | null
         handle: string | null
         joinedAt: string | null
+        clerkAccountMissing: boolean
       }
     }
     expect(body.success).toBe(true)
@@ -207,5 +210,58 @@ describe('GET /v1/admin/users/:userId', () => {
     expect(body.data.role).toBeNull()
     expect(body.data.handle).toBe('orphan')
     expect(body.data.joinedAt).toBeNull()
+    expect(body.data.clerkAccountMissing).toBe(true)
+  })
+
+  it('returns 200, not 404, when only price/artist activity exists', async () => {
+    setAuth('admin')
+    clerkState.getUserThrows = true
+    const venue = await seedVenue({ name: 'Bluebird' })
+    const event = await seedEvent(venue.id, { title: 'Solo Show' })
+    await seedPriceSubmission(event.id, TARGET_USER)
+    await testDb.insert(userArtistFollows).values({
+      userId: TARGET_USER,
+      artistName: 'Big Thief',
+    })
+
+    const res = await getDetail()
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        stats: { priceSubmissions: number; artistFollows: number }
+      }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.stats.priceSubmissions).toBe(1)
+    expect(body.data.stats.artistFollows).toBe(1)
+  })
+
+  it('counts total feedback beyond the 100-row list cap', async () => {
+    setAuth('admin')
+    await seedUserProfile(TARGET_USER, { handle: 'prolific' })
+    const rows = Array.from({ length: 105 }, (_unused, idx) => ({
+      userId: TARGET_USER,
+      pageUrl: 'https://concertcrawl.app/events',
+      category: 'bug' as const,
+      message: `Report ${idx}`,
+      status: 'unread' as const,
+    }))
+    await testDb.insert(feedback).values(rows)
+
+    const res = await getDetail()
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        stats: { feedback: number }
+        feedback: Array<{ message: string }>
+      }
+    }
+    expect(body.success).toBe(true)
+    // Stat card reflects the true total…
+    expect(body.data.stats.feedback).toBe(105)
+    // …while the list stays capped at the display limit.
+    expect(body.data.feedback.length).toBe(100)
   })
 })

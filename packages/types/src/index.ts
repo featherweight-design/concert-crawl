@@ -940,6 +940,9 @@ export interface AdminUserDetail {
   avatarColor: string | null
   role: Role | null
   joinedAt: string | null // Clerk account creation, ISO
+  // true when no Clerk record backs this id (deleted account) — identity
+  // fields fall back to profile/null and the UI shows a retained-activity note.
+  clerkAccountMissing: boolean
   stats: AdminUserDetailStats
   feedback: AdminUserFeedbackItem[]
   watching: AdminUserWatchingItem[]
