@@ -16,7 +16,8 @@
 // imported by the app and never runs in prod.
 
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { Resend } from 'resend'
 import type { EmailTemplateKey } from '@concert-crawl/db'
 import { getTemplateRenderer } from './registry.js'
@@ -24,7 +25,13 @@ import type { EmailTemplateVars, RenderedEmail } from './types.js'
 
 const FROM = 'Concert Crawl <billing@concertcrawl.app>'
 const REPLY_TO = 'support@concertcrawl.app'
-const OUTPUT_DIR = join(process.cwd(), '.email-preview')
+// Anchor output to the api package dir (../../ from src/emails or dist/emails),
+// not process.cwd(), so previews always land in apps/api/.email-preview/ —
+// which is what .gitignore covers — regardless of where the script is run from.
+const OUTPUT_DIR = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '../../.email-preview',
+)
 const PORTAL_URL = 'https://billing.stripe.com/p/session/test_preview'
 
 // One representative vars set per template — based on the fixtures in
@@ -102,6 +109,7 @@ const writePreviews = (keys: EmailTemplateKey[]): void => {
       process.stderr.write(
         `No renderer registered for ${templateKey} in registry.ts — skipped.\n`,
       )
+      process.exitCode = 1
       continue
     }
     const fileName = `${templateKey}.html`
@@ -137,6 +145,7 @@ const sendPreviews = async (
       process.stderr.write(
         `No renderer registered for ${templateKey} in registry.ts — skipped.\n`,
       )
+      process.exitCode = 1
       continue
     }
     try {
