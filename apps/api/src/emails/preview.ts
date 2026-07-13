@@ -92,6 +92,16 @@ const parseArgs = (
   return { sendTo, only }
 }
 
+// Minimal HTML-entity escape for values interpolated into the index page —
+// subjects can contain &, <, >, or quotes and would otherwise break the markup.
+const escapeHtml = (value: string): string =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
 const renderOne = <K extends EmailTemplateKey>(
   templateKey: K,
 ): RenderedEmail | null => {
@@ -115,7 +125,7 @@ const writePreviews = (keys: EmailTemplateKey[]): void => {
     const fileName = `${templateKey}.html`
     writeFileSync(join(OUTPUT_DIR, fileName), rendered.html, 'utf8')
     indexRows.push(
-      `<li><a href="./${fileName}">${templateKey}</a> — <em>${rendered.subject}</em></li>`,
+      `<li><a href="./${encodeURIComponent(fileName)}">${escapeHtml(templateKey)}</a> — <em>${escapeHtml(rendered.subject)}</em></li>`,
     )
   }
   writeFileSync(
