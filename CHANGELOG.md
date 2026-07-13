@@ -1,3 +1,17 @@
+# [1.110.0](https://github.com/HartiganHM/concert-crawl/compare/v1.109.1...v1.110.0) (2026-07-13)
+
+
+### Bug Fixes
+
+* **api:** anchor email preview dir to package; non-zero exit on missing renderer ([9805ba3](https://github.com/HartiganHM/concert-crawl/commit/9805ba32ead69af92e10dd8ca328286907ea4b29))
+* **api:** r7 — email preview exits non-zero when a Resend send fails or throws ([132e21d](https://github.com/HartiganHM/concert-crawl/commit/132e21d5941aa0311039edfa39058684ce9ab2ff))
+* **api:** r8 — HTML-escape template keys and subjects in email preview index ([f56316c](https://github.com/HartiganHM/concert-crawl/commit/f56316cd273ff345cc40cdd652064c07bf5337e0))
+
+
+### Features
+
+* **api:** email preview/test-send dev harness + explicit review-doc steps ([6b635a2](https://github.com/HartiganHM/concert-crawl/commit/6b635a24b4a39c70a27c9880b2958ed44c807b34))
+
 ## [1.109.1](https://github.com/HartiganHM/concert-crawl/compare/v1.109.0...v1.109.1) (2026-07-13)
 
 
