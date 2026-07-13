@@ -66,6 +66,10 @@ Fine-toothed pass surfaced these; small enough that a plan PR *could* proceed wi
 - **`theme-context.jsx:76, 116`** — header comment says *"Dark themes use the bright brand green (#1ED760)"*, but Forge sets `spotify-green: "#3BE06E"` and Cedar sets `"#4ADE7B"`. Either bring these two dark themes to `#1ED760` (Design's intent per the comment) or amend the comment to describe a per-theme variant. Note the token isn't currently painted with (§36 rule reserves it for the official logo asset), so this is a documentation-vs-data consistency issue, not a visual bug.
 - **`tweaks-panel.jsx:218`** — comment labels the message check as an *"Origin gate"*, but the code only checks `e.source !== window.parent` (source, not origin). Rename the comment to `Source gate` or add `e.origin` validation to match the comment.
 - **`spotify-states.jsx:49`** — eyebrow copy lowercases "denver" while every other surface capitalizes "Denver". Case-consistency fix.
+- **`taste-filter.jsx:129`** — `TasteFilterScreen` passes `onToggle={() => {}}` (a no-op) to the FilterBar, so the "wired to the toggle" claim in the header comment is misleading — the chip can't actually flip state in the live preview; only the hardcoded `active` prop changes the UI. Either wire the toggle to local state, or remove the "wired to the toggle" language from the header comment.
+- **`tweaks-panel.jsx:365`** — `TweakRadio` handles selection via `onPointerDown` on the container; the individual `role="radio"` buttons have no `onClick`, so keyboard users can't change the selection with Enter/Space even though the buttons are focusable. A11y bug in the design tooling (not a consumer surface, but affects Design's own accessibility testing).
+- **`connect-flow.jsx:122`** — glyph uses a heart (♥), but Design's own decision text (README §40) says the heart was retired for the eye/watch icon. Mock contradicts the doc — swap to the eye/watch glyph to match.
+- **`follow-highlight.jsx:10 + :136`** — header comment + inline note both claim the Follow chip is a filled `--accent`, text-only, no-icon treatment. Actual `FollowChip` implementation is neutral (`--surface-3`) and includes the Spotify mark, per Design's own §6 R1 decision reserving `--accent` for Watching. Stale explanatory comments from an earlier draft; update to describe the current neutral + Spotify-marked treatment.
 
 ## ✅ Per-dimension findings — Green-worthy across the board
 
@@ -145,6 +149,10 @@ Fine-toothed pass surfaced these; small enough that a plan PR *could* proceed wi
    - `theme-context.jsx` — line 2 "5 genre themes" → "6 genre themes"; Forge + Cedar `spotify-green` reconciled to `#1ED760` (or comment amended to explain per-theme variants)
    - `tweaks-panel.jsx:218` — "Origin gate" comment renamed to "Source gate" (or `e.origin` check added)
    - `spotify-states.jsx:49` — "denver" → "Denver"
+   - `taste-filter.jsx:129` — wire the toggle to local state (or remove the "wired to the toggle" claim from `TasteFilterScreen`'s header comment)
+   - `tweaks-panel.jsx:365` — add `onClick` handlers (or `onKeyDown` for Enter/Space) to the individual `TweakRadio` `role="radio"` buttons so keyboard users can change selection
+   - `connect-flow.jsx:122` — swap the heart glyph (♥) for the eye/watch glyph to match the R1 §6 decision
+   - `follow-highlight.jsx:10 + :136` — update the header comment + inline note to describe the current neutral + Spotify-marked FollowChip treatment (not the stale `--accent` filled description)
 3. **Second-pass audit** — single-round Low/Nit-floor pass to confirm the fixes; the design shape doesn't change.
 
 Once addendum lands, this flips 🟢 Green and the plan PR can open with the correct gate baked in from day one.
