@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Spotify Sync — Premium Payoff (Track 2 · R2)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Roboto:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="monetization-shared.jsx"></script>
+<script type="text/babel" src="spotify-shared.jsx"></script>
+<script type="text/babel" src="follow-highlight.jsx"></script>
+<script type="text/babel" src="taste-filter.jsx"></script>
+<script type="text/babel" src="discovery-surface.jsx"></script>
+<script type="text/babel" src="digest-email.jsx"></script>
+<script type="text/babel" src="push-alert.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEMES, CC_THEME_KEYS } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { MonoEyebrow, Scrim, A11yNote } = window;
+const { TasteFilterScreen, TasteUpsellSheet } = window;
+const { DiscoveryScreen, DiscoveryEmpty, DiscoveryFailure } = window;
+const { DigestEmail, DigestPlainText } = window;
+const { LockScreen, InAppReceipt, PushBanner, PUSH_COPY } = window;
+
+const PHONE_W = 402, PHONE_H = 874;
+const DESK_W = 1240;
+
+function Phone({ theme = "electric", children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={PHONE_W} height={PHONE_H} dark={theme !== "light"}>
+        <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden" }}>{children}</div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function PhoneOverlay({ theme = "electric", behind, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={PHONE_W} height={PHONE_H} dark={theme !== "light"}>
+        <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0 }}>{behind}</div>
+          <Scrim/>
+          {children}
+        </div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+// bare phone bezel for lock screens (no app chrome)
+function LockBezel({ children }) {
+  return (
+    <div style={{ width: PHONE_W, height: PHONE_H, borderRadius: 48, padding: 0, background: "#000", boxShadow: "0 40px 80px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.12)", overflow: "hidden" }}>{children}</div>
+  );
+}
+function NotePaper({ children }) {
+  return <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 4 }}>{children}</div>;
+}
+// light email-client chrome
+function EmailClient({ subject = "This week in Denver — 5 shows by artists you follow", children }) {
+  return (
+    <div style={{ width: 680, background: "#EDEBE6", borderRadius: 14, overflow: "hidden", border: "1px solid #D8D4CB", fontFamily: "Inter, system-ui" }}>
+      <div style={{ padding: "14px 18px", background: "#FBFAF6", borderBottom: "1px solid #E3DFD4" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 30, background: "linear-gradient(135deg,#7AE6FF,#FF7BD4)", flexShrink: 0 }}/>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#26241E" }}>Concert Crawl <span style={{ color: "#8A857A", fontWeight: 500 }}>&lt;hey@concertcrawl.app&gt;</span></div>
+            <div style={{ fontSize: 12, color: "#8A857A" }}>to you · Fri 8:02 AM</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#26241E", marginTop: 10 }}>{subject}</div>
+      </div>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "surface": "taste-active",
+  "tier": "supporter"
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect } = window;
+const THEME_OPTS = CC_THEME_KEYS.map(k => ({ value: k, label: CC_THEMES[k].label }));
+
+function liveSurface(surface, tier) {
+  switch (surface) {
+    case "taste-active":   return <TasteFilterScreen tier={tier} active />;
+    case "taste-inactive": return <TasteFilterScreen tier={tier} active={false} />;
+    case "taste-upsell":   return <div style={{ position:"absolute", inset:0 }}><div style={{ position:"absolute", inset:0 }}><TasteFilterScreen tier="free" /></div><Scrim/><TasteUpsellSheet/></div>;
+    case "discovery":      return <DiscoveryScreen />;
+    case "discovery-empty":return <DiscoveryEmpty />;
+    case "discovery-fail": return <DiscoveryFailure />;
+    case "receipt":        return <InAppReceipt />;
+    default:               return <TasteFilterScreen tier={tier} active />;
+  }
+}
+function LiveTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Live preview">
+        <TweakSelect label="Surface" value={t.surface} onChange={(v)=>setT("surface",v)} options={[
+          { value: "taste-active",   label: "Taste filter · ON" },
+          { value: "taste-inactive", label: "Taste filter · off" },
+          { value: "taste-upsell",   label: "Taste filter · Free upsell" },
+          { value: "discovery",      label: "Discovery shelf" },
+          { value: "discovery-empty",label: "Discovery · empty" },
+          { value: "discovery-fail", label: "Discovery · failure" },
+          { value: "receipt",        label: "Notifications tray" },
+        ]}/>
+        <TweakSelect label="Tier (taste filter)" value={t.tier} onChange={(v)=>setT("tier",v)} options={[
+          { value: "supporter", label: "Supporter (paid)" },
+          { value: "founder",   label: "Founder (paid)" },
+          { value: "free",      label: "Free (locked)" },
+        ]}/>
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakSelect label="Theme (all 9)" value={t.theme} onChange={(v)=>setT("theme",v)} options={THEME_OPTS}/>
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+function LivePhone() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return <Phone theme={t.theme}>{liveSurface(t.surface, t.tier)}</Phone>;
+}
+
+// push copy variants panel (themed)
+function PushCopyTable() {
+  const rows = [
+    ["Auto-watch ON", PUSH_COPY.autoOn, "States the outcome — the show's already on your list."],
+    ["Highlight-only", PUSH_COPY.highlight, "Invites the tap — you decide whether to watch."],
+    ["Presale reminder", PUSH_COPY.presale, "For a show you're already watching."],
+  ];
+  return (
+    <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", padding: "26px 20px", display: "flex", flexDirection: "column", gap: 12, overflowY: "auto" }}>
+      <MonoEyebrow size={10} color="var(--signal)" letterSpacing="0.16em">PUSH COPY · VARIES BY AUTO-WATCH SETTING</MonoEyebrow>
+      {rows.map(([label, c, why], i) => (
+        <div key={i} style={{ padding: 14, borderRadius: 12, background: "var(--surface-1)", border: "1px solid var(--border)" }}>
+          <MonoEyebrow size={9} color="var(--fg-subtle)" letterSpacing="0.12em">{label}</MonoEyebrow>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--fg)", marginTop: 7, letterSpacing: "-0.01em" }}>{c.title}</div>
+          <div style={{ fontSize: 13, color: "var(--fg-muted)", marginTop: 2 }}>{c.body}</div>
+          <div style={{ fontSize: 11.5, color: "var(--fg-subtle)", marginTop: 8, fontStyle: "italic", lineHeight: 1.4 }}>{why}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="Spotify Sync · Premium Payoff (R2)"
+        subtitle="Track 2 · Round 2 — the four Premium-gated surfaces on top of R1's connect + recognition spine: the taste-informed filter, a 'based on your taste' discovery shelf, the weekly digest email, and new-show push alerts. Gated on a paid tier (supporter / founder). Token-only across 9 themes; --accent = Watching, --signal = status/CTA, follow stays neutral + Spotify-marked; green only in the official logo asset. Sour Patch voice: recognition, never surveillance.">
+
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview" subtitle="Flip surface · tier · theme (all 9) in the Tweaks panel. The taste filter reacts to tier (paid = toggles, Free = locked → upsell).">
+          <DCArtboard id="live-phone" label="Responds to Tweaks" width={PHONE_W} height={PHONE_H}><LivePhone/></DCArtboard>
+          <DCArtboard id="live-note" label="Scope + gating" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote tone="note" title="R2 gating ★" items={[
+              "★ All four surfaces gate on a PAID tier (supporter || founder). Connecting + the free 'Following' tag from R1 stay free; these are the payoff.",
+              "⚠ Flag for Hugh: this R2 brief says gate on supporter||founder, but the older entitlements doc (uploads/2026-06-24…) lists Spotify features as Premium-and-up. The live enum is supporter+founder (PR #878), so I followed the brief — confirm the two docs are reconciled.",
+              "Free users still SEE the taste filter (locked) — discovery of the paid perk at a natural moment, per the monetization hybrid-gating call.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 1 · TASTE FILTER */}
+        <DCSection id="taste" title="1 · Taste-informed filter"
+          subtitle="A toggle chip leading the existing FilterBar chip row — scope Browse to 'shows by artists I follow' in one tap. Additive with venue/date/genre (AND), not a separate mode. Active uses --signal (the shipped active-chip color) + the Spotify mark for identity. Free tier sees it locked; tapping opens the upsell.">
+          <DCArtboard id="taste-off" label="Paid · toggle off (all shows)" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><TasteFilterScreen tier="supporter" active={false}/></Phone></DCArtboard>
+          <DCArtboard id="taste-on" label="Paid · toggle ON (scoped to follows)" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><TasteFilterScreen tier="supporter" active/></Phone></DCArtboard>
+          <DCArtboard id="taste-locked" label="Free · chip locked" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><TasteFilterScreen tier="free"/></Phone></DCArtboard>
+          <DCArtboard id="taste-upsell" label="Free · tap → upsell" width={PHONE_W} height={PHONE_H}><PhoneOverlay theme="electric" behind={<TasteFilterScreen tier="free"/>}><TasteUpsellSheet/></PhoneOverlay></DCArtboard>
+          <DCArtboard id="taste-a11y" label="A11y" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote title="Taste filter" items={[
+              "Chip is a toggle: role=button, aria-pressed reflects on/off; SR announces 'Following, filter, pressed/not pressed'.",
+              "Locked chip: aria-disabled + 'Following filter, paid' label; tap still opens the upsell (not a dead control).",
+              "Active state pairs the --signal fill with the ✕ affordance + the Spotify mark — not color alone.",
+              "Scope banner ('N shows by artists you follow') is an aria-live update when the toggle flips.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 2 · DISCOVERY */}
+        <DCSection id="discovery" title="2 · Discovery — 'Based on your taste'"
+          subtitle="A curated shelf pinned to the top of Browse (my call: a section, not a new tab — keeps discovery in the main flow). Richer taste data than follows alone, so reason chips vary ('You play them a lot' / 'In your top 5' / 'Following'). Empty + failure states included.">
+          <DCArtboard id="disc-shelf" label="Shelf on Browse (scroll the row)" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><DiscoveryScreen/></Phone></DCArtboard>
+          <DCArtboard id="disc-empty" label="Empty · nobody plays Denver this month" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><DiscoveryEmpty/></Phone></DCArtboard>
+          <DCArtboard id="disc-fail" label="Failure · taste data unavailable" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><DiscoveryFailure/></Phone></DCArtboard>
+          <DCArtboard id="disc-a11y" label="A11y" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote title="Discovery" items={[
+              "Shelf is a labelled region ('Based on your taste'); cards are a horizontal list, each a link with an accessible name = artist + venue + date.",
+              "Reason chip text ('You play them a lot') is real, SR-read content — it's the 'why', not decoration.",
+              "Horizontal scroll is keyboard-reachable; cards don't trap focus.",
+              "Empty vs failure are distinct: empty = neutral 'quiet month', failure = warning + a Reconnect recovery action.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 3 · DIGEST EMAIL */}
+        <DCSection id="email" title="3 · Weekly digest email"
+          subtitle="New template in the #783 family — table layout, mobile-first, single branded palette (email clients can't read CSS vars, so this is the one place we use inline hex; the token rule governs app screens, not email). Up to 5 shows + '+N more'; a light zero-week variant; per-family unsubscribe first. Plain-text fallback included.">
+          <DCArtboard id="email-main" label="Digest · 5 shows this week" width={720} height={860}>
+            <div style={{ width: "100%", height: "100%", background: "#DEDBD3", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+              <EmailClient><DigestEmail/></EmailClient>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="email-zero" label="Zero week · light + 2 taste picks" width={720} height={720}>
+            <div style={{ width: "100%", height: "100%", background: "#DEDBD3", display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 20, overflowY: "auto" }}>
+              <EmailClient subject="A quiet week in Denver — a couple picks anyway"><DigestEmail zero/></EmailClient>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="email-text" label="Plain-text fallback" width={520} height={520}>
+            <ThemeProvider theme="electric" style={{ width: "100%", height: "100%" }}>
+              <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: 20, overflowY: "auto" }}>
+                <MonoEyebrow size={9} color="var(--fg-subtle)" letterSpacing="0.12em" style={{ marginBottom: 10 }}>TEXT/PLAIN PART</MonoEyebrow>
+                <DigestPlainText/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="email-a11y" label="Notes + A11y" width={300} height={720}>
+            <NotePaper><A11yNote title="Digest email" items={[
+              "Table layout + inline styles for client support; semantic heading order; every image (art) needs alt = artist name (mock uses gradient blocks as stand-ins).",
+              "Send logic ★: skip nothing-to-say weeks OR send the light zero variant with 2 taste picks — never a blank email. Recommend the light send; confirm with lifecycle.",
+              "Unsubscribe ★: per-family ('turn off the weekly digest') leads; global 'all email settings' is secondary.",
+              "Dark palette meets AA on body text; plain-text part mirrors the content for no-HTML clients.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 4 · PUSH */}
+        <DCSection id="push" title="4 · New-show push alerts"
+          subtitle="Fires when a followed artist announces a Denver date (delivery sequenced behind #737; copy + rendering ready now). Copy varies by the R1 auto-watch setting: auto-on states the outcome, highlight-only invites the tap. Recognition voice, never surveillance. Once #737 lands, the same event also lands in the in-app tray.">
+          <DCArtboard id="push-ios" label="iOS lock screen · auto-watch on" width={PHONE_W} height={PHONE_H}><LockBezel><LockScreen platform="ios" variant="autoOn"/></LockBezel></DCArtboard>
+          <DCArtboard id="push-android" label="Android lock screen · highlight-only" width={PHONE_W} height={PHONE_H}><LockBezel><LockScreen platform="android" variant="highlight"/></LockBezel></DCArtboard>
+          <DCArtboard id="push-receipt" label="In-app notifications tray (post-#737)" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><InAppReceipt/></Phone></DCArtboard>
+          <DCArtboard id="push-copy" label="Copy variants" width={PHONE_W} height={560}>
+            <ThemeProvider theme="electric" style={{ width: "100%", height: "100%" }}><PushCopyTable/></ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="push-a11y" label="A11y" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote title="Push + tray" items={[
+              "Notification title + body are plain text (OS reads them); the app icon is decorative.",
+              "In-app receipt: follow-triggered rows carry the Spotify mark so the 'why' is explicit; unread = dot + bold, not color alone.",
+              "Copy names the artist, venue, date up front — front-loaded for glanceability and SR.",
+              "Never surveillance phrasing: 'just added a Denver date', never 'we noticed you listen to…'.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · THEME PARITY */}
+        <DCSection id="parity" title="5 · Theme parity"
+          subtitle="Token-only across the app surfaces. (The digest email is single-palette by nature — email can't theme per user.) Flip all 9 in Tweaks to verify the rest.">
+          <DCArtboard id="par-taste-light" label="Taste filter ON · Light" width={PHONE_W} height={PHONE_H}><Phone theme="light"><TasteFilterScreen tier="supporter" active/></Phone></DCArtboard>
+          <DCArtboard id="par-disc-pulse" label="Discovery shelf · Pulse" width={PHONE_W} height={PHONE_H}><Phone theme="pulse"><DiscoveryScreen/></Phone></DCArtboard>
+          <DCArtboard id="par-receipt-forge" label="Notifications tray · Forge" width={PHONE_W} height={PHONE_H}><Phone theme="forge"><InAppReceipt/></Phone></DCArtboard>
+          <DCArtboard id="par-fail-cedar" label="Discovery failure · Cedar" width={PHONE_W} height={PHONE_H}><Phone theme="cedar"><DiscoveryFailure/></Phone></DCArtboard>
+          <DCArtboard id="par-upsell-gloss" label="Taste upsell · Gloss" width={PHONE_W} height={PHONE_H}><PhoneOverlay theme="gloss" behind={<TasteFilterScreen tier="free"/>}><TasteUpsellSheet/></PhoneOverlay></DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+      <LiveTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

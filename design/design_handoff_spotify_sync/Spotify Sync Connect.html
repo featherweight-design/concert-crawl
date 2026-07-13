@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Spotify Sync — Connect Chapter (Track 2 · R1)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="monetization-shared.jsx"></script>
+<script type="text/babel" src="spotify-shared.jsx"></script>
+<script type="text/babel" src="connect-flow.jsx"></script>
+<script type="text/babel" src="connections-settings.jsx"></script>
+<script type="text/babel" src="follow-highlight.jsx"></script>
+<script type="text/babel" src="spotify-states.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEMES, CC_THEME_KEYS } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { MMark, MonoEyebrow, Scrim } = window;
+const { SpotifyLogo, SpotifyLockup, HonestyRail, ConnectButton, A11yNote, SectionNote, ArtistChip, EQGlyph } = window;
+const { ConnectEntry, FirstWatchNudge, OAuthHandoff, ConnectSuccess, AutoWatchSheet } = window;
+const { ConnectionsConnected, ConnectionsRefreshing, DisconnectConfirm } = window;
+const { AuditStrip, BrowseWithFollows, HeroCardCC, DetailFollowStrip, DetailHeaderMock } = window;
+const { EmptyDenverMatch, FailConnectDown, FailTokenRefresh, FailExternalRevoke, RevokeBanner } = window;
+
+const PHONE_W = 402, PHONE_H = 874;
+const DESK_W = 1240, DESK_H = 820;
+
+// ── phone frame (bare themed screen) ──
+function Phone({ theme = "electric", children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={PHONE_W} height={PHONE_H} dark={theme !== "light"}>
+        <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden" }}>{children}</div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+// ── phone with a scrim'd page-behind + sheet ──
+function PhoneOverlay({ theme = "electric", behind, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={PHONE_W} height={PHONE_H} dark={theme !== "light"}>
+        <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", inset: 0 }}>{behind}</div>
+          <Scrim/>
+          {children}
+        </div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+// ── desktop browser chrome ──
+function Desktop({ theme = "electric", url = "concertcrawl.app/settings/connections", height = DESK_H, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <div style={{ width: DESK_W, height, position: "relative", background: "var(--bg)", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 36, background: "var(--surface-1)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 14px", gap: 8, zIndex: 5 }}>
+          {[0,1,2].map(i => <span key={i} style={{ width: 11, height: 11, borderRadius: 6, background: ["#FF7A8A","#FFD27A","#7BFFB0"][i], opacity: 0.7 }}/>)}
+          <div style={{ flex: 1 }}/>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--fg-subtle)", letterSpacing: "0.06em" }}>{url}</div>
+          <div style={{ flex: 1 }}/>
+        </div>
+        <div style={{ position: "absolute", inset: "36px 0 0 0", display: "flex", alignItems: "center", justifyContent: "center" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ── a note artboard (paper card, no frame) ──
+function NotePaper({ children }) {
+  return <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 4 }}>{children}</div>;
+}
+
+// Desktop OAuth handoff — two-column: honesty rail left, art right.
+function OAuthDesktop({ theme = "electric" }) {
+  return (
+    <Desktop theme={theme} url="concertcrawl.app/connect/spotify" height={640}>
+      <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+        <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", display: "grid", gridTemplateColumns: "1.05fr 1fr", fontFamily: "Inter, system-ui" }}>
+          <div style={{ padding: "52px 56px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 20 }}>
+            <MonoEyebrow size={11} color="var(--signal)" letterSpacing="0.16em">HANDING OFF TO SPOTIFY</MonoEyebrow>
+            <div style={{ fontSize: 38, fontWeight: 900, letterSpacing: "-0.035em", lineHeight: 1.08 }}>You'll log in on Spotify's page — not ours.</div>
+            <div style={{ fontSize: 15, color: "var(--fg-muted)", lineHeight: 1.5, maxWidth: 440 }}>We ask Spotify one question: which artists do you love? Here's exactly what that does and doesn't mean.</div>
+            <div style={{ borderRadius: 16, background: "var(--surface-1)", border: "1px solid var(--border)", padding: 20, maxWidth: 440 }}><HonestyRail/></div>
+            <div style={{ display: "flex", gap: 12, maxWidth: 440 }}>
+              <ConnectButton full={false} style={{ flex: 1 }}>Continue to Spotify</ConnectButton>
+              <button style={{ all: "unset", cursor: "pointer", padding: "14px 22px", fontWeight: 700, fontSize: 15, color: "var(--fg-muted)" }}>Cancel</button>
+            </div>
+          </div>
+          <div style={{ background: "linear-gradient(150deg, color-mix(in oklch, var(--signal) 15%, var(--bg)), var(--bg) 70%)", display: "flex", alignItems: "center", justifyContent: "center", borderLeft: "1px solid var(--border)" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 22 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+                <MMark size={72}/>
+                <div style={{ display: "flex", gap: 5 }}>{[0,1,2,3].map(i => <span key={i} style={{ width: 6, height: 6, borderRadius: 6, background: "var(--signal)", opacity: 0.35 + i*0.2 }}/>)}</div>
+                <SpotifyLogo size={72}/>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8, maxWidth: 360, justifyContent: "center" }}>
+                {["Sleep Token","Wednesday","Geese","Wisp","Amyl","Bright Eyes"].map((n,i) => <ArtistChip key={n} name={n} hue={[280,160,210,300,20,50][i]}/>)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </ThemeProvider>
+    </Desktop>
+  );
+}
+
+// Desktop Settings ▸ Connections (connected), two-pane settings shell
+function ConnectionsDesktop({ theme = "electric" }) {
+  return (
+    <Desktop theme={theme} url="concertcrawl.app/settings/connections" height={640}>
+      <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+        <div style={{ width: "100%", height: "100%", display: "grid", gridTemplateColumns: "240px 1fr", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui" }}>
+          <div style={{ borderRight: "1px solid var(--border)", padding: "22px 16px", display: "flex", flexDirection: "column", gap: 14, background: "var(--surface-1)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}><MMark size={24}/><div style={{ fontWeight: 800, letterSpacing: "-0.02em" }}>concert<span style={{ color: "var(--accent)" }}>crawl.</span></div></div>
+            {["Profile","Appearance","Notifications","Connections","Plan","Account"].map(l => (
+              <div key={l} style={{ fontSize: 13, color: l === "Connections" ? "var(--fg)" : "var(--fg-muted)", fontWeight: l === "Connections" ? 700 : 500 }}>{l}</div>
+            ))}
+          </div>
+          <div style={{ padding: "40px 56px", display: "flex", flexDirection: "column", gap: 18, overflow: "hidden" }}>
+            <div style={{ fontSize: 38, fontWeight: 900, letterSpacing: "-0.035em" }}>Connections</div>
+            <div style={{ width: "100%", maxWidth: 460 }}><ConnectionsConnected/></div>
+          </div>
+        </div>
+      </ThemeProvider>
+    </Desktop>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Tweaks
+// ─────────────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "surface": "success",
+  "autoWatch": "highlight"
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect } = window;
+const THEME_OPTS = CC_THEME_KEYS.map(k => ({ value: k, label: CC_THEMES[k].label }));
+
+function liveSurface(surface, autoWatch) {
+  switch (surface) {
+    case "entry":     return <ConnectEntry/>;
+    case "nudge":     return <FirstWatchNudge/>;
+    case "handoff":   return <OAuthHandoff/>;
+    case "success":   return <ConnectSuccess/>;
+    case "autowatch": return <div style={{ position:"absolute", inset:0 }}><div style={{ position:"absolute", inset:0 }}><ConnectSuccess/></div><Scrim/><AutoWatchSheet choice={autoWatch}/></div>;
+    case "browse":    return <BrowseWithFollows/>;
+    case "connected": return <ConnectionsConnected/>;
+    case "disconnect":return <div style={{ position:"absolute", inset:0 }}><div style={{ position:"absolute", inset:0 }}><ConnectionsConnected/></div><Scrim/><DisconnectConfirm/></div>;
+    case "empty":     return <EmptyDenverMatch/>;
+    case "tokenfail": return <FailTokenRefresh/>;
+    default:          return <ConnectSuccess/>;
+  }
+}
+function LiveTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Live preview">
+        <TweakSelect label="Surface" value={t.surface} onChange={(v)=>setT("surface",v)} options={[
+          { value: "entry",      label: "Settings ▸ Connections (off)" },
+          { value: "nudge",      label: "Post-first-watch nudge" },
+          { value: "handoff",    label: "OAuth handoff" },
+          { value: "success",    label: "Connect success" },
+          { value: "autowatch",  label: "Auto-watch opt-in" },
+          { value: "browse",     label: "Browse · You follow" },
+          { value: "connected",  label: "Connected settings" },
+          { value: "disconnect", label: "Disconnect confirm" },
+          { value: "empty",      label: "Empty · 0 in Denver" },
+          { value: "tokenfail",  label: "Failure · sync lost" },
+        ]}/>
+        <TweakSelect label="Auto-watch choice" value={t.autoWatch} onChange={(v)=>setT("autoWatch",v)} options={[
+          { value: "highlight", label: "Highlight-only (default)" },
+          { value: "auto",      label: "Auto-watch" },
+        ]}/>
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakSelect label="Theme (all 9)" value={t.theme} onChange={(v)=>setT("theme",v)} options={THEME_OPTS}/>
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+function LivePhone() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return <Phone theme={t.theme}>{liveSurface(t.surface, t.autoWatch)}</Phone>;
+}
+
+// green swatch chip (token proof)
+function GreenSwatch({ theme }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <div style={{ width: 150, borderRadius: 12, overflow: "hidden", border: "1px solid var(--border)", background: "var(--bg)" }}>
+        <div style={{ height: 64, background: "var(--spotify-green)" }}/>
+        <div style={{ padding: "8px 10px", display: "flex", flexDirection: "column", gap: 2 }}>
+          <div style={{ fontFamily: "Inter, system-ui", fontWeight: 800, fontSize: 12, color: "var(--fg)" }}>{CC_THEMES[theme].label}</div>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: "var(--fg-muted)" }}>--spotify-green</div>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, color: "var(--spotify-green)" }}>{CC_THEMES[theme].tokens["spotify-green"]}</div>
+        </div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="Spotify Sync · Connect Chapter"
+        subtitle="Track 2 · Round 1 — the connect journey end-to-end: entry points, OAuth honesty handoff, success, the auto-watch opt-in, connected settings + disconnect, the browse card hierarchy audit + 'You follow' treatment, and every empty / failure state. Token-only across all 9 themes; Spotify green is pulled back to the official logo asset only — our own palette carries the flow. Sour Patch voice: recognition, never surveillance. Premium value surfaces (discovery feed, weekly digest email, push copy, taste filter) are scoped as R2 — see README.">
+
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview" subtitle="Flip surface + theme (all 9) from the Tweaks panel in the toolbar. Every surface below is token-only; this proves parity on demand.">
+          <DCArtboard id="live-phone" label="Responds to Tweaks · surface × theme" width={PHONE_W} height={PHONE_H}><LivePhone/></DCArtboard>
+          <DCArtboard id="live-note" label="Color policy" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote tone="note" title="Color policy ★" items={[
+              "★ Green is pulled back to near-zero. It is NOT an app accent — it was taking over and fighting our palette.",
+              "Our own tokens carry the flow: --signal for connect actions + status; --accent stays reserved for Watching a show. Following an artist is a neutral, Spotify-marked chip — never accent.",
+              "The only green left lives inside the official Spotify logo asset. The --spotify-green token is retained solely for that asset; screens don't paint with it.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 1 · ENTRY POINTS */}
+        <DCSection id="entry" title="1 · Entry points"
+          subtitle="Two doors, one behavior. Primary: a permanent home in Settings ▸ Connections (a real surface that scales as more integrations land). Secondary: a one-time, dismissible nudge that fires right after a user watches their first show — the moment intent is highest. Recognition framing throughout.">
+          <DCArtboard id="entry-settings" label="Primary · Settings ▸ Connections (disconnected)" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><ConnectEntry/></Phone></DCArtboard>
+          <DCArtboard id="entry-nudge" label="Secondary · post-first-watch nudge (Browse)" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><FirstWatchNudge/></Phone></DCArtboard>
+          <DCArtboard id="entry-note" label="Decision" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote tone="note" title="Entry-point call ★" items={[
+              "★ Lean: ship BOTH. Settings is the durable, discoverable home; the nudge is the conversion moment. They share one connect flow, so cost is low.",
+              "Nudge fires once, on first-watch, and never re-fires once dismissed (eng owns the flag). No nag.",
+              "Not gated behind Premium at the door — connecting is free; the taste-informed browsing it powers is the free-tier payoff. Premium value (discovery/alerts) is a separate upsell, never a wall on connect.",
+            ]}/></NotePaper>
+          </DCArtboard>
+          <DCArtboard id="entry-a11y" label="A11y" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote title="Entry points" items={[
+              "Connect button: role=button, label 'Connect Spotify', 44×44 min target (actual ~48).",
+              "Connect button uses our --signal primary (dark text on --signal → AA every theme), not green.",
+              "Nudge dismiss ✕ needs aria-label 'Dismiss' + a 44px hit area even though the glyph is small.",
+              "'Not connected' status is text, not color-only.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 2 · OAUTH HANDOFF */}
+        <DCSection id="handoff" title="2 · OAuth handoff — the honesty rail"
+          subtitle="Our screen BEFORE the redirect. We never render a fake Spotify login, and we never redraw their trademarked logo — the tile is a neutral placeholder the official Spotify asset drops into, always paired with the plain word 'Spotify'. The honesty rail answers the three fears up front — password, scope, reversibility — in warm, plain language.">
+          <DCArtboard id="handoff-mobile" label="Mobile · interstitial" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><OAuthHandoff/></Phone></DCArtboard>
+          <DCArtboard id="handoff-desktop" label="Desktop · two-column" width={DESK_W} height={640}><OAuthDesktop theme="electric"/></DCArtboard>
+          <DCArtboard id="handoff-a11y" label="A11y + note" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote title="OAuth handoff" items={[
+              "Never reproduce Spotify's trademarked logo — SpotifyLogo is a neutral placeholder slot; the official brand-guideline asset drops in at integration. The word 'Spotify' carries the co-brand.",
+              "Honesty-rail icons are decorative (aria-hidden); the text line is the accessible content.",
+              "Primary action reachable by keyboard first; 'Cancel' returns focus to the entry point.",
+              "Copy avoids surveillance verbs — 'we ask one question', not 'we scan your account'.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 3 · SUCCESS + AUTO-WATCH */}
+        <DCSection id="success" title="3 · Connect success + auto-watch opt-in"
+          subtitle="Success leads with recognition — 'here's what you told Spotify you love' — and a concrete stat (34 known · 9 play Denver). Then the one-time auto-watch sheet asks how eager we should be. Two explicit choices; dismissing (scrim / ✕) resolves to highlight-only — the quieter default.">
+          <DCArtboard id="succ-mobile" label="Success state" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><ConnectSuccess/></Phone></DCArtboard>
+          <DCArtboard id="aw-highlight" label="Auto-watch opt-in · highlight (default)" width={PHONE_W} height={PHONE_H}>
+            <PhoneOverlay theme="electric" behind={<ConnectSuccess/>}><AutoWatchSheet choice="highlight"/></PhoneOverlay>
+          </DCArtboard>
+          <DCArtboard id="aw-auto" label="Auto-watch opt-in · auto selected" width={PHONE_W} height={PHONE_H}>
+            <PhoneOverlay theme="electric" behind={<ConnectSuccess/>}><AutoWatchSheet choice="auto"/></PhoneOverlay>
+          </DCArtboard>
+          <DCArtboard id="aw-note" label="Decision + A11y" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote tone="note" title="Auto-watch default ★" items={[
+              "★ Dismissal = highlight-only. Auto-watching someone's whole Watching list without an explicit yes is too presumptuous; highlight is reversible-by-nothing.",
+              "Both choices are equal-weight radio options — we don't dark-pattern toward auto. 'DEFAULT' tag marks the fallback honestly.",
+              "Radios: role=radiogroup, arrow-key nav, selected state is ring + fill, not color alone.",
+              "Reachable forever from Settings ▸ Connections (toggle), so this is a soft ask, not a one-shot.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 4 · CONNECTED SETTINGS + DISCONNECT */}
+        <DCSection id="connected" title="4 · Connected settings + disconnect"
+          subtitle="The connected card: account, artist count (34 · 9 Denver), last-synced, an auto-watch toggle, 'Refresh my taste', and Disconnect. Disconnect confirms with a plain three-line 'here's what happens' — and reassures that watched shows survive. Weekly quiet auto-refresh is disclosed, not hidden.">
+          <DCArtboard id="conn-mobile" label="Connected · mobile" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><ConnectionsConnected/></Phone></DCArtboard>
+          <DCArtboard id="conn-refresh" label="Mid-sync · 'Refresh my taste' tapped" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><ConnectionsRefreshing/></Phone></DCArtboard>
+          <DCArtboard id="conn-disconnect" label="Disconnect confirmation" width={PHONE_W} height={PHONE_H}>
+            <PhoneOverlay theme="electric" behind={<ConnectionsConnected/>}><DisconnectConfirm/></PhoneOverlay>
+          </DCArtboard>
+          <DCArtboard id="conn-desktop" label="Connected · desktop settings shell" width={DESK_W} height={640}><ConnectionsDesktop theme="electric"/></DCArtboard>
+          <DCArtboard id="conn-a11y" label="A11y" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote title="Connected + disconnect" items={[
+              "'LINKED' pill = dot + text, never green dot alone (color-independent status).",
+              "Auto-watch toggle: role=switch, aria-checked, label 'Auto-watch matching shows'.",
+              "Disconnect is a two-step (button → confirm sheet); confirm's destructive action is danger-toned AND labelled, not red-only.",
+              "Refresh spinner has aria-live 'Syncing…' so SR users hear progress.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · BROWSE CARD AUDIT + YOU FOLLOW */}
+        <DCSection id="follow" title="5 · Browse card audit + 'You follow' treatment"
+          subtitle="The brief's hard ask: the row is already dense — don't tack on another badge. So we audited first. The signal is woven INTO the existing meta line ('YOU FOLLOW' takes the genre slot) plus one 3px rail — zero new stacked elements. Shown as before / rejected / after, then in context.">
+          <DCArtboard id="audit" label="The audit · before / rejected / after" width={PHONE_W} height={620}>
+            <ThemeProvider theme="electric" style={{ width: "100%", height: "100%" }}>
+              <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", padding: "26px 18px", fontFamily: "Inter, system-ui", overflowY: "auto" }}>
+                <MonoEyebrow size={10} color="var(--accent)" letterSpacing="0.16em">BROWSE ROW · HIERARCHY AUDIT</MonoEyebrow>
+                <div style={{ height: 16 }}/><AuditStrip/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="browse-context" label="In context · 2 you follow, promoted" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><BrowseWithFollows/></Phone></DCArtboard>
+          <DCArtboard id="follow-hero-detail" label="Event detail · Watching vs Following + hero" width={PHONE_W} height={720}>
+            <ThemeProvider theme="electric" style={{ width: "100%", height: "100%" }}>
+              <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: "26px 18px", fontFamily: "Inter, system-ui", display: "flex", flexDirection: "column", gap: 18, overflowY: "auto" }}>
+                <div><MonoEyebrow size={9} color="var(--fg-subtle)" letterSpacing="0.12em">EVENT DETAIL · TWO DISTINCT SIGNALS</MonoEyebrow><div style={{ height: 10 }}/><DetailHeaderMock/></div>
+                <div style={{ display: "flex", gap: 14, fontFamily: "'JetBrains Mono', monospace", fontSize: 9, lineHeight: 1.4 }}>
+                  <div style={{ flex: 1, color: "var(--accent)" }}>● WATCHING = the SHOW (accent action, as shipped)</div>
+                  <div style={{ flex: 1, color: "var(--fg-muted)" }}>● FOLLOWING = the ARTIST (neutral, Spotify-sourced context)</div>
+                </div>
+                <div style={{ height: 1, background: "var(--border)" }}/>
+                <div><MonoEyebrow size={9} color="var(--fg-subtle)" letterSpacing="0.12em">HERO · FOLLOWING OWNS THE EYEBROW SLOT</MonoEyebrow><div style={{ height: 10 }}/><HeroCardCC followed/></div>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="follow-note" label="Decision + A11y" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote tone="note" title="Follow vs Watch ★" items={[
+              "★ --accent is reserved for WATCHING a show (the shipped pill). Following an ARTIST never uses accent — that collision was the confusion.",
+              "★ Following = a neutral, Spotify-marked chip (surface + border + small Spotify logo). The logo is the disambiguator: a show's Watching never carries it, so it reads as 'the artist, on Spotify'.",
+              "★ Eye/watch button removed from browse rows entirely; watch lives on event detail as an outline pill. On detail, the follow signal is a neutral attribution line under the Watching pill — secondary, never mimicking it.",
+              "A11y: 'Following' + 'Watching' are real text; the Spotify mark carries source, accent carries the watch action. Meaning never rides on color alone.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 6 · EMPTY + FAILURE STATES */}
+        <DCSection id="states" title="6 · Empty + failure states"
+          subtitle="Hybrid empty-state voice — brand presence + clear status, playful not cute, never surveillance-y. Empty: connected fine but nobody plays Denver yet. Failures: Spotify down at connect, token refresh dead, and an external revoke from Spotify's side — plus the compact in-settings warning banner.">
+          <DCArtboard id="st-empty" label="Empty · 0 of your artists in Denver" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><EmptyDenverMatch/></Phone></DCArtboard>
+          <DCArtboard id="st-down" label="Failure · Spotify down at connect" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><FailConnectDown/></Phone></DCArtboard>
+          <DCArtboard id="st-token" label="Failure · token refresh failed" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><FailTokenRefresh/></Phone></DCArtboard>
+          <DCArtboard id="st-revoke" label="Failure · revoked on Spotify's side" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><FailExternalRevoke/></Phone></DCArtboard>
+          <DCArtboard id="st-banner" label="In-settings warning banners" width={PHONE_W} height={420}>
+            <ThemeProvider theme="electric" style={{ width: "100%", height: "100%" }}>
+              <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: "26px 18px", fontFamily: "Inter, system-ui", display: "flex", flexDirection: "column", gap: 14 }}>
+                <MonoEyebrow size={9} color="var(--fg-subtle)" letterSpacing="0.12em">SETTINGS ▸ CONNECTIONS · BROKEN-SYNC STRIP</MonoEyebrow>
+                <RevokeBanner kind="token"/>
+                <RevokeBanner kind="revoke"/>
+              </div>
+            </ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="st-a11y" label="A11y" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote title="States" items={[
+              "Failure eyebrows pair an icon with text + a colored dot — status never rides on hue alone.",
+              "Every state gives a recovery action first (Retry / Reconnect / Watch) and a calm exit second.",
+              "Empty state is not an error: neutral tone, --signal accent, no danger color.",
+              "Banner 'Reconnect' button: 44px target, label describes outcome not just 'Reconnect'.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 7 · THEME PARITY */}
+        <DCSection id="parity" title="7 · Theme parity"
+          subtitle="Token-only proof — every color reads from var(--*). Key surfaces reskinned across Light + genre themes; flip all 9 in Tweaks to verify the rest. Green is contained to the official Spotify logo asset (the neutral placeholder here stands in for it).">
+          <DCArtboard id="policy-note" label="Logo + green policy" width={PHONE_W} height={280}>
+            <div style={{ width: "100%", height: "100%", background: "#12131A", padding: 20, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <A11yNote tone="note" title="Spotify logo + green" items={[
+                "The neutral dashed tile is a PLACEHOLDER. Spotify's official logo asset (their file, their exact green) drops in at integration — we never redraw a trademarked logo.",
+                "Because the asset owns the green, screens stay on our palette across all 9 themes — nothing green to reskin.",
+                "--spotify-green token is retained for that asset + an optional tiny linked-status dot; not used as a UI accent.",
+              ]}/>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="par-success-light" label="Success · Light" width={PHONE_W} height={PHONE_H}><Phone theme="light"><ConnectSuccess/></Phone></DCArtboard>
+          <DCArtboard id="par-handoff-forge" label="OAuth handoff · Forge" width={PHONE_W} height={PHONE_H}><Phone theme="forge"><OAuthHandoff/></Phone></DCArtboard>
+          <DCArtboard id="par-connected-pulse" label="Connected · Pulse" width={PHONE_W} height={PHONE_H}><Phone theme="pulse"><ConnectionsConnected/></Phone></DCArtboard>
+          <DCArtboard id="par-follow-drip" label="Browse follows · Drip" width={PHONE_W} height={PHONE_H}><Phone theme="drip"><BrowseWithFollows/></Phone></DCArtboard>
+          <DCArtboard id="par-empty-cedar" label="Empty · Cedar" width={PHONE_W} height={PHONE_H}><Phone theme="cedar"><EmptyDenverMatch/></Phone></DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+      <LiveTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
