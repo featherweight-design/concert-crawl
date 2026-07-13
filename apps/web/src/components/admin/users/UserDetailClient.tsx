@@ -4,8 +4,8 @@ import Link from 'next/link'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import type {
   AdminUserDetail,
-  FeedbackStatus,
-  UserEventStatus,
+  AdminFeedbackStatus,
+  AdminUserEventStatus,
 } from '@concert-crawl/types'
 import {
   Panel,
@@ -24,7 +24,7 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 const COPY = ADMIN_COPY.users.detail
 
-const FEEDBACK_STATUS_KIND: Record<FeedbackStatus, StatusKind> = {
+const FEEDBACK_STATUS_KIND: Record<AdminFeedbackStatus, StatusKind> = {
   unread: 'signal',
   read: 'neutral',
   flagged: 'warning',
@@ -33,7 +33,7 @@ const FEEDBACK_STATUS_KIND: Record<FeedbackStatus, StatusKind> = {
   archived: 'neutral',
 }
 
-const WATCHING_STATUS_KIND: Record<UserEventStatus, StatusKind> = {
+const WATCHING_STATUS_KIND: Record<AdminUserEventStatus, StatusKind> = {
   going: 'success',
   interested: 'signal',
   watching: 'neutral',

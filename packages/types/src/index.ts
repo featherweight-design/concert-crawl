@@ -903,14 +903,17 @@ export interface WatchToggleResponse {
 // role, joinedAt — go null, but handle/city/theme/avatarColor still fall back
 // to the retained user_profiles row when one exists.
 
-export type FeedbackStatus =
+// Admin-surface unions — prefixed to avoid colliding with future general
+// domain types. AdminUserEventStatus spans the full tracked-event set (the
+// detail view shows going/interested/watching, not just the watchlist).
+export type AdminFeedbackStatus =
   'unread' | 'read' | 'flagged' | 'issue_opened' | 'resolved' | 'archived'
-export type UserEventStatus = 'going' | 'interested' | 'watching'
+export type AdminUserEventStatus = 'going' | 'interested' | 'watching'
 
 export interface AdminUserFeedbackItem {
   id: string
   category: FeedbackCategory
-  status: FeedbackStatus
+  status: AdminFeedbackStatus
   message: string
   pageUrl: string
   issueUrl: string | null
@@ -922,7 +925,7 @@ export interface AdminUserWatchingItem {
   eventTitle: string
   eventDate: string // ISO YYYY-MM-DD
   venueName: string | null
-  status: UserEventStatus
+  status: AdminUserEventStatus
   createdAt: string
 }
 
