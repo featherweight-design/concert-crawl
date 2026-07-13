@@ -102,8 +102,10 @@ Eyeball cross-client render in **Gmail + Apple Mail** at minimum.
 ### C. Render — daily billing cron
 
 - [ ] Create the **`concert-crawl-billing-jobs`** cron service (prod) — Node runtime,
-      schedule `0 15 * * *`, start command
-      `pnpm --filter @concert-crawl/api exec tsx src/jobs/billing-daily.ts`.
+      schedule `0 15 * * *`, build command
+      `npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api`,
+      start command `node apps/api/dist/jobs/billing-daily.js` (the build compiles
+      the API to `dist/`, so the cron runs plain `node` — no `tsx` needed at runtime).
       Render runs cron in UTC: `15:00 UTC` = **9 AM MDT / 8 AM MST**. The schedule
       is pinned to UTC and intentionally not adjusted for DST (the send hour isn't
       load-bearing). If 9 AM local ever becomes a hard requirement, use `0 16 * * *`

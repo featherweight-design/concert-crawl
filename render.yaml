@@ -53,7 +53,7 @@ services:
     # switch to "0 16 * * *" for MST months and back for MDT.
     schedule: "0 15 * * *"
     buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
-    startCommand: pnpm --filter @concert-crawl/api exec tsx src/jobs/billing-daily.ts
+    startCommand: node apps/api/dist/jobs/billing-daily.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -161,7 +161,7 @@ services:
     # switch to "0 16 * * *" for MST months and back for MDT.
     schedule: "0 15 * * *"
     buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
-    startCommand: pnpm --filter @concert-crawl/api exec tsx src/jobs/billing-daily.ts
+    startCommand: node apps/api/dist/jobs/billing-daily.js
     envVars:
       - key: NODE_ENV
         value: production

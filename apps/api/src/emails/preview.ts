@@ -59,14 +59,26 @@ const sampleVars: { [K in EmailTemplateKey]: EmailTemplateVars[K] } = {
   winback: { tierName: 'Premium' },
 }
 
+// Reads the value after a flag, failing fast if it's missing or is itself
+// another flag — otherwise `--send --only x` would silently send to nobody and
+// `--only` at the end would silently fall back to the whole set.
+const readFlagValue = (argv: string[], idx: number, flag: string): string => {
+  const value = argv[idx + 1]
+  if (value === undefined || value.startsWith('--')) {
+    process.stderr.write(`${flag} requires a value.\n`)
+    process.exit(1)
+  }
+  return value
+}
+
 const parseArgs = (
   argv: string[],
 ): { sendTo: string | null; only: string | null } => {
   let sendTo: string | null = null
   let only: string | null = null
   for (let idx = 0; idx < argv.length; idx += 1) {
-    if (argv[idx] === '--send') sendTo = argv[idx + 1] ?? null
-    if (argv[idx] === '--only') only = argv[idx + 1] ?? null
+    if (argv[idx] === '--send') sendTo = readFlagValue(argv, idx, '--send')
+    if (argv[idx] === '--only') only = readFlagValue(argv, idx, '--only')
   }
   return { sendTo, only }
 }
@@ -84,7 +96,12 @@ const writePreviews = (keys: EmailTemplateKey[]): void => {
   const indexRows: string[] = []
   for (const templateKey of keys) {
     const rendered = renderOne(templateKey)
-    if (rendered === null) continue
+    if (rendered === null) {
+      process.stderr.write(
+        `No renderer registered for ${templateKey} in registry.ts — skipped.\n`,
+      )
+      continue
+    }
     const fileName = `${templateKey}.html`
     writeFileSync(join(OUTPUT_DIR, fileName), rendered.html, 'utf8')
     indexRows.push(
@@ -115,7 +132,9 @@ const sendPreviews = async (
   for (const templateKey of keys) {
     const rendered = renderOne(templateKey)
     if (rendered === null) {
-      process.stderr.write(`No sample vars for ${templateKey} — skipped.\n`)
+      process.stderr.write(
+        `No renderer registered for ${templateKey} in registry.ts — skipped.\n`,
+      )
       continue
     }
     try {
