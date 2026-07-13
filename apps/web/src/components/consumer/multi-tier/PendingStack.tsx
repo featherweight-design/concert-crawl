@@ -20,8 +20,11 @@ export const PendingStack = ({ cards }: PendingStackProps) => {
         gap: '12px',
       }}
     >
-      {cards.map((cardProps, idx) => (
-        <PendingCardB key={idx} {...cardProps} />
+      {cards.map((cardProps) => (
+        <PendingCardB
+          key={`${cardProps.tier}-${cardProps.vendor}-${cardProps.submittedAt}`}
+          {...cardProps}
+        />
       ))}
     </div>
   )

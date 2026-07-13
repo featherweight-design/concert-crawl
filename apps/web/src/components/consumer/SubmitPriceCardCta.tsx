@@ -22,8 +22,13 @@ export function SubmitPriceCardButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
+      className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)] focus-visible:ring-offset-1"
       style={{
-        all: 'unset',
+        appearance: 'none',
+        background: 'none',
+        font: 'inherit',
+        textAlign: 'left',
+        margin: 0,
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
