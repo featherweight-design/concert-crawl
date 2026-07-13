@@ -243,6 +243,10 @@ export const PendingCardB = ({
           {isImminent && (
             <span
               title={copy.imminentTooltip}
+              // The title attribute alone is skipped by screen readers and
+              // hidden on touch. aria-label carries the full explanation to
+              // assistive tech; the tag text stays the terse visual label.
+              aria-label={`${copy.imminentTag}: ${copy.imminentTooltip}`}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

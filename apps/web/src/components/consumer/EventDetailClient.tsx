@@ -1027,8 +1027,8 @@ export function EventDetailPriceBlock({
 
   if (priceDecision.kind === 'all-tiers-pending') {
     // STATE #7 — every tier is pending-only. Stack the per-tier first-pending
-    // rows in PendingStack (handles 1–2 well; degrades gracefully on >2 by
-    // showing the first two — same shipped behavior as the legacy path below).
+    // rows in PendingStack, which renders one card per tier regardless of count
+    // (the >2 cap that dropped the third tier on reload was the #895 bug).
     const blocks = priceDecision.priceByTier
     const cardPropsList: Array<React.ComponentProps<typeof PendingCardB>> = []
     // Flat lookup of (tier, pending entry) keyed by pending id so the

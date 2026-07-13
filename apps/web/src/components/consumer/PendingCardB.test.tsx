@@ -81,8 +81,11 @@ describe('PendingCardB', () => {
       )
       const tag = screen.getByText('Show soon')
       expect(tag).toBeTruthy()
-      // Tooltip is delivered via the title attribute on the tag wrapper.
+      // Tooltip is delivered via the title attribute for mouse users, and the
+      // same explanation via aria-label so screen readers (which skip title)
+      // still get it.
       expect(tag.getAttribute('title')).toMatch(/extra confirmation/i)
+      expect(tag.getAttribute('aria-label')).toMatch(/extra confirmation/i)
     })
 
     it('does not render the imminent tag for a standard-confirm show', () => {
