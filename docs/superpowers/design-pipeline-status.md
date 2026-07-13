@@ -32,6 +32,7 @@ Design brief has landed AND the visual handoff is signed off Green. Awaiting an 
 | **#642** Calendar month/week jump picker | PR #862 (2026-07-10) | `design/design_handoff_calendar_jump_picker/` | 🟢 Green (PR #894, 2026-07-11) — one-pass audit, all 4 R-rounds Low/Nit floor | Design nailed the light-brainstorm scope in one pass. Ready for eng-planning agent. |
 | **#643** Supporting artists title separator | PR #869 (2026-07-11) | `design/design_handoff_supporting_artists_line/` | 🟢 Green (PR #903, 2026-07-11) — one-pass audit, 3 R-rounds; audit's favorite call: mono uppercase kicker above the headliner (instead of the brief's speculative italic + em-dash below), prevents opener-vs-tour row collision at overflow | Data-layer + UI workstreams. Eng-plan carries logged (aria-hidden conditional on interactive, overflow measurement strategy, fallback posture during backfill). |
 | **Concert History (Passport teaser)** | — (pre-existing handoff) | `design/design_handoff_concert_history/` | 🟢 Green (PR #916, 2026-07-12) — flip via addendum after Hugh walked the three Yellow blockers | Locked: (1) `attending_at timestamptz` on `user_events` (TS/API `attendingAt`; derive `going` from `attending_at IS NOT NULL`; `status = 'going'` not written going forward); (2) Supporter tier already resolved via PR #878; (3) Passport card scope moves to `shareable_cards` — History ships teaser link only. Ready for eng-planning agent. |
+| **#763** Spotify sync (R1 + R2) | PR #893 (2026-07-11) | `design/design_handoff_spotify_sync/` | 🟢 Green (PR #925, 2026-07-13) — flip post-addendum after Hugh confirmed the tier gate; Design landed a tight 4-file / 19-insertion fix | Two-round handoff: R1 Free connect chapter + R2 Premium payoff (taste filter + discovery shelf + digest email + push). Gating locked: `premium || founder`; Supporter stays badge-only. 11 prototype-polish items deferred to build (README.md line-listed) — mock-fidelity nits, not spec ambiguities. Sequencing deps: #737 for push delivery, #783 email family for digest. `CLAUDE_CODE_PROMPT.md` is eng-ready. |
 
 The monetization vertical (previously here) moved into active build 2026-07-11 — see `docs/superpowers/progress.md` and the execution plan (PR #854). Phases 1 → 3.2 already merged (PRs #873, #878, #879, #880, #885, #886); Phases 3.3 → 7 remaining.
 
@@ -57,7 +58,8 @@ Design brief has merged; Claude Design needs to produce the hi-fi handoff (mocks
 
 | Rank | Ticket | Brief PR | Path to eng handoff | Why this rank |
 |---|---|---|---|---|
-| 1 | **#763** Spotify sync connect flow | PR #893 (2026-07-11) | Design → connect flow + auto-watch opt-in modal + "you follow" highlight + Settings > Connections + Discovery surface + weekly digest email + push alert copy + taste-informed filter + empty/failure states → audit → build | Big Track 2 surface — 7 locked decisions across free/premium tier split. Also asks Design for a **browse card hierarchy audit** (mobile is dense). Sequencing deps flagged in brief: #737 (push alerts) + #783 email family (digest). Hugh handed the handoff prompt to Design 2026-07-11. |
+
+_Currently empty — #763 Spotify sync completed the full brief → handoff → audit cycle 2026-07-11 through 2026-07-13; moved to 🟢 above._
 
 **Maintenance note:** when Design produces the handoff, move to 🎨 (audit in flight) → then 🟡 / 🟢 based on verdict.
 
@@ -104,6 +106,8 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-13 | — | Tracker refresh #5 — Spotify sync #763 flipped 🎨 → 🟢 (this PR) |
+| 2026-07-13 | #763 | `design/design_handoff_spotify_sync/READINESS.md` merged (PR #925) — 🟢 Green post-addendum; R1 + R2 + addendum committed in one PR; gating locked at `premium || founder`; 11 prototype-polish items deferred to build |
 | 2026-07-12 | — | Tracker refresh #4 — concert_history flipped 🟡 → 🟢 (PR #918) |
 | 2026-07-12 | — | `design/design_handoff_concert_history/READINESS.md` addendum merged (PR #916) — 🟢 Green post-addendum verdict; all three Yellow blockers resolved (attending_at schema, Supporter tier via #878, Passport moved to shareable_cards) |
 | 2026-07-11 | — | Tracker refresh post-#903 audit (PR #904) |
@@ -139,8 +143,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 ## 📋 Immediate TODOs
 
-- [ ] **#642 + #643 + concert_history eng plans** — Three Green audits landed. Eng-planning agent picks up, writes implementation plans against the audited handoffs. concert_history's plan enumerates: (1) `attending_at` migration, (2) `user_events` API surface update, (3) three History surfaces + PassportTeaser (no full Passport), (4) Supporter tier gate on detail view.
-- [ ] **#763 Design handoff** — Hugh routed prompt to Design 2026-07-11; awaiting handoff for audit.
+- [ ] **#642 + #643 + concert_history + #763 Spotify eng plans** — Four Green audits landed. Eng-planning agent picks up. #763 is the big one — R1 (Free connect chapter) + R2 (Premium payoff) built on top of R1's spine; `CLAUDE_CODE_PROMPT.md` inside the handoff is eng-ready.
 - [ ] **shareable_cards Yellow → Green** — direct-write addendum needs to close: tier gate, anonymous URL contract, `POSTER_TAGLINES` reference, **plus newly inherited Passport card scope** (full compact + share dimensions from concert_history).
 - [ ] **Backlog priority order** (after #763 handoff work): #762 Who else is watching → #764 Venue first-timer → #506 Admin Venue Form → #794 Logged-out UX
 
