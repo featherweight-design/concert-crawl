@@ -3,12 +3,12 @@
 import { PendingCardB } from '@/components/consumer/PendingCardB'
 
 // ── Props ────────────────────────────────────────────────────────
-export interface TwoPendingStackProps {
+export interface PendingStackProps {
   cards: Array<React.ComponentProps<typeof PendingCardB>>
 }
 
 // ── Component ────────────────────────────────────────────────────
-export const TwoPendingStack = ({ cards }: TwoPendingStackProps) => {
+export const PendingStack = ({ cards }: PendingStackProps) => {
   // Render every card. The all-tiers-pending path routes batches of any
   // size through here; capping at two silently dropped the third tier on
   // reload.

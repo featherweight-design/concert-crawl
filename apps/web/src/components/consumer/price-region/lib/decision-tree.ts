@@ -62,7 +62,7 @@ export type PriceRegionDecision =
   | {
       // STATE #7 — every tier is pending-only (no headlines anywhere) AND at
       // least one tier has pending submissions. Renders the focused
-      // TwoPendingStack — each block contributes its first pending row.
+      // PendingStack — each block contributes its first pending row.
       kind: 'all-tiers-pending'
       priceByTier: TierPriceBlock[]
     }
@@ -167,7 +167,7 @@ export function decidePriceRegion({
   }
 
   // STATE #7 — all tiers pending. Every block has no headline AND at least
-  // one block has pending rows. Routes to TwoPendingStack via the renderer.
+  // one block has pending rows. Routes to PendingStack via the renderer.
   // Checked BEFORE mixed-tier because the all-pending case is a strict subset
   // of "any-pending" — mixed-tier requires at least one headline to exist.
   const anyHeadline = blocks.some((block) => block.headline !== null)
@@ -192,7 +192,7 @@ export function decidePriceRegion({
   }
 
   // Default — let MultiTierLiveCard handle it (multi-headline cases, single-
-  // tier cases, etc.). MixedTierCard / TwoPendingStack now have their own
+  // tier cases, etc.). MixedTierCard / PendingStack now have their own
   // explicit branches above; this branch is the simple "all tiers have a
   // headline" path.
   return { kind: 'multi-tier-shipped', priceByTier: blocks }

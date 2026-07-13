@@ -355,7 +355,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(screen.getByText('VIP')).toBeDefined()
   })
 
-  it('STATE #7 all-tiers-pending — every tier is pending-only routes through TwoPendingStack', () => {
+  it('STATE #7 all-tiers-pending — every tier is pending-only routes through PendingStack', () => {
     const ga = makeTierBlock({
       tier: 'GA',
       headline: null,

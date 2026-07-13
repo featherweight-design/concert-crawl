@@ -11,6 +11,7 @@ import {
   afterAll,
 } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { SP_POLICY } from '@concert-crawl/types'
 import { PendingCardB, type PendingCardBProps } from './PendingCardB'
 
 // Anchor a fixed "now" so `formatTimeAgo` is deterministic. Tests that need
@@ -66,16 +67,30 @@ describe('PendingCardB', () => {
   })
 
   describe('imminent-show tag (#895)', () => {
-    it('renders the "Show soon" tag with an explanatory tooltip when the confirm requirement is bumped (needed=3)', () => {
-      render(<PendingCardB {...buildProps({ confirms: 1, needed: 3 })} />)
+    // Derive the confirm denominators from policy so the test intent survives
+    // a change to SP_POLICY: the tag is driven by `needed` exceeding the
+    // standard requirement, not by the literal values 2/3.
+    it('renders the "Show soon" tag with an explanatory tooltip when the confirm requirement is bumped (imminent)', () => {
+      render(
+        <PendingCardB
+          {...buildProps({
+            confirms: 1,
+            needed: SP_POLICY.confirmsRequiredImminent,
+          })}
+        />,
+      )
       const tag = screen.getByText('Show soon')
       expect(tag).toBeTruthy()
       // Tooltip is delivered via the title attribute on the tag wrapper.
       expect(tag.getAttribute('title')).toMatch(/extra confirmation/i)
     })
 
-    it('does not render the imminent tag for a standard 2-confirm show', () => {
-      render(<PendingCardB {...buildProps({ confirms: 1, needed: 2 })} />)
+    it('does not render the imminent tag for a standard-confirm show', () => {
+      render(
+        <PendingCardB
+          {...buildProps({ confirms: 1, needed: SP_POLICY.confirmsRequired })}
+        />,
+      )
       expect(screen.queryByText('Show soon')).toBeNull()
     })
   })

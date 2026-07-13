@@ -26,7 +26,7 @@ import { PendingCardB } from '@/components/consumer/PendingCardB'
 import { CorroborationSheet } from '@/components/consumer/CorroborationSheet'
 import { MixedTierCard } from '@/components/consumer/multi-tier/MixedTierCard'
 import { MultiTierLiveCard } from '@/components/consumer/multi-tier/MultiTierLiveCard'
-import { TwoPendingStack } from '@/components/consumer/multi-tier/TwoPendingStack'
+import { PendingStack } from '@/components/consumer/multi-tier/PendingStack'
 import { PendingReportBanner } from '@/components/consumer/reporting/PendingReportBanner'
 import { PendingSoldOutCard } from '@/components/consumer/reporting/PendingSoldOutCard'
 import { LiveReportBanner } from '@/components/consumer/reporting/LiveReportBanner'
@@ -366,7 +366,7 @@ export function EventDetailBanners({
 //   4. Single pending submission (no price) → PendingCardB
 //   5. Everything else                      → null (let PriceDisplay show)
 //
-// Note: TwoPendingStack, MixedTierCard, and DisputedPriceCard require the API
+// Note: PendingStack, MixedTierCard, and DisputedPriceCard require the API
 // to surface pending submission lists in the event detail response.  Those are
 // stubbed here and will be wired once the API exposes that data.
 
@@ -1027,7 +1027,7 @@ export function EventDetailPriceBlock({
 
   if (priceDecision.kind === 'all-tiers-pending') {
     // STATE #7 — every tier is pending-only. Stack the per-tier first-pending
-    // rows in TwoPendingStack (handles 1–2 well; degrades gracefully on >2 by
+    // rows in PendingStack (handles 1–2 well; degrades gracefully on >2 by
     // showing the first two — same shipped behavior as the legacy path below).
     const blocks = priceDecision.priceByTier
     const cardPropsList: Array<React.ComponentProps<typeof PendingCardB>> = []
@@ -1118,7 +1118,7 @@ export function EventDetailPriceBlock({
         : null
     return (
       <>
-        <TwoPendingStack cards={cardPropsList} />
+        <PendingStack cards={cardPropsList} />
         {activeAtt !== null && (
           <CorroborationSheet
             submission={{
@@ -1630,7 +1630,7 @@ export function EventDetailPriceBlock({
     return (
       <>
         {visibleSubs.length === 2 ? (
-          <TwoPendingStack cards={pendingCardProps.map((item) => item.props)} />
+          <PendingStack cards={pendingCardProps.map((item) => item.props)} />
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {pendingCardProps.map(({ id, props }) => (

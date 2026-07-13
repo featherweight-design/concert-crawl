@@ -3,7 +3,7 @@
 import React from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import { TwoPendingStack } from './TwoPendingStack'
+import { PendingStack } from './PendingStack'
 import type { PendingCardBProps } from '@/components/consumer/PendingCardB'
 
 const buildCard = (
@@ -30,15 +30,15 @@ afterEach(() => {
   cleanup()
 })
 
-describe('TwoPendingStack', () => {
+describe('PendingStack', () => {
   it('renders a single card', () => {
-    render(<TwoPendingStack cards={[buildCard({ floor: 25 })]} />)
+    render(<PendingStack cards={[buildCard({ floor: 25 })]} />)
     expect(screen.getByText('$25')).toBeTruthy()
   })
 
   it('renders two cards', () => {
     render(
-      <TwoPendingStack
+      <PendingStack
         cards={[
           buildCard({ floor: 25 }),
           buildCard({ floor: 50, tier: 'Pit' }),
@@ -55,7 +55,7 @@ describe('TwoPendingStack', () => {
   // through this component).
   it('renders every card when given three or more', () => {
     render(
-      <TwoPendingStack
+      <PendingStack
         cards={[
           buildCard({ floor: 25, tier: 'GA' }),
           buildCard({ floor: 50, tier: 'Reserved' }),

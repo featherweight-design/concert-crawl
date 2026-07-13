@@ -864,7 +864,7 @@ export const CONSUMER_COPY = {
   },
 
   // ── Multi-tier price display ────────────────────────────────────
-  // Shared copy for TierAlternateRow, MultiTierLiveCard, MixedTierCard, TwoPendingStack
+  // Shared copy for TierAlternateRow, MultiTierLiveCard, MixedTierCard, PendingStack
   multiTier: {
     // TierAlternateRow — pending middle column: "pending · {confirms}/{needed}"
     pendingTemplate: (confirms: number, needed: number) =>
