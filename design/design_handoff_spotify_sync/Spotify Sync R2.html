@@ -98,7 +98,7 @@ function EmailClient({ subject = "This week in Denver — 5 shows by artists you
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "theme": "electric",
   "surface": "taste-active",
-  "tier": "supporter"
+  "tier": "premium"
 }/*EDITMODE-END*/;
 
 const { TweaksPanel, useTweaks, TweakSection, TweakSelect } = window;
@@ -131,8 +131,9 @@ function LiveTweaks() {
           { value: "receipt",        label: "Notifications tray" },
         ]}/>
         <TweakSelect label="Tier (taste filter)" value={t.tier} onChange={(v)=>setT("tier",v)} options={[
-          { value: "supporter", label: "Supporter (paid)" },
+          { value: "premium",   label: "Premium (paid)" },
           { value: "founder",   label: "Founder (paid)" },
+          { value: "supporter", label: "Supporter (locked)" },
           { value: "free",      label: "Free (locked)" },
         ]}/>
       </TweakSection>
@@ -175,15 +176,14 @@ function App() {
     <>
       <DesignCanvas
         title="Spotify Sync · Premium Payoff (R2)"
-        subtitle="Track 2 · Round 2 — the four Premium-gated surfaces on top of R1's connect + recognition spine: the taste-informed filter, a 'based on your taste' discovery shelf, the weekly digest email, and new-show push alerts. Gated on a paid tier (supporter / founder). Token-only across 9 themes; --accent = Watching, --signal = status/CTA, follow stays neutral + Spotify-marked; green only in the official logo asset. Sour Patch voice: recognition, never surveillance.">
+        subtitle="Track 2 · Round 2 — the four Premium-gated surfaces on top of R1's connect + recognition spine: the taste-informed filter, a 'based on your taste' discovery shelf, the weekly digest email, and new-show push alerts. Gated on premium || founder. Token-only across 9 themes; --accent = Watching, --signal = status/CTA, follow stays neutral + Spotify-marked; green only in the official logo asset. Sour Patch voice: recognition, never surveillance.">
 
         {/* 0 · LIVE */}
         <DCSection id="live" title="0 · Live preview" subtitle="Flip surface · tier · theme (all 9) in the Tweaks panel. The taste filter reacts to tier (paid = toggles, Free = locked → upsell).">
           <DCArtboard id="live-phone" label="Responds to Tweaks" width={PHONE_W} height={PHONE_H}><LivePhone/></DCArtboard>
           <DCArtboard id="live-note" label="Scope + gating" width={300} height={PHONE_H}>
-            <NotePaper><A11yNote tone="note" title="R2 gating ★" items={[
-              "★ All four surfaces gate on a PAID tier (supporter || founder). Connecting + the free 'Following' tag from R1 stay free; these are the payoff.",
-              "⚠ Flag for Hugh: this R2 brief says gate on supporter||founder, but the older entitlements doc (uploads/2026-06-24…) lists Spotify features as Premium-and-up. The live enum is supporter+founder (PR #878), so I followed the brief — confirm the two docs are reconciled.",
+            <NotePaper><A11yNote tone="note" title="R2 gating" items={[
+              "All four surfaces gate on premium || founder. Connecting + the free 'Following' tag from R1 stay free; these are the payoff.",
               "Free users still SEE the taste filter (locked) — discovery of the paid perk at a natural moment, per the monetization hybrid-gating call.",
             ]}/></NotePaper>
           </DCArtboard>
@@ -192,8 +192,8 @@ function App() {
         {/* 1 · TASTE FILTER */}
         <DCSection id="taste" title="1 · Taste-informed filter"
           subtitle="A toggle chip leading the existing FilterBar chip row — scope Browse to 'shows by artists I follow' in one tap. Additive with venue/date/genre (AND), not a separate mode. Active uses --signal (the shipped active-chip color) + the Spotify mark for identity. Free tier sees it locked; tapping opens the upsell.">
-          <DCArtboard id="taste-off" label="Paid · toggle off (all shows)" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><TasteFilterScreen tier="supporter" active={false}/></Phone></DCArtboard>
-          <DCArtboard id="taste-on" label="Paid · toggle ON (scoped to follows)" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><TasteFilterScreen tier="supporter" active/></Phone></DCArtboard>
+          <DCArtboard id="taste-off" label="Paid · toggle off (all shows)" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><TasteFilterScreen tier="premium" active={false}/></Phone></DCArtboard>
+          <DCArtboard id="taste-on" label="Paid · toggle ON (scoped to follows)" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><TasteFilterScreen tier="premium" active/></Phone></DCArtboard>
           <DCArtboard id="taste-locked" label="Free · chip locked" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><TasteFilterScreen tier="free"/></Phone></DCArtboard>
           <DCArtboard id="taste-upsell" label="Free · tap → upsell" width={PHONE_W} height={PHONE_H}><PhoneOverlay theme="electric" behind={<TasteFilterScreen tier="free"/>}><TasteUpsellSheet/></PhoneOverlay></DCArtboard>
           <DCArtboard id="taste-a11y" label="A11y" width={300} height={PHONE_H}>
@@ -275,7 +275,7 @@ function App() {
         {/* 5 · THEME PARITY */}
         <DCSection id="parity" title="5 · Theme parity"
           subtitle="Token-only across the app surfaces. (The digest email is single-palette by nature — email can't theme per user.) Flip all 9 in Tweaks to verify the rest.">
-          <DCArtboard id="par-taste-light" label="Taste filter ON · Light" width={PHONE_W} height={PHONE_H}><Phone theme="light"><TasteFilterScreen tier="supporter" active/></Phone></DCArtboard>
+          <DCArtboard id="par-taste-light" label="Taste filter ON · Light" width={PHONE_W} height={PHONE_H}><Phone theme="light"><TasteFilterScreen tier="premium" active/></Phone></DCArtboard>
           <DCArtboard id="par-disc-pulse" label="Discovery shelf · Pulse" width={PHONE_W} height={PHONE_H}><Phone theme="pulse"><DiscoveryScreen/></Phone></DCArtboard>
           <DCArtboard id="par-receipt-forge" label="Notifications tray · Forge" width={PHONE_W} height={PHONE_H}><Phone theme="forge"><InAppReceipt/></Phone></DCArtboard>
           <DCArtboard id="par-fail-cedar" label="Discovery failure · Cedar" width={PHONE_W} height={PHONE_H}><Phone theme="cedar"><DiscoveryFailure/></Phone></DCArtboard>

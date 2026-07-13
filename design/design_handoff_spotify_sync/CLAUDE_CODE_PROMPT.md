@@ -47,12 +47,10 @@ Integration TODOs / dependencies:
 - Spotify OAuth: read-only scope (top + followed artists). We never see the
   password (honesty rail copy depends on this being true). Store token per user;
   weekly background refresh; disconnect wipes the token + taste match immediately.
-- Gating: R2's four surfaces gate on a PAID subscription_tier (supporter ||
-  founder per PR #878). ⚠️ RECONCILE FIRST: the R2 brief says supporter||founder
-  but the older entitlements doc (uploads/2026-06-24-…) says Premium-and-up.
-  Confirm the intended gate before wiring entitlements. Connecting Spotify + the
-  free "Following" tag stay FREE; the filter/discovery/digest/push are the paid
-  payoff. Free users see the taste filter locked → upsell (reuse existing paywall).
+- Gating: R2's four surfaces gate on subscription_tier `premium || founder`.
+  Supporter stays badge-only (per the entitlements matrix). Connecting Spotify +
+  the free "Following" tag stay FREE; the filter/discovery/digest/push are the paid
+  payoff. Free (and Supporter) see the taste filter locked → upsell (reuse existing paywall).
 - Push alerts: DELIVERY is gated on #737 (consumer notification UI). Copy +
   lock-screen rendering are ready; the in-app notifications tray also depends on
   #737. Ship push-only for v1 if #737 lags.

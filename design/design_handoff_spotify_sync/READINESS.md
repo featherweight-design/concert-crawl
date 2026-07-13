@@ -1,12 +1,53 @@
 # Readiness Review — Spotify Sync (R1 + R2) · Track 1 Audit
 
-**Verdict:** 🟡 Yellow — two blockers (gating + locked-chip a11y contract) + six low-priority nits blocking Green. Tier-gate question **resolved 2026-07-13** by Hugh: `premium || founder`. Fixable in a ~20-min consolidated addendum from Design; verdict flips 🟢 on the second-pass audit.
-**Audited:** 2026-07-12 (initial pass) → refreshed 2026-07-13 (Copilot R1 findings folded in + gate decision recorded)
+**Verdict:** 🟢 Green (post-addendum, 2026-07-13) — Design's addendum resolved the gating blocker across all four surfaces + upsell + Tweaks preview + prose. Small prototype-polish items (aria-disabled on the locked chip button, stale header comments, heart-vs-eye glyph, theme-token constants, spec-note staleness) don't block eng — they're mock-fidelity artifacts, and the CLAUDE_CODE_PROMPT correctly tells the eng implementer to reimplement in the real stack matching layout/copy/behavior. Captured below as "🧹 Prototype polish deferred to build" so eng has a checklist during implementation.
+**Original verdict:** 🟡 Yellow (2026-07-12 initial pass, refreshed with Copilot R1+R2 findings) — two blockers (gating + locked-chip a11y contract) + eleven nits blocking Green. Tier-gate question resolved 2026-07-13 by Hugh: `premium || founder`.
+**Audited:** 2026-07-12 (initial pass) → refreshed 2026-07-13 (Copilot R1+R2 folded in) → **flipped 🟢 Green 2026-07-13** after Design addendum landed
 **Auditor:** Claude (Track 2 post-handoff Readiness Review — R1 + R2 combined)
-**Audited handoff:** `design/design_handoff_spotify_sync/` (R1 delivered 2026-07-11; R2 delivered 2026-07-12)
+**Audited handoff:** `design/design_handoff_spotify_sync/` (R1 delivered 2026-07-11; R2 delivered 2026-07-12; addendum delivered 2026-07-13)
 **Source ticket:** [#763](https://github.com/HartiganHM/concert-crawl/issues/763) (`type: design, source: internal, phase: beta, priority: normal`)
 **Source brief:** `docs/superpowers/specs/2026-07-11-spotify-sync-design.md` (PR #893, merged 2026-07-11)
-**Plan PR target:** `docs/superpowers/plans/<date>-spotify-sync-plan.md` — cannot open until the gating question resolves.
+**Plan PR target:** `docs/superpowers/plans/<date>-spotify-sync-plan.md` — **unblocked as of 2026-07-13.** Eng-planning agent can pick up.
+
+---
+
+## 🎉 Green resolution (2026-07-13 addendum)
+
+Design's addendum touched exactly 4 files with 19 insertions / 23 deletions — small, tight, focused on the load-bearing gating fix.
+
+### Fixed — blocker #1 (gating) is fully resolved
+
+- ✅ **`taste-filter.jsx:14`** — comment updated to `paid = premium/founder`.
+- ✅ **`taste-filter.jsx:114`** — `TasteFilterScreen` default prop `tier = "premium"`.
+- ✅ **`taste-filter.jsx:115`** — gate check is `tier === "premium" || tier === "founder"`.
+- ✅ **`taste-filter.jsx:158`** — upsell eyebrow reads `TASTE FILTER · PREMIUM`.
+- ✅ **`taste-filter.jsx:176`** — upsell footer reads `PREMIUM $5/MO · FOUNDER $3 LOCKED`.
+- ✅ **`Spotify Sync R2.html:101`** — Tweaks default tier is `premium`.
+- ✅ **`Spotify Sync R2.html:133–138`** — Tweaks tier dropdown now offers `premium` + `founder` + `supporter (locked)` + `free (locked)`. Nice call adding `supporter (locked)` explicitly — makes the "Supporter is badge-only" behavior visible in the preview.
+- ✅ **`Spotify Sync R2.html:179, 184–187`** — subtitle prose + on-canvas A11yNote both updated to `premium || founder`; reconcile-flag bullet deleted.
+- ✅ **`Spotify Sync R2.html:195–196, 278`** — every artboard prop `tier="supporter"` swapped to `tier="premium"` (taste-off, taste-on, theme-parity taste-filter).
+- ✅ **`README.md §53`** — prose: `premium || founder`; adds "Supporter stays badge-only."
+- ✅ **`README.md §55`** — reconcile callout deleted.
+- ✅ **`CLAUDE_CODE_PROMPT.md`** — gating paragraph fully rewritten with `premium || founder`, "⚠️ RECONCILE FIRST" preface dropped, `uploads/…` path removed by paragraph rewrite. Bonus: adds "Free (and Supporter) see the taste filter locked → upsell" for eng clarity.
+
+### 🧹 Prototype polish deferred to build
+
+These items were captured in the Yellow verdict's nit section but not addressed in Design's addendum. **Each is a documentation-vs-implementation or prototype-fidelity artifact — not a spec ambiguity.** Eng will apply best-practice implementations that match Design's documented intent regardless of what the prototype-level markup says. Listed here so the eng implementer has an at-a-glance checklist during build:
+
+- **`taste-filter.jsx:37–52`** (locked-chip button) — Add `aria-disabled="true"` and `aria-label="Following filter, paid"` in real implementation. Design's own R2 A11yNote at `Spotify Sync R2.html:202` documents this contract; the prototype button markup doesn't set it. Build to the documented contract, not the mock.
+- **`taste-filter.jsx:129`** (no-op toggle wire-up) — `TasteFilterScreen` passes `onToggle={() => {}}` to `TasteFilterBar`. In production, wire the chip toggle to real filter state (query param or context). Prototype-only inertia, not a spec ambiguity.
+- **`connect-flow.jsx:122`** — Prototype glyph is a heart (♥); Design's own R1 decision §6 explicitly retired the heart for the eye/watch icon. Build with the eye/watch glyph.
+- **`follow-highlight.jsx:10` + `:136`** — Header comment + inline note describe an older `--accent`-filled chip treatment; actual `FollowChip` implementation is neutral (`--surface-3`) + Spotify-marked per Design's own §6 R1 decision. Stale comments from an earlier draft; the implementation is right, the comments are misleading. Build to the implementation (neutral + Spotify-marked), not the stale comment.
+- **`theme-context.jsx:2`** — Header says "5 genre themes" but lists 6 (pulse, forge, bluenote, drip, cedar, gloss). Nit; correct total is `3 + 6 = 9`.
+- **`theme-context.jsx:76, 116`** — Forge sets `spotify-green: "#3BE06E"` and Cedar sets `"#4ADE7B"`; header comment claims all dark themes use `#1ED760`. Not a visual bug (README §36 reserves `--spotify-green` for the official Spotify logo asset — screens don't paint with it), just a token-value inconsistency. Reconcile to `#1ED760` or accept per-theme variants and update the comment.
+- **`tweaks-panel.jsx:218`** — Comment says "Origin gate" but code only checks `e.source !== window.parent` (source, not origin). Rename to "Source gate" or add `e.origin` validation. Dev-tooling only; doesn't ship.
+- **`tweaks-panel.jsx:361–369`** — `TweakRadio` reacts to `onPointerDown` on the container; individual `role="radio"` buttons have no `onClick`, so keyboard users can't advance with Enter/Space. Dev-tooling a11y bug in Design's own workflow; doesn't ship.
+- **`spotify-states.jsx:49`** — Eyebrow copy lowercases "denver"; case-consistency with the rest of the surfaces (all use "Denver"). Build with capitalized "Denver."
+- **`README.md:3`** — Design's stale sandbox note claims *"the brief referenced `docs/superpowers/specs/2026-07-11-spotify-sync-design.md` — that file is not in the project"*. The spec has been in-repo since PR #893 merged 2026-07-11. The note is a leftover from Design's environment; safe to ignore during build. (Design can delete during a future polish pass.)
+
+**Downstream note:** these prototype polish items are collectively very small and mostly documentation. They're compatible with an eng plan opening today.
+
+---
 
 ## Summary
 
@@ -138,25 +179,12 @@ Fine-toothed pass surfaced these; small enough that a plan PR *could* proceed wi
 - ✅ Files enumerated in `README.md §22–29` (R1) and §68–73 (R2) with responsibilities.
 - ✅ R1's design references are reused (theme-context, spotify-shared, follow-highlight, monetization-shared, ios-frame, design-canvas, tweaks-panel) — no duplication.
 
-## Path to Green
+## Historical: Path to Green (all steps resolved 2026-07-13)
 
 1. ✅ **Hugh confirmed tier gate (2026-07-13):** `premium || founder`. Supporter stays badge-only.
-2. **Design applies the consolidated addendum:**
-   - `taste-filter.jsx` — gate check + inline comment + default prop + upsell eyebrow + upsell footer + locked-chip `aria-disabled` + `aria-label` (blockers #1 + #2)
-   - `Spotify Sync R2.html` — Tweaks tier dropdown adds `premium`; subtitle + on-canvas A11yNote prose updated; reconcile flag deleted
-   - `README.md` — §53, §55 prose to `premium || founder`; reconcile callout deleted; §3 stale spec note deleted; §55 `uploads/` path corrected
-   - `CLAUDE_CODE_PROMPT.md` — Gating paragraph rewritten, `⚠️ RECONCILE FIRST` preface dropped, entitlements path corrected
-   - `theme-context.jsx` — line 2 "5 genre themes" → "6 genre themes"; Forge + Cedar `spotify-green` reconciled to `#1ED760` (or comment amended to explain per-theme variants)
-   - `tweaks-panel.jsx:218` — "Origin gate" comment renamed to "Source gate" (or `e.origin` check added)
-   - `spotify-states.jsx:49` — "denver" → "Denver"
-   - `taste-filter.jsx:129` — wire the toggle to local state (or remove the "wired to the toggle" claim from `TasteFilterScreen`'s header comment)
-   - `tweaks-panel.jsx:365` — add `onClick` handlers (or `onKeyDown` for Enter/Space) to the individual `TweakRadio` `role="radio"` buttons so keyboard users can change selection
-   - `connect-flow.jsx:122` — swap the heart glyph (♥) for the eye/watch glyph to match the R1 §6 decision
-   - `follow-highlight.jsx:10 + :136` — update the header comment + inline note to describe the current neutral + Spotify-marked FollowChip treatment (not the stale `--accent` filled description)
-3. **Second-pass audit** — single-round Low/Nit-floor pass to confirm the fixes; the design shape doesn't change.
-
-Once addendum lands, this flips 🟢 Green and the plan PR can open with the correct gate baked in from day one.
+2. ✅ **Design applied the addendum (2026-07-13)** — see "🎉 Green resolution" section at the top. All gating fixes landed across `taste-filter.jsx`, `Spotify Sync R2.html`, `README.md`, `CLAUDE_CODE_PROMPT.md`. Remaining prototype polish items (11 nits) are documented above as "🧹 Prototype polish deferred to build" — none block eng.
+3. ✅ **Second-pass audit (2026-07-13):** flipped 🟢 Green. Plan PR can open.
 
 ## Handoff prompt outputs
 
-`CLAUDE_CODE_PROMPT.md` inside the handoff folder carries Design's eng-ready implementation prompt for the eventual build. It also flags the same gating question — the fix above will bring that prompt into line with the resolution.
+`CLAUDE_CODE_PROMPT.md` inside the handoff folder carries Design's eng-ready implementation prompt for the eventual build. Gating language is now correct (`premium || founder`); the RECONCILE FIRST preface is dropped. Ready to hand to Claude Code / an eng-planning agent as-is.

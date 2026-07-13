@@ -11,7 +11,7 @@
 //   ★ Active state uses --signal (the shipped FilterBar active-chip color), so it
 //     obeys the existing filter system. The Spotify mark keeps it identifiable.
 //     --accent stays reserved for Watching; the chip never uses it.
-//   Free tier: chip shows a lock; tapping opens the upsell (paid = supporter/founder).
+//   Free tier: chip shows a lock; tapping opens the upsell (paid = premium/founder).
 //
 //   FollowFilterChip, FilterDimChip, TasteFilterBar, TasteFilterScreen, TasteUpsellSheet
 
@@ -111,8 +111,8 @@ function TasteFilterBar({ active, locked, onToggle }) {
 }
 
 // ── Full browse screen wired to the toggle ──────────────────────
-function TasteFilterScreen({ tier = "supporter", active = false }) {
-  const paid = tier === "supporter" || tier === "founder";
+function TasteFilterScreen({ tier = "premium", active = false }) {
+  const paid = tier === "premium" || tier === "founder";
   const locked = !paid;
   const showActive = paid && active;
   const rows = showActive ? TF_ROWS.filter(r => r.followed) : TF_ROWS;
@@ -155,7 +155,7 @@ function TasteUpsellSheet() {
       <div style={{ padding: "10px 22px 22px", display: "flex", flexDirection: "column", height: "100%" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
           <SpotifyLogo size={24} radius={7} />
-          <MonoEyebrow size={9} color="var(--signal)" letterSpacing="0.14em">TASTE FILTER · PAID</MonoEyebrow>
+          <MonoEyebrow size={9} color="var(--signal)" letterSpacing="0.14em">TASTE FILTER · PREMIUM</MonoEyebrow>
         </div>
         <div style={{ fontSize: 23, fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.15, marginBottom: 8 }}>
           Slice the whole calendar by your taste.
@@ -173,7 +173,7 @@ function TasteUpsellSheet() {
         </div>
         <div style={{ marginTop: "auto", paddingTop: 12, display: "flex", flexDirection: "column", gap: 10 }}>
           <SignalButton>See plans</SignalButton>
-          <div style={{ textAlign: "center" }}><MonoEyebrow size={9} color="var(--fg-subtle)" letterSpacing="0.08em" style={{ textAlign: "center" }}>SUPPORTER $2/MO · FOUNDER $3 LOCKED</MonoEyebrow></div>
+          <div style={{ textAlign: "center" }}><MonoEyebrow size={9} color="var(--fg-subtle)" letterSpacing="0.08em" style={{ textAlign: "center" }}>PREMIUM $5/MO · FOUNDER $3 LOCKED</MonoEyebrow></div>
         </div>
       </div>
     </SheetChrome>

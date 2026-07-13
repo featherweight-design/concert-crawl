@@ -50,9 +50,7 @@ Every section carries an on-canvas `A11Y` note. Cross-cutting: connect/CTA butto
 
 # Spotify Sync · Premium Payoff — Track 2 · Round 2
 
-Open **`Spotify Sync R2.html`**. Four Premium-gated surfaces built on R1's connect + recognition spine. All gate on a **paid tier (`supporter || founder`)** per the R2 brief.
-
-> **⚠️ Gating discrepancy to reconcile:** the R2 brief says gate on `supporter || founder`; the older entitlements doc (`uploads/2026-06-24…`) lists Spotify features as *Premium-and-up*. The live enum is `supporter + founder` (PR #878), so I followed the brief. Confirm the two docs agree before eng picks it up.
+Open **`Spotify Sync R2.html`**. Four Premium-gated surfaces built on R1's connect + recognition spine. All gate on **`premium || founder`** per the R2 brief + entitlements matrix. Supporter stays badge-only.
 
 ## What's in R2
 
