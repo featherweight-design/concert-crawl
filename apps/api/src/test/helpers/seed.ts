@@ -4,6 +4,9 @@ import {
   eventReportConfirms,
   eventReports,
   events,
+  inboxReads,
+  inboxReadWatermarks,
+  notifications,
   priceRetrievalLog,
   priceSubmissions,
   submissionConfirms,
@@ -12,6 +15,7 @@ import {
   userRoles,
   venues,
 } from '@concert-crawl/db'
+import type { InboxItemType } from '@concert-crawl/types'
 import { deriveSourceCategory } from '@concert-crawl/types'
 import { testDb } from './db.js'
 
@@ -22,7 +26,7 @@ export async function clearTables(): Promise<void> {
   await testDb.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(7777)`)
     await tx.execute(
-      sql`TRUNCATE event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles, feedback RESTART IDENTITY CASCADE`,
+      sql`TRUNCATE inbox_reads, inbox_read_watermarks, notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, price_retrieval_log, user_profiles, feedback RESTART IDENTITY CASCADE`,
     )
   })
 }
@@ -234,6 +238,61 @@ export async function seedEventReportConfirm(
     .values({ reportId, userId })
     .returning()
   if (!row) throw new Error('seedEventReportConfirm: insert returned no rows')
+  return row
+}
+
+export async function seedNotification(
+  overrides: Partial<typeof notifications.$inferInsert> = {},
+): Promise<typeof notifications.$inferSelect> {
+  const [row] = await testDb
+    .insert(notifications)
+    .values({
+      type: 'admin_alert',
+      category: 'crawl.failed',
+      title: 'Crawl failed',
+      body: 'A venue crawl failed three times in a row',
+      ...overrides,
+    })
+    .returning()
+  if (!row) throw new Error('seedNotification: insert returned no rows')
+  return row
+}
+
+export async function seedInboxRead(
+  itemType: InboxItemType,
+  itemId: string,
+  sourceCreatedAt: Date,
+  overrides: Partial<typeof inboxReads.$inferInsert> = {},
+): Promise<typeof inboxReads.$inferSelect> {
+  const [row] = await testDb
+    .insert(inboxReads)
+    .values({
+      itemType,
+      itemId,
+      sourceCreatedAt,
+      readBy: 'admin_user',
+      ...overrides,
+    })
+    .returning()
+  if (!row) throw new Error('seedInboxRead: insert returned no rows')
+  return row
+}
+
+export async function seedInboxWatermark(
+  itemType: InboxItemType,
+  readUpTo: Date,
+  overrides: Partial<typeof inboxReadWatermarks.$inferInsert> = {},
+): Promise<typeof inboxReadWatermarks.$inferSelect> {
+  const [row] = await testDb
+    .insert(inboxReadWatermarks)
+    .values({
+      itemType,
+      readUpTo,
+      readBy: 'admin_user',
+      ...overrides,
+    })
+    .returning()
+  if (!row) throw new Error('seedInboxWatermark: insert returned no rows')
   return row
 }
 

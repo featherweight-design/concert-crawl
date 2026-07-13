@@ -402,6 +402,7 @@ export default async function AdminDashboardPage() {
         items={attentionItems}
         {...(digestLabel ? { digestLabel } : {})}
         digestHref="/admin/crawl"
+        inboxHref="/admin/inbox"
       />
 
       {/* LLM spend */}

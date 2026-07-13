@@ -22,6 +22,9 @@ interface AttentionFeedProps {
   items: AttentionItemData[]
   digestLabel?: string
   digestHref?: string
+  // When set, renders an "Inbox ›" link in the panel header pointing to the
+  // full triage inbox (the dashboard feed is a preview of it).
+  inboxHref?: string
 }
 
 const SEV_TINT: Record<
@@ -159,6 +162,7 @@ export const AttentionFeed = ({
   items,
   digestLabel,
   digestHref,
+  inboxHref,
 }: AttentionFeedProps) => {
   const activeItems = items.filter((item) => item.severity !== 'neutral')
   const neutralItems = items.filter((item) => item.severity === 'neutral')
@@ -192,8 +196,31 @@ export const AttentionFeed = ({
     </div>
   )
 
+  const panelAction = inboxHref ? (
+    <Link
+      href={inboxHref}
+      style={{
+        fontFamily: 'var(--admin-font, Inter, sans-serif)',
+        fontSize: 12,
+        fontWeight: 700,
+        color: 'var(--fg)',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 2,
+        textDecoration: 'none',
+      }}
+    >
+      {ADMIN_COPY.dashboard.attentionFeed.inboxLink}
+      <ChevronRight size={13} />
+    </Link>
+  ) : undefined
+
   return (
-    <Panel title={panelTitle} padding={0}>
+    <Panel
+      title={panelTitle}
+      padding={0}
+      {...(panelAction ? { action: panelAction } : {})}
+    >
       {allItems.length === 0 ? (
         <div
           style={{
