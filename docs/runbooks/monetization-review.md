@@ -59,9 +59,43 @@ real account, a real key, or a human judgment call. Do them in roughly this orde
 
 ### B. Email — Resend + deliverability
 
-- [ ] Confirm the **sender domain is verified** in Resend and reputation is warm.
-- [ ] Send yourself one of each template (trial-end, dunning, winback, gift-ending)
-      and **eyeball cross-client render** (Gmail + Apple Mail at minimum).
+**Where the templates live.** All 10 transactional templates are TypeScript
+render functions in `apps/api/src/emails/templates/` (welcome-paid, welcome-gifted,
+renewal-receipt-monthly, cancellation-ack, dunning-1/2/3, card-expiring-soon,
+gifting-ending-notice, winback). Shared shell (header/footer/palette) is in
+`apps/api/src/emails/layout.ts` + `palette.ts`; the send pipeline is
+`apps/api/src/lib/email.ts`.
+
+**Review them in a browser** (no keys needed — renders to local HTML files):
+
+```bash
+pnpm --filter @concert-crawl/api email:preview
+# → writes apps/api/.email-preview/*.html + index.html; open index.html
+```
+
+**Test-send one (or all) to yourself.** Needs a Resend key in the shell; use a
+test key against a verified domain. `--only <key>` picks one template (keys are
+the snake_case names, e.g. `welcome_paid`, `dunning_1_card_declined`, `winback`):
+
+```bash
+RESEND_API_KEY=re_... pnpm --filter @concert-crawl/api email:preview -- \
+  --send you@example.com --only welcome_paid
+# omit --only to send the whole set
+```
+
+Sends go from `billing@concertcrawl.app` with subject prefixed `[preview]`.
+Eyeball cross-client render in **Gmail + Apple Mail** at minimum.
+
+**Confirm the sending domain is healthy in Resend:**
+
+- [ ] Resend dashboard → **Domains** → `concertcrawl.app` shows **Verified**
+      (SPF, DKIM, and DMARC DNS records all green). That's the real gate — an
+      unverified domain lands in spam or bounces.
+- [ ] Send a few previews (above) to a Gmail + an Apple Mail address and confirm
+      they hit the **inbox, not spam**. Resend has no numeric "reputation" score;
+      "warm" here just means the domain is verified and recent sends aren't
+      bouncing or getting flagged — check **Resend → Logs** for
+      delivered/bounced/complained after your test sends.
 - [ ] Read the copy in each once more in your own voice — templates are written,
       but you own the final tone.
 
@@ -80,8 +114,24 @@ real account, a real key, or a human judgment call. Do them in roughly this orde
 ### D. PostHog — analytics (once #6.2 merges)
 
 - [ ] Create a **PostHog Cloud project, US region** (free tier: 1M events/mo, no card).
-- [ ] Put the project key in Vercel (web) + Render (api) env. Instrumentation
-      **no-ops if the key is absent**, so nothing breaks if you defer this.
+      In the project you need two values from **Project Settings**:
+      the **Project API key** (starts `phc_…`) and the **API host**
+      (US region = `https://us.i.posthog.com`).
+- [ ] Add these env vars (PR 6.2 reads them; instrumentation **no-ops if the key
+      is absent**, so nothing breaks if you defer this):
+
+  | Env var                    | Where        | Value                        |
+  | -------------------------- | ------------ | ---------------------------- |
+  | `NEXT_PUBLIC_POSTHOG_KEY`  | Vercel (web) | the `phc_…` project key      |
+  | `NEXT_PUBLIC_POSTHOG_HOST` | Vercel (web) | `https://us.i.posthog.com`   |
+  | `POSTHOG_KEY`              | Render (api) | the same `phc_…` project key |
+  | `POSTHOG_HOST`             | Render (api) | `https://us.i.posthog.com`   |
+
+  The web vars are `NEXT_PUBLIC_`-prefixed because the browser SDK reads them;
+  the API vars are server-side only. Both sides use the same project key.
+
+  > Exact var names are confirmed when PR 6.2 lands — if they differ, this table
+  > is updated on that PR. Nothing to add until 6.2 is merged.
 
 ### E. Launch day — flip the switch
 

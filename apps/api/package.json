@@ -11,7 +11,8 @@
     "test:integration": "vitest run --config vitest.integration.ts",
     "test:all": "vitest run && vitest run --config vitest.integration.ts",
     "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "email:preview": "tsx src/emails/preview.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
