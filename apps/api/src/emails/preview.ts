@@ -29,7 +29,10 @@ const PORTAL_URL = 'https://billing.stripe.com/p/session/test_preview'
 
 // One representative vars set per template — mirrors the fixtures in
 // templates/templates.test.ts so the preview matches what the suite asserts.
-const sampleVars: { [K in EmailTemplateKey]?: EmailTemplateVars[K] } = {
+// Exhaustive (non-optional) by design: adding a new EmailTemplateKey breaks
+// this at compile time until its sample vars are supplied here, so the harness
+// can never silently drop a template.
+const sampleVars: { [K in EmailTemplateKey]: EmailTemplateVars[K] } = {
   welcome_paid: { tier: 'founder', founderSeatNumber: 7 },
   welcome_gifted: { gifterName: 'Sam', giftEndsAt: '2026-12-01T12:00:00Z' },
   renewal_receipt_monthly: {
@@ -72,9 +75,8 @@ const renderOne = <K extends EmailTemplateKey>(
   templateKey: K,
 ): RenderedEmail | null => {
   const renderer = getTemplateRenderer(templateKey)
-  const vars = sampleVars[templateKey]
-  if (renderer === null || vars === undefined) return null
-  return renderer(vars)
+  if (renderer === null) return null
+  return renderer(sampleVars[templateKey])
 }
 
 const writePreviews = (keys: EmailTemplateKey[]): void => {

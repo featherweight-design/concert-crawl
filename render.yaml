@@ -47,7 +47,11 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    schedule: "0 15 * * *" # 15:00 UTC = 9 AM MDT / 8 AM MST (Render runs cron in UTC)
+    # Pinned to 15:00 UTC = 9 AM MDT / 8 AM MST. Render runs cron in UTC and we
+    # deliberately do NOT chase DST — the exact send hour isn't load-bearing, so
+    # an 8 AM run in winter is fine. If 9 AM local ever becomes a hard rule,
+    # switch to "0 16 * * *" for MST months and back for MDT.
+    schedule: "0 15 * * *"
     buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
     startCommand: pnpm --filter @concert-crawl/api exec tsx src/jobs/billing-daily.ts
     envVars:
@@ -151,7 +155,11 @@ services:
     runtime: node
     region: oregon
     plan: starter
-    schedule: "0 15 * * *" # 15:00 UTC = 9 AM MDT / 8 AM MST (Render runs cron in UTC)
+    # Pinned to 15:00 UTC = 9 AM MDT / 8 AM MST. Render runs cron in UTC and we
+    # deliberately do NOT chase DST — the exact send hour isn't load-bearing, so
+    # an 8 AM run in winter is fine. If 9 AM local ever becomes a hard rule,
+    # switch to "0 16 * * *" for MST months and back for MDT.
+    schedule: "0 15 * * *"
     buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
     startCommand: pnpm --filter @concert-crawl/api exec tsx src/jobs/billing-daily.ts
     envVars:

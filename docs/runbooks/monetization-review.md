@@ -102,11 +102,13 @@ Eyeball cross-client render in **Gmail + Apple Mail** at minimum.
 ### C. Render — daily billing cron
 
 - [ ] Create the **`concert-crawl-billing-jobs`** cron service (prod) — Node runtime,
-      schedule `0 15 * * *` (Render runs cron in UTC: 15:00 UTC = 9 AM MDT / 8 AM MST),
-      start command
+      schedule `0 15 * * *`, start command
       `pnpm --filter @concert-crawl/api exec tsx src/jobs/billing-daily.ts`.
-      The full env-var list is in `render.yaml` (descriptive reference — the file
-      does not auto-create the service; you add it by hand in the dashboard).
+      Render runs cron in UTC: `15:00 UTC` = **9 AM MDT / 8 AM MST**. The schedule
+      is pinned to UTC and intentionally not adjusted for DST (the send hour isn't
+      load-bearing). If 9 AM local ever becomes a hard requirement, use `0 16 * * *`
+      during MST months. The full env-var list is in `render.yaml` (descriptive
+      reference — the file does not auto-create the service; add it by hand).
 - [ ] Optionally create the **`-staging`** twin (test Stripe key) to dry-run it.
 - [ ] The job is **idempotent** — safe to trigger manually once to confirm it runs
       clean before the schedule takes over.
