@@ -920,7 +920,10 @@ export interface AdminUserFeedbackItem {
   createdAt: string
 }
 
-export interface AdminUserWatchingItem {
+// Named for the full tracked-event set (going/interested/watching), not just
+// the watchlist — status can be any AdminUserEventStatus, so "watching" would
+// mislead.
+export interface AdminUserTrackedEventItem {
   eventId: string
   eventTitle: string
   eventDate: string // ISO YYYY-MM-DD
@@ -931,7 +934,7 @@ export interface AdminUserWatchingItem {
 
 export interface AdminUserDetailStats {
   feedback: number
-  watching: number
+  trackedEvents: number
   priceSubmissions: number
   artistFollows: number
 }
@@ -950,5 +953,5 @@ export interface AdminUserDetail {
   clerkAccountMissing: boolean
   stats: AdminUserDetailStats
   feedback: AdminUserFeedbackItem[]
-  watching: AdminUserWatchingItem[]
+  trackedEvents: AdminUserTrackedEventItem[]
 }

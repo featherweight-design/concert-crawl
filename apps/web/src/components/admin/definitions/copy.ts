@@ -1812,8 +1812,7 @@ export const ADMIN_COPY = {
     detail: {
       backButton: 'Back to users',
       eyebrow: 'operations · users',
-      loadError:
-        'Could not load this user. They may have been deleted, or the API is unavailable.',
+      loadError: "Couldn't load this user. Refresh to try again.",
       identity: {
         noEmail: 'No email on file',
         noHandle: 'no handle',

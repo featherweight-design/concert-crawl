@@ -178,12 +178,12 @@ describe('GET /v1/admin/users/:userId', () => {
         clerkAccountMissing: boolean
         stats: {
           feedback: number
-          watching: number
+          trackedEvents: number
           priceSubmissions: number
           artistFollows: number
         }
         feedback: Array<{ message: string; category: string }>
-        watching: Array<{ eventTitle: string; venueName: string | null }>
+        trackedEvents: Array<{ eventTitle: string; venueName: string | null }>
       }
     }
 
@@ -199,14 +199,14 @@ describe('GET /v1/admin/users/:userId', () => {
     expect(body.data.joinedAt).toBe('2026-04-01T00:00:00.000Z')
     expect(body.data.stats).toEqual({
       feedback: 1,
-      watching: 1,
+      trackedEvents: 1,
       priceSubmissions: 1,
       artistFollows: 1,
     })
     expect(body.data.clerkAccountMissing).toBe(false)
     expect(body.data.feedback[0]?.message).toBe('Something broke')
-    expect(body.data.watching[0]?.eventTitle).toBe('Night One')
-    expect(body.data.watching[0]?.venueName).toBe('Ogden Theatre')
+    expect(body.data.trackedEvents[0]?.eventTitle).toBe('Night One')
+    expect(body.data.trackedEvents[0]?.venueName).toBe('Ogden Theatre')
   })
 
   it('tolerates a deleted Clerk account when DB activity remains', async () => {

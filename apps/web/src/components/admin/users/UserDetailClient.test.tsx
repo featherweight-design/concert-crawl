@@ -20,7 +20,12 @@ const baseUser = (
   role: 'beta',
   joinedAt: '2026-04-01T00:00:00.000Z',
   clerkAccountMissing: false,
-  stats: { feedback: 1, watching: 1, priceSubmissions: 2, artistFollows: 3 },
+  stats: {
+    feedback: 1,
+    trackedEvents: 1,
+    priceSubmissions: 2,
+    artistFollows: 3,
+  },
   feedback: [
     {
       id: 'fb-1',
@@ -32,7 +37,7 @@ const baseUser = (
       createdAt: '2026-05-01T00:00:00.000Z',
     },
   ],
-  watching: [
+  trackedEvents: [
     {
       eventId: 'evt-1',
       eventTitle: 'Night One',
@@ -73,10 +78,10 @@ describe('UserDetailClient', () => {
       <UserDetailClient
         user={baseUser({
           feedback: [],
-          watching: [],
+          trackedEvents: [],
           stats: {
             feedback: 0,
-            watching: 0,
+            trackedEvents: 0,
             priceSubmissions: 0,
             artistFollows: 0,
           },
@@ -147,7 +152,7 @@ describe('UserDetailClient', () => {
     render(
       <UserDetailClient
         user={baseUser({
-          watching: [
+          trackedEvents: [
             {
               eventId: 'evt-2',
               eventTitle: 'Orphan Event',

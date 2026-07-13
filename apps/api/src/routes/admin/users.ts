@@ -3,7 +3,7 @@ import { getAuth } from '@hono/clerk-auth'
 import { z } from 'zod'
 import { zValidator } from '@hono/zod-validator'
 import { createClerkClient } from '@clerk/backend'
-import { count, desc, eq } from 'drizzle-orm'
+import { desc, eq, sql } from 'drizzle-orm'
 import {
   db,
   events,
@@ -18,7 +18,7 @@ import type { AdminVariables } from './index.js'
 import type {
   AdminUserDetail,
   AdminUserFeedbackItem,
-  AdminUserWatchingItem,
+  AdminUserTrackedEventItem,
   Role,
 } from '@concert-crawl/types'
 import { ROLE_HIERARCHY, isRole } from '@concert-crawl/types'
@@ -122,19 +122,19 @@ usersAdminRouter.get(
       [artistCountRow],
     ] = await Promise.all([
       db
-        .select({ value: count() })
+        .select({ value: sql<number>`count(*)::int` })
         .from(feedback)
         .where(eq(feedback.userId, userId)),
       db
-        .select({ value: count() })
+        .select({ value: sql<number>`count(*)::int` })
         .from(userEvents)
         .where(eq(userEvents.userId, userId)),
       db
-        .select({ value: count() })
+        .select({ value: sql<number>`count(*)::int` })
         .from(priceSubmissions)
         .where(eq(priceSubmissions.userId, userId)),
       db
-        .select({ value: count() })
+        .select({ value: sql<number>`count(*)::int` })
         .from(userArtistFollows)
         .where(eq(userArtistFollows.userId, userId)),
     ])
@@ -216,14 +216,16 @@ usersAdminRouter.get(
       }),
     )
 
-    const watching: AdminUserWatchingItem[] = watchingRows.map((row) => ({
-      eventId: row.eventId,
-      eventTitle: row.eventTitle,
-      eventDate: row.eventDate,
-      venueName: row.venueName,
-      status: row.status,
-      createdAt: row.createdAt.toISOString(),
-    }))
+    const trackedEvents: AdminUserTrackedEventItem[] = watchingRows.map(
+      (row) => ({
+        eventId: row.eventId,
+        eventTitle: row.eventTitle,
+        eventDate: row.eventDate,
+        venueName: row.venueName,
+        status: row.status,
+        createdAt: row.createdAt.toISOString(),
+      }),
+    )
 
     // A Clerk account can hold several addresses; surface the primary one
     // rather than whichever happens to sit at index 0.
@@ -248,12 +250,12 @@ usersAdminRouter.get(
       clerkAccountMissing: !clerkUser,
       stats: {
         feedback: feedbackTotal,
-        watching: watchingTotal,
+        trackedEvents: watchingTotal,
         priceSubmissions: priceTotal,
         artistFollows: artistTotal,
       },
       feedback: feedbackHistory,
-      watching,
+      trackedEvents,
     }
 
     return ctx.json({ success: true, data })

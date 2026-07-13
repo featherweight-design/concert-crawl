@@ -158,7 +158,7 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
         />
         <StatCard
           label={COPY.stats.watching}
-          value={String(user.stats.watching)}
+          value={String(user.stats.trackedEvents)}
           iconName="Eye"
           kind="neutral"
           noChip
@@ -251,7 +251,7 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
       </Panel>
 
       <Panel title={COPY.watching.title} padding={0}>
-        {user.watching.length === 0 ? (
+        {user.trackedEvents.length === 0 ? (
           <div
             style={{
               padding: 16,
@@ -274,7 +274,7 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
               </TR>
             </THead>
             <tbody>
-              {user.watching.map((item) => (
+              {user.trackedEvents.map((item) => (
                 <TR key={item.eventId}>
                   <TD>{item.eventTitle}</TD>
                   <TD>{item.venueName ?? COPY.watching.unknownVenue}</TD>
