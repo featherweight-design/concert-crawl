@@ -434,10 +434,13 @@ export const CheckoutPanel = ({
   const tier = TIER_DEFINITIONS[tierKey]
   const [surface, setSurface] = useState<CheckoutSurface>(CHECKOUT_SURFACE)
 
-  // Funnel step (spec §8): the payment surface mounted. Fires once.
+  // Funnel step (spec §8): the payment surface mounted. Fires exactly once
+  // with the tier/flow present at mount — the panel remounts per checkout, so
+  // a mid-life prop change should never emit a second "opened" event. The ref
+  // snapshot keeps the effect dependency-free without a lint suppression.
+  const openedProps = useRef({ tier: tierKey, flow })
   useEffect(() => {
-    track('payment_surface_opened', { tier: tierKey, flow })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    track('payment_surface_opened', openedProps.current)
   }, [])
 
   useEffect(() => {

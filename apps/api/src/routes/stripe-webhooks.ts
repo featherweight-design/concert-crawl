@@ -131,9 +131,17 @@ export const createStripeWebhooksRouter = (
         void sendTransactionalEmail(emailParams)
       }
       for (const captureFn of postCommitAnalytics) {
-        // captureServer swallows and logs its own errors, so a capture can
-        // never affect the webhook response.
-        captureFn()
+        // captureServer already swallows its own errors, but guard the
+        // invocation too so a future capture closure can never turn a
+        // committed webhook into a 500.
+        try {
+          captureFn()
+        } catch (err) {
+          apiLogger.warn(
+            { err, stripeEventId: event.id, type: event.type },
+            'stripe-webhooks: post-commit analytics capture threw',
+          )
+        }
       }
       return ctx.json({ success: true })
     } catch (err) {
