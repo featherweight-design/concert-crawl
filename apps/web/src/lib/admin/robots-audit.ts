@@ -28,14 +28,28 @@ export interface RobotsStatusCounts {
   unchecked: number
 }
 
-// websiteUrl is stored non-null and Zod-validated as a URL on write, but a
-// legacy or malformed row shouldn't crash the whole audit table — fall back to
-// the raw string when it can't be parsed.
+// websiteUrl is stored non-null and Zod-validated as a URL on write, but
+// z.string().url() still accepts non-http schemes (mailto:, javascript:) and a
+// legacy/malformed row shouldn't crash the audit table. Fall back to the raw
+// string when parsing fails or yields no host (e.g. mailto:/javascript: URLs
+// have an empty hostname), which would otherwise render a blank label.
 export function safeHostname(url: string): string {
   try {
-    return new URL(url).hostname
+    return new URL(url).hostname || url
   } catch {
     return url
+  }
+}
+
+// Only http(s) URLs are safe to render as a clickable link — Zod's url()
+// validator accepts javascript:/data: schemes, so guard before linking to
+// avoid a stored-XSS vector in the admin table.
+export function isHttpUrl(url: string): boolean {
+  try {
+    const { protocol } = new URL(url)
+    return protocol === 'http:' || protocol === 'https:'
+  } catch {
+    return false
   }
 }
 

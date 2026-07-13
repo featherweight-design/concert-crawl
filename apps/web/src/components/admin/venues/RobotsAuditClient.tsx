@@ -21,6 +21,7 @@ import {
   ROBOTS_STATUS_KIND,
   countRobotsStatuses,
   deriveRobotsStatus,
+  isHttpUrl,
   safeHostname,
   type RobotsStatusFilter,
 } from '@/lib/admin/robots-audit'
@@ -191,22 +192,33 @@ export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
                       <TR key={venue.id}>
                         <TD>{venue.name}</TD>
                         <TD>
-                          <Link
-                            href={venue.websiteUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 6,
-                              color: 'var(--signal)',
-                              textDecoration: 'none',
-                              fontSize: 13,
-                            }}
-                          >
-                            {safeHostname(venue.websiteUrl)}
-                            <ExternalLink size={12} />
-                          </Link>
+                          {isHttpUrl(venue.websiteUrl) ? (
+                            <a
+                              href={venue.websiteUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                color: 'var(--signal)',
+                                textDecoration: 'none',
+                                fontSize: 13,
+                              }}
+                            >
+                              {safeHostname(venue.websiteUrl)}
+                              <ExternalLink size={12} />
+                            </a>
+                          ) : (
+                            <span
+                              style={{
+                                fontSize: 13,
+                                color: 'var(--fg-muted)',
+                              }}
+                            >
+                              {safeHostname(venue.websiteUrl)}
+                            </span>
+                          )}
                         </TD>
                         <TD>
                           <StatusBadge kind={ROBOTS_STATUS_KIND[status]} dot>

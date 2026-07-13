@@ -103,4 +103,21 @@ describe('RobotsAuditClient', () => {
     // Falls back to the raw stored string rather than throwing on new URL().
     expect(screen.getByText('not-a-url')).toBeTruthy()
   })
+
+  it('does not render an unsafe-scheme URL as a clickable link', () => {
+    render(
+      <RobotsAuditClient
+        venues={[
+          venue({
+            name: 'XSS Venue',
+            websiteUrl: 'javascript:alert(1)',
+          }),
+        ]}
+      />,
+    )
+    // A javascript: URL is shown as plain text (raw string), never an anchor —
+    // guards against a stored-XSS vector through the admin table.
+    const label = screen.getByText('javascript:alert(1)')
+    expect(label.closest('a')).toBeNull()
+  })
 })
