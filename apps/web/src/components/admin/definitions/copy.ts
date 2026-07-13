@@ -1821,6 +1821,7 @@ export const ADMIN_COPY = {
         deletedNote: 'No Clerk account — showing retained activity only.',
         joinedPrefix: 'Joined',
         unknownJoined: 'Join date unknown',
+        idPrefix: 'ID',
       },
       stats: {
         feedback: 'Feedback',

@@ -134,6 +134,19 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
         {user.city ? ` · ${user.city}` : ''}
       </div>
 
+      <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
+        {COPY.identity.idPrefix}{' '}
+        <code
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            userSelect: 'all',
+            color: 'var(--fg)',
+          }}
+        >
+          {user.id}
+        </code>
+      </div>
+
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           label={COPY.stats.feedback}

@@ -198,9 +198,18 @@ usersAdminRouter.get(
       createdAt: row.createdAt.toISOString(),
     }))
 
+    // A Clerk account can hold several addresses; surface the primary one
+    // rather than whichever happens to sit at index 0.
+    const primaryEmail =
+      clerkUser?.emailAddresses.find(
+        (address) => address.id === clerkUser.primaryEmailAddressId,
+      )?.emailAddress ??
+      clerkUser?.emailAddresses[0]?.emailAddress ??
+      null
+
     const data: AdminUserDetail = {
       id: userId,
-      email: clerkUser?.emailAddresses[0]?.emailAddress ?? null,
+      email: primaryEmail,
       handle: profile?.handle ?? clerkHandle ?? clerkUser?.username ?? null,
       city: profile?.city ?? null,
       theme: profile?.theme ?? null,

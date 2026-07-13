@@ -56,6 +56,7 @@ describe('UserDetailClient', () => {
     expect(screen.getByText('Something broke')).toBeTruthy()
     expect(screen.getByText('Night One')).toBeTruthy()
     expect(screen.getByText('Ogden Theatre')).toBeTruthy()
+    expect(screen.getByText('user_target')).toBeTruthy()
   })
 
   it('links a feedback item with an issueUrl out to the tracker', () => {

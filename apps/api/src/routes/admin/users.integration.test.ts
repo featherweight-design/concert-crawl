@@ -12,9 +12,10 @@ const { authState, clerkState } = vi.hoisted(() => ({
     user: {
       id: 'user_target',
       username: 'targetuser' as string | null,
-      emailAddresses: [{ emailAddress: 'target@example.com' }] as Array<{
-        emailAddress: string
-      }>,
+      primaryEmailAddressId: 'email_primary' as string | null,
+      emailAddresses: [
+        { id: 'email_primary', emailAddress: 'target@example.com' },
+      ] as Array<{ id: string; emailAddress: string }>,
       publicMetadata: {} as { role?: string; handle?: string },
       createdAt: new Date('2026-04-01T00:00:00Z').getTime(),
     },
@@ -70,7 +71,10 @@ function resetClerk(): void {
   clerkState.user = {
     id: TARGET_USER,
     username: 'targetuser',
-    emailAddresses: [{ emailAddress: 'target@example.com' }],
+    primaryEmailAddressId: 'email_primary',
+    emailAddresses: [
+      { id: 'email_primary', emailAddress: 'target@example.com' },
+    ],
     publicMetadata: {},
     createdAt: new Date('2026-04-01T00:00:00Z').getTime(),
   }
@@ -211,6 +215,25 @@ describe('GET /v1/admin/users/:userId', () => {
     expect(body.data.handle).toBe('orphan')
     expect(body.data.joinedAt).toBeNull()
     expect(body.data.clerkAccountMissing).toBe(true)
+  })
+
+  it('surfaces the primary email, not the first address', async () => {
+    setAuth('admin')
+    clerkState.user.primaryEmailAddressId = 'email_primary'
+    clerkState.user.emailAddresses = [
+      { id: 'email_secondary', emailAddress: 'secondary@example.com' },
+      { id: 'email_primary', emailAddress: 'primary@example.com' },
+    ]
+    await seedUserProfile(TARGET_USER, { handle: 'multi' })
+
+    const res = await getDetail()
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { email: string | null }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.email).toBe('primary@example.com')
   })
 
   it('returns 200, not 404, when only price/artist activity exists', async () => {
