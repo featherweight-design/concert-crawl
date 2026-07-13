@@ -898,8 +898,10 @@ export interface WatchToggleResponse {
 // --- Admin user detail (GET /v1/admin/users/:userId) ---
 // Aggregates a single user's identity (Clerk + user_profiles) with their
 // feedback history and watchlist so admins can triage a "View @user" jump from
-// the feedback inbox. Identity fields are null when Clerk has no record for the
-// id (e.g. a deleted account still referenced by old feedback rows).
+// the feedback inbox. When Clerk has no record for the id (e.g. a deleted
+// account still referenced by old feedback rows), Clerk-only fields — email,
+// role, joinedAt — go null, but handle/city/theme/avatarColor still fall back
+// to the retained user_profiles row when one exists.
 
 export type FeedbackStatus =
   'unread' | 'read' | 'flagged' | 'issue_opened' | 'resolved' | 'archived'

@@ -113,26 +113,31 @@ usersAdminRouter.get(
       .limit(1)
 
     // Cheap existence signals first: counts, profile, and Clerk decide the
-    // 404 before we pay for the two 100-row list+join queries below.
-    const [feedbackCountRow] = await db
-      .select({ value: count() })
-      .from(feedback)
-      .where(eq(feedback.userId, userId))
-
-    const [watchingCountRow] = await db
-      .select({ value: count() })
-      .from(userEvents)
-      .where(eq(userEvents.userId, userId))
-
-    const [priceCountRow] = await db
-      .select({ value: count() })
-      .from(priceSubmissions)
-      .where(eq(priceSubmissions.userId, userId))
-
-    const [artistCountRow] = await db
-      .select({ value: count() })
-      .from(userArtistFollows)
-      .where(eq(userArtistFollows.userId, userId))
+    // 404 before we pay for the two 100-row list+join queries below. The four
+    // counts are independent, so run them concurrently to shave latency.
+    const [
+      [feedbackCountRow],
+      [watchingCountRow],
+      [priceCountRow],
+      [artistCountRow],
+    ] = await Promise.all([
+      db
+        .select({ value: count() })
+        .from(feedback)
+        .where(eq(feedback.userId, userId)),
+      db
+        .select({ value: count() })
+        .from(userEvents)
+        .where(eq(userEvents.userId, userId)),
+      db
+        .select({ value: count() })
+        .from(priceSubmissions)
+        .where(eq(priceSubmissions.userId, userId)),
+      db
+        .select({ value: count() })
+        .from(userArtistFollows)
+        .where(eq(userArtistFollows.userId, userId)),
+    ])
 
     const feedbackTotal = feedbackCountRow?.value ?? 0
     const watchingTotal = watchingCountRow?.value ?? 0
