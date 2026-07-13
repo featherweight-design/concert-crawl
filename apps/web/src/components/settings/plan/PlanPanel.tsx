@@ -7,7 +7,7 @@
 // + ManageSubscriptionSheet shared by the card entries.
 
 import { useState } from 'react'
-import type { PlanState } from '@concert-crawl/types'
+import type { PlanState, PickerEntry } from '@concert-crawl/types'
 import { TierPickerSheet } from '@/components/consumer/tier-picker'
 import { TIER_PICKER_COPY } from '@/components/consumer/tier-picker/definitions/copy'
 import {
@@ -39,6 +39,10 @@ export const PlanPanel = ({
   variant?: PlanOpenVariant
 }) => {
   const [pickerOpen, setPickerOpen] = useState(false)
+  // Tracks how the picker was opened, for the picker_viewed `entry` dimension.
+  // The plan=open param is the landing target for lifecycle nudges (trial-end
+  // takeover et al.), so a param-driven open is attributed to 'takeover'.
+  const [pickerEntry, setPickerEntry] = useState<PickerEntry>('settings')
   const [manageOpen, setManageOpen] = useState(false)
   const { openPortal, portalPending, portalError, clearPortalError } =
     usePortalNavigation()
@@ -55,7 +59,10 @@ export const PlanPanel = ({
   // picker, then strip the param. Both PlanPanel mounts (mobile + desktop
   // trees) run this; the variant gate ensures only the viewport-matching
   // instance opens its sheet.
-  usePlanOpenParam(() => setPickerOpen(true), variant)
+  usePlanOpenParam(() => {
+    setPickerEntry('takeover')
+    setPickerOpen(true)
+  }, variant)
 
   const dispatchCta = (cta: PlanCardCta) => {
     if (cta.action === 'portal') {
@@ -74,6 +81,7 @@ export const PlanPanel = ({
       setManageOpen(true)
       return
     }
+    setPickerEntry('settings')
     setPickerOpen(true)
   }
 
@@ -109,6 +117,7 @@ export const PlanPanel = ({
         onClick={() => {
           clearPortalError()
           clearResubscribeError()
+          setPickerEntry('settings')
           setPickerOpen(true)
         }}
         className="mt-2 w-full rounded-[10px] border border-border bg-surface-1 px-4 py-3 text-left transition-colors hover:border-border-strong"
@@ -127,6 +136,7 @@ export const PlanPanel = ({
         onClose={() => setPickerOpen(false)}
         planState={planState}
         scaRegion={scaRegion}
+        entry={pickerEntry}
       />
 
       {manageTier !== null && (

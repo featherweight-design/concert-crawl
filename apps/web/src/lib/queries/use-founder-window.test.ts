@@ -1,4 +1,6 @@
+// @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
+import { renderHook } from '@testing-library/react'
 
 const mockUseQuery = vi.fn().mockReturnValue({ data: undefined })
 vi.mock('@tanstack/react-query', () => ({
@@ -12,7 +14,7 @@ import { useFounderWindow } from './use-founder-window'
 
 describe('useFounderWindow', () => {
   it('polls at the 10s server-cache interval so the scarcity rail stays fresh', () => {
-    useFounderWindow()
+    renderHook(() => useFounderWindow())
     expect(mockUseQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         staleTime: 10_000,

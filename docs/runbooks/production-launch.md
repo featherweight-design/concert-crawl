@@ -187,6 +187,8 @@ The staging Vercel project would normally invert this (Production + Preview so p
 | `SENTRY_AUTH_TOKEN`                   | From Step 5                                                                                                                                          | ON        |
 | `INVITE_COOKIE_SECRET`                | Generate fresh: `openssl rand -hex 32`                                                                                                               | ON        |
 | `INTERNAL_API_SECRET`                 | Generate fresh: `openssl rand -hex 32` — **must match** the same key in the Render API's env vars (Step 8)                                           | ON        |
+| `NEXT_PUBLIC_POSTHOG_KEY`             | PostHog project API key (`phc_*`) — client-side monetization funnel analytics. Absent → analytics no-ops                                             | OFF       |
+| `NEXT_PUBLIC_POSTHOG_HOST`            | `https://us.i.posthog.com` (US cloud region)                                                                                                         | OFF       |
 
 `NEXT_PUBLIC_APP_VERSION` is hard-set at build time by `apps/web/next.config.ts` from `package.json#version` plus the deploy's commit SHA. **Current limitation:** the SHA fallback chain only reads `RENDER_GIT_COMMIT`, so on Vercel deploys the version banner reads `vX.Y.Z · dev` instead of `vX.Y.Z · abc1234`. Tracked in #595 (one-line fix to add `VERCEL_GIT_COMMIT_SHA` to the fallback chain).
 
@@ -234,6 +236,8 @@ In the Render dashboard for this service → **Environment** tab. The service ma
 | `NODE_ENV`              | `production`                                                                                                                               |
 | `REQUIRE_BETA_AUTH`     | `true` — gates `/v1/events`, `/v1/venues`, `/v1/search` behind Clerk during private beta. Remove or set `false` at public launch (Step 12) |
 | `INTERNAL_API_SECRET`   | **Same value** as set in the Vercel prod project (Step 6)                                                                                  |
+| `POSTHOG_KEY`           | PostHog project API key (`phc_*`) — server-truth monetization funnel analytics. Absent → capture no-ops                                    |
+| `POSTHOG_HOST`          | `https://us.i.posthog.com` (US cloud region)                                                                                               |
 
 > **Build commands — Node-version-dependent + differ between prod and staging.** The current `render.yaml` uses two different build commands:
 >

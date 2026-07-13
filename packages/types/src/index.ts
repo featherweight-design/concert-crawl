@@ -2,6 +2,10 @@
 // the API webhook handler and the web tier-picker failure surfaces.
 export * from './decline-category.js'
 
+// Monetization funnel analytics contract (eng-infra spec Part 2 §8) — shared
+// event names + property shapes for web (posthog-js) and API (posthog-node).
+export * from './analytics-events.js'
+
 // User roles — mirrors Clerk publicMetadata.role
 // Role always takes precedence over plan in access checks:
 //   admin/promoter/beta/sub_admin get full premium access regardless of subscription.

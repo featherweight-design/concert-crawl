@@ -157,7 +157,15 @@ const planState = (
 })
 
 const renderSheet = (state: PlanState, onClose = vi.fn()) => {
-  render(<TierPickerSheet open onClose={onClose} planState={state} scaRegion />)
+  render(
+    <TierPickerSheet
+      open
+      onClose={onClose}
+      planState={state}
+      scaRegion
+      entry="settings"
+    />,
+  )
   return onClose
 }
 
@@ -169,6 +177,7 @@ describe('TierPickerSheet — visibility and states', () => {
         onClose={vi.fn()}
         planState={planState('free')}
         scaRegion
+        entry="settings"
       />,
     )
     expect(screen.queryByRole('dialog')).toBeNull()

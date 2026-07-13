@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { FounderWindowView } from '@concert-crawl/types'
+import { track } from '@/lib/analytics'
 import { fetchFounderWindow } from '@/lib/billing'
 
 export const founderWindowQueryKey = ['founder-window'] as const
@@ -11,11 +13,29 @@ export const founderWindowQueryKey = ['founder-window'] as const
 // without asking harder than the server will answer. Only enabled while
 // the picker is open, so the poll is short-lived.
 export function useFounderWindow(enabled = true) {
-  return useQuery<FounderWindowView>({
+  const query = useQuery<FounderWindowView>({
     queryKey: founderWindowQueryKey,
     queryFn: fetchFounderWindow,
     staleTime: 10_000,
     refetchInterval: 10_000,
     enabled,
   })
+
+  // Funnel event (spec §8): the founder window state was surfaced. Fires once
+  // per enable cycle — not on every 10s poll — and re-arms when the surface
+  // that enabled it (picker / takeover) is dismissed and reopened.
+  const firedRef = useRef(false)
+  const windowState = query.data?.state
+  useEffect(() => {
+    if (!enabled) {
+      firedRef.current = false
+      return
+    }
+    if (windowState !== undefined && !firedRef.current) {
+      firedRef.current = true
+      track('founder_window_view', { state: windowState })
+    }
+  }, [enabled, windowState])
+
+  return query
 }

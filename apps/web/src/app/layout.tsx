@@ -6,6 +6,7 @@ import { ThemeProvider } from '@/theme'
 import { THEMES } from '@/theme/themes'
 import { cn } from '@/lib/utils'
 import { QueryProvider } from '@/components/QueryProvider'
+import { PostHogProvider } from '@/lib/analytics'
 import { Toaster } from 'sonner'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
@@ -76,7 +77,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </head>
         <body className="min-h-screen bg-bg text-fg font-sans antialiased">
           <QueryProvider>
-            <ThemeProvider>{children}</ThemeProvider>
+            <PostHogProvider>
+              <ThemeProvider>{children}</ThemeProvider>
+            </PostHogProvider>
           </QueryProvider>
           <Toaster position="bottom-center" richColors />
           <SpeedInsights />

@@ -7,7 +7,7 @@
 // requireFeature() middleware (server) — see PR 3.3.
 
 import { useState } from 'react'
-import type { PlanState } from '@concert-crawl/types'
+import type { PlanState, PickerEntry } from '@concert-crawl/types'
 import { TIER_PICKER_COPY } from './definitions/copy'
 import { TierPickerSheet } from './TierPickerSheet'
 import {
@@ -25,17 +25,26 @@ export const TierPickerEntry = ({
   variant?: PlanOpenVariant
 }) => {
   const [open, setOpen] = useState(false)
+  // Open source, for the picker_viewed `entry` dimension (spec §8): the
+  // plan=open param is the lifecycle-nudge (takeover) landing target.
+  const [entry, setEntry] = useState<PickerEntry>('settings')
 
   // Lifecycle nudge CTAs land on /me?plan=open (PR 4.2) — auto-open the
   // picker, then strip the param. The variant gate keeps concurrent
   // mobile/desktop mounts from both opening.
-  usePlanOpenParam(() => setOpen(true), variant)
+  usePlanOpenParam(() => {
+    setEntry('takeover')
+    setOpen(true)
+  }, variant)
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setEntry('settings')
+          setOpen(true)
+        }}
         className="mt-2 w-full rounded-[10px] border border-border bg-surface-1 px-4 py-3 text-left transition-colors hover:border-border-strong"
         style={{ cursor: 'pointer' }}
       >
@@ -51,6 +60,7 @@ export const TierPickerEntry = ({
         onClose={() => setOpen(false)}
         planState={planState}
         scaRegion={scaRegion}
+        entry={entry}
       />
     </>
   )

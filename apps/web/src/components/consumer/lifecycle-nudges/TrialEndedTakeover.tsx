@@ -7,6 +7,7 @@
 // bubble to the gate, which routes to Settings · Plan.
 
 import { useEffect, useState } from 'react'
+import { track } from '@/lib/analytics'
 import { useFounderWindow } from '@/lib/queries/use-founder-window'
 import { visibleTiers } from '@/components/consumer/tier-picker/lib/visible-tiers'
 import { scarcityRailData } from '@/components/consumer/tier-picker/lib/scarcity'
@@ -31,6 +32,12 @@ export const TrialEndedTakeover = ({
   onDismiss,
   onSelectTier,
 }: TrialEndedTakeoverProps) => {
+  // Funnel event (spec §8): the trial-ended takeover was shown. Fires once,
+  // matching the surface's once-per-session render contract.
+  useEffect(() => {
+    track('trial_ended_takeover_shown', {})
+  }, [])
+
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 639px)')
