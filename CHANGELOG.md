@@ -1,3 +1,16 @@
+# [1.112.0](https://github.com/HartiganHM/concert-crawl/compare/v1.111.0...v1.112.0) (2026-07-13)
+
+
+### Bug Fixes
+
+* **admin:** [#519](https://github.com/HartiganHM/concert-crawl/issues/519) guard unsafe URL schemes in robots-audit (PR [#929](https://github.com/HartiganHM/concert-crawl/issues/929) R2) ([af91012](https://github.com/HartiganHM/concert-crawl/commit/af91012511a6bf371052b7a9821de99dff358fa4))
+* **admin:** [#519](https://github.com/HartiganHM/concert-crawl/issues/519) harden robots-audit error + URL parsing (PR [#929](https://github.com/HartiganHM/concert-crawl/issues/929) R1) ([5fad534](https://github.com/HartiganHM/concert-crawl/commit/5fad5347a190873dfd28306b9c99aac5848f77bb))
+
+
+### Features
+
+* **admin:** [#519](https://github.com/HartiganHM/concert-crawl/issues/519) build robots.txt audit page ([2858803](https://github.com/HartiganHM/concert-crawl/commit/2858803c69a1e803c43f1bb97b6fcdada264c7a6))
+
 # [1.111.0](https://github.com/HartiganHM/concert-crawl/compare/v1.110.0...v1.111.0) (2026-07-13)
 
 
