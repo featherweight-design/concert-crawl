@@ -1,3 +1,16 @@
+# [1.111.0](https://github.com/HartiganHM/concert-crawl/compare/v1.110.0...v1.111.0) (2026-07-13)
+
+
+### Bug Fixes
+
+* **admin:** [#542](https://github.com/HartiganHM/concert-crawl/issues/542) hide inbox mark-all on read filter (PR [#927](https://github.com/HartiganHM/concert-crawl/issues/927) R1) ([60fa534](https://github.com/HartiganHM/concert-crawl/commit/60fa534f5ad355152fee773fec12347086d8d215))
+* **admin:** [#542](https://github.com/HartiganHM/concert-crawl/issues/542) inbox a11y — dedupe unread dot + drop redundant mark-all label (PR [#927](https://github.com/HartiganHM/concert-crawl/issues/927) R2) ([6dcc726](https://github.com/HartiganHM/concert-crawl/commit/6dcc726ccba25e4b08c74aa67699e735f33d27e2))
+
+
+### Features
+
+* **admin:** [#542](https://github.com/HartiganHM/concert-crawl/issues/542) unified inbox — 4-category aggregation with read/unread persistence ([36e871f](https://github.com/HartiganHM/concert-crawl/commit/36e871f71a22872e2c9afc24a743953c62a48bad))
+
 # [1.110.0](https://github.com/HartiganHM/concert-crawl/compare/v1.109.1...v1.110.0) (2026-07-13)
 
 
