@@ -9,6 +9,7 @@ const { authState, clerkState } = vi.hoisted(() => ({
   },
   clerkState: {
     getUserThrows: false,
+    getUserErrorStatus: 404 as number,
     user: {
       id: 'user_target',
       username: 'targetuser' as string | null,
@@ -33,7 +34,11 @@ vi.mock('@clerk/backend', () => ({
     users: {
       getUser: vi.fn().mockImplementation(() => {
         if (clerkState.getUserThrows) {
-          return Promise.reject(new Error('Clerk user not found'))
+          return Promise.reject(
+            Object.assign(new Error('Clerk lookup failed'), {
+              status: clerkState.getUserErrorStatus,
+            }),
+          )
         }
         return Promise.resolve(clerkState.user)
       }),
@@ -68,6 +73,7 @@ function clearAuth(): void {
 
 function resetClerk(): void {
   clerkState.getUserThrows = false
+  clerkState.getUserErrorStatus = 404
   clerkState.user = {
     id: TARGET_USER,
     username: 'targetuser',
@@ -110,6 +116,25 @@ describe('GET /v1/admin/users/:userId', () => {
     clerkState.getUserThrows = true
     const res = await getDetail('user_ghost')
     expect(res.status).toBe(404)
+  })
+
+  it('surfaces a 500, not a false "deleted account", on a transient Clerk error', async () => {
+    setAuth('admin')
+    clerkState.getUserThrows = true
+    clerkState.getUserErrorStatus = 503
+    // DB activity exists, so the old blanket catch would have returned a 200
+    // with clerkAccountMissing:true — masking the outage as a deleted account.
+    await seedUserProfile(TARGET_USER, { handle: 'flaky' })
+    await testDb.insert(feedback).values({
+      userId: TARGET_USER,
+      pageUrl: 'https://concertcrawl.app/events',
+      category: 'bug',
+      message: 'Present',
+      status: 'unread',
+    })
+
+    const res = await getDetail()
+    expect(res.status).toBe(500)
   })
 
   it('returns the full detail shape for a user with activity', async () => {

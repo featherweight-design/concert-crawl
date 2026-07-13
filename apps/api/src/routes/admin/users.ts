@@ -25,6 +25,17 @@ import { ROLE_HIERARCHY, isRole } from '@concert-crawl/types'
 
 const userIdParamSchema = z.object({ userId: z.string().min(1).max(255) })
 
+// A Clerk "user not found" surfaces as an error carrying HTTP 404. Only that
+// case means a genuinely deleted/missing account; any other failure (timeout,
+// 5xx) must propagate rather than masquerade as clerkAccountMissing.
+const isClerkNotFound = (err: unknown): boolean => {
+  if (typeof err !== 'object' || err === null || !('status' in err)) {
+    return false
+  }
+  const { status } = err
+  return status === 404
+}
+
 const secretKey = process.env['CLERK_SECRET_KEY'] ?? ''
 const clerkClient = createClerkClient({ secretKey })
 
@@ -88,7 +99,10 @@ usersAdminRouter.get(
     > | null = null
     try {
       clerkUser = await clerkClient.users.getUser(userId)
-    } catch {
+    } catch (err) {
+      // Rethrow anything but a confirmed 404 so transient Clerk failures
+      // surface as a 5xx (via app.onError) instead of a false "deleted account".
+      if (!isClerkNotFound(err)) throw err
       clerkUser = null
     }
 
