@@ -1,3 +1,20 @@
+# [1.113.0](https://github.com/HartiganHM/concert-crawl/compare/v1.112.0...v1.113.0) (2026-07-13)
+
+
+### Bug Fixes
+
+* **analytics:** align node engines; document direct provider import (PR [#928](https://github.com/HartiganHM/concert-crawl/issues/928) R5) ([1e73d23](https://github.com/HartiganHM/concert-crawl/commit/1e73d233ba2472f5d3b1cf25ece34e6a7730998c))
+* **analytics:** defensive guards + shutdown flush (PR [#928](https://github.com/HartiganHM/concert-crawl/issues/928) R1) ([f7a2281](https://github.com/HartiganHM/concert-crawl/commit/f7a2281490f3728d7d48af777cb34dbb51cd997e))
+* **analytics:** empty-host fallback + fire-once picker view (PR [#928](https://github.com/HartiganHM/concert-crawl/issues/928) R2) ([400d81e](https://github.com/HartiganHM/concert-crawl/commit/400d81e82a682f0879cf265ae502b8b239e06afa))
+* **analytics:** guard PostHog constructor so it never breaks billing (PR [#928](https://github.com/HartiganHM/concert-crawl/issues/928) R7) ([1bac6aa](https://github.com/HartiganHM/concert-crawl/commit/1bac6aacbf19fa61e5a927315d6920d0ae641f55))
+* **analytics:** import PostHogProvider directly + clarify import-type comment (PR [#928](https://github.com/HartiganHM/concert-crawl/issues/928) R4) ([1fcc633](https://github.com/HartiganHM/concert-crawl/commit/1fcc633b43a6cbd1ea9a9e1175222fb99ed0e453))
+* **analytics:** single-scan asCheckoutTier + bump node engines floor (PR [#928](https://github.com/HartiganHM/concert-crawl/issues/928) R3) ([e871bc8](https://github.com/HartiganHM/concert-crawl/commit/e871bc85cbc5e1c6adc585f5c5ed6879f1088763))
+
+
+### Features
+
+* **analytics:** wire PostHog monetization funnel instrumentation ([77c1995](https://github.com/HartiganHM/concert-crawl/commit/77c199553000021ce9b585e34d45b14b6b1682f5))
+
 # [1.112.0](https://github.com/HartiganHM/concert-crawl/compare/v1.111.0...v1.112.0) (2026-07-13)
 
 
