@@ -83,8 +83,24 @@ describe('RobotsAuditClient', () => {
     expect(screen.getByText(COPY.neverChecked)).toBeTruthy()
   })
 
-  it('shows a load-error banner when venues is null', () => {
+  it('shows only the error banner when venues is null (no misleading empty copy)', () => {
     render(<RobotsAuditClient venues={null} />)
     expect(screen.getByRole('alert').textContent).toContain(COPY.loadError)
+    // The empty-state copy is an "everything filtered out" message — it must
+    // not leak into the load-error path, where the stats/filters/table are
+    // hidden entirely.
+    expect(screen.queryByText(COPY.empty)).toBeNull()
+    expect(screen.queryByRole('button', { name: COPY.filters.all })).toBeNull()
+  })
+
+  it('renders a malformed website URL without crashing the table', () => {
+    render(
+      <RobotsAuditClient
+        venues={[venue({ name: 'Bad URL Venue', websiteUrl: 'not-a-url' })]}
+      />,
+    )
+    expect(screen.getByText('Bad URL Venue')).toBeTruthy()
+    // Falls back to the raw stored string rather than throwing on new URL().
+    expect(screen.getByText('not-a-url')).toBeTruthy()
   })
 })

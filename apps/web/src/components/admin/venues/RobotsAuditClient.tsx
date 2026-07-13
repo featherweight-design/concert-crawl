@@ -21,6 +21,7 @@ import {
   ROBOTS_STATUS_KIND,
   countRobotsStatuses,
   deriveRobotsStatus,
+  safeHostname,
   type RobotsStatusFilter,
 } from '@/lib/admin/robots-audit'
 
@@ -81,7 +82,7 @@ export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
         subtitle={COPY.page.subtitle}
       />
 
-      {venues === null && (
+      {venues === null ? (
         <div
           role="alert"
           style={{
@@ -97,137 +98,139 @@ export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
         >
           {COPY.loadError}
         </div>
-      )}
-
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard
-          label={COPY.stats.total}
-          value={String(counts.total)}
-          iconName="ShieldCheck"
-          kind="neutral"
-          noChip
-        />
-        <StatCard
-          label={COPY.stats.allowed}
-          value={String(counts.allowed)}
-          iconName="Check"
-          kind="success"
-        />
-        <StatCard
-          label={COPY.stats.blocked}
-          value={String(counts.blocked)}
-          iconName="Ban"
-          kind={counts.blocked > 0 ? 'danger' : 'neutral'}
-        />
-        <StatCard
-          label={COPY.stats.unchecked}
-          value={String(counts.unchecked)}
-          iconName="CircleHelp"
-          kind={counts.unchecked > 0 ? 'warning' : 'neutral'}
-        />
-      </div>
-
-      <div
-        role="group"
-        aria-label={COPY.filters.ariaLabel}
-        style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
-      >
-        {FILTER_RAIL.map((key) => {
-          const active = filter === key
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setFilter(key)}
-              aria-pressed={active}
-              style={{
-                height: 30,
-                padding: '0 12px',
-                borderRadius: 999,
-                cursor: 'pointer',
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 12,
-                fontWeight: 600,
-                color: active ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
-                background: active ? 'var(--signal)' : 'var(--surface-1)',
-                border: `1px solid ${
-                  active ? 'var(--signal)' : 'var(--border-strong)'
-                }`,
-              }}
-            >
-              {COPY.filters[key]}
-            </button>
-          )
-        })}
-      </div>
-
-      <Panel padding={0}>
-        {filtered.length === 0 ? (
-          <div
-            style={{
-              padding: 16,
-              color: 'var(--fg-muted)',
-              fontSize: 13,
-              fontFamily: "'Inter', sans-serif",
-            }}
-          >
-            {COPY.empty}
+      ) : (
+        <>
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+            <StatCard
+              label={COPY.stats.total}
+              value={String(counts.total)}
+              iconName="ShieldCheck"
+              kind="neutral"
+              noChip
+            />
+            <StatCard
+              label={COPY.stats.allowed}
+              value={String(counts.allowed)}
+              iconName="Check"
+              kind="success"
+            />
+            <StatCard
+              label={COPY.stats.blocked}
+              value={String(counts.blocked)}
+              iconName="Ban"
+              kind={counts.blocked > 0 ? 'danger' : 'neutral'}
+            />
+            <StatCard
+              label={COPY.stats.unchecked}
+              value={String(counts.unchecked)}
+              iconName="CircleHelp"
+              kind={counts.unchecked > 0 ? 'warning' : 'neutral'}
+            />
           </div>
-        ) : (
-          <AdminTable minWidth={640}>
-            <THead>
-              <TR>
-                <TH>{COPY.table.venue}</TH>
-                <TH>{COPY.table.website}</TH>
-                <TH>{COPY.table.status}</TH>
-                <TH>{COPY.table.checked}</TH>
-              </TR>
-            </THead>
-            <tbody>
-              {filtered.map((venue) => {
-                const status = deriveRobotsStatus(venue)
-                return (
-                  <TR key={venue.id}>
-                    <TD>{venue.name}</TD>
-                    <TD>
-                      <Link
-                        href={venue.websiteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          color: 'var(--signal)',
-                          textDecoration: 'none',
-                          fontSize: 13,
-                        }}
-                      >
-                        {new URL(venue.websiteUrl).hostname}
-                        <ExternalLink size={12} />
-                      </Link>
-                    </TD>
-                    <TD>
-                      <StatusBadge kind={ROBOTS_STATUS_KIND[status]} dot>
-                        {COPY.status[status]}
-                      </StatusBadge>
-                    </TD>
-                    <TD>
-                      {venue.robotsTxtCheckedAt ? (
-                        <RelTime iso={venue.robotsTxtCheckedAt} />
-                      ) : (
-                        <span style={{ color: 'var(--fg-subtle)' }}>
-                          {COPY.neverChecked}
-                        </span>
-                      )}
-                    </TD>
+
+          <div
+            role="group"
+            aria-label={COPY.filters.ariaLabel}
+            style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}
+          >
+            {FILTER_RAIL.map((key) => {
+              const active = filter === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setFilter(key)}
+                  aria-pressed={active}
+                  style={{
+                    height: 30,
+                    padding: '0 12px',
+                    borderRadius: 999,
+                    cursor: 'pointer',
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: active ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
+                    background: active ? 'var(--signal)' : 'var(--surface-1)',
+                    border: `1px solid ${
+                      active ? 'var(--signal)' : 'var(--border-strong)'
+                    }`,
+                  }}
+                >
+                  {COPY.filters[key]}
+                </button>
+              )
+            })}
+          </div>
+
+          <Panel padding={0}>
+            {filtered.length === 0 ? (
+              <div
+                style={{
+                  padding: 16,
+                  color: 'var(--fg-muted)',
+                  fontSize: 13,
+                  fontFamily: "'Inter', sans-serif",
+                }}
+              >
+                {COPY.empty}
+              </div>
+            ) : (
+              <AdminTable minWidth={640}>
+                <THead>
+                  <TR>
+                    <TH>{COPY.table.venue}</TH>
+                    <TH>{COPY.table.website}</TH>
+                    <TH>{COPY.table.status}</TH>
+                    <TH>{COPY.table.checked}</TH>
                   </TR>
-                )
-              })}
-            </tbody>
-          </AdminTable>
-        )}
-      </Panel>
+                </THead>
+                <tbody>
+                  {filtered.map((venue) => {
+                    const status = deriveRobotsStatus(venue)
+                    return (
+                      <TR key={venue.id}>
+                        <TD>{venue.name}</TD>
+                        <TD>
+                          <Link
+                            href={venue.websiteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 6,
+                              color: 'var(--signal)',
+                              textDecoration: 'none',
+                              fontSize: 13,
+                            }}
+                          >
+                            {safeHostname(venue.websiteUrl)}
+                            <ExternalLink size={12} />
+                          </Link>
+                        </TD>
+                        <TD>
+                          <StatusBadge kind={ROBOTS_STATUS_KIND[status]} dot>
+                            {COPY.status[status]}
+                          </StatusBadge>
+                        </TD>
+                        <TD>
+                          {venue.robotsTxtCheckedAt ? (
+                            <RelTime iso={venue.robotsTxtCheckedAt} />
+                          ) : (
+                            <span style={{ color: 'var(--fg-subtle)' }}>
+                              {COPY.neverChecked}
+                            </span>
+                          )}
+                        </TD>
+                      </TR>
+                    )
+                  })}
+                </tbody>
+              </AdminTable>
+            )}
+          </Panel>
+        </>
+      )}
     </div>
   )
 }
