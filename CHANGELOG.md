@@ -1,3 +1,14 @@
+## [1.109.1](https://github.com/HartiganHM/concert-crawl/compare/v1.109.0...v1.109.1) (2026-07-13)
+
+
+### Bug Fixes
+
+* **consumer:** generalize imminent tooltip copy for all tiers ([753b5a1](https://github.com/HartiganHM/concert-crawl/commit/753b5a127660b86e31c94fe597aee77d7502ec59))
+* **consumer:** stable pending card keys + focus ring on submit CTA ([68b8c96](https://github.com/HartiganHM/concert-crawl/commit/68b8c96738a7fc14c864e81d1b3f110d172baacf))
+* **web:** a11y aria-label on imminent tag; correct stale PendingStack comment ([05e75df](https://github.com/HartiganHM/concert-crawl/commit/05e75df5c81233750f9b7ed0f30fc23f790aac4b))
+* **web:** restore multi-tier pending visibility + clarify imminent shows ([2e95688](https://github.com/HartiganHM/concert-crawl/commit/2e9568811401d1786ed0d1d664ade4d9718bf39b)), closes [#895](https://github.com/HartiganHM/concert-crawl/issues/895)
+* **web:** route pending-path submit CTA into the shared modal ([fd2689c](https://github.com/HartiganHM/concert-crawl/commit/fd2689c892619cd79ab0906b6c0119f03c6a8a23))
+
 # [1.109.0](https://github.com/HartiganHM/concert-crawl/compare/v1.108.0...v1.109.0) (2026-07-12)
 
 
