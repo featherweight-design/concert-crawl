@@ -1,10 +1,12 @@
 // apps/api/src/jobs/billing-daily.ts
 //
 // The daily billing background job (eng infra spec Part 2 §5.1). Runs as the
-// Render Cron Job `concert-crawl-billing-jobs` (staging + prod, 9 AM MT) via
-// `tsx src/jobs/billing-daily.ts` — the same deploy artifact as the API, no
-// new package. Env: DATABASE_URL, STRIPE_SECRET_KEY, RESEND_API_KEY,
-// CLERK_SECRET_KEY.
+// Render Cron Job `concert-crawl-billing-jobs` (staging + prod) on the schedule
+// `0 15 * * *` = 15:00 UTC (9 AM MDT / 8 AM MST — see render.yaml for the
+// UTC/DST rationale). The cron builds the API (`turbo build`) and runs the
+// compiled artifact via `node apps/api/dist/jobs/billing-daily.js` — the same
+// deploy build as the API, no new package and no `tsx` at runtime. Env:
+// DATABASE_URL, STRIPE_SECRET_KEY, RESEND_API_KEY, CLERK_SECRET_KEY.
 //
 // Seven independent sub-tasks (§5.1), each wrapped in its own try/catch and
 // logged via apiLogger — one failure never blocks the rest. Idempotency comes
