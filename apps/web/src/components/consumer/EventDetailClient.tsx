@@ -1629,15 +1629,11 @@ export function EventDetailPriceBlock({
 
     return (
       <>
-        {visibleSubs.length === 2 ? (
-          <PendingStack cards={pendingCardProps.map((item) => item.props)} />
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {pendingCardProps.map(({ id, props }) => (
-              <PendingCardB key={id} {...props} />
-            ))}
-          </div>
-        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {pendingCardProps.map(({ id, props }) => (
+            <PendingCardB key={id} {...props} />
+          ))}
+        </div>
 
         {activeCorroboration !== null && (
           <CorroborationSheet
