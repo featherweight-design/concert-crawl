@@ -33,7 +33,7 @@ if [[ -z "$PR_NUMBER" ]]; then
   exit 2
 fi
 if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
-  echo "Error: PR number must be numeric, got '$PR_NUMBER'." >&2
+  echo "ERROR: PR number must be numeric, got '$PR_NUMBER'." >&2
   exit 2
 fi
 
@@ -58,10 +58,13 @@ fi
 # while Copilot was silently dropped. Match the bot's login EXACTLY — not a
 # substring — so an unrelated user with "copilot" in their handle can't false-
 # pass. The POST response lists the bot with the display login "Copilot"; its
-# review-author login is "copilot-pull-request-reviewer[bot]". Accept either.
+# review-author login is "copilot-pull-request-reviewer[bot]". Accept either,
+# but the bare "copilot" variant additionally requires type == "Bot" so a human
+# whose login is literally "copilot" can't false-pass while the real bot was
+# dropped — the "[bot]" login is already unambiguous and needs no type guard.
 COPILOT_COUNT=$(gh api -X POST -H "Accept: application/vnd.github+json" \
   "/repos/{owner}/{repo}/pulls/${PR_NUMBER}/requested_reviewers" \
-  --jq '[(.requested_reviewers // [])[].login | ascii_downcase | select(. == "copilot" or . == "copilot-pull-request-reviewer[bot]")] | length' \
+  --jq '[(.requested_reviewers // [])[] | select(((.login | ascii_downcase) == "copilot" and .type == "Bot") or (.login | ascii_downcase) == "copilot-pull-request-reviewer[bot]")] | length' \
   --input - <<JSON
 {"reviewers": ["${COPILOT_LOGIN}"]}
 JSON
