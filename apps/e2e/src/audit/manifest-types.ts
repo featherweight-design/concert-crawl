@@ -56,6 +56,21 @@ export const AuditRouteSchema: z.ZodType<Omit<AuditRoute, 'interactions'>> =
 // ---------------------------------------------------------------------------
 
 /**
+ * Type guard for optional interactions on a raw manifest entry. Uses `in`
+ * narrowing (TS 4.9+ refines to `{ interactions: unknown }`) plus
+ * Array.isArray to avoid `as` value casts on production code. The element
+ * type is asserted at the type-predicate level — trust the caller to pass
+ * AuditInteraction-shaped entries.
+ */
+function hasInteractions(
+  entry: unknown,
+): entry is { interactions: AuditInteraction[] } {
+  if (entry === null || typeof entry !== 'object') return false
+  if (!('interactions' in entry)) return false
+  return Array.isArray(entry.interactions)
+}
+
+/**
  * Validates a manifest of unknown shape, returning a typed AuditManifest.
  *
  * Throws a plain Error (prefixed "[manifest]") on:
@@ -92,16 +107,13 @@ export function validateManifest(manifest: unknown): AuditManifest {
     }
     seenIds.add(parsed.id)
 
-    // Preserve interactions from the original entry if present; they are
-    // functions and cannot pass through Zod — rely on TypeScript at the
-    // call site.
-    const interactions =
-      entry !== null &&
-      typeof entry === 'object' &&
-      'interactions' in entry &&
-      Array.isArray((entry as { interactions: unknown }).interactions)
-        ? (entry as { interactions: AuditInteraction[] }).interactions
-        : undefined
+    // Preserve interactions from the original entry if present. They are
+    // runtime functions and cannot pass through Zod — the type guard
+    // structurally narrows via `'interactions' in entry` (TS 4.9+ refines
+    // `entry.interactions` to unknown) then `Array.isArray` narrows it to
+    // `unknown[]`; the type-predicate assertion on the return type is the
+    // only unchecked step, which is exactly what type guards are for.
+    const interactions = hasInteractions(entry) ? entry.interactions : undefined
 
     routes.push({ ...parsed, ...(interactions ? { interactions } : {}) })
   }
