@@ -1832,6 +1832,9 @@ export const ADMIN_COPY = {
         buttonPending: 'Sending…',
         optionsLoading: 'Loading email list…',
         optionsFailed: 'Could not load the email list.',
+        optionsFailedFallback: 'Admin alert (generic) — fallback',
+        optionsFailedHint:
+          'Could not load the full email list. Only the generic admin alert is available — that is what will be sent.',
         successPrefix: 'Test email sent.',
         notSentPrefix: 'Email not sent —',
         requestFailed: 'Request failed',

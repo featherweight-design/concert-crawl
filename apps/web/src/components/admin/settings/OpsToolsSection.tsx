@@ -33,13 +33,17 @@ type Status =
 const COPY = ADMIN_COPY.settings.opsTools
 
 export function OpsToolsSection() {
-  const { getToken } = useAuth()
+  const { getToken, isLoaded } = useAuth()
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const [options, setOptions] = useState<TestEmailOption[] | null>(null)
   const [optionsFailed, setOptionsFailed] = useState(false)
   const [selectedKey, setSelectedKey] = useState('admin_alert')
 
   useEffect(() => {
+    // Wait for Clerk before treating a null token as a failure — otherwise a
+    // transient pre-hydration null would strand the picker in the error state
+    // for the rest of the session. The effect re-runs once isLoaded flips true.
+    if (!isLoaded) return
     let cancelled = false
     const loadOptions = async () => {
       try {
@@ -63,7 +67,7 @@ export function OpsToolsSection() {
     return () => {
       cancelled = true
     }
-  }, [getToken])
+  }, [getToken, isLoaded])
 
   const submitTest = async () => {
     setStatus({ kind: 'pending' })
@@ -98,7 +102,7 @@ export function OpsToolsSection() {
             {COPY.testEmail.pickerLabel}
           </span>
           <select
-            value={options === null ? '' : selectedKey}
+            value={options === null && !optionsFailed ? '' : selectedKey}
             onChange={(event) => setSelectedKey(event.target.value)}
             disabled={options === null || status.kind === 'pending'}
             className="w-full max-w-sm rounded-md border border-border bg-surface-1 px-3 py-1.5 text-sm text-fg disabled:cursor-not-allowed disabled:opacity-60"
@@ -107,7 +111,12 @@ export function OpsToolsSection() {
               <option value="">{COPY.testEmail.optionsLoading}</option>
             )}
             {optionsFailed && (
-              <option value="">{COPY.testEmail.optionsFailed}</option>
+              // Concrete fallback matching the key submitTest will actually send
+              // (selectedKey stays 'admin_alert'), so the disabled picker still
+              // shows exactly what the enabled button will do.
+              <option value="admin_alert">
+                {COPY.testEmail.optionsFailedFallback}
+              </option>
             )}
             {groupedOptions.map((section) => (
               <optgroup key={section.group} label={section.group}>
@@ -120,7 +129,9 @@ export function OpsToolsSection() {
             ))}
           </select>
           <span className="text-xs text-fg-muted">
-            {COPY.testEmail.pickerHint}
+            {optionsFailed
+              ? COPY.testEmail.optionsFailedHint
+              : COPY.testEmail.pickerHint}
           </span>
         </label>
 
