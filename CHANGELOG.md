@@ -1,3 +1,20 @@
+# [1.116.0](https://github.com/HartiganHM/concert-crawl/compare/v1.115.0...v1.116.0) (2026-07-14)
+
+
+### Bug Fixes
+
+* **seed-staging:** r1 — deterministic eventIds order, varchar(280) note cap, single-user safety ([5281840](https://github.com/HartiganHM/concert-crawl/commit/52818408ee4c655cd4a3cab24c266fdd8f291dfc))
+* **seed-staging:** r2 — empty-array guard, unmasked cleanup errors, coherent type/category pairs ([35e7c5f](https://github.com/HartiganHM/concert-crawl/commit/35e7c5f135d09c4eeb3ac983b542942fac4bfff1))
+* **seed-staging:** r3 — empty-array pick throws, runSynthetic guards, schema import path ([7f06acb](https://github.com/HartiganHM/concert-crawl/commit/7f06acbf50dcd06208d8e4e4dc8497dc15332c6f))
+* **seed-staging:** r4 — confirms cleanup covers cascade-affected rows ([e3bb956](https://github.com/HartiganHM/concert-crawl/commit/e3bb9569d8ffd9de0fb8923b7b2aef68699a642b))
+* **seed-staging:** r5 — collision-safe status patch, doc drift, confirms in summary ([0ecfaa8](https://github.com/HartiganHM/concert-crawl/commit/0ecfaa827252961292674a6126f3580dce03e4e4))
+* **seed-staging:** r6 — accurate rng docstring, mock covers insertedConfirms ([0439958](https://github.com/HartiganHM/concert-crawl/commit/04399585a2efde9d0d581f12b675f7cc26afd2d6))
+
+
+### Features
+
+* **seed-staging:** synthetic user data for fixture Clerk users ([d220c0b](https://github.com/HartiganHM/concert-crawl/commit/d220c0b972f4849a2b648e985a8195da4db395d2)), closes [#926](https://github.com/HartiganHM/concert-crawl/issues/926)
+
 # [1.115.0](https://github.com/HartiganHM/concert-crawl/compare/v1.114.1...v1.115.0) (2026-07-14)
 
 
