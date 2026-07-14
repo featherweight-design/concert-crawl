@@ -1,0 +1,59 @@
+import postgres from 'postgres'
+import { execSync } from 'node:child_process'
+import { selectOrphanedTestDbs } from './prune-test-dbs-helpers'
+
+const WORKTREE_MARKER = '/.worktrees/'
+const dryRun = process.argv.includes('--dry-run')
+
+const listWorktreeNames = (): string[] => {
+  const out = execSync('git worktree list --porcelain', { encoding: 'utf-8' })
+  const names: string[] = []
+  for (const line of out.split('\n')) {
+    if (!line.startsWith('worktree ')) continue
+    const wtPath = line.slice('worktree '.length)
+    const markerIdx = wtPath.indexOf(WORKTREE_MARKER)
+    if (markerIdx !== -1) {
+      names.push(wtPath.slice(markerIdx + WORKTREE_MARKER.length).split('/')[0])
+    }
+  }
+  return names
+}
+
+const main = async (): Promise<void> => {
+  const adminUrl = new URL(
+    process.env['DATABASE_URL_TEST'] ??
+      'postgresql://postgres:postgres@localhost:5433/concert_crawl_test',
+  )
+  adminUrl.pathname = '/postgres'
+  const admin = postgres(adminUrl.toString(), { max: 1 })
+  try {
+    const rows = await admin<{ datname: string }[]>`
+      SELECT datname FROM pg_database
+      WHERE datname LIKE 'concert_crawl_test__%'
+    `
+    const orphans = selectOrphanedTestDbs(
+      rows.map((row) => row.datname),
+      listWorktreeNames(),
+    )
+    if (orphans.length === 0) {
+      console.log('[prune-test-dbs] No orphaned test databases.')
+      return
+    }
+    for (const name of orphans) {
+      if (dryRun) {
+        console.log(`[prune-test-dbs] Would drop: ${name}`)
+        continue
+      }
+      console.log(`[prune-test-dbs] Dropping: ${name}`)
+      // name comes from pg_database filtered to our prefix — not user input.
+      await admin.unsafe(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`)
+    }
+  } finally {
+    await admin.end()
+  }
+}
+
+main().catch((err) => {
+  console.error('[prune-test-dbs] Failed:', err)
+  process.exit(1)
+})
