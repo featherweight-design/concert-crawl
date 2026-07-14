@@ -17,10 +17,15 @@ export async function loginAndSave(
   outputPath: string,
   baseURL: string,
 ): Promise<void> {
-  if (email === '') {
+  // Trim before the required-check so whitespace-only inputs (e.g. an env
+  // var set to a stray space) fail fast with a clear error instead of
+  // driving the browser and timing out at the Clerk password field.
+  const trimmedEmail = email.trim()
+  const trimmedPassword = password.trim()
+  if (trimmedEmail === '') {
     throw new Error('loginAndSave: email required')
   }
-  if (password === '') {
+  if (trimmedPassword === '') {
     throw new Error('loginAndSave: password required')
   }
 
@@ -31,7 +36,7 @@ export async function loginAndSave(
     await page.goto(`${baseURL}/sign-in`)
     await page.waitForLoadState('networkidle')
 
-    await page.getByLabel(/email/i).fill(email)
+    await page.getByLabel(/email/i).fill(trimmedEmail)
     // `exact: true` is required because Clerk renders a "Sign in with
     // Google" OAuth button whose accessible name resolves to "Sign in
     // with Google Continue" — a substring match on /continue/i hits
@@ -44,7 +49,7 @@ export async function loginAndSave(
     // "Show password"), tripping strict mode. Playwright's `fill()`
     // auto-waits for the input to become enabled — Clerk renders the
     // field `disabled` for a beat after the email-step transition.
-    await page.locator('input[name="password"]').fill(password)
+    await page.locator('input[name="password"]').fill(trimmedPassword)
     await page.getByRole('button', { name: 'Continue', exact: true }).click()
 
     await page.waitForURL((url) => !url.pathname.includes('sign-in'), {

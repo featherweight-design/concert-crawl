@@ -35,4 +35,24 @@ describe('loginAndSave', () => {
       ),
     ).rejects.toThrow('loginAndSave: password required')
   })
+
+  it('throws when email is whitespace-only', async () => {
+    // Regression guard: a stray-space env var previously drove the
+    // browser and failed as a timeout deep in the Clerk flow. Trim
+    // before the required-check so it fails fast.
+    await expect(
+      loginAndSave('   ', 'secret', '/tmp/state.json', 'http://localhost:3000'),
+    ).rejects.toThrow('loginAndSave: email required')
+  })
+
+  it('throws when password is whitespace-only', async () => {
+    await expect(
+      loginAndSave(
+        'user@example.com',
+        '\t\n ',
+        '/tmp/state.json',
+        'http://localhost:3000',
+      ),
+    ).rejects.toThrow('loginAndSave: password required')
+  })
 })

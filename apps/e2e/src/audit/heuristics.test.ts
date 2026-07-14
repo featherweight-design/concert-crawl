@@ -21,35 +21,78 @@ const runInDom = (html: string, vw: number): HeuristicSnapshot => {
       ),
   })
   // Save + restore so per-test prototype mutation doesn't bleed into
-  // sibling tests via Vitest's shared JS environment.
+  // sibling tests via Vitest's shared JS environment. `this: HTMLElement`
+  // typed parameter removes the previous `this as HTMLElement` value
+  // cast — all our fixtures use HTMLElements, and jsdom always calls
+  // this method with an HTMLElement receiver in our tests.
   const originalRect = Element.prototype.getBoundingClientRect
-  Element.prototype.getBoundingClientRect = function () {
-    const el = this as HTMLElement
+  Element.prototype.getBoundingClientRect = function (
+    this: HTMLElement,
+  ): DOMRect {
     const [l, t, w, h] = [
-      px(el.style.left),
-      px(el.style.top),
-      px(el.style.width),
-      px(el.style.height),
+      px(this.style.left),
+      px(this.style.top),
+      px(this.style.width),
+      px(this.style.height),
     ]
-    return Object.assign(Object.create(null), {
-      left: l,
-      top: t,
-      width: w,
-      height: h,
-      right: l + w,
-      bottom: t + h,
-      x: l,
-      y: t,
-      toJSON: () => ({}),
-    }) as DOMRect
+    return new DOMRect(l, t, w, h)
   }
   try {
     // eslint-disable-next-line no-new-func
-    return new Function(
+    const result: unknown = new Function(
       `return (${collectHeuristicsScript})(${vw})`,
-    )() as HeuristicSnapshot
+    )()
+    assertHeuristicSnapshot(result)
+    return result
   } finally {
     Element.prototype.getBoundingClientRect = originalRect
+  }
+}
+
+// Runtime shape check for the value coming out of `new Function(...)()`.
+// Replaces `as HeuristicSnapshot` on the harness return so a script that
+// ever returns an unexpected object fails the test with a clear message
+// instead of exploding later on undefined field access.
+//
+// Uses `in` narrowing (TS 4.9+ refines `value.<key>` to `unknown`) so
+// there are no `as` casts — the assertion signature carries the
+// structural claim, which is what type guards are for.
+function assertHeuristicSnapshot(
+  value: unknown,
+): asserts value is HeuristicSnapshot {
+  if (typeof value !== 'object' || value === null) {
+    throw new Error(
+      `assertHeuristicSnapshot: expected object, got ${String(value)}`,
+    )
+  }
+  if (
+    !('hasHorizontalScroll' in value) ||
+    typeof value.hasHorizontalScroll !== 'boolean'
+  ) {
+    throw new Error('assertHeuristicSnapshot: hasHorizontalScroll not boolean')
+  }
+  if (
+    !('offscreenElements' in value) ||
+    !Array.isArray(value.offscreenElements)
+  ) {
+    throw new Error('assertHeuristicSnapshot: offscreenElements not array')
+  }
+  if (!('smallTapTargets' in value) || !Array.isArray(value.smallTapTargets)) {
+    throw new Error('assertHeuristicSnapshot: smallTapTargets not array')
+  }
+  if (!('brokenImages' in value) || !Array.isArray(value.brokenImages)) {
+    throw new Error('assertHeuristicSnapshot: brokenImages not array')
+  }
+  if (
+    !('contentDensity' in value) ||
+    typeof value.contentDensity !== 'object' ||
+    value.contentDensity === null ||
+    !('mainChildren' in value.contentDensity) ||
+    typeof value.contentDensity.mainChildren !== 'number'
+  ) {
+    throw new Error(
+      'assertHeuristicSnapshot: contentDensity.mainChildren not number',
+    )
   }
 }
 
