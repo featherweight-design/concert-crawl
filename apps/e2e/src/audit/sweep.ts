@@ -80,7 +80,10 @@ async function captureState(
   const pngPath = outputPathFor(runId, routeId, state, vp.label, 'png')
   const jsonPath = outputPathFor(runId, routeId, state, vp.label, 'json')
 
-  fs.mkdirSync(path.dirname(pngPath), { recursive: true })
+  // pngPath and jsonPath share the same directory (same run/route bucket),
+  // so one mkdirSync covers both.
+  const outDir = path.dirname(pngPath)
+  fs.mkdirSync(outDir, { recursive: true })
 
   await page.screenshot({ path: pngPath, fullPage: true })
 
@@ -103,6 +106,8 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
   const baseUrl =
     process.env['PLAYWRIGHT_AUDIT_BASE_URL'] ??
     'https://staging.concertcrawl.app'
+  // Format: YYYY-MM-DDTHH-MM-SS (slice(0, 19) trims the fractional-second
+  // suffix from the ISO string, which is always 24+ chars).
   const runId =
     args.runId ?? new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
 
@@ -144,22 +149,35 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
               captures++
             } catch (err) {
               // Selector drift or missing state — capture as-is + record.
-              // Counts toward `captures` so the report math stays honest
-              // even when interactions drift; the stale capture is
-              // annotated in its filename and JSON for downstream triage.
-              await captureState(
-                runId,
-                route.id,
-                `${interaction.id}__stale`,
-                vp,
-                page,
-              )
-              captures++
+              // Push the interaction error BEFORE the stale capture so a
+              // secondary failure inside captureState can't be swallowed
+              // by the outer load handler; the real cause (`err`) is
+              // always in the report even if the stale screenshot fails.
               errors.push({
                 routeId: route.id,
                 kind: 'interaction',
                 message: String(err),
               })
+              try {
+                await captureState(
+                  runId,
+                  route.id,
+                  `${interaction.id}__stale`,
+                  vp,
+                  page,
+                )
+                captures++
+              } catch (staleErr) {
+                // The stale screenshot itself failed (page crashed,
+                // context torn down mid-write). Record it as its own
+                // interaction error rather than letting it propagate to
+                // the outer load handler and get misclassified.
+                errors.push({
+                  routeId: route.id,
+                  kind: 'interaction',
+                  message: `stale capture failed after interaction '${interaction.id}': ${String(staleErr)}`,
+                })
+              }
             }
           }
         } catch (err) {

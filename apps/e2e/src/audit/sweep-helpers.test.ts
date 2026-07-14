@@ -58,4 +58,15 @@ describe('parseCliTags', () => {
   it('returns undefined when --tags flag is absent', () => {
     expect(parseCliTags([])).toBeUndefined()
   })
+
+  it('returns undefined when --tags is followed by another flag (missing value)', () => {
+    // Regression guard: `--tags --other` used to fall into Zod with the
+    // value '--other' and throw a confusing "Invalid enum value" error.
+    // Treat a --dash-prefixed next arg as "no filter" instead.
+    expect(parseCliTags(['--tags', '--verbose'])).toBeUndefined()
+  })
+
+  it('throws on unknown tag values', () => {
+    expect(() => parseCliTags(['--tags=marketing'])).toThrow()
+  })
 })

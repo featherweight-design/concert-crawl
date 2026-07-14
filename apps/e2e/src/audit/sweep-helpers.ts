@@ -91,6 +91,10 @@ export function parseCliTags(
   if (spaceIdx >= 0 && spaceIdx + 1 < argv.length) {
     const raw = argv[spaceIdx + 1]
     if (raw === undefined) return undefined
+    // If the next arg looks like another flag, the user forgot the value.
+    // Treat as "no tag filter" rather than passing '--other' into Zod
+    // (which would throw with a confusing enum-mismatch error).
+    if (raw.startsWith('--')) return undefined
     return TagsSchema.parse(raw.split(',').filter(Boolean))
   }
   return undefined
