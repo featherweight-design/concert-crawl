@@ -58,4 +58,19 @@ describe('validateManifest', () => {
       ]),
     ).toThrow(/same-origin path/i)
   })
+  it('rejects protocol-relative URLs in route.path (`//host/x`)', () => {
+    // Regression guard: page.goto('//evil.com') with baseURL set escapes
+    // to evil.com's origin. The leading `/` alone isn't enough — must
+    // reject a second `/` immediately after.
+    expect(() =>
+      validateManifest([
+        {
+          id: 'evil-protocol-relative',
+          path: '//evil.com/admin',
+          tags: ['admin'],
+          auth: 'admin',
+        },
+      ]),
+    ).toThrow(/same-origin path/i)
+  })
 })

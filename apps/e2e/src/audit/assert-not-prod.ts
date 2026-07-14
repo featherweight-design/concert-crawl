@@ -21,17 +21,23 @@ const PROD_HOSTS = new Set(['concertcrawl.app', 'www.concertcrawl.app'])
  * runSweep and prepareAuditAuth before any network activity.
  */
 export function assertNotProdBaseUrl(url: string): void {
-  let hostname: string
+  let rawHostname: string
   try {
-    hostname = new URL(url).hostname
+    rawHostname = new URL(url).hostname
   } catch (err) {
     throw new Error(
       `assertNotProdBaseUrl: could not parse '${url}' as a URL: ${String(err)}`,
     )
   }
+  // Normalize the FQDN trailing dot — `concertcrawl.app.` is DNS-equivalent
+  // to `concertcrawl.app` on most resolvers, so treating them as different
+  // strings would let a trailing-dot URL bypass the blocklist. Also
+  // lowercase for good measure; browsers already lowercase hostnames but
+  // `new URL()` in Node preserves case if the input contains it.
+  const hostname = rawHostname.replace(/\.$/, '').toLowerCase()
   if (PROD_HOSTS.has(hostname)) {
     throw new Error(
-      `assertNotProdBaseUrl: refusing to run audit against production host '${hostname}'. Set PLAYWRIGHT_AUDIT_BASE_URL to a staging URL (e.g. https://staging.concertcrawl.app).`,
+      `assertNotProdBaseUrl: refusing to run audit against production host '${rawHostname}'. Set PLAYWRIGHT_AUDIT_BASE_URL to a staging URL (e.g. https://staging.concertcrawl.app).`,
     )
   }
 }

@@ -46,11 +46,13 @@ export type AuditManifest = readonly AuditRoute[]
 // so a manifest typo can never write outside audit-output/<runId>/.
 const ROUTE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/
 
-// route.path must be a same-origin path (leading `/`). Rejecting absolute
-// URLs prevents a manifest entry from targeting arbitrary origins via
-// page.goto — the sweep is scoped to the PLAYWRIGHT_AUDIT_BASE_URL host by
-// design, and an absolute URL would silently escape that scope.
-const ROUTE_PATH_PATTERN = /^\/[^\s]*$/
+// route.path must be a same-origin path — a single leading `/` followed by
+// any non-whitespace, non-`/` character. This rejects both absolute URLs
+// (`https://…`) AND protocol-relative URLs (`//evil.com/x`), either of
+// which would silently escape the PLAYWRIGHT_AUDIT_BASE_URL scope when
+// passed to page.goto with baseURL set. The `(?!/)` negative-lookahead
+// after the leading slash is the key: `/` yes, `//` no.
+const ROUTE_PATH_PATTERN = /^\/(?!\/)[^\s]*$/
 
 export const AuditRouteSchema: z.ZodType<Omit<AuditRoute, 'interactions'>> =
   z.object({
