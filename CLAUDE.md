@@ -123,6 +123,7 @@ These were made deliberately — understand them before proposing changes.
 - **Requesting a Copilot review** — Copilot does NOT auto-review. Run `./scripts/request-copilot-review.sh <pr-number>` after opening a PR and after every fix push. Do NOT hand-write the `requested_reviewers` API call with `"Copilot"` — that returns HTTP 200 but silently attaches nothing. The reviewer login must be `copilot-pull-request-reviewer[bot]`; the script hardcodes it and fails loudly if the attach doesn't take.
 - **All feature work must be done in a git worktree** — the primary repo directory (`/Users/huey/Projects/concert-crawl`) is reserved for the user's own use and testing. Worktrees live in `.worktrees/` at the project root (gitignored). Use `git worktree add .worktrees/<branch-name> -b <branch-name>` directly — do NOT use the `EnterWorktree` tool, which hardcodes `.claude/worktrees/` and cannot be configured.
 - **⚠️ NEVER leave uncommitted files in the main repo directory** — this is a hard rule that is violated every session. The main repo (`/Users/huey/Projects/concert-crawl`) must always be clean (`git status` = nothing to commit). If you write or modify any file while working in a worktree, write it directly in the worktree path, not the main repo path. At the end of every session — and before any `git push` — run `git -C /Users/huey/Projects/concert-crawl status` and either commit stray changes to the appropriate worktree branch or restore them.
+- **⚠️ Prune worktrees + test DBs after every merge** — once a PR merges, run `pnpm worktree:prune` to remove every worktree with no open PR and drop its orphaned `concert_crawl_test__*` database. This is a required cleanup step; skipping it is why 180+ stale worktrees accumulated. Preview first with `pnpm worktree:prune --dry-run` — it never removes an open-PR worktree or the base `concert_crawl_test` DB.
 
 ### Session handoff
 
@@ -159,6 +160,7 @@ All design work — both new design tickets and the build of existing handoffs �
 - E2E tests: Playwright (runs against staging)
 - Smoke tests: Playwright (runs against prod, hourly via GitHub Actions cron)
 - **Branch protection:** all checks must pass before merge to `main`
+- **Per-worktree test DBs** — integration tests run against `concert_crawl_test__<worktree>` (derived from the worktree directory; the main repo uses plain `concert_crawl_test`). `apps/api/src/test/setup/global-setup.ts` auto-creates and migrates it on first run. Set `DATABASE_URL_TEST` to override (CI does this per job). This isolates concurrent worktrees so parallel runs never truncate each other's data.
 
 ### Formatting
 
