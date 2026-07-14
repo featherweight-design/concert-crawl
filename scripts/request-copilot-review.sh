@@ -37,15 +37,20 @@ RESPONSE=$(gh api -X POST -H "Accept: application/vnd.github+json" \
 JSON
 )
 
-# A 200 is not success — verify the reviewer actually attached.
-ATTACHED=$(printf '%s' "$RESPONSE" | python3 -c \
-  "import json,sys; d=json.load(sys.stdin); print(','.join(r['login'] for r in d.get('requested_reviewers', [])))")
+# A 200 is not success — verify COPILOT SPECIFICALLY attached. Checking only
+# that some reviewer exists would false-pass if the PR already had other
+# reviewers while Copilot was silently dropped. The bot surfaces in
+# requested_reviewers with the display login "Copilot" (its review-author login
+# is "copilot-pull-request-reviewer[bot]"), so match any login containing
+# "copilot" case-insensitively.
+COPILOT_ATTACHED=$(printf '%s' "$RESPONSE" | python3 -c \
+  "import json,sys; d=json.load(sys.stdin); print('yes' if any('copilot' in (r.get('login') or '').lower() for r in d.get('requested_reviewers', [])) else '')")
 
-if [[ -z "$ATTACHED" ]]; then
+if [[ -z "$COPILOT_ATTACHED" ]]; then
   echo "FAILED: Copilot was not attached to PR #${PR_NUMBER} (silent 200)." >&2
   echo "Re-run, or add Copilot via the UI reviewers gear if it keeps failing." >&2
   exit 1
 fi
 
-echo "Requested Copilot review on PR #${PR_NUMBER} (attached: ${ATTACHED})."
+echo "Requested Copilot review on PR #${PR_NUMBER} (Copilot attached)."
 echo "Poll for completion: gh api /repos/${REPO}/pulls/${PR_NUMBER}/reviews"
