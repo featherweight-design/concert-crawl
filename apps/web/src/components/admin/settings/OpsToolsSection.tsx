@@ -57,6 +57,9 @@ export function OpsToolsSection() {
           token,
         )
         if (cancelled) return
+        // Clear any prior failure so a later successful fetch (effect rerun,
+        // re-auth) leaves the picker in its normal state, not the fallback.
+        setOptionsFailed(false)
         setOptions(data)
         if (data[0]) setSelectedKey(data[0].key)
       } catch {
