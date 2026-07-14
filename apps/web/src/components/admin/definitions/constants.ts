@@ -1,7 +1,24 @@
-import type { ActiveCrawlAlert, CrawlStatus } from '@concert-crawl/types'
+import type {
+  ActiveCrawlAlert,
+  AdminFeedbackStatus,
+  CrawlStatus,
+} from '@concert-crawl/types'
 import type { CrawlStatusBadgeConfig } from '@/types/badge'
 import type { StatusKind } from '@/components/admin/primitives/utils'
 import { ADMIN_COPY } from './copy'
+
+// Single source of truth for the feedback status → badge-kind mapping, shared
+// by the inbox row (FeedbackRow) and the user-detail feedback history so the
+// two views can't drift when a status is added or recoloured. Exhaustive over
+// AdminFeedbackStatus — the compiler flags any new status that lacks a kind.
+export const FEEDBACK_STATUS_KIND: Record<AdminFeedbackStatus, StatusKind> = {
+  unread: 'signal',
+  read: 'neutral',
+  flagged: 'warning',
+  issue_opened: 'danger',
+  resolved: 'success',
+  archived: 'neutral',
+}
 
 export const CRAWL_STATUS_BADGES: Record<CrawlStatus, CrawlStatusBadgeConfig> =
   {

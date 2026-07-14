@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/admin/primitives'
 import type { FeedbackStatusFilter } from './FeedbackFilterRail'
 import type { StatusKind } from '@/components/admin/primitives/utils'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { FEEDBACK_STATUS_KIND } from '@/components/admin/definitions/constants'
 
 export interface FeedbackItem {
   id: string
@@ -24,15 +25,6 @@ const CATEGORY_KIND: Record<FeedbackItem['category'], StatusKind> = {
   idea: 'accent',
   praise: 'success',
   other: 'neutral',
-}
-
-const STATUS_KIND: Record<string, StatusKind> = {
-  unread: 'signal',
-  flagged: 'warning',
-  issue_opened: 'danger',
-  resolved: 'success',
-  read: 'neutral',
-  archived: 'neutral',
 }
 
 const STATUS_LABEL = ADMIN_COPY.feedback.row.statusLabel
@@ -137,10 +129,7 @@ export function FeedbackRow({ item, isExpanded, onToggle }: FeedbackRowProps) {
             <StatusBadge kind={CATEGORY_KIND[item.category]}>
               {item.category}
             </StatusBadge>
-            <StatusBadge
-              kind={STATUS_KIND[item.status] ?? 'neutral'}
-              dot={showDot}
-            >
+            <StatusBadge kind={FEEDBACK_STATUS_KIND[item.status]} dot={showDot}>
               {STATUS_LABEL[item.status] ?? item.status}
             </StatusBadge>
             {hasScreenshot && (

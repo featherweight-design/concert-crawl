@@ -62,6 +62,18 @@ describe('UserDetailClient', () => {
     expect(screen.getByText('Night One')).toBeTruthy()
     expect(screen.getByText('Ogden Theatre')).toBeTruthy()
     expect(screen.getByText('user_target')).toBeTruthy()
+    // theme + avatarColor are returned by the API and must be surfaced, not
+    // silently dropped.
+    expect(screen.getByText('jade')).toBeTruthy()
+    expect(screen.getByText('signal')).toBeTruthy()
+  })
+
+  it('hides the appearance line when theme and avatarColor are both null', () => {
+    render(
+      <UserDetailClient user={baseUser({ theme: null, avatarColor: null })} />,
+    )
+    expect(screen.queryByText(COPY.identity.themePrefix)).toBeNull()
+    expect(screen.queryByText(COPY.identity.avatarPrefix)).toBeNull()
   })
 
   it('links a feedback item with an issueUrl out to the tracker', () => {

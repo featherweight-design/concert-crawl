@@ -4,7 +4,6 @@ import Link from 'next/link'
 import { ArrowLeft, ExternalLink } from 'lucide-react'
 import type {
   AdminUserDetail,
-  AdminFeedbackStatus,
   AdminUserEventStatus,
 } from '@concert-crawl/types'
 import {
@@ -21,17 +20,9 @@ import {
 } from '@/components/admin/primitives'
 import type { StatusKind } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { FEEDBACK_STATUS_KIND } from '@/components/admin/definitions/constants'
 
 const COPY = ADMIN_COPY.users.detail
-
-const FEEDBACK_STATUS_KIND: Record<AdminFeedbackStatus, StatusKind> = {
-  unread: 'signal',
-  read: 'neutral',
-  flagged: 'warning',
-  issue_opened: 'danger',
-  resolved: 'success',
-  archived: 'neutral',
-}
 
 const WATCHING_STATUS_KIND: Record<AdminUserEventStatus, StatusKind> = {
   going: 'success',
@@ -134,6 +125,43 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
         )}
         {user.city ? ` · ${user.city}` : ''}
       </div>
+
+      {(user.theme || user.avatarColor) && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 16,
+            fontSize: 12,
+            color: 'var(--fg-muted)',
+          }}
+        >
+          {user.theme && (
+            <span>
+              {COPY.identity.themePrefix}{' '}
+              <span style={{ color: 'var(--fg)' }}>{user.theme}</span>
+            </span>
+          )}
+          {user.avatarColor && (
+            <span
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              {COPY.identity.avatarPrefix}{' '}
+              <span
+                aria-hidden="true"
+                style={{
+                  display: 'inline-block',
+                  width: 10,
+                  height: 10,
+                  borderRadius: '50%',
+                  background: `var(--${user.avatarColor})`,
+                }}
+              />
+              <span style={{ color: 'var(--fg)' }}>{user.avatarColor}</span>
+            </span>
+          )}
+        </div>
+      )}
 
       <div style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
         {COPY.identity.idPrefix}{' '}

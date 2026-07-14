@@ -1821,6 +1821,8 @@ export const ADMIN_COPY = {
         joinedPrefix: 'Joined',
         unknownJoined: 'Join date unknown',
         idPrefix: 'ID',
+        themePrefix: 'Theme',
+        avatarPrefix: 'Avatar',
       },
       stats: {
         feedback: 'Feedback',
