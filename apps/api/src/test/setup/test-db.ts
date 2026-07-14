@@ -12,9 +12,10 @@ export const sanitizeWorktreeName = (name: string): string =>
 export const resolveTestDbName = (toplevel: string): string => {
   const markerIdx = toplevel.indexOf(WORKTREE_MARKER)
   if (markerIdx === -1) return BASE_DB_NAME
-  const worktreeDir = toplevel
+  const [worktreeDir = ''] = toplevel
     .slice(markerIdx + WORKTREE_MARKER.length)
-    .split('/')[0]
+    .split('/')
+  if (worktreeDir === '') return BASE_DB_NAME
   return `${BASE_DB_NAME}__${sanitizeWorktreeName(worktreeDir)}`
 }
 
