@@ -29,7 +29,21 @@ export async function setup(): Promise<void> {
       // dbName is derived from our own worktree path, but double any embedded
       // quote so a quoted identifier can't break out of the literal.
       const ident = dbName.replace(/"/g, '""')
-      await admin.unsafe(`CREATE DATABASE "${ident}"`)
+      try {
+        await admin.unsafe(`CREATE DATABASE "${ident}"`)
+      } catch (error) {
+        // 42P04 = duplicate_database: a concurrent runner created it between
+        // our existence check and CREATE. Harmless — proceed to migrate.
+        if (
+          error instanceof Error &&
+          'code' in error &&
+          error.code === '42P04'
+        ) {
+          console.log(`[test] Test DB "${dbName}" already created by a peer.`)
+        } else {
+          throw error
+        }
+      }
     }
   } finally {
     await admin.end()
