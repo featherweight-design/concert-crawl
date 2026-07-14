@@ -40,7 +40,7 @@ export const RELEASES: Release[] = [
       },
       {
         kind: 'fixed',
-        text: 'Shows coming up fast now wear a “Show soon” tag that explains why they ask for an extra confirmation before a price goes live.',
+        text: 'Shows coming up fast now wear a “Days away” tag — tap it to see why they need an extra confirmation before a price goes live.',
       },
     ],
   },

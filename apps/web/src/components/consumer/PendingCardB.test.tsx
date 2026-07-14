@@ -70,7 +70,7 @@ describe('PendingCardB', () => {
     // Derive the confirm denominators from policy so the test intent survives
     // a change to SP_POLICY: the tag is driven by `needed` exceeding the
     // standard requirement, not by the literal values 2/3.
-    it('renders the "Show soon" tag with an explanatory tooltip when the confirm requirement is bumped (imminent)', () => {
+    it('renders the "Days away" tag inside an accessible trigger and reveals the tooltip on click', () => {
       render(
         <PendingCardB
           {...buildProps({
@@ -79,13 +79,30 @@ describe('PendingCardB', () => {
           })}
         />,
       )
-      const tag = screen.getByText('Show soon')
-      expect(tag).toBeTruthy()
-      // Tooltip is delivered via the title attribute for mouse users, and the
-      // same explanation via aria-label so screen readers (which skip title)
-      // still get it.
-      expect(tag.getAttribute('title')).toMatch(/extra confirmation/i)
-      expect(tag.getAttribute('aria-label')).toMatch(/extra confirmation/i)
+      expect(screen.getByText('Days away')).toBeTruthy()
+
+      // The trigger is a real button so it is keyboard-focusable, and its
+      // accessible name carries the full explanation for screen readers.
+      const trigger = screen.getByRole('button', { name: /days away/i })
+      expect(trigger.getAttribute('aria-label')).toMatch(
+        new RegExp(`${SP_POLICY.imminentThresholdDays} days`, 'i'),
+      )
+      expect(trigger.getAttribute('aria-label')).toMatch(/confirmations/i)
+
+      // Click-triggered (no native title hover delay): the tooltip appears only
+      // after activating the trigger.
+      expect(screen.queryByRole('tooltip')).toBeNull()
+      fireEvent.click(trigger)
+      const tooltip = screen.getByRole('tooltip')
+      expect(tooltip.textContent).toMatch(
+        new RegExp(`${SP_POLICY.imminentThresholdDays} days`, 'i'),
+      )
+      expect(tooltip.textContent).toMatch(
+        new RegExp(
+          `${SP_POLICY.confirmsRequiredImminent} confirmations instead of ${SP_POLICY.confirmsRequired}`,
+          'i',
+        ),
+      )
     })
 
     it('does not render the imminent tag for a standard-confirm show', () => {
@@ -94,7 +111,7 @@ describe('PendingCardB', () => {
           {...buildProps({ confirms: 1, needed: SP_POLICY.confirmsRequired })}
         />,
       )
-      expect(screen.queryByText('Show soon')).toBeNull()
+      expect(screen.queryByText('Days away')).toBeNull()
     })
   })
 

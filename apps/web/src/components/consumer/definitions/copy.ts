@@ -84,8 +84,8 @@ export const CONSUMER_COPY = {
 
   // ── Submit price card CTA ──────────────────────────────────────────
   submitPriceCardCta: {
-    heading: 'Saw a different price?',
-    subheading: 'Two confirms move a community price out of pending.',
+    heading: 'Submit another price',
+    subheading: 'Prices are confirmed by the community before they go live.',
     ctaLabel: 'Submit',
   },
 
@@ -789,9 +789,11 @@ export const CONSUMER_COPY = {
     // Imminent-show tag + tooltip. Shown when the show is within the imminent
     // window (SP_POLICY.imminentThresholdDays) and the confirm requirement is
     // therefore bumped, so the "3 of 3" strip doesn't read as a mistake (#895).
-    imminentTag: 'Show soon',
-    imminentTooltip:
-      'This show is coming up fast, so we ask for an extra confirmation before this price goes live.',
+    imminentTag: 'Days away',
+    // Parametrised from SP_POLICY so the stated window/thresholds can never
+    // drift from what the server actually enforces (the drift this copy fixes).
+    imminentTooltip: (thresholdDays: number, imminent: number, base: number) =>
+      `Shows within ${thresholdDays} days need ${imminent} confirmations instead of ${base}, so prices stay accurate as the date gets close.`,
     // Eyebrow labels
     boxOfficeLabel: 'Box office',
     ticketsLabel: 'Tickets',

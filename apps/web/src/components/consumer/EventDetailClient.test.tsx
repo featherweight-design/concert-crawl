@@ -728,7 +728,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
   // Regression — issue #895 symptom 1. A pending price block must offer a
   // reload-surviving "submit another price" affordance. The post-submit
   // MTAddTierSuccess surface is session-only (cleared on refresh), so the
-  // persistent SubmitPriceCardCta ("Saw a different price?") has to render
+  // persistent SubmitPriceCardCta ("Submit another price") has to render
   // in the pending paths too — otherwise a user who reloads after batch
   // submitting has no way to add another tier.
   it('STATE #7 all-tiers-pending: renders the persistent SubmitPriceCardCta (#895 symptom 1)', () => {
@@ -756,7 +756,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
     )
-    expect(screen.getByText('Saw a different price?')).toBeDefined()
+    expect(screen.getByText('Submit another price')).toBeDefined()
   })
 
   it('legacy pending (pendingSubmissions) path renders the persistent SubmitPriceCardCta (#895 symptom 1)', () => {
@@ -783,7 +783,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     render(
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
     )
-    expect(screen.getByText('Saw a different price?')).toBeDefined()
+    expect(screen.getByText('Submit another price')).toBeDefined()
   })
 
   // Regression — issue #831. Same bug in the mixed-tier branch (a pending-only

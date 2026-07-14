@@ -2,6 +2,7 @@
 
 import { SP_POLICY } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { InfoTooltip } from '@/components/ui/info-tooltip'
 import {
   CheckGlyph,
   Eyebrow,
@@ -241,13 +242,14 @@ export const PendingCardB = ({
             {confirms} {copy.of} {needed} {copy.confirmed}
           </span>
           {isImminent && (
-            <span
-              title={copy.imminentTooltip}
-              // The title attribute alone is skipped by screen readers and
-              // hidden on touch. aria-label carries the full explanation to
-              // assistive tech; the tag text stays the terse visual label.
-              aria-label={`${copy.imminentTag}: ${copy.imminentTooltip}`}
-              style={{
+            <InfoTooltip
+              triggerLabel={copy.imminentTag}
+              content={copy.imminentTooltip(
+                SP_POLICY.imminentThresholdDays,
+                SP_POLICY.confirmsRequiredImminent,
+                SP_POLICY.confirmsRequired,
+              )}
+              triggerStyle={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 4,
@@ -261,12 +263,11 @@ export const PendingCardB = ({
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
                 fontWeight: 700,
-                cursor: 'help',
                 whiteSpace: 'nowrap',
               }}
             >
               {copy.imminentTag}
-            </span>
+            </InfoTooltip>
           )}
         </div>
 
