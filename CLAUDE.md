@@ -26,11 +26,13 @@ Concert Crawl aggregates live music events from Denver venue websites into a sin
 ├── apps/
 │   ├── web/        # Next.js 14+ (App Router) — UI + admin
 │   ├── api/        # Hono — REST API (/v1/...)
-│   └── crawler/    # Playwright + Claude Haiku extraction (runs as two Render Cron Jobs: triggers every 10 min, daily at 3 AM MT)
+│   ├── crawler/    # Playwright + Claude Haiku extraction (runs as two Render Cron Jobs: triggers every 10 min, daily at 3 AM MT)
+│   └── e2e/        # Playwright end-to-end tests (runs against staging)
 ├── packages/
 │   ├── config/         # Shared ESLint, TypeScript, Tailwind configs
 │   ├── crawler-core/   # Playwright + extraction logic (separated from API in PR #51)
 │   ├── db/             # Drizzle ORM schema + migrations (shared)
+│   ├── entitlements/   # Subscription tier / entitlement logic
 │   ├── logger/         # Shared Pino logger
 │   ├── price-pipeline/ # Price fetch + submission pipeline (extracted from packages/crawler-core in PR #51)
 │   └── types/          # Shared TypeScript types
@@ -86,10 +88,10 @@ These were made deliberately — understand them before proposing changes.
 | ------------------ | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | API style          | REST (not GraphQL)                    | One TS client; Zod + shared types gives equivalent type safety without resolver overhead                                                                                                                                                                                         |
 | Auth provider      | Clerk                                 | Free tier, Next.js-native, supports Spotify OAuth without migration                                                                                                                                                                                                              |
-| Auth abstraction   | `packages/auth` utilities only        | Never import Clerk directly in app code — enables future provider swap                                                                                                                                                                                                           |
+| Auth usage         | Clerk imported directly               | A `packages/auth` wrapper was originally planned but never built; Clerk is imported directly across `apps/web` and `apps/api`. A future provider swap would require introducing that abstraction first.                                                                            |
 | ORM                | Drizzle                               | TypeScript-native, parameterized queries, migration files are version-controlled                                                                                                                                                                                                 |
 | Migration strategy | Expand/contract only                  | Never destructive schema changes in a single deploy                                                                                                                                                                                                                              |
-| Crawler extraction | Structured data first, LLM fallback   | JSON-LD is free and reliable; LLM only when needed                                                                                                                                                                                                                               |
+| Crawler extraction | Structured data first, LLM fallback   | Cascade is HTML fetch → JSON-LD → Claude Haiku LLM. JSON-LD is free and reliable; LLM only when needed                                                                                                                                                                             |
 | Search             | Postgres full-text (`tsvector` + GIN) | Free, sufficient for this data volume; no external service                                                                                                                                                                                                                       |
 | Timezones          | Store UTC, display Mountain Time      | All DB timestamps are UTC; conversion at API/display layer                                                                                                                                                                                                                       |
 | Environments       | Local → Staging ∥ Prod                | Staging and prod auto-deploy in parallel from `main` (#786); CI on the PR is the pre-merge gate. Staging is a parallel canary, not a pre-prod gate. Prod has post-deploy smoke + auto-rollback. If we ever scale past solo, look at GitHub merge queue for a true pre-prod gate. |
@@ -140,10 +142,10 @@ Claude Code sessions are finite. To preserve continuity across sessions:
 
 - **TypeScript strict mode** across all packages
 - **Zod validation** at every Hono API endpoint — no raw input reaches the DB
-- **No direct Clerk imports** outside `packages/auth`
+- **Clerk is imported directly** — there is no `packages/auth` wrapper (see Architecture Decisions). Keep auth usage thin so a future abstraction stays feasible
 - **All API routes** namespaced under `/v1/`
-- **Drizzle only** for DB access — no raw SQL except in migration files
-- **No single-character variable names** — ESLint enforces a minimum identifier length of 2. Use descriptive names (`err` not `e`, `idx` not `i`, `ctx` not `c`). This applies to all identifiers: variables, parameters, and destructured bindings.
+- **Drizzle for DB access** — no hand-built raw SQL strings; Drizzle's parameterized `sql` template tag is fine and used in non-migration code (seeds, crawler queries)
+- **Descriptive identifiers** — ESLint `id-length` enforces a 2-char minimum (`err` not `e`, `ctx` not `c`) but permits `i`, `j`, `k`, `x`, `y`, `z`, and `_`. Applies to variables, parameters, and destructured bindings.
 - **Release notes on user-facing PRs** — any PR shipping a meaningful user-facing feature MUST add an entry to `apps/web/src/lib/definitions/releases.ts` on the same branch. Mirror the `progress.md` substantive-only rule: skip chores, dep bumps, doc tweaks, refactors, and customer-invisible bug fixes. For features with spotlight assets in `design/design_handoff_spotlight_heroes/`, wire up the spotlight as part of the entry. See `docs/superpowers/design-pipeline.md`.
 
 ### Design pipeline
@@ -214,9 +216,10 @@ Issues live in GitHub Issues (repo: `HartiganHM/concert-crawl`). The board is a 
 **Extraction priority:**
 
 1. JSON-LD structured data (`<script type="application/ld+json">`) — free, reliable, no LLM cost
-2. Microdata / schema.org markup — free, reliable
-3. Claude Haiku LLM extraction — paid, flexible, handles unstructured pages
-4. Manual admin entry — last resort for blocked/incompatible venues
+2. Claude Haiku LLM extraction — paid, flexible, handles unstructured pages
+3. Manual admin entry — last resort for blocked/incompatible venues
+
+(A per-venue `crawlWaitForSelector` is supported for render timing before extraction — it is not a per-venue scraping selector.)
 
 **Non-negotiable crawl rules:**
 
