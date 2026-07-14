@@ -1,3 +1,22 @@
+# [1.118.0](https://github.com/HartiganHM/concert-crawl/compare/v1.117.0...v1.118.0) (2026-07-14)
+
+
+### Bug Fixes
+
+* [#748](https://github.com/HartiganHM/concert-crawl/issues/748) PR [#936](https://github.com/HartiganHM/concert-crawl/issues/936) R1 — escape DB identifiers + .js import suffixes ([c10f3b5](https://github.com/HartiganHM/concert-crawl/commit/c10f3b509ed1ad78e394300f5b009a321edee086))
+* [#748](https://github.com/HartiganHM/concert-crawl/issues/748) PR [#936](https://github.com/HartiganHM/concert-crawl/issues/936) R2 — escape hook JSON + document SessionStart prune ([495e1df](https://github.com/HartiganHM/concert-crawl/commit/495e1df99c282b9e2c69e72f8d37306c9b2f20b0))
+* [#748](https://github.com/HartiganHM/concert-crawl/issues/748) PR [#936](https://github.com/HartiganHM/concert-crawl/issues/936) R3 — tolerate concurrent test DB creation ([a38c614](https://github.com/HartiganHM/concert-crawl/commit/a38c6148b3036b92aa7006e3727ceaf14d75b2d7))
+* [#748](https://github.com/HartiganHM/concert-crawl/issues/748) PR [#936](https://github.com/HartiganHM/concert-crawl/issues/936) R4 — v4 single-fork shape + nested worktree paths ([f45a02c](https://github.com/HartiganHM/concert-crawl/commit/f45a02c54af857527fe3297a2833bf4141750717)), closes [797/#856](https://github.com/HartiganHM/concert-crawl/issues/856)
+* [#748](https://github.com/HartiganHM/concert-crawl/issues/748) PR [#936](https://github.com/HartiganHM/concert-crawl/issues/936) R5 — prune only the local test DB instance ([0be63fe](https://github.com/HartiganHM/concert-crawl/commit/0be63fedf62424c6060016c10603f23a2c292a2e))
+* [#748](https://github.com/HartiganHM/concert-crawl/issues/748) PR [#936](https://github.com/HartiganHM/concert-crawl/issues/936) R6 — escape LIKE underscores + validate empty test DB name ([46031c4](https://github.com/HartiganHM/concert-crawl/commit/46031c4b6a766825c3ce56b980fd30d03ca6ff15))
+* **api:** [#748](https://github.com/HartiganHM/concert-crawl/issues/748) explicit .js import + guard empty worktree dir ([29b3b74](https://github.com/HartiganHM/concert-crawl/commit/29b3b74ca526efe61e0b6c934c1b3f2dc07b60db))
+* **scripts:** [#748](https://github.com/HartiganHM/concert-crawl/issues/748) harden clean-worktrees against SIGPIPE at scale ([4c3f523](https://github.com/HartiganHM/concert-crawl/commit/4c3f523aa03a4b0a3bc3a5c1805172ab26749e69))
+
+
+### Features
+
+* **scripts:** [#748](https://github.com/HartiganHM/concert-crawl/issues/748) worktree:prune drops orphaned test DBs ([0dc79a0](https://github.com/HartiganHM/concert-crawl/commit/0dc79a09ee30efce538022d6819177273b2122ad))
+
 # [1.117.0](https://github.com/HartiganHM/concert-crawl/compare/v1.116.0...v1.117.0) (2026-07-14)
 
 
