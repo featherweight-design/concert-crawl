@@ -41,10 +41,33 @@ export type AuditManifest = readonly AuditRoute[]
 // Zod schema — serializable subset (no interactions)
 // ---------------------------------------------------------------------------
 
+// route.id is embedded verbatim in output filenames (see
+// sweep-helpers.ts::outputPathFor). Restrict to a safe segment character set
+// so a manifest typo can never write outside audit-output/<runId>/.
+const ROUTE_ID_PATTERN = /^[a-z0-9][a-z0-9-]*$/
+
+// route.path must be a same-origin path (leading `/`). Rejecting absolute
+// URLs prevents a manifest entry from targeting arbitrary origins via
+// page.goto — the sweep is scoped to the PLAYWRIGHT_AUDIT_BASE_URL host by
+// design, and an absolute URL would silently escape that scope.
+const ROUTE_PATH_PATTERN = /^\/[^\s]*$/
+
 export const AuditRouteSchema: z.ZodType<Omit<AuditRoute, 'interactions'>> =
   z.object({
-    id: z.string().min(1, 'route id must be a non-empty string'),
-    path: z.string().min(1, 'route path must be a non-empty string'),
+    id: z
+      .string()
+      .min(1, 'route id must be a non-empty string')
+      .regex(
+        ROUTE_ID_PATTERN,
+        'route id must be lowercase letters, digits, and hyphens (path-safe)',
+      ),
+    path: z
+      .string()
+      .min(1, 'route path must be a non-empty string')
+      .regex(
+        ROUTE_PATH_PATTERN,
+        'route path must be a same-origin path starting with "/" (no absolute URLs)',
+      ),
     tags: z
       .array(z.enum(['consumer', 'admin']))
       .min(1, 'route must have at least one tag'),

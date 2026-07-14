@@ -1,8 +1,11 @@
+import { assertNotProdBaseUrl } from './assert-not-prod.js'
 import { loginAndSave } from '../fixtures/auth.js'
 
 /**
  * Logs in the requested fixture role and writes the Playwright storage state
- * to `.auth/audit-<role>.json`. Throws if the required env vars are not set.
+ * to `.auth/audit-<role>.json`. Throws if the required env vars are not set,
+ * or if PLAYWRIGHT_AUDIT_BASE_URL resolves to a production host (a mis-set
+ * env var would otherwise log fixture creds into prod Clerk).
  *
  * Credentials come from env vars — never from CLI args or hardcoded values.
  *   user  → E2E_AUDIT_USER_EMAIL / E2E_AUDIT_USER_PASSWORD
@@ -22,6 +25,10 @@ export async function prepareAuditAuth(role: 'user' | 'admin'): Promise<void> {
     process.env['PLAYWRIGHT_AUDIT_BASE_URL'] ??
     'https://staging.concertcrawl.app'
   const outputPath = `.auth/audit-${role}.json`
+
+  // Guard BEFORE the missing-creds check — if the base URL is prod, the
+  // operator needs to fix that regardless of whether creds are set.
+  assertNotProdBaseUrl(baseURL)
 
   if (email === '' || password === '') {
     throw new Error(

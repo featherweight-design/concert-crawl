@@ -37,6 +37,22 @@ describe('outputPathFor', () => {
       'audit-output/2026-07-12T18-04-11/admin-feedback__expand-first-card__390x844.png',
     )
   })
+
+  it('throws on path-unsafe segments (regression guard)', () => {
+    // Belt-and-braces: the manifest schema rejects unsafe route ids, but
+    // outputPathFor also runs on `state` (interaction id) — if a future
+    // interaction id ever slipped past the schema, this guard would
+    // prevent an escape from audit-output/.
+    expect(() => outputPathFor('r', 'r', '../evil', '390x844', 'png')).toThrow(
+      /unsafe state/i,
+    )
+    expect(() =>
+      outputPathFor('r', 'evil/id', 'default', '390x844', 'png'),
+    ).toThrow(/unsafe routeId/i)
+    expect(() =>
+      outputPathFor('r', 'r', 'default', '390\\x844', 'png'),
+    ).toThrow(/unsafe viewportLabel/i)
+  })
 })
 
 describe('parseCliTags', () => {

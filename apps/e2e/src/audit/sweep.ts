@@ -30,6 +30,7 @@ import path from 'node:path'
 import { chromium } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
+import { assertNotProdBaseUrl } from './assert-not-prod.js'
 import { prepareAuditAuth } from './audit-auth.js'
 import { collectHeuristics } from './heuristics.js'
 import manifest from './manifest.js'
@@ -108,12 +109,14 @@ async function captureState(
  * Returns a SweepResult with capture counts and any errors encountered.
  *
  * Never targets production — base URL comes from PLAYWRIGHT_AUDIT_BASE_URL;
- * defaults to the staging origin.
+ * defaults to the staging origin. `assertNotProdBaseUrl` throws before any
+ * browser launch if the resolved hostname is a known-prod host.
  */
 export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
   const baseUrl =
     process.env['PLAYWRIGHT_AUDIT_BASE_URL'] ??
     'https://staging.concertcrawl.app'
+  assertNotProdBaseUrl(baseUrl)
   // Format: YYYY-MM-DDTHH-MM-SS (slice(0, 19) trims the fractional-second
   // suffix from the ISO string, which is always 24+ chars).
   const runId =
@@ -137,6 +140,12 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
     try {
       await prepareAuditAuth(role)
     } catch (err) {
+      // Log to stderr so a live sweep run surfaces the failure without
+      // corrupting the stdout JSON that the CLI prints. The error is also
+      // captured in the result for post-run inspection.
+      console.error(
+        `[audit] auth prep failed for role '${role}': ${String(err)}`,
+      )
       errors.push({ kind: 'auth', message: String(err) })
       skippedRoles.add(role)
     }
@@ -185,6 +194,9 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
               // secondary failure inside captureState can't be swallowed
               // by the outer load handler; the real cause (`err`) is
               // always in the report even if the stale screenshot fails.
+              console.error(
+                `[audit] interaction '${interaction.id}' failed on route '${route.id}' at ${vp.label}: ${String(err)}`,
+              )
               errors.push({
                 routeId: route.id,
                 kind: 'interaction',
@@ -204,6 +216,9 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
                 // context torn down mid-write). Record it as its own
                 // interaction error rather than letting it propagate to
                 // the outer load handler and get misclassified.
+                console.error(
+                  `[audit] stale capture failed after interaction '${interaction.id}' on route '${route.id}' at ${vp.label}: ${String(staleErr)}`,
+                )
                 errors.push({
                   routeId: route.id,
                   kind: 'interaction',
@@ -213,6 +228,9 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
             }
           }
         } catch (err) {
+          console.error(
+            `[audit] load failed on route '${route.id}' at ${vp.label}: ${String(err)}`,
+          )
           errors.push({ routeId: route.id, kind: 'load', message: String(err) })
         } finally {
           await context.close()

@@ -6,8 +6,9 @@
  *
  * outputPathFor — builds the canonical file path for a screenshot (.png) or
  * heuristic JSON (.json) capture artifact. The path is relative to the
- * apps/e2e package root (the CWD when the sweep runs via `pnpm --filter e2e
- * audit`) so callers do not need to know the workspace layout.
+ * apps/e2e package root (the CWD when the sweep runs via
+ * `pnpm --filter e2e audit:sweep`) so callers do not need to know the
+ * workspace layout.
  *
  * parseCliTags — parses the --tags flag from process.argv, accepting both
  * --tags=admin,consumer (equals-separated) and --tags admin,consumer
@@ -43,6 +44,21 @@ export function filterManifest(
 // outputPathFor
 // ---------------------------------------------------------------------------
 
+// Any segment that becomes part of the on-disk path is validated: `/`,
+// `\\`, and `..` are the concrete traversal paths that could escape the
+// audit-output directory. The manifest schema already rejects unsafe
+// route ids, but this helper also runs on runId/state/viewportLabel —
+// runId is derived from Date().toISOString() and viewportLabel from the
+// hard-coded VIEWPORTS array (both safe), but `state` includes user-
+// authored interaction ids which flow through the schema. Belt-and-braces.
+function assertSafePathSegment(name: string, value: string): void {
+  if (value.includes('/') || value.includes('\\') || value.includes('..')) {
+    throw new Error(
+      `outputPathFor: unsafe ${name} segment '${value}' — must not contain '/', '\\\\', or '..'`,
+    )
+  }
+}
+
 /**
  * Builds the canonical output file path for a single capture artifact.
  *
@@ -57,6 +73,10 @@ export function outputPathFor(
   viewportLabel: string,
   ext: 'png' | 'json',
 ): string {
+  assertSafePathSegment('runId', runId)
+  assertSafePathSegment('routeId', routeId)
+  assertSafePathSegment('state', state)
+  assertSafePathSegment('viewportLabel', viewportLabel)
   return `audit-output/${runId}/${routeId}__${state}__${viewportLabel}.${ext}`
 }
 
