@@ -3,6 +3,7 @@ import { migrate } from 'drizzle-orm/postgres-js/migrator'
 import postgres from 'postgres'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import { resolveTestDbUrl } from './test-db'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -12,9 +13,25 @@ const MIGRATIONS_FOLDER = path.resolve(
 )
 
 export async function setup(): Promise<void> {
-  const testDbUrl =
-    process.env['DATABASE_URL_TEST'] ??
-    'postgresql://postgres:postgres@localhost:5433/concert_crawl_test'
+  const testDbUrl = resolveTestDbUrl()
+  const dbName = new URL(testDbUrl).pathname.replace(/^\//, '')
+
+  // Create the target DB if missing, via the postgres maintenance DB.
+  const adminUrl = new URL(testDbUrl)
+  adminUrl.pathname = '/postgres'
+  const admin = postgres(adminUrl.toString(), { max: 1 })
+  try {
+    const existing = await admin<
+      { datname: string }[]
+    >`SELECT datname FROM pg_database WHERE datname = ${dbName}`
+    if (existing.length === 0) {
+      console.log(`[test] Creating test DB "${dbName}"...`)
+      // dbName is derived from our own worktree path, not user input.
+      await admin.unsafe(`CREATE DATABASE "${dbName}"`)
+    }
+  } finally {
+    await admin.end()
+  }
 
   console.log('[test] Running migrations on test DB...')
 

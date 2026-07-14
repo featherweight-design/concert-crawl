@@ -1,4 +1,5 @@
 import { defineConfig } from 'vitest/config'
+import { resolveTestDbUrl } from './src/test/setup/test-db'
 
 export default defineConfig({
   test: {
@@ -13,9 +14,7 @@ export default defineConfig({
       },
     },
     env: {
-      DATABASE_URL:
-        process.env['DATABASE_URL_TEST'] ??
-        'postgresql://postgres:postgres@localhost:5433/concert_crawl_test',
+      DATABASE_URL: resolveTestDbUrl(),
     },
   },
 })
