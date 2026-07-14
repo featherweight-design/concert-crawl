@@ -26,7 +26,7 @@ const listQuerySchema = z.object({
 // so validate membership with a refine + type guard instead — no cast, and the
 // list can never drift from what the send path can actually build.
 function isTestEmailKey(value: string): value is TestEmailKey {
-  return (TEST_EMAIL_KEYS as readonly string[]).includes(value)
+  return TEST_EMAIL_KEYS.some((key) => key === value)
 }
 const testEmailBodySchema = z.object({
   emailKey: z

@@ -262,16 +262,21 @@ export async function sendTestEmail(
     return { sent: false, reason: 'missing_admin_email' }
   }
 
-  const built = buildTestEmail(key)
   const resend = new Resend(apiKey)
 
   try {
+    // Inside the try so a build failure (e.g. an unregistered template key)
+    // returns { sent:false } like every other failure, honouring the
+    // never-throws contract instead of bubbling up as a 500.
+    const built = buildTestEmail(key)
     const response = await resend.emails.send({
       from: testEmailFrom(built.fromCategory),
       to: adminEmail,
       subject: `[TEST] ${built.subject}`,
-      html: built.html === '' ? built.text : built.html,
       text: built.text,
+      // Omit html entirely for text-only samples (e.g. invite_code) — sending
+      // the plain text as html collapses whitespace/newlines in many clients.
+      ...(built.html.trim() === '' ? {} : { html: built.html }),
     })
 
     if (response.error) {

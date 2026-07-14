@@ -98,15 +98,17 @@ export function OpsToolsSection() {
             {COPY.testEmail.pickerLabel}
           </span>
           <select
-            value={selectedKey}
+            value={options === null ? '' : selectedKey}
             onChange={(event) => setSelectedKey(event.target.value)}
             disabled={options === null || status.kind === 'pending'}
             className="w-full max-w-sm rounded-md border border-border bg-surface-1 px-3 py-1.5 text-sm text-fg disabled:cursor-not-allowed disabled:opacity-60"
           >
             {options === null && !optionsFailed && (
-              <option>{COPY.testEmail.optionsLoading}</option>
+              <option value="">{COPY.testEmail.optionsLoading}</option>
             )}
-            {optionsFailed && <option>{COPY.testEmail.optionsFailed}</option>}
+            {optionsFailed && (
+              <option value="">{COPY.testEmail.optionsFailed}</option>
+            )}
             {groupedOptions.map((section) => (
               <optgroup key={section.group} label={section.group}>
                 {section.items.map((opt) => (

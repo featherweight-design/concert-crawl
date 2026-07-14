@@ -18,14 +18,10 @@ import type { EmailTemplateVars } from './types.js'
 // registry. crawl_failure / event_count_drop mirror the crawler-side alerts
 // in packages/crawler-core/src/lib/email.ts — kept as faithful samples here
 // so the API doesn't need to depend on crawler-core (Playwright et al).
-const OPERATIONAL_TEST_KEYS = [
-  'admin_alert',
-  'invite_code',
-  'crawl_failure',
-  'event_count_drop',
-] as const
-
-type OperationalTestKey = (typeof OPERATIONAL_TEST_KEYS)[number]
+// Completeness is enforced by OPERATIONAL_BUILDERS below: it's a
+// Record<OperationalTestKey, …>, so every key here needs a builder to compile.
+type OperationalTestKey =
+  'admin_alert' | 'invite_code' | 'crawl_failure' | 'event_count_drop'
 
 export type TestEmailKey = EmailTemplateKey | OperationalTestKey
 
