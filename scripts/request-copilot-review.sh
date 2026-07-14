@@ -17,7 +17,6 @@
 
 set -euo pipefail
 
-REPO="HartiganHM/concert-crawl"
 COPILOT_LOGIN="copilot-pull-request-reviewer[bot]"
 
 PR_NUMBER="${1:-}"
@@ -30,23 +29,27 @@ if ! [[ "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
   exit 2
 fi
 
-# Body MUST be JSON via --input - (form-encoded -f → 422).
-RESPONSE=$(gh api -X POST -H "Accept: application/vnd.github+json" \
-  "/repos/${REPO}/pulls/${PR_NUMBER}/requested_reviewers" --input - <<JSON
+# Derive the repo from the current checkout (gh reads the origin remote) rather
+# than hardcoding it — keeps the helper working across forks, renames, and
+# transfers. Used only for the poll hint below; the POST uses gh's {owner}/{repo}
+# placeholders, which resolve the same way.
+REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
+
+# Body MUST be JSON via --input - (form-encoded -f → 422). A 200 is not success:
+# verify COPILOT SPECIFICALLY attached, in the same call. Checking only that
+# some reviewer exists would false-pass if the PR already had other reviewers
+# while Copilot was silently dropped. --jq counts requested reviewers whose
+# login contains "copilot" (the bot surfaces with the display login "Copilot";
+# its review-author login is "copilot-pull-request-reviewer[bot]").
+COPILOT_COUNT=$(gh api -X POST -H "Accept: application/vnd.github+json" \
+  "/repos/{owner}/{repo}/pulls/${PR_NUMBER}/requested_reviewers" \
+  --jq '[(.requested_reviewers // [])[].login | select(ascii_downcase | contains("copilot"))] | length' \
+  --input - <<JSON
 {"reviewers": ["${COPILOT_LOGIN}"]}
 JSON
 )
 
-# A 200 is not success — verify COPILOT SPECIFICALLY attached. Checking only
-# that some reviewer exists would false-pass if the PR already had other
-# reviewers while Copilot was silently dropped. The bot surfaces in
-# requested_reviewers with the display login "Copilot" (its review-author login
-# is "copilot-pull-request-reviewer[bot]"), so match any login containing
-# "copilot" case-insensitively.
-COPILOT_ATTACHED=$(printf '%s' "$RESPONSE" | python3 -c \
-  "import json,sys; d=json.load(sys.stdin); print('yes' if any('copilot' in (r.get('login') or '').lower() for r in d.get('requested_reviewers', [])) else '')")
-
-if [[ -z "$COPILOT_ATTACHED" ]]; then
+if [[ "${COPILOT_COUNT:-0}" -eq 0 ]]; then
   echo "FAILED: Copilot was not attached to PR #${PR_NUMBER} (silent 200)." >&2
   echo "Re-run, or add Copilot via the UI reviewers gear if it keeps failing." >&2
   exit 1
