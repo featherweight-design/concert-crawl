@@ -682,13 +682,10 @@ export interface VenueWithEvents {
   // browse list endpoint adds, so the shared consumer EventCard renders an
   // identical "from" price on both surfaces (#787 parity). Without priceByTier
   // the card falls back to the flat ticketPriceMin scalar, which is clobbered
-  // to whichever tier was most recently confirmed.
-  upcomingEvents: Array<
-    Event & {
-      priceVendor?: string | null
-      priceByTier?: TierPriceBlock[] | null
-    }
-  >
+  // to whichever tier was most recently confirmed. Reuse EventWithVenue's
+  // enrichment field types (minus its `venue`, which lives on the parent) so
+  // the two surfaces can't drift.
+  upcomingEvents: Array<Omit<EventWithVenue, 'venue'>>
 }
 
 // InviteCode — represents the JSON-serialized API response shape.

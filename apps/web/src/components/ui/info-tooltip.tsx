@@ -12,8 +12,10 @@ import {
 interface InfoTooltipProps {
   // Short explanatory text shown in the popover.
   content: string
-  // Accessible name for the trigger, combined with `content` so screen
-  // readers announce the full explanation on focus regardless of open state.
+  // Concise accessible name for the trigger button. The explanatory `content`
+  // is exposed separately via `aria-describedby` on the tooltip when open (the
+  // WAI-ARIA tooltip relationship), so the name stays short and the
+  // description isn't announced twice.
   triggerLabel: string
   // Visible trigger content (e.g. the pill label).
   children: ReactNode
@@ -68,9 +70,9 @@ export const InfoTooltip = ({
     >
       <button
         type="button"
-        aria-label={`${triggerLabel}. ${content}`}
+        aria-label={triggerLabel}
         aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
+        aria-describedby={open ? panelId : undefined}
         onClick={() => setOpen((prev) => !prev)}
         className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)] focus-visible:ring-offset-1${
           triggerClassName ? ` ${triggerClassName}` : ''

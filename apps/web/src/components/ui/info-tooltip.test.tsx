@@ -21,24 +21,26 @@ const setup = () =>
   )
 
 describe('InfoTooltip', () => {
-  it('exposes the full explanation on the trigger and hides the tooltip until clicked', () => {
+  it('gives the trigger a concise name and hides the tooltip until clicked', () => {
     setup()
     const trigger = screen.getByRole('button', { name: /days away/i })
-    expect(trigger.getAttribute('aria-label')).toBe(
-      'Days away. Extra confirmation needed.',
-    )
+    // Concise accessible name — the explanation is a description, not the name,
+    // so it isn't announced twice.
+    expect(trigger.getAttribute('aria-label')).toBe('Days away')
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    expect(trigger.getAttribute('aria-describedby')).toBeNull()
     expect(screen.queryByRole('tooltip')).toBeNull()
   })
 
-  it('toggles open on click and marks the trigger expanded', () => {
+  it('toggles open on click and describes the trigger via the tooltip', () => {
     setup()
     const trigger = screen.getByRole('button', { name: /days away/i })
     fireEvent.click(trigger)
-    expect(screen.getByRole('tooltip').textContent).toBe(
-      'Extra confirmation needed.',
-    )
+    const tooltip = screen.getByRole('tooltip')
+    expect(tooltip.textContent).toBe('Extra confirmation needed.')
     expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    // aria-describedby links the trigger to the tooltip content while open.
+    expect(trigger.getAttribute('aria-describedby')).toBe(tooltip.id)
     fireEvent.click(trigger)
     expect(screen.queryByRole('tooltip')).toBeNull()
   })

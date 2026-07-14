@@ -81,19 +81,17 @@ describe('PendingCardB', () => {
       )
       expect(screen.getByText('Days away')).toBeTruthy()
 
-      // The trigger is a real button so it is keyboard-focusable, and its
-      // accessible name carries the full explanation for screen readers.
+      // The trigger is a real button so it is keyboard-focusable, with a
+      // concise accessible name; the explanation is exposed via the tooltip
+      // (aria-describedby) once opened, not baked into the name.
       const trigger = screen.getByRole('button', { name: /days away/i })
-      expect(trigger.getAttribute('aria-label')).toMatch(
-        new RegExp(`${SP_POLICY.imminentThresholdDays} days?`, 'i'),
-      )
-      expect(trigger.getAttribute('aria-label')).toMatch(/confirmations?/i)
 
       // Click-triggered (no native title hover delay): the tooltip appears only
-      // after activating the trigger.
+      // after activating the trigger, and describes the trigger while open.
       expect(screen.queryByRole('tooltip')).toBeNull()
       fireEvent.click(trigger)
       const tooltip = screen.getByRole('tooltip')
+      expect(trigger.getAttribute('aria-describedby')).toBe(tooltip.id)
       expect(tooltip.textContent).toMatch(
         new RegExp(`${SP_POLICY.imminentThresholdDays} days?`, 'i'),
       )
