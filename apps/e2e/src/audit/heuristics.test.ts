@@ -96,4 +96,12 @@ describe('collectHeuristicsScript', () => {
     // data-natural-width for testability.
     expect(snap.brokenImages.length).toBeGreaterThanOrEqual(1)
   })
+  it('does NOT flag jsdom images without the data-natural-width marker', () => {
+    // Regression guard: naturalWidth is 0 for every <img> under jsdom
+    // (images never load). Without gating on img.complete the previous
+    // implementation flagged every image as broken. This test proves the
+    // gate works — a plain <img> with no data attribute must be silent.
+    const snap = runInDom('<img src="ok.png" />', 320)
+    expect(snap.brokenImages).toEqual([])
+  })
 })

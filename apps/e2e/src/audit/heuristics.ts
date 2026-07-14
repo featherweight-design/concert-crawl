@@ -3,12 +3,13 @@
  *
  * collectHeuristicsScript is a stringified arrow-function expression that runs
  * entirely inside the page context — no imports, no closures over Node modules.
- * Task 4 (sweep runner) invokes it via:
+ * The wrapper `collectHeuristics(page, vw)` calls it via
  *
- *   await page.evaluate(new Function(`return (${collectHeuristicsScript})(${vw})`))
+ *   await page.evaluate(`(${collectHeuristicsScript})(${vw})`)
  *
- * The same `new Function(...)` mechanism lets jsdom unit tests call it against
- * crafted DOM fixtures without loading a real browser.
+ * (Playwright's typed `evaluate` rejects raw `Function` objects, hence the
+ * expression-string form.) jsdom unit tests invoke the same string via
+ * `new Function(...)` inside a page-shim harness — see heuristics.test.ts.
  *
  * Heuristics detected:
  *   1. hasHorizontalScroll  — scrollWidth > clientWidth on <html>
@@ -92,11 +93,14 @@ export const collectHeuristicsScript = `(vw) => {
   var brokenImages = []
   for (var ii = 0; ii < imgEls.length; ii++) {
     var img = imgEls[ii]
-    // naturalWidth === 0 catches real broken images in a live browser.
-    // data-natural-width="0" is a test-only fallback because jsdom never
-    // paints images so naturalWidth is always 0 for every <img> — the
-    // attribute lets tests mark only the intentionally broken ones.
-    var isBroken = (img instanceof HTMLImageElement && img.naturalWidth === 0)
+    // In a real browser: an image is broken when it has finished loading
+    // (complete === true) with zero natural width. Under jsdom images
+    // never load, so complete is false and the naturalWidth arm is
+    // skipped — jsdom relies solely on the data-natural-width attribute
+    // to mark broken fixtures deterministically. This prevents every
+    // <img> in a jsdom test from being flagged as broken.
+    var completed = img instanceof HTMLImageElement && img.complete
+    var isBroken = (completed && img.naturalWidth === 0)
                 || img.getAttribute('data-natural-width') === '0'
     if (isBroken) {
       brokenImages.push({ src: img.getAttribute('src') || '' })
@@ -112,9 +116,8 @@ export const collectHeuristicsScript = `(vw) => {
 
 /**
  * Runs the heuristic script inside the Playwright page and returns the result.
- *
- * Uses `new Function(...)` to invoke the stringified expression so the page
- * receives a fully self-contained function with no module references.
+ * Wraps the stringified expression in an immediately-invoked call so the page
+ * receives a self-contained IIFE with no module references.
  */
 export async function collectHeuristics(
   page: Page,
