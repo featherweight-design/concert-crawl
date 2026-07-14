@@ -13,7 +13,9 @@
     "db:migrate": "turbo run db:migrate --filter=@concert-crawl/db",
     "db:seed": "turbo run db:seed --filter=@concert-crawl/db",
     "db:sync-local": "docker exec -i concert-crawl-db psql -U postgres -d concert_crawl_db < scripts/staging-snapshot.sql && pnpm db:seed",
+    "db:seed:staging": "pnpm db:seed:staging:sync && pnpm db:seed:staging:synthetic",
     "db:seed:staging:sync": "tsx scripts/seed-staging/sync-prod-public-data.ts",
+    "db:seed:staging:synthetic": "tsx scripts/seed-staging/seed-synthetic.ts",
     "release:draft": "tsx scripts/draft-release.ts",
     "test:scripts": "vitest run --config vitest.scripts.config.ts",
     "prepare": "husky"
