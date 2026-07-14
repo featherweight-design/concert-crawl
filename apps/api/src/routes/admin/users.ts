@@ -117,7 +117,7 @@ usersAdminRouter.get(
     // counts are independent, so run them concurrently to shave latency.
     const [
       [feedbackCountRow],
-      [watchingCountRow],
+      [trackedEventsCountRow],
       [priceCountRow],
       [artistCountRow],
     ] = await Promise.all([
@@ -140,7 +140,7 @@ usersAdminRouter.get(
     ])
 
     const feedbackTotal = feedbackCountRow?.value ?? 0
-    const watchingTotal = watchingCountRow?.value ?? 0
+    const trackedEventsTotal = trackedEventsCountRow?.value ?? 0
     const priceTotal = priceCountRow?.value ?? 0
     const artistTotal = artistCountRow?.value ?? 0
 
@@ -151,7 +151,7 @@ usersAdminRouter.get(
       !clerkUser &&
       !profile &&
       feedbackTotal === 0 &&
-      watchingTotal === 0 &&
+      trackedEventsTotal === 0 &&
       priceTotal === 0 &&
       artistTotal === 0
     ) {
@@ -161,7 +161,7 @@ usersAdminRouter.get(
     // Totals above stay accurate past this display limit; the lists only run
     // once we know the response is a 200. The two are independent, so run them
     // concurrently to match the count-query fan-out above.
-    const [feedbackRows, watchingRows] = await Promise.all([
+    const [feedbackRows, trackedEventRows] = await Promise.all([
       db
         .select({
           id: feedback.id,
@@ -218,7 +218,7 @@ usersAdminRouter.get(
       }),
     )
 
-    const trackedEvents: AdminUserTrackedEventItem[] = watchingRows.map(
+    const trackedEvents: AdminUserTrackedEventItem[] = trackedEventRows.map(
       (row) => ({
         eventId: row.eventId,
         eventTitle: row.eventTitle,
@@ -252,7 +252,7 @@ usersAdminRouter.get(
       clerkAccountMissing: !clerkUser,
       stats: {
         feedback: feedbackTotal,
-        trackedEvents: watchingTotal,
+        trackedEvents: trackedEventsTotal,
         priceSubmissions: priceTotal,
         artistFollows: artistTotal,
       },
