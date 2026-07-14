@@ -2,3 +2,7 @@
 test-results/
 playwright-report/
 blob-report/
+audit-output/*
+!audit-output/.gitkeep
+.auth/audit-*.json
+

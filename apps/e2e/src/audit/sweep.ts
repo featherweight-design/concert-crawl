@@ -28,6 +28,7 @@ import path from 'node:path'
 import { chromium } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
+import { prepareAuditAuth } from './audit-auth.js'
 import { collectHeuristics } from './heuristics.js'
 import manifest from './manifest.js'
 import type { AuditManifest } from './manifest-types.js'
@@ -116,9 +117,33 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
   const errors: SweepResult['errors'] = []
   let captures = 0
 
+  // Prepare auth state files for any roles required by the filtered route
+  // list. Each role is prepared at most once. If auth preparation fails the
+  // role is added to skippedRoles and all routes requiring it are skipped.
+  const rolesNeeded = new Set<'user' | 'admin'>()
+  for (const route of routes) {
+    if (route.auth === 'user') rolesNeeded.add('user')
+    if (route.auth === 'admin') rolesNeeded.add('admin')
+  }
+  const skippedRoles = new Set<'user' | 'admin'>()
+  for (const role of rolesNeeded) {
+    try {
+      await prepareAuditAuth(role)
+    } catch (err) {
+      errors.push({ kind: 'auth', message: String(err) })
+      skippedRoles.add(role)
+    }
+  }
+
   const browser = await chromium.launch()
   try {
     for (const route of routes) {
+      if (
+        (route.auth === 'user' || route.auth === 'admin') &&
+        skippedRoles.has(route.auth)
+      ) {
+        continue
+      }
       const storageState =
         route.auth === 'none'
           ? undefined

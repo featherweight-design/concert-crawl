@@ -2,23 +2,28 @@ import { chromium, type FullConfig } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
 
-export default async function globalSetup(config: FullConfig): Promise<void> {
-  const email = process.env['E2E_TEST_USER_EMAIL']
-  const password = process.env['E2E_TEST_USER_PASSWORD']
-
-  const authDir = path.resolve('.auth')
-  const authFile = path.join(authDir, 'user.json')
-  fs.mkdirSync(authDir, { recursive: true })
-
-  if (!email || !password) {
-    console.warn(
-      '[e2e] E2E_TEST_USER_EMAIL or E2E_TEST_USER_PASSWORD not set — skipping auth setup.',
-    )
-    fs.writeFileSync(authFile, JSON.stringify({ cookies: [], origins: [] }))
-    return
+/**
+ * Logs in via the Clerk sign-in flow and writes the browser storage state to
+ * `outputPath`. Both `email` and `password` must be non-empty — the function
+ * throws immediately if either is missing so the caller gets a clear error
+ * rather than a confusing Playwright timeout.
+ *
+ * A new browser + page is spun up internally and torn down when done, so
+ * callers do not need to manage a browser lifecycle.
+ */
+export async function loginAndSave(
+  email: string,
+  password: string,
+  outputPath: string,
+  baseURL: string,
+): Promise<void> {
+  if (email === '') {
+    throw new Error('loginAndSave: email required')
+  }
+  if (password === '') {
+    throw new Error('loginAndSave: password required')
   }
 
-  const baseURL = config.projects[0]?.use.baseURL ?? 'http://localhost:3000'
   const browser = await chromium.launch()
   const page = await browser.newPage()
 
@@ -46,9 +51,32 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
       timeout: 15_000,
     })
 
-    await page.context().storageState({ path: authFile })
-    console.log('[e2e] Auth state saved to', authFile)
+    const outputDir = path.dirname(outputPath)
+    fs.mkdirSync(outputDir, { recursive: true })
+
+    await page.context().storageState({ path: outputPath })
+    console.log('[e2e] Auth state saved to', outputPath)
   } finally {
     await browser.close()
   }
+}
+
+export default async function globalSetup(config: FullConfig): Promise<void> {
+  const email = process.env['E2E_TEST_USER_EMAIL']
+  const password = process.env['E2E_TEST_USER_PASSWORD']
+
+  const authDir = path.resolve('.auth')
+  const authFile = path.join(authDir, 'user.json')
+  fs.mkdirSync(authDir, { recursive: true })
+
+  if (!email || !password) {
+    console.warn(
+      '[e2e] E2E_TEST_USER_EMAIL or E2E_TEST_USER_PASSWORD not set — skipping auth setup.',
+    )
+    fs.writeFileSync(authFile, JSON.stringify({ cookies: [], origins: [] }))
+    return
+  }
+
+  const baseURL = config.projects[0]?.use.baseURL ?? 'http://localhost:3000'
+  await loginAndSave(email, password, authFile, baseURL)
 }
