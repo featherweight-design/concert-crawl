@@ -793,7 +793,7 @@ export const CONSUMER_COPY = {
     // Parametrised from SP_POLICY so the stated window/thresholds can never
     // drift from what the server actually enforces (the drift this copy fixes).
     imminentTooltip: (thresholdDays: number, imminent: number, base: number) =>
-      `Shows within ${thresholdDays} days need ${imminent} confirmations instead of ${base}, so prices stay accurate as the date gets close.`,
+      `Shows within ${thresholdDays} ${thresholdDays === 1 ? 'day' : 'days'} need ${imminent} ${imminent === 1 ? 'confirmation' : 'confirmations'} instead of ${base}, so prices stay accurate as the date gets close.`,
     // Eyebrow labels
     boxOfficeLabel: 'Box office',
     ticketsLabel: 'Tickets',
