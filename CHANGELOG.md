@@ -1,3 +1,14 @@
+## [1.114.1](https://github.com/HartiganHM/concert-crawl/compare/v1.114.0...v1.114.1) (2026-07-14)
+
+
+### Bug Fixes
+
+* **a11y:** concise InfoTooltip name + aria-describedby; reuse enrichment type ([52d63da](https://github.com/HartiganHM/concert-crawl/commit/52d63da954b32df8c73c5362a8a6a11916a5f2e4))
+* **a11y:** use aria-controls not aria-describedby on InfoTooltip trigger ([2df713c](https://github.com/HartiganHM/concert-crawl/commit/2df713c273b33102a938a4a6f24a91225b43ce83))
+* **consumer:** clarify imminent price tag copy + click tooltip ([2a85eb0](https://github.com/HartiganHM/concert-crawl/commit/2a85eb0ec83aa48cd1efd2d93cc69b06ce41e3dd))
+* **copy:** pluralize imminent tooltip day/confirmation from policy values ([0348128](https://github.com/HartiganHM/concert-crawl/commit/0348128d0ffe02d587ed71650eb5a90fa8ea20cc))
+* **venues:** mirror browse priceByTier so venue card shows cheapest tier ([1838d43](https://github.com/HartiganHM/concert-crawl/commit/1838d43397dd86758738768e877fc5f32a8d0dd9)), closes [#787](https://github.com/HartiganHM/concert-crawl/issues/787)
+
 # [1.114.0](https://github.com/HartiganHM/concert-crawl/compare/v1.113.0...v1.114.0) (2026-07-14)
 
 
