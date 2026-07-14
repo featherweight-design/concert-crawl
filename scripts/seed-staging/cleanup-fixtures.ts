@@ -31,7 +31,7 @@ import {
   submissionConfirms,
   userEvents,
   userProfiles,
-} from '@concert-crawl/db'
+} from '../../packages/db/src/schema/index.js'
 import type { DrizzleWriteDb } from './sync-venues.js'
 
 export async function cleanupFixtures(deps: {

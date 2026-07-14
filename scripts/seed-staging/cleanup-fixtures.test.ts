@@ -6,7 +6,7 @@ import {
   userEvents,
   notifications,
   userProfiles,
-} from '@concert-crawl/db'
+} from '../../packages/db/src/schema/index.js'
 import { cleanupFixtures } from './cleanup-fixtures.js'
 
 describe('cleanupFixtures', () => {

@@ -30,7 +30,7 @@
 import { pathToFileURL } from 'node:url'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import { events } from '@concert-crawl/db'
+import { events } from '../../packages/db/src/schema/index.js'
 import * as schema from '../../packages/db/src/schema/index.js'
 import { cleanupFixtures } from './cleanup-fixtures.js'
 import { createRng } from './seeded-rng.js'
@@ -56,6 +56,18 @@ export async function runSynthetic(deps: {
   inserted: Record<string, number>
 }> {
   const { staging, fixtureUserIds, seed } = deps
+
+  // Reject empty fixture sets up front. cleanupFixtures happens to handle
+  // it (early-returns zeros), but downstream generators — generateFeedback
+  // reads fixtureUserIds[0]!, generateNotifications calls
+  // rng.pick(fixtureUserIds), generateUserProfiles would insert().values([])
+  // — would fail deep in generation with confusing errors instead. A clear
+  // failure at the entry point is more debuggable.
+  if (fixtureUserIds.length === 0) {
+    throw new Error(
+      'runSynthetic: fixtureUserIds must not be empty. Provide at least one Clerk user id.',
+    )
+  }
 
   // 1. Delete all fixture-user-owned rows (idempotency reset).
   const { deleted } = await cleanupFixtures({ staging, fixtureUserIds })

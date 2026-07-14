@@ -313,3 +313,24 @@ describe('runSynthetic — empty eventIds', () => {
     expect(result.inserted['priceSubmissions']).toBe(0)
   })
 })
+
+// ---------------------------------------------------------------------------
+// Suite (c): empty fixtureUserIds — reject up front
+// ---------------------------------------------------------------------------
+
+describe('runSynthetic — empty fixtureUserIds guard', () => {
+  it('throws a clear error before any generator or cleanup runs', async () => {
+    // Regression guard: several generators assume ≥1 user (feedback reads
+    // fixtureUserIds[0]!; notifications calls rng.pick(fixtureUserIds);
+    // profiles would insert([])). Failing at the entry point is more
+    // debuggable than a deep crash mid-generation.
+    const stagingMock = buildStagingMock([])
+    await expect(
+      runSynthetic({
+        staging: stagingMock as any,
+        fixtureUserIds: [],
+        seed: FIXTURE_SEED,
+      }),
+    ).rejects.toThrow('fixtureUserIds must not be empty')
+  })
+})

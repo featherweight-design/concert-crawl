@@ -19,4 +19,11 @@ describe('createRng', () => {
     const arr = ['a', 'b', 'c'] as const
     expect(arr).toContain(rng.pick(arr))
   })
+  it('pick throws on an empty array (no silent undefined)', () => {
+    // Regression guard: `pick` is typed to return T (not `T | undefined`)
+    // — an empty array would otherwise silently return `undefined` and
+    // corrupt downstream inserts.
+    const rng = createRng(1)
+    expect(() => rng.pick([])).toThrow('cannot pick from an empty array')
+  })
 })

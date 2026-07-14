@@ -23,6 +23,15 @@ export const createRng = (seed: number) => {
     next,
     int: (min: number, max: number) =>
       Math.floor(next() * (max - min + 1)) + min,
-    pick: <T>(arr: readonly T[]): T => arr[Math.floor(next() * arr.length)]!,
+    pick: <T>(arr: readonly T[]): T => {
+      // Empty array would compute `Math.floor(next() * 0)` = 0, then read
+      // `arr[0]` = undefined — but the return type is `T`, not `T |
+      // undefined`, so callers get a silent type-safety hole and downstream
+      // inserts would receive undefined. Fail loudly instead.
+      if (arr.length === 0) {
+        throw new Error('createRng.pick: cannot pick from an empty array')
+      }
+      return arr[Math.floor(next() * arr.length)]!
+    },
   }
 }
