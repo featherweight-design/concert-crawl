@@ -40,6 +40,24 @@ export async function cleanupFixtures(deps: {
 }): Promise<{ deleted: Record<string, number> }> {
   const { staging, fixtureUserIds } = deps
 
+  // Empty fixture set → nothing to delete. Drizzle's inArray([]) emits
+  // `IN ()`, which is invalid Postgres SQL (some drivers substitute
+  // `IN (NULL)` or fail outright); returning zeros up front avoids the
+  // driver-dependent behavior and matches the "safe for narrowed subsets"
+  // contract other seed-staging helpers rely on.
+  if (fixtureUserIds.length === 0) {
+    return {
+      deleted: {
+        submissionConfirms: 0,
+        priceSubmissions: 0,
+        feedback: 0,
+        userEvents: 0,
+        notifications: 0,
+        userProfiles: 0,
+      },
+    }
+  }
+
   // 1. submissionConfirms — child of priceSubmissions
   const deletedSubmissionConfirms = await staging
     .delete(submissionConfirms)

@@ -117,15 +117,21 @@ export const generateNotifications = async (
       readAt: null,
     })
 
-    // Short row with randomized read state
+    // Short row with randomized read state. Derive category from the chosen
+    // type so pairings stay coherent (admin_alert → admin categories only,
+    // user_notification → user categories only). Independent picks would
+    // produce nonsense like an admin_alert with category 'watch.reminder'
+    // which confuses admin views that switch on category.
     const isRead = rng.int(0, 1) === 1
+    const shortType = rng.pick(['admin_alert', 'user_notification'] as const)
+    const shortCategory =
+      shortType === 'admin_alert'
+        ? rng.pick(ADMIN_ALERT_CATEGORIES)
+        : rng.pick(USER_NOTIFICATION_CATEGORIES)
     rows.push({
       userId,
-      type: rng.pick(['admin_alert', 'user_notification'] as const),
-      category:
-        rng.int(0, 1) === 0
-          ? rng.pick(ADMIN_ALERT_CATEGORIES)
-          : rng.pick(USER_NOTIFICATION_CATEGORIES),
+      type: shortType,
+      category: shortCategory,
       title: rng.pick(SHORT_TITLES),
       body: rng.pick(SHORT_BODIES),
       actionUrl: null,

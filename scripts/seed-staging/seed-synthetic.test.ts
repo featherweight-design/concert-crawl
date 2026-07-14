@@ -159,7 +159,13 @@ describe('runSynthetic — determinism and idempotency', () => {
         .calls[0],
     }
 
-    // rng is stateful so it won't compare equal — compare the other deps only
+    // Compare the deterministic, structured deps directly (not via
+    // JSON.stringify — that silently drops function properties like the
+    // staging mock and would make this test weaker than it looks). Strip
+    // both `rng` (stateful, one-per-run identity) and `staging` (a
+    // different mock instance per run by design) explicitly. What remains
+    // — fixtureUserIds + eventIds — is the invariant we want to prove is
+    // threaded identically to each generator.
     for (const key of [
       'profiles',
       'userEvents',
@@ -167,11 +173,9 @@ describe('runSynthetic — determinism and idempotency', () => {
       'priceSubmissions',
       'notifications',
     ] as const) {
-      const depsA = { ...argsA[key]![0] }
-      const depsB = { ...argsB[key]![0] }
-      delete depsA.rng
-      delete depsB.rng
-      expect(JSON.stringify(depsA)).toBe(JSON.stringify(depsB))
+      const { rng: _rngA, staging: _stagingA, ...restA } = argsA[key]![0]
+      const { rng: _rngB, staging: _stagingB, ...restB } = argsB[key]![0]
+      expect(restA).toEqual(restB)
     }
   })
 

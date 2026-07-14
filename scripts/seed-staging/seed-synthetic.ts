@@ -181,8 +181,11 @@ export async function main(): Promise<void> {
     )
     console.log('[synthetic] Synthetic seeder complete.')
   } finally {
-    // 5. Close connection regardless of outcome.
-    await stagingSql?.end()
+    // 5. Close connection regardless of outcome. Use Promise.allSettled so a
+    // failure inside .end() (e.g. Neon socket already torn down mid-run)
+    // doesn't mask the original error from the try block. Mirrors the
+    // pattern in sync-prod-public-data.ts.
+    await Promise.allSettled([stagingSql?.end()])
   }
 }
 
