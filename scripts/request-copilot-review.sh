@@ -17,6 +17,14 @@
 
 set -euo pipefail
 
+# Fail loudly on the one hard dependency rather than a bare "command not found"
+# from the first gh call deep in the script.
+if ! command -v gh >/dev/null 2>&1; then
+  echo "ERROR: the GitHub CLI ('gh') is required but was not found in PATH." >&2
+  echo "  Install it from https://cli.github.com/ and run 'gh auth login'." >&2
+  exit 1
+fi
+
 COPILOT_LOGIN="copilot-pull-request-reviewer[bot]"
 
 PR_NUMBER="${1:-}"
