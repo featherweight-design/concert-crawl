@@ -85,9 +85,9 @@ describe('PendingCardB', () => {
       // accessible name carries the full explanation for screen readers.
       const trigger = screen.getByRole('button', { name: /days away/i })
       expect(trigger.getAttribute('aria-label')).toMatch(
-        new RegExp(`${SP_POLICY.imminentThresholdDays} days`, 'i'),
+        new RegExp(`${SP_POLICY.imminentThresholdDays} days?`, 'i'),
       )
-      expect(trigger.getAttribute('aria-label')).toMatch(/confirmations/i)
+      expect(trigger.getAttribute('aria-label')).toMatch(/confirmations?/i)
 
       // Click-triggered (no native title hover delay): the tooltip appears only
       // after activating the trigger.
@@ -95,11 +95,11 @@ describe('PendingCardB', () => {
       fireEvent.click(trigger)
       const tooltip = screen.getByRole('tooltip')
       expect(tooltip.textContent).toMatch(
-        new RegExp(`${SP_POLICY.imminentThresholdDays} days`, 'i'),
+        new RegExp(`${SP_POLICY.imminentThresholdDays} days?`, 'i'),
       )
       expect(tooltip.textContent).toMatch(
         new RegExp(
-          `${SP_POLICY.confirmsRequiredImminent} confirmations instead of ${SP_POLICY.confirmsRequired}`,
+          `${SP_POLICY.confirmsRequiredImminent} confirmations? instead of ${SP_POLICY.confirmsRequired}`,
           'i',
         ),
       )
