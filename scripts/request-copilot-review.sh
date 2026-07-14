@@ -31,19 +31,27 @@ fi
 
 # Derive the repo from the current checkout (gh reads the origin remote) rather
 # than hardcoding it — keeps the helper working across forks, renames, and
-# transfers. Used only for the poll hint below; the POST uses gh's {owner}/{repo}
-# placeholders, which resolve the same way.
-REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner)
+# transfers. Fail fast with an actionable hint: if gh can't resolve the repo
+# (not authed, wrong dir, bad remote), an empty REPO would produce a confusing
+# downstream error. Used only for the poll hint; the POST uses gh's
+# {owner}/{repo} placeholders, which resolve the same way.
+if ! REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>&1); then
+  echo "ERROR: Could not determine the repo via gh:" >&2
+  echo "  $REPO" >&2
+  echo "  Run 'gh auth login', or check you're inside the repo checkout." >&2
+  exit 1
+fi
 
 # Body MUST be JSON via --input - (form-encoded -f → 422). A 200 is not success:
 # verify COPILOT SPECIFICALLY attached, in the same call. Checking only that
 # some reviewer exists would false-pass if the PR already had other reviewers
-# while Copilot was silently dropped. --jq counts requested reviewers whose
-# login contains "copilot" (the bot surfaces with the display login "Copilot";
-# its review-author login is "copilot-pull-request-reviewer[bot]").
+# while Copilot was silently dropped. Match the bot's login EXACTLY — not a
+# substring — so an unrelated user with "copilot" in their handle can't false-
+# pass. The POST response lists the bot with the display login "Copilot"; its
+# review-author login is "copilot-pull-request-reviewer[bot]". Accept either.
 COPILOT_COUNT=$(gh api -X POST -H "Accept: application/vnd.github+json" \
   "/repos/{owner}/{repo}/pulls/${PR_NUMBER}/requested_reviewers" \
-  --jq '[(.requested_reviewers // [])[].login | select(ascii_downcase | contains("copilot"))] | length' \
+  --jq '[(.requested_reviewers // [])[].login | ascii_downcase | select(. == "copilot" or . == "copilot-pull-request-reviewer[bot]")] | length' \
   --input - <<JSON
 {"reviewers": ["${COPILOT_LOGIN}"]}
 JSON
