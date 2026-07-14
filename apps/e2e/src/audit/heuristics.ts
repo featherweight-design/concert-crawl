@@ -29,6 +29,7 @@ export type HeuristicSnapshot = {
   offscreenElements: { selector: string; rightEdgePx: number }[]
   smallTapTargets: { selector: string; widthPx: number; heightPx: number }[]
   brokenImages: { src: string }[]
+  contentDensity: { mainChildren: number }
 }
 
 // ---------------------------------------------------------------------------
@@ -107,7 +108,11 @@ export const collectHeuristicsScript = `(vw) => {
     }
   }
 
-  return { hasHorizontalScroll: hasHorizontalScroll, offscreenElements: offscreenElements, smallTapTargets: smallTapTargets, brokenImages: brokenImages }
+  // --- 5. Content density ---
+  var mainEl = document.querySelector('main')
+  var mainChildren = mainEl ? mainEl.children.length : 0
+
+  return { hasHorizontalScroll: hasHorizontalScroll, offscreenElements: offscreenElements, smallTapTargets: smallTapTargets, brokenImages: brokenImages, contentDensity: { mainChildren: mainChildren } }
 }`
 
 // ---------------------------------------------------------------------------

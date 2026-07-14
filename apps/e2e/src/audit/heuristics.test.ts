@@ -104,4 +104,12 @@ describe('collectHeuristicsScript', () => {
     const snap = runInDom('<img src="ok.png" />', 320)
     expect(snap.brokenImages).toEqual([])
   })
+  it('counts direct children of <main> for contentDensity', () => {
+    const snap = runInDom('<main><div></div><div></div></main>', 320)
+    expect(snap.contentDensity.mainChildren).toBe(2)
+  })
+  it('reports 0 mainChildren when no <main> element exists', () => {
+    const snap = runInDom('<div><p>no main here</p></div>', 320)
+    expect(snap.contentDensity.mainChildren).toBe(0)
+  })
 })

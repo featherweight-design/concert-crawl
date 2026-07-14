@@ -89,7 +89,12 @@ async function captureState(
   await page.screenshot({ path: pngPath, fullPage: true })
 
   const snapshot = await collectHeuristics(page, vp.width)
-  fs.writeFileSync(jsonPath, JSON.stringify(snapshot, null, 2))
+  // insufficientData is a sweep-side computation, not part of HeuristicSnapshot.
+  // The on-disk JSON is a deliberate superset: PR 4 vision-triage reads this
+  // flag to skip visual judgment on thin renders ("run the seeder" log instead).
+  const insufficientData = snapshot.contentDensity.mainChildren < 5
+  const jsonPayload = { ...snapshot, insufficientData }
+  fs.writeFileSync(jsonPath, JSON.stringify(jsonPayload, null, 2))
 }
 
 // ---------------------------------------------------------------------------
