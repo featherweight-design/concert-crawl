@@ -22,11 +22,17 @@ const listWorktreeNames = (): string[] => {
   return names
 }
 
+// Per-worktree DBs (concert_crawl_test__*) are only ever created on the local
+// default instance — resolveTestDbUrl() applies the per-worktree naming only
+// when DATABASE_URL_TEST is unset. Deliberately ignore DATABASE_URL_TEST here:
+// it may point at a shared/remote Postgres (CI, staging), and honouring it
+// would let `worktree:prune` (or the SessionStart hook) DROP databases on the
+// wrong server. The prune always targets the local instance where the DBs live.
+const LOCAL_ADMIN_URL =
+  'postgresql://postgres:postgres@localhost:5433/concert_crawl_test'
+
 const main = async (): Promise<void> => {
-  const adminUrl = new URL(
-    process.env['DATABASE_URL_TEST'] ??
-      'postgresql://postgres:postgres@localhost:5433/concert_crawl_test',
-  )
+  const adminUrl = new URL(LOCAL_ADMIN_URL)
   adminUrl.pathname = '/postgres'
   const admin = postgres(adminUrl.toString(), { max: 1 })
   try {
