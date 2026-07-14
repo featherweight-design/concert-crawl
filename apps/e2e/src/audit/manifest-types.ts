@@ -1,0 +1,110 @@
+/*
+ * Manifest schema + types for the UI audit sweep engine.
+ *
+ * AuditManifest is the authoritative list of routes the sweep runner visits.
+ * Each route declares its path, auth requirement, and which audience tags it
+ * belongs to so the runner can filter runs (e.g. "consumer only").
+ *
+ * AuditRouteSchema is the Zod schema for the serializable subset of AuditRoute
+ * (i.e. everything except `interactions`, which contain functions that cannot
+ * be represented in a Zod schema). validateManifest() applies this schema to
+ * every entry, then enforces cross-entry uniqueness of route ids.
+ *
+ * Interactions — { id, description, run(page) } — are passed through after Zod
+ * validation; TypeScript's static types guard them at the call site.
+ */
+
+import { z } from 'zod'
+import type { Page } from '@playwright/test'
+
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type AuditInteraction = {
+  id: string
+  description: string
+  run: (page: Page) => Promise<void>
+}
+
+export type AuditRoute = {
+  id: string
+  path: string
+  tags: ('consumer' | 'admin')[]
+  auth: 'none' | 'user' | 'admin'
+  interactions?: AuditInteraction[]
+}
+
+export type AuditManifest = readonly AuditRoute[]
+
+// ---------------------------------------------------------------------------
+// Zod schema — serializable subset (no interactions)
+// ---------------------------------------------------------------------------
+
+export const AuditRouteSchema: z.ZodType<Omit<AuditRoute, 'interactions'>> =
+  z.object({
+    id: z.string().min(1, 'route id must be a non-empty string'),
+    path: z.string().min(1, 'route path must be a non-empty string'),
+    tags: z
+      .array(z.enum(['consumer', 'admin']))
+      .min(1, 'route must have at least one tag'),
+    auth: z.enum(['none', 'user', 'admin']),
+  })
+
+// ---------------------------------------------------------------------------
+// Validation
+// ---------------------------------------------------------------------------
+
+/**
+ * Validates a manifest of unknown shape, returning a typed AuditManifest.
+ *
+ * Throws a plain Error (prefixed "[manifest]") on:
+ *   - shape violations (caught by Zod)
+ *   - empty tags array
+ *   - duplicate route ids
+ *
+ * Interactions, when present, are passed through unchecked — they are runtime
+ * functions that cannot be represented in a Zod schema.
+ */
+export function validateManifest(manifest: unknown): AuditManifest {
+  if (!Array.isArray(manifest)) {
+    throw new Error('[manifest] manifest must be an array')
+  }
+
+  const routes: AuditRoute[] = []
+  const seenIds = new Set<string>()
+
+  for (let idx = 0; idx < manifest.length; idx++) {
+    const entry = manifest[idx]
+    const result = AuditRouteSchema.safeParse(entry)
+
+    if (!result.success) {
+      const firstIssue = result.error.issues[0]
+      throw new Error(
+        `[manifest] route at index ${idx}: ${firstIssue?.message ?? result.error.message}`,
+      )
+    }
+
+    const parsed = result.data
+
+    if (seenIds.has(parsed.id)) {
+      throw new Error(`[manifest] duplicate route id: '${parsed.id}'`)
+    }
+    seenIds.add(parsed.id)
+
+    // Preserve interactions from the original entry if present; they are
+    // functions and cannot pass through Zod — rely on TypeScript at the
+    // call site.
+    const interactions =
+      entry !== null &&
+      typeof entry === 'object' &&
+      'interactions' in entry &&
+      Array.isArray((entry as { interactions: unknown }).interactions)
+        ? (entry as { interactions: AuditInteraction[] }).interactions
+        : undefined
+
+    routes.push({ ...parsed, ...(interactions ? { interactions } : {}) })
+  }
+
+  return routes
+}

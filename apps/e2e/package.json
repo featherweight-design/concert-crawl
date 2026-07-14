@@ -5,6 +5,7 @@
   "scripts": {
     "test:e2e": "playwright test --config playwright.config.ts",
     "test:smoke": "playwright test --config playwright.smoke.config.ts",
+    "test:audit": "vitest run",
     "install-browsers": "playwright install --with-deps chromium",
     "typecheck": "tsc --noEmit"
   },
@@ -15,6 +16,9 @@
     "@concert-crawl/config": "workspace:*",
     "@playwright/test": "^1.61.1",
     "@types/node": "^26.1.1",
-    "typescript": "^5.0.0"
+    "jsdom": "^29.1.1",
+    "typescript": "^5.0.0",
+    "vitest": "^4.1.10",
+    "zod": "^3.22.0"
   }
 }
