@@ -70,7 +70,7 @@ export const InfoTooltip = ({
         type="button"
         aria-label={`${triggerLabel}. ${content}`}
         aria-expanded={open}
-        aria-describedby={open ? panelId : undefined}
+        aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((prev) => !prev)}
         className={`focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)] focus-visible:ring-offset-1${
           triggerClassName ? ` ${triggerClassName}` : ''
