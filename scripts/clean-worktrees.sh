@@ -13,8 +13,11 @@ DRY_RUN=false
 echo ""
 
 # Derive the primary worktree path from the first entry in the worktree list
-# (always the primary, regardless of which worktree this script is run from)
-PRIMARY_WORKTREE=$(git worktree list --porcelain | awk '/^worktree / { print substr($0, 10); exit }')
+# (always the primary, regardless of which worktree this script is run from).
+# awk must consume the whole stream (no early `exit`) — exiting early closes
+# the pipe and, under `set -o pipefail` with many worktrees, git dies with
+# SIGPIPE and fails the script.
+PRIMARY_WORKTREE=$(git worktree list --porcelain | awk '/^worktree / && !seen { print substr($0, 10); seen = 1 }')
 
 # Fail fast if gh is unavailable or unauthenticated — an empty result would
 # cause every worktree to look PR-less and get deleted
@@ -39,7 +42,7 @@ while IFS='|' read -r wt_path branch; do
     continue
   fi
 
-  if echo "$open_branches" | grep -qxF "$branch"; then
+  if grep -qxF "$branch" <<<"$open_branches"; then
     echo "SKIP  (open PR): $branch"
     ((skipped++)) || true
   else
