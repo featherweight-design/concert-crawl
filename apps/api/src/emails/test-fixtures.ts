@@ -10,7 +10,7 @@
 // fails to compile. The operational entries (admin alert, invite, crawler
 // alerts) are enumerated explicitly below.
 
-import { EMAIL_TEMPLATE_KEYS, type EmailTemplateKey } from '@concert-crawl/db'
+import type { EmailTemplateKey } from '@concert-crawl/db'
 import { getTemplateRenderer } from './registry.js'
 import type { EmailTemplateVars } from './types.js'
 
@@ -147,14 +147,25 @@ const TRANSACTIONAL_TEST_VARS: {
   winback: { tierName: 'Premium' },
 }
 
+// Derived from the fixture map, not a runtime @concert-crawl/db export, so this
+// module evaluates even when API route tests mock that package with partial
+// factories — a missing named export would otherwise break module evaluation
+// before the test runs. The mapped type on TRANSACTIONAL_TEST_VARS already
+// guarantees these keys are exactly EmailTemplateKey.
+const TRANSACTIONAL_KEYS: ReadonlySet<string> = new Set(
+  Object.keys(TRANSACTIONAL_TEST_VARS),
+)
+
 function isTransactionalKey(key: TestEmailKey): key is EmailTemplateKey {
-  return (EMAIL_TEMPLATE_KEYS as readonly string[]).includes(key)
+  return TRANSACTIONAL_KEYS.has(key)
 }
 
 // Faithful samples of the crawler-side admin alerts (source of truth:
 // packages/crawler-core/src/lib/email.ts). Duplicated intentionally to keep
 // the API decoupled from the crawler package.
-const SAMPLE_ADMIN_URL = 'https://concertcrawl.app'
+// Env-driven so staging/dev test emails link to that environment's admin, not
+// prod. Mirrors the ADMIN_URL ?? prod fallback in the notifications route.
+const SAMPLE_ADMIN_URL = process.env.ADMIN_URL ?? 'https://concertcrawl.app'
 
 function buildAdminAlertSample(): BuiltTestEmail {
   return {

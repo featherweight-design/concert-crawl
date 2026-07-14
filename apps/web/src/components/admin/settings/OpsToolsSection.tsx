@@ -128,7 +128,7 @@ export function OpsToolsSection() {
           type="button"
           onClick={() => void submitTest()}
           disabled={
-            options === null || optionsFailed || status.kind === 'pending'
+            (options === null && !optionsFailed) || status.kind === 'pending'
           }
           className="inline-flex w-fit items-center gap-2 rounded-md border border-border bg-surface-1 px-3 py-1.5 text-sm font-medium text-fg hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
