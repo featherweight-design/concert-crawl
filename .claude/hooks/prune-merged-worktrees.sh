@@ -44,5 +44,8 @@ parts=()
 
 if [ ${#parts[@]} -gt 0 ]; then
   msg="Worktree hygiene: $(IFS='; '; echo "${parts[*]}")."
-  printf '{"systemMessage": "%s"}' "$msg"
+  # Build the JSON with jq so branch names containing quotes/backslashes/
+  # newlines can't produce invalid output. Fall back to nothing if jq is
+  # absent — the message is informational and must never block startup.
+  command -v jq >/dev/null 2>&1 && jq -cn --arg msg "$msg" '{systemMessage: $msg}'
 fi

@@ -87,8 +87,12 @@ Safety rules:
 - **Unit — `selectOrphanedTestDbs`:** returns only `concert_crawl_test__*` names absent from the surviving-worktree list; never returns the base `concert_crawl_test`; returns empty when every DB has a matching worktree.
 - **Manual validation:** create two worktrees, run `test:integration` in each simultaneously, confirm no cross-truncation and independent schemas; run `pnpm worktree:prune --dry-run` then for real and confirm open-PR worktrees survive while orphaned worktrees + their DBs are removed.
 
+## Automatic pruning
+
+`pnpm worktree:prune` is the explicit post-merge step, but to keep stale worktrees and DBs from accumulating between merges, a `SessionStart` hook (`.claude/settings.json` → `.claude/hooks/prune-merged-worktrees.sh`) runs the same cleanup automatically at the start of each session: it removes worktrees whose tracking branch is gone and drops their orphaned `concert_crawl_test__*` DBs (reusing `scripts/prune-test-dbs.ts`). The hook never blocks startup and skips the DB step when the local test DB is unreachable.
+
 ## Out of scope
 
 - Changing CI's DB provisioning (already isolated per job).
 - Migrating to a schema-per-test or container-per-worktree model.
-- Automatic pruning on a hook/cron — pruning is an explicit post-merge step, run by the agent that merged the PR.
+- Cron-based pruning on remote/CI — cleanup runs locally via the explicit command and the SessionStart hook.
