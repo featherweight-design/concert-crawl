@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { selectOrphanedTestDbs } from './prune-test-dbs-helpers'
+import { selectOrphanedTestDbs } from './prune-test-dbs-helpers.js'
 
 describe('selectOrphanedTestDbs', () => {
   it('drops DBs whose worktree no longer exists', () => {

@@ -1,6 +1,6 @@
 import postgres from 'postgres'
 import { execSync } from 'node:child_process'
-import { selectOrphanedTestDbs } from './prune-test-dbs-helpers'
+import { selectOrphanedTestDbs } from './prune-test-dbs-helpers.js'
 
 const WORKTREE_MARKER = '/.worktrees/'
 const dryRun = process.argv.includes('--dry-run')
@@ -45,8 +45,10 @@ const main = async (): Promise<void> => {
         continue
       }
       console.log(`[prune-test-dbs] Dropping: ${name}`)
-      // name comes from pg_database filtered to our prefix — not user input.
-      await admin.unsafe(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`)
+      // name comes from pg_database filtered to our prefix, but double any
+      // embedded quote so a quoted identifier can't break out of the literal.
+      const ident = name.replace(/"/g, '""')
+      await admin.unsafe(`DROP DATABASE IF EXISTS "${ident}" WITH (FORCE)`)
     }
   } finally {
     await admin.end()

@@ -26,8 +26,10 @@ export async function setup(): Promise<void> {
     >`SELECT datname FROM pg_database WHERE datname = ${dbName}`
     if (existing.length === 0) {
       console.log(`[test] Creating test DB "${dbName}"...`)
-      // dbName is derived from our own worktree path, not user input.
-      await admin.unsafe(`CREATE DATABASE "${dbName}"`)
+      // dbName is derived from our own worktree path, but double any embedded
+      // quote so a quoted identifier can't break out of the literal.
+      const ident = dbName.replace(/"/g, '""')
+      await admin.unsafe(`CREATE DATABASE "${ident}"`)
     }
   } finally {
     await admin.end()
