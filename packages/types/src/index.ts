@@ -678,7 +678,17 @@ export interface VenuePublic {
 // VenueWithEvents — venue profile page response
 export interface VenueWithEvents {
   venue: VenuePublic
-  upcomingEvents: Event[]
+  // upcomingEvents carry the same priceVendor + priceByTier enrichment the
+  // browse list endpoint adds, so the shared consumer EventCard renders an
+  // identical "from" price on both surfaces (#787 parity). Without priceByTier
+  // the card falls back to the flat ticketPriceMin scalar, which is clobbered
+  // to whichever tier was most recently confirmed.
+  upcomingEvents: Array<
+    Event & {
+      priceVendor?: string | null
+      priceByTier?: TierPriceBlock[] | null
+    }
+  >
 }
 
 // InviteCode — represents the JSON-serialized API response shape.

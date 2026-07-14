@@ -22,10 +22,16 @@ vi.mock('drizzle-orm', () => ({
   eq: vi.fn((_a, _b) => ({ type: 'eq' })),
   and: vi.fn((...args: unknown[]) => ({ type: 'and', args })),
   asc: vi.fn((col: unknown) => ({ type: 'asc', col })),
+  desc: vi.fn((col: unknown) => ({ type: 'desc', col })),
   gte: vi.fn((_a, _b) => ({ type: 'gte' })),
   count: vi.fn((col: unknown) => ({ type: 'count', col })),
+  inArray: vi.fn((_col: unknown, _values: unknown) => ({ type: 'inArray' })),
   isNotNull: vi.fn((col: unknown) => ({ type: 'isNotNull', col })),
   isNull: vi.fn((col: unknown) => ({ type: 'isNull', col })),
+  sql: Object.assign(
+    vi.fn((..._args: unknown[]) => ({ type: 'sql' })),
+    { raw: vi.fn((str: string) => ({ type: 'sql.raw', str })) },
+  ),
 }))
 
 vi.mock('@concert-crawl/db', () => ({
@@ -45,6 +51,21 @@ vi.mock('@concert-crawl/db', () => ({
     websiteUrl: 'websiteUrl',
     active: 'active',
     verified: 'verified',
+  },
+  priceSubmissions: {
+    id: 'id',
+    eventId: 'eventId',
+    tier: 'tier',
+    priceMin: 'priceMin',
+    priceMax: 'priceMax',
+    vendor: 'vendor',
+    sourceCategory: 'sourceCategory',
+    howFound: 'howFound',
+    userId: 'userId',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+    corroborationCount: 'corroborationCount',
+    status: 'status',
   },
   auditLog: {},
   inviteCodes: {},
@@ -155,6 +176,8 @@ describe('GET /v1/venues/:slug', () => {
     // events: select().from().where().orderBy().limit() → [mockEvent]
     mockDb.where.mockReturnValueOnce(mockDb)
     mockDb.limit.mockResolvedValueOnce([mockEvent])
+    // priceByTier batch: select().from().where() → no corroborated rows
+    mockDb.where.mockResolvedValueOnce([])
 
     const res = await createApp().request('/v1/venues/test-venue')
     expect(res.status).toBe(200)
@@ -165,6 +188,76 @@ describe('GET /v1/venues/:slug', () => {
     expect(body.success).toBe(true)
     expect(body.data.venue).toBeTruthy()
     expect(Array.isArray(body.data.upcomingEvents)).toBe(true)
+  })
+
+  it('populates priceByTier so the venue card mirrors the browse "from" price (cheapest tier wins over a later-confirmed pricier tier)', async () => {
+    mockDb.where.mockResolvedValueOnce([mockVenue])
+    mockDb.where.mockResolvedValueOnce([{ total: 1 }])
+    // events: select().from().where().orderBy().limit()
+    mockDb.where.mockReturnValueOnce(mockDb)
+    mockDb.orderBy.mockReturnValueOnce(mockDb)
+    // ticketPriceMin is $439 here — the flat scalar was clobbered by the
+    // most-recently-confirmed VIP tier. The batch must override it via the
+    // cheapest-tier headline.
+    mockDb.limit.mockResolvedValueOnce([
+      { ...mockEvent, ticketPriceMin: '439', priceSource: 'community' },
+    ])
+    // vendor lookup (community events): select().from().where().orderBy() → []
+    mockDb.where.mockReturnValueOnce(mockDb)
+    mockDb.orderBy.mockResolvedValueOnce([])
+    // priceByTier batch: two corroborated tiers for this event. GA $94 is the
+    // cheapest; VIP $439 was confirmed later. compareBlocks sorts cheapest
+    // headline first, so priceByTier[0] must be the $94 GA block.
+    const now = new Date('2026-07-10T00:00:00Z')
+    mockDb.where.mockResolvedValueOnce([
+      {
+        id: 'sub-ga',
+        eventId: 'event-1',
+        tier: 'GA',
+        priceMin: '94',
+        priceMax: '94',
+        vendor: 'AXS',
+        sourceCategory: 'standard',
+        howFound: 'ticket_site',
+        userId: 'user-ga',
+        createdAt: now,
+        updatedAt: now,
+        corroborationCount: 3,
+      },
+      {
+        id: 'sub-vip',
+        eventId: 'event-1',
+        tier: 'VIP',
+        priceMin: '439',
+        priceMax: '627',
+        vendor: 'AXS',
+        sourceCategory: 'standard',
+        howFound: 'ticket_site',
+        userId: 'user-vip',
+        createdAt: now,
+        updatedAt: now,
+        corroborationCount: 3,
+      },
+    ])
+
+    const res = await createApp().request('/v1/venues/test-venue')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      data: {
+        upcomingEvents: Array<{
+          priceByTier: Array<{
+            tier: string
+            headline: { priceMin: string } | null
+          }> | null
+        }>
+      }
+    }
+    const [event] = body.data.upcomingEvents
+    expect(event?.priceByTier).not.toBeNull()
+    expect(event?.priceByTier).toHaveLength(2)
+    // Cheapest tier leads — the venue card renders "from $94", not $439.
+    expect(event?.priceByTier?.[0]?.tier).toBe('GA')
+    expect(event?.priceByTier?.[0]?.headline?.priceMin).toBe('94')
   })
 
   it('filters upcoming events using a YYYY-MM-DD date string', async () => {

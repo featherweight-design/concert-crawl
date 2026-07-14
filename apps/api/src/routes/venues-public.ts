@@ -14,8 +14,10 @@ import {
   isNull,
   sql,
 } from 'drizzle-orm'
+import { SP_POLICY, deriveSourceCategory } from '@concert-crawl/types'
 import { todayInTimezone } from '../lib/time.js'
 import { requireAuth } from '../middleware/auth.js'
+import { aggregateByTier } from '../lib/price-aggregation/index.js'
 
 export const venuesPublicRouter = new Hono()
 
@@ -190,12 +192,88 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
     }
   }
 
+  // priceByTier parity with the browse list endpoint (#787). Both surfaces
+  // render the same consumer EventCard, which reads `priceByTier` via
+  // pickBrowseHeadline() to pick the cheapest tier. Without this batch the
+  // venue card falls back to the flat `ticketPriceMin` scalar, which is
+  // clobbered to whichever tier was most recently confirmed (a multi-tier
+  // event's VIP min can overwrite its GA min), so the venue page showed a
+  // higher "from" price than browse for the same event. Mirrors the list
+  // endpoint's cost-controlled shape: only corroborated rows, empty
+  // pending/counters, headline-only consumption. Bounded by the 50-event
+  // page limit above, same order as a browse page.
+  const visibleEventIds = upcomingEvents.map((evt) => evt.id)
+  const priceByTierByEventId = new Map<
+    string,
+    Awaited<ReturnType<typeof aggregateByTier>>
+  >()
+  if (visibleEventIds.length > 0) {
+    const corroboratedRows = await db
+      .select({
+        id: priceSubmissions.id,
+        eventId: priceSubmissions.eventId,
+        tier: priceSubmissions.tier,
+        priceMin: priceSubmissions.priceMin,
+        priceMax: priceSubmissions.priceMax,
+        vendor: priceSubmissions.vendor,
+        sourceCategory: priceSubmissions.sourceCategory,
+        howFound: priceSubmissions.howFound,
+        userId: priceSubmissions.userId,
+        createdAt: priceSubmissions.createdAt,
+        updatedAt: priceSubmissions.updatedAt,
+        corroborationCount: priceSubmissions.corroborationCount,
+      })
+      .from(priceSubmissions)
+      .where(
+        and(
+          inArray(priceSubmissions.eventId, visibleEventIds),
+          eq(priceSubmissions.status, 'corroborated'),
+        ),
+      )
+
+    const corroboratedByEvent = new Map<string, typeof corroboratedRows>()
+    for (const sub of corroboratedRows) {
+      const existing = corroboratedByEvent.get(sub.eventId)
+      if (existing) existing.push(sub)
+      else corroboratedByEvent.set(sub.eventId, [sub])
+    }
+
+    for (const [eventId, subs] of corroboratedByEvent) {
+      const blocks = aggregateByTier({
+        corroborated: subs.map((sub) => ({
+          id: sub.id,
+          tier: sub.tier,
+          priceMin: sub.priceMin,
+          priceMax: sub.priceMax,
+          vendor: sub.vendor,
+          sourceCategory:
+            sub.sourceCategory ??
+            deriveSourceCategory(sub.vendor, sub.howFound),
+          userId: sub.userId,
+          createdAt: sub.createdAt,
+          updatedAt: sub.updatedAt,
+          // Submitter counts as observation #1 per the corroboration_count
+          // schema comment, so the surfaced confirm count excludes them.
+          confirmsCount: Math.max(0, sub.corroborationCount - 1),
+        })),
+        pending: [],
+        counters: [],
+        handles: new Map(),
+        reportsByTier: new Map(),
+        confirmsNeeded: SP_POLICY.confirmsRequired,
+        viewerUserId: null,
+      })
+      priceByTierByEventId.set(eventId, blocks)
+    }
+  }
+
   const enrichedEvents = upcomingEvents.map((evt) => ({
     ...evt,
     priceVendor:
       evt.priceSource === 'community'
         ? (vendorByEventId[evt.id] ?? null)
         : null,
+    priceByTier: priceByTierByEventId.get(evt.id) ?? null,
   }))
 
   return ctx.json({
