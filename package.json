@@ -13,6 +13,7 @@
     "db:migrate": "turbo run db:migrate --filter=@concert-crawl/db",
     "db:seed": "turbo run db:seed --filter=@concert-crawl/db",
     "db:sync-local": "docker exec -i concert-crawl-db psql -U postgres -d concert_crawl_db < scripts/staging-snapshot.sql && pnpm db:seed",
+    "db:seed:staging:sync": "tsx scripts/seed-staging/sync-prod-public-data.ts",
     "release:draft": "tsx scripts/draft-release.ts",
     "test:scripts": "vitest run --config vitest.scripts.config.ts",
     "prepare": "husky"
@@ -32,6 +33,7 @@
     "drizzle-orm": "^0.45.2",
     "husky": "9.1.7",
     "lint-staged": "17.0.8",
+    "postgres": "^3.4.9",
     "prettier": "3.9.5",
     "semantic-release": "25.0.7",
     "stripe": "^22.3.1",

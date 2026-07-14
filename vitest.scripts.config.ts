@@ -12,8 +12,10 @@ import path from 'node:path'
 //
 // Workspace packages need explicit aliases to their src entry since the
 // test file isn't inside any workspace. External deps (anthropic-sdk,
-// drizzle-orm, etc.) resolve via pnpm's hoisted root node_modules — no
-// alias required. Mirrors packages/crawler-core/vitest.config.ts pattern.
+// drizzle-orm, postgres, etc.) resolve via pnpm's hoisted root node_modules
+// — no alias required. `postgres` is a root devDependency so it hoists
+// cleanly; no alias needed. Mirrors packages/crawler-core/vitest.config.ts
+// pattern.
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
