@@ -68,9 +68,9 @@ export async function cleanupFixtures(deps: {
   // would undercount them. Combining both filters here makes the
   // "fixture-owned" scope explicit and the count truthful.
   //
-  // Note: fetching fixture submission IDs via a subselect keeps this a
-  // single statement even if Drizzle doesn't produce a subquery — the
-  // separate SELECT is a clarity-vs-round-trip trade the plan prefers.
+  // Implementation note: two round trips (SELECT then DELETE) rather than a
+  // single subselect. Simpler to read and reason about, and the ~1ms extra
+  // round trip is negligible for a manual seeder script.
   const fixtureSubmissionRows = await staging
     .select({ id: priceSubmissions.id })
     .from(priceSubmissions)

@@ -60,13 +60,28 @@ export const generateUserEvents = async (
   }
 
   // Guarantee all three status values appear across the full row set.
-  // Walk through the generated rows and patch in missing statuses if needed
-  // (only relevant when the fixture set is very small).
-  const presentStatuses = new Set(rows.map((row) => row.status))
+  // Patching must (a) recompute presence after each write so an earlier
+  // patch counts as "present", and (b) pick from rows that haven't been
+  // patched yet in this loop, so successive patches can't overwrite each
+  // other on a small row set (which would silently leave a status
+  // missing).
+  const patchedIndices = new Set<number>()
   for (const status of STATUSES) {
-    if (!presentStatuses.has(status) && rows.length > 0) {
-      rows[rng.int(0, rows.length - 1)]!.status = status
+    if (rows.length === 0) break
+    const presentStatuses = new Set(rows.map((row) => row.status))
+    if (presentStatuses.has(status)) continue
+    // Prefer an unpatched slot; fall back to any row if all rows are
+    // already patched (row set smaller than STATUSES.length).
+    const unpatched: number[] = []
+    for (let idx = 0; idx < rows.length; idx++) {
+      if (!patchedIndices.has(idx)) unpatched.push(idx)
     }
+    const candidateIdx =
+      unpatched.length > 0
+        ? unpatched[rng.int(0, unpatched.length - 1)]!
+        : rng.int(0, rows.length - 1)
+    rows[candidateIdx]!.status = status
+    patchedIndices.add(candidateIdx)
   }
 
   if (rows.length > 0) {

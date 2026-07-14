@@ -112,9 +112,15 @@ export async function runSynthetic(deps: {
   const feedbackResult = await generateFeedback(generatorDeps)
 
   let priceSubmissionsInserted = 0
+  // Track confirms separately — cleanup deletes submissionConfirms so the
+  // report is asymmetric without this key (deleted.submissionConfirms
+  // shows up but inserted.submissionConfirms wouldn't). Makes idempotency
+  // validation from the CLI summary straightforward.
+  let submissionConfirmsInserted = 0
   if (eventIds.length > 0) {
     const priceSubmissionsResult = await generatePriceSubmissions(generatorDeps)
     priceSubmissionsInserted = priceSubmissionsResult.inserted
+    submissionConfirmsInserted = priceSubmissionsResult.insertedConfirms
   }
 
   const notificationsResult = await generateNotifications(generatorDeps)
@@ -126,6 +132,7 @@ export async function runSynthetic(deps: {
       userEvents: userEventsInserted,
       feedback: feedbackResult.inserted,
       priceSubmissions: priceSubmissionsInserted,
+      submissionConfirms: submissionConfirmsInserted,
       notifications: notificationsResult.inserted,
     },
   }

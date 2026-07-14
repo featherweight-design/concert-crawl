@@ -35,7 +35,11 @@ export type GeneratorDeps = {
   rng: ReturnType<typeof createRng>
 }
 
-export type GenResult = { inserted: number }
+// Wider than the shared GenResult in the other generators — this generator
+// writes to two tables (price_submissions + submission_confirms) so the
+// orchestrator's inserted summary can report both counts. Every other
+// generator returns just `{ inserted }`.
+export type GenResult = { inserted: number; insertedConfirms: number }
 
 const SUBMISSION_STATUSES = [
   'pending',
@@ -268,5 +272,8 @@ export const generatePriceSubmissions = async (
     await staging.insert(submissionConfirms).values(confirmRows)
   }
 
-  return { inserted: submissionRows.length }
+  return {
+    inserted: submissionRows.length,
+    insertedConfirms: confirmRows.length,
+  }
 }
