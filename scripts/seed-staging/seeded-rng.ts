@@ -2,9 +2,10 @@
  * Concert Crawl — deterministic seeded PRNG for synthetic staging data.
  *
  * Uses the mulberry32 algorithm: simple, fast, good statistical properties,
- * and produces an identical value stream for any given seed. This is required
- * so synthetic data is reproducible across seed runs — the same seed always
- * generates the same users, watchlists, and feedback entries.
+ * and produces an identical value stream for any given seed. Required so
+ * synthetic data is reproducible across runs — the same seed always produces
+ * the same profiles, user_events, feedback, price_submissions, submission
+ * confirms, and notifications for the fixture Clerk users.
  *
  * Never use Math.random() in the seeder — it is non-deterministic and would
  * produce different data on every run, making staging data drift unpredictably.

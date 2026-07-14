@@ -42,7 +42,14 @@ vi.mock('./generators/feedback.js', () => ({
 }))
 
 vi.mock('./generators/price-submissions.js', () => ({
-  generatePriceSubmissions: vi.fn().mockResolvedValue({ inserted: 10 }),
+  // Mock must return `insertedConfirms` too — the real generator writes to
+  // both `price_submissions` and `submission_confirms`, and the
+  // orchestrator reads `.insertedConfirms` for the inserted summary.
+  // A mock missing this field would silently pass `undefined` into the
+  // summary and hide regressions in the orchestrator wiring.
+  generatePriceSubmissions: vi
+    .fn()
+    .mockResolvedValue({ inserted: 10, insertedConfirms: 3 }),
 }))
 
 vi.mock('./generators/notifications.js', () => ({
