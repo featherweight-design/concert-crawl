@@ -136,7 +136,7 @@ Env vars (all entered manually — `sync: false`; prod = **live** values, stagin
 | `RESEND_API_KEY` | Resend key |
 | `CLERK_SECRET_KEY` | Clerk prod secret (staging: staging secret) |
 | `SENTRY_DSN` | API Sentry DSN |
-| `SENTRY_ENVIRONMENT` | `production` |
+| `SENTRY_ENVIRONMENT` | `production` (staging: `staging`) — must differ per env so Sentry issues are attributed correctly; don't copy the prod value into the staging cron |
 | `LOG_LEVEL` | `info` |
 
 ### Test it before go-live

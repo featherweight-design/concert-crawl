@@ -220,7 +220,7 @@ Winback day-60 is this spec's call (execution plan allowed 30–90); single-shot
 
 ### 5.1 The daily billing job
 
-New Render Cron Job **`concert-crawl-billing-jobs`** (staging + prod), daily 9 AM MT, running `apps/api`'s compiled `node apps/api/dist/jobs/billing-daily.js` (same deploy artifact as the API — no new package; matches `render.yaml` and the launch runbook). Env: `DATABASE_URL`, `STRIPE_SECRET_KEY`, `RESEND_API_KEY`, `CLERK_SECRET_KEY`. Each sub-task is independently wrapped in try/catch + logged; one failure never blocks the rest:
+New Render Cron Job **`concert-crawl-billing-jobs`** (staging + prod), scheduled `0 15 * * *` (15:00 UTC — 9 AM MDT / 8 AM MST; pinned to UTC, so it does not chase DST), running `apps/api`'s compiled `node apps/api/dist/jobs/billing-daily.js` (same deploy artifact as the API — no new package; matches `render.yaml` and the launch runbook). Env: `DATABASE_URL`, `STRIPE_SECRET_KEY`, `RESEND_API_KEY`, `CLERK_SECRET_KEY`. Each sub-task is independently wrapped in try/catch + logged; one failure never blocks the rest:
 
 1. **Card-expiry warnings** — iterate active subscriptions' default payment methods (cached card metadata refreshed by webhooks; fallback: Stripe list call), fire `card_expiring_soon` at the 30/14/7-day windows.
 2. **Gift-ending notices** — `gifted_comps.expiresAt` within 7 days ⇒ `gifting_ending_notice`; expired gifts ⇒ revoke (set `revokedAt`, repair Clerk mirror, `gift_revoked` event, set `premiumDataExpiresAt = expiresAt + 90d`).
