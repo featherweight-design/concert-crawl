@@ -944,8 +944,8 @@ export interface AdminUserDetail {
   email: string | null
   handle: string | null
   city: string | null
-  theme: string | null
-  avatarColor: string | null
+  theme: UserTheme | null
+  avatarColor: AvatarColor | null
   role: Role | null
   joinedAt: string | null // Clerk account creation, ISO
   // true when no Clerk record backs this id (deleted account) — identity
