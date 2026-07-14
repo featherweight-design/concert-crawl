@@ -24,7 +24,7 @@ import { FEEDBACK_STATUS_KIND } from '@/components/admin/definitions/constants'
 
 const COPY = ADMIN_COPY.users.detail
 
-const WATCHING_STATUS_KIND: Record<AdminUserEventStatus, StatusKind> = {
+const TRACKED_EVENT_STATUS_KIND: Record<AdminUserEventStatus, StatusKind> = {
   going: 'success',
   interested: 'signal',
   watching: 'neutral',
@@ -308,7 +308,10 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
                   <TD>{item.venueName ?? COPY.watching.unknownVenue}</TD>
                   <TD mono>{item.eventDate}</TD>
                   <TD>
-                    <StatusBadge kind={WATCHING_STATUS_KIND[item.status]} dot>
+                    <StatusBadge
+                      kind={TRACKED_EVENT_STATUS_KIND[item.status]}
+                      dot
+                    >
                       {item.status}
                     </StatusBadge>
                   </TD>
