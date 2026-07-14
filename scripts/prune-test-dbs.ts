@@ -38,7 +38,7 @@ const main = async (): Promise<void> => {
   try {
     const rows = await admin<{ datname: string }[]>`
       SELECT datname FROM pg_database
-      WHERE datname LIKE 'concert_crawl_test__%'
+      WHERE datname LIKE 'concert\\_crawl\\_test\\_\\_%' ESCAPE '\\'
     `
     const orphans = selectOrphanedTestDbs(
       rows.map((row) => row.datname),

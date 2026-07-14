@@ -15,6 +15,13 @@ const MIGRATIONS_FOLDER = path.resolve(
 export async function setup(): Promise<void> {
   const testDbUrl = resolveTestDbUrl()
   const dbName = new URL(testDbUrl).pathname.replace(/^\//, '')
+  // testDbUrl may come from DATABASE_URL_TEST (a system boundary); fail loudly
+  // if it carries no database name rather than trying to CREATE DATABASE "".
+  if (dbName === '') {
+    throw new Error(
+      `[test] Resolved test DB URL has no database name: ${testDbUrl}`,
+    )
+  }
 
   // Create the target DB if missing, via the postgres maintenance DB.
   const adminUrl = new URL(testDbUrl)
