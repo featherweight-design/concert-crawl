@@ -1,3 +1,28 @@
+# [1.117.0](https://github.com/HartiganHM/concert-crawl/compare/v1.116.0...v1.117.0) (2026-07-14)
+
+
+### Bug Fixes
+
+* **admin:** [#533](https://github.com/HartiganHM/concert-crawl/issues/533) guard feedback issueUrl against non-http(s) schemes (PR [#930](https://github.com/HartiganHM/concert-crawl/issues/930) R12) ([b0aba72](https://github.com/HartiganHM/concert-crawl/commit/b0aba7273eaa8178d5fd4826160fb9f15c6fc476))
+* **admin:** [#533](https://github.com/HartiganHM/concert-crawl/issues/533) PR [#930](https://github.com/HartiganHM/concert-crawl/issues/930) R1 — accurate stats, 404 handling, deleted-account signal ([87108ac](https://github.com/HartiganHM/concert-crawl/commit/87108acfa804b5815293c49b34b1e0ad5cdcb20e))
+* **admin:** [#533](https://github.com/HartiganHM/concert-crawl/issues/533) PR [#930](https://github.com/HartiganHM/concert-crawl/issues/930) R2 — primary email selection + visible user id ([6b8049e](https://github.com/HartiganHM/concert-crawl/commit/6b8049ecdda9ac4c7660126bf81877aa896762a2))
+* **admin:** [#533](https://github.com/HartiganHM/concert-crawl/issues/533) PR [#930](https://github.com/HartiganHM/concert-crawl/issues/930) R3 — role default, badge parity, lazy list queries ([8b62129](https://github.com/HartiganHM/concert-crawl/commit/8b62129a0199884cb857bbfca23075561ba087d8))
+* **admin:** [#533](https://github.com/HartiganHM/concert-crawl/issues/533) PR [#930](https://github.com/HartiganHM/concert-crawl/issues/930) R4 — narrow Clerk catch to 404, banner on missing token ([cf2442e](https://github.com/HartiganHM/concert-crawl/commit/cf2442ea089e9e3efa8d285dc49688cd49c02bf4))
+* **admin:** [#533](https://github.com/HartiganHM/concert-crawl/issues/533) PR [#930](https://github.com/HartiganHM/concert-crawl/issues/930) R6 — relabel user-detail events section to match all-status data ([b51fef1](https://github.com/HartiganHM/concert-crawl/commit/b51fef1f238b677cd87b57bab8941933725b2258))
+* **admin:** [#533](https://github.com/HartiganHM/concert-crawl/issues/533) PR [#930](https://github.com/HartiganHM/concert-crawl/issues/930) R8 — int-cast counts, rename watching→trackedEvents ([4d29544](https://github.com/HartiganHM/concert-crawl/commit/4d2954465e4b7a6f15a97b6650cde5d31fe72673))
+* **admin:** [#533](https://github.com/HartiganHM/concert-crawl/issues/533) PR [#930](https://github.com/HartiganHM/concert-crawl/issues/930) R9 — render theme/avatarColor, share feedback status map ([3a92f5c](https://github.com/HartiganHM/concert-crawl/commit/3a92f5c45af42cc0ce9b18765013c8694ee049b9))
+* **types:** [#533](https://github.com/HartiganHM/concert-crawl/issues/533) PR [#930](https://github.com/HartiganHM/concert-crawl/issues/930) R10 — tighten AdminUserDetail theme/avatarColor to enums ([3f60b1e](https://github.com/HartiganHM/concert-crawl/commit/3f60b1ee7a2097e51975665f191d1650704700c7))
+
+
+### Features
+
+* **admin:** [#533](https://github.com/HartiganHM/concert-crawl/issues/533) add /admin/users/:id detail page ([06f5cda](https://github.com/HartiganHM/concert-crawl/commit/06f5cda3817c8abae049cedf6c992953c4dcb5ff))
+
+
+### Performance Improvements
+
+* **api:** [#533](https://github.com/HartiganHM/concert-crawl/issues/533) parallelize user-detail list queries (PR [#930](https://github.com/HartiganHM/concert-crawl/issues/930) R14) ([98d7ce2](https://github.com/HartiganHM/concert-crawl/commit/98d7ce2a06cade714c9c4cb493727d840b23f679))
+
 # [1.116.0](https://github.com/HartiganHM/concert-crawl/compare/v1.115.0...v1.116.0) (2026-07-14)
 
 
