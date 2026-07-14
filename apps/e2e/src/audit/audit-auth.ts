@@ -19,8 +19,12 @@ export async function prepareAuditAuth(role: 'user' | 'admin'): Promise<void> {
     role === 'admin' ? 'E2E_AUDIT_ADMIN_EMAIL' : 'E2E_AUDIT_USER_EMAIL'
   const passwordVar =
     role === 'admin' ? 'E2E_AUDIT_ADMIN_PASSWORD' : 'E2E_AUDIT_USER_PASSWORD'
-  const email = process.env[emailVar] ?? ''
-  const password = process.env[passwordVar] ?? ''
+  // Trim here so a whitespace-only env var throws with an error message
+  // that names the env var (matching this function's docstring contract),
+  // rather than falling through to loginAndSave whose error names
+  // `email`/`password` parameters and is less debuggable from the CLI.
+  const email = (process.env[emailVar] ?? '').trim()
+  const password = (process.env[passwordVar] ?? '').trim()
   const baseURL =
     process.env['PLAYWRIGHT_AUDIT_BASE_URL'] ??
     'https://staging.concertcrawl.app'

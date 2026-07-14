@@ -10,6 +10,22 @@ const px = (raw: string | undefined) => parseInt(raw ?? '0', 10) || 0
 const runInDom = (html: string, vw: number): HeuristicSnapshot => {
   document.body.innerHTML = html
   const de = document.documentElement
+
+  // Save the ORIGINAL property descriptors for documentElement layout
+  // properties so we can restore them in finally. Vitest's jsdom
+  // environment is shared across tests; without restore, a leaked
+  // clientWidth/scrollWidth override would corrupt sibling tests. The
+  // getBoundingClientRect prototype mutation is restored the same way.
+  const originalClientWidthDesc = Object.getOwnPropertyDescriptor(
+    de,
+    'clientWidth',
+  )
+  const originalScrollWidthDesc = Object.getOwnPropertyDescriptor(
+    de,
+    'scrollWidth',
+  )
+  const originalRect = Element.prototype.getBoundingClientRect
+
   Object.defineProperty(de, 'clientWidth', { value: vw, configurable: true })
   Object.defineProperty(de, 'scrollWidth', {
     configurable: true,
@@ -20,12 +36,11 @@ const runInDom = (html: string, vw: number): HeuristicSnapshot => {
         vw,
       ),
   })
-  // Save + restore so per-test prototype mutation doesn't bleed into
-  // sibling tests via Vitest's shared JS environment. `this: HTMLElement`
-  // typed parameter removes the previous `this as HTMLElement` value
-  // cast — all our fixtures use HTMLElements, and jsdom always calls
-  // this method with an HTMLElement receiver in our tests.
-  const originalRect = Element.prototype.getBoundingClientRect
+
+  // `this: HTMLElement` typed parameter removes the previous
+  // `this as HTMLElement` value cast — all our fixtures use HTMLElements,
+  // and jsdom always calls this method with an HTMLElement receiver in
+  // our tests.
   Element.prototype.getBoundingClientRect = function (
     this: HTMLElement,
   ): DOMRect {
@@ -45,6 +60,21 @@ const runInDom = (html: string, vw: number): HeuristicSnapshot => {
     assertHeuristicSnapshot(result)
     return result
   } finally {
+    // Restore all three mutations. If the original descriptor was
+    // undefined (jsdom's built-in accessor, not our defineProperty
+    // override), delete our override; otherwise reinstate the original.
+    if (originalClientWidthDesc) {
+      Object.defineProperty(de, 'clientWidth', originalClientWidthDesc)
+    } else {
+      // Reflect.deleteProperty handles configurable:true accessor deletion
+      // correctly under strict-mode Vitest.
+      Reflect.deleteProperty(de, 'clientWidth')
+    }
+    if (originalScrollWidthDesc) {
+      Object.defineProperty(de, 'scrollWidth', originalScrollWidthDesc)
+    } else {
+      Reflect.deleteProperty(de, 'scrollWidth')
+    }
     Element.prototype.getBoundingClientRect = originalRect
   }
 }

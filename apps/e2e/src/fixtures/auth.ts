@@ -74,7 +74,15 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   const authFile = path.join(authDir, 'user.json')
   fs.mkdirSync(authDir, { recursive: true })
 
-  if (!email || !password) {
+  // Trim before the missing check so a whitespace-only env var takes the
+  // documented "creds-missing → warn + write empty storage state" path
+  // instead of falling through to loginAndSave (which trims and throws).
+  // Preserves the pre-refactor behavior for the still-common case of
+  // running the e2e suite without Clerk creds configured.
+  const trimmedEmail = email?.trim() ?? ''
+  const trimmedPassword = password?.trim() ?? ''
+
+  if (trimmedEmail === '' || trimmedPassword === '') {
     console.warn(
       '[e2e] E2E_TEST_USER_EMAIL or E2E_TEST_USER_PASSWORD not set — skipping auth setup.',
     )
@@ -83,5 +91,5 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   }
 
   const baseURL = config.projects[0]?.use.baseURL ?? 'http://localhost:3000'
-  await loginAndSave(email, password, authFile, baseURL)
+  await loginAndSave(trimmedEmail, trimmedPassword, authFile, baseURL)
 }

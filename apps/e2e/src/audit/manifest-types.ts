@@ -139,6 +139,22 @@ export function validateManifest(manifest: unknown): AuditManifest {
     // `entry.interactions` to unknown) then `Array.isArray` narrows it to
     // `unknown[]`; the type-predicate assertion on the return type is the
     // only unchecked step, which is exactly what type guards are for.
+    //
+    // If `interactions` is present but NOT an array (a common typo — e.g.
+    // supplying a single object where an array was intended), reject
+    // loudly. Silently dropping would let intended interactions never run
+    // and make the misconfiguration hard to catch.
+    if (
+      entry !== null &&
+      typeof entry === 'object' &&
+      'interactions' in entry &&
+      entry.interactions !== undefined &&
+      !Array.isArray(entry.interactions)
+    ) {
+      throw new Error(
+        `[manifest] route '${parsed.id}': interactions must be an array (got ${typeof entry.interactions})`,
+      )
+    }
     const interactions = hasInteractions(entry) ? entry.interactions : undefined
 
     routes.push({ ...parsed, ...(interactions ? { interactions } : {}) })

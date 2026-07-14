@@ -66,6 +66,16 @@ const VIEWPORTS = [
   { label: '1440x900', width: 1440, height: 900 },
 ] as const
 
+// A page whose <main> element has fewer than this many direct children is
+// treated as "thin render" — usually an unseeded staging DB or a not-yet-
+// loaded route. PR 4's vision triage keys off the resulting
+// `insufficientData: true` flag in the capture JSON to skip visual
+// judgment and log "run the seeder" instead. Threshold picked deliberately
+// narrow: content density is the reliable signal, and 5 avoids
+// false-positives on genuine sparse pages (e.g. a 404 that still renders
+// a header + link) while still catching truly empty renders.
+const INSUFFICIENT_DATA_MAIN_CHILDREN_THRESHOLD = 5
+
 // ---------------------------------------------------------------------------
 // captureState — internal helper
 // ---------------------------------------------------------------------------
@@ -95,7 +105,9 @@ async function captureState(
   // insufficientData is a sweep-side computation, not part of HeuristicSnapshot.
   // The on-disk JSON is a deliberate superset: PR 4 vision-triage reads this
   // flag to skip visual judgment on thin renders ("run the seeder" log instead).
-  const insufficientData = snapshot.contentDensity.mainChildren < 5
+  const insufficientData =
+    snapshot.contentDensity.mainChildren <
+    INSUFFICIENT_DATA_MAIN_CHILDREN_THRESHOLD
   const jsonPayload = { ...snapshot, insufficientData }
   fs.writeFileSync(jsonPath, JSON.stringify(jsonPayload, null, 2))
 }

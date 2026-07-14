@@ -73,4 +73,21 @@ describe('validateManifest', () => {
       ]),
     ).toThrow(/same-origin path/i)
   })
+  it('rejects interactions that are not an array (common config typo)', () => {
+    // Regression guard: a manifest entry that writes
+    // `interactions: someObject` (not wrapped in `[]`) was previously
+    // silently dropped by hasInteractions. Fail loudly instead so the
+    // misconfiguration surfaces at import time.
+    expect(() =>
+      validateManifest([
+        {
+          id: 'oops',
+          path: '/oops',
+          tags: ['admin'],
+          auth: 'admin',
+          interactions: { id: 'x', description: 'x', run: async () => {} },
+        },
+      ]),
+    ).toThrow(/interactions must be an array/i)
+  })
 })
