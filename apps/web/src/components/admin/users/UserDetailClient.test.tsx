@@ -85,6 +85,28 @@ describe('UserDetailClient', () => {
     )
   })
 
+  it('does not render the issue link for a non-http(s) issueUrl scheme', () => {
+    render(
+      <UserDetailClient
+        user={baseUser({
+          feedback: [
+            {
+              id: 'fb-xss',
+              category: 'bug',
+              status: 'unread',
+              message: 'Malicious link',
+              pageUrl: 'https://concertcrawl.app/events',
+              issueUrl: 'javascript:alert(1)',
+              createdAt: '2026-05-01T00:00:00.000Z',
+            },
+          ],
+        })}
+      />,
+    )
+    expect(screen.getByText('Malicious link')).toBeTruthy()
+    expect(screen.queryByText(COPY.feedback.viewIssue)).toBeNull()
+  })
+
   it('shows empty copy when the user has no feedback or watchlist', () => {
     render(
       <UserDetailClient

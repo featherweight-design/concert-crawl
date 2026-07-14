@@ -21,6 +21,7 @@ import {
 import type { StatusKind } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { FEEDBACK_STATUS_KIND } from '@/components/admin/definitions/constants'
+import { isHttpUrl } from '@/lib/admin/robots-audit'
 
 const COPY = ADMIN_COPY.users.detail
 
@@ -247,7 +248,7 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
                       }}
                     >
                       {item.message}
-                      {item.issueUrl && (
+                      {item.issueUrl && isHttpUrl(item.issueUrl) && (
                         <a
                           href={item.issueUrl}
                           target="_blank"
