@@ -43,9 +43,11 @@ fi
 # (not authed, wrong dir, bad remote), an empty REPO would produce a confusing
 # downstream error. Used only for the poll hint; the POST uses gh's
 # {owner}/{repo} placeholders, which resolve the same way.
-if ! REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner 2>&1); then
-  echo "ERROR: Could not determine the repo via gh:" >&2
-  echo "  $REPO" >&2
+if ! REPO=$(gh repo view --json nameWithOwner --jq .nameWithOwner); then
+  # Don't merge stderr into REPO (2>&1) — on success a stray gh warning would
+  # be baked into the poll path below. gh already prints its own error to the
+  # terminal on failure; we just add a remediation hint.
+  echo "ERROR: Could not determine the repo via gh (see gh output above)." >&2
   echo "  Run 'gh auth login', or check you're inside the repo checkout." >&2
   exit 1
 fi
