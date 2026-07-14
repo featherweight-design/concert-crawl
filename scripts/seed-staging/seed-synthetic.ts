@@ -61,9 +61,15 @@ export async function runSynthetic(deps: {
   const { deleted } = await cleanupFixtures({ staging, fixtureUserIds })
 
   // 2. Fetch event IDs once — used by event-linked generators.
+  // ORDER BY id is REQUIRED: LIMIT without ORDER BY lets Postgres return
+  // rows in an arbitrary order even when the events table is unchanged,
+  // which would break the seeder's binding same-seed → same-rows contract
+  // (the rng would be consumed against a different eventIds sequence
+  // across runs).
   const eventRows = await staging
     .select({ id: events.id })
     .from(events)
+    .orderBy(events.id)
     .limit(500)
   const eventIds: readonly string[] = eventRows.map((row) => row.id)
 

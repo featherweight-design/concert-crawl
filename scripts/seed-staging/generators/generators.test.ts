@@ -495,6 +495,44 @@ describe('generatePriceSubmissions', () => {
     )
     expect(disputedWithRef).toBeDefined()
   })
+
+  it('every note fits within the varchar(280) column limit', async () => {
+    // Regression guard for the varchar(280) DB constraint on
+    // price_submissions.note — longer strings fail the insert at runtime.
+    const { staging, submissionValuesSpy } = buildMultiInsertStagingMock()
+    await generatePriceSubmissions({
+      staging: staging as any,
+      fixtureUserIds,
+      eventIds,
+      rng: createRng(SEED),
+    })
+    const rows: { note: string | null }[] =
+      submissionValuesSpy.mock.calls[0]![0]
+    for (const row of rows) {
+      if (row.note !== null) {
+        expect(row.note.length).toBeLessThanOrEqual(280)
+      }
+    }
+  })
+
+  it('single fixture user: no confirms inserted (empty guard, no throw)', async () => {
+    // Cleanup helper explicitly allows a narrowed fixture-user subset. A
+    // single fixture user means every corroborated submission's
+    // otherUsers pool is empty. Previously this crashed with
+    // rng.int(1, Math.min(4, 0)) → min > max. Verify graceful skip.
+    const { staging, submissionValuesSpy, confirmsValuesSpy } =
+      buildMultiInsertStagingMock()
+    await generatePriceSubmissions({
+      staging: staging as any,
+      fixtureUserIds: ['user_2fixture_alpha'] as const,
+      eventIds,
+      rng: createRng(SEED),
+    })
+    // Submissions still get inserted.
+    expect(submissionValuesSpy).toHaveBeenCalledTimes(1)
+    // Confirms insert is SKIPPED entirely (no empty-values call).
+    expect(confirmsValuesSpy).not.toHaveBeenCalled()
+  })
 })
 
 // ---------------------------------------------------------------------------

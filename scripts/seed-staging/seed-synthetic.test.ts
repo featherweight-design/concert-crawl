@@ -60,14 +60,19 @@ const eventIds = Array.from(
 )
 
 /**
- * Builds a minimal staging mock whose select().from().limit() chain returns the
- * given eventIds array, and whose insert().values() chain resolves immediately.
+ * Builds a minimal staging mock whose select().from().orderBy().limit() chain
+ * returns the given eventIds array, and whose insert().values() chain resolves
+ * immediately. The orderBy step is required by the orchestrator (needed for
+ * deterministic eventIds order across runs) — omitting it here would silently
+ * break the tests when the orchestrator adds `.orderBy(events.id)`.
  */
 function buildStagingMock(returnedEventIds: { id: string }[]) {
   return {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
-        limit: vi.fn().mockResolvedValue(returnedEventIds),
+        orderBy: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue(returnedEventIds),
+        }),
       }),
     }),
     insert: vi.fn().mockReturnValue({
