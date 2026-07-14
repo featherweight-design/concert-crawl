@@ -1,0 +1,97 @@
+/*
+ * Pure helper functions for the UI audit sweep engine.
+ *
+ * filterManifest — filters the route manifest by tag intersection so the
+ * sweep runner can target a subset of routes (e.g. "admin only").
+ *
+ * outputPathFor — builds the canonical file path for a screenshot (.png) or
+ * heuristic JSON (.json) capture artifact. The path is relative to the
+ * apps/e2e package root (the CWD when the sweep runs via `pnpm --filter e2e
+ * audit`) so callers do not need to know the workspace layout.
+ *
+ * parseCliTags — parses the --tags flag from process.argv, accepting both
+ * --tags=admin,consumer (equals-separated) and --tags admin,consumer
+ * (space-separated). Returns undefined when the flag is absent or empty.
+ * Uses Zod to validate that every supplied tag is a known value so invalid
+ * CLI input throws loudly at the entry point.
+ */
+
+import { z } from 'zod'
+
+import type { AuditManifest } from './manifest-types.js'
+
+// ---------------------------------------------------------------------------
+// filterManifest
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns the subset of routes whose `tags` array intersects the supplied
+ * `tags` filter. When `tags` is undefined or empty the full manifest is
+ * returned unchanged.
+ */
+export function filterManifest(
+  manifest: AuditManifest,
+  tags?: readonly string[],
+): AuditManifest {
+  if (tags === undefined || tags.length === 0) return manifest
+  return manifest.filter((route) =>
+    route.tags.some((routeTag) => tags.includes(routeTag)),
+  )
+}
+
+// ---------------------------------------------------------------------------
+// outputPathFor
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds the canonical output file path for a single capture artifact.
+ *
+ * Example:
+ *   outputPathFor('2026-07-12T18-04-11', 'admin-feedback', 'expand-first-card', '390x844', 'png')
+ *   // → 'audit-output/2026-07-12T18-04-11/admin-feedback__expand-first-card__390x844.png'
+ */
+export function outputPathFor(
+  runId: string,
+  routeId: string,
+  state: string,
+  viewportLabel: string,
+  ext: 'png' | 'json',
+): string {
+  return `audit-output/${runId}/${routeId}__${state}__${viewportLabel}.${ext}`
+}
+
+// ---------------------------------------------------------------------------
+// parseCliTags
+// ---------------------------------------------------------------------------
+
+const TagsSchema = z.array(z.enum(['consumer', 'admin']))
+
+/**
+ * Parses the `--tags` flag from a process.argv slice.
+ *
+ * Accepts two forms:
+ *   --tags=admin,consumer   (equals-separated)
+ *   --tags admin,consumer   (space-separated)
+ *
+ * Returns undefined when the flag is absent or when `--tags=` is supplied
+ * with no value (treated as "no filter").
+ *
+ * Throws a Zod validation error when an unknown tag value is supplied.
+ */
+export function parseCliTags(
+  argv: readonly string[],
+): ('consumer' | 'admin')[] | undefined {
+  const equalsMatch = argv.find((arg) => arg.startsWith('--tags='))
+  if (equalsMatch !== undefined) {
+    const raw = equalsMatch.slice('--tags='.length)
+    if (raw === '') return undefined
+    return TagsSchema.parse(raw.split(',').filter(Boolean))
+  }
+  const spaceIdx = argv.indexOf('--tags')
+  if (spaceIdx >= 0 && spaceIdx + 1 < argv.length) {
+    const raw = argv[spaceIdx + 1]
+    if (raw === undefined) return undefined
+    return TagsSchema.parse(raw.split(',').filter(Boolean))
+  }
+  return undefined
+}
