@@ -15,5 +15,17 @@
       "mcp__render__list_deploys",
       "mcp__render__list_services"
     ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/prune-merged-worktrees.sh"
+          }
+        ]
+      }
+    ]
   }
 }
