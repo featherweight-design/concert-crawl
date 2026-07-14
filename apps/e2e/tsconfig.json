@@ -2,7 +2,8 @@
   "extends": "@concert-crawl/config/tsconfig",
   "compilerOptions": {
     "rootDir": ".",
-    "noEmit": true
+    "noEmit": true,
+    "lib": ["ES2022", "DOM"]
   },
   "include": ["src/**/*", "playwright.config.ts", "playwright.smoke.config.ts"],
   "exclude": ["node_modules"]

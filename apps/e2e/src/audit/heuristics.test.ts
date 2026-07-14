@@ -1,0 +1,99 @@
+import { describe, it, expect } from 'vitest'
+import { collectHeuristicsScript } from './heuristics.js'
+import type { HeuristicSnapshot } from './heuristics.js'
+
+// jsdom skips layout — clientWidth/scrollWidth/getBoundingClientRect are
+// 0 by default. `runInDom` stubs each from inline styles so the heuristic
+// script (which reads real layout metrics in production) sees meaningful
+// values. Extract to apps/e2e/src/audit/test-helpers.ts if reused.
+const px = (raw: string | undefined) => parseInt(raw ?? '0', 10) || 0
+const runInDom = (html: string, vw: number): HeuristicSnapshot => {
+  document.body.innerHTML = html
+  const de = document.documentElement
+  Object.defineProperty(de, 'clientWidth', { value: vw, configurable: true })
+  Object.defineProperty(de, 'scrollWidth', {
+    configurable: true,
+    get: () =>
+      Array.from(document.querySelectorAll<HTMLElement>('*')).reduce(
+        (max, elem) =>
+          Math.max(max, px(elem.style.left) + px(elem.style.width)),
+        vw,
+      ),
+  })
+  // Save + restore so per-test prototype mutation doesn't bleed into
+  // sibling tests via Vitest's shared JS environment.
+  const originalRect = Element.prototype.getBoundingClientRect
+  Element.prototype.getBoundingClientRect = function () {
+    const el = this as HTMLElement
+    const [l, t, w, h] = [
+      px(el.style.left),
+      px(el.style.top),
+      px(el.style.width),
+      px(el.style.height),
+    ]
+    return Object.assign(Object.create(null), {
+      left: l,
+      top: t,
+      width: w,
+      height: h,
+      right: l + w,
+      bottom: t + h,
+      x: l,
+      y: t,
+      toJSON: () => ({}),
+    }) as DOMRect
+  }
+  try {
+    // eslint-disable-next-line no-new-func
+    return new Function(
+      `return (${collectHeuristicsScript})(${vw})`,
+    )() as HeuristicSnapshot
+  } finally {
+    Element.prototype.getBoundingClientRect = originalRect
+  }
+}
+
+describe('collectHeuristicsScript', () => {
+  it('flags horizontal overflow', () => {
+    const snap = runInDom(
+      '<div style="width: 2000px; height: 10px"></div>',
+      320,
+    )
+    expect(snap.hasHorizontalScroll).toBe(true)
+  })
+  it('lists offscreen elements past the viewport right edge', () => {
+    const snap = runInDom(
+      '<div id="x" style="position: absolute; left: 500px; width: 100px; height: 100px"></div>',
+      320,
+    )
+    expect(
+      snap.offscreenElements.some((entry) => entry.selector.includes('#x')),
+    ).toBe(true)
+  })
+  it('flags tap targets smaller than 32x32', () => {
+    const snap = runInDom(
+      '<button id="tiny" style="width: 20px; height: 20px"></button>',
+      320,
+    )
+    expect(
+      snap.smallTapTargets.some((target) => target.selector.includes('#tiny')),
+    ).toBe(true)
+  })
+  it('does not flag 32x32 or larger tap targets', () => {
+    const snap = runInDom(
+      '<button id="ok" style="width: 40px; height: 40px"></button>',
+      320,
+    )
+    expect(snap.smallTapTargets).toEqual([])
+  })
+  it('flags images with naturalWidth 0', () => {
+    const snap = runInDom(
+      '<img src="broken.png" data-natural-width="0" />',
+      320,
+    )
+    // Test hook: our script reads Element#naturalWidth on <img>; in DOM
+    // fixtures we can't paint an image, so the script also honors
+    // data-natural-width for testability.
+    expect(snap.brokenImages.length).toBeGreaterThanOrEqual(1)
+  })
+})
