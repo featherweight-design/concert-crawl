@@ -14,7 +14,11 @@ describe('cleanupFixtures', () => {
 
   /**
    * Build a mock staging client where each delete().where().returning() call
-   * resolves to an array of `rowCount` stub objects.
+   * resolves to an array of `rowCount` stub objects. Also mocks the
+   * select().from().where() chain that cleanupFixtures now uses to look up
+   * fixture-owned submission IDs before deleting confirms — returns an
+   * empty array (no fixture submissions exist yet) so the confirms delete
+   * takes the userId-only branch.
    *
    * We collect `returningSpies` so tests can assert call count and order.
    */
@@ -22,6 +26,11 @@ describe('cleanupFixtures', () => {
     const returningSpies: ReturnType<typeof vi.fn>[] = []
 
     const staging = {
+      select: (_cols: unknown) => ({
+        from: (_table: unknown) => ({
+          where: (_cond: unknown) => Promise.resolve([]),
+        }),
+      }),
       delete: (_table: unknown) => ({
         where: (_cond: unknown) => {
           const spy = vi.fn().mockResolvedValue(
@@ -93,6 +102,13 @@ describe('cleanupFixtures', () => {
     ])
 
     const staging = {
+      // Empty select result — cleanupFixtures uses this to look up
+      // fixture-owned submission IDs before deleting confirms.
+      select: (_cols: unknown) => ({
+        from: (_table: unknown) => ({
+          where: (_cond: unknown) => Promise.resolve([]),
+        }),
+      }),
       delete: (table: unknown) => {
         callOrder.push(tableToName.get(table) ?? 'unknown')
         return {
@@ -124,5 +140,38 @@ describe('cleanupFixtures', () => {
     for (const count of Object.values(result.deleted)) {
       expect(count).toBe(0)
     }
+  })
+
+  it('looks up fixture-owned submission IDs so confirms delete matches the cascade', async () => {
+    // Regression guard for R4: submission_confirms.submission_id ->
+    // price_submissions.id has onDelete: 'cascade'. Deleting a fixture
+    // user's submissions cascade-drops all confirms attached to those
+    // submissions (regardless of confirmer identity). The confirms delete
+    // MUST include those to keep the reported count accurate and the
+    // "fixture-owned" scope explicit — a userId-only filter would
+    // undercount cascade-affected rows.
+    const selectSpy = vi.fn()
+    const staging = {
+      select: (_cols: unknown) => ({
+        from: (_table: unknown) => ({
+          where: (_cond: unknown) => {
+            selectSpy()
+            return Promise.resolve([
+              { id: 'submission-1' },
+              { id: 'submission-2' },
+            ])
+          },
+        }),
+      }),
+      delete: (_table: unknown) => ({
+        where: (_cond: unknown) => ({
+          returning: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    }
+
+    await cleanupFixtures({ staging: staging as any, fixtureUserIds })
+    // The lookup must run before the confirms delete.
+    expect(selectSpy).toHaveBeenCalled()
   })
 })

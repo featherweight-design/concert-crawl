@@ -23,7 +23,7 @@
  * so callers (and tests) can pass a narrowed subset of users.
  */
 
-import { inArray } from 'drizzle-orm'
+import { inArray, or } from 'drizzle-orm'
 import {
   feedback,
   notifications,
@@ -58,13 +58,40 @@ export async function cleanupFixtures(deps: {
     }
   }
 
-  // 1. submissionConfirms — child of priceSubmissions
+  // 1. submissionConfirms — child of priceSubmissions.
+  // Delete confirms that EITHER a fixture user submitted OR that belong to
+  // a fixture-user-owned submission. The second clause is what makes the
+  // reported count accurate: `submission_confirms.submission_id ->
+  // price_submissions.id` has `onDelete: 'cascade'`, so step 2 would
+  // silently drop confirms attached to fixture submissions even if the
+  // confirmer wasn't a fixture user, and step 1's userId-only filter
+  // would undercount them. Combining both filters here makes the
+  // "fixture-owned" scope explicit and the count truthful.
+  //
+  // Note: fetching fixture submission IDs via a subselect keeps this a
+  // single statement even if Drizzle doesn't produce a subquery — the
+  // separate SELECT is a clarity-vs-round-trip trade the plan prefers.
+  const fixtureSubmissionRows = await staging
+    .select({ id: priceSubmissions.id })
+    .from(priceSubmissions)
+    .where(inArray(priceSubmissions.userId, [...fixtureUserIds]))
+  const fixtureSubmissionIds = fixtureSubmissionRows.map((row) => row.id)
+
+  const confirmsWhere =
+    fixtureSubmissionIds.length > 0
+      ? or(
+          inArray(submissionConfirms.userId, [...fixtureUserIds]),
+          inArray(submissionConfirms.submissionId, fixtureSubmissionIds),
+        )
+      : inArray(submissionConfirms.userId, [...fixtureUserIds])
   const deletedSubmissionConfirms = await staging
     .delete(submissionConfirms)
-    .where(inArray(submissionConfirms.userId, [...fixtureUserIds]))
+    .where(confirmsWhere)
     .returning({ id: submissionConfirms.id })
 
-  // 2. priceSubmissions — child of events; parent of submissionConfirms
+  // 2. priceSubmissions — child of events; parent of submissionConfirms.
+  // Any orphaned confirms would cascade-drop here, but step 1 already
+  // handled them, so this delete acts only on the parent rows.
   const deletedPriceSubmissions = await staging
     .delete(priceSubmissions)
     .where(inArray(priceSubmissions.userId, [...fixtureUserIds]))
