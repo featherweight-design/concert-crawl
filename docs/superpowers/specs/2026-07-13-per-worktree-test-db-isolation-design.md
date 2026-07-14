@@ -53,22 +53,28 @@ Because Vitest resolves `env` in the config statically, `vitest.integration.ts` 
 
 Second and later runs on an existing DB skip creation and just migrate — idempotent.
 
-### 3. Sweep script — `pnpm worktree:prune`
+### 3. Sweep — `pnpm worktree:prune`
 
-New `scripts/prune-worktrees.ts` (mirrors the existing `scripts/` + `test:scripts` vitest pattern), exposed as a root `package.json` script `worktree:prune`. Order of operations:
+Worktree removal already exists: `scripts/clean-worktrees.sh` removes every non-primary worktree whose branch has **no open PR** (it keeps worktrees with an open PR and skips detached HEADs). This is a stronger signal than "merged into `origin/main`" — it correctly retains in-flight branches whose PR is still open — so we reuse it rather than reimplement worktree removal.
 
-1. **Worktrees:** for each directory under `.worktrees/`, if its branch is fully merged into `origin/main` **or** the branch no longer exists, run `git worktree remove` on it, then `git worktree prune`.
-2. **Databases:** enumerate all `concert_crawl_test__*` databases via the maintenance connection, cross-reference against the surviving `.worktrees/` directories, and `DROP DATABASE` any with no matching worktree.
+The only missing half is dropping the orphaned test databases those removed worktrees leave behind. Two new pieces:
+
+1. **`scripts/prune-test-dbs.ts`** (+ `prune-test-dbs-helpers.ts` + `prune-test-dbs.test.ts`, mirroring the existing `*-helpers.ts` / `*.test.ts` / runner split under `scripts/`). It:
+   - Reads the surviving worktree directory names from `git worktree list --porcelain`.
+   - Connects to the `postgres` maintenance DB and lists all `concert_crawl_test__*` databases.
+   - Computes the orphan set with a pure helper `selectOrphanedTestDbs(allDbNames, survivingWorktreeNames)` and `DROP DATABASE` each orphan.
+   - Supports `--dry-run` (print only) and forwards it from the wrapper.
+2. **`scripts/worktree-prune.sh`** — a thin wrapper that runs `clean-worktrees.sh "$@"` then `tsx scripts/prune-test-dbs.ts "$@"`, so a single `--dry-run` flag flows to both. Exposed as root `package.json` script `worktree:prune`.
+
+Order matters: worktrees are removed first, then the DB prune sees the reduced worktree set and drops the newly-orphaned DBs.
 
 Safety rules:
 
-- Never removes a worktree with uncommitted changes or an unmerged branch — protects in-progress work.
-- Never drops the base `concert_crawl_test` database.
-- `--dry-run` flag prints every worktree and database it would remove without touching anything.
+- `clean-worktrees.sh` already protects open-PR worktrees and the primary worktree, and fails fast if `gh` can't list PRs (so an auth failure never nukes everything).
+- `prune-test-dbs.ts` never drops the base `concert_crawl_test` database (it only matches the `concert_crawl_test__*` prefix) and never drops a DB whose worktree still exists.
+- `--dry-run` prints every worktree and database that would be removed without touching anything.
 
-The orphan-detection logic is factored into a pure function (`selectOrphanedDbs(allDbNames, surviving WorktreeNames)` and `selectRemovableWorktrees(worktrees)`) so it is unit-testable without a live DB or git tree.
-
-This single script both clears the current 80+ backlog and serves as the recurring hygiene tool.
+`selectOrphanedTestDbs` is a pure function, unit-tested without a live DB or git tree. Running `pnpm worktree:prune` once clears the current 80+ worktree backlog and their DBs, and it is the recurring post-merge hygiene tool.
 
 ### 4. Docs
 
@@ -78,8 +84,8 @@ This single script both clears the current 80+ backlog and serves as the recurri
 ## Testing
 
 - **Unit — `resolveTestDbUrl()`:** worktree path (`/.worktrees/foo` → `concert_crawl_test__foo`), main repo path → `concert_crawl_test`, `DATABASE_URL_TEST` set → returned verbatim, sanitization of `feat/bar-baz` → `feat_bar_baz`.
-- **Unit — prune logic:** `selectOrphanedDbs` returns only `concert_crawl_test__*` names absent from the worktree list and never the base name; `selectRemovableWorktrees` excludes dirty/unmerged worktrees.
-- **Manual validation:** create two worktrees, run `test:integration` in each simultaneously, confirm no cross-truncation and independent schemas; run `pnpm worktree:prune --dry-run` then for real and confirm merged worktrees + orphaned DBs are removed while active ones survive.
+- **Unit — `selectOrphanedTestDbs`:** returns only `concert_crawl_test__*` names absent from the surviving-worktree list; never returns the base `concert_crawl_test`; returns empty when every DB has a matching worktree.
+- **Manual validation:** create two worktrees, run `test:integration` in each simultaneously, confirm no cross-truncation and independent schemas; run `pnpm worktree:prune --dry-run` then for real and confirm open-PR worktrees survive while orphaned worktrees + their DBs are removed.
 
 ## Out of scope
 
