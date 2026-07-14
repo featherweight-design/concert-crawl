@@ -15,11 +15,13 @@
  *   audit-output/<runId>/<routeId>__<state>__<viewportLabel>.<ext>
  *
  * Paths are relative to the apps/e2e package root (the CWD when the sweep
- * runs via `pnpm --filter e2e audit`).
+ * runs via `pnpm --filter e2e audit:sweep`). Do NOT name the pnpm script
+ * `audit` — it collides with pnpm's built-in `audit` vulnerability-scan
+ * subcommand and never dispatches to the run script.
  *
  * CLI usage:
  *   PLAYWRIGHT_AUDIT_BASE_URL=https://staging.concertcrawl.app \
- *     node --loader tsx src/audit/sweep.ts [--tags=admin,consumer | --tags admin,consumer]
+ *     pnpm --filter e2e audit:sweep -- [--tags=admin,consumer | --tags admin,consumer]
  */
 
 import fs from 'node:fs'
@@ -228,9 +230,13 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
 // CLI entry
 // ---------------------------------------------------------------------------
 
-// CJS module guard — __filename is always defined in NodeNext CJS output.
-// Equivalent to `require.main === module` but works with the tsx runner
-// (which sets process.argv[1] to the source path, not a compiled file).
+// CLI entrypoint guard — `apps/e2e/tsconfig.json` compiles to CommonJS,
+// so `import.meta.url` is not available here (that's the pattern used by
+// scripts/*.ts which target ESM). `__filename` is the equivalent under
+// CJS output and works correctly under the tsx runner (tsx sets
+// process.argv[1] to the source path, not a compiled artifact). If this
+// package ever flips to `"type": "module"` / ESM output, swap this
+// guard for the pathToFileURL(...).href === import.meta.url form.
 if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === path.resolve(__filename)
@@ -241,7 +247,7 @@ if (
       console.log(JSON.stringify(result, null, 2))
       process.exit(0)
     })
-    .catch((err) => {
+    .catch((err: unknown) => {
       console.error(err)
       process.exit(1)
     })

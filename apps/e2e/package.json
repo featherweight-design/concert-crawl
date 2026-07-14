@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "audit": "tsx src/audit/sweep.ts",
+    "audit:sweep": "tsx src/audit/sweep.ts",
     "test:e2e": "playwright test --config playwright.config.ts",
     "test:smoke": "playwright test --config playwright.smoke.config.ts",
     "test:audit": "vitest run",

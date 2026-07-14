@@ -50,6 +50,9 @@ pnpm-debug.log*
 # Claude Code auto-memory (session-local, not project state)
 .claude/projects/
 
+# Subagent-driven development scratch (task briefs, reports, review packages)
+.superpowers/
+
 # Claude Code scheduled-tasks runtime artifact (regenerated each session)
 .claude/scheduled_tasks.lock
 
