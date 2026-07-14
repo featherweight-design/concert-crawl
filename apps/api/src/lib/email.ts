@@ -1,6 +1,7 @@
 import { Resend } from 'resend'
 import { eq, sql } from 'drizzle-orm'
 import { createClerkClient } from '@clerk/backend'
+import * as Sentry from '@sentry/hono/node'
 import {
   db,
   emailSendLog,
@@ -9,11 +10,23 @@ import {
 } from '@concert-crawl/db'
 import { getTemplateRenderer } from '../emails/registry.js'
 import type { EmailTemplateVars } from '../emails/types.js'
+import {
+  buildTestEmail,
+  type TestEmailFromCategory,
+  type TestEmailKey,
+} from '../emails/test-fixtures.js'
 import { apiLogger } from './logger.js'
 
 const ADMIN_EMAIL_FROM = 'Concert Crawl Alerts <alerts@concertcrawl.app>'
 const TRANSACTIONAL_EMAIL_FROM = 'Concert Crawl <billing@concertcrawl.app>'
 const TRANSACTIONAL_REPLY_TO = 'support@concertcrawl.app'
+const INVITE_EMAIL_FROM = 'Concert Crawl <noreply@concertcrawl.app>'
+
+function testEmailFrom(category: TestEmailFromCategory): string {
+  if (category === 'transactional') return TRANSACTIONAL_EMAIL_FROM
+  if (category === 'invite') return INVITE_EMAIL_FROM
+  return ADMIN_EMAIL_FROM
+}
 
 // Standard result envelope for email sends — callers can branch on .sent
 // instead of relying on thrown exceptions.
@@ -217,6 +230,70 @@ export async function sendTransactionalEmail<
       { err, ...logContext },
       'sendTransactionalEmail: send failed — send-log row (if claimed) left failed',
     )
+  }
+}
+
+/**
+ * Send a rendered sample of any email the app can produce to ADMIN_EMAIL, for
+ * pre-launch review of how each template lands in a real inbox. Backs the
+ * Admin > Settings email picker.
+ *
+ * Deliberately NOT the transactional pipeline: no email_send_log row, no Clerk
+ * recipient lookup, no per-template kill switch — so the same template can be
+ * re-sent freely and even a disabled one can be previewed. The subject is
+ * prefixed with [TEST] and delivery always goes to the admin, never a user.
+ *
+ * Returns a structured result (never throws). A real send failure is captured
+ * to Sentry so a broken Resend/domain config surfaces instead of failing
+ * silently.
+ */
+export async function sendTestEmail(
+  key: TestEmailKey,
+): Promise<EmailSendResult> {
+  const apiKey = process.env.RESEND_API_KEY
+  const adminEmail = process.env.ADMIN_EMAIL
+
+  if (!apiKey) {
+    apiLogger.warn({ key }, 'RESEND_API_KEY not set — test email skipped')
+    return { sent: false, reason: 'missing_api_key' }
+  }
+  if (!adminEmail) {
+    apiLogger.warn({ key }, 'ADMIN_EMAIL not set — test email skipped')
+    return { sent: false, reason: 'missing_admin_email' }
+  }
+
+  const built = buildTestEmail(key)
+  const resend = new Resend(apiKey)
+
+  try {
+    const response = await resend.emails.send({
+      from: testEmailFrom(built.fromCategory),
+      to: adminEmail,
+      subject: `[TEST] ${built.subject}`,
+      html: built.html === '' ? built.text : built.html,
+      text: built.text,
+    })
+
+    if (response.error) {
+      apiLogger.error(
+        { key, resendError: response.error },
+        'Resend rejected test email',
+      )
+      Sentry.captureException(response.error, {
+        tags: { email_test_send: 'resend_rejected' },
+        extra: { key },
+      })
+      return { sent: false, reason: 'send_failed', error: response.error }
+    }
+
+    return { sent: true, resendId: response.data?.id ?? null }
+  } catch (err) {
+    apiLogger.error({ err, key }, 'Test email send threw')
+    Sentry.captureException(err, {
+      tags: { email_test_send: 'threw' },
+      extra: { key },
+    })
+    return { sent: false, reason: 'send_failed', error: err }
   }
 }
 

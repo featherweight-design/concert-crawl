@@ -4,12 +4,35 @@ import { z } from 'zod'
 import { eq, desc, and, isNull } from 'drizzle-orm'
 import { db, notifications } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
-import { sendAdminAlertEmail } from '../../lib/email.js'
+import {
+  sendAdminAlertEmail,
+  sendTestEmail,
+  type EmailSendResult,
+} from '../../lib/email.js'
+import {
+  TEST_EMAIL_KEYS,
+  TEST_EMAIL_OPTIONS,
+  type TestEmailKey,
+} from '../../emails/test-fixtures.js'
 import type { AdminVariables } from './index.js'
 
 const notifIdSchema = z.object({ id: z.string().uuid() })
 const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
+})
+
+// TEST_EMAIL_KEYS (readonly TestEmailKey[]) is the single source of truth for
+// the picker, the send path, and this validator. z.enum wants a literal tuple,
+// so validate membership with a refine + type guard instead — no cast, and the
+// list can never drift from what the send path can actually build.
+function isTestEmailKey(value: string): value is TestEmailKey {
+  return (TEST_EMAIL_KEYS as readonly string[]).includes(value)
+}
+const testEmailBodySchema = z.object({
+  emailKey: z
+    .string()
+    .refine(isTestEmailKey, { message: 'Unknown email key' })
+    .default('admin_alert'),
 })
 
 export const notificationsAdminRouter = new Hono<AdminVariables>()
@@ -32,15 +55,47 @@ notificationsAdminRouter.get(
   },
 )
 
-// POST /v1/admin/notifications/test-email — send a test alert email to ADMIN_EMAIL
-// to validate the Resend pipeline (env vars, domain verification, deliverability)
-// without waiting for a real alert condition to fire. Audited.
-notificationsAdminRouter.post('/test-email', async (ctx) => {
-  const { userId } = getAuthUser(ctx)
+// GET /v1/admin/notifications/test-email/options — enumerate every email the
+// app can send, grouped for the Admin > Settings picker. Sourced from the same
+// key set the send path validates, so the menu can never list a key the backend
+// can't build, or omit one it can.
+notificationsAdminRouter.get('/test-email/options', (ctx) => {
+  return ctx.json({ success: true, data: TEST_EMAIL_OPTIONS })
+})
+
+// POST /v1/admin/notifications/test-email — send a sample of any email the app
+// can produce to ADMIN_EMAIL, so an admin can review how each template lands in
+// a real inbox and validate the Resend pipeline (env vars, domain, delivery)
+// without waiting for a real trigger. Defaults to the generic admin alert for
+// backward compatibility with the original single-button caller. Audited.
+notificationsAdminRouter.post(
+  '/test-email',
+  zValidator('json', testEmailBodySchema),
+  async (ctx) => {
+    const { userId } = getAuthUser(ctx)
+    const { emailKey } = ctx.req.valid('json')
+
+    // The generic admin alert keeps its richer, contextual body (who triggered
+    // it and when) via the dedicated sender; every other key routes through the
+    // fixture-backed sendTestEmail so the picker can preview real templates.
+    const result: EmailSendResult =
+      emailKey === 'admin_alert'
+        ? await sendGenericAdminAlertTest(userId)
+        : await sendTestEmail(emailKey)
+
+    ctx.set('auditAction', 'notification.test_email')
+    ctx.set('auditActorId', userId)
+    ctx.set('auditMeta', { emailKey, result: serializeResultForAudit(result) })
+
+    return ctx.json({ success: true, data: result })
+  },
+)
+
+function sendGenericAdminAlertTest(userId: string): Promise<EmailSendResult> {
   const triggeredAt = new Date().toISOString()
   const adminUrl = process.env['ADMIN_URL'] ?? 'https://concertcrawl.app'
 
-  const result = await sendAdminAlertEmail({
+  return sendAdminAlertEmail({
     subject: 'Concert Crawl — test alert',
     html: `
       <p>This is a test email from the Concert Crawl admin notifications pipeline.</p>
@@ -60,19 +115,13 @@ notificationsAdminRouter.post('/test-email', async (ctx) => {
       'If you received this, the alert pipeline is working end-to-end.',
     ].join('\n'),
   })
-
-  ctx.set('auditAction', 'notification.test_email')
-  ctx.set('auditActorId', userId)
-  ctx.set('auditMeta', { result: serializeResultForAudit(result) })
-
-  return ctx.json({ success: true, data: result })
-})
+}
 
 // audit_log.metadata is jsonb, and JSON.stringify(new Error('msg')) returns
 // '{}' — message + stack are non-enumerable. Flatten Error-like shapes into
 // { name, message } so the audit row keeps useful context after a send_failed.
 function serializeResultForAudit(
-  result: Awaited<ReturnType<typeof sendAdminAlertEmail>>,
+  result: EmailSendResult,
 ): Record<string, unknown> {
   if (result.sent) return { sent: true, resendId: result.resendId }
   const base: Record<string, unknown> = { sent: false, reason: result.reason }

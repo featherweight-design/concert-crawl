@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createApp } from '../../app.js'
 
 const mockSendAdminAlertEmail = vi.fn()
+const mockSendTestEmail = vi.fn()
 vi.mock('../../lib/email.js', () => ({
   sendAdminAlertEmail: (...args: unknown[]) => mockSendAdminAlertEmail(...args),
+  sendTestEmail: (...args: unknown[]) => mockSendTestEmail(...args),
 }))
 
 const mockGetAuth = vi.fn()
@@ -194,6 +196,7 @@ describe('POST /v1/admin/notifications/test-email', () => {
   beforeEach(() => {
     mockGetAuth.mockReset()
     mockSendAdminAlertEmail.mockReset()
+    mockSendTestEmail.mockReset()
   })
 
   it('returns 401 for unauthenticated requests', async () => {
@@ -278,6 +281,96 @@ describe('POST /v1/admin/notifications/test-email', () => {
     expect(body.success).toBe(true)
     expect(body.data.sent).toBe(false)
     expect(body.data.reason).toBe('send_failed')
+  })
+
+  it('defaults to the generic admin alert when no emailKey is given', async () => {
+    adminAuth()
+    mockSendAdminAlertEmail.mockResolvedValueOnce({
+      sent: true,
+      resendId: 'resend_default',
+    })
+
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email',
+      { method: 'POST' },
+    )
+
+    expect(res.status).toBe(200)
+    expect(mockSendAdminAlertEmail).toHaveBeenCalledTimes(1)
+    expect(mockSendTestEmail).not.toHaveBeenCalled()
+  })
+
+  it('routes a template key through sendTestEmail', async () => {
+    adminAuth()
+    mockSendTestEmail.mockResolvedValueOnce({
+      sent: true,
+      resendId: 'resend_welcome',
+    })
+
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ emailKey: 'welcome_paid' }),
+      },
+    )
+
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.data).toEqual({ sent: true, resendId: 'resend_welcome' })
+    expect(mockSendTestEmail).toHaveBeenCalledWith('welcome_paid')
+    expect(mockSendAdminAlertEmail).not.toHaveBeenCalled()
+  })
+
+  it('rejects an unknown emailKey with 400', async () => {
+    adminAuth()
+
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ emailKey: 'not_a_real_key' }),
+      },
+    )
+
+    expect(res.status).toBe(400)
+    expect(mockSendTestEmail).not.toHaveBeenCalled()
+    expect(mockSendAdminAlertEmail).not.toHaveBeenCalled()
+  })
+})
+
+describe('GET /v1/admin/notifications/test-email/options', () => {
+  beforeEach(() => {
+    mockGetAuth.mockReset()
+  })
+
+  it('returns 401 for unauthenticated requests', async () => {
+    mockGetAuth.mockReturnValue(null)
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email/options',
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('returns the grouped picker options for admins', async () => {
+    adminAuth()
+    const res = await createApp().request(
+      '/v1/admin/notifications/test-email/options',
+    )
+    expect(res.status).toBe(200)
+    const body = await res.json()
+    expect(body.success).toBe(true)
+    expect(Array.isArray(body.data)).toBe(true)
+    expect(body.data.length).toBeGreaterThan(0)
+    const groups = new Set(body.data.map((opt: { group: string }) => opt.group))
+    expect(groups).toContain('Customer')
+    expect(groups).toContain('Operational')
+    for (const opt of body.data) {
+      expect(typeof opt.key).toBe('string')
+      expect(typeof opt.label).toBe('string')
+    }
   })
 })
 

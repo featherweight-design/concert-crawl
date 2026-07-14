@@ -1825,8 +1825,13 @@ export const ADMIN_COPY = {
       description:
         'Operational diagnostics for admins. Use these to verify integrations are healthy outside of incident response.',
       testEmail: {
-        button: 'Send test alert email',
+        pickerLabel: 'Email to preview',
+        pickerHint:
+          'Sends a sample of the selected email to ADMIN_EMAIL so you can see how it lands in a real inbox. Uses mock data — no logging, no customer is contacted.',
+        button: 'Send test email',
         buttonPending: 'Sending…',
+        optionsLoading: 'Loading email list…',
+        optionsFailed: 'Could not load the email list.',
         successPrefix: 'Test email sent.',
         notSentPrefix: 'Email not sent —',
         requestFailed: 'Request failed',
