@@ -159,37 +159,39 @@ usersAdminRouter.get(
     }
 
     // Totals above stay accurate past this display limit; the lists only run
-    // once we know the response is a 200.
-    const feedbackRows = await db
-      .select({
-        id: feedback.id,
-        category: feedback.category,
-        status: feedback.status,
-        message: feedback.message,
-        pageUrl: feedback.pageUrl,
-        issueUrl: feedback.issueUrl,
-        createdAt: feedback.createdAt,
-      })
-      .from(feedback)
-      .where(eq(feedback.userId, userId))
-      .orderBy(desc(feedback.createdAt))
-      .limit(100)
-
-    const watchingRows = await db
-      .select({
-        eventId: events.id,
-        eventTitle: events.title,
-        eventDate: events.date,
-        venueName: venues.name,
-        status: userEvents.status,
-        createdAt: userEvents.createdAt,
-      })
-      .from(userEvents)
-      .innerJoin(events, eq(userEvents.eventId, events.id))
-      .leftJoin(venues, eq(events.venueId, venues.id))
-      .where(eq(userEvents.userId, userId))
-      .orderBy(desc(userEvents.createdAt))
-      .limit(100)
+    // once we know the response is a 200. The two are independent, so run them
+    // concurrently to match the count-query fan-out above.
+    const [feedbackRows, watchingRows] = await Promise.all([
+      db
+        .select({
+          id: feedback.id,
+          category: feedback.category,
+          status: feedback.status,
+          message: feedback.message,
+          pageUrl: feedback.pageUrl,
+          issueUrl: feedback.issueUrl,
+          createdAt: feedback.createdAt,
+        })
+        .from(feedback)
+        .where(eq(feedback.userId, userId))
+        .orderBy(desc(feedback.createdAt))
+        .limit(100),
+      db
+        .select({
+          eventId: events.id,
+          eventTitle: events.title,
+          eventDate: events.date,
+          venueName: venues.name,
+          status: userEvents.status,
+          createdAt: userEvents.createdAt,
+        })
+        .from(userEvents)
+        .innerJoin(events, eq(userEvents.eventId, events.id))
+        .leftJoin(venues, eq(events.venueId, venues.id))
+        .where(eq(userEvents.userId, userId))
+        .orderBy(desc(userEvents.createdAt))
+        .limit(100),
+    ])
 
     const publicMeta = clerkUser?.publicMetadata as
       { role?: unknown; handle?: unknown } | undefined
