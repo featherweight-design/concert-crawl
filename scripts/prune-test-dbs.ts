@@ -13,7 +13,10 @@ const listWorktreeNames = (): string[] => {
     const wtPath = line.slice('worktree '.length)
     const markerIdx = wtPath.indexOf(WORKTREE_MARKER)
     if (markerIdx !== -1) {
-      names.push(wtPath.slice(markerIdx + WORKTREE_MARKER.length).split('/')[0])
+      // Full path after the marker (selectOrphanedTestDbs sanitizes it) so a
+      // nested worktree root like `.worktrees/feat/foo` matches its DB name
+      // and isn't mistaken for an orphan of `.worktrees/feat`.
+      names.push(wtPath.slice(markerIdx + WORKTREE_MARKER.length))
     }
   }
   return names

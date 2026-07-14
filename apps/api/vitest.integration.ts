@@ -8,10 +8,8 @@ export default defineConfig({
     globalSetup: './src/test/setup/global-setup.ts',
     include: ['**/*.integration.test.ts'],
     fileParallelism: false,
-    poolOptions: {
-      forks: {
-        singleFork: true,
-      },
+    forks: {
+      singleFork: true,
     },
     env: {
       DATABASE_URL: resolveTestDbUrl(),

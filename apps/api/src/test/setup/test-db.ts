@@ -12,11 +12,12 @@ export const sanitizeWorktreeName = (name: string): string =>
 export const resolveTestDbName = (toplevel: string): string => {
   const markerIdx = toplevel.indexOf(WORKTREE_MARKER)
   if (markerIdx === -1) return BASE_DB_NAME
-  const [worktreeDir = ''] = toplevel
-    .slice(markerIdx + WORKTREE_MARKER.length)
-    .split('/')
-  if (worktreeDir === '') return BASE_DB_NAME
-  return `${BASE_DB_NAME}__${sanitizeWorktreeName(worktreeDir)}`
+  // Use the full path after the marker (sanitized), not just the first
+  // segment: nested worktree roots like `.worktrees/feat/foo` must not all
+  // collapse to `concert_crawl_test__feat` and collide.
+  const relativePath = toplevel.slice(markerIdx + WORKTREE_MARKER.length)
+  if (relativePath === '') return BASE_DB_NAME
+  return `${BASE_DB_NAME}__${sanitizeWorktreeName(relativePath)}`
 }
 
 export const resolveTestDbUrl = (): string => {

@@ -22,11 +22,16 @@ describe('resolveTestDbName', () => {
     ).toBe('concert_crawl_test__fix_foo')
   })
 
-  it('uses only the worktree dir, not deeper path segments', () => {
+  it('gives nested worktree roots distinct names', () => {
     expect(
       resolveTestDbName(
-        '/Users/huey/Projects/concert-crawl/.worktrees/chore-x/apps/api',
+        '/Users/huey/Projects/concert-crawl/.worktrees/feat/foo',
       ),
-    ).toBe('concert_crawl_test__chore_x')
+    ).toBe('concert_crawl_test__feat_foo')
+    expect(
+      resolveTestDbName(
+        '/Users/huey/Projects/concert-crawl/.worktrees/feat/bar',
+      ),
+    ).toBe('concert_crawl_test__feat_bar')
   })
 })
