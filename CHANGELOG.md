@@ -1,3 +1,23 @@
+# [1.115.0](https://github.com/HartiganHM/concert-crawl/compare/v1.114.1...v1.115.0) (2026-07-14)
+
+
+### Bug Fixes
+
+* **admin:** address Copilot review on test-email picker ([735de6d](https://github.com/HartiganHM/concert-crawl/commit/735de6da0ed14e7555117c8a54dcf4188b17cce0))
+* **admin:** env-driven sample URL, DB-mock-safe key set, options-fail fallback ([67ed123](https://github.com/HartiganHM/concert-crawl/commit/67ed123686269e05d262b32a45d7a7368f708307))
+* **admin:** honest options-fail fallback + Clerk-loaded gate for picker ([73c9ef3](https://github.com/HartiganHM/concert-crawl/commit/73c9ef335ca9fb60596e651d5bd86949cda51e7e))
+* **scripts:** exact Copilot login match and actionable gh-failure hint ([142d26d](https://github.com/HartiganHM/concert-crawl/commit/142d26d37310f7cd15445abca9debd51ab53e26a)), closes [#failure](https://github.com/HartiganHM/concert-crawl/issues/failure)
+* **scripts:** keep REPO stdout-only so gh stderr can't corrupt poll path ([196f5aa](https://github.com/HartiganHM/concert-crawl/commit/196f5aa60851c790bd0bb91ced00d3bf9404d2aa))
+* **scripts:** preflight-check gh so a missing CLI fails with a clear message ([9fec7df](https://github.com/HartiganHM/concert-crawl/commit/9fec7dfa86356879ce4d7f972458bb8d0281c565))
+* **scripts:** require type==Bot for the bare "copilot" reviewer match ([fe0c87e](https://github.com/HartiganHM/concert-crawl/commit/fe0c87e4dcaa08b582be0744da7c81370a0d24df))
+* **scripts:** verify Copilot specifically attached, not just any reviewer ([07c48db](https://github.com/HartiganHM/concert-crawl/commit/07c48db7b5dd6de5110ee974d629f48fa647a189))
+* **web:** reset optionsFailed after a successful test-email options fetch ([8964bd8](https://github.com/HartiganHM/concert-crawl/commit/8964bd8bca26362c7e726a263a9883ecf43547f4))
+
+
+### Features
+
+* **admin:** pick any email to preview via the test-email picker ([45ac617](https://github.com/HartiganHM/concert-crawl/commit/45ac617c90257eed7cfb880b0a52168a0fa43a2e))
+
 ## [1.114.1](https://github.com/HartiganHM/concert-crawl/compare/v1.114.0...v1.114.1) (2026-07-14)
 
 
