@@ -31,7 +31,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # TEMPORARY (#951): `pnpm audit` hits npm's retired
+      # /security/audits/quick endpoint and always returns HTTP 410 —
+      # pnpm 10.33.2's audit path has not moved to the modern
+      # bulk-advisory endpoint yet, so every PR gets a hard-fail here
+      # until pnpm ships the fix or we swap scanners. Make the step
+      # non-blocking so the check still runs (and starts passing once
+      # pnpm is fixed) without blocking merges on infrastructure.
+      # Dependabot on main still provides the actual dependency-vuln
+      # signal in the meantime.
+      #
+      # Remove `continue-on-error: true` once #951 lands its replacement.
       - name: Audit dependencies
+        continue-on-error: true
         run: pnpm audit --audit-level=high
 
   install:
