@@ -61,6 +61,36 @@ describe('deriveTicketLinks', () => {
     ])
   })
 
+  it('downgrades a same-domain link to primary when the venue sells via a marketplace vendor', () => {
+    // Red Rocks: ticket URL is on the venue's own domain (a landing page that
+    // funnels to AXS) and ticketVendor is 'axs'. The same-domain heuristic
+    // would mark this boxoffice, but AXS charges fees — it must be primary so
+    // the UI never shows "AXS · face value, no fees".
+    const result = deriveTicketLinks('https://www.redrocksonline.com/events/', {
+      websiteUrl: 'https://www.redrocksonline.com/events/',
+      ticketVendor: 'axs',
+    })
+    expect(result).toEqual([
+      {
+        kind: 'primary',
+        vendor: 'AXS',
+        url: 'https://www.redrocksonline.com/events/',
+      },
+    ])
+  })
+
+  it('downgrades a venue_box_office venue to primary when the link host is a marketplace', () => {
+    // Even with ticketVendor='venue_box_office', a link that resolves to a
+    // fee-charging marketplace host (AXS) can't be the fee-free box office.
+    const result = deriveTicketLinks('https://www.axs.com/events/xyz', {
+      websiteUrl: 'https://gothictheatre.example.com/',
+      ticketVendor: 'venue_box_office',
+    })
+    expect(result).toEqual([
+      { kind: 'primary', vendor: 'AXS', url: 'https://www.axs.com/events/xyz' },
+    ])
+  })
+
   it('marks a Ticketmaster URL as primary with vendor Ticketmaster', () => {
     const result = deriveTicketLinks(
       'https://www.ticketmaster.com/event/abc123',

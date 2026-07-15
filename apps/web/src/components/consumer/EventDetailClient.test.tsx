@@ -786,6 +786,45 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(screen.getByText('Submit another price')).toBeDefined()
   })
 
+  // Regression — issue #895 (post-submit form re-open). Submitting from the
+  // no-price branch populates localSubmissions, which flips the decision tree
+  // to the legacy pending branch (4a) and remounts the SubmitPriceModal. The
+  // remounted modal loses its internal success state and re-renders the form.
+  // The fix lifts the success payload to the parent (submitSuccessSurface) via
+  // onPendingSubmitSuccess, so the success card survives the branch switch
+  // instead of the form re-appearing.
+  it('no-price branch: submit success shows the success surface after the pending-branch transition (#895)', async () => {
+    const event = buildBaseEvent({
+      ticketPriceMin: null,
+      pendingSubmissions: null,
+      priceByTier: null,
+    })
+    render(
+      <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
+    )
+
+    expect(latestModalOnSuccess).not.toBeNull()
+    await act(async () => {
+      latestModalOnSuccess?.([
+        {
+          isEdit: false,
+          id: 'sub-ga-1',
+          priceMin: '40',
+          priceMax: null,
+          tier: 'GA',
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+        },
+      ])
+    })
+
+    // Parent-owned success surface renders even though the block transitioned
+    // into the legacy pending branch — the form did not re-open.
+    expect(screen.getByText('GA price is in. Thanks.')).toBeDefined()
+    expect(screen.queryByTestId('submit-price-modal-open')).toBeNull()
+  })
+
   // Regression — issue #831. Same bug in the mixed-tier branch (a pending-only
   // sibling tier renders via TierAlternateRow's "pending · {N}/{needed}" tell).
   it('mixed-tier: pending-only sibling tier renders "pending · 1/2" not "pending · 0/2" (submitter counts as #1, #831)', () => {

@@ -553,6 +553,21 @@ export function EventDetailPriceBlock({
     [],
   )
 
+  // #895 symptom: the two legacy pending-card branches transition shape as
+  // localSubmissions populates (noPriceState branch 5 → branch 4a), which
+  // remounts their SubmitPriceModal and discards its internal success state —
+  // so the form re-appears instead of the success surface. Combine the
+  // optimistic pending-row update with handleSubmitSuccess: the latter closes
+  // the modal and lifts the success payload to submitSuccessSurface (parent
+  // state), which survives the branch switch.
+  const onPendingSubmitSuccess = useCallback(
+    (results: SubmitPriceResult[], submissionsRemaining?: number) => {
+      applySubmissionResults(results)
+      handleSubmitSuccess(results, submissionsRemaining)
+    },
+    [applySubmissionResults, handleSubmitSuccess],
+  )
+
   // Submit-success surface — Submit-success state #1 (post-submit add-tier).
   // The MTAddTierSuccess follow-up is a GLOBAL after-submit affordance:
   // every decision branch that owns a SubmitPriceModal must show the tier
@@ -1712,8 +1727,7 @@ export function EventDetailPriceBlock({
         )}
 
         {/* #895 symptom 1: reload-surviving "submit another price" affordance
-            for the legacy pending path (this branch renders no session-only
-            MTAddTierSuccess surface). Routes into the shared SubmitPriceModal
+            for the legacy pending path. Routes into the shared SubmitPriceModal
             below so a submission updates localSubmissions live (onSuccess /
             onWithdrawSuccess). The modal self-gates the exhausted case. */}
         {event.status !== 'cancelled' && (
@@ -1726,18 +1740,22 @@ export function EventDetailPriceBlock({
             />
           </div>
         )}
+        {submitSuccessSurface}
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
             setSubmitPriceOpen(false)
             setSubmitPriceEditMode(false)
+            setSubmitSuccessPayload(null)
+            setPreselectedTier(null)
           }}
           openInEditMode={submitPriceEditMode}
+          preselectedTier={preselectedTier}
           eventId={event.id}
           artist={event.artist}
           venueName={event.venue.name}
           date={event.date}
-          onSuccess={applySubmissionResults}
+          onSuccess={onPendingSubmitSuccess}
           onWithdrawSuccess={(submissionId) => {
             setLocalSubmissions((prev) =>
               prev.filter((sub) => sub.id !== submissionId),
@@ -1866,19 +1884,23 @@ export function EventDetailPriceBlock({
           />
         </div>
       )}
+      {noPriceState && submitSuccessSurface}
       {noPriceState && (
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
             setSubmitPriceOpen(false)
             setSubmitPriceEditMode(false)
+            setSubmitSuccessPayload(null)
+            setPreselectedTier(null)
           }}
           openInEditMode={submitPriceEditMode}
+          preselectedTier={preselectedTier}
           eventId={event.id}
           artist={event.artist}
           venueName={event.venue.name}
           date={event.date}
-          onSuccess={applySubmissionResults}
+          onSuccess={onPendingSubmitSuccess}
           onWithdrawSuccess={(submissionId) => {
             setLocalSubmissions((prev) =>
               prev.filter((sub) => sub.id !== submissionId),

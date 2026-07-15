@@ -30,6 +30,16 @@ function isSameOrSubdomain(linkHost: string, venueHost: string): boolean {
   return linkHost.endsWith(`.${venueHost}`)
 }
 
+// A fee-charging marketplace vendor is any resolved Vendor that isn't the
+// venue's own box office. Only the box office sells at face value with no
+// fees — AXS/Ticketmaster/SeatGeek/DICE/Eventbrite always add fees, so a link
+// attributed to one of them can never be the fee-free 'boxoffice' tier, even
+// when the URL sits on the venue's own domain (a landing page that funnels to
+// the marketplace) or the venue is flagged venue_box_office.
+function isFeeChargingVendor(vendor: Vendor | null): boolean {
+  return vendor != null && vendor !== 'VenueBoxOffice'
+}
+
 export function deriveTicketLinks(
   ticketUrl: string | null | undefined,
   venue: TicketLinkVenueContext,
@@ -56,6 +66,14 @@ export function deriveTicketLinks(
   // vendor resolution — URL-derived first, then venue fallback.
   const vendor: Vendor | null =
     vendorForHost(linkHost) ?? vendorFromVenue(venue.ticketVendor)
+
+  // Invariant: the fee-free box office is the venue itself. If the resolved
+  // vendor is a fee-charging marketplace, the link is an official primary sale
+  // ('face + fees'), never 'boxoffice' — otherwise the UI mislabels e.g. a
+  // Red Rocks → AXS link as "AXS · face value, no fees".
+  if (kind === 'boxoffice' && isFeeChargingVendor(vendor)) {
+    kind = 'primary'
+  }
 
   return [{ kind, vendor, url: ticketUrl }]
 }
