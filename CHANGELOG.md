@@ -1,3 +1,10 @@
+## [1.118.1](https://github.com/HartiganHM/concert-crawl/compare/v1.118.0...v1.118.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* **ci:** unblock Security audit — pnpm audit hits retired npm endpoint ([#951](https://github.com/HartiganHM/concert-crawl/issues/951)) ([d51d6ca](https://github.com/HartiganHM/concert-crawl/commit/d51d6ca483377c40ac29500c05032240d4d073b3))
+
 # [1.118.0](https://github.com/HartiganHM/concert-crawl/compare/v1.117.0...v1.118.0) (2026-07-14)
 
 
