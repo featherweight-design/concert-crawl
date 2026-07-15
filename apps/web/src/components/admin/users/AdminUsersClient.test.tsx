@@ -50,6 +50,33 @@ describe('AdminUsersClient', () => {
     }
   })
 
+  it('renders the visible @handle span inside each link when a handle is present', () => {
+    render(<AdminUsersClient initialUsers={[baseRow()]} total={1} />)
+    const detailLinks = screen
+      .getAllByRole('link')
+      .filter((el) => el.getAttribute('href') === '/admin/users/user_abc')
+    expect(detailLinks.length).toBe(2)
+    // Guards against the visible @handle span being dropped while the
+    // aria-label still carries the handle — the accessible-name test alone
+    // would not catch that regression.
+    for (const link of detailLinks) {
+      expect(within(link).getByText('@memberhandle')).toBeTruthy()
+    }
+  })
+
+  it('renders no @handle span inside the link when handle is null', () => {
+    render(
+      <AdminUsersClient initialUsers={[baseRow({ handle: null })]} total={1} />,
+    )
+    const detailLinks = screen
+      .getAllByRole('link')
+      .filter((el) => el.getAttribute('href') === '/admin/users/user_abc')
+    expect(detailLinks.length).toBe(2)
+    for (const link of detailLinks) {
+      expect(within(link).queryByText(/^@/)).toBeNull()
+    }
+  })
+
   it('includes the full visible text (email + @handle) in the link accessible name', () => {
     render(<AdminUsersClient initialUsers={[baseRow()]} total={1} />)
     const links = screen.getAllByRole('link', {
