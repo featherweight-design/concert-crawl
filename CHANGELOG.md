@@ -1,3 +1,10 @@
+## [1.119.1](https://github.com/HartiganHM/concert-crawl/compare/v1.119.0...v1.119.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* submission success surface + marketplace fee label ([#949](https://github.com/HartiganHM/concert-crawl/issues/949)) ([bf10e7b](https://github.com/HartiganHM/concert-crawl/commit/bf10e7bea1495dc6c25b6bff128b387f54df6f80)), closes [post-#935](https://github.com/post-/issues/935)
+
 # [1.119.0](https://github.com/HartiganHM/concert-crawl/compare/v1.118.1...v1.119.0) (2026-07-15)
 
 
