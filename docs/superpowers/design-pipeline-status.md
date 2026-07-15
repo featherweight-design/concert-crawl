@@ -58,8 +58,7 @@ Design brief has merged; Claude Design needs to produce the hi-fi handoff (mocks
 
 | Rank | Ticket | Brief PR | Path to eng handoff | Why this rank |
 |---|---|---|---|---|
-
-_Currently empty — #763 Spotify sync completed the full brief → handoff → audit cycle 2026-07-11 through 2026-07-13; moved to 🟢 above._
+| 1 | **#783** Monetization — email touchpoints (brand pass) | PR #846 (2026-06-27) | Design → hi-fi templates for the 10 locked email templates (welcome-per-tier, monthly + annual renewal receipts, dunning 3-email sequence, cancellation ack, win-back, gifted welcome) → audit → build | Brief locked 10 templates in text/decision form, but Design handoff was never produced — emails shipped as basic Resend placeholders (Hugh flagged 2026-07-15 with welcome + receipt screenshots). This ticket was mistakenly not in the tracker until 2026-07-15; corrected here. Same email-DNA precedent as `design_handoff_shareable_cards/digest-email.jsx` (inline hex, single branded palette, table layout, mobile-first, plain-text fallback). |
 
 **Maintenance note:** when Design produces the handoff, move to 🎨 (audit in flight) → then 🟡 / 🟢 based on verdict.
 
@@ -105,7 +104,8 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
-| 2026-07-15 | — | Tracker refresh #8 — #506 flipped 🟡 → 🟢 as-is per audit recommendation (Path A, no Design round); tracker corrected — was in 🕰️ Backlog by mistake (this PR) |
+| 2026-07-15 | — | Tracker refresh #9 — #783 email touchpoints moved into 📐 Brief locked; brief has been merged since PR #846 (2026-06-27) but Design handoff was never produced (emails shipped as basic Resend placeholders). Tracker-invisible until Hugh flagged the current state (this PR) |
+| 2026-07-15 | — | Tracker refresh #8 — #506 flipped 🟡 → 🟢 as-is per audit recommendation (Path A, no Design round); tracker corrected — was in 🕰️ Backlog by mistake (PR #953) |
 | 2026-07-15 | #506 | `design/design_handoff_admin_venues/READINESS_506.md` addendum — 🟢 Green as-is per original audit's "eng can proceed without Design round-trip" recommendation. Plan PR gets 8 locked defaults; Design polish (4 gaps) deferred as follow-ups. Blocks eng #505 |
 | 2026-07-14 | — | Tracker refresh #7 — shareable_cards #72 flipped 🟡 → 🟢 (PR #948); Passport card added in-scope via inherited concert_history addendum |
 | 2026-07-14 | #72 | `design/design_handoff_shareable_cards/READINESS.md` addendum merged — 🟢 Green post-addendum; tier gate = Free, URL contract = public `/e/:eventId` mirror; `POSTER_TAGLINES` bank added + Sour Patch voice pass (de-blamed the soldout line); Passport card added (compact 320×500 + share 1080×1080), inherited from concert_history |
@@ -148,6 +148,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 ## 📋 Immediate TODOs
 
 - [ ] **6 eng plans ready for eng-planning agent:** #642 · #643 · concert_history · #763 Spotify · #72 shareable_cards + Passport · **#506** Admin Venue Form (new — unblocks eng #505). #763 Spotify + #72 shareable_cards are the biggest surfaces; #506 is the smallest (2 form fields, existing pattern). No Yellow items remaining.
+- [ ] **#783 email touchpoints Design handoff** — brief exists, handoff never produced. Hugh routed the handoff prompt to Design 2026-07-15. Awaiting hi-fi templates for the 10 locked emails.
 - [ ] **Backlog priority order** (per 2026-07-15 deep-read): #762 Who else is watching → #764 Venue first-timer → #794 Logged-out UX. #762 is the highest-value next pull.
 
 ---
