@@ -47,10 +47,14 @@ export function filterManifest(
 // Any segment that becomes part of the on-disk path is validated: `/`,
 // `\\`, and `..` are the concrete traversal paths that could escape the
 // audit-output directory. The manifest schema already rejects unsafe
-// route ids, but this helper also runs on runId/state/viewportLabel —
-// runId is derived from Date().toISOString() and viewportLabel from the
-// hard-coded VIEWPORTS array (both safe), but `state` includes user-
-// authored interaction ids which flow through the schema. Belt-and-braces.
+// route ids, but this helper is currently the ONLY runtime guard on
+// `state` — `state` is set from either the literal string 'default' or
+// from user-authored `interaction.id` values, which `validateManifest`
+// intentionally does NOT run through Zod (interactions carry function
+// properties and bypass schema entirely). So this defense stays load-
+// bearing until a follow-up adds explicit interaction.id validation.
+// runId comes from Date().toISOString() and viewportLabel from the
+// hard-coded VIEWPORTS array — both safe, guarded here anyway.
 function assertSafePathSegment(name: string, value: string): void {
   if (value.includes('/') || value.includes('\\') || value.includes('..')) {
     throw new Error(

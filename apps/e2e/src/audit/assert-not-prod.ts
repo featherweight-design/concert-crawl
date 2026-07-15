@@ -25,6 +25,13 @@ export function assertNotProdBaseUrl(url: string): void {
   try {
     rawHostname = new URL(url).hostname
   } catch (err) {
+    // House rule (project CLAUDE.md, feedback_async_try_catch): every
+    // catch block logs before rethrowing. Log the raw URL + parser error
+    // to stderr so a live sweep CLI shows the failure inline; the rethrow
+    // still fails the caller with actionable context.
+    console.error(
+      `[audit] assertNotProdBaseUrl: URL.parse failed on '${url}': ${String(err)}`,
+    )
     throw new Error(
       `assertNotProdBaseUrl: could not parse '${url}' as a URL: ${String(err)}`,
     )
