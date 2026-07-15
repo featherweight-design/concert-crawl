@@ -1,10 +1,42 @@
 # Readiness Review — Admin Venue Form API fields (#506)
 
-**Verdict:** 🟡 Yellow
-**Audited:** 2026-06-23
-**Auditor:** Claude (autonomous Readiness Review)
+**Verdict:** 🟢 Green (post-review, 2026-07-15) — flip authorized by Hugh with no Design addendum. The original Yellow verdict flagged Design polish as *optional* and explicitly stated *"engineering can pattern-match this addition cleanly without a Design round-trip."* The 8 eng-side decisions in §72–82 stand as the locked defaults for the plan PR; the 4 Design-polish gaps (§67–70) are logged as follow-up options and don't block build. Eng-planning agent picks up.
+**Original verdict:** 🟡 Yellow (2026-06-23) — Design-polish-optional, not Design-blocking.
+**Audited:** 2026-06-23 (initial) → **flipped 🟢 Green 2026-07-15** after re-read confirmed the audit itself recommended proceeding without a Design round
+**Auditor:** Claude (autonomous Readiness Review; Green flip after Hugh's Path A confirmation)
 **Related ticket(s):** #506 (blocks #505)
-**Plan PR target:** TBD
+**Plan PR target:** `docs/superpowers/plans/<date>-506-admin-venue-api-fields-plan.md`. **Unblocked as of 2026-07-15.**
+
+---
+
+## 🎉 Green resolution (2026-07-15)
+
+The Yellow verdict has been on record since 2026-06-23 (committed via PR #753), but #506 sat in the tracker's 🕰️ Backlog by mistake rather than 🟡 Yellow — meaning it was invisible to the design-planning queue. On re-read (2026-07-15), Hugh took the audit's own recommendation and flipped it 🟢 Green as-is.
+
+**Why Green without Design:** the audit was specific that Design polish was *optional*:
+
+> *"Engineering can pattern-match this addition cleanly without a Design round-trip — provided the decisions listed below are surfaced explicitly in the plan PR so a future Design pass can revise them if needed."* — Summary paragraph, above.
+
+Every primitive eng needs already ships in the codebase (`VDSelect`, `VDInput` / `Field`, hint/error treatments, dirty-tracking, `definitions/copy.ts` copy structure). The conditional field-reveal is a standard `{providerVal && ...}` block matching the shipped `priceUrl` pattern.
+
+**What the plan PR carries forward:** the 8 eng-side clarifications in §72–82 become the plan's locked defaults. Named here for the plan author's convenience:
+
+1. **Placement** — append both fields to the **Crawl config** section as a new "Integration" subsection above Extraction strategy
+2. **Conditional reveal** — `<VDField>` for API Account ID renders only when `apiProviderVal` is non-null; `aria-live="polite"` on the wrapper
+3. **Add Venue modal scope** — omit the new fields from the modal; first pass is Edit-page-only
+4. **Empty-state mapping** — empty option value `""` maps to `null` in the DB (same pattern as `ticketVendor`)
+5. **Label** — `VenuePilot` (single word, capitalized) for the option label; `'venuepilot'` for the enum value
+6. **Validation** — when `apiProvider !== null`, `apiAccountId` is required and must be non-empty trimmed string
+7. **Source URL** — stays required even when a provider is set (crawler bypasses; consumer surface still uses it)
+8. **Editability** — `apiProvider` freely editable post-create; #505's `crawlVenue()` handles the mid-life strategy switch
+
+**Design polish gaps deferred as follow-ups (from §67–70):** placement variant (own "Integration" section vs. appended vs. own block above Crawl config), Source URL treatment when provider is set (gray it out? "informational only" badge?), micro-copy for hint text + error messages, Add Venue modal scope. If a user pinpoints any of these as friction post-ship, spin a small addendum ticket for Design to weigh in.
+
+---
+
+> ⏳ **Everything below is the original 2026-06-23 Yellow audit, preserved as historical context.** Verdict has since flipped 🟢 Green; the audit's own findings (especially the eng-can-proceed-without-Design summary) underwrite the flip.
+
+---
 
 ## Summary
 
