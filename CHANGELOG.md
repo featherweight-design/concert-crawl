@@ -1,3 +1,28 @@
+# [1.119.0](https://github.com/HartiganHM/concert-crawl/compare/v1.118.1...v1.119.0) (2026-07-15)
+
+
+### Bug Fixes
+
+* **audit:** gate naturalWidth broken-image check on img.complete ([d7a5422](https://github.com/HartiganHM/concert-crawl/commit/d7a5422f7d29a4340b51ab506a66670d6f955707))
+* **audit:** isolate stale-capture failures; guard --tags <dash-prefixed> ([5bd8d37](https://github.com/HartiganHM/concert-crawl/commit/5bd8d37acf7f8f1105e4a7ac670ea87a09feaae0))
+* **audit:** r1 — prod-host guard, path-safe manifest ids, stderr logging ([58115b9](https://github.com/HartiganHM/concert-crawl/commit/58115b9c65fedc247b552e765fd76c5cf74e2fc0))
+* **audit:** r2 — close protocol-relative + trailing-dot bypass paths ([0355b94](https://github.com/HartiganHM/concert-crawl/commit/0355b9457caf7399fcce389e8d151f6b2f76fbfe))
+* **audit:** r3 — trim creds, sharpen ROUTE_PATH_PATTERN doc, drop test-harness `as` casts ([1ee35e2](https://github.com/HartiganHM/concert-crawl/commit/1ee35e25bc509859732de097dfa63bcbba9711d5))
+* **audit:** r4 — whitespace trims, test-state isolation, non-array interactions ([89cc88e](https://github.com/HartiganHM/concert-crawl/commit/89cc88e309a4e72c1505f6f021d0496d16e23c8a))
+* **audit:** r5 — house-rule catch log; correct outputPathFor doc drift ([fbd7298](https://github.com/HartiganHM/concert-crawl/commit/fbd72985b7bb73e9ce4117f505fb59bec5da9f3b)), closes [#3](https://github.com/HartiganHM/concert-crawl/issues/3)
+* **audit:** rename pnpm script, gitignore .superpowers/, clarify CLI guard ([def40ff](https://github.com/HartiganHM/concert-crawl/commit/def40ffb16294b6b62de3557fd76002d272ff1fa))
+* **audit:** replace `as` value casts with a proper type guard ([3a9eb92](https://github.com/HartiganHM/concert-crawl/commit/3a9eb921d02c06ecce39442ba030db06c6a19574))
+
+
+### Features
+
+* **audit:** dom heuristics — overflow, offscreen, tap targets, broken images ([cc977b5](https://github.com/HartiganHM/concert-crawl/commit/cc977b5c783e02f1b10edc4ad193db7fcf646229))
+* **audit:** initial route manifest — admin + consumer surfaces ([ad46199](https://github.com/HartiganHM/concert-crawl/commit/ad4619947122ba0575696624e936efeb9f471576))
+* **audit:** manifest schema + validator (Zod, unique ids, non-empty tags) ([d26c6b7](https://github.com/HartiganHM/concert-crawl/commit/d26c6b77834c5811090840e51ff391f2ac4f124a))
+* **audit:** mark thin renders as insufficientData for triage skip ([261bded](https://github.com/HartiganHM/concert-crawl/commit/261bded9a1ff5e2cb275e972c06e4d22719c8619))
+* **audit:** pnpm --filter e2e audit wiring + audit-scoped auth state ([170d8be](https://github.com/HartiganHM/concert-crawl/commit/170d8be2d9d2a999799efcfedff8e14050d11afb))
+* **audit:** sweep runner — viewport matrix, interactions, heuristics per capture ([cea24a1](https://github.com/HartiganHM/concert-crawl/commit/cea24a1b44c4acebadb6bdb01f7f7fac5027a480))
+
 ## [1.118.1](https://github.com/HartiganHM/concert-crawl/compare/v1.118.0...v1.118.1) (2026-07-15)
 
 
