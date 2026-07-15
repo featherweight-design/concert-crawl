@@ -6,6 +6,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     globalSetup: './src/test/setup/global-setup.ts',
+    setupFiles: ['./src/test/setup/drain-background.ts'],
     include: ['**/*.integration.test.ts'],
     fileParallelism: false,
     forks: {

@@ -12,6 +12,7 @@ import type {
 import { getAuthUser } from '../../middleware/auth.js'
 import { apiLogger } from '../../lib/logger.js'
 import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js'
+import { runBackgroundTask } from '../../lib/background-tasks.js'
 import type { AdminVariables } from './index.js'
 
 const createVenueSchema = z.object({
@@ -394,7 +395,7 @@ venuesAdminRouter.post(
 
     // Detect vendor in the background — does not block the response
     if (!body.ticketVendor) {
-      void (async () => {
+      runBackgroundTask(async () => {
         try {
           const detectedVendor = await detectTicketVendor(body.websiteUrl)
           await db
@@ -404,7 +405,7 @@ venuesAdminRouter.post(
         } catch (err) {
           apiLogger.warn({ err }, 'detectTicketVendor background update failed')
         }
-      })()
+      })
     }
 
     ctx.set('auditAction', 'venue.create')

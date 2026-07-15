@@ -8,6 +8,7 @@ import { randomBytes } from 'crypto'
 import type { AdminVariables } from './index.js'
 import { sendInviteCodeEmail } from '../../lib/email.js'
 import { apiLogger } from '../../lib/logger.js'
+import { runBackgroundTask } from '../../lib/background-tasks.js'
 
 function generateCode(): string {
   // Format: BETA-XXXX-XXXX (uppercase hex, URL-safe)
@@ -64,13 +65,13 @@ inviteCodesAdminRouter.post(
     ctx.set('auditActorId', userId)
 
     if (recipientEmail) {
-      void (async () => {
+      runBackgroundTask(async () => {
         try {
           await sendInviteCodeEmail(recipientEmail, code.code)
         } catch (err) {
           apiLogger.error({ err }, 'Failed to send invite code email')
         }
-      })()
+      })
     }
 
     return ctx.json({ success: true, data: code }, 201)

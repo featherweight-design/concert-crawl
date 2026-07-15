@@ -16,6 +16,7 @@ import { createLogger } from '@concert-crawl/logger'
 import { deriveSourceCategory } from '@concert-crawl/types'
 import { getAuthUser } from '../../middleware/auth.js'
 import { apiLogger } from '../../lib/logger.js'
+import { runBackgroundTask } from '../../lib/background-tasks.js'
 import type { AdminVariables } from './index.js'
 
 const logger = createLogger('admin:prices')
@@ -591,7 +592,7 @@ pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
 
   const narrowedVenueId = event.venueId
 
-  void (async () => {
+  runBackgroundTask(async () => {
     try {
       await runPricePipeline({
         eventId: event.id,
@@ -604,7 +605,7 @@ pricesAdminRouter.post('/pipeline/:eventId', async (ctx) => {
     } catch (err) {
       logger.error({ err, eventId }, 'on-demand price pipeline failed')
     }
-  })()
+  })
 
   ctx.set('auditActorId', getAuthUser(ctx).userId)
   ctx.set('auditAction', 'price.pipeline.run')
