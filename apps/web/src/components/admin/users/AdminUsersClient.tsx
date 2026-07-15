@@ -80,6 +80,13 @@ function RolePip({ role }: { role: Role }) {
   )
 }
 
+// The visible identity shows the handle with a leading '@', so the accessible
+// label must match it (bare handle would read inconsistently to a screen
+// reader); fall back to the email when there is no handle.
+function identityLabel(row: AdminUserRow): string {
+  return row.handle ? `@${row.handle}` : row.email
+}
+
 // Email + handle rendered as a link into the per-user detail page. Kept as a
 // standalone control (not a full-row link) so the inline role <select> stays
 // independently clickable.
@@ -87,7 +94,7 @@ function UserIdentityLink({ row }: { row: AdminUserRow }) {
   return (
     <Link
       href={`/admin/users/${row.id}`}
-      aria-label={ADMIN_COPY.users.viewDetail(row.handle ?? row.email)}
+      aria-label={ADMIN_COPY.users.viewDetail(identityLabel(row))}
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -226,7 +233,7 @@ function UserCard({
       >
         <Link
           href={`/admin/users/${row.id}`}
-          aria-label={ADMIN_COPY.users.viewDetail(row.handle ?? row.email)}
+          aria-label={ADMIN_COPY.users.viewDetail(identityLabel(row))}
           style={{
             display: 'flex',
             flexDirection: 'column',

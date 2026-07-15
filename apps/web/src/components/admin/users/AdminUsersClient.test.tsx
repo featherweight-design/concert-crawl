@@ -33,6 +33,14 @@ describe('AdminUsersClient', () => {
     }
   })
 
+  it('prefixes the handle with @ in the link aria-label to match the visible text', () => {
+    render(<AdminUsersClient initialUsers={[baseRow()]} total={1} />)
+    const links = screen.getAllByRole('link', {
+      name: 'View details for @memberhandle',
+    })
+    expect(links.length).toBe(2)
+  })
+
   it('falls back to the email in the link aria-label when handle is null', () => {
     render(
       <AdminUsersClient initialUsers={[baseRow({ handle: null })]} total={1} />,
