@@ -90,8 +90,16 @@ function identityLabel(row: AdminUserRow): string {
 
 // Email + handle rendered as a link into the per-user detail page. Kept as a
 // standalone control (not a full-row link) so the inline role <select> stays
-// independently clickable.
-function UserIdentityLink({ row }: { row: AdminUserRow }) {
+// independently clickable. Shared by the desktop table and the mobile card so
+// both layouts stay in sync; `variant` only tunes the email typography/spacing.
+const UserIdentityLink = ({
+  row,
+  variant = 'table',
+}: {
+  row: AdminUserRow
+  variant?: 'table' | 'card'
+}) => {
+  const isCard = variant === 'card'
   return (
     <Link
       href={`/admin/users/${row.id}`}
@@ -99,13 +107,15 @@ function UserIdentityLink({ row }: { row: AdminUserRow }) {
       style={{
         display: 'flex',
         flexDirection: 'column',
+        gap: isCard ? 2 : 0,
         textDecoration: 'none',
         color: 'inherit',
       }}
     >
       <span
         style={{
-          fontWeight: 600,
+          fontWeight: isCard ? 700 : 600,
+          fontSize: isCard ? 13.5 : undefined,
           color: 'var(--signal)',
           wordBreak: 'break-all',
         }}
@@ -232,39 +242,7 @@ function UserCard({
           gap: 12,
         }}
       >
-        <Link
-          href={`/admin/users/${row.id}`}
-          aria-label={ADMIN_COPY.users.viewDetail(identityLabel(row))}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 2,
-            textDecoration: 'none',
-            color: 'inherit',
-          }}
-        >
-          <span
-            style={{
-              fontWeight: 700,
-              fontSize: 13.5,
-              color: 'var(--signal)',
-              wordBreak: 'break-all',
-            }}
-          >
-            {row.email}
-          </span>
-          {row.handle && (
-            <span
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 11,
-                color: 'var(--fg-subtle)',
-              }}
-            >
-              @{row.handle}
-            </span>
-          )}
-        </Link>
+        <UserIdentityLink row={row} variant="card" />
         <RolePip role={row.role} />
       </div>
       <RoleSelect
