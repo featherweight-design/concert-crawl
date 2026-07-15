@@ -1802,6 +1802,7 @@ export const ADMIN_COPY = {
       ariaLabel: 'Assign role',
       errorFallback: 'Failed to update role',
     },
+    viewDetail: (label: string) => `View details for ${label}`,
     summary: {
       userSingular: 'user',
       userPlural: 'users',

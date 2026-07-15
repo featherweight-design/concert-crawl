@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useCallback } from 'react'
+import Link from 'next/link'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import {
   AdminTable,
@@ -76,6 +77,45 @@ function RolePip({ role }: { role: Role }) {
       />
       {ROLE_LABEL[role]}
     </span>
+  )
+}
+
+// Email + handle rendered as a link into the per-user detail page. Kept as a
+// standalone control (not a full-row link) so the inline role <select> stays
+// independently clickable.
+function UserIdentityLink({ row }: { row: AdminUserRow }) {
+  return (
+    <Link
+      href={`/admin/users/${row.id}`}
+      aria-label={ADMIN_COPY.users.viewDetail(row.handle ?? row.email)}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        textDecoration: 'none',
+        color: 'inherit',
+      }}
+    >
+      <span
+        style={{
+          fontWeight: 600,
+          color: 'var(--signal)',
+          wordBreak: 'break-all',
+        }}
+      >
+        {row.email}
+      </span>
+      {row.handle && (
+        <span
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 11,
+            color: 'var(--fg-subtle)',
+          }}
+        >
+          @{row.handle}
+        </span>
+      )}
+    </Link>
   )
 }
 
@@ -184,12 +224,22 @@ function UserCard({
           gap: 12,
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Link
+          href={`/admin/users/${row.id}`}
+          aria-label={ADMIN_COPY.users.viewDetail(row.handle ?? row.email)}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            textDecoration: 'none',
+            color: 'inherit',
+          }}
+        >
           <span
             style={{
               fontWeight: 700,
               fontSize: 13.5,
-              color: 'var(--fg)',
+              color: 'var(--signal)',
               wordBreak: 'break-all',
             }}
           >
@@ -206,7 +256,7 @@ function UserCard({
               @{row.handle}
             </span>
           )}
-        </div>
+        </Link>
         <RolePip role={row.role} />
       </div>
       <RoleSelect
@@ -267,20 +317,7 @@ export function AdminUsersClient({
             {users.map((row) => (
               <TR key={row.id}>
                 <TD>
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontWeight: 600 }}>{row.email}</span>
-                    {row.handle && (
-                      <span
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 11,
-                          color: 'var(--fg-subtle)',
-                        }}
-                      >
-                        @{row.handle}
-                      </span>
-                    )}
-                  </div>
+                  <UserIdentityLink row={row} />
                 </TD>
                 <TD>
                   <RolePip role={row.role} />
