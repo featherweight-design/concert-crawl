@@ -20,6 +20,35 @@ const SC_RATIOS = {
   link:   { w: 1200, h: 628,  label: "1.91:1 · Link" },
 };
 
+// ──────────────────────────────────────────────────────────────────────
+// POSTER_TAGLINES — the tagline bank for the Riso Poster, keyed by event
+// state. This is the source of the one-liner printed above the wordmark.
+//
+// **Placement / final home:** these strings are the Design-owned draft. On
+// build, they move to `apps/web/src/components/consumer/definitions/copy.ts`
+// like every other customer-facing string (per feedback_definitions_copy_rule
+// — all customer-facing strings externalized). The Poster renderer keys into
+// this bank by `event.state`; it does NOT read per-event `event.snark`
+// anymore (that field is fixture-only and gets stripped on build).
+//
+// **Voice — Sour Patch bar #782: "honest + slight cheek, never blamey."**
+//   going   — unchanged; the only line that names the app on purpose.
+//   soldout — de-blamed: dropped "you snoozed" and flipped "you … the rest
+//             of us" to inclusive "we're all … together". Keeps the beloved
+//             2am-StubHub detail; the cheek now points at shared misery, not
+//             at the reader.
+//   drop    — genericized (no hard-coded $ amount — the pricePill carries the
+//             number). Cheek is self-directed ("my dignity"), so it was never
+//             blamey; kept the joke, lightened the specifics.
+const POSTER_TAGLINES = {
+  going:   "found this one on Concert Crawl. see you in the pit.",
+  soldout: "sold out. now we're all refreshing stubhub at 2am together.",
+  drop:    "price dropped. so did my dignity, but that's unrelated.",
+};
+function posterTagline(state) {
+  return POSTER_TAGLINES[state] || POSTER_TAGLINES.going;
+}
+
 // Card "scale factor" — the fixed-pixel design renders at 1× and the canvas
 // shrinks it via transform: scale(). This keeps every card pixel-accurate.
 function scProps(ratio) {
@@ -440,7 +469,7 @@ function PosterCard({ event, ratio = "story", mint, sharer, showMint = true }) {
             fontStyle: "italic",
             textWrap: "pretty",
           }}>
-            "{event.snark}"
+            "{posterTagline(event.state)}"
           </div>
         )}
 
@@ -714,6 +743,8 @@ function ShareCard({ direction = "stub", event, ratio = "story", mint, sharer, o
 }
 
 window.SC_RATIOS = SC_RATIOS;
+window.POSTER_TAGLINES = POSTER_TAGLINES;
+window.posterTagline = posterTagline;
 window.ShareCard = ShareCard;
 window.StubCard = StubCard;
 window.PosterCard = PosterCard;

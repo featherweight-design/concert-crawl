@@ -103,14 +103,15 @@ function MockEventDetailHero({ event, onShare, sheetOpen }) {
       <div style={{ position: "relative", height: 300 }}>
         <IdentityArt name={event.artist} kind="artist" scale="hero"
           width="100%" height="100%" showInitials={false}/>
-        {/* EV2 scrim-pills: Back (left), Share + Save (right) */}
+        {/* EV2 scrim-pills: Back (left), Share (right). No Save/heart pill —
+            the live app moved Watch to the eye affordance below the title. */}
         <ScrimPill side="left" label="Back">
           <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
             <path d="M8 2L2 8l6 6" stroke="var(--fg)" strokeWidth="2"
                   strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
         </ScrimPill>
-        <ScrimPill side="right" offset={14 + 36 + 8} label="Share"
+        <ScrimPill side="right" label="Share"
           onClick={onShare} active={sheetOpen}>
           <svg width="14" height="16" viewBox="0 0 16 18" fill="none">
             <path d="M8 1.5v9M8 1.5L4.5 5M8 1.5L11.5 5"
@@ -118,12 +119,6 @@ function MockEventDetailHero({ event, onShare, sheetOpen }) {
               strokeLinecap="round" strokeLinejoin="round"/>
             <path d="M2.5 9.5v5a1.5 1.5 0 0 0 1.5 1.5h8a1.5 1.5 0 0 0 1.5-1.5v-5"
               stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
-          </svg>
-        </ScrimPill>
-        <ScrimPill side="right" label="Save">
-          <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
-            <path d="M9 15l-6.5-6A3.5 3.5 0 019 4.5 3.5 3.5 0 0115.5 9L9 15z"
-              stroke="var(--fg)" strokeWidth="1.5" strokeLinejoin="round"/>
           </svg>
         </ScrimPill>
         {/* Hero fade into bg */}
@@ -150,31 +145,22 @@ function MockEventDetailHero({ event, onShare, sheetOpen }) {
           margin: 0, fontWeight: 900, fontSize: 26, letterSpacing: "-0.03em", lineHeight: 1.1,
         }}>{event.artist}</h1>
 
-        {/* Watch CTA — EV2 WatchShowButton vocabulary (active state shown) */}
-        <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-          <button style={{
+        {/* Watch affordance — EV2 WatchingEye: outlined square, eye icon, no
+            text. Mirrors the live mobile app (see concert_history handoff). */}
+        <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10 }}>
+          <button aria-label="Watch" aria-pressed="false" style={{
             all: "unset", cursor: "pointer",
-            display: "inline-flex", alignItems: "center", gap: 8,
-            height: 30, padding: "0 12px", borderRadius: 8,
-            background: "color-mix(in oklab, var(--accent) 14%, transparent)",
+            width: 44, height: 44, borderRadius: 10, boxSizing: "border-box",
+            border: "1.5px solid color-mix(in oklab, var(--accent) 40%, var(--border-strong))",
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
             color: "var(--accent)",
-            border: "1px solid color-mix(in oklab, var(--accent) 35%, transparent)",
-            fontWeight: 700, fontSize: 12, letterSpacing: "-0.005em",
           }}>
-            <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
-              <path d="M2.5 6.5l2.5 2.5L9.5 4" stroke="currentColor" strokeWidth="1.8"
-                strokeLinecap="round" strokeLinejoin="round"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"
+                stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
             </svg>
-            Watching
           </button>
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 6,
-            fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 600,
-            color: "var(--fg-subtle)", letterSpacing: "0.04em",
-          }}>
-            <span style={{ width: 4, height: 4, borderRadius: 2, background: "var(--accent)" }}/>
-            14 watching
-          </span>
         </div>
 
         {/* Info rows (Venue / Date / Doors / Ages) — EV2 InfoRow */}

@@ -33,6 +33,7 @@ Design brief has landed AND the visual handoff is signed off Green. Awaiting an 
 | **#643** Supporting artists title separator | PR #869 (2026-07-11) | `design/design_handoff_supporting_artists_line/` | 🟢 Green (PR #903, 2026-07-11) — one-pass audit, 3 R-rounds; audit's favorite call: mono uppercase kicker above the headliner (instead of the brief's speculative italic + em-dash below), prevents opener-vs-tour row collision at overflow | Data-layer + UI workstreams. Eng-plan carries logged (aria-hidden conditional on interactive, overflow measurement strategy, fallback posture during backfill). |
 | **#55** Concert History (Passport teaser) | — (pre-existing handoff) | `design/design_handoff_concert_history/` | 🟢 Green (PR #916, 2026-07-12) — flip via addendum after Hugh walked the three Yellow blockers | Locked: (1) `attending_at timestamptz` on `user_events` (TS/API `attendingAt`; derive `going` from `attending_at IS NOT NULL`; `status = 'going'` not written going forward); (2) Supporter tier already resolved via PR #878; (3) Passport card scope moves to `shareable_cards` — History ships teaser link only. Ready for eng-planning agent. |
 | **#763** Spotify sync (R1 + R2) | PR #893 (2026-07-11) | `design/design_handoff_spotify_sync/` | 🟢 Green (PR #925, 2026-07-13) — flip post-addendum after Hugh confirmed the tier gate; Design landed a tight 4-file / 19-insertion fix | Two-round handoff: R1 Free connect chapter + R2 Premium payoff (taste filter + discovery shelf + digest email + push). Gating locked: `premium || founder`; Supporter stays badge-only. 11 prototype-polish items deferred to build (README.md line-listed) — mock-fidelity nits, not spec ambiguities. Sequencing deps: #737 for push delivery, #783 email family for digest. `CLAUDE_CODE_PROMPT.md` is eng-ready. |
+| **#72** Shareable cards (IdentityArt) + Passport | — (pre-existing handoff) | `design/design_handoff_shareable_cards/` | 🟢 Green (PR TBD, 2026-07-14) — flip post-addendum after Hugh locked tier gate + URL contract; Design added Passport (inherited from concert_history) in the same pass | Locked: (1) tier gate = **Free** (Watching drives share virality); (2) URL contract = public `/e/:eventId` mirror route (paywall on secondary actions only); (3) `POSTER_TAGLINES` bank added with de-blamed voice pass; (4) **Passport card in scope** — compact 320×500 (in-app) + share 1080×1080 (social), inherited from concert_history addendum. Related: **#85** Concert passport. |
 
 The monetization vertical (previously here) moved into active build 2026-07-11 — see `docs/superpowers/progress.md` and the execution plan (PR #854). Phases 1 → 3.2 already merged (PRs #873, #878, #879, #880, #885, #886); Phases 3.3 → 7 remaining.
 
@@ -46,7 +47,8 @@ Handoff audit is done and the design shape is right; verdict flagged specific ga
 
 | # / handoff | Verdict PR | Blockers to close | Effort |
 |---|---|---|---|
-| **#72** Shareable show cards (IdentityArt) · `design/design_handoff_shareable_cards/` | PR #871 (2026-07-11) | (1) tier gate for share is undefined — handoff pre-dates monetization by 6 weeks; (2) anonymous URL contract undefined — event pages live under `(protected)/(main)`; (3) README references non-existent `POSTER_TAGLINES` constant; **(4) NEW: inherits Passport card scope from concert_history (compact 320×500 + share 1080×1080)** — concert_history's Yellow → Green addendum (PR #916) moved Passport ownership here; **also related to #85 Concert passport (visual shareable grid)** | ~30-min direct-write addendum + Passport scope confirmation |
+
+_Currently empty — #72 shareable_cards flipped 🟡 → 🟢 on 2026-07-14; moved to 🟢 above._
 
 Full audit findings are in the handoff's `READINESS.md`.
 
@@ -106,7 +108,9 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
-| 2026-07-13 | — | Tracker refresh #6 — added source ticket refs to pre-existing handoffs (#55 concert_history, #72 shareable_cards, #85 concert passport related); enables `design-status` skill to fetch phase/priority labels directly (this PR) |
+| 2026-07-14 | — | Tracker refresh #7 — shareable_cards #72 flipped 🟡 → 🟢 (this PR); Passport card added in-scope via inherited concert_history addendum |
+| 2026-07-14 | #72 | `design/design_handoff_shareable_cards/READINESS.md` addendum merged — 🟢 Green post-addendum; tier gate = Free, URL contract = public `/e/:eventId` mirror; `POSTER_TAGLINES` bank added + Sour Patch voice pass (de-blamed the soldout line); Passport card added (compact 320×500 + share 1080×1080), inherited from concert_history |
+| 2026-07-13 | — | Tracker refresh #6 — added source ticket refs to pre-existing handoffs (#55 concert_history, #72 shareable_cards, #85 concert passport related); enables `design-status` skill to fetch phase/priority labels directly (PR #939) |
 | 2026-07-13 | — | Tracker refresh #5 — Spotify sync #763 flipped 🎨 → 🟢 (PR #925) |
 | 2026-07-13 | #763 | `design/design_handoff_spotify_sync/READINESS.md` merged (PR #925) — 🟢 Green post-addendum; R1 + R2 + addendum committed in one PR; gating locked at `premium || founder`; 11 prototype-polish items deferred to build |
 | 2026-07-12 | — | Tracker refresh #4 — concert_history flipped 🟡 → 🟢 (PR #918) |
@@ -144,8 +148,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 ## 📋 Immediate TODOs
 
-- [ ] **#642 + #643 + concert_history + #763 Spotify eng plans** — Four Green audits landed. Eng-planning agent picks up. #763 is the big one — R1 (Free connect chapter) + R2 (Premium payoff) built on top of R1's spine; `CLAUDE_CODE_PROMPT.md` inside the handoff is eng-ready.
-- [ ] **shareable_cards Yellow → Green** — direct-write addendum needs to close: tier gate, anonymous URL contract, `POSTER_TAGLINES` reference, **plus newly inherited Passport card scope** (full compact + share dimensions from concert_history).
+- [ ] **#642 + #643 + concert_history + #763 Spotify + #72 shareable_cards eng plans** — Five Green audits landed. Eng-planning agent picks up. #763 Spotify + #72 shareable_cards are the biggest — shareable_cards now includes Passport card so it's a two-surface build (Poster + Passport). No Yellow items remaining.
 - [ ] **Backlog priority order** (after #763 handoff work): #762 Who else is watching → #764 Venue first-timer → #506 Admin Venue Form → #794 Logged-out UX
 
 ---

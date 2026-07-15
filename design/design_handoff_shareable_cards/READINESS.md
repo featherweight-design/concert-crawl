@@ -1,16 +1,71 @@
 # Readiness Review — Shareable Cards (IdentityArt)
 
-**Verdict:** 🟡 Yellow — one Design pass to close the tier-gate + anonymous-URL questions, one small handoff cleanup, and then a plan PR is fine
-**Audited:** 2026-06-26
-**Auditor:** Claude (autonomous Track 1 gate — pre-existing handoff, merged 2026-05-09)
-**Audited handoff:** `design/design_handoff_shareable_cards/` (committed `58eb5b80`, 2026-05-09)
+**Verdict:** 🟢 Green (post-addendum, 2026-07-14) — Design's addendum landed all three items from the Yellow → Green path: tier gate + anonymous URL both locked at Hugh's calls, `POSTER_TAGLINES` bank added with a smart de-blaming voice pass, Passport card added with `compact`/`share` modes coherent with the Poster direction. Bonus: mock hero updated to match live app (Watch is the eye affordance below the title, not a Save/heart pill). Plan PR unblocked.
+**Original verdict:** 🟡 Yellow (2026-06-26) — two blockers (tier gate + anonymous URL) + one handoff cleanup (`POSTER_TAGLINES` reference) blocking Green. Concert History's Yellow → Green addendum (PR #916) later moved Passport ownership here, expanding scope.
+**Audited:** 2026-06-26 (initial) → **flipped 🟢 Green 2026-07-14** after Design addendum landed
+**Auditor:** Claude (autonomous Track 1 gate — pre-existing handoff, merged 2026-05-09; addendum re-audit 2026-07-14)
+**Audited handoff:** `design/design_handoff_shareable_cards/` (committed `58eb5b80`, 2026-05-09; addendum delivered 2026-07-14)
 **Related tickets:**
 - [#92](https://github.com/HartiganHM/concert-crawl/issues/92) — Design: Shareable event card (**closed**, delivered by this handoff)
 - [#72](https://github.com/HartiganHM/concert-crawl/issues/72) — Shareable show cards (IdentityArt) (**open**, this is the build ticket)
-- [#85](https://github.com/HartiganHM/concert-crawl/issues/85) — Concert passport (**open, launch phase**, out of scope here)
+- [#85](https://github.com/HartiganHM/concert-crawl/issues/85) — Concert passport (**open**, **now in scope** via inherited Passport card work per PR #916)
 - [#99](https://github.com/HartiganHM/concert-crawl/issues/99) — Venue passport card (**open, launch phase**, out of scope here)
 
-**Plan PR target:** `docs/superpowers/plans/<date>-shareable-cards-implementation-plan.md`. **Blocked** on two Design-owned clarifications (below) before opening — small addendum, not a full re-pass.
+**Plan PR target:** `docs/superpowers/plans/<date>-shareable-cards-implementation-plan.md`. **Unblocked as of 2026-07-14.** Eng-planning agent picks up.
+
+---
+
+## 🎉 Green resolution (2026-07-14 addendum)
+
+Design's addendum touched 5 files + 2 new files across 152 insertions / 37 deletions — focused, no scope creep, everything Hugh signed off on.
+
+### Blockers closed
+
+- ✅ **Tier gate for share generation → Free** (locked in `README.md`). Rationale from Hugh: Watching is Free per #781 R6; sharing is what drives Watching virality, gating it would neuter the loop. Supporter/Premium adds nothing share-specific.
+- ✅ **Anonymous URL contract → public `/e/:eventId` mirror route** (locked in `README.md`). OG-preview clicks land on a public event detail surface that mirrors `/events/:id`; paywall stays on secondary actions (Watch, Get Tickets, submit-a-price). Eng chooses between "mirror route" or `public: true` variant — infra decision, not Design's problem.
+- ✅ **`POSTER_TAGLINES` bank shape + placement** (`share-cards.jsx:24–48`). Constant added, keyed by state (`going`/`soldout`/`drop`), wired into `PosterCard` via `posterTagline(state)` instead of the old per-event `event.snark`. Final home documented as `apps/web/src/components/consumer/definitions/copy.ts` per `feedback_definitions_copy_rule`.
+- ✅ **Sour Patch voice pass on all three taglines** (documented in `README.md` diff table). Notable: `soldout` de-blamed from *"you snoozed. now you're refreshing stubhub…"* to *"sold out. now we're all refreshing stubhub at 2am together"* — flips from finger-pointing to inclusive shared misery, keeps the 2am detail. `drop` genericized (no hard-coded $ amount; the `pricePill` carries the number). `going` unchanged — already at the bar.
+- ✅ **Link ratio drift fixed** — README + code both now read `1200×628`.
+
+### Passport card (NEW — inherited from concert_history, added in scope)
+
+- ✅ **`passport-card.jsx`** — `<PassportCard mode="compact|share" shows stats handle year />` + `<PassportStamp>` + `PP_MODES` config bank.
+- ✅ **Two modes**:
+  - **compact (320×500)** — 3×3 stamp wall, sidebar/inline surface; ships on the Concert History page under a "See your Passport →" teaser link.
+  - **share (1080×1080)** — 4×4 stamp wall, matches existing `square` share ratio; render pipeline reuses `/share/:eventId/:ratio.png` shape as a sibling route (proposed `/passport/:userId/:ratio.png`).
+- ✅ **Visual coherence with Poster** — identity-art stamp wall (top) uses same generative palette engine as Poster's hero (theme-independent per Phase 7.5); tokened `--scrim` glassmorphism panel (bottom) with stat readout (`nights` / `venues` / `top genre`) + wordmark. Stands on its own conceptually (personal shrine, not per-event).
+- ✅ **`history-data.jsx`** copied verbatim from `concert_history` handoff — Passport consumes `H_SHOWS` + `h_stats()` without inventing a new fixture shape.
+- ✅ **Canvas section added** — `shareable-canvas.jsx` gains a "Concert Passport" section with both mode artboards, scaled to fit.
+- ✅ **HTML entry updated** — `Shareable Cards.html` loads `history-data.jsx` and `passport-card.jsx` before the canvas.
+
+### Bonus improvement from Design
+
+- ✅ **Mock Event Detail hero fixed to match live app** — removed the Save/heart pill from the hero (`share-trigger.jsx`). The live app moved Watch to the eye affordance below the title (see `concert_history` handoff). The hero now carries only Back + Share, matching what shipped. Small drift catch that prevents an implementer from rebuilding against a stale hero pattern.
+
+### Non-blocking items — deferred to build (unchanged from Yellow verdict)
+
+The following were flagged in the original audit as non-blocking; the addendum correctly did not touch them, and they remain build-phase items:
+
+- A11y annotations on share sheet (`role="dialog"`, focus trap, SR script)
+- Desktop trigger placement (assumption: top-right scrim-pill row, matches BackButton pattern)
+- Analytics events spec (share sheet open/close, destination click, share completion)
+- Rendered PNG alt text (recommend `{artist} at {venue}, {date}`)
+- 9-theme scope confirmation (paper-scrim is theme-independent per Phase 7.5; bottom scrim reads tokens — likely auto-adapts)
+- Watching-composite dead code paths in `share-cards.jsx` and `share-trigger.jsx` (strip during implementation, per original audit)
+- Anonymous handle policy (currently: drop the signature line — README default confirmed)
+
+## Path to Green — historical
+
+1. ✅ **Hugh confirmed tier gate (2026-07-14):** Free.
+2. ✅ **Hugh confirmed URL contract (2026-07-14):** public `/e/:eventId` mirror route.
+3. ✅ **Design applied the addendum (2026-07-14):** all six items closed (3 blockers + Passport scope + link ratio + hero cleanup).
+4. ✅ **Second-pass audit (2026-07-14):** flipped 🟢 Green. Plan PR can open.
+
+---
+
+> ⏳ **Everything below is the original 2026-06-26 Yellow audit, preserved as historical context.** Statements about undesigned tier gates, missing `POSTER_TAGLINES`, and out-of-scope Passport reflect the codebase at audit time and have since been resolved — see the Green resolution section above for current state.
+
+---
 
 ## Summary 🎯
 

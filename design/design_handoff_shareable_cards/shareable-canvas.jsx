@@ -37,6 +37,31 @@ function SCCard({ direction, event, ratio, mint, theme, opts }) {
   );
 }
 
+// Scale a Passport card to fit its artboard. Compact renders ~1:1; share
+// (1080²) scales down. Themed wrapper so tokens resolve.
+function PassportScaled({ mode, theme = "electric", target }) {
+  const M = window.PP_MODES[mode];
+  const t = target || (mode === "compact" ? 300 : 400);
+  const scale = t / M.W;
+  return (
+    <div style={{
+      width: M.W * scale, height: M.H * scale,
+      overflow: "hidden", position: "relative",
+      borderRadius: M.radius * scale,
+      boxShadow: "0 16px 44px rgba(0,0,0,0.24), 0 1px 2px rgba(0,0,0,0.12)",
+    }}>
+      <window.ThemeProvider theme={theme}>
+        <div style={{
+          width: M.W, height: M.H,
+          transform: `scale(${scale})`, transformOrigin: "top left",
+        }}>
+          <window.PassportCard mode={mode} theme={theme} />
+        </div>
+      </window.ThemeProvider>
+    </div>
+  );
+}
+
 function ShareableCanvas() {
   const [t, setTweak] = window.useTweaks(window.TWEAK_DEFAULTS);
 
@@ -61,7 +86,7 @@ function ShareableCanvas() {
       <DesignCanvas storageKey="shareable-cards-canvas">
         {/* ── Trigger UX ───────────────────────────────────── */}
         <DCSection id="trigger" title="Trigger · Event Detail v2"
-          subtitle="Share lives next to Save in the hero. Bottom sheet shows the live Riso preview + destinations.">
+          subtitle="Share lives next to Back in the hero (no heart — Watch is the eye below the title). Bottom sheet shows the live Riso preview + destinations.">
           <DCArtboard id="trigger-closed" label="Closed (entry point)" width={420} height={870}>
             <window.ThemeProvider theme={theme}>
               <window.ShareTriggerEventDetail event={eventGoing} mint={mint1}
@@ -98,6 +123,21 @@ function ShareableCanvas() {
           <DCArtboard id="poster-drop-square" label="Price drop · 1:1" width={380} height={400}>
             <SCCard direction="poster" event={eventDrop} ratio="square"
               mint={mint3} theme={theme} opts={cardOpts}/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* ── Concert Passport — inherited from concert_history ─── */}
+        <DCSection id="passport" title="Concert Passport"
+          subtitle="A personal shrine of past-attended shows — not a per-event card. Identity-art stamp wall up top, tokened scrim panel below. Compact ships inline on Concert History; share is the 1:1 social render.">
+          <DCArtboard id="passport-compact" label="Compact · 320×500 · in-app" width={360} height={560}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+              <PassportScaled mode="compact" theme={theme} target={300} />
+            </div>
+          </DCArtboard>
+          <DCArtboard id="passport-share" label="Share · 1080×1080 · /passport/:userId/1080.png" width={500} height={560}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+              <PassportScaled mode="share" theme={theme} target={440} />
+            </div>
           </DCArtboard>
         </DCSection>
 
