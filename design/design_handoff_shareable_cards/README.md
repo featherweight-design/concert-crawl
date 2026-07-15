@@ -13,7 +13,10 @@ Image cards a fan posts to invite friends or flex an upcoming show. Two surfaces
 
 ## Locked calls (from Hugh)
 
-- **Tier gate — Free.** Share generation (Poster + Passport) is available on the Free tier. Watching is Free per #781 R6, and sharing is what drives Watching virality — gating it would neuter the loop. Supporter/Premium adds nothing share-specific.
+- **Tier gate — Free (for share generation).** The *act of sharing* is always Free:
+  - **Poster share** (per-event, from Event Detail): available to every user, including Free. Watching is Free per #781 R6, and sharing is what drives Watching virality — gating it would neuter the loop. Supporter/Premium adds nothing share-specific.
+  - **Passport share** (1080×1080 social): also Free at the share-generation step. **But note:** the Passport *itself* is a Concert History artifact, and **Concert History is a Supporter feature** (per `design/design_handoff_concert_history/README.md` §3). So in practice a Free user has no Passport to share — they'd first need to upgrade to Supporter to have a History, at which point sharing is free. The compact Passport surface (320×500) also ships inline on the History page, so it inherits that gating naturally.
+  - **Net entitlement for eng:** Poster = Free everywhere. Passport = requires Concert History access (Supporter+) to exist; once it exists, both `compact` and `share` modes render for that user and the share action is Free.
 - **Anonymous URL contract — public `/e/:eventId` mirror route.** OG-preview clicks (SMS / iMessage / Slack / preview crawlers) land on a **public** event-detail surface that mirrors `/events/:id` (eng builds it as a mirror route or a `public: true` variant — infra choice, not Design's). Secondary actions (Watch, Get Tickets, submit a price) still require sign-in, so the paywall stays in place without breaking the share loop. The card's OG `link.png` points here.
 - **Link ratio — 1200×628** (matches code; the earlier `630` reference in the ratio table was drift).
 

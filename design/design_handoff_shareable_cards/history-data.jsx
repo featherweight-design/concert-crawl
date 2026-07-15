@@ -1,5 +1,13 @@
 // history-data.jsx — Concert History (Supporter feature)
 //
+// **Reused here for Passport fixtures.** This file is copied verbatim from
+// `design/design_handoff_concert_history/` — same source-of-truth and shape,
+// so the Passport card consumes the same dataset the History page already
+// renders. Concert History is Supporter-gated, so the *existence* of a
+// Passport (which is a History artifact) inherits that gating. The share
+// generation *action* itself is Free — see README §Locked calls for the
+// full entitlement seam.
+//
 // **Source of truth:** a show enters History when the user has explicitly
 // marked it as "I'm going!" *and* the show date has passed. Watching is
 // **not** a proxy for attendance — that's a tracking action (price /
