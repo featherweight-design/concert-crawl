@@ -1,3 +1,10 @@
+## [1.120.1](https://github.com/HartiganHM/concert-crawl/compare/v1.120.0...v1.120.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* **api:** [#941](https://github.com/HartiganHM/concert-crawl/issues/941) drain fire-and-forget background tasks in integration tests ([#950](https://github.com/HartiganHM/concert-crawl/issues/950)) ([6ea18fa](https://github.com/HartiganHM/concert-crawl/commit/6ea18fa24bf57f199b01abbebc1d913c8dcacd12))
+
 # [1.120.0](https://github.com/HartiganHM/concert-crawl/compare/v1.119.1...v1.120.0) (2026-07-15)
 
 
