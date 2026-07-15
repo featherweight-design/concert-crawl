@@ -10,15 +10,15 @@
  *   3. Paste it into FIXTURE_USER_IDS below.
  *   4. Re-run `pnpm db:seed:staging` to regenerate synthetic data.
  *
- * The placeholder IDs below are the accepted PR-open state. Replace them with
- * real staging IDs before the seeder is exercised against the staging database.
+ * These are the reserved staging fixture users (alpha, bravo, charlie, delta,
+ * echo) provisioned in the Clerk staging dashboard.
  */
 export const FIXTURE_USER_IDS = [
-  'user_2fixture_alpha',
-  'user_2fixture_bravo',
-  'user_2fixture_charlie',
-  'user_2fixture_delta',
-  'user_2fixture_echo',
+  'user_3GYqkhiaCasabdEYXqtsdiUYjnD',
+  'user_3GYqnPxZbye3I8zWTz1JHbIDHnq',
+  'user_3GYqr7qRwQdEuUvmHEDiqkCPImQ',
+  'user_3GYquWEByYLXHmyg3LqM3Z8nHJa',
+  'user_3GYqwsWNeehFh3GWkjiVgYxwixZ',
 ] as const
 
 export type FixtureUserId = (typeof FIXTURE_USER_IDS)[number]
