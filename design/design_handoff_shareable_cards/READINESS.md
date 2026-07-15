@@ -42,6 +42,15 @@ Design's addendum touched 5 files + 2 new files across 152 insertions / 37 delet
 
 - ✅ **Mock Event Detail hero fixed to match live app** — removed the Save/heart pill from the hero (`share-trigger.jsx`). The live app moved Watch to the eye affordance below the title (see `concert_history` handoff). The hero now carries only Back + Share, matching what shipped. Small drift catch that prevents an implementer from rebuilding against a stale hero pattern.
 
+### 🧹 Prototype polish deferred to build
+
+Two small bugs surfaced during the Copilot R1 pass on the addendum — both are mock-fidelity issues in `passport-card.jsx` that a reasonable implementer will get right when porting to production. Listed here so eng has an at-a-glance checklist:
+
+- **`passport-card.jsx:196`** (handle fallback) — `handle || (window.SHARE_USER ? window.SHARE_USER.handle : "@you").replace(/^@?/, "@")` will throw if `SHARE_USER` exists but its `.handle` is undefined (because `.replace()` runs on `undefined`). Fix: guard for a missing handle before the `.replace()` — e.g. `(window.SHARE_USER?.handle || "@you").replace(...)`. Won't bite in the prototype (SHARE_USER fixture always defines handle); would bite in prod if the auth layer ever hands off a nameless session.
+- **`passport-card.jsx:63`** (`pp_dateParts` timezone drift) — `month` uses `America/Denver`, `day` uses `getUTCDate()`. Near midnight in Denver, the UTC day can be off-by-one from the Denver day (rare but real — shows starting at 11pm local on the last day of the month). Fix: switch `day` to a Denver-timezone extraction to match the month (e.g. `d.toLocaleString("en-US", { day: "numeric", timeZone: "America/Denver" })`).
+
+Neither affects the visual system or the design's intent — the mock renders fine on the fixture data. Eng should apply both when reimplementing in the real app stack (per `CLAUDE_CODE_PROMPT` convention in adjacent handoffs).
+
 ### Non-blocking items — deferred to build (unchanged from Yellow verdict)
 
 The following were flagged in the original audit as non-blocking; the addendum correctly did not touch them, and they remain build-phase items:
