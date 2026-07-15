@@ -134,7 +134,7 @@ function ShareableCanvas() {
               <PassportScaled mode="compact" theme={theme} target={300} />
             </div>
           </DCArtboard>
-          <DCArtboard id="passport-share" label="Share · 1080×1080 · /passport/:userId/1080.png" width={500} height={560}>
+          <DCArtboard id="passport-share" label="Share · 1080×1080 · /passport/:userId/:ratio.png" width={500} height={560}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
               <PassportScaled mode="share" theme={theme} target={440} />
             </div>
