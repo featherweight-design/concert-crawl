@@ -2,8 +2,25 @@
 
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
+import React from 'react'
 import { AdminUsersClient } from './AdminUsersClient'
 import type { AdminUserRow } from './AdminUsersClient'
+
+vi.mock('next/link', () => ({
+  default: ({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode
+    href: string
+    [key: string]: unknown
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}))
 
 vi.mock('@/lib/actions/admin-users', () => ({
   updateUserRole: vi.fn(),
@@ -33,10 +50,10 @@ describe('AdminUsersClient', () => {
     }
   })
 
-  it('prefixes the handle with @ in the link aria-label to match the visible text', () => {
+  it('includes the full visible text (email + @handle) in the link accessible name', () => {
     render(<AdminUsersClient initialUsers={[baseRow()]} total={1} />)
     const links = screen.getAllByRole('link', {
-      name: 'View details for @memberhandle',
+      name: 'View details for member@example.com @memberhandle',
     })
     expect(links.length).toBe(2)
   })

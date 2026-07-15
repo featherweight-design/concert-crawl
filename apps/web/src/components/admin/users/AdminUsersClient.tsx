@@ -80,11 +80,12 @@ function RolePip({ role }: { role: Role }) {
   )
 }
 
-// The visible identity shows the handle with a leading '@', so the accessible
-// label must match it (bare handle would read inconsistently to a screen
-// reader); fall back to the email when there is no handle.
+// The link's visible text is the email plus, when present, the '@handle'. The
+// accessible name must contain that full visible text (WCAG 2.5.3 Label in
+// Name), so include both — not just the handle — and fall back to the email
+// alone when there is no handle.
 function identityLabel(row: AdminUserRow): string {
-  return row.handle ? `@${row.handle}` : row.email
+  return row.handle ? `${row.email} @${row.handle}` : row.email
 }
 
 // Email + handle rendered as a link into the per-user detail page. Kept as a
