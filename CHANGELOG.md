@@ -1,3 +1,16 @@
+# [1.120.0](https://github.com/HartiganHM/concert-crawl/compare/v1.119.1...v1.120.0) (2026-07-15)
+
+
+### Bug Fixes
+
+* **admin:** include @ in users-list detail-link aria-label (PR [#947](https://github.com/HartiganHM/concert-crawl/issues/947) R1) ([4adbb17](https://github.com/HartiganHM/concert-crawl/commit/4adbb170c6f653238977d519a3bba29e10c0248f))
+* **admin:** include full visible text in users-list link name (PR [#947](https://github.com/HartiganHM/concert-crawl/issues/947) R2) ([2371e6e](https://github.com/HartiganHM/concert-crawl/commit/2371e6ead296c0b31c06630ef0e54e391a6cbbc5))
+
+
+### Features
+
+* **admin:** link users-list rows to the user detail page ([7943cc2](https://github.com/HartiganHM/concert-crawl/commit/7943cc2939e25f20b8ca3fd11a3542b09cc9baf9)), closes [#930](https://github.com/HartiganHM/concert-crawl/issues/930)
+
 ## [1.119.1](https://github.com/HartiganHM/concert-crawl/compare/v1.119.0...v1.119.1) (2026-07-15)
 
 
