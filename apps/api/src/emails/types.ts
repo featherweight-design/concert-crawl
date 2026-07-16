@@ -14,6 +14,24 @@ export interface RenderedEmail {
 
 export type TemplateRenderer<Vars> = (vars: Vars) => RenderedEmail
 
+// Paid tiers that can carry a billing relationship (drive the receipt/card
+// tier badge + accent). Gifted is comped and never receives these emails.
+export type PaidEmailTier = 'premium' | 'supporter' | 'founder'
+
+// Receipt vars are identical for monthly and annual — the period discriminator
+// lives in the template key, and the shared receipt core reads it. `tier` is
+// optional: absent falls back to a premium badge/accent.
+interface ReceiptVars {
+  periodLabel: string
+  amount: string | null
+  tierName: string | null
+  periodEnd: string | null
+  chargeDate: string
+  customerId: string
+  stripeReceiptUrl: string | null
+  tier?: PaidEmailTier
+}
+
 // Nullable fields are vars a trigger cannot always derive (e.g. a webhook
 // payload missing the receipt URL) — templates own the fallback copy.
 export interface EmailTemplateVars {
@@ -25,15 +43,8 @@ export interface EmailTemplateVars {
     gifterName: string | null
     giftEndsAt: string | null
   }
-  renewal_receipt_monthly: {
-    periodLabel: string
-    amount: string | null
-    tierName: string | null
-    periodEnd: string | null
-    chargeDate: string
-    customerId: string
-    stripeReceiptUrl: string | null
-  }
+  renewal_receipt_monthly: ReceiptVars
+  renewal_receipt_annual: ReceiptVars
   dunning_1_card_declined: {
     tierName: string | null
     portalUrl: string
@@ -49,6 +60,15 @@ export interface EmailTemplateVars {
   card_expiring_soon: {
     tierName: string | null
     daysRemaining: number
+    tier?: PaidEmailTier
+    // The card on file, when the trigger could resolve it from Stripe. Absent →
+    // the template omits the card chip rather than showing a placeholder.
+    card?: {
+      brand: string
+      last4: string
+      expMonth: number
+      expYear: number
+    } | null
   }
   cancellation_ack: {
     tierName: string | null

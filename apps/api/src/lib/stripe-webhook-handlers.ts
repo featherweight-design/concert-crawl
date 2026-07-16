@@ -36,7 +36,10 @@ import {
   subscriptionNeverPaid,
 } from './founder-seats.js'
 import { apiLogger } from './logger.js'
-import type { TransactionalEmailParams } from '../emails/types.js'
+import type {
+  PaidEmailTier,
+  TransactionalEmailParams,
+} from '../emails/types.js'
 
 export type DbSubscriptionStatus =
   | 'active'
@@ -102,13 +105,13 @@ const TIER_DISPLAY_NAMES: Record<DbSubscriptionTier, string> = {
   founder: 'Founder',
 }
 
-// Dunning CTA target — /settings/plan hosts the Stripe-portal entry point
+// Dunning CTA target — /me?section=plan hosts the Stripe-portal entry point
 // (POST /v1/billing/portal-session); portal sessions themselves are
 // short-lived and cannot be minted into an email. Origin comes from
 // ALLOWED_ORIGIN (same convention as app.ts CORS and the portal return_url)
 // so staging/local emails never link prod.
 const billingPortalEntryUrl = (): string =>
-  `${process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000'}/settings/plan`
+  `${process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000'}/me?section=plan`
 
 const DUNNING_TEMPLATE_BY_STAGE = {
   1: 'dunning_1_card_declined',
@@ -118,6 +121,12 @@ const DUNNING_TEMPLATE_BY_STAGE = {
 
 const tierDisplayName = (tier: DbSubscriptionTier | null): string | null =>
   tier !== null ? TIER_DISPLAY_NAMES[tier] : null
+
+// Narrows a DB tier to the paid-tier union the email templates accept, so
+// receipts can render the tier-aware badge/accent and the founder receipt
+// variant. 'free'/null yields false — the template falls back to Premium.
+const isPaidTier = (tier: DbSubscriptionTier | null): tier is PaidEmailTier =>
+  tier === 'premium' || tier === 'supporter' || tier === 'founder'
 
 const monthLabelFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'long',
@@ -174,6 +183,7 @@ export const emailForInvoicePaymentSucceeded = (input: {
           ? formatUsd(input.amountPaidCents)
           : null,
       tierName: tierDisplayName(input.tier),
+      ...(isPaidTier(input.tier) ? { tier: input.tier } : {}),
       periodEnd: input.periodEnd?.toISOString() ?? null,
       chargeDate: input.chargedAt.toISOString(),
       customerId: input.customerId,

@@ -54,6 +54,11 @@ export const TEST_EMAIL_OPTIONS: readonly TestEmailOption[] = [
     group: 'Customer',
   },
   {
+    key: 'renewal_receipt_annual',
+    label: 'Renewal receipt (annual)',
+    group: 'Customer',
+  },
+  {
     key: 'dunning_1_card_declined',
     label: 'Dunning 1 — card declined',
     group: 'Customer',
@@ -123,6 +128,15 @@ const TRANSACTIONAL_TEST_VARS: {
     customerId: 'cus_TEST0000000000',
     stripeReceiptUrl: 'https://pay.stripe.com/receipts/test_sample',
   },
+  renewal_receipt_annual: {
+    periodLabel: 'July 2026 – July 2027',
+    amount: '$50.00',
+    tierName: 'Premium',
+    periodEnd: '2027-07-13T00:00:00.000Z',
+    chargeDate: '2026-07-13T00:00:00.000Z',
+    customerId: 'cus_TEST0000000000',
+    stripeReceiptUrl: 'https://pay.stripe.com/receipts/test_sample',
+  },
   dunning_1_card_declined: {
     tierName: 'Premium',
     portalUrl: 'https://billing.stripe.com/p/session/test_sample',
@@ -135,7 +149,11 @@ const TRANSACTIONAL_TEST_VARS: {
     tierName: 'Premium',
     portalUrl: 'https://billing.stripe.com/p/session/test_sample',
   },
-  card_expiring_soon: { tierName: 'Premium', daysRemaining: 6 },
+  card_expiring_soon: {
+    tierName: 'Premium',
+    daysRemaining: 6,
+    card: { brand: 'visa', last4: '4242', expMonth: 8, expYear: 2026 },
+  },
   cancellation_ack: {
     tierName: 'Premium',
     accessEndsAt: '2026-08-13T00:00:00.000Z',

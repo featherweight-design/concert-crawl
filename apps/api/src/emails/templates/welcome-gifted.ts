@@ -1,62 +1,96 @@
-// welcome_gifted — time-bounded Premium comp (#781): gift may carry an end
-// date, and the account wraps back to Free when it lapses. Names the gifter,
-// states the end date when we have one, and sets expectations for the wrap-up
-// moment with a soft add-a-card CTA. Never a hard sell.
+// welcome_gifted — comped Premium (#783 brand pass reframes this as lifetime,
+// on-us access: no tier to pick, no card, nothing to manage). Distinct branch
+// from welcome_paid: gifted+beta badge, accent italic gratitude line, a signal
+// callout of the four core unlocks, a ghost CTA, and a PRODUCT footer with NO
+// manage link (comped — there's no billing relationship to manage).
+//
+// NOTE: the design copy no longer interpolates gifterName/giftEndsAt (both stay
+// in the vars contract for the send pipeline but are unused here — see gap
+// report). The gifter + end date now live only in gifting_ending_notice.
 
-import { escapeHtml, renderEmailShell, renderTextShell } from '../layout.js'
-import { EMAIL_ACCENT_PREMIUM, EMAIL_TEXT_MUTED } from '../palette.js'
+import {
+  button,
+  callout,
+  featureList,
+  footerRow,
+  headerRow,
+  ledeRow,
+  monoEyebrow,
+  row,
+  tierBadge,
+} from '../atoms.js'
+import {
+  EMAIL_MONO,
+  ME,
+  appUrl,
+  renderEmailShell,
+  renderTextShell,
+} from '../layout.js'
 import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
-import { formatEmailDate, planPageUrl, sanitizeInlineText } from './format.js'
-import { PREMIUM_UNLOCKS } from './unlocks.js'
+import { PREMIUM_FEATURES_CORE } from './unlocks.js'
 
-const SUBJECT = "Someone gifted you Premium — it's live"
-const PREHEADER =
-  'Every Premium unlock is yours — concert history, calendar export, alerts, the lot.'
+const SUBJECT = "You're in — Premium's on us."
+const PREHEADER = 'Lifetime Premium, no card, nothing to manage. Just enjoy it.'
 
-const GIFTER_FALLBACK = 'a friend of the crawl'
+const CONTENT_PAD = '18px 26px 0'
 
 export const renderWelcomeGifted: TemplateRenderer<
   EmailTemplateVars['welcome_gifted']
-> = ({ gifterName, giftEndsAt }) => {
-  const sanitizedGifter =
-    gifterName === null ? '' : sanitizeInlineText(gifterName)
-  const gifterLabel = sanitizedGifter === '' ? GIFTER_FALLBACK : sanitizedGifter
-  const giftEndDate = formatEmailDate(giftEndsAt)
+> = () => {
+  const title = "You're already in."
+  const sub =
+    "Lifetime Premium — on us. No tier to pick, no card to add, nothing to manage. You showed up early; that's the whole price."
 
-  const dateSentence =
-    giftEndDate === null ? null : `Your gift runs through ${giftEndDate}.`
-  const wrapSentence =
-    'When it wraps, your account slides back to Free — nothing gets deleted, you just lose the Premium extras until you pick a plan.'
+  const italicLine = `<div style="font-family: ${EMAIL_MONO}; font-style: italic; font-size: 12.5px; color: ${ME.accent}; letter-spacing: 0.02em;">—— Seriously. We owe you one.</div>`
 
-  const unlockItemsHtml = PREMIUM_UNLOCKS.map(
-    (unlock) => `<li style="margin: 0 0 8px;">${escapeHtml(unlock)}</li>`,
-  ).join('\n')
+  const microcopy = `<div style="font-family: ${EMAIL_MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">No card on file · nothing to cancel · just enjoy it</div>`
 
-  const bodyHtml = `<h1 style="margin: 0 0 16px; font-size: 24px; line-height: 1.3; color: ${EMAIL_ACCENT_PREMIUM};">You've got Premium, from ${escapeHtml(gifterLabel)}</h1>
-<p style="margin: 0 0 16px;">Someone likes you. Every Premium unlock is live on your account right now:</p>
-<ul style="margin: 0 0 16px; padding-left: 20px;">
-${unlockItemsHtml}
-</ul>
-<p style="margin: 0 0 16px;">${dateSentence === null ? '' : `${escapeHtml(dateSentence)} `}${escapeHtml(wrapSentence)}</p>
-<p style="margin: 0; font-size: 14px; color: ${EMAIL_TEXT_MUTED};"><a href="${escapeHtml(planPageUrl())}" style="color: ${EMAIL_ACCENT_PREMIUM};">Add a card for when this wraps</a> — no pressure, it'll be right there when you want it.</p>`
+  const calloutInner =
+    monoEyebrow({
+      text: 'Everything Premium, switched on',
+      color: ME.signal,
+      marginBottom: 12,
+    }) + featureList({ items: PREMIUM_FEATURES_CORE, accent: ME.signal })
 
-  const textLines = [
-    `You've got Premium, from ${gifterLabel}`,
+  const bodyRows = [
+    headerRow('Lifetime Premium · Beta'),
+    ledeRow({ eyebrow: 'On us', title, sub }),
+    row('14px 26px 0', tierBadge({ tier: 'gifted', beta: true })),
+    row('14px 26px 0', italicLine),
+    row(CONTENT_PAD, callout({ inner: calloutInner, accent: ME.signal })),
+    row(
+      '20px 26px 6px',
+      button({
+        label: "See everything you've got →",
+        tone: 'ghost',
+        href: appUrl(),
+      }),
+    ),
+    row('10px 26px 4px', microcopy),
+    footerRow({ family: 'product', showManage: false }),
+  ].join('\n')
+
+  const text = [
+    title,
     '',
-    'Someone likes you. Every Premium unlock is live on your account right now:',
+    sub,
     '',
-    ...PREMIUM_UNLOCKS.map((unlock) => `- ${unlock}`),
+    '—— Seriously. We owe you one.',
     '',
-    ...(dateSentence === null ? [] : [dateSentence]),
-    wrapSentence,
+    'Everything Premium, switched on:',
+    ...PREMIUM_FEATURES_CORE.map(
+      (item) => `  - ${typeof item === 'string' ? item : item.text}`,
+    ),
     '',
-    `Add a card for when this wraps: ${planPageUrl()}`,
-  ]
+    'No card on file · nothing to cancel · just enjoy it',
+    '',
+    `See everything you've got: ${appUrl()}`,
+  ].join('\n')
 
   return {
     subject: SUBJECT,
     preheader: PREHEADER,
-    html: renderEmailShell({ preheader: PREHEADER, bodyHtml }),
-    text: renderTextShell(textLines.join('\n')),
+    html: renderEmailShell({ preheader: PREHEADER, bodyRows }),
+    text: renderTextShell({ body: text, family: 'product', showManage: false }),
   }
 }

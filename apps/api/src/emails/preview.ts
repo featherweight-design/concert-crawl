@@ -53,6 +53,15 @@ const sampleVars: { [K in EmailTemplateKey]: EmailTemplateVars[K] } = {
     customerId: 'cus_preview123',
     stripeReceiptUrl: 'https://pay.stripe.com/receipts/preview123',
   },
+  renewal_receipt_annual: {
+    periodLabel: 'June 2026 – June 2027',
+    amount: '$50.00',
+    tierName: 'Premium',
+    periodEnd: '2027-06-15T12:00:00Z',
+    chargeDate: '2026-06-15T12:00:00Z',
+    customerId: 'cus_preview123',
+    stripeReceiptUrl: 'https://pay.stripe.com/receipts/preview123',
+  },
   cancellation_ack: {
     tierName: 'Premium',
     accessEndsAt: '2026-07-15T12:00:00Z',
@@ -60,7 +69,11 @@ const sampleVars: { [K in EmailTemplateKey]: EmailTemplateVars[K] } = {
   dunning_1_card_declined: { tierName: 'Premium', portalUrl: PORTAL_URL },
   dunning_2_still_declined: { tierName: 'Premium', portalUrl: PORTAL_URL },
   dunning_3_final_warning: { tierName: 'Premium', portalUrl: PORTAL_URL },
-  card_expiring_soon: { tierName: 'Premium', daysRemaining: 30 },
+  card_expiring_soon: {
+    tierName: 'Premium',
+    daysRemaining: 30,
+    card: { brand: 'visa', last4: '4242', expMonth: 8, expYear: 2026 },
+  },
   gifting_ending_notice: {
     gifterName: 'Sam',
     giftEndsAt: '2026-12-01T12:00:00Z',

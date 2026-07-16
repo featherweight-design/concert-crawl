@@ -13,6 +13,7 @@ import { renderDunning1CardDeclined } from './templates/dunning-1-card-declined.
 import { renderDunning2StillDeclined } from './templates/dunning-2-still-declined.js'
 import { renderDunning3FinalWarning } from './templates/dunning-3-final-warning.js'
 import { renderGiftingEndingNotice } from './templates/gifting-ending-notice.js'
+import { renderRenewalReceiptAnnual } from './templates/renewal-receipt-annual.js'
 import { renderRenewalReceiptMonthly } from './templates/renewal-receipt-monthly.js'
 import { renderWelcomeGifted } from './templates/welcome-gifted.js'
 import { renderWelcomePaid } from './templates/welcome-paid.js'
@@ -25,6 +26,7 @@ const templateRegistry: {
   welcome_paid: renderWelcomePaid,
   welcome_gifted: renderWelcomeGifted,
   renewal_receipt_monthly: renderRenewalReceiptMonthly,
+  renewal_receipt_annual: renderRenewalReceiptAnnual,
   cancellation_ack: renderCancellationAck,
   dunning_1_card_declined: renderDunning1CardDeclined,
   dunning_2_still_declined: renderDunning2StillDeclined,

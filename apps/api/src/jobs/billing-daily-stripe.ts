@@ -16,6 +16,8 @@ import { apiLogger } from '../lib/logger.js'
 
 export interface DefaultCard {
   fingerprint: string
+  brand: string
+  last4: string
   expMonth: number
   expYear: number
 }
@@ -77,6 +79,8 @@ export const getBillingJobStripeClient = (): BillingJobStripeClient => {
         }
         return {
           fingerprint: card.fingerprint,
+          brand: card.brand,
+          last4: card.last4,
           expMonth: card.exp_month,
           expYear: card.exp_year,
         }

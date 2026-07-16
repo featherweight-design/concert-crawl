@@ -46,6 +46,7 @@ import {
   userEvents,
 } from '@concert-crawl/db'
 import { sendTransactionalEmail } from '../lib/email.js'
+import type { PaidEmailTier } from '../emails/types.js'
 import { apiLogger } from '../lib/logger.js'
 import {
   getBillingJobStripeClient,
@@ -81,6 +82,13 @@ const TIER_DISPLAY_NAMES: Record<string, string> = {
 
 const tierDisplayName = (tier: string | null): string | null =>
   tier !== null ? (TIER_DISPLAY_NAMES[tier] ?? null) : null
+
+// Narrows a raw subscriptions.tier string to the paid-tier union the email
+// templates accept, so card_expiring_soon can render the tier-aware accent +
+// badge. 'free' (and any unknown value) yields undefined — the template then
+// falls back to the neutral signal accent and omits the badge.
+const isPaidEmailTier = (tier: string | null): tier is PaidEmailTier =>
+  tier === 'premium' || tier === 'supporter' || tier === 'founder'
 
 // ---------------------------------------------------------------------------
 // Pure decidable helpers (unit-tested directly, no DB)
@@ -246,6 +254,13 @@ export const runCardExpiryWarnings = async (
         vars: {
           tierName: tierDisplayName(row.tier),
           daysRemaining,
+          ...(isPaidEmailTier(row.tier) ? { tier: row.tier } : {}),
+          card: {
+            brand: card.brand,
+            last4: card.last4,
+            expMonth: card.expMonth,
+            expYear: card.expYear,
+          },
         },
       })
     } catch (err) {

@@ -1,43 +1,85 @@
-// winback — day-60 post-cancel nudge (WB-*). Voice: casual + lightly nostalgic
-// (WB-3). BASIC SHAPE ONLY: one hero copy block, one CTA (WB-4). NOT multi-stage
-// (WB-6) and — critically — NO discount / percent-off / coupon of any kind
-// (WB-8, G18): winback pricing matches the locked tier prices, no special
-// offers. Kept light; no heavy "we miss you". Single CTA → plan page.
+// winback — post-cancel nudge (#783 brand pass). BASIC SHAPE ONLY: one hero,
+// one "what you'd get back" callout, one signal CTA. NOT multi-stage, and —
+// critically — NO discount / percent-off / coupon of any kind: winback pricing
+// matches the locked tier prices, no special offers, no countdown.
 
-import { escapeHtml, renderEmailShell, renderTextShell } from '../layout.js'
-import { EMAIL_BRAND_PRIMARY, EMAIL_TEXT_MUTED } from '../palette.js'
+import {
+  button,
+  callout,
+  featureList,
+  footerRow,
+  headerRow,
+  ledeRow,
+  monoEyebrow,
+  row,
+} from '../atoms.js'
+import {
+  EMAIL_MONO,
+  ME,
+  planUrl,
+  renderEmailShell,
+  renderTextShell,
+} from '../layout.js'
 import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
-import { planPageUrl } from './format.js'
+import { WINBACK_FEATURES } from './unlocks.js'
 
-const SUBJECT = 'The Denver calendar has been busy lately'
+const SUBJECT = "Denver's been busy since you left."
 const PREHEADER =
-  "Plenty of new shows on the board since you left. Your old plan's right where you left it."
+  "Here's what Premium would hand back. No pressure, no countdown."
 
-const HEADING = 'Denver kept the shows coming'
+const CONTENT_PAD = '18px 26px 0'
 
-export const renderWinback: TemplateRenderer<EmailTemplateVars['winback']> = ({
-  tierName,
-}) => {
-  const planLabel = tierName ?? 'Premium'
+export const renderWinback: TemplateRenderer<
+  EmailTemplateVars['winback']
+> = () => {
+  const title = "Denver's been busy."
+  const sub =
+    "Since you switched back to Free, Premium's quietly picked up a few things. Whenever you want them back, they're one tap away — no countdown, no discount gimmick. Just here when you are."
 
-  const heroSentence = `It's been a minute. The calendar's filled up since you left — new venues, new shows, the usual chaos. Whenever you want the ${planLabel} extras back, they're right where you left them.`
+  const calloutInner =
+    monoEyebrow({
+      text: "What you'd get back",
+      color: ME.signal,
+      marginBottom: 12,
+    }) + featureList({ items: WINBACK_FEATURES, accent: ME.signal })
 
-  const bodyHtml = `<h1 style="margin: 0 0 16px; font-size: 24px; line-height: 1.3; color: ${EMAIL_BRAND_PRIMARY};">${escapeHtml(HEADING)}</h1>
-<p style="margin: 0 0 16px;">${escapeHtml(heroSentence)}</p>
-<p style="margin: 0; font-size: 14px; color: ${EMAIL_TEXT_MUTED};"><a href="${escapeHtml(planPageUrl())}" style="color: ${EMAIL_BRAND_PRIMARY};">Take another look</a> — no pressure, same plan, same price.</p>`
+  const microcopy = `<div style="font-family: ${EMAIL_MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">Still $5/mo · cancel any time · no hard sell</div>`
 
-  const textLines = [
-    HEADING,
+  const bodyRows = [
+    headerRow('Concert Crawl'),
+    ledeRow({ eyebrow: 'Whenever you want', title, sub, titleSize: 27 }),
+    row(CONTENT_PAD, callout({ inner: calloutInner, accent: ME.signal })),
+    row(
+      '20px 26px 6px',
+      button({
+        label: 'Turn Premium back on',
+        tone: 'signal',
+        href: planUrl(),
+      }),
+    ),
+    row('10px 26px 4px', microcopy),
+    footerRow({ family: 'product', showManage: false }),
+  ].join('\n')
+
+  const text = [
+    title,
     '',
-    heroSentence,
+    sub,
     '',
-    `Take another look: ${planPageUrl()}`,
-  ]
+    "What you'd get back:",
+    ...WINBACK_FEATURES.map(
+      (item) => `  - ${typeof item === 'string' ? item : item.text}`,
+    ),
+    '',
+    'Still $5/mo · cancel any time · no hard sell',
+    '',
+    `Turn Premium back on: ${planUrl()}`,
+  ].join('\n')
 
   return {
     subject: SUBJECT,
     preheader: PREHEADER,
-    html: renderEmailShell({ preheader: PREHEADER, bodyHtml }),
-    text: renderTextShell(textLines.join('\n')),
+    html: renderEmailShell({ preheader: PREHEADER, bodyRows }),
+    text: renderTextShell({ body: text, family: 'product', showManage: false }),
   }
 }

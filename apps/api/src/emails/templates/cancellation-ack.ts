@@ -1,47 +1,83 @@
-// cancellation_ack — warm + gracious, and deliberately NOT a sales surface
-// (#783 locked decision: no win-back pitch, no discount hook). Confirms
-// access through the period end and the 90-day data-retention window.
+// cancellation_ack — warm confirmation, deliberately NOT a sales surface (#783
+// brand pass, locked decision: no win-back pitch, no discount hook). Neutral
+// muted dot, an access-until panel, a plain "what changes" rundown, and a ghost
+// "Manage subscription" affordance. Billing footer with NO manage link — the
+// payment relationship is ending.
 
-import { escapeHtml, renderEmailShell, renderTextShell } from '../layout.js'
-import { EMAIL_ACCENT_PREMIUM, EMAIL_TEXT_MUTED } from '../palette.js'
+import {
+  button,
+  footerRow,
+  headerRow,
+  ledeRow,
+  monoEyebrow,
+  row,
+  statusEyebrow,
+} from '../atoms.js'
+import {
+  EMAIL_FONT,
+  ME,
+  escapeHtml,
+  planUrl,
+  renderEmailShell,
+  renderTextShell,
+} from '../layout.js'
 import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
 import { formatEmailDate } from './format.js'
 
-const SUBJECT = 'Your cancellation is confirmed — no hard feelings'
-const PREHEADER =
-  'Your access runs until the end of the period, and your data waits 90 days for you.'
+const SUBJECT = "Your Premium's set to wind down."
+const FOOTER_NOTE =
+  "If this cancel was a surprise, reply to this email and we'll sort it out."
+const CHANGES_BODY_TEXT =
+  "History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free — same as always. Everything you've saved stays saved."
+
+const CONTENT_PAD = '18px 26px 0'
 
 export const renderCancellationAck: TemplateRenderer<
   EmailTemplateVars['cancellation_ack']
-> = ({ tierName, accessEndsAt }) => {
-  const accessEndDate = formatEmailDate(accessEndsAt)
-  const planLabel = tierName ?? 'plan'
+> = ({ accessEndsAt }) => {
+  const accessValue =
+    formatEmailDate(accessEndsAt) ?? 'the end of your billing period'
+  const preheader = `You're good through ${accessValue}. No hooks, no hard feelings.`
+  const sub = `Done — we won't bill you again. Premium keeps working right up until ${accessValue}, then your account drops back to Free.`
 
-  const accessSentence =
-    accessEndDate === null
-      ? `Your ${planLabel} access continues until the end of your current billing period — nothing changes before then.`
-      : `Your ${planLabel} access continues until ${accessEndDate} — nothing changes before then.`
-  const retentionSentence = `After that, your ${planLabel} data sticks around for 90 days before it's cleared — nothing you need to do either way.`
+  const accessPanel = `<div style="padding: 16px 18px; border-radius: 12px; background: ${ME.surf}; border: 1px solid ${ME.border};">
+${monoEyebrow({ text: 'Premium works until', color: ME.subtle, marginBottom: 8 })}
+<div style="font-family: ${EMAIL_FONT}; font-weight: 900; font-size: 24px; color: ${ME.fg}; letter-spacing: -0.02em;">${escapeHtml(accessValue)}</div>
+</div>`
 
-  const bodyHtml = `<h1 style="margin: 0 0 16px; font-size: 24px; line-height: 1.3; color: ${EMAIL_ACCENT_PREMIUM};">All set — cancellation confirmed</h1>
-<p style="margin: 0 0 16px;">${escapeHtml(accessSentence)}</p>
-<p style="margin: 0 0 16px;">${escapeHtml(retentionSentence)}</p>
-<p style="margin: 0; font-size: 14px; color: ${EMAIL_TEXT_MUTED};">Thanks for supporting the crawl while you did. The free calendar is yours forever — that's the whole point.</p>`
+  const changesBody = `${monoEyebrow({ text: 'What changes after that', color: ME.subtle, marginBottom: 10 })}
+<div style="font-family: ${EMAIL_FONT}; font-size: 13.5px; color: ${ME.muted}; line-height: 1.55;">History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free — same as always. <span style="color: ${ME.fg}; font-weight: 700;">Everything you've saved stays saved.</span></div>`
 
-  const textLines = [
-    'All set — cancellation confirmed',
+  const bodyRows = [
+    headerRow('Subscription'),
+    row('22px 26px 0', statusEyebrow({ text: 'Cancelled', color: ME.muted })),
+    ledeRow({ title: 'Cancelled. No more charges.', sub, titleSize: 26 }),
+    row(CONTENT_PAD, accessPanel),
+    row(CONTENT_PAD, changesBody),
+    row(
+      '20px 26px 6px',
+      button({ label: 'Manage subscription', tone: 'ghost', href: planUrl() }),
+    ),
+    footerRow({ family: 'billing', showManage: false, note: FOOTER_NOTE }),
+  ].join('\n')
+
+  const text = [
+    'Cancelled. No more charges.',
     '',
-    accessSentence,
+    sub,
     '',
-    retentionSentence,
+    `Premium works until: ${accessValue}`,
     '',
-    "Thanks for supporting the crawl while you did. The free calendar is yours forever — that's the whole point.",
-  ]
+    'What changes after that',
+    CHANGES_BODY_TEXT,
+    '',
+    `Manage subscription: ${planUrl()}`,
+  ].join('\n')
 
   return {
     subject: SUBJECT,
-    preheader: PREHEADER,
-    html: renderEmailShell({ preheader: PREHEADER, bodyHtml }),
-    text: renderTextShell(textLines.join('\n')),
+    preheader,
+    html: renderEmailShell({ preheader, bodyRows }),
+    text: renderTextShell({ body: text, family: 'billing', showManage: false }),
   }
 }

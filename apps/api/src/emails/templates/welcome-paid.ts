@@ -1,119 +1,220 @@
-// welcome_paid — one template family, three tier variants (#783). Copy voice:
-// slight cheek + honesty rail + warmth. Tier data locked in #781.
+// welcome_paid — one template family, three tier variants (#783 brand pass).
+// Voice: slight cheek + honesty rail + warmth. Premium/founder use the signal
+// accent + full unlock list; supporter branches to a badge-only block with an
+// accent CTA. Founder adds the seat stamp when we know the seat number.
 
-import { escapeHtml, renderEmailShell, renderTextShell } from '../layout.js'
 import {
-  EMAIL_ACCENT_FOUNDER,
-  EMAIL_ACCENT_PREMIUM,
-  EMAIL_ACCENT_SUPPORTER,
-  EMAIL_TEXT_MUTED,
-} from '../palette.js'
+  button,
+  featureList,
+  footerRow,
+  headerRow,
+  ledeRow,
+  monoEyebrow,
+  pricePromise,
+  row,
+  seatStamp,
+  tierBadge,
+} from '../atoms.js'
+import type { FeatureItem } from '../atoms.js'
+import {
+  EMAIL_MONO,
+  ME,
+  appUrl,
+  profileUrl,
+  renderEmailShell,
+  renderTextShell,
+} from '../layout.js'
 import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
-import { planPageUrl } from './format.js'
-import { PREMIUM_UNLOCKS } from './unlocks.js'
+import { PREMIUM_FEATURES, PREMIUM_FEATURES_CORE } from './unlocks.js'
 
-type PaidTier = EmailTemplateVars['welcome_paid']['tier']
+const CONTENT_PAD = '18px 26px 0'
+const CTA_PAD = '20px 26px 8px'
 
-interface TierCopy {
-  accent: string
-  subject: string
-  preheader: string
-  headline: string
-  intro: string
-  unlocks: string[]
-  outro: string
-}
+const featureTextLines = (items: FeatureItem[]): string[] =>
+  items.map((item) => {
+    const text = typeof item === 'string' ? item : item.text
+    const future = typeof item !== 'string' && item.future
+    return `  ${future ? '*' : '-'} ${text}`
+  })
 
-const TIER_COPY: Record<PaidTier, TierCopy> = {
-  premium: {
-    accent: EMAIL_ACCENT_PREMIUM,
-    subject: "You're in — Premium is live on your account",
-    preheader:
-      "Concert history, calendar export, artist alerts — here's everything you just unlocked.",
-    headline: 'Welcome to Premium — $5/month',
-    intro: 'Everything below is live on your account right now. Go poke at it.',
-    unlocks: PREMIUM_UNLOCKS,
-    outro:
-      'Thanks for backing the crawl. This is what keeps the lights on and the crawlers crawling.',
-  },
-  supporter: {
-    accent: EMAIL_ACCENT_SUPPORTER,
-    subject: "You're in — Supporter status, officially",
-    preheader:
-      "No new features, just our sincere gratitude — exactly as promised. Here's your badge.",
-    headline: 'Welcome, Supporter — $2/month',
-    intro:
-      'You knew there were no premium features behind this door, and you walked through anyway. Respect.',
-    unlocks: [
-      'Everything in Free',
-      'Supporter badge on your profile',
-      'The warm, smug glow of keeping us alive',
-    ],
-    outro:
-      'That $2 covers the stuff we can run without scaling. It matters more than it looks. Thank you.',
-  },
-  founder: {
-    accent: EMAIL_ACCENT_FOUNDER,
-    subject: "You're in — Founder status, locked forever",
-    preheader:
-      'Your $3/month rate never goes up, ever. Every Premium unlock is live right now.',
-    headline: 'Welcome, Founder — $3/month, forever',
-    intro:
-      'That rate never goes up. Ever. Everything in Premium is yours, plus proof you were here first.',
-    unlocks: [...PREMIUM_UNLOCKS, 'Founder badge — first 100 only'],
-    outro:
-      'Thanks for betting on the crawl this early. We take that seriously.',
-  },
-}
+const microcopyRow = (text: string): string =>
+  `<div style="font-family: ${EMAIL_MONO}; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">${text}</div>`
 
-const FOUNDER_BADGE_FALLBACK = 'Founder — one of the first 100'
+const SUPPORTER_FEATURES: FeatureItem[] = [
+  'A Supporter badge on your profile',
+  'The warm, smug glow of keeping us alive',
+]
 
-const founderBadgeLine = (founderSeatNumber: number | undefined): string =>
-  founderSeatNumber === undefined
-    ? FOUNDER_BADGE_FALLBACK
-    : `Founder #${founderSeatNumber} of 100`
+const FOUNDER_FEATURES: FeatureItem[] = [
+  ...PREMIUM_FEATURES_CORE,
+  'Founder badge — first 100 only',
+]
 
 export const renderWelcomePaid: TemplateRenderer<
   EmailTemplateVars['welcome_paid']
 > = ({ tier, founderSeatNumber }) => {
-  const copy = TIER_COPY[tier]
-  const badgeLine =
-    tier === 'founder' ? founderBadgeLine(founderSeatNumber) : null
+  if (tier === 'supporter') {
+    const subject = "You're in — and you're keeping the lights on."
+    const preheader =
+      "Your badge is live. No paywalls moved — that's the point."
+    const microcopy = 'No Premium unlocks — that’s the point.'
+    const title = "You didn't have to. Thanks for backing us."
+    const sub =
+      "Supporter doesn't unlock anything new — that's the whole point. You're chipping in so the app stays free for everyone. The glow is real."
 
-  const badgeHtml =
-    badgeLine === null
-      ? ''
-      : `<p style="margin: 0 0 8px; font-size: 13px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: ${copy.accent};">${escapeHtml(badgeLine)}</p>`
+    const bodyRows = [
+      headerRow('Welcome · supporter'),
+      ledeRow({ eyebrow: 'Welcome · Supporter', title, sub }),
+      row(CONTENT_PAD, tierBadge({ tier: 'supporter' })),
+      row(
+        CONTENT_PAD,
+        monoEyebrow({ text: 'What backing gets you', marginBottom: 12 }) +
+          featureList({ items: SUPPORTER_FEATURES, accent: ME.accent }),
+      ),
+      row('12px 26px 0', microcopyRow(microcopy)),
+      row(CONTENT_PAD, pricePromise({ tier: 'supporter' })),
+      row(
+        CTA_PAD,
+        button({
+          label: 'Wear it on your profile',
+          tone: 'accent',
+          href: profileUrl(),
+        }),
+      ),
+      footerRow({ family: 'billing', showManage: true }),
+    ].join('\n')
 
-  const unlockItemsHtml = copy.unlocks
-    .map((unlock) => `<li style="margin: 0 0 8px;">${escapeHtml(unlock)}</li>`)
-    .join('\n')
+    const text = [
+      title,
+      '',
+      sub,
+      '',
+      ...featureTextLines(SUPPORTER_FEATURES),
+      '',
+      microcopy,
+      '',
+      'Whatever you pay, you pay. We never raise it.',
+      '',
+      `Wear it on your profile: ${profileUrl()}`,
+    ].join('\n')
 
-  const bodyHtml = `${badgeHtml}<h1 style="margin: 0 0 16px; font-size: 24px; line-height: 1.3; color: ${copy.accent};">${escapeHtml(copy.headline)}</h1>
-<p style="margin: 0 0 16px;">${escapeHtml(copy.intro)}</p>
-<ul style="margin: 0 0 16px; padding-left: 20px;">
-${unlockItemsHtml}
-</ul>
-<p style="margin: 0 0 16px;">${escapeHtml(copy.outro)}</p>
-<p style="margin: 0; font-size: 14px; color: ${EMAIL_TEXT_MUTED};">Manage your plan any time: <a href="${escapeHtml(planPageUrl())}" style="color: ${copy.accent};">your plan page</a>.</p>`
+    return {
+      subject,
+      preheader,
+      html: renderEmailShell({ preheader, bodyRows }),
+      text: renderTextShell({
+        body: text,
+        family: 'billing',
+        showManage: true,
+      }),
+    }
+  }
 
-  const textLines = [
-    ...(badgeLine === null ? [] : [badgeLine, '']),
-    copy.headline,
+  if (tier === 'founder') {
+    const seatLabel =
+      founderSeatNumber === undefined
+        ? 'a Founder'
+        : `Founder #${founderSeatNumber}`
+    const subject =
+      founderSeatNumber === undefined
+        ? "You're a Founder. Locked in at $3, forever."
+        : `You're Founder #${founderSeatNumber}. Locked in at $3, forever.`
+    const preheader = 'First 100 only. $3/mo never goes up. Here’s your seat.'
+    const title = `You're ${seatLabel}.`
+    const sub =
+      'One of the first hundred people to back Concert Crawl. Your price is locked at $3 a month, and it never moves — no matter what anyone pays later.'
+
+    const bodyRows = [
+      headerRow('Welcome · founder'),
+      ledeRow({ eyebrow: 'Welcome · Founder', title, sub, titleSize: 27 }),
+      row(CONTENT_PAD, tierBadge({ tier: 'founder' })),
+      ...(founderSeatNumber === undefined
+        ? []
+        : [row(CONTENT_PAD, seatStamp(founderSeatNumber))]),
+      row(
+        CONTENT_PAD,
+        monoEyebrow({ text: 'Everything Premium — yours', marginBottom: 12 }) +
+          featureList({ items: FOUNDER_FEATURES, accent: ME.signal }),
+      ),
+      row(CONTENT_PAD, pricePromise({ tier: 'founder' })),
+      row(
+        CTA_PAD,
+        button({ label: 'Open Concert Crawl', tone: 'signal', href: appUrl() }),
+      ),
+      footerRow({ family: 'billing', showManage: true }),
+    ].join('\n')
+
+    const text = [
+      title,
+      '',
+      sub,
+      '',
+      ...(founderSeatNumber === undefined
+        ? []
+        : [
+            `Founder #${founderSeatNumber} of 100 — $3/mo, never goes up, ever.`,
+            '',
+          ]),
+      ...featureTextLines(FOUNDER_FEATURES),
+      '',
+      '$3 is $3. New folks may pay double someday — never you.',
+      '',
+      `Open Concert Crawl: ${appUrl()}`,
+    ].join('\n')
+
+    return {
+      subject,
+      preheader,
+      html: renderEmailShell({ preheader, bodyRows }),
+      text: renderTextShell({
+        body: text,
+        family: 'billing',
+        showManage: true,
+      }),
+    }
+  }
+
+  // premium
+  const subject = "You're in — Premium is live on your account."
+  const preheader =
+    "Everything Premium, switched on. Here's what you just unlocked."
+  const title = "You're in. Premium's switched on."
+  const sub =
+    'Everything that actually costs us money to run is now yours. No trial asterisks, no upsell wall. Go use it.'
+
+  const bodyRows = [
+    headerRow('Welcome · premium'),
+    ledeRow({ eyebrow: 'Welcome · Premium', title, sub }),
+    row(CONTENT_PAD, tierBadge({ tier: 'premium' })),
+    row(
+      CONTENT_PAD,
+      monoEyebrow({ text: 'Switched on now', marginBottom: 12 }) +
+        featureList({ items: PREMIUM_FEATURES, accent: ME.signal }),
+    ),
+    row(CONTENT_PAD, pricePromise({ tier: 'premium' })),
+    row(
+      CTA_PAD,
+      button({ label: 'Open Concert Crawl', tone: 'signal', href: appUrl() }),
+    ),
+    footerRow({ family: 'billing', showManage: true }),
+  ].join('\n')
+
+  const text = [
+    title,
     '',
-    copy.intro,
+    sub,
     '',
-    ...copy.unlocks.map((unlock) => `- ${unlock}`),
+    ...featureTextLines(PREMIUM_FEATURES),
     '',
-    copy.outro,
+    'Whatever you pay, you pay. We never raise it.',
     '',
-    `Manage your plan any time: ${planPageUrl()}`,
-  ]
+    `Open Concert Crawl: ${appUrl()}`,
+  ].join('\n')
 
   return {
-    subject: copy.subject,
-    preheader: copy.preheader,
-    html: renderEmailShell({ preheader: copy.preheader, bodyHtml }),
-    text: renderTextShell(textLines.join('\n')),
+    subject,
+    preheader,
+    html: renderEmailShell({ preheader, bodyRows }),
+    text: renderTextShell({ body: text, family: 'billing', showManage: true }),
   }
 }

@@ -1,20 +1,38 @@
-// gifting_ending_notice — the gift lapses in ~7 days (GE-*). Voice: casual +
-// warm (GE-3). Names the gifter (GE-5, sanitized + fallback like welcome_gifted)
-// and the end date (GE-6). This is the second and LAST gift email (GE-8) — no
-// periodic check-ins. CTA → plan page to convert to paid (GE-7). All
-// interpolated user strings are escaped and single-lined.
+// gifting_ending_notice — the gift lapses in ~a week (#783 brand pass). Warm
+// wrap-up, not a hard sell: names the gifter (sanitized + fallback), an accent
+// gratitude line, a "when it ends" rundown, and an accent callout to keep it
+// going. This is the second and LAST gift email — no periodic check-ins.
+// Product footer with NO manage link (comped — no billing relationship yet).
 
-import { escapeHtml, renderEmailShell, renderTextShell } from '../layout.js'
-import { EMAIL_ACCENT_PREMIUM, EMAIL_TEXT_MUTED } from '../palette.js'
+import {
+  button,
+  callout,
+  featureList,
+  footerRow,
+  headerRow,
+  ledeRow,
+  monoEyebrow,
+  row,
+} from '../atoms.js'
+import {
+  EMAIL_FONT,
+  EMAIL_MONO,
+  ME,
+  planUrl,
+  renderEmailShell,
+  renderTextShell,
+} from '../layout.js'
 import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
-import { formatEmailDate, planPageUrl, sanitizeInlineText } from './format.js'
+import { formatEmailDate, sanitizeInlineText } from './format.js'
+import { GIFT_KEEP_FEATURES } from './unlocks.js'
 
-const SUBJECT = 'Your gifted Premium is wrapping up soon'
+const SUBJECT = 'Your gifted Premium is wrapping up.'
 const PREHEADER =
-  'It slides back to Free when the gift ends — add a card to keep the extras going.'
-
-const GIFTER_FALLBACK = 'a friend of the crawl'
-const HEADING = 'Your gifted Premium is wrapping up'
+  "About a week left. Nothing gets deleted — here's what happens next."
+const GIFTER_FALLBACK = 'A friend of the crawl'
+const CONTENT_PAD = '18px 26px 0'
+const CHANGES_BODY_TEXT =
+  "History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free — same as always. Everything you've saved stays saved."
 
 export const renderGiftingEndingNotice: TemplateRenderer<
   EmailTemplateVars['gifting_ending_notice']
@@ -23,33 +41,75 @@ export const renderGiftingEndingNotice: TemplateRenderer<
     gifterName === null ? '' : sanitizeInlineText(gifterName)
   const gifterLabel = sanitizedGifter === '' ? GIFTER_FALLBACK : sanitizedGifter
   const giftEndDate = formatEmailDate(giftEndsAt)
+  const endsPhrase =
+    giftEndDate === null ? 'in about a week' : `on ${giftEndDate}`
 
-  const introSentence =
-    giftEndDate === null
-      ? `The Premium ${gifterLabel} gifted you is wrapping up in about a week.`
-      : `The Premium ${gifterLabel} gifted you wraps up on ${giftEndDate} — about a week from now.`
-  const wrapSentence =
-    'When it ends, your account slides back to Free — nothing gets deleted, you just lose the Premium extras until you pick a plan.'
+  const sub = `${gifterLabel} put you on Premium — and the gift wraps up ${endsPhrase}. After that your account slides back to Free. No charge, no surprise.`
 
-  const bodyHtml = `<h1 style="margin: 0 0 16px; font-size: 24px; line-height: 1.3; color: ${EMAIL_ACCENT_PREMIUM};">${escapeHtml(HEADING)}</h1>
-<p style="margin: 0 0 16px;">${escapeHtml(introSentence)}</p>
-<p style="margin: 0 0 16px;">${escapeHtml(wrapSentence)}</p>
-<p style="margin: 0; font-size: 14px; color: ${EMAIL_TEXT_MUTED};"><a href="${escapeHtml(planPageUrl())}" style="color: ${EMAIL_ACCENT_PREMIUM};">Pick a plan to keep Premium</a> — no pressure, it'll be there when you want it.</p>`
+  const italicLine = `<div style="font-family: ${EMAIL_MONO}; font-style: italic; font-size: 12.5px; color: ${ME.accent}; letter-spacing: 0.02em;">—— Hope it showed you a few good nights.</div>`
 
-  const textLines = [
-    HEADING,
+  const changesBody = `${monoEyebrow({ text: 'When it ends', color: ME.subtle, marginBottom: 10 })}
+<div style="font-family: ${EMAIL_FONT}; font-size: 13.5px; color: ${ME.muted}; line-height: 1.55;">History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free — same as always. <span style="color: ${ME.fg}; font-weight: 700;">Everything you've saved stays saved.</span></div>`
+
+  const calloutInner =
+    monoEyebrow({
+      text: 'Want to keep it going?',
+      color: ME.accent,
+      marginBottom: 12,
+    }) + featureList({ items: GIFT_KEEP_FEATURES, accent: ME.accent })
+
+  const microcopy = `<div style="font-family: ${EMAIL_MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">No card on file · nothing gets deleted · only if you want to</div>`
+
+  const bodyRows = [
+    headerRow('Gifted Premium · ending'),
+    ledeRow({
+      eyebrow: "Your gift's almost up",
+      title: "It's been a good run.",
+      sub,
+      titleSize: 27,
+    }),
+    row('14px 26px 0', italicLine),
+    row(CONTENT_PAD, changesBody),
+    row(
+      CONTENT_PAD,
+      callout({ inner: calloutInner, accent: ME.accent, soft: ME.accentSoft }),
+    ),
+    row(
+      '20px 26px 6px',
+      button({
+        label: 'Keep Premium — $5/mo',
+        tone: 'signal',
+        href: planUrl(),
+      }),
+    ),
+    row('10px 26px 4px', microcopy),
+    footerRow({ family: 'product', showManage: false }),
+  ].join('\n')
+
+  const text = [
+    "It's been a good run.",
     '',
-    introSentence,
+    sub,
     '',
-    wrapSentence,
+    '—— Hope it showed you a few good nights.',
     '',
-    `Pick a plan to keep Premium: ${planPageUrl()}`,
-  ]
+    'When it ends',
+    CHANGES_BODY_TEXT,
+    '',
+    'Want to keep it going?',
+    ...GIFT_KEEP_FEATURES.map(
+      (item) => `  - ${typeof item === 'string' ? item : item.text}`,
+    ),
+    '',
+    'No card on file · nothing gets deleted · only if you want to',
+    '',
+    `Keep Premium — $5/mo: ${planUrl()}`,
+  ].join('\n')
 
   return {
     subject: SUBJECT,
     preheader: PREHEADER,
-    html: renderEmailShell({ preheader: PREHEADER, bodyHtml }),
-    text: renderTextShell(textLines.join('\n')),
+    html: renderEmailShell({ preheader: PREHEADER, bodyRows }),
+    text: renderTextShell({ body: text, family: 'product', showManage: false }),
   }
 }

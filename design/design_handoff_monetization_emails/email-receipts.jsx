@@ -32,9 +32,10 @@ const RECEIPT_COPY = {
 };
 
 function ReceiptEmail({ period = "monthly", tier = "premium", seat = 37 }) {
-  const copy = RECEIPT_COPY[tier === "founder" ? "founder" : period];
   const annual = period === "annual";
   const isFounder = tier === "founder";
+  const copy =
+    isFounder && !annual ? RECEIPT_COPY.founder : RECEIPT_COPY[period];
 
   const amount = annual ? "$50.00" : (isFounder ? "$3.00" : "$5.00");
   const planName = { premium: "Premium", founder: "Founder", supporter: "Supporter" }[tier] || "Premium";
@@ -136,9 +137,9 @@ Questions about a charge? Reply to this email —
 a human reads it.
 
 ----------------------------------------
-Turn off billing emails:  {unsubscribe_url}
-All email settings:       {email_settings_url}
-Manage subscription:      {manage_subscription_url}
+Turn off billing emails:  {link}
+All email settings:       {link}
+Manage subscription:      {link}
 Concert Crawl · Denver, CO`;
 }
 

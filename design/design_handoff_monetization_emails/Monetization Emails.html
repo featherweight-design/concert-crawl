@@ -25,6 +25,7 @@
 <script type="text/babel" src="email-receipts.jsx"></script>
 <script type="text/babel" src="email-dunning.jsx"></script>
 <script type="text/babel" src="email-lifecycle.jsx"></script>
+<script type="text/babel" src="email-notices.jsx"></script>
 
 <script type="text/babel">
 const { DesignCanvas, DCSection, DCArtboard } = window;
@@ -32,6 +33,7 @@ const { ME, WelcomeEmail, welcomePlain, WELCOME_COPY } = window;
 const { ReceiptEmail, receiptPlain, RECEIPT_COPY } = window;
 const { DunningEmail, dunningPlain, DUNNING_COPY } = window;
 const { CancellationEmail, WinbackEmail, cancellationPlain, winbackPlain, LIFECYCLE_COPY } = window;
+const { CardExpiringEmail, GiftEndingEmail, cardExpiringPlain, giftEndingPlain, NOTICES_COPY } = window;
 const { PlainText } = window;
 
 const MONO = "'JetBrains Mono', monospace";
@@ -198,7 +200,7 @@ function App() {
           <MailBoard copy={RECEIPT_COPY.annual}><ReceiptEmail period="annual" tier="premium"/></MailBoard>
         </DCArtboard>
         <DCArtboard id="r-founder" label="Monthly · Founder (subtle price promise)" width={EW} height={1100}>
-          <MailBoard copy={RECEIPT_COPY.founder}><ReceiptEmail period="monthly" tier="founder"/></MailBoard>
+          <MailBoard copy={{ subject: "Founder's paid up — $3, same as always.", preheader: "$3.00 on Jul 15. Next renewal Aug 15. Locked forever." }}><ReceiptEmail period="monthly" tier="founder"/></MailBoard>
         </DCArtboard>
         <DCArtboard id="r-plain-monthly" label="Plain-text · Monthly" width={PW} height={620}>
           <PlainWrap label="text/plain part">{receiptPlain("monthly", "premium")}</PlainWrap>
@@ -270,6 +272,36 @@ function App() {
               "Cancellation: confirm + access-until date, prominently. State what changes after (features go quiet, Free stays). 'Everything you've saved stays saved.' No comeback pitch — the only affordance is a neutral Manage subscription.",
               "Win-back: single hero copy block + single CTA ('Turn Premium back on'). No 'we miss you', no countdown, no discount gimmick.",
               "'If this cancel was a surprise, reply' — a safety valve, not a retention trap.",
+            ]}/>
+          </NotePaper>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 5 · ACCOUNT NOTICES ────────────────────────────── */}
+      <DCSection id="notices" title="5 · Account notices"
+        subtitle="Two wired-but-undrawn sends the brand pass missed (build-time sweep). Both are heads-ups, not failures — no amber-alarm treatment. Inherit the same DNA; card-expiry is tier-aware with a manage affordance, gift-ending mirrors welcome_gifted (no billing).">
+        <DCArtboard id="n-card" label="Card expiring · Premium · 14 days" width={EW} height={760}>
+          <MailBoard copy={NOTICES_COPY.cardExpiring}><CardExpiringEmail tier="premium" days={14}/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="n-card-1" label="Same template · singular (1 day) · Founder" width={EW} height={760}>
+          <MailBoard copy={{ subject: "Heads up — your card's about to expire.", preheader: "The card on file runs out in 1 day. A fresh one keeps Founder rolling." }}><CardExpiringEmail tier="founder" days={1}/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="n-gift" label="Gift ending · comped, no billing" width={EW} height={940}>
+          <MailBoard copy={NOTICES_COPY.giftEnding}><GiftEndingEmail gifterName="Marisa" giftEndsAt="Jul 22"/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="n-plain-card" label="Plain-text · Card expiring" width={PW} height={580}>
+          <PlainWrap label="text/plain part">{cardExpiringPlain("premium", null, 14)}</PlainWrap>
+        </DCArtboard>
+        <DCArtboard id="n-plain-gift" label="Plain-text · Gift ending" width={PW} height={600}>
+          <PlainWrap label="text/plain part">{giftEndingPlain("Marisa", "Jul 22")}</PlainWrap>
+        </DCArtboard>
+        <DCArtboard id="n-notes" label="Notes" width={360} height={560}>
+          <NotePaper width={360}>
+            <NoteCard title="Notice decisions" items={[
+              "Card-expiring: ONE template, day-count is a variable (30 / 14 / 7). Timeframe copy flexes; 1 day handled singular ('in 1 day'). tierName null → 'your plan'.",
+              "Card-expiring is a nudge, not a failure — neutral tier-accent dot, no amber. Card-on-file chip shows which card. Manage-subscription allowed (payment relationship exists).",
+              "Gift-ending: gifterName null → 'A friend of the crawl'; giftEndsAt null → 'in about a week'. Pink gifted accent, warm + grateful, 'nothing gets deleted'.",
+              "Gift-ending has NO manage-subscription (comped, mirrors welcome_gifted). CTA converts to paid.",
             ]}/>
           </NotePaper>
         </DCArtboard>

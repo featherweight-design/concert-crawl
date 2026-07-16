@@ -245,11 +245,12 @@ describe('monetization schema (execution plan PR 2.1)', () => {
       expect(emailTemplateConfig.enabled.default).toBe(true)
     })
 
-    it('EMAIL_TEMPLATE_KEYS lists exactly the 10 #783 template keys', () => {
+    it('EMAIL_TEMPLATE_KEYS lists exactly the 11 #783 template keys', () => {
       expect(EMAIL_TEMPLATE_KEYS).toEqual([
         'welcome_paid',
         'welcome_gifted',
         'renewal_receipt_monthly',
+        'renewal_receipt_annual',
         'dunning_1_card_declined',
         'dunning_2_still_declined',
         'dunning_3_final_warning',

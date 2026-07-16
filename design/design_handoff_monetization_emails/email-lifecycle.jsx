@@ -141,8 +141,8 @@ If this cancel was a surprise, reply to this
 email and we'll sort it out.
 
 ----------------------------------------
-Turn off billing emails:  {unsubscribe_url}
-All email settings:       {email_settings_url}
+Turn off billing emails:  {link}
+All email settings:       {link}
 Concert Crawl · Denver, CO`;
 }
 
@@ -166,8 +166,8 @@ Turn Premium back on:
 Still $5/mo. Cancel any time. No hard sell.
 
 ----------------------------------------
-Turn off product emails:  {unsubscribe_url}
-All email settings:       {email_settings_url}
+Turn off product emails:  {link}
+All email settings:       {link}
 Concert Crawl · Denver, CO`;
 }
 

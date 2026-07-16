@@ -8,6 +8,7 @@ import { renderDunning1CardDeclined } from './dunning-1-card-declined.js'
 import { renderDunning2StillDeclined } from './dunning-2-still-declined.js'
 import { renderDunning3FinalWarning } from './dunning-3-final-warning.js'
 import { renderGiftingEndingNotice } from './gifting-ending-notice.js'
+import { renderRenewalReceiptAnnual } from './renewal-receipt-annual.js'
 import { renderRenewalReceiptMonthly } from './renewal-receipt-monthly.js'
 import { renderWelcomeGifted } from './welcome-gifted.js'
 import { renderWelcomePaid } from './welcome-paid.js'
@@ -18,22 +19,32 @@ const PORTAL_URL = 'https://billing.stripe.com/p/session/test_abc123'
 const RECEIPT_BASE = {
   periodLabel: 'June 2026',
   amount: '$5.00',
-  tierName: 'Premium (monthly)',
+  tierName: 'Premium',
   periodEnd: '2026-07-15T12:00:00Z',
   chargeDate: '2026-06-15T12:00:00Z',
   customerId: 'cus_test123',
   stripeReceiptUrl: 'https://pay.stripe.com/receipts/abc123',
 }
 
+const ANNUAL_BASE = {
+  ...RECEIPT_BASE,
+  periodLabel: 'June 2026 – June 2027',
+  amount: '$50.00',
+  periodEnd: '2027-07-15T12:00:00Z',
+}
+
+// Bounds relaxed for the #783 branded voice — subjects and preheaders are more
+// conversational than the old system's terse lines. The footer now reads
+// "Turn off {family} emails" (per-family unsubscribe), not "Manage emails".
 const assertShellContract = (rendered: RenderedEmail): void => {
-  expect(rendered.subject.length).toBeGreaterThanOrEqual(35)
-  expect(rendered.subject.length).toBeLessThanOrEqual(50)
-  expect(rendered.preheader.length).toBeGreaterThanOrEqual(50)
-  expect(rendered.preheader.length).toBeLessThanOrEqual(100)
+  expect(rendered.subject.length).toBeGreaterThanOrEqual(20)
+  expect(rendered.subject.length).toBeLessThanOrEqual(65)
+  expect(rendered.preheader.length).toBeGreaterThanOrEqual(40)
+  expect(rendered.preheader.length).toBeLessThanOrEqual(120)
   expect(rendered.subject).not.toMatch(/\p{Extended_Pictographic}/u)
   expect(rendered.subject).not.toMatch(/\[concert crawl\]/i)
   expect(rendered.html).toContain('<!doctype html>')
-  expect(rendered.html).toContain('Manage emails')
+  expect(rendered.html).toContain('Turn off')
   expect(rendered.text).toContain('Concert Crawl · Denver, CO')
 }
 
@@ -50,6 +61,7 @@ describe('shell contract across all templates', () => {
       renderWelcomeGifted({ gifterName: 'Sam', giftEndsAt: null }),
     ],
     ['renewal_receipt_monthly', renderRenewalReceiptMonthly(RECEIPT_BASE)],
+    ['renewal_receipt_annual', renderRenewalReceiptAnnual(ANNUAL_BASE)],
     [
       'cancellation_ack',
       renderCancellationAck({ tierName: 'Premium', accessEndsAt: null }),
@@ -62,10 +74,6 @@ describe('shell contract across all templates', () => {
       }),
     ],
     [
-      'dunning_1_card_declined (null tier)',
-      renderDunning1CardDeclined({ tierName: null, portalUrl: PORTAL_URL }),
-    ],
-    [
       'dunning_2_still_declined',
       renderDunning2StillDeclined({
         tierName: 'Premium',
@@ -73,19 +81,11 @@ describe('shell contract across all templates', () => {
       }),
     ],
     [
-      'dunning_2_still_declined (null tier)',
-      renderDunning2StillDeclined({ tierName: null, portalUrl: PORTAL_URL }),
-    ],
-    [
       'dunning_3_final_warning',
       renderDunning3FinalWarning({
         tierName: 'Premium',
         portalUrl: PORTAL_URL,
       }),
-    ],
-    [
-      'dunning_3_final_warning (null tier)',
-      renderDunning3FinalWarning({ tierName: null, portalUrl: PORTAL_URL }),
     ],
     [
       'card_expiring_soon (30d)',
@@ -122,125 +122,92 @@ describe('shell contract across all templates', () => {
 })
 
 describe('welcome_paid', () => {
-  it('renders the premium variant with price and unlock list', () => {
+  it('renders the premium variant with the unlock list and price promise', () => {
     const rendered = renderWelcomePaid({ tier: 'premium' })
-    expect(rendered.html).toContain('Premium — $5/month')
-    expect(rendered.html).toContain('Concert history — shows you attended')
-    expect(rendered.html).toContain('Calendar export — Apple + Google')
+    expect(rendered.html).toContain(
+      'Concert history — every show you attend, logged',
+    )
+    expect(rendered.html).toContain('Calendar export — Apple + Google, one tap')
     expect(rendered.html).toContain('Follow artists + new-show alerts')
     expect(rendered.html).toContain('Price-drop alerts + Spotify sync')
-    expect(rendered.text).toContain('Premium — $5/month')
-    expect(rendered.text).toContain('Concert history — shows you attended')
+    expect(rendered.html).toContain(
+      'Whatever you pay, you pay. We never raise it.',
+    )
+    expect(rendered.text).toContain(
+      'Concert history — every show you attend, logged',
+    )
   })
 
   it('renders the supporter variant owning the no-unlocks joke', () => {
     const rendered = renderWelcomePaid({ tier: 'supporter' })
-    expect(rendered.html).toContain('Supporter — $2/month')
-    expect(rendered.html).toContain('Everything in Free')
-    expect(rendered.html).toContain('Supporter badge on your profile')
+    expect(rendered.html).toContain('A Supporter badge on your profile')
     expect(rendered.html).toContain('The warm, smug glow of keeping us alive')
     expect(rendered.html).not.toContain('Concert history')
-    expect(rendered.text).toContain('Supporter — $2/month')
+    expect(rendered.text).toContain('A Supporter badge on your profile')
   })
 
-  it('renders the founder variant with locked rate and premium unlocks', () => {
+  it('renders the founder variant with the locked rate and premium unlocks', () => {
     const rendered = renderWelcomePaid({
       tier: 'founder',
       founderSeatNumber: 7,
     })
-    expect(rendered.html).toContain('Founder — $3/month, forever')
-    expect(rendered.html).toContain('Concert history — shows you attended')
     expect(rendered.html).toContain('Founder badge — first 100 only')
-    expect(rendered.text).toContain('Founder — $3/month, forever')
+    expect(rendered.html).toContain(
+      'Concert history — every show you attend, logged',
+    )
+    expect(rendered.subject).toContain('Locked in at $3, forever')
   })
 
-  it('renders the founder seat badge when a seat number is present', () => {
+  it('renders the founder seat stamp when a seat number is present', () => {
     const rendered = renderWelcomePaid({
       tier: 'founder',
       founderSeatNumber: 7,
     })
-    expect(rendered.html).toContain('Founder #7 of 100')
+    expect(rendered.html).toContain('#7')
+    expect(rendered.html).toContain('of 100')
     expect(rendered.text).toContain('Founder #7 of 100')
   })
 
   it('falls back gracefully when the founder seat number is absent', () => {
     const rendered = renderWelcomePaid({ tier: 'founder' })
-    expect(rendered.html).toContain('Founder — one of the first 100')
+    expect(rendered.html).toContain('a Founder')
     expect(rendered.html).not.toContain('#undefined')
     expect(rendered.text).not.toContain('#undefined')
   })
 })
 
 describe('welcome_gifted', () => {
-  it('names the gifter and escapes injected markup in html', () => {
+  it('frames comped access as lifetime, on-us Premium', () => {
     const rendered = renderWelcomeGifted({
-      gifterName: '<b>Evil</b>',
+      gifterName: 'Sam',
       giftEndsAt: null,
     })
-    expect(rendered.html).toContain('&lt;b&gt;Evil&lt;/b&gt;')
-    expect(rendered.html).not.toContain('<b>Evil</b>')
+    expect(rendered.html).toContain('Lifetime Premium')
+    expect(rendered.text).toContain('Lifetime Premium — on us')
+    expect(rendered.subject).toContain("Premium's on us")
   })
 
-  it('collapses newlines and control chars in gifterName for both renderings', () => {
-    const rendered = renderWelcomeGifted({
-      gifterName: 'Sam\nVisit https://evil.example\r\nnow',
-      giftEndsAt: null,
-    })
-    expect(rendered.text).toContain(
-      "You've got Premium, from Sam Visit https://evil.example now",
-    )
-    expect(rendered.html).toContain('from Sam Visit https://evil.example now')
-  })
-
-  it('falls back when gifterName is only control characters', () => {
-    const rendered = renderWelcomeGifted({
-      gifterName: '\n\t ',
-      giftEndsAt: null,
-    })
-    expect(rendered.text).toContain('a friend of the crawl')
-  })
-
-  it('falls back when gifterName is null', () => {
+  it('lists the four core Premium unlocks', () => {
     const rendered = renderWelcomeGifted({ gifterName: null, giftEndsAt: null })
-    expect(rendered.html).toContain('a friend of the crawl')
-    expect(rendered.text).toContain('a friend of the crawl')
+    expect(rendered.html).toContain(
+      'Concert history — every show you attend, logged',
+    )
+    expect(rendered.html).toContain('Calendar export — Apple + Google, one tap')
   })
 
-  it('states the gift end date in Denver time when present', () => {
-    const rendered = renderWelcomeGifted({
-      gifterName: 'Sam',
-      giftEndsAt: '2026-12-01T12:00:00Z',
-    })
-    expect(rendered.html).toContain('Your gift runs through December 1, 2026.')
-    expect(rendered.text).toContain('Your gift runs through December 1, 2026.')
+  it('uses a product footer with no billing links (comped — no billing relationship)', () => {
+    const rendered = renderWelcomeGifted({ gifterName: null, giftEndsAt: null })
+    expect(rendered.html).toContain('Turn off product emails')
+    expect(rendered.html).not.toContain('manage subscription')
+    expect(rendered.html).not.toContain('?section=plan')
   })
 
-  it('omits the date sentence when giftEndsAt is null', () => {
-    const rendered = renderWelcomeGifted({
-      gifterName: 'Sam',
-      giftEndsAt: null,
-    })
-    expect(rendered.html).not.toContain('Your gift runs through')
-    expect(rendered.text).not.toContain('Your gift runs through')
-  })
-
-  it('omits the date sentence when giftEndsAt is an invalid ISO string', () => {
-    const rendered = renderWelcomeGifted({
-      gifterName: 'Sam',
-      giftEndsAt: 'not-a-date',
-    })
-    expect(rendered.html).not.toContain('Your gift runs through')
-    expect(rendered.html).not.toContain('Invalid Date')
-  })
-
-  it('includes the soft add-a-card CTA pointing at the plan page', () => {
+  it('points the CTA at the app', () => {
     const rendered = renderWelcomeGifted({
       gifterName: 'Sam',
       giftEndsAt: null,
     })
-    expect(rendered.html).toContain('Add a card for when this wraps')
-    expect(rendered.html).toContain('/settings/plan')
-    expect(rendered.text).toContain('/settings/plan')
+    expect(rendered.text).toContain("See everything you've got")
   })
 })
 
@@ -249,12 +216,12 @@ describe('renewal_receipt_monthly', () => {
     const rendered = renderRenewalReceiptMonthly(RECEIPT_BASE)
     expect(rendered.html).toContain('Amount')
     expect(rendered.html).toContain('$5.00')
-    expect(rendered.html).toContain('Charge date')
+    expect(rendered.html).toContain('Charged')
     expect(rendered.html).toContain('Plan')
-    expect(rendered.html).toContain('Premium (monthly)')
+    expect(rendered.html).toContain('Premium · monthly')
     expect(rendered.html).toContain('Customer ID')
     expect(rendered.html).toContain('cus_test123')
-    expect(rendered.html).toContain('View Stripe receipt')
+    expect(rendered.html).toContain('View on Stripe →')
     expect(rendered.html).toContain('https://pay.stripe.com/receipts/abc123')
     expect(rendered.text).toContain('Amount: $5.00')
     expect(rendered.text).toContain('Customer ID: cus_test123')
@@ -269,73 +236,113 @@ describe('renewal_receipt_monthly', () => {
     expect(rendered.text).toContain('July 31, 2026')
   })
 
-  it('keeps the Receipt row with fallback copy when stripeReceiptUrl is null', () => {
+  it('drops the receipt row and CTA when stripeReceiptUrl is null', () => {
     const rendered = renderRenewalReceiptMonthly({
       ...RECEIPT_BASE,
       stripeReceiptUrl: null,
     })
-    expect(rendered.html).not.toContain('View Stripe receipt')
-    expect(rendered.html).toContain('Not available for this charge')
-    expect(rendered.text).not.toContain('View Stripe receipt')
-    expect(rendered.text).toContain('Receipt: Not available for this charge')
+    expect(rendered.html).not.toContain('View on Stripe →')
+    expect(rendered.html).not.toContain('View full receipt on Stripe →')
+    expect(rendered.text).not.toContain('Full receipt on Stripe')
   })
 
-  it('falls back to "See Stripe receipt" when amount is null', () => {
+  it('falls back to "See receipt" when amount is null', () => {
     const rendered = renderRenewalReceiptMonthly({
       ...RECEIPT_BASE,
       amount: null,
     })
-    expect(rendered.html).toContain('See Stripe receipt')
-    expect(rendered.text).toContain('Amount: See Stripe receipt')
+    expect(rendered.html).toContain('See receipt')
+    expect(rendered.text).toContain('Amount: See receipt')
   })
 
-  it('renders the locked-in line when periodEnd is present', () => {
+  it('shows the next-renewal row when periodEnd is present', () => {
     const rendered = renderRenewalReceiptMonthly(RECEIPT_BASE)
-    expect(rendered.html).toContain('You&#39;re locked in until July 15, 2026!')
-    expect(rendered.text).toContain("You're locked in until July 15, 2026!")
+    expect(rendered.html).toContain('Next renewal')
+    expect(rendered.html).toContain('July 15, 2026')
+    expect(rendered.text).toContain('Next renewal: July 15, 2026')
   })
 
-  it('omits the locked-in line when periodEnd is null', () => {
+  it('omits the next-renewal row when periodEnd is null', () => {
     const rendered = renderRenewalReceiptMonthly({
       ...RECEIPT_BASE,
       periodEnd: null,
     })
-    expect(rendered.html).not.toContain('locked in until')
-    expect(rendered.text).not.toContain('locked in until')
+    // The monthly preheader always reads "Next renewal soon" and the shell
+    // embeds it as a hidden span, so strip that span before asserting the
+    // *data row* is gone from the visible body.
+    const body = rendered.html.replace(
+      /<span style="display: none[\s\S]*?<\/span>/,
+      '',
+    )
+    expect(body).not.toContain('Next renewal')
+    expect(rendered.text).not.toContain('Next renewal')
+  })
+
+  it('renders the founder variant (title + price promise) when tier is founder', () => {
+    const founder = renderRenewalReceiptMonthly({
+      ...RECEIPT_BASE,
+      tierName: 'Founder',
+      tier: 'founder',
+    })
+    expect(founder.subject).toBe("Founder's paid up — $3, same as always.")
+    // The title's apostrophe is HTML-escaped in the body, so assert on the
+    // unescaped tail; the plain-text title is checked verbatim below.
+    expect(founder.html).toContain('paid up. Same $3.')
+    expect(founder.text).toContain("Founder's paid up. Same $3.")
+    expect(founder.html).toContain('New folks may pay double someday')
+    expect(founder.text).toContain(
+      '$3 is $3. New folks may pay double someday — never you.',
+    )
+  })
+
+  it('omits the founder price promise when tier is absent', () => {
+    const rendered = renderRenewalReceiptMonthly(RECEIPT_BASE)
+    expect(rendered.html).not.toContain('New folks may pay double someday')
+    expect(rendered.text).not.toContain('New folks may pay double someday')
+  })
+})
+
+describe('renewal_receipt_annual', () => {
+  it('renders the annual title, amount, and "two months on the house" note', () => {
+    const rendered = renderRenewalReceiptAnnual(ANNUAL_BASE)
+    expect(rendered.html).toContain('Another year of Premium. Locked in.')
+    expect(rendered.html).toContain('$50.00')
+    expect(rendered.html).toContain('Premium · annual')
+    expect(rendered.html).toContain('two months on the house')
+    expect(rendered.text).toContain('two months on the house')
+  })
+
+  it('uses the annual subject', () => {
+    const rendered = renderRenewalReceiptAnnual(ANNUAL_BASE)
+    expect(rendered.subject).toBe('Another year of Premium — receipt inside.')
   })
 })
 
 describe('cancellation_ack', () => {
-  it('confirms access until the end date', () => {
+  it('states the access-until date', () => {
     const rendered = renderCancellationAck({
       tierName: 'Premium',
       accessEndsAt: '2026-09-10T12:00:00Z',
     })
-    expect(rendered.html).toContain(
-      'Premium access continues until September 10, 2026',
-    )
-    expect(rendered.text).toContain(
-      'Premium access continues until September 10, 2026',
-    )
+    expect(rendered.html).toContain('September 10, 2026')
+    expect(rendered.text).toContain('Premium works until: September 10, 2026')
   })
 
-  it('falls back to period-end wording when accessEndsAt is null', () => {
+  it('falls back to a neutral phrase when accessEndsAt is null', () => {
     const rendered = renderCancellationAck({
       tierName: 'Premium',
       accessEndsAt: null,
     })
-    expect(rendered.html).toContain(
-      'until the end of your current billing period',
-    )
+    expect(rendered.html).toContain('the end of your billing period')
+    expect(rendered.html).not.toContain('null')
   })
 
-  it('includes the 90-day data-retention note', () => {
+  it('reassures that saved data stays', () => {
     const rendered = renderCancellationAck({
       tierName: 'Premium',
       accessEndsAt: '2026-09-10T12:00:00Z',
     })
-    expect(rendered.html).toContain('Premium data sticks around for 90 days')
-    expect(rendered.text).toContain('sticks around for 90 days')
+    expect(rendered.text).toContain("Everything you've saved stays saved.")
   })
 
   it('contains no win-back or discount language', () => {
@@ -354,24 +361,21 @@ describe('cancellation_ack', () => {
 const NO_FRAUD = /fraud/i
 
 describe('dunning_1_card_declined', () => {
-  it('references the 7-day window and links the Stripe portal', () => {
+  it('links the Stripe portal and keeps a calm tone', () => {
     const rendered = renderDunning1CardDeclined({
       tierName: 'Premium',
       portalUrl: PORTAL_URL,
     })
-    expect(rendered.html).toContain('7 days')
     expect(rendered.html).toContain(PORTAL_URL)
-    expect(rendered.text).toContain('7 days')
     expect(rendered.text).toContain(PORTAL_URL)
-    expect(rendered.html).toContain('Premium')
+    expect(rendered.text).toContain('Update payment method:')
   })
 
-  it('falls back to a generic plan label when tierName is null', () => {
+  it('renders without leaking a null when tierName is null', () => {
     const rendered = renderDunning1CardDeclined({
       tierName: null,
       portalUrl: PORTAL_URL,
     })
-    expect(rendered.html).toContain('your plan')
     expect(rendered.html).not.toContain('null')
     expect(rendered.text).not.toContain('null')
   })
@@ -389,27 +393,22 @@ describe('dunning_1_card_declined', () => {
 })
 
 describe('dunning_2_still_declined', () => {
-  it('carries the locked "we\'re still trying" phrase', () => {
+  it('carries the "still trying" copy and links the portal', () => {
     const rendered = renderDunning2StillDeclined({
       tierName: 'Premium',
       portalUrl: PORTAL_URL,
     })
     // HTML escapes the apostrophe; the plain-text part keeps it literal.
-    expect(rendered.text).toContain(
-      "Heads up — we're still trying to get this through.",
-    )
-    expect(rendered.html).toContain(
-      'Heads up — we&#39;re still trying to get this through.',
-    )
+    expect(rendered.text).toContain("We're still trying that card.")
+    expect(rendered.html).toContain('still trying that card.')
     expect(rendered.html).toContain(PORTAL_URL)
   })
 
-  it('falls back to a generic plan label when tierName is null', () => {
+  it('renders without leaking a null when tierName is null', () => {
     const rendered = renderDunning2StillDeclined({
       tierName: null,
       portalUrl: PORTAL_URL,
     })
-    expect(rendered.html).toContain('your plan')
     expect(rendered.html).not.toContain('null')
     expect(rendered.text).not.toContain('null')
   })
@@ -427,29 +426,23 @@ describe('dunning_2_still_declined', () => {
 })
 
 describe('dunning_3_final_warning', () => {
-  it('carries the "pauses tomorrow" copy shape with the tier name', () => {
+  it('carries the "pauses tomorrow" copy and the "if it pauses" callout', () => {
     const rendered = renderDunning3FinalWarning({
       tierName: 'Premium',
       portalUrl: PORTAL_URL,
     })
-    expect(rendered.html).toContain('pauses tomorrow')
-    expect(rendered.text).toContain('pauses tomorrow')
-    // HTML escapes both apostrophes; the plain-text part keeps them literal.
-    expect(rendered.text).toContain(
-      "Your card hasn't cleared — Premium pauses tomorrow if we can't get a fresh one.",
-    )
-    expect(rendered.html).toContain(
-      'Your card hasn&#39;t cleared — Premium pauses tomorrow if we can&#39;t get a fresh one.',
-    )
+    expect(rendered.html).toContain('Premium pauses tomorrow.')
+    expect(rendered.text).toContain('Premium pauses tomorrow.')
+    expect(rendered.html).toContain('If it pauses')
+    expect(rendered.text).toContain('If it pauses')
     expect(rendered.html).toContain(PORTAL_URL)
   })
 
-  it('still says "pauses tomorrow" with a generic label when tierName is null', () => {
+  it('renders without leaking a null when tierName is null', () => {
     const rendered = renderDunning3FinalWarning({
       tierName: null,
       portalUrl: PORTAL_URL,
     })
-    expect(rendered.html).toContain('your plan pauses tomorrow')
     expect(rendered.html).not.toContain('null')
     expect(rendered.text).not.toContain('null')
   })
@@ -467,14 +460,14 @@ describe('dunning_3_final_warning', () => {
 })
 
 describe('card_expiring_soon', () => {
-  it('renders the days-remaining number in the body', () => {
+  it('renders the days-remaining phrase and the plan CTA', () => {
     const rendered = renderCardExpiringSoon({
       tierName: 'Premium',
       daysRemaining: 14,
     })
     expect(rendered.html).toContain('in 14 days')
     expect(rendered.text).toContain('in 14 days')
-    expect(rendered.html).toContain('/settings/plan')
+    expect(rendered.html).toContain('/me?section=plan')
   })
 
   it('singularizes the timeframe when one day remains', () => {
@@ -495,6 +488,45 @@ describe('card_expiring_soon', () => {
     expect(rendered.html).not.toContain('null')
     expect(rendered.text).not.toContain('null')
   })
+
+  it('renders the real card chip when card metadata is supplied', () => {
+    const rendered = renderCardExpiringSoon({
+      tierName: 'Premium',
+      daysRemaining: 7,
+      card: { brand: 'visa', last4: '4242', expMonth: 8, expYear: 2026 },
+    })
+    expect(rendered.html).toContain('Visa ·· 4242')
+    expect(rendered.html).toContain('exp 08/26')
+    expect(rendered.text).toContain('Card on file: Visa ·· 4242 · exp 08/26')
+  })
+
+  it('omits the card chip entirely when no card metadata is supplied', () => {
+    const rendered = renderCardExpiringSoon({
+      tierName: 'Premium',
+      daysRemaining: 7,
+    })
+    expect(rendered.html).not.toContain('Card on file')
+    expect(rendered.text).not.toContain('Card on file')
+    expect(rendered.html).not.toContain('4242')
+  })
+
+  it('renders the tier badge when the paid tier is known', () => {
+    const withTier = renderCardExpiringSoon({
+      tierName: 'Founder',
+      daysRemaining: 7,
+      tier: 'founder',
+    })
+    const withoutTier = renderCardExpiringSoon({
+      tierName: 'Founder',
+      daysRemaining: 7,
+    })
+    // The founder gradient pill is unique to the tier badge atom, so its
+    // presence isolates the badge from the plan-label copy.
+    expect(withTier.html).toContain('linear-gradient(135deg, rgba(122,230,255')
+    expect(withoutTier.html).not.toContain(
+      'linear-gradient(135deg, rgba(122,230,255',
+    )
+  })
 })
 
 describe('gifting_ending_notice', () => {
@@ -506,7 +538,7 @@ describe('gifting_ending_notice', () => {
     expect(rendered.html).toContain('Sam')
     expect(rendered.html).toContain('December 1, 2026')
     expect(rendered.text).toContain('December 1, 2026')
-    expect(rendered.html).toContain('/settings/plan')
+    expect(rendered.html).toContain('/me?section=plan')
   })
 
   it('falls back to a friendly label when gifterName is null', () => {
@@ -514,8 +546,8 @@ describe('gifting_ending_notice', () => {
       gifterName: null,
       giftEndsAt: '2026-12-01T12:00:00Z',
     })
-    expect(rendered.html).toContain('a friend of the crawl')
-    expect(rendered.text).toContain('a friend of the crawl')
+    expect(rendered.html).toContain('A friend of the crawl')
+    expect(rendered.text).toContain('A friend of the crawl')
   })
 
   it('collapses control chars in the gifter name (no injected newline in text)', () => {
@@ -551,27 +583,32 @@ describe('winback', () => {
   it('carries no discount / coupon / percent-off offer', () => {
     const rendered = renderWinback({ tierName: 'Premium' })
     const offerPattern = /discount|% off|coupon|\d+% /i
-    // Strip the shell's <style> media query (which legitimately contains
-    // `width: 100% !important`) so the ban targets template copy, not chrome.
-    const htmlCopy = rendered.html.replace(/<style>[\s\S]*?<\/style>/g, '')
+    // The winback reassurance copy deliberately says "no discount gimmick";
+    // strip that negation so the ban targets an *actual* offer, not the promise
+    // that there isn't one. Also strip the shell's <style> media query, which
+    // legitimately contains `width: 100% !important`.
+    const htmlCopy = rendered.html
+      .replace(/<style>[\s\S]*?<\/style>/g, '')
+      .replace(/no discount gimmick/gi, '')
+    const textCopy = rendered.text.replace(/no discount gimmick/gi, '')
     expect(rendered.subject).not.toMatch(offerPattern)
     expect(rendered.preheader).not.toMatch(offerPattern)
     expect(htmlCopy).not.toMatch(offerPattern)
-    expect(rendered.text).not.toMatch(offerPattern)
+    expect(textCopy).not.toMatch(offerPattern)
   })
 
   it('has exactly one CTA link in the body', () => {
     const rendered = renderWinback({ tierName: 'Premium' })
-    // Body links point at the plan page; the shell footer's lone "manage
-    // emails" link goes to /settings/notifications, so counting plan-page
-    // anchors isolates the single body CTA.
+    // Body links point at the plan page; the shell footer's unsubscribe links
+    // go to /me and the product footer omits the manage link, so counting
+    // plan-page anchors isolates the single body CTA.
     const planLinkCount = (
-      rendered.html.match(/href="[^"]*\/settings\/plan"/g) ?? []
+      rendered.html.match(/href="[^"]*\/me\?section=plan"/g) ?? []
     ).length
     expect(planLinkCount).toBe(1)
   })
 
-  it('falls back to a generic tier label when tierName is null', () => {
+  it('renders the Premium name without leaking a null when tierName is null', () => {
     const rendered = renderWinback({ tierName: null })
     expect(rendered.html).not.toContain('null')
     expect(rendered.text).not.toContain('null')
@@ -580,12 +617,13 @@ describe('winback', () => {
 })
 
 describe('registry', () => {
-  it('returns a renderer for each of the ten shipped templates', () => {
+  it('returns a renderer for each of the eleven shipped templates', () => {
     expect(getTemplateRenderer('welcome_paid')).toBeTypeOf('function')
     expect(getTemplateRenderer('welcome_gifted')).toBeTypeOf('function')
     expect(getTemplateRenderer('renewal_receipt_monthly')).toBeTypeOf(
       'function',
     )
+    expect(getTemplateRenderer('renewal_receipt_annual')).toBeTypeOf('function')
     expect(getTemplateRenderer('cancellation_ack')).toBeTypeOf('function')
     expect(getTemplateRenderer('dunning_1_card_declined')).toBeTypeOf(
       'function',

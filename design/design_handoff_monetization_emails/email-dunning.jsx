@@ -1,4 +1,4 @@
-// email-dunning.jsx — #783 · payment-failed dunning (3 emails over ~7 days: Day 0 / 3–4 / 7)
+// email-dunning.jsx — #783 · payment-failed dunning (3 emails over ~7 days)
 // De-blamed gentle ramp (locked #782 + brief):
 //   step 1 = "give it a refresh?"      — breezy, no drama
 //   step 2 = "we're still trying"      — patient, still on
@@ -50,7 +50,7 @@ function DunningEmail({ step = 1 }) {
   return (
     <EmShell>
       <EmPreheader>{copy.preheader}</EmPreheader>
-      <EmHeader eyebrow={copy.eyebrow} />
+      <EmHeader eyebrow={isFinal ? "Billing · last try" : "Billing"} />
 
       {/* status eyebrow tints amber on the final notice */}
       <tr><td style={{ padding: "24px 26px 0" }}>
@@ -127,9 +127,9 @@ Already fixed it? Ignore this — the next retry
 picks it up automatically.
 
 ----------------------------------------
-Turn off billing emails:  {unsubscribe_url}
-All email settings:       {email_settings_url}
-Manage subscription:      {manage_subscription_url}
+Turn off billing emails:  {link}
+All email settings:       {link}
+Manage subscription:      {link}
 Concert Crawl · Denver, CO`;
 }
 

@@ -56,12 +56,13 @@ export const subscriptionEventTypeEnum = pgEnum('subscription_event_type', [
   'data_purged',
 ])
 
-// The 10 #783 transactional email template keys (eng infra spec Part 2 §4.4).
+// The 11 #783 transactional email template keys (eng infra spec Part 2 §4.4).
 // email_template_config is seeded with one enabled row per key.
 export const EMAIL_TEMPLATE_KEYS = [
   'welcome_paid',
   'welcome_gifted',
   'renewal_receipt_monthly',
+  'renewal_receipt_annual',
   'dunning_1_card_declined',
   'dunning_2_still_declined',
   'dunning_3_final_warning',
@@ -256,7 +257,7 @@ export const emailSendLog = pgTable(
 )
 
 // Per-template kill switch (spec §8) — disabled templates log 'suppressed'
-// sends. Seeded with all 10 EMAIL_TEMPLATE_KEYS, enabled.
+// sends. Seeded with every EMAIL_TEMPLATE_KEYS entry, enabled.
 export const emailTemplateConfig = pgTable('email_template_config', {
   templateKey: text('template_key').primaryKey(),
   enabled: boolean('enabled').notNull().default(true),

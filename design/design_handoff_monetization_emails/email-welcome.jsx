@@ -107,7 +107,7 @@ function WelcomeEmail({ tier = "premium", seat = 37 }) {
   return (
     <EmShell>
       <EmPreheader>{copy.preheader}</EmPreheader>
-      <EmHeader eyebrow={lede.eyebrow} />
+      <EmHeader eyebrow={`Welcome · ${tier}`} />
       <EmLede eyebrow={lede.eyebrow} title={lede.title} sub={lede.sub} titleSize={isFounder ? 27 : 26} />
 
       <tr><td style={{ padding: "16px 26px 0" }}>
@@ -174,8 +174,8 @@ See everything you've got:
 No card on file. Nothing to cancel. Just enjoy it.
 
 ----------------------------------------
-Turn off product emails:  {unsubscribe_url}
-All email settings:       {email_settings_url}
+Turn off product emails:  {link}
+All email settings:       {link}
 Concert Crawl · Denver, CO`;
   }
   if (tier === "supporter") {
@@ -197,9 +197,9 @@ Wear it on your profile:
   https://concertcrawl.app/profile
 
 ----------------------------------------
-Turn off billing emails:  {unsubscribe_url}
-All email settings:       {email_settings_url}
-Manage subscription:      {manage_subscription_url}
+Turn off billing emails:  {link}
+All email settings:       {link}
+Manage subscription:      {link}
 Concert Crawl · Denver, CO`;
   }
   if (tier === "founder") {
@@ -222,9 +222,9 @@ Open Concert Crawl:
   https://concertcrawl.app
 
 ----------------------------------------
-Turn off billing emails:  {unsubscribe_url}
-All email settings:       {email_settings_url}
-Manage subscription:      {manage_subscription_url}
+Turn off billing emails:  {link}
+All email settings:       {link}
+Manage subscription:      {link}
 Concert Crawl · Denver, CO`;
   }
   // premium
@@ -245,9 +245,9 @@ Open Concert Crawl:
   https://concertcrawl.app
 
 ----------------------------------------
-Turn off billing emails:  {unsubscribe_url}
-All email settings:       {email_settings_url}
-Manage subscription:      {manage_subscription_url}
+Turn off billing emails:  {link}
+All email settings:       {link}
+Manage subscription:      {link}
 Concert Crawl · Denver, CO`;
 }
 
