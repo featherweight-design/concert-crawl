@@ -107,10 +107,14 @@ async function request<T>(
 
   if (!res.ok || !success) {
     const zodIssues = parseZodIssues(errorField)
+    // When `error` is a zValidator ZodError object rather than a string, fall
+    // back to the first issue's message so callers that surface `message`
+    // directly still see the real validation reason instead of a generic code.
     const message =
       typeof errorField === 'string'
         ? errorField
-        : `Request failed with status ${res.status}`
+        : (zodIssues?.[0]?.message ??
+          `Request failed with status ${res.status}`)
     throw new ApiError(res.status, message, codeField, zodIssues)
   }
 
