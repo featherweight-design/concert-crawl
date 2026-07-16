@@ -4,6 +4,7 @@ import { useState, useRef, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type {
+  ApiProvider,
   PlatformProbeResult,
   VenuePlatform,
   VenueWithCrawlHealth,
@@ -532,7 +533,7 @@ export function VenueDetailsClient({ venue }: Props) {
   const [platformVenueIdVal, setPlatformVenueIdVal] = useState(
     venue.platformVenueId ?? '',
   )
-  const [apiProviderVal, setApiProviderVal] = useState<string | null>(
+  const [apiProviderVal, setApiProviderVal] = useState<ApiProvider | null>(
     venue.apiProvider ?? null,
   )
   const [apiAccountIdVal, setApiAccountIdVal] = useState(
@@ -1636,8 +1637,10 @@ export function VenueDetailsClient({ venue }: Props) {
                   value={apiProviderVal ?? ''}
                   disabled={isDisabled}
                   onChange={(evt) => {
-                    const nextProvider =
-                      evt.target.value === '' ? null : evt.target.value
+                    // Map only supported option values so the union stays
+                    // narrow; anything unexpected collapses to None.
+                    const nextProvider: ApiProvider | null =
+                      evt.target.value === 'venuepilot' ? 'venuepilot' : null
                     setApiProviderVal(nextProvider)
                     if (nextProvider === null) {
                       setApiAccountIdVal('')
