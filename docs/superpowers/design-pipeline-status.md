@@ -35,6 +35,7 @@ Design brief has landed AND the visual handoff is signed off Green. Awaiting an 
 | **#763** Spotify sync (R1 + R2) | PR #893 (2026-07-11) | `design/design_handoff_spotify_sync/` | 🟢 Green (PR #925, 2026-07-13) — flip post-addendum after Hugh confirmed the tier gate; Design landed a tight 4-file / 19-insertion fix | Two-round handoff: R1 Free connect chapter + R2 Premium payoff (taste filter + discovery shelf + digest email + push). Gating locked: `premium || founder`; Supporter stays badge-only. 11 prototype-polish items deferred to build (README.md line-listed) — mock-fidelity nits, not spec ambiguities. Sequencing deps: #737 for push delivery, #783 email family for digest. `CLAUDE_CODE_PROMPT.md` is eng-ready. |
 | **#72** Shareable cards (IdentityArt) + Passport | — (pre-existing handoff) | `design/design_handoff_shareable_cards/` | 🟢 Green (PR #948, 2026-07-14) — flip post-addendum after Hugh locked tier gate + URL contract; Design added Passport (inherited from concert_history) in the same pass | Locked: (1) tier gate = **Free** (Watching drives share virality); (2) URL contract = public `/e/:eventId` mirror route (paywall on secondary actions only); (3) `POSTER_TAGLINES` bank added with de-blamed voice pass; (4) **Passport card in scope** — compact 320×500 (in-app) + share 1080×1080 (social), inherited from concert_history addendum. Related: **#85** Concert passport. |
 | **#506** Admin Venue Form — API provider fields | — (pre-existing handoff, ticket-scoped audit) | `design/design_handoff_admin_venues/` (audit: `READINESS_506.md`) | 🟢 Green (PR #953, 2026-07-15) — flipped as-is from the original 🟡 Yellow (PR #753, 2026-06-23); audit itself recommended eng proceed without a Design round-trip. Tracker corrected — was in 🕰️ Backlog by mistake | Two fields on Admin Venue Edit page: `API Provider` (select: `None` / `VenuePilot`) + `API Account ID` (text, conditional). Blocks eng **#505** (crawler API-provider dispatch). Plan PR gets 8 locked defaults (placement, conditional reveal, modal scope, enum/label conventions, validation, source URL rules, editability); Design polish (4 gaps) deferred as follow-ups. |
+| **#783** Monetization emails (brand pass) | PR #846 (2026-06-27) | `design/design_handoff_monetization_emails/` | 🟢 Green (PR #957, 2026-07-12) — one-pass audit against #783 brief lock + #782 voice bar; DNA inheritance from `digest-email.jsx` verified; per-template guardrail checks pass across all 10 templates | 10 templates covered by 4 email files + 1 shared atoms file: welcome (4 tier variants), receipts (monthly + annual + Founder bonus), dunning (3-step de-blamed ramp), cancellation + win-back. Hi-fi pass also fixes a voice-lock violation in prod (`dunning-3-final-warning.ts` subject uses "Last chance" — #782 prohibits). 2 prototype-polish items deferred to build (annual price SKU not yet provisioned, placeholder sample values). |
 
 The monetization vertical (previously here) moved into active build 2026-07-11 — see `docs/superpowers/progress.md` and the execution plan (PR #854). Phases 1 → 3.2 already merged (PRs #873, #878, #879, #880, #885, #886); Phases 3.3 → 7 remaining.
 
@@ -56,9 +57,7 @@ Full audit findings for each handoff live in that handoff's `READINESS.md`.
 
 Design brief has merged; Claude Design needs to produce the hi-fi handoff (mocks, components, canvas). Top of the list = closest to eng handoff (smallest remaining Design + build path).
 
-| Rank | Ticket | Brief PR | Path to eng handoff | Why this rank |
-|---|---|---|---|---|
-| 1 | **#783** Monetization — email touchpoints (brand pass) | PR #846 (2026-06-27) | Design → hi-fi templates for the 10 locked email templates (welcome-per-tier, monthly + annual renewal receipts, dunning 3-email sequence, cancellation ack, win-back, gifted welcome) → audit → build | Brief locked 10 templates in text/decision form, but Design handoff was never produced — emails shipped as basic Resend placeholders (Hugh flagged 2026-07-15 with welcome + receipt screenshots). This ticket was mistakenly not in the tracker until 2026-07-15; corrected here. Same email-DNA precedent as `design_handoff_shareable_cards/digest-email.jsx` (inline hex, single branded palette, table layout, mobile-first, plain-text fallback). |
+_Currently empty — #783 monetization emails flipped 📐 → 🟢 on 2026-07-12; moved to 🟢 above. When a new brief locks, restore the table with columns: `Rank | Ticket | Brief PR | Path to eng handoff | Why this rank`._
 
 **Maintenance note:** when Design produces the handoff, move to 🎨 (audit in flight) → then 🟡 / 🟢 based on verdict.
 
@@ -104,6 +103,8 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-12 | — | Tracker refresh #10 — #783 monetization emails flipped 📐 → 🟢 (this PR) after one-pass audit; hi-fi templates cover all 10 emails with DNA inheritance from `digest-email.jsx`; 2 prototype-polish nits deferred to build (annual SKU, placeholder sample values). Dunning cadence copy, plain-text URL literal, plain-text placeholder collision, and Founder receipt subject extraction all fixed inline across R2–R4. |
+| 2026-07-12 | #783 | `design/design_handoff_monetization_emails/READINESS.md` merged (this PR) — 🟢 Green verdict; per-template guardrail checks pass across all 10 templates; hi-fi pass also fixes prod dunning-3 subject voice-lock violation ("Last chance" prohibited by #782) |
 | 2026-07-15 | — | Tracker refresh #9 — #783 email touchpoints moved into 📐 Brief locked; brief has been merged since PR #846 (2026-06-27) but Design handoff was never produced (emails shipped as basic Resend placeholders). Tracker-invisible until Hugh flagged the current state (this PR) |
 | 2026-07-15 | — | Tracker refresh #8 — #506 flipped 🟡 → 🟢 as-is per audit recommendation (Path A, no Design round); tracker corrected — was in 🕰️ Backlog by mistake (PR #953) |
 | 2026-07-15 | #506 | `design/design_handoff_admin_venues/READINESS_506.md` addendum — 🟢 Green as-is per original audit's "eng can proceed without Design round-trip" recommendation. Plan PR gets 8 locked defaults; Design polish (4 gaps) deferred as follow-ups. Blocks eng #505 |
@@ -147,8 +148,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 ## 📋 Immediate TODOs
 
-- [ ] **6 eng plans ready for eng-planning agent:** #642 · #643 · concert_history · #763 Spotify · #72 shareable_cards + Passport · **#506** Admin Venue Form (new — unblocks eng #505). #763 Spotify + #72 shareable_cards are the biggest surfaces; #506 is the smallest (2 form fields, existing pattern). No Yellow items remaining.
-- [ ] **#783 email touchpoints Design handoff** — brief exists, handoff never produced. Hugh routed the handoff prompt to Design 2026-07-15. Awaiting hi-fi templates for the 10 locked emails.
+- [ ] **7 eng plans ready for eng-planning agent:** #642 · #643 · concert_history · #763 Spotify · #72 shareable_cards + Passport · **#506** Admin Venue Form (unblocks eng #505) · **#783** monetization emails brand pass. #763 Spotify + #72 shareable_cards + #783 emails are the biggest surfaces; #506 is the smallest (2 form fields, existing pattern). No Yellow items remaining. No Brief-locked items remaining.
 - [ ] **Backlog priority order** (per 2026-07-15 deep-read): #762 Who else is watching → #764 Venue first-timer → #794 Logged-out UX. #762 is the highest-value next pull.
 
 ---

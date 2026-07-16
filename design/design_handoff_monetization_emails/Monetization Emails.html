@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Monetization Emails (#783)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="email-primitives.jsx"></script>
+<script type="text/babel" src="email-welcome.jsx"></script>
+<script type="text/babel" src="email-receipts.jsx"></script>
+<script type="text/babel" src="email-dunning.jsx"></script>
+<script type="text/babel" src="email-lifecycle.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { ME, WelcomeEmail, welcomePlain, WELCOME_COPY } = window;
+const { ReceiptEmail, receiptPlain, RECEIPT_COPY } = window;
+const { DunningEmail, dunningPlain, DUNNING_COPY } = window;
+const { CancellationEmail, WinbackEmail, cancellationPlain, winbackPlain, LIFECYCLE_COPY } = window;
+const { PlainText } = window;
+
+const MONO = "'JetBrains Mono', monospace";
+const FONT = "Inter, system-ui, sans-serif";
+
+// ── Light inbox-client chrome (dark email body sits inside) ──
+function EmailClient({ subject, time = "Fri 8:02 AM", children }) {
+  return (
+    <div style={{ width: 660, background: "#EDEBE6", borderRadius: 14, overflow: "hidden", border: "1px solid #D8D4CB", fontFamily: FONT }}>
+      <div style={{ padding: "13px 18px", background: "#FBFAF6", borderBottom: "1px solid #E3DFD4" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <div style={{ width: 30, height: 30, borderRadius: 30, background: "linear-gradient(135deg,#7AE6FF,#FF7BD4)", flexShrink: 0 }}/>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#26241E" }}>Concert Crawl <span style={{ color: "#8A857A", fontWeight: 500 }}>&lt;billing@concertcrawl.app&gt;</span></div>
+            <div style={{ fontSize: 12, color: "#8A857A" }}>to you · {time}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: "#26241E", marginTop: 9 }}>{subject}</div>
+      </div>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+// ── Plain-text artboard wrapper ──────────────────────────────
+function PlainWrap({ label, children }) {
+  return (
+    <div style={{ width: "100%", height: "100%", background: ME.page, padding: 18, overflowY: "auto" }}>
+      <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: "0.14em", textTransform: "uppercase", color: ME.subtle, marginBottom: 10 }}>{label}</div>
+      <PlainText>{children}</PlainText>
+    </div>
+  );
+}
+
+// ── Note / decisions card (canvas annotation, warm paper) ────
+function NoteCard({ title, items = [], tone = "note" }) {
+  const bar = tone === "voice" ? "#B4573B" : tone === "rule" ? "#8A5A00" : "#2E7D5B";
+  return (
+    <div style={{ width: "100%", background: "#FBFAF6", border: "1px solid #E3DFD4", borderRadius: 12, padding: "18px 18px 20px", fontFamily: FONT, boxShadow: "0 1px 3px rgba(0,0,0,.05)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <span style={{ width: 9, height: 9, borderRadius: 9, background: bar }}/>
+        <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#3A362E" }}>{title}</span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        {items.map((it, i) => (
+          <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <span style={{ marginTop: 6, width: 5, height: 5, borderRadius: 5, background: bar, flexShrink: 0 }}/>
+            <span style={{ fontSize: 12.5, lineHeight: 1.5, color: "#4A453B" }}>{it}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+function NotePaper({ width = 340, children }) {
+  return <div style={{ width, display: "flex", alignItems: "flex-start", paddingTop: 2 }}>{children}</div>;
+}
+
+// ── Subject/preheader label strip above a rendered email ─────
+function SubjectStrip({ subject, preheader }) {
+  return (
+    <div style={{ width: 660, marginBottom: 10, fontFamily: MONO }}>
+      <div style={{ fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(60,50,40,0.5)" }}>Subject</div>
+      <div style={{ fontSize: 12.5, fontWeight: 600, color: "rgba(40,30,20,0.85)", fontFamily: FONT, marginTop: 3, marginBottom: 7 }}>{subject}</div>
+      <div style={{ fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(60,50,40,0.5)" }}>Preheader</div>
+      <div style={{ fontSize: 12, color: "rgba(60,50,40,0.65)", fontFamily: FONT, marginTop: 3 }}>{preheader}</div>
+    </div>
+  );
+}
+function MailBoard({ copy, children }) {
+  return (
+    <div style={{ padding: 14 }}>
+      <SubjectStrip subject={copy.subject} preheader={copy.preheader}/>
+      <EmailClient subject={copy.subject}>{children}</EmailClient>
+    </div>
+  );
+}
+
+const EW = 720;      // email artboard width (client 660 + padding)
+const PW = 500;      // plaintext artboard width
+
+function App() {
+  return (
+    <DesignCanvas>
+      {/* ── 0 · SYSTEM ─────────────────────────────────────── */}
+      <DCSection id="system" title="Monetization emails · #783"
+        subtitle="Hi-fi templates for the 10 locked #783 emails — the brand pass over the current Resend defaults. Same email DNA as the weekly digest: inline hex, single electric-derived palette, 600px table layout, plain-text fallback per template. Sour Patch voice — honest + slight cheek, formal for receipts, de-blamed dunning.">
+        <DCArtboard id="sys-notes" label="The system" width={380} height={560}>
+          <NotePaper width={380}>
+            <NoteCard title="Email DNA — inherited, not reinvented" items={[
+              "Inline hex, single palette (electric-derived, matches digest-email.jsx). The one deliberate exception to the token rule — email clients can't read CSS vars.",
+              "600px card on a #04050C page, 320px-safe. Inter for text, JetBrains Mono for eyebrows + metadata.",
+              "concert + crawl. wordmark top-left, mono eyebrow top-right. Footer: per-family unsubscribe first, all-email-settings second, Concert Crawl · Denver, CO.",
+              "Every template ships a plain-text part (shown beside each render).",
+            ]}/>
+          </NotePaper>
+        </DCArtboard>
+        <DCArtboard id="sys-improve" label="What we're improving on" width={380} height={560}>
+          <NotePaper width={380}>
+            <NoteCard tone="rule" title="Prod → hi-fi" items={[
+              "Prod welcome: plain blue serif headline + bullet list. Prod receipt: green headline + bare table. Both indistinguishable from any SaaS transactional mail.",
+              "The generic green is gone — the confirmed amount now uses the branded signal cyan.",
+              "Subjects lead with the outcome ('Premium's paid up') not the object ('Your monthly receipt').",
+              "Tier accent maps to the app tier shells: Premium=signal, Supporter=accent, Founder=signal+accent halo, Gifted=accent.",
+            ]}/>
+          </NotePaper>
+        </DCArtboard>
+        <DCArtboard id="sys-voice" label="Voice guardrails" width={380} height={560}>
+          <NotePaper width={380}>
+            <NoteCard tone="voice" title="Sour Patch bar (#782)" items={[
+              "Honest + slight cheek, never blamey. Formal-ish for receipts (tax record); casual for welcome / win-back.",
+              "Dunning is de-blamed and ramps gently: 'give it a refresh?' → 'still trying' → 'pauses tomorrow'. Never the word 'fraud', never 'last chance!'.",
+              "Cancellation is a confirmation, not a pitch — no win-back hook, no urgency.",
+              "Win-back: single hero block + one CTA. No 'we miss you', no countdown, no discount gimmick.",
+              "Founder welcome is understated — no exclamation. Gifted is gratitude, no manage-subscription CTA.",
+            ]}/>
+          </NotePaper>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 1 · WELCOME ────────────────────────────────────── */}
+      <DCSection id="welcome" title="1 · Welcome"
+        subtitle="welcome_paid renders 3 tier variants (Premium / Supporter / Founder); welcome_gifted is a distinct template. Each tier earns its own emotional beat.">
+        <DCArtboard id="w-premium" label="Premium · new subscriber" width={EW} height={930}>
+          <MailBoard copy={WELCOME_COPY.premium}><WelcomeEmail tier="premium"/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="w-supporter" label="Supporter · badge only" width={EW} height={860}>
+          <MailBoard copy={WELCOME_COPY.supporter}><WelcomeEmail tier="supporter"/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="w-founder" label="Founder · the moment (#37 / 100)" width={EW} height={1040}>
+          <MailBoard copy={WELCOME_COPY.founder}><WelcomeEmail tier="founder" seat={37}/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="w-gifted" label="Gifted · comped, no manage CTA" width={EW} height={915}>
+          <MailBoard copy={WELCOME_COPY.gifted}><WelcomeEmail tier="gifted"/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="w-plain-premium" label="Plain-text · Premium" width={PW} height={640}>
+          <PlainWrap label="text/plain part">{welcomePlain("premium")}</PlainWrap>
+        </DCArtboard>
+        <DCArtboard id="w-plain-founder" label="Plain-text · Founder" width={PW} height={640}>
+          <PlainWrap label="text/plain part">{welcomePlain("founder", 37)}</PlainWrap>
+        </DCArtboard>
+        <DCArtboard id="w-plain-gifted" label="Plain-text · Gifted" width={PW} height={600}>
+          <PlainWrap label="text/plain part">{welcomePlain("gifted")}</PlainWrap>
+        </DCArtboard>
+        <DCArtboard id="w-notes" label="Notes" width={360} height={520}>
+          <NotePaper width={360}>
+            <NoteCard title="Welcome decisions" items={[
+              "Premium: full feature acknowledgment + the locked price-promise line.",
+              "Supporter: 'thanks for backing' — badge only, explicit 'no Premium unlocks, that's the point'. Accent (pink) CTA: 'Wear it on your profile'.",
+              "Founder: seat #N of 100 stamp + $3-locked-forever, understated. No exclamation marks anywhere.",
+              "Gifted: gratitude beat + '—— we owe you one'. Only affordance is 'See everything you've got' (discovery). No manage-subscription link — they're comped.",
+            ]}/>
+          </NotePaper>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 2 · RECEIPTS ───────────────────────────────────── */}
+      <DCSection id="receipts" title="2 · Renewal receipts"
+        subtitle="Monthly + annual. Lean+ tax-record field set. Formal-ish body, Sour Patch headline. Branded signal amount replaces the prod green.">
+        <DCArtboard id="r-monthly" label="Monthly · Premium" width={EW} height={1075}>
+          <MailBoard copy={RECEIPT_COPY.monthly}><ReceiptEmail period="monthly" tier="premium"/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="r-annual" label="Annual · Premium" width={EW} height={1120}>
+          <MailBoard copy={RECEIPT_COPY.annual}><ReceiptEmail period="annual" tier="premium"/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="r-founder" label="Monthly · Founder (subtle price promise)" width={EW} height={1100}>
+          <MailBoard copy={RECEIPT_COPY.founder}><ReceiptEmail period="monthly" tier="founder"/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="r-plain-monthly" label="Plain-text · Monthly" width={PW} height={620}>
+          <PlainWrap label="text/plain part">{receiptPlain("monthly", "premium")}</PlainWrap>
+        </DCArtboard>
+        <DCArtboard id="r-plain-annual" label="Plain-text · Annual" width={PW} height={620}>
+          <PlainWrap label="text/plain part">{receiptPlain("annual", "premium")}</PlainWrap>
+        </DCArtboard>
+        <DCArtboard id="r-notes" label="Notes" width={360} height={520}>
+          <NotePaper width={360}>
+            <NoteCard tone="rule" title="Receipt decisions" items={[
+              "Fields: amount · charged · billing period · next renewal · payment (last-4) · plan · customer ID · Stripe receipt link. No invoice # / tax line — over-engineered here.",
+              "Amount hero uses signal cyan — the prod green headline is retired.",
+              "Founder receipt carries a single subtle price-promise line under the amount (reinforces monthly, not a headline).",
+              "'Reply to this email — a human reads it' beats a support-ticket funnel for a beta this size.",
+            ]}/>
+          </NotePaper>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 3 · DUNNING ────────────────────────────────────── */}
+      <DCSection id="dunning" title="3 · Payment-failed dunning"
+        subtitle="Three emails over ~14 days. De-blamed gentle ramp. Amber = calm attention (never alarm red); CTA stays branded signal throughout.">
+        <DCArtboard id="d-1" label="Dunning 1 · 'give it a refresh?'" width={EW} height={760}>
+          <MailBoard copy={DUNNING_COPY[1]}><DunningEmail step={1}/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="d-2" label="Dunning 2 · 'still trying'" width={EW} height={760}>
+          <MailBoard copy={DUNNING_COPY[2]}><DunningEmail step={2}/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="d-3" label="Dunning 3 · 'pauses tomorrow'" width={EW} height={900}>
+          <MailBoard copy={DUNNING_COPY[3]}><DunningEmail step={3}/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="d-plain-1" label="Plain-text · Dunning 1" width={PW} height={560}>
+          <PlainWrap label="text/plain part">{dunningPlain(1)}</PlainWrap>
+        </DCArtboard>
+        <DCArtboard id="d-plain-3" label="Plain-text · Dunning 3" width={PW} height={620}>
+          <PlainWrap label="text/plain part">{dunningPlain(3)}</PlainWrap>
+        </DCArtboard>
+        <DCArtboard id="d-notes" label="Notes" width={360} height={540}>
+          <NotePaper width={360}>
+            <NoteCard tone="voice" title="Dunning decisions (#782)" items={[
+              "Ramp: 'give it a refresh?' → 'we're still trying' → 'pauses tomorrow if we can't get a fresh one'. No shame, no false urgency.",
+              "Never the word 'fraud'. No 'last chance!'.",
+              "A 3-step tracker shows where you are in the retry window; step 3 tints amber.",
+              "Step 3 spells out what 'pausing' means — account + saved shows stay, features go quiet, nothing deleted. Kills the data-loss fear without threatening.",
+              "'Already fixed it? Ignore this' — the automatic-retry reality, stated plainly.",
+            ]}/>
+          </NotePaper>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 4 · LIFECYCLE ──────────────────────────────────── */}
+      <DCSection id="lifecycle" title="4 · Cancellation + win-back"
+        subtitle="Cancellation is a confirmation, not a pitch (no win-back hook). Win-back is the basic shape only — single hero block + one CTA, zero pressure.">
+        <DCArtboard id="l-cancel" label="Cancellation acknowledgment" width={EW} height={890}>
+          <MailBoard copy={LIFECYCLE_COPY.cancel}><CancellationEmail/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="l-winback" label="Win-back · basic shape" width={EW} height={880}>
+          <MailBoard copy={LIFECYCLE_COPY.winback}><WinbackEmail/></MailBoard>
+        </DCArtboard>
+        <DCArtboard id="l-plain-cancel" label="Plain-text · Cancellation" width={PW} height={620}>
+          <PlainWrap label="text/plain part">{cancellationPlain()}</PlainWrap>
+        </DCArtboard>
+        <DCArtboard id="l-plain-winback" label="Plain-text · Win-back" width={PW} height={560}>
+          <PlainWrap label="text/plain part">{winbackPlain()}</PlainWrap>
+        </DCArtboard>
+        <DCArtboard id="l-notes" label="Notes" width={360} height={520}>
+          <NotePaper width={360}>
+            <NoteCard tone="voice" title="Lifecycle decisions" items={[
+              "Cancellation: confirm + access-until date, prominently. State what changes after (features go quiet, Free stays). 'Everything you've saved stays saved.' No comeback pitch — the only affordance is a neutral Manage subscription.",
+              "Win-back: single hero copy block + single CTA ('Turn Premium back on'). No 'we miss you', no countdown, no discount gimmick.",
+              "'If this cancel was a surprise, reply' — a safety valve, not a retention trap.",
+            ]}/>
+          </NotePaper>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
