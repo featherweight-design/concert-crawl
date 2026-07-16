@@ -1,3 +1,10 @@
+## [1.120.2](https://github.com/HartiganHM/concert-crawl/compare/v1.120.1...v1.120.2) (2026-07-16)
+
+
+### Bug Fixes
+
+* **audit:** calibrate ui-audit harness against seeded staging ([#960](https://github.com/HartiganHM/concert-crawl/issues/960)) ([61dd288](https://github.com/HartiganHM/concert-crawl/commit/61dd28870cc59aa975b791cbc807cea6bd92c22a))
+
 ## [1.120.1](https://github.com/HartiganHM/concert-crawl/compare/v1.120.0...v1.120.1) (2026-07-15)
 
 
