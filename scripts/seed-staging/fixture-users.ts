@@ -14,11 +14,11 @@
  * echo) provisioned in the Clerk staging dashboard.
  */
 export const FIXTURE_USER_IDS = [
-  'user_3GYqkhiaCasabdEYXqtsdiUYjnD',
-  'user_3GYqnPxZbye3I8zWTz1JHbIDHnq',
-  'user_3GYqr7qRwQdEuUvmHEDiqkCPImQ',
-  'user_3GYquWEByYLXHmyg3LqM3Z8nHJa',
-  'user_3GYqwsWNeehFh3GWkjiVgYxwixZ',
+  'user_3GYqkhiaCasabdEYXqtsdiUYjnD', // alpha
+  'user_3GYqnPxZbye3I8zWTz1JHbIDHnq', // bravo
+  'user_3GYqr7qRwQdEuUvmHEDiqkCPImQ', // charlie
+  'user_3GYquWEByYLXHmyg3LqM3Z8nHJa', // delta
+  'user_3GYqwsWNeehFh3GWkjiVgYxwixZ', // echo
 ] as const
 
 export type FixtureUserId = (typeof FIXTURE_USER_IDS)[number]
