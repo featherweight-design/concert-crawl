@@ -124,6 +124,21 @@ const updateVenueSchema = createVenueSchema
       .nullable()
       .optional()
       .transform((val) => (val === '' ? null : val)),
+    // API-backed venue crawling (#506). When apiProvider is set, the crawler
+    // (per #505) bypasses the HTML → JSON-LD → LLM cascade. null = None.
+    apiProvider: z.enum(['venuepilot']).nullable().optional(),
+    // Trim + null-if-empty, matching the address / crawlWaitForSelector shape
+    // (returns the trimmed value, unlike priceUrl which returns the original).
+    apiAccountId: z
+      .string()
+      .max(200)
+      .nullable()
+      .optional()
+      .transform((val) => {
+        if (val == null) return val
+        const trimmed = val.trim()
+        return trimmed === '' ? null : trimmed
+      }),
   })
   .refine(
     // When the payload sets platform non-null, platformVenueId must ride
@@ -137,6 +152,16 @@ const updateVenueSchema = createVenueSchema
     {
       message: 'platformVenueId is required when platform is set',
       path: ['platformVenueId'],
+    },
+  )
+  .refine(
+    // When apiProvider is set, apiAccountId must ride along in the SAME
+    // payload as a non-empty value. The transform above has already collapsed
+    // empty/whitespace strings to null, so a null here means "missing."
+    (body) => body.apiProvider == null || body.apiAccountId != null,
+    {
+      message: 'API account ID is required when an API provider is selected',
+      path: ['apiAccountId'],
     },
   )
 
@@ -466,6 +491,12 @@ venuesAdminRouter.patch(
     const platformClearFields =
       body.platform === null ? { platformVenueId: null } : {}
 
+    // Same orphan-prevention as platform (#506): clearing apiProvider forces
+    // apiAccountId to null in the same update, so a stale account id can't
+    // silently re-activate if the provider is re-set later.
+    const apiProviderClearFields =
+      body.apiProvider === null ? { apiAccountId: null } : {}
+
     const nextPlatform =
       body.platform !== undefined ? body.platform : existing.platform
     const nextPlatformVenueId =
@@ -510,6 +541,7 @@ venuesAdminRouter.patch(
       .set({
         ...body,
         ...platformClearFields,
+        ...apiProviderClearFields,
         ...verificationFields,
         updatedAt: new Date(),
       })

@@ -341,4 +341,130 @@ describe('Admin venue routes', () => {
     expect(body.data.verifiedBy).toBeNull()
     expect(body.data.verifiedAt).toBeNull()
   })
+
+  it('PATCH /v1/admin/venues/:id accepts apiProvider + apiAccountId', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
+    )
+    mockDb.returning.mockResolvedValue([
+      {
+        ...mockDb._mockVenueRow,
+        apiProvider: 'venuepilot',
+        apiAccountId: '1105',
+      },
+    ])
+    mockDb.set.mockClear()
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiProvider: 'venuepilot', apiAccountId: '1105' }),
+    })
+    expect(res.status).toBe(200)
+    expect(mockDb.set).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiProvider: 'venuepilot',
+        apiAccountId: '1105',
+      }),
+    )
+    const body = (await res.json()) as {
+      success: boolean
+      data: { apiProvider: string; apiAccountId: string }
+    }
+    expect(body.data.apiProvider).toBe('venuepilot')
+    expect(body.data.apiAccountId).toBe('1105')
+  })
+
+  it('PATCH /v1/admin/venues/:id trims apiAccountId whitespace', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
+    )
+    mockDb.returning.mockResolvedValue([
+      {
+        ...mockDb._mockVenueRow,
+        apiProvider: 'venuepilot',
+        apiAccountId: '1105',
+      },
+    ])
+    mockDb.set.mockClear()
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiProvider: 'venuepilot',
+        apiAccountId: '  1105  ',
+      }),
+    })
+    expect(res.status).toBe(200)
+    expect(mockDb.set).toHaveBeenCalledWith(
+      expect.objectContaining({ apiAccountId: '1105' }),
+    )
+  })
+
+  it('PATCH /v1/admin/venues/:id rejects apiProvider without apiAccountId', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
+    )
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiProvider: 'venuepilot' }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('PATCH /v1/admin/venues/:id rejects apiProvider with whitespace-only apiAccountId', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
+    )
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiProvider: 'venuepilot', apiAccountId: '   ' }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('PATCH /v1/admin/venues/:id nulls apiAccountId when apiProvider set to null', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        {
+          ...mockDb._mockVenueRow,
+          apiProvider: 'venuepilot',
+          apiAccountId: '1105',
+        },
+      ]),
+    )
+    mockDb.returning.mockResolvedValue([
+      { ...mockDb._mockVenueRow, apiProvider: null, apiAccountId: null },
+    ])
+    mockDb.set.mockClear()
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiProvider: null }),
+    })
+    expect(res.status).toBe(200)
+    // Route defensively nulls the orphaned account id in the same update.
+    expect(mockDb.set).toHaveBeenCalledWith(
+      expect.objectContaining({ apiAccountId: null }),
+    )
+  })
+
+  it('PATCH /v1/admin/venues/:id rejects unknown apiProvider value', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([mockDb._mockVenueRow]),
+    )
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiProvider: 'eventbrite', apiAccountId: '1105' }),
+    })
+    expect(res.status).toBe(400)
+  })
 })

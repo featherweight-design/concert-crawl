@@ -98,6 +98,10 @@ export type TicketVendor =
   | 'venue_box_office'
   | 'unknown'
 
+// API provider for API-backed venue crawling (#506). When set, the crawler
+// bypasses the HTML → JSON-LD → LLM cascade and pulls events from the provider.
+export type ApiProvider = 'venuepilot'
+
 // How the submitter found the price
 export type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'
 
@@ -211,6 +215,8 @@ export interface Venue {
   contactEmail: string | null
   priceUrl: string | null
   ticketVendor: TicketVendor | null
+  apiProvider: ApiProvider | null
+  apiAccountId: string | null
   debugCaptureHtml: boolean
   crawlMode: 'http' | 'browser' | null
   platform: VenuePlatform | null
