@@ -93,28 +93,30 @@ async function request<T>(
     throw new ApiError(res.status, `Request failed with status ${res.status}`)
   }
 
-  const body = (await res.json()) as {
-    success: boolean
-    data?: T
-    // App routes return a string message; Hono's zValidator returns a
-    // serialized ZodError object ({ issues: [...] }) on 400. Handle both.
-    error?: string | { issues?: unknown }
-    // Optional discriminator used by routes that want clients to brand-
-    // narrow specific failure modes (admin contests resolve/defer return
-    // code: 'precondition_failed' on 409). Threaded through ApiError.code.
-    code?: string
-  }
+  // Parse as `unknown` and narrow with the runtime guard rather than casting
+  // to a shape TypeScript can't verify. `error` is a string from app routes or
+  // a serialized ZodError ({ issues: [...] }) from Hono's zValidator on 400;
+  // `code` is an optional discriminator some routes send so clients can brand-
+  // narrow failure modes (e.g. contests resolve/defer 'precondition_failed').
+  const body: unknown = await res.json()
+  const record = isRecord(body) ? body : {}
+  const success = record['success'] === true
+  const errorField = record['error']
+  const codeField =
+    typeof record['code'] === 'string' ? record['code'] : undefined
 
-  if (!res.ok || !body.success) {
-    const zodIssues = parseZodIssues(body.error)
+  if (!res.ok || !success) {
+    const zodIssues = parseZodIssues(errorField)
     const message =
-      typeof body.error === 'string'
-        ? body.error
+      typeof errorField === 'string'
+        ? errorField
         : `Request failed with status ${res.status}`
-    throw new ApiError(res.status, message, body.code, zodIssues)
+    throw new ApiError(res.status, message, codeField, zodIssues)
   }
 
-  return body.data as T
+  // The success payload's shape is the caller's generic T; the API client
+  // can't statically verify it, so this is the one unavoidable boundary cast.
+  return record['data'] as T
 }
 
 export const apiClient = {

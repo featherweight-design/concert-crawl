@@ -1,17 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
-// The action module carries a top-level 'use server' directive and imports
-// Clerk + next/cache. Stub them so importing the pure helper doesn't pull in
-// the Next.js server runtime.
-vi.mock('@clerk/nextjs/server', () => ({
-  auth: vi.fn(),
-  currentUser: vi.fn(),
-}))
-vi.mock('next/cache', () => ({
-  revalidatePath: vi.fn(),
-}))
-
-import { buildUpdateVenueBody } from './venues'
+import { buildUpdateVenueBody } from './build-update-venue-body'
 
 function formDataFrom(entries: Record<string, string>): FormData {
   const formData = new FormData()
