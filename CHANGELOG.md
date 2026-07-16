@@ -1,3 +1,10 @@
+# [1.122.0](https://github.com/HartiganHM/concert-crawl/compare/v1.121.0...v1.122.0) (2026-07-16)
+
+
+### Features
+
+* **emails:** [#783](https://github.com/HartiganHM/concert-crawl/issues/783) monetization email brand pass — dark branded system ([#964](https://github.com/HartiganHM/concert-crawl/issues/964)) ([3bbae49](https://github.com/HartiganHM/concert-crawl/commit/3bbae49925310ef967f4752e4fd5ba6d1f09686d))
+
 # [1.121.0](https://github.com/HartiganHM/concert-crawl/compare/v1.120.2...v1.121.0) (2026-07-16)
 
 
