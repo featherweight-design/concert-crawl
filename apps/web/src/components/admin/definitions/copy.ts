@@ -756,6 +756,18 @@ export const ADMIN_COPY = {
           requestFailed: 'Probe request failed',
         },
       },
+      apiProvider: {
+        label: 'API provider',
+        hint: 'If this venue exposes a calendar API, pick the provider — we’ll skip crawling and pull events directly.',
+        optionNone: 'None',
+        optionVenuePilot: 'VenuePilot',
+      },
+      apiAccountId: {
+        label: 'API account ID',
+        hint: 'The venue’s identifier with the provider (e.g. VenuePilot venue ID).',
+        errorRequired:
+          'API account ID is required when an API provider is selected',
+      },
       extractionStrategy: {
         label: 'Extraction strategy',
         auto: '— Auto —',

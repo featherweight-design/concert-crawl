@@ -532,6 +532,12 @@ export function VenueDetailsClient({ venue }: Props) {
   const [platformVenueIdVal, setPlatformVenueIdVal] = useState(
     venue.platformVenueId ?? '',
   )
+  const [apiProviderVal, setApiProviderVal] = useState<string | null>(
+    venue.apiProvider ?? null,
+  )
+  const [apiAccountIdVal, setApiAccountIdVal] = useState(
+    venue.apiAccountId ?? '',
+  )
   const [debugCaptureHtmlVal, setDebugCaptureHtmlVal] = useState(
     venue.debugCaptureHtml,
   )
@@ -568,6 +574,10 @@ export function VenueDetailsClient({ venue }: Props) {
     ...(platformVenueIdVal !== (venue.platformVenueId ?? '')
       ? ['Platform venue ID']
       : []),
+    ...(apiProviderVal !== (venue.apiProvider ?? null) ? ['API provider'] : []),
+    ...(apiAccountIdVal !== (venue.apiAccountId ?? '')
+      ? ['API account ID']
+      : []),
     ...(debugCaptureHtmlVal !== venue.debugCaptureHtml
       ? ['Debug capture']
       : []),
@@ -587,6 +597,7 @@ export function VenueDetailsClient({ venue }: Props) {
   const [fieldErrors, setFieldErrors] = useState<{
     slug?: string | undefined
     platformVenueId?: string | undefined
+    apiAccountId?: string | undefined
   }>({})
 
   // Responsive breakpoint
@@ -715,6 +726,8 @@ export function VenueDetailsClient({ venue }: Props) {
     setExtractionStrategyVal(venue.extractionStrategy ?? null)
     setPlatformVal(venue.platform ?? null)
     setPlatformVenueIdVal(venue.platformVenueId ?? '')
+    setApiProviderVal(venue.apiProvider ?? null)
+    setApiAccountIdVal(venue.apiAccountId ?? '')
     setProbeStatus({ kind: 'idle' })
     setDebugCaptureHtmlVal(venue.debugCaptureHtml)
     setCapacityVal(venue.capacity != null ? String(venue.capacity) : '')
@@ -768,6 +781,10 @@ export function VenueDetailsClient({ venue }: Props) {
     formData.set('extractionStrategy', extractionStrategyVal ?? '')
     formData.set('platform', platformVal ?? '')
     formData.set('platformVenueId', platformVenueIdVal.trim())
+    if (apiProviderVal !== null) {
+      formData.set('apiProvider', apiProviderVal)
+    }
+    formData.set('apiAccountId', apiAccountIdVal.trim())
     formData.set('debugCaptureHtml', String(debugCaptureHtmlVal))
     formData.set('capacity', capacityVal.trim())
     formData.set('venueType', venueTypeVal.trim())
@@ -782,6 +799,12 @@ export function VenueDetailsClient({ venue }: Props) {
           setFieldErrors({
             slug:
               result.error ?? ADMIN_COPY.venueDetailsClient.errors.slugInUse,
+          })
+        } else if (result.field === 'apiAccountId') {
+          setFieldErrors({
+            apiAccountId:
+              result.error ??
+              ADMIN_COPY.venueDetailsClient.fields.apiAccountId.errorRequired,
           })
         } else {
           setSaveError(
@@ -1598,6 +1621,78 @@ export function VenueDetailsClient({ venue }: Props) {
                     }
                     : {probeStatus.message}
                   </div>
+                )}
+              </div>
+
+              {/* API integration (#506/#505) — sits BEFORE Extraction
+                  Strategy because a provider bypasses the crawl cascade */}
+              <VDField
+                label={ADMIN_COPY.venueDetailsClient.fields.apiProvider.label}
+                htmlFor="edit-venue-api-provider"
+                hint={ADMIN_COPY.venueDetailsClient.fields.apiProvider.hint}
+              >
+                <VDSelect
+                  id="edit-venue-api-provider"
+                  value={apiProviderVal ?? ''}
+                  disabled={isDisabled}
+                  onChange={(evt) => {
+                    const nextProvider =
+                      evt.target.value === '' ? null : evt.target.value
+                    setApiProviderVal(nextProvider)
+                    if (nextProvider === null) {
+                      setApiAccountIdVal('')
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        apiAccountId: undefined,
+                      }))
+                    }
+                  }}
+                >
+                  <option value="">
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.apiProvider
+                        .optionNone
+                    }
+                  </option>
+                  <option value="venuepilot">
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.apiProvider
+                        .optionVenuePilot
+                    }
+                  </option>
+                </VDSelect>
+              </VDField>
+
+              <div aria-live="polite">
+                {apiProviderVal !== null && (
+                  <VDField
+                    label={
+                      ADMIN_COPY.venueDetailsClient.fields.apiAccountId.label
+                    }
+                    htmlFor="edit-venue-api-account-id"
+                    hint={
+                      ADMIN_COPY.venueDetailsClient.fields.apiAccountId.hint
+                    }
+                    {...(fieldErrors.apiAccountId
+                      ? { error: fieldErrors.apiAccountId }
+                      : {})}
+                  >
+                    <VDInput
+                      id="edit-venue-api-account-id"
+                      value={apiAccountIdVal}
+                      disabled={isDisabled}
+                      hasError={Boolean(fieldErrors.apiAccountId)}
+                      onChange={(evt) => {
+                        setApiAccountIdVal(evt.target.value)
+                        if (fieldErrors.apiAccountId) {
+                          setFieldErrors((prev) => ({
+                            ...prev,
+                            apiAccountId: undefined,
+                          }))
+                        }
+                      }}
+                    />
+                  </VDField>
                 )}
               </div>
 
