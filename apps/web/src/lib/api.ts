@@ -3,20 +3,50 @@ const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001'
 // Sent as x-service-key so the API can allow Next.js SSR calls without a user token.
 const SERVICE_KEY = process.env['INTERNAL_API_SECRET']
 
+export interface ZodIssue {
+  path: (string | number)[]
+  message: string
+}
+
 export class ApiError extends Error {
   // `code` carries the API's optional discriminator (e.g.
   // 'precondition_failed' on 409s from the admin contests resolve/defer
   // routes). Callers that want to brand-narrow the failure use this
   // instead of substring-matching `message`. Optional so legacy throw
   // sites that don't pass it stay valid.
+  //
+  // `zodIssues` carries the flattened issue list when a 400 comes from
+  // Hono's zValidator (body shape: { success: false, error: { issues: [...] } }).
+  // Callers that need field-level errors (e.g. mapping a cross-field
+  // refine to a specific form input) read this instead of the message.
   constructor(
     public readonly status: number,
     message: string,
     public readonly code?: string,
+    public readonly zodIssues?: ZodIssue[],
   ) {
     super(message)
     this.name = 'ApiError'
   }
+}
+
+// Narrow the zValidator 400 body's `error` field to a Zod issue list.
+// zValidator serializes a ZodError as { issues: [{ path, message, ... }] };
+// anything else (a plain string error from an app route) yields undefined.
+function parseZodIssues(error: unknown): ZodIssue[] | undefined {
+  if (typeof error !== 'object' || error === null || !('issues' in error)) {
+    return undefined
+  }
+  const { issues } = error as { issues: unknown }
+  if (!Array.isArray(issues)) return undefined
+  const parsed = issues.filter(
+    (issue): issue is ZodIssue =>
+      typeof issue === 'object' &&
+      issue !== null &&
+      Array.isArray((issue as { path?: unknown }).path) &&
+      typeof (issue as { message?: unknown }).message === 'string',
+  )
+  return parsed.length > 0 ? parsed : undefined
 }
 
 async function request<T>(
@@ -57,7 +87,9 @@ async function request<T>(
   const body = (await res.json()) as {
     success: boolean
     data?: T
-    error?: string
+    // App routes return a string message; Hono's zValidator returns a
+    // serialized ZodError object ({ issues: [...] }) on 400. Handle both.
+    error?: string | { issues?: unknown }
     // Optional discriminator used by routes that want clients to brand-
     // narrow specific failure modes (admin contests resolve/defer return
     // code: 'precondition_failed' on 409). Threaded through ApiError.code.
@@ -65,11 +97,12 @@ async function request<T>(
   }
 
   if (!res.ok || !body.success) {
-    throw new ApiError(
-      res.status,
-      body.error ?? `Request failed with status ${res.status}`,
-      body.code,
-    )
+    const zodIssues = parseZodIssues(body.error)
+    const message =
+      typeof body.error === 'string'
+        ? body.error
+        : `Request failed with status ${res.status}`
+    throw new ApiError(res.status, message, body.code, zodIssues)
   }
 
   return body.data as T

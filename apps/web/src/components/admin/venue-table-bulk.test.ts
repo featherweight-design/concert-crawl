@@ -31,6 +31,8 @@ function makeVenue(
     crawlMode: null,
     platform: null,
     platformVenueId: null,
+    apiProvider: null,
+    apiAccountId: null,
     address: null,
     capacity: null,
     venueType: null,
