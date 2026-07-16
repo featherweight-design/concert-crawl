@@ -26,6 +26,33 @@ const runInDom = (html: string, vw: number): HeuristicSnapshot => {
   )
   const originalRect = Element.prototype.getBoundingClientRect
 
+  // Per-element clientWidth/scrollWidth stubs for the container-overflow
+  // heuristic. jsdom reports 0 for both on every element; we source them from
+  // data-client-width / data-scroll-width so a fixture can express "content
+  // wider than its own box". Defined on Element.prototype like
+  // getBoundingClientRect above — documentElement's own-property overrides
+  // below still shadow these for the root-level checks.
+  const originalProtoClientWidth = Object.getOwnPropertyDescriptor(
+    Element.prototype,
+    'clientWidth',
+  )
+  const originalProtoScrollWidth = Object.getOwnPropertyDescriptor(
+    Element.prototype,
+    'scrollWidth',
+  )
+  Object.defineProperty(Element.prototype, 'clientWidth', {
+    configurable: true,
+    get(this: Element): number {
+      return px(this.getAttribute('data-client-width') ?? undefined)
+    },
+  })
+  Object.defineProperty(Element.prototype, 'scrollWidth', {
+    configurable: true,
+    get(this: Element): number {
+      return px(this.getAttribute('data-scroll-width') ?? undefined)
+    },
+  })
+
   Object.defineProperty(de, 'clientWidth', { value: vw, configurable: true })
   Object.defineProperty(de, 'scrollWidth', {
     configurable: true,
@@ -75,6 +102,24 @@ const runInDom = (html: string, vw: number): HeuristicSnapshot => {
     } else {
       Reflect.deleteProperty(de, 'scrollWidth')
     }
+    if (originalProtoClientWidth) {
+      Object.defineProperty(
+        Element.prototype,
+        'clientWidth',
+        originalProtoClientWidth,
+      )
+    } else {
+      Reflect.deleteProperty(Element.prototype, 'clientWidth')
+    }
+    if (originalProtoScrollWidth) {
+      Object.defineProperty(
+        Element.prototype,
+        'scrollWidth',
+        originalProtoScrollWidth,
+      )
+    } else {
+      Reflect.deleteProperty(Element.prototype, 'scrollWidth')
+    }
     Element.prototype.getBoundingClientRect = originalRect
   }
 }
@@ -112,6 +157,12 @@ function assertHeuristicSnapshot(
   }
   if (!('brokenImages' in value) || !Array.isArray(value.brokenImages)) {
     throw new Error('assertHeuristicSnapshot: brokenImages not array')
+  }
+  if (
+    !('overflowingContainers' in value) ||
+    !Array.isArray(value.overflowingContainers)
+  ) {
+    throw new Error('assertHeuristicSnapshot: overflowingContainers not array')
   }
   if (
     !('contentDensity' in value) ||
@@ -195,5 +246,83 @@ describe('collectHeuristicsScript', () => {
     expect(snap.contentDensity.mainChildren).toBe(0)
     // div + section + 2 p = 4 elements under <body>.
     expect(snap.contentDensity.bodyElements).toBe(4)
+  })
+  it('flags container-relative overflow (scrollWidth > clientWidth) inside the viewport', () => {
+    // The card is only 200px wide and fully within a 320px viewport, so
+    // neither hasHorizontalScroll nor offscreenElements fires — but its
+    // content is 500px wide (a long unbroken string), which is exactly the
+    // desktop dispute-panel bug class (#961) the viewport checks missed.
+    // style width gives the element a real layout box (rect.width) so it isn't
+    // short-circuited as a zero-box node; the client/scroll widths still come
+    // from the data-* stubs.
+    const snap = runInDom(
+      '<div id="card" style="width: 200px" data-client-width="200" data-scroll-width="500"></div>',
+      320,
+    )
+    expect(snap.hasHorizontalScroll).toBe(false)
+    expect(snap.offscreenElements).toEqual([])
+    expect(
+      snap.overflowingContainers.some((entry) =>
+        entry.selector.includes('#card'),
+      ),
+    ).toBe(true)
+  })
+  it('does not flag an element whose content fits its own box', () => {
+    const snap = runInDom(
+      '<div id="fits" style="width: 200px" data-client-width="200" data-scroll-width="200"></div>',
+      320,
+    )
+    expect(snap.overflowingContainers).toEqual([])
+  })
+  it('does not flag sub-pixel overflow within tolerance', () => {
+    const snap = runInDom(
+      '<div id="rounding" style="width: 200px" data-client-width="200" data-scroll-width="201"></div>',
+      320,
+    )
+    expect(snap.overflowingContainers).toEqual([])
+  })
+  it('does not flag the <body> root even when its own content overflows', () => {
+    // Document-level horizontal overflow is hasHorizontalScroll's job (check
+    // 1); the container list must not double-report the <html>/<body> roots.
+    // The prototype clientWidth/scrollWidth stubs read these off body itself.
+    document.body.setAttribute('data-client-width', '200')
+    document.body.setAttribute('data-scroll-width', '800')
+    try {
+      const snap = runInDom('<div id="inner">x</div>', 320)
+      expect(
+        snap.overflowingContainers.some((entry) =>
+          entry.selector.includes('body'),
+        ),
+      ).toBe(false)
+    } finally {
+      document.body.removeAttribute('data-client-width')
+      document.body.removeAttribute('data-scroll-width')
+    }
+  })
+  it('excludes intentional scrollers (overflow-x: auto/scroll)', () => {
+    // Carousels, code blocks, and other deliberately-scrollable regions
+    // legitimately have scrollWidth > clientWidth. The overflow-x exclusion
+    // keeps them out of the report.
+    const snap = runInDom(
+      '<div id="carousel" style="overflow-x: auto; width: 200px" data-client-width="200" data-scroll-width="900"></div>',
+      320,
+    )
+    expect(
+      snap.overflowingContainers.some((entry) =>
+        entry.selector.includes('#carousel'),
+      ),
+    ).toBe(false)
+  })
+  it('reports the measured scroll/client widths on flagged containers', () => {
+    const snap = runInDom(
+      '<div id="wide" style="width: 200px" data-client-width="200" data-scroll-width="500"></div>',
+      320,
+    )
+    const entry = snap.overflowingContainers.find((row) =>
+      row.selector.includes('#wide'),
+    )
+    expect(entry).toBeDefined()
+    expect(entry!.scrollWidthPx).toBe(500)
+    expect(entry!.clientWidthPx).toBe(200)
   })
 })

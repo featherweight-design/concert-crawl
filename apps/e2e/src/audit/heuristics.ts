@@ -12,10 +12,13 @@
  * `new Function(...)` inside a page-shim harness — see heuristics.test.ts.
  *
  * Heuristics detected:
- *   1. hasHorizontalScroll  — scrollWidth > clientWidth on <html>
- *   2. offscreenElements    — any element whose right edge exceeds the viewport
- *   3. smallTapTargets      — interactive elements smaller than 32×32 px
- *   4. brokenImages         — <img> with naturalWidth === 0 (or data-natural-width="0")
+ *   1. hasHorizontalScroll   — scrollWidth > clientWidth on <html>
+ *   2. offscreenElements     — any element whose right edge exceeds the viewport
+ *   3. smallTapTargets       — interactive elements smaller than 32×32 px
+ *   4. brokenImages          — <img> with naturalWidth === 0 (or data-natural-width="0")
+ *   5. overflowingContainers — element content wider than its own box
+ *                              (scrollWidth > clientWidth), i.e. container-relative
+ *                              overflow that the viewport-anchored checks (1 & 2) miss
  */
 
 import type { Page } from '@playwright/test'
@@ -29,6 +32,11 @@ export type HeuristicSnapshot = {
   offscreenElements: { selector: string; rightEdgePx: number }[]
   smallTapTargets: { selector: string; widthPx: number; heightPx: number }[]
   brokenImages: { src: string }[]
+  overflowingContainers: {
+    selector: string
+    scrollWidthPx: number
+    clientWidthPx: number
+  }[]
   contentDensity: {
     mainChildren: number
     bodyElements: number
@@ -63,17 +71,61 @@ export const collectHeuristicsScript = `(vw) => {
     return tag
   }
 
-  // --- 2. Offscreen elements ---
+  // --- 2 & 5. Per-element layout scan (single pass over all elements) ---
+  // One walk of the element list feeds two overflow checks so large pages pay
+  // the DOM iteration and layout reads only once:
+  //   (2) offscreenElements     — right edge past the viewport (rect.right > vw)
+  //   (5) overflowingContainers — content wider than the element's OWN box
+  //       (scrollWidth > clientWidth). The viewport-anchored checks (1 & 2)
+  //       only flag content crossing the viewport's right edge; they miss an
+  //       element whose content bleeds past its own box while still inside the
+  //       viewport — e.g. a long unbroken string widening a card past its
+  //       column, which an ancestor may clip so the document never gains a
+  //       scrollbar. Skip for (5): (a) the <html>/<body> roots, whose
+  //       document-level overflow is already reported by hasHorizontalScroll
+  //       (check 1); (b) intentional scrollers (overflow-x auto/scroll —
+  //       carousels, code blocks); (c) zero-box/inline elements (clientWidth 0),
+  //       whose scrollWidth is not a meaningful container bound. A small
+  //       tolerance absorbs sub-pixel rounding.
+  var OVERFLOW_TOLERANCE_PX = 2
   var offscreenElements = []
+  var overflowingContainers = []
   var allEls = document.querySelectorAll('*')
-  for (var oi = 0; oi < allEls.length; oi++) {
-    var el = allEls[oi]
+  for (var ei = 0; ei < allEls.length; ei++) {
+    var el = allEls[ei]
     // Skip elements explicitly hidden via inline display:none
     if (el.style && el.style.display === 'none') continue
+
+    // (2) Offscreen: right edge beyond the viewport.
     var rect = el.getBoundingClientRect()
     if (rect.right > vw) {
       offscreenElements.push({ selector: selectorFor(el), rightEdgePx: rect.right })
     }
+
+    // (5) Container-relative overflow. Skip the roots (that's check 1's job).
+    if (el === de || el === document.body) continue
+    // Zero-box nodes (head/meta/script/title and other non-rendered elements)
+    // can't overflow their own box. rect is already measured above, so this
+    // short-circuits the extra clientWidth/scrollWidth layout reads for them
+    // before we touch those properties. clientWidth<=0 still filters inline
+    // elements, which have a non-zero rect but a zero client box.
+    if (rect.width <= 0) continue
+    var clientW = el.clientWidth
+    if (clientW <= 0) continue
+    var scrollW = el.scrollWidth
+    if (scrollW <= clientW + OVERFLOW_TOLERANCE_PX) continue
+    // Only the small subset that actually overflows reaches getComputedStyle,
+    // which is expensive enough to dominate the script on large pages.
+    var overflowX = ''
+    if (typeof window !== 'undefined' && window.getComputedStyle) {
+      overflowX = window.getComputedStyle(el).overflowX || ''
+    }
+    if (overflowX === 'auto' || overflowX === 'scroll') continue
+    overflowingContainers.push({
+      selector: selectorFor(el),
+      scrollWidthPx: scrollW,
+      clientWidthPx: clientW,
+    })
   }
 
   // --- 3. Small tap targets ---
@@ -111,7 +163,7 @@ export const collectHeuristicsScript = `(vw) => {
     }
   }
 
-  // --- 5. Content density ---
+  // --- 6. Content density ---
   // mainChildren stays for information, but it is NOT a reliable "did real
   // content render" signal: this app's page content is inconsistently wrapped
   // in <main> (the (main) route-group layout has no <main> landmark, and some
@@ -128,7 +180,7 @@ export const collectHeuristicsScript = `(vw) => {
   var bodyEl = document.body
   var bodyElements = bodyEl ? bodyEl.querySelectorAll('*').length : 0
 
-  return { hasHorizontalScroll: hasHorizontalScroll, offscreenElements: offscreenElements, smallTapTargets: smallTapTargets, brokenImages: brokenImages, contentDensity: { mainChildren: mainChildren, bodyElements: bodyElements } }
+  return { hasHorizontalScroll: hasHorizontalScroll, offscreenElements: offscreenElements, smallTapTargets: smallTapTargets, brokenImages: brokenImages, overflowingContainers: overflowingContainers, contentDensity: { mainChildren: mainChildren, bodyElements: bodyElements } }
 }`
 
 // ---------------------------------------------------------------------------
