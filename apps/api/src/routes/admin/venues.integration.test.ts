@@ -23,7 +23,7 @@ import {
   seedVenue,
 } from '../../test/helpers/seed.js'
 import { testDb } from '../../test/helpers/db.js'
-import { events } from '@concert-crawl/db'
+import { events, venues } from '@concert-crawl/db'
 import { eq } from 'drizzle-orm'
 
 const app = createApp()
@@ -287,6 +287,30 @@ describe('PATCH /v1/admin/venues/:id — integration', () => {
     expect(body.success).toBe(true)
     expect(body.data.name).toBe('Ogden Theatre')
     expect(body.data.slug).toBe('ogden')
+  })
+
+  it('clears apiAccountId when apiProvider is set back to null', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({
+      name: 'Levitt Pavilion',
+      slug: 'levitt-pavilion',
+      apiProvider: 'venuepilot',
+      apiAccountId: '1105',
+    })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiProvider: null, apiAccountId: null }),
+    })
+    expect(res.status).toBe(200)
+
+    const [row] = await testDb
+      .select()
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(row?.apiProvider).toBeNull()
+    expect(row?.apiAccountId).toBeNull()
   })
 })
 
