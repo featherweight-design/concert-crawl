@@ -1,3 +1,10 @@
+# [1.121.0](https://github.com/HartiganHM/concert-crawl/compare/v1.120.2...v1.121.0) (2026-07-16)
+
+
+### Features
+
+* **audit:** detect container-relative horizontal overflow ([#963](https://github.com/HartiganHM/concert-crawl/issues/963)) ([b322453](https://github.com/HartiganHM/concert-crawl/commit/b3224535648ce8be3e37161f83944d917e5bc5f3)), closes [#962](https://github.com/HartiganHM/concert-crawl/issues/962)
+
 ## [1.120.2](https://github.com/HartiganHM/concert-crawl/compare/v1.120.1...v1.120.2) (2026-07-16)
 
 
