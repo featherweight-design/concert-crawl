@@ -101,6 +101,7 @@ export async function updateVenue(
     return { success: true }
   } catch (err: unknown) {
     if (err instanceof ApiError && err.status === 409) {
+      console.warn('updateVenue: slug conflict', { id })
       return { success: false, error: 'Slug already in use', field: 'slug' }
     }
     if (err instanceof ApiError && err.status === 400 && err.zodIssues) {
@@ -108,6 +109,10 @@ export async function updateVenue(
         (issue) => issue.path[0] === 'apiAccountId',
       )
       if (apiAccountIdIssue) {
+        console.warn('updateVenue: apiAccountId validation failed', {
+          id,
+          message: apiAccountIdIssue.message,
+        })
         return {
           success: false,
           error: apiAccountIdIssue.message,
