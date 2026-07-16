@@ -32,6 +32,8 @@ export const ticketVendorEnum = pgEnum('ticket_vendor', [
   'unknown',
 ])
 
+export const apiProviderEnum = pgEnum('api_provider', ['venuepilot'])
+
 export const venues = pgTable('venues', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull(),
@@ -80,6 +82,8 @@ export const venues = pgTable('venues', {
   contactEmail: text('contact_email'),
   priceUrl: text('price_url'),
   ticketVendor: ticketVendorEnum('ticket_vendor'),
+  apiProvider: apiProviderEnum('api_provider'),
+  apiAccountId: text('api_account_id'),
   debugCaptureHtml: boolean('debug_capture_html').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
