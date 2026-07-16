@@ -83,6 +83,12 @@ export function FeedbackRow({ item, isExpanded, onToggle }: FeedbackRowProps) {
       <button
         type="button"
         onClick={() => onToggle(item.id)}
+        aria-expanded={isExpanded}
+        aria-label={`${
+          isExpanded
+            ? ADMIN_COPY.feedback.row.collapseLabel
+            : ADMIN_COPY.feedback.row.expandLabel
+        } ${handle}`}
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr auto',

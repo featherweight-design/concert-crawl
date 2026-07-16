@@ -118,10 +118,12 @@ function assertHeuristicSnapshot(
     typeof value.contentDensity !== 'object' ||
     value.contentDensity === null ||
     !('mainChildren' in value.contentDensity) ||
-    typeof value.contentDensity.mainChildren !== 'number'
+    typeof value.contentDensity.mainChildren !== 'number' ||
+    !('bodyElements' in value.contentDensity) ||
+    typeof value.contentDensity.bodyElements !== 'number'
   ) {
     throw new Error(
-      'assertHeuristicSnapshot: contentDensity.mainChildren not number',
+      'assertHeuristicSnapshot: contentDensity fields not numbers',
     )
   }
 }
@@ -184,5 +186,14 @@ describe('collectHeuristicsScript', () => {
   it('reports 0 mainChildren when no <main> element exists', () => {
     const snap = runInDom('<div><p>no main here</p></div>', 320)
     expect(snap.contentDensity.mainChildren).toBe(0)
+  })
+  it('counts body elements independent of <main>, so main-less pages still register', () => {
+    // A page can render real content with no <main> landmark (this app's
+    // consumer detail pages do exactly that). bodyElements is the markup-
+    // agnostic signal the sweep's insufficientData gate keys off.
+    const snap = runInDom('<div><section><p>a</p><p>b</p></section></div>', 320)
+    expect(snap.contentDensity.mainChildren).toBe(0)
+    // div + section + 2 p = 4 elements under <body>.
+    expect(snap.contentDensity.bodyElements).toBe(4)
   })
 })

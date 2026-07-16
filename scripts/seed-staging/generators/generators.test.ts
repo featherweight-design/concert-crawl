@@ -480,7 +480,12 @@ describe('generatePriceSubmissions', () => {
     }
   })
 
-  it('at least one disputed submission has a non-null disputedSubmissionId', async () => {
+  it('produces one open price contest: a pending counter referencing a disputed parent', async () => {
+    // The admin Contests queue pivots on the COUNTER row
+    // (status='pending' AND disputedSubmissionId IS NOT NULL), whose
+    // disputedSubmissionId points at the disputed PARENT. This is the exact
+    // shape apps/api/src/routes/admin/contests.ts queries — asserting it
+    // here guards against the seeder regressing to an empty Contests UI.
     const { staging, submissionValuesSpy } = buildMultiInsertStagingMock()
     await generatePriceSubmissions({
       staging: staging as any,
@@ -488,12 +493,28 @@ describe('generatePriceSubmissions', () => {
       eventIds,
       rng: createRng(SEED),
     })
-    const rows: { status: string; disputedSubmissionId: string | null }[] =
-      submissionValuesSpy.mock.calls[0]![0]
-    const disputedWithRef = rows.find(
-      (row) => row.status === 'disputed' && row.disputedSubmissionId !== null,
+    const rows: {
+      id: string
+      status: string
+      disputedSubmissionId: string | null
+      userId: string
+    }[] = submissionValuesSpy.mock.calls[0]![0]
+
+    // Assert EXACTLY one open contest — a filter+length check, not a find:
+    // the admin Contests UI is calibrated around a single seeded dispute, and
+    // this test's name promises one. A plain find would silently pass if the
+    // generator regressed to emitting several counters.
+    const counters = rows.filter(
+      (row) => row.status === 'pending' && row.disputedSubmissionId !== null,
     )
-    expect(disputedWithRef).toBeDefined()
+    expect(counters).toHaveLength(1)
+    const counter = counters[0]!
+
+    const parent = rows.find((row) => row.id === counter.disputedSubmissionId)
+    expect(parent).toBeDefined()
+    expect(parent!.status).toBe('disputed')
+    // A fan disputes someone else's price, never their own.
+    expect(counter.userId).not.toBe(parent!.userId)
   })
 
   it('every note fits within the varchar(280) column limit', async () => {

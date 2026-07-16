@@ -29,7 +29,10 @@ export type HeuristicSnapshot = {
   offscreenElements: { selector: string; rightEdgePx: number }[]
   smallTapTargets: { selector: string; widthPx: number; heightPx: number }[]
   brokenImages: { src: string }[]
-  contentDensity: { mainChildren: number }
+  contentDensity: {
+    mainChildren: number
+    bodyElements: number
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -109,10 +112,23 @@ export const collectHeuristicsScript = `(vw) => {
   }
 
   // --- 5. Content density ---
+  // mainChildren stays for information, but it is NOT a reliable "did real
+  // content render" signal: this app's page content is inconsistently wrapped
+  // in <main> (the (main) route-group layout has no <main> landmark, and some
+  // consumer detail pages render content as a bare fragment). A venue page can
+  // render a full event list with zero <main> descendants. So the sweep's
+  // insufficientData gate keys off bodyElements instead, which is markup-
+  // agnostic: every rendered element in the document. A 404/blank/bounced
+  // render has very few; any genuine route render — even an empty-state — has
+  // many. (Body TEXT length is deliberately NOT used: Next.js embeds its RSC
+  // hydration payload as inline <script> text, which dwarfs and masks the
+  // visible copy, so text length does not measure real content here.)
   var mainEl = document.querySelector('main')
   var mainChildren = mainEl ? mainEl.children.length : 0
+  var bodyEl = document.body
+  var bodyElements = bodyEl ? bodyEl.querySelectorAll('*').length : 0
 
-  return { hasHorizontalScroll: hasHorizontalScroll, offscreenElements: offscreenElements, smallTapTargets: smallTapTargets, brokenImages: brokenImages, contentDensity: { mainChildren: mainChildren } }
+  return { hasHorizontalScroll: hasHorizontalScroll, offscreenElements: offscreenElements, smallTapTargets: smallTapTargets, brokenImages: brokenImages, contentDensity: { mainChildren: mainChildren, bodyElements: bodyElements } }
 }`
 
 // ---------------------------------------------------------------------------

@@ -66,15 +66,21 @@ const VIEWPORTS = [
   { label: '1440x900', width: 1440, height: 900 },
 ] as const
 
-// A page whose <main> element has fewer than this many direct children is
-// treated as "thin render" — usually an unseeded staging DB or a not-yet-
-// loaded route. PR 4's vision triage keys off the resulting
-// `insufficientData: true` flag in the capture JSON to skip visual
-// judgment and log "run the seeder" instead. Threshold picked deliberately
-// narrow: content density is the reliable signal, and 5 avoids
-// false-positives on genuine sparse pages (e.g. a 404 that still renders
-// a header + link) while still catching truly empty renders.
-const INSUFFICIENT_DATA_MAIN_CHILDREN_THRESHOLD = 5
+// A page whose <body> has fewer than this many descendant elements is
+// treated as "thin render" — usually a 404, an auth bounce to the waitlist
+// landing page, an unseeded staging DB, or a not-yet-loaded route. PR 4's
+// vision triage keys off the resulting `insufficientData: true` flag to skip
+// visual judgment and log "run the seeder / check the route" instead.
+//
+// We count BODY elements, not <main> descendants: this app inconsistently
+// wraps page content in <main> (the (main) route-group layout renders no
+// <main> landmark, and some consumer detail pages are bare fragments), so a
+// fully-rendered venue page can report zero <main> descendants. Body-level
+// element count is markup-agnostic. Calibrated against seeded staging: a thin
+// render (e.g. a Next 404 page, which draws outside the app chrome) measured
+// well below this threshold, while every genuine app route — including the
+// sparsest real page — measured far above it.
+const INSUFFICIENT_DATA_BODY_ELEMENTS_THRESHOLD = 40
 
 // ---------------------------------------------------------------------------
 // captureState — internal helper
@@ -106,8 +112,8 @@ async function captureState(
   // The on-disk JSON is a deliberate superset: PR 4 vision-triage reads this
   // flag to skip visual judgment on thin renders ("run the seeder" log instead).
   const insufficientData =
-    snapshot.contentDensity.mainChildren <
-    INSUFFICIENT_DATA_MAIN_CHILDREN_THRESHOLD
+    snapshot.contentDensity.bodyElements <
+    INSUFFICIENT_DATA_BODY_ELEMENTS_THRESHOLD
   const jsonPayload = { ...snapshot, insufficientData }
   fs.writeFileSync(jsonPath, JSON.stringify(jsonPayload, null, 2))
 }

@@ -4,8 +4,11 @@
  * Inserts a set of price_submissions rows covering all 5 status enum values
  * and layout-hostile price amounts ($0.50, $0.00, $999+). For each
  * `corroborated` submission, 1–4 submission_confirms rows are also inserted
- * (keyed to other fixture users). A `disputed` submission references another
- * synthetic submission via disputedSubmissionId.
+ * (keyed to other fixture users). An open price contest is modeled as a
+ * `disputed` PARENT row (disputedSubmissionId = null) plus a `pending` counter
+ * row that points back at the parent via disputedSubmissionId — the admin
+ * Contests queue pivots on the counter (status='pending' AND
+ * disputedSubmissionId IS NOT NULL) and treats the parent's id as the contestId.
  *
  * Two insert calls are made:
  *   1. price_submissions rows
@@ -171,14 +174,18 @@ export const generatePriceSubmissions = async (
     disputedSubmissionId: null,
   })
 
-  // 5. disputed — must reference an existing synthetic submission.
-  // The corroborated1Id row was inserted before this one (it's row index 1),
-  // so we can safely reference it as the disputed target.
-  const disputedId = deterministicUuid(rng)
+  // 5. disputed parent — the corroborated price a fan is now challenging.
+  // This is the PARENT of the open contest formed with row 6; the pending
+  // counter below references it via disputedSubmissionId. In the admin
+  // Contests queue, this row's id IS the contestId. Both sides share one
+  // eventId so the contest reads as a genuine single-event price dispute.
+  const disputedParentId = deterministicUuid(rng)
+  const contestEventId = rng.pick(eventIds)
+  const parentUserId = rng.pick(fixtureUserIds)
   submissionRows.push({
-    id: disputedId,
-    userId: rng.pick(fixtureUserIds),
-    eventId: rng.pick(eventIds),
+    id: disputedParentId,
+    userId: parentUserId,
+    eventId: contestEventId,
     priceMin: '30.00',
     priceMax: '60.00',
     tier: rng.pick(TIERS),
@@ -186,7 +193,33 @@ export const generatePriceSubmissions = async (
     howFound: rng.pick(HOW_FOUND),
     status: 'disputed',
     note: 'This price appears higher than what was posted at the box office.',
-    disputedSubmissionId: corroborated1Id,
+    disputedSubmissionId: null,
+  })
+
+  // 6. pending counter — the challenger that forms ONE open price contest.
+  // The admin Contests queue pivots on exactly this shape:
+  //   status = 'pending' AND disputedSubmissionId IS NOT NULL
+  // (see apps/api/src/routes/admin/contests.ts). Without this row the
+  // Contests UI renders an empty queue even though a disputed parent exists.
+  const counterId = deterministicUuid(rng)
+  const otherUsers = fixtureUserIds.filter((uid) => uid !== parentUserId)
+  // Fall back to the parent's author only in the degenerate single-user
+  // fixture set (supported cleanup-API input); otherwise a fan disputes
+  // someone else's price, never their own.
+  const counterUserId =
+    otherUsers.length > 0 ? rng.pick(otherUsers) : parentUserId
+  submissionRows.push({
+    id: counterId,
+    userId: counterUserId,
+    eventId: contestEventId,
+    priceMin: '18.00',
+    priceMax: '35.00',
+    tier: rng.pick(TIERS),
+    vendor: rng.pick(VENDORS),
+    howFound: rng.pick(HOW_FOUND),
+    status: 'pending',
+    note: 'Saw a lower price at the box office — this listing looks inflated.',
+    disputedSubmissionId: disputedParentId,
   })
 
   // --- Additional corroborated rows for volume and confirms variety ---

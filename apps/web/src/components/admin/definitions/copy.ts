@@ -1942,6 +1942,11 @@ export const ADMIN_COPY = {
         archived: 'Archived',
       },
       screenshotBadge: 'screenshot',
+      // Prefixes — concatenated with the row handle so each button gets a
+      // unique accessible name. The "Expand feedback" stem stays intact for
+      // the ui-audit harness, which targets buttons by /expand feedback/i.
+      expandLabel: 'Expand feedback details from',
+      collapseLabel: 'Collapse feedback details from',
     },
     filterRail: {
       viewLabel: 'View',
