@@ -536,6 +536,47 @@ venuesAdminRouter.patch(
       }
     }
 
+    const nextApiProvider =
+      body.apiProvider !== undefined ? body.apiProvider : existing.apiProvider
+    const nextApiAccountId =
+      body.apiProvider === null
+        ? null
+        : body.apiAccountId !== undefined
+          ? body.apiAccountId
+          : existing.apiAccountId
+
+    // Same merged-state guard as platform (#506): the schema refine only sees
+    // the payload, so a partial PATCH — e.g. { apiAccountId: '1105' } against a
+    // venue with apiProvider = null, or { apiProvider: 'venuepilot' } against
+    // one with no saved account id — could orphan the invariant. Only enforced
+    // when the payload touches an API field so unrelated PATCHes never fail on
+    // pre-existing orphaned rows.
+    const touchesApiFields =
+      body.apiProvider !== undefined || body.apiAccountId !== undefined
+    if (touchesApiFields) {
+      if (nextApiProvider === null && nextApiAccountId !== null) {
+        return ctx.json(
+          {
+            success: false,
+            error: 'API account ID requires an API provider to be set',
+            field: 'apiAccountId',
+          },
+          400,
+        )
+      }
+      if (nextApiProvider !== null && nextApiAccountId === null) {
+        return ctx.json(
+          {
+            success: false,
+            error:
+              'API account ID is required when an API provider is selected',
+            field: 'apiAccountId',
+          },
+          400,
+        )
+      }
+    }
+
     const [updated] = await db
       .update(venues)
       .set({

@@ -312,6 +312,50 @@ describe('PATCH /v1/admin/venues/:id — integration', () => {
     expect(row?.apiProvider).toBeNull()
     expect(row?.apiAccountId).toBeNull()
   })
+
+  it('rejects a partial PATCH that would orphan apiAccountId (no provider)', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({
+      name: 'Orphan Account Venue',
+      slug: 'orphan-account-venue',
+    })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiAccountId: '1105' }),
+    })
+    expect(res.status).toBe(400)
+
+    const [row] = await testDb
+      .select()
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(row?.apiProvider).toBeNull()
+    expect(row?.apiAccountId).toBeNull()
+  })
+
+  it('rejects a partial PATCH that sets a provider with no saved account ID', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({
+      name: 'Orphan Provider Venue',
+      slug: 'orphan-provider-venue',
+    })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiProvider: 'venuepilot' }),
+    })
+    expect(res.status).toBe(400)
+
+    const [row] = await testDb
+      .select()
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(row?.apiProvider).toBeNull()
+    expect(row?.apiAccountId).toBeNull()
+  })
 })
 
 describe('DELETE /v1/admin/venues/:id — integration (hard delete)', () => {

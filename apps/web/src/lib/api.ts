@@ -33,19 +33,28 @@ export class ApiError extends Error {
 // Narrow the zValidator 400 body's `error` field to a Zod issue list.
 // zValidator serializes a ZodError as { issues: [{ path, message, ... }] };
 // anything else (a plain string error from an app route) yields undefined.
-function parseZodIssues(error: unknown): ZodIssue[] | undefined {
-  if (typeof error !== 'object' || error === null || !('issues' in error)) {
-    return undefined
-  }
-  const { issues } = error as { issues: unknown }
-  if (!Array.isArray(issues)) return undefined
-  const parsed = issues.filter(
-    (issue): issue is ZodIssue =>
-      typeof issue === 'object' &&
-      issue !== null &&
-      Array.isArray((issue as { path?: unknown }).path) &&
-      typeof (issue as { message?: unknown }).message === 'string',
+// Pure runtime type-guards (Record<string, unknown> index access) — no casts.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isZodIssue(value: unknown): value is ZodIssue {
+  if (!isRecord(value)) return false
+  const { path, message } = value
+  return (
+    Array.isArray(path) &&
+    path.every(
+      (segment) => typeof segment === 'string' || typeof segment === 'number',
+    ) &&
+    typeof message === 'string'
   )
+}
+
+function parseZodIssues(error: unknown): ZodIssue[] | undefined {
+  if (!isRecord(error)) return undefined
+  const { issues } = error
+  if (!Array.isArray(issues)) return undefined
+  const parsed = issues.filter(isZodIssue)
   return parsed.length > 0 ? parsed : undefined
 }
 
