@@ -1,5 +1,15 @@
 import type { VenuePlatform } from '@concert-crawl/types'
 
+// Narrow a raw string to one of a fixed set of literals without an `as` cast.
+// `find` compares by value and returns the matched literal (typed as the union
+// member) or undefined, so TypeScript infers the union without an assertion.
+function matchLiteral<T extends string>(
+  value: string,
+  allowed: readonly T[],
+): T | undefined {
+  return allowed.find((option) => option === value)
+}
+
 // Assemble the PATCH body from the edit-venue FormData. Lives outside the
 // 'use server' action module so (a) Next.js doesn't reject it for being a
 // synchronous export from a server-action file, and (b) the FormData→JSON
@@ -21,11 +31,7 @@ export function buildUpdateVenueBody(
 
   const crawlWaitUntilRaw = String(formData.get('crawlWaitUntil') ?? '')
   const VALID_WAIT_UNTIL = ['networkidle', 'load', 'domcontentloaded'] as const
-  const crawlWaitUntil = (VALID_WAIT_UNTIL as readonly string[]).includes(
-    crawlWaitUntilRaw,
-  )
-    ? (crawlWaitUntilRaw as (typeof VALID_WAIT_UNTIL)[number])
-    : undefined
+  const crawlWaitUntil = matchLiteral(crawlWaitUntilRaw, VALID_WAIT_UNTIL)
 
   const crawlWaitForSelectorRaw = formData.get('crawlWaitForSelector')
   const crawlWaitForSelector =
@@ -43,24 +49,20 @@ export function buildUpdateVenueBody(
   const crawlModeRaw = formData.get('crawlMode')
   const crawlMode =
     crawlModeRaw === 'http' || crawlModeRaw === 'browser'
-      ? (crawlModeRaw as 'http' | 'browser')
+      ? crawlModeRaw
       : crawlModeRaw === ''
         ? null
         : undefined
 
-  const extractionStrategyRaw = formData.get('extractionStrategy')
+  const extractionStrategyRaw = String(formData.get('extractionStrategy') ?? '')
   const VALID_EXTRACTION_STRATEGIES = [
     'structured_data',
     'llm',
     'manual',
   ] as const
-  const extractionStrategy = (
-    VALID_EXTRACTION_STRATEGIES as readonly string[]
-  ).includes(String(extractionStrategyRaw ?? ''))
-    ? (extractionStrategyRaw as (typeof VALID_EXTRACTION_STRATEGIES)[number])
-    : extractionStrategyRaw === '' || extractionStrategyRaw === null
-      ? null
-      : undefined
+  const extractionStrategy =
+    matchLiteral(extractionStrategyRaw, VALID_EXTRACTION_STRATEGIES) ??
+    (extractionStrategyRaw === '' ? null : undefined)
 
   const addressRaw = formData.get('address')
   const address =
