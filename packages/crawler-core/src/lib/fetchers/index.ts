@@ -13,6 +13,14 @@ import type { NormalizedEvent } from '../../types.js'
 
 export type { VenuePlatform } from '@concert-crawl/types'
 
+/**
+ * The union of platform-fetcher identifiers. Single source of truth: the
+ * `PlatformFetcher.source` field and crawl.ts's `extraction_strategy_used`
+ * strategy type both derive from this, so adding a fetcher is a compile
+ * error until every consumer is updated.
+ */
+export type PlatformSource = 'aeg' | 'venuepilot'
+
 export interface PlatformFetchResult {
   events: NormalizedEvent[]
   /**
@@ -35,7 +43,7 @@ export interface PlatformFetcher {
    * is an apiProvider, not a venues.platform value, so this is a
    * fetcher-local union rather than `VenuePlatform`.
    */
-  readonly source: 'aeg' | 'venuepilot'
+  readonly source: PlatformSource
   /** Returns false if this fetcher can't handle the venue
    * (e.g. missing platformVenueId / apiAccountId). */
   canHandle(venue: Venue): boolean

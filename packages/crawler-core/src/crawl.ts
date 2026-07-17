@@ -23,6 +23,7 @@ import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import { calculateCost } from './lib/cost.js'
 import { dispatch } from './lib/fetchers/index.js'
+import type { PlatformSource } from './lib/fetchers/index.js'
 import {
   detectCrossVenuePresale,
   type CrossVenueCandidate,
@@ -261,7 +262,7 @@ export async function crawlVenue(
     // recognize both branches as compatible.
     type ExtractionResult = {
       normalizedEvents: NormalizedEvent[]
-      strategy: 'structured_data' | 'llm' | `platform:${'aeg' | 'venuepilot'}`
+      strategy: 'structured_data' | 'llm' | `platform:${PlatformSource}`
       tokenUsage: TokenUsage | undefined
     }
     let extraction: ExtractionResult

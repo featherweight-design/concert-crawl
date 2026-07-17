@@ -379,6 +379,19 @@ describe('venuePilotFetcher.fetch', () => {
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
+  it.each(['1e2', '0x10', '11.0', '+11', '011'])(
+    'rejects a non-decimal apiAccountId (%s) without fetching',
+    async (badId) => {
+      mockFetchOk(LEVITT_FIXTURE)
+      await expect(
+        venuePilotFetcher.fetch(makeVenue({ apiAccountId: badId }), {
+          crawlDelayMs: 0,
+        }),
+      ).rejects.toBeInstanceOf(VenuePilotFetchError)
+      expect(fetchSpy).not.toHaveBeenCalled()
+    },
+  )
+
   it('throws VenuePilotFetchError and issues no GraphQL request when robots.txt disallows', async () => {
     isAllowedMock.mockResolvedValue(false)
     mockFetchOk(LEVITT_FIXTURE)

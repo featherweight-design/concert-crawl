@@ -4,12 +4,15 @@ import { venuePilotFetcher } from './venuepilot.js'
 import type { PlatformFetcher } from './index.js'
 
 // Ordered list of available adapters. Each fetcher owns its own matching
-// via canHandle(); dispatch returns the first that claims the venue.
-// AEG matches on venue.platform, VenuePilot on venue.apiProvider — a
-// venue never matches both (a VenuePilot venue has platform = null).
+// via canHandle(); dispatch returns the FIRST that claims the venue, so
+// order encodes precedence. AEG matches on venue.platform, VenuePilot on
+// venue.apiProvider. These are normally mutually exclusive, but the schema
+// permits both columns to be populated — a misconfiguration. When both are
+// set we prefer the explicit API integration (apiProvider), so VenuePilot
+// is listed first.
 const FETCHERS: readonly PlatformFetcher[] = [
-  aegFetcher,
   venuePilotFetcher,
+  aegFetcher,
 ] as const
 
 /**

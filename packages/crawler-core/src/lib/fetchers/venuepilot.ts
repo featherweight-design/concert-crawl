@@ -283,17 +283,18 @@ async function venuePilotFetch(
       `Venue ${venue.id} has apiProvider='venuepilot' but no api_account_id`,
     )
   }
-  // Number('  ') coerces to 0 and Number.isInteger(0) is true, so trim first
-  // and require a positive integer — otherwise a blank/zero id would silently
-  // fetch account 0 instead of failing loudly.
-  const accountId = Number(rawAccountId)
-  if (!Number.isInteger(accountId) || accountId <= 0) {
+  // Require a plain base-10 positive integer (no leading zeros). Number()
+  // would otherwise accept non-decimal forms — "1e2" (=> 100), "0x10" (=> 16),
+  // "  " (=> 0) — and Number.isInteger would wave them through, silently
+  // fetching the wrong account instead of failing loudly.
+  if (!/^[1-9][0-9]*$/.test(rawAccountId)) {
     throw new VenuePilotFetchError(
       0,
       ENDPOINT,
       `Venue ${venue.id} has an invalid api_account_id: ${venue.apiAccountId}`,
     )
   }
+  const accountId = Number(rawAccountId)
 
   // Honor robots.txt for the endpoint domain we actually fetch (in addition to
   // crawlVenue's check of venue.websiteUrl). isAllowed caches per domain and

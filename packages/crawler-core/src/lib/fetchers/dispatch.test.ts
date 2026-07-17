@@ -73,4 +73,16 @@ describe('dispatch', () => {
   it('returns null for a venue with neither platform nor apiProvider', () => {
     expect(dispatch(makeVenue())).toBeNull()
   })
+
+  it('prefers VenuePilot when both platform and apiProvider are set (misconfig)', () => {
+    const fetcher = dispatch(
+      makeVenue({
+        platform: 'aeg',
+        platformVenueId: '2',
+        apiProvider: 'venuepilot',
+        apiAccountId: '1105',
+      }),
+    )
+    expect(fetcher?.source).toBe('venuepilot')
+  })
 })
