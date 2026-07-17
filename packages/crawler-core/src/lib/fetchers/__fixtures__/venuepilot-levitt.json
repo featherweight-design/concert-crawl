@@ -1,0 +1,93 @@
+{
+  "data": {
+    "paginatedEvents": {
+      "collection": [
+        {
+          "id": 220145,
+          "name": "The California Honeydrops",
+          "date": "2026-07-24",
+          "doorTime": "18:00:00",
+          "startTime": "19:00:00",
+          "description": "<p style=\"text-align: center\"><strong>The California Honeydrops</strong> bring their infectious blend of blues, soul, and New Orleans R&amp;B to Levitt Pavilion.</p><iframe-embed src=\"https://embed.venuepilot.co/e/220145\">Loading&hellip;</iframe-embed>",
+          "ticketsUrl": "https://www.venuepilot.co/events/220145",
+          "status": "FREE RSVP/UPGRADE",
+          "announceArtists": [
+            {
+              "name": "The California Honeydrops"
+            }
+          ],
+          "announceImages": [
+            {
+              "highlighted": true,
+              "variants": [
+                {
+                  "variant": "thumb",
+                  "src": "https://cdn.venuepilot.co/220145/thumb.jpg"
+                },
+                {
+                  "variant": "cover_small",
+                  "src": "https://cdn.venuepilot.co/220145/cover_small.jpg"
+                },
+                {
+                  "variant": "cover",
+                  "src": "https://cdn.venuepilot.co/220145/cover.jpg"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 220146,
+          "name": "Neal Francis",
+          "date": "2026-07-31",
+          "doorTime": "18:00:00",
+          "startTime": "19:30:00",
+          "description": "<p>Chicago's <strong>Neal Francis</strong> returns with his funk-soaked piano rock.</p>",
+          "ticketsUrl": "https://www.venuepilot.co/events/220146",
+          "status": "BUY TICKETS",
+          "announceArtists": [
+            {
+              "name": "Neal Francis"
+            },
+            {
+              "name": "Say She She"
+            }
+          ],
+          "announceImages": [
+            {
+              "highlighted": false,
+              "variants": [
+                {
+                  "variant": "cover",
+                  "src": "https://cdn.venuepilot.co/220146/cover.jpg"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": 220147,
+          "name": "Sunsquabi",
+          "date": "2026-08-07",
+          "doorTime": "18:30:00",
+          "startTime": "20:00:00",
+          "description": "",
+          "ticketsUrl": "https://www.venuepilot.co/events/220147",
+          "status": "BUY TICKETS",
+          "announceArtists": [
+            {
+              "name": "Sunsquabi"
+            }
+          ],
+          "announceImages": []
+        }
+      ],
+      "metadata": {
+        "totalCount": 3,
+        "totalPages": 1,
+        "currentPage": 1,
+        "limitValue": 100
+      }
+    }
+  }
+}
