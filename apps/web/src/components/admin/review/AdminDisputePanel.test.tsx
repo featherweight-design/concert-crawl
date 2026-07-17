@@ -160,6 +160,26 @@ describe('AdminDisputePanel', () => {
     expect(screen.getByText('kel')).toBeTruthy()
   })
 
+  it('stacks the two-up grid on mobile and restores minmax columns at sm+ (issue #961)', async () => {
+    mockApiGet.mockResolvedValue(buildContest())
+    const { container } = renderWithClient(<AdminDisputePanel contestId="c1" />)
+    await waitFor(() => {
+      expect(screen.getByText('hugh')).toBeTruthy()
+    })
+    // Mobile-first single column keeps the counter side + decision buttons
+    // on-screen at 320px; the sm+ tracks use minmax(0,…) so long AdminEntry
+    // content shrinks to fit instead of overflowing the panel.
+    const grid = container.querySelector('.grid-cols-1')
+    expect(grid).not.toBeNull()
+    expect(grid?.className).toContain(
+      'sm:grid-cols-[minmax(0,1fr)_16px_minmax(0,1fr)]',
+    )
+    // Both AdminEntry column wrappers can shrink below their content width.
+    expect(
+      container.querySelectorAll('.min-w-0').length,
+    ).toBeGreaterThanOrEqual(2)
+  })
+
   it('renders the event title and venue in the header', async () => {
     mockApiGet.mockResolvedValue(buildContest())
     renderWithClient(<AdminDisputePanel contestId="c1" />)

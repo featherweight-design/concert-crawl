@@ -525,19 +525,13 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
         </p>
       )}
 
-      {/* Two-up grid — §3 lines 128–156. 1fr 16px 1fr columns; AdminEntry
-          renders inside each side with the winner flag wired off the
-          optimistic state (or the resolved status in read-only mode). */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 16px 1fr',
-          alignItems: 'start',
-          marginTop: 18,
-          marginBottom: 18,
-        }}
-      >
-        <div>
+      {/* Two-up grid — §3 lines 128–156. Stacks to a single column below the
+          sm breakpoint so the counter side + decision buttons stay on-screen
+          and actionable on mobile; at sm+ it restores the 1fr 16px 1fr layout
+          with minmax(0,…) tracks so long AdminEntry content shrinks to fit the
+          panel instead of overflowing it. */}
+      <div className="my-[18px] grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_16px_minmax(0,1fr)] sm:items-start sm:gap-0">
+        <div className="min-w-0">
           <div
             style={{
               fontFamily: MONO,
@@ -579,7 +573,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
         >
           {REVIEW_CONTEST_COPY.panel.versusDivider}
         </div>
-        <div>
+        <div className="min-w-0">
           <div
             style={{
               fontFamily: MONO,
