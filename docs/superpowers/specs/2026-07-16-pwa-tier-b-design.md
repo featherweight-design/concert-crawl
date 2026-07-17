@@ -66,7 +66,7 @@ Serwist is the **transport** cache; React Query (already integrated) remains the
 ### 4. Offline UX — functional now, polish deferred
 
 - **Offline fallback page**: a static route (e.g. `app/~offline/page.tsx`) rendered for uncached navigations while offline.
-- **Offline indicator**: a lightweight banner driven by an `useOnlineStatus` hook (`navigator.onLine` + `online`/`offline` events), copy in `definitions/copy.ts`.
+- **Offline indicator**: a lightweight banner driven by a `useOnlineStatus` hook (`navigator.onLine` + `online`/`offline` events), copy in `definitions/copy.ts`.
 - **Install affordance**: capture `beforeinstallprompt` (Android/desktop) → a simple install button; on iOS (no prompt API) show a static "Add to Home Screen" hint. Built from existing tokens/components.
 
 These three surfaces are intentionally minimal. Their designed treatment is handled by the two design tickets (see Follow-on Work) and is NOT a blocker for this effort.
