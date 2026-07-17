@@ -89,6 +89,8 @@ const mockEvent = {
   venueId: 'venue-1',
   title: 'Test Show',
   artist: 'Test Artist',
+  supportingArtists: null,
+  tourName: null,
   date: '2099-12-31',
   doorsTime: null,
   showTime: '20:00:00',

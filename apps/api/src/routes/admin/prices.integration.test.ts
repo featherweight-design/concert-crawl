@@ -576,6 +576,8 @@ describe('GET /v1/admin/prices/events', () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       artist: 'Visible Concert',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-07-01',
       status: 'upcoming',
       ticketPriceMin: null,
@@ -583,6 +585,8 @@ describe('GET /v1/admin/prices/events', () => {
     })
     await seedEvent(venue.id, {
       artist: 'Hidden Non-Concert',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-07-02',
       status: 'upcoming',
       ticketPriceMin: null,
@@ -603,6 +607,8 @@ describe('GET /v1/admin/prices/events', () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       artist: 'Visible',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-07-01',
       status: 'upcoming',
       ticketPriceMin: '25.00',
@@ -610,6 +616,8 @@ describe('GET /v1/admin/prices/events', () => {
     })
     await seedEvent(venue.id, {
       artist: 'Hidden',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-07-02',
       status: 'upcoming',
       ticketPriceMin: '30.00',
@@ -633,6 +641,8 @@ describe('GET /v1/admin/prices/events', () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       artist: 'Visible Missing 1',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-07-01',
       status: 'upcoming',
       ticketPriceMin: null,
@@ -640,6 +650,8 @@ describe('GET /v1/admin/prices/events', () => {
     })
     await seedEvent(venue.id, {
       artist: 'Visible Missing 2',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-07-02',
       status: 'upcoming',
       ticketPriceMin: null,
@@ -647,6 +659,8 @@ describe('GET /v1/admin/prices/events', () => {
     })
     await seedEvent(venue.id, {
       artist: 'Hidden Missing',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-07-03',
       status: 'upcoming',
       ticketPriceMin: null,
@@ -685,6 +699,8 @@ describe('GET /v1/admin/prices/coverage', () => {
     // 2 visible upcoming, 1 with price → coverage 1/2 = 50%
     await seedEvent(venue.id, {
       artist: 'Visible With Price',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-07-01',
       status: 'upcoming',
       ticketPriceMin: '25.00',
@@ -692,6 +708,8 @@ describe('GET /v1/admin/prices/coverage', () => {
     })
     await seedEvent(venue.id, {
       artist: 'Visible Missing Price',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-07-02',
       status: 'upcoming',
       ticketPriceMin: null,
@@ -700,6 +718,8 @@ describe('GET /v1/admin/prices/coverage', () => {
     // 1 hidden non-concert with price (should NOT count toward either)
     await seedEvent(venue.id, {
       artist: 'Hidden Non-Concert',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-07-03',
       status: 'upcoming',
       ticketPriceMin: '20.00',
@@ -709,6 +729,8 @@ describe('GET /v1/admin/prices/coverage', () => {
     // with /prices/events which enforces date >= today)
     await seedEvent(venue.id, {
       artist: 'Past Stale',
+      supportingArtists: null,
+      tourName: null,
       date: '2020-01-01',
       status: 'upcoming',
       ticketPriceMin: '15.00',
@@ -737,6 +759,8 @@ describe('GET /v1/admin/prices/events?count=true', () => {
     for (let idx = 0; idx < 4; idx++) {
       await seedEvent(venue.id, {
         artist: `Artist ${idx}`,
+        supportingArtists: null,
+        tourName: null,
         date: `2099-08-0${idx + 1}`,
         status: 'upcoming',
         ticketPriceMin: null,
@@ -760,6 +784,8 @@ describe('GET /v1/admin/prices/events?count=true', () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       artist: 'Solo',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-08-15',
       status: 'upcoming',
       ticketPriceMin: null,
@@ -777,18 +803,24 @@ describe('GET /v1/admin/prices/events?count=true', () => {
     // 2 with price, 1 without — missingOnly=true should count only 1.
     await seedEvent(venue.id, {
       artist: 'Priced 1',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-01',
       status: 'upcoming',
       ticketPriceMin: '30',
     })
     await seedEvent(venue.id, {
       artist: 'Priced 2',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-02',
       status: 'upcoming',
       ticketPriceMin: '40',
     })
     await seedEvent(venue.id, {
       artist: 'Missing',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-03',
       status: 'upcoming',
       ticketPriceMin: null,

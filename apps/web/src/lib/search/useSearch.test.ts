@@ -27,6 +27,8 @@ const POPULAR_RESPONSE = {
       id: 'ev-1',
       title: 'Show A',
       artist: 'Artist A',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-01',
       ticketPriceMin: '25',
       watcherCount: 3,
@@ -42,6 +44,8 @@ const EVENTS_RESPONSE = {
       {
         id: 'ev-1',
         artist: 'Radiohead',
+        supportingArtists: null,
+        tourName: null,
         date: '2027-06-01',
         title: 'Radiohead Live',
         venue: { id: 'venue-rr', name: 'Red Rocks', slug: 'red-rocks' },
@@ -49,6 +53,8 @@ const EVENTS_RESPONSE = {
       {
         id: 'ev-2',
         artist: 'Radiohead',
+        supportingArtists: null,
+        tourName: null,
         date: '2027-06-05',
         title: 'Radiohead Night 2',
         venue: {
@@ -60,6 +66,8 @@ const EVENTS_RESPONSE = {
       {
         id: 'ev-3',
         artist: 'Other Band',
+        supportingArtists: null,
+        tourName: null,
         date: '2027-06-02',
         title: 'Other Show',
         venue: {

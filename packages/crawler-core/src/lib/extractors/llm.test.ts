@@ -316,6 +316,50 @@ describe('extractWithLlm', () => {
     expect(result.events[0]?.reviewNeeded).toBeUndefined()
   })
 
+  it('threads supportingArtists and tourName through the return object (#643)', async () => {
+    const mockEvents = [
+      {
+        title: 'Wednesday',
+        rawTitle: 'Wednesday',
+        artist: 'Wednesday',
+        supportingArtists: ['Hotline TNT', 'MJ Lenderman'],
+        tourName: 'Rat Saw God Tour',
+        date: '2026-08-01',
+        confidence: 0.9,
+        isConcert: true,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]?.supportingArtists).toEqual([
+      'Hotline TNT',
+      'MJ Lenderman',
+    ])
+    expect(result.events[0]?.tourName).toBe('Rat Saw God Tour')
+  })
+
+  it('trims and drops blank supportingArtists / whitespace tourName (#643)', async () => {
+    const mockEvents = [
+      {
+        title: 'Wednesday',
+        rawTitle: 'Wednesday',
+        artist: 'Wednesday',
+        supportingArtists: ['  Hotline TNT  ', '   ', ''],
+        tourName: '   ',
+        date: '2026-08-01',
+        confidence: 0.9,
+        isConcert: true,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events[0]?.supportingArtists).toEqual(['Hotline TNT'])
+    expect(result.events[0]?.tourName).toBeUndefined()
+  })
+
   it('SAVE_EVENTS_TOOL declares reviewNeeded as a required boolean property', async () => {
     mockCreate.mockResolvedValue(makeAnthropicResponse([]))
     await extractWithLlm('<html>test</html>', SOURCE_URL)
@@ -562,5 +606,37 @@ describe('extractWithLlm', () => {
     } finally {
       consoleSpy.mockRestore()
     }
+  })
+})
+
+// appended to llm.test.ts — the vi.mock('@anthropic-ai/sdk', …) at the top of
+// the file is hoisted, so this dynamic import is safe here too.
+const { NormalizedEventSchema } = await import('./llm.js')
+
+describe('NormalizedEventSchema', () => {
+  it('parses supportingArtists and tourName when present', () => {
+    const parsed = NormalizedEventSchema.parse({
+      title: 'Wednesday',
+      rawTitle: 'Wednesday',
+      artist: 'Wednesday',
+      supportingArtists: ['Hotline TNT', 'MJ Lenderman'],
+      tourName: 'Rat Saw God Tour',
+      date: '2026-08-01',
+      confidence: 0.9,
+    })
+    expect(parsed.supportingArtists).toEqual(['Hotline TNT', 'MJ Lenderman'])
+    expect(parsed.tourName).toBe('Rat Saw God Tour')
+  })
+
+  it('defaults missing supportingArtists/tourName to undefined', () => {
+    const parsed = NormalizedEventSchema.parse({
+      title: 'Solo Act',
+      rawTitle: 'Solo Act',
+      artist: 'Solo Act',
+      date: '2026-08-01',
+      confidence: 0.9,
+    })
+    expect(parsed.supportingArtists).toBeUndefined()
+    expect(parsed.tourName).toBeUndefined()
   })
 })

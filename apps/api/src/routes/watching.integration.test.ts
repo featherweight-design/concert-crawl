@@ -65,6 +65,8 @@ describe('GET /v1/watching', () => {
     // Use a future date so the event shows up in GET /v1/watching
     const event = await seedEvent(venue.id, {
       artist: 'Radiohead',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-07-15',
       status: 'upcoming',
     })
@@ -94,6 +96,8 @@ describe('GET /v1/watching', () => {
     const venue = await seedVenue({ name: 'Bluebird', slug: 'bluebird' })
     const event = await seedEvent(venue.id, {
       artist: 'Wilco',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-08-01',
       status: 'upcoming',
       ticketPriceMin: null,
@@ -117,16 +121,22 @@ describe('GET /v1/watching', () => {
     const venue = await seedVenue({ name: 'Gothic', slug: 'gothic' })
     const eventLate = await seedEvent(venue.id, {
       artist: 'Late Show',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-01',
       showTime: '21:00:00',
     })
     const eventEarly = await seedEvent(venue.id, {
       artist: 'Early Show',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-01',
       showTime: '18:00:00',
     })
     const eventNextDay = await seedEvent(venue.id, {
       artist: 'Next Day',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-02',
       showTime: '20:00:00',
     })
@@ -152,10 +162,14 @@ describe('GET /v1/watching', () => {
     const venue = await seedVenue()
     const visibleEvent = await seedEvent(venue.id, {
       artist: 'Visible Show',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-01',
     })
     const hiddenEvent = await seedEvent(venue.id, {
       artist: 'Hidden Show',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-02',
       hiddenFromConsumer: true,
     })
@@ -189,6 +203,8 @@ describe('PUT /v1/watching/:eventId', () => {
     const venue = await seedVenue({ name: 'Fillmore', slug: 'fillmore' })
     const event = await seedEvent(venue.id, {
       artist: 'Pearl Jam',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-08-01',
       ticketPriceMin: '75.00',
     })
@@ -211,6 +227,8 @@ describe('PUT /v1/watching/:eventId', () => {
     const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' })
     const event = await seedEvent(venue.id, {
       artist: 'The Strokes',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-01',
     })
     await seedUserEvent('user_toggle2', event.id, { status: 'watching' })

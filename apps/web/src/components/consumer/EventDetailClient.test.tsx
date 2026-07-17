@@ -89,6 +89,8 @@ function buildBaseEvent(
     venueId: 'venue-1',
     title: 'Test Show',
     artist: 'Test Artist',
+    supportingArtists: null,
+    tourName: null,
     date: '2099-07-15',
     doorsTime: null,
     showTime: null,

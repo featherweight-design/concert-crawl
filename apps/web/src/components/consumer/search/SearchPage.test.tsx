@@ -91,6 +91,8 @@ describe('SearchDefaultState', () => {
         id: 'ev-1',
         title: 'Show A',
         artist: 'Artist A',
+        supportingArtists: null,
+        tourName: null,
         date: '2027-06-01',
         ticketPriceMin: '25',
         watcherCount: 3,

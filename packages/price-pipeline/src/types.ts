@@ -12,6 +12,8 @@ export interface PipelineContext {
   eventId: string
   venueId: string
   artist: string
+  supportingArtists?: string[] | null
+  tourName?: string | null
   date: string // YYYY-MM-DD
   priceUrl?: string | null
   ticketUrl?: string | null

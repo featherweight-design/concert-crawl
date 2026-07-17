@@ -12,6 +12,8 @@ export interface NormalizedEvent {
    */
   rawTitle: string
   artist: string
+  supportingArtists?: string[]
+  tourName?: string | null
   date: string
   doorsTime?: string
   showTime?: string

@@ -64,6 +64,8 @@ describe('GET /v1/venues — integration', () => {
     await seedEvent(venue.id, {
       title: 'Active',
       artist: 'A',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-05',
       status: 'upcoming',
       firstMissingAt: null,
@@ -71,6 +73,8 @@ describe('GET /v1/venues — integration', () => {
     await seedEvent(venue.id, {
       title: 'Stale',
       artist: 'B',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-06',
       status: 'upcoming',
       firstMissingAt: new Date('2026-06-17T09:00:00Z'),
@@ -117,6 +121,8 @@ describe('GET /v1/venues/:slug — integration', () => {
     await seedEvent(venue.id, {
       title: 'Active',
       artist: 'A',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-05',
       status: 'upcoming',
       firstMissingAt: null,
@@ -124,6 +130,8 @@ describe('GET /v1/venues/:slug — integration', () => {
     await seedEvent(venue.id, {
       title: 'Stale',
       artist: 'B',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-06',
       status: 'upcoming',
       firstMissingAt: new Date('2026-06-17T09:00:00Z'),
@@ -150,6 +158,31 @@ describe('GET /v1/venues/:slug — integration', () => {
     const body = (await res.json()) as { success: boolean; error: string }
     expect(body.success).toBe(false)
     expect(body.error).toBe('Venue not found')
+  })
+
+  it('serializes supportingArtists and tourName on venue-profile events', async () => {
+    const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' })
+    await seedEvent(venue.id, {
+      artist: 'Wednesday',
+      date: '2027-06-05',
+      supportingArtists: ['Hotline TNT'],
+      tourName: 'Rat Saw God Tour',
+    })
+    const res = await app.request('/v1/venues/ogden')
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        venue: { slug: string }
+        upcomingEvents: {
+          supportingArtists: string[] | null
+          tourName: string | null
+        }[]
+      }
+    }
+    expect(body.data.upcomingEvents[0]?.supportingArtists).toEqual([
+      'Hotline TNT',
+    ])
+    expect(body.data.upcomingEvents[0]?.tourName).toBe('Rat Saw God Tour')
   })
 })
 

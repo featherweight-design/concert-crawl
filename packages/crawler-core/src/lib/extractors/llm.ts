@@ -13,13 +13,15 @@ const isoDateSchema = z
     return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v
   }, 'date must be a valid calendar date')
 
-const NormalizedEventSchema = z.object({
+export const NormalizedEventSchema = z.object({
   title: z.string(),
   // EXACT source-headline copy used by the cross-venue presale filter to
   // detect "Artist AT OTHER VENUE" markers. See issue #826 and the
   // matching property on `NormalizedEvent` in ../../types.ts.
   rawTitle: z.string(),
   artist: z.string(),
+  supportingArtists: z.array(z.string()).optional(),
+  tourName: z.string().nullable().optional(),
   date: isoDateSchema,
   doorsTime: z.string().nullable().optional(),
   showTime: z.string().nullable().optional(),
@@ -104,6 +106,8 @@ Rules:
 - Pass an empty events array if no events are found
 - When a date has no year, infer it using today's date (provided in the user message): if the month/day is today or in the future within the current year, use the current year; if the month/day has already passed this year, use next year
 - rawTitle must be the EXACT verbatim copy of the event card's headline string from the page, byte-for-byte. Do NOT combine with subheads (e.g. "AEG Presents"), do NOT strip venue suffixes (e.g. "AT MISSION BALLROOM"), do NOT normalize or clean. The "title" field may be cleaned/combined, but rawTitle must be the unmodified source string. Downstream cross-venue routing depends on this
+- supportingArtists: list the opening/supporting acts in the order printed, and do NOT include the headliner (already in artist). If the page shows no distinct openers, use an empty array.
+- tourName: only set this when the source names a tour/run distinctly (e.g. "The Eras Tour"). Do not put promoter/presenter text ("AEG Presents"), venue names, or opener names here. Use null when there is no tour name.
 
 Set isConcert on every event using these rules:
 
@@ -132,6 +136,17 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
             artist: {
               type: 'string',
               description: 'Main performing artist or band name',
+            },
+            supportingArtists: {
+              type: 'array',
+              items: { type: 'string' },
+              description:
+                'Opening / supporting acts, in billing order, EXCLUDING the headliner in the artist field. Order-preserved as printed on the source. Omit or use an empty array if there are no named openers.',
+            },
+            tourName: {
+              type: ['string', 'null'],
+              description:
+                'The tour or run name when the source clearly labels one (e.g. "Rat Saw God Tour"). This is NOT the openers and NOT "AEG Presents"-style promoter text. Use null when no distinct tour name is present.',
             },
             date: { type: 'string', description: 'ISO date YYYY-MM-DD' },
             doorsTime: {
@@ -295,6 +310,12 @@ export async function extractWithLlm(
     // repeat that also appears verbatim on the page (e.g. the band
     // "Bow Wow Wow") is real and must not be stripped.
     const title = stripDuplicatedTrailingWord(evt.title, evt.rawTitle)
+    // Normalize opener names the same way the JSON-LD extractor does: trim
+    // each and drop blank/whitespace-only entries so they never render as
+    // empty opener chips downstream.
+    const supportingArtists = (evt.supportingArtists ?? [])
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0)
     return {
       title,
       rawTitle: evt.rawTitle,
@@ -308,6 +329,9 @@ export async function extractWithLlm(
         evt.showTime !== '' && { showTime: evt.showTime }),
       ...(evt.ticketUrl != null && { ticketUrl: evt.ticketUrl }),
       ...(description != null && description !== '' && { description }),
+      ...(supportingArtists.length > 0 && { supportingArtists }),
+      ...(evt.tourName != null &&
+        evt.tourName.trim() !== '' && { tourName: evt.tourName.trim() }),
       ...(evt.isConcert != null && { isConcert: evt.isConcert }),
       ...(evt.reviewNeeded != null && { reviewNeeded: evt.reviewNeeded }),
     }

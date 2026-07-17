@@ -423,6 +423,8 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     await seedEvent(venue.id, {
       title: 'Currently Seen Show',
       artist: 'Artist Seen',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(14),
       status: 'upcoming',
       firstMissingAt: null,
@@ -430,6 +432,8 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     await seedEvent(venue.id, {
       title: 'Older Disappearance',
       artist: 'Artist Older',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(21),
       status: 'upcoming',
       firstMissingAt: earlier,
@@ -437,6 +441,8 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     await seedEvent(venue.id, {
       title: 'Newer Disappearance',
       artist: 'Artist Newer',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(28),
       status: 'upcoming',
       firstMissingAt: later,
@@ -467,6 +473,8 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     await seedEvent(venue.id, {
       title: 'Old Disappeared Show',
       artist: 'Artist Past',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(-30),
       status: 'upcoming',
       firstMissingAt: new Date(),
@@ -493,6 +501,8 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     await seedEvent(venue.id, {
       title: 'Visible Missing Show',
       artist: 'Visible Artist',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(14),
       status: 'upcoming',
       firstMissingAt: new Date(),
@@ -501,6 +511,8 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     await seedEvent(venue.id, {
       title: 'Hidden Missing Show',
       artist: 'Hidden Artist',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(21),
       status: 'upcoming',
       firstMissingAt: new Date(),
@@ -529,6 +541,8 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     await seedEvent(venue.id, {
       title: 'Verified Show',
       artist: 'Artist Verified',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(14),
       status: 'upcoming',
       verified: true,
@@ -658,12 +672,16 @@ describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', 
     await seedEvent(venue.id, {
       title: 'Verified Show',
       artist: 'Artist V',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(14),
       verified: true,
     })
     await seedEvent(venue.id, {
       title: 'Unverified Show',
       artist: 'Artist U',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(15),
       verified: false,
     })
@@ -686,12 +704,16 @@ describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', 
     await seedEvent(venue.id, {
       title: 'Verified Show',
       artist: 'Artist V',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(14),
       verified: true,
     })
     await seedEvent(venue.id, {
       title: 'Unverified Show',
       artist: 'Artist U',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(15),
       verified: false,
     })
@@ -714,12 +736,16 @@ describe('GET /v1/admin/events — verified filter optional (PR 4 all-events)', 
     await seedEvent(venue.id, {
       title: 'Verified Show',
       artist: 'Artist V',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(14),
       verified: true,
     })
     await seedEvent(venue.id, {
       title: 'Unverified Show',
       artist: 'Artist U',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(15),
       verified: false,
     })
@@ -749,11 +775,15 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Lord Huron Live',
       artist: 'Lord Huron',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(14),
     })
     await seedEvent(venue.id, {
       title: 'Other Show',
       artist: 'Some Band',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(15),
     })
 
@@ -771,11 +801,15 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Set A',
       artist: 'Bon Iver',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(14),
     })
     await seedEvent(venue.id, {
       title: 'Set B',
       artist: 'King Krule',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(15),
     })
 
@@ -799,11 +833,15 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(targetVenue.id, {
       title: 'At Mission',
       artist: 'Artist X',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(14),
     })
     await seedEvent(otherVenue.id, {
       title: 'At Bluebird',
       artist: 'Artist Y',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(15),
     })
 
@@ -820,16 +858,22 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Past Show',
       artist: 'Artist A',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(-30),
     })
     await seedEvent(venue.id, {
       title: 'Recent Show',
       artist: 'Artist B',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(-5),
     })
     await seedEvent(venue.id, {
       title: 'Upcoming Show',
       artist: 'Artist C',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
     })
 
@@ -847,11 +891,15 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Near Show',
       artist: 'Artist A',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(5),
     })
     await seedEvent(venue.id, {
       title: 'Far Show',
       artist: 'Artist B',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(30),
     })
 
@@ -869,12 +917,16 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Indie Show',
       artist: 'Artist A',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
       genre: ['indie', 'folk'],
     })
     await seedEvent(venue.id, {
       title: 'Metal Show',
       artist: 'Artist B',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(8),
       genre: ['metal'],
     })
@@ -892,18 +944,24 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Indie Show',
       artist: 'Artist A',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
       genre: ['indie'],
     })
     await seedEvent(venue.id, {
       title: 'Metal Show',
       artist: 'Artist B',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(8),
       genre: ['metal'],
     })
     await seedEvent(venue.id, {
       title: 'Jazz Show',
       artist: 'Artist C',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(9),
       genre: ['jazz'],
     })
@@ -921,12 +979,16 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Priced Show',
       artist: 'Artist A',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
       ticketPriceMin: '25',
     })
     await seedEvent(venue.id, {
       title: 'No Price Show',
       artist: 'Artist B',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(8),
       ticketPriceMin: null,
     })
@@ -944,6 +1006,8 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Full Show',
       artist: 'Artist A',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
       showTime: '20:00',
       genre: ['indie'],
@@ -951,6 +1015,8 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Missing Both',
       artist: 'Artist B',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(8),
       showTime: null,
       genre: null,
@@ -958,6 +1024,8 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Missing Genre Only',
       artist: 'Artist C',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(9),
       showTime: '21:00',
       genre: null,
@@ -977,6 +1045,8 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Lord Huron Indie',
       artist: 'Lord Huron',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
       genre: ['indie'],
       verified: true,
@@ -984,6 +1054,8 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Lord Huron Folk',
       artist: 'Lord Huron',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(8),
       genre: ['folk'],
       verified: true,
@@ -991,6 +1063,8 @@ describe('GET /v1/admin/events — PR 5 filters', () => {
     await seedEvent(venue.id, {
       title: 'Other Indie',
       artist: 'Some Band',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(9),
       genre: ['indie'],
       verified: true,
@@ -1086,12 +1160,16 @@ describe('PR 6 — DELETE loosened + PATCH hiddenFromConsumer', () => {
     await seedEvent(venue.id, {
       title: 'Hidden Show',
       artist: 'Artist Hidden',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
       hiddenFromConsumer: true,
     })
     await seedEvent(venue.id, {
       title: 'Visible Show',
       artist: 'Artist Visible',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(8),
       hiddenFromConsumer: false,
     })
@@ -1118,6 +1196,8 @@ describe('GET /v1/admin/events — view=hidden-flagged-for-review', () => {
     await seedEvent(venue.id, {
       title: 'Visible Concert',
       artist: 'Artist Visible',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
       hiddenFromConsumer: false,
       isConcertReviewNeeded: true,
@@ -1125,6 +1205,8 @@ describe('GET /v1/admin/events — view=hidden-flagged-for-review', () => {
     await seedEvent(venue.id, {
       title: 'Hidden Unflagged',
       artist: 'Artist Unflagged',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(8),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: false,
@@ -1132,6 +1214,8 @@ describe('GET /v1/admin/events — view=hidden-flagged-for-review', () => {
     await seedEvent(venue.id, {
       title: 'Hidden Flagged Borderline',
       artist: 'Artist Borderline',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(9),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: true,
@@ -1201,12 +1285,16 @@ describe('PR 10 — bulk endpoints', () => {
     const evt1 = await seedEvent(venue.id, {
       title: 'Show 1',
       artist: 'Artist 1',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
       verified: true,
     })
     const evt2 = await seedEvent(venue.id, {
       title: 'Show 2',
       artist: 'Artist 2',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(8),
       verified: true,
     })
@@ -1243,11 +1331,15 @@ describe('PR 10 — bulk endpoints', () => {
     const evt1 = await seedEvent(venue.id, {
       title: 'A',
       artist: 'A',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
     })
     const evt2 = await seedEvent(venue.id, {
       title: 'B',
       artist: 'B',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(8),
     })
 
@@ -1273,12 +1365,16 @@ describe('PR 10 — bulk endpoints', () => {
     const evt1 = await seedEvent(venue.id, {
       title: 'A',
       artist: 'A',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
       hiddenFromConsumer: true,
     })
     const evt2 = await seedEvent(venue.id, {
       title: 'B',
       artist: 'B',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(8),
       hiddenFromConsumer: true,
     })
@@ -1312,6 +1408,8 @@ describe('PR 10 — bulk endpoints', () => {
     const evt = await seedEvent(venue.id, {
       title: 'Flagged Hidden Event',
       artist: 'Test',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
       hiddenFromConsumer: true,
       isConcertReviewNeeded: true,
@@ -1374,12 +1472,16 @@ describe('PR 10 — bulk endpoints', () => {
     const hiddenEvent = await seedEvent(venue.id, {
       title: 'Hidden',
       artist: 'A',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
       hiddenFromConsumer: true,
     })
     const visibleEvent = await seedEvent(venue.id, {
       title: 'Visible',
       artist: 'B',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(8),
       hiddenFromConsumer: false,
     })
@@ -1424,6 +1526,8 @@ describe('PR 10 — bulk endpoints', () => {
     const evt = await seedEvent(venue.id, {
       title: 'D',
       artist: 'D',
+      supportingArtists: null,
+      tourName: null,
       date: futureDate(7),
     })
 
@@ -1569,11 +1673,15 @@ describe('POST /v1/admin/events/:id/merge', () => {
     const source = await seedEvent(venue.id, {
       title: 'Source Show',
       artist: 'Source Artist',
+      supportingArtists: null,
+      tourName: null,
       date: '2026-09-01',
     })
     const target = await seedEvent(venue.id, {
       title: 'Target Show',
       artist: 'Target Artist',
+      supportingArtists: null,
+      tourName: null,
       date: '2026-09-02',
     })
 
@@ -1646,6 +1754,8 @@ describe('POST /v1/admin/events/:id/merge', () => {
     const source = await seedEvent(venue.id, { artist: 'Source' })
     const target = await seedEvent(venue.id, {
       artist: 'Target',
+      supportingArtists: null,
+      tourName: null,
       date: '2026-10-01',
     })
 
@@ -1689,6 +1799,8 @@ describe('POST /v1/admin/events/:id/merge', () => {
     const source = await seedEvent(venue.id, { artist: 'Src' })
     const target = await seedEvent(venue.id, {
       artist: 'Tgt',
+      supportingArtists: null,
+      tourName: null,
       date: '2026-11-01',
     })
     await seedUserEvent('user-a', source.id)
@@ -1780,6 +1892,8 @@ describe('POST /v1/admin/events/:id/merge', () => {
     const source = await seedEvent(venue.id)
     const target = await seedEvent(venue.id, {
       artist: 'Target',
+      supportingArtists: null,
+      tourName: null,
       date: '2026-12-01',
     })
     setNonAdminAuth()
@@ -1805,6 +1919,8 @@ describe('GET /v1/admin/events?count=true', () => {
     for (let idx = 0; idx < 5; idx++) {
       await seedEvent(venue.id, {
         artist: `Artist ${idx}`,
+        supportingArtists: null,
+        tourName: null,
         date: `2026-09-0${idx + 1}`,
       })
     }
@@ -1842,11 +1958,15 @@ describe('GET /v1/admin/events?count=true', () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       artist: 'Verified Artist',
+      supportingArtists: null,
+      tourName: null,
       date: '2026-11-01',
       verified: true,
     })
     await seedEvent(venue.id, {
       artist: 'Unverified Artist',
+      supportingArtists: null,
+      tourName: null,
       date: '2026-11-02',
       verified: false,
     })

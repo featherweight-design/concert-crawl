@@ -32,16 +32,22 @@ describe('GET /v1/search/popular', () => {
     const eventA = await seedEvent(venue.id, {
       title: 'Show A',
       artist: 'Artist A',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-01',
     })
     const eventB = await seedEvent(venue.id, {
       title: 'Show B',
       artist: 'Artist B',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-02',
     })
     const eventC = await seedEvent(venue.id, {
       title: 'Show C',
       artist: 'Artist C',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-03',
     })
 
@@ -109,6 +115,8 @@ describe('GET /v1/search/popular', () => {
     await seedEvent(venue.id, {
       title: 'Active Popular',
       artist: 'Pop A',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-05',
       status: 'upcoming',
       firstMissingAt: null,
@@ -116,6 +124,8 @@ describe('GET /v1/search/popular', () => {
     await seedEvent(venue.id, {
       title: 'Stale Popular',
       artist: 'Pop B',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-06',
       status: 'upcoming',
       firstMissingAt: new Date('2026-06-17T09:00:00Z'),

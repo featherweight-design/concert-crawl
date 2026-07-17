@@ -631,6 +631,8 @@ export async function crawlVenue(
             venueId,
             title: event.title,
             artist: event.artist,
+            supportingArtists: event.supportingArtists ?? [],
+            tourName: event.tourName ?? null,
             canonicalArtist: event.canonicalArtist,
             canonicalTitle: event.canonicalTitle,
             date: event.date,
@@ -714,6 +716,8 @@ export async function crawlVenue(
               // the first crawl after this PR ships), its artist string
               // stays. Otherwise the field flips between extractions
               // ("BPM BINGO!" one day, "Dombresky" the next).
+              supportingArtists: sql`excluded.supporting_artists`,
+              tourName: sql`excluded.tour_name`,
               doorsTime: sql`excluded.doors_time`,
               showTime: sql`excluded.show_time`,
               ticketUrl: sql`excluded.ticket_url`,

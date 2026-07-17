@@ -98,6 +98,8 @@ describe('GET /v1/events — integration', () => {
     await seedEvent(venue.id, {
       title: 'Hidden Non-Concert',
       artist: 'Other Artist',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-02',
       hiddenFromConsumer: true,
     })
@@ -212,6 +214,8 @@ describe('GET /v1/events — integration', () => {
     await seedEvent(venue.id, {
       title: 'Active Show',
       artist: 'Active Artist',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-01',
       status: 'upcoming',
       firstMissingAt: null,
@@ -219,6 +223,8 @@ describe('GET /v1/events — integration', () => {
     await seedEvent(venue.id, {
       title: 'Stale Show',
       artist: 'Stale Artist',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-01',
       status: 'upcoming',
       firstMissingAt: new Date('2026-06-17T09:00:00Z'),
@@ -319,6 +325,8 @@ describe('GET /v1/events/:id — integration', () => {
     const evt = await seedEvent(venue.id, {
       title: 'Stale Detail',
       artist: 'Stale Detail Artist',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-01',
       status: 'upcoming',
       firstMissingAt: new Date('2026-06-17T09:00:00Z'),
@@ -869,6 +877,8 @@ describe('GET /v1/events — search', () => {
     await seedEvent(venue.id, {
       title: 'Rock Night',
       artist: 'Test Band',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-01',
     })
 
@@ -1128,6 +1138,8 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     const venue = await seedVenue({ name: 'Red Rocks', slug: 'red-rocks' })
     const source = await seedEvent(venue.id, {
       artist: 'Source Artist',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-15',
     })
     await seedEvent(venue.id, { artist: 'Sibling One', date: '2027-06-16' })
@@ -1152,6 +1164,8 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     const venueB = await seedVenue({ name: 'Venue B', slug: 'venue-b-rel' })
     const source = await seedEvent(venueA.id, {
       artist: 'Source Artist',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-15',
     })
     await seedEvent(venueA.id, { artist: 'Same Venue', date: '2027-06-16' })
@@ -1170,11 +1184,15 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     const venue = await seedVenue({ name: 'Slim Venue', slug: 'slim-venue' })
     const source = await seedEvent(venue.id, {
       artist: 'Source Artist',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-15',
       priceSource: 'community',
     })
     const sibling = await seedEvent(venue.id, {
       artist: 'Sibling',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-16',
       priceSource: 'community',
     })
@@ -1220,15 +1238,21 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     const venue = await seedVenue({ name: 'Hide Venue', slug: 'hide-venue' })
     const source = await seedEvent(venue.id, {
       artist: 'Source',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-15',
     })
     await seedEvent(venue.id, {
       artist: 'Hidden Sibling',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-16',
       hiddenFromConsumer: true,
     })
     await seedEvent(venue.id, {
       artist: 'Visible Sibling',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-17',
     })
 
@@ -1248,15 +1272,21 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     })
     const source = await seedEvent(venue.id, {
       artist: 'Source',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-15',
     })
     await seedEvent(venue.id, {
       artist: 'Stale Sibling',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-16',
       firstMissingAt: new Date('2026-06-17T09:00:00Z'),
     })
     await seedEvent(venue.id, {
       artist: 'Visible Sibling',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-17',
     })
 
@@ -1294,6 +1324,8 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     })
     const source = await seedEvent(venue.id, {
       artist: 'Hidden Source',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-15',
       hiddenFromConsumer: true,
     })
@@ -1313,6 +1345,8 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     })
     const source = await seedEvent(venue.id, {
       artist: 'Stale Source',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-15',
       firstMissingAt: new Date('2026-06-26T09:00:00Z'),
     })
@@ -1328,6 +1362,8 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     })
     const source = await seedEvent(venue.id, {
       artist: 'Detached Source',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-15',
     })
     // Drop the venue association directly — the route can't group related
@@ -1346,6 +1382,8 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     const venue = await seedVenue({ name: 'Solo Venue', slug: 'solo-venue' })
     const source = await seedEvent(venue.id, {
       artist: 'Only Show',
+      supportingArtists: null,
+      tourName: null,
       date: '2027-06-15',
     })
 
@@ -1357,5 +1395,81 @@ describe('GET /v1/events/:id/related — integration (#833)', () => {
     }
     expect(body.success).toBe(true)
     expect(body.data.data).toHaveLength(0)
+  })
+
+  it('serializes supportingArtists and tourName on related events', async () => {
+    const venue = await seedVenue({
+      name: 'Related Ogden',
+      slug: 'related-ogden',
+    })
+    const source = await seedEvent(venue.id, {
+      artist: 'Wednesday',
+      supportingArtists: null,
+      tourName: null,
+      date: '2027-06-01',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Opener Act',
+      supportingArtists: ['Hotline TNT'],
+      tourName: 'Rat Saw God Tour',
+      date: '2027-06-10',
+    })
+
+    const res = await app.request(`/v1/events/${source.id}/related`)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: {
+        data: Array<{
+          id: string
+          supportingArtists: string[] | null
+          tourName: string | null
+        }>
+      }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.data).toHaveLength(1)
+    expect(body.data.data[0]?.supportingArtists).toEqual(['Hotline TNT'])
+    expect(body.data.data[0]?.tourName).toBe('Rat Saw God Tour')
+  })
+})
+
+describe('GET /v1/events — supportingArtists + tourName serialization', () => {
+  beforeEach(async () => {
+    await clearTables()
+  })
+
+  it('returns supportingArtists and tourName on list + detail', async () => {
+    const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' })
+    const event = await seedEvent(venue.id, {
+      title: 'Wednesday',
+      date: '2027-06-01',
+      supportingArtists: ['Hotline TNT'],
+      tourName: 'Rat Saw God Tour',
+    })
+
+    const list = await app.request('/v1/events')
+    const listBody = (await list.json()) as {
+      success: boolean
+      data: {
+        data: Array<{
+          id: string
+          supportingArtists: string[] | null
+          tourName: string | null
+        }>
+        total: number
+      }
+    }
+    const listed = listBody.data.data.find((row) => row.id === event.id)
+    expect(listed?.supportingArtists).toEqual(['Hotline TNT'])
+    expect(listed?.tourName).toBe('Rat Saw God Tour')
+
+    const detail = await app.request(`/v1/events/${event.id}`)
+    const detailBody = (await detail.json()) as {
+      success: boolean
+      data: { supportingArtists: string[] | null; tourName: string | null }
+    }
+    expect(detailBody.data.supportingArtists).toEqual(['Hotline TNT'])
+    expect(detailBody.data.tourName).toBe('Rat Saw God Tour')
   })
 })

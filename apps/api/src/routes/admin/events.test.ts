@@ -81,6 +81,8 @@ const mockEventRow = {
   id: EVENT_ID,
   title: 'Test Show',
   artist: 'Test Artist',
+  supportingArtists: null,
+  tourName: null,
   date: '2026-06-01',
   doorsTime: null,
   showTime: null,

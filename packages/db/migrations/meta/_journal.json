@@ -351,6 +351,13 @@
       "when": 1783296000000,
       "tag": "0049_admin_venue_api_provider",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1784311501329,
+      "tag": "0050_supporting_artists_tour_name",
+      "breakpoints": true
     }
   ]
 }

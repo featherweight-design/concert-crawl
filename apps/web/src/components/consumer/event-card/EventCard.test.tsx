@@ -40,6 +40,8 @@ const baseEvent: EventWithVenue = {
   venueId: 'venue-1',
   title: 'Test Show',
   artist: 'Test Artist',
+  supportingArtists: null,
+  tourName: null,
   date: '2026-07-01',
   doorsTime: null,
   showTime: '20:00:00',

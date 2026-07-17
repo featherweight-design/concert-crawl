@@ -64,17 +64,23 @@ describe('GET /v1/admin/review/counts', () => {
     // 2 unverified events — eventFlags should be 2
     await seedEvent(venue.id, {
       artist: 'Unverified 1',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-01',
       verified: false,
     })
     await seedEvent(venue.id, {
       artist: 'Unverified 2',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-02',
       verified: false,
     })
     // 1 verified event — does not count toward eventFlags
     const verified = await seedEvent(venue.id, {
       artist: 'Verified',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-03',
       verified: true,
     })
@@ -87,6 +93,8 @@ describe('GET /v1/admin/review/counts', () => {
     // 1 missing event (firstMissingAt + upcoming + future date) — missing should be 1
     await seedEvent(venue.id, {
       artist: 'Missing',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-04',
       status: 'upcoming',
       verified: true,
@@ -118,6 +126,8 @@ describe('GET /v1/admin/review/counts', () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       artist: 'Past Missing',
+      supportingArtists: null,
+      tourName: null,
       date: '2020-01-01',
       status: 'upcoming',
       verified: true,
@@ -141,11 +151,15 @@ describe('GET /v1/admin/review/counts', () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       artist: 'Old Unverified',
+      supportingArtists: null,
+      tourName: null,
       date: '2020-01-01',
       verified: false,
     })
     await seedEvent(venue.id, {
       artist: 'Future Unverified',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-01',
       verified: false,
     })
@@ -167,6 +181,8 @@ describe('GET /v1/admin/review/counts', () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       artist: 'Hidden Missing',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-01',
       status: 'upcoming',
       verified: true,
@@ -175,6 +191,8 @@ describe('GET /v1/admin/review/counts', () => {
     })
     await seedEvent(venue.id, {
       artist: 'Visible Missing',
+      supportingArtists: null,
+      tourName: null,
       date: '2099-09-02',
       status: 'upcoming',
       verified: true,

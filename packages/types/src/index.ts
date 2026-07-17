@@ -347,6 +347,8 @@ export interface Event {
   venueId: string
   title: string
   artist: string
+  supportingArtists: string[] | null
+  tourName: string | null
   date: string
   doorsTime: string | null
   showTime: string | null

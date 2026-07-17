@@ -281,4 +281,37 @@ describe('extractJsonLd', () => {
       expect(events[0]?.showTime).toBe('04:00:00')
     })
   })
+
+  it('maps trailing JSON-LD performers to supportingArtists', () => {
+    const html = makeHtml({
+      '@context': 'https://schema.org',
+      '@type': 'MusicEvent',
+      name: 'Wednesday',
+      startDate: '2026-08-01T20:00:00-06:00',
+      performer: [
+        { '@type': 'MusicGroup', name: 'Wednesday' },
+        { '@type': 'MusicGroup', name: 'Hotline TNT' },
+      ],
+    })
+    const events = extractJsonLd(html, SOURCE_URL)
+    expect(events[0]?.artist).toBe('Wednesday')
+    expect(events[0]?.supportingArtists).toEqual(['Hotline TNT'])
+  })
+
+  it('trims and drops blank JSON-LD performer names', () => {
+    const html = makeHtml({
+      '@context': 'https://schema.org',
+      '@type': 'MusicEvent',
+      name: 'Wednesday',
+      startDate: '2026-08-01T20:00:00-06:00',
+      performer: [
+        { '@type': 'MusicGroup', name: '  Wednesday  ' },
+        { '@type': 'MusicGroup', name: '   ' },
+        { '@type': 'MusicGroup', name: 'Hotline TNT' },
+      ],
+    })
+    const events = extractJsonLd(html, SOURCE_URL)
+    expect(events[0]?.artist).toBe('Wednesday')
+    expect(events[0]?.supportingArtists).toEqual(['Hotline TNT'])
+  })
 })

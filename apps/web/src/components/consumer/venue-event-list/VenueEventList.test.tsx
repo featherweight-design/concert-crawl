@@ -27,6 +27,8 @@ function makeEvent(overrides: Partial<EventWithVenue>): EventWithVenue {
     venueId: 'v-1',
     title: 'Show',
     artist: 'Artist',
+    supportingArtists: null,
+    tourName: null,
     date: '2099-07-15',
     doorsTime: null,
     showTime: '20:00',

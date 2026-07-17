@@ -65,19 +65,32 @@ function extractTimeOnly(
   return parts[1]?.split(/[+\-Z]/)[0]
 }
 
-function getArtistName(performer: unknown): string {
-  if (typeof performer === 'string') return performer
-  if (Array.isArray(performer) && performer.length > 0) {
-    const first = performer[0]
-    if (typeof first === 'string') return first
-    if (first && typeof first === 'object' && 'name' in first) {
-      return String((first as Record<string, unknown>)['name'])
+// JSON-LD is untrusted source data, so read `name` via runtime narrowing
+// rather than casting. Blank/whitespace-only performer names are dropped so
+// they never become an empty artist or supporting-artist entry.
+function performerName(value: unknown): string | undefined {
+  if (typeof value === 'string') {
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : undefined
+  }
+  if (value && typeof value === 'object' && 'name' in value) {
+    const name = value.name
+    if (typeof name === 'string') {
+      const trimmed = name.trim()
+      return trimmed.length > 0 ? trimmed : undefined
     }
   }
-  if (performer && typeof performer === 'object' && 'name' in performer) {
-    return String((performer as Record<string, unknown>)['name'])
+  return undefined
+}
+
+function getPerformerNames(performer: unknown): string[] {
+  const items = Array.isArray(performer) ? performer : [performer]
+  const names: string[] = []
+  for (const item of items) {
+    const name = performerName(item)
+    if (name !== undefined) names.push(name)
   }
-  return ''
+  return names
 }
 
 function mapToNormalizedEvent(
@@ -90,7 +103,9 @@ function mapToNormalizedEvent(
 
   if (typeof name !== 'string' || typeof startDate !== 'string') return null
 
-  const artist = getArtistName(obj['performer'])
+  const performerNames = getPerformerNames(obj['performer'])
+  const artist = performerNames[0] ?? name
+  const supportingArtists = performerNames.slice(1)
   const date = extractDateOnly(startDate, timeZone)
   const showTime = extractTimeOnly(startDate, timeZone)
   const doorsTime =
@@ -115,11 +130,12 @@ function mapToNormalizedEvent(
     // `title` into `rawTitle` keeps the cross-venue filter's input
     // contract uniform across extractors (#826).
     rawTitle: name,
-    artist: artist || name,
+    artist,
     date,
     sourceUrl,
     confidence: 1.0,
   }
+  if (supportingArtists.length > 0) event.supportingArtists = supportingArtists
   if (doorsTime !== undefined) event.doorsTime = doorsTime
   if (showTime !== undefined) event.showTime = showTime
   if (ticketUrl !== undefined) event.ticketUrl = ticketUrl

@@ -139,6 +139,8 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
       venueId: events.venueId,
       title: events.title,
       artist: events.artist,
+      supportingArtists: events.supportingArtists,
+      tourName: events.tourName,
       date: events.date,
       doorsTime: events.doorsTime,
       showTime: events.showTime,

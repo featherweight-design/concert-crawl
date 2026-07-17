@@ -52,6 +52,8 @@ export const events = pgTable(
     }),
     title: text('title').notNull(),
     artist: text('artist').notNull(),
+    supportingArtists: text('supporting_artists').array(),
+    tourName: text('tour_name'),
     date: date('date').notNull(),
     doorsTime: time('doors_time'),
     showTime: time('show_time'),
