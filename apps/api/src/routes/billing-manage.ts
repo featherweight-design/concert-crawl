@@ -193,7 +193,7 @@ export const createBillingManageRouter = (
       const webOrigin = process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000'
       const session = await getStripe().billingPortal.sessions.create({
         customer: subscriptionRow.stripeCustomerId,
-        return_url: `${webOrigin}/settings/plan`,
+        return_url: `${webOrigin}/me?section=plan`,
       })
       return ctx.json({ success: true, data: { url: session.url } })
     } catch (err) {

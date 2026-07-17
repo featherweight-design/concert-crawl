@@ -331,7 +331,7 @@ describe('POST /v1/billing/portal-session', () => {
     expect(fake.portalSessionsCreated).toHaveLength(1)
     expect(fake.portalSessionsCreated[0]?.customer).toBe('cus_portal_1')
     expect(fake.portalSessionsCreated[0]?.return_url).toMatch(
-      /\/settings\/plan$/,
+      /\/me\?section=plan$/,
     )
   })
 })
