@@ -16,7 +16,7 @@ Three new files following Next.js App Router conventions — consistent with the
 
 ### `src/app/manifest.ts`
 
-Next.js App Router manifest file, automatically served at `/manifest.webmanifest`.
+Next.js App Router manifest file, automatically served at `/manifest.json`.
 
 ```ts
 name: 'Concert Crawl'
@@ -54,7 +54,7 @@ The existing `apple-icon.tsx` uses Next.js's special metadata image convention (
 
 ## Acceptance Criteria
 
-- `/manifest.webmanifest` returns 200 with valid JSON
+- `/manifest.json` returns 200 with valid JSON
 - Chrome DevTools → Application → Manifest shows all required fields populated
 - "Add to Home Screen" prompt appears on mobile when visiting over HTTPS (staging: `staging.concertcrawl.app`, prod: `concertcrawl.app`)
 - Installed app opens in standalone mode (no browser address bar)
