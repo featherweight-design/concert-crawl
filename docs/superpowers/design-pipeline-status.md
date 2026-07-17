@@ -55,7 +55,9 @@ Full audit findings for each handoff live in that handoff's `READINESS.md`.
 
 Design brief has merged; Claude Design needs to produce the hi-fi handoff (mocks, components, canvas). Top of the list = closest to eng handoff (smallest remaining Design + build path).
 
-_Currently empty — #783 monetization emails flipped 📐 → 🟢 on 2026-07-12; moved to 🟢 above. When a new brief locks, restore the table with columns: `Rank | Ticket | Brief PR | Path to eng handoff | Why this rank`._
+| Rank | Ticket | Brief PR | Path to eng handoff | Why this rank |
+|---|---|---|---|---|
+| 1 | **#764** Venue first-timer guide surface | PR #999 (2026-07-17) | Design → hi-fi templates for consumer surface (venue detail + event detail across first-timer / thin-guide / returner / anonymous variants) + admin authoring surface → audit → build | Fresh Track 2 brainstorm, 9 questions locked, 3 follow-up issues filed (**#981** community tips, **#996** draft-generation automation, **#997** chip pool expansion). Sequences with **#55** Concert History (Ready — supplies the first-timer detection query). |
 
 **Maintenance note:** when Design produces the handoff, move to 🎨 (audit in flight) → then 🟡 / 🟢 based on verdict.
 
@@ -82,7 +84,6 @@ Ordered by beta-phase urgency + adjacency to already-locked verticals.
 | # | Phase | Priority | Adjacency / notes |
 |---|---|---|---|
 | **#762** Who else is watching — social signal on event detail | Beta | Normal | Adjacent to concert-history + attending vocabulary |
-| **#764** Venue first-timer guide surface | Beta | Normal | Rich texture — parking, age limits, loading dock vs front door |
 | **#971** Web push notification stack (PWA Tier C) | Launch | High | PWA cluster · web push = highest-value native-feeling feature; closes consumer-notification gap in **#737**; largely eng but has design surfaces (permission prompt, notification content, in-app preferences) |
 | **#969** PWA install-prompt UI polish | Launch | Normal | PWA cluster · Tier B ships bare install affordance; this elevates it to a crafted, on-brand experience |
 | **#970** PWA offline-state UI polish | Launch | Normal | PWA cluster · Tier B ships bare online/offline banner + offline fallback page; this elevates both to deliberate, on-brand |
@@ -104,6 +105,8 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-17 | **#764** | Venue first-timer guide design brief merged (PR #999) — Track 2 brainstorm through 9 questions locked with Hugh; brief captures surface pattern (persistent section + first-timer callout), content shape (structured chips + free-form vibe line), voice authenticity + automation principles (admin-side only, display 100% voice-passed), per-venue curated chips + accessibility always-on, event-detail chip anchor to venue-page callout, honest empty-state adaptation, returner collapsed-state persistence. 3 follow-ups filed: **#981** community-submitted tips (v2), **#996** draft-generation automation (v2), **#997** chip pool expansion (v2). |
+| 2026-07-17 | — | Tracker refresh #13 — **#764** flips 🕰️ Backlog → 📐 Brief locked (PR #999); brief document lives at `docs/superpowers/specs/2026-07-17-764-venue-first-timer-guide-design-brief.md`. Backlog count 6 → 5. |
 | 2026-07-17 | — | Tracker refresh #12 — drain shipped items off 🟢 Green: **#506** Admin Venue Form API provider fields (shipped as PR #958, 2026-07-16, closed) and **#783** Monetization emails brand pass (shipped as PR #964, 2026-07-16, closed). Both had lived on Green post-verdict; eng build agent picked them up same-week. Green count 7 → 5; remaining eng-plan pickups: #642, #643, #55, #763, #72. |
 | 2026-07-17 | — | Tracker refresh #11 — 🕰️ Backlog gains three PWA-cluster tickets: **#971** Web push notification stack (PWA Tier C, Launch · High — closes consumer-notification gap in #737), **#969** PWA install-prompt UI polish (Launch · Normal), **#970** PWA offline-state UI polish (Launch · Normal). Anchor context lives in pickup memory (`project_pickup_pwa_native.md`) — PWA Tier B plan in PR #968 awaiting Hugh review + Copilot; native/Capacitor deferred. Cluster ordered ahead of #794 since #971 is High priority and the three are related. |
 | 2026-07-12 | — | Tracker refresh #10 — #783 monetization emails flipped 📐 → 🟢 (this PR) after one-pass audit; hi-fi templates cover all 10 emails with DNA inheritance from `digest-email.jsx`; 2 prototype-polish nits deferred to build (annual SKU, placeholder sample values). Dunning cadence copy, plain-text URL literal, plain-text placeholder collision, and Founder receipt subject extraction all fixed inline across R2–R4. |
@@ -151,8 +154,9 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 ## 📋 Immediate TODOs
 
-- [ ] **5 eng plans ready for eng-planning agent:** #642 · #643 · concert_history · #763 Spotify · #72 shareable_cards + Passport. #763 Spotify + #72 shareable_cards are the biggest surfaces. **#506** and **#783** shipped 2026-07-16 (PRs #958 + #964); drained off Green in refresh #12. No Yellow items remaining. No Brief-locked items remaining.
-- [ ] **Backlog priority order** (per 2026-07-17 refresh #11): #762 Who else is watching → #764 Venue first-timer → **#971** Web push (PWA Tier C, Launch · High) → #969 PWA install polish → #970 PWA offline polish → #794 Logged-out UX. #762 is still the highest-value next pull; the PWA cluster clusters together since they share the same vertical anchor.
+- [ ] **5 eng plans ready for eng-planning agent:** #642 · #643 · concert_history · #763 Spotify · #72 shareable_cards + Passport. #763 Spotify + #72 shareable_cards are the biggest surfaces. **#506** and **#783** shipped 2026-07-16 (PRs #958 + #964); drained off Green in refresh #12. No Yellow items remaining.
+- [ ] **1 Brief-locked awaiting Design handoff:** **#764** Venue first-timer guide (this PR, refresh #13). Design produces hi-fi handoff for consumer surface (venue + event detail across 4 user states) + admin authoring surface.
+- [ ] **Backlog priority order** (per 2026-07-17 refresh #13): #762 Who else is watching → **#971** Web push (PWA Tier C, Launch · High) → #969 PWA install polish → #970 PWA offline polish → #794 Logged-out UX. #762 is still the highest-value next pull once one of the current Greens breaks free.
 
 ---
 
