@@ -27,7 +27,7 @@ describe('dispatch', () => {
       makeVenue({ platform: 'aeg', platformVenueId: '2' }),
     )
     expect(fetcher).not.toBeNull()
-    expect(fetcher?.platform).toBe('aeg')
+    expect(fetcher?.source).toBe('aeg')
   })
 
   it('returns null when AEG fetcher rejects via canHandle (missing platformVenueId)', () => {

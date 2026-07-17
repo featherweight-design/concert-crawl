@@ -373,7 +373,7 @@ async function aegFetch(
 }
 
 export const aegFetcher: PlatformFetcher = {
-  platform: 'aeg',
+  source: 'aeg',
   canHandle(venue) {
     return Boolean(
       venue.platform === 'aeg' &&

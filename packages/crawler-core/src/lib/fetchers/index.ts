@@ -9,7 +9,6 @@
 // described. See aeg.ts for details.)
 
 import type { Venue } from '@concert-crawl/db'
-import type { VenuePlatform } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 
 export type { VenuePlatform } from '@concert-crawl/types'
@@ -30,9 +29,15 @@ export interface PlatformFetchResult {
 }
 
 export interface PlatformFetcher {
-  readonly platform: VenuePlatform
+  /**
+   * Identifies the fetcher for logging + the crawl_runs
+   * `extraction_strategy_used` string (`platform:${source}`). VenuePilot
+   * is an apiProvider, not a venues.platform value, so this is a
+   * fetcher-local union rather than `VenuePlatform`.
+   */
+  readonly source: 'aeg' | 'venuepilot'
   /** Returns false if this fetcher can't handle the venue
-   * (e.g. missing platformVenueId). */
+   * (e.g. missing platformVenueId / apiAccountId). */
   canHandle(venue: Venue): boolean
   fetch(
     venue: Venue,

@@ -22,7 +22,7 @@ import {
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import { calculateCost } from './lib/cost.js'
-import { dispatch, type VenuePlatform } from './lib/fetchers/index.js'
+import { dispatch } from './lib/fetchers/index.js'
 import {
   detectCrossVenuePresale,
   type CrossVenueCandidate,
@@ -261,7 +261,7 @@ export async function crawlVenue(
     // recognize both branches as compatible.
     type ExtractionResult = {
       normalizedEvents: NormalizedEvent[]
-      strategy: 'structured_data' | 'llm' | `platform:${VenuePlatform}`
+      strategy: 'structured_data' | 'llm' | `platform:${'aeg' | 'venuepilot'}`
       tokenUsage: TokenUsage | undefined
     }
     let extraction: ExtractionResult
@@ -275,7 +275,7 @@ export async function crawlVenue(
       })
       extraction = {
         normalizedEvents: platformResult.events,
-        strategy: `platform:${platformFetcher.platform}`,
+        strategy: `platform:${platformFetcher.source}`,
         tokenUsage: undefined,
       }
       // Platform path has no HTML byte stream to hash + no upstream HTTP
@@ -295,7 +295,7 @@ export async function crawlVenue(
         JSON.stringify({
           event: 'crawl.platform_fetch',
           venueId,
-          platform: platformFetcher.platform,
+          source: platformFetcher.source,
           endpoint: platformResult.sourceUrl,
           eventsFound: platformResult.events.length,
           meta: platformResult.meta,

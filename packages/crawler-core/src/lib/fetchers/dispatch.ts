@@ -21,7 +21,7 @@ const FETCHERS: readonly PlatformFetcher[] = [aegFetcher] as const
  */
 export function dispatch(venue: Venue): PlatformFetcher | null {
   if (!venue.platform) return null
-  const fetcher = FETCHERS.find((entry) => entry.platform === venue.platform)
+  const fetcher = FETCHERS.find((entry) => entry.source === venue.platform)
   if (!fetcher) return null
   if (!fetcher.canHandle(venue)) return null
   return fetcher
