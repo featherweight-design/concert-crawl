@@ -132,6 +132,19 @@ aria-disabled="true">` — not `:disabled` — so the rule re-enabled its hover 
   is the current month, otherwise the 1st. Regression test added [JumpPicker.tsx:219,
   JumpPicker.test.tsx]
 
+## GAPS (2 — found by Copilot review round 6 on PR #987, both fixed)
+
+- **§10 breakpoint overlap at exactly 640px** — the mobile/desktop switch used
+  `@media (max-width:640px)`, which collides with Tailwind's `sm` (`min-width:640px`): at exactly
+  640px the picker rendered the mobile scrim/sheet even though 640px belongs to desktop by
+  convention. Changed all three media queries to `max-width:639.98px` so the boundary matches
+  Tailwind (mobile is strictly `<640px`) [WeekStripHeader.tsx:30,35 · JumpPicker.tsx:80]
+- **§8 double onClose on Escape** — the grid's `onKeyDown` handled Escape and called `onClose()`,
+  then the event bubbled to the dialog root's `onKeyDown`, which called `onClose()` again — firing
+  close/focus-return twice. Removed the grid's redundant Escape case; the root handles it once.
+  Regression test added asserting `onClose` fires exactly once for Escape in the grid
+  [JumpPicker.tsx:320, JumpPicker.test.tsx]
+
 ## DEFERRED (0)
 
 None.

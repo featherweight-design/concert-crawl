@@ -77,7 +77,7 @@ const STYLE_CONTENT = [
   // Popover width on desktop, full-width sheet under 640px (design §2/§10). CSS
   // media query keeps this SSR-safe — no JS viewport read, no hydration skew.
   '.cjp-w{width:min(324px, calc(100vw - 24px))}',
-  '@media (max-width:640px){.cjp-w{width:100%}}',
+  '@media (max-width:639.98px){.cjp-w{width:100%}}',
   '.cjp-day{cursor:pointer;transition:background .12s,box-shadow .12s}',
   '.cjp-day.cjp-dis{cursor:default}',
   '.cjp-hit:hover:not(.cjp-dis){background:var(--overlay-hover)}',
@@ -317,10 +317,9 @@ export const JumpPicker = ({
         evt.preventDefault()
         pageMonth(evt.shiftKey ? 12 : 1, true)
         break
-      case 'Escape':
-        evt.preventDefault()
-        onClose()
-        break
+      // Escape is intentionally not handled here — it bubbles to the dialog
+      // root's onKeyDown, which closes once. Handling it in both places fired
+      // onClose() twice.
       default:
         break
     }

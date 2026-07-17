@@ -115,6 +115,14 @@ describe('JumpPicker', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('calls onClose once for Escape pressed inside the grid', () => {
+    const { onClose } = setup()
+    // Escape in the grid must bubble to the dialog root and close exactly once,
+    // not fire onClose in both the grid and root handlers.
+    fireEvent.keyDown(screen.getByRole('grid'), { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('moves focus with arrow keys and skips disabled days', () => {
     setup()
     // Selected day (Apr 28) is focused on open; ArrowRight → Apr 29.
