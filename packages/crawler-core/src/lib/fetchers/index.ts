@@ -46,4 +46,5 @@ export interface PlatformFetcher {
 }
 
 export { aegFetcher } from './aeg.js'
+export { venuePilotFetcher } from './venuepilot.js'
 export { dispatch } from './dispatch.js'

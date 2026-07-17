@@ -1,28 +1,23 @@
 import type { Venue } from '@concert-crawl/db'
 import { aegFetcher } from './aeg.js'
+import { venuePilotFetcher } from './venuepilot.js'
 import type { PlatformFetcher } from './index.js'
 
-// Ordered list of available adapters. Order doesn't matter today
-// because each fetcher's `platform` is distinct, but if we ever add
-// detect-by-URL fallbacks (no venue.platform set, infer from
-// venue.websiteUrl) the first match would win.
-const FETCHERS: readonly PlatformFetcher[] = [aegFetcher] as const
+// Ordered list of available adapters. Each fetcher owns its own matching
+// via canHandle(); dispatch returns the first that claims the venue.
+// AEG matches on venue.platform, VenuePilot on venue.apiProvider — a
+// venue never matches both (a VenuePilot venue has platform = null).
+const FETCHERS: readonly PlatformFetcher[] = [
+  aegFetcher,
+  venuePilotFetcher,
+] as const
 
 /**
  * Pick the platform fetcher for a venue, or null if the venue should
- * fall through to the HTML → JSON-LD → LLM cascade.
- *
- * Returns null when:
- *  - venue.platform is null (no platform configured)
- *  - no registered fetcher claims that platform value (defensive
- *    against a value typo'd into the column by an admin or migration)
- *  - the matching fetcher's canHandle() rejects the venue (e.g.
- *    platformVenueId is missing)
+ * fall through to the HTML → JSON-LD → LLM cascade. Each fetcher's
+ * canHandle() inspects the columns it cares about (AEG: platform +
+ * platformVenueId; VenuePilot: apiProvider + apiAccountId).
  */
 export function dispatch(venue: Venue): PlatformFetcher | null {
-  if (!venue.platform) return null
-  const fetcher = FETCHERS.find((entry) => entry.source === venue.platform)
-  if (!fetcher) return null
-  if (!fetcher.canHandle(venue)) return null
-  return fetcher
+  return FETCHERS.find((fetcher) => fetcher.canHandle(venue)) ?? null
 }
