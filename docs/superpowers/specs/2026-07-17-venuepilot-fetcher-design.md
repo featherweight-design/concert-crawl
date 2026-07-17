@@ -86,7 +86,7 @@ Mirrors `aeg.ts` structure exactly:
   - VenuePilot: `venue.apiProvider === 'venuepilot' && venue.apiAccountId` (non-empty). A VenuePilot venue has `platform = null`, so it never matches AEG.
 - `FETCHERS = [aegFetcher, venuePilotFetcher]`.
 
-The `PlatformFetcher.platform` field is used only to build the `extraction_strategy_used` string (`platform:${x}`) and the structured log. It is broadened and **renamed to `source`** (VenuePilot is an `apiProvider`, not a "platform") with type `'aeg' | 'venuepilot'`:
+In the shipped crawler the `PlatformFetcher.platform` field does double duty: `dispatch.ts` matches on it (`entry.platform === venue.platform`), and `crawl.ts` builds the `extraction_strategy_used` string (`platform:${x}`) + structured log from it. This change removes the dispatch-matching role (each fetcher now owns matching via `canHandle`, above), leaving the field responsible only for the strategy string + log. With that narrowed role it is broadened and **renamed to `source`** (VenuePilot is an `apiProvider`, not a "platform") with type `'aeg' | 'venuepilot'`:
 
 - `index.ts`: `readonly source: 'aeg' | 'venuepilot'` replaces `readonly platform: VenuePlatform`.
 - `aeg.ts`: `source: 'aeg'` replaces `platform: 'aeg'`.

@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- **No `as` casts** — use Zod `safeParse` at the API boundary, type guards for narrowing. (Test helpers may mirror the existing `as Venue` pattern in sibling test files — that is pre-existing test-harness convention, not production code.)
+- **No `as` casts in production code** — use Zod `safeParse` at the API boundary, type guards for narrowing. This ban applies to the adapter/dispatch source only; test files may mirror the existing `as Venue` fixture-builder pattern from sibling test files (`aeg.test.ts`, `dispatch.test.ts`), which is pre-existing test-harness convention.
 - **`exactOptionalPropertyTypes: true`** — never pass `field: undefined` for an optional property; conditionally spread instead (`...(x !== undefined ? { x } : {})`).
 - **No silent LLM fallback** — a VenuePilot fetch error must bubble to `crawlVenue`'s outer catch (treated as a crawl failure), never fall through to the cascade.
 - **Honest User-Agent** — `ConcertCrawl/1.0 (+https://concertcrawl.app/bot)` on every outbound request.
