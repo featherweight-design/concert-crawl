@@ -1,7 +1,6 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '@clerk/nextjs'
 import type { EventsAvailabilityResponse } from '@concert-crawl/types'
 import { STALE_30_MIN } from '@/lib/query-client'
 import { availabilityQueryKey, fetchAvailability } from './availability'
@@ -23,13 +22,10 @@ export function useAvailability({
   to,
   initialData,
 }: UseAvailabilityArgs) {
-  const { getToken } = useAuth()
-
   return useQuery({
     queryKey: availabilityQueryKey(from, to),
     queryFn: async (): Promise<Map<string, number>> => {
-      const token = await getToken()
-      const res = await fetchAvailability(from, to, token)
+      const res = await fetchAvailability(from, to)
       return toMap(res)
     },
     staleTime: STALE_30_MIN,

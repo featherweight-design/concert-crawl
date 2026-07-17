@@ -1,9 +1,8 @@
 'use client'
 
 import { useInfiniteQuery } from '@tanstack/react-query'
-import { useAuth } from '@clerk/nextjs'
 import type { EventsListResponse } from '@concert-crawl/types'
-import { apiClient, publicApiClient } from '@/lib/api'
+import { publicApiClient } from '@/lib/api'
 import { STALE_30_MIN } from '@/lib/query-client'
 
 export function eventsQueryKey(paramsString: string) {
@@ -23,19 +22,19 @@ export function useEvents({
   initialData,
   initialOffset = 0,
 }: UseEventsOptions) {
-  const { getToken } = useAuth()
-
   return useInfiniteQuery({
     queryKey: eventsQueryKey(searchParamsString),
+    // Fetch WITHOUT auth even when signed in: the /v1/events list route is
+    // fully public (no clerkMiddleware — it reads no per-user fields), so an
+    // anonymous request returns identical data. Sending Authorization would
+    // make the service worker refuse to cache it, breaking offline browsing of
+    // the events list for the (default, protected) signed-in case.
     queryFn: async ({ pageParam }) => {
-      const token = await getToken()
       const params = new URLSearchParams(searchParamsString)
       params.set('offset', String(pageParam))
       params.set('limit', String(limit))
       const path = `/v1/events?${params.toString()}`
-      return token
-        ? apiClient.get<EventsListResponse>(path, token)
-        : publicApiClient.get<EventsListResponse>(path)
+      return publicApiClient.get<EventsListResponse>(path)
     },
     initialPageParam: initialOffset,
     getNextPageParam: (lastPage: EventsListResponse) => {

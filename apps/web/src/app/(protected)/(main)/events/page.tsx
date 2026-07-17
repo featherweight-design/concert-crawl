@@ -176,7 +176,6 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       initialAvailability = await fetchAvailability(
         availabilityWindow.from,
         availabilityWindow.to,
-        token,
       )
     } catch (err) {
       console.error('availability prefetch failed', err)
