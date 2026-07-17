@@ -26,6 +26,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.8.7-beta',
+    date: 'Jul 17, 2026',
+    headline: 'Put Concert Crawl on your home screen — and take it offline.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Install Concert Crawl to your home screen — Android and desktop get a one-tap install prompt, and iPhone gets a quick “Share → Add to Home Screen” nudge so it opens like a real app.',
+      },
+      {
+        kind: 'added',
+        text: 'Lose signal at the venue? Shows and venue pages you’ve already loaded stay browsable offline, with a banner up top so you know you’re looking at the last-loaded lineup.',
+      },
+    ],
+  },
+  {
     version: 'v0.8.6-beta',
     date: 'Jul 17, 2026',
     headline: 'Openers get their own line — and tours get a proper billing.',
