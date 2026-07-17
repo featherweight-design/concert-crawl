@@ -1,3 +1,10 @@
+## [1.124.1](https://github.com/HartiganHM/concert-crawl/compare/v1.124.0...v1.124.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **billing:** repoint Stripe portal return_url to /me?section=plan ([#983](https://github.com/HartiganHM/concert-crawl/issues/983)) ([93c42b0](https://github.com/HartiganHM/concert-crawl/commit/93c42b08220ef49cf0fde5db35b1af2f3a4b4e10)), closes [#966](https://github.com/HartiganHM/concert-crawl/issues/966)
+
 # [1.124.0](https://github.com/HartiganHM/concert-crawl/compare/v1.123.0...v1.124.0) (2026-07-17)
 
 
