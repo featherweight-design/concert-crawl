@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import type { EventWithVenue } from '@concert-crawl/types'
 import { CalendarView } from './CalendarView'
 
 // Repo convention (memory:feedback_no_type_casting): no @testing-library/jest-dom
@@ -25,6 +26,45 @@ const days = [
   { date: '2026-05-02', label: 'SAT', dayOfMonth: '2', hasEvents: false },
   { date: '2026-05-03', label: 'SUN', dayOfMonth: '3', hasEvents: false },
 ]
+
+function makeEvent(overrides: Partial<EventWithVenue>): EventWithVenue {
+  return {
+    id: 'evt-1',
+    venueId: 'venue-1',
+    title: 'Test Show',
+    artist: 'Test Artist',
+    supportingArtists: null,
+    tourName: null,
+    date: '2026-05-11',
+    doorsTime: null,
+    showTime: '20:00:00',
+    ticketUrl: null,
+    ticketLinks: null,
+    ticketPriceMin: '25',
+    ticketPriceMax: '25',
+    priceSource: 'community',
+    pipelineExhaustedAt: null,
+    description: null,
+    imageUrl: null,
+    genre: ['rock'],
+    status: 'upcoming',
+    confidenceScore: null,
+    verified: false,
+    sourceUrl: null,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+    venue: {
+      id: 'venue-1',
+      name: 'Test Venue',
+      slug: 'test-venue',
+      city: 'Denver',
+      timezone: 'America/Denver',
+      websiteUrl: 'https://example.com',
+    },
+    priceVendor: null,
+    ...overrides,
+  }
+}
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({
@@ -56,6 +96,20 @@ function setup() {
 describe('CalendarView jump navigation', () => {
   beforeEach(() => {
     push.mockClear()
+    // EventCard → WatchShowButton reads window.matchMedia, absent in jsdom.
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
   })
 
   it('router.pushes with weekOffset when jumping outside the current week', () => {
@@ -69,6 +123,63 @@ describe('CalendarView jump navigation', () => {
     const url = push.mock.calls[0]?.[0]
     expect(url).toContain('weekOffset=2')
     expect(url).toContain('selectedDate=2026-05-11')
+  })
+
+  it('tracks a new initialSelectedDate after a cross-week router.push re-render', () => {
+    // A cross-week jump soft-navigates via router.push; Next.js re-renders this
+    // client component with a fresh initialSelectedDate + the new week's events,
+    // but React does NOT re-run useState's initializer. Without syncing state to
+    // the prop, filteredEvents keeps filtering the new week by the stale date and
+    // renders "Nothing on this day". This asserts the selection tracks the prop.
+    const mayWeek = [
+      { date: '2026-05-11', label: 'MON', dayOfMonth: '11', hasEvents: true },
+      { date: '2026-05-12', label: 'TUE', dayOfMonth: '12', hasEvents: false },
+      { date: '2026-05-13', label: 'WED', dayOfMonth: '13', hasEvents: false },
+      { date: '2026-05-14', label: 'THU', dayOfMonth: '14', hasEvents: false },
+      { date: '2026-05-15', label: 'FRI', dayOfMonth: '15', hasEvents: false },
+      { date: '2026-05-16', label: 'SAT', dayOfMonth: '16', hasEvents: false },
+      { date: '2026-05-17', label: 'SUN', dayOfMonth: '17', hasEvents: false },
+    ]
+    const mayEvent = makeEvent({
+      id: 'evt-may-11',
+      artist: 'Cross Week Headliner',
+      date: '2026-05-11',
+    })
+    const { rerender } = render(
+      <CalendarView
+        days={days}
+        events={[]}
+        initialSelectedDate="2026-04-28"
+        today="2026-04-28"
+        watchedIds={[]}
+        prevWeekHref={null}
+        nextWeekHref="/events?view=cal&weekOffset=1"
+        initialAvailability={{
+          data: [{ date: '2026-05-11', count: 3 }],
+          from: '2026-04-01',
+          to: '2027-04-30',
+        }}
+      />,
+      { wrapper },
+    )
+    // Simulate the post-navigation server props: new week, new selected date.
+    rerender(
+      <CalendarView
+        days={mayWeek}
+        events={[mayEvent]}
+        initialSelectedDate="2026-05-11"
+        today="2026-04-28"
+        watchedIds={[]}
+        prevWeekHref="/events?view=cal"
+        nextWeekHref="/events?view=cal&weekOffset=3"
+        initialAvailability={{
+          data: [{ date: '2026-05-11', count: 3 }],
+          from: '2026-04-01',
+          to: '2027-04-30',
+        }}
+      />,
+    )
+    expect(screen.getByText('Cross Week Headliner')).toBeTruthy()
   })
 
   it('updates the cue month label on an in-week pick that crosses months', () => {

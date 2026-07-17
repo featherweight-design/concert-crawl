@@ -48,6 +48,16 @@ export function CalendarView({
   initialAvailability,
 }: CalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate)
+  // A cross-week jump soft-navigates via router.push, so Next.js re-renders this
+  // component with a fresh initialSelectedDate but React keeps the old useState
+  // value. Adjust state during render when the prop changes so the selection
+  // follows the new week instead of filtering it against the stale date.
+  const [syncedInitialDate, setSyncedInitialDate] =
+    useState(initialSelectedDate)
+  if (initialSelectedDate !== syncedInitialDate) {
+    setSyncedInitialDate(initialSelectedDate)
+    setSelectedDate(initialSelectedDate)
+  }
   // Derived client-side so the cue label tracks in-week picks that cross a
   // month boundary (no server re-render happens for those).
   const monthLabel = useMemo(() => monthLabelFor(selectedDate), [selectedDate])
