@@ -8,7 +8,11 @@ import type {
 } from '@concert-crawl/types'
 import { EventCard } from '@/components/consumer/event-card'
 import { EmptyState } from '@/components/consumer/empty-state'
-import { WeekStrip, WeekStripHeader } from '@/components/consumer/week-strip'
+import {
+  WeekStrip,
+  WeekStripHeader,
+  type WeekStripDay,
+} from '@/components/consumer/week-strip'
 import { dateGroupLabel } from '@/components/consumer/definitions/lib'
 import {
   monthLabelFor,
@@ -19,7 +23,6 @@ import { useAvailability } from '@/lib/queries/use-availability'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY
-import type { WeekStripDay } from '@/components/consumer/week-strip'
 
 interface CalendarViewProps {
   days: WeekStripDay[]

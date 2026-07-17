@@ -41,6 +41,15 @@ describe('WeekStripHeader', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
   })
 
+  it('toggles the picker closed when the cue is clicked again', () => {
+    setup()
+    const cue = screen.getByRole('button', { name: /Jump to a date/ })
+    fireEvent.click(cue)
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    fireEvent.click(cue)
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('closes the picker when the click-catcher scrim is clicked', () => {
     setup()
     fireEvent.click(screen.getByRole('button', { name: /Jump to a date/ }))

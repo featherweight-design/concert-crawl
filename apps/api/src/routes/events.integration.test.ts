@@ -1501,11 +1501,7 @@ describe('GET /v1/events/availability', () => {
       '/v1/events/availability?from=2026-04-01&to=2026-05-31',
     )
     expect(res.status).toBe(200)
-    const body = (await res.json()) as {
-      from: string
-      to: string
-      data: { date: string; count: number }[]
-    }
+    const body = await res.json()
     expect(body.from).toBe('2026-04-01')
     expect(body.to).toBe('2026-05-31')
     const byDate = Object.fromEntries(
@@ -1538,9 +1534,7 @@ describe('GET /v1/events/availability', () => {
     const res = await app.request(
       '/v1/events/availability?from=2026-04-01&to=2026-04-30',
     )
-    const body = (await res.json()) as {
-      data: { date: string; count: number }[]
-    }
+    const body = await res.json()
     const byDate = Object.fromEntries(
       body.data.map((day) => [day.date, day.count]),
     )
@@ -1567,7 +1561,7 @@ describe('GET /v1/events/availability', () => {
   it('defaults `from` to today when omitted', async () => {
     const res = await app.request('/v1/events/availability?to=2026-12-31')
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { from: string }
+    const body = await res.json()
     expect(body.from).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 })

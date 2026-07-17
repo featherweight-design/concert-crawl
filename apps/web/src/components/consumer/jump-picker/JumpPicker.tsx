@@ -540,7 +540,7 @@ export const JumpPicker = ({
               >
                 {cell.d}
               </span>
-              {count > 0 && !disabled ? (
+              {count > 0 && !disabled && (
                 <span
                   style={{
                     width: 4,
@@ -549,8 +549,6 @@ export const JumpPicker = ({
                     background: sel ? 'var(--fg-on-accent)' : 'var(--accent)',
                   }}
                 />
-              ) : (
-                <span style={{ height: 4 }} />
               )}
             </button>
           )

@@ -86,6 +86,20 @@ at `design/design_handoff_calendar_jump_picker/` at build config `cueStyle="chip
   switch at the 640px breakpoint, matching design §2 exactly [WeekStripHeader.tsx:32-34,186 ·
   JumpPicker.tsx:76-78,331-353]
 
+## GAPS (3 — found by Copilot review round 3 on PR #987, all fixed)
+
+- **§5 dots-mode spacer** — cells with no dot rendered a `<span style={{height:4}} />` spacer, but the
+  design table §5 (L353) specifies that in dots mode a day with count 0 / disabled renders **no dot and
+  no spacer**. Removed the else-branch so the shipped grid matches the handoff's vertical rhythm
+  [JumpPicker.tsx:543]
+- **§1 cue toggle** — the month cue only ever opened the picker (`setOpen(true)`), so a keyboard user
+  pressing Enter on the focused cue while open couldn't dismiss it (mouse users hit the click-catcher).
+  Now toggles: `open ? close() : setOpen(true)`. Regression test added
+  [WeekStripHeader.tsx:121, WeekStripHeader.test.tsx]
+- **test hygiene — `as` casts** — the availability integration tests cast `await res.json()` to inline
+  shapes, violating the repo no-`as` rule; `Response.json()` is already `any` here, so the casts were
+  unnecessary. Removed all three [events.integration.test.ts]
+
 ## DEFERRED (0)
 
 None.

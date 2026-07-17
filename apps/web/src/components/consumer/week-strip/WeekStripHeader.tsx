@@ -123,7 +123,7 @@ export const WeekStripHeader = ({
             aria-haspopup="dialog"
             aria-expanded={open}
             aria-label={`${monthLabel}. ${CONSUMER_COPY.jumpPickerCueSuffix}`}
-            onClick={() => setOpen(true)}
+            onClick={() => (open ? close() : setOpen(true))}
             style={cueStyle}
           >
             <span>{monthLabel}</span>
