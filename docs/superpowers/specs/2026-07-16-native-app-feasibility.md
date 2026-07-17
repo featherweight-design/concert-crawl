@@ -20,7 +20,7 @@ apps/web is **Next.js 15.5.20, App Router**, mobile-first (Tailwind responsive, 
 
 **PWA claim is aspirational.** What actually exists vs. what a real PWA needs:
 
-- ✅ Web app manifest (`apps/web/src/app/manifest.ts`) — name, short_name, description, start_url, standalone display, theme/background color, 192 + 512 icons
+- ⚠️ Web app manifest source exists (`apps/web/src/app/manifest.ts`, served by Next at `/manifest.webmanifest`) — name, short_name, description, start_url, standalone display, theme/background color, 192 + 512 icons. **But it isn't linked:** `layout.tsx` points `metadata.manifest` at `/manifest.json` (no such route), so browsers can't discover it today.
 - ❌ **No service worker** (the thing that makes a PWA installable/offline). None exists in the repo — no `public/sw.js`, no Serwist/next-pwa.
 - ❌ No `next-pwa`/Serwist, no caching, no offline fallback, no install prompt
 - ❌ No iOS meta tags (apple-touch-icon, apple-mobile-web-app-*), no favicon set, no maskable icon
@@ -107,7 +107,7 @@ Precise gaps to close, from a full codebase pass:
 1. **Manifest** (`apps/web/src/app/manifest.ts`): has name/short_name/description/start_url/display/theme+background/192+512 icons. **Missing:** maskable icon variant, screenshots (Android install prompt), shortcuts, categories, explicit scope/orientation.
 2. **Icons/assets:** only `/api/pwa/icon-192` and `/api/pwa/icon-512` (Edge `ImageResponse`). **Missing:** apple-touch-icon (180), favicon set, maskable variant, splash screens. No `apps/web/public/` directory exists.
 3. **Service worker:** none. Next 15.5.20 App Router — Serwist adds cleanly. `next.config.ts` only wraps `withSentryConfig` (plus `reactStrictMode` + `transpilePackages`); no conflicts.
-4. **Offline surface:** React Query 5.x present (no SWR), no persistent cache. Client + server components fetch from `NEXT_PUBLIC_API_URL`. High-value offline targets: event listings, venue details, profile, notifications list.
+4. **Offline surface:** React Query 5.x present (no SWR), no persistent cache. Client + server components fetch from `NEXT_PUBLIC_API_URL`. High-value offline targets under the locked Tier B scope are **public** only: event listings, venue details. Authenticated surfaces (profile, notifications list) stay network-only in Tier B — offline caching of user-specific data is a deliberate follow-on, not part of this effort.
 5. **Install prompt / iOS meta:** zero `beforeinstallprompt` handling, zero "Add to Home Screen" UI, zero apple-mobile-web-app-* meta in `layout.tsx`. iOS gets no PWA affordance today.
 6. **Web push:** nothing toward it (no SW, no push handler, no VAPID keys, no subscription table). Would hook into existing `notifications` table + API. iOS 16.4+ web push requires installed PWA + manifest + SW push handler + VAPID.
 7. **CI/testing:** no Lighthouse/PWA check in `.github/workflows`; `apps/e2e` route-audit framework does not test install/manifest/SW.

@@ -9,11 +9,11 @@
 
 ## Problem
 
-`apps/web` (Next.js 15.5.20, App Router) ships a web app manifest but nothing else a PWA needs: no service worker, no offline support, no iOS install affordance, no complete icon set. Today it is a mobile-responsive website with a manifest file (~20% of a PWA). We want a genuinely installable, offline-capable PWA — the foundation that also de-risks a later Capacitor/native effort.
+`apps/web` (Next.js 15.5.20, App Router) has a manifest source (`manifest.ts`, served by Next at `/manifest.webmanifest`) but nothing else a PWA needs: no service worker, no offline support, no iOS install affordance, no complete icon set. The manifest isn't even correctly linked today — `layout.tsx` sets `metadata.manifest` to `/manifest.json`, a route that doesn't exist, so browsers can't discover it. Today it is a mobile-responsive website with an unwired manifest file (~20% of a PWA). We want a genuinely installable, offline-capable PWA — the foundation that also de-risks a later Capacitor/native effort.
 
 ## Goals
 
-- Installable on Android, iOS (16.4+), and desktop, with a complete icon/favicon set and correct iOS meta tags.
+- Installable on Android, iOS, and desktop, with a complete icon/favicon set and correct iOS meta tags. (Add-to-Home-Screen install works on older iOS too; the iOS 16.4+ floor only matters later for web push, which is out of scope here.)
 - Offline browsing of **public** data (events, venues) plus an app-shell + offline fallback for uncached navigations.
 - A minimal, functional install affordance and offline indicator (visual polish deferred to design tickets).
 - Automated verification that the app stays a valid, installable PWA (Lighthouse in CI + e2e).
@@ -48,6 +48,7 @@ Extend the icon pipeline (`/api/pwa/icon-*` Edge routes):
 
 Add to `apps/web/src/app/layout.tsx` (missing today — why iOS shows no affordance):
 - `apple-touch-icon` link and `apple-mobile-web-app-capable` / `apple-mobile-web-app-status-bar-style` / `apple-mobile-web-app-title` meta.
+- Fix the existing `metadata.manifest` value — it currently points at `/manifest.json` (no such route). Set it to `/manifest.webmanifest`, the path Next serves `manifest.ts` from, so the manifest is actually discoverable.
 
 ### 3. Offline caching strategy — public data only
 
