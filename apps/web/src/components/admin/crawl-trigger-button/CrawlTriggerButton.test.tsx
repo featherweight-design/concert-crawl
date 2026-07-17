@@ -133,4 +133,28 @@ describe('CrawlTriggerButton', () => {
     ).toBeTruthy()
     expect(mockFetchCrawlRun).not.toHaveBeenCalled()
   })
+
+  it('stops polling after unmount and never fetches the run', async () => {
+    mockTriggerVenueCrawl.mockResolvedValue({ triggerId: TRIGGER_ID })
+    mockFetchCrawlTrigger.mockResolvedValue(
+      makeTrigger({ status: 'processing' }),
+    )
+
+    const { unmount } = render(<CrawlTriggerButton venueId={VENUE_ID} />)
+    fireEvent.click(screen.getByText(ADMIN_COPY.crawlTriggerButton.button.idle))
+
+    // Flush the trigger POST and schedule the first poll, then unmount.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    unmount()
+
+    // Advancing past several poll intervals must not schedule further work or
+    // fetch a run — the unmount guard bails the in-flight tick.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000)
+    })
+
+    expect(mockFetchCrawlRun).not.toHaveBeenCalled()
+  })
 })

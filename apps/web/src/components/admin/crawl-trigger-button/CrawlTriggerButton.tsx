@@ -39,9 +39,11 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
   const [result, setResult] = useState<CrawlRun | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const pollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isUnmounted = useRef(false)
 
   useEffect(() => {
     return () => {
+      isUnmounted.current = true
       if (pollTimeout.current) clearTimeout(pollTimeout.current)
     }
   }, [])
@@ -77,6 +79,10 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
           // linked run for the result display.
           const trigger = await fetchCrawlTrigger(triggerId, pollToken)
 
+          // Bail if the component unmounted while this tick was in flight, so
+          // we never set state or schedule another timeout on a dead component.
+          if (isUnmounted.current) return
+
           if (trigger.status === 'done' || trigger.status === 'failed') {
             if (trigger.crawlRunId) {
               const run = await fetchCrawlRun(trigger.crawlRunId, pollToken)
@@ -92,6 +98,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
 
           pollTimeout.current = setTimeout(poll, POLL_INTERVAL_MS)
         } catch (err) {
+          if (isUnmounted.current) return
           setTriggerState('error')
           setErrorMessage(
             err instanceof ApiError || err instanceof Error
@@ -101,8 +108,10 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
         }
       }
 
+      if (isUnmounted.current) return
       pollTimeout.current = setTimeout(poll, POLL_INTERVAL_MS)
     } catch (err) {
+      if (isUnmounted.current) return
       setTriggerState('error')
       setErrorMessage(
         err instanceof ApiError || err instanceof Error
