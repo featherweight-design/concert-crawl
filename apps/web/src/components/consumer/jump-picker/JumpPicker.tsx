@@ -159,7 +159,9 @@ export const JumpPicker = ({
   const gridRef = useRef<HTMLDivElement>(null)
   const pendingFocus = useRef(false)
 
-  ensureStyles()
+  // Inject the one-off style tag after commit, not during render — a
+  // render-time DOM mutation would run on every (possibly aborted) render.
+  useEffect(ensureStyles, [])
 
   const { min, max, from: winFrom, to: winTo } = pickerWindow(today)
   const todayParts = partsOf(today)

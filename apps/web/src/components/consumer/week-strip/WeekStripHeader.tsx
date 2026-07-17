@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { JumpPicker } from '@/components/consumer/jump-picker'
 
@@ -86,7 +86,9 @@ export const WeekStripHeader = ({
   const [open, setOpen] = useState(false)
   const cueRef = useRef<HTMLButtonElement>(null)
 
-  ensureStyles()
+  // Inject the one-off style tag after commit, not during render — a
+  // render-time DOM mutation would run on every (possibly aborted) render.
+  useEffect(ensureStyles, [])
 
   const close = () => {
     setOpen(false)

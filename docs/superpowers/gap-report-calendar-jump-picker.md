@@ -168,6 +168,16 @@ aria-disabled="true">` — not `:disabled` — so the rule re-enabled its hover 
   mocks first. Moved the `useAvailability` import below the two `vi.mock` blocks
   [use-availability.test.tsx:6-22]
 
+## GAPS (2 — found by Copilot review round 9 on PR #987, both fixed)
+
+- **§7 render-time style injection** — both `WeekStripHeader` and `JumpPicker` called
+  `ensureStyles()` directly in the render body, mutating `document.head` during render. A render-time
+  DOM side effect can run on every (possibly aborted / Strict-Mode-double-invoked) render, and it
+  diverges from the repo pattern (`release-notes/heroes/showtime-base.tsx:90-101` injects its one-off
+  style tag inside `useEffect(…, [])`). Moved both to `useEffect(ensureStyles, [])` so injection
+  happens once after commit; `ensureStyles` remains idempotent via its `getElementById` guard
+  [WeekStripHeader.tsx:4,90 · JumpPicker.tsx:162]
+
 ## DEFERRED (0)
 
 None.
