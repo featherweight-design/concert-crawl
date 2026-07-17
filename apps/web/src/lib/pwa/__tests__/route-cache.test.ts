@@ -31,6 +31,14 @@ describe('isPublicCacheableApi', () => {
     )
   })
 
+  it('does not cache non-UUID single-segment event routes', () => {
+    expect(isPublicCacheableApi(url('/v1/events/search'))).toBe(false)
+    expect(isPublicCacheableApi(url('/v1/events/recommended'))).toBe(false)
+    expect(isPublicCacheableApi(url('/v1/events/not-a-uuid/related'))).toBe(
+      false,
+    )
+  })
+
   it('never caches authenticated or admin routes', () => {
     expect(isPublicCacheableApi(url('/v1/me'))).toBe(false)
     expect(isPublicCacheableApi(url('/v1/notifications'))).toBe(false)
