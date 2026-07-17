@@ -41,3 +41,29 @@ describe('manifest', () => {
     icons.forEach((icon) => expect(icon.type).toBe('image/png'))
   })
 })
+
+describe('web app manifest', () => {
+  it('declares standalone display and correct id/scope', () => {
+    const result = manifest()
+    expect(result.display).toBe('standalone')
+    expect(result.id).toBe('/')
+    expect(result.scope).toBe('/')
+    expect(result.start_url).toBe('/')
+  })
+
+  it('includes a maskable icon variant at each size', () => {
+    const result = manifest()
+    const maskable = (result.icons ?? []).filter((icon) =>
+      icon.purpose?.includes('maskable'),
+    )
+    expect(maskable.map((icon) => icon.sizes)).toEqual(
+      expect.arrayContaining(['192x192', '512x512']),
+    )
+  })
+
+  it('declares shortcuts and categories', () => {
+    const result = manifest()
+    expect(result.categories).toContain('music')
+    expect((result.shortcuts ?? []).length).toBeGreaterThanOrEqual(2)
+  })
+})
