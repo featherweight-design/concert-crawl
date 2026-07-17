@@ -1,3 +1,10 @@
+# [1.128.0](https://github.com/HartiganHM/concert-crawl/compare/v1.127.1...v1.128.0) (2026-07-17)
+
+
+### Features
+
+* **web:** supporting-artists line + tour kicker on event surfaces ([#643](https://github.com/HartiganHM/concert-crawl/issues/643)) ([#995](https://github.com/HartiganHM/concert-crawl/issues/995)) ([f1ac32e](https://github.com/HartiganHM/concert-crawl/commit/f1ac32e315a19920074ea603bbe40d37ec4d2f32))
+
 ## [1.127.1](https://github.com/HartiganHM/concert-crawl/compare/v1.127.0...v1.127.1) (2026-07-17)
 
 
