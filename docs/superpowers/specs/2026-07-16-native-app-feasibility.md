@@ -32,7 +32,7 @@ So today it is a mobile-responsive website with a manifest file — roughly 20% 
 
 **Payments:** Stripe web checkout — `@stripe/react-stripe-js`, `CheckoutPanel.tsx` → `/v1/billing/checkout-session`. `subscriptions` table mirrors Stripe tiers (free/premium/supporter/founder). **This is the crux for app stores (see gotcha below).**
 
-**Push:** None. Notifications are in-app DB rows only (`packages/db/src/schema/notifications.ts`; `apps/api/.../contest-notifications.ts`). Issue #737 tracks the open consumer in-app notification surface (bell + panel + endpoints) — related but distinct from push delivery.
+**Push:** None. Notifications are in-app DB rows only (`packages/db/src/schema/notifications.ts`; `apps/api/src/lib/contest-notifications.ts`). Issue #737 tracks the open consumer in-app notification surface (bell + panel + endpoints) — related but distinct from push delivery.
 
 **Rendering:** Heavy Server Components + server actions + middleware auth + `next/image` + ISR. A WebView wrapper pointing at the deployed site keeps all of this for free; a static export would break it.
 
