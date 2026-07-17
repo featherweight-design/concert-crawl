@@ -1,3 +1,11 @@
+## [1.130.1](https://github.com/HartiganHM/concert-crawl/compare/v1.130.0...v1.130.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **crawler:** drop LLM openers that repeat the headliner ([#1004](https://github.com/HartiganHM/concert-crawl/issues/1004)) ([b86a201](https://github.com/HartiganHM/concert-crawl/commit/b86a2012e70b6af7928ee78e7dba13b3feda63fd))
+* **web:** sync calendar selection when a cross-week jump re-renders ([b19bf9d](https://github.com/HartiganHM/concert-crawl/commit/b19bf9dfbfb82b25913e8650f154501654ab621e))
+
 # [1.130.0](https://github.com/HartiganHM/concert-crawl/compare/v1.129.0...v1.130.0) (2026-07-17)
 
 
