@@ -26,6 +26,25 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.8.6-beta',
+    date: 'Jul 17, 2026',
+    headline: 'Openers get their own line — and tours get a proper billing.',
+    items: [
+      {
+        kind: 'changed',
+        text: 'Supporting acts now read as their own line under the headliner — “with Hotline TNT · MJ Lenderman” — instead of getting mashed into one long run-on title.',
+      },
+      {
+        kind: 'added',
+        text: 'Tour names ride above the headliner as a kicker, so “Rat Saw God Tour” shows up as the tour it is, not buried in the show name.',
+      },
+      {
+        kind: 'changed',
+        text: 'Long opener lineups on a card trim to a clean “+3 more,” while the full roster still reads aloud in order for screen readers.',
+      },
+    ],
+  },
+  {
     version: 'v0.8.5-beta',
     date: 'Jul 16, 2026',
     headline:

@@ -1,0 +1,1 @@
+export { EventTitleBlock } from './EventTitleBlock'

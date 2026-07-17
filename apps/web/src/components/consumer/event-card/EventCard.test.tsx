@@ -71,6 +71,32 @@ const baseEvent: EventWithVenue = {
   priceVendor: null,
 }
 
+describe('EventCard — EventTitleBlock integration', () => {
+  it('renders supporting artists group when supportingArtists is provided', () => {
+    render(
+      <EventCard
+        event={{
+          ...baseEvent,
+          supportingArtists: ['Hotline TNT'],
+          tourName: null,
+        }}
+      />,
+    )
+    // EventTitleBlock renders a role="group" element for the openers section.
+    const openersGroup = document.querySelector('[role="group"]')
+    expect(openersGroup).not.toBeNull()
+  })
+
+  it('title link is a neutral group wrapper — no typography leaks into the block', () => {
+    render(<EventCard event={baseEvent} />)
+    const titleLink = document.querySelector('a[class*="group/eventtitle"]')
+    expect(titleLink).not.toBeNull()
+    // The wrapper establishes the hover group but must not carry font-weight
+    // (which would leak bold onto the mono lead word + tour eyebrow).
+    expect(titleLink?.className).not.toContain('font-bold')
+  })
+})
+
 describe('EventCard — browse chip parity (MTListChip)', () => {
   it("community + VenueBoxOffice vendor → MTListChip with kind='boxoffice' (star glyph)", () => {
     render(

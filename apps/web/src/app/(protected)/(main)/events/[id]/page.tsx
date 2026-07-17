@@ -27,6 +27,7 @@ import {
   formatShowTime,
 } from '@/components/consumer/definitions/lib'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { EventTitleBlock } from '@/components/consumer/event-title-block'
 
 const copy = CONSUMER_COPY.eventDetail
 
@@ -143,24 +144,15 @@ export default async function EventDetailPage({
           <GenreChips genres={event.genre} className="mb-2" />
 
           {/* Title */}
-          <h1
-            className="text-fg"
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 900,
-              fontSize: 26,
-              letterSpacing: '-0.03em',
-              lineHeight: 1.1,
-              margin: 0,
-            }}
-          >
-            {event.artist}
-          </h1>
-          {event.title !== event.artist && (
-            <p className="mt-1 text-[14px] font-medium text-fg-muted">
-              {event.title}
-            </p>
-          )}
+          <EventTitleBlock
+            headliner={event.artist}
+            supportingArtists={event.supportingArtists}
+            tourName={event.tourName}
+            fallbackTitle={event.title}
+            status={event.status}
+            surface="detail"
+            headlinerAs="h1"
+          />
 
           {/* Watch strip — directly under title */}
           <div className="mt-3">

@@ -4,9 +4,10 @@ import { EventImage } from '../event-image'
 import { WatchShowButton } from '../watch-show-button'
 import { formatShowTime, venueShort } from '../definitions/lib'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { EventTitleBlock } from '../event-title-block'
+import { GenreChips } from '../GenreChips'
 
 const copy = CONSUMER_COPY
-import { GenreChips } from '../GenreChips'
 
 interface HeroEventCardProps {
   event: EventWithVenue
@@ -67,25 +68,15 @@ export function HeroEventCard({
 
         {/* Content — overlaps image by 40px */}
         <div className="relative -mt-10 px-3.5 pb-3.5 pt-3">
-          <p
-            className="text-[20px] text-fg"
-            style={{
-              fontFamily: 'var(--font-ui)',
-              fontWeight: 800,
-              letterSpacing: '-0.02em',
-              lineHeight: 1.15,
-            }}
-          >
-            {event.artist}
-          </p>
-          {event.title !== event.artist && (
-            <p
-              className="mt-0.5 text-[12px] font-medium text-fg-muted"
-              style={{ lineHeight: 1.3 }}
-            >
-              {event.title}
-            </p>
-          )}
+          <EventTitleBlock
+            headliner={event.artist}
+            supportingArtists={event.supportingArtists}
+            tourName={event.tourName}
+            fallbackTitle={event.title}
+            status={event.status}
+            surface="hero"
+            maxInline={3}
+          />
           <div
             className="mt-2 flex items-center gap-1.5 text-fg-muted"
             style={{

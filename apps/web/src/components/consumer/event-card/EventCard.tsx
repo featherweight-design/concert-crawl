@@ -1,19 +1,16 @@
 import Link from 'next/link'
 import type { EventWithVenue } from '@concert-crawl/types'
 import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
 import { EventImage } from '../event-image'
 import { WatchShowButton } from '../watch-show-button'
 import { GenreChips } from '../GenreChips'
 import { formatShowTime, venueShort } from '../definitions/lib'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import {
   MTListChip,
   type MTListChipKind,
 } from '@/components/consumer/price-region'
 import { pickBrowseHeadline } from '@/components/consumer/price-region/lib/pick-headline'
-
-const copy = CONSUMER_COPY
+import { EventTitleBlock } from '@/components/consumer/event-title-block'
 
 interface EventCardProps {
   event: EventWithVenue
@@ -91,34 +88,20 @@ export function EventCard({
 
       {/* Info */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {isCancelled || isPostponed ? (
-          <div className="flex items-center gap-2">
-            <Link
-              href={`/events/${event.id}`}
-              className="truncate text-sm font-bold text-fg transition-colors hover:text-signal"
-            >
-              {event.artist}
-            </Link>
-            {isCancelled && (
-              <Badge variant="destructive">{copy.cancelledLabel}</Badge>
-            )}
-            {isPostponed && (
-              <Badge variant="secondary">{copy.postponedLabel}</Badge>
-            )}
-          </div>
-        ) : (
-          <Link
-            href={`/events/${event.id}`}
-            className="truncate text-sm font-bold text-fg transition-colors hover:text-signal"
-          >
-            {event.artist}
-          </Link>
-        )}
-        {event.title !== event.artist && (
-          <p className="truncate text-[12px] font-medium text-fg-muted">
-            {event.title}
-          </p>
-        )}
+        <Link
+          href={`/events/${event.id}`}
+          className="group/eventtitle block min-w-0"
+        >
+          <EventTitleBlock
+            headliner={event.artist}
+            supportingArtists={event.supportingArtists}
+            tourName={event.tourName}
+            fallbackTitle={event.title}
+            status={event.status}
+            surface="card"
+            maxInline={2}
+          />
+        </Link>
         <p
           className="mt-0.5 flex items-center gap-1.5 text-fg-muted"
           style={{

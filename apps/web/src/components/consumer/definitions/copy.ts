@@ -736,6 +736,16 @@ export const CONSUMER_COPY = {
     priceNotAnnounced: 'tba',
   },
 
+  // ── Event title ─────────────────────────────────────────────────
+  // Shown on event cards and the event detail page — event title with supporting artists
+  eventTitle: {
+    lead: 'with',
+    moreSuffix: 'more',
+    tourAriaLabel: (tourName: string) => `Tour: ${tourName}`,
+    // Screen-reader roster conjunction (e.g. "A, B, and C").
+    rosterConjunction: 'and',
+  },
+
   // ── Event detail ────────────────────────────────────────────────
   // Shown on the event detail page
   eventDetail: {
