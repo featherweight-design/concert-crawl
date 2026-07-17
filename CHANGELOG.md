@@ -1,3 +1,22 @@
+# [1.123.0](https://github.com/HartiganHM/concert-crawl/compare/v1.122.0...v1.123.0) (2026-07-17)
+
+
+### Bug Fixes
+
+* address copilot review — drop as-casts in parseZodIssues, guard merged api-field state ([8bfa1e9](https://github.com/HartiganHM/concert-crawl/commit/8bfa1e927a3c4b89af650c7c06fddd2fb868a3d9))
+* fall back to first Zod issue message for zValidator errors ([4b28384](https://github.com/HartiganHM/concert-crawl/commit/4b283846bf39ba4ee3a262ec518beb6ef4ba2a1f))
+* log handled slug/apiAccountId failures in updateVenue catch ([67566b6](https://github.com/HartiganHM/concert-crawl/commit/67566b624c2377f6e98e2207c63369157a28dcd3))
+* narrow apiProviderVal state to ApiProvider union ([4113e72](https://github.com/HartiganHM/concert-crawl/commit/4113e7291bba6f2da540d553d1751deffd95d17c))
+* unblock next build + address copilot round 2 ([7627f5b](https://github.com/HartiganHM/concert-crawl/commit/7627f5bb7daa6ebf4f4a0d125d04c2b2eab38f3b))
+
+
+### Features
+
+* **api:** apiProvider + apiAccountId on updateVenueSchema with cross-field validation ([#506](https://github.com/HartiganHM/concert-crawl/issues/506)) ([8ec9889](https://github.com/HartiganHM/concert-crawl/commit/8ec98896f30e42a436bb5c9aff5c0cae9a6f1cc2))
+* **db:** api_provider enum + api_account_id columns on venues ([#506](https://github.com/HartiganHM/concert-crawl/issues/506)) ([211e573](https://github.com/HartiganHM/concert-crawl/commit/211e5734878d05eab4cfa18ecfb5caaf3ee20040))
+* **web:** add api provider + account id fields to venue edit ([dc9b102](https://github.com/HartiganHM/concert-crawl/commit/dc9b1028835b871db391885309f3c540d54a23a6))
+* **web:** normalize apiProvider/apiAccountId in updateVenue action ([c17fb56](https://github.com/HartiganHM/concert-crawl/commit/c17fb565c9752a28e670a8dc2ef21016e4824119))
+
 # [1.122.0](https://github.com/HartiganHM/concert-crawl/compare/v1.121.0...v1.122.0) (2026-07-16)
 
 
