@@ -26,6 +26,22 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.8.5-beta',
+    date: 'Jul 16, 2026',
+    headline:
+      'Jump straight to any date on the calendar — no more clicking through weeks.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Tap the month above the day strip to pop open a mini calendar and jump to any date in one move — a weekend three months out is now one tap, not a dozen.',
+      },
+      {
+        kind: 'added',
+        text: 'Dots on the mini calendar show which days already have shows on sale, so you can spot a busy night before you even pick it.',
+      },
+    ],
+  },
+  {
     version: 'v0.8.4-beta',
     date: 'Jul 12, 2026',
     headline: 'Every price tier you submit sticks around — and stays clear.',
