@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 import type { CrawlRun, CrawlTrigger } from '@concert-crawl/types'
 
 const mockTriggerVenueCrawl = vi.fn()
@@ -84,24 +84,28 @@ describe('CrawlTriggerButton', () => {
     render(<CrawlTriggerButton venueId={VENUE_ID} />)
     fireEvent.click(screen.getByText(ADMIN_COPY.crawlTriggerButton.button.idle))
 
-    // triggerVenueCrawl resolves, poll interval starts
-    await vi.waitFor(() =>
-      expect(mockTriggerVenueCrawl).toHaveBeenCalledWith(
-        VENUE_ID,
-        'test-token',
-      ),
-    )
+    // Flush the trigger POST and schedule the first poll. Wrapping each
+    // fake-timer advance in act() flushes the React state updates the poll
+    // drives, so assertions see settled state deterministically.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(mockTriggerVenueCrawl).toHaveBeenCalledWith(VENUE_ID, 'test-token')
 
-    // First poll: still processing → no run fetch yet
-    await vi.advanceTimersByTimeAsync(2000)
-    // Second poll: done → fetch the linked run
-    await vi.advanceTimersByTimeAsync(2000)
+    // First poll: still processing → no run fetch yet.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+    expect(mockFetchCrawlRun).not.toHaveBeenCalled()
 
-    await vi.waitFor(() =>
-      expect(mockFetchCrawlRun).toHaveBeenCalledWith(RUN_ID, 'test-token'),
-    )
+    // Second poll: done → fetch the linked run.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+
     // The regression: the run must be fetched by the trigger's crawlRunId,
     // never by an undefined id.
+    expect(mockFetchCrawlRun).toHaveBeenCalledWith(RUN_ID, 'test-token')
     expect(mockFetchCrawlRun).not.toHaveBeenCalledWith(undefined, 'test-token')
   })
 
@@ -114,14 +118,19 @@ describe('CrawlTriggerButton', () => {
     render(<CrawlTriggerButton venueId={VENUE_ID} />)
     fireEvent.click(screen.getByText(ADMIN_COPY.crawlTriggerButton.button.idle))
 
-    await vi.waitFor(() => expect(mockTriggerVenueCrawl).toHaveBeenCalled())
-    await vi.advanceTimersByTimeAsync(2000)
+    // Flush the trigger POST, then advance to the first (terminal) poll.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(mockTriggerVenueCrawl).toHaveBeenCalled()
 
-    await vi.waitFor(() =>
-      expect(
-        screen.getByText(ADMIN_COPY.crawlTriggerButton.errors.crawlFailed),
-      ).toBeTruthy(),
-    )
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000)
+    })
+
+    expect(
+      screen.getByText(ADMIN_COPY.crawlTriggerButton.errors.crawlFailed),
+    ).toBeTruthy()
     expect(mockFetchCrawlRun).not.toHaveBeenCalled()
   })
 })

@@ -38,11 +38,11 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
   const [triggerState, setTriggerState] = useState<TriggerState>('idle')
   const [result, setResult] = useState<CrawlRun | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const pollInterval = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     return () => {
-      if (pollInterval.current) clearInterval(pollInterval.current)
+      if (pollTimeout.current) clearTimeout(pollTimeout.current)
     }
   }, [])
 
@@ -60,7 +60,10 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
 
       setTriggerState('polling')
 
-      pollInterval.current = setInterval(async () => {
+      // Self-scheduling poll: each tick is queued only after the previous one
+      // resolves, so a slow token fetch or request can never overlap with the
+      // next tick (which a fixed setInterval would allow).
+      const poll = async () => {
         try {
           const pollToken = await getToken()
           if (!pollToken)
@@ -75,9 +78,6 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
           const trigger = await fetchCrawlTrigger(triggerId, pollToken)
 
           if (trigger.status === 'done' || trigger.status === 'failed') {
-            clearInterval(pollInterval.current!)
-            pollInterval.current = null
-
             if (trigger.crawlRunId) {
               const run = await fetchCrawlRun(trigger.crawlRunId, pollToken)
               setResult(run)
@@ -87,10 +87,11 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
               setTriggerState('error')
               setErrorMessage(ADMIN_COPY.crawlTriggerButton.errors.crawlFailed)
             }
+            return
           }
+
+          pollTimeout.current = setTimeout(poll, POLL_INTERVAL_MS)
         } catch (err) {
-          clearInterval(pollInterval.current!)
-          pollInterval.current = null
           setTriggerState('error')
           setErrorMessage(
             err instanceof ApiError || err instanceof Error
@@ -98,7 +99,9 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
               : ADMIN_COPY.crawlTriggerButton.errors.pollFailed,
           )
         }
-      }, POLL_INTERVAL_MS)
+      }
+
+      pollTimeout.current = setTimeout(poll, POLL_INTERVAL_MS)
     } catch (err) {
       setTriggerState('error')
       setErrorMessage(
