@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-17
 **Issue:** #505 — VenuePilot API integration for API-backed venue crawling
-**Depends on:** #506 (shipped) — added `venues.api_provider` (`'venuepilot'`) + `venues.api_account_id` columns and the admin UI to set them.
+**Depends on:** the `venues.api_provider` (`'venuepilot'`) + `venues.api_account_id` columns and the admin UI to set them, which already exist. (#506 was the design/mocks ticket for those admin-form fields, not the column migration itself.)
 
 ## Problem
 
@@ -10,7 +10,7 @@ When a venue has `apiProvider = 'venuepilot'` and `apiAccountId` set, the crawle
 
 The crawler already has a vendor-API dispatch mechanism — the **PlatformFetcher registry** (#623), which routes venues to a platform-specific adapter that returns `NormalizedEvent[]` directly, bypassing the cascade. AEG is the only current adapter, keyed off `venues.platform`. VenuePilot slots into this same registry as a sibling adapter, keyed off `venues.api_provider`.
 
-We deliberately **reuse** the fetcher registry rather than building the standalone `extractors/venuepilot.ts` the original issue text suggested — that would be a third parallel mechanism doing the same job. The `api_provider`/`api_account_id` columns from #506 stay as-is; no schema change.
+We deliberately **reuse** the fetcher registry rather than building the standalone `extractors/venuepilot.ts` the original issue text suggested — that would be a third parallel mechanism doing the same job. The existing `api_provider`/`api_account_id` columns stay as-is; no schema change.
 
 ## Verified VenuePilot contract
 
@@ -76,7 +76,7 @@ Mirrors `aeg.ts` structure exactly:
   - Returns `PlatformFetchResult { events, sourceUrl: endpoint, meta: { fetchLatencyMs, totalCount, pagesFetched, eventsAfterNormalization } }`.
 - **Export** `venuePilotFetcher: PlatformFetcher`.
 
-**robots.txt stance (matches the AEG precedent):** `crawlVenue` already checks `robots.txt` for `venue.websiteUrl` *before* `dispatch()` (crawl.ts:206), so every VenuePilot venue's own calendar domain is honored exactly as today. We deliberately do **not** add a second robots.txt check for the fetcher's endpoint domain (`www.venuepilot.co`). This mirrors the shipped AEG fetcher, which hits `aegwebprod.blob.core.windows.net` without a per-endpoint robots check: a venue's official, documented public API is an *integration surface* we were pointed at by the venue's own `api_account_id`, not an HTML page we discovered by crawling. Rate-limiting (`crawlDelayMs`) and honest identification (`User-Agent`) still apply to these requests. If we ever add non-API HTML scraping on a third-party domain, that path must reinstate the endpoint-domain robots check.
+**robots.txt stance (matches the AEG precedent):** `crawlVenue` already checks `robots.txt` for `venue.websiteUrl` *before* `dispatch()` (crawl.ts:206), so every VenuePilot venue's own calendar domain is honored exactly as today. We deliberately do **not** add a second robots.txt check for the fetcher's endpoint domain (`www.venuepilot.co`). This mirrors the shipped AEG fetcher, which hits `aegwebprod.blob.core.windows.net` without a per-endpoint robots check: a venue's official, documented public API is an *integration surface* we were pointed at by the venue's own `api_account_id`, not an HTML page we discovered by crawling. Rate-limiting (`crawlDelayMs`) and honest identification (`User-Agent`) still apply to these requests. For completeness we verified the endpoint's policy anyway (2026-07-17): `https://www.venuepilot.co/robots.txt` returns `User-agent: * / Allow: /` — only `Amazonbot`, `Applebot-Extended`, and `Bytespider` are `Disallow`ed — so our `ConcertCrawl` UA (which matches `*`) is explicitly allowed and there is no `Disallow` to override. The CLAUDE.md rule ("never override a disallow") is satisfied on the facts, independent of the AEG-precedent argument above. If we ever add non-API HTML scraping on a third-party domain, that path must reinstate the endpoint-domain robots check.
 
 ## Registry reconciliation (the only change to shipped crawler code)
 

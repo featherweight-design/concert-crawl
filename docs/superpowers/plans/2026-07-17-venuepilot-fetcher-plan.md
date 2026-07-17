@@ -4,7 +4,7 @@
 
 **Goal:** When a venue has `apiProvider = 'venuepilot'` and `apiAccountId` set, pull events directly from the VenuePilot GraphQL API through the existing PlatformFetcher registry, bypassing the HTML → JSON-LD → LLM cascade.
 
-**Architecture:** VenuePilot slots into the `PlatformFetcher` registry (#623) as a sibling adapter to AEG, keyed off `venues.api_provider` instead of `venues.platform`. `dispatch()` is generalized from platform-equality matching to per-fetcher `canHandle()`. The `PlatformFetcher.platform` field (typed `VenuePlatform`) is renamed to `source` (typed `'aeg' | 'venuepilot'`) because VenuePilot is an `apiProvider`, not a "platform". No schema change — #506 already shipped the columns.
+**Architecture:** VenuePilot slots into the `PlatformFetcher` registry (#623) as a sibling adapter to AEG, keyed off `venues.api_provider` instead of `venues.platform`. `dispatch()` is generalized from platform-equality matching to per-fetcher `canHandle()`. The `PlatformFetcher.platform` field (typed `VenuePlatform`) is renamed to `source` (typed `'aeg' | 'venuepilot'`) because VenuePilot is an `apiProvider`, not a "platform". No schema change — the `venues.api_provider` / `venues.api_account_id` columns and the admin UI to set them already exist (#506 was the design/mocks ticket for the admin form fields).
 
 **Tech Stack:** TypeScript (strict, `exactOptionalPropertyTypes: true`), Zod, Vitest, pnpm + Turborepo. All work in `packages/crawler-core`.
 
@@ -17,7 +17,7 @@
 - **No silent LLM fallback** — a VenuePilot fetch error must bubble to `crawlVenue`'s outer catch (treated as a crawl failure), never fall through to the cascade.
 - **Honest User-Agent** — `ConcertCrawl/1.0 (+https://concertcrawl.app/bot)` on every outbound request.
 - **Respect `crawlDelayMs`** — wait before each request, including between pages.
-- **robots.txt** — no per-endpoint robots check for `www.venuepilot.co`, matching the AEG precedent. `crawlVenue` already checks `robots.txt` for `venue.websiteUrl` before `dispatch()` (crawl.ts:206), which is untouched. The VenuePilot GraphQL endpoint is an official public API we were pointed at by the venue's `api_account_id`, not a crawled HTML page — same treatment as AEG's blob endpoint. Do not add a robots fetch inside `venuepilot.ts`. (See the spec's "robots.txt stance" note.)
+- **robots.txt** — no per-endpoint robots check for `www.venuepilot.co`, matching the AEG precedent. `crawlVenue` already checks `robots.txt` for `venue.websiteUrl` before `dispatch()` (crawl.ts:206), which is untouched. The VenuePilot GraphQL endpoint is an official public API we were pointed at by the venue's `api_account_id`, not a crawled HTML page — same treatment as AEG's blob endpoint. Independently verified 2026-07-17: `https://www.venuepilot.co/robots.txt` returns `User-agent: * / Allow: /` (only Amazonbot / Applebot-Extended / Bytespider are `Disallow`ed), so our `ConcertCrawl` UA is explicitly allowed and no `Disallow` is being overridden — the crawl-safety concern is moot on the facts. Do not add a robots fetch inside `venuepilot.ts`. (See the spec's "robots.txt stance" note.)
 - **Conventional commits**, one commit per task. TDD: failing test first.
 - **No schema/migration, no API/UI, no AEG migration** — crawler-only.
 
@@ -931,7 +931,7 @@ Expected: PASS — all `canHandle` + `fetch` cases green.
 - [ ] **Step 6: Type-check**
 
 Run: `pnpm --filter @concert-crawl/crawler-core typecheck`
-Expected: PASS — no errors. If `Venue` lacks `apiProvider`/`apiAccountId`/`timezone` fields the type-check will flag it; those columns shipped in #506, so they should exist.
+Expected: PASS — no errors. If `Venue` lacks `apiProvider`/`apiAccountId`/`timezone` fields the type-check will flag it; those columns already exist on the `Venue` type, so they should resolve.
 
 - [ ] **Step 7: Commit**
 
