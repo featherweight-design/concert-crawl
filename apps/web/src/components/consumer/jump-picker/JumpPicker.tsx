@@ -81,9 +81,9 @@ const STYLE_CONTENT = [
   '.cjp-day{cursor:pointer;transition:background .12s,box-shadow .12s}',
   '.cjp-day.cjp-dis{cursor:default}',
   '.cjp-hit:hover:not(.cjp-dis){background:var(--overlay-hover)}',
-  '.cjp-chev{cursor:pointer;transition:background .12s,opacity .12s}',
-  '.cjp-chev:hover:not(:disabled){background:var(--overlay-hover)}',
-  '.cjp-chev:disabled{opacity:.32;cursor:default}',
+  'button.cjp-chev{cursor:pointer;transition:background .12s,opacity .12s}',
+  'button.cjp-chev:hover:not(:disabled){background:var(--overlay-hover)}',
+  'button.cjp-chev:disabled{opacity:.32;cursor:default}',
   '@media (prefers-reduced-motion: reduce){.cjp-pop{transition:none!important;transform:none!important;opacity:1!important}.cjp-car{transition:none!important}}',
 ].join('\n')
 

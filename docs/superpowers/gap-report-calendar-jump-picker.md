@@ -100,6 +100,22 @@ at `design/design_handoff_calendar_jump_picker/` at build config `cueStyle="chip
   shapes, violating the repo no-`as` rule; `Response.json()` is already `any` here, so the casts were
   unnecessary. Removed all three [events.integration.test.ts]
 
+## GAPS (2 — found by Copilot review round 4 on PR #987, both fixed)
+
+- **§2 availability envelope** — `GET /v1/events/availability` returned a bare
+  `{ data, from, to }` body, but every sibling events route wraps its payload in the
+  `{ success: true, data }` envelope that the web `apiClient`/`publicApiClient` require
+  (`apps/web/src/lib/api.ts` throws `ApiError` unless `record.success === true`, then returns
+  `record.data`). As-is the picker's availability fetch would throw on every 200. Now returns
+  `{ success: true, data: { data, from, to } }`; the three integration tests read through the
+  envelope (`body.data.from`, `body.data.data`, assert `body.success`) [events.ts:428,
+  events.integration.test.ts]
+- **§1 JumpPicker chevron CSS leak** — JumpPicker injected a global `.cjp-chev:hover:not(:disabled)`
+  rule, but WeekStripHeader's disabled prev-week chevron is a `<span class="cjp-chev"
+aria-disabled="true">` — not `:disabled` — so the rule re-enabled its hover background. All three
+  JumpPicker chevrons are `<button>`, so the injected rules are now scoped to `button.cjp-chev`,
+  which can't match the header's span/Link chevrons [JumpPicker.tsx:84-86]
+
 ## DEFERRED (0)
 
 None.

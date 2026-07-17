@@ -427,7 +427,7 @@ eventsRouter.get('/availability', async (ctx) => {
 
   ctx.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
   const body: EventsAvailabilityResponse = { data, from, to }
-  return ctx.json(body)
+  return ctx.json({ success: true, data: body })
 })
 
 // GET /v1/events/:id — single event with venue, watching count, setlist
