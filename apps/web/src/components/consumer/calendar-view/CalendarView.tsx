@@ -33,8 +33,6 @@ export function CalendarView({
   initialSelectedDate,
   today,
   watchedIds,
-  prevWeekHref,
-  nextWeekHref,
 }: CalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate)
   const watchedSet = useMemo(() => new Set(watchedIds), [watchedIds])
@@ -70,8 +68,6 @@ export function CalendarView({
         selectedDate={selectedDate}
         today={today}
         onDateSelect={handleDateSelect}
-        prevWeekHref={prevWeekHref}
-        nextWeekHref={nextWeekHref}
       />
 
       {groups.size === 0 && (
