@@ -60,6 +60,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
 
       const { triggerId } = await triggerVenueCrawl(venueId, token)
 
+      if (isUnmounted.current) return
       setTriggerState('polling')
 
       // Self-scheduling poll: each tick is queued only after the previous one
@@ -86,6 +87,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
           if (trigger.status === 'done' || trigger.status === 'failed') {
             if (trigger.crawlRunId) {
               const run = await fetchCrawlRun(trigger.crawlRunId, pollToken)
+              if (isUnmounted.current) return
               setResult(run)
               setTriggerState('done')
               router.refresh()

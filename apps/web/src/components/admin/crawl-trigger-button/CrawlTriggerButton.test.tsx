@@ -24,6 +24,7 @@ vi.mock('next/navigation', () => ({
 }))
 
 import { CrawlTriggerButton } from './CrawlTriggerButton'
+import { POLL_INTERVAL_MS } from './definitions/constants'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 const VENUE_ID = '11111111-1111-1111-1111-111111111111'
@@ -94,13 +95,13 @@ describe('CrawlTriggerButton', () => {
 
     // First poll: still processing → no run fetch yet.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000)
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     })
     expect(mockFetchCrawlRun).not.toHaveBeenCalled()
 
     // Second poll: done → fetch the linked run.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000)
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     })
 
     // The regression: the run must be fetched by the trigger's crawlRunId,
@@ -125,7 +126,7 @@ describe('CrawlTriggerButton', () => {
     expect(mockTriggerVenueCrawl).toHaveBeenCalled()
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(2000)
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     })
 
     expect(
@@ -152,7 +153,7 @@ describe('CrawlTriggerButton', () => {
     // Advancing past several poll intervals must not schedule further work or
     // fetch a run — the unmount guard bails the in-flight tick.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(6000)
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3)
     })
 
     expect(mockFetchCrawlRun).not.toHaveBeenCalled()
