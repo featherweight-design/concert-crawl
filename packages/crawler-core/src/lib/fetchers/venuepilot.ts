@@ -17,6 +17,7 @@ import { createLogger } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
 import { isAllowed } from '../robots.js'
+import { CrawlFetchError } from '../fetcher.js'
 import type { PlatformFetcher, PlatformFetchResult } from './index.js'
 
 const logger = createLogger('venuepilot-fetcher')
@@ -108,13 +109,19 @@ const GraphQLErrorsSchema = z.object({
 
 export type VenuePilotEvent = z.infer<typeof VenuePilotEventSchema>
 
-export class VenuePilotFetchError extends Error {
+// Extends CrawlFetchError so crawl.ts's block classifier
+// (`err instanceof CrawlFetchError && (httpStatus === 403 || 429)`) treats a
+// VenuePilot 403/429 as an HTTP block — setting venues.blockedAt for admin
+// recovery — rather than a plain failure that just increments
+// consecutiveFailures and auto-pauses. Non-HTTP failures (validation, robots)
+// pass httpStatus 0, which is neither 403 nor 429, so they never misclassify.
+export class VenuePilotFetchError extends CrawlFetchError {
   constructor(
-    public readonly httpStatus: number,
+    httpStatus: number,
     public readonly url: string,
     message: string,
   ) {
-    super(message)
+    super(httpStatus, message)
     this.name = 'VenuePilotFetchError'
   }
 }
@@ -234,9 +241,10 @@ function normalize(
 
   const showTime = event.startTime ?? undefined
   const doorsTime = event.doorTime ?? undefined
+  const trimmedTicketUrl = event.ticketsUrl?.trim()
   const ticketUrl =
-    event.ticketsUrl && event.ticketsUrl.length > 0
-      ? event.ticketsUrl
+    trimmedTicketUrl && trimmedTicketUrl.length > 0
+      ? trimmedTicketUrl
       : undefined
   const imageUrl = pickImageUrl(event.announceImages)
   const cleaned = stripVenuePilotDescription(event.description)

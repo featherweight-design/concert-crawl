@@ -3,6 +3,7 @@ import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import { isAllowed } from '../robots.js'
+import { CrawlFetchError } from '../fetcher.js'
 import {
   venuePilotFetcher,
   VenuePilotFetchError,
@@ -175,6 +176,52 @@ describe('venuePilotFetcher.fetch', () => {
       crawlDelayMs: 0,
     })
     expect(result.events[0]!.title).toBe('Trailing Space Show')
+  })
+
+  it('omits ticketUrl when ticketsUrl is whitespace-only', async () => {
+    mockFetchOk(
+      graphqlBody([
+        {
+          id: 1,
+          name: 'Whitespace Ticket URL',
+          date: '2026-08-01',
+          doorTime: '18:00:00',
+          startTime: '19:00:00',
+          description: '',
+          ticketsUrl: '   ',
+          status: 'BUY TICKETS',
+          announceArtists: [{ name: 'A' }],
+          announceImages: [],
+        },
+      ]),
+    )
+    const result = await venuePilotFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+    })
+    expect(result.events[0]!.ticketUrl).toBeUndefined()
+  })
+
+  it('trims surrounding whitespace on a real ticketsUrl', async () => {
+    mockFetchOk(
+      graphqlBody([
+        {
+          id: 2,
+          name: 'Padded Ticket URL',
+          date: '2026-08-02',
+          doorTime: '18:00:00',
+          startTime: '19:00:00',
+          description: '',
+          ticketsUrl: '  https://tickets.example/show  ',
+          status: 'BUY TICKETS',
+          announceArtists: [{ name: 'A' }],
+          announceImages: [],
+        },
+      ]),
+    )
+    const result = await venuePilotFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+    })
+    expect(result.events[0]!.ticketUrl).toBe('https://tickets.example/show')
   })
 
   it('falls back to the title for artist when announceArtists is empty', async () => {
@@ -369,6 +416,22 @@ describe('venuePilotFetcher.fetch', () => {
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
     ).rejects.toBeInstanceOf(VenuePilotFetchError)
   })
+
+  it.each([403, 429])(
+    'throws a CrawlFetchError on HTTP %s so crawl.ts classifies it as a block',
+    async (status) => {
+      fetchSpy.mockResolvedValue(
+        new Response('blocked', { status }) as Response,
+      )
+      const error = await venuePilotFetcher
+        .fetch(makeVenue(), { crawlDelayMs: 0 })
+        .catch((err: unknown) => err)
+      expect(error).toBeInstanceOf(CrawlFetchError)
+      if (error instanceof CrawlFetchError) {
+        expect(error.httpStatus).toBe(status)
+      }
+    },
+  )
 
   it('throws VenuePilotFetchError when the body carries GraphQL errors on 200', async () => {
     fetchSpy.mockResolvedValue(
