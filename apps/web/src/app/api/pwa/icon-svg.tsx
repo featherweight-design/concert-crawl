@@ -1,3 +1,9 @@
+// Icons are deterministic from code and only change on deploy; cache a day,
+// serve stale up to a week while revalidating so redesigns still propagate.
+export const PWA_ICON_CACHE_HEADERS = {
+  'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+}
+
 export const PWA_ICON_PALETTE = {
   canvas: '#070A1A',
   background: '#171D3A',

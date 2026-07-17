@@ -1,5 +1,5 @@
 import { ImageResponse } from 'next/og'
-import { PwaIconSvg } from '../icon-svg'
+import { PwaIconSvg, PWA_ICON_CACHE_HEADERS } from '../icon-svg'
 
 export const runtime = 'edge'
 
@@ -8,5 +8,6 @@ export function GET() {
   return new ImageResponse(<PwaIconSvg size={180} />, {
     width: 180,
     height: 180,
+    headers: PWA_ICON_CACHE_HEADERS,
   })
 }
