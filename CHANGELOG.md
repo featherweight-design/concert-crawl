@@ -1,3 +1,12 @@
+## [1.127.1](https://github.com/HartiganHM/concert-crawl/compare/v1.127.0...v1.127.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **admin:** [#961](https://github.com/HartiganHM/concert-crawl/issues/961) reflow dispute panel two-up grid for mobile ([#991](https://github.com/HartiganHM/concert-crawl/issues/991)) ([198b855](https://github.com/HartiganHM/concert-crawl/commit/198b855d333b92c347c93f78d4bfbb9d3f88dbf0))
+* **admin:** [#974](https://github.com/HartiganHM/concert-crawl/issues/974) wrap long feedback URLs and stack expanded columns on mobile ([#989](https://github.com/HartiganHM/concert-crawl/issues/989)) ([7a63e69](https://github.com/HartiganHM/concert-crawl/commit/7a63e69cc164510c30953214b41b5354e00a94c0))
+* **settings:** [#979](https://github.com/HartiganHM/concert-crawl/issues/979) wrap long profile handles in card header ([#984](https://github.com/HartiganHM/concert-crawl/issues/984)) ([5f50e0c](https://github.com/HartiganHM/concert-crawl/commit/5f50e0c3a20dbc952e29aaa3ffd04cab0655a6cd))
+
 # [1.127.0](https://github.com/HartiganHM/concert-crawl/compare/v1.126.0...v1.127.0) (2026-07-17)
 
 
