@@ -122,7 +122,7 @@ These were made deliberately — understand them before proposing changes.
 - **Never commit `.env` files** — use `.env.example` with placeholder values only
 - **Always open a PR for code changes** — never merge to main locally, never discard changes
 - **Always use `.github/pull_request_template.md`** when opening a PR
-- **Requesting a Copilot review** — Copilot does NOT auto-review. Run `./scripts/request-copilot-review.sh <pr-number>` after opening a PR and after every fix push. Do NOT hand-write the `requested_reviewers` API call with `"Copilot"` — that returns HTTP 200 but silently attaches nothing. The reviewer login must be `copilot-pull-request-reviewer[bot]`; the script hardcodes it and fails loudly if the attach doesn't take.
+- **Copilot review** — the canonical review policy (request mechanism, merge bar, triage, cadence) lives in `~/.claude/CLAUDE.md` (user scope). Project specifics: Copilot does NOT auto-review — run `./scripts/request-copilot-review.sh <pr-number>` after opening a PR and after every fix push (the script hardcodes the `copilot-pull-request-reviewer[bot]` login and fails loudly if the attach doesn't take; do NOT hand-write the `requested_reviewers` call with `"Copilot"`, which returns HTTP 200 but silently attaches nothing).
 - **All feature work must be done in a git worktree** — the primary repo directory (`/Users/huey/Projects/concert-crawl`) is reserved for the user's own use and testing. Worktrees live in `.worktrees/` at the project root (gitignored). Use `git worktree add .worktrees/<branch-name> -b <branch-name>` directly — do NOT use the `EnterWorktree` tool, which hardcodes `.claude/worktrees/` and cannot be configured.
 - **⚠️ NEVER leave uncommitted files in the main repo directory** — this is a hard rule that is violated every session. The main repo (`/Users/huey/Projects/concert-crawl`) must always be clean (`git status` = nothing to commit). If you write or modify any file while working in a worktree, write it directly in the worktree path, not the main repo path. At the end of every session — and before any `git push` — run `git -C /Users/huey/Projects/concert-crawl status` and either commit stray changes to the appropriate worktree branch or restore them.
 - **⚠️ Prune worktrees + test DBs after every merge** — once a PR merges, run `pnpm worktree:prune` to remove every worktree with no open PR and drop its orphaned `concert_crawl_test__*` database. This is a required cleanup step; skipping it is why 180+ stale worktrees accumulated. Preview first with `pnpm worktree:prune --dry-run` — it never removes an open-PR worktree or the base `concert_crawl_test` DB.
@@ -154,7 +154,7 @@ All design work — both new design tickets and the build of existing handoffs �
 
 - **Pre-existing handoffs** (merged before 2026-06-23) require a Design Readiness Review (verdict in `design/design_handoff_X/READINESS.md`) before opening a plan PR
 - **New design tickets** (Track 2) use the handoff prompt template — objective problem + app context + technical requirements, design decisions left to Design
-- **Plan PRs** live in `docs/superpowers/plans/` and go through the Copilot review loop (min 2 successful reviews, no Crit/High/Medium remaining) before implementation
+- **Plan PRs** live in `docs/superpowers/plans/` and go through the Copilot review loop (see the canonical merge bar in `~/.claude/CLAUDE.md`) before implementation
 
 ### Testing
 
