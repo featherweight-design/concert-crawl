@@ -3,23 +3,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@clerk/nextjs'
 import type { EventsAvailabilityResponse } from '@concert-crawl/types'
-import { apiClient, publicApiClient } from '@/lib/api'
 import { STALE_30_MIN } from '@/lib/query-client'
-
-export function availabilityQueryKey(from: string, to: string) {
-  return ['availability', from, to] as const
-}
-
-export async function fetchAvailability(
-  from: string,
-  to: string,
-  token: string | null,
-): Promise<EventsAvailabilityResponse> {
-  const url = `/v1/events/availability?from=${from}&to=${to}`
-  return token
-    ? apiClient.get<EventsAvailabilityResponse>(url, token)
-    : publicApiClient.get<EventsAvailabilityResponse>(url)
-}
+import { availabilityQueryKey, fetchAvailability } from './availability'
 
 function toMap(res: EventsAvailabilityResponse): Map<string, number> {
   const map = new Map<string, number>()

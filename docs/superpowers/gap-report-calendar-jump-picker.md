@@ -116,6 +116,22 @@ aria-disabled="true">` — not `:disabled` — so the rule re-enabled its hover 
   JumpPicker chevrons are `<button>`, so the injected rules are now scoped to `button.cjp-chev`,
   which can't match the header's span/Link chevrons [JumpPicker.tsx:84-86]
 
+## GAPS (2 — found by Copilot review round 5 on PR #987, both fixed)
+
+- **§2 SSR prefetch client-boundary bug** — `fetchAvailability` lived in the `'use client'`
+  `use-availability.ts` module, but the server component `events/page.tsx` imports it to seed the
+  SSR availability prefetch. A server component importing a value from a `'use client'` module gets
+  a client-reference proxy, not the real function, so the prefetch threw (silently caught → the
+  prefetch was always a no-op, defeating its purpose). Extracted `fetchAvailability` +
+  `availabilityQueryKey` into a server-safe `lib/queries/availability.ts` (no directive); the hook
+  re-imports them and the page imports from the new module [availability.ts, use-availability.ts,
+  events/page.tsx:26]
+- **§8 pager dead tab-stop on return to current month** — `pageMonth` always set `focusIso` to the
+  1st of the viewed month, but the current month's 1st is in the past (disabled), so paging back to
+  it parked the single roving tab-stop on a disabled cell. Now lands on `today` when the viewed month
+  is the current month, otherwise the 1st. Regression test added [JumpPicker.tsx:219,
+  JumpPicker.test.tsx]
+
 ## DEFERRED (0)
 
 None.

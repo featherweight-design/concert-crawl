@@ -23,7 +23,7 @@ import {
 import { localDateString } from '@/lib/time'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { pickerWindow } from '@/components/consumer/jump-picker/date-math'
-import { fetchAvailability } from '@/lib/queries/use-availability'
+import { fetchAvailability } from '@/lib/queries/availability'
 
 const copy = CONSUMER_COPY
 

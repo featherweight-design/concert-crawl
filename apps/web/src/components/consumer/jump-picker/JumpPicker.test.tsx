@@ -127,4 +127,17 @@ describe('JumpPicker', () => {
     setup()
     expect(buttonByLabel('Previous month').disabled).toBe(true)
   })
+
+  it('lands the roving tab-stop on today when paging back to the current month', () => {
+    setup()
+    // Page forward to May, then back to April (the current/min month). April 1
+    // is in the past (disabled), so the single tab-stop must land on today
+    // rather than a dead disabled cell.
+    fireEvent.click(buttonByLabel('Next month'))
+    fireEvent.click(buttonByLabel('Previous month'))
+    const todayCell = document.querySelector('[data-iso="2026-04-28"]')
+    const firstCell = document.querySelector('[data-iso="2026-04-01"]')
+    expect(todayCell?.getAttribute('tabindex')).toBe('0')
+    expect(firstCell?.getAttribute('tabindex')).toBe('-1')
+  })
 })

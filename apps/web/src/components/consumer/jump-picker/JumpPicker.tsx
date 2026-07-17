@@ -215,8 +215,11 @@ export const JumpPicker = ({
     const next = clampView(addMonths(view, delta), min, max)
     setView(next)
     // Keep the roving tab-stop inside the newly-viewed month so it never lands
-    // on an out-of-month spill cell. Only steal DOM focus for keyboard paging.
-    setFocusIso(isoOf(next.y, next.m, 1))
+    // on an out-of-month spill cell. In the current month the 1st is in the past
+    // (disabled), so land on today instead to avoid a dead tab-stop. Only steal
+    // DOM focus for keyboard paging.
+    const isCurrentMonth = next.y === todayParts.y && next.m === todayParts.m
+    setFocusIso(isCurrentMonth ? today : isoOf(next.y, next.m, 1))
     if (moveDomFocus) {
       pendingFocus.current = true
     }
