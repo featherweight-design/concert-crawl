@@ -85,6 +85,9 @@ Ordered by beta-phase urgency + adjacency to already-locked verticals.
 |---|---|---|---|
 | **#762** Who else is watching — social signal on event detail | Beta | Normal | Adjacent to concert-history + attending vocabulary |
 | **#764** Venue first-timer guide surface | Beta | Normal | Rich texture — parking, age limits, loading dock vs front door |
+| **#971** Web push notification stack (PWA Tier C) | Launch | High | PWA cluster · web push = highest-value native-feeling feature; closes consumer-notification gap in **#737**; largely eng but has design surfaces (permission prompt, notification content, in-app preferences) |
+| **#969** PWA install-prompt UI polish | Launch | Normal | PWA cluster · Tier B ships bare install affordance; this elevates it to a crafted, on-brand experience |
+| **#970** PWA offline-state UI polish | Launch | Normal | PWA cluster · Tier B ships bare online/offline banner + offline fallback page; this elevates both to deliberate, on-brand |
 | **#794** Logged-out app UX — navigation, header, browse-only shape | Launch | Normal | Adjacencies with monetization paywalls — worth pairing with eng infra work |
 
 ---
@@ -103,6 +106,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-17 | — | Tracker refresh #11 — 🕰️ Backlog gains three PWA-cluster tickets: **#971** Web push notification stack (PWA Tier C, Launch · High — closes consumer-notification gap in #737), **#969** PWA install-prompt UI polish (Launch · Normal), **#970** PWA offline-state UI polish (Launch · Normal). Anchor context lives in pickup memory (`project_pickup_pwa_native.md`) — PWA Tier B plan in PR #968 awaiting Hugh review + Copilot; native/Capacitor deferred. Cluster ordered ahead of #794 since #971 is High priority and the three are related. |
 | 2026-07-12 | — | Tracker refresh #10 — #783 monetization emails flipped 📐 → 🟢 (this PR) after one-pass audit; hi-fi templates cover all 10 emails with DNA inheritance from `digest-email.jsx`; 2 prototype-polish nits deferred to build (annual SKU, placeholder sample values). Dunning cadence copy, plain-text URL literal, plain-text placeholder collision, and Founder receipt subject extraction all fixed inline across R2–R4. |
 | 2026-07-12 | #783 | `design/design_handoff_monetization_emails/READINESS.md` merged (this PR) — 🟢 Green verdict; per-template guardrail checks pass across all 10 templates; hi-fi pass also fixes prod dunning-3 subject voice-lock violation ("Last chance" prohibited by #782) |
 | 2026-07-15 | — | Tracker refresh #9 — #783 email touchpoints moved into 📐 Brief locked; brief has been merged since PR #846 (2026-06-27) but Design handoff was never produced (emails shipped as basic Resend placeholders). Tracker-invisible until Hugh flagged the current state (this PR) |
@@ -149,7 +153,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 ## 📋 Immediate TODOs
 
 - [ ] **7 eng plans ready for eng-planning agent:** #642 · #643 · concert_history · #763 Spotify · #72 shareable_cards + Passport · **#506** Admin Venue Form (unblocks eng #505) · **#783** monetization emails brand pass. #763 Spotify + #72 shareable_cards + #783 emails are the biggest surfaces; #506 is the smallest (2 form fields, existing pattern). No Yellow items remaining. No Brief-locked items remaining.
-- [ ] **Backlog priority order** (per 2026-07-15 deep-read): #762 Who else is watching → #764 Venue first-timer → #794 Logged-out UX. #762 is the highest-value next pull.
+- [ ] **Backlog priority order** (per 2026-07-17 refresh #11): #762 Who else is watching → #764 Venue first-timer → **#971** Web push (PWA Tier C, Launch · High) → #969 PWA install polish → #970 PWA offline polish → #794 Logged-out UX. #762 is still the highest-value next pull; the PWA cluster clusters together since they share the same vertical anchor.
 
 ---
 
