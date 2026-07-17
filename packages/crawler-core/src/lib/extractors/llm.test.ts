@@ -360,6 +360,27 @@ describe('extractWithLlm', () => {
     expect(result.events[0]?.tourName).toBeUndefined()
   })
 
+  it('drops openers that repeat the headliner, case-insensitively (#643)', async () => {
+    const mockEvents = [
+      {
+        title: 'The Body',
+        rawTitle: 'The Body',
+        artist: 'The Body',
+        supportingArtists: ['the body', 'Big Brave', 'Many Blessings'],
+        date: '2026-08-01',
+        confidence: 0.9,
+        isConcert: true,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events[0]?.supportingArtists).toEqual([
+      'Big Brave',
+      'Many Blessings',
+    ])
+  })
+
   it('SAVE_EVENTS_TOOL declares reviewNeeded as a required boolean property', async () => {
     mockCreate.mockResolvedValue(makeAnthropicResponse([]))
     await extractWithLlm('<html>test</html>', SOURCE_URL)

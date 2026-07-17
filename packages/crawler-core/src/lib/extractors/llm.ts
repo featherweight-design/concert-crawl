@@ -312,10 +312,14 @@ export async function extractWithLlm(
     const title = stripDuplicatedTrailingWord(evt.title, evt.rawTitle)
     // Normalize opener names the same way the JSON-LD extractor does: trim
     // each and drop blank/whitespace-only entries so they never render as
-    // empty opener chips downstream.
+    // empty opener chips downstream. Also drop any opener that repeats the
+    // headliner (case-insensitive): the prompt instructs the model to exclude
+    // it, but a disobedient response would otherwise render the headliner
+    // twice — once bold, once in the "with …" openers line (#643).
+    const headlinerKey = evt.artist.trim().toLowerCase()
     const supportingArtists = (evt.supportingArtists ?? [])
       .map((name) => name.trim())
-      .filter((name) => name.length > 0)
+      .filter((name) => name.length > 0 && name.toLowerCase() !== headlinerKey)
     return {
       title,
       rawTitle: evt.rawTitle,
