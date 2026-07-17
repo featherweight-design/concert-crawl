@@ -300,6 +300,23 @@ export interface CrawlRun {
   activeAlert?: ActiveCrawlAlert | null
 }
 
+// CrawlTrigger — JSON-serialized shape of a queued crawl trigger row.
+// POST /v1/admin/crawl/:venueId returns { triggerId }; the crawler service
+// later stamps the trigger with a terminal `status` and, when a run row was
+// created, the resulting `crawlRunId`. Clients poll GET /triggers/:id to learn
+// when the async crawl finished, then fetch the linked run for its result.
+export type CrawlTriggerStatus = 'pending' | 'processing' | 'done' | 'failed'
+
+export interface CrawlTrigger {
+  id: string
+  venueId: string
+  status: CrawlTriggerStatus
+  crawlRunId: string | null
+  triggeredBy: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface ActiveCrawlAlert {
   notificationId: string
   category: 'crawl.event_count_dropped' | 'crawl.failed'

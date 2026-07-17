@@ -9,7 +9,11 @@ import { formatDurationMs } from '@/lib/time'
 import { AdminButton, StatusBadge } from '@/components/admin/primitives'
 import type { StatusKind } from '@/components/admin/primitives'
 import { RefreshCw, Loader2 } from 'lucide-react'
-import { triggerVenueCrawl, fetchCrawlRun } from './lib/crawl'
+import {
+  triggerVenueCrawl,
+  fetchCrawlTrigger,
+  fetchCrawlRun,
+} from './lib/crawl'
 import { CRAWL_STATUS_BADGES, POLL_INTERVAL_MS } from './definitions/constants'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import type { TriggerState } from './definitions/types'
@@ -52,7 +56,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
       if (!token)
         throw new Error(ADMIN_COPY.crawlTriggerButton.errors.notAuthenticated)
 
-      const { crawlRunId } = await triggerVenueCrawl(venueId, token)
+      const { triggerId } = await triggerVenueCrawl(venueId, token)
 
       setTriggerState('polling')
 
@@ -64,14 +68,25 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
               ADMIN_COPY.crawlTriggerButton.errors.notAuthenticated,
             )
 
-          const run = await fetchCrawlRun(crawlRunId, pollToken)
+          // The trigger is processed asynchronously by the crawler service,
+          // which stamps a terminal status and (once a run row exists) a
+          // crawlRunId. Poll the trigger until it settles, then fetch the
+          // linked run for the result display.
+          const trigger = await fetchCrawlTrigger(triggerId, pollToken)
 
-          if (run.status !== 'in_progress') {
+          if (trigger.status === 'done' || trigger.status === 'failed') {
             clearInterval(pollInterval.current!)
             pollInterval.current = null
-            setResult(run)
-            setTriggerState('done')
-            router.refresh()
+
+            if (trigger.crawlRunId) {
+              const run = await fetchCrawlRun(trigger.crawlRunId, pollToken)
+              setResult(run)
+              setTriggerState('done')
+              router.refresh()
+            } else {
+              setTriggerState('error')
+              setErrorMessage(ADMIN_COPY.crawlTriggerButton.errors.crawlFailed)
+            }
           }
         } catch (err) {
           clearInterval(pollInterval.current!)

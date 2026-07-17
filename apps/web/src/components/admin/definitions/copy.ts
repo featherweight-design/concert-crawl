@@ -581,6 +581,7 @@ export const ADMIN_COPY = {
       notAuthenticated: 'Not authenticated',
       triggerFailed: 'Failed to trigger crawl',
       pollFailed: 'Polling failed',
+      crawlFailed: 'Crawl failed before a run was recorded',
     },
   },
 
