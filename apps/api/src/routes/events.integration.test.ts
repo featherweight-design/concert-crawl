@@ -1473,3 +1473,91 @@ describe('GET /v1/events — supportingArtists + tourName serialization', () => 
     expect(detailBody.data.tourName).toBe('Rat Saw God Tour')
   })
 })
+
+describe('GET /v1/events/availability', () => {
+  beforeEach(async () => {
+    await clearTables()
+  })
+
+  it('returns per-date show counts within the window', async () => {
+    const venue = await seedVenue({ slug: 'larimer', name: 'Larimer Lounge' })
+    await seedEvent(venue.id, {
+      artist: 'Show A',
+      date: '2026-04-28',
+      status: 'upcoming',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Show B',
+      date: '2026-04-28',
+      status: 'upcoming',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Show C',
+      date: '2026-05-02',
+      status: 'upcoming',
+    })
+
+    const res = await app.request(
+      '/v1/events/availability?from=2026-04-01&to=2026-05-31',
+    )
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      from: string
+      to: string
+      data: { date: string; count: number }[]
+    }
+    expect(body.from).toBe('2026-04-01')
+    expect(body.to).toBe('2026-05-31')
+    const byDate = Object.fromEntries(
+      body.data.map((day) => [day.date, day.count]),
+    )
+    expect(byDate['2026-04-28']).toBe(2)
+    expect(byDate['2026-05-02']).toBe(1)
+  })
+
+  it('excludes hidden and missing events', async () => {
+    const venue = await seedVenue({ slug: 'hi-dive', name: 'Hi-Dive' })
+    await seedEvent(venue.id, {
+      artist: 'Visible Show',
+      date: '2026-04-28',
+      status: 'upcoming',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Hidden Show',
+      date: '2026-04-28',
+      status: 'upcoming',
+      hiddenFromConsumer: true,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Missing Show',
+      date: '2026-04-28',
+      status: 'upcoming',
+      firstMissingAt: new Date(),
+    })
+
+    const res = await app.request(
+      '/v1/events/availability?from=2026-04-01&to=2026-04-30',
+    )
+    const body = (await res.json()) as {
+      data: { date: string; count: number }[]
+    }
+    const byDate = Object.fromEntries(
+      body.data.map((day) => [day.date, day.count]),
+    )
+    expect(byDate['2026-04-28']).toBe(1)
+  })
+
+  it('rejects a window wider than 400 days', async () => {
+    const res = await app.request(
+      '/v1/events/availability?from=2026-01-01&to=2027-12-31',
+    )
+    expect(res.status).toBe(400)
+  })
+
+  it('defaults `from` to today when omitted', async () => {
+    const res = await app.request('/v1/events/availability?to=2026-12-31')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { from: string }
+    expect(body.from).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+})

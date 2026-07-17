@@ -33,6 +33,8 @@ import {
 import {
   SP_POLICY,
   deriveSourceCategory,
+  type AvailabilityDay,
+  type EventsAvailabilityResponse,
   type Tier,
 } from '@concert-crawl/types'
 import { isImminentEvent, todayInTimezone } from '../lib/time.js'
@@ -62,6 +64,20 @@ const listEventsSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
 })
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+const MAX_WINDOW_DAYS = 400
+
+const availabilitySchema = z.object({
+  from: z.string().regex(DATE_RE).optional(),
+  to: z.string().regex(DATE_RE),
+})
+
+function dayCountBetween(from: string, to: string): number {
+  const start = Date.parse(`${from}T00:00:00Z`)
+  const end = Date.parse(`${to}T00:00:00Z`)
+  return Math.floor((end - start) / 86_400_000) + 1
+}
 
 export const eventsRouter = new Hono()
 
@@ -355,6 +371,52 @@ eventsRouter.get('/genres', async (ctx) => {
     .map((row) => (row as Record<string, unknown>)['genre'])
     .filter((genre): genre is string => typeof genre === 'string')
   return ctx.json({ success: true, data: genres })
+})
+
+// GET /v1/events/availability — per-date show counts for a bounded window.
+// Registered AFTER /genres and BEFORE /:id so the `/:id` param route does not
+// swallow the literal `/availability` path. Projection-only GROUP BY date query
+// backed by events_date_status_idx (date, status).
+eventsRouter.get('/availability', async (ctx) => {
+  const parsed = availabilitySchema.safeParse({
+    from: ctx.req.query('from'),
+    to: ctx.req.query('to'),
+  })
+  if (!parsed.success) {
+    return ctx.json({ error: 'Invalid availability window' }, 400)
+  }
+  const from = parsed.data.from ?? todayInTimezone('UTC')
+  const { to } = parsed.data
+  if (to < from) {
+    return ctx.json({ error: '`to` must be on or after `from`' }, 400)
+  }
+  const span = dayCountBetween(from, to)
+  if (span < 1 || span > MAX_WINDOW_DAYS) {
+    return ctx.json({ error: 'Window must be 1–400 days' }, 400)
+  }
+
+  const rows = await db
+    .select({ date: events.date, count: count() })
+    .from(events)
+    .where(
+      and(
+        inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
+        gte(events.date, from),
+        lte(events.date, to),
+        eq(events.hiddenFromConsumer, false),
+        isNull(events.firstMissingAt),
+      ),
+    )
+    .groupBy(events.date)
+
+  const data: AvailabilityDay[] = rows.map((row) => ({
+    date: row.date,
+    count: Number(row.count),
+  }))
+
+  ctx.header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
+  const body: EventsAvailabilityResponse = { data, from, to }
+  return ctx.json(body)
 })
 
 // GET /v1/events/:id — single event with venue, watching count, setlist
