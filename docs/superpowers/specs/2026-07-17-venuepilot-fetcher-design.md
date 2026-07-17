@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-17
 **Issue:** #505 — VenuePilot API integration for API-backed venue crawling
-**Depends on:** the `venues.api_provider` (`'venuepilot'`) + `venues.api_account_id` columns and the admin UI to set them, which already exist. (#506 was the design/mocks ticket for those admin-form fields, not the column migration itself.)
+**Depends on:** the `venues.api_provider` (`'venuepilot'`) + `venues.api_account_id` columns and the admin UI to set them, which already exist. (The columns were added by migration `packages/db/migrations/0049_admin_venue_api_provider.sql`.)
 
 ## Problem
 

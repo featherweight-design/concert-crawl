@@ -4,7 +4,7 @@
 
 **Goal:** When a venue has `apiProvider = 'venuepilot'` and `apiAccountId` set, pull events directly from the VenuePilot GraphQL API through the existing PlatformFetcher registry, bypassing the HTML → JSON-LD → LLM cascade.
 
-**Architecture:** VenuePilot slots into the `PlatformFetcher` registry (#623) as a sibling adapter to AEG, keyed off `venues.api_provider` instead of `venues.platform`. `dispatch()` is generalized from platform-equality matching to per-fetcher `canHandle()`. The `PlatformFetcher.platform` field (typed `VenuePlatform`) is renamed to `source` (typed `'aeg' | 'venuepilot'`) because VenuePilot is an `apiProvider`, not a "platform". No schema change — the `venues.api_provider` / `venues.api_account_id` columns and the admin UI to set them already exist (#506 was the design/mocks ticket for the admin form fields).
+**Architecture:** VenuePilot slots into the `PlatformFetcher` registry (#623) as a sibling adapter to AEG, keyed off `venues.api_provider` instead of `venues.platform`. `dispatch()` is generalized from platform-equality matching to per-fetcher `canHandle()`. The `PlatformFetcher.platform` field (typed `VenuePlatform`) is renamed to `source` (typed `'aeg' | 'venuepilot'`) because VenuePilot is an `apiProvider`, not a "platform". No schema change — the `venues.api_provider` / `venues.api_account_id` columns already exist (added by migration `packages/db/migrations/0049_admin_venue_api_provider.sql`), along with the admin UI to set them.
 
 **Tech Stack:** TypeScript (strict, `exactOptionalPropertyTypes: true`), Zod, Vitest, pnpm + Turborepo. All work in `packages/crawler-core`.
 
