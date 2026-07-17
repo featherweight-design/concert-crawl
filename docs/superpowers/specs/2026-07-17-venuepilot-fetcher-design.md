@@ -83,6 +83,8 @@ Mirrors `aeg.ts` structure exactly:
 
 ## Registry reconciliation (the only change to shipped crawler code)
 
+> This section revises the dispatch/`PlatformFetcher` semantics established in the per-platform fetcher dispatch design (`docs/superpowers/specs/2026-06-17-per-platform-fetcher-dispatch.md`, #623): it generalizes `dispatch()` from platform-equality matching to per-fetcher `canHandle()` and renames the `platform` field to `source`. That earlier spec describes the AEG-only starting point; this one supersedes its dispatch-matching mechanism.
+
 `dispatch.ts` currently short-circuits on `!venue.platform` and matches `entry.platform === venue.platform` — AEG-specific. Generalize it:
 
 - `dispatch(venue)` becomes `FETCHERS.find((f) => f.canHandle(venue)) ?? null`. Drop the `venue.platform` early-return.
