@@ -10,6 +10,7 @@ import { QueryProvider } from '@/components/QueryProvider'
 // browser-only posthog-js helpers, which must not enter this Server Component's
 // module graph.
 import { PostHogProvider } from '@/lib/analytics/PostHogProvider'
+import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration'
 import { Toaster } from 'sonner'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
@@ -91,6 +92,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         </head>
         <body className="min-h-screen bg-bg text-fg font-sans antialiased">
+          <ServiceWorkerRegistration />
           <QueryProvider>
             <PostHogProvider>
               <ThemeProvider>{children}</ThemeProvider>
