@@ -30,6 +30,9 @@ export const CONSUMER_COPY = {
   jumpPickerNextMonth: 'Next month',
   jumpPickerPrevWeek: 'Previous week',
   jumpPickerNextWeek: 'Next week',
+  // Screen-reader-only cue appended to a WeekStrip day when it has shows on
+  // sale (the visible dot indicator is aria-hidden).
+  weekStripDayShows: 'shows on sale',
 
   // ── Venue ──────────────────────────────────────────────────────────
   venueEmptyEyebrow: 'Upcoming',

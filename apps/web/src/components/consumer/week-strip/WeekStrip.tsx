@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 export interface WeekStripDay {
   date: string
@@ -99,6 +100,12 @@ export function WeekStrip({
               : 'bg-surface-1 text-fg-muted',
           )
 
+          // The dot indicator is aria-hidden, so screen readers otherwise miss
+          // whether a day has shows — fold that cue into the accessible name.
+          const dayAriaLabel = day.hasEvents
+            ? `${day.label} ${day.dayOfMonth}, ${CONSUMER_COPY.weekStripDayShows}`
+            : `${day.label} ${day.dayOfMonth}`
+
           if (onDateSelect) {
             return (
               <button
@@ -106,6 +113,7 @@ export function WeekStrip({
                 type="button"
                 className={cn(dayClassName, 'cursor-pointer')}
                 onClick={() => onDateSelect(day.date)}
+                aria-label={dayAriaLabel}
                 aria-current={selected ? 'date' : undefined}
               >
                 {dayInner}
@@ -119,6 +127,7 @@ export function WeekStrip({
               href={buildHref?.(day.date) ?? '#'}
               className={dayClassName}
               scroll={false}
+              aria-label={dayAriaLabel}
               aria-current={selected ? 'date' : undefined}
             >
               {dayInner}

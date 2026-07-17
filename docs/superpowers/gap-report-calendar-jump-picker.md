@@ -178,6 +178,16 @@ aria-disabled="true">` — not `:disabled` — so the rule re-enabled its hover 
   happens once after commit; `ensureStyles` remains idempotent via its `getElementById` guard
   [WeekStripHeader.tsx:4,90 · JumpPicker.tsx:162]
 
+## GAPS (2 — found by Copilot review round 10 on PR #987, both fixed)
+
+- **§5 / a11y — WeekStrip day accessible name** — the WeekStrip day button and Link variants exposed
+  only their visible content ("Mon 27") to assistive tech; the shows dot is `aria-hidden`, so screen
+  readers got no signal that a day has shows on sale. Added an `aria-label` that appends the
+  `weekStripDayShows` cue ("shows on sale", new copy key) when `day.hasEvents` — applied to both the
+  `onDateSelect` button and the `buildHref` Link. New WeekStrip.test.tsx covers all three cases
+  (button-with-shows, button-without-shows, link-with-shows) [WeekStrip.tsx:95-142, copy.ts:33,
+  WeekStrip.test.tsx]
+
 ## DEFERRED (0)
 
 None.
