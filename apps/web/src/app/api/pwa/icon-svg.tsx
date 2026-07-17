@@ -12,30 +12,48 @@ export const PWA_ICON_PALETTE = {
   dot: '#E8F3FF',
 } as const
 
+// The art is authored in a square viewBox of this many units.
+const ICON_VIEWBOX = 48
+// Maskable icons must keep their art inside a centered "safe zone"; platforms
+// may crop the outer margin into any shape. The inset is half the cropped
+// margin, applied on each side, so the scaled art stays centered.
+const MASKABLE_SAFE_ZONE_SCALE = 0.8
+const MASKABLE_INSET = (ICON_VIEWBOX * (1 - MASKABLE_SAFE_ZONE_SCALE)) / 2
+
 interface PwaIconSvgProps {
   size: number
   maskable?: boolean
 }
 
 export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
-  // Maskable: full-bleed canvas + art inset into the 80% safe zone.
-  const artTransform = maskable ? 'translate(4.8 4.8) scale(0.8)' : undefined
+  // Maskable: full-bleed canvas + art inset into the safe zone.
+  const artTransform = maskable
+    ? `translate(${MASKABLE_INSET} ${MASKABLE_INSET}) scale(${MASKABLE_SAFE_ZONE_SCALE})`
+    : undefined
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 48 48"
+      viewBox={`0 0 ${ICON_VIEWBOX} ${ICON_VIEWBOX}`}
       xmlns="http://www.w3.org/2000/svg"
     >
-      <rect width="48" height="48" fill={PWA_ICON_PALETTE.canvas} />
+      <rect
+        width={ICON_VIEWBOX}
+        height={ICON_VIEWBOX}
+        fill={PWA_ICON_PALETTE.canvas}
+      />
       {maskable && (
-        <rect width="48" height="48" fill={PWA_ICON_PALETTE.background} />
+        <rect
+          width={ICON_VIEWBOX}
+          height={ICON_VIEWBOX}
+          fill={PWA_ICON_PALETTE.background}
+        />
       )}
       <g transform={artTransform}>
         {!maskable && (
           <rect
-            width="48"
-            height="48"
+            width={ICON_VIEWBOX}
+            height={ICON_VIEWBOX}
             rx="10"
             fill={PWA_ICON_PALETTE.background}
           />
