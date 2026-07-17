@@ -18,6 +18,17 @@ export const CONSUMER_COPY = {
   emptyCalTitle: 'Nothing on this day.',
   emptyCalBody: 'Try a different day or drop a filter.',
 
+  // ── Calendar jump picker (#642) ────────────────────────────────────
+  jumpPickerCueSuffix: 'Jump to a date',
+  jumpPickerDialogPrefix: 'Jump to a date',
+  jumpPickerFooterHint: 'Dots = shows on sale',
+  jumpPickerEmptyPrefix: 'Crickets in',
+  jumpPickerEmptySuffix: 'Try later.',
+  jumpPickerToday: 'Today',
+  jumpPickerClose: 'Close date picker',
+  jumpPickerPrevMonth: 'Previous month',
+  jumpPickerNextMonth: 'Next month',
+
   // ── Venue ──────────────────────────────────────────────────────────
   venueEmptyEyebrow: 'Upcoming',
   venueEmptyTitle: 'Nothing booked yet.',
