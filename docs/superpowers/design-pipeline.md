@@ -55,8 +55,8 @@ The fix is a two-track pipeline with explicit gates between phases.
 │           │                  │   │               │                 │
 │  ┌────────▼─────────────┐    │   │  ┌────────────▼───────────┐    │
 │  │ Copilot review loop  │    │   │  │ Design Readiness       │    │
-│  │ (min 2 successful,   │    │   │  │ Review (parity gate)   │    │
-│  │ no Crit/High/Med)    │    │   │  └────────────┬───────────┘    │
+│  │ (canonical bar —    │    │   │  │ Review (parity gate)   │    │
+│  │ see Cadence rules)  │    │   │  └────────────┬───────────┘    │
 │  └────────┬─────────────┘    │   │               └─→ to Track 1   │
 │           │                  │   └─────────────────────────────────┘
 │  ┌────────▼─────────────┐    │
@@ -75,7 +75,7 @@ Both tracks converge on the same plan-PR-and-Copilot-review step. Track 2 design
 ## Cadence rules
 
 - **No WIP limit on design tickets.** Hugh wants Design throughput high so the roadmap stays predictable and eng work doesn't block on design. Instead, track *throughput* (designs merged per week) as a health signal — if backpressure shows up, revisit.
-- **Plan PR Copilot review exit criteria:** min 2 successful Copilot reviews (errored reviews don't count); merge bar = no Critical / High / Medium remaining. Apply valid Low / Nits, skip invalid ones, do NOT iterate to zero. See `feedback_copilot_review_multi_round.md`.
+- **Plan PR Copilot review exit criteria:** see the canonical Copilot-review policy in `~/.claude/CLAUDE.md` (user scope) — merge bar = no Crit/High/Med remaining + ≥2 successful reviews (errored reviews don't count), apply valid Low/Nits, skip invalid, do NOT iterate to zero.
 - **Plan PRs live in `docs/superpowers/plans/`.** Keep after the feature ships — they make valuable session-start context.
 - **Traceability chain:** design ticket → design handoff folder → plan PR → implementation PR(s). All cross-linked in PR bodies and GH issue references.
 - **Update the changelog on user-facing PRs** — per `feedback_release_notes_on_major_pr.md`, any PR shipping a meaningful user-facing feature must add an entry to `apps/web/src/lib/definitions/releases.ts` on the same branch.
