@@ -213,6 +213,14 @@ aria-disabled="true">` — not `:disabled` — so the rule re-enabled its hover 
   node (grid index 30 in April, index 2 in May's spill) is the _same_ DOM element across the page
   [JumpPicker.tsx:473,509, JumpPicker.test.tsx]
 
+## GAPS (1 — found by Copilot review round 13 on PR #987, fixed)
+
+- **§2 availability response ordering** — the availability query used `GROUP BY events.date` with no
+  `ORDER BY`, leaving row order up to the Postgres planner (unstable across plans/releases). Added
+  `.orderBy(asc(events.date))` so the `data` array is always ascending and self-describing. The
+  per-date-counts test now asserts the exact ascending date sequence [events.ts:432,
+  events.integration.test.ts:1508]
+
 ## DEFERRED (0)
 
 None.

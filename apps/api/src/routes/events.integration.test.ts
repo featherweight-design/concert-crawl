@@ -1505,6 +1505,9 @@ describe('GET /v1/events/availability', () => {
     expect(body.success).toBe(true)
     expect(body.data.from).toBe('2026-04-01')
     expect(body.data.to).toBe('2026-05-31')
+    const dates = body.data.data.map((day) => day.date)
+    // The endpoint sorts by date ascending, not the planner's arbitrary order.
+    expect(dates).toEqual(['2026-04-28', '2026-05-02'])
     const byDate = Object.fromEntries(
       body.data.data.map((day) => [day.date, day.count]),
     )

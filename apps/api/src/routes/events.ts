@@ -429,6 +429,9 @@ eventsRouter.get('/availability', async (ctx) => {
       ),
     )
     .groupBy(events.date)
+    // A bare GROUP BY leaves row order up to the planner; sort ascending so the
+    // response is stable and self-describing regardless of Postgres plan.
+    .orderBy(asc(events.date))
 
   const data: AvailabilityDay[] = rows.map((row) => ({
     date: row.date,
