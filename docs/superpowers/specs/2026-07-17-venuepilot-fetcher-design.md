@@ -76,6 +76,8 @@ Mirrors `aeg.ts` structure exactly:
   - Returns `PlatformFetchResult { events, sourceUrl: endpoint, meta: { fetchLatencyMs, totalCount, pagesFetched, eventsAfterNormalization } }`.
 - **Export** `venuePilotFetcher: PlatformFetcher`.
 
+**robots.txt stance (matches the AEG precedent):** `crawlVenue` already checks `robots.txt` for `venue.websiteUrl` *before* `dispatch()` (crawl.ts:206), so every VenuePilot venue's own calendar domain is honored exactly as today. We deliberately do **not** add a second robots.txt check for the fetcher's endpoint domain (`www.venuepilot.co`). This mirrors the shipped AEG fetcher, which hits `aegwebprod.blob.core.windows.net` without a per-endpoint robots check: a venue's official, documented public API is an *integration surface* we were pointed at by the venue's own `api_account_id`, not an HTML page we discovered by crawling. Rate-limiting (`crawlDelayMs`) and honest identification (`User-Agent`) still apply to these requests. If we ever add non-API HTML scraping on a third-party domain, that path must reinstate the endpoint-domain robots check.
+
 ## Registry reconciliation (the only change to shipped crawler code)
 
 `dispatch.ts` currently short-circuits on `!venue.platform` and matches `entry.platform === venue.platform` — AEG-specific. Generalize it:

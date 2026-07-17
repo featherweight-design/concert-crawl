@@ -17,6 +17,7 @@
 - **No silent LLM fallback** — a VenuePilot fetch error must bubble to `crawlVenue`'s outer catch (treated as a crawl failure), never fall through to the cascade.
 - **Honest User-Agent** — `ConcertCrawl/1.0 (+https://concertcrawl.app/bot)` on every outbound request.
 - **Respect `crawlDelayMs`** — wait before each request, including between pages.
+- **robots.txt** — no per-endpoint robots check for `www.venuepilot.co`, matching the AEG precedent. `crawlVenue` already checks `robots.txt` for `venue.websiteUrl` before `dispatch()` (crawl.ts:206), which is untouched. The VenuePilot GraphQL endpoint is an official public API we were pointed at by the venue's `api_account_id`, not a crawled HTML page — same treatment as AEG's blob endpoint. Do not add a robots fetch inside `venuepilot.ts`. (See the spec's "robots.txt stance" note.)
 - **Conventional commits**, one commit per task. TDD: failing test first.
 - **No schema/migration, no API/UI, no AEG migration** — crawler-only.
 
