@@ -54,7 +54,7 @@ Probed live on 2026-07-17 against account 1105 (the issue's documented contract 
 | `doorsTime` | `doorTime` | passthrough; omit when absent |
 | `ticketUrl` | `ticketsUrl` | omit when absent/empty |
 | `imageUrl` | highlighted image → `variant === 'cover'` `.src` | fallback: first variant of the highlighted image, then first image overall; omit if no images |
-| `description` | `description` | `stripDescriptionHtml()` (existing helper); omit when the stripped result is empty |
+| `description` | `description` | pre-strip the custom `<iframe-embed>` element (the shared helper only strips known HTML tags, so it would leak), then `stripDescriptionHtml()`; omit when the stripped result is empty |
 | `confidence` | — | `1.0` (platform fetch, no LLM uncertainty) |
 | `sourceUrl` | `venue.websiteUrl` | the venue's canonical calendar URL (matches AEG/LLM convention) |
 

@@ -478,7 +478,7 @@ describe('venuePilotFetcher.fetch', () => {
     expect(result.events.length).toBe(0)
   })
 
-  it('strips HTML from the description', async () => {
+  it('strips HTML — including VenuePilot <iframe-embed> — from the description', async () => {
     mockFetchOk(
       graphqlBody([
         {
@@ -487,7 +487,11 @@ describe('venuePilotFetcher.fetch', () => {
           date: '2026-08-06',
           doorTime: '18:00:00',
           startTime: '19:00:00',
-          description: '<p style="text-align: center"><strong>Hello</strong> world</p>',
+          // Real VenuePilot markup carries a custom <iframe-embed> element that
+          // the shared stripDescriptionHtml() helper leaves intact (unknown tag).
+          description:
+            '<p style="text-align: center"><strong>Hello</strong> world</p>' +
+            '<iframe-embed src="https://embed.example/x">fallback</iframe-embed>',
           ticketsUrl: '',
           status: 'BUY TICKETS',
           announceArtists: [{ name: 'Q' }],
@@ -500,6 +504,7 @@ describe('venuePilotFetcher.fetch', () => {
     })
     expect(result.events[0]!.description).toBe('Hello world')
     expect(result.events[0]!.description).not.toContain('<')
+    expect(result.events[0]!.description).not.toContain('iframe-embed')
   })
 
   it('passes an abort signal only when timeoutMs is set', async () => {
@@ -827,6 +832,24 @@ function pickImageUrl(
   return (cover ?? variants[0])?.src
 }
 
+// VenuePilot descriptions embed a custom <iframe-embed> element. The shared
+// stripDescriptionHtml() helper only strips KNOWN HTML tag names (it preserves
+// unknown tags like <heart> to keep its round-trip idempotent, #844), so it
+// would leave <iframe-embed> markup in the plain-text description. Remove the
+// whole element here — its inner content is embed chrome, not prose — before
+// handing the string to the shared stripper. Runs on the raw markup VenuePilot
+// serves (real tags, not entity-encoded, per the live 1105 probe).
+const IFRAME_EMBED_BLOCK = /<iframe-embed\b[^>]*>[\s\S]*?<\/iframe-embed>/gi
+const IFRAME_EMBED_TAG = /<\/?iframe-embed\b[^>]*>/gi
+
+function stripVenuePilotDescription(html: string | null | undefined): string {
+  if (!html) return ''
+  const withoutEmbeds = html
+    .replace(IFRAME_EMBED_BLOCK, ' ')
+    .replace(IFRAME_EMBED_TAG, ' ')
+  return stripDescriptionHtml(withoutEmbeds)
+}
+
 function normalize(
   event: VenuePilotEvent,
   venueCalendarUrl: string,
@@ -850,7 +873,7 @@ function normalize(
       ? event.ticketsUrl
       : undefined
   const imageUrl = pickImageUrl(event.announceImages)
-  const cleaned = stripDescriptionHtml(event.description)
+  const cleaned = stripVenuePilotDescription(event.description)
   const description = cleaned.length > 0 ? cleaned : undefined
 
   return {
