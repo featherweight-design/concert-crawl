@@ -53,7 +53,22 @@ const themeScript = `
 export const metadata: Metadata = {
   title: 'Concert Crawl',
   description: 'Denver concert calendar — find shows at your favorite venues.',
-  manifest: '/manifest.json',
+  manifest: '/manifest.webmanifest',
+  applicationName: 'Concert Crawl',
+  appleWebApp: {
+    capable: true,
+    title: 'Concert Crawl',
+    statusBarStyle: 'black-translucent',
+  },
+  icons: {
+    icon: [
+      { url: '/api/pwa/icon-192', sizes: '192x192', type: 'image/png' },
+      { url: '/api/pwa/icon-512', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/api/pwa/icon-apple-180', sizes: '180x180', type: 'image/png' },
+    ],
+  },
 }
 
 export const viewport: Viewport = {

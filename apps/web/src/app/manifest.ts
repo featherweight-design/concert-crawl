@@ -44,5 +44,14 @@ export default function manifest(): MetadataRoute.Manifest {
       { name: 'Browse events', short_name: 'Events', url: '/' },
       { name: 'Search', short_name: 'Search', url: '/search' },
     ],
+    screenshots: [
+      {
+        src: '/api/pwa/icon-512',
+        sizes: '512x512',
+        type: 'image/png',
+        form_factor: 'narrow',
+        label: 'Concert Crawl',
+      },
+    ],
   }
 }

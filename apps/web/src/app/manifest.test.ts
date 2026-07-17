@@ -66,4 +66,12 @@ describe('web app manifest', () => {
     expect(result.categories).toContain('music')
     expect((result.shortcuts ?? []).length).toBeGreaterThanOrEqual(2)
   })
+
+  it('declares at least one narrow screenshot', () => {
+    const result = manifest()
+    const narrow = (result.screenshots ?? []).filter(
+      (shot) => shot.form_factor === 'narrow',
+    )
+    expect(narrow.length).toBeGreaterThanOrEqual(1)
+  })
 })
