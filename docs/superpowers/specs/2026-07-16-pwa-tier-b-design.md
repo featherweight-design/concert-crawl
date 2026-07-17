@@ -34,7 +34,7 @@
 Use **Serwist** (`@serwist/next`), the maintained successor to Workbox/next-pwa with first-class Next 15 App Router support. `next-pwa` is effectively unmaintained and is not used.
 
 - SW source: `apps/web/src/app/sw.ts` (Serwist's `defaultCache` + custom runtime strategies).
-- Build wiring: wrap `next.config.ts` (currently Sentry + Turbo + strict mode only) with `withSerwist({ swSrc, swDest })`, output to `public/sw.js`. Create the `public/` directory (does not exist today).
+- Build wiring: wrap `next.config.ts` (currently `withSentryConfig` + `reactStrictMode` + `transpilePackages` + an `env` version string) with `withSerwist({ swSrc, swDest })`, output to `public/sw.js`. Create the `public/` directory (does not exist today).
 - Registration: client-side registration on load (a small client component mounted in the root layout).
 - Dev: Serwist disabled in development to avoid caching churn.
 
@@ -102,4 +102,4 @@ Each PR ships independently and passes CI on its own.
 - **iOS PWA quirks**: iOS web push (later) requires an installed PWA; install is manual (no prompt) — the static "Add to Home Screen" hint mitigates.
 - **Stale cache after deploy**: versioned precache + `skipWaiting`/`clientsClaim` tuned so users get fresh assets promptly; verify against the ISR landing page.
 - **Auth data leakage**: the network-only default for non-allowlisted routes is the safeguard; the e2e suite should assert an authenticated route is not served from cache offline.
-- **Serwist + Sentry/Turbo config interplay**: confirm `withSerwist` composes cleanly with the existing `next.config.ts` wrappers.
+- **Serwist + Sentry config interplay**: confirm `withSerwist` composes cleanly with the existing `withSentryConfig` wrapper in `next.config.ts`.

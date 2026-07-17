@@ -21,7 +21,7 @@ apps/web is **Next.js 15.5.20, App Router**, mobile-first (Tailwind responsive, 
 **PWA claim is aspirational.** What actually exists vs. what a real PWA needs:
 
 - ✅ Web app manifest (`apps/web/src/app/manifest.ts`) — name, short_name, description, start_url, standalone display, theme/background color, 192 + 512 icons
-- ❌ **No service worker** (the thing that makes a PWA installable/offline). Only MSW, dev-only mocking.
+- ❌ **No service worker** (the thing that makes a PWA installable/offline). None exists in the repo — no `public/sw.js`, no Serwist/next-pwa.
 - ❌ No `next-pwa`/Serwist, no caching, no offline fallback, no install prompt
 - ❌ No iOS meta tags (apple-touch-icon, apple-mobile-web-app-*), no favicon set, no maskable icon
 - ❌ No push infrastructure of any kind
@@ -32,7 +32,7 @@ So today it is a mobile-responsive website with a manifest file — roughly 20% 
 
 **Payments:** Stripe web checkout — `@stripe/react-stripe-js`, `CheckoutPanel.tsx` → `/v1/billing/checkout-session`. `subscriptions` table mirrors Stripe tiers (free/premium/supporter/founder). **This is the crux for app stores (see gotcha below).**
 
-**Push:** None. Notifications are in-app DB rows only (`packages/db/src/schema/notifications.ts`; `apps/api/.../contest-notifications.ts`). Issue #737 is the open consumer-notification gap.
+**Push:** None. Notifications are in-app DB rows only (`packages/db/src/schema/notifications.ts`; `apps/api/.../contest-notifications.ts`). Issue #737 tracks the open consumer in-app notification surface (bell + panel + endpoints) — related but distinct from push delivery.
 
 **Rendering:** Heavy Server Components + server actions + middleware auth + `next/image` + ISR. A WebView wrapper pointing at the deployed site keeps all of this for free; a static export would break it.
 
@@ -69,7 +69,7 @@ Options, each with tradeoffs:
 ## Other gotchas
 
 - **Auth (Clerk):** Cookie handling + OAuth pop-ups (Spotify) are fiddly in a WebView. Clerk has Capacitor guidance; budget real QA time.
-- **Push:** Net-new. Stand up FCM (Android) + APNs (iOS) + device-token table + send pipeline (~1 wk). Worth doing anyway — also unblocks web push for the PWA and closes #737.
+- **Push:** Net-new. Stand up FCM (Android) + APNs (iOS) + device-token table + send pipeline (~1 wk). Worth doing anyway — also unblocks web push for the PWA and relates to #737.
 - **SSR reliance:** WebView-loads-live-site keeps SSR/actions/middleware; static export would break them. Trade "true offline" for keeping server features.
 - **Review + maintenance overhead:** two store accounts ($99/yr Apple, $25 once Google), review latency on every change, screenshots, privacy labels, "broke on iOS 19" tax. Permanent operational cost.
 - **Deep links / universal links** for shareable event URLs need per-platform config.
@@ -91,7 +91,7 @@ Options, each with tradeoffs:
 ## Recommended sequencing
 
 1. **Decide the billing model** (native IAP vs. external-link vs. web-only reader app). Everything scopes off this. Lean: web-only upgrades for v1.
-2. **Finish the PWA** (service worker + offline shell + install prompt + web push). ~1–2 wks, independently valuable, closes #737 for free.
+2. **Finish the PWA** (service worker + offline shell + install prompt + web push). ~1–2 wks, independently valuable, and lays the push groundwork that complements #737.
 3. **Wrap with Capacitor** — add FCM/APNs, deep links, native auth QA. ~3–4 wks.
 4. **Ship to Play first** (faster, friendlier review), then App Store.
 5. Reconsider React Native only if the WebView experience proves too janky (rare for a browsing app).
@@ -106,7 +106,7 @@ Precise gaps to close, from a full codebase pass:
 
 1. **Manifest** (`apps/web/src/app/manifest.ts`): has name/short_name/description/start_url/display/theme+background/192+512 icons. **Missing:** maskable icon variant, screenshots (Android install prompt), shortcuts, categories, explicit scope/orientation.
 2. **Icons/assets:** only `/api/pwa/icon-192` and `/api/pwa/icon-512` (Edge `ImageResponse`). **Missing:** apple-touch-icon (180), favicon set, maskable variant, splash screens. No `apps/web/public/` directory exists.
-3. **Service worker:** none. Next 15.5.20 App Router — Serwist adds cleanly. `next.config.ts` only has Sentry + Turbo + strict mode; no conflicts.
+3. **Service worker:** none. Next 15.5.20 App Router — Serwist adds cleanly. `next.config.ts` only wraps `withSentryConfig` (plus `reactStrictMode` + `transpilePackages`); no conflicts.
 4. **Offline surface:** React Query 5.x present (no SWR), no persistent cache. Client + server components fetch from `NEXT_PUBLIC_API_URL`. High-value offline targets: event listings, venue details, profile, notifications list.
 5. **Install prompt / iOS meta:** zero `beforeinstallprompt` handling, zero "Add to Home Screen" UI, zero apple-mobile-web-app-* meta in `layout.tsx`. iOS gets no PWA affordance today.
 6. **Web push:** nothing toward it (no SW, no push handler, no VAPID keys, no subscription table). Would hook into existing `notifications` table + API. iOS 16.4+ web push requires installed PWA + manifest + SW push handler + VAPID.
