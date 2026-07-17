@@ -4,7 +4,7 @@
 
 **Goal:** Create a valid Web App Manifest so Concert Crawl can be installed as a PWA on mobile devices.
 
-**Architecture:** Three new files following Next.js App Router conventions. `manifest.ts` is served automatically at `/manifest.json`. Two API route handlers generate 192×192 and 512×512 PNG icons via `ImageResponse` — same pattern as the existing `apple-icon.tsx`. No changes to `layout.tsx` (manifest reference and themeColor already declared).
+**Architecture:** Three new files following Next.js App Router conventions. `manifest.ts` is served automatically at `/manifest.webmanifest`. Two API route handlers generate 192×192 and 512×512 PNG icons via `ImageResponse` — same pattern as the existing `apple-icon.tsx`. No changes to `layout.tsx` (manifest reference and themeColor already declared).
 
 **Tech Stack:** Next.js 14 App Router, `next/og` ImageResponse, TypeScript
 
@@ -31,7 +31,7 @@ git commit -m "docs: add PWA manifest design spec"
 
 - Create: `apps/web/src/app/manifest.ts`
 
-The manifest file uses Next.js's built-in `MetadataRoute.Manifest` type and is automatically served at `/manifest.json` by the App Router — no additional config needed.
+The manifest file uses Next.js's built-in `MetadataRoute.Manifest` type and is automatically served at `/manifest.webmanifest` by the App Router — no additional config needed.
 
 - [ ] **Step 1: Create `apps/web/src/app/manifest.ts`**
 
