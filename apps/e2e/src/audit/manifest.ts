@@ -86,6 +86,127 @@ const manifest: AuditManifest = validateManifest([
     tags: ['admin'],
     auth: 'admin',
   },
+
+  // --- Additional consumer routes -----------------------------------------
+  {
+    id: 'search',
+    path: '/search',
+    tags: ['consumer'],
+    auth: 'user',
+  },
+  {
+    id: 'changelog',
+    path: '/changelog',
+    tags: ['consumer'],
+    auth: 'user',
+  },
+  {
+    id: 'venues-index',
+    path: '/venues',
+    tags: ['consumer'],
+    auth: 'user',
+  },
+  {
+    id: 'me',
+    path: '/me',
+    tags: ['consumer'],
+    auth: 'user',
+  },
+
+  // --- Additional admin routes --------------------------------------------
+  {
+    id: 'admin-settings',
+    path: '/admin/settings',
+    tags: ['admin'],
+    auth: 'admin',
+  },
+  {
+    id: 'admin-prices',
+    path: '/admin/prices',
+    tags: ['admin'],
+    auth: 'admin',
+  },
+  {
+    id: 'admin-price-submissions',
+    path: '/admin/prices/submissions',
+    tags: ['admin'],
+    auth: 'admin',
+  },
+  {
+    id: 'admin-inbox',
+    path: '/admin/inbox',
+    tags: ['admin'],
+    auth: 'admin',
+  },
+  {
+    id: 'admin-venues',
+    path: '/admin/venues',
+    tags: ['admin'],
+    auth: 'admin',
+    interactions: [
+      {
+        // Admin venue-detail (`/admin/venues/[id]`) keys on the staging venue
+        // UUID, which is NOT stable: the prod->staging sync strips the prod id
+        // and lets staging generate its own (see sync-venues.ts — insert drops
+        // `id`, ON CONFLICT targets `slug`), so a hardcoded UUID would 404 after
+        // any staging rebuild. Reach the detail page by clicking the first real
+        // venue row link on the stable index instead. The `:not(...)` filters
+        // exclude the two non-detail links (`/robots-audit`, `/new`); the venue
+        // table renders both a mobile-card and desktop-table link set, so
+        // `:visible` picks the one rendered at the current viewport.
+        id: 'open-first-venue',
+        description:
+          'Open the first venue detail page from the admin venues index (UUID-stable coverage of /admin/venues/[id])',
+        run: async (page: Page) => {
+          await page
+            .locator(
+              'a[href^="/admin/venues/"]:not([href="/admin/venues/robots-audit"]):not([href="/admin/venues/new"]):visible',
+            )
+            .first()
+            .click()
+          await page.waitForLoadState('networkidle')
+        },
+      },
+    ],
+  },
+  {
+    id: 'admin-robots-audit',
+    path: '/admin/venues/robots-audit',
+    tags: ['admin'],
+    auth: 'admin',
+  },
+  {
+    id: 'admin-crawl',
+    path: '/admin/crawl',
+    tags: ['admin'],
+    auth: 'admin',
+  },
+  {
+    id: 'admin-founder-window',
+    path: '/admin/founder-window',
+    tags: ['admin'],
+    auth: 'admin',
+  },
+  {
+    id: 'admin-users',
+    path: '/admin/users',
+    tags: ['admin'],
+    auth: 'admin',
+  },
+  {
+    // /admin/users/:userId keys on the Clerk user id (identity source of
+    // truth); this is the seeded `alpha` fixture user from fixture-users.ts.
+    id: 'admin-user-detail',
+    path: '/admin/users/user_3GYqkhiaCasabdEYXqtsdiUYjnD',
+    tags: ['admin'],
+    auth: 'admin',
+  },
+  {
+    id: 'admin-invite-codes',
+    path: '/admin/invite-codes',
+    tags: ['admin'],
+    auth: 'admin',
+  },
 ])
 
 export default manifest

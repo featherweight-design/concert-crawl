@@ -3,9 +3,20 @@ import manifest from './manifest.js'
 import { validateManifest } from './manifest-types.js'
 
 describe('manifest', () => {
-  it('exports an array of 7 entries', () => {
+  it('exports a non-empty array of routes', () => {
     expect(Array.isArray(manifest)).toBe(true)
-    expect(manifest).toHaveLength(7)
+    expect(manifest.length).toBeGreaterThan(0)
+  })
+
+  it('has unique route ids', () => {
+    const ids = manifest.map((route) => route.id)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  it('covers both consumer and admin audiences', () => {
+    const tags = new Set(manifest.flatMap((route) => route.tags))
+    expect(tags.has('consumer')).toBe(true)
+    expect(tags.has('admin')).toBe(true)
   })
 
   it('passes validateManifest without throwing', () => {
