@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import type {
+  EventsAvailabilityResponse,
   EventsListResponse,
   VenuePublic,
   WatchingShow,
@@ -21,6 +22,8 @@ import {
 } from '@/components/consumer/definitions/lib'
 import { localDateString } from '@/lib/time'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { pickerWindow } from '@/components/consumer/jump-picker/date-math'
+import { fetchAvailability } from '@/lib/queries/use-availability'
 
 const copy = CONSUMER_COPY
 
@@ -163,6 +166,24 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
   const watchedIds = new Set(watchedShows.map((show) => show.eventId))
 
+  // SSR-prefetch the availability window (date→count) for the jump picker so
+  // react-query is seeded and all in-picker month paging is client-side. Only
+  // needed in calendar view; a failure degrades gracefully to a client fetch.
+  let initialAvailability: EventsAvailabilityResponse | undefined
+  if (view === 'cal') {
+    const availabilityWindow = pickerWindow(today)
+    try {
+      initialAvailability = await fetchAvailability(
+        availabilityWindow.from,
+        availabilityWindow.to,
+        token,
+      )
+    } catch (err) {
+      console.error('availability prefetch failed', err)
+      initialAvailability = undefined
+    }
+  }
+
   const { data: events, total, limit } = eventsResult
 
   if (view === 'cal') {
@@ -289,6 +310,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           watchedIds={Array.from(watchedIds)}
           prevWeekHref={calPrevWeekHref}
           nextWeekHref={calNextWeekHref}
+          initialAvailability={initialAvailability}
         />
       )}
 

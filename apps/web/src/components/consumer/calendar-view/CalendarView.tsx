@@ -1,7 +1,10 @@
 'use client'
 
 import { Fragment, useMemo, useState } from 'react'
-import type { EventWithVenue } from '@concert-crawl/types'
+import type {
+  EventsAvailabilityResponse,
+  EventWithVenue,
+} from '@concert-crawl/types'
 import { EventCard } from '@/components/consumer/event-card'
 import { EmptyState } from '@/components/consumer/empty-state'
 import { WeekStrip } from '@/components/consumer/week-strip'
@@ -19,6 +22,9 @@ interface CalendarViewProps {
   watchedIds: string[]
   prevWeekHref: string | null
   nextWeekHref: string
+  // SSR-prefetched availability window; wired into the jump picker in a later
+  // task. Accepted here as a no-op passthrough so the page can pass it now.
+  initialAvailability?: EventsAvailabilityResponse | undefined
 }
 
 export function CalendarView({
