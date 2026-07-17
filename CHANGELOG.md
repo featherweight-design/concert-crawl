@@ -1,3 +1,10 @@
+# [1.126.0](https://github.com/HartiganHM/concert-crawl/compare/v1.125.0...v1.126.0) (2026-07-17)
+
+
+### Features
+
+* **#643:** supportingArtists + tourName data layer (PR1 of 2) ([#994](https://github.com/HartiganHM/concert-crawl/issues/994)) ([8e8b7c4](https://github.com/HartiganHM/concert-crawl/commit/8e8b7c404eb3349fd201f946f0d656a13f33e04a)), closes [#643](https://github.com/HartiganHM/concert-crawl/issues/643) [#643](https://github.com/HartiganHM/concert-crawl/issues/643) [#643](https://github.com/HartiganHM/concert-crawl/issues/643) [#643](https://github.com/HartiganHM/concert-crawl/issues/643) [#643](https://github.com/HartiganHM/concert-crawl/issues/643) [#643](https://github.com/HartiganHM/concert-crawl/issues/643) [#643](https://github.com/HartiganHM/concert-crawl/issues/643) [#643](https://github.com/HartiganHM/concert-crawl/issues/643) [#643](https://github.com/HartiganHM/concert-crawl/issues/643) [#643](https://github.com/HartiganHM/concert-crawl/issues/643)
+
 # [1.125.0](https://github.com/HartiganHM/concert-crawl/compare/v1.124.1...v1.125.0) (2026-07-17)
 
 
