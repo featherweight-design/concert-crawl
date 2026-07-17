@@ -1,3 +1,33 @@
+# [1.127.0](https://github.com/HartiganHM/concert-crawl/compare/v1.126.0...v1.127.0) (2026-07-17)
+
+
+### Bug Fixes
+
+* **api:** order availability response by date ascending ([73a5b8e](https://github.com/HartiganHM/concert-crawl/commit/73a5b8ef084ff3d0311e8ffd7c3dcfe28efd895c))
+* default availability window to MT + key calendar cells by ISO ([4510021](https://github.com/HartiganHM/concert-crawl/commit/451002163c3a922af549eec725f6023df5a11706))
+* **events:** wrap availability error responses in success envelope ([f47efa5](https://github.com/HartiganHM/concert-crawl/commit/f47efa560bd85e0583234e1887e7d6b45339ffcb))
+* server-safe availability fetch + avoid dead picker tab-stop ([39642e0](https://github.com/HartiganHM/concert-crawl/commit/39642e0e615110d08d31219c0ab1fae68110f62e))
+* single Escape close + non-overlapping mobile breakpoint ([447a8c0](https://github.com/HartiganHM/concert-crawl/commit/447a8c0ebbfb4bf54de043d6767790f14818137d))
+* **web+api:** address Copilot review on jump picker ([#642](https://github.com/HartiganHM/concert-crawl/issues/642)) ([0f3a283](https://github.com/HartiganHM/concert-crawl/commit/0f3a283843830d399ffc81183ac167a81a718606))
+* **web+api:** address Copilot round 3 on jump picker ([#642](https://github.com/HartiganHM/concert-crawl/issues/642)) ([ac0f80f](https://github.com/HartiganHM/concert-crawl/commit/ac0f80facd1edb9bd566ca517144365e5cefefd9))
+* **web:** address Copilot round 2 on jump picker ([#642](https://github.com/HartiganHM/concert-crawl/issues/642)) ([8bb7f6b](https://github.com/HartiganHM/concert-crawl/commit/8bb7f6b24da70123af87c878961d26a06ad1832d))
+* **web:** derive WeekStrip day aria-label from ISO date ([965c0b6](https://github.com/HartiganHM/concert-crawl/commit/965c0b66faa86f90365f5cc85f0317cf9c56f8fb))
+* **web:** float jump picker as popover with click-outside scrim ([#642](https://github.com/HartiganHM/concert-crawl/issues/642)) ([fd01717](https://github.com/HartiganHM/concert-crawl/commit/fd01717c240da9666e7f86af428da23ee6b3bf57))
+* **week-strip:** expose shows-on-sale cue in day accessible name ([6a034a0](https://github.com/HartiganHM/concert-crawl/commit/6a034a034bdf7319e880da29e3efe2c916d23151))
+* wrap availability response in success envelope + scope picker chevron CSS ([4050f96](https://github.com/HartiganHM/concert-crawl/commit/4050f963b684fa41c1dea1d474d9ad6ffe9a2975))
+
+
+### Features
+
+* **api:** add GET /v1/events/availability date-count endpoint ([#642](https://github.com/HartiganHM/concert-crawl/issues/642)) ([59b14b9](https://github.com/HartiganHM/concert-crawl/commit/59b14b92fedc2c0793a1bfd33c21f4a7d11989b0))
+* **types:** add EventsAvailabilityResponse for calendar jump picker ([dae97a6](https://github.com/HartiganHM/concert-crawl/commit/dae97a68f3ba9917a99504fd3e103c8d0d43f9ef))
+* **web:** add jump-picker copy strings ([#642](https://github.com/HartiganHM/concert-crawl/issues/642)) ([2ba6ea6](https://github.com/HartiganHM/concert-crawl/commit/2ba6ea645ffa8a474dbd7c72de489868766f32e0))
+* **web:** add jump-picker date-math helpers ([#642](https://github.com/HartiganHM/concert-crawl/issues/642)) ([61c2466](https://github.com/HartiganHM/concert-crawl/commit/61c24666f82647127faf11e9ef8b154aef528639))
+* **web:** add jump-picker month-grid component ([#642](https://github.com/HartiganHM/concert-crawl/issues/642)) ([ca78114](https://github.com/HartiganHM/concert-crawl/commit/ca781145993c971c5ef868935ce18ecd155babbc))
+* **web:** availability react-query hook + SSR prefetch ([#642](https://github.com/HartiganHM/concert-crawl/issues/642)) ([70b5c85](https://github.com/HartiganHM/concert-crawl/commit/70b5c85168f6b781a703d774f0c69be9e7064ed7))
+* **web:** weekstrip header cue + grid-only week strip ([#642](https://github.com/HartiganHM/concert-crawl/issues/642)) ([10a9043](https://github.com/HartiganHM/concert-crawl/commit/10a9043e39b14daf5730731c1688649006f4dd2c))
+* **web:** wire jump picker into calendarview with cross-week nav ([#642](https://github.com/HartiganHM/concert-crawl/issues/642)) ([3c88dd1](https://github.com/HartiganHM/concert-crawl/commit/3c88dd148700cff6762eeafed6fed8dc50d4a8b5))
+
 # [1.126.0](https://github.com/HartiganHM/concert-crawl/compare/v1.125.0...v1.126.0) (2026-07-17)
 
 
