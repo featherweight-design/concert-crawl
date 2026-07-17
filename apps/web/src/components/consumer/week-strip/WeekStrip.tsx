@@ -84,7 +84,7 @@ export function WeekStrip({
                   background: day.hasEvents
                     ? selected
                       ? 'var(--fg-on-accent)'
-                      : 'var(--signal)'
+                      : 'var(--accent)'
                     : 'transparent',
                 }}
                 aria-hidden

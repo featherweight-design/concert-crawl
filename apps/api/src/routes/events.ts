@@ -68,9 +68,20 @@ const listEventsSchema = z.object({
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const MAX_WINDOW_DAYS = 400
 
+// Regex alone accepts impossible calendar dates (e.g. 2026-02-31), which
+// Date.parse silently rolls over to a different day rather than rejecting.
+// Require the date to round-trip so the window can't be quietly widened.
+const isRealDate = (value: string): boolean => {
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  )
+}
+
 const availabilitySchema = z.object({
-  from: z.string().regex(DATE_RE).optional(),
-  to: z.string().regex(DATE_RE),
+  from: z.string().regex(DATE_RE).refine(isRealDate).optional(),
+  to: z.string().regex(DATE_RE).refine(isRealDate),
 })
 
 function dayCountBetween(from: string, to: string): number {

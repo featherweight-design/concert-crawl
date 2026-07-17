@@ -1554,6 +1554,16 @@ describe('GET /v1/events/availability', () => {
     expect(res.status).toBe(400)
   })
 
+  it('rejects a regex-matching but invalid calendar date', async () => {
+    // 2026-02-31 passes the YYYY-MM-DD regex but is not a real date, so the
+    // day-span becomes NaN — the guard must reject it rather than 500 on the
+    // bad string reaching Postgres.
+    const res = await app.request(
+      '/v1/events/availability?from=2026-02-01&to=2026-02-31',
+    )
+    expect(res.status).toBe(400)
+  })
+
   it('defaults `from` to today when omitted', async () => {
     const res = await app.request('/v1/events/availability?to=2026-12-31')
     expect(res.status).toBe(200)

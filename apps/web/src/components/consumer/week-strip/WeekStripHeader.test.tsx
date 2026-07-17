@@ -51,6 +51,18 @@ describe('WeekStripHeader', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
+  it('restores focus to the cue after picking a day', () => {
+    const { onPick } = setup()
+    const cue = screen.getByRole('button', { name: /Jump to a date/ })
+    fireEvent.click(cue)
+    // Today (2026-04-28) is a selectable in-window day in the open grid.
+    const day = screen.getByRole('gridcell', { name: /April 28/ })
+    fireEvent.click(day)
+    expect(onPick).toHaveBeenCalledWith('2026-04-28')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(document.activeElement).toBe(cue)
+  })
+
   it('disables the previous-week chevron at the current week', () => {
     setup()
     expect(screen.getByRole('link', { name: 'Next week' })).toBeTruthy()

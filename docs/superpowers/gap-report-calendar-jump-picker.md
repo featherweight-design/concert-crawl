@@ -54,6 +54,23 @@ at `design/design_handoff_calendar_jump_picker/` at build config `cueStyle="chip
   (WeekStripHeader.test.tsx "closes the picker when the click-catcher scrim is clicked").
   [WeekStripHeader.tsx:29-30,86-89,183-204 · JumpPicker.tsx:330-331]
 
+## GAPS (5 — found by Copilot review on PR #987, all fixed)
+
+- **§5 WeekStrip dot parity** — day-strip dot used `var(--signal)`; design table L220 specifies
+  `var(--accent)` (→ `var(--fg-on-accent)` when selected). Missed in the first pass because the
+  property table's dot row was checked against the picker, not the strip. Fixed [WeekStrip.tsx:87]
+- **§8 focus on pick** — picking a day closed the picker via bare `setOpen(false)`, dropping focus
+  to `<body>`; §8 requires focus to return to the cue on every dismissal. Now routes through
+  `close()`. Regression test added [WeekStripHeader.tsx:201, WeekStripHeader.test.tsx]
+- **§1 disabled chevron hover** — the disabled prev-week `<span>` still matched the hover rule
+  (`:not(:disabled)` never excludes a span). Added `:not([aria-disabled="true"])` [WeekStripHeader.tsx:24]
+- **§8 pager roving tab-stop** — month pager buttons changed `view` but left `focusIso` in the old
+  month, so the single tab-stop landed on an out-of-month spill cell. `pageMonth` now advances
+  `focusIso` to the new month's first day, gating only the DOM-focus move [JumpPicker.tsx:212]
+- **§11 availability date validation** — `to`/`from` accepted regex-matching but impossible dates
+  (e.g. `2026-02-31`), which `Date.parse` silently rolled over rather than rejecting. Added a
+  round-trip `isRealDate` refine to the Zod schema. Regression test added [events.ts:71]
+
 ## DEFERRED (0)
 
 None.

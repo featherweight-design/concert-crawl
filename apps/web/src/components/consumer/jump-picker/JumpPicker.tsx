@@ -209,12 +209,13 @@ export const JumpPicker = ({
       (availability.get(cell.iso) ?? 0) > 0,
   )
 
-  const pageMonth = (delta: number, keepFocus: boolean) => {
+  const pageMonth = (delta: number, moveDomFocus: boolean) => {
     const next = clampView(addMonths(view, delta), min, max)
     setView(next)
-    if (keepFocus) {
-      const firstIso = isoOf(next.y, next.m, 1)
-      setFocusIso(firstIso)
+    // Keep the roving tab-stop inside the newly-viewed month so it never lands
+    // on an out-of-month spill cell. Only steal DOM focus for keyboard paging.
+    setFocusIso(isoOf(next.y, next.m, 1))
+    if (moveDomFocus) {
       pendingFocus.current = true
     }
   }

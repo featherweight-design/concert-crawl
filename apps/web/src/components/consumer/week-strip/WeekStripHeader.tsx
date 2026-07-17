@@ -21,7 +21,7 @@ const STYLE_CONTENT = [
   '.cjp-cue:hover{background:var(--overlay-hover)}',
   '.cjp-car{transition:transform .16s cubic-bezier(.2,.7,.3,1)}',
   '.cjp-chev{transition:background .12s,opacity .12s}',
-  '.cjp-chev:hover:not(:disabled){background:var(--overlay-hover)}',
+  '.cjp-chev:hover:not(:disabled):not([aria-disabled="true"]){background:var(--overlay-hover)}',
   '.cjp-chev:disabled{opacity:.32;cursor:default}',
   // Click-catcher: invisible on desktop (popover model), a blurred scrim on
   // mobile (sheet model) per design §10. Closing the picker by clicking it is a
@@ -197,7 +197,7 @@ export const WeekStripHeader = ({
           today={today}
           availability={availability}
           onPick={(iso) => {
-            setOpen(false)
+            close()
             onPick(iso)
           }}
         />
