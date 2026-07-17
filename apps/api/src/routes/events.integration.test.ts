@@ -1568,4 +1568,34 @@ describe('GET /v1/events/availability', () => {
     const body = await res.json()
     expect(body.data.from).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
+
+  it('defaults `from` to Mountain Time today, not UTC', async () => {
+    // 2026-07-11T04:00:00Z is 2026-07-10 22:00 in America/Denver (UTC-6 DST):
+    // UTC "today" is already the 11th while MT is still the 10th. events.date
+    // holds MT calendar dates, so the default window must start on the 10th or a
+    // same-day evening show would silently drop off the calendar.
+    const venue = await seedVenue({ slug: 'ogden', name: 'Ogden Theatre' })
+    await seedEvent(venue.id, {
+      artist: 'Tonight Show',
+      date: '2026-07-10',
+      status: 'upcoming',
+    })
+
+    // Fake only Date (not timers) so async DB calls still settle while the
+    // handler's `new Date()` reads the frozen MT-evening instant.
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-07-11T04:00:00Z'))
+    try {
+      const res = await app.request('/v1/events/availability?to=2026-12-31')
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.data.from).toBe('2026-07-10')
+      const byDate = Object.fromEntries(
+        body.data.data.map((day) => [day.date, day.count]),
+      )
+      expect(byDate['2026-07-10']).toBe(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

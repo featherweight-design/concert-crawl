@@ -136,6 +136,19 @@ describe('JumpPicker', () => {
     expect(buttonByLabel('Previous month').disabled).toBe(true)
   })
 
+  it('keys day cells by ISO date so paging reuses the same DOM node', () => {
+    setup()
+    // 2026-04-28 (today) sits at grid index 30 in April but index 2 in the May
+    // grid's leading spill. Keyed by ISO, React reuses the same DOM node across
+    // the page; keyed by array index it would rebind that node to a new date,
+    // sticking stale focus/aria state to the wrong day.
+    const aprNode = document.querySelector('[data-iso="2026-04-28"]')
+    fireEvent.click(buttonByLabel('Next month'))
+    const mayNode = document.querySelector('[data-iso="2026-04-28"]')
+    expect(mayNode).not.toBeNull()
+    expect(mayNode).toBe(aprNode)
+  })
+
   it('lands the roving tab-stop on today when paging back to the current month', () => {
     setup()
     // Page forward to May, then back to April (the current/min month). April 1

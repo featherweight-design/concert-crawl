@@ -470,7 +470,7 @@ export const JumpPicker = ({
           gap: GRID_GAP,
         }}
       >
-        {cells.map((cell, i) => {
+        {cells.map((cell) => {
           const count = availability.get(cell.iso) ?? 0
           const past = ymdKey(cell.y, cell.m, cell.d) < todayKey
           const sel = cell.iso === selectedDate
@@ -506,7 +506,7 @@ export const JumpPicker = ({
 
           return (
             <button
-              key={i}
+              key={cell.iso}
               type="button"
               role="gridcell"
               data-iso={cell.iso}

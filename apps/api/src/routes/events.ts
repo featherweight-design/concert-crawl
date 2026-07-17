@@ -67,6 +67,7 @@ const listEventsSchema = z.object({
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const MAX_WINDOW_DAYS = 400
+const MT_TIME_ZONE = 'America/Denver'
 
 // Regex alone accepts impossible calendar dates (e.g. 2026-02-31), which
 // Date.parse silently rolls over to a different day rather than rejecting.
@@ -399,7 +400,10 @@ eventsRouter.get('/availability', async (ctx) => {
       400,
     )
   }
-  const from = parsed.data.from ?? todayInTimezone('UTC')
+  // events.date holds event-local (Mountain Time) calendar dates, so default
+  // the window start to today in MT — not UTC. During MT evening UTC has already
+  // rolled to tomorrow, which would drop same-day shows from the calendar.
+  const from = parsed.data.from ?? todayInTimezone(MT_TIME_ZONE)
   const { to } = parsed.data
   if (to < from) {
     return ctx.json(

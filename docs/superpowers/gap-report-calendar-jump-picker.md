@@ -198,6 +198,21 @@ aria-disabled="true">` — not `:disabled` — so the rule re-enabled its hover 
   `weekStripDayShows` cue. Updated WeekStrip.test.tsx + CalendarView.test.tsx assertions to the fuller
   format [date-math.ts:40-77, WeekStrip.tsx:4,101-108]
 
+## GAPS (2 — found by Copilot review round 12 on PR #987, both fixed)
+
+- **§2 availability default window used UTC, not Mountain Time** — `GET /v1/events/availability`
+  defaulted an omitted `from` to `todayInTimezone('UTC')`, but `events.date` holds event-local (MT)
+  calendar dates. During MT evening hours UTC has already rolled to tomorrow, so the default window
+  started a day late and dropped same-day shows. Now defaults to `todayInTimezone(MT_TIME_ZONE)`
+  ('America/Denver'). Regression test freezes the clock at 2026-07-11T04:00Z (2026-07-10 22:00 MT) and
+  asserts `from === '2026-07-10'` and that a 2026-07-10 show is counted
+  [events.ts:70,404-406, events.integration.test.ts:1572]
+- **§4 JumpPicker calendar cells keyed by array index** — the 42-cell grid used `key={i}`, so paging
+  months rebound a DOM node to a new date and could stick focus/tabIndex/aria state to the wrong day.
+  Switched to the stable `key={cell.iso}`. Regression test pages April→May and asserts the 2026-04-28
+  node (grid index 30 in April, index 2 in May's spill) is the _same_ DOM element across the page
+  [JumpPicker.tsx:473,509, JumpPicker.test.tsx]
+
 ## DEFERRED (0)
 
 None.
