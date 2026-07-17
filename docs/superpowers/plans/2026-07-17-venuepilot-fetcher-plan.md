@@ -287,6 +287,12 @@ describe('venuePilotFetcher.canHandle', () => {
       venuePilotFetcher.canHandle(makeVenue({ apiAccountId: '' })),
     ).toBe(false)
   })
+
+  it('returns false when apiAccountId is whitespace-only', () => {
+    expect(
+      venuePilotFetcher.canHandle(makeVenue({ apiAccountId: '   ' })),
+    ).toBe(false)
+  })
 })
 
 describe('venuePilotFetcher.fetch', () => {
@@ -539,6 +545,26 @@ describe('venuePilotFetcher.fetch', () => {
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
     ).rejects.toBeInstanceOf(VenuePilotSchemaError)
+  })
+
+  it('throws VenuePilotFetchError for a whitespace-only apiAccountId without fetching', async () => {
+    mockFetchOk(LEVITT_FIXTURE)
+    await expect(
+      venuePilotFetcher.fetch(makeVenue({ apiAccountId: '   ' }), {
+        crawlDelayMs: 0,
+      }),
+    ).rejects.toBeInstanceOf(VenuePilotFetchError)
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('throws VenuePilotFetchError for a non-positive apiAccountId', async () => {
+    mockFetchOk(LEVITT_FIXTURE)
+    await expect(
+      venuePilotFetcher.fetch(makeVenue({ apiAccountId: '0' }), {
+        crawlDelayMs: 0,
+      }),
+    ).rejects.toBeInstanceOf(VenuePilotFetchError)
+    expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('throws VenuePilotFetchError and issues no GraphQL request when robots.txt disallows', async () => {
@@ -889,7 +915,8 @@ async function venuePilotFetch(
   venue: Venue,
   opts: { crawlDelayMs: number; timeoutMs?: number },
 ): Promise<PlatformFetchResult> {
-  if (!venue.apiAccountId) {
+  const rawAccountId = venue.apiAccountId?.trim() ?? ''
+  if (rawAccountId === '') {
     // canHandle() should have caught this; be defensive.
     throw new VenuePilotFetchError(
       0,
@@ -897,12 +924,15 @@ async function venuePilotFetch(
       `Venue ${venue.id} has apiProvider='venuepilot' but no api_account_id`,
     )
   }
-  const accountId = Number(venue.apiAccountId)
-  if (!Number.isInteger(accountId)) {
+  // Number('  ') coerces to 0 and Number.isInteger(0) is true, so trim first
+  // and require a positive integer — otherwise a blank/zero id would silently
+  // fetch account 0 instead of failing loudly.
+  const accountId = Number(rawAccountId)
+  if (!Number.isInteger(accountId) || accountId <= 0) {
     throw new VenuePilotFetchError(
       0,
       ENDPOINT,
-      `Venue ${venue.id} has a non-numeric api_account_id: ${venue.apiAccountId}`,
+      `Venue ${venue.id} has an invalid api_account_id: ${venue.apiAccountId}`,
     )
   }
 
@@ -958,10 +988,11 @@ async function venuePilotFetch(
 export const venuePilotFetcher: PlatformFetcher = {
   source: 'venuepilot',
   canHandle(venue) {
+    // Trim so a whitespace-only api_account_id isn't treated as configured.
     return Boolean(
       venue.apiProvider === 'venuepilot' &&
       venue.apiAccountId &&
-      venue.apiAccountId.length > 0,
+      venue.apiAccountId.trim().length > 0,
     )
   },
   fetch: venuePilotFetch,

@@ -69,7 +69,7 @@ Mirrors `aeg.ts` structure exactly:
 - **`normalize(event, venue): NormalizedEvent | null`** — applies the mapping above; returns `null` (with a warn log) for events with an empty/whitespace-only `name`.
 - **`fetch(venue, { crawlDelayMs, timeoutMs })`:**
   - **robots.txt gate first:** `await isAllowed(endpoint, USER_AGENT)` (the existing cached helper, `lib/robots.ts`); an explicit `Disallow` → `VenuePilotFetchError` before any GraphQL request. Fail-open (helper returns `true` when `robots.txt` can't be fetched), so the happy path is unchanged.
-  - `accountIds = [Number(venue.apiAccountId)]`; `startDate` = today in `venue.timezone` (so only upcoming shows return).
+  - `accountIds = [Number(venue.apiAccountId.trim())]`, validated as a positive integer first (`Number('  ')` coerces to `0`, so trim + require `> 0` — a blank/zero id throws `VenuePilotFetchError` rather than silently fetching account 0); `startDate` = today in `venue.timezone` (so only upcoming shows return).
   - `AbortSignal.timeout(timeoutMs)` when provided; honest `User-Agent: ConcertCrawl/1.0 (+https://concertcrawl.app/bot)`; `Content-Type: application/json`.
   - Respects `crawlDelayMs` before each request (including between pages).
   - Paginates `page = 1..metadata.totalPages` (Levitt = 1 page; larger accounts loop). A hard page cap (e.g. 50) guards against a runaway `totalPages`.
@@ -105,6 +105,7 @@ No behavioral change to the AEG path — same dispatch result, same strategy str
   - happy path: full normalize, `date`/`showTime`/`doorsTime` passthrough, headliner artist, `cover` image selection.
   - edge cases: empty `announceArtists` → artist falls back to title; no images → `imageUrl` omitted; whitespace-only `name` → event skipped; HTML description stripped; trailing-whitespace title trimmed.
   - schema drift → `VenuePilotSchemaError`; HTTP non-200 → `VenuePilotFetchError`; GraphQL `errors[]` on 200 → `VenuePilotFetchError`.
+  - account-id validation: whitespace-only or non-positive `apiAccountId` (`'   '`, `'0'`) → `VenuePilotFetchError` with **no** GraphQL request; `canHandle` returns `false` for a whitespace-only id.
   - robots gate: mocked `robots.txt` with an explicit `Disallow: /graphql` (or `Disallow: /`) for `*` → `VenuePilotFetchError` and **no** GraphQL request issued; `Allow: /` (or unfetchable robots, fail-open) → fetch proceeds normally.
   - pagination: multi-page `metadata.totalPages` loops and concatenates; page cap respected.
 - **`dispatch.test.ts`** (extend): a `apiProvider='venuepilot'` venue routes to `venuePilotFetcher`; AEG venue still routes to `aegFetcher` (regression); a venue with neither returns `null`; `apiProvider='venuepilot'` but no `apiAccountId` returns `null`.
