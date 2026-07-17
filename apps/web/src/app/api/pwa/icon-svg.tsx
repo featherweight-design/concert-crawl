@@ -26,7 +26,11 @@ interface PwaIconSvgProps {
 }
 
 export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
-  // Maskable: full-bleed canvas + art inset into the safe zone.
+  // Maskable: full-bleed canvas + art inset into the safe zone. Order matters:
+  // `translate` before `scale` composes as T·S, so the geometry scales first and
+  // the inset is applied in unscaled units — keeping the art centered (equal
+  // MASKABLE_INSET margins). Swapping to scale-then-translate would shrink the
+  // inset and push the art off-center.
   const artTransform = maskable
     ? `translate(${MASKABLE_INSET} ${MASKABLE_INSET}) scale(${MASKABLE_SAFE_ZONE_SCALE})`
     : undefined
