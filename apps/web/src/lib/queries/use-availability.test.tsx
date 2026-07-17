@@ -3,7 +3,6 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { useAvailability } from './use-availability'
 
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: async () => null }),
@@ -18,6 +17,8 @@ vi.mock('@/lib/api', () => ({
   },
   apiClient: { get: async () => ({ data: [], from: '', to: '' }) },
 }))
+
+import { useAvailability } from './use-availability'
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({

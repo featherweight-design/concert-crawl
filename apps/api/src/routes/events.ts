@@ -394,16 +394,22 @@ eventsRouter.get('/availability', async (ctx) => {
     to: ctx.req.query('to'),
   })
   if (!parsed.success) {
-    return ctx.json({ error: 'Invalid availability window' }, 400)
+    return ctx.json(
+      { success: false, error: 'Invalid availability window' },
+      400,
+    )
   }
   const from = parsed.data.from ?? todayInTimezone('UTC')
   const { to } = parsed.data
   if (to < from) {
-    return ctx.json({ error: '`to` must be on or after `from`' }, 400)
+    return ctx.json(
+      { success: false, error: '`to` must be on or after `from`' },
+      400,
+    )
   }
   const span = dayCountBetween(from, to)
   if (span < 1 || span > MAX_WINDOW_DAYS) {
-    return ctx.json({ error: 'Window must be 1–400 days' }, 400)
+    return ctx.json({ success: false, error: 'Window must be 1–400 days' }, 400)
   }
 
   const rows = await db

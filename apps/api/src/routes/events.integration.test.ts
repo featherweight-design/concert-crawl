@@ -1547,6 +1547,9 @@ describe('GET /v1/events/availability', () => {
       '/v1/events/availability?from=2026-01-01&to=2027-12-31',
     )
     expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.success).toBe(false)
+    expect(typeof body.error).toBe('string')
   })
 
   it('rejects a regex-matching but invalid calendar date', async () => {

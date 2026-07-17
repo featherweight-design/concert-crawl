@@ -155,6 +155,19 @@ aria-disabled="true">` — not `:disabled` — so the rule re-enabled its hover 
   `setSelectedDate` + `replaceState` logic already in `handleDateSelect`, risking drift if the URL
   contract changes. Now calls `handleDateSelect(iso)` directly [CalendarView.tsx:72]
 
+## GAPS (2 — found by Copilot review round 8 on PR #987, both fixed)
+
+- **§2 availability error envelope** — the three availability guards (bad Zod parse, `to < from`,
+  out-of-range span) returned a bare `{ error }` body, but every sibling error path in `events.ts`
+  (e.g. `GET /v1/events/:id` → `{ success: false, error: 'Event not found' }`) uses the
+  `{ success: false, error }` envelope. Inconsistent error shapes complicate client error handling.
+  Now all three return `{ success: false, error }`; the wide-window integration test asserts
+  `body.success === false` and a string `error` [events.ts:394-405, events.integration.test.ts:1435]
+- **test hygiene — mock-before-import** — `use-availability.test.tsx` imported the module under test
+  above its `vi.mock` calls; repo convention (and deterministic ESM mock application) is to declare
+  mocks first. Moved the `useAvailability` import below the two `vi.mock` blocks
+  [use-availability.test.tsx:6-22]
+
 ## DEFERRED (0)
 
 None.
