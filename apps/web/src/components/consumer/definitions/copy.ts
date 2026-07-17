@@ -28,6 +28,8 @@ export const CONSUMER_COPY = {
   jumpPickerClose: 'Close date picker',
   jumpPickerPrevMonth: 'Previous month',
   jumpPickerNextMonth: 'Next month',
+  jumpPickerPrevWeek: 'Previous week',
+  jumpPickerNextWeek: 'Next week',
 
   // ── Venue ──────────────────────────────────────────────────────────
   venueEmptyEyebrow: 'Upcoming',

@@ -70,10 +70,8 @@ export function CalendarView({
   // preserving every active filter param (mirrors calNextWeekHref param-copy).
   const onJumpPick = (iso: string) => {
     if (weekDates.has(iso)) {
-      setSelectedDate(iso)
-      const url = new URL(window.location.href)
-      url.searchParams.set('selectedDate', iso)
-      window.history.replaceState(null, '', url.toString())
+      // Same client-side select + URL-sync as tapping a day in the strip.
+      handleDateSelect(iso)
       return
     }
     const offset = weekOffsetForDate(iso, today)

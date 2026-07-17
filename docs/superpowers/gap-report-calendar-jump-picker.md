@@ -145,6 +145,16 @@ aria-disabled="true">` — not `:disabled` — so the rule re-enabled its hover 
   Regression test added asserting `onClose` fires exactly once for Escape in the grid
   [JumpPicker.tsx:320, JumpPicker.test.tsx]
 
+## GAPS (2 — found by Copilot review round 7 on PR #987, both fixed)
+
+- **§12 inline ARIA copy** — the week chevrons hard-coded `aria-label="Previous week"` /
+  `"Next week"` inline, violating the repo rule that all customer-facing strings (screen-reader
+  labels included) live in `definitions/copy.ts`. Added `jumpPickerPrevWeek` / `jumpPickerNextWeek`
+  copy keys and referenced them [copy.ts:31-32, WeekStripHeader.tsx:165,183]
+- **§8 CalendarView URL-sync duplication** — `onJumpPick`'s in-week branch re-implemented the exact
+  `setSelectedDate` + `replaceState` logic already in `handleDateSelect`, risking drift if the URL
+  contract changes. Now calls `handleDateSelect(iso)` directly [CalendarView.tsx:72]
+
 ## DEFERRED (0)
 
 None.

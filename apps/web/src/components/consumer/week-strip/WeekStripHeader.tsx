@@ -157,7 +157,7 @@ export const WeekStripHeader = ({
               <Link
                 href={prevWeekHref}
                 scroll={false}
-                aria-label="Previous week"
+                aria-label={CONSUMER_COPY.jumpPickerPrevWeek}
                 className="cjp-chev"
                 style={chevStyle}
               >
@@ -175,7 +175,7 @@ export const WeekStripHeader = ({
             <Link
               href={nextWeekHref}
               scroll={false}
-              aria-label="Next week"
+              aria-label={CONSUMER_COPY.jumpPickerNextWeek}
               className="cjp-chev"
               style={chevStyle}
             >
