@@ -1,0 +1,41 @@
+/// <reference lib="webworker" />
+// The reference directive above scopes the WebWorker lib to THIS file only, so the
+// app-wide tsconfig keeps its DOM lib and we avoid conflicting global type
+// declarations (self, addEventListener, etc.) between DOM and WebWorker.
+import { defaultCache } from '@serwist/next/worker'
+import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist'
+import { Serwist } from 'serwist'
+
+declare global {
+  interface WorkerGlobalScope extends SerwistGlobalConfig {
+    __SW_MANIFEST: (PrecacheEntry | string)[] | undefined
+  }
+}
+
+declare const self: ServiceWorkerGlobalScope
+
+// Serwist replaces the single literal `self.__SW_MANIFEST` reference with the
+// build-time precache list; it must appear exactly once in this source, so read
+// it into a local before use.
+const precacheEntries = self.__SW_MANIFEST
+
+const serwist = new Serwist({
+  // Conditional spread rather than passing the value directly: under
+  // exactOptionalPropertyTypes the option must be an array or absent, never
+  // explicitly `undefined`.
+  ...(precacheEntries ? { precacheEntries } : {}),
+  skipWaiting: true,
+  clientsClaim: true,
+  navigationPreload: true,
+  runtimeCaching: defaultCache,
+  fallbacks: {
+    entries: [
+      {
+        url: '/~offline',
+        matcher: ({ request }) => request.destination === 'document',
+      },
+    ],
+  },
+})
+
+serwist.addEventListeners()

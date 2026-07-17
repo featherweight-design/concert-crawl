@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next'
 import { withSentryConfig } from '@sentry/nextjs'
+import withSerwistInit from '@serwist/next'
 import rootPkg from '../../package.json'
 
 const config: NextConfig = {
@@ -10,7 +11,14 @@ const config: NextConfig = {
   },
 }
 
-export default withSentryConfig(config, {
+const withSerwist = withSerwistInit({
+  swSrc: 'src/app/sw.ts',
+  swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV === 'development',
+  reloadOnOnline: true,
+})
+
+export default withSentryConfig(withSerwist(config), {
   org: 'concert-crawl',
   project: 'concert-crawl-web',
   // Suppress output locally; print in CI for source map upload confirmation
