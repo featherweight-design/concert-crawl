@@ -69,7 +69,7 @@ Options, each with tradeoffs:
 ## Other gotchas
 
 - **Auth (Clerk):** Cookie handling + OAuth pop-ups (Spotify) are fiddly in a WebView. Clerk has Capacitor guidance; budget real QA time.
-- **Push:** Net-new. Stand up FCM (Android) + APNs (iOS) + device-token table + send pipeline (~1 wk). Worth doing anyway — also unblocks web push for the PWA and relates to #737.
+- **Push:** Net-new. Stand up FCM (Android) + APNs (iOS) + device-token table + send pipeline (~1 wk). Web push (Tier C) is a separate front-end stack (VAPID keys + Push API subscriptions + a service-worker `push` handler), but it can share this same downstream notification-send pipeline — and both relate to #737.
 - **SSR reliance:** WebView-loads-live-site keeps SSR/actions/middleware; static export would break them. Trade "true offline" for keeping server features.
 - **Review + maintenance overhead:** two store accounts ($99/yr Apple, $25 once Google), review latency on every change, screenshots, privacy labels, "broke on iOS 19" tax. Permanent operational cost.
 - **Deep links / universal links** for shareable event URLs need per-platform config.
