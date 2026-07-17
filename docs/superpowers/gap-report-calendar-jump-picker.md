@@ -188,6 +188,16 @@ aria-disabled="true">` — not `:disabled` — so the rule re-enabled its hover 
   (button-with-shows, button-without-shows, link-with-shows) [WeekStrip.tsx:95-142, copy.ts:33,
   WeekStrip.test.tsx]
 
+## GAPS (1 — found by Copilot review round 11 on PR #987, fixed)
+
+- **§5 / a11y — WeekStrip day accessible name omitted the month** — the round-10 `aria-label` reused
+  the precomputed short weekday label ("Mon 27"), leaving the month ambiguous vs. the design property
+  table's fuller "weekday + month" format. Added a shared `accessibleDayLabelFor(iso)` helper to
+  `date-math.ts` that derives "Monday, Apr 27" from `day.date` (ISO, UTC-noon to avoid a DST weekday
+  shift), and wired it into WeekStrip so the name always includes the month and still appends the
+  `weekStripDayShows` cue. Updated WeekStrip.test.tsx + CalendarView.test.tsx assertions to the fuller
+  format [date-math.ts:40-77, WeekStrip.tsx:4,101-108]
+
 ## DEFERRED (0)
 
 None.

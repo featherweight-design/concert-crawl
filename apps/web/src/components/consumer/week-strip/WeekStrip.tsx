@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { accessibleDayLabelFor } from '@/components/consumer/jump-picker/date-math'
 
 export interface WeekStripDay {
   date: string
@@ -100,11 +101,14 @@ export function WeekStrip({
               : 'bg-surface-1 text-fg-muted',
           )
 
-          // The dot indicator is aria-hidden, so screen readers otherwise miss
-          // whether a day has shows — fold that cue into the accessible name.
+          // Derive the accessible name from the ISO date so it always names the
+          // weekday + month ("Monday, Apr 27") instead of the ambiguous short
+          // label. The dot indicator is aria-hidden, so fold the shows-on-sale
+          // cue into the name too.
+          const dayName = accessibleDayLabelFor(day.date)
           const dayAriaLabel = day.hasEvents
-            ? `${day.label} ${day.dayOfMonth}, ${CONSUMER_COPY.weekStripDayShows}`
-            : `${day.label} ${day.dayOfMonth}`
+            ? `${dayName}, ${CONSUMER_COPY.weekStripDayShows}`
+            : dayName
 
           if (onDateSelect) {
             return (

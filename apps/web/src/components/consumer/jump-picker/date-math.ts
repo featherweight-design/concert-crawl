@@ -35,6 +35,31 @@ const MONTHS = [
   'December',
 ]
 
+const MONTHS_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+]
+
+const DOW_FULL = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+]
+
 // Human-readable "Month YYYY" for the jump-picker cue, derived from an ISO
 // (YYYY-MM-DD) date so the label tracks the current selection.
 export function monthLabelFor(selectedIso: string): string {
@@ -42,6 +67,18 @@ export function monthLabelFor(selectedIso: string): string {
   const year = parts[0] ?? 0
   const monthIndex = (parts[1] ?? 1) - 1
   return `${MONTHS[monthIndex] ?? ''} ${year}`
+}
+
+// Full accessible day name ("Monday, Apr 27") for a screen reader, derived from
+// an ISO (YYYY-MM-DD) date so the short precomputed weekday label never leaves
+// the month ambiguous. UTC-noon avoids a DST/tz weekday shift.
+export function accessibleDayLabelFor(iso: string): string {
+  const parts = iso.split('-').map(Number)
+  const year = parts[0] ?? 0
+  const monthIndex = (parts[1] ?? 1) - 1
+  const day = parts[2] ?? 1
+  const dow = new Date(Date.UTC(year, monthIndex, day, 12)).getUTCDay()
+  return `${DOW_FULL[dow] ?? ''}, ${MONTHS_SHORT[monthIndex] ?? ''} ${day}`
 }
 
 function pad(value: number): string {

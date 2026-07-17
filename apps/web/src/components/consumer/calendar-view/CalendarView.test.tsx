@@ -78,7 +78,7 @@ describe('CalendarView jump navigation', () => {
       screen.getByRole('button', { name: /April 2026\. Jump to a date/ }),
     ).toBeTruthy()
     // Fri May 1 is in the rendered week (Apr 27 – May 3) → in-week, no nav.
-    fireEvent.click(screen.getByRole('button', { name: /FRI/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Friday, May 1/ }))
     expect(push).not.toHaveBeenCalled()
     expect(
       screen.getByRole('button', { name: /May 2026\. Jump to a date/ }),

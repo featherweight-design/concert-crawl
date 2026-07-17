@@ -26,7 +26,7 @@ describe('WeekStrip accessible day names', () => {
     )
     expect(
       screen.getByRole('button', {
-        name: `Mon 27, ${CONSUMER_COPY.weekStripDayShows}`,
+        name: `Monday, Apr 27, ${CONSUMER_COPY.weekStripDayShows}`,
       }),
     ).toBeTruthy()
   })
@@ -41,8 +41,8 @@ describe('WeekStrip accessible day names', () => {
         onDateSelect={onDateSelect}
       />,
     )
-    const noShows = screen.getByRole('button', { name: 'Tue 28' })
-    expect(noShows.getAttribute('aria-label')).toBe('Tue 28')
+    const noShows = screen.getByRole('button', { name: 'Tuesday, Apr 28' })
+    expect(noShows.getAttribute('aria-label')).toBe('Tuesday, Apr 28')
     fireEvent.click(noShows)
     expect(onDateSelect).toHaveBeenCalledWith('2026-04-28')
   })
@@ -58,7 +58,7 @@ describe('WeekStrip accessible day names', () => {
     )
     expect(
       screen.getByRole('link', {
-        name: `Mon 27, ${CONSUMER_COPY.weekStripDayShows}`,
+        name: `Monday, Apr 27, ${CONSUMER_COPY.weekStripDayShows}`,
       }),
     ).toBeTruthy()
   })
