@@ -163,7 +163,7 @@ export function SettingsRouteDesktop({
           size={56}
         />
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="text-[20px] font-black tracking-[-0.02em] text-fg">
+          <span className="min-w-0 break-words text-[20px] font-black tracking-[-0.02em] text-fg">
             {profile.handle ? (
               <>
                 <span className="font-bold text-fg-muted">@</span>

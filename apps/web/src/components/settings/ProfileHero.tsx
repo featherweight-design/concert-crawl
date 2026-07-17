@@ -70,7 +70,7 @@ export function ProfileHero({
         {/* Handle / anonymous label */}
         <div className="flex min-w-0 items-center gap-2">
           <span
-            className="truncate leading-[1.15] tracking-[-0.02em] text-fg"
+            className="min-w-0 truncate leading-[1.15] tracking-[-0.02em] text-fg"
             style={{ fontSize: dense ? 18 : 22, fontWeight: 900 }}
           >
             {isAnon ? (
