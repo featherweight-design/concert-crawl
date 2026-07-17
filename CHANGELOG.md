@@ -1,3 +1,10 @@
+# [1.124.0](https://github.com/HartiganHM/concert-crawl/compare/v1.123.0...v1.124.0) (2026-07-17)
+
+
+### Features
+
+* **audit:** expand UI-audit sweep manifest to full route coverage ([#980](https://github.com/HartiganHM/concert-crawl/issues/980)) ([0c9bb6f](https://github.com/HartiganHM/concert-crawl/commit/0c9bb6f526f99b23411bd3809b7b54175e23b540))
+
 # [1.123.0](https://github.com/HartiganHM/concert-crawl/compare/v1.122.0...v1.123.0) (2026-07-17)
 
 
