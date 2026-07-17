@@ -3,11 +3,32 @@ import { isPublicCacheableApi } from '../route-cache'
 
 const url = (path: string) => new URL(`https://api.concertcrawl.app${path}`)
 
+// UUID-shaped id to match the API contract for /v1/events/:id.
+const EVENT_ID = '3f8c1e2a-9b4d-4c6e-8a71-2d5f0b9e1c34'
+
 describe('isPublicCacheableApi', () => {
   it('allows public event + venue reads', () => {
     expect(isPublicCacheableApi(url('/v1/events'))).toBe(true)
-    expect(isPublicCacheableApi(url('/v1/events/abc-123'))).toBe(true)
+    expect(isPublicCacheableApi(url('/v1/events/genres'))).toBe(true)
+    expect(isPublicCacheableApi(url('/v1/events/availability'))).toBe(true)
+    expect(isPublicCacheableApi(url(`/v1/events/${EVENT_ID}`))).toBe(true)
+    expect(isPublicCacheableApi(url(`/v1/events/${EVENT_ID}/related`))).toBe(
+      true,
+    )
     expect(isPublicCacheableApi(url('/v1/venues'))).toBe(true)
+    expect(isPublicCacheableApi(url('/v1/venues/ogden-theatre'))).toBe(true)
+  })
+
+  it('never caches user-specific subresources under a public prefix', () => {
+    expect(
+      isPublicCacheableApi(url(`/v1/events/${EVENT_ID}/price-submissions`)),
+    ).toBe(false)
+    expect(isPublicCacheableApi(url(`/v1/events/${EVENT_ID}/reports`))).toBe(
+      false,
+    )
+    expect(isPublicCacheableApi(url(`/v1/events/${EVENT_ID}/watch`))).toBe(
+      false,
+    )
   })
 
   it('never caches authenticated or admin routes', () => {

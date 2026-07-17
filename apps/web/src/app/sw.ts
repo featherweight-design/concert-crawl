@@ -28,9 +28,14 @@ const apiOrigin = new URL(
 ).origin
 
 const publicApiCache = {
+  // Refuse to cache any credentialed request: otherwise-public endpoints like
+  // GET /v1/events/:id return auth-dependent fields (e.g. `isWatching`) when an
+  // Authorization header is present, which would leak user state into the shared
+  // public cache. Keeping the invariant "only anonymous responses are cached."
   matcher: ({ request, url }: { request: Request; url: URL }) =>
     request.method === 'GET' &&
     url.origin === apiOrigin &&
+    !request.headers.has('Authorization') &&
     isPublicCacheableApi(url),
   handler: new StaleWhileRevalidate({
     cacheName: 'public-api',
