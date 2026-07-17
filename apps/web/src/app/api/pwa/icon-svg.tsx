@@ -22,6 +22,9 @@ export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
       xmlns="http://www.w3.org/2000/svg"
     >
       <rect width="48" height="48" fill={PWA_ICON_PALETTE.canvas} />
+      {maskable && (
+        <rect width="48" height="48" fill={PWA_ICON_PALETTE.background} />
+      )}
       <g transform={artTransform}>
         {!maskable && (
           <rect
@@ -30,9 +33,6 @@ export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
             rx="10"
             fill={PWA_ICON_PALETTE.background}
           />
-        )}
-        {maskable && (
-          <rect width="48" height="48" fill={PWA_ICON_PALETTE.background} />
         )}
         {/* Signal ring */}
         <circle
