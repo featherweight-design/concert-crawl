@@ -38,14 +38,40 @@ function makeVenue(overrides: Partial<Venue> = {}): Venue {
     timezone: 'America/Denver',
     active: true,
     verified: true,
-    crawlMode: 'browser',
+    verifiedBy: null,
+    verifiedAt: null,
+    lastCrawledAt: null,
+    crawlNotes: null,
     crawlDelayMs: 0,
+    robotsTxtAllowed: null,
+    robotsTxtCheckedAt: null,
+    consecutiveFailures: 0,
+    blockedAt: null,
+    lastEventCountAlertAt: null,
     platform: null,
     platformVenueId: null,
+    extractionStrategy: null,
+    crawlWaitUntil: 'networkidle',
+    crawlWaitForSelector: null,
+    crawlMode: 'browser',
+    address: null,
+    capacity: null,
+    venueType: null,
+    about: null,
+    neighborhood: null,
+    featured: false,
+    lat: null,
+    lng: null,
+    contactEmail: null,
+    priceUrl: null,
+    ticketVendor: null,
     apiProvider: 'venuepilot',
     apiAccountId: '1105',
+    debugCaptureHtml: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
     ...overrides,
-  } as Venue
+  } satisfies Venue
 }
 
 // Build a single-page GraphQL response body from an array of events.
@@ -115,7 +141,7 @@ describe('venuePilotFetcher.fetch', () => {
       new Response(body, {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
-      }) as Response,
+      }),
     )
   }
 
@@ -409,9 +435,7 @@ describe('venuePilotFetcher.fetch', () => {
   })
 
   it('throws VenuePilotFetchError on a non-200 response', async () => {
-    fetchSpy.mockResolvedValue(
-      new Response('nope', { status: 502 }) as Response,
-    )
+    fetchSpy.mockResolvedValue(new Response('nope', { status: 502 }))
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
     ).rejects.toBeInstanceOf(VenuePilotFetchError)
@@ -420,9 +444,7 @@ describe('venuePilotFetcher.fetch', () => {
   it.each([403, 429])(
     'throws a CrawlFetchError on HTTP %s so crawl.ts classifies it as a block',
     async (status) => {
-      fetchSpy.mockResolvedValue(
-        new Response('blocked', { status }) as Response,
-      )
+      fetchSpy.mockResolvedValue(new Response('blocked', { status }))
       const error = await venuePilotFetcher
         .fetch(makeVenue(), { crawlDelayMs: 0 })
         .catch((err: unknown) => err)
@@ -438,7 +460,7 @@ describe('venuePilotFetcher.fetch', () => {
       new Response(JSON.stringify({ errors: [{ message: 'boom' }] }), {
         status: 200,
         headers: { 'Content-Type': 'application/json' },
-      }) as Response,
+      }),
     )
     await expect(
       venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
@@ -533,7 +555,7 @@ describe('venuePilotFetcher.fetch', () => {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
           },
-        ) as Response,
+        ),
       )
       .mockResolvedValueOnce(
         new Response(
@@ -542,7 +564,7 @@ describe('venuePilotFetcher.fetch', () => {
             status: 200,
             headers: { 'Content-Type': 'application/json' },
           },
-        ) as Response,
+        ),
       )
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,

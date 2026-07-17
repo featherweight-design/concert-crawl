@@ -144,14 +144,20 @@ export class VenuePilotSchemaError extends Error {
 // the whole crawl. Fall back to UTC and log so the crawl still proceeds
 // (mirrors the json-ld extractor's timezone guard).
 function todayInTimezone(timezone: string, venueId: string): string {
-  const format = (tz: string): string =>
-    // en-CA formats as YYYY-MM-DD; timeZone shifts to the venue-local day.
-    new Intl.DateTimeFormat('en-CA', {
+  const format = (tz: string): string => {
+    // Build the date from parts (matching the json-ld extractor) rather than
+    // relying on .format() returning an ISO-like string — locale/ICU builds
+    // can vary. timeZone shifts to the venue-local day.
+    const parts = new Intl.DateTimeFormat('en-CA', {
       timeZone: tz,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
-    }).format(new Date())
+    }).formatToParts(new Date())
+    const pick = (type: Intl.DateTimeFormatPartTypes): string =>
+      parts.find((part) => part.type === type)?.value ?? ''
+    return `${pick('year')}-${pick('month')}-${pick('day')}`
+  }
   try {
     return format(timezone)
   } catch (err) {
