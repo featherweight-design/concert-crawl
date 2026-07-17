@@ -1,3 +1,17 @@
+# [1.130.0](https://github.com/HartiganHM/concert-crawl/compare/v1.129.0...v1.130.0) (2026-07-17)
+
+
+### Bug Fixes
+
+* **web:** unregister stale SW in dev; soften offline copy ([6e0e11a](https://github.com/HartiganHM/concert-crawl/commit/6e0e11a12db4645d02e4e826de9af9f9f74cf66f))
+
+
+### Features
+
+* **web:** add offline fallback page ([cc31334](https://github.com/HartiganHM/concert-crawl/commit/cc313347b8bc9da1b4655dcce4b9b31eecfb58e2))
+* **web:** add Serwist service worker with app-shell precache ([f44eaff](https://github.com/HartiganHM/concert-crawl/commit/f44eaff2612d65cd96d89972d5df94a4c27ae7fa))
+* **web:** register service worker client-side ([34187a3](https://github.com/HartiganHM/concert-crawl/commit/34187a30e067116a3394799a24133bd3f582fae4))
+
 # [1.129.0](https://github.com/HartiganHM/concert-crawl/compare/v1.128.0...v1.129.0) (2026-07-17)
 
 
