@@ -74,6 +74,10 @@ const STYLE_CONTENT = [
   '.cjp-pop{transition:transform .13s cubic-bezier(.2,.7,.3,1),opacity .13s ease}',
   '.cjp-pop.scale{transform:scale(.95);opacity:0;transform-origin:34px -6px}',
   '.cjp-pop.cjp-in{transform:none;opacity:1}',
+  // Popover width on desktop, full-width sheet under 640px (design §2/§10). CSS
+  // media query keeps this SSR-safe — no JS viewport read, no hydration skew.
+  '.cjp-w{width:min(324px, calc(100vw - 24px))}',
+  '@media (max-width:640px){.cjp-w{width:100%}}',
   '.cjp-day{cursor:pointer;transition:background .12s,box-shadow .12s}',
   '.cjp-day.cjp-dis{cursor:default}',
   '.cjp-hit:hover:not(.cjp-dis){background:var(--overlay-hover)}',
@@ -138,7 +142,6 @@ export interface JumpPickerProps {
   today: string
   availability: Map<string, number>
   onPick: (iso: string) => void
-  variant?: 'mobile' | 'desktop' | undefined
 }
 
 export const JumpPicker = ({
@@ -148,7 +151,6 @@ export const JumpPicker = ({
   today,
   availability,
   onPick,
-  variant = 'desktop',
 }: JumpPickerProps) => {
   const initial = partsOf(selectedDate)
   const [view, setView] = useState<YearMonth>({ y: initial.y, m: initial.m })
@@ -328,9 +330,6 @@ export const JumpPicker = ({
     }
   }
 
-  const width: CSSProperties['width'] =
-    variant === 'mobile' ? '100%' : 'min(324px, calc(100vw - 24px))'
-
   const chevBtn: CSSProperties = {
     all: 'unset',
     width: 30,
@@ -351,10 +350,9 @@ export const JumpPicker = ({
       role="dialog"
       aria-modal="false"
       aria-label={`${CONSUMER_COPY.jumpPickerDialogPrefix} — ${MONTHS[view.m]} ${view.y}`}
-      className={`cjp-pop scale ${mounted ? 'cjp-in' : ''}`}
+      className={`cjp-pop cjp-w scale ${mounted ? 'cjp-in' : ''}`}
       onKeyDown={onRootKeyDown}
       style={{
-        width,
         background: 'var(--bg-elevated)',
         border: '1px solid var(--border-strong)',
         borderRadius: 16,

@@ -20,6 +20,30 @@ export interface MatrixCell {
   dow: number
 }
 
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+]
+
+// Human-readable "Month YYYY" for the jump-picker cue, derived from an ISO
+// (YYYY-MM-DD) date so the label tracks the current selection.
+export function monthLabelFor(selectedIso: string): string {
+  const parts = selectedIso.split('-').map(Number)
+  const year = parts[0] ?? 0
+  const monthIndex = (parts[1] ?? 1) - 1
+  return `${MONTHS[monthIndex] ?? ''} ${year}`
+}
+
 function pad(value: number): string {
   return String(value).padStart(2, '0')
 }

@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/consumer/empty-state'
 import { WeekStrip, WeekStripHeader } from '@/components/consumer/week-strip'
 import { dateGroupLabel } from '@/components/consumer/definitions/lib'
 import {
+  monthLabelFor,
   pickerWindow,
   weekOffsetForDate,
 } from '@/components/consumer/jump-picker/date-math'
@@ -25,7 +26,6 @@ interface CalendarViewProps {
   events: EventWithVenue[]
   initialSelectedDate: string
   today: string
-  monthLabel: string
   watchedIds: string[]
   prevWeekHref: string | null
   nextWeekHref: string
@@ -39,13 +39,15 @@ export function CalendarView({
   events,
   initialSelectedDate,
   today,
-  monthLabel,
   watchedIds,
   prevWeekHref,
   nextWeekHref,
   initialAvailability,
 }: CalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate)
+  // Derived client-side so the cue label tracks in-week picks that cross a
+  // month boundary (no server re-render happens for those).
+  const monthLabel = useMemo(() => monthLabelFor(selectedDate), [selectedDate])
   const watchedSet = useMemo(() => new Set(watchedIds), [watchedIds])
   const router = useRouter()
 

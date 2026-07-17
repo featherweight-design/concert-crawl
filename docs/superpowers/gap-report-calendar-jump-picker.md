@@ -71,6 +71,21 @@ at `design/design_handoff_calendar_jump_picker/` at build config `cueStyle="chip
   (e.g. `2026-02-31`), which `Date.parse` silently rolled over rather than rejecting. Added a
   round-trip `isRealDate` refine to the Zod schema. Regression test added [events.ts:71]
 
+## GAPS (2 — found by Copilot review round 2 on PR #987, both fixed)
+
+- **§1 stale month cue label** — `CalendarView` forwarded a server-derived `monthLabel` prop
+  straight to the cue, so an in-week pick that crossed a month boundary (e.g. Fri May 1 inside an
+  Apr 27–May 3 week) left the cue reading "April". Now derived client-side from `selectedDate` via
+  `monthLabelFor` (extracted to `date-math.ts`, DRY with the page's former helper). Regression test
+  added [CalendarView.tsx:50, date-math.ts:40, CalendarView.test.tsx]
+- **§2 / §10 unreachable mobile sheet** — `WeekStripHeader` always anchored the picker at `top:48`
+  and never passed `variant="mobile"`, so the documented mobile sheet (top:150, full-width, centered)
+  was unreachable and `JumpPicker`'s `variant` prop was dead. Replaced the JS `variant` branch with
+  SSR-safe CSS media queries: `.cjp-pos` (desktop popover top:46/left:12 → mobile sheet
+  top:150/left:12/right:12/flex-center) and `.cjp-w` (desktop `min(324px,…)` → mobile `100%`) both
+  switch at the 640px breakpoint, matching design §2 exactly [WeekStripHeader.tsx:32-34,186 ·
+  JumpPicker.tsx:76-78,331-353]
+
 ## DEFERRED (0)
 
 None.

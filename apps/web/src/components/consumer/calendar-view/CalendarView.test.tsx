@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
@@ -40,7 +40,6 @@ function setup() {
       events={[]}
       initialSelectedDate="2026-04-28"
       today="2026-04-28"
-      monthLabel="April 2026"
       watchedIds={[]}
       prevWeekHref={null}
       nextWeekHref="/events?view=cal&weekOffset=1"
@@ -55,6 +54,10 @@ function setup() {
 }
 
 describe('CalendarView jump navigation', () => {
+  beforeEach(() => {
+    push.mockClear()
+  })
+
   it('router.pushes with weekOffset when jumping outside the current week', () => {
     setup()
     // Open the picker via the month cue.
@@ -66,5 +69,19 @@ describe('CalendarView jump navigation', () => {
     const url = push.mock.calls[0]?.[0]
     expect(url).toContain('weekOffset=2')
     expect(url).toContain('selectedDate=2026-05-11')
+  })
+
+  it('updates the cue month label on an in-week pick that crosses months', () => {
+    setup()
+    // Cue starts on the initial selection (Apr 28).
+    expect(
+      screen.getByRole('button', { name: /April 2026\. Jump to a date/ }),
+    ).toBeTruthy()
+    // Fri May 1 is in the rendered week (Apr 27 – May 3) → in-week, no nav.
+    fireEvent.click(screen.getByRole('button', { name: /FRI/ }))
+    expect(push).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole('button', { name: /May 2026\. Jump to a date/ }),
+    ).toBeTruthy()
   })
 })

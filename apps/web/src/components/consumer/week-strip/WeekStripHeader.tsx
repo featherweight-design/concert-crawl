@@ -28,6 +28,11 @@ const STYLE_CONTENT = [
   // specified close path (closing="both").
   '.cjp-catch{position:fixed;inset:0;z-index:30;cursor:pointer}',
   '@media (max-width:640px){.cjp-catch{background:var(--scrim);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}}',
+  // Positioner: left-anchored popover on desktop, centered full-width sheet
+  // dropped from the top on mobile (design §2/§10). CSS media query only, so the
+  // two models stay SSR-safe with no JS viewport branch.
+  '.cjp-pos{position:absolute;top:46px;left:12px;z-index:40}',
+  '@media (max-width:640px){.cjp-pos{top:150px;left:12px;right:12px;display:flex;justify-content:center}}',
   '@media (prefers-reduced-motion: reduce){.cjp-car{transition:none!important}}',
 ].join('\n')
 
@@ -181,15 +186,7 @@ export const WeekStripHeader = ({
       </div>
 
       {open && <div className="cjp-catch" onClick={close} aria-hidden="true" />}
-      <div
-        style={{
-          position: 'absolute',
-          top: 48,
-          left: 12,
-          right: 12,
-          zIndex: 40,
-        }}
-      >
+      <div className="cjp-pos">
         <JumpPicker
           open={open}
           onClose={close}
