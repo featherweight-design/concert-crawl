@@ -652,6 +652,21 @@ export interface EventsListResponse {
   offset: number
 }
 
+export interface AvailabilityDay {
+  /** ISO date `YYYY-MM-DD` (event-local calendar date). */
+  date: string
+  /** Number of consumer-visible shows on that date. */
+  count: number
+}
+
+export interface EventsAvailabilityResponse {
+  data: AvailabilityDay[]
+  /** Inclusive window start, `YYYY-MM-DD`. */
+  from: string
+  /** Inclusive window end, `YYYY-MM-DD`. */
+  to: string
+}
+
 // Related-events response (issue #833). Returned by GET /v1/events/:id/related.
 // Slim payload — same shape as EventsListResponse.data but priceByTier is never
 // populated (the per-tier batch query is the dominant cost on Red Rocks-sized
