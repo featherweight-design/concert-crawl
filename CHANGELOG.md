@@ -1,3 +1,18 @@
+# [1.125.0](https://github.com/HartiganHM/concert-crawl/compare/v1.124.1...v1.125.0) (2026-07-17)
+
+
+### Bug Fixes
+
+* **crawler:** address Copilot review on VenuePilot fetcher ([b554805](https://github.com/HartiganHM/concert-crawl/commit/b55480598fcf0687d7a0ad48f35cc780712883df))
+* **crawler:** guard invalid venue timezone + malformed event date ([a02c52e](https://github.com/HartiganHM/concert-crawl/commit/a02c52efd15bfd84dd4b69f66d53579eb7803b54))
+* **venuepilot:** round 3 — extend CrawlFetchError; trim ticketUrl ([e0c5eae](https://github.com/HartiganHM/concert-crawl/commit/e0c5eae4e5bda29ee3fa8bc3fda6a0658e7cd171))
+
+
+### Features
+
+* **crawler:** add VenuePilot GraphQL fetcher ([fa7ca0b](https://github.com/HartiganHM/concert-crawl/commit/fa7ca0bf50100edde94328ea888e86b87d5b2b2d))
+* **crawler:** route venuepilot venues through dispatch ([f5e1c8c](https://github.com/HartiganHM/concert-crawl/commit/f5e1c8c1eec70fdf692a2d4d940b56a03244e1a9))
+
 ## [1.124.1](https://github.com/HartiganHM/concert-crawl/compare/v1.124.0...v1.124.1) (2026-07-17)
 
 
