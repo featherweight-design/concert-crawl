@@ -27,6 +27,30 @@ import { fetchAvailability } from '@/lib/queries/use-availability'
 
 const copy = CONSUMER_COPY
 
+const MONTHS = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+]
+
+// Human-readable "Month YYYY" for the jump-picker cue, derived from the
+// selected ISO date (YYYY-MM-DD).
+function monthLabelFor(selectedIso: string): string {
+  const parts = selectedIso.split('-').map(Number)
+  const year = parts[0] ?? 0
+  const monthIndex = (parts[1] ?? 1) - 1
+  return `${MONTHS[monthIndex] ?? ''} ${year}`
+}
+
 export const dynamic = 'force-dynamic'
 
 const PAGE_LIMIT = 20
@@ -307,6 +331,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           events={events}
           initialSelectedDate={selectedDate}
           today={today}
+          monthLabel={monthLabelFor(selectedDate)}
           watchedIds={Array.from(watchedIds)}
           prevWeekHref={calPrevWeekHref}
           nextWeekHref={calNextWeekHref}

@@ -1,14 +1,20 @@
 'use client'
 
 import { Fragment, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type {
   EventsAvailabilityResponse,
   EventWithVenue,
 } from '@concert-crawl/types'
 import { EventCard } from '@/components/consumer/event-card'
 import { EmptyState } from '@/components/consumer/empty-state'
-import { WeekStrip } from '@/components/consumer/week-strip'
+import { WeekStrip, WeekStripHeader } from '@/components/consumer/week-strip'
 import { dateGroupLabel } from '@/components/consumer/definitions/lib'
+import {
+  pickerWindow,
+  weekOffsetForDate,
+} from '@/components/consumer/jump-picker/date-math'
+import { useAvailability } from '@/lib/queries/use-availability'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY
@@ -19,11 +25,12 @@ interface CalendarViewProps {
   events: EventWithVenue[]
   initialSelectedDate: string
   today: string
+  monthLabel: string
   watchedIds: string[]
   prevWeekHref: string | null
   nextWeekHref: string
-  // SSR-prefetched availability window; wired into the jump picker in a later
-  // task. Accepted here as a no-op passthrough so the page can pass it now.
+  // SSR-prefetched availability window; seeds the jump picker's react-query
+  // cache so all in-picker month paging is client-side.
   initialAvailability?: EventsAvailabilityResponse | undefined
 }
 
@@ -32,10 +39,46 @@ export function CalendarView({
   events,
   initialSelectedDate,
   today,
+  monthLabel,
   watchedIds,
+  prevWeekHref,
+  nextWeekHref,
+  initialAvailability,
 }: CalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate)
   const watchedSet = useMemo(() => new Set(watchedIds), [watchedIds])
+  const router = useRouter()
+
+  const { from, to } = pickerWindow(today)
+  const { data: availability } = useAvailability({
+    from,
+    to,
+    ...(initialAvailability !== undefined
+      ? { initialData: initialAvailability }
+      : {}),
+  })
+
+  const weekDates = useMemo(() => new Set(days.map((day) => day.date)), [days])
+
+  // Picking a date inside the current rendered week stays client-side (no fetch,
+  // no navigation). Picking a date outside it re-paginates via router.push,
+  // preserving every active filter param (mirrors calNextWeekHref param-copy).
+  const onJumpPick = (iso: string) => {
+    if (weekDates.has(iso)) {
+      setSelectedDate(iso)
+      const url = new URL(window.location.href)
+      url.searchParams.set('selectedDate', iso)
+      window.history.replaceState(null, '', url.toString())
+      return
+    }
+    const offset = weekOffsetForDate(iso, today)
+    const params = new URLSearchParams(window.location.search)
+    params.delete('offset')
+    params.set('view', 'cal')
+    params.set('weekOffset', String(offset))
+    params.set('selectedDate', iso)
+    router.push(`/events?${params.toString()}`)
+  }
 
   const filteredEvents = useMemo(
     () => events.filter((event) => event.date === selectedDate),
@@ -63,6 +106,15 @@ export function CalendarView({
 
   return (
     <>
+      <WeekStripHeader
+        monthLabel={monthLabel}
+        selectedDate={selectedDate}
+        today={today}
+        availability={availability ?? new Map()}
+        onPick={onJumpPick}
+        prevWeekHref={prevWeekHref}
+        nextWeekHref={nextWeekHref}
+      />
       <WeekStrip
         days={days}
         selectedDate={selectedDate}
