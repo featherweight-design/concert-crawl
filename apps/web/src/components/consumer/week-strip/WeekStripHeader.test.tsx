@@ -41,6 +41,16 @@ describe('WeekStripHeader', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
   })
 
+  it('closes the picker when the click-catcher scrim is clicked', () => {
+    setup()
+    fireEvent.click(screen.getByRole('button', { name: /Jump to a date/ }))
+    expect(screen.getByRole('dialog')).toBeTruthy()
+    const catcher = document.querySelector('.cjp-catch')
+    expect(catcher).toBeTruthy()
+    fireEvent.click(catcher!)
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('disables the previous-week chevron at the current week', () => {
     setup()
     expect(screen.getByRole('link', { name: 'Next week' })).toBeTruthy()

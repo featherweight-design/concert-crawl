@@ -23,6 +23,11 @@ const STYLE_CONTENT = [
   '.cjp-chev{transition:background .12s,opacity .12s}',
   '.cjp-chev:hover:not(:disabled){background:var(--overlay-hover)}',
   '.cjp-chev:disabled{opacity:.32;cursor:default}',
+  // Click-catcher: invisible on desktop (popover model), a blurred scrim on
+  // mobile (sheet model) per design §10. Closing the picker by clicking it is a
+  // specified close path (closing="both").
+  '.cjp-catch{position:fixed;inset:0;z-index:30;cursor:pointer}',
+  '@media (max-width:640px){.cjp-catch{background:var(--scrim);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}}',
   '@media (prefers-reduced-motion: reduce){.cjp-car{transition:none!important}}',
 ].join('\n')
 
@@ -77,6 +82,11 @@ export const WeekStripHeader = ({
   const cueRef = useRef<HTMLButtonElement>(null)
 
   ensureStyles()
+
+  const close = () => {
+    setOpen(false)
+    cueRef.current?.focus()
+  }
 
   const cueStyle: CSSProperties = {
     display: 'inline-flex',
@@ -170,20 +180,28 @@ export const WeekStripHeader = ({
         </div>
       </div>
 
-      <JumpPicker
-        open={open}
-        onClose={() => {
-          setOpen(false)
-          cueRef.current?.focus()
+      {open && <div className="cjp-catch" onClick={close} aria-hidden="true" />}
+      <div
+        style={{
+          position: 'absolute',
+          top: 48,
+          left: 12,
+          right: 12,
+          zIndex: 40,
         }}
-        selectedDate={selectedDate}
-        today={today}
-        availability={availability}
-        onPick={(iso) => {
-          setOpen(false)
-          onPick(iso)
-        }}
-      />
+      >
+        <JumpPicker
+          open={open}
+          onClose={close}
+          selectedDate={selectedDate}
+          today={today}
+          availability={availability}
+          onPick={(iso) => {
+            setOpen(false)
+            onPick(iso)
+          }}
+        />
+      </div>
     </div>
   )
 }

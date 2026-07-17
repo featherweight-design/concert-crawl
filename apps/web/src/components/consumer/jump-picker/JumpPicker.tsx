@@ -327,7 +327,8 @@ export const JumpPicker = ({
     }
   }
 
-  const width: CSSProperties['width'] = variant === 'mobile' ? '100%' : 324
+  const width: CSSProperties['width'] =
+    variant === 'mobile' ? '100%' : 'min(324px, calc(100vw - 24px))'
 
   const chevBtn: CSSProperties = {
     all: 'unset',
