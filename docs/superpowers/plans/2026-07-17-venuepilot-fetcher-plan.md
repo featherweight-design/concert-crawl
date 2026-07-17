@@ -17,7 +17,7 @@
 - **No silent LLM fallback** — a VenuePilot fetch error must bubble to `crawlVenue`'s outer catch (treated as a crawl failure), never fall through to the cascade.
 - **Honest User-Agent** — `ConcertCrawl/1.0 (+https://concertcrawl.app/bot)` on every outbound request.
 - **Respect `crawlDelayMs`** — wait before each request, including between pages.
-- **robots.txt** — the fetcher checks `robots.txt` for its own endpoint domain (`www.venuepilot.co`) via the existing cached `isAllowed()` helper (`lib/robots.ts`) before any GraphQL request; an explicit `Disallow` → `VenuePilotFetchError`. This is in addition to `crawlVenue`'s existing check of `venue.websiteUrl` before `dispatch()` (crawl.ts:206, untouched). The helper caches per domain (one fetch per run) and fails open, so the happy path is unaffected — today `https://www.venuepilot.co/robots.txt` returns `User-agent: *` / `Allow: /`, so the gate is a no-op until VenuePilot tightens their policy. AEG's blob endpoint lacks this gate today; follow-up #985 backfills it (AEG untouched here). (See the spec's "robots.txt stance" note.)
+- **robots.txt** — the fetcher checks `robots.txt` for its own endpoint domain (`www.venuepilot.co`) via the existing cached `isAllowed()` helper (`lib/robots.ts`) before any GraphQL request; an explicit `Disallow` → `VenuePilotFetchError`. This is in addition to `crawlVenue`'s existing check of `venue.websiteUrl` before `dispatch()` (crawl.ts:206, untouched). The helper caches per domain (one fetch per run) and fails open, so the happy path is unaffected — today `https://www.venuepilot.co/robots.txt` returns `User-agent: *` / `Allow: /`, so the gate is a no-op until VenuePilot tightens their policy. AEG's blob endpoint lacks this gate today (and uses a flat, un-jittered crawl delay); follow-up #985 backfills both the robots gate and the ±500ms jitter into AEG (AEG untouched here). (See the spec's "robots.txt stance" note.)
 - **Conventional commits**, one commit per task. TDD: failing test first.
 - **No schema/migration, no API/UI, no AEG migration** — crawler-only.
 
@@ -648,8 +648,13 @@ describe('venuePilotFetcher.fetch', () => {
           { status: 200, headers: { 'Content-Type': 'application/json' } },
         ),
     )
-    await venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+    const result = await venuePilotFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+    })
     expect(fetchSpy.mock.calls.length).toBeLessThanOrEqual(50)
+    // Truncation must be visible in meta so operators can alert on partial fetches.
+    expect(result.meta?.truncated).toBe(true)
+    expect(result.meta?.totalPages).toBe(9999)
   })
 })
 ```
@@ -690,6 +695,13 @@ const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 const ENDPOINT = 'https://www.venuepilot.co/graphql'
 // Guard against a runaway metadata.totalPages pinning the crawl.
 const MAX_PAGES = 50
+
+// Jitter the crawl delay (±500ms) so paged requests don't hit VenuePilot on a
+// bot-like fixed interval — mirrors the cascade fetcher (lib/fetcher.ts). AEG
+// still uses a flat delay; #985 backfills jitter there too.
+function jitter(ms: number): number {
+  return Math.max(0, ms + Math.floor(Math.random() * 1000) - 500)
+}
 
 const EVENTS_QUERY = `query($args: EventsApiArguments!) {
   paginatedEvents(arguments: $args) {
@@ -956,7 +968,10 @@ async function venuePilotFetch(
 
   for (let page = 1; page <= Math.min(totalPages, MAX_PAGES); page += 1) {
     if (opts.crawlDelayMs > 0) {
-      await new Promise((resolve) => setTimeout(resolve, opts.crawlDelayMs))
+      const delay = jitter(opts.crawlDelayMs)
+      if (delay > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delay))
+      }
     }
     const paginated = await fetchPage(
       accountId,
@@ -973,13 +988,26 @@ async function venuePilotFetch(
     }
   }
 
+  // totalPages > MAX_PAGES means we stopped short of the full set — surface it
+  // in meta (which is logged) so operators can alert on partial fetches rather
+  // than silently serving truncated data.
+  const truncated = totalPages > MAX_PAGES
+  if (truncated) {
+    logger.warn(
+      { venueId: venue.id, totalPages, pagesFetched, cap: MAX_PAGES },
+      'VenuePilot pagination hit MAX_PAGES cap — event set is truncated',
+    )
+  }
+
   return {
     events,
     sourceUrl: ENDPOINT,
     meta: {
       fetchLatencyMs: Date.now() - startedAt,
       totalCount,
+      totalPages,
       pagesFetched,
+      truncated,
       eventsAfterNormalization: events.length,
     },
   }

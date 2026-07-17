@@ -71,15 +71,15 @@ Mirrors `aeg.ts` structure exactly:
   - **robots.txt gate first:** `await isAllowed(endpoint, USER_AGENT)` (the existing cached helper, `lib/robots.ts`); an explicit `Disallow` → `VenuePilotFetchError` before any GraphQL request. Fail-open (helper returns `true` when `robots.txt` can't be fetched), so the happy path is unchanged.
   - `accountIds = [Number(venue.apiAccountId.trim())]`, validated as a positive integer first (`Number('  ')` coerces to `0`, so trim + require `> 0` — a blank/zero id throws `VenuePilotFetchError` rather than silently fetching account 0); `startDate` = today in `venue.timezone` (so only upcoming shows return).
   - `AbortSignal.timeout(timeoutMs)` when provided; honest `User-Agent: ConcertCrawl/1.0 (+https://concertcrawl.app/bot)`; `Content-Type: application/json`.
-  - Respects `crawlDelayMs` before each request (including between pages).
-  - Paginates `page = 1..metadata.totalPages` (Levitt = 1 page; larger accounts loop). A hard page cap (e.g. 50) guards against a runaway `totalPages`.
+  - Respects `crawlDelayMs` before each request (including between pages), **jittered ±500ms** so paged requests don't hit VenuePilot on a bot-like fixed interval — mirrors the cascade fetcher (`lib/fetcher.ts`; AEG still uses a flat delay, follow-up #985 backfills jitter there too).
+  - Paginates `page = 1..metadata.totalPages` (Levitt = 1 page; larger accounts loop). A hard page cap (`MAX_PAGES = 50`) guards against a runaway `totalPages`; when `totalPages > MAX_PAGES` the fetch stops short, sets `meta.truncated = true`, and logs a warn so operators can alert on partial fetches rather than silently serving truncated data.
   - GraphQL `errors[]` in the body → `VenuePilotFetchError` even on HTTP 200.
-  - Returns `PlatformFetchResult { events, sourceUrl: endpoint, meta: { fetchLatencyMs, totalCount, pagesFetched, eventsAfterNormalization } }`.
+  - Returns `PlatformFetchResult { events, sourceUrl: endpoint, meta: { fetchLatencyMs, totalCount, totalPages, pagesFetched, truncated, eventsAfterNormalization } }`.
 - **Export** `venuePilotFetcher: PlatformFetcher`.
 
 **robots.txt stance (check the endpoint domain too):** `crawlVenue` already checks `robots.txt` for `venue.websiteUrl` *before* `dispatch()` (crawl.ts:206), so every VenuePilot venue's own calendar domain is honored exactly as today. **In addition**, the fetcher checks `robots.txt` for its own endpoint domain (`www.venuepilot.co`) via the existing cached `isAllowed()` helper before issuing any GraphQL request, and treats an explicit `Disallow` as a `VenuePilotFetchError` (a normal crawl failure — no silent fallback). This upholds CLAUDE.md's "never override a disallow" rule for the *actual URL we fetch*, and future-proofs against VenuePilot later tightening their policy — today `https://www.venuepilot.co/robots.txt` returns a `User-agent: *` group whose only rule is `Allow: /` (line-oriented: `User-agent: *` on one line, `Allow: /` on the next; only `Amazonbot`, `Applebot-Extended`, and `Bytespider` are `Disallow`ed), so our `ConcertCrawl` UA is allowed and this gate is a no-op until that changes. The check is cheap: `isAllowed()` caches `robots.txt` per domain (one fetch per crawl run) and fails open, so the happy path is unaffected. Rate-limiting (`crawlDelayMs`) and honest identification (`User-Agent`) apply to every request as before.
 
-> **AEG parity follow-up:** the shipped AEG fetcher hits `aegwebprod.blob.core.windows.net` *without* this endpoint-domain robots check. Adding the VenuePilot gate leaves AEG as the odd one out; follow-up #985 backfills the same `isAllowed()` gate into `aeg.ts` so both fetchers are consistent. (Out of scope for this PR — AEG is untouched here.)
+> **AEG parity follow-up:** the shipped AEG fetcher hits `aegwebprod.blob.core.windows.net` *without* this endpoint-domain robots check, and paces pages with a flat (un-jittered) delay. Adding the VenuePilot gate + jitter leaves AEG as the odd one out; follow-up #985 backfills both the `isAllowed()` gate and the ±500ms jitter into `aeg.ts` so both fetchers are consistent. (Out of scope for this PR — AEG is untouched here.)
 
 ## Registry reconciliation (the only change to shipped crawler code)
 
@@ -107,7 +107,7 @@ No behavioral change to the AEG path — same dispatch result, same strategy str
   - schema drift → `VenuePilotSchemaError`; HTTP non-200 → `VenuePilotFetchError`; GraphQL `errors[]` on 200 → `VenuePilotFetchError`.
   - account-id validation: whitespace-only or non-positive `apiAccountId` (`'   '`, `'0'`) → `VenuePilotFetchError` with **no** GraphQL request; `canHandle` returns `false` for a whitespace-only id.
   - robots gate: mocked `robots.txt` with an explicit `Disallow: /graphql` (or `Disallow: /`) for `*` → `VenuePilotFetchError` and **no** GraphQL request issued; `Allow: /` (or unfetchable robots, fail-open) → fetch proceeds normally.
-  - pagination: multi-page `metadata.totalPages` loops and concatenates; page cap respected.
+  - pagination: multi-page `metadata.totalPages` loops and concatenates; page cap respected, and a runaway `totalPages` sets `meta.truncated = true` with `meta.totalPages` preserved.
 - **`dispatch.test.ts`** (extend): a `apiProvider='venuepilot'` venue routes to `venuePilotFetcher`; AEG venue still routes to `aegFetcher` (regression); a venue with neither returns `null`; `apiProvider='venuepilot'` but no `apiAccountId` returns `null`.
 
 ## Scope / non-goals
