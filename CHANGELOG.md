@@ -1,3 +1,25 @@
+# [1.129.0](https://github.com/HartiganHM/concert-crawl/compare/v1.128.0...v1.129.0) (2026-07-17)
+
+
+### Bug Fixes
+
+* **web:** cache apple-icon; drop out-of-scope historical doc edits ([f767d11](https://github.com/HartiganHM/concert-crawl/commit/f767d119dc7888023b0284bcb705eed356f8905e)), closes [#526](https://github.com/HartiganHM/concert-crawl/issues/526)
+* **web:** consolidate apple-touch-icon onto apple-icon convention ([19c4959](https://github.com/HartiganHM/concert-crawl/commit/19c49593f7f85b31fe00999d5d4fc9807636803e))
+* **web:** maskable icon background full-bleed (move outside transformed group) ([5775943](https://github.com/HartiganHM/concert-crawl/commit/57759435103c36466c94511d796c92119d41ccb8))
+
+
+### Features
+
+* **web:** add iOS PWA meta tags, apple-touch icon, manifest screenshots ([f58871b](https://github.com/HartiganHM/concert-crawl/commit/f58871b11b43958ed48c9e6afdc9d5102b45d24b))
+* **web:** add maskable + apple-touch PWA icon routes ([8ccbeb6](https://github.com/HartiganHM/concert-crawl/commit/8ccbeb61ec4757bbe8f9855121f54dbb8468c874))
+* **web:** add maskable variant to PWA icon generator ([d9afb9e](https://github.com/HartiganHM/concert-crawl/commit/d9afb9eb5c18396ce803d9b6980d27f0b0bbb26d))
+* **web:** complete PWA manifest (maskable icons, shortcuts, categories) ([21e3dd6](https://github.com/HartiganHM/concert-crawl/commit/21e3dd673db936a7df6eb6eb06b4cecc4cc38cc3))
+
+
+### Performance Improvements
+
+* **web:** cache PWA icon route responses via shared Cache-Control header ([398fb57](https://github.com/HartiganHM/concert-crawl/commit/398fb573a1896c717fe5fcc238fd8b5fdbf4a39a))
+
 # [1.128.0](https://github.com/HartiganHM/concert-crawl/compare/v1.127.1...v1.128.0) (2026-07-17)
 
 
