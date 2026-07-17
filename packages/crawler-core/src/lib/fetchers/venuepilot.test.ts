@@ -310,6 +310,40 @@ describe('venuePilotFetcher.fetch', () => {
     expect(result.events[0]!.description).not.toContain('iframe-embed')
   })
 
+  it('skips an event with a malformed date', async () => {
+    mockFetchOk(
+      graphqlBody([
+        {
+          id: 7,
+          name: 'Bad Date',
+          date: '2026-13-40',
+          doorTime: '18:00:00',
+          startTime: '19:00:00',
+          description: '',
+          ticketsUrl: '',
+          status: 'BUY TICKETS',
+          announceArtists: [{ name: 'BD' }],
+          announceImages: [],
+        },
+      ]),
+    )
+    const result = await venuePilotFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+    })
+    expect(result.events.length).toBe(0)
+  })
+
+  it('falls back to UTC (no throw) when the venue timezone is invalid', async () => {
+    mockFetchOk(LEVITT_FIXTURE)
+    const result = await venuePilotFetcher.fetch(
+      makeVenue({ timezone: 'Not/AZone' }),
+      { crawlDelayMs: 0 },
+    )
+    expect(result.events.length).toBeGreaterThan(0)
+    const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body))
+    expect(body.variables.args.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
   it('passes an abort signal only when timeoutMs is set', async () => {
     fetchSpy.mockImplementation(
       async () =>

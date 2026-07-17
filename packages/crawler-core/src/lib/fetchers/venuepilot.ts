@@ -132,14 +132,28 @@ export class VenuePilotSchemaError extends Error {
 
 // Today, in the venue's timezone, as "YYYY-MM-DD". Filters the query to
 // upcoming shows only (VenuePilot returns past events without startDate).
-function todayInTimezone(timezone: string): string {
-  // en-CA formats as YYYY-MM-DD; timeZone shifts to the venue-local day.
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date())
+// venues.timezone is a free-text column and can be invalid — an unknown
+// timeZone makes Intl.DateTimeFormat throw a RangeError, which would fail
+// the whole crawl. Fall back to UTC and log so the crawl still proceeds
+// (mirrors the json-ld extractor's timezone guard).
+function todayInTimezone(timezone: string, venueId: string): string {
+  const format = (tz: string): string =>
+    // en-CA formats as YYYY-MM-DD; timeZone shifts to the venue-local day.
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: tz,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date())
+  try {
+    return format(timezone)
+  } catch (err) {
+    logger.warn(
+      { venueId, timezone, err },
+      'venuepilot: invalid venue timezone — falling back to UTC for startDate',
+    )
+    return format('UTC')
+  }
 }
 
 // Pick the display image: prefer the highlighted image, else the first
@@ -174,6 +188,21 @@ function stripVenuePilotDescription(html: string | null | undefined): string {
   return stripDescriptionHtml(withoutEmbeds)
 }
 
+// "YYYY-MM-DD" with real calendar validity (rejects 2026-13-40 and the like).
+const ISO_DATE = /^(\d{4})-(\d{2})-(\d{2})$/
+function isValidIsoDate(value: string): boolean {
+  const match = ISO_DATE.exec(value)
+  if (!match) return false
+  const [, year, month, day] = match
+  const date = new Date(`${value}T00:00:00Z`)
+  return (
+    !Number.isNaN(date.getTime()) &&
+    date.getUTCFullYear() === Number(year) &&
+    date.getUTCMonth() + 1 === Number(month) &&
+    date.getUTCDate() === Number(day)
+  )
+}
+
 function normalize(
   event: VenuePilotEvent,
   venueCalendarUrl: string,
@@ -183,6 +212,19 @@ function normalize(
     logger.warn(
       { eventId: event.id, venueCalendarUrl },
       'venuepilot: skipping event with empty/whitespace-only name',
+    )
+    return null
+  }
+
+  // event.date drives NormalizedEvent.date and the downstream events.date
+  // upsert. VenuePilot's schema types it as a bare string, so guard the
+  // format (and calendar validity) here — skip a malformed row with a warn
+  // rather than failing the whole response, so one bad event can't drop the
+  // venue's entire batch.
+  if (!isValidIsoDate(event.date)) {
+    logger.warn(
+      { eventId: event.id, date: event.date, venueCalendarUrl },
+      'venuepilot: skipping event with invalid date',
     )
     return null
   }
@@ -307,7 +349,7 @@ async function venuePilotFetch(
     )
   }
 
-  const startDate = todayInTimezone(venue.timezone)
+  const startDate = todayInTimezone(venue.timezone, venue.id)
   const startedAt = Date.now()
   const events: NormalizedEvent[] = []
   let totalCount = 0
