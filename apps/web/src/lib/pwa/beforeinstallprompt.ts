@@ -15,7 +15,10 @@ declare global {
 export const isIosSafari = (): boolean => {
   if (typeof navigator === 'undefined') return false
   const ua = navigator.userAgent
-  const isIos = /iPad|iPhone|iPod/.test(ua)
+  // iPadOS 13+ Safari reports a "Macintosh" UA but, unlike a real Mac, exposes
+  // multi-touch — the canonical way to tell an iPad apart from a desktop Mac.
+  const isIpadOs = ua.includes('Macintosh') && navigator.maxTouchPoints > 1
+  const isIos = /iPad|iPhone|iPod/.test(ua) || isIpadOs
   const isSafari = /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua)
   return isIos && isSafari
 }
