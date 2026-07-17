@@ -172,14 +172,7 @@ export function FeedbackExpanded({
         borderTop: '1px solid var(--border)',
       }}
     >
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)',
-          gap: 20,
-          marginTop: 12,
-        }}
-      >
+      <div className="mt-3 grid grid-cols-1 gap-5 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         {/* Left column: Full Body + Screenshot + Admin Notes */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           {/* Full Body */}
@@ -198,6 +191,7 @@ export function FeedbackExpanded({
                 lineHeight: 1.6,
                 color: 'var(--fg)',
                 marginTop: 8,
+                overflowWrap: 'anywhere',
               }}
             >
               {item.message}
