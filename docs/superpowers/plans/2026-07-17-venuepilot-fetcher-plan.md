@@ -17,7 +17,7 @@
 - **No silent LLM fallback** — a VenuePilot fetch error must bubble to `crawlVenue`'s outer catch (treated as a crawl failure), never fall through to the cascade.
 - **Honest User-Agent** — `ConcertCrawl/1.0 (+https://concertcrawl.app/bot)` on every outbound request.
 - **Respect `crawlDelayMs`** — wait before each request, including between pages.
-- **robots.txt** — no per-endpoint robots check for `www.venuepilot.co`, matching the AEG precedent. `crawlVenue` already checks `robots.txt` for `venue.websiteUrl` before `dispatch()` (crawl.ts:206), which is untouched. The VenuePilot GraphQL endpoint is an official public API we were pointed at by the venue's `api_account_id`, not a crawled HTML page — same treatment as AEG's blob endpoint. Independently verified 2026-07-17: `https://www.venuepilot.co/robots.txt` returns a `User-agent: *` group whose only rule is `Allow: /` (two line-oriented directives: `User-agent: *` then `Allow: /`; only Amazonbot / Applebot-Extended / Bytespider are `Disallow`ed), so our `ConcertCrawl` UA is explicitly allowed and no `Disallow` is being overridden — the crawl-safety concern is moot on the facts. Do not add a robots fetch inside `venuepilot.ts`. (See the spec's "robots.txt stance" note.)
+- **robots.txt** — the fetcher checks `robots.txt` for its own endpoint domain (`www.venuepilot.co`) via the existing cached `isAllowed()` helper (`lib/robots.ts`) before any GraphQL request; an explicit `Disallow` → `VenuePilotFetchError`. This is in addition to `crawlVenue`'s existing check of `venue.websiteUrl` before `dispatch()` (crawl.ts:206, untouched). The helper caches per domain (one fetch per run) and fails open, so the happy path is unaffected — today `https://www.venuepilot.co/robots.txt` returns `User-agent: *` / `Allow: /`, so the gate is a no-op until VenuePilot tightens their policy. AEG's blob endpoint lacks this gate today; follow-up #985 backfills it (AEG untouched here). (See the spec's "robots.txt stance" note.)
 - **Conventional commits**, one commit per task. TDD: failing test first.
 - **No schema/migration, no API/UI, no AEG migration** — crawler-only.
 
@@ -173,7 +173,7 @@ git commit -m "refactor(crawler): rename PlatformFetcher.platform to source"
 - Test: `packages/crawler-core/src/lib/fetchers/venuepilot.test.ts`
 
 **Interfaces:**
-- Consumes: `PlatformFetcher`, `PlatformFetchResult` from `./index.js`; `NormalizedEvent` from `../../types.js`; `stripDescriptionHtml` from `../strip-description-html.js`; `Venue` from `@concert-crawl/db`.
+- Consumes: `PlatformFetcher`, `PlatformFetchResult` from `./index.js`; `NormalizedEvent` from `../../types.js`; `stripDescriptionHtml` from `../strip-description-html.js`; `isAllowed` from `../robots.js`; `Venue` from `@concert-crawl/db`.
 - Produces: `venuePilotFetcher: PlatformFetcher` (`source: 'venuepilot'`); `VenuePilotFetchError`, `VenuePilotSchemaError`; `type VenuePilotEvent`.
 
 - [ ] **Step 1: Capture the fixture**
@@ -199,12 +199,21 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import path from 'path'
+import { isAllowed } from '../robots.js'
 import {
   venuePilotFetcher,
   VenuePilotFetchError,
   VenuePilotSchemaError,
 } from './venuepilot.js'
 import type { Venue } from '@concert-crawl/db'
+
+// Mock the robots helper so fetch tests don't issue a real robots.txt request
+// (which would otherwise consume a fetch call and leak the module-level cache
+// across tests). Defaults to allowed; gate tests override per-case.
+vi.mock('../robots.js', () => ({
+  isAllowed: vi.fn(async () => true),
+}))
+const isAllowedMock = vi.mocked(isAllowed)
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -285,6 +294,7 @@ describe('venuePilotFetcher.fetch', () => {
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(globalThis, 'fetch')
+    isAllowedMock.mockResolvedValue(true)
   })
   afterEach(() => {
     fetchSpy.mockRestore()
@@ -531,6 +541,29 @@ describe('venuePilotFetcher.fetch', () => {
     ).rejects.toBeInstanceOf(VenuePilotSchemaError)
   })
 
+  it('throws VenuePilotFetchError and issues no GraphQL request when robots.txt disallows', async () => {
+    isAllowedMock.mockResolvedValue(false)
+    mockFetchOk(LEVITT_FIXTURE)
+    await expect(
+      venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
+    ).rejects.toBeInstanceOf(VenuePilotFetchError)
+    expect(isAllowedMock).toHaveBeenCalledWith(
+      'https://www.venuepilot.co/graphql',
+      'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
+    )
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('proceeds with the fetch when robots.txt allows', async () => {
+    isAllowedMock.mockResolvedValue(true)
+    mockFetchOk(LEVITT_FIXTURE)
+    const result = await venuePilotFetcher.fetch(makeVenue(), {
+      crawlDelayMs: 0,
+    })
+    expect(result.events.length).toBeGreaterThan(0)
+    expect(fetchSpy).toHaveBeenCalledOnce()
+  })
+
   it('loops pages up to metadata.totalPages and concatenates', async () => {
     const pageEvent = (id: number) => ({
       id,
@@ -623,6 +656,7 @@ import type { Venue } from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
+import { isAllowed } from '../robots.js'
 import type { PlatformFetcher, PlatformFetchResult } from './index.js'
 
 const logger = createLogger('venuepilot-fetcher')
@@ -869,6 +903,17 @@ async function venuePilotFetch(
       0,
       ENDPOINT,
       `Venue ${venue.id} has a non-numeric api_account_id: ${venue.apiAccountId}`,
+    )
+  }
+
+  // Honor robots.txt for the endpoint domain we actually fetch (in addition to
+  // crawlVenue's check of venue.websiteUrl). isAllowed caches per domain and
+  // fails open, so this is a no-op unless VenuePilot adds an explicit Disallow.
+  if (!(await isAllowed(ENDPOINT, USER_AGENT))) {
+    throw new VenuePilotFetchError(
+      0,
+      ENDPOINT,
+      `robots.txt disallows ${USER_AGENT} at ${ENDPOINT}`,
     )
   }
 
