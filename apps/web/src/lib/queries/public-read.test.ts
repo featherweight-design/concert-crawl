@@ -61,6 +61,16 @@ describe('fetchPublicRead', () => {
     expect(console.error).toHaveBeenCalledOnce()
   })
 
+  it('logs and rethrows when the 401 auth retry itself fails', async () => {
+    publicGet.mockRejectedValue(new ApiError(401, 'Unauthorized'))
+    authGet.mockRejectedValue(new ApiError(500, 'Server error'))
+    await expect(
+      fetchPublicRead('/v1/events', async () => 'tok'),
+    ).rejects.toBeInstanceOf(ApiError)
+    expect(authGet).toHaveBeenCalledWith('/v1/events', 'tok')
+    expect(console.error).toHaveBeenCalledOnce()
+  })
+
   it('logs and rethrows non-401 errors without retrying', async () => {
     publicGet.mockRejectedValue(new ApiError(500, 'Server error'))
     await expect(

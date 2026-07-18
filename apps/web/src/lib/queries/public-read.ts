@@ -17,7 +17,17 @@ export async function fetchPublicRead<T>(
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) {
       const token = await getToken()
-      if (token) return apiClient.get<T>(path, token)
+      if (token) {
+        try {
+          return await apiClient.get<T>(path, token)
+        } catch (retryErr) {
+          console.error(
+            `fetchPublicRead auth retry failed for ${path}`,
+            retryErr,
+          )
+          throw retryErr
+        }
+      }
     }
     console.error(`fetchPublicRead failed for ${path}`, err)
     throw err

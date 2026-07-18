@@ -22,10 +22,26 @@ const precacheEntries = self.__SW_MANIFEST
 
 // Only same-origin-as-the-API requests are eligible. Guard the origin explicitly
 // so an unrelated cross-origin URL that happens to share a `/v1/events` path
-// prefix can never enter the public cache.
-const apiOrigin = new URL(
-  process.env.NEXT_PUBLIC_API_URL ?? self.location.origin,
-).origin
+// prefix can never enter the public cache. Parse defensively: an empty or
+// malformed NEXT_PUBLIC_API_URL would throw here during SW evaluation, aborting
+// install/activation and breaking offline caching entirely — so fall back to the
+// worker's own origin on any invalid value.
+function resolveApiOrigin(): string {
+  const configured = process.env.NEXT_PUBLIC_API_URL
+  if (configured) {
+    try {
+      return new URL(configured).origin
+    } catch (err) {
+      console.error(
+        'Invalid NEXT_PUBLIC_API_URL; falling back to self.location.origin',
+        err,
+      )
+    }
+  }
+  return self.location.origin
+}
+
+const apiOrigin = resolveApiOrigin()
 
 const publicApiCache = {
   // Refuse to cache any credentialed request: otherwise-public endpoints like
