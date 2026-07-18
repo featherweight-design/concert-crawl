@@ -68,7 +68,7 @@ Break the Spotify Sync feature into an ordered set of PRs that each ship indepen
 - `spotify_digest` template — key added to `EMAIL_TEMPLATE_KEYS` in `packages/db/src/schema/commerce.ts` (+ `schema.test.ts` lockstep), then registry + `EmailTemplateVars` + `email_template_config` seed: inline hex, ≤5 shows + "+N more", zero-week variant, plain-text fallback, per the mock (§8.2).
 - New `'digest'` email family in `apps/api/src/emails/layout.ts`; per-family footer link is the one-click HMAC unsubscribe `GET /v1/email/unsubscribe?uid=…&family=digest&token=…` (`timingSafeEqual` verify) flipping `digestEnabled`; `EMAIL_UNSUBSCRIBE_SECRET` env var.
 - `SPOTIFY_SYNC_DRY_RUN` support.
-- Render cron `concert-crawl-spotify-weekly` (`30 15 * * 1`, offset from `billing-jobs`) created at deploy (human checkpoint).
+- `render.yaml` entries (the file is descriptive documentation, not blueprint-synced — services are still created manually) for `concert-crawl-spotify-weekly` + `concert-crawl-spotify-weekly-staging` (`30 15 * * 1`, offset from `billing-jobs`) ship **in PR 4**, mirroring the `billing-jobs` entries. The agent creates the **staging** cron service itself in the Render **concert-crawl > staging** project and sets `SPOTIFY_SYNC_DRY_RUN=1` on it for the first cycle (note: Render MCP create tools skip the env group — re-home env vars after creation); the **prod** cron remains a human checkpoint.
 - Digest *sends* are premium-gated at send time via `canUseFeature`; landing this before the premium UI is safe — no premium users have connections yet, and dry-run covers the first staging cycle.
 
 ### Phase 2 — Free spine (R1 UI)
@@ -135,7 +135,7 @@ Break the Spotify Sync feature into an ordered set of PRs that each ship indepen
 | Before PR 5 staging validation | Create Spotify Developer app (staging + prod redirect URIs); enable Spotify provider in **both** Clerk instances with scopes `user-follow-read user-top-read` (spec §3) |
 | As soon as the feature hits staging | File Spotify **Extended Quota Mode** request (dev mode = 25 allowlisted users; approval takes weeks; launch blocker — tracked as a GH issue at PR-5 time) |
 | PR 1 merge | Approve running backfill scripts against prod (production DB touch = explicit approval) |
-| PR 4 deploy | Create the `concert-crawl-spotify-weekly` Render cron (dashboard/API; cron jobs have no deploy-hook UI) + set `EMAIL_UNSUBSCRIBE_SECRET`, `SPOTIFY_SYNC_DRY_RUN=1` for the first cycle |
+| PR 4 deploy | Create the **prod** `concert-crawl-spotify-weekly` Render cron (dashboard/API; cron jobs have no deploy-hook UI) + set `EMAIL_UNSUBSCRIBE_SECRET`, `SPOTIFY_SYNC_DRY_RUN=1` for the first cycle. (Staging cron + `render.yaml` entries are handled by the agent in PR 4 — see Phase 1.) |
 | PR 9 deploy | Generate VAPID keys (`npx web-push generate-vapid-keys`); set the three api vars + `NEXT_PUBLIC_VAPID_PUBLIC_KEY` on Vercel |
 | End-to-end staging pass | Connect with a real allowlisted Spotify account; verify Following chip, taste filter, discovery, digest test-send, push on an installed PWA |
 
