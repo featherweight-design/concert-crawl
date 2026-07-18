@@ -64,7 +64,12 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
   },
   icons: {
+    // The SVG must lead: declaring `icons` overrides Next's automatic
+    // detection of the app/icon.svg file convention, so without this entry the
+    // scalable tab favicon is dropped and browsers fall back to the oversized
+    // PWA PNGs (or nothing). The PNGs remain for platforms without SVG support.
     icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
       { url: '/api/pwa/icon-192', sizes: '192x192', type: 'image/png' },
       { url: '/api/pwa/icon-512', sizes: '512x512', type: 'image/png' },
     ],
