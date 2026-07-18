@@ -8,7 +8,7 @@ import {
   db,
   founderWindow,
   userProfiles,
-  userRoles,
+  userCred,
   priceSubmissions,
   events,
   venues,
@@ -163,9 +163,9 @@ usersRouter.get('/me', async (ctx) => {
     .where(eq(priceSubmissions.userId, auth.userId))
 
   const [credRow] = await db
-    .select({ priceCredScore: userRoles.priceCredScore })
-    .from(userRoles)
-    .where(eq(userRoles.userId, auth.userId))
+    .select({ priceCredScore: userCred.priceCredScore })
+    .from(userCred)
+    .where(eq(userCred.userId, auth.userId))
     .limit(1)
 
   const email = clerkUser.emailAddresses[0]?.emailAddress ?? ''

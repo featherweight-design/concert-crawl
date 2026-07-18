@@ -8,10 +8,10 @@ import {
   events,
   priceSubmissions,
   userProfiles,
-  userRoles,
   venues,
 } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
+import { awardPriceCred } from '../../lib/award-price-cred.js'
 import { writeContestNotifications } from '../../lib/contest-notifications.js'
 import { narrowLastAdminAction } from '../../lib/last-admin-action.js'
 import type { AdminVariables } from './index.js'
@@ -665,10 +665,7 @@ contestsAdminRouter.post(
           eventPriceUpdated = true
         }
         if (challenger.userId !== null) {
-          await tx
-            .update(userRoles)
-            .set({ priceCredScore: sql`${userRoles.priceCredScore} + 1` })
-            .where(eq(userRoles.userId, challenger.userId))
+          await awardPriceCred(tx, challenger.userId)
         }
       } else {
         // parent_wins: parent stays canonical → corroborated.

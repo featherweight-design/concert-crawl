@@ -22,7 +22,7 @@ import {
   events,
   notifications,
   priceSubmissions,
-  userRoles,
+  userCred,
 } from '@concert-crawl/db'
 import { createApp } from '../../app.js'
 import { testDb } from '../../test/helpers/db.js'
@@ -30,6 +30,7 @@ import {
   clearTables,
   seedEvent,
   seedPriceSubmission,
+  seedUserCred,
   seedUserProfile,
   seedUserRole,
   seedVenue,
@@ -926,17 +927,10 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
     const challenger = await seedUserProfile(`resolve-chal-${uniq}`, {
       handle: `chal-${uniq}`,
     })
-    // Cred is awarded by UPDATE — rows must exist for the +1 to land.
-    const parentRole = await seedUserRole(submitter.userId, {
-      role: 'user',
-      grantedBy: 'system',
-      priceCredScore: 5,
-    })
-    const challengerRole = await seedUserRole(challenger.userId, {
-      role: 'user',
-      grantedBy: 'system',
-      priceCredScore: 2,
-    })
+    // Cred lives in user_cred (#1012). Seed starting balances so the dispute
+    // award's upsert exercises its UPDATE branch (increment an existing row).
+    const parentCred = await seedUserCred(submitter.userId, 5)
+    const challengerCred = await seedUserCred(challenger.userId, 2)
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
       tier: 'GA',
       vendor: 'AXS',
@@ -967,8 +961,8 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
       challenger,
       parent,
       counter,
-      parentRoleBefore: parentRole,
-      challengerRoleBefore: challengerRole,
+      parentCredBefore: parentCred,
+      challengerCredBefore: challengerCred,
     }
   }
 
@@ -994,9 +988,9 @@ describe('POST /v1/admin/contests/prices/:contestId/resolve', () => {
 
   const fetchCred = async (userId: string): Promise<number> => {
     const [row] = await testDb
-      .select({ score: userRoles.priceCredScore })
-      .from(userRoles)
-      .where(eq(userRoles.userId, userId))
+      .select({ score: userCred.priceCredScore })
+      .from(userCred)
+      .where(eq(userCred.userId, userId))
       .limit(1)
     return row?.score ?? 0
   }
@@ -1581,16 +1575,8 @@ describe('POST /v1/admin/contests/prices/:contestId/defer', () => {
     const challenger = await seedUserProfile(`defer-chal-${uniq}`, {
       handle: `chal-${uniq}`,
     })
-    await seedUserRole(submitter.userId, {
-      role: 'user',
-      grantedBy: 'system',
-      priceCredScore: 5,
-    })
-    await seedUserRole(challenger.userId, {
-      role: 'user',
-      grantedBy: 'system',
-      priceCredScore: 2,
-    })
+    await seedUserCred(submitter.userId, 5)
+    await seedUserCred(challenger.userId, 2)
     const parent = await seedPriceSubmission(event.id, submitter.userId, {
       tier: 'GA',
       vendor: 'AXS',
@@ -1646,9 +1632,9 @@ describe('POST /v1/admin/contests/prices/:contestId/defer', () => {
 
   const fetchCred = async (userId: string): Promise<number> => {
     const [row] = await testDb
-      .select({ score: userRoles.priceCredScore })
-      .from(userRoles)
-      .where(eq(userRoles.userId, userId))
+      .select({ score: userCred.priceCredScore })
+      .from(userCred)
+      .where(eq(userCred.userId, userId))
       .limit(1)
     return row?.score ?? 0
   }

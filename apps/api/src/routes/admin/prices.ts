@@ -8,7 +8,6 @@ import {
   events,
   priceRetrievalLog,
   priceSubmissions,
-  userRoles,
   venues,
 } from '@concert-crawl/db'
 import { runPricePipeline } from '@concert-crawl/price-pipeline'
@@ -16,6 +15,7 @@ import { createLogger } from '@concert-crawl/logger'
 import { deriveSourceCategory } from '@concert-crawl/types'
 import { getAuthUser } from '../../middleware/auth.js'
 import { apiLogger } from '../../lib/logger.js'
+import { awardPriceCred } from '../../lib/award-price-cred.js'
 import { runBackgroundTask } from '../../lib/background-tasks.js'
 import type { AdminVariables } from './index.js'
 
@@ -415,10 +415,7 @@ pricesAdminRouter.patch(
       if (status === 'corroborated' && existing.status !== 'corroborated') {
         // Award cred to the submitter
         if (existing.userId !== null) {
-          await tx
-            .update(userRoles)
-            .set({ priceCredScore: sql`${userRoles.priceCredScore} + 1` })
-            .where(eq(userRoles.userId, existing.userId))
+          await awardPriceCred(tx, existing.userId)
         }
 
         // Propagate the approved community price to the event

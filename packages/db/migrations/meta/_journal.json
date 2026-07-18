@@ -358,6 +358,13 @@
       "when": 1784311501329,
       "tag": "0050_supporting_artists_tour_name",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1784592000000,
+      "tag": "0051_user_cred",
+      "breakpoints": true
     }
   ]
 }

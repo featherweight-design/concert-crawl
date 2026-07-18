@@ -14,7 +14,9 @@ import { db } from './src/client.js'
 import {
   venues,
   events as eventsTable,
+  eventStatusEnum,
   priceRetrievalLog,
+  userCred,
   userProfiles,
   userRoles,
   inviteCodes,
@@ -30,6 +32,22 @@ import {
   type NewVenue,
   type NewPriceSubmission,
 } from './src/schema/index.js'
+
+type EventStatus = (typeof eventStatusEnum.enumValues)[number]
+
+function isEventStatus(value: string | undefined): value is EventStatus {
+  return (
+    value !== undefined &&
+    eventStatusEnum.enumValues.some((status) => status === value)
+  )
+}
+
+// Narrow seed data's optional `status` to a valid event_status, defaulting to
+// 'upcoming'. Runtime-validated rather than cast, so drifting seed data can't
+// smuggle an invalid enum value past the type checker.
+function toEventStatus(value: string | undefined): EventStatus {
+  return isEventStatus(value) ? value : 'upcoming'
+}
 
 // ---------------------------------------------------------------------------
 // Venues — synced from staging 2026-05-21, 13 total
@@ -1358,10 +1376,7 @@ async function seed() {
           ticketPriceMax: ev.ticketPriceMax ?? null,
           priceSource: ev.priceSource ?? null,
           genre: ev.genre ?? null,
-          status: (ev.status ?? 'upcoming') as
-            | 'upcoming'
-            | 'cancelled'
-            | 'postponed',
+          status: toEventStatus(ev.status),
           confidenceScore: ev.confidenceScore ?? null,
           verified: ev.verified ?? false,
         },
@@ -1467,6 +1482,27 @@ async function seed() {
     console.warn(`Inserted ${missingRoles.length} user roles.`)
   } else {
     console.warn('All synthetic user roles already present, skipping.')
+  }
+
+  // Per-user cred (#1012) — cred now lives in `user_cred`, keyed by user_id.
+  // Mirror each seeded user's score so local/dev profiles render real cred.
+  const existingCredRows = await db
+    .select({ userId: userCred.userId })
+    .from(userCred)
+  const existingCredUserIds = new Set(existingCredRows.map((row) => row.userId))
+  const missingCred = FAKE_USER_ROLES.filter(
+    (role) => !existingCredUserIds.has(role.userId),
+  )
+  if (missingCred.length > 0) {
+    await db.insert(userCred).values(
+      missingCred.map((role) => ({
+        userId: role.userId,
+        priceCredScore: role.priceCredScore,
+      })),
+    )
+    console.warn(`Inserted ${missingCred.length} user cred rows.`)
+  } else {
+    console.warn('All synthetic user cred rows already present, skipping.')
   }
 
   // Invite codes

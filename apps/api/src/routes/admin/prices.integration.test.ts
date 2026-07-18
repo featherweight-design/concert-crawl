@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { userRoles } from '@concert-crawl/db'
+import { userCred } from '@concert-crawl/db'
 
 vi.mock('@sentry/hono/node', async () => {
   const actual =
@@ -43,7 +43,6 @@ import {
   seedEvent,
   seedPriceRetrievalLog,
   seedPriceSubmission,
-  seedUserRole,
   seedVenue,
 } from '../../test/helpers/seed.js'
 import { testDb } from '../../test/helpers/db.js'
@@ -207,11 +206,13 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
     return clearTables()
   })
 
-  it('increments priceCredScore when transitioning pending → corroborated', async () => {
+  // Regression for #1012: a regular fan has NO user_roles row, so the old
+  // UPDATE-user_roles award silently matched zero rows and their cred stayed 0.
+  // The award now upserts into user_cred, so the fan gets a row scored 1.
+  it('awards cred to a fan with no user_roles row on pending → corroborated', async () => {
     const venue = await seedVenue()
     const event = await seedEvent(venue.id)
     const userId = 'user_cred_test'
-    await seedUserRole(userId)
     const submission = await seedPriceSubmission(event.id, userId)
 
     const res = await app.request(
@@ -224,19 +225,18 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
     )
     expect(res.status).toBe(200)
 
-    const [role] = await testDb
-      .select({ priceCredScore: userRoles.priceCredScore })
-      .from(userRoles)
-      .where(eq(userRoles.userId, userId))
+    const [cred] = await testDb
+      .select({ priceCredScore: userCred.priceCredScore })
+      .from(userCred)
+      .where(eq(userCred.userId, userId))
       .limit(1)
-    expect(role?.priceCredScore).toBe(1)
+    expect(cred?.priceCredScore).toBe(1)
   })
 
   it('does not double-increment when status is already corroborated', async () => {
     const venue = await seedVenue()
     const event = await seedEvent(venue.id)
     const userId = 'user_no_double'
-    await seedUserRole(userId)
     const submission = await seedPriceSubmission(event.id, userId, {
       status: 'corroborated',
     })
@@ -251,12 +251,14 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
     )
     expect(res.status).toBe(200)
 
-    const [role] = await testDb
-      .select({ priceCredScore: userRoles.priceCredScore })
-      .from(userRoles)
-      .where(eq(userRoles.userId, userId))
+    // No transition occurred, so no award ran and no user_cred row exists —
+    // which the read path treats as 0.
+    const [cred] = await testDb
+      .select({ priceCredScore: userCred.priceCredScore })
+      .from(userCred)
+      .where(eq(userCred.userId, userId))
       .limit(1)
-    expect(role?.priceCredScore).toBe(0)
+    expect(cred?.priceCredScore ?? 0).toBe(0)
   })
 
   it('does not increment for anonymous submissions (null userId)', async () => {
