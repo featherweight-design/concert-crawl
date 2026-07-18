@@ -343,9 +343,13 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
           alignItems: 'flex-start',
           gap: 12,
           marginBottom: 16,
+          // Wrap the status pills below the title when the row can't fit
+          // both at narrow widths (≤320px) instead of pushing the pill
+          // group past the panel edge.
+          flexWrap: 'wrap',
         }}
       >
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div
             style={{
               fontFamily: MONO,
@@ -361,7 +365,8 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
             // Title — design source margin is top-only (`4px 0 0`) so
             // the spacing rhythm collapses between the title and the
             // header's bottom edge; the header's marginBottom owns the
-            // gap to the next block.
+            // gap to the next block. overflowWrap keeps long titles inside
+            // the panel at narrow widths.
             style={{
               fontFamily: INTER,
               fontSize: 22,
@@ -369,6 +374,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
               letterSpacing: '-0.025em',
               color: 'var(--fg)',
               margin: '4px 0 0',
+              overflowWrap: 'anywhere',
             }}
           >
             {title}
@@ -527,11 +533,14 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
 
       {/* Two-up grid — §3 lines 128–156. Stacks to a single column below the
           sm breakpoint so the counter side + decision buttons stay on-screen
-          and actionable on mobile; at sm+ it restores the 1fr 16px 1fr layout
-          with minmax(0,…) tracks so long AdminEntry content shrinks to fit the
-          panel instead of overflowing it. */}
-      <div className="my-[18px] grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_16px_minmax(0,1fr)] sm:items-start sm:gap-0">
-        <div className="min-w-0">
+          and actionable on mobile; at sm+ it restores the two-up layout with
+          minmax(0,…) tracks so long AdminEntry content shrinks to fit the
+          panel instead of overflowing it. The divider column is `auto` with a
+          gap-x so the "vs" gets breathing room on both sides, and
+          items-stretch + flex-column wrappers let the two cards match heights
+          even when one side is taller. */}
+      <div className="my-[18px] grid grid-cols-1 gap-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:items-stretch sm:gap-y-0 sm:gap-x-3">
+        <div className="flex min-w-0 flex-col">
           <div
             style={{
               fontFamily: MONO,
@@ -573,7 +582,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
         >
           {REVIEW_CONTEST_COPY.panel.versusDivider}
         </div>
-        <div className="min-w-0">
+        <div className="flex min-w-0 flex-col">
           <div
             style={{
               fontFamily: MONO,
@@ -701,19 +710,17 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
           ) : null}
 
           <div
-            // §3 line 167 — flex row, gap 10, justifyContent flex-end.
-            style={{
-              display: 'flex',
-              gap: 10,
-              justifyContent: 'flex-end',
-              marginTop: 14,
-            }}
+            // §3 line 167 — flex row, gap 10, justifyContent flex-end at
+            // sm+. Stacks the three buttons full-width on mobile so they
+            // stay inside the panel at 320px instead of overflowing it.
+            className="mt-[14px] flex flex-col gap-[10px] sm:flex-row sm:justify-end"
           >
             <button
               ref={firstButtonRef}
               type="button"
               disabled={disabled}
               onClick={onDefer}
+              className="w-full sm:w-auto"
               // §3 lines 168–174 — transparent background, 1px
               // border-strong, fg-muted text.
               style={{
@@ -736,6 +743,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
               type="button"
               disabled={disabled}
               onClick={onKeep}
+              className="w-full sm:w-auto"
               // §3 lines 175–179 — gold accent border + text on a
               // transparent background.
               style={{
@@ -758,6 +766,7 @@ export const AdminDisputePanel: FC<AdminDisputePanelProps> = ({
               type="button"
               disabled={disabled}
               onClick={onPromote}
+              className="w-full sm:w-auto"
               // §3 lines 180–185 — azure-filled primary action.
               style={{
                 background: AZURE_DARK,

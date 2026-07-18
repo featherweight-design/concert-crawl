@@ -168,12 +168,15 @@ describe('AdminDisputePanel', () => {
     })
     // Mobile-first single column keeps the counter side + decision buttons
     // on-screen at 320px; the sm+ tracks use minmax(0,…) so long AdminEntry
-    // content shrinks to fit instead of overflowing the panel.
+    // content shrinks to fit instead of overflowing the panel. The middle
+    // "vs" column is `auto`-sized with sm:gap-x-3 so the divider gets breathing
+    // room on both sides at wide widths.
     const grid = container.querySelector('.grid-cols-1')
     expect(grid).not.toBeNull()
     expect(grid?.className).toContain(
-      'sm:grid-cols-[minmax(0,1fr)_16px_minmax(0,1fr)]',
+      'sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]',
     )
+    expect(grid?.className).toContain('sm:gap-x-3')
     // Both AdminEntry column wrappers can shrink below their content width.
     expect(
       container.querySelectorAll('.min-w-0').length,

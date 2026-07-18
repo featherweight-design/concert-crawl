@@ -123,8 +123,16 @@ export const AdminEntry: FC<AdminEntryProps> = ({
   return (
     <div
       // Card container — §3b lines 197–200 (padding / background /
-      // border-radius / conditional border).
+      // border-radius / conditional border). flexGrow lets the two cards
+      // match heights when their flex-column wrappers are stretched by the
+      // parent grid, so the original + counter cards stay level even when
+      // one side has a note or a longer handle. box-border keeps the
+      // padding inside the width so long content can't push the card past
+      // the panel edge. (flexGrow is inert when the card isn't rendered in
+      // a flex parent, so it stays safe for any future reuse.)
       style={{
+        flexGrow: 1,
+        boxSizing: 'border-box',
         padding: '14px 16px',
         background: 'var(--surface-1)',
         border: isWinner
@@ -234,7 +242,11 @@ export const AdminEntry: FC<AdminEntryProps> = ({
         style={{
           marginTop: 8,
           display: 'grid',
-          gridTemplateColumns: 'auto 1fr',
+          // minmax(0,1fr) on the value column lets long, unbreakable
+          // values (seeded handles, ISO timestamps) shrink to the track
+          // instead of forcing the card wider than the panel. Paired with
+          // overflowWrap:'anywhere' on each value so they wrap.
+          gridTemplateColumns: 'auto minmax(0, 1fr)',
           gap: '4px 12px',
           fontFamily: MONO,
           fontSize: 9.5,
@@ -244,24 +256,38 @@ export const AdminEntry: FC<AdminEntryProps> = ({
         <span style={{ color: 'var(--fg-subtle)', textTransform: 'uppercase' }}>
           {REVIEW_CONTEST_COPY.adminEntry.metadata.submitter}
         </span>
-        <span style={{ color: 'var(--fg)' }}>{handleDisplay}</span>
+        <span
+          style={{ color: 'var(--fg)', minWidth: 0, overflowWrap: 'anywhere' }}
+        >
+          {handleDisplay}
+        </span>
 
         <span style={{ color: 'var(--fg-subtle)', textTransform: 'uppercase' }}>
           {REVIEW_CONTEST_COPY.adminEntry.metadata.vendor}
         </span>
-        <span style={{ color: 'var(--fg)' }}>{vendor}</span>
+        <span
+          style={{ color: 'var(--fg)', minWidth: 0, overflowWrap: 'anywhere' }}
+        >
+          {vendor}
+        </span>
 
         <span style={{ color: 'var(--fg-subtle)', textTransform: 'uppercase' }}>
           {REVIEW_CONTEST_COPY.adminEntry.metadata.observed}
         </span>
-        <span style={{ color: 'var(--fg)' }}>
+        <span
+          style={{ color: 'var(--fg)', minWidth: 0, overflowWrap: 'anywhere' }}
+        >
           <time dateTime={observedAt}>{observedAt}</time>
         </span>
 
         <span style={{ color: 'var(--fg-subtle)', textTransform: 'uppercase' }}>
           {REVIEW_CONTEST_COPY.adminEntry.metadata.confirms}
         </span>
-        <span style={{ color: 'var(--fg)' }}>{confirmsDisplay}</span>
+        <span
+          style={{ color: 'var(--fg)', minWidth: 0, overflowWrap: 'anywhere' }}
+        >
+          {confirmsDisplay}
+        </span>
       </div>
 
       {note !== null ? (
