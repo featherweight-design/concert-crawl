@@ -26,6 +26,7 @@
     "@clerk/backend": "^2.33.6",
     "@commitlint/cli": "21.2.1",
     "@commitlint/config-conventional": "21.2.0",
+    "@concert-crawl/crawler-core": "workspace:*",
     "@concert-crawl/db": "workspace:*",
     "@semantic-release/changelog": "6.0.3",
     "@semantic-release/commit-analyzer": "13.0.1",

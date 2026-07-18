@@ -23,6 +23,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@concert-crawl/db': path.resolve(__dirname, 'packages/db/src/index.ts'),
+      '@concert-crawl/crawler-core': path.resolve(
+        __dirname,
+        'packages/crawler-core/src/index.ts',
+      ),
     },
   },
   test: {

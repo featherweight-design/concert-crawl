@@ -29,6 +29,9 @@ importers:
       '@commitlint/config-conventional':
         specifier: 21.2.0
         version: 21.2.0
+      '@concert-crawl/crawler-core':
+        specifier: workspace:*
+        version: link:packages/crawler-core
       '@concert-crawl/db':
         specifier: workspace:*
         version: link:packages/db
