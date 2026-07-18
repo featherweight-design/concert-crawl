@@ -1,3 +1,16 @@
+# [1.135.0](https://github.com/HartiganHM/concert-crawl/compare/v1.134.0...v1.135.0) (2026-07-18)
+
+
+### Bug Fixes
+
+* **web:** stack admin dashboard + venues stat tiles at mobile width ([#1043](https://github.com/HartiganHM/concert-crawl/issues/1043)) ([8392bbf](https://github.com/HartiganHM/concert-crawl/commit/8392bbf38afa47b0ebb09cc86e4184a9bbff6f90))
+
+
+### Features
+
+* **bruno:** add force-recrawl requests + prod environment ([#1046](https://github.com/HartiganHM/concert-crawl/issues/1046)) ([2ccb610](https://github.com/HartiganHM/concert-crawl/commit/2ccb61025136fc0e3057fbbc9e7d2e2d5bd26916)), closes [#1033](https://github.com/HartiganHM/concert-crawl/issues/1033)
+* **entitlements:** spotify-sync visible-locked for free/supporter/logged-out ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 2) ([a9b1278](https://github.com/HartiganHM/concert-crawl/commit/a9b1278cf1caa051ac91d1d5dc9f4c0fc5dc2b79))
+
 # [1.134.0](https://github.com/HartiganHM/concert-crawl/compare/v1.133.0...v1.134.0) (2026-07-18)
 
 
