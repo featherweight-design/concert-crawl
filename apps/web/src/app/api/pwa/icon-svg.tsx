@@ -33,7 +33,10 @@ export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
   // inset and push the art off-center.
   const artTransform = maskable
     ? `translate(${MASKABLE_INSET} ${MASKABLE_INSET}) scale(${MASKABLE_SAFE_ZONE_SCALE})`
-    : undefined
+    : // Satori (next/og) drops the children of a <g> with no transform, which
+      // blanks the art; an explicit identity transform keeps the non-maskable
+      // icon's art rendering.
+      'translate(0 0)'
   return (
     <svg
       width={size}

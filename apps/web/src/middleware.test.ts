@@ -114,4 +114,16 @@ describe('middleware — edge auth gate (#841)', () => {
 
     expect(result).toBeUndefined()
   })
+
+  it('lets unauthenticated PWA icon fetches through without protect', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    // The OS/browser fetches install icons with no session. If middleware
+    // gated these, auth.protect would redirect the fetch to the HTML landing
+    // page and the icon would render blank.
+    const req = new NextRequest('http://localhost/api/pwa/icon-192')
+    const result = await (middleware as Function)(makeAuth(null), req)
+
+    expect(result).toBeUndefined()
+  })
 })

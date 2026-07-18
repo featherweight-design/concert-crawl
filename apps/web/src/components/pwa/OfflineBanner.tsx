@@ -7,11 +7,14 @@ export const OfflineBanner = () => {
   const online = useOnlineStatus()
   if (online) return null
 
+  // Rendered in normal document flow (not fixed) so it pushes the sticky app
+  // header down instead of overlaying it. It sits at the top of <body>, above
+  // the app content, and scrolls away with the page.
   return (
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-x-0 top-0 z-50 bg-warning px-4 py-2 text-center text-sm text-fg-on-accent"
+      className="bg-warning px-4 py-2 text-center text-sm text-fg-on-accent"
     >
       {PWA_COPY.offlineBanner}
     </div>

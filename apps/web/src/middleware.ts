@@ -7,6 +7,10 @@ const isAlwaysPublic = createRouteMatcher([
   '/auth/code(.*)',
   '/sign-in(.*)',
   '/api/webhooks(.*)',
+  // PWA install icons are fetched by the OS/browser without a session; gating
+  // them redirects the fetch to the HTML landing page and the icon renders
+  // blank. Scoped to /icon* so future /api/pwa handlers aren't public by default.
+  '/api/pwa/icon(.*)',
   '/legal(.*)',
 ])
 
