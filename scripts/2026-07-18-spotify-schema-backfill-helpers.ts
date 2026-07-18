@@ -11,10 +11,14 @@
  * skip/update logic is unit-testable without a DB.
  */
 
+// Relative source import (not the @concert-crawl/crawler-core entrypoint,
+// which resolves to dist/) so the one-shot backfills run on a clean checkout
+// without a prior crawler-core build — same pattern as
+// scripts/2026-06-19-non-concert-backfill.ts.
 import {
   canonicalizeArtist,
   canonicalizeSupporting,
-} from '@concert-crawl/crawler-core'
+} from '../packages/crawler-core/src/lib/canonical-artist.js'
 
 export interface FollowRow {
   id: string
