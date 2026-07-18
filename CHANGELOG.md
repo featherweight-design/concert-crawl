@@ -1,3 +1,10 @@
+# [1.133.0](https://github.com/HartiganHM/concert-crawl/compare/v1.132.1...v1.133.0) (2026-07-18)
+
+
+### Features
+
+* **crawler:** force-recrawl flag to reprocess legacy events ([#1033](https://github.com/HartiganHM/concert-crawl/issues/1033)) ([5ad0dfa](https://github.com/HartiganHM/concert-crawl/commit/5ad0dfa6de253d2e9547515f6f147164a101595f))
+
 ## [1.132.1](https://github.com/HartiganHM/concert-crawl/compare/v1.132.0...v1.132.1) (2026-07-18)
 
 
