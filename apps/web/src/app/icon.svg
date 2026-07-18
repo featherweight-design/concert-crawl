@@ -1,28 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
   <style>
-    .bg  { fill: #E8EDF6; }
-    .ac  { fill: #E0297A; }
-    .sig { fill: #0080A0; }
-    .dot { fill: #070A1A; }
+    .bg   { fill: #E8EDF6; }
+    .glow { fill: #E0297A; }
+    .sig  { fill: #0080A0; }
     @media (prefers-color-scheme: dark) {
-      .bg  { fill: #171D3A; }
-      .ac  { fill: #FF7BD4; }
-      .sig { fill: #7AE6FF; }
-      .dot { fill: #E8F3FF; }
+      .bg   { fill: #171D3A; }
+      .glow { fill: #FF7BD4; }
+      .sig  { fill: #7AE6FF; }
     }
   </style>
-  <!-- Background -->
-  <rect width="48" height="48" rx="10" class="bg"/>
-  <!-- Signal ring -->
-  <circle cx="34" cy="14" r="9" class="ac"  opacity="0.22"/>
-  <circle cx="34" cy="14" r="5" class="ac"  opacity="0.45"/>
-  <circle cx="34" cy="14" r="3" class="sig"/>
-  <!-- Dot trail -->
-  <circle cx="14" cy="38" r="1.6" class="dot" opacity="0.45"/>
-  <circle cx="18" cy="34" r="1.6" class="dot" opacity="0.52"/>
-  <circle cx="22" cy="30" r="1.6" class="dot" opacity="0.59"/>
-  <circle cx="26" cy="26" r="1.6" class="dot" opacity="0.66"/>
-  <circle cx="30" cy="22" r="1.6" class="dot" opacity="0.73"/>
-  <circle cx="34" cy="18" r="1.6" class="dot" opacity="0.80"/>
-  <circle cx="14" cy="32" r="1.6" class="dot" opacity="0.87"/>
+  <!-- ClusterPath mark — logo-workshop-5.jsx signature electric -->
+  <rect width="96" height="96" class="bg"/>
+  <!-- Focal halo -->
+  <circle cx="72" cy="24" r="20" class="glow" opacity="0.22"/>
+  <circle cx="72" cy="24" r="12" class="glow" opacity="0.42"/>
+  <circle cx="72" cy="24" r="7" class="sig"/>
+  <!-- Dot trail: shares the signal cyan, grows toward the halo -->
+  <circle cx="14" cy="76" r="1.5" class="sig" opacity="0.35"/>
+  <circle cx="24" cy="70" r="2"   class="sig" opacity="0.44"/>
+  <circle cx="34" cy="64" r="2.5" class="sig" opacity="0.53"/>
+  <circle cx="42" cy="58" r="3"   class="sig" opacity="0.62"/>
+  <circle cx="50" cy="50" r="4"   class="sig" opacity="0.71"/>
+  <circle cx="58" cy="42" r="5"   class="sig" opacity="0.80"/>
+  <circle cx="66" cy="32" r="6"   class="sig" opacity="0.89"/>
 </svg>

@@ -22,4 +22,17 @@ describe('icon.svg', () => {
   it('contains signal element', () => {
     expect(svgContent).toContain('#7AE6FF')
   })
+
+  // Locked ClusterPath mark (logo-workshop-5.jsx): a cyan trail that grows
+  // toward the halo, not the earlier uniform near-white dots.
+  it('renders the trail in the signal color, not a separate dot color', () => {
+    expect(svgContent).not.toContain('.dot')
+    expect(svgContent).not.toContain('#E8F3FF')
+  })
+
+  it('grows the trail dots toward the halo', () => {
+    expect(svgContent).toContain('r="1.5"')
+    expect(svgContent).toContain('r="6"')
+    expect(svgContent).not.toContain('r="1.6"')
+  })
 })

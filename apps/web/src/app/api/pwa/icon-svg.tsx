@@ -4,21 +4,37 @@ export const PWA_ICON_CACHE_HEADERS = {
   'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
 }
 
+// Signature "ClusterPath" mark, electric palette — the locked logo from
+// design/design_handoff_brand_and_theming/logo-workshop-5.jsx. Trail dots share
+// the signal's cyan (`signal`) and grow toward the halo; the pink glow rings the
+// focal point.
 export const PWA_ICON_PALETTE = {
-  canvas: '#070A1A',
   background: '#171D3A',
-  signalOuter: '#FF7BD4',
-  signalInner: '#7AE6FF',
-  dot: '#E8F3FF',
+  glow: '#FF7BD4',
+  signal: '#7AE6FF',
 } as const
 
-// The art is authored in a square viewBox of this many units.
-const ICON_VIEWBOX = 48
+// The art is authored in a square viewBox of this many units — matching the
+// canonical ClusterPath source so its coordinates port over verbatim.
+const ICON_VIEWBOX = 96
 // Maskable icons must keep their art inside a centered "safe zone"; platforms
 // may crop the outer margin into any shape. The inset is half the cropped
 // margin, applied on each side, so the scaled art stays centered.
 const MASKABLE_SAFE_ZONE_SCALE = 0.8
 const MASKABLE_INSET = (ICON_VIEWBOX * (1 - MASKABLE_SAFE_ZONE_SCALE)) / 2
+
+// Dots travel along an implied curve, growing toward the focal halo — verbatim
+// from the ClusterPath source. Opacity ramps as `0.35 + index * 0.09`, and the
+// final r=6 dot overlaps the r=7 core to read as one merged signal.
+const TRAIL = [
+  { cx: 14, cy: 76, radius: 1.5 },
+  { cx: 24, cy: 70, radius: 2 },
+  { cx: 34, cy: 64, radius: 2.5 },
+  { cx: 42, cy: 58, radius: 3 },
+  { cx: 50, cy: 50, radius: 4 },
+  { cx: 58, cy: 42, radius: 5 },
+  { cx: 66, cy: 32, radius: 6 },
+] as const
 
 interface PwaIconSvgProps {
   size: number
@@ -26,17 +42,14 @@ interface PwaIconSvgProps {
 }
 
 export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
-  // Maskable: full-bleed canvas + art inset into the safe zone. Order matters:
-  // `translate` before `scale` composes as T·S, so the geometry scales first and
-  // the inset is applied in unscaled units — keeping the art centered (equal
-  // MASKABLE_INSET margins). Swapping to scale-then-translate would shrink the
-  // inset and push the art off-center.
+  // Maskable: art inset into the safe zone. Order matters: `translate` before
+  // `scale` composes as T·S, so the geometry scales first and the inset is
+  // applied in unscaled units — keeping the art centered (equal MASKABLE_INSET
+  // margins). Non-maskable uses an explicit identity transform: Satori (next/og)
+  // drops the children of a <g> with no transform, blanking the art.
   const artTransform = maskable
     ? `translate(${MASKABLE_INSET} ${MASKABLE_INSET}) scale(${MASKABLE_SAFE_ZONE_SCALE})`
-    : // Satori (next/og) drops the children of a <g> with no transform, which
-      // blanks the art; an explicit identity transform keeps the non-maskable
-      // icon's art rendering.
-      'translate(0 0)'
+    : 'translate(0 0)'
   return (
     <svg
       width={size}
@@ -47,90 +60,36 @@ export function PwaIconSvg({ size, maskable = false }: PwaIconSvgProps) {
       <rect
         width={ICON_VIEWBOX}
         height={ICON_VIEWBOX}
-        fill={PWA_ICON_PALETTE.canvas}
+        fill={PWA_ICON_PALETTE.background}
       />
-      {maskable && (
-        <rect
-          width={ICON_VIEWBOX}
-          height={ICON_VIEWBOX}
-          fill={PWA_ICON_PALETTE.background}
-        />
-      )}
       <g transform={artTransform}>
-        {!maskable && (
-          <rect
-            width={ICON_VIEWBOX}
-            height={ICON_VIEWBOX}
-            rx="10"
-            fill={PWA_ICON_PALETTE.background}
-          />
-        )}
-        {/* Signal ring */}
+        {/* Focal halo */}
         <circle
-          cx="34"
-          cy="14"
-          r="9"
-          fill={PWA_ICON_PALETTE.signalOuter}
+          cx="72"
+          cy="24"
+          r="20"
+          fill={PWA_ICON_PALETTE.glow}
           opacity="0.22"
         />
         <circle
-          cx="34"
-          cy="14"
-          r="5"
-          fill={PWA_ICON_PALETTE.signalOuter}
-          opacity="0.45"
+          cx="72"
+          cy="24"
+          r="12"
+          fill={PWA_ICON_PALETTE.glow}
+          opacity="0.42"
         />
-        <circle cx="34" cy="14" r="3" fill={PWA_ICON_PALETTE.signalInner} />
+        <circle cx="72" cy="24" r="7" fill={PWA_ICON_PALETTE.signal} />
         {/* Dot trail */}
-        <circle
-          cx="14"
-          cy="38"
-          r="1.6"
-          fill={PWA_ICON_PALETTE.dot}
-          opacity="0.45"
-        />
-        <circle
-          cx="18"
-          cy="34"
-          r="1.6"
-          fill={PWA_ICON_PALETTE.dot}
-          opacity="0.52"
-        />
-        <circle
-          cx="22"
-          cy="30"
-          r="1.6"
-          fill={PWA_ICON_PALETTE.dot}
-          opacity="0.59"
-        />
-        <circle
-          cx="26"
-          cy="26"
-          r="1.6"
-          fill={PWA_ICON_PALETTE.dot}
-          opacity="0.66"
-        />
-        <circle
-          cx="30"
-          cy="22"
-          r="1.6"
-          fill={PWA_ICON_PALETTE.dot}
-          opacity="0.73"
-        />
-        <circle
-          cx="34"
-          cy="18"
-          r="1.6"
-          fill={PWA_ICON_PALETTE.dot}
-          opacity="0.80"
-        />
-        <circle
-          cx="14"
-          cy="32"
-          r="1.6"
-          fill={PWA_ICON_PALETTE.dot}
-          opacity="0.87"
-        />
+        {TRAIL.map((dot, index) => (
+          <circle
+            key={index}
+            cx={dot.cx}
+            cy={dot.cy}
+            r={dot.radius}
+            fill={PWA_ICON_PALETTE.signal}
+            opacity={(0.35 + index * 0.09).toFixed(2)}
+          />
+        ))}
       </g>
     </svg>
   )
