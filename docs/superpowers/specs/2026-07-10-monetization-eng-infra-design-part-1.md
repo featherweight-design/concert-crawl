@@ -275,7 +275,7 @@ export const ENTITLEMENTS_MATRIX: Record<
 >
 ```
 
-Matrix content (verbatim from #781 §6, including the R6 Watching-is-Free amendment):
+Matrix content (verbatim from #781 §6, including the R6 Watching-is-Free amendment; the spotify-sync row was later superseded by #763 §7 (E8) — logged-out → tier-picker-on-tap, free/supporter → paywall-on-tap):
 
 | Feature           | logged-out         | free           | supporter      | premium        | founder        | gifted         |
 | ----------------- | ------------------ | -------------- | -------------- | -------------- | -------------- | -------------- |

@@ -11,8 +11,9 @@ import {
 } from './index.js'
 
 // Independent literal copy of #781 §6 (including the R6 Watching-is-Free
-// amendment). A matrix edit fails these tests until this table is updated
-// in lockstep — that friction is intentional (eng infra spec Part 1).
+// amendment and the #763 §7 (E8) spotify-sync override — no longer verbatim
+// #781 for that row). A matrix edit fails these tests until this table is
+// updated in lockstep — that friction is intentional (eng infra spec Part 1).
 const EXPECTED_CELLS: Record<
   PremiumFeature,
   Record<UserPlan, EntitlementCell>
@@ -82,7 +83,7 @@ const allCombos: Array<[PremiumFeature, UserPlan]> = PREMIUM_FEATURES.flatMap(
 
 describe('ENTITLEMENTS_MATRIX', () => {
   it.each(allCombos)(
-    'matrix cell for %s × %s matches #781 §6',
+    'matrix cell for %s × %s matches #781 §6 (as amended by #763 §7 E8)',
     (feature, plan) => {
       expect(ENTITLEMENTS_MATRIX[feature][plan]).toBe(
         EXPECTED_CELLS[feature][plan],

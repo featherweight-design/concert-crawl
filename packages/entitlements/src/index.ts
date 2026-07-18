@@ -31,7 +31,9 @@ export const USER_PLANS: readonly UserPlan[] = [
   'gifted',
 ]
 
-// Canonical encoding of #781 §6 (with the R6 Watching-is-Free amendment).
+// Canonical encoding of #781 §6 (with the R6 Watching-is-Free amendment and
+// the #763 §7 (E8) spotify-sync override: free/supporter are paywall-on-tap
+// and logged-out is tier-picker-on-tap, superseding #781's hidden cells).
 // Single point of truth for both the boolean entitlement and the locked-tap
 // UX routing — edits here must update the test table in lockstep.
 export const ENTITLEMENTS_MATRIX: Record<
