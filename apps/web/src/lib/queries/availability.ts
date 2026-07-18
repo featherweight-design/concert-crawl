@@ -9,12 +9,12 @@ export function availabilityPath(from: string, to: string) {
   return `/v1/events/availability?from=${from}&to=${to}`
 }
 
-// Server-safe (no `'use client'`): the events page prefetches this during SSR,
-// so it must not live in the client-only `use-availability` hook module.
-// Fetched WITHOUT auth: the /v1/events/availability route is fully public (no
-// clerkMiddleware, no per-user fields), so an anonymous request returns
-// identical data and — unlike an authenticated one — stays cacheable by the
-// service worker for offline browsing.
+// SSR-only prefetch for the events page (no `'use client'`), so it must not
+// live in the client-only `use-availability` hook module. The client refetch
+// path goes through `fetchPublicRead` in that hook; this call runs on the
+// server, where `publicApiClient` sends the x-service-key header — so it
+// succeeds even when the API is beta-gated (REQUIRE_BETA_AUTH). Service workers
+// only intercept browser fetches, so SW caching is irrelevant here.
 export async function fetchAvailability(
   from: string,
   to: string,
