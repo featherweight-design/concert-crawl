@@ -275,7 +275,7 @@ export const ENTITLEMENTS_MATRIX: Record<
 >
 ```
 
-Matrix content (verbatim from #781 §6, including the R6 Watching-is-Free amendment; the spotify-sync row was later superseded by #763 §7 (E8) — logged-out → tier-picker-on-tap, free/supporter → paywall-on-tap):
+Matrix content (from #781 §6, including the R6 Watching-is-Free amendment; the spotify-sync row shows the #763 §7 (E8) override that superseded #781's hidden cells):
 
 | Feature           | logged-out         | free           | supporter      | premium        | founder        | gifted         |
 | ----------------- | ------------------ | -------------- | -------------- | -------------- | -------------- | -------------- |
@@ -284,7 +284,7 @@ Matrix content (verbatim from #781 §6, including the R6 Watching-is-Free amendm
 | calendar-export   | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
 | following         | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
 | alerts            | hidden             | hidden         | hidden         | visible-active | visible-active | visible-active |
-| spotify-sync      | hidden             | hidden         | hidden         | visible-active | visible-active | visible-active |
+| spotify-sync      | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
 | price-drop-alerts | hidden             | hidden         | hidden         | visible-active | visible-active | visible-active |
 
 API (per #781 §6's entitlement-vs-UX-routing split):
