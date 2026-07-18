@@ -1,3 +1,10 @@
+## [1.132.1](https://github.com/HartiganHM/concert-crawl/compare/v1.132.0...v1.132.1) (2026-07-18)
+
+
+### Bug Fixes
+
+* **api+db:** relocate price cred to per-user user_cred table ([#1012](https://github.com/HartiganHM/concert-crawl/issues/1012)) ([#1031](https://github.com/HartiganHM/concert-crawl/issues/1031)) ([53c1833](https://github.com/HartiganHM/concert-crawl/commit/53c18337033de357de5a7f931a2b359d9742990d))
+
 # [1.132.0](https://github.com/HartiganHM/concert-crawl/compare/v1.131.6...v1.132.0) (2026-07-18)
 
 
