@@ -78,12 +78,14 @@ _Currently empty — #763 Spotify brainstorm completed 2026-07-11, brief merged 
 
 Ordered by beta-phase urgency + adjacency to already-locked verticals.
 
+> **🎨 PWA cluster review session (Hugh, 2026-07-18):** #971 · #969 · #970 will be workshopped as a **single design brainstorm** rather than three separate cycles — they share too much DNA (voice, install/permission prompt patterns, on-brand offline treatment) for split sessions. Practical shape TBD when the session starts, but expected: one brainstorm → one brief PR covering shared decisions → then split into per-ticket handoffs if surfaces diverge (#971 carries more eng infrastructure than #969/#970). Anchor context: `project_pickup_pwa_native.md` (memory).
+
 | # | Phase | Priority | Adjacency / notes |
 |---|---|---|---|
 | **#762** Who else is watching — social signal on event detail | Beta | Normal | Adjacent to concert-history + attending vocabulary |
-| **#971** Web push notification stack (PWA Tier C) | Launch | High | PWA cluster · web push = highest-value native-feeling feature; closes consumer-notification gap in **#737**; largely eng but has design surfaces (permission prompt, notification content, in-app preferences) |
-| **#969** PWA install-prompt UI polish | Launch | Normal | PWA cluster · Tier B ships bare install affordance; this elevates it to a crafted, on-brand experience |
-| **#970** PWA offline-state UI polish | Launch | Normal | PWA cluster · Tier B ships bare online/offline banner + offline fallback page; this elevates both to deliberate, on-brand |
+| **#971** Web push notification stack (PWA Tier C) | Launch | High | **PWA cluster · workshop together with #969/#970** · web push = highest-value native-feeling feature; closes consumer-notification gap in **#737**; largely eng but has design surfaces (permission prompt, notification content, in-app preferences) |
+| **#969** PWA install-prompt UI polish | Launch | Normal | **PWA cluster · workshop together with #971/#970** · Tier B ships bare install affordance; this elevates it to a crafted, on-brand experience |
+| **#970** PWA offline-state UI polish | Launch | Normal | **PWA cluster · workshop together with #971/#969** · Tier B ships bare online/offline banner + offline fallback page; this elevates both to deliberate, on-brand |
 | **#794** Logged-out app UX — navigation, header, browse-only shape | Launch | Normal | Adjacencies with monetization paywalls — worth pairing with eng infra work |
 
 ---
@@ -102,6 +104,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-18 | — | Tracker refresh #16 — annotated the 🕰️ Backlog PWA cluster (#971 · #969 · #970) with an explicit "workshop together" note per Hugh's call: the three surfaces share too much DNA (voice, install/permission prompt patterns, on-brand offline treatment) for split brainstorms. Practical shape TBD when the session starts — expected: one brainstorm → one brief PR covering shared decisions → then split into per-ticket handoffs if surfaces diverge (#971 carries more eng infrastructure than #969/#970). Backlog count unchanged at 5; #762 still the highest-value next design pull. |
 | 2026-07-18 | — | Tracker refresh #15 — drain shipped items off 🟢 Green: **#642** Calendar month/week jump picker (shipped as PR #987, 2026-07-17, closed) and **#643** Supporting artists title separator (shipped as PRs #994 data + #995 UI, 2026-07-17, closed — the 2-PR execution plan). Both had lived on Green post-verdict for less than a week before eng-planning picked them up. Green count 6 → 4; remaining eng-plan pickups: #55 concert_history, #763 Spotify, #72 shareable_cards, #764 venue guide. |
 | 2026-07-18 | — | Tracker refresh #14 — **#764** flips 📐 → 🟢 (this PR); handoff at `design/design_handoff_venue_first_timer_guide/` with 12 files (4 authored code + 6 shared infra + README + READINESS), covers 4-state consumer surface × mobile + desktop + 3-state admin block + chip-state legend + all 9 themes. Hugh's R1 + R2 iteration fully applied by Design (About kept, map dropped, Capacity/Type hoisted above callout, Insider tip surfaced first, returner accent-tinted with preview strip, event chip signal-tinted + right-aligned). Brief-locked queue back to empty. Green count 5 → 6. |
 | 2026-07-18 | **#764** | `design/design_handoff_venue_first_timer_guide/READINESS.md` merged (this PR) — 🟢 Green one-pass verdict; every Q1–Q9 lock from brief (PR #999) honored; voice authenticity + admin-side automation principles demonstrated across every surface; grepped clean of brochure copy / "fraud" / "last chance" / "we miss you"; 4 prototype-polish items deferred to plan PR (chip-key naming, chip-state data model, publish-state derivation, v2 chip hooks). Design's own 4 gap-report items reviewed — all reasonable, no addendum needed. |
