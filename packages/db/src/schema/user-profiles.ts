@@ -26,6 +26,11 @@ export const userProfiles = pgTable('user_profiles', {
   city: text('city'),
   avatarColor: avatarColorEnum('avatar_color'),
   theme: userThemeEnum('theme').notNull().default('electric'),
+  // Set when the user dismisses the Spotify connect nudge (spec §8) so it
+  // renders once. NULL = never shown/dismissed.
+  spotifyNudgeSeenAt: timestamp('spotify_nudge_seen_at', {
+    withTimezone: true,
+  }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

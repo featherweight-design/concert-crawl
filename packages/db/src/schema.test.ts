@@ -22,6 +22,7 @@ import {
   EMAIL_TEMPLATE_KEYS,
   artistFollowSourceEnum,
   userArtistFollows,
+  userProfiles,
   spotifyConnectionStatusEnum,
   userSpotifyConnections,
   pushSubscriptions,
@@ -335,6 +336,11 @@ describe('spotify sync schema (eng spec §4, PR 1)', () => {
       expect(columns).toContain(col)
     }
     expect(spotifyAlertLog.eventId.notNull).toBe(true)
+  })
+
+  it('user_profiles gains spotifyNudgeSeenAt (nullable)', () => {
+    expect(userProfiles.spotifyNudgeSeenAt).toBeDefined()
+    expect(userProfiles.spotifyNudgeSeenAt.notNull).toBe(false)
   })
 
   it('events gains canonical_supporting text[] (nullable)', () => {
