@@ -713,6 +713,11 @@ export const ADMIN_COPY = {
         hint: 'The events page we crawl on the configured schedule.',
       },
       city: 'City',
+      address: {
+        label: 'Street address',
+        placeholder: 'e.g. 1380 W Florida Ave, Denver, CO 80223',
+        hint: 'Powers the embedded map on the public venue page. Leave blank to show the placeholder map.',
+      },
       status: {
         label: 'Status',
         ariaLabel: 'Venue status',

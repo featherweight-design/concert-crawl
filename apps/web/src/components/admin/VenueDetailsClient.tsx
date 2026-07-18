@@ -1228,6 +1228,24 @@ export function VenueDetailsClient({ venue }: Props) {
               />
             </VDField>
 
+            {/* Street address */}
+            <VDField
+              label={ADMIN_COPY.venueDetailsClient.fields.address.label}
+              htmlFor="edit-venue-address"
+              hint={ADMIN_COPY.venueDetailsClient.fields.address.hint}
+            >
+              <VDInput
+                id="edit-venue-address"
+                inputRef={addressRef}
+                defaultValue={venue.address ?? ''}
+                placeholder={
+                  ADMIN_COPY.venueDetailsClient.fields.address.placeholder
+                }
+                disabled={isDisabled}
+                onChange={(evt) => setAddressVal(evt.target.value)}
+              />
+            </VDField>
+
             {/* City + Status row */}
             <div
               style={{
