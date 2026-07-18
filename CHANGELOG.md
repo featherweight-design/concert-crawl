@@ -1,3 +1,10 @@
+## [1.135.1](https://github.com/HartiganHM/concert-crawl/compare/v1.135.0...v1.135.1) (2026-07-18)
+
+
+### Bug Fixes
+
+* **web:** persist theme from browse-page picker + stop avatar flash ([#1040](https://github.com/HartiganHM/concert-crawl/issues/1040)) ([74cabfb](https://github.com/HartiganHM/concert-crawl/commit/74cabfb495b39a292fe0ee0dcfee0f3ef34b65c7))
+
 # [1.135.0](https://github.com/HartiganHM/concert-crawl/compare/v1.134.0...v1.135.0) (2026-07-18)
 
 
