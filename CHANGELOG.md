@@ -1,3 +1,10 @@
+## [1.131.5](https://github.com/HartiganHM/concert-crawl/compare/v1.131.4...v1.131.5) (2026-07-18)
+
+
+### Bug Fixes
+
+* **admin:** contain dispute panel overflow at 1200/744/320px ([#1023](https://github.com/HartiganHM/concert-crawl/issues/1023)) ([9842bae](https://github.com/HartiganHM/concert-crawl/commit/9842baef2f71d61a5d2ed6f526b79b03c4b81489)), closes [#1013](https://github.com/HartiganHM/concert-crawl/issues/1013) [#1014](https://github.com/HartiganHM/concert-crawl/issues/1014) [#961](https://github.com/HartiganHM/concert-crawl/issues/961)
+
 ## [1.131.4](https://github.com/HartiganHM/concert-crawl/compare/v1.131.3...v1.131.4) (2026-07-18)
 
 
