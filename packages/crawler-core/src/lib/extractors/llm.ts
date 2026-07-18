@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { reportFailure } from '@concert-crawl/logger'
 import type { LLMResult } from '../../types.js'
+import { normalizeSupportingArtists } from '../normalize-supporting-artists.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
 import { stripDuplicatedTrailingWord } from '../strip-duplicated-trailing-word.js'
 
@@ -310,16 +311,16 @@ export async function extractWithLlm(
     // repeat that also appears verbatim on the page (e.g. the band
     // "Bow Wow Wow") is real and must not be stripped.
     const title = stripDuplicatedTrailingWord(evt.title, evt.rawTitle)
-    // Normalize opener names the same way the JSON-LD extractor does: trim
-    // each and drop blank/whitespace-only entries so they never render as
-    // empty opener chips downstream. Also drop any opener that repeats the
-    // headliner (case-insensitive): the prompt instructs the model to exclude
-    // it, but a disobedient response would otherwise render the headliner
-    // twice — once bold, once in the "with …" openers line (#643).
-    const headlinerKey = evt.artist.trim().toLowerCase()
-    const supportingArtists = (evt.supportingArtists ?? [])
-      .map((name) => name.trim())
-      .filter((name) => name.length > 0 && name.toLowerCase() !== headlinerKey)
+    // Normalize opener names through the shared helper: trim each, drop
+    // blank/whitespace-only entries so they never render as empty opener
+    // chips, and drop any opener that repeats the headliner (case-insensitive).
+    // The prompt instructs the model to exclude the headliner, but a
+    // disobedient response would otherwise render it twice — once bold, once
+    // in the "with …" openers line (#643).
+    const supportingArtists = normalizeSupportingArtists(
+      evt.artist,
+      evt.supportingArtists ?? [],
+    )
     return {
       title,
       rawTitle: evt.rawTitle,

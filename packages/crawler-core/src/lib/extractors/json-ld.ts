@@ -1,5 +1,6 @@
 import { reportFailure } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
+import { normalizeSupportingArtists } from '../normalize-supporting-artists.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
 
 const EVENT_TYPES = new Set(['Event', 'MusicEvent'])
@@ -105,7 +106,14 @@ function mapToNormalizedEvent(
 
   const performerNames = getPerformerNames(obj['performer'])
   const artist = performerNames[0] ?? name
-  const supportingArtists = performerNames.slice(1)
+  // Some venues list the headliner more than once in `performer[]` (or repeat
+  // it after the openers). `slice(1)` alone would keep those duplicates and
+  // surface the headliner as its own supporting act. Route through the shared
+  // normalizer so this path stays byte-identical to the LLM path (#643).
+  const supportingArtists = normalizeSupportingArtists(
+    artist,
+    performerNames.slice(1),
+  )
   const date = extractDateOnly(startDate, timeZone)
   const showTime = extractTimeOnly(startDate, timeZone)
   const doorsTime =

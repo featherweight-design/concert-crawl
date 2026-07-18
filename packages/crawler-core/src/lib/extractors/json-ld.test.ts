@@ -298,6 +298,25 @@ describe('extractJsonLd', () => {
     expect(events[0]?.supportingArtists).toEqual(['Hotline TNT'])
   })
 
+  it('drops performers that repeat the headliner, case-insensitively (#643)', () => {
+    // Real prod case: a venue listed the headliner twice in `performer[]`, so
+    // `slice(1)` surfaced Vandoliers as its own supporting act.
+    const html = makeHtml({
+      '@context': 'https://schema.org',
+      '@type': 'MusicEvent',
+      name: 'Vandoliers',
+      startDate: '2026-08-01T20:00:00-06:00',
+      performer: [
+        { '@type': 'MusicGroup', name: 'Vandoliers' },
+        { '@type': 'MusicGroup', name: 'vandoliers' },
+        { '@type': 'MusicGroup', name: 'Mya Byrne' },
+      ],
+    })
+    const events = extractJsonLd(html, SOURCE_URL)
+    expect(events[0]?.artist).toBe('Vandoliers')
+    expect(events[0]?.supportingArtists).toEqual(['Mya Byrne'])
+  })
+
   it('trims and drops blank JSON-LD performer names', () => {
     const html = makeHtml({
       '@context': 'https://schema.org',
