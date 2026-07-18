@@ -20,6 +20,8 @@ import {
   emailSendLog,
   emailTemplateConfig,
   EMAIL_TEMPLATE_KEYS,
+  artistFollowSourceEnum,
+  userArtistFollows,
   spotifyConnectionStatusEnum,
   userSpotifyConnections,
   pushSubscriptions,
@@ -333,5 +335,22 @@ describe('spotify sync schema (eng spec §4, PR 1)', () => {
       expect(columns).toContain(col)
     }
     expect(spotifyAlertLog.eventId.notNull).toBe(true)
+  })
+
+  it('artist_follow_source enum has exactly the spec values', () => {
+    expect(artistFollowSourceEnum.enumValues).toEqual([
+      'manual',
+      'spotify_followed',
+      'spotify_top',
+    ])
+  })
+
+  it('user_artist_follows gains source/canonicalName/rank/lastSyncedAt', () => {
+    expect(userArtistFollows.source.notNull).toBe(true)
+    expect(userArtistFollows.source.default).toBe('manual')
+    expect(userArtistFollows.canonicalName.notNull).toBe(true)
+    expect(userArtistFollows.canonicalName.default).toBe('')
+    expect(userArtistFollows.rank.notNull).toBe(false)
+    expect(userArtistFollows.lastSyncedAt.notNull).toBe(false)
   })
 })
