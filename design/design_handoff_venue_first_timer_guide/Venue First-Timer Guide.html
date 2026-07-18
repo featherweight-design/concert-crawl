@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Venue First-Timer Guide (#764)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="admin-primitives.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="guide-data.jsx"></script>
+<script type="text/babel" src="guide-consumer.jsx"></script>
+<script type="text/babel" src="guide-admin.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEME_KEYS, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+const { IOSDevice } = window;
+const { VenueDetail, EventDetail, FirstTimerCallout, GuideChip, AccessPlaceholderChip, VibeLine, Eyebrow } = window;
+const { GuideAdminBlock, ChipStateLegend } = window;
+const { CHIP_DEFS, ROXY_GUIDE_COPY, ROXY_VIBE } = window;
+
+const PHONE_W = 390, PHONE_H = 820;
+const NARROW_W = 320, NARROW_H = 800;
+const DESK_W = 1120, DESK_H = 1540;
+
+// ── Stages ───────────────────────────────────────────────────
+function PhoneStage({ theme = "electric", width = PHONE_W, height = PHONE_H, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>{children}</IOSDevice>
+    </ThemeProvider>
+  );
+}
+function DeskStage({ theme = "electric", width = DESK_W, height = DESK_H, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width, height }}>
+      <div style={{ width, height, background: "var(--bg)", overflow: "hidden" }}>{children}</div>
+    </ThemeProvider>
+  );
+}
+// bare padded themed stage (guide anatomy + admin). Renamed from "Panel" to
+// avoid clobbering admin-primitives' window.Panel in the shared babel scope.
+function BareStage({ theme = "electric", pad = 22, width, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad,
+        display: "flex", alignItems: "flex-start", justifyContent: "center", boxSizing: "border-box" }}>
+        <div style={{ width: width || "100%" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ── Tweaks ───────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "mode": "populated",
+  "adminVariant": "populated"
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio } = window;
+const THEME_OPTS = CC_THEME_KEYS.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+
+function GuideTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Consumer surface">
+        <TweakSelect label="Venue state" value={t.mode} onChange={(v) => setT("mode", v)}
+          options={[
+            { value: "populated", label: "First-timer · populated" },
+            { value: "thin", label: "First-timer · thin guide" },
+            { value: "returner", label: "Returner · collapsed" },
+            { value: "anon", label: "Anonymous (= first-timer)" },
+          ]} />
+      </TweakSection>
+      <TweakSection label="Admin surface">
+        <TweakRadio label="Block state" value={t.adminVariant} onChange={(v) => setT("adminVariant", v)}
+          options={[{ value: "populated", label: "Full" }, { value: "empty", label: "Empty" }, { value: "validation", label: "Invalid" }]} />
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakSelect label="Theme (all 9)" value={t.theme} onChange={(v) => setT("theme", v)} options={THEME_OPTS} />
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+
+function LiveMobile() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  // anon → populated (same as desktop): anonymous == first-timer, callout fires
+  return <PhoneStage theme={t.theme}><VenueDetail mode={t.mode === "anon" ? "populated" : t.mode} /></PhoneStage>;
+}
+function LiveDesktop() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return <DeskStage theme={t.theme}><VenueDetail mode={t.mode === "anon" ? "populated" : t.mode} desktop /></DeskStage>;
+}
+function LiveAdmin() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return <BareStage theme={t.theme === "light" ? "light" : "electric"} width={680} pad={26}>
+    <GuideAdminBlock variant={t.adminVariant} /></BareStage>;
+}
+
+// ── Guide anatomy pieces (bare) ──────────────────────────────
+function CalloutDemo({ variant }) {
+  return <BareStage theme="electric" pad={20}><FirstTimerCallout variant={variant} /></BareStage>;
+}
+function ChipDemo({ chipKey }) {
+  return <BareStage theme="electric" pad={20}>
+    <Eyebrow color="var(--signal)" style={{ marginBottom: 8 }}>First-timer guide</Eyebrow>
+    <GuideChip chipKey={chipKey} value={ROXY_GUIDE_COPY[chipKey]} first />
+  </BareStage>;
+}
+function AccessStatesDemo() {
+  return <BareStage theme="electric" pad={20}>
+    <Eyebrow color="var(--signal)" style={{ marginBottom: 6 }}>Accessibility · authored</Eyebrow>
+    <GuideChip chipKey="accessibility" value={ROXY_GUIDE_COPY.accessibility} first />
+    <div style={{ height: 14 }} />
+    <Eyebrow style={{ marginBottom: 6 }}>Accessibility · honest placeholder</Eyebrow>
+    <AccessPlaceholderChip first />
+  </BareStage>;
+}
+function VibeDemo() {
+  return <BareStage theme="electric" pad={20}><VibeLine text={ROXY_VIBE} /></BareStage>;
+}
+
+const CONSUMER_THEMES = ["electric", "jade", "light"];
+
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="Venue · First-Timer Guide"
+        subtitle="#764 · Track 2 — a concert-goer-voice guide that answers 'what do I need to know before I walk into this room?' A warm callout fires for first-timers (and anonymous visitors); the guide section itself is progressive-enhancement and ships independent of detection. 100% authored voice on display; automation stays admin-side. Tokens across all 9 themes, mobile 320 + desktop, WCAG AA. Drive the states from the Tweaks panel.">
+
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview" subtitle="Flip Venue state (populated · thin · returner · anonymous), admin block state, and theme (all 9) from the Tweaks panel. Mobile + desktop consumer, plus the admin block.">
+          <DCArtboard id="live-m" label="Consumer · mobile" width={PHONE_W} height={PHONE_H}><LiveMobile/></DCArtboard>
+          <DCArtboard id="live-d" label="Consumer · desktop" width={DESK_W} height={DESK_H}><LiveDesktop/></DCArtboard>
+          <DCArtboard id="live-a" label="Admin · guide block" width={740} height={1060}><LiveAdmin/></DCArtboard>
+        </DCSection>
+
+        {/* 1 · FIRST-TIMER POPULATED */}
+        <DCSection id="pop" title="1 · Venue detail — first-timer, populated"
+          subtitle="Warm inline callout (a question, never a claim) sits under the venue name; the guide section carries every authored chip + the vibe line. Venue basics (capacity, address, neighborhood) stay in their own row — never inside the guide.">
+          <DCArtboard id="pop-320" label="Mobile · 320 baseline" width={NARROW_W} height={NARROW_H}>
+            <PhoneStage theme="electric" width={NARROW_W} height={NARROW_H}><VenueDetail mode="populated"/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="pop-390" label="Mobile · 390" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><VenueDetail mode="populated"/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="pop-d" label="Desktop · single column · 2-col guide" width={DESK_W} height={1540}>
+            <DeskStage theme="electric" height={1540}><VenueDetail mode="populated" desktop/></DeskStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 2 · THIN GUIDE */}
+        <DCSection id="thin" title="2 · Venue detail — first-timer, thin guide"
+          subtitle="Softened callout ('here's what we've got so far'). Only accessibility is authored; the rest collapse into one honest 'still gathering' cluster — never faked, never padded. This is the shape of a freshly-added venue.">
+          <DCArtboard id="thin-390" label="Mobile · 390" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><VenueDetail mode="thin"/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="thin-d" label="Desktop" width={DESK_W} height={1180}>
+            <DeskStage theme="electric" height={1180}><VenueDetail mode="thin" desktop/></DeskStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 3 · RETURNER */}
+        <DCSection id="ret" title="3 · Venue detail — returner"
+          subtitle="No callout. The guide compresses to a one-line accordion with a preview strip (Parking · Access · Transit +N) — reachable in one gesture, out of the way otherwise. Detection: any event at this venue with attending_at IS NOT NULL (#55). Left: collapsed. Right: tapped open.">
+          <DCArtboard id="ret-collapsed" label="Mobile · collapsed (default)" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><VenueDetail mode="returner"/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="ret-open" label="Mobile · one tap → open (vibe leads)" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><VenueDetail mode="returner" startOpen key="open"/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="ret-d" label="Desktop · collapsed inline (no empty rail)" width={DESK_W} height={1000}>
+            <DeskStage theme="electric" height={1000}><VenueDetail mode="returner" desktop/></DeskStage>
+          </DCArtboard>
+          <DCPostIt top={-8} right={30}>Guide is an inline section, not a sidebar — so a collapsed returner never leaves an empty column.</DCPostIt>
+        </DCSection>
+
+        {/* 4 · ANONYMOUS */}
+        <DCSection id="anon" title="4 · Venue detail — anonymous"
+          subtitle="Identical to signed-in first-timer — the callout fires by default. A question works whether or not we know who you are, so no separate copy or gating. The guide section is public; secondary actions (Watch, tickets) keep their own sign-in walls elsewhere.">
+          <DCArtboard id="anon-390" label="Mobile · 390 (= first-timer)" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><VenueDetail mode="populated"/></PhoneStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · EVENT DETAIL */}
+        <DCSection id="event" title="5 · Event detail — the entry point"
+          subtitle="First-timer gets a compressed chip in the sub-hero row ('First time at Roxy? Guide →') that anchors to the venue-page callout. Returner sees the standard event detail, unchanged — no chip, nothing added.">
+          <DCArtboard id="ev-ft" label="First-timer · chip in sub-hero" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><EventDetail firstTimer/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="ev-ret" label="Returner · baseline (no chip)" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><EventDetail firstTimer={false}/></PhoneStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 6 · ANATOMY */}
+        <DCSection id="anatomy" title="6 · Guide anatomy — the parts"
+          subtitle="Callout (both variants), a single chip, the vibe line, and the accessibility chip in both of its states (authored + honest placeholder). Every string is voice-passed to the Sour Patch bar — specific, honest, direct; nothing reads scraped or brochure-y.">
+          <DCArtboard id="an-callout-p" label="Callout · populated" width={420} height={150}><CalloutDemo variant="populated"/></DCArtboard>
+          <DCArtboard id="an-callout-t" label="Callout · thin" width={420} height={150}><CalloutDemo variant="thin"/></DCArtboard>
+          <DCArtboard id="an-vibe" label="Insider tip (leads the guide)" width={420} height={190}><VibeDemo/></DCArtboard>
+          <DCArtboard id="an-access" label="Accessibility · both states" width={420} height={300}><AccessStatesDemo/></DCArtboard>
+          <DCArtboard id="an-chip-parking" label="Chip · parking" width={420} height={150}><ChipDemo chipKey="parking"/></DCArtboard>
+          <DCArtboard id="an-chip-transit" label="Chip · getting there" width={420} height={160}><ChipDemo chipKey="transit"/></DCArtboard>
+        </DCSection>
+
+        {/* 7 · ADMIN */}
+        <DCSection id="admin" title="7 · Admin — the first-timer guide block"
+          subtitle="On the venue-edit page. Accessibility is pinned + required; the 7 optional chips are a picker that reveals a field each. Every field placeholder models specific-over-generic. Automation is passive (defaults pre-populate) — draft-from-scraped is deferred to #996. Three states below.">
+          <DCArtboard id="adm-full" label="Populated · ready to publish" width={740} height={1060}>
+            <BareStage theme="electric" width={680} pad={26}><GuideAdminBlock variant="populated"/></BareStage>
+          </DCArtboard>
+          <DCArtboard id="adm-empty" label="Empty · fresh venue" width={740} height={560}>
+            <BareStage theme="electric" width={680} pad={26}><GuideAdminBlock variant="empty"/></BareStage>
+          </DCArtboard>
+          <DCArtboard id="adm-invalid" label="Validation · publish blocked" width={740} height={720}>
+            <BareStage theme="electric" width={680} pad={26}><GuideAdminBlock variant="validation"/></BareStage>
+          </DCArtboard>
+          <DCArtboard id="adm-legend" label="Chip state indicators" width={480} height={320}>
+            <BareStage theme="electric" width={420} pad={24}><ChipStateLegend/></BareStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 8 · THEME PARITY */}
+        <DCSection id="parity" title="8 · Theme parity — consumer themes, token-only"
+          subtitle="The populated guide rendered in each shipped consumer theme (Electric · Jade · Light). Every color reads from var(--*): callout = --accent tint, accessibility icon = --signal, vibe eyebrow = --accent. Flip the live preview in Tweaks to check the other five genre themes too.">
+          {CONSUMER_THEMES.map((k) => (
+            <DCArtboard key={k} id={"par-" + k} label={CC_THEMES[k].label} width={PHONE_W} height={PHONE_H}>
+              <PhoneStage theme={k}><VenueDetail mode="populated"/></PhoneStage>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+      </DesignCanvas>
+      <GuideTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
