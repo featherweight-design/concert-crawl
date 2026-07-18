@@ -1,0 +1,17 @@
+{
+  "ci": {
+    "collect": {
+      "startServerCommand": "pnpm --filter @concert-crawl/web start",
+      "url": ["http://localhost:3000/"],
+      "numberOfRuns": 1
+    },
+    "assert": {
+      "assertions": {
+        "installable-manifest": ["error", { "minScore": 1 }],
+        "service-worker": ["warn", { "minScore": 1 }],
+        "maskable-icon": ["warn", { "minScore": 1 }],
+        "apple-touch-icon": ["warn", { "minScore": 1 }]
+      }
+    }
+  }
+}

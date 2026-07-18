@@ -1,0 +1,42 @@
+name: Lighthouse PWA
+
+on:
+  pull_request:
+    paths:
+      - 'apps/web/**'
+
+permissions: read-all
+
+jobs:
+  lighthouse:
+    name: Lighthouse PWA installability
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web
+        run: pnpm --filter @concert-crawl/web build
+
+      # Pinned to @lhci/cli@0.13.x deliberately: it bundles Lighthouse 11, which
+      # still ships the PWA installability audits (installable-manifest,
+      # service-worker, maskable-icon, apple-touch-icon). Lighthouse 12 removed
+      # the PWA category and those audits, so 0.14.x would assert against audits
+      # that no longer exist. Non-blocking first (#970/#969 polish still landing);
+      # flip to required once green on a couple of runs.
+      - name: Run Lighthouse CI
+        continue-on-error: true
+        run: pnpm dlx @lhci/cli@0.13.x autorun --config=apps/web/lighthouserc.json
