@@ -3,14 +3,55 @@
 # Worktrees with an open PR are always kept.
 #
 # Usage:
-#   ./scripts/clean-worktrees.sh            # live run
-#   ./scripts/clean-worktrees.sh --dry-run  # preview only
+#   ./scripts/clean-worktrees.sh <branch>...            # scoped: only these branches
+#   ./scripts/clean-worktrees.sh --dry-run <branch>...  # preview a scoped run
+#   ./scripts/clean-worktrees.sh --all                  # full sweep (human use only)
+#   ./scripts/clean-worktrees.sh --all --dry-run        # preview a full sweep
+#
+# Agents MUST scope to the branch(es) they worked on this session — other
+# PR-less worktrees may belong to concurrent sessions. The full sweep is
+# reserved for a human.
 
 set -euo pipefail
 
 DRY_RUN=false
-[[ "${1:-}" == "--dry-run" ]] && DRY_RUN=true && echo "Dry run — no changes will be made."
+ALL=false
+SCOPE_BRANCHES=()
+
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=true ;;
+    --all) ALL=true ;;
+    --*)
+      echo "ERROR: unknown flag: $arg" >&2
+      exit 1
+      ;;
+    *) SCOPE_BRANCHES+=("$arg") ;;
+  esac
+done
+
+if [[ "$ALL" == true && ${#SCOPE_BRANCHES[@]} -gt 0 ]]; then
+  echo "ERROR: --all cannot be combined with branch names." >&2
+  exit 1
+fi
+
+if [[ "$ALL" == false && ${#SCOPE_BRANCHES[@]} -eq 0 ]]; then
+  echo "ERROR: no branches given. Pass the branch(es) you worked on, or --all for a full sweep." >&2
+  echo "  Usage: ./scripts/clean-worktrees.sh [--dry-run] (<branch>... | --all)" >&2
+  exit 1
+fi
+
+[[ "$DRY_RUN" == true ]] && echo "Dry run — no changes will be made."
 echo ""
+
+in_scope() {
+  [[ "$ALL" == true ]] && return 0
+  local candidate
+  for candidate in "${SCOPE_BRANCHES[@]}"; do
+    [[ "$candidate" == "$1" ]] && return 0
+  done
+  return 1
+}
 
 # Derive the primary worktree path from the first entry in the worktree list
 # (always the primary, regardless of which worktree this script is run from).
@@ -35,9 +76,15 @@ while IFS='|' read -r wt_path branch; do
   # Always keep the primary worktree
   [[ "$wt_path" == "$PRIMARY_WORKTREE" ]] && continue
 
-  # Skip detached HEADs (no branch)
+  # Skip detached HEADs (no branch); only worth reporting in a full sweep
   if [[ -z "$branch" ]]; then
-    echo "SKIP  (detached HEAD): $wt_path"
+    [[ "$ALL" == true ]] && echo "SKIP  (detached HEAD): $wt_path"
+    ((skipped++)) || true
+    continue
+  fi
+
+  # Out-of-scope worktrees may belong to concurrent sessions — leave untouched
+  if ! in_scope "$branch"; then
     ((skipped++)) || true
     continue
   fi
@@ -54,7 +101,7 @@ while IFS='|' read -r wt_path branch; do
     ((removed++)) || true
   fi
 done < <(git worktree list --porcelain | awk '
-  /^worktree / { path = substr($0, 10) }
+  /^worktree / { path = substr($0, 10); branch = "" }
   /^branch /   { branch = substr($0, 19) }
   /^$/         { if (path != "") print path "|" branch; path = ""; branch = "" }
   END          { if (path != "") print path "|" branch }
@@ -64,7 +111,7 @@ done < <(git worktree list --porcelain | awk '
 
 echo ""
 if [[ "$DRY_RUN" == true ]]; then
-  echo "Dry run complete. Would remove: $removed worktree(s), would skip: $skipped."
+  echo "Dry run complete. Would remove: $removed worktree(s), would skip: $skipped (open PRs, out of scope, or detached HEAD)."
 else
-  echo "Done. Removed: $removed worktree(s), skipped: $skipped (open PRs or detached HEAD)."
+  echo "Done. Removed: $removed worktree(s), skipped: $skipped (open PRs, out of scope, or detached HEAD)."
 fi

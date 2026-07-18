@@ -1,5 +1,7 @@
 # Per-Worktree Test DB Isolation Implementation Plan
 
+> **Update (2026-07-18):** `pnpm worktree:prune` now requires explicit branch args — `pnpm worktree:prune <branch>...` — or `--all` for a full sweep (human use only). Usage examples below reflect the original no-args behavior; see `scripts/clean-worktrees.sh` for current usage.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give each git worktree its own auto-created integration test database so concurrent test runs never collide, and add a post-merge sweep that drops orphaned test DBs alongside the existing worktree cleanup.

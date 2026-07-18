@@ -4,6 +4,8 @@
 **Date:** 2026-07-13
 **Type:** chore / test infrastructure
 
+> **Update (2026-07-18):** `pnpm worktree:prune` now requires explicit branch args — `pnpm worktree:prune <branch>...` — or `--all` for a full sweep (human use only). Usage examples below reflect the original no-args behavior; see `scripts/clean-worktrees.sh` for current usage.
+
 ---
 
 ## Problem
