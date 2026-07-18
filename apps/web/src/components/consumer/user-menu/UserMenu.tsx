@@ -9,15 +9,69 @@ import { ThemeSwatch } from '@/theme/ThemeSwatch'
 import { THEMES, THEME_META, THEME_NAMES } from '@/theme/themes'
 import { MiniMark } from '@/theme/MiniMark'
 import { useTheme } from '@/theme'
-import { fetchMe } from '@/lib/users'
+import { fetchMe, patchMe } from '@/lib/users'
+import type { ThemeName } from '@/theme/themes'
 import type { AvatarColor } from '@concert-crawl/types'
 import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
 
+const AVATAR_CACHE_KEY = 'cc-avatar'
+const AVATAR_COLORS: readonly AvatarColor[] = [
+  'signal',
+  'accent',
+  'success',
+  'warning',
+]
+
+interface CachedAvatar {
+  handle: string | null
+  avatarColor: AvatarColor | null
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function isCachedAvatar(value: unknown): value is CachedAvatar {
+  if (!isRecord(value)) return false
+  const { handle, avatarColor } = value
+  const handleOk = handle === null || typeof handle === 'string'
+  const colorOk =
+    avatarColor === null || AVATAR_COLORS.some((color) => color === avatarColor)
+  return handleOk && colorOk
+}
+
+// Scope the cache per Clerk user so a different account signing in on a shared
+// device never briefly sees the previous user's handle/color.
+function avatarCacheKey(userId: string): string {
+  return `${AVATAR_CACHE_KEY}:${userId}`
+}
+
+function readAvatarCache(userId: string): CachedAvatar | null {
+  try {
+    const raw = window.localStorage.getItem(avatarCacheKey(userId))
+    if (!raw) return null
+    const parsed: unknown = JSON.parse(raw)
+    return isCachedAvatar(parsed) ? parsed : null
+  } catch (err) {
+    console.warn('UserMenu: could not read avatar cache', err)
+    return null
+  }
+}
+
+function writeAvatarCache(userId: string, value: CachedAvatar): void {
+  try {
+    window.localStorage.setItem(avatarCacheKey(userId), JSON.stringify(value))
+  } catch (err) {
+    // Non-fatal: caching is a progressive enhancement.
+    console.warn('UserMenu: could not write avatar cache', err)
+  }
+}
+
 export function UserMenu() {
-  const { getToken, sessionClaims } = useAuth()
+  const { getToken, sessionClaims, isLoaded } = useAuth()
   const { user } = useUser()
   const { signOut } = useClerk()
   const router = useRouter()
@@ -26,7 +80,38 @@ export function UserMenu() {
   const [submissionCount, setSubmissionCount] = useState(0)
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null)
+  const [avatarLoaded, setAvatarLoaded] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  const userId = user?.id
+
+  // Hydrate the avatar from a local cache before fetchMe resolves so the
+  // trigger renders filled on repeat loads instead of flashing empty→filled.
+  useEffect(() => {
+    // Reset per-user state whenever the signed-in user changes (or signs out),
+    // so a previous account's cached handle/color or submission count can't
+    // linger on a shared device until fetchMe resolves.
+    setSubmissionCount(0)
+    if (!userId) {
+      // Signed-out: there's nothing to fetch, so resolve the loading state
+      // immediately. Otherwise loading={!avatarLoaded} stays true forever and
+      // the trigger shows the neutral disc instead of the anonymous avatar.
+      setAvatarHandle(null)
+      setAvatarColor(null)
+      setAvatarLoaded(true)
+      return
+    }
+    const cached = readAvatarCache(userId)
+    if (cached) {
+      setAvatarHandle(cached.handle)
+      setAvatarColor(cached.avatarColor)
+      setAvatarLoaded(true)
+    } else {
+      setAvatarHandle(null)
+      setAvatarColor(null)
+      setAvatarLoaded(false)
+    }
+  }, [userId])
 
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 639px)')
@@ -64,25 +149,46 @@ export function UserMenu() {
   }, [open])
 
   useEffect(() => {
+    // Wait for Clerk before treating a null token as "nothing to fetch" —
+    // otherwise a transient pre-hydration null would strand the effect for the
+    // rest of the session, leaving submissionCount at 0 and the avatar cache
+    // unrefreshed. The effect re-runs once isLoaded flips true.
+    if (!isLoaded) return
+    if (!userId) return
     let cancelled = false
     void (async () => {
       const token = await getToken()
-      if (!token || cancelled) return
+      if (cancelled) return
+      if (!token) {
+        // Clerk is loaded but this user has no token: nothing to fetch. Keep any
+        // cached handle/color already seeded for this userId and just resolve
+        // the loading disc so the trigger shows its resolved state.
+        setAvatarLoaded(true)
+        return
+      }
       try {
         const profile = await fetchMe(token)
         if (!cancelled) {
           setAvatarHandle(profile.handle)
           setAvatarColor(profile.avatarColor)
           setSubmissionCount(profile.submissionCount)
+          writeAvatarCache(userId, {
+            handle: profile.handle,
+            avatarColor: profile.avatarColor,
+          })
         }
       } catch (err) {
         console.warn('UserMenu: could not load profile', err)
+      } finally {
+        // Always resolve the loading state so a failed fetch never leaves the
+        // avatar stuck in the neutral loading disc.
+        if (!cancelled) setAvatarLoaded(true)
       }
     })()
     return () => {
       cancelled = true
     }
-  }, [getToken])
+  }, [getToken, isLoaded, userId])
 
   const handleSignOut = useCallback(() => {
     void signOut().catch((err: unknown) =>
@@ -112,7 +218,12 @@ export function UserMenu() {
           aria-haspopup="true"
           className="shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
         >
-          <Avatar handle={avatarHandle} avatarColor={avatarColor} size={36} />
+          <Avatar
+            handle={avatarHandle}
+            avatarColor={avatarColor}
+            size={36}
+            loading={!avatarLoaded}
+          />
         </button>
 
         {/* Desktop popover */}
@@ -181,9 +292,36 @@ interface MenuBodyProps {
 
 function ThemeMenuRow() {
   const { theme, setTheme } = useTheme()
+  const { getToken } = useAuth()
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
   const activeTokens = THEMES[theme]
   const activeMeta = THEME_META[theme]
+
+  // Persist to the server (mirrors settings ThemePickerInline). Without this
+  // the browse-page picker only set theme locally, so ThemeSync reverted it to
+  // the server value on the next /me visit and the choice never stuck.
+  const selectTheme = async (name: ThemeName) => {
+    if (name === theme || isSaving) return
+    const previous = theme
+    setTheme(name)
+    setPickerOpen(false)
+    setIsSaving(true)
+    try {
+      const token = await getToken()
+      // Signed-out users have no server record to persist to, and no ThemeSync
+      // runs to revert the localStorage write setTheme just made — the local
+      // choice sticks on its own. Only signed-in users need the server round-trip.
+      if (token) {
+        await patchMe(token, { theme: name })
+      }
+    } catch (err) {
+      console.warn('UserMenu: could not persist theme', err)
+      setTheme(previous)
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   return (
     <>
@@ -256,10 +394,8 @@ function ThemeMenuRow() {
               key={name}
               name={name}
               active={theme === name}
-              onClick={() => {
-                setTheme(name)
-                setPickerOpen(false)
-              }}
+              disabled={isSaving}
+              onClick={() => void selectTheme(name)}
             />
           ))}
         </div>
