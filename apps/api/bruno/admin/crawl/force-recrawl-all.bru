@@ -1,0 +1,39 @@
+meta {
+  name: Force Recrawl All
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/v1/admin/crawl
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {
+    "force": true
+  }
+}
+
+assert {
+  res.status: eq 202
+  res.body.success: eq true
+  res.body.data.count: isDefined
+}
+
+docs {
+  Force a full re-extract of EVERY active + verified venue. Bypasses both
+  hash-skip short-circuits, re-extracting and re-upserting every upcoming
+  event across the fleet (~2000+ events). Runs LLM extraction per event
+  fleet-wide — the highest-cost operation in this collection. Run the
+  single-venue canary ("Force Recrawl Venue") first and confirm results
+  before firing this.
+
+  Async: enqueues one crawl_triggers row per venue; the crawler-triggers
+  cron claims them every 10 min.
+}

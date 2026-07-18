@@ -1,0 +1,46 @@
+meta {
+  name: Force Recrawl Venue
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/v1/admin/crawl/{{venueId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+params:path {
+  venueId: 99dc4766-0ac5-4dba-89bc-666f70990aa4
+}
+
+body:json {
+  {
+    "force": true
+  }
+}
+
+assert {
+  res.status: eq 202
+  res.body.success: eq true
+  res.body.data.triggerId: isDefined
+}
+
+docs {
+  Force a full re-extract of ONE venue, bypassing both hash-skip
+  short-circuits (venue page hash + per-event source hash). Every event is
+  re-extracted and re-upserted even if the listing is byte-identical, so
+  fields not covered by the event hash — notably supportingArtists — get
+  written back. Runs LLM extraction per event, so it has real cost.
+
+  The default venueId is Hi-Dive (a club that lists openers) — a good
+  low-cost canary. Change the venueId path param to target another venue.
+
+  Async: this only enqueues a crawl_triggers row. The crawler-triggers cron
+  claims pending triggers every 10 min, so allow up to ~10 min before
+  results land. Poll with "Get Crawl Trigger".
+}
