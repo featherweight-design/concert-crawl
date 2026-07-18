@@ -76,16 +76,12 @@ _Currently empty — #763 Spotify brainstorm completed 2026-07-11, brief merged 
 
 ## 🕰️ Backlog (design cycle not started)
 
-Ordered by beta-phase urgency + adjacency to already-locked verticals.
-
-> **🎨 PWA cluster review session (Hugh, 2026-07-18):** #971 · #969 · #970 will be workshopped as a **single design brainstorm** rather than three separate cycles — they share too much DNA (voice, install/permission prompt patterns, on-brand offline treatment) for split sessions. Practical shape TBD when the session starts, but expected: one brainstorm → one brief PR covering shared decisions → then split into per-ticket handoffs if surfaces diverge (#971 carries more eng infrastructure than #969/#970). Anchor context: `project_pickup_pwa_native.md` (memory).
+Ordered by beta-phase urgency + adjacency to already-locked verticals. Consolidated clusters (PWA) count as one workstream even when they span multiple issues — expand the notes column to see the component tickets.
 
 | # | Phase | Priority | Adjacency / notes |
 |---|---|---|---|
 | **#762** Who else is watching — social signal on event detail | Beta | Normal | Adjacent to concert-history + attending vocabulary |
-| **#971** Web push notification stack (PWA Tier C) | Launch | High | **PWA cluster · workshop together with #969/#970** · web push = highest-value native-feeling feature; closes consumer-notification gap in **#737**; largely eng but has design surfaces (permission prompt, notification content, in-app preferences) |
-| **#969** PWA install-prompt UI polish | Launch | Normal | **PWA cluster · workshop together with #971/#970** · Tier B ships bare install affordance; this elevates it to a crafted, on-brand experience |
-| **#970** PWA offline-state UI polish | Launch | Normal | **PWA cluster · workshop together with #971/#969** · Tier B ships bare online/offline banner + offline fallback page; this elevates both to deliberate, on-brand |
+| **PWA cluster** — install-prompt + offline-state + web push | Launch | High | Consolidated workstream: **#971** Web push notification stack (Tier C, Launch · High; closes consumer-notification gap in **#737**), **#969** PWA install-prompt UI polish (Launch · Normal), **#970** PWA offline-state UI polish (Launch · Normal). One brainstorm covers the shared DNA (voice, install/permission prompt patterns, on-brand offline treatment); brief PR captures shared decisions; then splits into per-ticket handoffs if surfaces diverge (#971 carries more eng infra). Priority = High (inherited from #971). Anchor context: `project_pickup_pwa_native.md` (memory). |
 | **#794** Logged-out app UX — navigation, header, browse-only shape | Launch | Normal | Adjacencies with monetization paywalls — worth pairing with eng infra work |
 
 ---
@@ -104,6 +100,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-18 | — | Tracker refresh #17 — **actually consolidated** the PWA cluster into a single "PWA cluster" row in the 🕰️ Backlog (replacing three separate rows for #971 + #969 + #970). Priority = High (inherited from #971). The consolidation reflects the workflow decision from refresh #16 in the tracker's row structure itself, not just an annotation. Backlog workstream count 5 → 3; ticket count unchanged at 5. #762 still highest-value next design pull. |
 | 2026-07-18 | — | Tracker refresh #16 — annotated the 🕰️ Backlog PWA cluster (#971 · #969 · #970) with an explicit "workshop together" note per Hugh's call: the three surfaces share too much DNA (voice, install/permission prompt patterns, on-brand offline treatment) for split brainstorms. Practical shape TBD when the session starts — expected: one brainstorm → one brief PR covering shared decisions → then split into per-ticket handoffs if surfaces diverge (#971 carries more eng infrastructure than #969/#970). Backlog count unchanged at 5; #762 still the highest-value next design pull. |
 | 2026-07-18 | — | Tracker refresh #15 — drain shipped items off 🟢 Green: **#642** Calendar month/week jump picker (shipped as PR #987, 2026-07-17, closed) and **#643** Supporting artists title separator (shipped as PRs #994 data + #995 UI, 2026-07-17, closed — the 2-PR execution plan). Both had lived on Green post-verdict for less than a week before eng-planning picked them up. Green count 6 → 4; remaining eng-plan pickups: #55 concert_history, #763 Spotify, #72 shareable_cards, #764 venue guide. |
 | 2026-07-18 | — | Tracker refresh #14 — **#764** flips 📐 → 🟢 (this PR); handoff at `design/design_handoff_venue_first_timer_guide/` with 12 files (4 authored code + 6 shared infra + README + READINESS), covers 4-state consumer surface × mobile + desktop + 3-state admin block + chip-state legend + all 9 themes. Hugh's R1 + R2 iteration fully applied by Design (About kept, map dropped, Capacity/Type hoisted above callout, Insider tip surfaced first, returner accent-tinted with preview strip, event chip signal-tinted + right-aligned). Brief-locked queue back to empty. Green count 5 → 6. |
@@ -158,7 +155,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 ## 📋 Immediate TODOs
 
 - [ ] **4 eng plans ready for eng-planning agent:** concert_history · #763 Spotify · #72 shareable_cards + Passport · **#764** Venue first-timer guide. #763 Spotify + #72 shareable_cards + #764 venue guide are the biggest surfaces; concert_history is the smallest (teaser link only). **#642** and **#643** shipped 2026-07-17 (PRs #987 + #994 + #995); drained off Green in refresh #15. No Yellow items remaining. No Brief-locked items remaining.
-- [ ] **Backlog priority order** (per 2026-07-17 refresh #13): #762 Who else is watching → **#971** Web push (PWA Tier C, Launch · High) → #969 PWA install polish → #970 PWA offline polish → #794 Logged-out UX. #762 is still the highest-value next pull once one of the current Greens breaks free.
+- [ ] **Backlog workstream order** (per 2026-07-18 refresh #17): #762 Who else is watching → **PWA cluster** (#971 + #969 + #970, single workstream, Launch · High) → #794 Logged-out UX. Backlog is now 3 workstreams / 5 tickets. #762 remains the highest-value next design pull.
 
 ---
 
