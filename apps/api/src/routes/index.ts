@@ -13,6 +13,7 @@ import { usersRouter } from './users.js'
 import { watchingRouter } from './watching.js'
 import { feedbackRouter } from './feedback.js'
 import { searchRouter } from './search.js'
+import { spotifyRouter } from './spotify.js'
 import { createBillingRouter } from './billing.js'
 import { createBillingManageRouter } from './billing-manage.js'
 import { createBillingLifecycleRouter } from './billing-lifecycle.js'
@@ -40,6 +41,7 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/watching', watchingRouter)
   app.route('/v1/feedback', feedbackRouter)
   app.route('/v1/search', searchRouter)
+  app.route('/v1/spotify', spotifyRouter)
   app.route('/v1/billing', createBillingRouter(getStripeClient))
   app.route('/v1/billing', createBillingManageRouter(getStripeClient))
   app.route('/v1/billing', createBillingLifecycleRouter(getStripeClient))

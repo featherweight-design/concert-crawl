@@ -996,3 +996,22 @@ export interface AdminUserDetail {
   feedback: AdminUserFeedbackItem[]
   trackedEvents: AdminUserTrackedEventItem[]
 }
+
+// --- Spotify sync (#763) ---
+// Connection payload returned by GET/POST/PATCH /v1/spotify/connection and
+// POST /v1/spotify/connection/sync (eng spec §6). A user with no connection
+// row gets the bare disconnected variant.
+export type SpotifyConnectionStatus = 'connected' | 'error' | 'revoked'
+
+export interface SpotifyConnectionView {
+  status: SpotifyConnectionStatus
+  displayName: string | null
+  artistCount: number
+  lastSyncedAt: string | null // ISO
+  autoWatch: boolean
+  digestEnabled: boolean
+  pushEnabled: boolean
+}
+
+export type SpotifyConnectionResponse =
+  SpotifyConnectionView | { status: 'disconnected' }

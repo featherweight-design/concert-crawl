@@ -27,7 +27,7 @@ export async function clearTables(): Promise<void> {
   await testDb.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(7777)`)
     await tx.execute(
-      sql`TRUNCATE inbox_reads, inbox_read_watermarks, notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback RESTART IDENTITY CASCADE`,
+      sql`TRUNCATE inbox_reads, inbox_read_watermarks, notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking RESTART IDENTITY CASCADE`,
     )
   })
 }

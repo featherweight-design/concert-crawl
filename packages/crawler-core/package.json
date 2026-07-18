@@ -13,6 +13,10 @@
     "./fetchers": {
       "types": "./dist/fetchers.d.ts",
       "import": "./dist/fetchers.js"
+    },
+    "./canonical": {
+      "types": "./dist/lib/canonical-artist.d.ts",
+      "import": "./dist/lib/canonical-artist.js"
     }
   },
   "scripts": {
