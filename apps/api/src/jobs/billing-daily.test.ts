@@ -21,9 +21,11 @@ import {
   isGiftExpired,
   isPurgeEligible,
   isWinbackDue,
+  purgeFollowsWhere,
   selectCardExpiryWindow,
   winbackDedupeKey,
 } from './billing-daily.js'
+import { PgDialect } from 'drizzle-orm/pg-core'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const daysFromNow = (now: Date, days: number): Date =>
@@ -230,6 +232,16 @@ describe('isPurgeEligible (guard re-check at purge time)', () => {
     }
     expect(isPurgeEligible(input)).toBe(true)
     expect(isPurgeEligible(input)).toBe(true)
+  })
+})
+
+describe('purgeFollowsWhere (E9 — spotify rows survive the purge)', () => {
+  it('scopes the follows delete to userId AND source = manual', () => {
+    const dialect = new PgDialect()
+    const query = dialect.sqlToQuery(purgeFollowsWhere('user_1'))
+    expect(query.sql).toContain('"user_artist_follows"."user_id"')
+    expect(query.sql).toContain('"user_artist_follows"."source"')
+    expect(query.params).toEqual(['user_1', 'manual'])
   })
 })
 

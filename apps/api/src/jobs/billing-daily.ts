@@ -35,6 +35,7 @@
 
 import { pathToFileURL } from 'node:url'
 import { and, eq, isNotNull, lt, lte, sql } from 'drizzle-orm'
+import type { SQL } from 'drizzle-orm'
 import {
   db,
   giftedComps,
@@ -190,6 +191,24 @@ export const isPurgeEligible = (input: {
     return false
   }
   return true
+}
+
+/**
+ * Where-clause for the 90-day purge's follows delete (E9): manual rows only.
+ * Spotify-sourced follows (source = 'spotify_followed' | 'spotify_top') live
+ * and die with the Spotify connection (PR 3 disconnect purge), never the
+ * billing clock. Exported as a pure helper so the delete scope is
+ * unit-testable (billing-daily has no integration harness yet — #914).
+ */
+export const purgeFollowsWhere = (userId: string): SQL => {
+  const condition = and(
+    eq(userArtistFollows.userId, userId),
+    eq(userArtistFollows.source, 'manual'),
+  )
+  if (condition === undefined) {
+    throw new Error('unreachable: both purge predicates are defined')
+  }
+  return condition
 }
 
 /**
@@ -680,13 +699,17 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
           )
           .returning({ id: userEvents.id })
 
-        // Following.
+        // Following — manual rows only (E9): Spotify-sourced rows live and
+        // die with the Spotify connection (PR 3 disconnect purge), not the
+        // billing clock.
         const deletedFollows = await tx
           .delete(userArtistFollows)
-          .where(eq(userArtistFollows.userId, row.userId))
+          .where(purgeFollowsWhere(row.userId))
           .returning({ id: userArtistFollows.id })
 
-        // Alert prefs + Spotify sync state: no tables exist yet (see header).
+        // Alert prefs + Spotify sync state: the Spotify tables now exist
+        // (migration 0051) but are intentionally excluded from the billing
+        // purge — they are cleaned up by the PR 3 disconnect flow instead.
         // Recorded as null so the audit event shows they were not applicable.
         const counts = {
           attendedHistory: deletedHistory.length,
