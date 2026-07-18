@@ -1,3 +1,11 @@
+## [1.131.6](https://github.com/HartiganHM/concert-crawl/compare/v1.131.5...v1.131.6) (2026-07-18)
+
+
+### Bug Fixes
+
+* **admin:** surface street address field on venue detail form ([30f8b1e](https://github.com/HartiganHM/concert-crawl/commit/30f8b1eaa10d69d93c1d46ef8d0c696364458bd9))
+* **pwa:** render "any" icons, unblock icon fetches, in-flow offline banner ([#1029](https://github.com/HartiganHM/concert-crawl/issues/1029)) ([66dde64](https://github.com/HartiganHM/concert-crawl/commit/66dde64c1f65f92e6bbbe0a89e55e058b4c131b7))
+
 ## [1.131.5](https://github.com/HartiganHM/concert-crawl/compare/v1.131.4...v1.131.5) (2026-07-18)
 
 
