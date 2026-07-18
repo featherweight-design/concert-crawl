@@ -153,7 +153,7 @@ function Chevron({ dir = "left", size = 14, color = "var(--fg-muted)", w = 2 }) 
 function WeekStripHeader({
   week, selectedISO, monthLabel, cueStyle = "chip", open = false,
   onToggle = () => {}, onPrevWeek = () => {}, onNextWeek = () => {},
-  onSelectDay = () => {}, atMin = false, atMax = false,
+  onSelectDay = () => {}, atMin = false, atMax = false, beforeChevrons = null,
 }) {
   // cue chrome
   const cueBase = {
@@ -185,7 +185,8 @@ function WeekStripHeader({
             </svg>
           </span>
         </button>
-        <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {beforeChevrons}
           <button type="button" className="cjp-chev" onClick={onPrevWeek} disabled={atMin}
             aria-label="Previous week"
             style={{ all: "unset", width: 34, height: 34, borderRadius: 9, border: "1px solid var(--border-strong)", display: "flex", alignItems: "center", justifyContent: "center", boxSizing: "border-box" }}>
@@ -237,8 +238,10 @@ function JumpPicker({
   initialY = CJP_TODAY.y, initialM = CJP_TODAY.m, selectedISO,
   onSelect = () => {}, onClose = () => {},
   indicators = "dots", closing = "both", weekendEmphasis = true, anim = "scale",
-  width = 300,
+  width = 300, showTodayChip = true,
 }) {
+  // shared "snap to today" glyph (same mark as the on-surface BackToTodayControl)
+  const RotateCcw = window.RotateCcwGlyph;
   const [view, setView] = React.useState({ y: initialY, m: initialM });
   const [mounted, setMounted] = React.useState(false);
   React.useEffect(() => { const r = requestAnimationFrame(() => setMounted(true)); return () => cancelAnimationFrame(r); }, []);
@@ -358,15 +361,18 @@ function JumpPicker({
 
       {/* footer: today reset + empty-month line */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12, minHeight: 22 }}>
-        <button type="button" onClick={() => { setView({ y: CJP_TODAY.y, m: CJP_TODAY.m }); onSelect(CJP_TODAY_ISO); }}
-          style={{
-            all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
-            padding: "5px 10px", borderRadius: 999, border: "1px solid var(--border-strong)",
-            fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em",
-            textTransform: "uppercase", color: "var(--fg-muted)",
-          }}>
-          <span style={{ width: 5, height: 5, borderRadius: 5, background: "var(--accent)" }} /> Today
-        </button>
+        {showTodayChip ? (
+          <button type="button" onClick={() => { setView({ y: CJP_TODAY.y, m: CJP_TODAY.m }); onSelect(CJP_TODAY_ISO); }}
+            aria-label="Snap to today"
+            style={{
+              all: "unset", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 6,
+              padding: "5px 10px", borderRadius: 999, border: "1px solid var(--border-strong)",
+              fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em",
+              textTransform: "uppercase", color: "var(--fg-muted)",
+            }}>
+            {RotateCcw ? <RotateCcw size={12} color="var(--accent)" /> : <span style={{ width: 5, height: 5, borderRadius: 5, background: "var(--accent)" }} />} Today
+          </button>
+        ) : <span />}
         {monthEmpty
           ? <MonoEyebrow size={9.5} color="var(--fg-subtle)" letterSpacing="0.1em">Crickets in {MON3[view.m]}. Try later.</MonoEyebrow>
           : <MonoEyebrow size={9.5} color="var(--fg-subtle)" letterSpacing="0.1em">Dots = shows on sale</MonoEyebrow>}

@@ -10,6 +10,7 @@ import { WeekStripHeader } from './WeekStripHeader'
 
 function setup(overrides: Record<string, unknown> = {}) {
   const onPick = vi.fn()
+  const onBackToToday = vi.fn()
   render(
     <WeekStripHeader
       monthLabel="April 2026"
@@ -19,10 +20,12 @@ function setup(overrides: Record<string, unknown> = {}) {
       onPick={onPick}
       prevWeekHref={null}
       nextWeekHref="/events?view=cal&weekOffset=1"
+      showBackToToday={false}
+      onBackToToday={onBackToToday}
       {...overrides}
     />,
   )
-  return { onPick }
+  return { onPick, onBackToToday }
 }
 
 describe('WeekStripHeader', () => {
@@ -77,5 +80,17 @@ describe('WeekStripHeader', () => {
     expect(screen.getByRole('link', { name: 'Next week' })).toBeTruthy()
     // prevWeekHref null → rendered as a disabled span, not a link.
     expect(screen.queryByRole('link', { name: 'Previous week' })).toBeNull()
+  })
+
+  it('hides the back-to-today control when showBackToToday is false', () => {
+    setup({ showBackToToday: false })
+    expect(screen.queryByRole('button', { name: /Back to today/ })).toBeNull()
+  })
+
+  it('shows the back-to-today control and fires onBackToToday when true', () => {
+    const { onBackToToday } = setup({ showBackToToday: true })
+    const button = screen.getByRole('button', { name: /Back to today/ })
+    fireEvent.click(button)
+    expect(onBackToToday).toHaveBeenCalledTimes(1)
   })
 })

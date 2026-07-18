@@ -30,6 +30,9 @@ export const CONSUMER_COPY = {
   jumpPickerNextMonth: 'Next month',
   jumpPickerPrevWeek: 'Previous week',
   jumpPickerNextWeek: 'Next week',
+  // ── "Back to Today" surface control (#1006) ────────────────────────
+  backToTodayLabel: 'Today',
+  backToTodayAriaPrefix: 'Back to today',
   // Screen-reader-only cue appended to a WeekStrip day when it has shows on
   // sale (the visible dot indicator is aria-hidden).
   weekStripDayShows: 'shows on sale',

@@ -26,6 +26,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.8.8-beta',
+    date: 'Jul 18, 2026',
+    headline: 'Wandered off into next month? One tap snaps you back to today.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Once you page the calendar away from today, a small “Today” button appears next to the week arrows — tap it to jump straight back to this week with today selected. It disappears the moment today’s back in view.',
+      },
+    ],
+  },
+  {
     version: 'v0.8.7-beta',
     date: 'Jul 17, 2026',
     headline: 'Put Concert Crawl on your home screen — and take it offline.',

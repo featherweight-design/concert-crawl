@@ -13,6 +13,13 @@ const {
   MONTHS, MON3, isoOf, ymd, cjpEventsFor, cjpFmtDate,
 } = window;
 
+// spoken form of today, for the control's aria-label
+function b2tTodaySpoken() {
+  const dt = new Date(CJP_TODAY.y, CJP_TODAY.m, CJP_TODAY.d);
+  const DOW = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  return `${DOW[dt.getDay()]}, ${MONTHS[CJP_TODAY.m]} ${CJP_TODAY.d}`;
+}
+
 function cjpWeekOf(iso) {
   const [y, m, d] = iso.split("-").map(Number);
   const base = new Date(y, m - 1, d);
@@ -112,6 +119,7 @@ function MobileTop() {
 function CalSurfaceMobile({
   initialSelected = CJP_TODAY_ISO, initialOpen = false, pickerView,
   cueStyle = "chip", indicators = "dots", closing = "both", weekendEmphasis = true, anim = "scale",
+  backToToday = false, btLabelStyle = "iconText", btWording = "today", btPlacement = "inline", showTodayChip = true,
 }) {
   const [selected, setSelected] = React.useState(initialSelected);
   const [open, setOpen] = React.useState(initialOpen);
@@ -124,6 +132,12 @@ function CalSurfaceMobile({
   const canClosePane = closing === "both" || closing === "scrim";
 
   const pick = (iso) => { setSelected(iso); setOpen(false); };
+  const goToday = () => { setSelected(CJP_TODAY_ISO); setOpen(false); };
+  const B2T = window.BackToTodayControl;
+  const showB2T = backToToday && !window.b2tWeekHasToday(week, CJP_TODAY_ISO);
+  const b2tInline = showB2T && btPlacement === "inline" && B2T
+    ? <B2T labelStyle={btLabelStyle} wording={btWording} placement="inline" todaySpoken={b2tTodaySpoken()} onClick={goToday} />
+    : null;
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", overflow: "hidden" }}>
@@ -135,10 +149,20 @@ function CalSurfaceMobile({
           onPrevWeek={() => setSelected((s) => cjpShift(s, -7))}
           onNextWeek={() => setSelected((s) => cjpShift(s, 7))}
           onSelectDay={setSelected}
+          beforeChevrons={b2tInline}
         />
         <div style={{ height: 1, background: "var(--border)", margin: "2px 16px 12px" }} />
         <DayList iso={selected} />
       </div>
+
+      {/* floating variant — sits over the day list, thumb-reach */}
+      {showB2T && btPlacement === "floating" && B2T && (
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 22, display: "flex", justifyContent: "center", zIndex: 3, pointerEvents: "none" }}>
+          <div style={{ pointerEvents: "auto" }}>
+            <B2T labelStyle={btLabelStyle} wording={btWording} placement="floating" todaySpoken={b2tTodaySpoken()} onClick={goToday} />
+          </div>
+        </div>
+      )}
 
       {/* picker overlay */}
       {open && (
@@ -149,7 +173,7 @@ function CalSurfaceMobile({
             <JumpPicker
               initialY={vY} initialM={vM} selectedISO={selected} onSelect={pick} onClose={() => setOpen(false)}
               indicators={indicators} closing={closing} weekendEmphasis={weekendEmphasis} anim={anim}
-              width={"100%"}
+              width={"100%"} showTodayChip={showTodayChip}
             />
           </div>
         </>
@@ -179,6 +203,7 @@ function DesktopChrome({ url = "concertcrawl.app/browse", children }) {
 function CalSurfaceDesktop({
   initialSelected = CJP_TODAY_ISO, initialOpen = false, pickerView,
   cueStyle = "chip", indicators = "dots", closing = "both", weekendEmphasis = true, anim = "scale",
+  backToToday = false, btLabelStyle = "iconText", btWording = "today", btPlacement = "inline", showTodayChip = true,
 }) {
   const [selected, setSelected] = React.useState(initialSelected);
   const [open, setOpen] = React.useState(initialOpen);
@@ -190,6 +215,12 @@ function CalSurfaceDesktop({
   const vM = pickerView ? pickerView.m : Number(selected.split("-")[1]) - 1;
   const canClosePane = closing === "both" || closing === "scrim";
   const pick = (iso) => { setSelected(iso); setOpen(false); };
+  const goToday = () => { setSelected(CJP_TODAY_ISO); setOpen(false); };
+  const B2T = window.BackToTodayControl;
+  const showB2T = backToToday && !window.b2tWeekHasToday(week, CJP_TODAY_ISO);
+  const b2tInline = showB2T && btPlacement === "inline" && B2T
+    ? <B2T labelStyle={btLabelStyle} wording={btWording} placement="inline" todaySpoken={b2tTodaySpoken()} onClick={goToday} />
+    : null;
 
   return (
     <DesktopChrome>
@@ -230,6 +261,7 @@ function CalSurfaceDesktop({
               onPrevWeek={() => setSelected((s) => cjpShift(s, -7))}
               onNextWeek={() => setSelected((s) => cjpShift(s, 7))}
               onSelectDay={setSelected}
+              beforeChevrons={b2tInline}
             />
             {/* popover */}
             {open && (
@@ -239,7 +271,7 @@ function CalSurfaceDesktop({
                   <JumpPicker
                     initialY={vY} initialM={vM} selectedISO={selected} onSelect={pick} onClose={() => setOpen(false)}
                     indicators={indicators} closing={closing} weekendEmphasis={weekendEmphasis} anim={anim}
-                    width={324}
+                    width={324} showTodayChip={showTodayChip}
                   />
                 </div>
               </>
@@ -248,6 +280,15 @@ function CalSurfaceDesktop({
 
           <div style={{ height: 1, background: "var(--border)", margin: "4px 12px 16px" }} />
           <DayList iso={selected} dense />
+
+          {/* floating variant — over the day list */}
+          {showB2T && btPlacement === "floating" && B2T && (
+            <div style={{ position: "absolute", left: 0, right: 0, bottom: 20, display: "flex", justifyContent: "center", zIndex: 3, pointerEvents: "none" }}>
+              <div style={{ pointerEvents: "auto" }}>
+                <B2T labelStyle={btLabelStyle} wording={btWording} placement="floating" todaySpoken={b2tTodaySpoken()} onClick={goToday} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </DesktopChrome>

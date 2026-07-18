@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Back to Today (#642)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="monetization-shared.jsx"></script>
+<script type="text/babel" src="calendar-picker.jsx"></script>
+<script type="text/babel" src="back-to-today.jsx"></script>
+<script type="text/babel" src="calendar-surfaces.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEME_KEYS, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { MonoEyebrow } = window;
+const { WeekStripHeader, JumpPicker, CalSurfaceMobile, CalSurfaceDesktop, cjpWeekOf, cjpMonthLabelFor } = window;
+const { BackToTodayControl, RotateCcwGlyph } = window;
+
+const PHONE_W = 390, PHONE_H = 780;
+const NARROW_W = 320, NARROW_H = 760;
+const DESK_W = 1180, DESK_H = 660;
+
+// off-today anchors (TODAY = Tue Apr 28 2026)
+const OFF_JUN = "2026-06-27";   // jumped months ahead
+const OFF_WK  = "2026-05-05";   // stepped one week forward
+const ON_WK   = "2026-05-02";   // Sat May 2 — same week still holds Apr 28
+const TODAY   = "2026-04-28";
+
+function PhoneStage({ theme = "electric", width = PHONE_W, height = PHONE_H, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>{children}</IOSDevice>
+    </ThemeProvider>
+  );
+}
+function Stage({ theme = "electric", pad = 20, align = "center", justify = "center", children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad, display: "flex", alignItems: align, justifyContent: justify, boxSizing: "border-box" }}>
+        {children}
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ── compact header detail — title row + week strip, off-today, control inline ──
+function HeaderDetail({ theme = "electric", width = 340, selected = OFF_JUN, labelStyle = "iconText", wording = "today", caption }) {
+  const week = cjpWeekOf(selected);
+  const ctrl = <BackToTodayControl labelStyle={labelStyle} wording={wording} placement="inline"
+    todaySpoken="Tuesday, April 28" animateIn={false} onClick={() => {}} />;
+  return (
+    <Stage theme={theme} align="flex-start" justify="center" pad={16}>
+      <div style={{ width, maxWidth: "100%", color: "var(--fg)", fontFamily: "Inter, system-ui" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", padding: "0 6px 12px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            <span style={{ fontWeight: 800, fontSize: 21, letterSpacing: "-0.03em" }}>What's on?</span>
+            <MonoEyebrow size={9} color="var(--fg-muted)" letterSpacing="0.06em">Denver, CO</MonoEyebrow>
+          </div>
+          <div style={{ display: "flex", height: 30, borderRadius: 8, overflow: "hidden", border: "1px solid var(--border-strong)" }}>
+            {["list", "cal"].map((v) => (
+              <div key={v} style={{ padding: "0 11px", display: "flex", alignItems: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase", background: v === "cal" ? "var(--signal)" : "transparent", color: v === "cal" ? "var(--fg-on-accent)" : "var(--fg-muted)" }}>{v}</div>
+            ))}
+          </div>
+        </div>
+        <WeekStripHeader week={week} selectedISO={selected} monthLabel={cjpMonthLabelFor(selected)} cueStyle="chip" open={false} beforeChevrons={ctrl} />
+        {caption && (
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 14 }}>
+            <MonoEyebrow size={8.5} color="var(--fg-subtle)" letterSpacing="0.1em">{caption}</MonoEyebrow>
+          </div>
+        )}
+      </div>
+    </Stage>
+  );
+}
+
+// ── spec / anatomy card ──────────────────────────────────────
+function SpecRow({ k, children }) {
+  return (
+    <div style={{ display: "flex", gap: 14, padding: "11px 0", borderBottom: "1px solid var(--border)" }}>
+      <div style={{ flex: "0 0 128px", fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--fg-subtle)", paddingTop: 1 }}>{k}</div>
+      <div style={{ flex: 1, fontFamily: "Inter, system-ui", fontSize: 13, lineHeight: 1.5, color: "var(--fg)" }}>{children}</div>
+    </div>
+  );
+}
+function SpecCard({ theme = "electric" }) {
+  return (
+    <Stage theme={theme} align="flex-start" justify="flex-start" pad={26}>
+      <div style={{ width: "100%", color: "var(--fg)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+          <BackToTodayControl labelStyle="iconText" wording="today" placement="inline" animateIn={false} todaySpoken="Tuesday, April 28" />
+          <span style={{ fontFamily: "Inter, system-ui", fontWeight: 800, fontSize: 17, letterSpacing: "-0.02em" }}>Back to Today — spec</span>
+        </div>
+        <div style={{ marginTop: 8 }}>
+          <SpecRow k="Trigger">Week-level. Visible when the selected week does <b>not</b> contain today; hidden the instant today is back in view. Stepping to a different day <i>within</i> today's week keeps it hidden.</SpecRow>
+          <SpecRow k="Action">One tap = full reset: jump to today's week <b>and</b> select today (mirrors the JumpPicker footer chip exactly).</SpecRow>
+          <SpecRow k="Placement">Inline in the header nav cluster, immediately left of the ◂ ▸ week chevrons — same spot on mobile &amp; desktop (parity). Never covers content; appears/leaves in a stable location.</SpecRow>
+          <SpecRow k="Touch target">Button hit area is 44 × 44 (transparent); the visible 34px pill is centred inside it so it lines up with the 34px chevrons.</SpecRow>
+          <SpecRow k="Glyph">rotate-ccw (reset) — deliberately not a plain ◂, which would collide with the adjacent prev-week chevron. Drawn in <span style={{ color: "var(--accent)" }}>--accent</span>, the same colour the grid uses to mark “today”.</SpecRow>
+          <SpecRow k="Keyboard / SR">Standard <code>&lt;button&gt;</code> — Tab-reachable, Enter/Space activate. <code>aria-label="Back to today, Tuesday, April 28"</code>; focus ring via <code>:focus-visible</code>. When it hides, it unmounts (no dead tab-stop).</SpecRow>
+          <SpecRow k="Motion">Fades + slides in over 170ms as it enters the cluster; reduced-motion shows the end-state instantly. Print/PDF unaffected.</SpecRow>
+          <SpecRow k="Tokens">surface-2 fill · border-strong · accent glyph · fg label. No one-off colours — verified across Electric / Jade / Light.</SpecRow>
+        </div>
+      </div>
+    </Stage>
+  );
+}
+
+// ── Tweaks ───────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "labelStyle": "iconText",
+  "wording": "today",
+  "placement": "inline",
+  "showTodayChip": true
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio, TweakToggle } = window;
+const THEME_OPTS = CC_THEME_KEYS.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+
+function B2TTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="The control">
+        <TweakRadio label="Label" value={t.labelStyle} onChange={(v) => setT("labelStyle", v)}
+          options={[{ value: "iconText", label: "Icon + text" }, { value: "iconOnly", label: "Icon only" }]} />
+        <TweakRadio label="Wording" value={t.wording} onChange={(v) => setT("wording", v)}
+          options={[{ value: "today", label: "Today" }, { value: "tonight", label: "Tonight" }]} />
+        <TweakRadio label="Placement" value={t.placement} onChange={(v) => setT("placement", v)}
+          options={[{ value: "inline", label: "Inline" }, { value: "floating", label: "Floating" }]} />
+      </TweakSection>
+      <TweakSection label="Consolidation">
+        <TweakToggle label="Keep picker 'Today' chip" value={t.showTodayChip} onChange={(v) => setT("showTodayChip", v)} />
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakSelect label="Theme" value={t.theme} onChange={(v) => setT("theme", v)} options={THEME_OPTS} />
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+function LiveMobile() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <PhoneStage theme={t.theme}>
+      <CalSurfaceMobile key={t.placement + t.labelStyle} initialSelected={OFF_JUN}
+        backToToday btLabelStyle={t.labelStyle} btWording={t.wording} btPlacement={t.placement} showTodayChip={t.showTodayChip} />
+    </PhoneStage>
+  );
+}
+function LiveDesktop() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <ThemeProvider theme={t.theme} style={{ width: DESK_W, height: DESK_H }}>
+      <div style={{ width: DESK_W, height: DESK_H }} key={t.placement + t.labelStyle}>
+        <CalSurfaceDesktop initialSelected={OFF_JUN}
+          backToToday btLabelStyle={t.labelStyle} btWording={t.wording} btPlacement={t.placement} showTodayChip={t.showTodayChip} />
+      </div>
+    </ThemeProvider>
+  );
+}
+
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="Calendar · Back to Today"
+        subtitle="#642 follow-up — a small, unobtrusive control that returns the Cal view to the current week + selects today in one tap. Week-level trigger (shows only when today isn't in view), full-reset action, inline in the header nav cluster with mobile↔desktop parity. Shares one 'snap to today' mark with the JumpPicker footer chip. Token-only across Electric / Jade / Light, ≥44px touch target, keyboard + SR. Drive label · wording · placement · picker-chip from the Tweaks panel."
+      >
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview" subtitle="Both mockups start jumped ahead to Sat Jun 27, so the control is present. Drive label (icon+text / icon-only), wording, placement (inline / floating), whether the picker keeps its own 'Today' chip, and theme — all from the Tweaks panel. Tap the control to snap home and watch it vanish.">
+          <DCArtboard id="live-m" label="Mobile · responds to Tweaks" width={PHONE_W} height={PHONE_H}><LiveMobile/></DCArtboard>
+          <DCArtboard id="live-d" label="Desktop · responds to Tweaks" width={DESK_W} height={DESK_H}><LiveDesktop/></DCArtboard>
+        </DCSection>
+
+        {/* 1 · THE RULE */}
+        <DCSection id="rule" title="1 · When it shows — week-level trigger"
+          subtitle="The control keys off the visible WEEK, not the selected day. On today's week it stays hidden even if you tap a different day; step or jump to a week that doesn't hold today and it appears. This keeps it quiet during normal within-week browsing.">
+          <DCArtboard id="rule-today" label="On today (Tue Apr 28) · hidden" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><CalSurfaceMobile initialSelected={TODAY} backToToday/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="rule-samewk" label="Diff day, same week (Sat May 2) · still hidden" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><CalSurfaceMobile initialSelected={ON_WK} backToToday/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="rule-nextwk" label="Stepped one week (May 5) · appears" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><CalSurfaceMobile initialSelected={OFF_WK} backToToday/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="rule-jumped" label="Jumped to June · appears" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><CalSurfaceMobile initialSelected={OFF_JUN} backToToday/></PhoneStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 2 · LABEL */}
+        <DCSection id="label" title="2 · Label — icon + text vs icon-only"
+          subtitle="Two label directions, shown at the 320 baseline where space is tightest. Recommendation: ship icon+text where it fits and collapse to icon-only at ≤360 — the header only holds so much next to a long month label and two chevrons. The icon carries the meaning; the word removes all doubt.">
+          <DCArtboard id="label-it-320" label="A · Icon + text · 320 (recommended, fits)" width={NARROW_W} height={210}>
+            <HeaderDetail theme="electric" width={288} labelStyle="iconText" wording="today" caption="one tap → today's week"/>
+          </DCArtboard>
+          <DCArtboard id="label-io-320" label="B · Icon only · 320 (compact fallback)" width={NARROW_W} height={210}>
+            <HeaderDetail theme="electric" width={288} labelStyle="iconOnly" wording="today" caption="reset glyph — matches the picker chip"/>
+          </DCArtboard>
+          <DCArtboard id="label-it-390" label="A · Icon + text · 390 (comfortable)" width={PHONE_W} height={210}>
+            <HeaderDetail theme="electric" width={358} labelStyle="iconText" wording="today"/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 3 · WORDING */}
+        <DCSection id="wording" title="3 · Wording — literal vs voice"
+          subtitle="Recommendation: 'Today'. It's the exact word every calendar user already scans for, and it stays inside the width budget. The voice option ('Back to tonight' — a nod to the empty-state 'No shows tonight, grandpa') is warmer but ~2× wider, so it only lives on desktop / floating, never the tight header.">
+          <DCArtboard id="word-today" label="A · 'Today' (recommended)" width={PHONE_W} height={200}>
+            <HeaderDetail theme="electric" width={358} labelStyle="iconText" wording="today"/>
+          </DCArtboard>
+          <DCArtboard id="word-tonight" label="B · 'Back to tonight' (voice · wider)" width={PHONE_W} height={200}>
+            <HeaderDetail theme="electric" width={358} labelStyle="iconText" wording="tonight"/>
+          </DCArtboard>
+          <DCArtboard id="word-tonight-float" label="B · voice reads best floating" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><CalSurfaceMobile initialSelected={OFF_JUN} backToToday btWording="tonight" btPlacement="floating"/></PhoneStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 4 · PLACEMENT */}
+        <DCSection id="placement" title="4 · Placement — inline vs floating"
+          subtitle="Recommendation: inline in the header nav cluster. It sits with the other week-nav controls, stays put across mobile + desktop, and never occludes a show. The floating pill is more thumb-reachable but hovers over the day list and reads heavier — shown here for comparison.">
+          <DCArtboard id="place-inline" label="A · Inline in header (recommended)" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><CalSurfaceMobile initialSelected={OFF_JUN} backToToday btPlacement="inline"/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="place-float" label="B · Floating pill over the list" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><CalSurfaceMobile initialSelected={OFF_JUN} backToToday btPlacement="floating"/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="place-desk" label="Desktop · inline (parity)" width={DESK_W} height={DESK_H}>
+            <ThemeProvider theme="electric" style={{ width: DESK_W, height: DESK_H }}>
+              <div style={{ width: DESK_W, height: DESK_H }}><CalSurfaceDesktop initialSelected={OFF_JUN} backToToday btPlacement="inline"/></div>
+            </ThemeProvider>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · UNIFIED AFFORDANCE */}
+        <DCSection id="unify" title="5 · One mark, two contexts — the consolidation call"
+          subtitle="You flagged the near-duplicate 'Today' affordances. They're modally separated — the surface control lives on the closed header; the picker chip lives inside the open overlay — so they never compete. Fix: give them the SAME rotate-ccw mark so it reads as one learned gesture. Toggle 'Keep picker chip' in Tweaks to see it removed entirely.">
+          <DCArtboard id="unify-surface" label="On the closed header (surface control)" width={PHONE_W} height={260}>
+            <HeaderDetail theme="electric" width={358} labelStyle="iconText" wording="today" caption="same mark ↓"/>
+          </DCArtboard>
+          <DCArtboard id="unify-picker" label="Inside the open picker (footer chip)" width={332} height={430}>
+            <Stage theme="electric" pad={16}><JumpPicker initialY={2026} initialM={5} selectedISO={OFF_JUN} indicators="dots" weekendEmphasis anim="fade" width={300} showTodayChip/></Stage>
+          </DCArtboard>
+          <DCArtboard id="unify-nochip" label="Picker chip removed (surface control covers it)" width={332} height={430}>
+            <Stage theme="electric" pad={16}><JumpPicker initialY={2026} initialM={5} selectedISO={OFF_JUN} indicators="dots" weekendEmphasis anim="fade" width={300} showTodayChip={false}/></Stage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 6 · THEME PARITY */}
+        <DCSection id="parity" title="6 · Theme parity — token-only"
+          subtitle="The control across all three shipped themes. surface-2 fill, border-strong outline, accent-coloured reset glyph, fg label — every value from var(--*).">
+          {CC_THEME_KEYS.map((k) => (
+            <DCArtboard key={k} id={"par-" + k} label={CC_THEMES[k].label} width={PHONE_W} height={200}>
+              <HeaderDetail theme={k} width={358} labelStyle="iconText" wording="today"/>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+        {/* 7 · SPEC */}
+        <DCSection id="spec" title="7 · Anatomy &amp; spec"
+          subtitle="The build contract — trigger, action, placement, touch target, glyph choice, keyboard/SR, motion, tokens.">
+          <DCArtboard id="spec-card" label="Spec sheet" width={760} height={560}><SpecCard theme="electric"/></DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+      <B2TTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

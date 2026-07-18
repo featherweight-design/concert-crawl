@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { JumpPicker } from '@/components/consumer/jump-picker'
+import { accessibleDayLabelFor } from '@/components/consumer/jump-picker/date-math'
+import { BackToTodayControl } from './BackToTodayControl'
 
 interface WeekStripHeaderProps {
   monthLabel: string
@@ -13,6 +15,8 @@ interface WeekStripHeaderProps {
   onPick: (iso: string) => void
   prevWeekHref: string | null
   nextWeekHref: string
+  showBackToToday: boolean
+  onBackToToday: () => void
 }
 
 const STYLE_ID = 'cjp-header-styles'
@@ -82,6 +86,8 @@ export const WeekStripHeader = ({
   onPick,
   prevWeekHref,
   nextWeekHref,
+  showBackToToday,
+  onBackToToday,
 }: WeekStripHeaderProps) => {
   const [open, setOpen] = useState(false)
   const cueRef = useRef<HTMLButtonElement>(null)
@@ -154,7 +160,13 @@ export const WeekStripHeader = ({
             </span>
           </button>
 
-          <div className="flex gap-1">
+          <div className="flex items-center gap-1">
+            {showBackToToday && (
+              <BackToTodayControl
+                todaySpoken={accessibleDayLabelFor(today)}
+                onClick={onBackToToday}
+              />
+            )}
             {prevWeekHref ? (
               <Link
                 href={prevWeekHref}

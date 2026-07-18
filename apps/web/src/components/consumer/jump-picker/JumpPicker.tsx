@@ -17,6 +17,7 @@ import {
   type KeyboardEvent,
 } from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { RotateCcwGlyph } from './RotateCcwGlyph'
 import {
   addMonths,
   isoOf,
@@ -584,15 +585,7 @@ export const JumpPicker = ({
             color: 'var(--fg-muted)',
           }}
         >
-          <span
-            style={{
-              width: 5,
-              height: 5,
-              borderRadius: 5,
-              background: 'var(--accent)',
-            }}
-          />{' '}
-          {CONSUMER_COPY.jumpPickerToday}
+          <RotateCcwGlyph size={11} /> {CONSUMER_COPY.jumpPickerToday}
         </button>
         <span
           style={{

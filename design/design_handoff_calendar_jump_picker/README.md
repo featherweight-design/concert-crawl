@@ -11,6 +11,39 @@ Open: `Calendar Jump Picker.html`
 
 ---
 
+## R2 · "Back to Today" control (July 18, 2026)
+
+Open: `Back to Today.html`
+
+Companion to the jump picker: once a user navigates away from now, there was no
+fast way back. This adds a small, unobtrusive control that returns the Cal view
+to the current week **and** selects today in one tap.
+
+| Call | Decision |
+|---|---|
+| **Trigger** | **Week-level** — visible when the shown week doesn't contain today; hidden the instant today is back in view (tapping a different day *within* today's week keeps it hidden). |
+| **Action** | **Full reset** — jump to today's week + select today. Mirrors the JumpPicker footer chip exactly. |
+| **Placement** | **Inline** in the header nav cluster, left of the `◂ ▸` chevrons — same spot on mobile + desktop (parity). Floating-pill variant shown for comparison. |
+| **Label** | **Icon + text** where it fits; collapse to **icon-only** at ≤360 (320 header can't hold a long month label + word + two chevrons). |
+| **Wording** | **"Today"** (literal, in budget). Voice option "Back to tonight" is ~2× wider → desktop / floating only. |
+| **Glyph** | rotate-ccw (reset). Deliberately **not** a plain `◂` — that would collide with the adjacent prev-week chevron. Drawn in `--accent` (the calendar's "today" colour). |
+
+**Consolidation:** the JumpPicker footer already had a near-duplicate "Today"
+reset. Rather than remove one, both now share the **same rotate-ccw mark** so it
+reads as one learned "snap to today" gesture. They're modally separated (surface
+control = closed header; picker chip = inside the open overlay) so they never
+compete. `showTodayChip={false}` removes the picker chip if you'd rather
+consolidate to one — live as a Tweak.
+
+**A11y:** standard `<button>`, Tab/Enter/Space, `aria-label="Back to today, Tuesday, April 28"`, `:focus-visible` ring, **44 × 44 hit target** (transparent) around the 34px visible pill. Unmounts when hidden (no dead tab-stop). Motion fades+slides in over 170ms; reduced-motion + print show the end-state. Token-only across Electric / Jade / Light.
+
+Ships into the real surfaces via opt-in props on `CalSurfaceMobile` /
+`CalSurfaceDesktop` (`backToToday`, `btLabelStyle`, `btWording`, `btPlacement`,
+`showTodayChip`) — the R1 canvas is unchanged (default off). New file:
+`back-to-today.jsx` (`BackToTodayControl`, `RotateCcwGlyph`, `b2tWeekHasToday`).
+
+---
+
 ## Two-mode nav — preserved
 
 The picker is **additive**; it does not replace the existing chevron paging.

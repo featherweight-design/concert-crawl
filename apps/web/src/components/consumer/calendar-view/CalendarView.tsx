@@ -127,6 +127,8 @@ export function CalendarView({
         onPick={onJumpPick}
         prevWeekHref={prevWeekHref}
         nextWeekHref={nextWeekHref}
+        showBackToToday={!weekDates.has(today)}
+        onBackToToday={() => onJumpPick(today)}
       />
       <WeekStrip
         days={days}
