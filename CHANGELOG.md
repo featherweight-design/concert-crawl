@@ -1,3 +1,11 @@
+## [1.131.4](https://github.com/HartiganHM/concert-crawl/compare/v1.131.3...v1.131.4) (2026-07-18)
+
+
+### Bug Fixes
+
+* **admin:** reflow dashboard, venue, and review surfaces at 320px ([#1028](https://github.com/HartiganHM/concert-crawl/issues/1028)) ([7dce0c0](https://github.com/HartiganHM/concert-crawl/commit/7dce0c05e545457ede2ac47fb6416abbbf963338)), closes [#1014](https://github.com/HartiganHM/concert-crawl/issues/1014)
+* wire JumpPicker footer Today reset to actually select today ([#1026](https://github.com/HartiganHM/concert-crawl/issues/1026)) ([82574c9](https://github.com/HartiganHM/concert-crawl/commit/82574c9f1b420c05723de9df64d7c9875fad7370))
+
 ## [1.131.3](https://github.com/HartiganHM/concert-crawl/compare/v1.131.2...v1.131.3) (2026-07-18)
 
 
