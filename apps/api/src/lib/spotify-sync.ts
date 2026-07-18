@@ -274,19 +274,49 @@ export async function syncSpotifyConnection(
     [...followedRows, ...topRows].map((row) => row.spotifyArtistId),
   ).size
 
-  await db.transaction(async (tx) => {
-    await replaceSourceSet(tx, userId, 'spotify_followed', followedRows)
-    await replaceSourceSet(tx, userId, 'spotify_top', topRows)
-    await tx
-      .update(userSpotifyConnections)
-      .set({
-        status: 'connected',
-        artistCount: distinctArtistCount,
-        lastSyncedAt: syncedAt,
-        lastSyncError: null,
-      })
-      .where(eq(userSpotifyConnections.userId, userId))
-  })
+  try {
+    await db.transaction(async (tx) => {
+      await replaceSourceSet(tx, userId, 'spotify_followed', followedRows)
+      await replaceSourceSet(tx, userId, 'spotify_top', topRows)
+      await tx
+        .update(userSpotifyConnections)
+        .set({
+          status: 'connected',
+          artistCount: distinctArtistCount,
+          lastSyncedAt: syncedAt,
+          lastSyncError: null,
+        })
+        .where(eq(userSpotifyConnections.userId, userId))
+    })
+  } catch (err) {
+    // Transaction rollback leaves the previous artist set intact; surface the
+    // failure on the connection row so callers see status='error'. The status
+    // write gets its own catch — if the DB is down it will throw too, and this
+    // function's contract is to never throw.
+    const message = err instanceof Error ? err.message : 'Spotify sync failed'
+    apiLogger.error({ err, userId }, 'spotify: sync persistence failed')
+    try {
+      await db
+        .update(userSpotifyConnections)
+        .set({ status: 'error', lastSyncError: message })
+        .where(eq(userSpotifyConnections.userId, userId))
+    } catch (statusErr) {
+      apiLogger.error(
+        { err: statusErr, userId },
+        'spotify: failed to record sync error status',
+      )
+    }
+    await recordSyncCost({
+      userId,
+      outcome: 'error',
+      apiCalls: client.getCallCount(),
+    })
+    return {
+      outcome: 'error',
+      artistCount: connection.artistCount,
+      error: message,
+    }
+  }
 
   await recordSyncCost({
     userId,

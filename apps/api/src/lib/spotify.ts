@@ -11,8 +11,9 @@ import { z } from 'zod'
 const SPOTIFY_API_BASE = 'https://api.spotify.com/v1'
 
 // 50 artists/page → 1000-artist ceiling. The typical connected user follows
-// far fewer (spec §9.2 sizes the canonical set at ≤ ~600 rows); the cap only
-// guards against a runaway cursor loop.
+// far fewer (spec §9.2 sizes the canonical set at ≤ ~600 rows); the cap guards
+// against a runaway cursor loop — hitting it with a live cursor throws rather
+// than silently truncating the set.
 const MAX_FOLLOWED_PAGES = 20
 
 export class SpotifyAuthError extends Error {
@@ -172,6 +173,15 @@ export const createSpotifyClient = (
       items.push(...parsed.artists.items)
       after = parsed.artists.cursors?.after ?? null
       if (after === null || parsed.artists.items.length === 0) break
+    }
+    // Cap exhausted with a live cursor: fail the sync rather than return a
+    // truncated set — the replace-set upsert would delete follows beyond the
+    // cap. The engine maps this to status='error', preserving the previous set.
+    if (after !== null) {
+      throw new SpotifyApiError(
+        `Spotify followed-artists pagination exceeded ${MAX_FOLLOWED_PAGES} pages`,
+        200,
+      )
     }
     return items
   }

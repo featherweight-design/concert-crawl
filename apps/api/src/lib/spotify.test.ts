@@ -117,6 +117,26 @@ describe('createSpotifyClient', () => {
         SpotifyApiError,
       )
     })
+
+    it('fails rather than truncating when the page cap is hit with a live cursor', async () => {
+      // 20 pages (the cap), each still advertising a next cursor. Returning a
+      // truncated set here would let the replace-set sync delete real follows.
+      const pages: StubResponse[] = Array.from({ length: 20 }, (_, i) => ({
+        status: 200,
+        body: {
+          artists: {
+            items: [artist(`a${i}`, `Artist ${i}`)],
+            cursors: { after: `cursor-${i}` },
+          },
+        },
+      }))
+      const { fetchFn, calls } = makeFetchStub(pages)
+      const client = createSpotifyClient('tok', { fetchFn })
+      await expect(client.getFollowedArtists()).rejects.toBeInstanceOf(
+        SpotifyApiError,
+      )
+      expect(calls).toHaveLength(20)
+    })
   })
 
   describe('getTopArtists', () => {

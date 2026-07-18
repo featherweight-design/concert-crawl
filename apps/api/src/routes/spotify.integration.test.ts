@@ -1,7 +1,7 @@
 // Integration tests for the Spotify connection API + sync engine (#763 PR 3,
 // eng spec §5/§6/§8.1 phase 1). The Spotify HTTP layer is stubbed at the
 // fetch boundary and Clerk at the SDK boundary — no real Spotify calls ever.
-import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const { authState, clerkState } = vi.hoisted(() => ({
   authState: {
@@ -47,6 +47,7 @@ vi.mock('@clerk/backend', () => ({
 
 import { and, eq, inArray } from 'drizzle-orm'
 import {
+  db,
   costTracking,
   userArtistFollows,
   userEvents,
@@ -113,12 +114,11 @@ const spotifyFetchStub = async (
 // reject-all fetch stub in a beforeAll (network guard), which runs AFTER
 // this module evaluates — so a module-scope stub here would be clobbered.
 // beforeEach runs after every setup-file hook, keeping the Spotify stub live.
+// No afterAll cleanup here: drain-background's own afterAll runs
+// vi.unstubAllGlobals() last, and unstubbing earlier would drop the reject-all
+// network guard while the worker is still live.
 beforeEach(() => {
   vi.stubGlobal('fetch', spotifyFetchStub)
-})
-
-afterAll(() => {
-  vi.unstubAllGlobals()
 })
 
 // --- helpers ---
@@ -455,6 +455,34 @@ describe('POST /v1/spotify/connection/sync', () => {
     expect(row?.status).toBe('error')
     expect(row?.lastSyncError).toBeTruthy()
     // A transient failure never nukes the previous artist set
+    expect(await getSpotifyFollows(USER)).toHaveLength(1)
+  })
+
+  it('marks the connection error when the persistence transaction fails', async () => {
+    setAuth(USER)
+    linkSpotifyAccount()
+    spotifyState.followedPages = [[{ id: 'a1', name: 'Alpha' }]]
+    await connect()
+
+    await backdateLastSynced(USER)
+    const transactionSpy = vi
+      .spyOn(db, 'transaction')
+      .mockRejectedValueOnce(new Error('deadlock detected'))
+    try {
+      const res = await app.request('/v1/spotify/connection/sync', {
+        method: 'POST',
+      })
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as ConnectionBody
+      expect(body.data.status).toBe('error')
+    } finally {
+      transactionSpy.mockRestore()
+    }
+
+    const row = await getConnectionRow(USER)
+    expect(row?.status).toBe('error')
+    expect(row?.lastSyncError).toContain('deadlock')
+    // A persistence failure never nukes the previous artist set
     expect(await getSpotifyFollows(USER)).toHaveLength(1)
   })
 
