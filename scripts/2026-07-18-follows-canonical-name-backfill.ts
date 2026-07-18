@@ -2,7 +2,7 @@
  * Concert Crawl — one-time user_artist_follows.canonical_name backfill
  * (#763 PR 1, eng spec §4).
  *
- * Migration 0051 adds `canonical_name` with DEFAULT '' — every pre-existing
+ * Migration 0052 adds `canonical_name` with DEFAULT '' — every pre-existing
  * follow row needs canonicalizeArtist(artist_name) written so the Spotify
  * highlighting equality joins (PR 6/7) match manual follows too. Going
  * forward app code writes canonical_name on every insert; this script only
@@ -11,7 +11,7 @@
  * Canonicalization lives ONLY in JS (@concert-crawl/crawler-core) — this
  * script never re-implements the transform in SQL (Ø/ø parity rule).
  *
- * Usage (after migration 0051 has been applied to the target DB):
+ * Usage (after migration 0052 has been applied to the target DB):
  *
  *   Dry run (default — lists planned updates, writes nothing):
  *     DATABASE_URL=... tsx scripts/2026-07-18-follows-canonical-name-backfill.ts

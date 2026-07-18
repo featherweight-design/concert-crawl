@@ -711,7 +711,7 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
           .returning({ id: userArtistFollows.id })
 
         // Alert prefs + Spotify sync state: the Spotify tables now exist
-        // (migration 0051) but are intentionally excluded from the billing
+        // (migration 0052) but are intentionally excluded from the billing
         // purge — they are cleaned up by the PR 3 disconnect flow instead.
         // Recorded as null so the audit event shows they were not applicable.
         const counts = {
