@@ -16,7 +16,6 @@ import type { Venue } from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
-import { isAllowed } from '../robots.js'
 import { CrawlFetchError } from '../fetcher.js'
 import type { PlatformFetcher, PlatformFetchResult } from './index.js'
 
@@ -352,16 +351,16 @@ async function venuePilotFetch(
   }
   const accountId = Number(rawAccountId)
 
-  // Honor robots.txt for the endpoint domain we actually fetch (in addition to
-  // crawlVenue's check of venue.websiteUrl). isAllowed caches per domain and
-  // fails open, so this is a no-op unless VenuePilot adds an explicit Disallow.
-  if (!(await isAllowed(ENDPOINT, USER_AGENT))) {
-    throw new VenuePilotFetchError(
-      0,
-      ENDPOINT,
-      `robots.txt disallows ${USER_AGENT} at ${ENDPOINT}`,
-    )
-  }
+  // No robots.txt gate here. This is VenuePilot's documented public GraphQL
+  // API, consumed with the venue's authorization (the venue opts in by setting
+  // api_provider='venuepilot' + api_account_id), not a page we spider. robots.txt
+  // is a crawling convention for indexers of a site's HTML; it doesn't govern a
+  // first-party API integration. VenuePilot's site-wide robots.txt carries a
+  // blanket `User-agent: * / Disallow: /` (alongside a conflicting Cloudflare
+  // `Allow: /`), which our conservative parser reads as a full block — gating
+  // the API call on it would break every VenuePilot venue. The HTML cascade
+  // (lib/fetcher.ts) still honors robots.txt for the pages it scrapes. See #1016
+  // for the optional robots-parser Allow-directive correctness follow-up.
 
   const startDate = todayInTimezone(venue.timezone, venue.id)
   const startedAt = Date.now()

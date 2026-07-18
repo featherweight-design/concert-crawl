@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import path from 'path'
-import { isAllowed } from '../robots.js'
 import { CrawlFetchError } from '../fetcher.js'
 import {
   venuePilotFetcher,
@@ -10,14 +9,6 @@ import {
   VenuePilotSchemaError,
 } from './venuepilot.js'
 import type { Venue } from '@concert-crawl/db'
-
-// Mock the robots helper so fetch tests don't issue a real robots.txt request
-// (which would otherwise consume a fetch call and leak the module-level cache
-// across tests). Defaults to allowed; gate tests override per-case.
-vi.mock('../robots.js', () => ({
-  isAllowed: vi.fn(async () => true),
-}))
-const isAllowedMock = vi.mocked(isAllowed)
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -130,7 +121,6 @@ describe('venuePilotFetcher.fetch', () => {
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(globalThis, 'fetch')
-    isAllowedMock.mockResolvedValue(true)
   })
   afterEach(() => {
     fetchSpy.mockRestore()
@@ -511,27 +501,23 @@ describe('venuePilotFetcher.fetch', () => {
     },
   )
 
-  it('throws VenuePilotFetchError and issues no GraphQL request when robots.txt disallows', async () => {
-    isAllowedMock.mockResolvedValue(false)
-    mockFetchOk(LEVITT_FIXTURE)
-    await expect(
-      venuePilotFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
-    ).rejects.toBeInstanceOf(VenuePilotFetchError)
-    expect(isAllowedMock).toHaveBeenCalledWith(
-      'https://www.venuepilot.co/graphql',
-      'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
-    )
-    expect(fetchSpy).not.toHaveBeenCalled()
-  })
-
-  it('proceeds with the fetch when robots.txt allows', async () => {
-    isAllowedMock.mockResolvedValue(true)
+  // The VenuePilot GraphQL API is a venue-authorized first-party integration,
+  // not a page we spider, so it is intentionally exempt from the robots.txt
+  // gate (see venuepilot.ts). Assert we hit the API directly and never issue a
+  // robots.txt request for it.
+  it('fetches the API directly without a robots.txt request', async () => {
     mockFetchOk(LEVITT_FIXTURE)
     const result = await venuePilotFetcher.fetch(makeVenue(), {
       crawlDelayMs: 0,
     })
     expect(result.events.length).toBeGreaterThan(0)
     expect(fetchSpy).toHaveBeenCalledOnce()
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://www.venuepilot.co/graphql',
+      expect.objectContaining({ method: 'POST' }),
+    )
+    const requestedUrls = fetchSpy.mock.calls.map((call) => call[0])
+    expect(requestedUrls).not.toContain('https://www.venuepilot.co/robots.txt')
   })
 
   it('loops pages up to metadata.totalPages and concatenates', async () => {
