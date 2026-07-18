@@ -238,11 +238,7 @@ describe('isPurgeEligible (guard re-check at purge time)', () => {
 describe('purgeFollowsWhere (E9 — spotify rows survive the purge)', () => {
   it('scopes the follows delete to userId AND source = manual', () => {
     const dialect = new PgDialect()
-    const condition = purgeFollowsWhere('user_1')
-    if (condition === undefined) {
-      throw new Error('expected a defined where clause')
-    }
-    const query = dialect.sqlToQuery(condition)
+    const query = dialect.sqlToQuery(purgeFollowsWhere('user_1'))
     expect(query.sql).toContain('"user_artist_follows"."user_id"')
     expect(query.sql).toContain('"user_artist_follows"."source"')
     // Order-insensitive: Drizzle's param ordering is an internal detail.
