@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const { publicGet, authGet } = vi.hoisted(() => ({
   publicGet: vi.fn(),
@@ -28,6 +28,11 @@ describe('fetchPublicRead', () => {
   beforeEach(() => {
     publicGet.mockReset()
     authGet.mockReset()
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('returns the anonymous response when the public read succeeds', async () => {
@@ -35,6 +40,7 @@ describe('fetchPublicRead', () => {
     const result = await fetchPublicRead('/v1/events', async () => 'tok')
     expect(result).toEqual({ ok: true })
     expect(authGet).not.toHaveBeenCalled()
+    expect(console.error).not.toHaveBeenCalled()
   })
 
   it('falls back to an authenticated read on 401 (beta auth gating)', async () => {
@@ -43,21 +49,24 @@ describe('fetchPublicRead', () => {
     const result = await fetchPublicRead('/v1/events', async () => 'tok')
     expect(result).toEqual({ ok: true, authed: true })
     expect(authGet).toHaveBeenCalledWith('/v1/events', 'tok')
+    expect(console.error).not.toHaveBeenCalled()
   })
 
-  it('rethrows a 401 when no token is available', async () => {
+  it('logs and rethrows a 401 when no token is available', async () => {
     publicGet.mockRejectedValue(new ApiError(401, 'Unauthorized'))
     await expect(
       fetchPublicRead('/v1/events', async () => null),
     ).rejects.toBeInstanceOf(ApiError)
     expect(authGet).not.toHaveBeenCalled()
+    expect(console.error).toHaveBeenCalledOnce()
   })
 
-  it('rethrows non-401 errors without retrying', async () => {
+  it('logs and rethrows non-401 errors without retrying', async () => {
     publicGet.mockRejectedValue(new ApiError(500, 'Server error'))
     await expect(
       fetchPublicRead('/v1/events', async () => 'tok'),
     ).rejects.toBeInstanceOf(ApiError)
     expect(authGet).not.toHaveBeenCalled()
+    expect(console.error).toHaveBeenCalledOnce()
   })
 })

@@ -19,6 +19,7 @@ export async function fetchPublicRead<T>(
       const token = await getToken()
       if (token) return apiClient.get<T>(path, token)
     }
+    console.error(`fetchPublicRead failed for ${path}`, err)
     throw err
   }
 }
