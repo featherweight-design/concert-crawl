@@ -1,3 +1,12 @@
+## [1.131.3](https://github.com/HartiganHM/concert-crawl/compare/v1.131.2...v1.131.3) (2026-07-18)
+
+
+### Bug Fixes
+
+* **crawler:** address Copilot R1 — clarify exemption rationale + robust test URL check ([0f9d8ee](https://github.com/HartiganHM/concert-crawl/commit/0f9d8eef0ef2f981a0d06e5d2f267bc716126d89))
+* **crawler:** exempt VenuePilot API from robots.txt gate ([983e6f4](https://github.com/HartiganHM/concert-crawl/commit/983e6f41cad1faebb5fab8dca3c384200accaa76)), closes [#1016](https://github.com/HartiganHM/concert-crawl/issues/1016)
+* dedupe headliner from openers in JSON-LD extractor ([#643](https://github.com/HartiganHM/concert-crawl/issues/643)) ([#1025](https://github.com/HartiganHM/concert-crawl/issues/1025)) ([38e76c2](https://github.com/HartiganHM/concert-crawl/commit/38e76c2383ad12c8bdebad8eea244b28c3264b31)), closes [#1004](https://github.com/HartiganHM/concert-crawl/issues/1004)
+
 ## [1.131.2](https://github.com/HartiganHM/concert-crawl/compare/v1.131.1...v1.131.2) (2026-07-18)
 
 
