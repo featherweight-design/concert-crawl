@@ -97,10 +97,12 @@ export function canonicalizeArtist(artist: string): string {
 
 /**
  * canonicalizeArtist applied element-wise to a supporting-artists array —
- * deduped, with empty-string results dropped. Backs the
+ * deduped, sorted, with empty-string results dropped. Backs the
  * events.canonical_supporting column (#763): the equality-match surface for
  * Spotify follow highlighting. Every writer of supporting_artists must write
- * canonical_supporting through this helper so the pair never drifts.
+ * canonical_supporting through this helper so the pair never drifts. Sorted
+ * so the stored array is deterministic regardless of upstream ordering —
+ * a re-crawl that only reorders supporting artists causes no DB churn.
  */
 export function canonicalizeSupporting(artists: string[]): string[] {
   const seen = new Set<string>()
@@ -110,5 +112,5 @@ export function canonicalizeSupporting(artists: string[]): string[] {
       seen.add(canonical)
     }
   }
-  return [...seen]
+  return [...seen].sort()
 }

@@ -195,4 +195,14 @@ describe('canonicalizeSupporting', () => {
   it('returns an empty array for empty input', () => {
     expect(canonicalizeSupporting([])).toEqual([])
   })
+
+  it('sorts output so upstream reordering never changes the stored array', () => {
+    expect(canonicalizeSupporting(['Niontay', 'MIKE'])).toEqual(
+      canonicalizeSupporting(['MIKE', 'Niontay']),
+    )
+    expect(canonicalizeSupporting(['Niontay', 'MIKE'])).toEqual([
+      'mike',
+      'niontay',
+    ])
+  })
 })
