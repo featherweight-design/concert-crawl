@@ -79,9 +79,9 @@ export const ENTITLEMENTS_MATRIX: Record<
     gifted: 'visible-active',
   },
   'spotify-sync': {
-    'logged-out': 'hidden',
-    free: 'hidden',
-    supporter: 'hidden',
+    'logged-out': 'tier-picker-on-tap',
+    free: 'paywall-on-tap',
+    supporter: 'paywall-on-tap',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',
