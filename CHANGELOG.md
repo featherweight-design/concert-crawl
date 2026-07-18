@@ -1,3 +1,10 @@
+## [1.131.1](https://github.com/HartiganHM/concert-crawl/compare/v1.131.0...v1.131.1) (2026-07-18)
+
+
+### Bug Fixes
+
+* **ci:** build web workspace deps before lighthouse run ([9c0f8f9](https://github.com/HartiganHM/concert-crawl/commit/9c0f8f964e72f65e1a17e7534121c1c31ee8cb89))
+
 # [1.131.0](https://github.com/HartiganHM/concert-crawl/compare/v1.130.2...v1.131.0) (2026-07-18)
 
 
