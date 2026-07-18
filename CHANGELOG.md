@@ -1,3 +1,10 @@
+## [1.131.2](https://github.com/HartiganHM/concert-crawl/compare/v1.131.1...v1.131.2) (2026-07-18)
+
+
+### Bug Fixes
+
+* **web:** restore SVG favicon dropped by explicit metadata.icons ([#1020](https://github.com/HartiganHM/concert-crawl/issues/1020)) ([20ae19a](https://github.com/HartiganHM/concert-crawl/commit/20ae19ade59dead812eba83389b5def3e13977e8)), closes [#1015](https://github.com/HartiganHM/concert-crawl/issues/1015)
+
 ## [1.131.1](https://github.com/HartiganHM/concert-crawl/compare/v1.131.0...v1.131.1) (2026-07-18)
 
 
