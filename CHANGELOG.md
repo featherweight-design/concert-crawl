@@ -1,3 +1,15 @@
+# [1.132.0](https://github.com/HartiganHM/concert-crawl/compare/v1.131.6...v1.132.0) (2026-07-18)
+
+
+### Bug Fixes
+
+* **pwa:** match app icons to locked ClusterPath mark ([#1035](https://github.com/HartiganHM/concert-crawl/issues/1035)) ([1714b93](https://github.com/HartiganHM/concert-crawl/commit/1714b93adada4df9e05ac8d939cccadadb8d418c))
+
+
+### Features
+
+* **cal:** "Back to Today" surface button ([#1006](https://github.com/HartiganHM/concert-crawl/issues/1006)) ([#1034](https://github.com/HartiganHM/concert-crawl/issues/1034)) ([c900997](https://github.com/HartiganHM/concert-crawl/commit/c900997cb468c614908f876d7f7196f50f11bbb1))
+
 ## [1.131.6](https://github.com/HartiganHM/concert-crawl/compare/v1.131.5...v1.131.6) (2026-07-18)
 
 
