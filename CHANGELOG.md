@@ -1,3 +1,27 @@
+# [1.134.0](https://github.com/HartiganHM/concert-crawl/compare/v1.133.0...v1.134.0) (2026-07-18)
+
+
+### Bug Fixes
+
+* **api:** return non-optional SQL from purgeFollowsWhere (Copilot round 4) ([cb232f0](https://github.com/HartiganHM/concert-crawl/commit/cb232f0a9432d349c5df4d3912aa7b197e7ffa5c))
+* **billing:** scope 90-day follow purge to source='manual' ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) E9) ([4bbbb36](https://github.com/HartiganHM/concert-crawl/commit/4bbbb369e4ff2a294ab270d0463f7a4c787683b6))
+* **crawler:** sort canonicalizeSupporting output for deterministic storage (Copilot round 2) ([fd73cbc](https://github.com/HartiganHM/concert-crawl/commit/fd73cbcb9d12e386f22549f4fc1359f2b420992d))
+* import canonical helpers via relative source path in backfill helpers (Copilot round 6) ([d5d7048](https://github.com/HartiganHM/concert-crawl/commit/d5d7048371a8076cab08578a787ecf6b7211f772))
+* **scripts:** address Copilot round 1 — drop dead undefined guard, scan all follow rows in backfill ([954ee4e](https://github.com/HartiganHM/concert-crawl/commit/954ee4e699c6a234eedf908ecd2717880176de8d))
+* **scripts:** guard events backfill update with IS NULL re-check (Copilot round 3) ([3d5199e](https://github.com/HartiganHM/concert-crawl/commit/3d5199e828674c02ef2be59ab5f96fcde8e64b17))
+* **web:** stack settings profile hero vertically at mobile width ([#1042](https://github.com/HartiganHM/concert-crawl/issues/1042)) ([cbf5bbf](https://github.com/HartiganHM/concert-crawl/commit/cbf5bbf6d60999f1978db94366e829ac9af9ffca)), closes [#1023](https://github.com/HartiganHM/concert-crawl/issues/1023)
+
+
+### Features
+
+* **crawler:** write events.canonical_supporting on every supporting_artists write ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 1) ([ab4d0ff](https://github.com/HartiganHM/concert-crawl/commit/ab4d0ff8b4aa9a8a07df01be9b9cd58647b48492))
+* **db:** add events.canonical_supporting with GIN index ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 1) ([ab81c73](https://github.com/HartiganHM/concert-crawl/commit/ab81c73650f433be3daf41c5f21c41f428e1f829))
+* **db:** add user_profiles.spotify_nudge_seen_at ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 1) ([0b4b5d0](https://github.com/HartiganHM/concert-crawl/commit/0b4b5d0edf84f4a52335e0bd132c2af403a4ea52))
+* **db:** add user_spotify_connections, push_subscriptions, spotify_alert_log tables ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 1) ([336ff7f](https://github.com/HartiganHM/concert-crawl/commit/336ff7f3206923548dd47295fd154a10fbef9cbd))
+* **db:** extend user_artist_follows with source/canonical_name/rank/last_synced_at ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 1) ([6f6d1a0](https://github.com/HartiganHM/concert-crawl/commit/6f6d1a0fbd163ffdb55850d344f7cf971c766377))
+* **db:** migration 0051 — spotify sync schema expansion ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 1) ([b4b9ec4](https://github.com/HartiganHM/concert-crawl/commit/b4b9ec4fbefa6cdb3c14d68c85417826c43dbba8))
+* **scripts:** canonical_name + canonical_supporting backfills ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 1) ([4c7b92e](https://github.com/HartiganHM/concert-crawl/commit/4c7b92e95d50812e5255b07b2892c0fe6d0c529d))
+
 # [1.133.0](https://github.com/HartiganHM/concert-crawl/compare/v1.132.1...v1.133.0) (2026-07-18)
 
 
