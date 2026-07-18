@@ -337,6 +337,11 @@ describe('spotify sync schema (eng spec §4, PR 1)', () => {
     expect(spotifyAlertLog.eventId.notNull).toBe(true)
   })
 
+  it('events gains canonical_supporting text[] (nullable)', () => {
+    expect(events.canonicalSupporting).toBeDefined()
+    expect(events.canonicalSupporting.notNull).toBe(false)
+  })
+
   it('artist_follow_source enum has exactly the spec values', () => {
     expect(artistFollowSourceEnum.enumValues).toEqual([
       'manual',

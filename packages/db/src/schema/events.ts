@@ -111,6 +111,11 @@ export const events = pgTable(
     // packages/crawler-core/src/lib/canonical-title.ts for the rules and
     // migration 0044 for the partial UNIQUE index swap (#821).
     canonicalTitle: text('canonical_title').notNull().default(''),
+    // canonicalizeArtist() applied element-wise to supportingArtists —
+    // the equality-match surface for Spotify follow highlighting (#763).
+    // Written by the crawler wherever supporting_artists is written;
+    // backfilled by scripts/2026-07-18-events-canonical-supporting-backfill.ts.
+    canonicalSupporting: text('canonical_supporting').array(),
     // Stale-event detection (issue #607). lastSeenAt is bumped to NOW() on
     // every successful crawl run that returns this event row. firstMissingAt
     // is set to NOW() on the first successful crawl that *should* have
@@ -144,6 +149,10 @@ export const events = pgTable(
     ),
     canonicalTitleIdx: index('events_canonical_title_idx').on(
       table.canonicalTitle,
+    ),
+    canonicalSupportingIdx: index('events_canonical_supporting_idx').using(
+      'gin',
+      table.canonicalSupporting,
     ),
     // Partial UNIQUE on (venue_id, date, canonical_title) WHERE
     // status='upcoming' — backs the crawler's ON CONFLICT target. Replaces
