@@ -12,7 +12,7 @@
 
 - Spec source of truth: `docs/superpowers/specs/2026-07-18-spotify-sync-eng-spec.md` §4 (schema) + E9 (purge scope). Spec wins over this plan on conflict.
 - Expand-only migration — no drops, no type changes, all new columns nullable or defaulted.
-- Migration journal: latest entry is idx=51 (`0051_user_cred`), `when`=1784592000000 — main landed 0051 mid-review, so this PR ships idx=52. The generated entry's `when` MUST exceed it (drizzle-kit uses current epoch ms — verify anyway).
+- Migration journal: latest entry is idx=52 (`0052_crawl_triggers_force`), `when`=1784678400000 — main landed 0051 and 0052 mid-review, so this PR ships idx=53. The generated entry's `when` MUST exceed it (drizzle-kit uses current epoch ms — verify anyway).
 - Canonicalization logic exists ONLY in JS (`canonicalizeArtist`, `packages/crawler-core/src/lib/canonical-artist.ts:63`). No SQL copy (Ø/ø parity rule).
 - Backfill scripts: repo-root `scripts/` following the `2026-07-11-gifted-comps-backfill.ts` pattern (helpers file + test + dry-run default + `--commit` flag + CLI entrypoint guard). The spec's `packages/db/src/scripts/` location is overridden: scripts need `canonicalizeArtist` from `@concert-crawl/crawler-core`, and crawler-core depends on db — importing it from inside packages/db would create a workspace cycle. Repo-root scripts import both packages today; note this deviation in the PR body.
 - ESLint `id-length` ≥2 (`err`, `ctx`, `idx`); TypeScript strict; no `as` casts.
@@ -29,7 +29,7 @@
 - Modify: `packages/db/src/schema/user-profiles.ts` — `spotifyNudgeSeenAt`
 - Modify: `packages/db/src/schema/index.ts` — export `./spotify.js`
 - Modify: `packages/db/src/schema.test.ts` — new `describe` block, spec-lockstep assertions
-- Create: `packages/db/migrations/0052_*.sql` + journal entry (drizzle-kit generate)
+- Create: `packages/db/migrations/0053_*.sql` + journal entry (drizzle-kit generate)
 - Modify: `apps/api/src/jobs/billing-daily.ts:684-687` — purge scoped to `source = 'manual'`
 - Modify: `apps/api/src/jobs/billing-daily.test.ts` — regression test for the scope
 - Modify: `packages/crawler-core/src/crawl.ts:524,636,~718` — compute + write `canonicalSupporting`
@@ -413,13 +413,13 @@ it('user_profiles gains spotifyNudgeSeenAt (nullable)', () => {
 
 **Files:**
 
-- Create: `packages/db/migrations/0052_*.sql` + journal entry (hand-written — no snapshot, see Task 5 note)
+- Create: `packages/db/migrations/0053_*.sql` + journal entry (hand-written — no snapshot, see Task 5 note)
 
 - [ ] **Step 1:** `pnpm --filter @concert-crawl/db exec drizzle-kit generate` (check `packages/db/package.json` for the exact script name — likely `pnpm db:generate` at root).
 - [ ] **Step 2: Inspect the SQL** — must contain ONLY: 2 `CREATE TYPE`, 3 `CREATE TABLE`, `ALTER TABLE` ADD COLUMN statements for events/user_artist_follows/user_profiles, and `CREATE [UNIQUE] INDEX` statements including `USING gin`. NO drops, NO alters of existing columns. If drizzle-kit didn't emit the GIN index (Task 3 fallback), append the raw `CREATE INDEX ... USING gin` line to the same migration file — do NOT hand-edit the journal.
-- [ ] **Step 3: Verify journal** — `tail packages/db/migrations/meta/_journal.json`: new entry idx=52, `when` > 1784592000000.
+- [ ] **Step 3: Verify journal** — `tail packages/db/migrations/meta/_journal.json`: new entry idx=53, `when` > 1784678400000.
 - [ ] **Step 4: Apply locally** — `pnpm db:migrate` against local Docker Postgres; expect success. Then confirm: `docker exec -it concert-crawl-db psql -U postgres -d concert_crawl_db -c "\d user_artist_follows"` shows the new columns.
-- [ ] **Step 5: Commit** — `git add packages/db/migrations && git commit -m "feat(db): migration 0052 — spotify sync schema expansion (#763 PR 1)"`
+- [ ] **Step 5: Commit** — `git add packages/db/migrations && git commit -m "feat(db): migration 0053 — spotify sync schema expansion (#763 PR 1)"`
 
 ---
 
@@ -651,7 +651,7 @@ export function planSupportingBackfill(
 - [ ] **Step 1:** Full local gate in the worktree: `pnpm typecheck && pnpm lint && pnpm test`.
 - [ ] **Step 2:** Commit this plan doc (`docs/superpowers/plans/2026-07-18-763-pr1-schema-backfills.md`) if not already committed.
 - [ ] **Step 3:** `git fetch origin && git rebase origin/main`, re-run tests if rebase pulled changes, push (plain unless rebase rewrote).
-- [ ] **Step 4:** Open PR (template; `Closes` nothing — #763 closes at PR 11; reference `#763 PR 1/11`). Body notes: expand-only migration 0052, script-location deviation from spec (workspace-cycle rationale), staging backfill = notify-and-proceed, prod backfill + prod migration = Hugh approval. No new env vars. No releases.ts / progress.md row (customer-invisible groundwork).
+- [ ] **Step 4:** Open PR (template; `Closes` nothing — #763 closes at PR 11; reference `#763 PR 1/11`). Body notes: expand-only migration 0053, script-location deviation from spec (workspace-cycle rationale), staging backfill = notify-and-proceed, prod backfill + prod migration = Hugh approval. No new env vars. No releases.ts / progress.md row (customer-invisible groundwork).
 - [ ] **Step 5:** `./scripts/request-copilot-review.sh <pr>` → full canonical review loop → merge at the bar → verify staging+prod deploy workflows ran → run staging migration/backfills (notify-and-proceed, capture counts) → HARD PAUSE before any prod backfill → `pnpm worktree:prune feat/763-spotify-schema` → update pickup memory.
 
 ---

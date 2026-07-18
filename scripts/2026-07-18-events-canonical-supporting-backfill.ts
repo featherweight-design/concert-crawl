@@ -2,7 +2,7 @@
  * Concert Crawl — one-time events.canonical_supporting backfill
  * (#763 PR 1, eng spec §4).
  *
- * Migration 0052 adds nullable `canonical_supporting` text[]; the crawler
+ * Migration 0053 adds nullable `canonical_supporting` text[]; the crawler
  * now writes it in lock-step with `supporting_artists` on every upsert.
  * This script covers the historical rows: every event with a non-NULL
  * supporting_artists but a still-NULL canonical_supporting gets
@@ -12,7 +12,7 @@
  * Canonicalization lives ONLY in JS (@concert-crawl/crawler-core) — this
  * script never re-implements the transform in SQL (Ø/ø parity rule).
  *
- * Usage (after migration 0052 has been applied to the target DB):
+ * Usage (after migration 0053 has been applied to the target DB):
  *
  *   Dry run (default — lists planned updates, writes nothing):
  *     DATABASE_URL=... tsx scripts/2026-07-18-events-canonical-supporting-backfill.ts
@@ -25,7 +25,7 @@
  *
  * Idempotent: only rows where canonical_supporting IS NULL are selected, and
  * the write always produces a non-NULL array (possibly []), so a re-run
- * plans 0 updates. Rows the crawler has already touched post-0052 are
+ * plans 0 updates. Rows the crawler has already touched post-0053 are
  * skipped for the same reason — the script never fights fresher crawler
  * writes.
  */
