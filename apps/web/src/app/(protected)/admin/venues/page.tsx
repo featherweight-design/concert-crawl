@@ -84,7 +84,16 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
         }
       />
 
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* Stat row — matches Admin > Crawl: auto-fit lays out one 180px-min
+          column per card as the container allows (single column at 320px, up to
+          one track per StatCard on wide screens) and collapses empty tracks */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 16,
+        }}
+      >
         <StatCard
           label={ADMIN_COPY.venuesPage.stats.totalVenues}
           value={String(venues.length)}

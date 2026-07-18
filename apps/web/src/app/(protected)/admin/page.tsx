@@ -300,8 +300,16 @@ export default async function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Stat row */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* Stat row — matches Admin > Crawl: auto-fit lays out one 180px-min
+          column per card as the container allows (single column at 320px, up to
+          one track per StatCard on wide screens) and collapses empty tracks */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+          gap: 16,
+        }}
+      >
         {/* Needs review */}
         <StatCard
           label={ADMIN_COPY.dashboard.statCards.needsReview}
