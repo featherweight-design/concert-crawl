@@ -28,7 +28,10 @@ import {
   detectCrossVenuePresale,
   type CrossVenueCandidate,
 } from './lib/cross-venue-filter.js'
-import { canonicalizeArtist } from './lib/canonical-artist.js'
+import {
+  canonicalizeArtist,
+  canonicalizeSupporting,
+} from './lib/canonical-artist.js'
 import { canonicalizeTitle } from './lib/canonical-title.js'
 import { hashPage, hashEvent } from './lib/hash.js'
 import { deriveTicketLinks } from './lib/ticket-links/index.js'
@@ -530,6 +533,9 @@ export async function crawlVenue(
         .map((event) => ({
           ...event,
           canonicalArtist: canonicalizeArtist(event.artist),
+          canonicalSupporting: canonicalizeSupporting(
+            event.supportingArtists ?? [],
+          ),
           canonicalTitle: canonicalizeTitle(event.title),
           sourceHash: hashEvent({
             title: event.title,
@@ -648,6 +654,11 @@ export async function crawlVenue(
             title: event.title,
             artist: event.artist,
             supportingArtists: event.supportingArtists ?? [],
+            // Lock-step pair with supportingArtists (#763): computed via
+            // canonicalizeSupporting in the enrichment map above. Any code
+            // path that writes supporting_artists MUST also write
+            // canonical_supporting.
+            canonicalSupporting: event.canonicalSupporting,
             tourName: event.tourName ?? null,
             canonicalArtist: event.canonicalArtist,
             canonicalTitle: event.canonicalTitle,
@@ -733,6 +744,7 @@ export async function crawlVenue(
               // stays. Otherwise the field flips between extractions
               // ("BPM BINGO!" one day, "Dombresky" the next).
               supportingArtists: sql`excluded.supporting_artists`,
+              canonicalSupporting: sql`excluded.canonical_supporting`,
               tourName: sql`excluded.tour_name`,
               doorsTime: sql`excluded.doors_time`,
               showTime: sql`excluded.show_time`,

@@ -5,7 +5,10 @@ export type { FetchResult } from './lib/fetcher.js'
 export { extractJsonLd } from './lib/extractors/json-ld.js'
 export { extractWithLlm, IS_CONCERT_RULES } from './lib/extractors/llm.js'
 export { calculateCost } from './lib/cost.js'
-export { canonicalizeArtist } from './lib/canonical-artist.js'
+export {
+  canonicalizeArtist,
+  canonicalizeSupporting,
+} from './lib/canonical-artist.js'
 export { crawlVenue } from './crawl.js'
 export { tagEventsWithGenres } from './lib/genre-tagger.js'
 export type { GenreTagInput } from './lib/genre-tagger.js'

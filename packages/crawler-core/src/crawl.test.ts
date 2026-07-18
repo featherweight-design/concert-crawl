@@ -312,6 +312,58 @@ describe('crawlVenue — page-level skip', () => {
   })
 })
 
+describe('crawlVenue — canonical_supporting writes (#763)', () => {
+  it('writes canonical_supporting alongside supporting_artists — canonicalized, deduped, empty-filtered', async () => {
+    const venue = seedVenue()
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          ...METALLICA_EVENT,
+          supportingArtists: ['MIKE', 'Niontay & Friends', 'MIKE'],
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const insertedEvent = stores.events.find(
+      (row: { venueId: string }) => row.venueId === venue.id,
+    )
+    expect(insertedEvent?.supportingArtists).toEqual([
+      'MIKE',
+      'Niontay & Friends',
+      'MIKE',
+    ])
+    expect(insertedEvent?.canonicalSupporting).toEqual(['mike', 'niontay'])
+  })
+
+  it('writes an empty canonical_supporting when there are no supporting artists', async () => {
+    const venue = seedVenue()
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const insertedEvent = stores.events.find(
+      (row: { venueId: string }) => row.venueId === venue.id,
+    )
+    expect(insertedEvent?.canonicalSupporting).toEqual([])
+  })
+})
+
 describe('crawlVenue — ticketLinks derivation', () => {
   it('emits a boxoffice TicketLink when the ticketUrl host matches the venue host', async () => {
     // METALLICA_EVENT.ticketUrl is 'https://test-venue.example.com/tickets',

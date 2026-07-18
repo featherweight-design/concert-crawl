@@ -94,3 +94,21 @@ export function canonicalizeArtist(artist: string): string {
 
   return firstSegment.trim()
 }
+
+/**
+ * canonicalizeArtist applied element-wise to a supporting-artists array —
+ * deduped, with empty-string results dropped. Backs the
+ * events.canonical_supporting column (#763): the equality-match surface for
+ * Spotify follow highlighting. Every writer of supporting_artists must write
+ * canonical_supporting through this helper so the pair never drifts.
+ */
+export function canonicalizeSupporting(artists: string[]): string[] {
+  const seen = new Set<string>()
+  for (const artist of artists) {
+    const canonical = canonicalizeArtist(artist)
+    if (canonical !== '') {
+      seen.add(canonical)
+    }
+  }
+  return [...seen]
+}

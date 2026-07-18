@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { canonicalizeArtist } from './canonical-artist.js'
+import {
+  canonicalizeArtist,
+  canonicalizeSupporting,
+} from './canonical-artist.js'
 
 describe('canonicalizeArtist', () => {
   describe('basic transformations', () => {
@@ -169,4 +172,27 @@ describe('canonicalizeArtist', () => {
   it.todo(
     'known false positive: "Earth, Wind & Fire" canonicalizes to "earth, wind"',
   )
+})
+
+describe('canonicalizeSupporting', () => {
+  it('canonicalizes each supporting artist element-wise', () => {
+    expect(canonicalizeSupporting(['MIKE', 'Niontay & Friends'])).toEqual([
+      'mike',
+      'niontay',
+    ])
+  })
+
+  it('dedupes entries that canonicalize to the same value', () => {
+    expect(
+      canonicalizeSupporting(['MIKE', 'Niontay & Friends', 'MIKE w/ band']),
+    ).toEqual(['mike', 'niontay'])
+  })
+
+  it('drops entries that canonicalize to empty string', () => {
+    expect(canonicalizeSupporting(['   ', 'MIKE', ''])).toEqual(['mike'])
+  })
+
+  it('returns an empty array for empty input', () => {
+    expect(canonicalizeSupporting([])).toEqual([])
+  })
 })
