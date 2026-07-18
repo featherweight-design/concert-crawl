@@ -1,3 +1,13 @@
+## [1.130.2](https://github.com/HartiganHM/concert-crawl/compare/v1.130.1...v1.130.2) (2026-07-18)
+
+
+### Bug Fixes
+
+* **admin:** guard crawl-trigger poll against post-unmount state updates ([52d025b](https://github.com/HartiganHM/concert-crawl/commit/52d025b2d05c25f417b3a01a3c27b7819188849c))
+* **admin:** guard remaining post-await state updates; use POLL_INTERVAL_MS in tests ([aeb5a31](https://github.com/HartiganHM/concert-crawl/commit/aeb5a3124475ee2ed768875734e9abd8134ac968))
+* **admin:** poll crawl trigger before fetching run in Run crawl now ([9d103c9](https://github.com/HartiganHM/concert-crawl/commit/9d103c98411b68682b44cbb381ab6458c1ebebc8)), closes [#1002](https://github.com/HartiganHM/concert-crawl/issues/1002)
+* **admin:** self-scheduling poll + deterministic timer tests ([95d3e43](https://github.com/HartiganHM/concert-crawl/commit/95d3e43c96be22770dcff9853b8088c836fbc677))
+
 ## [1.130.1](https://github.com/HartiganHM/concert-crawl/compare/v1.130.0...v1.130.1) (2026-07-17)
 
 
