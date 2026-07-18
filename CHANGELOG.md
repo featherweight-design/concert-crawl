@@ -1,3 +1,25 @@
+# [1.131.0](https://github.com/HartiganHM/concert-crawl/compare/v1.130.2...v1.131.0) (2026-07-18)
+
+
+### Bug Fixes
+
+* **pwa:** detect iPadOS 13+ Safari for the install hint ([3034d37](https://github.com/HartiganHM/concert-crawl/commit/3034d378bcc6805ec7f233d4ff9a62d9e3ba0587))
+* **pwa:** fall back to authenticated reads when beta auth gating is on ([1943bdb](https://github.com/HartiganHM/concert-crawl/commit/1943bdbd41ab86f64be3f968ae1a8f8ab148732a))
+* **pwa:** fetch public event/availability reads without auth so the offline cache populates ([ea1b29e](https://github.com/HartiganHM/concert-crawl/commit/ea1b29ed5ab9f638cec9081d5ea134848bece6af))
+* **pwa:** harden SW origin parse, auth SSR availability prefetch, log auth-retry failures ([4f56517](https://github.com/HartiganHM/concert-crawl/commit/4f56517e33cff126c5fcc0a9ed37a35dfcdef6a8))
+* **pwa:** log failed public reads before rethrowing ([7e6db45](https://github.com/HartiganHM/concert-crawl/commit/7e6db456c3aac319903cbd254f92e2d2a212cbba))
+* **pwa:** match event id as UUID in public-cache allowlist ([3da8c84](https://github.com/HartiganHM/concert-crawl/commit/3da8c84c70786b9bac318d2640341db16c772cb4))
+* **pwa:** tighten public-cache allowlist to explicit read routes ([5154420](https://github.com/HartiganHM/concert-crawl/commit/51544201d0ed43963501143b40551dc68c21f379))
+
+
+### Features
+
+* **web:** add install prompt (Android/desktop + iOS hint) ([641260b](https://github.com/HartiganHM/concert-crawl/commit/641260b2d3017fed1bf7d0506d7f1f7183ad4b09))
+* **web:** add offline banner ([923b3f9](https://github.com/HartiganHM/concert-crawl/commit/923b3f9b2601af180a2c010a4cd92981d8b7e836))
+* **web:** add public-API cache allowlist helper ([af76153](https://github.com/HartiganHM/concert-crawl/commit/af76153938d203fd19dcf436506175c95a6f9ce9))
+* **web:** add useOnlineStatus hook ([b131ec6](https://github.com/HartiganHM/concert-crawl/commit/b131ec66e9899e3289755a6cc602e9673bf601a4))
+* **web:** cache public event/venue reads offline (stale-while-revalidate) ([032092d](https://github.com/HartiganHM/concert-crawl/commit/032092de84fcd6956c201150301470147f72c87a))
+
 ## [1.130.2](https://github.com/HartiganHM/concert-crawl/compare/v1.130.1...v1.130.2) (2026-07-18)
 
 
