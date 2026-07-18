@@ -20,6 +20,10 @@ import {
   emailSendLog,
   emailTemplateConfig,
   EMAIL_TEMPLATE_KEYS,
+  spotifyConnectionStatusEnum,
+  userSpotifyConnections,
+  pushSubscriptions,
+  spotifyAlertLog,
 } from './index.js'
 
 describe('database schema exports', () => {
@@ -260,5 +264,74 @@ describe('monetization schema (execution plan PR 2.1)', () => {
         'winback',
       ])
     })
+  })
+})
+
+describe('spotify sync schema (eng spec §4, PR 1)', () => {
+  it('spotify_connection_status enum has exactly the spec values', () => {
+    expect(spotifyConnectionStatusEnum.enumValues).toEqual([
+      'connected',
+      'error',
+      'revoked',
+    ])
+  })
+
+  it('user_spotify_connections has the spec §4 columns', () => {
+    expect(userSpotifyConnections).toBeDefined()
+    const columns = Object.keys(userSpotifyConnections)
+    for (const col of [
+      'id',
+      'userId',
+      'spotifyUserId',
+      'displayName',
+      'status',
+      'autoWatch',
+      'digestEnabled',
+      'pushEnabled',
+      'connectedAt',
+      'lastSyncedAt',
+      'lastSyncError',
+      'artistCount',
+    ]) {
+      expect(columns).toContain(col)
+    }
+    expect(userSpotifyConnections.userId.notNull).toBe(true)
+    expect(userSpotifyConnections.status.notNull).toBe(true)
+    expect(userSpotifyConnections.status.default).toBe('connected')
+    expect(userSpotifyConnections.autoWatch.default).toBe(false)
+    expect(userSpotifyConnections.digestEnabled.default).toBe(true)
+    expect(userSpotifyConnections.pushEnabled.default).toBe(true)
+    expect(userSpotifyConnections.artistCount.default).toBe(0)
+    expect(userSpotifyConnections.lastSyncedAt.notNull).toBe(false)
+    expect(userSpotifyConnections.lastSyncError.notNull).toBe(false)
+  })
+
+  it('push_subscriptions has the spec §4 columns', () => {
+    expect(pushSubscriptions).toBeDefined()
+    const columns = Object.keys(pushSubscriptions)
+    for (const col of [
+      'id',
+      'userId',
+      'endpoint',
+      'p256dh',
+      'auth',
+      'userAgent',
+      'createdAt',
+      'lastUsedAt',
+      'disabledAt',
+    ]) {
+      expect(columns).toContain(col)
+    }
+    expect(pushSubscriptions.endpoint.notNull).toBe(true)
+    expect(pushSubscriptions.disabledAt.notNull).toBe(false)
+  })
+
+  it('spotify_alert_log has the spec §4 columns', () => {
+    expect(spotifyAlertLog).toBeDefined()
+    const columns = Object.keys(spotifyAlertLog)
+    for (const col of ['id', 'userId', 'eventId', 'kind', 'createdAt']) {
+      expect(columns).toContain(col)
+    }
+    expect(spotifyAlertLog.eventId.notNull).toBe(true)
   })
 })
