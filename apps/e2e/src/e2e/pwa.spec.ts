@@ -7,8 +7,9 @@ test.describe('PWA', () => {
     expect(res.ok()).toBeTruthy()
     const manifest = await res.json()
     expect(manifest.display).toBe('standalone')
+    expect(Array.isArray(manifest.icons)).toBeTruthy()
     expect(
-      manifest.icons.some((icon: { purpose?: string }) =>
+      manifest.icons?.some((icon: { purpose?: string }) =>
         icon.purpose?.includes('maskable'),
       ),
     ).toBeTruthy()

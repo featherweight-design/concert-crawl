@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'apps/web/**'
+      - '.github/workflows/lighthouse-pwa.yml'
 
 permissions: read-all
 
