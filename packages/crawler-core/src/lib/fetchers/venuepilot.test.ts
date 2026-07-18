@@ -501,7 +501,7 @@ describe('venuePilotFetcher.fetch', () => {
     },
   )
 
-  // The VenuePilot GraphQL API is a venue-authorized first-party integration,
+  // The VenuePilot GraphQL API is a per-venue opt-in first-party integration,
   // not a page we spider, so it is intentionally exempt from the robots.txt
   // gate (see venuepilot.ts). Assert we hit the API directly and never issue a
   // robots.txt request for it.
@@ -516,7 +516,9 @@ describe('venuePilotFetcher.fetch', () => {
       'https://www.venuepilot.co/graphql',
       expect.objectContaining({ method: 'POST' }),
     )
-    const requestedUrls = fetchSpy.mock.calls.map((call) => call[0])
+    // fetch's first arg can be a string, URL, or Request — coerce to a string
+    // so the robots.txt assertion can't be silently bypassed by a non-string.
+    const requestedUrls = fetchSpy.mock.calls.map((call) => String(call[0]))
     expect(requestedUrls).not.toContain('https://www.venuepilot.co/robots.txt')
   })
 

@@ -351,16 +351,18 @@ async function venuePilotFetch(
   }
   const accountId = Number(rawAccountId)
 
-  // No robots.txt gate here. This is VenuePilot's documented public GraphQL
-  // API, consumed with the venue's authorization (the venue opts in by setting
-  // api_provider='venuepilot' + api_account_id), not a page we spider. robots.txt
-  // is a crawling convention for indexers of a site's HTML; it doesn't govern a
-  // first-party API integration. VenuePilot's site-wide robots.txt carries a
-  // blanket `User-agent: * / Disallow: /` (alongside a conflicting Cloudflare
-  // `Allow: /`), which our conservative parser reads as a full block — gating
-  // the API call on it would break every VenuePilot venue. The HTML cascade
-  // (lib/fetcher.ts) still honors robots.txt for the pages it scrapes. See #1016
-  // for the optional robots-parser Allow-directive correctness follow-up.
+  // No robots.txt gate here. The VenuePilot GraphQL API is an opt-in integration
+  // configured per venue (api_provider='venuepilot' + api_account_id), not a page
+  // we spider. robots.txt is a crawling convention for indexers of a site's HTML;
+  // it doesn't govern a first-party API integration. VenuePilot's site-wide
+  // robots.txt now serves a blanket block:
+  //   User-agent: *
+  //   Disallow: /
+  // (alongside a conflicting Cloudflare-injected `Allow: /`), which our
+  // conservative parser reads as a full block — gating the API call on it would
+  // break every VenuePilot venue. The HTML cascade (lib/fetcher.ts) still honors
+  // robots.txt for the pages it scrapes. See #1016 for the optional robots-parser
+  // Allow-directive correctness follow-up.
 
   const startDate = todayInTimezone(venue.timezone, venue.id)
   const startedAt = Date.now()
