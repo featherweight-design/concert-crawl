@@ -54,7 +54,9 @@ Full audit findings for each handoff live in that handoff's `READINESS.md`.
 
 Design brief has merged; Claude Design needs to produce the hi-fi handoff (mocks, components, canvas). Top of the list = closest to eng handoff (smallest remaining Design + build path).
 
-_Currently empty — #764 venue first-timer guide flipped 📐 → 🟢 on 2026-07-18; moved to 🟢 above. When a new brief locks, restore the table with columns: `Rank | Ticket | Brief PR | Path to eng handoff | Why this rank`._
+| Rank | Ticket | Brief PR | Path to eng handoff | Why this rank |
+|---|---|---|---|---|
+| 1 | **PWA cluster** (#971 + #969 + #970) — install-prompt + offline-state + web push | PR #1039 (2026-07-18) | Design → hi-fi templates for 3 consumer surfaces (install slot + iOS "Here's how" sheet + offline pill + fallback with cached shortcuts + push permission sheet + iOS-not-installed variant + Settings notifications page with master + 2 sub-toggles) → audit → per-ticket eng plans | Fresh Track 2 brainstorm (single session, 6 questions locked); 3 v2 follow-up issues filed (**#1036** device management, **#1037** new-artist push, **#1038** batching). Depends on PWA Tier B SW landing first (#968 PR2). Brief: `docs/superpowers/specs/2026-07-18-pwa-cluster-design-brief.md`. |
 
 **Maintenance note:** when Design produces the handoff, move to 🎨 (audit in flight) → then 🟡 / 🟢 based on verdict.
 
@@ -81,7 +83,6 @@ Ordered by beta-phase urgency + adjacency to already-locked verticals. Consolida
 | # | Phase | Priority | Adjacency / notes |
 |---|---|---|---|
 | **#762** Who else is watching — social signal on event detail | Beta | Normal | Adjacent to concert-history + attending vocabulary |
-| **PWA cluster** — install-prompt + offline-state + web push | Launch | High | Consolidated workstream: **#971** Web push notification stack (Tier C, Launch · High; closes consumer-notification gap in **#737**), **#969** PWA install-prompt UI polish (Launch · Normal), **#970** PWA offline-state UI polish (Launch · Normal). One brainstorm covers the shared DNA (voice, install/permission prompt patterns, on-brand offline treatment); brief PR captures shared decisions; then splits into per-ticket handoffs if surfaces diverge (#971 carries more eng infra). Priority = High (inherited from #971). Anchor context: `project_pickup_pwa_native.md` (memory). |
 | **#794** Logged-out app UX — navigation, header, browse-only shape | Launch | Normal | Adjacencies with monetization paywalls — worth pairing with eng infra work |
 
 ---
@@ -100,6 +101,8 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-18 | **PWA cluster** | Design brief merged (PR #1039) — Track 2 brainstorm through 6 questions locked with Hugh: (Q1) web-first register + splash of earned escalation for push; (Q2) install prompt = persistent header slot dismissible + iOS "Here's how" sheet; (Q3) offline = header pill + full-page fallback with cached shortcuts; (Q4) push permission = two-step contextual sheet on first watch, no auto re-asks; (Q5) push categories v1 = watch updates + price drops only (contest/admin stay in bell); (Q6) prefs = master + per-category sub-toggles at Settings → Notifications. 3 v2 follow-ups filed: **#1036** device management, **#1037** new-artist push category, **#1038** send-frequency batching. Brief covers all three tickets (#969 + #970 + #971); handoff may split into per-ticket production if surfaces diverge. |
+| 2026-07-18 | — | Tracker refresh #18 — **PWA cluster** flips 🕰️ Backlog → 📐 Brief locked (PR #1039); brief document lives at `docs/superpowers/specs/2026-07-18-pwa-cluster-design-brief.md`. Backlog workstream count 3 → 2. |
 | 2026-07-18 | — | Tracker refresh #17 — **actually consolidated** the PWA cluster into a single "PWA cluster" row in the 🕰️ Backlog (replacing three separate rows for #971 + #969 + #970). Priority = High (inherited from #971). The consolidation reflects the workflow decision from refresh #16 in the tracker's row structure itself, not just an annotation. Backlog workstream count 5 → 3; ticket count unchanged at 5. #762 still highest-value next design pull. |
 | 2026-07-18 | — | Tracker refresh #16 — annotated the 🕰️ Backlog PWA cluster (#971 · #969 · #970) with an explicit "workshop together" note per Hugh's call: the three surfaces share too much DNA (voice, install/permission prompt patterns, on-brand offline treatment) for split brainstorms. Practical shape TBD when the session starts — expected: one brainstorm → one brief PR covering shared decisions → then split into per-ticket handoffs if surfaces diverge (#971 carries more eng infrastructure than #969/#970). Backlog count unchanged at 5; #762 still the highest-value next design pull. |
 | 2026-07-18 | — | Tracker refresh #15 — drain shipped items off 🟢 Green: **#642** Calendar month/week jump picker (shipped as PR #987, 2026-07-17, closed) and **#643** Supporting artists title separator (shipped as PRs #994 data + #995 UI, 2026-07-17, closed — the 2-PR execution plan). Both had lived on Green post-verdict for less than a week before eng-planning picked them up. Green count 6 → 4; remaining eng-plan pickups: #55 concert_history, #763 Spotify, #72 shareable_cards, #764 venue guide. |
@@ -154,8 +157,9 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 ## 📋 Immediate TODOs
 
-- [ ] **4 eng plans ready for eng-planning agent:** concert_history · #763 Spotify · #72 shareable_cards + Passport · **#764** Venue first-timer guide. #763 Spotify + #72 shareable_cards + #764 venue guide are the biggest surfaces; concert_history is the smallest (teaser link only). **#642** and **#643** shipped 2026-07-17 (PRs #987 + #994 + #995); drained off Green in refresh #15. No Yellow items remaining. No Brief-locked items remaining.
-- [ ] **Backlog workstream order** (per 2026-07-18 refresh #17): #762 Who else is watching → **PWA cluster** (#971 + #969 + #970, single workstream, Launch · High) → #794 Logged-out UX. Backlog is now 3 workstreams / 5 tickets. #762 remains the highest-value next design pull.
+- [ ] **4 eng plans ready for eng-planning agent:** concert_history · #763 Spotify · #72 shareable_cards + Passport · **#764** Venue first-timer guide. #763 Spotify + #72 shareable_cards + #764 venue guide are the biggest surfaces; concert_history is the smallest (teaser link only). No Yellow items remaining.
+- [ ] **1 Brief-locked awaiting Design handoff:** **PWA cluster** (#971 + #969 + #970) — this PR (refresh #18). Design produces hi-fi handoff covering 3 consumer surfaces (install slot + iOS sheet, offline pill + fallback with cached shortcuts, push permission sheet + iOS-not-installed variant + Settings notifications page). May split into per-ticket handoffs if surfaces diverge. Depends on PWA Tier B SW landing first (#968 PR2).
+- [ ] **Backlog workstream order** (per 2026-07-18 refresh #18): #762 Who else is watching → #794 Logged-out UX. Backlog is now 2 workstreams. #762 remains the highest-value next design pull.
 
 ---
 
