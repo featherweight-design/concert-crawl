@@ -34,8 +34,16 @@ test.describe('PWA', () => {
     await page.goto('/')
     await page.evaluate(() => navigator.serviceWorker.ready)
     await context.setOffline(true)
-    await page.goto('/a-path-that-was-never-cached')
-    await expect(page.getByRole('heading', { name: /offline/i })).toBeVisible()
-    await context.setOffline(false)
+    // finally guarantees the context is restored even if the offline
+    // navigation throws, so a failure here can't leave the worker offline
+    // and flake unrelated tests.
+    try {
+      await page.goto('/a-path-that-was-never-cached')
+      await expect(
+        page.getByRole('heading', { name: /offline/i }),
+      ).toBeVisible()
+    } finally {
+      await context.setOffline(false)
+    }
   })
 })
