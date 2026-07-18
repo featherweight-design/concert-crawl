@@ -245,7 +245,9 @@ describe('purgeFollowsWhere (E9 — spotify rows survive the purge)', () => {
     const query = dialect.sqlToQuery(condition)
     expect(query.sql).toContain('"user_artist_follows"."user_id"')
     expect(query.sql).toContain('"user_artist_follows"."source"')
-    expect(query.params).toEqual(['user_1', 'manual'])
+    // Order-insensitive: Drizzle's param ordering is an internal detail.
+    expect(query.params).toHaveLength(2)
+    expect(query.params).toEqual(expect.arrayContaining(['user_1', 'manual']))
   })
 })
 

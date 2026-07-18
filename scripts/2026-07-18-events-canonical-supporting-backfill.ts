@@ -95,14 +95,23 @@ export async function runBackfill(opts: {
     }
   }
 
-  // 3. --commit path: per-row updates keyed by primary key.
+  // 3. --commit path: per-row updates keyed by primary key, with an
+  //    optimistic IS NULL re-check so a crawler write landing between the
+  //    scan and this update is never clobbered.
   let updatedCount = 0
   for (const update of updates) {
-    await db
+    const updated = await db
       .update(events)
       .set({ canonicalSupporting: update.canonicalSupporting })
-      .where(eq(events.id, update.id))
-    updatedCount += 1
+      .where(and(eq(events.id, update.id), isNull(events.canonicalSupporting)))
+      .returning({ id: events.id })
+    if (updated.length > 0) {
+      updatedCount += 1
+    } else {
+      console.log(
+        `Skipped ${update.id} — canonical_supporting written since scan`,
+      )
+    }
   }
 
   console.log('---')
