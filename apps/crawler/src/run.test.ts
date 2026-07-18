@@ -411,8 +411,8 @@ describe('runDailyCrawl', () => {
 
 describe('runTriggeredCrawls', () => {
   const mockTriggers = [
-    { id: 'trigger-1', venueId: 'venue-a' },
-    { id: 'trigger-2', venueId: 'venue-b' },
+    { id: 'trigger-1', venueId: 'venue-a', force: false },
+    { id: 'trigger-2', venueId: 'venue-b', force: false },
   ]
 
   beforeEach(() => {
@@ -458,12 +458,14 @@ describe('runTriggeredCrawls', () => {
       browser,
       undefined,
       expect.any(Array),
+      false,
     )
     expect(mockCrawlVenue).toHaveBeenCalledWith(
       'venue-b',
       browser,
       undefined,
       expect.any(Array),
+      false,
     )
   })
 

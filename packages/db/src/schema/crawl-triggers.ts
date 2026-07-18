@@ -1,4 +1,11 @@
-import { pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
+import {
+  boolean,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core'
 import { venues } from './venues.js'
 
 export const crawlTriggerStatusEnum = pgEnum('crawl_trigger_status', [
@@ -14,6 +21,12 @@ export const crawlTriggers = pgTable('crawl_triggers', {
     .notNull()
     .references(() => venues.id, { onDelete: 'cascade' }),
   status: crawlTriggerStatusEnum('status').notNull().default('pending'),
+  // When true, the crawler ignores both hash-skip short-circuits (venue-level
+  // page hash and per-event source hash) and re-extracts + re-upserts every
+  // event. Used to reprocess legacy rows (e.g. backfilling supportingArtists)
+  // whose listings haven't changed. Default false keeps normal + scheduled
+  // crawls on the cost-saving skip path.
+  force: boolean('force').notNull().default(false),
   crawlRunId: uuid('crawl_run_id'),
   triggeredBy: text('triggered_by'),
   createdAt: timestamp('created_at', { withTimezone: true })

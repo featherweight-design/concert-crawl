@@ -74,7 +74,11 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
     .update(crawlTriggers)
     .set({ status: 'processing', updatedAt: new Date() })
     .where(eq(crawlTriggers.status, 'pending'))
-    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId })
+    .returning({
+      id: crawlTriggers.id,
+      venueId: crawlTriggers.venueId,
+      force: crawlTriggers.force,
+    })
 
   if (claimed.length === 0) {
     logger.info('No pending crawl triggers')
@@ -113,6 +117,7 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
           browser,
           undefined,
           crossVenueCandidates,
+          trigger.force,
         )
         if (crawlRun.status === 'failed') {
           Sentry.captureException(

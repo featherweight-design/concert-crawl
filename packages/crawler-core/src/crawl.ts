@@ -174,6 +174,13 @@ export async function crawlVenue(
   browser: Browser,
   crawlRunId?: string,
   crossVenueCandidates: CrossVenueCandidate[] = [],
+  // When true, both hash-skip short-circuits are bypassed: the venue-level
+  // page-hash skip never fires, and every extracted event is re-upserted even
+  // if its source hash is unchanged. Used to reprocess legacy rows whose
+  // listings are byte-identical to the last crawl (e.g. backfilling
+  // supportingArtists). Default false preserves the cost-saving skip path for
+  // normal + scheduled crawls.
+  force = false,
 ): Promise<CrawlRun> {
   const id = crawlRunId ?? crypto.randomUUID()
   const startedAt = Date.now()
@@ -372,6 +379,7 @@ export async function crawlVenue(
         .limit(1)
 
       if (
+        !force &&
         lastRun?.pageHash !== undefined &&
         lastRun.pageHash !== null &&
         lastRun.pageHash === pageHash
@@ -609,14 +617,22 @@ export async function crawlVenue(
         })
       }
 
-      // Only upsert events that are new or have changed content
-      const eventsToUpsert = eventsWithHashes.filter((evt) => {
-        const existing = existingMap.get(`${evt.canonicalTitle}|${evt.date}`)
-        if (!existing) return true // new event
-        return (
-          existing.sourceHash === null || existing.sourceHash !== evt.sourceHash
-        ) // null hash backfill or content changed
-      })
+      // Only upsert events that are new or have changed content. A forced
+      // reprocess re-upserts every event regardless of source hash, so
+      // re-extracted fields not covered by the hash (e.g. supportingArtists)
+      // get written back even when title/date/times are unchanged.
+      const eventsToUpsert = force
+        ? eventsWithHashes
+        : eventsWithHashes.filter((evt) => {
+            const existing = existingMap.get(
+              `${evt.canonicalTitle}|${evt.date}`,
+            )
+            if (!existing) return true // new event
+            return (
+              existing.sourceHash === null ||
+              existing.sourceHash !== evt.sourceHash
+            ) // null hash backfill or content changed
+          })
 
       if (eventsToUpsert.length > 0) {
         const eventValues = eventsToUpsert.map((event) => {

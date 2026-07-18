@@ -1303,3 +1303,58 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
     expect(String(noteRows[0]?.body)).not.toMatch(/auto-paused/i)
   })
 })
+
+describe('crawlVenue — force reprocess', () => {
+  it('re-upserts an unchanged event to backfill supportingArtists only when force=true', async () => {
+    const venue = await seedTestVenue()
+    const dateA = futureDate(30)
+    const baseEvent = makeEvent('Reprocess Artist', dateA, venue.url)
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    // First crawl persists the event with no openers (legacy shape).
+    mockExtractWithLlm.mockResolvedValue({
+      events: [baseEvent],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+    const first = await crawlVenue(venue.id, mockBrowser)
+    expect(first.status).toBe('success')
+
+    // Force the row into the pre-fix legacy state: null openers.
+    await db
+      .update(events)
+      .set({ supportingArtists: null })
+      .where(eq(events.venueId, venue.id))
+
+    // The extractor now yields the SAME event (identical title/date/times, so
+    // the source hash is unchanged; identical HTML, so the page hash is
+    // unchanged) but with openers present.
+    mockExtractWithLlm.mockResolvedValue({
+      events: [{ ...baseEvent, supportingArtists: ['Opener One'] }],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    // A normal re-crawl hits the venue-level page-hash skip and never
+    // re-extracts, so the legacy null stays put.
+    const skipped = await crawlVenue(venue.id, mockBrowser)
+    expect(skipped.status).toBe('skipped')
+    const [afterSkip] = await db
+      .select({ supportingArtists: events.supportingArtists })
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+    expect(afterSkip?.supportingArtists).toBeNull()
+
+    // A forced re-crawl bypasses both skips and re-upserts, backfilling the
+    // openers even though nothing in the hashed fields changed.
+    const forced = await crawlVenue(venue.id, mockBrowser, undefined, [], true)
+    expect(forced.status).not.toBe('skipped')
+    const [afterForce] = await db
+      .select({ supportingArtists: events.supportingArtists })
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+    expect(afterForce?.supportingArtists).toEqual(['Opener One'])
+  })
+})

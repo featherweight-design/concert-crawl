@@ -152,6 +152,73 @@ describe('Admin crawl routes', () => {
       expect(body.data.triggerIds).toEqual([TRIGGER_ID])
       expect(body.data.count).toBe(1)
     })
+
+    it('persists force=true on every trigger when the body sets force=true', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([
+        { id: VENUE_ID },
+      ])
+      vi.mocked(db.insert({}).values).mockClear()
+      vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
+        { id: TRIGGER_ID, venueId: VENUE_ID },
+      ])
+      const res = await createApp().request('/v1/admin/crawl', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+      })
+      expect(res.status).toBe(202)
+      expect(vi.mocked(db.insert({}).values)).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ force: true })]),
+      )
+    })
+
+    // The Next.js proxy POSTs Content-Type: application/json with an empty
+    // body, so parseForce must treat an empty JSON body as force=false without
+    // logging a malformed-body warning.
+    it('defaults force=false for an empty application/json body', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([
+        { id: VENUE_ID },
+      ])
+      vi.mocked(db.insert({}).values).mockClear()
+      vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
+        { id: TRIGGER_ID, venueId: VENUE_ID },
+      ])
+      const res = await createApp().request('/v1/admin/crawl', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+      })
+      expect(res.status).toBe(202)
+      expect(vi.mocked(db.insert({}).values)).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ force: false })]),
+      )
+    })
+
+    // A present-but-invalid body (valid JSON, wrong type) must not fail the
+    // trigger — it defaults to force=false (and warns, see parseForce).
+    it('defaults force=false when the body fails schema validation', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([
+        { id: VENUE_ID },
+      ])
+      vi.mocked(db.insert({}).values).mockClear()
+      vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
+        { id: TRIGGER_ID, venueId: VENUE_ID },
+      ])
+      const res = await createApp().request('/v1/admin/crawl', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ force: 'true' }),
+      })
+      expect(res.status).toBe(202)
+      expect(vi.mocked(db.insert({}).values)).toHaveBeenCalledWith(
+        expect.arrayContaining([expect.objectContaining({ force: false })]),
+      )
+    })
   })
 
   describe('POST /v1/admin/crawl/:venueId', () => {
@@ -235,6 +302,45 @@ describe('Admin crawl routes', () => {
       }
       expect(body.success).toBe(true)
       expect(typeof body.data.triggerId).toBe('string')
+    })
+
+    it('persists force=true on the trigger when the body sets force=true', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([mockVenue])
+      vi.mocked(db.insert({}).values).mockClear()
+      vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
+        mockTrigger,
+      ])
+      const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+      })
+      expect(res.status).toBe(202)
+      expect(vi.mocked(db.insert({}).values)).toHaveBeenCalledWith(
+        expect.objectContaining({ force: true }),
+      )
+    })
+
+    // Mirrors the Next.js proxy's empty application/json body (see bulk route
+    // test) — parseForce must default to force=false without a warning log.
+    it('defaults force=false for an empty application/json body', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      vi.mocked(db.select().from().where).mockResolvedValueOnce([mockVenue])
+      vi.mocked(db.insert({}).values).mockClear()
+      vi.mocked(db.insert({}).values().returning).mockResolvedValueOnce([
+        mockTrigger,
+      ])
+      const res = await createApp().request(`/v1/admin/crawl/${VENUE_ID}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+      })
+      expect(res.status).toBe(202)
+      expect(vi.mocked(db.insert({}).values)).toHaveBeenCalledWith(
+        expect.objectContaining({ force: false }),
+      )
     })
   })
 

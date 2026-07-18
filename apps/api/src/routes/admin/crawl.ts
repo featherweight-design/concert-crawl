@@ -10,14 +10,59 @@ import {
   notifications,
 } from '@concert-crawl/db'
 import type { ActiveCrawlAlert } from '@concert-crawl/types'
+import { createLogger } from '@concert-crawl/logger'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
+
+const logger = createLogger('admin:crawl')
 
 const venueIdSchema = z.object({
   venueId: z.string().uuid('venueId must be a UUID'),
 })
 const crawlRunIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
 const triggerIdSchema = z.object({ id: z.string().uuid('id must be a UUID') })
+
+// Optional trigger body. Both crawl-trigger endpoints historically take no
+// body (the admin UI posts nothing), so we tolerate an empty/absent body and
+// default force to false. When force=true the crawler bypasses both hash-skip
+// short-circuits and re-extracts + re-upserts every event — used to reprocess
+// legacy rows whose listings are unchanged (e.g. backfilling supportingArtists).
+const triggerBodySchema = z.object({
+  force: z.boolean().optional().default(false),
+})
+
+// Parse force from the request body without requiring one. The admin UI (and
+// the Next.js proxy routes) POST no body — often with a `Content-Type:
+// application/json` header but an empty payload — so an empty body silently
+// resolves to force=false. A *non-empty* body that is present but wrong — either
+// unparseable JSON or valid JSON that fails the schema (e.g. `{"force":"true"}`)
+// — is a caller/proxy bug worth surfacing: we warn (house rule: every catch
+// logs) and still default to false rather than 400-ing the trigger.
+async function parseForce(ctx: {
+  req: { text: () => Promise<string> }
+}): Promise<boolean> {
+  const body = (await ctx.req.text()).trim()
+  if (body === '') return false
+  let raw: unknown
+  try {
+    raw = JSON.parse(body)
+  } catch (err: unknown) {
+    logger.warn(
+      { err },
+      'crawl trigger: malformed JSON body — defaulting force=false',
+    )
+    return false
+  }
+  const result = triggerBodySchema.safeParse(raw)
+  if (!result.success) {
+    logger.warn(
+      { issues: result.error.issues },
+      'crawl trigger: body failed schema validation — defaulting force=false',
+    )
+    return false
+  }
+  return result.data.force
+}
 
 // Subset of notification.metadata shape this route cares about (#804).
 // Validated via Zod so a malformed metadata field doesn't poison the badge
@@ -74,11 +119,16 @@ crawlAdminRouter.post('/', async (ctx) => {
     return ctx.json({ success: true, data: { triggerIds: [], count: 0 } }, 202)
   }
 
+  const force = await parseForce(ctx)
   const actor = getAuthUser(ctx).userId
   const inserted = await db
     .insert(crawlTriggers)
     .values(
-      activeVenues.map((venue) => ({ venueId: venue.id, triggeredBy: actor })),
+      activeVenues.map((venue) => ({
+        venueId: venue.id,
+        triggeredBy: actor,
+        force,
+      })),
     )
     .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId })
 
@@ -117,9 +167,10 @@ crawlAdminRouter.post(
       )
     }
 
+    const force = await parseForce(ctx)
     const inserted = await db
       .insert(crawlTriggers)
-      .values({ venueId, triggeredBy: getAuthUser(ctx).userId })
+      .values({ venueId, triggeredBy: getAuthUser(ctx).userId, force })
       .returning()
 
     const trigger = inserted[0]

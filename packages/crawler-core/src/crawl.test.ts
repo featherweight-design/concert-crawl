@@ -288,6 +288,28 @@ describe('crawlVenue — page-level skip', () => {
     expect(run.eventsFound).toBe(1)
     expect(run.eventsInserted).toBe(0) // sourceHash matches despite page change
   })
+
+  it('bypasses the page-hash skip when force=true', async () => {
+    const venue = seedVenue()
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser) // first crawl — stores pageHash
+
+    // Same HTML — a normal crawl would return status='skipped'. With force the
+    // crawl proceeds to extraction instead.
+    const run = await crawlVenue(venue.id, mockBrowser, undefined, [], true)
+
+    expect(run.status).not.toBe('skipped')
+    expect(run.eventsFound).toBe(1)
+  })
 })
 
 describe('crawlVenue — ticketLinks derivation', () => {
