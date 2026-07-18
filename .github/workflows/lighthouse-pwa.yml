@@ -29,8 +29,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # turbo run (not `pnpm --filter ... build`) so the web build's workspace
+      # dependencies (@concert-crawl/types et al.) are compiled first via the
+      # build task's `^build` dependency. A bare filtered build skips them and
+      # fails with "Module not found: Can't resolve '@concert-crawl/types'".
       - name: Build web
-        run: pnpm --filter @concert-crawl/web build
+        run: pnpm turbo run build --filter=@concert-crawl/web
 
       # Pinned to @lhci/cli@0.13.x deliberately: it bundles Lighthouse 11, which
       # still ships the PWA installability audits (installable-manifest,
