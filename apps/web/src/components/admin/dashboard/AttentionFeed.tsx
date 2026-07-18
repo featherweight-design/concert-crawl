@@ -171,7 +171,14 @@ export const AttentionFeed = ({
   const activeCount = activeItems.length
 
   const panelTitle = (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        flexWrap: 'wrap',
+      }}
+    >
       <span>{ADMIN_COPY.dashboard.attentionFeed.panelTitle}</span>
       {activeCount > 0 && (
         <span
@@ -188,6 +195,8 @@ export const AttentionFeed = ({
             fontWeight: 700,
             color: 'var(--accent)',
             letterSpacing: '0.01em',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
           {activeCount} {ADMIN_COPY.dashboard.attentionFeed.activeSuffix}

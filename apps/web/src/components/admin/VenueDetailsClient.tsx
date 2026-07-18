@@ -1003,8 +1003,8 @@ export function VenueDetailsClient({ venue }: Props) {
               style={{
                 display: 'flex',
                 gap: 8,
-                flexShrink: 0,
                 flexWrap: 'wrap',
+                minWidth: 0,
               }}
             >
               <AdminButton

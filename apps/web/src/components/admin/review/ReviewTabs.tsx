@@ -65,80 +65,109 @@ export const ReviewTabs = ({
   )
 
   return (
-    <div
-      role="tablist"
-      aria-label={ariaLabel}
-      style={{
-        display: 'inline-flex',
-        padding: 4,
-        background: 'var(--surface-1)',
-        borderRadius: 11,
-        border: '1px solid var(--border)',
-        gap: 6,
-      }}
-    >
-      {tabs.map(({ key, label, count, kind }) => {
-        const isActive = key === activeTab
-        const activeBadgeBg =
-          kind !== undefined ? `var(--${kind})` : 'var(--signal)'
-        return (
-          <button
-            key={key}
-            ref={(el) => {
-              if (el) tabRefs.current.set(key, el)
-              else tabRefs.current.delete(key)
-            }}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            tabIndex={isActive ? 0 : -1}
-            onClick={() => onChange(key)}
-            onKeyDown={(evt) => handleKeyDown(evt, key)}
-            style={{
-              flex: '0 0 auto',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-              padding: '9px 16px',
-              border: 'none',
-              borderRadius: 8,
-              background: isActive ? 'var(--bg-elevated)' : 'transparent',
-              boxShadow: isActive
-                ? '0 1px 2px rgba(0,0,0,0.18), 0 0 0 1px var(--border)'
-                : 'none',
-              fontFamily: "'Inter', sans-serif",
-              fontSize: 13.5,
-              fontWeight: isActive ? 700 : 600,
-              color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
-              cursor: 'pointer',
-            }}
-          >
-            {label}
-            {count !== undefined && count > 0 && (
-              <span
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  fontVariantNumeric: 'tabular-nums',
-                  minWidth: 18,
-                  height: 18,
-                  padding: '0 6px',
-                  borderRadius: 9,
-                  background: isActive ? activeBadgeBg : 'var(--surface-2)',
-                  color: isActive ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {count}
-              </span>
-            )}
-          </button>
-        )
-      })}
-    </div>
+    <>
+      {/*
+        Narrow viewports (≤640px) can't fit the horizontal tablist without
+        clipping the last tab, so below `sm` we swap to a native select that
+        exposes every tab — including Contests — as an option.
+      */}
+      <select
+        className="w-full sm:hidden"
+        aria-label={ariaLabel}
+        value={activeTab}
+        onChange={(evt) => onChange(evt.target.value)}
+        style={{
+          padding: '10px 12px',
+          background: 'var(--surface-1)',
+          borderRadius: 11,
+          border: '1px solid var(--border)',
+          fontFamily: "'Inter', sans-serif",
+          fontSize: 13.5,
+          fontWeight: 600,
+          color: 'var(--fg)',
+        }}
+      >
+        {tabs.map(({ key, label, count }) => (
+          <option key={key} value={key}>
+            {count !== undefined && count > 0 ? `${label} (${count})` : label}
+          </option>
+        ))}
+      </select>
+      <div
+        role="tablist"
+        aria-label={ariaLabel}
+        className="hidden sm:inline-flex"
+        style={{
+          padding: 4,
+          background: 'var(--surface-1)',
+          borderRadius: 11,
+          border: '1px solid var(--border)',
+          gap: 6,
+        }}
+      >
+        {tabs.map(({ key, label, count, kind }) => {
+          const isActive = key === activeTab
+          const activeBadgeBg =
+            kind !== undefined ? `var(--${kind})` : 'var(--signal)'
+          return (
+            <button
+              key={key}
+              ref={(el) => {
+                if (el) tabRefs.current.set(key, el)
+                else tabRefs.current.delete(key)
+              }}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
+              onClick={() => onChange(key)}
+              onKeyDown={(evt) => handleKeyDown(evt, key)}
+              style={{
+                flex: '0 0 auto',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                padding: '9px 16px',
+                border: 'none',
+                borderRadius: 8,
+                background: isActive ? 'var(--bg-elevated)' : 'transparent',
+                boxShadow: isActive
+                  ? '0 1px 2px rgba(0,0,0,0.18), 0 0 0 1px var(--border)'
+                  : 'none',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 13.5,
+                fontWeight: isActive ? 700 : 600,
+                color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
+                cursor: 'pointer',
+              }}
+            >
+              {label}
+              {count !== undefined && count > 0 && (
+                <span
+                  style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    fontVariantNumeric: 'tabular-nums',
+                    minWidth: 18,
+                    height: 18,
+                    padding: '0 6px',
+                    borderRadius: 9,
+                    background: isActive ? activeBadgeBg : 'var(--surface-2)',
+                    color: isActive ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </>
   )
 }

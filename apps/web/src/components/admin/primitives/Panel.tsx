@@ -25,6 +25,8 @@ export const Panel = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 10,
           padding: '14px 18px',
           borderBottom: '1px solid var(--border)',
         }}
@@ -35,11 +37,12 @@ export const Panel = ({
             fontWeight: 700,
             color: 'var(--fg)',
             letterSpacing: '-0.01em',
+            minWidth: 0,
           }}
         >
           {title}
         </div>
-        {action && <div>{action}</div>}
+        {action && <div style={{ flexShrink: 0 }}>{action}</div>}
       </div>
     )}
     <div style={{ padding }}>{children}</div>

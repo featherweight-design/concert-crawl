@@ -8,8 +8,17 @@ export const RunHistoryBlocks = ({ data }: RunHistoryBlocksProps) => {
   if (!data.length) return null
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <div style={{ display: 'flex', gap: 3 }}>
+    <div
+      // Stack the label below the run blocks so the two never overlap at
+      // narrow tile widths (≤320px) where a side-by-side row can't fit both.
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: 6,
+      }}
+    >
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
         {data.map((val, idx) => (
           <div
             key={idx}

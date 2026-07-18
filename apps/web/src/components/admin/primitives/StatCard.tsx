@@ -90,17 +90,30 @@ export const StatCard = ({
         >
           {label}
         </div>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 6,
+            minWidth: 0,
+            flexWrap: 'wrap',
+          }}
+        >
           <span
             style={{
               fontFamily: mono
                 ? "'JetBrains Mono', monospace"
                 : 'var(--admin-font, Inter, sans-serif)',
-              fontSize: 38,
+              // Fluid so the value shrinks on narrow tiles (≤320px) instead
+              // of overflowing the card; caps at the original 38px on wide
+              // viewports.
+              fontSize: 'clamp(24px, 6.5vw, 38px)',
               fontWeight: 800,
               fontVariantNumeric: 'tabular-nums',
               lineHeight: 1,
               color: 'var(--fg)',
+              minWidth: 0,
+              overflowWrap: 'anywhere',
             }}
           >
             {value}
@@ -109,7 +122,7 @@ export const StatCard = ({
             <span
               style={{
                 fontFamily: "'JetBrains Mono', monospace",
-                fontSize: 14,
+                fontSize: 'clamp(12px, 3vw, 14px)',
                 fontWeight: 600,
                 color: 'var(--fg-muted)',
               }}
