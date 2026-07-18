@@ -850,6 +850,11 @@ export const CONSUMER_COPY = {
     anonymousLabel: 'anonymous fan',
     anonymousExplainer:
       "You're browsing as an anonymous fan. Pick a handle to get credit for your price submissions (it applies retroactively).",
+    heroCredNudge: 'Submit a price to start earning.',
+    heroAnonLead: 'Submissions show as',
+    heroAnonTail: 'Pick a handle if you want credit.',
+    heroJoinedLabel: 'joined',
+    heroEditButton: 'Edit',
     goingAnonymousWarning:
       'Clearing your handle makes you anonymous again. You may lose your handle and your past submissions will no longer show your name.',
     handlePlaceholder: 'lowercase_handle',

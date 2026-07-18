@@ -56,19 +56,16 @@ export function ProfileHero({
     !showRoleBadge && displayRole !== 'fan' && displayRole !== 'staff'
 
   return (
-    <div className="flex items-center gap-3.5">
-      {/* Avatar */}
-      <Avatar
-        handle={handle}
-        avatarColor={avatarColor}
-        size={avatarSize}
-        ringed
-      />
-
-      {/* Text content */}
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        {/* Handle / anonymous label */}
-        <div className="flex min-w-0 items-center gap-2">
+    <div className="flex flex-col gap-3">
+      {/* Row 1 — Avatar + handle + role badge */}
+      <div className="flex items-center gap-3.5">
+        <Avatar
+          handle={handle}
+          avatarColor={avatarColor}
+          size={avatarSize}
+          ringed
+        />
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
           <span
             className="min-w-0 truncate leading-[1.15] tracking-[-0.02em] text-fg"
             style={{ fontSize: dense ? 18 : 22, fontWeight: 900 }}
@@ -150,49 +147,50 @@ export function ProfileHero({
             </span>
           )}
         </div>
+      </div>
 
-        {/* City + joined */}
-        <span
-          className="text-[11px] font-semibold text-fg-muted"
-          style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
-        >
-          {city ? `${city} · ` : ''}joined {joined}
-        </span>
+      {/* City + joined */}
+      <span
+        className="text-[11px] font-semibold text-fg-muted"
+        style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.04em' }}
+      >
+        {city ? `${city} · ` : ''}
+        {SETTINGS_COPY.heroJoinedLabel} {joined}
+      </span>
 
-        {/* Cred chip + zero-state nudge */}
-        <div className="mt-1 flex items-center gap-1.5">
-          <CredChip cred={cred} size={dense ? 'sm' : 'md'} showTooltip />
-          {cred === 0 && !isAnon && (
-            <span className="text-[11.5px] text-fg-subtle">
-              Submit a price to start earning.
-            </span>
-          )}
-        </div>
-
-        {/* Anonymous inline explainer */}
-        {isAnon && (
-          <p
-            className="mt-0.5 text-[12px] leading-relaxed text-fg-subtle"
-            style={{ letterSpacing: '-0.005em' }}
-          >
-            Submissions show as <em>anonymous fan</em>. Pick a handle if you
-            want credit.
-          </p>
+      {/* Cred chip + zero-state nudge */}
+      <div className="flex items-center gap-1.5">
+        <CredChip cred={cred} size={dense ? 'sm' : 'md'} showTooltip />
+        {cred === 0 && !isAnon && (
+          <span className="text-[11.5px] text-fg-subtle">
+            {SETTINGS_COPY.heroCredNudge}
+          </span>
         )}
       </div>
+
+      {/* Anonymous inline explainer */}
+      {isAnon && (
+        <p
+          className="text-[12px] leading-relaxed text-fg-subtle"
+          style={{ letterSpacing: '-0.005em' }}
+        >
+          {SETTINGS_COPY.heroAnonLead} <em>{SETTINGS_COPY.anonymousLabel}</em>.{' '}
+          {SETTINGS_COPY.heroAnonTail}
+        </p>
+      )}
 
       {/* Edit button */}
       {!dense && (
         <Link
           href="/me/edit"
-          className="shrink-0 rounded-lg border px-3 py-1.5 text-[12.5px] font-bold text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+          className="self-start rounded-lg border px-3 py-1.5 text-[12.5px] font-bold text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
           style={{
             background: 'var(--surface-2)',
             borderColor: 'var(--border-strong)',
             letterSpacing: '-0.005em',
           }}
         >
-          Edit
+          {SETTINGS_COPY.heroEditButton}
         </Link>
       )}
     </div>
