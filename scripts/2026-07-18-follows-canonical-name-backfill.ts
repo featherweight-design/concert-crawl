@@ -22,10 +22,11 @@
  * Staging first (notify-and-proceed, capture before/after counts), then prod
  * — prod runs require explicit human approval per CLAUDE.md (HARD PAUSE).
  *
- * Idempotent: only rows where canonical_name = '' are selected, and a
- * re-run after commit plans 0 updates (rows whose artist_name legitimately
- * canonicalizes to '' are re-selected but skipped by the planner since
- * stored '' already equals the transform result).
+ * Idempotent: every follow row is scanned and only rows whose stored
+ * canonical_name differs from canonicalizeArtist(artist_name) are updated,
+ * so a re-run after commit plans 0 updates. Scanning all rows (not just
+ * canonical_name = '') also lets a re-run repair drift if the JS transform
+ * ever changes — the table is small enough that a full scan is cheap.
  */
 
 import { pathToFileURL } from 'node:url'
@@ -43,7 +44,9 @@ export interface BackfillSummary {
 export async function runBackfill(opts: {
   commit: boolean
 }): Promise<BackfillSummary> {
-  // 1. Select the un-backfilled rows (canonical_name still at its '' default).
+  // 1. Scan every follow row — the planner skips rows whose stored
+  //    canonical_name already matches the transform, and a full scan lets
+  //    a re-run repair drift if the JS transform ever changes.
   const rows = await db
     .select({
       id: userArtistFollows.id,
@@ -51,13 +54,12 @@ export async function runBackfill(opts: {
       canonicalName: userArtistFollows.canonicalName,
     })
     .from(userArtistFollows)
-    .where(eq(userArtistFollows.canonicalName, ''))
 
   // 2. Plan via the pure helper — skips rows already matching the transform.
   const updates = planFollowBackfill(rows)
 
   console.log(
-    `Scanned ${rows.length} follow rows with empty canonical_name; ${updates.length} updates planned.`,
+    `Scanned ${rows.length} follow rows; ${updates.length} canonical_name updates planned.`,
   )
 
   // Per-row operator log (dry-run and --commit alike).

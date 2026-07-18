@@ -199,17 +199,14 @@ export const isPurgeEligible = (input: {
  * and die with the Spotify connection (PR 3 disconnect purge), never the
  * billing clock. Exported as a pure helper so the delete scope is
  * unit-testable (billing-daily has no integration harness yet — #914).
+ * Returns `SQL | undefined` to match `and()`'s signature; both predicates
+ * are always defined, and `.where()` accepts the optional type as-is.
  */
-export const purgeFollowsWhere = (userId: string): SQL => {
-  const condition = and(
+export const purgeFollowsWhere = (userId: string): SQL | undefined =>
+  and(
     eq(userArtistFollows.userId, userId),
     eq(userArtistFollows.source, 'manual'),
   )
-  if (condition === undefined) {
-    throw new Error('unreachable: both purge predicates are defined')
-  }
-  return condition
-}
 
 /**
  * Whether a cancellation of `tier` should start the 90-day preserve-then-purge
