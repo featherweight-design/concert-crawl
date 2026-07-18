@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · PWA Cluster — install · offline · push (#969 #970 #971)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  a { color: inherit; }
+  /* Focus-visible fallback — most authored buttons use `all: unset` which strips
+     the UA outline. Restore a token-ish visible focus ring for keyboard users so
+     the a11y bar the README/READINESS claim actually holds in the prototype. */
+  :focus-visible { outline: 2px solid var(--signal, #6ea8ff); outline-offset: 2px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="pwa-data.jsx"></script>
+<script type="text/babel" src="pwa-install.jsx"></script>
+<script type="text/babel" src="pwa-offline.jsx"></script>
+<script type="text/babel" src="pwa-push.jsx"></script>
+<script type="text/babel" src="profile-settings-screens.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEME_KEYS, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+const { IOSDevice } = window;
+const { PWA_FONT: F, PWA_MONO: M } = window;
+const { CCMark, Wordmark, Eyebrow, Icon, PrimaryButton, GhostButton, PwaTabBar } = window;
+const { AppChrome, InstallSlot, IosHowToSheet, IosSheetRowMock, DismissNote } = window;
+const { OfflinePill, OfflineFallback, CachedShortcuts, CacheTile } = window;
+const { PostWatchSheet, NotificationCard, NotificationStack } = window;
+const { SettingsRoute, SettingsRouteDesktop, NotificationsSection } = window;
+const { INSTALL_COPY, OFFLINE_COPY, PUSH_COPY, CACHED_EVENTS } = window;
+
+const PHONE_W = 390, PHONE_H = 820;
+const NARROW_W = 320, NARROW_H = 800;
+const DESK_W = 1120, DESK_H = 900;
+
+// ── Stages ───────────────────────────────────────────────────
+function PhoneStage({ theme = "electric", width = PHONE_W, height = PHONE_H, tab = null, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>
+        <div style={{ position: "relative", height: "100%", overflow: "hidden", background: "var(--bg)",
+          display: "flex", flexDirection: "column" }}>
+          <div style={{ position: "relative", flex: 1, minHeight: 0, overflow: "hidden" }}>{children}</div>
+          {tab && <PwaTabBar active={tab} />}
+        </div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function DeskStage({ theme = "electric", width = DESK_W, height = DESK_H, pad = 0, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width, height }}>
+      <div style={{ width, height, background: "var(--bg)", overflow: "hidden", padding: pad }}>{children}</div>
+    </ThemeProvider>
+  );
+}
+function BareStage({ theme = "electric", pad = 22, width, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad,
+        display: "flex", alignItems: "flex-start", justifyContent: "center", boxSizing: "border-box" }}>
+        <div style={{ width: width || "100%" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ── Browse backdrop — content behind the sheets ──────────────
+function BrowseFill({ slot, scroll = true }) {
+  return (
+    <div style={{ height: "100%", overflowY: scroll ? "auto" : "hidden", background: "var(--bg)" }}>
+      <AppChrome slot={slot} />
+      <div style={{ padding: "6px 16px 20px" }}>
+        <div style={{ fontFamily: F, fontWeight: 800, fontSize: 24, color: "var(--fg)",
+          letterSpacing: "-0.03em" }}>What's on?</div>
+        <Eyebrow style={{ marginTop: 3 }}>Denver, CO · Tonight</Eyebrow>
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column" }}>
+          {CACHED_EVENTS.concat(CACHED_EVENTS).slice(0, 5).map((e, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 0",
+              borderTop: i > 0 ? "1px solid var(--border)" : "none" }}>
+              <CacheTile name={e.artist} size={46} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: F, fontWeight: 700, fontSize: 14, color: "var(--fg)",
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{e.artist}</div>
+                <div style={{ fontFamily: M, fontSize: 9.5, color: "var(--fg-muted)", marginTop: 2 }}>
+                  {e.venue} · {e.when}</div>
+              </div>
+              <span style={{ fontFamily: F, fontWeight: 800, fontSize: 13, color: "var(--signal)" }}>{e.price}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Interactive sheet scenes ─────────────────────────────────
+function InstallSheetScene({ theme = "electric" }) {
+  const [open, setOpen] = React.useState(true);
+  return (
+    <PhoneStage theme={theme} tab="browse">
+      <BrowseFill scroll={false} slot={<InstallSlot variant="ios" onClick={() => setOpen(true)} />} />
+      <IosHowToSheet open={open} onClose={() => setOpen(false)} />
+    </PhoneStage>
+  );
+}
+function PushSheetScene({ theme = "electric", variant = "default" }) {
+  const [open, setOpen] = React.useState(true);
+  const [showInstall, setShowInstall] = React.useState(false);
+  return (
+    <PhoneStage theme={theme} tab="browse">
+      <BrowseFill scroll={false} slot={variant === "ios" ? <InstallSlot variant="ios" /> : null} />
+      <PostWatchSheet open={open && !showInstall} variant={variant}
+        onClose={() => setOpen(false)} onShowInstall={() => setShowInstall(true)} />
+      <IosHowToSheet open={showInstall} onClose={() => { setShowInstall(false); setOpen(false); }} />
+    </PhoneStage>
+  );
+}
+
+// ── Live preview (Tweaks-driven) ─────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "surface": "install",
+  "installState": "sheet",
+  "offlineState": "populated",
+  "pushState": "postwatch"
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio } = window;
+const THEME_OPTS = CC_THEME_KEYS.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+
+function LiveSurface({ t }) {
+  const th = t.theme;
+  if (t.surface === "install") {
+    if (t.installState === "sheet") return <InstallSheetScene theme={th} key={th} />;
+    const slot = t.installState === "dismissed" ? null
+      : <InstallSlot variant={t.installState === "ios" ? "ios" : "installable"} />;
+    return (
+      <PhoneStage theme={th} tab="browse">
+        <BrowseFill slot={slot} />
+        {t.installState === "dismissed" && (
+          <div style={{ position: "absolute", left: 16, right: 16, bottom: 20 }}><DismissNote /></div>
+        )}
+      </PhoneStage>
+    );
+  }
+  if (t.surface === "offline") {
+    return <PhoneStage theme={th} tab="browse"><OfflineFallback empty={t.offlineState === "empty"} /></PhoneStage>;
+  }
+  // push
+  if (t.pushState === "postwatch") return <PushSheetScene theme={th} key={th + "d"} />;
+  if (t.pushState === "postwatch-ios") return <PushSheetScene theme={th} variant="ios" key={th + "i"} />;
+  if (t.pushState === "notifications")
+    return <PhoneStage theme={th}><div style={{ padding: "60px 14px 14px", height: "100%", overflowY: "auto" }}><NotificationStack /></div></PhoneStage>;
+  // Settings → Notifications lives inside the real settings screen.
+  const notif = { "settings-on": "on", "settings-empty": "empty", "settings-denied": "denied" }[t.pushState] || "on";
+  return <PhoneStage theme={th}><SettingsRoute notifState={notif} /></PhoneStage>;
+}
+
+function LiveMobile() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return <LiveSurface t={t} />;
+}
+function LiveDesktop() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  const th = t.theme;
+  if (t.surface === "offline")
+    return <DeskStage theme={th} height={860}><OfflineFallback empty={t.offlineState === "empty"} desktop /></DeskStage>;
+  if (t.surface === "push" && String(t.pushState).startsWith("settings")) {
+    const notif = { "settings-on": "on", "settings-empty": "empty", "settings-denied": "denied" }[t.pushState] || "on";
+    return <DeskStage theme={th} height={780}>
+      <SettingsRouteDesktop activeSection="notifications" notifState={notif} />
+    </DeskStage>;
+  }
+  // install / push sheet surfaces are mobile-native — show the desktop chrome for install
+  return <DeskStage theme={th} height={520}>
+    <AppChrome desktop slot={<InstallSlot variant="installable" />} />
+    <div style={{ padding: 40, fontFamily: M, fontSize: 12, color: "var(--fg-subtle)", letterSpacing: "0.04em" }}>
+      Sheets (install walkthrough · post-watch permission) are mobile-native surfaces — see the mobile column.
+    </div>
+  </DeskStage>;
+}
+
+function PwaTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="PWA cluster">
+      <TweakSection label="Surface">
+        <TweakRadio label="Ticket" value={t.surface} onChange={(v) => setT("surface", v)}
+          options={[{ value: "install", label: "Install" }, { value: "offline", label: "Offline" }, { value: "push", label: "Push" }]} />
+      </TweakSection>
+      {t.surface === "install" && (
+        <TweakSection label="#969 Install state">
+          <TweakSelect label="State" value={t.installState} onChange={(v) => setT("installState", v)}
+            options={[
+              { value: "installable", label: "Slot · installable" },
+              { value: "ios", label: "Slot · iOS Safari" },
+              { value: "dismissed", label: "Slot · post-dismiss (hidden)" },
+              { value: "sheet", label: "iOS \u201cHere's how\u201d sheet" },
+            ]} />
+        </TweakSection>
+      )}
+      {t.surface === "offline" && (
+        <TweakSection label="#970 Offline state">
+          <TweakRadio label="Cache" value={t.offlineState} onChange={(v) => setT("offlineState", v)}
+            options={[{ value: "populated", label: "Populated" }, { value: "empty", label: "Empty" }]} />
+        </TweakSection>
+      )}
+      {t.surface === "push" && (
+        <TweakSection label="#971 Push state">
+          <TweakSelect label="State" value={t.pushState} onChange={(v) => setT("pushState", v)}
+            options={[
+              { value: "postwatch", label: "Post-watch sheet" },
+              { value: "postwatch-ios", label: "Post-watch · iOS not-installed" },
+              { value: "settings-on", label: "Settings · Notifications on" },
+              { value: "settings-empty", label: "Settings · never asked" },
+              { value: "settings-denied", label: "Settings · denied" },
+              { value: "notifications", label: "Notification cards" },
+            ]} />
+        </TweakSection>
+      )}
+      <TweakSection label="Theme">
+        <TweakSelect label="Theme" value={t.theme} onChange={(v) => setT("theme", v)} options={THEME_OPTS} />
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+
+const THEMES = ["electric", "jade", "light"];
+
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="PWA Cluster — install · offline · push"
+        subtitle="#969 + #970 + #971 · Track 2. Web-first, respect the browser: every ask is dismissible, no on-load takeovers. Voice is the Sour Patch bar (#782) — honest > cheerful, specific > generic, callouts are questions. Tokens only across Electric / Jade / Light; mobile 320 + 390 and desktop; a11y (role/aria/kbd/≥44px) baked in. Drive every state from the Tweaks panel.">
+
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview"
+          subtitle="Flip surface (install · offline · push), the per-surface state, and theme from the Tweaks panel. Sheets open on mount; press Escape or tap the scrim to dismiss (for the push sheet, that counts as 'Not now').">
+          <DCArtboard id="live-m" label="Mobile · 390" width={PHONE_W} height={PHONE_H}><LiveMobile/></DCArtboard>
+          <DCArtboard id="live-d" label="Desktop · 1120" width={DESK_W} height={DESK_H}><LiveDesktop/></DCArtboard>
+        </DCSection>
+
+        {/* 1 · INSTALL */}
+        <DCSection id="install" title="1 · #969 — Install prompt"
+          subtitle="A small dismissible Install action in the top-right chrome, next to the account menu. Android/desktop fire the browser's own prompt; iOS Safari (no beforeinstallprompt) opens the 'Here's how' walkthrough instead. Dismissal persists: first dismiss quiets it 30 days, a second retires it (Settings can still re-trigger).">
+          <DCArtboard id="ins-able" label="Slot · installable (Android / desktop)" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric" tab="browse"><BrowseFill slot={<InstallSlot variant="installable" />} /></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="ins-ios" label="Slot · iOS Safari (opens sheet)" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric" tab="browse"><BrowseFill slot={<InstallSlot variant="ios" />} /></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="ins-dismiss" label="Post-dismiss · slot hidden" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric" tab="browse">
+              <BrowseFill slot={null} />
+              <div style={{ position: "absolute", left: 16, right: 16, bottom: 20 }}><DismissNote /></div>
+            </PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="ins-sheet-390" label="iOS 'Here's how' sheet · 390" width={PHONE_W} height={PHONE_H}>
+            <InstallSheetScene theme="electric" />
+          </DCArtboard>
+          <DCArtboard id="ins-sheet-320" label="iOS sheet · 320 baseline" width={NARROW_W} height={NARROW_H}>
+            <PhoneStage theme="electric" width={NARROW_W} height={NARROW_H} tab="browse">
+              <BrowseFill scroll={false} slot={<InstallSlot variant="ios" compact />} />
+              <IosHowToSheetStatic />
+            </PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="ins-desk" label="Desktop chrome · slot by account menu" width={DESK_W} height={360}>
+            <DeskStage theme="electric" height={360}>
+              <AppChrome desktop slot={<InstallSlot variant="installable" />} />
+            </DeskStage>
+          </DCArtboard>
+          <DCPostIt top={-8} right={30}>iOS has no beforeinstallprompt — the slot opens the walkthrough, it never fakes a native prompt.</DCPostIt>
+        </DCSection>
+
+        {/* 2 · OFFLINE */}
+        <DCSection id="offline" title="2 · #970 — Offline states"
+          subtitle="A quiet header pill (role=status, --warning dot — not --danger, no alarm register) says we're offline but cached content is fine. Uncached navigations hit a full fallback page with a branded retry and a cached-shortcuts list pulled from real SW cache state. Caching is public-data-only; account content is network-only, said plainly.">
+          <DCArtboard id="off-pop-390" label="Fallback · cached · 390" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric" tab="browse"><OfflineFallback /></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="off-pop-320" label="Fallback · cached · 320" width={NARROW_W} height={NARROW_H}>
+            <PhoneStage theme="electric" width={NARROW_W} height={NARROW_H} tab="browse"><OfflineFallback tight /></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="off-empty" label="Fallback · nothing cached yet" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric" tab="browse"><OfflineFallback empty /></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="off-desk" label="Fallback · desktop" width={DESK_W} height={860}>
+            <DeskStage theme="electric" height={860}><OfflineFallback desktop /></DeskStage>
+          </DCArtboard>
+          <DCArtboard id="off-pill" label="Header pill · anatomy" width={360} height={150}>
+            <BareStage theme="electric" pad={22} width={300}>
+              <Eyebrow style={{ marginBottom: 10 }}>Offline pill · role=status</Eyebrow>
+              <OfflinePill />
+            </BareStage>
+          </DCArtboard>
+          <DCPostIt top={-8} right={30}>"cached OK", not "connection error" — the pill is honest about what still works.</DCPostIt>
+        </DCSection>
+
+        {/* 3 · PUSH */}
+        <DCSection id="push" title="3 · #971 — Web push (Tier C)"
+          subtitle="Fires ~500ms after the first 'Watch this show' tap — never on load. A question, not a pitch; 'Not now' is real and we never auto-re-ask (Settings only). On non-installed iOS Safari (where push can't work) the same moment becomes an install-first flow that opens the #969 walkthrough. Settings covers on / empty / the honest browser-denied edge.">
+          <DCArtboard id="push-sheet" label="Post-watch permission sheet" width={PHONE_W} height={PHONE_H}>
+            <PushSheetScene theme="electric" />
+          </DCArtboard>
+          <DCArtboard id="push-ios" label="Post-watch · iOS not installed (install-first)" width={PHONE_W} height={PHONE_H}>
+            <PushSheetScene theme="electric" variant="ios" />
+          </DCArtboard>
+          <DCArtboard id="push-entry-m" label="Settings screen · Notifications is a section (mobile)" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><SettingsRoute notifState="on" /></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="push-set-on" label="Notifications · on (master + sub-toggles), in context" width={430} height={330}>
+            <BareStage theme="electric" pad={22} width={386}>
+              <Eyebrow style={{ marginBottom: 10, letterSpacing: "0.14em" }}>Notifications</Eyebrow>
+              <NotificationsSection state="on" />
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="push-set-empty" label="Notifications · never asked (master off)" width={430} height={280}>
+            <BareStage theme="electric" pad={22} width={386}>
+              <Eyebrow style={{ marginBottom: 10, letterSpacing: "0.14em" }}>Notifications</Eyebrow>
+              <NotificationsSection state="empty" />
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="push-set-denied" label="Notifications · browser-denied edge case" width={430} height={360}>
+            <BareStage theme="electric" pad={22} width={386}>
+              <Eyebrow style={{ marginBottom: 10, letterSpacing: "0.14em" }}>Notifications</Eyebrow>
+              <NotificationsSection state="denied" />
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="push-set-desk" label="Settings · desktop · Notifications section" width={DESK_W} height={780}>
+            <DeskStage theme="electric" height={780}>
+              <SettingsRouteDesktop activeSection="notifications" notifState="on" />
+            </DeskStage>
+          </DCArtboard>
+          <DCPostIt top={-8} right={30}>"Not now" = dismiss, and we mean it — no re-asks. The only path back is this Settings page.</DCPostIt>
+        </DCSection>
+
+        {/* 4 · NOTIFICATION CONTENT */}
+        <DCSection id="notifs" title="4 · #971 — Notification content, per category"
+          subtitle="OS-level cards, one voice-passed shape per event change. Specific over generic ($32, the Roxy, Aug 14); honest over hype (sold out says 'waitlist may open', not 'going fast'); no false urgency anywhere. The app icon is the CCMark — no restyle.">
+          <DCArtboard id="notif-all" label="All five categories" width={430} height={620}>
+            <BareStage theme="electric" pad={22} width={386}><NotificationStack /></BareStage>
+          </DCArtboard>
+          <DCArtboard id="notif-light" label="On a light lock screen" width={430} height={620}>
+            <BareStage theme="light" pad={22} width={386}><NotificationStack /></BareStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · ANATOMY */}
+        <DCSection id="anatomy" title="5 · Component anatomy"
+          subtitle="The install slot in each state, the offline pill, the settings switch, and a single notification card — the reusable atoms, tokenized. Every interactive element is a real button/switch with role + aria + a ≥44px tap target; no native title= tooltips.">
+          <DCArtboard id="an-slot" label="Install slot · states" width={360} height={230}>
+            <BareStage theme="electric" pad={22} width={300}>
+              <Eyebrow style={{ marginBottom: 8 }}>Installable</Eyebrow>
+              <InstallSlot variant="installable" />
+              <div style={{ height: 16 }} />
+              <Eyebrow style={{ marginBottom: 8 }}>iOS Safari</Eyebrow>
+              <InstallSlot variant="ios" />
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="an-sheetrow" label="iOS action-sheet mock" width={360} height={200}>
+            <BareStage theme="electric" pad={22} width={300}>
+              <Eyebrow style={{ marginBottom: 10 }}>Walkthrough illustration</Eyebrow>
+              <IosSheetRowMock />
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="an-notif" label="Notification card" width={430} height={170}>
+            <BareStage theme="electric" pad={22} width={386}>
+              <NotificationCard item={PUSH_COPY.notifications[4]} time="2m" />
+            </BareStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 6 · THEME PARITY */}
+        <DCSection id="parity" title="6 · Theme parity — token-only"
+          subtitle="The offline fallback and the post-watch sheet rendered across the three shipped consumer themes. Every color reads from var(--*): --signal CTAs, --warning offline dot, --accent brand presence. Flip the live preview for the rest.">
+          {THEMES.map((k) => (
+            <DCArtboard key={"pf-" + k} id={"pf-" + k} label={"Offline · " + CC_THEMES[k].label} width={PHONE_W} height={PHONE_H}>
+              <PhoneStage theme={k} tab="browse"><OfflineFallback /></PhoneStage>
+            </DCArtboard>
+          ))}
+          {THEMES.map((k) => (
+            <DCArtboard key={"pp-" + k} id={"pp-" + k} label={"Post-watch · " + CC_THEMES[k].label} width={PHONE_W} height={PHONE_H}>
+              <PushSheetScene theme={k} key={"pp" + k} />
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+      </DesignCanvas>
+      <PwaTweaks/>
+    </>
+  );
+}
+
+// static (always-open) iOS sheet for the 320 artboard — no toggle needed
+function IosHowToSheetStatic() {
+  return <IosHowToSheet open={true} onClose={() => {}} />;
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
