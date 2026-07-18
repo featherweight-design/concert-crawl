@@ -16,6 +16,7 @@ import type {
   SpotifyConnectionView,
 } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
+import { checkRateLimit } from '../lib/rate-limit.js'
 import { createSpotifyClient, SpotifyAuthError } from '../lib/spotify.js'
 import {
   getSpotifyAccessToken,
@@ -217,6 +218,26 @@ spotifyRouter.post('/connection/sync', async (ctx) => {
         429,
       )
     }
+  }
+
+  // Failed syncs never advance lastSyncedAt, so the check above alone would
+  // let refresh spam through during a Spotify outage. Each actual sync
+  // attempt also consumes an in-memory token (feedback.ts pattern; resets on
+  // deploy, which lastSyncedAt covers for the success path).
+  const { allowed, retryAfterMs } = checkRateLimit(
+    `spotify-sync:${auth.userId}`,
+    1,
+    SYNC_MIN_INTERVAL_MS,
+  )
+  if (!allowed) {
+    ctx.header('Retry-After', String(Math.ceil(retryAfterMs / 1000)))
+    return ctx.json(
+      {
+        success: false,
+        error: 'Taste was refreshed recently — try again in a few minutes',
+      },
+      429,
+    )
   }
 
   await syncSpotifyConnection(auth.userId)

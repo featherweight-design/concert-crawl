@@ -123,7 +123,11 @@ afterAll(() => {
 
 // --- helpers ---
 
-const USER = 'user-spotify-1'
+// Unique per test: the sync route's attempt limiter is an in-memory
+// module-level store keyed by userId, so a shared id would leak rate-limit
+// state across tests (same pattern as feedback.integration.test.ts).
+let USER = 'user-spotify-1'
+let userSeq = 0
 
 function setAuth(userId: string): void {
   authState.current = { userId, sessionClaims: { metadata: { role: 'user' } } }
@@ -180,6 +184,8 @@ interface ConnectionBody {
 }
 
 beforeEach(async () => {
+  userSeq += 1
+  USER = `user-spotify-${userSeq}`
   authState.current = null
   clerkState.externalAccounts = []
   clerkState.token = null
@@ -370,6 +376,29 @@ describe('POST /v1/spotify/connection/sync', () => {
     })
     expect(res.status).toBe(429)
     const retryAfter = Number(res.headers.get('Retry-After'))
+    expect(retryAfter).toBeGreaterThan(0)
+    expect(retryAfter).toBeLessThanOrEqual(600)
+  })
+
+  it('rate limits repeated refresh attempts even when the sync fails', async () => {
+    setAuth(USER)
+    linkSpotifyAccount()
+    await connect()
+    await backdateLastSynced(USER)
+
+    // Failed syncs never advance lastSyncedAt — the attempt limiter is what
+    // stops refresh spam during a Spotify outage.
+    spotifyState.failStatus = 502
+    const first = await app.request('/v1/spotify/connection/sync', {
+      method: 'POST',
+    })
+    expect(first.status).toBe(200)
+
+    const second = await app.request('/v1/spotify/connection/sync', {
+      method: 'POST',
+    })
+    expect(second.status).toBe(429)
+    const retryAfter = Number(second.headers.get('Retry-After'))
     expect(retryAfter).toBeGreaterThan(0)
     expect(retryAfter).toBeLessThanOrEqual(600)
   })
