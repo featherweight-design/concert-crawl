@@ -3,6 +3,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { JumpPicker } from './JumpPicker'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 // jsdom + Vitest do not ship the @testing-library/jest-dom matchers in this
 // repo (memory:feedback_no_type_casting bans `as` casts), so these tests read
@@ -107,6 +108,17 @@ describe('JumpPicker', () => {
     expect(screen.getByRole('dialog').getAttribute('aria-label')).toContain(
       'May 2026',
     )
+  })
+
+  it('selects today when the footer Today reset is clicked', () => {
+    const { onPick } = setup({ selectedDate: '2026-05-15' })
+    // Page away from the current month first, so the reset has real work to do —
+    // it must select today via onPick, not merely re-view the current month.
+    fireEvent.click(buttonByLabel('Next month'))
+    fireEvent.click(
+      screen.getByRole('button', { name: CONSUMER_COPY.jumpPickerToday }),
+    )
+    expect(onPick).toHaveBeenCalledWith('2026-04-28')
   })
 
   it('closes on Escape', () => {

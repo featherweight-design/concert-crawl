@@ -227,12 +227,6 @@ export const JumpPicker = ({
     }
   }
 
-  const resetToToday = () => {
-    setView({ y: todayParts.y, m: todayParts.m })
-    setFocusIso(today)
-    pendingFocus.current = true
-  }
-
   const moveFocus = (deltaDays: number) => {
     const base = partsOf(focusIso)
     let cursor = new Date(base.y, base.m, base.d)
@@ -572,7 +566,7 @@ export const JumpPicker = ({
       >
         <button
           type="button"
-          onClick={resetToToday}
+          onClick={() => onPick(today)}
           style={{
             all: 'unset',
             cursor: 'pointer',
