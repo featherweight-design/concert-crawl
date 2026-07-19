@@ -1,3 +1,19 @@
+# [1.142.0](https://github.com/HartiganHM/concert-crawl/compare/v1.141.0...v1.142.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* drop as-casts in follow tests + correct matcher query-cost comments (Copilot r1) ([b856122](https://github.com/HartiganHM/concert-crawl/commit/b8561226dd82d72cdbe93994994cd6b87849875d))
+* **web:** constrain DetailFollowStrip text for long artist lists (design review) ([429418b](https://github.com/HartiganHM/concert-crawl/commit/429418babdc872469c0cf171fcad60ac8c4ae081))
+* **web:** keep anonymous events fetch when a connection has zero taste rows (Copilot r2) ([0e15609](https://github.com/HartiganHM/concert-crawl/commit/0e156091b09b65ca08be12adb02e99a30dc888a1))
+* **web:** scope personalized events cache by viewer and fail closed on token gaps ([d268559](https://github.com/HartiganHM/concert-crawl/commit/d2685596ec40d638a12c0cc175be3daf5d97ab1f))
+
+
+### Features
+
+* **api:** followedArtists overlay on events list + detail ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 6) ([c1be0e9](https://github.com/HartiganHM/concert-crawl/commit/c1be0e9685a4a9a572c5889a07389b7e77ed7601))
+* **web:** following highlighting on browse cards, hero, and event detail ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 6) ([d0424bc](https://github.com/HartiganHM/concert-crawl/commit/d0424bc6300527c77a4c8490d2754035e419df00))
+
 # [1.141.0](https://github.com/HartiganHM/concert-crawl/compare/v1.140.0...v1.141.0) (2026-07-19)
 
 
