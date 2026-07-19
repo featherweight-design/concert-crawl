@@ -53,6 +53,7 @@ import { canUseFeature } from '@concert-crawl/entitlements'
 import { loadPlanState } from '../lib/plan.js'
 import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js'
 import { bucketsPresentIn, expandBucket } from '../lib/genre-buckets.js'
+import { parseGenreRows } from '../lib/parse-genre-rows.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -489,27 +490,15 @@ eventsRouter.get(
 // first_missing_at IS NULL mirrors the list/detail filter so a genre tag
 // that only exists on stale rows never appears in the filter surface —
 // otherwise users would pick a vibe and get zero results.
-const genreRowSchema = z.object({ genre: z.string() })
-
+//
+// Row-shape parsing + the drop-signal (apiLogger.warn + Sentry.captureMessage
+// tagged `genres_parse_drop`) live in lib/parse-genre-rows so the drop-path
+// is unit-testable without mocking the ORM (#1108).
 eventsRouter.get('/genres', async (ctx) => {
   const rows = await db.execute(
     sql`SELECT DISTINCT unnest(genre) AS genre FROM ${events} WHERE status = 'upcoming' AND first_missing_at IS NULL AND genre IS NOT NULL`,
   )
-  const rawGenres: string[] = []
-  for (const row of rows) {
-    const parsed = genreRowSchema.safeParse(row)
-    if (parsed.success) {
-      rawGenres.push(parsed.data.genre)
-    } else {
-      // The SELECT projection is stable, so a parse failure here means a
-      // driver regression or an unexpected null from unnest — log it so a
-      // silent drop can't degrade the filter surface without a signal.
-      apiLogger.warn(
-        { issues: parsed.error.issues },
-        'events/genres: row failed genreRowSchema — dropped',
-      )
-    }
-  }
+  const rawGenres = parseGenreRows(rows)
   return ctx.json({ success: true, data: bucketsPresentIn(rawGenres) })
 })
 
