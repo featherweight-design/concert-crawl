@@ -142,6 +142,27 @@ describe('ThemeProvider', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('jade')
   })
 
+  it('setTheme still applies the theme when localStorage writes throw', async () => {
+    const setItem = localStorageMock.setItem
+    localStorageMock.setItem = () => {
+      throw new Error('storage disabled')
+    }
+    try {
+      const { result } = renderHook(() => useTheme(), {
+        wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+      })
+
+      await act(async () => {
+        result.current.setTheme('jade')
+      })
+
+      expect(result.current.theme).toBe('jade')
+      expect(document.documentElement.getAttribute('data-theme')).toBe('jade')
+    } finally {
+      localStorageMock.setItem = setItem
+    }
+  })
+
   it('useTheme throws when called outside ThemeProvider', () => {
     expect(() => renderHook(() => useTheme())).toThrow(
       'useTheme must be used within ThemeProvider',

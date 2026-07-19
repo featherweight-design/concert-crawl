@@ -53,7 +53,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   function setTheme(theme: ThemeName) {
     applyTheme(theme)
-    localStorage.setItem('cc-theme', theme)
+    try {
+      localStorage.setItem('cc-theme', theme)
+    } catch (err) {
+      // Storage unavailable (private mode, blocked, or disabled) — the theme
+      // still applies for this visit, it just won't persist.
+      console.warn('theme: could not persist theme choice', err)
+    }
     setThemeState(theme)
   }
 
