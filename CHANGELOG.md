@@ -1,3 +1,18 @@
+# [1.136.0](https://github.com/HartiganHM/concert-crawl/compare/v1.135.1...v1.136.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* **api:** consume an attempt token on failed syncs so outage retries stay rate limited ([4c8c806](https://github.com/HartiganHM/concert-crawl/commit/4c8c806760e19553903a02fa9fcf331d142665bc))
+* **spotify:** handle HTTP-date Retry-After, transient Clerk failures ([248d33b](https://github.com/HartiganHM/concert-crawl/commit/248d33bcad89ad52d58d2344a58497f8ec2b1d92))
+* **spotify:** harden sync failure paths ([9f89943](https://github.com/HartiganHM/concert-crawl/commit/9f8994336fc41b9a53642a5b7f4fb4ab4fd5290a))
+* **spotify:** log unparseable PATCH bodies ([9ce399d](https://github.com/HartiganHM/concert-crawl/commit/9ce399d85af90720b4ce8393063c9e8014451e78))
+
+
+### Features
+
+* **api:** spotify client + sync engine + connection API ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 3) ([076f312](https://github.com/HartiganHM/concert-crawl/commit/076f312f281dff9b620e2b628047cfc272d339f9))
+
 ## [1.135.1](https://github.com/HartiganHM/concert-crawl/compare/v1.135.0...v1.135.1) (2026-07-18)
 
 
