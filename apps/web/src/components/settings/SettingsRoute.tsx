@@ -3,6 +3,7 @@ import { ProfileHero } from './ProfileHero'
 import { AccountManagementRow } from './AccountManagementRow'
 import { PlanPanel } from './plan'
 import { ThemePickerInline } from './ThemePickerInline'
+import { NotificationsSection } from './notifications/NotificationsSection'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
 import { ConnectionsPanel } from './connections'
@@ -98,6 +99,13 @@ export function SettingsRoute({
             </span>
           </div>
           <ThemePickerInline />
+        </div>
+
+        <div className="mx-4 h-px bg-border" />
+
+        {/* Notifications (#1063) */}
+        <div className="flex flex-col gap-2 px-4">
+          <NotificationsSection />
         </div>
 
         <div className="mx-4 h-px bg-border" />

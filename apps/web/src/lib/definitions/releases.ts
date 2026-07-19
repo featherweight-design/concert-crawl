@@ -26,6 +26,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.12.0-beta',
+    date: 'Jul 19, 2026',
+    headline: 'Turn push on (or off) right from Settings.',
+    items: [
+      {
+        kind: 'added',
+        text: "Settings → Notifications now has a master switch and two sub-toggles (Watch updates + Price drops). One tap fires the browser permission dialog if you haven't already granted it; another tap disables push on this device without losing your preferences.",
+      },
+    ],
+  },
+  {
     version: 'v0.11.0-beta',
     date: 'Jul 19, 2026',
     headline: 'Your artists announce a Denver show — you hear about it first.',

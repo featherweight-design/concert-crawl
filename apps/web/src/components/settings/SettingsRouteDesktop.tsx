@@ -12,6 +12,8 @@ import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
 import { EditProfileForm } from './EditProfileForm'
 import { ConnectionsPanel } from './connections'
+import { NotificationsSection } from './notifications/NotificationsSection'
+import { NOTIFICATIONS_COPY } from './notifications/definitions/copy'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
@@ -28,6 +30,7 @@ type NavSection =
   | 'plan'
   | 'appearance'
   | 'connections'
+  | 'notifications'
   | 'submissions'
   | 'account'
   | 'danger'
@@ -37,6 +40,7 @@ const NAV_ITEMS: { key: NavSection; label: string }[] = [
   { key: 'plan', label: 'Plan' },
   { key: 'submissions', label: 'My submissions' },
   { key: 'appearance', label: 'Appearance' },
+  { key: 'notifications', label: NOTIFICATIONS_COPY.heading },
   { key: 'connections', label: SPOTIFY_COPY.connectEntry.sectionTitle },
   { key: 'account', label: 'Account' },
   { key: 'danger', label: 'Danger zone' },
@@ -90,6 +94,24 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
       <path
         d="M6.8 9.2l2.4-2.4M8.5 4.5l1-1a2.3 2.3 0 013.2 3.2l-1 1M7.5 8.3l-1 1a2.3 2.3 0 003.2 3.2l1-1"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  notifications: (
+    // Bell glyph — small enough to match the neighboring 16px icons.
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M8 2v.8M5 6a3 3 0 016 0v3l1.2 2H3.8L5 9V6z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M6.5 12.5a1.5 1.5 0 003 0"
         stroke="currentColor"
         strokeWidth="1.5"
         strokeLinecap="round"
@@ -400,6 +422,10 @@ export function SettingsRouteDesktop({
                 </div>
                 <ConnectionsPanel />
               </div>
+            )}
+
+            {activeSection === 'notifications' && (
+              <NotificationsSection variant="desktop" />
             )}
 
             {activeSection === 'submissions' && submissionsPanel}
