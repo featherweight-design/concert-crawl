@@ -127,4 +127,15 @@ describe('GET /v1/email/unsubscribe — integration', () => {
     expect(res.status).toBe(503)
     expect(await getDigestEnabled('user_unsub_7')).toBe(true)
   })
+
+  it('returns 503 when EMAIL_UNSUBSCRIBE_SECRET is set but empty', async () => {
+    await seedConnection('user_unsub_8')
+    const token = buildUnsubscribeToken('user_unsub_8', 'digest')
+    process.env['EMAIL_UNSUBSCRIBE_SECRET'] = ''
+    const res = await app.request(
+      `/v1/email/unsubscribe?uid=user_unsub_8&family=digest&token=${token}`,
+    )
+    expect(res.status).toBe(503)
+    expect(await getDigestEnabled('user_unsub_8')).toBe(true)
+  })
 })

@@ -15,6 +15,7 @@ import { db, userSpotifyConnections } from '@concert-crawl/db'
 import { apiLogger } from '../lib/logger.js'
 import {
   UNSUBSCRIBE_FAMILIES,
+  isUnsubscribeConfigured,
   verifyUnsubscribeToken,
 } from '../lib/email-unsubscribe.js'
 
@@ -54,7 +55,7 @@ emailUnsubscribeRouter.get(
   async (ctx) => {
     const { uid, family, token } = ctx.req.valid('query')
 
-    if (process.env['EMAIL_UNSUBSCRIBE_SECRET'] === undefined) {
+    if (!isUnsubscribeConfigured()) {
       apiLogger.error(
         { family },
         'EMAIL_UNSUBSCRIBE_SECRET not configured — unsubscribe unavailable',

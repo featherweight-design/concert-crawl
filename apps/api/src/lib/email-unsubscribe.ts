@@ -20,6 +20,11 @@ const getSecret = (): string | undefined => {
   return secret !== undefined && secret.length > 0 ? secret : undefined
 }
 
+// True when a non-empty EMAIL_UNSUBSCRIBE_SECRET is set. Empty string counts
+// as unconfigured (common dashboard misconfig) so the route can 503 instead
+// of a misleading 400.
+export const isUnsubscribeConfigured = (): boolean => getSecret() !== undefined
+
 // Public origin of THIS API service (the unsubscribe route lives on the API,
 // not the web app). Set per environment, e.g.
 // https://concert-crawl-api.onrender.com — defaults to local dev.
