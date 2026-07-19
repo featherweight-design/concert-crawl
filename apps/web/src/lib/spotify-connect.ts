@@ -28,6 +28,45 @@ export type CreateSpotifyExternalAccount = (
 // point shares this path so the handler mounts in exactly one place.
 export const SPOTIFY_RETURN_PATH = '/me?section=connections&spotify=return'
 
+// Resume intent for the connect flow. Clerk's reverification can reload the
+// page after the user completes an email/OTP factor (#763 staging feedback),
+// which orphans the in-flight connect promise — the user lands back on
+// Connections still disconnected. The sheet marks intent in sessionStorage
+// before the reverification-capable call and resumes on remount; the TTL
+// mirrors Clerk's 10-minute reverification window so a stale mark never
+// fires a surprise connect on a later visit.
+const RESUME_KEY = 'cc-spotify-connect-resume'
+const RESUME_TTL_MS = 10 * 60 * 1000
+
+export function markSpotifyConnectPending(): void {
+  try {
+    sessionStorage.setItem(RESUME_KEY, String(Date.now()))
+  } catch {
+    // Storage unavailable (private mode) — resume is a best-effort nicety.
+  }
+}
+
+export function clearSpotifyConnectPending(): void {
+  try {
+    sessionStorage.removeItem(RESUME_KEY)
+  } catch {
+    // Storage unavailable — nothing was marked, nothing to clear.
+  }
+}
+
+// Clear-on-read so at most one mounted sheet resumes after a reload.
+export function consumeSpotifyConnectPending(): boolean {
+  try {
+    const raw = sessionStorage.getItem(RESUME_KEY)
+    if (!raw) return false
+    sessionStorage.removeItem(RESUME_KEY)
+    const markedAt = Number(raw)
+    return Number.isFinite(markedAt) && Date.now() - markedAt <= RESUME_TTL_MS
+  } catch {
+    return false
+  }
+}
+
 export type SpotifyConnectStart =
   | { status: 'redirect'; url: string }
   | { status: 'cancelled' }

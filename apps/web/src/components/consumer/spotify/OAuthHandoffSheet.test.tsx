@@ -7,10 +7,15 @@ import type { SpotifyConnectStart } from '@/lib/spotify-connect'
 const startSpotifyConnect =
   vi.fn<(...args: unknown[]) => Promise<SpotifyConnectStart>>()
 
-vi.mock('@/lib/spotify-connect', () => ({
-  SPOTIFY_RETURN_PATH: '/me?section=connections&spotify=return',
-  startSpotifyConnect: (...args: unknown[]) => startSpotifyConnect(...args),
-}))
+// Keep the real sessionStorage resume-intent helpers — the resume tests
+// below exercise them against jsdom storage; only the connect call is faked.
+vi.mock('@/lib/spotify-connect', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/spotify-connect')>()
+  return {
+    ...actual,
+    startSpotifyConnect: (...args: unknown[]) => startSpotifyConnect(...args),
+  }
+})
 
 vi.mock('@clerk/nextjs', () => ({
   useUser: () => ({
@@ -22,6 +27,7 @@ vi.mock('@clerk/nextjs', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  sessionStorage.clear()
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
@@ -154,6 +160,70 @@ describe('OAuthHandoffSheet', () => {
     await Promise.resolve()
     await Promise.resolve()
     expect(assign).not.toHaveBeenCalled()
+  })
+
+  it('marks a resume intent before the connect starts and clears it on settle', async () => {
+    startSpotifyConnect.mockImplementation(() => {
+      // The flag must already be persisted when the reverification-capable
+      // call begins — a mid-flow reload is exactly what it protects against.
+      expect(sessionStorage.getItem('cc-spotify-connect-resume')).not.toBeNull()
+      return Promise.resolve<SpotifyConnectStart>({ status: 'error' })
+    })
+    render(<OAuthHandoffSheet open onClose={vi.fn()} />)
+    fireEvent.click(
+      screen.getByRole('button', { name: HANDOFF_COPY.continueCta }),
+    )
+    await waitFor(() => {
+      expect(screen.getByText(FAIL_COPY.title)).toBeTruthy()
+    })
+    expect(sessionStorage.getItem('cc-spotify-connect-resume')).toBeNull()
+  })
+
+  it('clears the resume intent before redirecting to Spotify', async () => {
+    startSpotifyConnect.mockResolvedValue({
+      status: 'redirect',
+      url: 'https://accounts.spotify.com/authorize',
+    })
+    const assign = vi.fn(() => {
+      expect(sessionStorage.getItem('cc-spotify-connect-resume')).toBeNull()
+    })
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { origin: 'http://localhost', assign },
+    })
+    render(<OAuthHandoffSheet open onClose={vi.fn()} />)
+    fireEvent.click(
+      screen.getByRole('button', { name: HANDOFF_COPY.continueCta }),
+    )
+    await waitFor(() => expect(assign).toHaveBeenCalledTimes(1))
+  })
+
+  it('resumes the connect after a reload interrupted it mid-reverification', async () => {
+    sessionStorage.setItem('cc-spotify-connect-resume', String(Date.now()))
+    startSpotifyConnect.mockReturnValue(
+      new Promise<SpotifyConnectStart>(() => undefined),
+    )
+    render(<OAuthHandoffSheet open={false} onClose={vi.fn()} />)
+    await waitFor(() => {
+      expect(startSpotifyConnect).toHaveBeenCalledTimes(1)
+    })
+    // The sheet opens itself while resuming, even though the parent's open
+    // state was reset by the reload.
+    expect(screen.getByText(HANDOFF_COPY.title)).toBeTruthy()
+    expect(sessionStorage.getItem('cc-spotify-connect-resume')).toBeNull()
+  })
+
+  it('does not resume from a stale intent', async () => {
+    sessionStorage.setItem(
+      'cc-spotify-connect-resume',
+      String(Date.now() - 11 * 60 * 1000),
+    )
+    render(<OAuthHandoffSheet open={false} onClose={vi.fn()} />)
+    // Give any (incorrect) resume effect a chance to fire.
+    await Promise.resolve()
+    expect(startSpotifyConnect).not.toHaveBeenCalled()
+    expect(screen.queryByText(HANDOFF_COPY.title)).toBeNull()
+    expect(sessionStorage.getItem('cc-spotify-connect-resume')).toBeNull()
   })
 
   it('dismisses the failure state via "Maybe later"', async () => {
