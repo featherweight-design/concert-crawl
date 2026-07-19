@@ -16,6 +16,13 @@ interface StatCardProps {
   noChip?: boolean
   footer?: React.ReactNode
   onClick?: () => void
+  /**
+   * Tighten the value's font-size for cards that render an atypically long
+   * numeric string — e.g. LLM Cost Today ($0.3113 wraps mid-value on narrow
+   * tiles at the default clamp). Affects only the value; label/unit/trend
+   * stay put (#1078).
+   */
+  compact?: boolean
 }
 
 export const StatCard = ({
@@ -30,6 +37,7 @@ export const StatCard = ({
   noChip = false,
   footer,
   onClick,
+  compact = false,
 }: StatCardProps) => {
   const Icon = (
     LucideIcons as unknown as Record<
@@ -106,14 +114,32 @@ export const StatCard = ({
                 : 'var(--admin-font, Inter, sans-serif)',
               // Fluid so the value shrinks on narrow tiles (≤320px) instead
               // of overflowing the card; caps at the original 38px on wide
-              // viewports.
-              fontSize: 'clamp(24px, 6.5vw, 38px)',
+              // viewports. `compact` tightens the clamp for cards whose
+              // value can grow past ~6 chars (currency w/ sub-cent precision).
+              fontSize: compact
+                ? 'clamp(18px, 5vw, 28px)'
+                : 'clamp(24px, 6.5vw, 38px)',
               fontWeight: 800,
               fontVariantNumeric: 'tabular-nums',
               lineHeight: 1,
               color: 'var(--fg)',
               minWidth: 0,
-              overflowWrap: 'anywhere',
+              // The default `overflowWrap: 'anywhere'` lets long values
+              // shrink AND break mid-string as a fallback — fine for
+              // arbitrary text. `compact` cards render currency /
+              // numeric strings that must never split (the original
+              // symptom in #1078 was `$0.3113` breaking between the
+              // 2nd and 3rd trailing digit), so lock them to a single
+              // line and let the tighter clamp handle overflow. Belt-
+              // and-braces: an unexpectedly long value on a narrow tile
+              // could still exceed the clamp minimum, so add
+              // `overflow: hidden` + `textOverflow: ellipsis` to keep
+              // the card's layout stable rather than letting the value
+              // spill onto adjacent UI.
+              overflowWrap: compact ? 'normal' : 'anywhere',
+              whiteSpace: compact ? 'nowrap' : undefined,
+              overflow: compact ? 'hidden' : undefined,
+              textOverflow: compact ? 'ellipsis' : undefined,
             }}
           >
             {value}

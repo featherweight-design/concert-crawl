@@ -48,12 +48,6 @@ interface Props {
   initialRuns: CrawlRun[]
   initialSelectedId?: string
   initialTab?: InspectorTab
-  // #804: when true, the per-venue History tab fetches only crawl_runs
-  // that carry an unread admin_alert. Plumbed through to
-  // useAdminVenueRuns so the table re-fetches on toggle. The page header
-  // stats keep using the unfiltered initialRuns so they reflect the
-  // true crawl pipeline regardless of filter state.
-  hasAlert?: boolean
 }
 
 const STATUS_KIND: Record<
@@ -229,7 +223,6 @@ export const CrawlSplitView = ({
   initialRuns,
   initialSelectedId,
   initialTab,
-  hasAlert = false,
 }: Props) => {
   const resolvedInitialId =
     initialSelectedId &&
@@ -257,7 +250,7 @@ export const CrawlSplitView = ({
   const [recrawlError, setRecrawlError] = useState<Record<string, string>>({})
   const triggerCrawl = useTriggerVenueCrawl()
   const { data: venueRuns = [], isLoading: venueRunsLoading } =
-    useAdminVenueRuns(selectedId, hasAlert)
+    useAdminVenueRuns(selectedId)
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null)
   const [isMobile, setIsMobile] = useState(false)
 
@@ -983,9 +976,7 @@ export const CrawlSplitView = ({
                             {
                               label:
                                 ADMIN_COPY.crawl.splitView.eventsCreatedLabel,
-                              value: activeRun.eventsInserted as
-                                | string
-                                | number,
+                              value: activeRun.eventsInserted,
                               color:
                                 activeRun.eventsInserted > 0
                                   ? 'var(--success)'

@@ -5,7 +5,6 @@ import {
   CrawlSplitView,
   CrawlRunAllButton,
 } from '@/components/admin/crawl/CrawlSplitView'
-import { CrawlAlertFilter } from '@/components/admin/crawl/CrawlAlertFilter'
 import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner'
 import {
   formatSweepHint,
@@ -103,27 +102,12 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
     (Array.isArray(rawVenueId) ? rawVenueId[0] : rawVenueId) || undefined
   const rawTab = resolvedParams.tab
   const initialTab = (Array.isArray(rawTab) ? rawTab[0] : rawTab) || undefined
-  // #804: when `?hasAlert=true` is in the URL, narrow the per-venue
-  // history list to only runs carrying an unread admin_alert. The filter
-  // is plumbed through to CrawlSplitView's `useAdminVenueRuns` hook (the
-  // History tab data source); the page-level `runs` fetch stays
-  // unfiltered so the header stats (today's runs, last sweep, ingested
-  // events, LLM cost) reflect the true crawl pipeline regardless of
-  // filter state. We also collect the OTHER search params (venueId, tab)
-  // so the filter's hrefs preserve them — toggling the filter shouldn't
-  // clobber the operator's current venue selection or active inspector
-  // tab.
-  const rawHasAlert = resolvedParams.hasAlert
-  const hasAlertParam = Array.isArray(rawHasAlert)
-    ? rawHasAlert[0]
-    : rawHasAlert
-  const hasAlertOnly = hasAlertParam === 'true'
-
-  const otherSearchParams: Record<string, string> = {}
-  for (const [key, value] of Object.entries(resolvedParams)) {
-    if (key === 'hasAlert' || value === undefined) continue
-    otherSearchParams[key] = Array.isArray(value) ? (value[0] ?? '') : value
-  }
+  // #804 introduced a page-level `?hasAlert=true` filter surfaced through a
+  // "Show alerts only" CTA next to Run all. The CTA read as inert to admins
+  // (its effect landed inside the per-venue History tab, not the top-level
+  // stats or venue list) — see #1077. The visible toggle was removed; the
+  // History tab now always shows the unfiltered run list. Blocked / failed
+  // venues remain surfaced through the IssuesBanner just below.
 
   const [rawStatus, runs] = await Promise.all([
     apiClient.get<RawVenueStatus[]>('/v1/admin/crawl/status', token),
@@ -186,22 +170,7 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         eyebrow={ADMIN_COPY.crawlPage.sectionEyebrow}
         title={ADMIN_COPY.crawlPage.sectionTitle}
         subtitle={ADMIN_COPY.crawlPage.sectionSubtitle}
-        actions={
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 12,
-              flexWrap: 'wrap',
-            }}
-          >
-            <CrawlAlertFilter
-              hasAlert={hasAlertOnly}
-              otherParams={otherSearchParams}
-            />
-            <CrawlRunAllButton />
-          </div>
-        }
+        actions={<CrawlRunAllButton />}
       />
 
       <IssuesBanner
@@ -250,13 +219,13 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
           value={formatLlmCostTotal(todayRuns) || '$0.00'}
           iconName="DollarSign"
           kind="signal"
+          compact
         />
       </div>
 
       <CrawlSplitView
         initialStatus={status}
         initialRuns={runs}
-        hasAlert={hasAlertOnly}
         {...(initialVenueId !== undefined && {
           initialSelectedId: initialVenueId,
         })}
