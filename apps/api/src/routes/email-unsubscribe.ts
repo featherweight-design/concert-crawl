@@ -51,7 +51,25 @@ export const emailUnsubscribeRouter = new Hono()
 
 emailUnsubscribeRouter.get(
   '/unsubscribe',
-  zValidator('query', unsubscribeQuerySchema),
+  // Custom hook: malformed links must render the same HTML page as a bad
+  // token, not zValidator's default JSON error — humans land here from email
+  // clients.
+  zValidator('query', unsubscribeQuerySchema, (result, ctx) => {
+    if (!result.success) {
+      apiLogger.warn(
+        { issues: result.error.issues },
+        'email unsubscribe query rejected',
+      )
+      return ctx.html(
+        confirmationPage(
+          'That link didn’t work.',
+          'This unsubscribe link is invalid or has expired. You can still manage emails from your account settings.',
+        ),
+        400,
+      )
+    }
+    return undefined
+  }),
   async (ctx) => {
     const { uid, family, token } = ctx.req.valid('query')
 

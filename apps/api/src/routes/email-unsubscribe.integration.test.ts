@@ -104,17 +104,21 @@ describe('GET /v1/email/unsubscribe — integration', () => {
     expect(await getDigestEnabled('user_unsub_5')).toBe(true)
   })
 
-  it('rejects an unknown family with 400', async () => {
+  it('rejects an unknown family with a 400 HTML page', async () => {
     const token = buildUnsubscribeToken('user_unsub_6', 'digest')
     const res = await app.request(
       `/v1/email/unsubscribe?uid=user_unsub_6&family=billing&token=${token}`,
     )
     expect(res.status).toBe(400)
+    expect(res.headers.get('content-type')).toContain('text/html')
+    expect(await res.text()).toContain('didn’t work')
   })
 
-  it('rejects missing params with 400', async () => {
+  it('rejects missing params with a 400 HTML page', async () => {
     const res = await app.request('/v1/email/unsubscribe?family=digest')
     expect(res.status).toBe(400)
+    expect(res.headers.get('content-type')).toContain('text/html')
+    expect(await res.text()).toContain('didn’t work')
   })
 
   it('returns 503 when EMAIL_UNSUBSCRIBE_SECRET is not configured', async () => {
