@@ -9,8 +9,10 @@ vi.mock('next/navigation', () => ({
   usePathname: () => pathname,
 }))
 
+const getToken = vi.fn()
+
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: vi.fn().mockResolvedValue('tok') }),
+  useAuth: () => ({ getToken }),
 }))
 
 // Minimal shape of the mutation-cache 'updated' notification the gate
@@ -56,6 +58,7 @@ vi.mock('./OAuthHandoffSheet', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  getToken.mockResolvedValue('tok')
   pathname = '/events'
   cacheListeners = []
   eligible = true
@@ -99,6 +102,19 @@ describe('FirstWatchNudgeGate', () => {
     await Promise.resolve()
     expect(fetchEligibility).not.toHaveBeenCalled()
     expect(screen.queryByTestId('first-watch-nudge')).toBeNull()
+  })
+
+  it('retries on a later watch when the auth token was not ready', async () => {
+    getToken.mockResolvedValueOnce(null)
+    render(<FirstWatchNudgeGate />)
+    emit(watchSuccess(true))
+    await waitFor(() => expect(getToken).toHaveBeenCalledTimes(1))
+    expect(fetchEligibility).not.toHaveBeenCalled()
+    emit(watchSuccess(true))
+    await waitFor(() => expect(fetchEligibility).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(screen.getByTestId('first-watch-nudge')).toBeTruthy(),
+    )
   })
 
   it('checks eligibility only once even across multiple watches', async () => {

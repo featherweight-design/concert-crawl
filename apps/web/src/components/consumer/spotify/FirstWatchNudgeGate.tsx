@@ -64,7 +64,12 @@ export const FirstWatchNudgeGate = () => {
       void (async () => {
         try {
           const token = await getToken()
-          if (!token) return
+          if (!token) {
+            // Clerk not ready yet — release the trigger so a later watch
+            // can retry instead of losing the nudge for the page lifetime.
+            triggeredRef.current = false
+            return
+          }
           const { eligible } = await fetchSpotifyNudgeEligibility(token)
           if (!eligible) return
           setShow(true)

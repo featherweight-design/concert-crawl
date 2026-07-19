@@ -83,8 +83,9 @@ export const SpotifyReturnFlow = () => {
   }
 
   const watchAndBrowse = () => {
-    patch.mutate({ autoWatch: true })
-    goBrowse()
+    // Navigate only once auto-watch actually saved — on failure the current
+    // sheet stays open, so the same CTA retries the PATCH.
+    patch.mutate({ autoWatch: true }, { onSuccess: goBrowse })
   }
 
   const view = connect.data

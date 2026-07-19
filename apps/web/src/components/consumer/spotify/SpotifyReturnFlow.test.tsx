@@ -24,7 +24,16 @@ const connectMutate = vi.fn((_vars: undefined, opts?: ConnectOptions) => {
   if (connectFails) opts?.onError?.(new Error('boom'))
   else if (connectView) opts?.onSuccess?.(connectView)
 })
-const patchMutate = vi.fn()
+interface PatchOptions {
+  onSuccess?: () => void
+}
+
+let patchFails: boolean
+const patchMutate = vi.fn(
+  (_vars: { autoWatch: boolean }, opts?: PatchOptions) => {
+    if (!patchFails) opts?.onSuccess?.()
+  },
+)
 
 vi.mock('@/lib/queries/use-spotify-connection', () => ({
   useSpotifyConnect: () => ({ mutate: connectMutate, data: connectView }),
@@ -36,6 +45,7 @@ beforeEach(() => {
   params = new URLSearchParams('section=connections&spotify=return')
   connectView = undefined
   connectFails = false
+  patchFails = false
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
@@ -117,8 +127,33 @@ describe('SpotifyReturnFlow', () => {
         name: SPOTIFY_COPY.autoWatchSheet.ctaAuto(12),
       }),
     )
-    expect(patchMutate).toHaveBeenCalledWith({ autoWatch: true })
+    expect(patchMutate).toHaveBeenCalledWith(
+      { autoWatch: true },
+      expect.anything(),
+    )
     expect(push).toHaveBeenCalledWith('/events')
+  })
+
+  it('stays on the auto-watch sheet when the auto-watch PATCH fails', () => {
+    connectView = VIEW
+    patchFails = true
+    render(<SpotifyReturnFlow />)
+    fireEvent.click(
+      screen.getByRole('button', { name: SPOTIFY_COPY.connectSuccess.cta }),
+    )
+    fireEvent.click(
+      screen.getByRole('radio', {
+        name: new RegExp(SPOTIFY_COPY.autoWatchSheet.optionAuto.head),
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: SPOTIFY_COPY.autoWatchSheet.ctaAuto(12),
+      }),
+    )
+    expect(patchMutate).toHaveBeenCalledTimes(1)
+    expect(push).not.toHaveBeenCalled()
+    expect(screen.getByText(SPOTIFY_COPY.autoWatchSheet.title)).toBeTruthy()
   })
 
   it('shows the empty Denver match state when no shows matched', () => {
@@ -130,7 +165,10 @@ describe('SpotifyReturnFlow', () => {
         name: SPOTIFY_COPY.emptyDenverMatch.primaryCta,
       }),
     )
-    expect(patchMutate).toHaveBeenCalledWith({ autoWatch: true })
+    expect(patchMutate).toHaveBeenCalledWith(
+      { autoWatch: true },
+      expect.anything(),
+    )
     expect(push).toHaveBeenCalledWith('/events')
   })
 
