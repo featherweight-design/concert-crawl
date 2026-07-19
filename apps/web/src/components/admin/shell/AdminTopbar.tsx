@@ -1,6 +1,6 @@
 'use client'
 
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 import { NAV_V2 } from './nav'
@@ -11,7 +11,8 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 const useBreadcrumbs = (pageTitle: string | null) => {
   const pathname = usePathname()
-  const crumbs = buildBreadcrumbs(pathname, NAV_V2)
+  const searchParams = useSearchParams()
+  const crumbs = buildBreadcrumbs(pathname, NAV_V2, searchParams)
   if (pageTitle && crumbs.length > 0) {
     return [...crumbs.slice(0, -1), { label: pageTitle }]
   }

@@ -1,11 +1,16 @@
 import type { NavItem } from './nav'
+import { reviewHrefFromParam } from '@/lib/admin/edit-event-link'
 
 export interface Crumb {
   label: string
   href?: string
 }
 
-export function buildBreadcrumbs(pathname: string, nav: NavItem[]): Crumb[] {
+export function buildBreadcrumbs(
+  pathname: string,
+  nav: NavItem[],
+  searchParams?: URLSearchParams | null,
+): Crumb[] {
   const section = nav.find((item) =>
     item.href !== '/admin'
       ? pathname.startsWith(item.href)
@@ -31,5 +36,14 @@ export function buildBreadcrumbs(pathname: string, nav: NavItem[]): Crumb[] {
     subLabel = 'New'
   }
 
-  return [{ label: section.label, href: section.href }, { label: subLabel }]
+  // Review subpages carry an optional `?from=<tab>` param so the breadcrumb
+  // returns the admin to whichever Review tab they came from (#1083). Only
+  // the Review section honours this — other sections keep their canonical
+  // parent href.
+  const sectionHref =
+    section.key === 'review'
+      ? reviewHrefFromParam(searchParams?.get('from'))
+      : section.href
+
+  return [{ label: section.label, href: sectionHref }, { label: subLabel }]
 }

@@ -40,9 +40,9 @@ export default async function EventEditorPage({ params }: PageProps) {
     throw error
   }
 
-  return (
-    <div style={{ padding: '24px 28px' }}>
-      <EventEditorClient event={event} />
-    </div>
-  )
+  // The admin shell's <main> already applies the section-level padding
+  // (24px 28px desktop, 16px 14px mobile — see AdminShellClient). Dropping
+  // the extra inner wrapper brings the editor's outer spacing in line with
+  // /admin/review, which renders its client directly under the shell (#1082).
+  return <EventEditorClient event={event} />
 }

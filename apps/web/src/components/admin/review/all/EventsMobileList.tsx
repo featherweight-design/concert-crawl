@@ -95,7 +95,12 @@ const EventCard = ({
           display: 'block',
           textAlign: 'left',
           width: '100%',
-          padding: 14,
+          // When selectable, drop the checkbox onto its own line above the
+          // title by pushing the button content down past the absolutely-
+          // positioned checkbox (top:12 + ~16px checkbox = ~28, plus a
+          // small gap). Without this the checkbox overlaps the title on
+          // mobile (#1081).
+          padding: selectable ? '36px 14px 14px' : 14,
           borderRadius: 13,
           background: 'transparent',
           border: 'none',

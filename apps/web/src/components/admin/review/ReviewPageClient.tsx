@@ -22,6 +22,7 @@ import { AdminReviewMobile } from './AdminReviewMobile'
 import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs'
 import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
 import { editEventHref } from '@/lib/admin/edit-event-link'
+import { isReviewTabKey, type ReviewTabKey } from '@/lib/admin/review-tabs'
 import { computePendingCount } from '@/lib/admin/review-pending'
 import { PricesTabContent } from './_tabs/PricesTabContent'
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
@@ -59,23 +60,9 @@ interface ReviewPageClientProps {
   initialCounts: ReviewCounts
 }
 
-type ReviewTabKey =
-  'event-flags' | 'prices' | 'missing' | 'all-events' | 'contests'
-
-const VALID_TAB_KEYS: ReadonlySet<string> = new Set([
-  'event-flags',
-  'prices',
-  'missing',
-  'all-events',
-  'contests',
-])
-
-const isValidTabKey = (value: string | null): value is ReviewTabKey =>
-  value !== null && VALID_TAB_KEYS.has(value)
-
 const resolveTabFromSearchParams = (params: URLSearchParams): ReviewTabKey => {
   const tab = params.get('tab')
-  if (isValidTabKey(tab)) return tab
+  if (isReviewTabKey(tab)) return tab
   // Back-compat: legacy `?section=submissions` → prices tab
   if (params.get('section') === 'submissions') return 'prices'
   return 'event-flags'
@@ -124,7 +111,7 @@ export const ReviewPageClient = ({
 
   const setActiveTab = useCallback(
     (next: string) => {
-      if (!isValidTabKey(next)) return
+      if (!isReviewTabKey(next)) return
       const params = new URLSearchParams(searchParams?.toString() ?? '')
       params.set('tab', next)
       params.delete('section') // retire legacy key once user navigates
@@ -584,8 +571,10 @@ export const ReviewPageClient = ({
     },
   }
 
+  // Callers inside Review pass `activeTab` so the editor's topbar breadcrumb
+  // takes the admin back to whichever tab they came from (#1083).
   const onAllEventsEdit = (event: AllEvent) =>
-    router.push(editEventHref(event.id))
+    router.push(editEventHref(event.id, activeTab))
   const onAllEventsViewDetail = (event: AllEvent) => {
     window.open(`/events/${event.id}`, '_blank', 'noopener,noreferrer')
   }
@@ -704,7 +693,9 @@ export const ReviewPageClient = ({
             onMarkMissingCancelled={markMissingCancelled}
             onDismissMissing={dismissMissing}
             onEnterMissingTab={() => setMissingActivated(true)}
-            onAllEventsRowClick={(id) => router.push(editEventHref(id))}
+            onAllEventsRowClick={(id) =>
+              router.push(editEventHref(id, activeTab))
+            }
             allEventsFilters={parseFiltersFromParams(
               new URLSearchParams(searchParams?.toString() ?? ''),
             )}
@@ -728,6 +719,12 @@ export const ReviewPageClient = ({
     )
   }
 
+  // Counts are intentionally omitted from `prices` and `missing` (#1079).
+  // Their `/v1/admin/review/counts` metrics — pending price submissions and
+  // events with `firstMissingAt IS NOT NULL` — read as inaccurate against
+  // what a user would infer from the tab labels, so rather than surface a
+  // misleading number we drop them entirely. The other tabs' counts remain
+  // in lock-step with their surfaces.
   const tabs: ReadonlyArray<ReviewTabDescriptor> = [
     {
       key: 'event-flags',
@@ -738,13 +735,11 @@ export const ReviewPageClient = ({
     {
       key: 'prices',
       label: ADMIN_COPY.review.tabs.prices,
-      count: counts.prices,
       kind: 'signal',
     },
     {
       key: 'missing',
       label: ADMIN_COPY.review.tabs.missing,
-      count: counts.missing,
       kind: 'danger',
     },
     { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents },
@@ -782,7 +777,7 @@ export const ReviewPageClient = ({
           }
           onApprove={approveEvent}
           onReject={rejectEvent}
-          onEdit={(id) => router.push(editEventHref(id))}
+          onEdit={(id) => router.push(editEventHref(id, activeTab))}
         />
       )}
 
@@ -832,7 +827,7 @@ export const ReviewPageClient = ({
       {activeTab === 'all-events' && (
         <AllEventsTabContent
           isDesktop
-          onRowClick={(id) => router.push(editEventHref(id))}
+          onRowClick={(id) => router.push(editEventHref(id, activeTab))}
           onEdit={onAllEventsEdit}
           onViewDetail={onAllEventsViewDetail}
           api={allEventsApi}

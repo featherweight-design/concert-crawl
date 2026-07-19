@@ -1,9 +1,10 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import * as LucideIcons from 'lucide-react'
 import { NAV_V2 } from './nav'
+import { reviewHrefFromParam } from '@/lib/admin/edit-event-link'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 interface MobileBottomBarProps {
@@ -33,6 +34,11 @@ const getCount = (
 
 export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  // Review-parented sub-pages (e.g. the event editor) drop a `?from=<tab>`
+  // param on the URL so the Review tab we surface here matches the tab the
+  // admin came from (#1083). No signal → plain `/admin/review`.
+  const reviewHref = reviewHrefFromParam(searchParams?.get('from'))
   const tabItems = NAV_V2.filter((item) => item.section === 'operations')
 
   return (
@@ -60,10 +66,11 @@ export const MobileBottomBar = ({ badgeCounts }: MobileBottomBarProps) => {
         const count = getCount(item.key, badgeCounts)
         const showBadge = item.badge !== undefined && count > 0
 
+        const href = item.key === 'review' ? reviewHref : item.href
         return (
           <Link
             key={item.key}
-            href={item.href}
+            href={href}
             style={{
               display: 'flex',
               flexDirection: 'column',

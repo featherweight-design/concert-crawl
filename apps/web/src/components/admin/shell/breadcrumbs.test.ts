@@ -44,4 +44,57 @@ describe('buildBreadcrumbs', () => {
     const crumbs = buildBreadcrumbs('/admin/unknown', NAV)
     expect(crumbs).toEqual([{ label: 'Admin', href: '/admin' }])
   })
+
+  // #1083 — Review sub-pages carry an optional `?from=<tab>` param telling
+  // us which Review tab the admin came from so the breadcrumb takes them
+  // back there instead of dropping them on the default Event flags tab.
+  // (The event editor at /admin/events/... is a separate top-level route
+  // and gets its Review-return fix via the sidebar + mobile bottom bar,
+  // which read the same param.)
+  it('routes the Review breadcrumb to ?tab=<from> when the param is a known tab', () => {
+    const params = new URLSearchParams('from=all-events')
+    const crumbs = buildBreadcrumbs(
+      '/admin/review/contests/abc123',
+      NAV,
+      params,
+    )
+    expect(crumbs).toEqual([
+      { label: 'Review', href: '/admin/review?tab=all-events' },
+      { label: 'Details' },
+    ])
+  })
+
+  it('ignores an unknown ?from= value so a hand-crafted URL cannot steer the breadcrumb', () => {
+    const params = new URLSearchParams('from=something-else')
+    const crumbs = buildBreadcrumbs(
+      '/admin/review/contests/abc123',
+      NAV,
+      params,
+    )
+    expect(crumbs).toEqual([
+      { label: 'Review', href: '/admin/review' },
+      { label: 'Details' },
+    ])
+  })
+
+  it('leaves the Review breadcrumb untouched when no ?from= is present', () => {
+    const crumbs = buildBreadcrumbs(
+      '/admin/review/contests/abc123',
+      NAV,
+      new URLSearchParams(),
+    )
+    expect(crumbs).toEqual([
+      { label: 'Review', href: '/admin/review' },
+      { label: 'Details' },
+    ])
+  })
+
+  it('does not apply ?from= to non-Review sections', () => {
+    const params = new URLSearchParams('from=all-events')
+    const crumbs = buildBreadcrumbs('/admin/venues/abc123', NAV, params)
+    expect(crumbs).toEqual([
+      { label: 'Venues', href: '/admin/venues' },
+      { label: 'Edit venue' },
+    ])
+  })
 })

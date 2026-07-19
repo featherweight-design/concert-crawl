@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useClerk } from '@clerk/nextjs'
 import * as LucideIcons from 'lucide-react'
 import { LogOut } from 'lucide-react'
 import { NAV_V2, type NavItem } from './nav'
+import { reviewHrefFromParam } from '@/lib/admin/edit-event-link'
 import { CCMark } from '@/components/brand/cc-mark'
 import { CCWordmark } from '@/components/brand/cc-wordmark'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
@@ -34,18 +35,20 @@ const NavLink = ({
   mode,
   active,
   count,
+  href,
 }: {
   item: NavItem
   mode: 'full' | 'rail'
   active: boolean
   count: number
+  href: string
 }) => {
   const [hovered, setHovered] = useState(false)
   const showBadge = item.badge !== undefined
 
   return (
     <Link
-      href={item.href}
+      href={href}
       title={mode === 'rail' ? item.label : undefined}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -138,6 +141,12 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
   const userCardRef = useRef<HTMLDivElement>(null)
   const { signOut } = useClerk()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
+  // Preserve the source Review tab on the Review nav item when the current
+  // page is a Review-parented sub-page (event editor, contest detail) that
+  // dropped a `?from=<tab>` param — mirrors the breadcrumb behaviour so
+  // both surfaces route back to the same tab (#1083).
+  const reviewHref = reviewHrefFromParam(searchParams?.get('from'))
 
   useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY) as SidebarMode | null
@@ -297,6 +306,9 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
             pathname === item.href ||
             (item.href !== '/admin' && pathname.startsWith(item.href))
           const count = getCount(item.key)
+          // Review nav preserves `?from=<tab>` when the current page is a
+          // Review-parented sub-page (#1083).
+          const href = item.key === 'review' ? reviewHref : item.href
           return (
             <NavLink
               key={item.key}
@@ -304,6 +316,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
               mode={effectiveMode}
               active={active}
               count={count}
+              href={href}
             />
           )
         })}
@@ -333,6 +346,7 @@ export const AdminSidebar = ({ badgeCounts, user }: AdminSidebarProps) => {
               mode={effectiveMode}
               active={active}
               count={0}
+              href={item.href}
             />
           )
         })}
