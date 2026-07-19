@@ -172,6 +172,13 @@ async function markEventsSeenForVenue(
     )
 }
 
+// crawlVenue's return value: the crawl_runs row plus the DB ids of events
+// this run INSERTED (as opposed to updated). The Spotify fan-out (#763 §10.1)
+// keys "new show" alerts off inserted rows only — an update to an existing
+// listing must never re-alert. Empty on the robots-blocked / page-hash-skip /
+// failed paths, where by definition nothing was inserted.
+export type CrawlVenueResult = CrawlRun & { insertedEventIds: string[] }
+
 export async function crawlVenue(
   venueId: string,
   browser: Browser,
@@ -184,7 +191,7 @@ export async function crawlVenue(
   // supportingArtists). Default false preserves the cost-saving skip path for
   // normal + scheduled crawls.
   force = false,
-): Promise<CrawlRun> {
+): Promise<CrawlVenueResult> {
   const id = crawlRunId ?? crypto.randomUUID()
   const startedAt = Date.now()
   // Date snapshot captured up-front so the stale-event detection update can
@@ -244,7 +251,7 @@ export async function crawlVenue(
         updatedAt: new Date(),
       })
       .where(eq(venues.id, venueId))
-    return crawlRun
+    return { ...crawlRun, insertedEventIds: [] }
   }
 
   try {
@@ -426,7 +433,7 @@ export async function crawlVenue(
         // on all upcoming events for this venue. Filtering by date >= today
         // matches the API surface — past events never go stale.
         await markEventsSeenForVenue(venueId, startedAtDate)
-        return crawlRun
+        return { ...crawlRun, insertedEventIds: [] }
       }
 
       // Extract events. In auto-detect mode, only check JSON-LD on the HTTP HTML
@@ -511,6 +518,10 @@ export async function crawlVenue(
     // Upsert events — insert on first crawl, update mutable fields on re-crawl
     let eventsInserted = 0
     let eventsUpdated = 0
+    // DB ids of rows this run INSERTED (not updated) — recovered from the
+    // upsert's RETURNING clause by checking each returned (canonical_title,
+    // date) key against existingMap. Feeds the Spotify fan-out (#763 §10.1).
+    const insertedEventIds: string[] = []
     // Track (canonical_title, date) pairs we've actually upserted this run so
     // the stale-event detection below can refresh last_seen_at for them.
     // Includes both the freshly-inserted and the already-existed-with-unchanged-hash
@@ -709,7 +720,7 @@ export async function crawlVenue(
           }
         }
 
-        await db
+        const upsertedRows = await db
           .insert(events)
           .values(eventValues)
           .onConflictDoUpdate({
@@ -762,6 +773,20 @@ export async function crawlVenue(
               verified: sql`CASE WHEN excluded.verified = TRUE THEN TRUE ELSE ${events.verified} END`,
             },
           })
+          .returning({
+            id: events.id,
+            canonicalTitle: events.canonicalTitle,
+            date: events.date,
+          })
+
+        // A returned row whose (canonical_title, date) key was absent from
+        // existingMap (loaded before the upsert) is a fresh INSERT — the same
+        // classification the eventsInserted counter above uses.
+        for (const row of upsertedRows) {
+          if (!existingMap.has(`${row.canonicalTitle}|${row.date}`)) {
+            insertedEventIds.push(row.id)
+          }
+        }
       }
     }
 
@@ -929,7 +954,7 @@ export async function crawlVenue(
       lastEventCountAlertAt: venue.lastEventCountAlertAt,
     })
 
-    return crawlRun
+    return { ...crawlRun, insertedEventIds }
   } catch (err) {
     const isHttpBlocked =
       err instanceof CrawlFetchError &&
@@ -1053,6 +1078,6 @@ export async function crawlVenue(
       durationMs,
     })
 
-    return crawlRun
+    return { ...crawlRun, insertedEventIds: [] }
   }
 }

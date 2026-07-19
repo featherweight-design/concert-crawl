@@ -577,7 +577,10 @@ describe('crawlVenue — email await regression (#649)', () => {
 
     mockFetchPage.mockRejectedValue(new Error('boom'))
     mockSendEmail.mockRejectedValueOnce(new Error('resend 500'))
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    // reportFailure routes severity 'error' through console.error (PR #808
+    // standardized operational failures onto stderr) — spy there, not on
+    // console.log.
+    const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     try {
       const result = await crawlVenue(venue.id, mockBrowser)
@@ -1373,6 +1376,107 @@ describe('crawlVenue — auto-pause at threshold (#743)', () => {
       .where(eq(notifications.category, 'crawl.failed'))
     expect(noteRows.length).toBe(1)
     expect(String(noteRows[0]?.body)).not.toMatch(/auto-paused/i)
+  })
+})
+
+describe('crawlVenue — insertedEventIds threading (#763)', () => {
+  it('returns the DB ids of freshly inserted events on a first crawl', async () => {
+    const venue = await seedTestVenue()
+    const dateA = futureDate(10)
+    const dateB = futureDate(11)
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        makeEvent('Fanout Artist A', dateA, venue.url),
+        makeEvent('Fanout Artist B', dateB, venue.url),
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+    expect(run.status).toBe('success')
+    expect(run.eventsInserted).toBe(2)
+    expect(run.insertedEventIds).toHaveLength(2)
+
+    // Each returned id maps to a row actually inserted for this venue.
+    const rows = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+    const rowIds = rows.map((row) => row.id).sort()
+    expect([...run.insertedEventIds].sort()).toEqual(rowIds)
+  })
+
+  it('returns no ids when a re-crawl only updates existing events', async () => {
+    const venue = await seedTestVenue()
+    const dateA = futureDate(10)
+    const baseEvent = makeEvent('Fanout Update Artist', dateA, venue.url)
+
+    mockFetchPage.mockResolvedValueOnce({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValueOnce({
+      events: [baseEvent],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+    const first = await crawlVenue(venue.id, mockBrowser)
+    expect(first.insertedEventIds).toHaveLength(1)
+
+    // Re-crawl: same listing with a changed showTime (so the source hash
+    // differs and the upsert runs) hits the UPDATE branch — no new insert,
+    // so no id may leak into insertedEventIds (an update must never
+    // re-trigger a "new show" alert downstream).
+    mockFetchPage.mockResolvedValueOnce({
+      html: HTML_BASE_V2,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValueOnce({
+      events: [{ ...baseEvent, showTime: '20:00' }],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+    const second = await crawlVenue(venue.id, mockBrowser)
+    expect(second.status).toBe('success')
+    expect(second.eventsUpdated).toBe(1)
+    expect(second.insertedEventIds).toEqual([])
+  })
+
+  it('returns no ids on the page-hash skip path', async () => {
+    const venue = await seedTestVenue()
+    const dateA = futureDate(10)
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [makeEvent('Fanout Skip Artist', dateA, venue.url)],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+    await crawlVenue(venue.id, mockBrowser)
+
+    // Identical HTML → page-hash skip.
+    const skipped = await crawlVenue(venue.id, mockBrowser)
+    expect(skipped.status).toBe('skipped')
+    expect(skipped.insertedEventIds).toEqual([])
+  })
+
+  it('returns no ids on the failed path', async () => {
+    const venue = await seedTestVenue()
+    mockFetchPage.mockRejectedValue(new Error('network unreachable'))
+    mockFetchPageHttp.mockRejectedValue(new Error('network unreachable'))
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+    expect(run.status).toBe('failed')
+    expect(run.insertedEventIds).toEqual([])
   })
 })
 

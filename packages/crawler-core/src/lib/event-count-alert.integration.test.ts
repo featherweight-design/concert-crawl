@@ -298,7 +298,10 @@ describe('checkEventCountDrop', () => {
     const currentRunId = ids[ids.length - 1]!
 
     mockSendEmail.mockRejectedValueOnce(new Error('resend down'))
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    // reportFailure routes severity 'error' through console.error (PR #808
+    // standardized operational failures onto stderr) — spy there, not on
+    // console.log.
+    const logSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     try {
       const outcome = await checkEventCountDrop({

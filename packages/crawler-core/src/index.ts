@@ -9,7 +9,7 @@ export {
   canonicalizeArtist,
   canonicalizeSupporting,
 } from './lib/canonical-artist.js'
-export { crawlVenue } from './crawl.js'
+export { crawlVenue, type CrawlVenueResult } from './crawl.js'
 export { tagEventsWithGenres } from './lib/genre-tagger.js'
 export type { GenreTagInput } from './lib/genre-tagger.js'
 export {
