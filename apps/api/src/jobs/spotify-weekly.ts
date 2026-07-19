@@ -63,15 +63,29 @@ const isDryRun = (): boolean => process.env['SPOTIFY_SYNC_DRY_RUN'] === '1'
 // the window is computed on the Denver calendar, not raw UTC.
 // ---------------------------------------------------------------------------
 
+// formatToParts (matching lib/time.ts todayInTimezone) rather than splitting
+// a formatted string — parts are locale-stable, and missing parts fail fast
+// instead of silently computing a wrong digest window.
 const denverDayUtcMs = (at: Date): number => {
-  const formatted = new Intl.DateTimeFormat('en-CA', {
+  const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: DENVER_TZ,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  }).format(at)
-  const [year, month, day] = formatted.split('-').map(Number)
-  return Date.UTC(year ?? 1970, (month ?? 1) - 1, day ?? 1)
+  }).formatToParts(at)
+  const part = (type: string): string | undefined =>
+    parts.find((entry) => entry.type === type)?.value
+  const year = Number(part('year'))
+  const month = Number(part('month'))
+  const day = Number(part('day'))
+  if (
+    !Number.isFinite(year) ||
+    !Number.isFinite(month) ||
+    !Number.isFinite(day)
+  ) {
+    throw new Error('Unable to derive Denver-local date for digest window')
+  }
+  return Date.UTC(year, month - 1, day)
 }
 
 const toDateString = (utcMs: number): string =>
