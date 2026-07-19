@@ -1,3 +1,10 @@
+# [1.150.0](https://github.com/HartiganHM/concert-crawl/compare/v1.149.0...v1.150.0) (2026-07-19)
+
+
+### Features
+
+* **pwa:** watch-update fan-out on report state transitions ([#1064](https://github.com/HartiganHM/concert-crawl/issues/1064)) ([#1102](https://github.com/HartiganHM/concert-crawl/issues/1102)) ([8822eba](https://github.com/HartiganHM/concert-crawl/commit/8822ebae8c551a6ce9437a1f6d35e934467cc419))
+
 # [1.149.0](https://github.com/HartiganHM/concert-crawl/compare/v1.148.0...v1.149.0) (2026-07-19)
 
 
