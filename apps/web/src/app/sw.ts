@@ -81,3 +81,106 @@ const serwist = new Serwist({
 })
 
 serwist.addEventListeners()
+
+// #971 Web push handlers.
+// Payload shape sent by apps/api/src/lib/push/send-push.ts.
+interface PushPayload {
+  title: string
+  body: string
+  actionUrl?: string
+  tag?: string
+}
+
+const isValidPayload = (value: unknown): value is PushPayload => {
+  if (typeof value !== 'object' || value === null) return false
+  if (!('title' in value) || typeof value.title !== 'string') return false
+  if (value.title.length === 0 || value.title.length > 200) return false
+  if (!('body' in value) || typeof value.body !== 'string') return false
+  if (value.body.length === 0 || value.body.length > 500) return false
+  if (
+    'actionUrl' in value &&
+    typeof value.actionUrl !== 'string' &&
+    value.actionUrl !== undefined
+  ) {
+    return false
+  }
+  if (
+    'tag' in value &&
+    typeof value.tag !== 'string' &&
+    value.tag !== undefined
+  ) {
+    return false
+  }
+  return true
+}
+
+// Constrain actionUrl to a same-origin path — push payloads are untrusted
+// input, and `notification.data` persists across events, so a malicious value
+// must never reach `client.navigate` / `openWindow` as a full URL.
+const safeSameOriginPath = (raw: unknown): string => {
+  if (typeof raw !== 'string' || raw.length === 0) return '/'
+  try {
+    const parsed = new URL(raw, self.location.origin)
+    if (parsed.origin !== self.location.origin) {
+      // Log the drop so a compromised push endpoint injecting external URLs is
+      // visible in operator logs — a malformed payload that lands here is
+      // useful to diagnose.
+      console.warn('sw: dropped cross-origin actionUrl', { raw })
+      return '/'
+    }
+    return parsed.pathname + parsed.search
+  } catch (parseErr) {
+    console.warn('sw: dropped unparseable actionUrl', { raw, err: parseErr })
+    return '/'
+  }
+}
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return
+  let payload: PushPayload
+  try {
+    const raw = event.data.json()
+    if (!isValidPayload(raw)) {
+      console.warn('sw: dropping push with invalid payload shape')
+      return
+    }
+    payload = raw
+  } catch (parseErr) {
+    console.warn('sw: dropping push with unparseable body', parseErr)
+    return
+  }
+  const options: NotificationOptions = {
+    body: payload.body,
+    icon: '/api/pwa/icon-192',
+    badge: '/api/pwa/icon-maskable-192',
+    data: { actionUrl: safeSameOriginPath(payload.actionUrl) },
+    ...(payload.tag ? { tag: payload.tag } : {}),
+  }
+  event.waitUntil(self.registration.showNotification(payload.title, options))
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const target = safeSameOriginPath(
+    typeof event.notification.data === 'object' &&
+      event.notification.data !== null &&
+      'actionUrl' in event.notification.data
+      ? event.notification.data.actionUrl
+      : undefined,
+  )
+  event.waitUntil(
+    // includeUncontrolled: true — after a fresh SW install/update, existing
+    // tabs aren't controlled yet, so the default matchAll returns [] and we'd
+    // wastefully openWindow a duplicate tab.
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clients) => {
+        for (const client of clients) {
+          if (new URL(client.url).origin === self.location.origin) {
+            return client.focus().then(() => client.navigate(target))
+          }
+        }
+        return self.clients.openWindow(target)
+      }),
+  )
+})

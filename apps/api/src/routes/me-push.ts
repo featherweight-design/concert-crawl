@@ -1,0 +1,208 @@
+// apps/api/src/routes/me-push.ts
+// Web push (#971): subscribe / unsubscribe / preferences endpoints.
+import { Hono } from 'hono'
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
+import { zValidator } from '@hono/zod-validator'
+import { and, eq, sql } from 'drizzle-orm'
+import { z } from 'zod'
+import {
+  db,
+  pushSubscriptions,
+  userNotificationPreferences,
+} from '@concert-crawl/db'
+import { apiLogger } from '../lib/logger.js'
+
+export const mePushRouter = new Hono()
+
+mePushRouter.use('*', clerkMiddleware())
+
+const subscribeSchema = z.object({
+  endpoint: z.string().url(),
+  keys: z.object({
+    p256dh: z.string().min(1),
+    auth: z.string().min(1),
+  }),
+  userAgent: z.string().max(500).optional(),
+})
+
+const preferencesSchema = z.object({
+  masterEnabled: z.boolean().optional(),
+  watchUpdatesEnabled: z.boolean().optional(),
+  priceDropsEnabled: z.boolean().optional(),
+})
+
+// Read VAPID vars directly from process.env rather than the validated
+// `env` object so this route module doesn't trigger env.ts evaluation on
+// import — vitest unit tests import routes without a populated .env, and
+// env.ts calls process.exit(1) on invalid parse. When any of the three are
+// unset or empty, subscribe returns 503.
+const requireVapid = () => {
+  const publicKey = process.env['VAPID_PUBLIC_KEY']
+  const privateKey = process.env['VAPID_PRIVATE_KEY']
+  const contactEmail = process.env['VAPID_CONTACT_EMAIL']
+  if (!publicKey || !privateKey || !contactEmail) return false
+  return true
+}
+
+// POST /v1/me/push/subscriptions — upsert on endpoint. Returns { id }.
+mePushRouter.post(
+  '/push/subscriptions',
+  zValidator('json', subscribeSchema),
+  async (ctx) => {
+    const authInfo = getAuth(ctx)
+    const userId = authInfo?.userId ?? null
+    if (!userId) return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    if (!requireVapid()) {
+      return ctx.json(
+        { success: false, error: 'Push notifications not configured' },
+        503,
+      )
+    }
+    const body = ctx.req.valid('json')
+    try {
+      const [row] = await db
+        .insert(pushSubscriptions)
+        .values({
+          userId,
+          endpoint: body.endpoint,
+          p256dh: body.keys.p256dh,
+          auth: body.keys.auth,
+          userAgent: body.userAgent,
+          lastUsedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: pushSubscriptions.endpoint,
+          set: {
+            userId,
+            p256dh: body.keys.p256dh,
+            auth: body.keys.auth,
+            userAgent: body.userAgent,
+            // Clear any prior soft-disable so a fresh subscribe on the same
+            // endpoint re-enables push for that device.
+            disabledAt: null,
+            lastUsedAt: new Date(),
+          },
+        })
+        .returning({ id: pushSubscriptions.id })
+      return ctx.json({ success: true, data: { id: row?.id } })
+    } catch (insertErr) {
+      apiLogger.warn(
+        { userId, err: insertErr },
+        'me-push: failed to upsert subscription',
+      )
+      return ctx.json({ success: false, error: 'Insert failed' }, 500)
+    }
+  },
+)
+
+// DELETE /v1/me/push/subscriptions/:id — remove by row UUID + ownership check.
+// Chosen over `/subscriptions/:endpoint` because push endpoint URLs contain /
+// and ?, and over a DELETE-with-body pattern because DELETE bodies aren't
+// idiomatic REST + some intermediaries strip them.
+mePushRouter.delete('/push/subscriptions/:id', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  const userId = authInfo?.userId ?? null
+  if (!userId) return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const idParam = z.string().uuid().safeParse(ctx.req.param('id'))
+  if (!idParam.success) {
+    return ctx.json({ success: false, error: 'Invalid subscription id' }, 400)
+  }
+  try {
+    const result = await db
+      .delete(pushSubscriptions)
+      .where(
+        and(
+          eq(pushSubscriptions.id, idParam.data),
+          eq(pushSubscriptions.userId, userId),
+        ),
+      )
+      .returning({ id: pushSubscriptions.id })
+    if (result.length === 0) {
+      return ctx.json({ success: false, error: 'Not found' }, 404)
+    }
+    return ctx.json({ success: true, data: null })
+  } catch (deleteErr) {
+    apiLogger.warn(
+      { userId, err: deleteErr },
+      'me-push: failed to delete subscription',
+    )
+    return ctx.json({ success: false, error: 'Delete failed' }, 500)
+  }
+})
+
+const DEFAULT_PREFS = {
+  masterEnabled: false,
+  watchUpdatesEnabled: true,
+  priceDropsEnabled: true,
+} as const
+
+// GET /v1/me/notification-preferences — side-effect-free. Returns defaults
+// when no row exists; first write happens on PATCH (upsert).
+mePushRouter.get('/notification-preferences', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  const userId = authInfo?.userId ?? null
+  if (!userId) return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  try {
+    const [row] = await db
+      .select()
+      .from(userNotificationPreferences)
+      .where(eq(userNotificationPreferences.userId, userId))
+    const data = row
+      ? {
+          masterEnabled: row.masterEnabled,
+          watchUpdatesEnabled: row.watchUpdatesEnabled,
+          priceDropsEnabled: row.priceDropsEnabled,
+        }
+      : DEFAULT_PREFS
+    return ctx.json({ success: true, data })
+  } catch (readErr) {
+    apiLogger.warn({ userId, err: readErr }, 'me-push: prefs read failed')
+    return ctx.json({ success: false, error: 'Read failed' }, 500)
+  }
+})
+
+// PATCH /v1/me/notification-preferences — upsert partial flags.
+mePushRouter.patch(
+  '/notification-preferences',
+  zValidator('json', preferencesSchema),
+  async (ctx) => {
+    const authInfo = getAuth(ctx)
+    const userId = authInfo?.userId ?? null
+    if (!userId) return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    const body = ctx.req.valid('json')
+    if (Object.keys(body).length === 0) {
+      return ctx.json({ success: false, error: 'No fields provided' }, 400)
+    }
+    try {
+      const [existing] = await db
+        .select()
+        .from(userNotificationPreferences)
+        .where(eq(userNotificationPreferences.userId, userId))
+      const next = {
+        masterEnabled:
+          body.masterEnabled ??
+          existing?.masterEnabled ??
+          DEFAULT_PREFS.masterEnabled,
+        watchUpdatesEnabled:
+          body.watchUpdatesEnabled ??
+          existing?.watchUpdatesEnabled ??
+          DEFAULT_PREFS.watchUpdatesEnabled,
+        priceDropsEnabled:
+          body.priceDropsEnabled ??
+          existing?.priceDropsEnabled ??
+          DEFAULT_PREFS.priceDropsEnabled,
+      }
+      await db
+        .insert(userNotificationPreferences)
+        .values({ userId, ...next })
+        .onConflictDoUpdate({
+          target: userNotificationPreferences.userId,
+          set: { ...next, updatedAt: sql`now()` },
+        })
+      return ctx.json({ success: true, data: next })
+    } catch (writeErr) {
+      apiLogger.warn({ userId, err: writeErr }, 'me-push: prefs write failed')
+      return ctx.json({ success: false, error: 'Write failed' }, 500)
+    }
+  },
+)

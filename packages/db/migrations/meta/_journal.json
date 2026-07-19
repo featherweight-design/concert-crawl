@@ -386,6 +386,13 @@
       "when": 1784851200000,
       "tag": "0054_spotify_digest_template",
       "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1784937600000,
+      "tag": "0055_user_notification_preferences",
+      "breakpoints": true
     }
   ]
 }
