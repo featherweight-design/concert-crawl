@@ -30,11 +30,14 @@ while IFS= read -r line; do
 done < <(git -C "$REPO_ROOT" worktree list --porcelain)
 
 # Drop test DBs whose worktree no longer exists. Reuse the canonical prune
-# script so the orphan/sanitize logic lives in exactly one place. Guard on the
-# local test DB being reachable; skip silently (and never block startup) if not.
+# script so the orphan/sanitize logic lives in exactly one place. This hook
+# runs a session-start sweep — after the hook's own worktree cleanup, any
+# remaining orphan DB is one whose worktree is already gone, so a full-sweep
+# --all is safe here and matches the hook's intent. Guard on the local test
+# DB being reachable; skip silently (and never block startup) if not.
 dropped_dbs=0
 if docker exec concert-crawl-db psql -U postgres -lqt 2>/dev/null | grep -q concert_crawl_test; then
-  db_output=$( (cd "$REPO_ROOT" && pnpm exec tsx scripts/prune-test-dbs.ts) 2>/dev/null )
+  db_output=$( (cd "$REPO_ROOT" && pnpm exec tsx scripts/prune-test-dbs.ts --all) 2>/dev/null )
   dropped_dbs=$(printf '%s\n' "$db_output" | grep -c 'Dropping:')
 fi
 

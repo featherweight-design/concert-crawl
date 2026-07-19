@@ -1,9 +1,32 @@
 import postgres from 'postgres'
 import { execSync } from 'node:child_process'
-import { selectOrphanedTestDbs } from './prune-test-dbs-helpers.js'
+import {
+  selectOrphanedTestDbs,
+  filterOrphansToScope,
+} from './prune-test-dbs-helpers.js'
 
 const WORKTREE_MARKER = '/.worktrees/'
-const dryRun = process.argv.includes('--dry-run')
+
+interface ParsedArgs {
+  dryRun: boolean
+  all: boolean
+  branches: string[]
+}
+
+const parseArgs = (argv: readonly string[]): ParsedArgs => {
+  let dryRun = false
+  let all = false
+  const branches: string[] = []
+  for (const arg of argv) {
+    if (arg === '--dry-run') dryRun = true
+    else if (arg === '--all') all = true
+    else if (arg.startsWith('--')) {
+      console.error(`[prune-test-dbs] ERROR: unknown flag: ${arg}`)
+      process.exit(1)
+    } else branches.push(arg)
+  }
+  return { dryRun, all, branches }
+}
 
 const listWorktreeNames = (): string[] => {
   const out = execSync('git worktree list --porcelain', { encoding: 'utf-8' })
@@ -32,6 +55,21 @@ const LOCAL_ADMIN_URL =
   'postgresql://postgres:postgres@localhost:5433/concert_crawl_test'
 
 const main = async (): Promise<void> => {
+  const { dryRun, all, branches } = parseArgs(process.argv.slice(2))
+
+  if (all && branches.length > 0) {
+    console.error(
+      '[prune-test-dbs] ERROR: --all cannot be combined with branch names.',
+    )
+    process.exit(1)
+  }
+  if (!all && branches.length === 0) {
+    console.error(
+      '[prune-test-dbs] ERROR: no branches given. Pass the branch(es) you worked on this session, or --all for a full sweep.',
+    )
+    process.exit(1)
+  }
+
   const adminUrl = new URL(LOCAL_ADMIN_URL)
   adminUrl.pathname = '/postgres'
   const admin = postgres(adminUrl.toString(), { max: 1 })
@@ -44,11 +82,19 @@ const main = async (): Promise<void> => {
       rows.map((row) => row.datname),
       listWorktreeNames(),
     )
-    if (orphans.length === 0) {
-      console.log('[prune-test-dbs] No orphaned test databases.')
+    const inScope = all ? orphans : filterOrphansToScope(orphans, branches)
+    const skippedCount = orphans.length - inScope.length
+
+    if (skippedCount > 0) {
+      console.log(
+        `[prune-test-dbs] Skipping ${skippedCount} orphaned DB(s) not in scope — may belong to concurrent sessions. Use --all for a full sweep.`,
+      )
+    }
+    if (inScope.length === 0) {
+      console.log('[prune-test-dbs] No in-scope orphaned test databases.')
       return
     }
-    for (const name of orphans) {
+    for (const name of inScope) {
       if (dryRun) {
         console.log(`[prune-test-dbs] Would drop: ${name}`)
         continue

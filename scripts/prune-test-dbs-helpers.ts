@@ -18,3 +18,18 @@ export const selectOrphanedTestDbs = (
     return !survivors.has(name.slice(WORKTREE_DB_PREFIX.length))
   })
 }
+
+// Restricts an orphan list to only those DBs owned by branches this session
+// worked on. Ownership is inferred by naming convention: for a branch name
+// `feat/foo`, the expected DB suffix is sanitize('feat/foo') = 'feat_foo'.
+// Agents who followed the standard `.worktrees/<branch>` layout will match;
+// nonstandard worktree paths will not (use --all for a full sweep instead).
+export const filterOrphansToScope = (
+  orphans: string[],
+  scopedBranches: string[],
+): string[] => {
+  const scopedSuffixes = new Set(scopedBranches.map(sanitize))
+  return orphans.filter((name) =>
+    scopedSuffixes.has(name.slice(WORKTREE_DB_PREFIX.length)),
+  )
+}
