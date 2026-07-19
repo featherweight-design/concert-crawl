@@ -1,3 +1,10 @@
+## [1.147.3](https://github.com/HartiganHM/concert-crawl/compare/v1.147.2...v1.147.3) (2026-07-19)
+
+
+### Bug Fixes
+
+* **admin/invite-codes:** Redeemed column data + default expiry never ([#1099](https://github.com/HartiganHM/concert-crawl/issues/1099)) ([f022817](https://github.com/HartiganHM/concert-crawl/commit/f022817c900d9757aa0b2584347636f77536c69e)), closes [#1084](https://github.com/HartiganHM/concert-crawl/issues/1084) [#1085](https://github.com/HartiganHM/concert-crawl/issues/1085) [#1084](https://github.com/HartiganHM/concert-crawl/issues/1084) [#1085](https://github.com/HartiganHM/concert-crawl/issues/1085)
+
 ## [1.147.2](https://github.com/HartiganHM/concert-crawl/compare/v1.147.1...v1.147.2) (2026-07-19)
 
 
