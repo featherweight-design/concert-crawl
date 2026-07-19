@@ -12,7 +12,16 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY.appHeader
 
-export function AppHeader() {
+interface AppHeaderProps {
+  /**
+   * Top-right chrome slot. Callers pass components that live to the left of
+   * the search action on mobile and to the left of the user menu on desktop —
+   * currently used for the PWA install slot (#969) and offline pill (#970).
+   */
+  rightSlots?: React.ReactNode
+}
+
+export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
   const pathname = usePathname()
   const [paletteOpen, setPaletteOpen] = useState(false)
 
@@ -47,13 +56,16 @@ export function AppHeader() {
             <span className="text-accent">{copy.brand.accent}</span>
           </span>
         </Link>
-        <button
-          onClick={() => setPaletteOpen(true)}
-          aria-label={copy.search.ariaLabel}
-          className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-border-strong"
-        >
-          <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
-        </button>
+        <div className="flex items-center gap-2">
+          {rightSlots}
+          <button
+            onClick={() => setPaletteOpen(true)}
+            aria-label={copy.search.ariaLabel}
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-border-strong"
+          >
+            <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
+          </button>
+        </div>
       </div>
 
       {/* ── Desktop TopNav (shown sm+) ──────────────────── */}
@@ -113,6 +125,7 @@ export function AppHeader() {
             </span>
           </button>
 
+          {rightSlots}
           <UserMenu />
         </div>
       </div>

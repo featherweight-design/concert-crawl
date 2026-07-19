@@ -26,6 +26,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.9.0-beta',
+    date: 'Jul 19, 2026',
+    headline: 'The install nudge grew up.',
+    items: [
+      {
+        kind: 'changed',
+        text: "Install lives in the top corner now — quiet, always there when you want it, gone when you don't. On iPhone, it walks you through the Share → Add to Home Screen tap-dance in three steps.",
+      },
+    ],
+  },
+  {
     version: 'v0.8.8-beta',
     date: 'Jul 18, 2026',
     headline: 'Wandered off into next month? One tap snaps you back to today.',
