@@ -1,3 +1,18 @@
+# [1.149.0](https://github.com/HartiganHM/concert-crawl/compare/v1.148.0...v1.149.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* **admin/dashboard:** populate strategy + cost on crawl health table ([#1095](https://github.com/HartiganHM/concert-crawl/issues/1095)) ([1633473](https://github.com/HartiganHM/concert-crawl/commit/16334730cd1b5eab6a2685f67ce8125310576b84)), closes [#1074](https://github.com/HartiganHM/concert-crawl/issues/1074) [#1075](https://github.com/HartiganHM/concert-crawl/issues/1075) [#1074](https://github.com/HartiganHM/concert-crawl/issues/1074) [#1075](https://github.com/HartiganHM/concert-crawl/issues/1075)
+* **admin/review:** use server total for mobile 'Needs price' badge ([#1106](https://github.com/HartiganHM/concert-crawl/issues/1106)) ([21f24e0](https://github.com/HartiganHM/concert-crawl/commit/21f24e033b43f43baba098c13bc7c3e2563e15ac)), closes [#710](https://github.com/HartiganHM/concert-crawl/issues/710) [#1079](https://github.com/HartiganHM/concert-crawl/issues/1079)
+* **admin/settings:** update Appearance selector to match consumer UI ([#1100](https://github.com/HartiganHM/concert-crawl/issues/1100)) ([9138107](https://github.com/HartiganHM/concert-crawl/commit/91381072f16952d3c814fce08deceb7a4e481b8e)), closes [#1086](https://github.com/HartiganHM/concert-crawl/issues/1086) [#1086](https://github.com/HartiganHM/concert-crawl/issues/1086)
+* **admin:** wrap SectionHead H1 so long [@handles](https://github.com/handles) don't clip at 320px ([#1105](https://github.com/HartiganHM/concert-crawl/issues/1105)) ([d3058f6](https://github.com/HartiganHM/concert-crawl/commit/d3058f656f28bc899da33634ebf9053bb4c651fa))
+
+
+### Features
+
+* **pwa:** [#1063](https://github.com/HartiganHM/concert-crawl/issues/1063) notifications section in Settings ([#1098](https://github.com/HartiganHM/concert-crawl/issues/1098)) ([67fa203](https://github.com/HartiganHM/concert-crawl/commit/67fa203b5763160e2740fa6fc0b5b212041b03c8)), closes [#763](https://github.com/HartiganHM/concert-crawl/issues/763) [#971](https://github.com/HartiganHM/concert-crawl/issues/971)
+
 # [1.148.0](https://github.com/HartiganHM/concert-crawl/compare/v1.147.4...v1.148.0) (2026-07-19)
 
 
