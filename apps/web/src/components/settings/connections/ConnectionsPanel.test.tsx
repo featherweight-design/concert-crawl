@@ -30,6 +30,20 @@ vi.mock('@clerk/nextjs', () => ({
   useUser: () => ({ user: null }),
 }))
 
+// The connected card's push toggle (#763 PR 9) — device state + toggle
+// behavior are covered in ConnectedCard.test.tsx; stub them out here.
+vi.mock('@/lib/queries/use-push-toggle', () => ({
+  usePushDeviceState: () => ({
+    data: { support: 'supported', permission: 'granted', subscribed: false },
+  }),
+  usePushToggle: () => ({
+    mutate: vi.fn(),
+    isPending: false,
+    error: null,
+    data: undefined,
+  }),
+}))
+
 beforeEach(() => {
   vi.clearAllMocks()
   connectionQuery = { data: undefined, isPending: true }

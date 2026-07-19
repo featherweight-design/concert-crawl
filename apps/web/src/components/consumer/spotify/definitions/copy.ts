@@ -109,6 +109,17 @@ export const SPOTIFY_COPY = {
     lastSyncedNever: '—',
     syncingValue: 'Syncing…',
     autoWatchLabel: 'Auto-watch matches',
+    // Web Push toggle (#763 PR 9). Label matches the R2 surface name locked
+    // in the taste-filter upsell ("New-show alerts"); the state notes aren't
+    // in the mocks (real-browser constraints), written in the same voice.
+    pushLabel: 'New-show alerts',
+    pushAria: 'Push alerts when your artists add Denver shows',
+    pushDenied:
+      "Notifications are blocked for us in this browser. Allow them in your browser's site settings, then flip this on.",
+    pushUnsupported: "This browser can't do push notifications.",
+    pushIosInstall:
+      'On iPhone, push needs the app on your Home Screen first — Share → Add to Home Screen, then flip this on.',
+    pushError: "Couldn't update push alerts — give it another try in a second.",
     refreshCta: 'Refresh my taste',
     refreshingCta: 'Syncing…',
     disconnectCta: 'Disconnect',

@@ -14,6 +14,10 @@ import {
   useSpotifyPatch,
   useSpotifySync,
 } from '@/lib/queries/use-spotify-connection'
+import {
+  usePushDeviceState,
+  usePushToggle,
+} from '@/lib/queries/use-push-toggle'
 import { ApiError } from '@/lib/api'
 import { formatRelativeTime } from '@/lib/relative-time'
 import { ToggleSwitch } from './ToggleSwitch'
@@ -59,11 +63,40 @@ export const ConnectedCard = ({
   const sync = useSpotifySync()
   const patch = useSpotifyPatch()
   const disconnect = useSpotifyDisconnect()
+  const pushDevice = usePushDeviceState()
+  const pushToggle = usePushToggle()
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const refreshing = sync.isPending
   const rateLimited =
     sync.error instanceof ApiError && sync.error.status === 429
+
+  // Push toggle state (#763 PR 9). Checked = the server preference AND a live
+  // subscription on this device — the preference alone can't deliver a push
+  // here, so an unsubscribed device honestly shows OFF.
+  const pushSupport = pushDevice.data?.support
+  const pushDenied = pushDevice.data?.permission === 'denied'
+  const pushChecked =
+    connection.pushEnabled && pushDevice.data?.subscribed === true
+  const pushUnavailable =
+    !pushDevice.data || pushSupport !== 'supported' || pushDenied
+  const pushErrored =
+    pushToggle.error !== null ||
+    (pushToggle.data !== undefined &&
+      !pushToggle.data.ok &&
+      pushToggle.data.reason === 'error')
+  // One note at a time, hardest constraint first: install gate → unsupported
+  // → permission → transient failure.
+  const pushNote =
+    pushSupport === 'ios-needs-install'
+      ? { text: COPY.pushIosInstall, warning: false }
+      : pushSupport === 'unsupported'
+        ? { text: COPY.pushUnsupported, warning: false }
+        : pushDenied
+          ? { text: COPY.pushDenied, warning: true }
+          : pushErrored
+            ? { text: COPY.pushError, warning: true }
+            : null
 
   const account = connection.displayName
     ? `${connection.displayName}${COPY.accountSuffix}`
@@ -160,6 +193,24 @@ export const ConnectedCard = ({
               disabled={patch.isPending}
             />
           </CardRow>
+          <CardRow label={COPY.pushLabel}>
+            <ToggleSwitch
+              checked={pushChecked}
+              onChange={(next) => pushToggle.mutate(next)}
+              ariaLabel={COPY.pushAria}
+              disabled={pushToggle.isPending || pushUnavailable}
+            />
+          </CardRow>
+          {pushNote && (
+            <p
+              role={pushNote.warning ? 'status' : undefined}
+              className={`-mt-1.5 pb-[13px] text-[12px] leading-[1.5] ${
+                pushNote.warning ? 'text-warning' : 'text-fg-subtle'
+              }`}
+            >
+              {pushNote.text}
+            </p>
+          )}
         </div>
 
         {/* Actions */}
