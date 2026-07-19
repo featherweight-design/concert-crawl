@@ -1,3 +1,12 @@
+## [1.147.1](https://github.com/HartiganHM/concert-crawl/compare/v1.147.0...v1.147.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **api:** require crawlWaitForSelector for browser-mode venues ([#1072](https://github.com/HartiganHM/concert-crawl/issues/1072)) ([5f3b206](https://github.com/HartiganHM/concert-crawl/commit/5f3b206271f355ed632212d7599c1a5279853f6c))
+* gate browser selector guard on platform/api field changes ([de38ddf](https://github.com/HartiganHM/concert-crawl/commit/de38ddf58c6429503871807e01b5acca5dff9fca))
+* tighten browser-mode selector guard to require both platform id fields ([2b4ccd2](https://github.com/HartiganHM/concert-crawl/commit/2b4ccd275e27fedcce147fb020f80c8297fbad45))
+
 # [1.147.0](https://github.com/HartiganHM/concert-crawl/compare/v1.146.2...v1.147.0) (2026-07-19)
 
 
