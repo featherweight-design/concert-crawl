@@ -141,4 +141,28 @@ describe('ConnectionsPanel', () => {
       }),
     ).toBeTruthy()
   })
+
+  it('"Not now" collapses the token-refresh state to the compact banner', () => {
+    connectionQuery = { data: brokenRow('error'), isPending: false }
+    renderPanel()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: SPOTIFY_COPY.failTokenRefresh.secondaryCta,
+      }),
+    )
+    expect(screen.queryByText(SPOTIFY_COPY.failTokenRefresh.title)).toBeNull()
+    expect(screen.getByText(SPOTIFY_COPY.revokeBanner.token.head)).toBeTruthy()
+  })
+
+  it('"Leave it unlinked" collapses the revoke state to the compact banner', () => {
+    connectionQuery = { data: brokenRow('revoked'), isPending: false }
+    renderPanel()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: SPOTIFY_COPY.failExternalRevoke.secondaryCta,
+      }),
+    )
+    expect(screen.queryByText(SPOTIFY_COPY.failExternalRevoke.title)).toBeNull()
+    expect(screen.getByText(SPOTIFY_COPY.revokeBanner.revoke.head)).toBeTruthy()
+  })
 })

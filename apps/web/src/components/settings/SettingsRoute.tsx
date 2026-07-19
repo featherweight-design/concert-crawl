@@ -105,6 +105,9 @@ export function SettingsRoute({
         {/* Connections (#763) */}
         <div className="flex flex-col gap-2 px-4">
           <SectionLabel>{SPOTIFY_COPY.connectEntry.sectionTitle}</SectionLabel>
+          <p className="-mt-1 text-[13px] leading-[1.4] text-fg-muted">
+            {SPOTIFY_COPY.connectEntry.sectionSub}
+          </p>
           <ConnectionsPanel />
         </div>
 

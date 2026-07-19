@@ -62,11 +62,13 @@ export const FirstWatchNudge = ({
       </p>
       <div className="flex items-center gap-2">
         <div className="flex-1">
-          <SignalButton withLogo onClick={onConnect}>
+          <SignalButton size="sm" withLogo onClick={onConnect}>
             {COPY.primaryCta}
           </SignalButton>
         </div>
-        <TextButton onClick={onDismiss}>{COPY.secondaryCta}</TextButton>
+        <TextButton size="sm" onClick={onDismiss}>
+          {COPY.secondaryCta}
+        </TextButton>
       </div>
     </div>
   </div>

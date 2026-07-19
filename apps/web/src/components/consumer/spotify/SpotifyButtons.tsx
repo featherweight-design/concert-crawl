@@ -23,23 +23,28 @@ export const SignalButton = ({
   disabled = false,
   ariaLabel,
   tone = 'solid',
+  size = 'md',
   withLogo = false,
   leftIcon,
 }: ActionButtonProps & {
   tone?: 'solid' | 'ghost'
+  size?: 'md' | 'sm'
   withLogo?: boolean
   leftIcon?: React.ReactNode
 }) => {
   const solid = tone === 'solid'
+  const small = size === 'sm'
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
-      className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl text-[15px] font-extrabold tracking-[-0.01em] transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:cursor-default disabled:opacity-60"
+      className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl font-extrabold tracking-[-0.01em] transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:cursor-default disabled:opacity-60 ${small ? 'text-[13px]' : 'text-[15px]'}`}
       style={{
-        padding: '13px 18px',
+        // Handoff spec: the logo-bearing ConnectButton is 14px tall-padded;
+        // the plain SignalButton variant is 13px (spotify-shared.jsx).
+        padding: small ? '9px 14px' : withLogo ? '14px 18px' : '13px 18px',
         background: solid ? 'var(--signal)' : 'transparent',
         color: solid ? 'var(--fg-on-accent)' : 'var(--signal)',
         border: solid
@@ -48,7 +53,7 @@ export const SignalButton = ({
         fontFamily: 'var(--font-ui)',
       }}
     >
-      {withLogo && <SpotifyLogo size={18} />}
+      {withLogo && <SpotifyLogo size={small ? 16 : 18} />}
       {leftIcon}
       {children}
     </button>
@@ -89,13 +94,16 @@ export const TextButton = ({
   onClick,
   disabled = false,
   ariaLabel,
-}: ActionButtonProps) => (
+  size = 'md',
+}: ActionButtonProps & { size?: 'md' | 'sm' }) => (
   <button
     type="button"
     onClick={onClick}
     disabled={disabled}
     aria-label={ariaLabel}
-    className="cursor-pointer rounded-lg py-2.5 text-center text-[14px] font-bold text-fg-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:cursor-default disabled:opacity-60"
+    className={`cursor-pointer rounded-lg text-center font-bold text-fg-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal disabled:cursor-default disabled:opacity-60 ${
+      size === 'sm' ? 'px-3.5 py-[9px] text-[13px]' : 'py-2.5 text-[14px]'
+    }`}
     style={{ fontFamily: 'var(--font-ui)' }}
   >
     {children}

@@ -16,7 +16,11 @@ import {
   StateBody,
   StateGlyphDisc,
 } from '@/components/consumer/spotify/StateBody'
-import { SignalButton } from '@/components/consumer/spotify/SpotifyButtons'
+import {
+  SignalButton,
+  TextButton,
+} from '@/components/consumer/spotify/SpotifyButtons'
+import { SpotifyStatusBanner } from '@/components/consumer/spotify/SpotifyStatusBanner'
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 import {
   spotifyConnectionQueryKey,
@@ -65,9 +69,11 @@ const CutLinkGlyph = () => (
 const BrokenState = ({
   kind,
   onReconnect,
+  onDismiss,
 }: {
   kind: 'error' | 'revoked'
   onReconnect: () => void
+  onDismiss: () => void
 }) => {
   const copy =
     kind === 'error'
@@ -95,6 +101,7 @@ const BrokenState = ({
         <SignalButton withLogo onClick={onReconnect}>
           {copy.primaryCta}
         </SignalButton>
+        <TextButton onClick={onDismiss}>{copy.secondaryCta}</TextButton>
       </StateBody>
     </div>
   )
@@ -104,6 +111,8 @@ const resolveContent = (
   data: SpotifyConnectionResponse | undefined,
   isPending: boolean,
   openHandoff: () => void,
+  brokenCollapsed: boolean,
+  collapseBroken: () => void,
 ): React.ReactNode => {
   if (isPending) {
     return (
@@ -121,17 +130,35 @@ const resolveContent = (
   if (data.status === 'connected') {
     return <ConnectedCard connection={data} />
   }
-  return <BrokenState kind={data.status} onReconnect={openHandoff} />
+  // The secondary dismiss ("Not now" / "Leave it unlinked") collapses the
+  // full state card to the handoff's compact in-settings banner variant.
+  if (brokenCollapsed) {
+    return <SpotifyStatusBanner />
+  }
+  return (
+    <BrokenState
+      kind={data.status}
+      onReconnect={openHandoff}
+      onDismiss={collapseBroken}
+    />
+  )
 }
 
 export const ConnectionsPanel = () => {
   const { data, isPending } = useSpotifyConnection()
   const queryClient = useQueryClient()
   const [handoffOpen, setHandoffOpen] = useState(false)
+  const [brokenCollapsed, setBrokenCollapsed] = useState(false)
 
   return (
     <div className="flex flex-col">
-      {resolveContent(data, isPending, () => setHandoffOpen(true))}
+      {resolveContent(
+        data,
+        isPending,
+        () => setHandoffOpen(true),
+        brokenCollapsed,
+        () => setBrokenCollapsed(true),
+      )}
       <OAuthHandoffSheet
         open={handoffOpen}
         onClose={() => {
