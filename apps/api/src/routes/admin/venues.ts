@@ -582,9 +582,13 @@ venuesAdminRouter.patch(
     // page.content(); without a crawlWaitForSelector there is nothing to gate
     // on before capture, so a slow client-side render is captured as an empty
     // DOM → 0 events (how Hi-Dive and Red Rocks went dark on unlucky runs).
-    // Platform / apiProvider venues use an API fetcher instead, so the selector
-    // does not apply to them. Only checked when the payload touches crawlMode
-    // or the selector, so unrelated PATCHes never fail on a pre-existing venue.
+    // A venue is exempt only when a platform / API fetcher can FULLY handle
+    // it: dispatch()'s canHandle() also requires the id field (AEG needs
+    // platformVenueId, VenuePilot needs apiAccountId). A venue with the
+    // platform/provider set but no id is NOT handled by any fetcher — it still
+    // falls through to the HTML cascade, so it needs the selector like any
+    // other browser venue. Only checked when the payload touches crawlMode or
+    // the selector, so unrelated PATCHes never fail on a pre-existing venue.
     const nextCrawlMode =
       body.crawlMode !== undefined ? body.crawlMode : existing.crawlMode
     const nextWaitForSelector =
@@ -593,11 +597,13 @@ venuesAdminRouter.patch(
         : existing.crawlWaitForSelector
     const touchesBrowserGate =
       body.crawlMode !== undefined || body.crawlWaitForSelector !== undefined
+    const platformFetcherHandles =
+      (nextPlatform != null && nextPlatformVenueId != null) ||
+      (nextApiProvider != null && nextApiAccountId != null)
     if (
       touchesBrowserGate &&
       nextCrawlMode === 'browser' &&
-      nextPlatform == null &&
-      nextApiProvider == null &&
+      !platformFetcherHandles &&
       nextWaitForSelector == null
     ) {
       return ctx.json(

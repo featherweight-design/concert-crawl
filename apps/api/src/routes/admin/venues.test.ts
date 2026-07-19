@@ -557,6 +557,61 @@ describe('Admin venue routes', () => {
     expect(res.status).toBe(200)
   })
 
+  it('PATCH /v1/admin/venues/:id allows browser crawlMode without a selector when an apiProvider fetcher handles the venue', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        {
+          ...mockDb._mockVenueRow,
+          crawlWaitForSelector: null,
+          platform: null,
+          apiProvider: 'venuepilot',
+          apiAccountId: '1105',
+        },
+      ]),
+    )
+    mockDb.returning.mockResolvedValue([
+      {
+        ...mockDb._mockVenueRow,
+        crawlMode: 'browser',
+        apiProvider: 'venuepilot',
+      },
+    ])
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ crawlMode: 'browser' }),
+    })
+    expect(res.status).toBe(200)
+  })
+
+  it('PATCH /v1/admin/venues/:id requires a selector for a browser venue whose platform is set but missing its id', async () => {
+    adminAuth()
+    // platform='aeg' with no platformVenueId is NOT handled by any fetcher
+    // (dispatch's canHandle requires both), so it still falls through to the
+    // HTML cascade and needs the selector. The PATCH does not touch platform
+    // fields, so the platform orphan guard does not fire first.
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        {
+          ...mockDb._mockVenueRow,
+          crawlWaitForSelector: null,
+          platform: 'aeg',
+          platformVenueId: null,
+          apiProvider: null,
+        },
+      ]),
+    )
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ crawlMode: 'browser' }),
+    })
+    expect(res.status).toBe(400)
+    const body = (await res.json()) as { field: string }
+    expect(body.field).toBe('crawlWaitForSelector')
+  })
+
   it('PATCH /v1/admin/venues/:id does not fire the selector guard on an unrelated PATCH', async () => {
     adminAuth()
     mockDb.select.mockReturnValue(
