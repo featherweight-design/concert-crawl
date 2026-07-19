@@ -195,6 +195,19 @@ const tastePicks = async (
     .orderBy(events.date, events.artist)
     .limit(TASTE_PICK_COUNT)
 
+// The picks are identical for every zero-match user in a run, so the query
+// executes at most once per run instead of once per user.
+const lazyTastePicks = (
+  windowStart: string,
+  windowEnd: string,
+): (() => Promise<MatchedEventRow[]>) => {
+  let cached: Promise<MatchedEventRow[]> | null = null
+  return () => {
+    cached ??= tastePicks(windowStart, windowEnd)
+    return cached
+  }
+}
+
 // tourName stays null — events carry no tour metadata yet; the template
 // collapses the line when absent.
 const toDigestShow = (row: MatchedEventRow): DigestEmailShow => ({
@@ -234,6 +247,7 @@ const digestForUser = async (
   userId: string,
   clerkUsers: { getUser: (id: string) => Promise<{ publicMetadata: unknown }> },
   summary: WeeklySummary,
+  getTastePicks: () => Promise<MatchedEventRow[]>,
 ): Promise<DigestOutcome> => {
   // Clerk publicMetadata feeds role-comped derivation; a Clerk blip falls
   // back to metadata-free derivation (DB rows still decide paid plans).
@@ -269,9 +283,7 @@ const digestForUser = async (
     summary.windowEnd,
   )
   const zero = matched.length === 0
-  const picks = zero
-    ? await tastePicks(summary.windowStart, summary.windowEnd)
-    : []
+  const picks = zero ? await getTastePicks() : []
   if (zero && picks.length === 0) {
     // Nothing to say at all — better no email than an empty one.
     return 'skipped-empty'
@@ -389,9 +401,15 @@ export const runSpotifyWeekly = async (
         ),
       )
     summary.digestCandidates = recipients.length
+    const getTastePicks = lazyTastePicks(summary.windowStart, summary.windowEnd)
     for (const { userId } of recipients) {
       try {
-        const outcome = await digestForUser(userId, clerk.users, summary)
+        const outcome = await digestForUser(
+          userId,
+          clerk.users,
+          summary,
+          getTastePicks,
+        )
         if (outcome === 'skipped-entitlement') {
           summary.digestSkippedEntitlement += 1
         }
