@@ -1,3 +1,10 @@
+## [1.150.1](https://github.com/HartiganHM/concert-crawl/compare/v1.150.0...v1.150.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **api:** surface /v1/events/genres safeParse drops in Sentry ([#1108](https://github.com/HartiganHM/concert-crawl/issues/1108)) ([#1110](https://github.com/HartiganHM/concert-crawl/issues/1110)) ([bca86d6](https://github.com/HartiganHM/concert-crawl/commit/bca86d685cf38351f30813684651af47ec1621c0))
+
 # [1.150.0](https://github.com/HartiganHM/concert-crawl/compare/v1.149.0...v1.150.0) (2026-07-19)
 
 
