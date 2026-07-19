@@ -250,6 +250,7 @@ export const SPOTIFY_COPY = {
     // Spotify mark.
     reasonAriaPrefix: 'Picked because: ',
     priceTba: 'tba',
+    venueDateSeparator: ' · ',
     listAria: 'Shows picked for your taste',
     allShowsDivider: 'All Denver shows',
     empty: {

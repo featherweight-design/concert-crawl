@@ -50,7 +50,7 @@ export const EMPTY_MATCH_SUMMARY: SpotifyMatchSummary = {
 interface FollowName {
   artistName: string
   canonicalName: string
-  source: string
+  source: (typeof userArtistFollows.$inferSelect)['source']
   rank: number | null
 }
 

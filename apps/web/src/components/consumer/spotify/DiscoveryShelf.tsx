@@ -102,7 +102,7 @@ const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
           >
             {pick.venueName}
             <span aria-hidden className="opacity-45">
-              {' · '}
+              {COPY.venueDateSeparator}
             </span>
             {formatShortDate(pick.date)}
           </span>
