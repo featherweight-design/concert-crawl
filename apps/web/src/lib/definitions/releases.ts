@@ -26,6 +26,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.13.0-beta',
+    date: 'Jul 19, 2026',
+    headline: 'Watch a show, get asked once about push.',
+    items: [
+      {
+        kind: 'added',
+        text: "First time you tap Watch, we'll pop a quick sheet asking if you want a heads-up when things change — tickets drop, sell out, or the show moves. Only for shows you're watching. Say Not now and we don't ask again — Settings is always there when you change your mind.",
+      },
+      {
+        kind: 'added',
+        text: 'On iPhone: because Apple only lets web apps send notifications from Home Screen, the sheet swaps to a 3-step guide for adding Concert Crawl to your Home Screen. Takes 10 seconds — after that, push works like every other app on your phone.',
+      },
+    ],
+  },
+  {
     version: 'v0.12.0-beta',
     date: 'Jul 19, 2026',
     headline: 'Turn push on (or off) right from Settings.',

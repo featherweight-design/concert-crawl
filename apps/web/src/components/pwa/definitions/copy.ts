@@ -37,6 +37,36 @@ export const INSTALL_COPY = {
     "We'll quit asking. You can still add it from Settings whenever.",
 } as const
 
+// #1062 post-watch permission sheet. Two variants:
+// - default: browser can prompt for push permission directly
+// - ios: iOS Safari can't send push until installed, so offer the how-to
+//
+// Copy is voice-passed from design/design_handoff_pwa_cluster/pwa-data.jsx
+// (PUSH_COPY.postWatch + PUSH_COPY.iosNotInstalled) — do not rewrite.
+export const POST_WATCH_COPY = {
+  default: {
+    eyebrow: "You're watching this show",
+    title: 'Want a heads-up if anything changes?',
+    sub: "We'll ping you if tickets drop, sell out, or the show moves — only for shows you're watching. Nothing else.",
+    turnOn: 'Turn on notifications',
+    notNow: 'Not now',
+    footnote: 'You can change this anytime in Settings.',
+  },
+  ios: {
+    eyebrow: 'One extra step on iPhone',
+    title:
+      'To get pinged on iPhone, add Concert Crawl to your Home Screen first.',
+    sub: "Apple only lets web apps send notifications once they're installed. Takes 10 seconds.",
+    showMe: 'Show me how',
+    notNow: 'Not now',
+  },
+  // Sr-only titles for the two variants — BottomSheet uses these as
+  // aria-labelledby targets so screen readers announce the sheet with a
+  // stable label independent of the visible headings.
+  srTitleDefault: 'Enable push notifications',
+  srTitleIos: 'How to enable notifications on iPhone',
+} as const
+
 export const OFFLINE_COPY = {
   pillLabel: 'Offline · cached OK',
   pillAria: "You're offline. Cached shows are still available.",
