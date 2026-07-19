@@ -113,7 +113,12 @@ export default async function EventDetailPage({
       : (showTime ?? doorsTime ?? '—')
 
   return (
-    <>
+    // overflow-x-clip guarantees the 320px mobile baseline never scrolls
+    // horizontally: the full-bleed hero plus data-dependent status/price cards
+    // can otherwise push a few px past the viewport. Prefer `clip` over
+    // `hidden` here to avoid turning the wrapper into a vertical scroll
+    // container. #973
+    <div className="flex flex-1 flex-col overflow-x-clip">
       {/* Hero — 300px, full-bleed */}
       <div className="relative w-full shrink-0" style={{ height: 300 }}>
         <EventImage
@@ -341,7 +346,7 @@ export default async function EventDetailPage({
           <EventDetailFooter event={event} reports={reports} />
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
