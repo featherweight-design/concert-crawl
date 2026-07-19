@@ -1,3 +1,12 @@
+## [1.152.1](https://github.com/HartiganHM/concert-crawl/compare/v1.152.0...v1.152.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **spotify:** clear resume mark on dismiss and guard resume check to once per mount ([7a9dc7a](https://github.com/HartiganHM/concert-crawl/commit/7a9dc7aff90412dcffc0da35fe79c170f0a176dc))
+* **spotify:** reject future-dated resume marks and log storage failures ([9f96493](https://github.com/HartiganHM/concert-crawl/commit/9f964933be87c1f88e7e485c2341ac0c44309f21))
+* **spotify:** resume interrupted connect after Clerk reverification reload ([1fe4448](https://github.com/HartiganHM/concert-crawl/commit/1fe44480d5a894468080ead6c3956a5362a7637c)), closes [#763](https://github.com/HartiganHM/concert-crawl/issues/763)
+
 # [1.152.0](https://github.com/HartiganHM/concert-crawl/compare/v1.151.0...v1.152.0) (2026-07-19)
 
 
