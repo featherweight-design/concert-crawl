@@ -10,7 +10,7 @@
 // Renders nothing while the entitlement is still resolving — never flash a
 // locked treatment at a paying user.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PlanState, PickerEntry } from '@concert-crawl/types'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
 import { usePlanState } from '@/lib/queries/use-plan-state'
@@ -88,10 +88,18 @@ export const TasteFilterChip = ({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall')
 
-  // Hold rendering while the plan resolves — no locked flash.
-  if (isLoading || surface === null) return null
+  const resolved = !isLoading && surface !== null
+  const usable = resolved && surface === 'visible-active'
 
-  const usable = surface === 'visible-active'
+  // Entitlement lapsed (downgrade / session change) with filterTaste=1 still
+  // in the URL: the locked chip can't toggle and Clear-all excludes taste, so
+  // release the stale param here rather than strand rejected taste fetches.
+  useEffect(() => {
+    if (resolved && !usable && active) onToggle(false)
+  }, [resolved, usable, active, onToggle])
+
+  // Hold rendering while the plan resolves — no locked flash.
+  if (!resolved) return null
 
   if (usable) {
     return (

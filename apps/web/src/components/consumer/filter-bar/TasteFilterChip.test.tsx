@@ -91,6 +91,17 @@ describe('TasteFilterChip', () => {
     expect(onToggle).toHaveBeenCalledWith(false)
   })
 
+  it('releases a stale active filter when the entitlement resolves locked', () => {
+    entitlementState.current = {
+      isLoading: false,
+      active: false,
+      surface: 'paywall-on-tap',
+    }
+    const onToggle = vi.fn()
+    renderChip({ active: true, onToggle })
+    expect(onToggle).toHaveBeenCalledWith(false)
+  })
+
   it('locked (free/supporter) taps open the upsell, then See plans opens the picker', () => {
     entitlementState.current = {
       isLoading: false,
