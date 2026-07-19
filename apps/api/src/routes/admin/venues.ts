@@ -586,9 +586,11 @@ venuesAdminRouter.patch(
     // it. We ask dispatch() directly on the merged venue state rather than
     // re-deriving the match: canHandle() requires more than a non-null id
     // (AEG needs platformVenueId.length > 0, VenuePilot apiAccountId.trim()
-    // .length > 0), so an empty-string / whitespace id still falls through to
-    // the HTML cascade and needs the selector. A venue with the platform/
-    // provider set but no usable id is NOT handled by any fetcher. Only
+    // .length > 0), so an empty-string id falls through to the HTML cascade
+    // and needs the selector — as does a whitespace-only VenuePilot
+    // apiAccountId, which VenuePilot trims (AEG does not trim, so a
+    // whitespace platformVenueId is still treated as configured). A venue
+    // with the platform/provider set but no usable id is NOT handled. Only
     // checked when the payload touches the merged browser-gate state — the
     // crawl mode, the selector, OR a platform/API field. Clearing platform or
     // apiProvider on a fetcher-exempt browser venue removes the exemption and
@@ -609,7 +611,7 @@ venuesAdminRouter.patch(
       body.platformVenueId !== undefined ||
       body.apiProvider !== undefined ||
       body.apiAccountId !== undefined
-    const platformFetcherHandles =
+    const fetcherHandles =
       dispatch({
         ...existing,
         platform: nextPlatform,
@@ -620,7 +622,7 @@ venuesAdminRouter.patch(
     if (
       touchesBrowserGate &&
       nextCrawlMode === 'browser' &&
-      !platformFetcherHandles &&
+      !fetcherHandles &&
       nextWaitForSelector == null
     ) {
       return ctx.json(
