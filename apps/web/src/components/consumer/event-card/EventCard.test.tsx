@@ -220,6 +220,29 @@ describe('EventCard — browse chip parity (MTListChip)', () => {
     expect(screen.queryByText('$25')).toBeNull()
   })
 
+  describe('Following chip (#763 PR 6)', () => {
+    it('renders the Following chip when followedArtists is non-empty', () => {
+      render(
+        <EventCard
+          event={{ ...baseEvent, followedArtists: ['Test Artist'] }}
+        />,
+      )
+      expect(screen.getByText('Following')).toBeDefined()
+      // Genre chips still render alongside it in the shared chip row.
+      expect(screen.getByText('rock')).toBeDefined()
+    })
+
+    it('omits the chip when followedArtists is an empty array', () => {
+      render(<EventCard event={{ ...baseEvent, followedArtists: [] }} />)
+      expect(screen.queryByText('Following')).toBeNull()
+    })
+
+    it('omits the chip when followedArtists is absent (anonymous/unconnected)', () => {
+      render(<EventCard event={baseEvent} />)
+      expect(screen.queryByText('Following')).toBeNull()
+    })
+  })
+
   describe('Browse #7 — priceByTier-driven chip parity (closes #787)', () => {
     it('priceByTier with boxoffice headline → boxoffice chip regardless of priceSource', () => {
       render(

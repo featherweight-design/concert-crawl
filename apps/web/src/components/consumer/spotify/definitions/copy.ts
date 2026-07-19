@@ -5,6 +5,14 @@
 // first-watch nudge glyph is an eye (watching), not a heart.
 // Voice: Sour Patch — recognition, never surveillance.
 
+// Oxford-comma list join for the detail attribution strip: "X", "X and Y",
+// "X, Y, and Z".
+const formatArtistList = (artists: readonly string[]): string => {
+  if (artists.length <= 1) return artists[0] ?? ''
+  if (artists.length === 2) return `${artists[0]} and ${artists[1]}`
+  return `${artists.slice(0, -1).join(', ')}, and ${artists[artists.length - 1]}`
+}
+
 export const SPOTIFY_COPY = {
   connectEntry: {
     sectionTitle: 'Connections',
@@ -174,6 +182,20 @@ export const SPOTIFY_COPY = {
     },
     cta: 'Reconnect',
     regionAria: 'Spotify connection notice',
+  },
+  // "Following" highlighting on browse/detail surfaces (#763 PR 6, from the
+  // follow-highlight.jsx mock). Neutral + Spotify-marked — never --accent,
+  // which stays reserved for Watching.
+  followHighlight: {
+    chip: 'Following',
+    // Screen-reader context for the visual "Following" chip/badge — the bare
+    // word is ambiguous without the Spotify mark.
+    chipAria: 'You follow this artist on Spotify',
+    // Detail strip: "You follow X on Spotify" / "You follow X and Y on
+    // Spotify" / "You follow X, Y, and Z on Spotify". The mock shows the
+    // single-artist form; the list join extends it for multi-match bills.
+    strip: (artists: readonly string[]) =>
+      `You follow ${formatArtistList(artists)} on Spotify`,
   },
   firstWatchNudge: {
     eyebrow: 'NICE — FIRST ONE SAVED',

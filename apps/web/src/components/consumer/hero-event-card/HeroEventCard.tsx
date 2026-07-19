@@ -6,6 +6,7 @@ import { formatShowTime, venueShort } from '../definitions/lib'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { EventTitleBlock } from '../event-title-block'
 import { GenreChips } from '../GenreChips'
+import { HeroFollowingBadge } from '@/components/consumer/spotify/FollowHighlight'
 
 const copy = CONSUMER_COPY
 
@@ -21,6 +22,8 @@ export function HeroEventCard({
   isWatching = false,
 }: HeroEventCardProps) {
   const showTime = formatShowTime(event.showTime)
+  // Present only for connected viewers (#763 PR 6) — swaps the eyebrow badge.
+  const isFollowed = (event.followedArtists?.length ?? 0) > 0
   const priceDisplay =
     event.ticketPriceMin != null
       ? `$${parseFloat(event.ticketPriceMin).toFixed(0)}`
@@ -49,20 +52,26 @@ export function HeroEventCard({
             }}
             aria-hidden
           />
-          {/* Tonight's pick badge */}
+          {/* Eyebrow badge slot — the Spotify "Following" badge replaces the
+              accent "★ Tonight's pick" badge when the bill matches a followed
+              artist (#763 PR 6, follow-highlight mock). */}
           <div className="absolute left-2.5 top-2.5">
-            <span
-              className="rounded-[4px] bg-accent px-2 py-[3px] text-fg-on-accent"
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '9px',
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-              }}
-            >
-              ★ {label}
-            </span>
+            {isFollowed ? (
+              <HeroFollowingBadge />
+            ) : (
+              <span
+                className="rounded-[4px] bg-accent px-2 py-[3px] text-fg-on-accent"
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '9px',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                ★ {label}
+              </span>
+            )}
           </div>
         </div>
 

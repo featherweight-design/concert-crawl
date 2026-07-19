@@ -28,6 +28,7 @@ import {
 } from '@/components/consumer/definitions/lib'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { EventTitleBlock } from '@/components/consumer/event-title-block'
+import { DetailFollowStrip } from '@/components/consumer/spotify/FollowHighlight'
 
 const copy = CONSUMER_COPY.eventDetail
 
@@ -167,6 +168,16 @@ export default async function EventDetailPage({
               watchingCount={event.watching}
             />
           </div>
+
+          {/* Spotify attribution strip — directly under the Watching pill
+              (#763 PR 6). followedArtists only exists for signed-in viewers
+              with a Spotify connection, and is non-empty only when the bill
+              matches their followed artists. */}
+          {event.followedArtists && event.followedArtists.length > 0 && (
+            <div className="mt-3">
+              <DetailFollowStrip artists={event.followedArtists} />
+            </div>
+          )}
 
           {/* Info block */}
           <div className="mt-4 border-y border-border py-1">

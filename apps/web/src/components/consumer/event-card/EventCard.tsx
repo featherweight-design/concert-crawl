@@ -11,6 +11,7 @@ import {
 } from '@/components/consumer/price-region'
 import { pickBrowseHeadline } from '@/components/consumer/price-region/lib/pick-headline'
 import { EventTitleBlock } from '@/components/consumer/event-title-block'
+import { FollowingChip } from '@/components/consumer/spotify/FollowHighlight'
 
 interface EventCardProps {
   event: EventWithVenue
@@ -45,6 +46,9 @@ export function EventCard({
   const showTime = formatShowTime(event.showTime)
   const isCancelled = event.status === 'cancelled'
   const isPostponed = event.status === 'postponed'
+  // followedArtists is only present for signed-in viewers with a Spotify
+  // connection (#763 PR 6) — a non-empty array marks this show as theirs.
+  const isFollowed = (event.followedArtists?.length ?? 0) > 0
 
   // Browse table #7 (locked): mirror pickTierHeadline / compareTierRows
   // from the API by reading the headline directly off the canonical
@@ -124,7 +128,16 @@ export function EventCard({
             </>
           )}
         </p>
-        <GenreChips genres={event.genre} className="mt-1" maxChips={3} />
+        {isFollowed ? (
+          // Following chip leads the chip row (#763 PR 6, follow-highlight
+          // mock) — GenreChips keeps its own flex container nested inside.
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            <FollowingChip />
+            <GenreChips genres={event.genre} maxChips={3} />
+          </div>
+        ) : (
+          <GenreChips genres={event.genre} className="mt-1" maxChips={3} />
+        )}
       </div>
 
       {/* Watch button */}
