@@ -1,3 +1,10 @@
+## [1.147.2](https://github.com/HartiganHM/concert-crawl/compare/v1.147.1...v1.147.2) (2026-07-19)
+
+
+### Bug Fixes
+
+* **admin/crawl:** remove no-op alerts CTA + shrink LLM cost chip ([#1091](https://github.com/HartiganHM/concert-crawl/issues/1091)) ([2a772e7](https://github.com/HartiganHM/concert-crawl/commit/2a772e7b5b563dcfe119f5b0a23a4b34aa60d445)), closes [#1077](https://github.com/HartiganHM/concert-crawl/issues/1077) [#1078](https://github.com/HartiganHM/concert-crawl/issues/1078) [#1077](https://github.com/HartiganHM/concert-crawl/issues/1077) [#1078](https://github.com/HartiganHM/concert-crawl/issues/1078)
+
 ## [1.147.1](https://github.com/HartiganHM/concert-crawl/compare/v1.147.0...v1.147.1) (2026-07-19)
 
 
