@@ -26,6 +26,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.11.0-beta',
+    date: 'Jul 19, 2026',
+    headline: 'Your artists announce a Denver show — you hear about it first.',
+    items: [
+      {
+        kind: 'added',
+        text: 'New-show push alerts: when a venue posts a date from an artist you follow on Spotify, Premium members get a push the moment our crawler finds it — before it hits the calendar rush.',
+      },
+      {
+        kind: 'added',
+        text: 'Auto-watch: flip one switch and every new show from your artists lands straight on your Watching list, on every plan. Already going or watching? We never touch it.',
+      },
+    ],
+  },
+  {
     version: 'v0.10.0-beta',
     date: 'Jul 19, 2026',
     headline: 'Link Spotify and your artists light up as you browse.',
