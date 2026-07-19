@@ -107,6 +107,18 @@ describe('ModalShell', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('renders no header band when header is omitted', () => {
+    render(
+      <ModalShell open={true} onClose={vi.fn()} ariaLabel="Test">
+        <div>Content</div>
+      </ModalShell>,
+    )
+    const dialog = screen.getByRole('dialog')
+    // Only the content wrapper — no empty header container above it.
+    expect(dialog.children).toHaveLength(1)
+    expect(screen.getByText('Content')).toBeTruthy()
+  })
+
   it('renders footer when provided', () => {
     render(
       <ModalShell

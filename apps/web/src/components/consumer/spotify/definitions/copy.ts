@@ -221,6 +221,16 @@ export const SPOTIFY_COPY = {
     chipAria: 'Filter to artists you follow',
     banner: (count: number) => `${count} Denver shows by artists you follow`,
     bannerSingular: '1 Denver show by artists you follow',
+    // Empty state when the filter is on but no Spotify is linked — the API
+    // returns an empty 200 for entitled viewers with zero follow rows, so
+    // without this the page shows a generic "no hits" with no way forward.
+    emptyNotConnected: {
+      eyebrow: 'Following · not linked',
+      title: "We can't see your artists yet.",
+      body: "The Following filter runs on your Spotify follows, and nothing's linked right now. Connect and this view fills itself in.",
+      primaryCta: 'Connect Spotify',
+      secondaryCta: 'Browse everything instead',
+    },
     upsell: {
       eyebrow: 'TASTE FILTER · PREMIUM',
       title: 'Slice the whole calendar by your taste.',

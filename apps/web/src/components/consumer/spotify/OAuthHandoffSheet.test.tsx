@@ -13,7 +13,11 @@ vi.mock('@/lib/spotify-connect', () => ({
 }))
 
 vi.mock('@clerk/nextjs', () => ({
-  useUser: () => ({ user: { id: 'user_1' } }),
+  useUser: () => ({
+    user: { id: 'user_1', createExternalAccount: vi.fn() },
+  }),
+  useReverification: (fetcher: (...args: unknown[]) => Promise<unknown>) =>
+    fetcher,
 }))
 
 beforeEach(() => {
@@ -79,8 +83,45 @@ describe('OAuthHandoffSheet', () => {
     await waitFor(() => {
       expect(screen.getByText(FAIL_COPY.title)).toBeTruthy()
     })
-    // "Try again" returns to the rail — nothing was linked.
+    // "Try again" retries the connection directly — no detour back through
+    // the handoff rail (#763 staging feedback).
     fireEvent.click(screen.getByRole('button', { name: FAIL_COPY.primaryCta }))
+    expect(startSpotifyConnect).toHaveBeenCalledTimes(2)
+    expect(screen.queryByText(HANDOFF_COPY.title)).toBeNull()
+    await waitFor(() => {
+      expect(screen.getByText(FAIL_COPY.title)).toBeTruthy()
+    })
+  })
+
+  it('disables "Try again" while the retry is in flight', async () => {
+    startSpotifyConnect.mockResolvedValueOnce({ status: 'error' })
+    render(<OAuthHandoffSheet open onClose={vi.fn()} />)
+    fireEvent.click(
+      screen.getByRole('button', { name: HANDOFF_COPY.continueCta }),
+    )
+    await waitFor(() => {
+      expect(screen.getByText(FAIL_COPY.title)).toBeTruthy()
+    })
+    startSpotifyConnect.mockReturnValueOnce(
+      new Promise<SpotifyConnectStart>(() => undefined),
+    )
+    const tryAgain = screen.getByRole('button', { name: FAIL_COPY.primaryCta })
+    fireEvent.click(tryAgain)
+    await waitFor(() => {
+      expect(tryAgain.hasAttribute('disabled')).toBe(true)
+    })
+  })
+
+  it('returns to the rail when reverification is cancelled', async () => {
+    startSpotifyConnect.mockResolvedValue({ status: 'cancelled' })
+    render(<OAuthHandoffSheet open onClose={vi.fn()} />)
+    fireEvent.click(
+      screen.getByRole('button', { name: HANDOFF_COPY.continueCta }),
+    )
+    await waitFor(() => {
+      expect(startSpotifyConnect).toHaveBeenCalledTimes(1)
+    })
+    expect(screen.queryByText(FAIL_COPY.title)).toBeNull()
     expect(screen.getByText(HANDOFF_COPY.title)).toBeTruthy()
   })
 

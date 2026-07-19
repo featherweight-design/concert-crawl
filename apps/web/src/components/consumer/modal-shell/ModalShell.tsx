@@ -6,7 +6,7 @@ interface ModalShellProps {
   open: boolean
   onClose: () => void
   ariaLabel: string
-  header: React.ReactNode
+  header?: React.ReactNode
   footer?: React.ReactNode
   mobileFooter?: React.ReactNode
   children: React.ReactNode
@@ -121,9 +121,11 @@ export function ModalShell({
               }}
             />
           </div>
-          <div style={{ flexShrink: 0, padding: '10px 16px 8px' }}>
-            {header}
-          </div>
+          {header != null && (
+            <div style={{ flexShrink: 0, padding: '10px 16px 8px' }}>
+              {header}
+            </div>
+          )}
           <div
             style={{
               flex: 1,
@@ -172,15 +174,17 @@ export function ModalShell({
             overflow: 'hidden',
           }}
         >
-          <div
-            style={{
-              flexShrink: 0,
-              padding: '10px 16px 8px',
-              borderBottom: '1px solid var(--border)',
-            }}
-          >
-            {header}
-          </div>
+          {header != null && (
+            <div
+              style={{
+                flexShrink: 0,
+                padding: '10px 16px 8px',
+                borderBottom: '1px solid var(--border)',
+              }}
+            >
+              {header}
+            </div>
+          )}
           <div
             style={{
               flex: 1,

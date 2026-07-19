@@ -30,6 +30,7 @@ import { SpotifyStatusBanner } from '@/components/consumer/spotify/SpotifyStatus
 import { DiscoveryShelf } from '@/components/consumer/spotify/DiscoveryShelf'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
+import { fetchSpotifyConnection } from '@/lib/spotify'
 
 const copy = CONSUMER_COPY
 
@@ -251,6 +252,24 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     })
   }
 
+  // Taste filter with zero hits and no Spotify linked (#763 staging
+  // feedback): entitled viewers without a connection get an empty 200 from
+  // taste=1 (no follow rows), so the generic "0 hits" state offers no way
+  // forward. Check the connection only in that narrow case and swap in a
+  // connect nudge. A failed check degrades to the generic empty state.
+  let tasteNudgeConnect = false
+  if (tasteApplied && events.length === 0 && view === 'list' && token) {
+    try {
+      const connection = await fetchSpotifyConnection(token)
+      tasteNudgeConnect = connection.status === 'disconnected'
+    } catch (err) {
+      console.error(
+        'spotify connection check for taste empty state failed',
+        err,
+      )
+    }
+  }
+
   const firstEventIsToday =
     events.length > 0 && events[0] !== undefined && isToday(events[0].date)
   const heroEvent = firstEventIsToday ? events[0] : null
@@ -328,7 +347,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
       {/* Taste scope banner — only when the API actually applied taste=1
           (taste-filter.jsx mock). */}
-      {tasteApplied && (
+      {tasteApplied && !tasteNudgeConnect && (
         <div
           className="mb-4 flex items-center gap-2 rounded-lg px-3 py-2"
           style={{
@@ -347,7 +366,24 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         </div>
       )}
 
-      {events.length === 0 && view === 'list' && (
+      {tasteNudgeConnect && (
+        <EmptyState
+          state="filtered"
+          eyebrow={SPOTIFY_COPY.tasteFilter.emptyNotConnected.eyebrow}
+          title={SPOTIFY_COPY.tasteFilter.emptyNotConnected.title}
+          body={SPOTIFY_COPY.tasteFilter.emptyNotConnected.body}
+          primaryCta={{
+            label: SPOTIFY_COPY.tasteFilter.emptyNotConnected.primaryCta,
+            href: '/me?section=connections',
+          }}
+          secondaryCta={{
+            label: SPOTIFY_COPY.tasteFilter.emptyNotConnected.secondaryCta,
+            href: '/events',
+          }}
+        />
+      )}
+
+      {events.length === 0 && view === 'list' && !tasteNudgeConnect && (
         <EmptyState
           state={isFiltered ? 'filtered' : 'no-data'}
           eyebrow={

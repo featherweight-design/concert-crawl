@@ -28,6 +28,8 @@ vi.mock('@/lib/queries/use-spotify-connection', () => ({
 
 vi.mock('@clerk/nextjs', () => ({
   useUser: () => ({ user: null }),
+  useReverification: (fetcher: (...args: unknown[]) => Promise<unknown>) =>
+    fetcher,
 }))
 
 // The connected card's push toggle (#763 PR 9) — device state + toggle

@@ -7,11 +7,15 @@
 // "Spotify's not picking up" state — no crash, nothing linked.
 
 import { useRef, useState } from 'react'
-import { useUser } from '@clerk/nextjs'
+import { useReverification, useUser } from '@clerk/nextjs'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
-import { SPOTIFY_RETURN_PATH, startSpotifyConnect } from '@/lib/spotify-connect'
+import {
+  SPOTIFY_RETURN_PATH,
+  startSpotifyConnect,
+  type SpotifyExternalAccountParams,
+} from '@/lib/spotify-connect'
 import { SPOTIFY_COPY } from './definitions/copy'
 import { HonestyRail } from './HonestyRail'
 import { NoAnswerGlyph } from './glyphs'
@@ -21,7 +25,7 @@ import { SignalButton, TextButton } from './SpotifyButtons'
 const HANDOFF_COPY = SPOTIFY_COPY.oauthHandoff
 const FAIL_COPY = SPOTIFY_COPY.failConnectDown
 
-type HandoffPhase = 'rail' | 'starting' | 'error'
+type HandoffPhase = 'rail' | 'error'
 
 interface OAuthHandoffSheetProps {
   open: boolean
@@ -33,32 +37,46 @@ export const OAuthHandoffSheet = ({
   onClose,
 }: OAuthHandoffSheetProps) => {
   const { user } = useUser()
+  // Clerk treats createExternalAccount as a sensitive op — on instances with
+  // reverification enabled, aged sessions 403 unless the enhanced fetcher
+  // shows Clerk's re-auth modal and retries (#763 staging feedback).
+  const createSpotifyAccount = useReverification(
+    (params: SpotifyExternalAccountParams) => {
+      if (!user) {
+        return Promise.reject(new Error('spotify connect: no signed-in user'))
+      }
+      return user.createExternalAccount(params)
+    },
+  )
   const [phase, setPhase] = useState<HandoffPhase>('rail')
+  // `starting` is tracked apart from the phase so "Try again" can retry from
+  // the error state without flashing back to the rail.
+  const [starting, setStarting] = useState(false)
   // Dismissing while startSpotifyConnect is in flight must not redirect the
   // user to Spotify once the promise settles — cancel wins.
   const cancelledRef = useRef(false)
 
   const beginHandoff = async () => {
-    if (phase === 'starting') return
-    if (!user) {
-      setPhase('error')
-      return
-    }
+    if (starting) return
     cancelledRef.current = false
-    setPhase('starting')
+    setStarting(true)
     const redirectUrl = `${window.location.origin}${SPOTIFY_RETURN_PATH}`
-    const result = await startSpotifyConnect(user, redirectUrl)
+    const result = await startSpotifyConnect(createSpotifyAccount, redirectUrl)
     if (cancelledRef.current) return
     if (result.status === 'redirect') {
+      // Leave `starting` set — the button stays disabled until navigation.
       window.location.assign(result.url)
       return
     }
-    setPhase('error')
+    setStarting(false)
+    // Backing out of Clerk's reverification modal is a choice, not a failure.
+    setPhase(result.status === 'cancelled' ? 'rail' : 'error')
   }
 
   const close = () => {
     cancelledRef.current = true
     setPhase('rail')
+    setStarting(false)
     onClose()
   }
 
@@ -83,11 +101,15 @@ export const OAuthHandoffSheet = ({
       open={open}
       onClose={close}
       ariaLabel={HANDOFF_COPY.ariaLabel}
-      header={phase === 'error' ? <div aria-hidden /> : railHeader}
+      {...(phase === 'error' ? {} : { header: railHeader })}
       footer={
         phase === 'error' ? (
           <div className="flex flex-col gap-2.5">
-            <SignalButton withLogo onClick={() => setPhase('rail')}>
+            <SignalButton
+              withLogo
+              onClick={() => void beginHandoff()}
+              disabled={starting}
+            >
               {FAIL_COPY.primaryCta}
             </SignalButton>
             <TextButton onClick={close}>{FAIL_COPY.secondaryCta}</TextButton>
@@ -97,7 +119,7 @@ export const OAuthHandoffSheet = ({
             <SignalButton
               withLogo
               onClick={() => void beginHandoff()}
-              disabled={phase === 'starting'}
+              disabled={starting}
             >
               {HANDOFF_COPY.continueCta}
             </SignalButton>
