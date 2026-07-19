@@ -638,6 +638,61 @@ describe('Admin venue routes', () => {
     expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
   })
 
+  it('PATCH /v1/admin/venues/:id requires a selector when clearing platform on a fetcher-exempt browser venue', async () => {
+    adminAuth()
+    // The venue is currently AEG-handled (platform='aeg', id='shard-1') in
+    // browser mode with no selector — exempt today. Clearing platform removes
+    // the fetcher exemption and drops it into the HTML cascade, so the guard
+    // must fire even though the payload never touches crawlMode/selector.
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        {
+          ...mockDb._mockVenueRow,
+          crawlMode: 'browser',
+          crawlWaitForSelector: null,
+          platform: 'aeg',
+          platformVenueId: 'shard-1',
+          apiProvider: null,
+        },
+      ]),
+    )
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: null }),
+    })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
+  })
+
+  it('PATCH /v1/admin/venues/:id requires a selector when clearing apiProvider on a fetcher-exempt browser venue', async () => {
+    adminAuth()
+    // The venue is currently VenuePilot-handled (apiProvider='venuepilot',
+    // apiAccountId='1105') in browser mode with no selector — exempt today.
+    // Clearing apiProvider removes the exemption and drops it into the HTML
+    // cascade, so the guard must fire even though the payload never touches
+    // crawlMode/selector.
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        {
+          ...mockDb._mockVenueRow,
+          crawlMode: 'browser',
+          crawlWaitForSelector: null,
+          platform: null,
+          apiProvider: 'venuepilot',
+          apiAccountId: '1105',
+        },
+      ]),
+    )
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apiProvider: null }),
+    })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
+  })
+
   it('PATCH /v1/admin/venues/:id does not fire the selector guard on an unrelated PATCH', async () => {
     adminAuth()
     mockDb.select.mockReturnValue(

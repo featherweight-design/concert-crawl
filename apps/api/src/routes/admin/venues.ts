@@ -589,8 +589,13 @@ venuesAdminRouter.patch(
     // .length > 0), so an empty-string / whitespace id still falls through to
     // the HTML cascade and needs the selector. A venue with the platform/
     // provider set but no usable id is NOT handled by any fetcher. Only
-    // checked when the payload touches crawlMode or the selector, so unrelated
-    // PATCHes never fail on a pre-existing venue.
+    // checked when the payload touches the merged browser-gate state — the
+    // crawl mode, the selector, OR a platform/API field. Clearing platform or
+    // apiProvider on a fetcher-exempt browser venue removes the exemption and
+    // drops it back into the HTML cascade, so those fields gate the guard too;
+    // otherwise a PATCH { platform: null } would silently reintroduce the
+    // timing race. Unrelated PATCHes (verify, pause, rename) leave every gate
+    // field untouched, so the guard never fails on a pre-existing venue.
     const nextCrawlMode =
       body.crawlMode !== undefined ? body.crawlMode : existing.crawlMode
     const nextWaitForSelector =
@@ -598,7 +603,12 @@ venuesAdminRouter.patch(
         ? body.crawlWaitForSelector
         : existing.crawlWaitForSelector
     const touchesBrowserGate =
-      body.crawlMode !== undefined || body.crawlWaitForSelector !== undefined
+      body.crawlMode !== undefined ||
+      body.crawlWaitForSelector !== undefined ||
+      body.platform !== undefined ||
+      body.platformVenueId !== undefined ||
+      body.apiProvider !== undefined ||
+      body.apiAccountId !== undefined
     const platformFetcherHandles =
       dispatch({
         ...existing,
