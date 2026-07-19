@@ -372,10 +372,13 @@ export const runSpotifyWeekly = async (
   // Phase 2 — digests. Clerk loaded lazily so the sync phase (which has its
   // own Clerk client inside spotify-sync) never depends on this import.
   try {
+    // Fail fast once (billing-daily pattern) instead of erroring per-user.
+    const clerkSecretKey = process.env['CLERK_SECRET_KEY']
+    if (clerkSecretKey === undefined || clerkSecretKey.length === 0) {
+      throw new Error('CLERK_SECRET_KEY not set — digest phase skipped')
+    }
     const { createClerkClient } = await import('@clerk/backend')
-    const clerk = createClerkClient({
-      secretKey: process.env['CLERK_SECRET_KEY'] ?? '',
-    })
+    const clerk = createClerkClient({ secretKey: clerkSecretKey })
     const recipients = await db
       .select({ userId: userSpotifyConnections.userId })
       .from(userSpotifyConnections)

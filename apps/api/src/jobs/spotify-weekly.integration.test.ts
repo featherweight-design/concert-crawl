@@ -220,6 +220,19 @@ describe('runSpotifyWeekly — sync phase (§8.1 phase 1)', () => {
 })
 
 describe('runSpotifyWeekly — digest phase (§8.1 phase 2)', () => {
+  it('skips the digest phase cleanly when CLERK_SECRET_KEY is unset', async () => {
+    await seedConnection(USER)
+    await seedPremium(USER)
+    clerkState.emails.set(USER, 'weekly@example.com')
+    grantSpotify(USER, [{ id: 'sp1', name: 'Sleep Token' }])
+    vi.stubEnv('CLERK_SECRET_KEY', '')
+
+    await expect(runSpotifyWeekly(NOW)).resolves.toBeUndefined()
+
+    expect(await getDigestLogRows(USER)).toHaveLength(0)
+    expect(resendState.sends).toHaveLength(0)
+  })
+
   it('sends a matched-show digest to a premium user, deduped per ISO week', async () => {
     await seedConnection(USER)
     await seedPremium(USER)

@@ -74,4 +74,12 @@ describe('email unsubscribe token', () => {
       `https://api.example.com/v1/email/unsubscribe?uid=${encodeURIComponent('user/123')}&family=digest&token=${token}`,
     )
   })
+
+  it('normalizes trailing slashes and whitespace in API_PUBLIC_URL', () => {
+    process.env['API_PUBLIC_URL'] = '  https://api.example.com//  '
+    const token = buildUnsubscribeToken('user_123', 'digest')
+    expect(buildUnsubscribeUrl('user_123', 'digest')).toBe(
+      `https://api.example.com/v1/email/unsubscribe?uid=user_123&family=digest&token=${token}`,
+    )
+  })
 })

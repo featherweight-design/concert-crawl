@@ -27,9 +27,13 @@ export const isUnsubscribeConfigured = (): boolean => getSecret() !== undefined
 
 // Public origin of THIS API service (the unsubscribe route lives on the API,
 // not the web app). Set per environment, e.g.
-// https://concert-crawl-api.onrender.com — defaults to local dev.
+// https://concert-crawl-api.onrender.com — defaults to local dev. Trailing
+// slashes / whitespace (common dashboard copy-paste artifacts) are stripped
+// so links never render with a double slash.
 const apiPublicUrl = (): string =>
-  process.env['API_PUBLIC_URL'] ?? 'http://localhost:3001'
+  (process.env['API_PUBLIC_URL'] ?? 'http://localhost:3001')
+    .trim()
+    .replace(/\/+$/, '')
 
 export const buildUnsubscribeToken = (
   userId: string,
