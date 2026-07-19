@@ -155,6 +155,13 @@ export function formatStrategy(strategy: string | null): string {
   if (strategy === 'structured_data') return 'structured'
   if (strategy === 'llm') return 'llm'
   if (strategy === 'manual') return 'manual'
+  // Platform-routed crawls persist `platform:<slug>` (e.g. `platform:aeg`,
+  // `platform:venuepilot`). Display just the slug so the column stays
+  // narrow and consistent with the other tokens — #1075 follow-up: the
+  // Strategy column blanked out for every AEG/VenuePilot venue because
+  // this whitelist rejected them.
+  if (strategy?.startsWith('platform:'))
+    return strategy.slice('platform:'.length)
   return '—'
 }
 

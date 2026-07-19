@@ -26,7 +26,10 @@ export const AdminTopbar = () => {
   return (
     <header
       style={{
-        height: 56,
+        // Match the sidebar logo header (64px, `AdminSidebar.tsx`) so the
+        // two bottom borders sit on the same horizontal line where the
+        // columns meet — the 8px gap between them read as a misalignment.
+        height: 64,
         flexShrink: 0,
         display: 'flex',
         alignItems: 'center',

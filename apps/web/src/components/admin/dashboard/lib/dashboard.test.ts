@@ -145,6 +145,15 @@ describe('formatStrategy', () => {
   it('maps unknown string → —', () => {
     expect(formatStrategy('unknown')).toBe('—')
   })
+  it('maps platform:aeg → aeg (strips the platform prefix)', () => {
+    // The crawler persists platform-routed runs as `platform:<slug>` in
+    // `crawl_runs.extraction_strategy_used`. Prior behaviour returned '—'
+    // for every AEG venue on the Dashboard.
+    expect(formatStrategy('platform:aeg')).toBe('aeg')
+  })
+  it('maps platform:venuepilot → venuepilot', () => {
+    expect(formatStrategy('platform:venuepilot')).toBe('venuepilot')
+  })
 })
 
 // --- buildPendingReviewHint ---
