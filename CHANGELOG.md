@@ -1,3 +1,10 @@
+## [1.137.1](https://github.com/HartiganHM/concert-crawl/compare/v1.137.0...v1.137.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* split run-on artist billings into headliner + openers ([#1027](https://github.com/HartiganHM/concert-crawl/issues/1027)) ([#1054](https://github.com/HartiganHM/concert-crawl/issues/1054)) ([7ece319](https://github.com/HartiganHM/concert-crawl/commit/7ece319b624134484debf93dd5f0855ee00cccaf)), closes [#1053](https://github.com/HartiganHM/concert-crawl/issues/1053)
+
 # [1.137.0](https://github.com/HartiganHM/concert-crawl/compare/v1.136.1...v1.137.0) (2026-07-19)
 
 
