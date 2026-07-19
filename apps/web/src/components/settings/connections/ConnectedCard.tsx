@@ -75,16 +75,22 @@ export const ConnectedCard = ({
   // subscription on this device — the preference alone can't deliver a push
   // here, so an unsubscribed device honestly shows OFF.
   const pushSupport = pushDevice.data?.support
-  const pushDenied = pushDevice.data?.permission === 'denied'
+  const permissionDenied = pushDevice.data?.permission === 'denied'
+  // subscribeToPush reports 'permission-denied' for a dismissed prompt too,
+  // where live permission can still be 'default' — surface the note but keep
+  // the toggle operable so the user can retry.
+  const promptRefused =
+    pushToggle.data !== undefined &&
+    !pushToggle.data.ok &&
+    pushToggle.data.reason === 'permission-denied'
   const pushChecked =
     connection.pushEnabled && pushDevice.data?.subscribed === true
   const pushUnavailable =
-    !pushDevice.data || pushSupport !== 'supported' || pushDenied
+    !pushDevice.data || pushSupport !== 'supported' || permissionDenied
   const pushErrored =
-    pushToggle.error !== null ||
-    (pushToggle.data !== undefined &&
-      !pushToggle.data.ok &&
-      pushToggle.data.reason === 'error')
+    pushToggle.data !== undefined &&
+    !pushToggle.data.ok &&
+    pushToggle.data.reason === 'error'
   // One note at a time, hardest constraint first: install gate → unsupported
   // → permission → transient failure.
   const pushNote =
@@ -92,7 +98,7 @@ export const ConnectedCard = ({
       ? { text: COPY.pushIosInstall, warning: false }
       : pushSupport === 'unsupported'
         ? { text: COPY.pushUnsupported, warning: false }
-        : pushDenied
+        : permissionDenied || promptRefused
           ? { text: COPY.pushDenied, warning: true }
           : pushErrored
             ? { text: COPY.pushError, warning: true }

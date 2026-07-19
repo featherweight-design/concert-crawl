@@ -6,10 +6,11 @@
 // together:
 //   ON  → permission prompt + pushManager subscribe + POST, then
 //         PATCH { pushEnabled: true }
-//   OFF → DELETE the subscription row + pushManager unsubscribe, then
-//         PATCH { pushEnabled: false }
-// Expected failures (denied / unsupported / subscribe error) resolve — never
-// throw — so the card can render the matching note.
+//   OFF → PATCH { pushEnabled: false } FIRST (the server preference is the
+//         opt-out that gates sends to every device), then best-effort local
+//         DELETE + pushManager unsubscribe
+// Every failure resolves to { ok: false } — the mutation never rejects — so
+// the card can render the matching note.
 
 import { useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -49,26 +50,35 @@ export function usePushToggle() {
 
   return useMutation<PushToggleOutcome, Error, boolean>({
     mutationFn: async (next) => {
-      const token = await getToken()
-      if (!token) throw new Error('Not authenticated')
-      if (next) {
-        const result = await subscribeToPush(token)
-        if (result.status !== 'subscribed') {
-          return { ok: false, reason: result.status }
+      try {
+        const token = await getToken()
+        if (!token) return { ok: false, reason: 'error' }
+        if (next) {
+          const result = await subscribeToPush(token)
+          if (result.status !== 'subscribed') {
+            return { ok: false, reason: result.status }
+          }
+          subscriptionIdRef.current = result.id
+          const view = await patchSpotifyConnection(token, {
+            pushEnabled: true,
+          })
+          return { ok: true, view }
         }
-        subscriptionIdRef.current = result.id
-      } else {
+        // The preference PATCH goes first — it's what stops sends to every
+        // device — so a failed local teardown can't strand the opt-out.
+        const view = await patchSpotifyConnection(token, {
+          pushEnabled: false,
+        })
         const result = await unsubscribeFromPush(
           token,
           subscriptionIdRef.current ?? undefined,
         )
-        if (result.status === 'error') return { ok: false, reason: 'error' }
-        // 'unsupported' on the way off means there's no device subscription
-        // to tear down — still honor the opt-out by patching the preference.
-        subscriptionIdRef.current = null
+        if (result.status !== 'error') subscriptionIdRef.current = null
+        return { ok: true, view }
+      } catch (err) {
+        console.error('push: toggle failed', err)
+        return { ok: false, reason: 'error' }
       }
-      const view = await patchSpotifyConnection(token, { pushEnabled: next })
-      return { ok: true, view }
     },
     onSuccess: (outcome) => {
       if (outcome.ok) {

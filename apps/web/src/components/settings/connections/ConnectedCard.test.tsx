@@ -249,15 +249,18 @@ describe('ConnectedCard', () => {
       expect(screen.getByText(CARD_COPY.pushError)).toBeTruthy()
     })
 
-    it('surfaces the denied note after an in-app permission refusal', () => {
+    it('surfaces the denied note after a dismissed prompt while keeping the toggle operable', () => {
       pushDeviceState.data = {
         support: 'supported',
-        permission: 'denied',
+        permission: 'default',
         subscribed: false,
       }
       pushToggleMutation.data = { ok: false, reason: 'permission-denied' }
       renderCard()
       expect(screen.getByText(CARD_COPY.pushDenied)).toBeTruthy()
+      expect(getPushSwitch().hasAttribute('disabled')).toBe(false)
+      fireEvent.click(getPushSwitch())
+      expect(pushToggleMutation.mutate).toHaveBeenCalledWith(true)
     })
   })
 
