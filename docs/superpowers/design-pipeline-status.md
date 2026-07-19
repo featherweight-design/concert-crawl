@@ -55,7 +55,9 @@ Full audit findings for each handoff live in that handoff's `READINESS.md`.
 
 Design brief has merged; Claude Design needs to produce the hi-fi handoff (mocks, components, canvas). Top of the list = closest to eng handoff (smallest remaining Design + build path).
 
-_Currently empty — PWA cluster flipped 📐 → 🟢 on 2026-07-18; moved to 🟢 above. When a new brief locks, restore the table with columns: `Rank | Ticket | Brief PR | Path to eng handoff | Why this rank`._
+| Rank | Ticket | Brief PR | Path to eng handoff | Why this rank |
+|---|---|---|---|---|
+| 1 | **#762** Who else is watching — social signal on event detail (Beta · Normal) | PR opening 2026-07-19 | Design produces hi-fi handoff at `design/design_handoff_who_else_is_watching/` covering populated states (1 named / 2-3 named / named+others / all-others-no-names) × mobile + desktop × 3 themes. Then Readiness Review → 🟢 → eng-planning. | Only brief-locked item; net-new social surface, small-to-medium visual scope, most primitives (avatar atom, handle atom, count endpoint) already exist in code. |
 
 **Maintenance note:** when Design produces the handoff, move to 🎨 (audit in flight) → then 🟡 / 🟢 based on verdict.
 
@@ -81,7 +83,6 @@ Ordered by beta-phase urgency + adjacency to already-locked verticals. Consolida
 
 | # | Phase | Priority | Adjacency / notes |
 |---|---|---|---|
-| **#762** Who else is watching — social signal on event detail | Beta | Normal | Adjacent to concert-history + attending vocabulary |
 | **#794** Logged-out app UX — navigation, header, browse-only shape | Launch | Normal | Adjacencies with monetization paywalls — worth pairing with eng infra work |
 
 ---
@@ -100,6 +101,8 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-19 | **#762** | Who else is watching design brief (this PR) — Track 2 brainstorm through 9 questions locked with Hugh: (Q1) watching-only this cycle, attending as v2 in **#1096**; (Q2) handle-gated visibility, no separate opt-out; (Q3) named handles up to a cap + "and N others" fold-in; (Q4) hide surface entirely at 0 other watchers; (Q5) signed-out deferred to #794; (Q6) new surface replaces button's count text; (Q7) exclude self, surface is "others" only; (Q8) colored initials + handle text using existing `avatarColor` atom; (Q9) Free tier. Follow-up **#1096** filed for attending-signal v2 (blocked on #55 shipping). Backlog count 2 → 1; Brief-locked 0 → 1. |
+| 2026-07-19 | — | Tracker refresh #20 — **#762** flips 🕰️ Backlog → 📐 Brief locked (this PR); brief document lives at `docs/superpowers/specs/2026-07-19-762-who-else-is-watching-design-brief.md`. Backlog count 2 → 1 (only **#794** Logged-out UX remains). |
 | 2026-07-18 | — | Tracker refresh #19 — **PWA cluster** flips 📐 → 🟢 (this PR); handoff at `design/design_handoff_pwa_cluster/` with 12 files (5 authored code + 1 vendored settings copy + 4 shared infra + README + READINESS), covers 14 state artboards across 3 surfaces × mobile 320 + 390 + desktop + theme parity × 3 themes (Electric/Jade/Light — this project ships 3, not 9). `NotificationsSection` slots into real `SettingsRoute` / `SettingsRouteDesktop`. Brief-locked queue back to empty. Green count 4 → 5. |
 | 2026-07-18 | **PWA cluster** | `design/design_handoff_pwa_cluster/READINESS.md` merged (this PR) — 🟢 Green one-pass verdict; every Q1–Q6 lock from brief (PR #1039) honored; voice authenticity + web-first principles demonstrated across every surface; grepped clean of brochure copy / "fraud" / "last chance" / "we miss you"; 4 prototype-polish items deferred to plan PR (AppBar shared-component decision, cached-shortcuts data source, prefs data model, `profile-settings-screens.jsx` review-as-diff). Design's 8 open-brief calls all reasonable, no addendum needed. Depends on PWA Tier B PR2 (SW + app shell) before eng-planning can start. |
 | 2026-07-18 | **PWA cluster** | Design brief merged (PR #1039) — Track 2 brainstorm through 6 questions locked with Hugh: (Q1) web-first register + splash of earned escalation for push; (Q2) install prompt = persistent header slot dismissible + iOS "Here's how" sheet; (Q3) offline = header pill + full-page fallback with cached shortcuts; (Q4) push permission = two-step contextual sheet on first watch, no auto re-asks; (Q5) push categories v1 = watch updates + price drops only (contest/admin stay in bell); (Q6) prefs = master + per-category sub-toggles at Settings → Notifications. 3 v2 follow-ups filed: **#1036** device management, **#1037** new-artist push category, **#1038** send-frequency batching. Brief covers all three tickets (#969 + #970 + #971); handoff may split into per-ticket production if surfaces diverge. |
@@ -158,8 +161,9 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 ## 📋 Immediate TODOs
 
-- [ ] **5 eng plans ready for eng-planning agent:** concert_history · #763 Spotify · #72 shareable_cards + Passport · **#764** Venue first-timer guide · **PWA cluster** (#971 + #969 + #970, new — refresh #19, 2026-07-18). #763 Spotify + #72 shareable_cards + #764 venue guide + PWA cluster are the biggest surfaces; concert_history is the smallest (teaser link only). **PWA cluster is sequenced behind Tier B PR2** (#968) landing first — eng-planning waits. No Yellow items remaining. No Brief-locked items remaining.
-- [ ] **Backlog workstream order** (per 2026-07-18 refresh #18): #762 Who else is watching → #794 Logged-out UX. Backlog is now 2 workstreams. #762 remains the highest-value next design pull.
+- [ ] **5 eng plans ready for eng-planning agent:** concert_history · #763 Spotify · #72 shareable_cards + Passport · **#764** Venue first-timer guide · **PWA cluster** (#971 + #969 + #970). #763 Spotify + #72 shareable_cards + #764 venue guide + PWA cluster are the biggest surfaces; concert_history is the smallest (teaser link only). PWA cluster's Tier B PR2 gate cleared 2026-07-18. No Yellow items remaining.
+- [ ] **#762** design handoff production — Claude Design produces hi-fi handoff off the brief at `docs/superpowers/specs/2026-07-19-762-who-else-is-watching-design-brief.md`; target folder `design/design_handoff_who_else_is_watching/`. Handoff prompt delivered in chat (not committed).
+- [ ] **Backlog** is down to 1 workstream: **#794** Logged-out UX (Launch · Normal). Adjacencies with monetization paywalls suggest pairing with eng infra work when picked up.
 
 ---
 
