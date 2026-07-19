@@ -119,11 +119,17 @@ spotifyRouter.post('/connection', async (ctx) => {
     )
   }
 
-  const token = await getSpotifyAccessToken(auth.userId)
-  if (token === null) {
+  const tokenResult = await getSpotifyAccessToken(auth.userId)
+  if (tokenResult.status === 'no-grant') {
     return ctx.json(
       { success: false, error: 'Spotify authorization is incomplete' },
       400,
+    )
+  }
+  if (tokenResult.status === 'error') {
+    return ctx.json(
+      { success: false, error: 'Spotify is unavailable — try again shortly' },
+      502,
     )
   }
 
@@ -131,7 +137,7 @@ spotifyRouter.post('/connection', async (ctx) => {
   let spotifyUserId: string
   let displayName: string | null
   try {
-    const profile = await createSpotifyClient(token).getProfile()
+    const profile = await createSpotifyClient(tokenResult.token).getProfile()
     spotifyUserId = profile.spotifyUserId
     displayName = profile.displayName
   } catch (err) {

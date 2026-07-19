@@ -179,6 +179,29 @@ describe('createSpotifyClient', () => {
       expect(calls).toHaveLength(2)
     })
 
+    it('honors an HTTP-date Retry-After header', async () => {
+      const sleeps: number[] = []
+      const { fetchFn } = makeFetchStub([
+        {
+          status: 429,
+          headers: {
+            'Retry-After': new Date(Date.now() + 5000).toUTCString(),
+          },
+        },
+        { status: 200, body: { items: [artist('t1', 'Top One')] } },
+      ])
+      const client = createSpotifyClient('tok', {
+        fetchFn,
+        sleepFn: async (ms) => {
+          sleeps.push(ms)
+        },
+      })
+      await client.getTopArtists()
+      // toUTCString truncates to whole seconds, so allow a generous window
+      expect(sleeps[0]).toBeGreaterThan(2000)
+      expect(sleeps[0]).toBeLessThanOrEqual(5000)
+    })
+
     it('throws SpotifyRateLimitError on a second consecutive 429', async () => {
       const { fetchFn, calls } = makeFetchStub([
         { status: 429, headers: { 'Retry-After': '1' } },

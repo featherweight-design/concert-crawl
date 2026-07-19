@@ -86,10 +86,19 @@ const defaultSleep = (ms: number): Promise<void> =>
     setTimeout(resolve, ms)
   })
 
+// Retry-After is delta-seconds or an HTTP-date (RFC 9110 §10.2.3); Spotify
+// sends seconds, but honor both. Unparseable or non-positive → 1s.
 const parseRetryAfterMs = (header: string | null): number => {
+  if (header === null) return 1000
   const seconds = Number(header)
-  if (!Number.isFinite(seconds) || seconds <= 0) return 1000
-  return seconds * 1000
+  if (Number.isFinite(seconds)) {
+    return seconds > 0 ? seconds * 1000 : 1000
+  }
+  const dateMs = Date.parse(header)
+  if (!Number.isNaN(dateMs) && dateMs > Date.now()) {
+    return dateMs - Date.now()
+  }
+  return 1000
 }
 
 export const createSpotifyClient = (

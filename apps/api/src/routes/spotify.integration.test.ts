@@ -13,6 +13,8 @@ const { authState, clerkState } = vi.hoisted(() => ({
   clerkState: {
     externalAccounts: [] as Array<{ id: string; provider: string }>,
     token: null as string | null,
+    // Simulates a transient Clerk outage (network/5xx) on the token fetch.
+    tokenFetchError: false,
     deleteCalls: [] as Array<{ userId: string; externalAccountId: string }>,
   },
 }))
@@ -31,8 +33,14 @@ vi.mock('@clerk/backend', () => ({
         publicMetadata: {},
       }),
       getUserOauthAccessToken: async () => {
-        if (!clerkState.token) throw new Error('no spotify token on user')
-        return { data: [{ token: clerkState.token }] }
+        if (clerkState.tokenFetchError) {
+          throw new Error('Clerk is unavailable (simulated 500)')
+        }
+        // Empty list = no grant on the user (the real Clerk 4xx also maps
+        // to no-grant via its numeric status)
+        return {
+          data: clerkState.token ? [{ token: clerkState.token }] : [],
+        }
       },
       deleteUserExternalAccount: async (params: {
         userId: string
@@ -189,6 +197,7 @@ beforeEach(async () => {
   authState.current = null
   clerkState.externalAccounts = []
   clerkState.token = null
+  clerkState.tokenFetchError = false
   clerkState.deleteCalls = []
   spotifyState.profile = { id: 'spotify-user-1', display_name: 'Huey' }
   spotifyState.followedPages = [[]]
@@ -455,6 +464,28 @@ describe('POST /v1/spotify/connection/sync', () => {
     expect(row?.status).toBe('error')
     expect(row?.lastSyncError).toBeTruthy()
     // A transient failure never nukes the previous artist set
+    expect(await getSpotifyFollows(USER)).toHaveLength(1)
+  })
+
+  it('marks the connection error (not revoked) on a transient Clerk failure', async () => {
+    setAuth(USER)
+    linkSpotifyAccount()
+    spotifyState.followedPages = [[{ id: 'a1', name: 'Alpha' }]]
+    await connect()
+
+    await backdateLastSynced(USER)
+    clerkState.tokenFetchError = true
+    const res = await app.request('/v1/spotify/connection/sync', {
+      method: 'POST',
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as ConnectionBody
+    expect(body.data.status).toBe('error')
+
+    const row = await getConnectionRow(USER)
+    expect(row?.status).toBe('error')
+    expect(row?.lastSyncError).toContain('Clerk')
+    // A Clerk blip must never purge the previous artist set
     expect(await getSpotifyFollows(USER)).toHaveLength(1)
   })
 

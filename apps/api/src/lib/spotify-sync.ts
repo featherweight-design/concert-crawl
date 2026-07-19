@@ -89,22 +89,46 @@ export async function markConnectionRevoked(
   })
 }
 
+export type SpotifyTokenResult =
+  | { status: 'ok'; token: string }
+  | { status: 'no-grant' }
+  | { status: 'error'; message: string }
+
+const hasNumericStatus = (err: unknown): err is { status: number } =>
+  typeof err === 'object' &&
+  err !== null &&
+  'status' in err &&
+  typeof err.status === 'number'
+
 // Live access token via Clerk (E1) — Clerk stores + refreshes; nothing
-// persists in our DB. Null means the grant is gone (revoke path).
+// persists in our DB. 'no-grant' (empty token list or a Clerk 4xx) means the
+// grant is gone and drives the revoke path; transient Clerk failures
+// (network/5xx) map to 'error' so a Clerk blip never purges the user's
+// artist set.
 export async function getSpotifyAccessToken(
   userId: string,
-): Promise<string | null> {
+): Promise<SpotifyTokenResult> {
   try {
     const tokens = await clerkClient.users.getUserOauthAccessToken(
       userId,
       'spotify',
     )
     const token = tokens.data[0]?.token
-    if (typeof token !== 'string' || token.length === 0) return null
-    return token
+    if (typeof token !== 'string' || token.length === 0) {
+      return { status: 'no-grant' }
+    }
+    return { status: 'ok', token }
   } catch (err) {
+    if (hasNumericStatus(err) && err.status >= 400 && err.status < 500) {
+      apiLogger.warn({ err, userId }, 'spotify: Clerk reports no OAuth grant')
+      return { status: 'no-grant' }
+    }
     apiLogger.warn({ err, userId }, 'spotify: Clerk OAuth token fetch failed')
-    return null
+    return {
+      status: 'error',
+      message:
+        err instanceof Error ? err.message : 'Clerk OAuth token fetch failed',
+    }
   }
 }
 
@@ -222,15 +246,27 @@ export async function syncSpotifyConnection(
     .limit(1)
   if (!connection) return { outcome: 'no-connection', artistCount: 0 }
 
-  const token = await getSpotifyAccessToken(userId)
-  if (token === null) {
+  const tokenResult = await getSpotifyAccessToken(userId)
+  if (tokenResult.status === 'no-grant') {
     const reason = 'Spotify access token unavailable — grant revoked?'
     await markConnectionRevoked(userId, reason)
     await recordSyncCost({ userId, outcome: 'revoked', apiCalls: 0 })
     return { outcome: 'revoked', artistCount: 0, error: reason }
   }
+  if (tokenResult.status === 'error') {
+    await db
+      .update(userSpotifyConnections)
+      .set({ status: 'error', lastSyncError: tokenResult.message })
+      .where(eq(userSpotifyConnections.userId, userId))
+    await recordSyncCost({ userId, outcome: 'error', apiCalls: 0 })
+    return {
+      outcome: 'error',
+      artistCount: connection.artistCount,
+      error: tokenResult.message,
+    }
+  }
 
-  const client = createSpotifyClient(token)
+  const client = createSpotifyClient(tokenResult.token)
   let followed: SpotifyArtistItem[]
   let top: SpotifyArtistItem[]
   try {
