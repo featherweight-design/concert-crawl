@@ -83,6 +83,7 @@ Ordered by beta-phase urgency + adjacency to already-locked verticals. Consolida
 
 | # | Phase | Priority | Adjacency / notes |
 |---|---|---|---|
+| **#737** In-app notification surface (bell + panel + endpoints) | Beta | Normal | Push infra (PR #1060) is already writing `user_notification` rows passively — this surface reads them. Deliberate: users who miss the OS push (device off, permission revoked, etc.) need somewhere in-app to catch up. Ticket body already carries a design prompt (bell placement, panel anatomy, mark-read semantics, categories, empty state, mobile-first, action affordances). |
 | **#794** Logged-out app UX — navigation, header, browse-only shape | Launch | Normal | Adjacencies with monetization paywalls — worth pairing with eng infra work |
 
 ---
@@ -101,6 +102,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-19 | — | Tracker refresh #21 — **#737** In-app notification surface added to 🕰️ Backlog as rank 1 (this PR); relabeled from `type: feature` → `type: design` to route through the pipeline. Push infra (PR #1060) is already writing rows for it to read passively — this is the consumer-side surface Hugh flagged today. Ticket body already carries a rich design prompt (bell placement, panel anatomy, mark-read semantics, categories, empty state, mobile-first, action affordances). Backlog count 1 → 2. |
 | 2026-07-19 | **#762** | Who else is watching design brief (this PR) — Track 2 brainstorm through 9 questions locked with Hugh: (Q1) watching-only this cycle, attending as v2 in **#1096**; (Q2) handle-gated visibility, no separate opt-out; (Q3) named handles up to a cap + "and N others" fold-in; (Q4) hide surface entirely at 0 other watchers; (Q5) signed-out deferred to #794; (Q6) new surface replaces button's count text; (Q7) exclude self, surface is "others" only; (Q8) colored initials + handle text using existing `avatarColor` atom; (Q9) Free tier. Follow-up **#1096** filed for attending-signal v2 (blocked on #55 shipping). Backlog count 2 → 1; Brief-locked 0 → 1. |
 | 2026-07-19 | — | Tracker refresh #20 — **#762** flips 🕰️ Backlog → 📐 Brief locked (this PR); brief document lives at `docs/superpowers/specs/2026-07-19-762-who-else-is-watching-design-brief.md`. Backlog count 2 → 1 (only **#794** Logged-out UX remains). |
 | 2026-07-18 | — | Tracker refresh #19 — **PWA cluster** flips 📐 → 🟢 (this PR); handoff at `design/design_handoff_pwa_cluster/` with 12 files (5 authored code + 1 vendored settings copy + 4 shared infra + README + READINESS), covers 14 state artboards across 3 surfaces × mobile 320 + 390 + desktop + theme parity × 3 themes (Electric/Jade/Light — this project ships 3, not 9). `NotificationsSection` slots into real `SettingsRoute` / `SettingsRouteDesktop`. Brief-locked queue back to empty. Green count 4 → 5. |
@@ -163,7 +165,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 - [ ] **5 eng plans ready for eng-planning agent:** concert_history · #763 Spotify · #72 shareable_cards + Passport · **#764** Venue first-timer guide · **PWA cluster** (#971 + #969 + #970). #763 Spotify + #72 shareable_cards + #764 venue guide + PWA cluster are the biggest surfaces; concert_history is the smallest (teaser link only). PWA cluster's Tier B PR2 gate cleared 2026-07-18. No Yellow items remaining.
 - [ ] **#762** design handoff production — Claude Design produces hi-fi handoff off the brief at `docs/superpowers/specs/2026-07-19-762-who-else-is-watching-design-brief.md`; target folder `design/design_handoff_who_else_is_watching/`. Handoff prompt delivered in chat (not committed).
-- [ ] **Backlog** is down to 1 workstream: **#794** Logged-out UX (Launch · Normal). Adjacencies with monetization paywalls suggest pairing with eng infra work when picked up.
+- [ ] **Backlog workstream order:** **#737** In-app notification surface (Beta · Normal, rank 1) → **#794** Logged-out UX (Launch · Normal, rank 2). #737 has push-infra readers already in place — the design pass is the missing piece. #794's paywalls adjacency suggests pairing with monetization eng infra work.
 
 ---
 
