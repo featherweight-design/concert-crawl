@@ -961,6 +961,96 @@ describe('GET /v1/events — filterVibe', () => {
     expect(titles).toEqual(['Indie Rock Show', 'Pure Indie'])
   })
 
+  it('expands a bucket to its sub-genres — filterVibe=electronic surfaces house / dubstep / bass', async () => {
+    // #1101 — the whole point of the taxonomy: picking one bucket surfaces
+    // the entire family. Without expansion, filterVibe=electronic would
+    // only match events literally tagged 'electronic'.
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'House DJ',
+      title: 'House Night',
+      genre: ['house'],
+      date: '2027-06-01',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Dubstep DJ',
+      title: 'Bass Bin',
+      genre: ['dubstep', 'bass'],
+      date: '2027-06-02',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Rock Band',
+      title: 'Not Electronic',
+      genre: ['rock'],
+      date: '2027-06-03',
+    })
+
+    const res = await app.request('/v1/events?filterVibe=electronic')
+    const body: {
+      success: boolean
+      data: { data: { title: string }[] }
+    } = await res.json()
+    expect(res.status).toBe(200)
+    const titles = body.data.data.map((ev) => ev.title).sort()
+    expect(titles).toEqual(['Bass Bin', 'House Night'])
+  })
+
+  it('bucket also matches rows tagged with the bucket label itself', async () => {
+    // Some events are tagged with the umbrella label directly ('rock',
+    // 'electronic') rather than a sub-genre. The expansion has to include
+    // the bucket label or those rows would silently disappear.
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Umbrella Act',
+      title: 'Just Electronic',
+      genre: ['electronic'],
+      date: '2027-06-01',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Sub Act',
+      title: 'Techno Set',
+      genre: ['techno'],
+      date: '2027-06-02',
+    })
+
+    const res = await app.request('/v1/events?filterVibe=electronic')
+    const body: {
+      success: boolean
+      data: { data: { title: string }[] }
+    } = await res.json()
+    const titles = body.data.data.map((ev) => ev.title).sort()
+    expect(titles).toEqual(['Just Electronic', 'Techno Set'])
+  })
+
+  it('falls back to exact-string overlap for unknown filterVibe (back-compat with bookmarks)', async () => {
+    // A bookmarked ?filterVibe=dubstep from before the bucket switch must
+    // still work — even though dubstep is no longer in the /genres response,
+    // it's a valid raw genre and the fallback path preserves the exact
+    // string overlap semantics.
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Dubstep DJ',
+      title: 'Only Dubstep',
+      genre: ['dubstep'],
+      date: '2027-06-01',
+    })
+    await seedEvent(venue.id, {
+      artist: 'House DJ',
+      title: 'Only House',
+      genre: ['house'],
+      date: '2027-06-02',
+    })
+
+    const res = await app.request('/v1/events?filterVibe=dubstep')
+    const body: {
+      success: boolean
+      data: { data: { title: string }[] }
+    } = await res.json()
+    // Fallback = single-value overlap; House Night should NOT match.
+    expect(body.data.data).toHaveLength(1)
+    expect(body.data.data[0]?.title).toBe('Only Dubstep')
+  })
+
   it('returns 400 for a filterVibe value exceeding 100 characters', async () => {
     const longGenre = 'a'.repeat(101)
     const res = await app.request(`/v1/events?filterVibe=${longGenre}`)
@@ -1069,7 +1159,10 @@ describe('GET /v1/events/genres', () => {
     expect(body.data).toEqual([])
   })
 
-  it('returns distinct genres from upcoming events sorted alphabetically', async () => {
+  it('returns bucket labels (not raw genres) sorted alphabetically', async () => {
+    // #1101 — the endpoint used to return raw genre strings ('r&b', 'dubstep',
+    // 'metalcore', ...). It now collapses them to bucket labels so the Vibe
+    // filter has 16 stable options instead of ~85 long-tail LLM strings.
     const venue = await seedVenue()
     await seedEvent(venue.id, {
       artist: 'Artist One',
@@ -1084,8 +1177,52 @@ describe('GET /v1/events/genres', () => {
 
     const res = await app.request('/v1/events/genres')
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { success: boolean; data: string[] }
-    expect(body.data).toEqual(['indie', 'r&b', 'rock'])
+    const body: { success: boolean; data: string[] } = await res.json()
+    // r&b buckets under hip-hop; rock and indie are their own buckets.
+    expect(body.data).toEqual(['hip-hop', 'indie', 'rock'])
+  })
+
+  it('collapses electronic sub-genres into a single "electronic" bucket', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'DJ One',
+      genre: ['dubstep'],
+      status: 'upcoming',
+    })
+    await seedEvent(venue.id, {
+      artist: 'DJ Two',
+      genre: ['house', 'bass'],
+      status: 'upcoming',
+    })
+    await seedEvent(venue.id, {
+      artist: 'DJ Three',
+      genre: ['drum and bass'],
+      status: 'upcoming',
+    })
+
+    const res = await app.request('/v1/events/genres')
+    const body: { success: boolean; data: string[] } = await res.json()
+    expect(body.data).toEqual(['electronic'])
+  })
+
+  it('drops unbucketed long-tail genres from the filter surface', async () => {
+    // 'ceremony', 'film', '<UNKNOWN>' exist in prod but are not real music
+    // vibes — they should not appear as filter chips.
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Wedding Band',
+      genre: ['ceremony'],
+      status: 'upcoming',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Rock Band',
+      genre: ['rock'],
+      status: 'upcoming',
+    })
+
+    const res = await app.request('/v1/events/genres')
+    const body: { success: boolean; data: string[] } = await res.json()
+    expect(body.data).toEqual(['rock'])
   })
 
   it('excludes genres from non-upcoming events', async () => {

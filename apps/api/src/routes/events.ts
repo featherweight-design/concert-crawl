@@ -52,6 +52,7 @@ import {
 import { canUseFeature } from '@concert-crawl/entitlements'
 import { loadPlanState } from '../lib/plan.js'
 import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js'
+import { bucketsPresentIn, expandBucket } from '../lib/genre-buckets.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -207,7 +208,19 @@ eventsRouter.get(
     if (priceCondition) conditions.push(priceCondition)
 
     if (filterVibe) {
-      conditions.push(sql`${events.genre} && ARRAY[${filterVibe}]::text[]`)
+      // Bucket taxonomy (#1101): a filterVibe value like 'electronic' expands
+      // to every sub-genre in the bucket so picking one label surfaces the
+      // whole family (house / dubstep / bass / ...). Unknown values fall
+      // through as a single-element array so bookmarked ?filterVibe=dubstep
+      // URLs from before this shipped still match exactly.
+      const genreValues = expandBucket(filterVibe)
+      const genrePlaceholders = sql.join(
+        genreValues.map((genre) => sql`${genre}`),
+        sql`, `,
+      )
+      conditions.push(
+        sql`${events.genre} && ARRAY[${genrePlaceholders}]::text[]`,
+      )
     }
 
     // taste=1 (#763 PR 7, §9.3) — narrows the list to events matching the
@@ -464,18 +477,40 @@ eventsRouter.get(
   },
 )
 
-// GET /v1/events/genres — distinct genres across all upcoming events
+// GET /v1/events/genres — bucket labels present across all upcoming events.
+//
+// Prod carries ~85 distinct LLM-extracted genre strings; surfacing them all
+// in the Vibe filter dropdown is unusable. We collapse the observed raw
+// genres to the bucket taxonomy in lib/genre-buckets and return only the
+// bucket labels that have at least one matching row. Unbucketed long-tail
+// values ('ceremony', '<UNKNOWN>', film scores) are dropped from the filter
+// surface — they remain searchable, they just don't clutter the dropdown.
+//
+// first_missing_at IS NULL mirrors the list/detail filter so a genre tag
+// that only exists on stale rows never appears in the filter surface —
+// otherwise users would pick a vibe and get zero results.
+const genreRowSchema = z.object({ genre: z.string() })
+
 eventsRouter.get('/genres', async (ctx) => {
-  // first_missing_at IS NULL mirrors the list/detail filter — a genre tag
-  // that only exists on stale rows should not appear in the filter chip
-  // surface, otherwise users would pick a vibe and get zero results.
   const rows = await db.execute(
-    sql`SELECT DISTINCT unnest(genre) AS genre FROM ${events} WHERE status = 'upcoming' AND first_missing_at IS NULL AND genre IS NOT NULL ORDER BY genre`,
+    sql`SELECT DISTINCT unnest(genre) AS genre FROM ${events} WHERE status = 'upcoming' AND first_missing_at IS NULL AND genre IS NOT NULL`,
   )
-  const genres = Array.from(rows)
-    .map((row) => (row as Record<string, unknown>)['genre'])
-    .filter((genre): genre is string => typeof genre === 'string')
-  return ctx.json({ success: true, data: genres })
+  const rawGenres: string[] = []
+  for (const row of rows) {
+    const parsed = genreRowSchema.safeParse(row)
+    if (parsed.success) {
+      rawGenres.push(parsed.data.genre)
+    } else {
+      // The SELECT projection is stable, so a parse failure here means a
+      // driver regression or an unexpected null from unnest — log it so a
+      // silent drop can't degrade the filter surface without a signal.
+      apiLogger.warn(
+        { issues: parsed.error.issues },
+        'events/genres: row failed genreRowSchema — dropped',
+      )
+    }
+  }
+  return ctx.json({ success: true, data: bucketsPresentIn(rawGenres) })
 })
 
 // GET /v1/events/availability — per-date show counts for a bounded window.
