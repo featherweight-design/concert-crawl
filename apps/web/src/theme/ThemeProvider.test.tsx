@@ -5,6 +5,7 @@ import { renderHook } from '@testing-library/react'
 import { describe, it, expect, beforeEach } from 'vitest'
 import React from 'react'
 import { ThemeProvider, useTheme } from './ThemeProvider'
+import { THEMES } from './themes'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -88,6 +89,57 @@ describe('ThemeProvider', () => {
     await act(async () => {})
 
     expect(result.current.theme).toBe('electric')
+  })
+
+  // React 19's hydration-mismatch recovery treats <html> as a singleton and
+  // cleans attributes it didn't render — wiping the inline no-flash script's
+  // style tokens and data-theme. The provider must re-assert the persisted
+  // theme on mount or the app silently falls back to the :root Electric CSS
+  // while state (and the picker's ACTIVE badge) still says otherwise.
+
+  it('re-applies the persisted theme when hydration recovery wiped the html attributes', async () => {
+    localStorageMock.setItem('cc-theme', 'jade')
+
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    })
+
+    await act(async () => {})
+
+    expect(result.current.theme).toBe('jade')
+    expect(document.documentElement.getAttribute('data-theme')).toBe('jade')
+    expect(document.documentElement.style.getPropertyValue('--bg')).toBe(
+      THEMES.jade.bg,
+    )
+  })
+
+  it('re-asserts style tokens when data-theme survived but inline styles were wiped', async () => {
+    document.documentElement.setAttribute('data-theme', 'jade')
+
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    })
+
+    await act(async () => {})
+
+    expect(result.current.theme).toBe('jade')
+    expect(document.documentElement.style.getPropertyValue('--bg')).toBe(
+      THEMES.jade.bg,
+    )
+  })
+
+  it('prefers the persisted localStorage theme over a divergent data-theme attribute', async () => {
+    localStorageMock.setItem('cc-theme', 'jade')
+    document.documentElement.setAttribute('data-theme', 'light')
+
+    const { result } = renderHook(() => useTheme(), {
+      wrapper: ({ children }) => <ThemeProvider>{children}</ThemeProvider>,
+    })
+
+    await act(async () => {})
+
+    expect(result.current.theme).toBe('jade')
+    expect(document.documentElement.getAttribute('data-theme')).toBe('jade')
   })
 
   it('useTheme throws when called outside ThemeProvider', () => {

@@ -22,11 +22,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return stored && isThemeName(stored) ? stored : 'electric'
   })
 
+  // Re-assert the persisted theme after mount. React 19's hydration-mismatch
+  // recovery treats <html> as a singleton and cleans attributes it didn't
+  // render — wiping the inline no-flash script's style tokens and data-theme
+  // (seen after Clerk reverification reloads). localStorage is the persisted
+  // source of truth (the inline script derives data-theme from it), so it
+  // wins over a divergent attribute; applyTheme is a no-op when the DOM is
+  // already correct.
   useEffect(() => {
-    const stored = document.documentElement.getAttribute('data-theme')
-    if (stored && isThemeName(stored)) {
-      setThemeState(stored)
+    let persisted: string | null = null
+    try {
+      persisted = localStorage.getItem('cc-theme')
+    } catch {
+      // Storage unavailable (private mode) — fall back to the DOM attribute.
     }
+    const attr = document.documentElement.getAttribute('data-theme')
+    const resolved =
+      persisted && isThemeName(persisted)
+        ? persisted
+        : attr && isThemeName(attr)
+          ? attr
+          : theme
+    applyTheme(resolved)
+    setThemeState(resolved)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function setTheme(theme: ThemeName) {
