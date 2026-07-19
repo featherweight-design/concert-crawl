@@ -781,7 +781,10 @@ export async function crawlVenue(
 
         // A returned row whose (canonical_title, date) key was absent from
         // existingMap (loaded before the upsert) is a fresh INSERT — the same
-        // classification the eventsInserted counter above uses.
+        // classification the eventsInserted counter above uses. If overlapping
+        // crawls of the same venue both classify an event as new, the Spotify
+        // fan-out's spotify_alert_log claim (onConflictDoNothing per
+        // user/event/kind) makes the duplicate fan-out a no-op — no re-alert.
         for (const row of upsertedRows) {
           if (!existingMap.has(`${row.canonicalTitle}|${row.date}`)) {
             insertedEventIds.push(row.id)
