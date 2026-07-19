@@ -6,11 +6,14 @@ import * as Sentry from '@sentry/hono/node'
 import {
   db,
   events,
+  notifications,
   priceRetrievalLog,
   priceSubmissions,
+  userEvents,
   venues,
 } from '@concert-crawl/db'
 import { runPricePipeline } from '@concert-crawl/price-pipeline'
+import { fanoutWatchNotification } from '@concert-crawl/push'
 import { createLogger } from '@concert-crawl/logger'
 import { deriveSourceCategory } from '@concert-crawl/types'
 import { getAuthUser } from '../../middleware/auth.js'
@@ -333,7 +336,20 @@ pricesAdminRouter.patch(
     const { status } = ctx.req.valid('json')
 
     type TxResult =
-      | { ok: true; updated: typeof priceSubmissions.$inferSelect }
+      | {
+          ok: true
+          updated: typeof priceSubmissions.$inferSelect
+          // #1107: on a promote-to-corroborated where the new price is
+          // strictly below the previous event.ticketPriceMin, carry the
+          // pre/post prices out of the transaction so the fan-out runs
+          // AFTER commit — the fan-out writes its own bell rows outside
+          // the tx boundary and shouldn't block the corroboration.
+          pricedrop?: {
+            eventId: string
+            oldPriceMin: string
+            newPriceMin: string
+          }
+        }
       | { ok: false }
       | { ok: 'contest_lockout' }
 
@@ -412,11 +428,26 @@ pricesAdminRouter.patch(
 
       if (!updated) return { ok: false }
 
+      let pricedropForFanout:
+        | { eventId: string; oldPriceMin: string; newPriceMin: string }
+        | undefined
       if (status === 'corroborated' && existing.status !== 'corroborated') {
         // Award cred to the submitter
         if (existing.userId !== null) {
           await awardPriceCred(tx, existing.userId)
         }
+
+        // #1107: read the event's PRE-update price so we can decide whether
+        // to fan out watch.pricedrop. FOR UPDATE locks the event row so two
+        // admins corroborating different submissions for the same event
+        // can't both observe the same pre-state and both fan out — the
+        // second tx waits, reads the new floor, and skips fan-out.
+        const [preEvent] = await tx
+          .select({ ticketPriceMin: events.ticketPriceMin })
+          .from(events)
+          .where(eq(events.id, existing.eventId))
+          .for('update')
+          .limit(1)
 
         // Propagate the approved community price to the event
         await tx
@@ -427,9 +458,25 @@ pricesAdminRouter.patch(
             priceSource: 'community',
           })
           .where(eq(events.id, existing.eventId))
+
+        // Real price-drop = strictly lower minimum. Equal prices are a
+        // corroboration (same number, different source) and shouldn't fire
+        // a notification. Higher prices are also not a drop.
+        if (
+          preEvent?.ticketPriceMin != null &&
+          isStrictlyLowerNumeric(existing.priceMin, preEvent.ticketPriceMin)
+        ) {
+          pricedropForFanout = {
+            eventId: existing.eventId,
+            oldPriceMin: preEvent.ticketPriceMin,
+            newPriceMin: existing.priceMin,
+          }
+        }
       }
 
-      return { ok: true, updated }
+      return pricedropForFanout
+        ? { ok: true as const, updated, pricedrop: pricedropForFanout }
+        : { ok: true as const, updated }
     })
 
     if (result.ok === 'contest_lockout') {
@@ -465,9 +512,41 @@ pricesAdminRouter.patch(
     ctx.set('auditAction', 'price.submission.update')
     ctx.set('auditTargetId', id)
 
+    // #1107: fan out watch.pricedrop to status='watching' users AFTER the
+    // corroboration commits. Best-effort — the price update is the
+    // primary user-visible state change; a fan-out failure here can't
+    // roll it back and shouldn't fail the admin request.
+    if (result.pricedrop) {
+      await fanoutWatchNotification(
+        { db, notifications, userEvents, events, venues },
+        {
+          eventId: result.pricedrop.eventId,
+          category: 'watch.pricedrop',
+          pricedrop: {
+            newPriceMin: result.pricedrop.newPriceMin,
+            oldPriceMin: result.pricedrop.oldPriceMin,
+          },
+        },
+      )
+    }
+
     return ctx.json({ success: true, data: result.updated })
   },
 )
+
+// Compare two numeric-string prices (from Drizzle's `numeric(10,2)` columns,
+// which come back as string) for a strict drop. When either side isn't
+// parseable as a number, returns false — a "drop" claim we can't verify is
+// better skipped than false-positived into a bogus notification.
+const isStrictlyLowerNumeric = (
+  candidate: string,
+  baseline: string,
+): boolean => {
+  const candidateNum = Number.parseFloat(candidate)
+  const baselineNum = Number.parseFloat(baseline)
+  if (Number.isNaN(candidateNum) || Number.isNaN(baselineNum)) return false
+  return candidateNum < baselineNum
+}
 
 // GET /v1/admin/prices/activity — last 100 price retrieval attempts with event + venue context
 pricesAdminRouter.get('/activity', async (ctx) => {

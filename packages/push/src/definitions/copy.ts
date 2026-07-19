@@ -21,13 +21,46 @@ export const watchNotificationCopy = {
     title: `Tickets for ${artistAtVenue} just went back on sale.`,
     body: 'A batch reopened. They tend to go fast — no pressure though.',
   }),
-  // Default price-drop template — fanoutWatchNotification uses this when
-  // it receives a watch.pricedrop category. Price-drop writers that have
-  // the actual price delta prefer to template at the write site so the
-  // body can carry the concrete number; this is the fallback copy for
-  // callers that don't.
-  pricedrop: (artistAtVenue: string) => ({
-    title: `Tickets for ${artistAtVenue} just dropped.`,
-    body: 'Cheaper than we last saw. Grab them before they go.',
-  }),
+  // Price-drop template. When the caller passes concrete prices, the copy
+  // matches the design handoff mock — title carries the new floor, body
+  // names the previous number. When the caller can't supply prices (e.g.
+  // a re-scrape detected the drop but only has the new value), fall back
+  // to a generic template. Amounts are formatted whole-dollar per the
+  // handoff (no cents).
+  pricedrop: (
+    artistAtVenue: string,
+    prices?: { newPriceMin: string; oldPriceMin: string },
+  ) => {
+    if (!prices) {
+      return {
+        title: `Tickets for ${artistAtVenue} just dropped.`,
+        body: 'Cheaper than we last saw. Grab them before they go.',
+      }
+    }
+    const newPrice = formatWholeDollar(prices.newPriceMin)
+    const oldPrice = formatWholeDollar(prices.oldPriceMin)
+    return {
+      title: `${newPrice} tickets for ${artistAtVenue} just went on sale.`,
+      // Body copy lifted verbatim from the handoff mock
+      // (design/design_handoff_pwa_cluster/pwa-data.jsx line 333). "Cheapest
+      // we've seen for this one" reads against the event's stored prior
+      // ticketPriceMin — which is the reference point for the drop we're
+      // notifying about, so the claim is accurate for the flow that fires
+      // this copy.
+      body: `Down from ${oldPrice}. Cheapest we've seen for this one.`,
+    }
+  },
 } as const
+
+// Format a decimal ticketPrice ('32.00' | '32.5' | '32') as '$32'. The
+// events.ticketPriceMin column is `numeric(10,2)` and comes back as a
+// string; whole-dollar formatting matches the handoff mock and keeps the
+// title compact enough for iOS's ~50-char alert width. Uses Math.floor
+// rather than Math.round so we never overstate the ticket floor — a
+// $32.50 minimum stays as "$32" instead of rounding UP to "$33" and
+// misrepresenting the actual price on offer.
+const formatWholeDollar = (raw: string): string => {
+  const num = Number.parseFloat(raw)
+  if (Number.isNaN(num)) return `$${raw}`
+  return `$${Math.floor(num)}`
+}

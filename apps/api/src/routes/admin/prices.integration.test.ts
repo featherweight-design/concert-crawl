@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { eq } from 'drizzle-orm'
-import { userCred } from '@concert-crawl/db'
+import { events, notifications, userCred } from '@concert-crawl/db'
 
 vi.mock('@sentry/hono/node', async () => {
   const actual =
@@ -43,6 +43,7 @@ import {
   seedEvent,
   seedPriceRetrievalLog,
   seedPriceSubmission,
+  seedUserEvent,
   seedVenue,
 } from '../../test/helpers/seed.js'
 import { testDb } from '../../test/helpers/db.js'
@@ -471,6 +472,150 @@ describe('PATCH /v1/admin/prices/submissions/:id', () => {
       )
       expect(res.status).toBe(200)
       expect(Sentry.captureMessage).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('watch.pricedrop fan-out (#1107)', () => {
+    it('fires watch.pricedrop to status=watching users when corroborated price is strictly lower', async () => {
+      const venue = await seedVenue()
+      const event = await seedEvent(venue.id, {
+        date: '2026-09-01',
+        ticketPriceMin: '48',
+      })
+      const WATCHER = 'user_pricedrop_watcher'
+      const GOING = 'user_pricedrop_going'
+      await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+      await seedUserEvent(GOING, event.id, { status: 'going' })
+      const submission = await seedPriceSubmission(event.id, 'submitter_1', {
+        priceMin: '32',
+      })
+
+      const res = await app.request(
+        `/v1/admin/prices/submissions/${submission.id}`,
+        {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({ status: 'corroborated' }),
+        },
+      )
+      expect(res.status).toBe(200)
+
+      // Event price actually updated to the new floor.
+      const [updatedEvent] = await testDb
+        .select({ ticketPriceMin: events.ticketPriceMin })
+        .from(events)
+        .where(eq(events.id, event.id))
+        .limit(1)
+      expect(updatedEvent?.ticketPriceMin).toBe('32.00')
+
+      // Watcher got exactly one watch.pricedrop bell row; going/interested
+      // did not.
+      const rows = await testDb
+        .select({
+          userId: notifications.userId,
+          title: notifications.title,
+          body: notifications.body,
+        })
+        .from(notifications)
+        .where(eq(notifications.category, 'watch.pricedrop'))
+      expect(rows.map((row) => row.userId)).toEqual([WATCHER])
+      // Copy carries the concrete new and old dollar amounts per the design
+      // handoff mock.
+      expect(rows[0]?.title).toMatch(/\$32.*just went on sale/)
+      expect(rows[0]?.body).toMatch(/\$48/)
+    })
+
+    it('does not fire when the new corroborated price equals the current event price', async () => {
+      const venue = await seedVenue()
+      const event = await seedEvent(venue.id, {
+        date: '2026-09-02',
+        ticketPriceMin: '35',
+      })
+      await seedUserEvent('user_equal_watcher', event.id, {
+        status: 'watching',
+      })
+      const submission = await seedPriceSubmission(event.id, 'submitter_eq', {
+        priceMin: '35',
+      })
+
+      const res = await app.request(
+        `/v1/admin/prices/submissions/${submission.id}`,
+        {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({ status: 'corroborated' }),
+        },
+      )
+      expect(res.status).toBe(200)
+
+      const rows = await testDb
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(eq(notifications.category, 'watch.pricedrop'))
+      expect(rows).toHaveLength(0)
+    })
+
+    it('does not fire when the new corroborated price is higher than the current event price', async () => {
+      const venue = await seedVenue()
+      const event = await seedEvent(venue.id, {
+        date: '2026-09-03',
+        ticketPriceMin: '30',
+      })
+      await seedUserEvent('user_higher_watcher', event.id, {
+        status: 'watching',
+      })
+      const submission = await seedPriceSubmission(event.id, 'submitter_hi', {
+        priceMin: '40',
+      })
+
+      const res = await app.request(
+        `/v1/admin/prices/submissions/${submission.id}`,
+        {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({ status: 'corroborated' }),
+        },
+      )
+      expect(res.status).toBe(200)
+
+      const rows = await testDb
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(eq(notifications.category, 'watch.pricedrop'))
+      expect(rows).toHaveLength(0)
+    })
+
+    it('does not fire when the event had no prior price to compare against', async () => {
+      const venue = await seedVenue()
+      // ticketPriceMin defaults to null on the seed. A first-ever price
+      // isn't a "drop" — it's just data appearing.
+      const event = await seedEvent(venue.id, { date: '2026-09-04' })
+      await seedUserEvent('user_first_price_watcher', event.id, {
+        status: 'watching',
+      })
+      const submission = await seedPriceSubmission(
+        event.id,
+        'submitter_first',
+        {
+          priceMin: '25',
+        },
+      )
+
+      const res = await app.request(
+        `/v1/admin/prices/submissions/${submission.id}`,
+        {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({ status: 'corroborated' }),
+        },
+      )
+      expect(res.status).toBe(200)
+
+      const rows = await testDb
+        .select({ id: notifications.id })
+        .from(notifications)
+        .where(eq(notifications.category, 'watch.pricedrop'))
+      expect(rows).toHaveLength(0)
     })
   })
 })

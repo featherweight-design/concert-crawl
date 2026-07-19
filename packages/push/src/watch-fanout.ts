@@ -46,6 +46,14 @@ export interface WatchFanoutDeps {
 export interface FanoutInput {
   eventId: string
   category: UserNotificationCategory
+  /**
+   * Optional per-category context. When `category === 'watch.pricedrop'`,
+   * pass `pricedrop: { newPriceMin, oldPriceMin }` so the copy template
+   * can carry the concrete numbers (see the handoff mock in
+   * design/design_handoff_pwa_cluster/pwa-data.jsx). If omitted for a
+   * price-drop, the copy falls back to a generic "just dropped" line.
+   */
+  pricedrop?: { newPriceMin: string; oldPriceMin: string }
 }
 
 interface EventContext {
@@ -99,11 +107,11 @@ const shortDate = (raw: string): string => {
 // that don't fan out through this helper (contest.*, spotify.new_show) return
 // empty strings so the caller can skip the write.
 const composeMessage = (
-  category: UserNotificationCategory,
+  input: FanoutInput,
   ctx: EventContext,
 ): { title: string; body: string } => {
   const artistAtVenue = `${ctx.artist} at ${ctx.venueName}`
-  switch (category) {
+  switch (input.category) {
     case 'watch.cancelled':
       return watchNotificationCopy.cancelled(artistAtVenue)
     case 'watch.postponed':
@@ -113,7 +121,7 @@ const composeMessage = (
     case 'watch.backonsale':
       return watchNotificationCopy.backonsale(artistAtVenue)
     case 'watch.pricedrop':
-      return watchNotificationCopy.pricedrop(artistAtVenue)
+      return watchNotificationCopy.pricedrop(artistAtVenue, input.pricedrop)
     case 'contest.resolved':
     case 'contest.needs_info':
     case 'spotify.new_show':
@@ -123,7 +131,7 @@ const composeMessage = (
     default: {
       // Exhaustiveness assertion — a new category added to the union forces
       // a compile error here.
-      const exhaustive: never = category
+      const exhaustive: never = input.category
       return exhaustive
     }
   }
@@ -156,7 +164,7 @@ export async function fanoutWatchNotification(
   )
   if (!context) return { watchersNotified: 0, pushDelivered: 0 }
 
-  const message = composeMessage(input.category, context)
+  const message = composeMessage(input, context)
   if (!message.title) {
     // Category doesn't apply to fan-out (contest.* etc.). Nothing to write.
     return { watchersNotified: 0, pushDelivered: 0 }

@@ -194,6 +194,55 @@ describe('fanoutWatchNotification', () => {
     expect(rows[0]?.['title']).toContain('back on sale')
   })
 
+  it('composes a rich pricedrop title with concrete prices when context is provided', async () => {
+    const deps = makeDeps()
+    deps.pushSelect([
+      {
+        title: 'The Show',
+        artist: 'Amyl',
+        venueName: 'The Roxy',
+        date: '2026-08-14',
+      },
+    ])
+    deps.pushSelect([{ userId: 'user_a' }])
+    deps.sendPush.mockResolvedValue({ delivered: 1 })
+    await fanoutWatchNotification(deps, {
+      eventId: 'evt_1',
+      category: 'watch.pricedrop',
+      pricedrop: { newPriceMin: '32.00', oldPriceMin: '48.00' },
+    })
+    expect(deps.insertCalls[0]?.rows).toMatchObject([
+      {
+        title: '$32 tickets for Amyl at The Roxy just went on sale.',
+        body: "Down from $48. Cheapest we've seen for this one.",
+      },
+    ])
+  })
+
+  it('falls back to a generic pricedrop line when no price context is supplied', async () => {
+    const deps = makeDeps()
+    deps.pushSelect([
+      {
+        title: 'The Show',
+        artist: 'Amyl',
+        venueName: 'The Roxy',
+        date: '2026-08-14',
+      },
+    ])
+    deps.pushSelect([{ userId: 'user_a' }])
+    deps.sendPush.mockResolvedValue({ delivered: 1 })
+    await fanoutWatchNotification(deps, {
+      eventId: 'evt_1',
+      category: 'watch.pricedrop',
+    })
+    expect(deps.insertCalls[0]?.rows).toMatchObject([
+      {
+        title: expect.stringContaining('just dropped'),
+        body: expect.stringContaining('Cheaper'),
+      },
+    ])
+  })
+
   it('skips fan-out for categories that this helper does not own', async () => {
     const deps = makeDeps()
     deps.pushSelect([
