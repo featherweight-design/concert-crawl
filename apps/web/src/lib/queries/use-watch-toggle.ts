@@ -11,6 +11,9 @@ export function useWatchToggle() {
   const { getToken } = useAuth()
 
   return useMutation({
+    // Identifies watch toggles in the mutation cache so the post-first-watch
+    // Spotify nudge gate (#763 PR 5) can subscribe to successful watches.
+    mutationKey: ['watch-toggle'],
     mutationFn: async (eventId: string): Promise<WatchToggleResponse> => {
       const token = await getToken()
       if (!token) throw new Error('Not authenticated')
