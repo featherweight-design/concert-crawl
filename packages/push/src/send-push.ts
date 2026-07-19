@@ -5,22 +5,25 @@ import {
   pushSubscriptions,
   userNotificationPreferences,
 } from '@concert-crawl/db'
-import { apiLogger } from '../logger.js'
+import { createLogger } from '@concert-crawl/logger'
 import {
   PUSH_ELIGIBLE_CATEGORIES,
   PRICE_DROP_CATEGORY,
   WATCH_UPDATE_CATEGORIES,
   type UserNotificationCategory,
-} from '../notification-categories.js'
+} from './notification-categories.js'
+
+const pushLogger = createLogger('push')
 
 let configured = false
 
-// Read VAPID vars directly from process.env rather than the validated
-// `env` object so this module doesn't trigger env.ts evaluation on import
-// (env.ts calls process.exit(1) on invalid parse — vitest unit tests import
-// route registries without a populated .env). Also accept an optional
-// `mailto:` prefix on the contact email so operators can paste either the
-// bare address or a full mailto: URI without breaking the RFC 8292 subject.
+// Read VAPID vars directly from process.env rather than a validated `env`
+// object so this module doesn't couple to any app's env.ts evaluation on
+// import (apps/api's env.ts calls process.exit(1) on invalid parse — vitest
+// unit tests import route registries without a populated .env). Also accept
+// an optional `mailto:` prefix on the contact email so operators can paste
+// either the bare address or a full mailto: URI without breaking the
+// RFC 8292 subject.
 const configure = () => {
   if (configured) return true
   const publicKey = process.env['VAPID_PUBLIC_KEY']
@@ -58,6 +61,8 @@ export interface SendPushInput {
  * - `masterEnabled` gates everything.
  * - `watchUpdatesEnabled` gates watch.cancelled/postponed/soldout/backonsale.
  * - `priceDropsEnabled` gates watch.pricedrop.
+ * - `spotify.new_show` has no sub-toggle here — its per-connection
+ *   `pushEnabled` + premium entitlement gates live at the fan-out call site.
  * - Non-push-eligible categories (contest.*) return without firing.
  *
  * Preferences default to `master_enabled=false` when no row exists, so a user
@@ -101,7 +106,7 @@ export async function sendPushForNotification(input: SendPushInput): Promise<{
       .from(userNotificationPreferences)
       .where(eq(userNotificationPreferences.userId, input.userId))
   } catch (readPrefsErr) {
-    apiLogger.warn(
+    pushLogger.warn(
       { userId: input.userId, err: readPrefsErr },
       'send-push: prefs read failed',
     )
@@ -134,7 +139,7 @@ export async function sendPushForNotification(input: SendPushInput): Promise<{
         ),
       )
   } catch (readSubsErr) {
-    apiLogger.warn(
+    pushLogger.warn(
       { userId: input.userId, err: readSubsErr },
       'send-push: subscriptions read failed',
     )
@@ -174,7 +179,7 @@ export async function sendPushForNotification(input: SendPushInput): Promise<{
                 .set({ disabledAt: new Date() })
                 .where(eq(pushSubscriptions.id, sub.id))
             } catch (disableErr) {
-              apiLogger.warn(
+              pushLogger.warn(
                 { subscriptionId: sub.id, err: disableErr },
                 'send-push: failed to soft-disable stale endpoint',
               )
@@ -182,7 +187,7 @@ export async function sendPushForNotification(input: SendPushInput): Promise<{
             return
           }
         }
-        apiLogger.warn(
+        pushLogger.warn(
           {
             subscriptionId: sub.id,
             userId: input.userId,

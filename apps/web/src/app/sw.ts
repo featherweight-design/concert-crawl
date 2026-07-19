@@ -83,7 +83,7 @@ const serwist = new Serwist({
 serwist.addEventListeners()
 
 // #971 Web push handlers.
-// Payload shape sent by apps/api/src/lib/push/send-push.ts.
+// Payload shape sent by packages/push/src/send-push.ts.
 interface PushPayload {
   title: string
   body: string

@@ -1,5 +1,12 @@
 import type { PlanState, UserPlan } from '@concert-crawl/types'
 
+export {
+  derivePlanState,
+  isGiftLive,
+  LIVE_STATUSES,
+  type PlanDerivationInput,
+} from './plan-state.js'
+
 export type PremiumFeature =
   | 'watching'
   | 'concert-history'

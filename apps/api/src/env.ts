@@ -15,7 +15,8 @@ const envSchema = z.object({
 })
 
 // Web Push (#971) VAPID vars are read directly from process.env at runtime
-// inside send-push.ts and me-push.ts — not validated here — so that adding
+// inside @concert-crawl/push (send-push.ts) and me-push.ts — not validated
+// here — so that adding
 // them didn't force every test-time importer of the route registry through
 // env.ts's exit-on-invalid path (unit tests import routes without a
 // populated .env). See .env.example for the three names and generation.

@@ -10,6 +10,9 @@ import { z } from 'zod'
 //
 // Push-eligible categories drive the send pipeline: PUSH_ELIGIBLE_CATEGORIES
 // is the exact set that fires web push when the user has opted in.
+//
+// Lives in @concert-crawl/push (moved from apps/api in #763 PR 10) so the
+// crawler's Spotify fan-out can share the same closed set + send pipeline.
 export const UserNotificationCategorySchema = z.enum([
   'contest.resolved',
   'contest.needs_info',
@@ -18,6 +21,7 @@ export const UserNotificationCategorySchema = z.enum([
   'watch.soldout',
   'watch.backonsale',
   'watch.pricedrop',
+  'spotify.new_show',
 ])
 
 export type UserNotificationCategory = z.infer<
@@ -31,12 +35,19 @@ export const PUSH_ELIGIBLE_CATEGORIES: ReadonlySet<UserNotificationCategory> =
     'watch.soldout',
     'watch.backonsale',
     'watch.pricedrop',
+    'spotify.new_show',
   ])
 
 export const PRICE_DROP_CATEGORY: UserNotificationCategory = 'watch.pricedrop'
 
 // The four watch-update sub-types respect the `watchUpdatesEnabled`
 // preference. Price drops respect `priceDropsEnabled`.
+//
+// `spotify.new_show` is deliberately in NEITHER sub-toggle set: within
+// send-push only `masterEnabled` gates it. Its own opt-outs — the
+// per-connection `userSpotifyConnections.pushEnabled` toggle and the
+// premium `spotify-sync` entitlement — are enforced at the fan-out call
+// site before send-push is ever invoked (eng spec §10.1).
 export const WATCH_UPDATE_CATEGORIES: ReadonlySet<UserNotificationCategory> =
   new Set([
     'watch.cancelled',

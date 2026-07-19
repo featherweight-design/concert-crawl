@@ -48,12 +48,12 @@ vi.mock('drizzle-orm', () => ({
   eq: (...args: unknown[]) => args,
   isNull: (...args: unknown[]) => args,
 }))
-vi.mock('../logger.js', () => ({
-  apiLogger: {
+vi.mock('@concert-crawl/logger', () => ({
+  createLogger: () => ({
     warn: vi.fn(),
     info: vi.fn(),
     error: vi.fn(),
-  },
+  }),
 }))
 
 const originalEnv = process.env
@@ -124,6 +124,33 @@ describe('sendPushForNotification', () => {
       body: 'b',
     })
     expect(result.skipped).toBe('category_off')
+  })
+
+  it('sends spotify.new_show regardless of watch/price sub-toggles (master only)', async () => {
+    process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
+    process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
+    process.env['VAPID_CONTACT_EMAIL'] = 'ops@example.com'
+    dbSelectMock
+      .mockResolvedValueOnce([
+        {
+          masterEnabled: true,
+          watchUpdatesEnabled: false,
+          priceDropsEnabled: false,
+        },
+      ])
+      .mockResolvedValueOnce([
+        { id: 'sub-1', endpoint: 'https://x/1', p256dh: 'p1', auth: 'a1' },
+      ])
+    sendNotificationMock.mockResolvedValue({})
+    const { sendPushForNotification } = await import('./send-push.js')
+    const result = await sendPushForNotification({
+      userId: 'user_1',
+      category: 'spotify.new_show',
+      title: 't',
+      body: 'b',
+    })
+    expect(result.skipped).toBeNull()
+    expect(result.delivered).toBe(1)
   })
 
   it('skips with no_subscriptions when the user has zero active subscriptions', async () => {
