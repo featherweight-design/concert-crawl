@@ -7,14 +7,17 @@
 // scoped to consumer-visible upcoming events (same visibility filter as the
 // events list: upcoming status, date >= today MT, not hidden, not missing).
 import {
+  type SQL,
   and,
   arrayOverlaps,
   asc,
   eq,
+  exists,
   gte,
   inArray,
   isNull,
   or,
+  sql,
 } from 'drizzle-orm'
 import { db, events, userArtistFollows } from '@concert-crawl/db'
 import { SPOTIFY_FOLLOW_SOURCES } from './spotify-sync.js'
@@ -191,6 +194,32 @@ export async function getFollowedArtistMatcher(
         .sort((left, right) => left.localeCompare(right))
     },
   }
+}
+
+// EXISTS condition for the events-list `taste=1` filter (#763 PR 7, eng spec
+// §9.3). Correlated against the outer `events` row so it AND-composes with the
+// list endpoint's other conditions and applies identically to the count and
+// row queries. Matches the §9.1 rule: the viewer has a Spotify-sourced follow
+// row whose canonical name equals the event's canonical headliner OR appears
+// in its canonical supporting set. NULL canonical columns simply never match.
+export function spotifyTasteCondition(userId: string): SQL {
+  return exists(
+    db
+      .select({ one: sql`1` })
+      .from(userArtistFollows)
+      .where(
+        and(
+          eq(userArtistFollows.userId, userId),
+          inArray(userArtistFollows.source, [...SPOTIFY_FOLLOW_SOURCES]),
+          or(
+            eq(userArtistFollows.canonicalName, events.canonicalArtist),
+            // Correlated half of the §9.1 overlap rule — `= ANY(NULL)` is
+            // NULL (falsy), so events without supporting acts are safe.
+            sql`${userArtistFollows.canonicalName} = ANY(${events.canonicalSupporting})`,
+          ),
+        ),
+      ),
+  )
 }
 
 // Event ids for the auto-watch opt-in backfill: every currently-matched
