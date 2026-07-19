@@ -1,3 +1,13 @@
+## [1.152.2](https://github.com/HartiganHM/concert-crawl/compare/v1.152.1...v1.152.2) (2026-07-19)
+
+
+### Bug Fixes
+
+* **theme:** keep theme picker working when localStorage writes throw ([c6424af](https://github.com/HartiganHM/concert-crawl/commit/c6424af6e54c8bfa86f018facda4f3b5ebc56ef6))
+* **theme:** log storage-unavailable fallback and correct applyTheme comment ([730a951](https://github.com/HartiganHM/concert-crawl/commit/730a9515c950d4ef5c38dd8096dc069a1fd51484))
+* **theme:** move applyTheme out of the state updater to keep it pure ([ee19350](https://github.com/HartiganHM/concert-crawl/commit/ee1935098f12183b54d9d37198cfd6aafa041cc7))
+* **theme:** re-assert persisted theme after React hydration recovery wipes html attrs ([80224f3](https://github.com/HartiganHM/concert-crawl/commit/80224f333159c733ce91b5a20596081a120ed3d5))
+
 ## [1.152.1](https://github.com/HartiganHM/concert-crawl/compare/v1.152.0...v1.152.1) (2026-07-19)
 
 
