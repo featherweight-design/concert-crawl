@@ -1,3 +1,10 @@
+# [1.148.0](https://github.com/HartiganHM/concert-crawl/compare/v1.147.4...v1.148.0) (2026-07-19)
+
+
+### Features
+
+* **browse:** collapse Vibe filter into bucket genres ([#1101](https://github.com/HartiganHM/concert-crawl/issues/1101)) ([#1104](https://github.com/HartiganHM/concert-crawl/issues/1104)) ([217f63d](https://github.com/HartiganHM/concert-crawl/commit/217f63d5575a1b3298b15927d3fb073ed672c20c))
+
 ## [1.147.4](https://github.com/HartiganHM/concert-crawl/compare/v1.147.3...v1.147.4) (2026-07-19)
 
 
