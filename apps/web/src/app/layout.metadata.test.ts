@@ -43,4 +43,24 @@ describe('root metadata.icons', () => {
     expect(urls).toContain('/api/pwa/icon-192')
     expect(urls).toContain('/api/pwa/icon-512')
   })
+
+  // Regression guard: without this entry Next renders no <link
+  // rel="apple-touch-icon">, and iOS Safari's Add-to-Home-Screen falls back to
+  // a page screenshot — which for us displayed the "Concert Crawl" wordmark's
+  // "C" as a giant letter icon on the home screen (bug found 2026-07-19).
+  it('declares an apple-touch-icon so iOS Add-to-Home-Screen uses our art', () => {
+    const list =
+      icons && typeof icons === 'object' && 'apple' in icons
+        ? icons.apple
+        : null
+    expect(Array.isArray(list)).toBeTruthy()
+    const urls = Array.isArray(list)
+      ? list.map((entry) =>
+          entry && typeof entry === 'object' && 'url' in entry
+            ? String(entry.url)
+            : '',
+        )
+      : []
+    expect(urls).toContain('/api/pwa/icon-apple-180')
+  })
 })

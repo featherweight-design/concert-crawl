@@ -71,6 +71,16 @@ export const metadata: Metadata = {
       { url: '/api/pwa/icon-192', sizes: '192x192', type: 'image/png' },
       { url: '/api/pwa/icon-512', sizes: '512x512', type: 'image/png' },
     ],
+    // iOS Safari uses the apple-touch-icon link when a user does Share → Add
+    // to Home Screen. Without this entry the icon field renders no <link
+    // rel="apple-touch-icon">, and iOS falls back to a screenshot of the
+    // page — which for us surfaces the "Concert Crawl" wordmark's "C" as a
+    // giant letter on the home screen. Verified on iPhone Safari 2026-07-19.
+    // The 180×180 endpoint uses the non-maskable `any` art (Apple composites
+    // it on an opaque tile).
+    apple: [
+      { url: '/api/pwa/icon-apple-180', sizes: '180x180', type: 'image/png' },
+    ],
   },
 }
 
