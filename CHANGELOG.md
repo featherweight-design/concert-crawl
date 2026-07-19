@@ -1,3 +1,29 @@
+# [1.139.0](https://github.com/HartiganHM/concert-crawl/compare/v1.138.0...v1.139.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* **api:** deterministic display-name pick for duplicated spotify canonicals ([be088e6](https://github.com/HartiganHM/concert-crawl/commit/be088e62367438cbfe60897a4c63ab1eab81b387))
+* copilot r1 — denver-scoped more-chip count, idempotent nudge upsert ([3645541](https://github.com/HartiganHM/concert-crawl/commit/3645541c01cd020477380699aebb2888edcfc404))
+* copilot r3 — deterministic matched-artist ordering, cancel-safe handoff ([e6932e6](https://github.com/HartiganHM/concert-crawl/commit/e6932e6c887436b26bc6e37b5e90ae5adfc51f4d))
+* copilot r5 — skip match queries in broken states, centralize card fallbacks ([6f10cbc](https://github.com/HartiganHM/concert-crawl/commit/6f10cbc5216485c3ad6e2a3272941eaf118e3f34))
+* **web:** copilot r4 — token-retry nudge trigger, navigate on patch success, copy extraction ([4bc1f0b](https://github.com/HartiganHM/concert-crawl/commit/4bc1f0b0a387da3a4abc9f6f782c1bcf31c59b96))
+* **web:** design-review gaps — secondary CTAs, button sizes, mobile sub ([62b28cb](https://github.com/HartiganHM/concert-crawl/commit/62b28cba396654bee7fb791b776852aa128c7421))
+* **web:** drop as-cast in handoff test mock, use copy definition for nav label ([0476caa](https://github.com/HartiganHM/concert-crawl/commit/0476caa410e0e0ce25d235589b874874091e700b))
+* **web:** gate first-watch nudge listener off admin routes (copilot r2) ([f7c8841](https://github.com/HartiganHM/concert-crawl/commit/f7c8841290580105383f67202e42559977f6be58))
+* **web:** release nudge trigger on pre-display eligibility failure ([49bd2f3](https://github.com/HartiganHM/concert-crawl/commit/49bd2f3a315f241c27c151a566e4d4372e739668))
+* **web:** scope spotify connection query key by userId, throw on token gap ([08e36e2](https://github.com/HartiganHM/concert-crawl/commit/08e36e2b517dcf889bc45b73cd6c0a099efaf224))
+
+
+### Features
+
+* **api:** denver match summary, nudge routes + auto-watch backfill for spotify connect ui ([7347d5a](https://github.com/HartiganHM/concert-crawl/commit/7347d5a6da2386f0e614986673fda63ed46b4528))
+* **web:** browse revoke banner + single-fire first-watch spotify nudge ([dae1698](https://github.com/HartiganHM/concert-crawl/commit/dae1698e1157ccfa7bacd1c6e5a1d0eb2b199ff4))
+* **web:** post-oauth return flow — success, auto-watch opt-in + empty/fail states ([4805c2b](https://github.com/HartiganHM/concert-crawl/commit/4805c2b993758c88b6761021cd99f64a43c10ff6))
+* **web:** settings connections section + spotify oauth handoff sheet ([56a9521](https://github.com/HartiganHM/concert-crawl/commit/56a9521f49f96f714c7dfadc957efaf7c59bf26f))
+* **web:** spotify api client, connection hooks + relative-time helper ([c3f6a5d](https://github.com/HartiganHM/concert-crawl/commit/c3f6a5d7a926c154b08400b30985bbb23e86c83f))
+* **web:** spotify brand token, official logo component + copy scope ([e7534f2](https://github.com/HartiganHM/concert-crawl/commit/e7534f28001823cd4e9bd4653344300c0db81e1e))
+
 # [1.138.0](https://github.com/HartiganHM/concert-crawl/compare/v1.137.1...v1.138.0) (2026-07-19)
 
 
