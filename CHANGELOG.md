@@ -1,3 +1,15 @@
+# [1.153.0](https://github.com/HartiganHM/concert-crawl/compare/v1.152.3...v1.153.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* **crawler:** [#1053](https://github.com/HartiganHM/concert-crawl/issues/1053) re-key dedup to (venue, date, canonical_artist, show_time) ([#1121](https://github.com/HartiganHM/concert-crawl/issues/1121)) ([e7b6b3e](https://github.com/HartiganHM/concert-crawl/commit/e7b6b3ee54ffba1ef5716ec4e99b839190f56826)), closes [#821](https://github.com/HartiganHM/concert-crawl/issues/821) [#763](https://github.com/HartiganHM/concert-crawl/issues/763) [#825](https://github.com/HartiganHM/concert-crawl/issues/825)
+
+
+### Features
+
+* **design:** [#762](https://github.com/HartiganHM/concert-crawl/issues/762) who else is watching — Green handoff + tracker refresh ([#1117](https://github.com/HartiganHM/concert-crawl/issues/1117)) ([6d6409d](https://github.com/HartiganHM/concert-crawl/commit/6d6409d78ffe019658ff37be1fb6081ce5d91d37)), closes [#1096](https://github.com/HartiganHM/concert-crawl/issues/1096) [#794](https://github.com/HartiganHM/concert-crawl/issues/794) [#22](https://github.com/HartiganHM/concert-crawl/issues/22) [#1114](https://github.com/HartiganHM/concert-crawl/issues/1114) [#1115](https://github.com/HartiganHM/concert-crawl/issues/1115) [#737](https://github.com/HartiganHM/concert-crawl/issues/737) [#1114](https://github.com/HartiganHM/concert-crawl/issues/1114) [#1115](https://github.com/HartiganHM/concert-crawl/issues/1115) [#794](https://github.com/HartiganHM/concert-crawl/issues/794) [#22](https://github.com/HartiganHM/concert-crawl/issues/22) [#21](https://github.com/HartiganHM/concert-crawl/issues/21)
+
 ## [1.152.3](https://github.com/HartiganHM/concert-crawl/compare/v1.152.2...v1.152.3) (2026-07-19)
 
 
