@@ -1,3 +1,10 @@
+# [1.151.0](https://github.com/HartiganHM/concert-crawl/compare/v1.150.1...v1.151.0) (2026-07-19)
+
+
+### Features
+
+* **pwa:** admin PATCH watch-update fan-out ([#1107](https://github.com/HartiganHM/concert-crawl/issues/1107)) ([#1109](https://github.com/HartiganHM/concert-crawl/issues/1109)) ([2b715bc](https://github.com/HartiganHM/concert-crawl/commit/2b715bc886393120d4dd9e199285246f6971aa26))
+
 ## [1.150.1](https://github.com/HartiganHM/concert-crawl/compare/v1.150.0...v1.150.1) (2026-07-19)
 
 
