@@ -24,3 +24,11 @@ export {
   deriveTicketLinks,
   type TicketLinkVenueContext,
 } from './lib/ticket-links/index.js'
+export {
+  runSpotifyFanout,
+  runSpotifyFanoutSafely,
+} from './lib/spotify-fanout/index.js'
+export type {
+  SpotifyFanoutDeps,
+  SpotifyFanoutSummary,
+} from './lib/spotify-fanout/index.js'

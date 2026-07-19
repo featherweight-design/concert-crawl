@@ -408,12 +408,21 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.111.0
         version: 0.111.0(zod@3.25.76)
+      '@clerk/backend':
+        specifier: ^2.33.6
+        version: 2.33.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@concert-crawl/db':
         specifier: workspace:*
         version: link:../db
+      '@concert-crawl/entitlements':
+        specifier: workspace:*
+        version: link:../entitlements
       '@concert-crawl/logger':
         specifier: workspace:*
         version: link:../logger
+      '@concert-crawl/push':
+        specifier: workspace:*
+        version: link:../push
       '@concert-crawl/types':
         specifier: workspace:*
         version: link:../types

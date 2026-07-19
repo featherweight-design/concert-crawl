@@ -20,6 +20,16 @@ export default defineConfig({
         __dirname,
         '../../packages/logger/src/index.ts',
       ),
+      // Aliased to src (like db/logger) so the fan-out integration tests
+      // never run against a stale dist build of these workspace packages.
+      '@concert-crawl/push': path.resolve(
+        __dirname,
+        '../../packages/push/src/index.ts',
+      ),
+      '@concert-crawl/entitlements': path.resolve(
+        __dirname,
+        '../../packages/entitlements/src/index.ts',
+      ),
     },
   },
   test: {

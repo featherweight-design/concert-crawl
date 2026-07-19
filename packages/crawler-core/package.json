@@ -28,8 +28,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",
+    "@clerk/backend": "^2.33.6",
     "@concert-crawl/db": "workspace:*",
+    "@concert-crawl/entitlements": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
+    "@concert-crawl/push": "workspace:*",
     "@concert-crawl/types": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "playwright": "^1.61.1",
