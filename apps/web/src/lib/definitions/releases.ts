@@ -26,6 +26,42 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.10.0-beta',
+    date: 'Jul 19, 2026',
+    headline: 'Link Spotify and your artists light up as you browse.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Connect Spotify in Settings → Connections and we pull the artists you follow and play most — read-only, unlink anytime, we never see your password.',
+      },
+      {
+        kind: 'added',
+        text: 'Shows from your artists now wear a “Following” badge as you browse, and the event page tells you exactly who on the bill you follow. No more scrolling past your own favorites.',
+      },
+    ],
+    spotlight: {
+      title: 'Your taste, on the calendar.',
+      tagline: 'Link Spotify once — your artists stand out everywhere.',
+      hero: 'spotify',
+      cta: 'Connect Spotify',
+      ctaHref: '/settings',
+      steps: [
+        {
+          caption:
+            'Head to Settings → Connections and tap Connect Spotify. You log in on Spotify’s own page — we just get a yes, plus a read-only look at your top and followed artists.',
+        },
+        {
+          caption:
+            'From then on, any Denver show featuring one of your artists gets a “Following” badge as you browse — headliners and openers both count.',
+        },
+        {
+          caption:
+            'Changed your mind? Disconnect wipes the link and the highlights on the spot. Anything you were already watching stays yours.',
+        },
+      ],
+    },
+  },
+  {
     version: 'v0.9.1-beta',
     date: 'Jul 19, 2026',
     headline: 'Offline mode looks like it means it now.',
