@@ -1,3 +1,10 @@
+## [1.147.4](https://github.com/HartiganHM/concert-crawl/compare/v1.147.3...v1.147.4) (2026-07-19)
+
+
+### Bug Fixes
+
+* **scripts:** scope test-DB prune to the branches passed in ([#1103](https://github.com/HartiganHM/concert-crawl/issues/1103)) ([84efcd9](https://github.com/HartiganHM/concert-crawl/commit/84efcd99a5fbaa0f924b7f08697e6349d6d09e94)), closes [#1097](https://github.com/HartiganHM/concert-crawl/issues/1097)
+
 ## [1.147.3](https://github.com/HartiganHM/concert-crawl/compare/v1.147.2...v1.147.3) (2026-07-19)
 
 
