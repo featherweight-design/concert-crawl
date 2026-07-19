@@ -24,6 +24,7 @@ import { localDateString } from '@/lib/time'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { pickerWindow } from '@/components/consumer/jump-picker/date-math'
 import { fetchAvailability } from '@/lib/queries/availability'
+import { SpotifyStatusBanner } from '@/components/consumer/spotify/SpotifyStatusBanner'
 
 const copy = CONSUMER_COPY
 
@@ -261,6 +262,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
+      {/* Broken-Spotify-link notice — renders nothing unless the connection
+          is in an error/revoked state. */}
+      <SpotifyStatusBanner />
+
       {/* Filter bar */}
       <div className="mb-5">
         <Suspense>

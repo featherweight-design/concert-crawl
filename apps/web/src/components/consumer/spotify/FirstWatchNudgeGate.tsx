@@ -1,0 +1,95 @@
+'use client'
+
+// Post-first-watch Spotify nudge gate (#763 PR 5). Mounted in
+// (protected)/layout next to the other gates. Subscribes to the react-query
+// mutation cache for the first successful watch-toggle that lands on
+// `watching: true`, then asks GET /v1/spotify/nudge whether this user should
+// see the nudge (server predicate: no connection row AND never seen). When
+// displayed it is marked seen immediately — one impression ever, regardless
+// of what the user picks. "Connect Spotify" opens the honesty-rail handoff.
+
+import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@clerk/nextjs'
+import {
+  fetchSpotifyNudgeEligibility,
+  markSpotifyNudgeSeen,
+} from '@/lib/spotify'
+import { FirstWatchNudge } from './FirstWatchNudge'
+import { OAuthHandoffSheet } from './OAuthHandoffSheet'
+
+// Matches the mutationKey set in lib/queries/use-watch-toggle.ts.
+const WATCH_TOGGLE_MUTATION_KEY = 'watch-toggle'
+
+// Narrow the untyped mutation-cache payload without casts: a successful
+// watch toggle resolves to WatchToggleResponse, whose `watching` flag tells
+// unwatch (false) apart from watch (true).
+const isWatchOn = (data: unknown): boolean =>
+  typeof data === 'object' &&
+  data !== null &&
+  'watching' in data &&
+  data.watching === true
+
+export const FirstWatchNudgeGate = () => {
+  const pathname = usePathname()
+  const queryClient = useQueryClient()
+  const { getToken } = useAuth()
+
+  const [show, setShow] = useState(false)
+  const [handoffOpen, setHandoffOpen] = useState(false)
+  // One eligibility check per page lifetime — the server's seen-marker
+  // guarantees once-ever across sessions.
+  const triggeredRef = useRef(false)
+
+  const hidden = pathname.startsWith('/admin')
+
+  useEffect(() => {
+    const unsubscribe = queryClient.getMutationCache().subscribe((event) => {
+      if (triggeredRef.current) return
+      if (event.type !== 'updated') return
+      if (
+        event.mutation.options.mutationKey?.[0] !== WATCH_TOGGLE_MUTATION_KEY
+      ) {
+        return
+      }
+      if (event.action.type !== 'success') return
+      if (!isWatchOn(event.action.data)) return
+      triggeredRef.current = true
+      void (async () => {
+        try {
+          const token = await getToken()
+          if (!token) return
+          const { eligible } = await fetchSpotifyNudgeEligibility(token)
+          if (!eligible) return
+          setShow(true)
+          // Marked seen when DISPLAYED — dismissal vs connect doesn't matter.
+          await markSpotifyNudgeSeen(token)
+        } catch (err) {
+          console.error('Failed to run first-watch Spotify nudge', err)
+        }
+      })()
+    })
+    return unsubscribe
+  }, [queryClient, getToken])
+
+  if (hidden) return null
+
+  return (
+    <>
+      {show && (
+        <FirstWatchNudge
+          onConnect={() => {
+            setShow(false)
+            setHandoffOpen(true)
+          }}
+          onDismiss={() => setShow(false)}
+        />
+      )}
+      <OAuthHandoffSheet
+        open={handoffOpen}
+        onClose={() => setHandoffOpen(false)}
+      />
+    </>
+  )
+}
