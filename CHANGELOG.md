@@ -1,3 +1,10 @@
+## [1.136.1](https://github.com/HartiganHM/concert-crawl/compare/v1.136.0...v1.136.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **web:** stop event detail page scrolling horizontally at 320px ([#1049](https://github.com/HartiganHM/concert-crawl/issues/1049)) ([f59f5bb](https://github.com/HartiganHM/concert-crawl/commit/f59f5bbff19c98395aea4b221f2dda3a13520920)), closes [#973](https://github.com/HartiganHM/concert-crawl/issues/973)
+
 # [1.136.0](https://github.com/HartiganHM/concert-crawl/compare/v1.135.1...v1.136.0) (2026-07-19)
 
 
