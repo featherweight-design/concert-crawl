@@ -57,8 +57,10 @@ import { and, eq, inArray } from 'drizzle-orm'
 import {
   db,
   costTracking,
+  spotifyAlertLog,
   userArtistFollows,
   userEvents,
+  userProfiles,
   userSpotifyConnections,
 } from '@concert-crawl/db'
 import { createApp } from '../app.js'
@@ -188,6 +190,9 @@ interface ConnectionBody {
     autoWatch: boolean
     digestEnabled: boolean
     pushEnabled: boolean
+    denverArtistCount: number
+    denverShowCount: number
+    matchedArtists: string[]
   }
 }
 
@@ -213,6 +218,8 @@ describe('auth guards', () => {
     ['PATCH', '/v1/spotify/connection'],
     ['DELETE', '/v1/spotify/connection'],
     ['POST', '/v1/spotify/connection/sync'],
+    ['GET', '/v1/spotify/nudge'],
+    ['POST', '/v1/spotify/nudge/seen'],
   ])('%s %s returns 401 when unauthenticated', async (method, path) => {
     const res = await app.request(path, { method })
     expect(res.status).toBe(401)
@@ -639,5 +646,249 @@ describe('DELETE /v1/spotify/connection', () => {
     const after = await app.request('/v1/spotify/connection')
     const body = (await after.json()) as { data: { status: string } }
     expect(body.data.status).toBe('disconnected')
+  })
+})
+
+// events.date is compared against "today in MT" — keep match fixtures far in
+// the future so the suite never rots as the calendar advances.
+const FUTURE_DATE = '2035-06-01'
+
+describe('denver match summary on the connection payload', () => {
+  it('reports zero matches when no upcoming event matches the artist set', async () => {
+    setAuth(USER)
+    linkSpotifyAccount()
+    spotifyState.followedPages = [[{ id: 'a1', name: 'Beyoncé' }]]
+    const res = await connect()
+    const body = (await res.json()) as ConnectionBody
+    expect(body.data.denverArtistCount).toBe(0)
+    expect(body.data.denverShowCount).toBe(0)
+    expect(body.data.matchedArtists).toEqual([])
+  })
+
+  it('matches headliners and supporting artists by canonical name', async () => {
+    setAuth(USER)
+    linkSpotifyAccount()
+    spotifyState.followedPages = [
+      [
+        { id: 'a1', name: 'Beyoncé' },
+        { id: 'a2', name: 'Sigur Rós' },
+        { id: 'a3', name: 'Khruangbin' },
+      ],
+    ]
+
+    const venue = await seedVenue()
+    // Headliner match (canonical form of 'Beyoncé')
+    await seedEvent(venue.id, {
+      artist: 'Beyoncé Live',
+      canonicalArtist: 'beyonce',
+      date: FUTURE_DATE,
+    })
+    // Supporting-artist match (canonical overlap)
+    await seedEvent(venue.id, {
+      artist: 'Someone Else',
+      canonicalArtist: 'someone else',
+      canonicalSupporting: ['sigur ros'],
+      date: FUTURE_DATE,
+    })
+    // Non-match
+    await seedEvent(venue.id, {
+      artist: 'Unrelated Band',
+      canonicalArtist: 'unrelated band',
+      date: FUTURE_DATE,
+    })
+
+    const res = await connect()
+    const body = (await res.json()) as ConnectionBody
+    expect(body.data.denverArtistCount).toBe(2)
+    expect(body.data.denverShowCount).toBe(2)
+    expect(body.data.matchedArtists.sort()).toEqual(['Beyoncé', 'Sigur Rós'])
+  })
+
+  it('ignores past, hidden, and crawler-missing events', async () => {
+    setAuth(USER)
+    linkSpotifyAccount()
+    spotifyState.followedPages = [[{ id: 'a1', name: 'Beyoncé' }]]
+
+    const venue = await seedVenue()
+    // Past show (seedEvent default date is already in the past)
+    await seedEvent(venue.id, { canonicalArtist: 'beyonce' })
+    // Hidden from consumers
+    await seedEvent(venue.id, {
+      artist: 'Beyoncé Hidden',
+      canonicalArtist: 'beyonce',
+      date: FUTURE_DATE,
+      hiddenFromConsumer: true,
+    })
+    // Crawler flagged missing
+    await seedEvent(venue.id, {
+      artist: 'Beyoncé Missing',
+      canonicalArtist: 'beyonce',
+      date: FUTURE_DATE,
+      firstMissingAt: new Date(),
+    })
+
+    const res = await connect()
+    const body = (await res.json()) as ConnectionBody
+    expect(body.data.denverShowCount).toBe(0)
+    expect(body.data.denverArtistCount).toBe(0)
+  })
+})
+
+describe('auto-watch opt-in backfill (PATCH autoWatch on)', () => {
+  async function connectWithMatches(): Promise<string[]> {
+    linkSpotifyAccount()
+    spotifyState.followedPages = [
+      [
+        { id: 'a1', name: 'Beyoncé' },
+        { id: 'a2', name: 'Sigur Rós' },
+      ],
+    ]
+    const venue = await seedVenue()
+    const first = await seedEvent(venue.id, {
+      artist: 'Beyoncé Live',
+      canonicalArtist: 'beyonce',
+      date: FUTURE_DATE,
+    })
+    const second = await seedEvent(venue.id, {
+      artist: 'Sigur Rós Live',
+      canonicalArtist: 'sigur ros',
+      date: FUTURE_DATE,
+    })
+    await connect()
+    return [first.id, second.id]
+  }
+
+  async function patchAutoWatch(value: boolean): Promise<Response> {
+    return app.request('/v1/spotify/connection', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ autoWatch: value }),
+    })
+  }
+
+  it('adds matched upcoming shows to Watching and claims the alert ledger', async () => {
+    setAuth(USER)
+    const eventIds = await connectWithMatches()
+
+    const res = await patchAutoWatch(true)
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as ConnectionBody
+    expect(body.data.autoWatch).toBe(true)
+
+    const watching = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, USER))
+    expect(watching.map((row) => row.eventId).sort()).toEqual(
+      [...eventIds].sort(),
+    )
+    expect(watching.every((row) => row.status === 'watching')).toBe(true)
+
+    const claims = await testDb
+      .select()
+      .from(spotifyAlertLog)
+      .where(eq(spotifyAlertLog.userId, USER))
+    expect(claims).toHaveLength(2)
+    expect(claims.every((row) => row.kind === 'auto_watch')).toBe(true)
+  })
+
+  it('never overwrites an existing saved status and stays idempotent', async () => {
+    setAuth(USER)
+    const eventIds = await connectWithMatches()
+    const [firstId] = eventIds
+    if (!firstId) throw new Error('expected a seeded event id')
+    await testDb.insert(userEvents).values({
+      userId: USER,
+      eventId: firstId,
+      status: 'going',
+    })
+
+    await patchAutoWatch(true)
+    // Toggle off → on again must not double-write
+    await patchAutoWatch(false)
+    const res = await patchAutoWatch(true)
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, USER))
+    expect(rows).toHaveLength(2)
+    expect(rows.find((row) => row.eventId === firstId)?.status).toBe('going')
+  })
+
+  it('does not backfill when autoWatch is already on', async () => {
+    setAuth(USER)
+    await connectWithMatches()
+    await patchAutoWatch(true)
+    await testDb.delete(userEvents).where(eq(userEvents.userId, USER))
+    await testDb.delete(spotifyAlertLog).where(eq(spotifyAlertLog.userId, USER))
+
+    // autoWatch true → true (no transition) leaves the ledger alone
+    const res = await patchAutoWatch(true)
+    expect(res.status).toBe(200)
+    const rows = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, USER))
+    expect(rows).toHaveLength(0)
+  })
+})
+
+describe('spotify nudge', () => {
+  async function getNudge(): Promise<{ eligible: boolean }> {
+    const res = await app.request('/v1/spotify/nudge')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { eligible: boolean }
+    }
+    return body.data
+  }
+
+  it('is eligible for a user with no connection and no profile row', async () => {
+    setAuth(USER)
+    expect(await getNudge()).toEqual({ eligible: true })
+  })
+
+  it('is not eligible once a connection exists', async () => {
+    setAuth(USER)
+    linkSpotifyAccount()
+    await connect()
+    expect(await getNudge()).toEqual({ eligible: false })
+  })
+
+  it('marking seen lazily creates the profile row and ends eligibility', async () => {
+    setAuth(USER)
+    const res = await app.request('/v1/spotify/nudge/seen', { method: 'POST' })
+    expect(res.status).toBe(200)
+
+    const [profile] = await testDb
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, USER))
+      .limit(1)
+    expect(profile?.spotifyNudgeSeenAt).toBeInstanceOf(Date)
+    expect(await getNudge()).toEqual({ eligible: false })
+  })
+
+  it('marking seen updates an existing profile row without clobbering it', async () => {
+    setAuth(USER)
+    await testDb.insert(userProfiles).values({
+      userId: USER,
+      handle: `huey-${userSeq}`,
+      theme: 'jade',
+    })
+    const res = await app.request('/v1/spotify/nudge/seen', { method: 'POST' })
+    expect(res.status).toBe(200)
+
+    const [profile] = await testDb
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, USER))
+      .limit(1)
+    expect(profile?.spotifyNudgeSeenAt).toBeInstanceOf(Date)
+    expect(profile?.handle).toBe(`huey-${userSeq}`)
+    expect(profile?.theme).toBe('jade')
   })
 })

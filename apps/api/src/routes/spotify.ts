@@ -9,15 +9,26 @@ import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import { createClerkClient } from '@clerk/backend'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
-import { db, userSpotifyConnections } from '@concert-crawl/db'
+import {
+  db,
+  spotifyAlertLog,
+  userEvents,
+  userProfiles,
+  userSpotifyConnections,
+} from '@concert-crawl/db'
 import type { UserSpotifyConnection } from '@concert-crawl/db'
 import type {
   SpotifyConnectionResponse,
   SpotifyConnectionView,
+  SpotifyNudgeResponse,
 } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
 import { checkRateLimit } from '../lib/rate-limit.js'
 import { createSpotifyClient, SpotifyAuthError } from '../lib/spotify.js'
+import {
+  getMatchedUpcomingEventIds,
+  getSpotifyMatchSummary,
+} from '../lib/spotify-matches.js'
 import {
   getSpotifyAccessToken,
   purgeSpotifyFollows,
@@ -50,15 +61,23 @@ export const spotifyRouter = new Hono()
 
 spotifyRouter.use('*', clerkMiddleware())
 
-const toView = (row: UserSpotifyConnection): SpotifyConnectionView => ({
-  status: row.status,
-  displayName: row.displayName ?? null,
-  artistCount: row.artistCount,
-  lastSyncedAt: row.lastSyncedAt?.toISOString() ?? null,
-  autoWatch: row.autoWatch,
-  digestEnabled: row.digestEnabled,
-  pushEnabled: row.pushEnabled,
-})
+// The Denver-match summary rides along on every connection payload (PR 5) —
+// it drives "N play Denver" on the success screen and Connections card.
+const toView = async (
+  row: UserSpotifyConnection,
+): Promise<SpotifyConnectionView> => {
+  const matches = await getSpotifyMatchSummary(row.userId)
+  return {
+    status: row.status,
+    displayName: row.displayName ?? null,
+    artistCount: row.artistCount,
+    lastSyncedAt: row.lastSyncedAt?.toISOString() ?? null,
+    autoWatch: row.autoWatch,
+    digestEnabled: row.digestEnabled,
+    pushEnabled: row.pushEnabled,
+    ...matches,
+  }
+}
 
 const loadConnection = async (
   userId: string,
@@ -69,6 +88,45 @@ const loadConnection = async (
     .where(eq(userSpotifyConnections.userId, userId))
     .limit(1)
   return row ?? null
+}
+
+// Auto-watch opt-in backfill: claim a spotify_alert_log row per matched
+// event (kind='auto_watch', the spec §10 idempotency ledger) and insert a
+// Watching row for each newly-claimed claim. Both writes are
+// onConflictDoNothing, so repeat opt-ins and races with the PR 10 fan-out
+// never double-write. Never throws — the toggle write is the source of
+// truth and already landed.
+const backfillAutoWatch = async (userId: string): Promise<void> => {
+  try {
+    const eventIds = await getMatchedUpcomingEventIds(userId)
+    if (eventIds.length === 0) return
+    await db.transaction(async (tx) => {
+      const claimed = await tx
+        .insert(spotifyAlertLog)
+        .values(
+          eventIds.map((eventId) => ({
+            userId,
+            eventId,
+            kind: 'auto_watch',
+          })),
+        )
+        .onConflictDoNothing()
+        .returning({ eventId: spotifyAlertLog.eventId })
+      if (claimed.length === 0) return
+      await tx
+        .insert(userEvents)
+        .values(
+          claimed.map(({ eventId }) => ({
+            userId,
+            eventId,
+            status: 'watching' as const,
+          })),
+        )
+        .onConflictDoNothing()
+    })
+  } catch (err) {
+    apiLogger.error({ err, userId }, 'spotify: auto-watch backfill failed')
+  }
 }
 
 // Clerk models the linked account with provider 'oauth_spotify' (the
@@ -85,7 +143,7 @@ spotifyRouter.get('/connection', async (ctx) => {
 
   const row = await loadConnection(auth.userId)
   const data: SpotifyConnectionResponse = row
-    ? toView(row)
+    ? await toView(row)
     : { status: 'disconnected' }
   return ctx.json({ success: true, data })
 })
@@ -189,7 +247,7 @@ spotifyRouter.post('/connection', async (ctx) => {
   if (!row) {
     return ctx.json({ success: false, error: 'Failed to connect Spotify' }, 500)
   }
-  return ctx.json({ success: true, data: toView(row) }, 201)
+  return ctx.json({ success: true, data: await toView(row) }, 201)
 })
 
 // POST /v1/spotify/connection/sync — on-demand "Refresh my taste"
@@ -252,7 +310,7 @@ spotifyRouter.post('/connection/sync', async (ctx) => {
   if (!updated) {
     return ctx.json({ success: false, error: 'Spotify is not connected' }, 404)
   }
-  return ctx.json({ success: true, data: toView(updated) })
+  return ctx.json({ success: true, data: await toView(updated) })
 })
 
 // PATCH /v1/spotify/connection — Settings toggles + one-time auto-watch opt-in
@@ -298,7 +356,15 @@ spotifyRouter.patch('/connection', async (ctx) => {
         404,
       )
     }
-    return ctx.json({ success: true, data: toView(updated) })
+    // Opt-in moment (auto-watch off → on): backfill currently-matched
+    // upcoming shows into Watching. PR 10's fan-out only covers events that
+    // land AFTER the flip, and the opt-in sheet promises "we'll add all N
+    // now". Best-effort — the toggle write above already succeeded, and a
+    // failed backfill is self-healing on the next explicit opt-in cycle.
+    if (parsed.data.autoWatch === true && !row.autoWatch) {
+      await backfillAutoWatch(auth.userId)
+    }
+    return ctx.json({ success: true, data: await toView(updated) })
   } catch (err) {
     apiLogger.error(
       { err, userId: auth.userId },
@@ -360,4 +426,67 @@ spotifyRouter.delete('/connection', async (ctx) => {
   }
 
   return ctx.body(null, 204)
+})
+
+// GET /v1/spotify/nudge — post-first-watch connect nudge gate (PR 5).
+// Eligible only while the user has no connection row AND has never been
+// shown the nudge (single-fire via user_profiles.spotify_nudge_seen_at).
+spotifyRouter.get('/nudge', async (ctx) => {
+  const auth = getAuth(ctx)
+  if (!auth?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const row = await loadConnection(auth.userId)
+  if (row) {
+    const data: SpotifyNudgeResponse = { eligible: false }
+    return ctx.json({ success: true, data })
+  }
+
+  const [profile] = await db
+    .select({ spotifyNudgeSeenAt: userProfiles.spotifyNudgeSeenAt })
+    .from(userProfiles)
+    .where(eq(userProfiles.userId, auth.userId))
+    .limit(1)
+  // No profile row yet = never seen — the seen write lazily creates the row.
+  const data: SpotifyNudgeResponse = {
+    eligible: !profile || profile.spotifyNudgeSeenAt === null,
+  }
+  return ctx.json({ success: true, data })
+})
+
+// POST /v1/spotify/nudge/seen — mark the nudge shown (fires when it is
+// DISPLAYED, regardless of what the user taps — single-fire, spec §3).
+// Lazy profile-row creation mirrors PATCH /v1/users/me.
+spotifyRouter.post('/nudge/seen', async (ctx) => {
+  const auth = getAuth(ctx)
+  if (!auth?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  try {
+    const seenAt = new Date()
+    const [existing] = await db
+      .select({ id: userProfiles.id })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, auth.userId))
+      .limit(1)
+    if (existing) {
+      await db
+        .update(userProfiles)
+        .set({ spotifyNudgeSeenAt: seenAt, updatedAt: seenAt })
+        .where(eq(userProfiles.userId, auth.userId))
+    } else {
+      await db.insert(userProfiles).values({
+        userId: auth.userId,
+        spotifyNudgeSeenAt: seenAt,
+      })
+    }
+  } catch (err) {
+    apiLogger.error(
+      { err, userId: auth.userId },
+      'spotify: nudge seen write failed',
+    )
+    return ctx.json({ success: false, error: 'Failed to record nudge' }, 500)
+  }
+
+  return ctx.json({ success: true })
 })

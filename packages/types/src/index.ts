@@ -1011,7 +1011,22 @@ export interface SpotifyConnectionView {
   autoWatch: boolean
   digestEnabled: boolean
   pushEnabled: boolean
+  // Denver-match summary (§9.1 canonical match against upcoming events) —
+  // additive extension over the spec §6 payload so the connect-success and
+  // Connections surfaces can show real "N play Denver" numbers (PR 5).
+  denverArtistCount: number
+  denverShowCount: number
+  // Display names of the Denver-matched artists (capped) for the
+  // "WE RECOGNIZED" chip row on the connect-success screen.
+  matchedArtists: string[]
 }
 
 export type SpotifyConnectionResponse =
   SpotifyConnectionView | { status: 'disconnected' }
+
+// GET /v1/spotify/nudge — post-first-watch connect nudge gate (PR 5).
+// Eligible = user has no Spotify connection row AND has never seen the nudge
+// (user_profiles.spotify_nudge_seen_at IS NULL).
+export interface SpotifyNudgeResponse {
+  eligible: boolean
+}
