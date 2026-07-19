@@ -7,8 +7,15 @@ import {
   eventReportConfirms,
   eventReports,
   events,
+  notifications,
+  userEvents,
   userProfiles,
+  venues,
 } from '@concert-crawl/db'
+import {
+  fanoutWatchNotification,
+  WATCH_CATEGORY_FROM_REPORT_STATUS,
+} from '@concert-crawl/push'
 import { ER_POLICY } from '@concert-crawl/types'
 import {
   clerkAuth,
@@ -29,6 +36,45 @@ const EVIDENCE_METHODS = [
 
 function isImminent(eventDate: string | null): boolean {
   return isImminentEvent(eventDate, ER_POLICY.imminentThresholdDays)
+}
+
+// Is promoting a report of `reportStatus` going to actually flip user-visible
+// state on this event? Called before the promotion runs so watchers only get
+// notified on real transitions, not on duplicate promotions of the same
+// state (e.g. a second confirmed 'sold-out' report after the first was
+// already promoted).
+//
+// - cancelled/postponed: reflected in events.status. Check the current
+//   value vs. the target.
+// - sold-out: not on events.status; derived from having an active promoted
+//   sold-out report. Check whether another promoted sold-out already exists.
+//   /available flips resolution to 'rejected', so an /available-cleared row
+//   correctly doesn't block the next fanout.
+async function hasEventStateChanged(
+  eventId: string,
+  reportStatus: (typeof REPORT_STATUSES)[number],
+): Promise<boolean> {
+  if (reportStatus === 'cancelled' || reportStatus === 'postponed') {
+    const [row] = await db
+      .select({ status: events.status })
+      .from(events)
+      .where(eq(events.id, eventId))
+      .limit(1)
+    return row?.status !== reportStatus
+  }
+  // sold-out
+  const existing = await db
+    .select({ id: eventReports.id })
+    .from(eventReports)
+    .where(
+      and(
+        eq(eventReports.eventId, eventId),
+        eq(eventReports.status, 'sold-out'),
+        eq(eventReports.resolution, 'promoted'),
+      ),
+    )
+    .limit(1)
+  return existing.length === 0
 }
 
 const reportBodySchema = z.object({
@@ -296,6 +342,15 @@ eventReportsRouter.post(
 
     let resolved = false
     if (confirmsCount >= threshold) {
+      // Check pre-state to decide whether promotion actually transitions
+      // user-visible state. Fan-out only fires on a real transition — a
+      // second cancelled/postponed report promoted after the event was
+      // already in that status shouldn't spam watchers a second time.
+      const isRealTransition = await hasEventStateChanged(
+        eventId,
+        report.status,
+      )
+
       await db
         .update(eventReports)
         .set({
@@ -311,6 +366,31 @@ eventReportsRouter.post(
           .update(events)
           .set({ status: report.status })
           .where(eq(events.id, eventId))
+      }
+
+      // #1064: fan out watch notifications to every user watching this event.
+      // Best-effort — the promotion already committed above, so any error
+      // here can't roll back the user-visible state change. Narrow via `in`
+      // rather than an `as` cast so the compiler forces us to handle any
+      // new report status added later. Gated on isRealTransition so
+      // duplicate promotions don't re-spam the same watchers.
+      if (
+        isRealTransition &&
+        report.status in WATCH_CATEGORY_FROM_REPORT_STATUS
+      ) {
+        await fanoutWatchNotification(
+          {
+            db,
+            notifications,
+            userEvents,
+            events,
+            venues,
+          },
+          {
+            eventId,
+            category: WATCH_CATEGORY_FROM_REPORT_STATUS[report.status],
+          },
+        )
       }
 
       resolved = true

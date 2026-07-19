@@ -21,6 +21,7 @@
     "@concert-crawl/entitlements": "workspace:*",
     "@concert-crawl/logger": "workspace:*",
     "@concert-crawl/price-pipeline": "workspace:*",
+    "@concert-crawl/push": "workspace:*",
     "@concert-crawl/types": "workspace:*",
     "@hono/clerk-auth": "^2.0.0",
     "@hono/node-server": "^2.0.8",

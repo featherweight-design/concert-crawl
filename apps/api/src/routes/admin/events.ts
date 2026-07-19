@@ -20,11 +20,16 @@ import {
   db,
   eventReports,
   events,
+  notifications,
   priceRetrievalLog,
   priceSubmissions,
   userEvents,
   venues,
 } from '@concert-crawl/db'
+import {
+  fanoutWatchNotification,
+  WATCH_CATEGORY_FROM_REPORT_STATUS,
+} from '@concert-crawl/push'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
 
@@ -199,6 +204,40 @@ eventsAdminRouter.patch(
       return ctx.json({ success: false, error: 'Report already resolved' }, 400)
     }
 
+    // Pre-state check: does promoting this report actually flip user-visible
+    // state? cancelled/postponed compare against events.status; sold-out
+    // compares against whether another live promoted sold-out already exists.
+    // Fan-out only fires on real transitions so duplicate confirmed reports
+    // don't re-spam watchers.
+    let isRealTransition = false
+    if (resolution === 'promoted') {
+      if (report.status === 'cancelled' || report.status === 'postponed') {
+        const [eventRow] = await db
+          .select({ status: events.status })
+          .from(events)
+          .where(eq(events.id, report.eventId))
+          .limit(1)
+        isRealTransition = eventRow?.status !== report.status
+      } else if (report.status === 'sold-out') {
+        // Excludes the current report because we haven't run the update
+        // below yet — its resolution is still null, so the resolution=
+        // 'promoted' filter naturally omits it. Any match here is another
+        // pre-existing promoted sold-out on this event.
+        const existing = await db
+          .select({ id: eventReports.id })
+          .from(eventReports)
+          .where(
+            and(
+              eq(eventReports.eventId, report.eventId),
+              eq(eventReports.status, 'sold-out'),
+              eq(eventReports.resolution, 'promoted'),
+            ),
+          )
+          .limit(1)
+        isRealTransition = existing.length === 0
+      }
+    }
+
     const [updated] = await db
       .update(eventReports)
       .set({
@@ -216,6 +255,31 @@ eventsAdminRouter.patch(
           .update(events)
           .set({ status: report.status })
           .where(eq(events.id, report.eventId))
+      }
+
+      // #1064: fan out watch notifications to every user watching this event.
+      // Best-effort — the resolve above already committed. `in` narrowing
+      // avoids an `as` cast; the compiler forces us to update the mapping if
+      // a new report status is added later. Gated on isRealTransition so a
+      // second promoted cancelled/postponed/sold-out on an already-flagged
+      // event doesn't duplicate notifications.
+      if (
+        isRealTransition &&
+        report.status in WATCH_CATEGORY_FROM_REPORT_STATUS
+      ) {
+        await fanoutWatchNotification(
+          {
+            db,
+            notifications,
+            userEvents,
+            events,
+            venues,
+          },
+          {
+            eventId: report.eventId,
+            category: WATCH_CATEGORY_FROM_REPORT_STATUS[report.status],
+          },
+        )
       }
     }
 
@@ -713,6 +777,24 @@ eventsAdminRouter.post(
       evidenceUrl: evidenceUrl ?? null,
     })
 
+    // #1064: fan out watch.soldout to every user watching this event. Only on
+    // the freshly-created path — the idempotent early-return above already
+    // covers the "already sold out" case (watchers were notified on the
+    // original mark).
+    await fanoutWatchNotification(
+      {
+        db,
+        notifications,
+        userEvents,
+        events,
+        venues,
+      },
+      {
+        eventId: id,
+        category: 'watch.soldout',
+      },
+    )
+
     return ctx.json({ success: true, data: created }, 201)
   },
 )
@@ -780,6 +862,23 @@ eventsAdminRouter.post(
       ctx.set('auditTargetId', id)
       ctx.set('auditActorId', actor.userId)
       ctx.set('auditMeta', { reportIds: cleared.map((row) => row.id) })
+
+      // #1064: fan out watch.backonsale to every user watching this event.
+      // Only when we actually flipped state — a no-op call didn't change
+      // anything user-visible.
+      await fanoutWatchNotification(
+        {
+          db,
+          notifications,
+          userEvents,
+          events,
+          venues,
+        },
+        {
+          eventId: id,
+          category: 'watch.backonsale',
+        },
+      )
     }
 
     return ctx.body(null, 204)

@@ -104,6 +104,9 @@ importers:
       '@concert-crawl/price-pipeline':
         specifier: workspace:*
         version: link:../../packages/price-pipeline
+      '@concert-crawl/push':
+        specifier: workspace:*
+        version: link:../../packages/push
       '@concert-crawl/types':
         specifier: workspace:*
         version: link:../../packages/types

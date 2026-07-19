@@ -4,6 +4,7 @@ import {
   auditLog,
   eventReports,
   events,
+  notifications,
   priceRetrievalLog,
   priceSubmissions,
   userEvents,
@@ -218,6 +219,31 @@ describe('POST /v1/admin/events/:id/sold-out', () => {
     })
     expect(res.status).toBe(422)
   })
+
+  it('fans out watch.soldout notifications to status=watching users only', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2026-08-01' })
+    const WATCHER = 'user_admin_soldout_watcher'
+    const GOING = 'user_admin_soldout_going'
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+    await seedUserEvent(GOING, event.id, { status: 'going' })
+
+    const res = await app.request(`/v1/admin/events/${event.id}/sold-out`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({}),
+    })
+    expect(res.status).toBe(201)
+
+    const rows = await testDb
+      .select({
+        userId: notifications.userId,
+        category: notifications.category,
+      })
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.soldout'))
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
+  })
 })
 
 describe('POST /v1/admin/events/:id/available', () => {
@@ -333,6 +359,41 @@ describe('POST /v1/admin/events/:id/available', () => {
         ),
       )
     expect(rows).toHaveLength(1)
+  })
+
+  it('fans out watch.backonsale to watchers when clearing an active sold-out report', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2026-08-05' })
+    const WATCHER = 'user_admin_backonsale_watcher'
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+
+    // Seed the active sold-out report first — the admin/available handler
+    // only fans out when it actually clears something.
+    await app.request(`/v1/admin/events/${event.id}/sold-out`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({}),
+    })
+    // Clear the notifications table so we only see the backonsale rows.
+    await testDb
+      .delete(notifications)
+      .where(eq(notifications.category, 'watch.soldout'))
+
+    const availableRes = await app.request(
+      `/v1/admin/events/${event.id}/available`,
+      {
+        method: 'POST',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({}),
+      },
+    )
+    expect(availableRes.status).toBe(204)
+
+    const rows = await testDb
+      .select({ userId: notifications.userId })
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.backonsale'))
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
   })
 })
 

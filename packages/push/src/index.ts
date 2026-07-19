@@ -6,3 +6,9 @@ export {
   type UserNotificationCategory,
 } from './notification-categories.js'
 export { sendPushForNotification, type SendPushInput } from './send-push.js'
+export {
+  fanoutWatchNotification,
+  WATCH_CATEGORY_FROM_REPORT_STATUS,
+  type WatchFanoutDeps,
+  type FanoutInput,
+} from './watch-fanout.js'
