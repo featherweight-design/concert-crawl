@@ -51,16 +51,22 @@ describe('startSpotifyConnect', () => {
   })
 
   it('returns error when the account creation throws', async () => {
-    vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    const createExternalAccount = vi
-      .fn()
-      .mockRejectedValue(new Error('session_reverification_required'))
-    const result = await startSpotifyConnect(
-      createExternalAccount,
-      REDIRECT_URL,
-    )
-    expect(result).toEqual({ status: 'error' })
-    expect(console.error).toHaveBeenCalled()
+    const errorSpy = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+    try {
+      const createExternalAccount = vi
+        .fn()
+        .mockRejectedValue(new Error('session_reverification_required'))
+      const result = await startSpotifyConnect(
+        createExternalAccount,
+        REDIRECT_URL,
+      )
+      expect(result).toEqual({ status: 'error' })
+      expect(errorSpy).toHaveBeenCalled()
+    } finally {
+      errorSpy.mockRestore()
+    }
   })
 
   it('returns cancelled when the user backs out of reverification', async () => {
