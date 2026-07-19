@@ -1,3 +1,10 @@
+## [1.146.2](https://github.com/HartiganHM/concert-crawl/compare/v1.146.1...v1.146.2) (2026-07-19)
+
+
+### Bug Fixes
+
+* **admin/review:** sweep — dropdown counts, mobile overlap, editor padding, back nav ([#1089](https://github.com/HartiganHM/concert-crawl/issues/1089)) ([6ee7b12](https://github.com/HartiganHM/concert-crawl/commit/6ee7b125b62b4fb400d3db1460b078b0a8902380)), closes [#1079](https://github.com/HartiganHM/concert-crawl/issues/1079) [#1081](https://github.com/HartiganHM/concert-crawl/issues/1081) [#1082](https://github.com/HartiganHM/concert-crawl/issues/1082) [#1083](https://github.com/HartiganHM/concert-crawl/issues/1083) [#1079](https://github.com/HartiganHM/concert-crawl/issues/1079) [#1081](https://github.com/HartiganHM/concert-crawl/issues/1081) [#1082](https://github.com/HartiganHM/concert-crawl/issues/1082)
+
 ## [1.146.1](https://github.com/HartiganHM/concert-crawl/compare/v1.146.0...v1.146.1) (2026-07-19)
 
 
