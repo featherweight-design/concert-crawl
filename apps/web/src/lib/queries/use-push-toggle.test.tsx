@@ -136,7 +136,7 @@ describe('usePushToggle', () => {
     expect(patchMock).toHaveBeenCalledWith('token-1', { pushEnabled: false })
   })
 
-  it('resolves { ok: false } instead of rejecting when the PATCH throws', async () => {
+  it('resolves { ok: false } and rolls back the subscription when the enable PATCH throws', async () => {
     const consoleError = vi
       .spyOn(console, 'error')
       .mockImplementation(() => undefined)
@@ -144,6 +144,7 @@ describe('usePushToggle', () => {
     const { result } = renderToggle()
     const outcome = await result.current.mutateAsync(true)
     expect(outcome).toEqual({ ok: false, reason: 'error' })
+    expect(unsubscribeMock).toHaveBeenCalledWith('token-1', 'sub-row-1')
     await waitFor(() => expect(result.current.error).toBeNull())
     consoleError.mockRestore()
   })

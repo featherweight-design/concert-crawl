@@ -59,10 +59,19 @@ export function usePushToggle() {
             return { ok: false, reason: result.status }
           }
           subscriptionIdRef.current = result.id
-          const view = await patchSpotifyConnection(token, {
-            pushEnabled: true,
-          })
-          return { ok: true, view }
+          try {
+            const view = await patchSpotifyConnection(token, {
+              pushEnabled: true,
+            })
+            return { ok: true, view }
+          } catch (err) {
+            // Best-effort rollback so a failed enable doesn't strand a live
+            // subscription the preference will never send to.
+            console.error('push: enable PATCH failed, rolling back', err)
+            await unsubscribeFromPush(token, result.id)
+            subscriptionIdRef.current = null
+            return { ok: false, reason: 'error' }
+          }
         }
         // The preference PATCH goes first — it's what stops sends to every
         // device — so a failed local teardown can't strand the opt-out.
