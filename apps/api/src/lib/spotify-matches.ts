@@ -6,7 +6,16 @@
 //   events.canonical_artist = ANY($names) OR events.canonical_supporting && $names
 // scoped to consumer-visible upcoming events (same visibility filter as the
 // events list: upcoming status, date >= today MT, not hidden, not missing).
-import { and, arrayOverlaps, eq, gte, inArray, isNull, or } from 'drizzle-orm'
+import {
+  and,
+  arrayOverlaps,
+  asc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  or,
+} from 'drizzle-orm'
 import { db, events, userArtistFollows } from '@concert-crawl/db'
 import { SPOTIFY_FOLLOW_SOURCES } from './spotify-sync.js'
 import { todayInTimezone } from './time.js'
@@ -39,18 +48,24 @@ interface FollowName {
 const loadSpotifyFollowNames = async (
   userId: string,
 ): Promise<FollowName[]> => {
-  return db
-    .select({
-      artistName: userArtistFollows.artistName,
-      canonicalName: userArtistFollows.canonicalName,
-    })
-    .from(userArtistFollows)
-    .where(
-      and(
-        eq(userArtistFollows.userId, userId),
-        inArray(userArtistFollows.source, [...SPOTIFY_FOLLOW_SOURCES]),
-      ),
-    )
+  return (
+    db
+      .select({
+        artistName: userArtistFollows.artistName,
+        canonicalName: userArtistFollows.canonicalName,
+      })
+      .from(userArtistFollows)
+      .where(
+        and(
+          eq(userArtistFollows.userId, userId),
+          inArray(userArtistFollows.source, [...SPOTIFY_FOLLOW_SOURCES]),
+        ),
+      )
+      // Deterministic first-wins pick in displayByCanonical when a canonical
+      // exists under both sources: 'spotify_followed' sorts before
+      // 'spotify_top', then artistName breaks remaining ties.
+      .orderBy(asc(userArtistFollows.source), asc(userArtistFollows.artistName))
+  )
 }
 
 interface MatchedEventRow {
