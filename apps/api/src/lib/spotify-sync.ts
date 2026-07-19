@@ -328,8 +328,8 @@ export async function syncSpotifyConnection(
   } catch (err) {
     // Transaction rollback leaves the previous artist set intact; surface the
     // failure on the connection row so callers see status='error'. The status
-    // write gets its own catch — if the DB is down it will throw too, and this
-    // function's contract is to never throw.
+    // write gets its own catch (best effort — a fully-down DB would otherwise
+    // throw again from inside this error path).
     const message = err instanceof Error ? err.message : 'Spotify sync failed'
     apiLogger.error({ err, userId }, 'spotify: sync persistence failed')
     try {
