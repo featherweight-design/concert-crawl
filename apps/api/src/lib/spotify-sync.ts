@@ -208,9 +208,10 @@ async function replaceSourceSet(
 }
 
 // Phase-1 sync for one user: Clerk token → followed + top pull → canonical
-// replace-set upsert → connection bookkeeping. Never throws — outcomes map
-// to connection status so callers (routes now, weekly cron in PR 4) can just
-// re-read the row.
+// replace-set upsert → connection bookkeeping. Spotify/Clerk failures never
+// throw — they map to connection status so callers (routes now, weekly cron
+// in PR 4) can just re-read the row. Only a DB-layer failure on the
+// bookkeeping reads/writes themselves can still reject.
 export async function syncSpotifyConnection(
   userId: string,
 ): Promise<SpotifySyncResult> {

@@ -255,7 +255,15 @@ spotifyRouter.patch('/connection', async (ctx) => {
   if (!auth?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
 
-  const body: unknown = await ctx.req.json().catch(() => null)
+  let body: unknown = null
+  try {
+    body = await ctx.req.json()
+  } catch (err) {
+    apiLogger.warn(
+      { err, userId: auth.userId },
+      'spotify: unparseable PATCH body',
+    )
+  }
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) {
     return ctx.json(
