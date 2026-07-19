@@ -1,3 +1,10 @@
+## [1.152.3](https://github.com/HartiganHM/concert-crawl/compare/v1.152.2...v1.152.3) (2026-07-19)
+
+
+### Bug Fixes
+
+* **husky:** skip pre-push tests on delete-only pushes ([#1111](https://github.com/HartiganHM/concert-crawl/issues/1111)) ([8c83161](https://github.com/HartiganHM/concert-crawl/commit/8c8316187dc3931f0ab71a659731e31fab1eed63)), closes [#1103](https://github.com/HartiganHM/concert-crawl/issues/1103)
+
 ## [1.152.2](https://github.com/HartiganHM/concert-crawl/compare/v1.152.1...v1.152.2) (2026-07-19)
 
 
