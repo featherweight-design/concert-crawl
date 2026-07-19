@@ -24,7 +24,8 @@ interface FilterBarProps {
   genres?: string[]
   className?: string
   // Server-resolved SCA-region boolean for the taste chip's tier-picker
-  // handoff (#763 PR 7). Defaults false for mounts that never resolved it.
+  // handoff (#763 PR 7). Defaults true (fail-safe): isScaRegion treats an
+  // unknown country as SCA, so unresolved mounts must show the notice too.
   scaRegion?: boolean
 }
 
@@ -90,7 +91,7 @@ export function FilterBar({
   venues,
   genres = [],
   className,
-  scaRegion = false,
+  scaRegion = true,
 }: FilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()

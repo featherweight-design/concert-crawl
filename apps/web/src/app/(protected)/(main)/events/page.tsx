@@ -188,7 +188,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         err instanceof ApiError &&
         (err.status === 401 || err.status === 403)
       ) {
-        console.error('taste filter rejected — falling back to unfiltered', err)
+        console.warn('taste filter rejected — falling back to unfiltered', err)
         return {
           response: await fetchEvents(fetchParams, token, viewLimit, false),
           tasteApplied: false,

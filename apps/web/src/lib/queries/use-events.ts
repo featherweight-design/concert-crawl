@@ -99,7 +99,7 @@ export function useEvents({
               err instanceof ApiError &&
               (err.status === 401 || err.status === 403)
             ) {
-              console.error(
+              console.warn(
                 'taste filter rejected — falling back to unfiltered',
                 err,
               )

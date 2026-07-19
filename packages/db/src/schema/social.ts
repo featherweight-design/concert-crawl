@@ -90,6 +90,11 @@ export const userArtistFollows = pgTable(
     canonicalNameIdx: index('user_artist_follows_canonical_name_idx').on(
       table.canonicalName,
     ),
+    // Serves the taste-filter correlated EXISTS (user_id + canonical_name
+    // lookup) so it stays index-backed as follow counts grow.
+    userCanonicalNameIdx: index(
+      'user_artist_follows_user_canonical_name_idx',
+    ).on(table.userId, table.canonicalName),
   }),
 )
 

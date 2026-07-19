@@ -100,7 +100,8 @@ describe('TasteFilterChip', () => {
     const onToggle = vi.fn()
     renderChip({ onToggle })
     const chip = screen.getByRole('button', { name: COPY.chipLockedAria })
-    expect(chip.getAttribute('aria-disabled')).toBe('true')
+    // Locked chip stays operable for AT — the paid state lives in the label.
+    expect(chip.getAttribute('aria-disabled')).toBeNull()
     fireEvent.click(chip)
     expect(onToggle).not.toHaveBeenCalled()
     expect(screen.getByText(COPY.upsell.title)).toBeTruthy()

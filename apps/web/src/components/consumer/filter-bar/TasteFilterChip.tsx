@@ -141,7 +141,6 @@ export const TasteFilterChip = ({
       <button
         type="button"
         onClick={onLockedTap}
-        aria-disabled="true"
         aria-label={COPY.chipLockedAria}
         className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
         style={{
