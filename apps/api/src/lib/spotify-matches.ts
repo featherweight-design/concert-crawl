@@ -87,18 +87,23 @@ interface MatchedEventRow {
 
 // Shared §9.1 condition: consumer-visible upcoming events matching the
 // canonical set (headliner equality OR supporting-array overlap).
-const matchedUpcomingCondition = (canonicalNames: string[]): SQL | undefined =>
-  and(
-    eq(events.status, 'upcoming'),
-    gte(events.date, todayInTimezone(MT_TIME_ZONE)),
-    eq(events.hiddenFromConsumer, false),
-    isNull(events.firstMissingAt),
-    or(
-      inArray(events.canonicalArtist, canonicalNames),
-      // Array-overlap (&&) half of the §9.1 match rule.
-      arrayOverlaps(events.canonicalSupporting, canonicalNames),
-    ),
+const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
+  // Total: inArray/arrayOverlaps with [] would generate invalid SQL.
+  if (canonicalNames.length === 0) return sql`false`
+  return (
+    and(
+      eq(events.status, 'upcoming'),
+      gte(events.date, todayInTimezone(MT_TIME_ZONE)),
+      eq(events.hiddenFromConsumer, false),
+      isNull(events.firstMissingAt),
+      or(
+        inArray(events.canonicalArtist, canonicalNames),
+        // Array-overlap (&&) half of the §9.1 match rule.
+        arrayOverlaps(events.canonicalSupporting, canonicalNames),
+      ),
+    ) ?? sql`false`
   )
+}
 
 const loadMatchedUpcomingEvents = async (
   canonicalNames: string[],
