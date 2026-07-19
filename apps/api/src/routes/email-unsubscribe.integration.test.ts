@@ -9,7 +9,7 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { eq } from 'drizzle-orm'
-import { userSpotifyConnections } from '@concert-crawl/db'
+import { db, userSpotifyConnections } from '@concert-crawl/db'
 import { createApp } from '../app.js'
 import { testDb } from '../test/helpers/db.js'
 import { clearTables } from '../test/helpers/seed.js'
@@ -130,6 +130,24 @@ describe('GET /v1/email/unsubscribe — integration', () => {
     )
     expect(res.status).toBe(503)
     expect(await getDigestEnabled('user_unsub_7')).toBe(true)
+  })
+
+  it('renders the HTML error shell when the DB update throws', async () => {
+    await seedConnection('user_unsub_db')
+    const token = buildUnsubscribeToken('user_unsub_db', 'digest')
+    const updateSpy = vi.spyOn(db, 'update').mockImplementationOnce(() => {
+      throw new Error('db down')
+    })
+    try {
+      const res = await app.request(
+        `/v1/email/unsubscribe?uid=user_unsub_db&family=digest&token=${token}`,
+      )
+      expect(res.status).toBe(500)
+      expect(res.headers.get('content-type')).toContain('text/html')
+      expect(await res.text()).toContain('Something went wrong')
+    } finally {
+      updateSpy.mockRestore()
+    }
   })
 
   it('returns 503 when EMAIL_UNSUBSCRIBE_SECRET is set but empty', async () => {

@@ -200,7 +200,9 @@ describe('sendTransactionalEmail', () => {
     mockGetTemplateRenderer.mockReturnValue(null)
     const { sendTransactionalEmail } = await import('./email.js')
 
-    await sendTransactionalEmail(sendParams)
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe(
+      'not-registered',
+    )
 
     expect(mockInsertValues).not.toHaveBeenCalled()
     expect(mockSend).not.toHaveBeenCalled()
@@ -210,7 +212,7 @@ describe('sendTransactionalEmail', () => {
     mockSelectLimit.mockResolvedValue([{ enabled: false }])
     const { sendTransactionalEmail } = await import('./email.js')
 
-    await sendTransactionalEmail(sendParams)
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('suppressed')
 
     expect(mockInsertValues).toHaveBeenCalledOnce()
     expect(mockInsertValues.mock.calls[0]![0]).toMatchObject({
@@ -231,7 +233,7 @@ describe('sendTransactionalEmail', () => {
     mockInsertReturning.mockResolvedValue([])
     const { sendTransactionalEmail } = await import('./email.js')
 
-    await sendTransactionalEmail(sendParams)
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('deduped')
 
     expect(mockSend).not.toHaveBeenCalled()
     expect(mockUpdateSet).not.toHaveBeenCalled()
@@ -240,7 +242,7 @@ describe('sendTransactionalEmail', () => {
   it('claims the row as failed, sends to the primary Clerk email, and flips the row to sent', async () => {
     const { sendTransactionalEmail } = await import('./email.js')
 
-    await sendTransactionalEmail(sendParams)
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('sent')
 
     expect(mockInsertValues.mock.calls[0]![0]).toMatchObject({
       templateKey: 'welcome_paid',
@@ -276,7 +278,7 @@ describe('sendTransactionalEmail', () => {
     mockSend.mockRejectedValueOnce(new Error('network down'))
     const { sendTransactionalEmail } = await import('./email.js')
 
-    await expect(sendTransactionalEmail(sendParams)).resolves.toBeUndefined()
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('failed')
     expect(mockUpdateSet).not.toHaveBeenCalled()
   })
 
@@ -287,7 +289,7 @@ describe('sendTransactionalEmail', () => {
     })
     const { sendTransactionalEmail } = await import('./email.js')
 
-    await sendTransactionalEmail(sendParams)
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('failed')
 
     expect(mockUpdateSet).not.toHaveBeenCalled()
   })
@@ -299,7 +301,7 @@ describe('sendTransactionalEmail', () => {
     })
     const { sendTransactionalEmail } = await import('./email.js')
 
-    await expect(sendTransactionalEmail(sendParams)).resolves.toBeUndefined()
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('failed')
     expect(mockSend).not.toHaveBeenCalled()
     expect(mockUpdateSet).not.toHaveBeenCalled()
   })

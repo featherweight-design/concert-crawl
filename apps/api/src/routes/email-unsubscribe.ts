@@ -98,14 +98,28 @@ emailUnsubscribeRouter.get(
       )
     }
 
-    // family is currently only 'digest'; the switch keeps additions explicit.
-    switch (family) {
-      case 'digest':
-        await db
-          .update(userSpotifyConnections)
-          .set({ digestEnabled: false })
-          .where(eq(userSpotifyConnections.userId, uid))
-        break
+    try {
+      // family is currently only 'digest'; the switch keeps additions
+      // explicit.
+      switch (family) {
+        case 'digest':
+          await db
+            .update(userSpotifyConnections)
+            .set({ digestEnabled: false })
+            .where(eq(userSpotifyConnections.userId, uid))
+          break
+      }
+    } catch (err) {
+      // Humans land here from email clients — a DB hiccup must render the
+      // same HTML shell, not the app-level JSON 500.
+      apiLogger.error({ err, family }, 'email unsubscribe DB update failed')
+      return ctx.html(
+        confirmationPage(
+          'Something went wrong.',
+          'We couldn’t process your unsubscribe just now. Please try the link again, or manage emails from your account settings.',
+        ),
+        500,
+      )
     }
 
     apiLogger.info({ family }, 'email unsubscribe applied')
