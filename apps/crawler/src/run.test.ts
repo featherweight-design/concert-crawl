@@ -84,9 +84,13 @@ const mockCrawlVenue = vi
   .fn()
   .mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
 const mockTagEventsWithGenres = vi.fn().mockResolvedValue(undefined)
+// Contract: runSpotifyFanoutSafely never throws (it swallows internally), so
+// the resolved-null default is its worst-case observable behavior.
+const mockRunSpotifyFanoutSafely = vi.fn().mockResolvedValue(null)
 vi.mock('@concert-crawl/crawler-core', () => ({
   crawlVenue: mockCrawlVenue,
   tagEventsWithGenres: mockTagEventsWithGenres,
+  runSpotifyFanoutSafely: mockRunSpotifyFanoutSafely,
 }))
 
 // Mock logger
@@ -108,6 +112,7 @@ const SUCCESSFUL_CRAWL_RUN = {
   extractionStrategyUsed: 'structured_data',
   llmCostUsd: null,
   errorMessage: null,
+  insertedEventIds: ['evt-new-1', 'evt-new-2', 'evt-new-3'],
 }
 
 describe('runDailyCrawl', () => {
@@ -122,6 +127,7 @@ describe('runDailyCrawl', () => {
     mockCrawlVenue.mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
     mockBrowser.close.mockResolvedValue(undefined)
     mockRunPricePipeline.mockResolvedValue(undefined)
+    mockRunSpotifyFanoutSafely.mockResolvedValue(null)
     mockSentryCaptureException.mockReset()
     mockSentryLoggerInfo.mockReset()
     mockSentryLoggerWarn.mockReset()
@@ -313,6 +319,40 @@ describe('runDailyCrawl', () => {
     expect(mockRunPricePipeline).toHaveBeenCalledTimes(3)
   })
 
+  it('runs the spotify fan-out with each crawl’s inserted event ids (#763)', async () => {
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    expect(mockRunSpotifyFanoutSafely).toHaveBeenCalledTimes(4)
+    expect(mockRunSpotifyFanoutSafely).toHaveBeenCalledWith([
+      'evt-new-1',
+      'evt-new-2',
+      'evt-new-3',
+    ])
+  })
+
+  it('skips the spotify fan-out for failed crawls (#763)', async () => {
+    mockCrawlVenue.mockResolvedValue({
+      id: 'run-uuid-1',
+      status: 'failed',
+      insertedEventIds: [],
+    })
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    expect(mockRunSpotifyFanoutSafely).not.toHaveBeenCalled()
+  })
+
+  it('daily crawl counts are unaffected when the fan-out reports a run-level failure (#763)', async () => {
+    // null = runSpotifyFanoutSafely swallowed a run-level error internally.
+    mockRunSpotifyFanoutSafely.mockResolvedValue(null)
+    const { runDailyCrawl } = await import('./run.js')
+    const result = await runDailyCrawl()
+
+    expect(result.succeeded).toBe(4)
+    expect(result.failed).toBe(0)
+  })
+
   it('calls Sentry.captureException when crawlVenue resolves with status: failed', async () => {
     mockCrawlVenue.mockResolvedValueOnce({
       id: 'run-uuid-1',
@@ -430,6 +470,7 @@ describe('runTriggeredCrawls', () => {
     mockCrawlVenue.mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
     mockBrowser.close.mockResolvedValue(undefined)
     mockRunPricePipeline.mockResolvedValue(undefined)
+    mockRunSpotifyFanoutSafely.mockResolvedValue(null)
     mockSentryCaptureException.mockReset()
     mockSentryLoggerInfo.mockReset()
     mockSentryLoggerWarn.mockReset()
@@ -567,6 +608,30 @@ describe('runTriggeredCrawls', () => {
     const result = await runTriggeredCrawls()
 
     expect(result.processed).toBe(2)
+  })
+
+  it('runs the spotify fan-out with each trigger’s inserted event ids (#763)', async () => {
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+
+    expect(mockRunSpotifyFanoutSafely).toHaveBeenCalledTimes(2)
+    expect(mockRunSpotifyFanoutSafely).toHaveBeenCalledWith([
+      'evt-new-1',
+      'evt-new-2',
+      'evt-new-3',
+    ])
+  })
+
+  it('skips the spotify fan-out for failed triggered crawls (#763)', async () => {
+    mockCrawlVenue.mockResolvedValue({
+      id: 'run-uuid-1',
+      status: 'failed',
+      insertedEventIds: [],
+    })
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+
+    expect(mockRunSpotifyFanoutSafely).not.toHaveBeenCalled()
   })
 
   it('calls Sentry.captureException when crawlVenue resolves with status: failed', async () => {

@@ -6,6 +6,7 @@ import { db, venues, crawlTriggers, events } from '@concert-crawl/db'
 import { eq, and, inArray, isNull } from 'drizzle-orm'
 import {
   crawlVenue,
+  runSpotifyFanoutSafely,
   tagEventsWithGenres,
   type CrossVenueCandidate,
 } from '@concert-crawl/crawler-core'
@@ -155,6 +156,11 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
         }
         if (crawlRun.status !== 'failed') {
           await runPricesForVenue(trigger.venueId)
+          // #763 §10.1: Spotify new-show fan-out for this crawl's inserted
+          // events. Awaited (not detached) because this process hard-exits
+          // via process.exit(0) — a floating promise would be severed
+          // (#649). Never throws; a fan-out bug cannot fail the trigger.
+          await runSpotifyFanoutSafely(crawlRun.insertedEventIds)
         }
         const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done'
         await db
@@ -285,6 +291,9 @@ export async function runDailyCrawl(): Promise<{
             }
             if (result.value.status !== 'failed') {
               await runPricesForVenue(batch[idx].id)
+              // #763 §10.1 — same awaited-never-throwing fan-out as the
+              // triggered path (see comment there).
+              await runSpotifyFanoutSafely(result.value.insertedEventIds)
             }
           }
         } else {
