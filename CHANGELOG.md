@@ -1,3 +1,16 @@
+# [1.147.0](https://github.com/HartiganHM/concert-crawl/compare/v1.146.2...v1.147.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* **admin:** mobile 2×2 stat-card skeleton + Crawl Config input overflow ([#1093](https://github.com/HartiganHM/concert-crawl/issues/1093)) ([5ba2a0c](https://github.com/HartiganHM/concert-crawl/commit/5ba2a0c681743cd72e6ba2cc787231915216b92d)), closes [#1073](https://github.com/HartiganHM/concert-crawl/issues/1073) [#1076](https://github.com/HartiganHM/concert-crawl/issues/1076) [#1073](https://github.com/HartiganHM/concert-crawl/issues/1073) [#1076](https://github.com/HartiganHM/concert-crawl/issues/1076)
+* **spotify:** reverification-aware connect + staging-feedback UI fixes ([#763](https://github.com/HartiganHM/concert-crawl/issues/763)) ([41c5808](https://github.com/HartiganHM/concert-crawl/commit/41c5808f1a1ca5cdb06dce709d5e8020104e7218))
+
+
+### Features
+
+* **pwa:** [#1061](https://github.com/HartiganHM/concert-crawl/issues/1061) post-watch dismissal store ([#1092](https://github.com/HartiganHM/concert-crawl/issues/1092)) ([5dfc770](https://github.com/HartiganHM/concert-crawl/commit/5dfc770650403473a3919e0e7e3920d757b874bc)), closes [#1062](https://github.com/HartiganHM/concert-crawl/issues/1062) [#763](https://github.com/HartiganHM/concert-crawl/issues/763)
+
 ## [1.146.2](https://github.com/HartiganHM/concert-crawl/compare/v1.146.1...v1.146.2) (2026-07-19)
 
 
