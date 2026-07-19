@@ -21,8 +21,17 @@ vi.mock('@clerk/nextjs', () => ({
   }),
 }))
 
-let subscribeMock: ReturnType<typeof vi.fn>
-let unsubscribeMock: ReturnType<typeof vi.fn>
+type SubscribeResult =
+  | { status: 'subscribed'; id: string }
+  | { status: 'permission-denied' | 'unsupported' | 'error' }
+type UnsubscribeResult = { status: 'unsubscribed' | 'unsupported' | 'error' }
+
+let subscribeMock: ReturnType<
+  typeof vi.fn<(token: string) => Promise<SubscribeResult>>
+>
+let unsubscribeMock: ReturnType<
+  typeof vi.fn<(token: string, id?: string) => Promise<UnsubscribeResult>>
+>
 
 vi.mock('@/lib/push/client', () => ({
   getPushDeviceState: async () => ({
@@ -30,14 +39,23 @@ vi.mock('@/lib/push/client', () => ({
     permission: 'granted',
     subscribed: false,
   }),
-  subscribeToPush: (...args: unknown[]) => subscribeMock(...args),
-  unsubscribeFromPush: (...args: unknown[]) => unsubscribeMock(...args),
+  subscribeToPush: (token: string) => subscribeMock(token),
+  unsubscribeFromPush: (token: string, id?: string) =>
+    unsubscribeMock(token, id),
 }))
 
-let patchMock: ReturnType<typeof vi.fn>
+let patchMock: ReturnType<
+  typeof vi.fn<
+    (
+      token: string,
+      body: { pushEnabled: boolean },
+    ) => Promise<SpotifyConnectionView>
+  >
+>
 
 vi.mock('@/lib/spotify', () => ({
-  patchSpotifyConnection: (...args: unknown[]) => patchMock(...args),
+  patchSpotifyConnection: (token: string, body: { pushEnabled: boolean }) =>
+    patchMock(token, body),
 }))
 
 import { usePushToggle } from './use-push-toggle'
