@@ -294,6 +294,69 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 2)', () => {
     expect(summaries[1]?.metadata).toContain('"digestSent":0')
   })
 
+  it('ignores manual follows when matching — Spotify sources only (§8.1)', async () => {
+    await seedConnection(USER)
+    await seedPremium(USER)
+    clerkState.emails.set(USER, 'weekly@example.com')
+    // Token present but Spotify returns no artists — sync leaves only the
+    // manual follow below in place.
+    grantSpotify(USER, [])
+
+    const venue = await seedVenue({ slug: `venue-${USER}` })
+    await seedEvent(venue.id, {
+      artist: 'Manual Fave',
+      canonicalArtist: 'manual fave',
+      date: '2026-07-22',
+    })
+    await testDb.insert(userArtistFollows).values({
+      userId: USER,
+      artistName: 'Manual Fave',
+      source: 'manual',
+      canonicalName: 'manual fave',
+    })
+
+    await runSpotifyWeekly(NOW)
+
+    // The manual follow must not read as a Spotify match — the week is a
+    // zero-week (the show may still appear as a taste pick).
+    const costs = await testDb
+      .select()
+      .from(costTracking)
+      .where(eq(costTracking.service, 'spotify'))
+    const summary = costs.find((row) =>
+      (row.metadata ?? '').includes('"job":"spotify-weekly"'),
+    )
+    expect(summary?.metadata).toContain('"digestZeroWeek":1')
+  })
+
+  it('counts a failed send as digestFailures, not digestSent', async () => {
+    await seedConnection(USER)
+    await seedPremium(USER)
+    clerkState.emails.set(USER, 'weekly@example.com')
+    grantSpotify(USER, [{ id: 'sp1', name: 'Sleep Token' }])
+    const venue = await seedVenue({ slug: `venue-${USER}` })
+    await seedEvent(venue.id, {
+      artist: 'Sleep Token',
+      canonicalArtist: 'sleep token',
+      date: '2026-07-22',
+    })
+    // sendTransactionalEmail resolves 'failed' when RESEND_API_KEY is unset.
+    vi.stubEnv('RESEND_API_KEY', '')
+
+    await runSpotifyWeekly(NOW)
+
+    expect(resendState.sends).toHaveLength(0)
+    const costs = await testDb
+      .select()
+      .from(costTracking)
+      .where(eq(costTracking.service, 'spotify'))
+    const summary = costs.find((row) =>
+      (row.metadata ?? '').includes('"job":"spotify-weekly"'),
+    )
+    expect(summary?.metadata).toContain('"digestSent":0')
+    expect(summary?.metadata).toContain('"digestFailures":1')
+  })
+
   it('matches via canonical_supporting overlap too (§9.1)', async () => {
     await seedConnection(USER)
     await seedPremium(USER)

@@ -32,7 +32,7 @@
 
 import { pathToFileURL } from 'node:url'
 import * as Sentry from '@sentry/hono/node'
-import { and, eq, gte, lte, ne, sql } from 'drizzle-orm'
+import { and, eq, gte, inArray, lte, ne, sql } from 'drizzle-orm'
 import {
   costTracking,
   db,
@@ -272,6 +272,9 @@ const digestForUser = async (
     .where(
       and(
         eq(userArtistFollows.userId, userId),
+        // The digest copy says "artists you follow on Spotify" — manual
+        // follows (and future sources) are out of scope for this email.
+        inArray(userArtistFollows.source, ['spotify_followed', 'spotify_top']),
         ne(userArtistFollows.canonicalName, ''),
       ),
     )
@@ -313,7 +316,10 @@ const digestForUser = async (
   })
   // Only a real Resend delivery counts toward digestSent — the pipeline can
   // no-op (dedupe on cron retry, kill switch, missing env) without throwing.
+  // A 'failed' outcome is a real delivery failure and must show up in the
+  // summary; deduped/suppressed no-ops are neither sent nor failed.
   if (sendOutcome === 'sent') summary.digestSent += 1
+  if (sendOutcome === 'failed') summary.digestFailures += 1
   return 'sent'
 }
 
