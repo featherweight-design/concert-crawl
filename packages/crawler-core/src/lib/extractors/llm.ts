@@ -103,11 +103,25 @@ Rules:
 - date must be ISO format YYYY-MM-DD
 - confidence reflects how certain you are the extraction is accurate (0.0-1.0)
 - Only include actual upcoming events, not past events
-- If artist is unclear, use the event title as the artist
+- If artist is unclear, derive it from the event title — but still apply the headliner-only and run-on-splitting rules below (never copy a multi-act title verbatim into artist)
 - Pass an empty events array if no events are found
 - When a date has no year, infer it using today's date (provided in the user message): if the month/day is today or in the future within the current year, use the current year; if the month/day has already passed this year, use next year
 - rawTitle must be the EXACT verbatim copy of the event card's headline string from the page, byte-for-byte. Do NOT combine with subheads (e.g. "AEG Presents"), do NOT strip venue suffixes (e.g. "AT MISSION BALLROOM"), do NOT normalize or clean. The "title" field may be cleaned/combined, but rawTitle must be the unmodified source string. Downstream cross-venue routing depends on this
+- artist must be the HEADLINER ONLY — a single act. NEVER store a run-on list of several acts (e.g. "Dylan Earl, The Gray Jays, Johno Leeroy") in artist.
 - supportingArtists: list the opening/supporting acts in the order printed, and do NOT include the headliner (already in artist). If the page shows no distinct openers, use an empty array.
+- When a billing joins several acts with commas, "with", "w/", "and", "featuring", "feat.", "ft.", "&", "+", or "/", the FIRST act is the headliner (artist) and every act after it goes into supportingArtists. This applies whether the run-on appears in the artist field or embedded in the title:
+  - "Dylan Earl, The Gray Jays, Johno Leeroy" → artist "Dylan Earl", supportingArtists ["The Gray Jays", "Johno Leeroy"]
+  - "Hilary Duff with La Roux and Jade LeMac" → artist "Hilary Duff", supportingArtists ["La Roux", "Jade LeMac"]
+  - "The Widdler w/ Thelem, Roommate, Aimerie" → artist "The Widdler", supportingArtists ["Thelem", "Roommate", "Aimerie"]
+- BUT never fragment a single act's OWN name. Some band names legitimately contain a comma or ampersand — keep them whole with an empty supportingArtists:
+  - "Goodnight, Texas" → artist "Goodnight, Texas", supportingArtists []
+  - "hey, nothing" → artist "hey, nothing", supportingArtists []
+  - "Crosby, Stills & Nash" → artist "Crosby, Stills & Nash", supportingArtists []
+  - "Earth, Wind & Fire" → artist "Earth, Wind & Fire", supportingArtists []
+- A comma inside a tour or subtitle is NOT an opener. Route that text to tourName, not supportingArtists:
+  - "CHIODOS: ITS NOT YOU, ITS ME TOUR" → artist "Chiodos", tourName "It's Not You, It's Me Tour", supportingArtists []
+  - "Skillet: Comatose 20 Years, Still Screaming Tour" → artist "Skillet", tourName "Comatose 20 Years, Still Screaming Tour", supportingArtists []
+- When you cannot tell whether a comma separates two acts or sits inside one act's name, prefer keeping the name whole rather than fragmenting a real act.
 - tourName: only set this when the source names a tour/run distinctly (e.g. "The Eras Tour"). Do not put promoter/presenter text ("AEG Presents"), venue names, or opener names here. Use null when there is no tour name.
 
 Set isConcert on every event using these rules:
@@ -136,7 +150,8 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
             },
             artist: {
               type: 'string',
-              description: 'Main performing artist or band name',
+              description:
+                "Headliner only — a single act. Never a run-on list of multiple acts. If the billing joins several acts (commas, 'with', 'w/', 'and', 'feat.', '&', '+', '/'), put the first act here and the rest in supportingArtists. Do NOT fragment a single act's own name that contains a comma or ampersand (e.g. 'Goodnight, Texas', 'Earth, Wind & Fire').",
             },
             supportingArtists: {
               type: 'array',
