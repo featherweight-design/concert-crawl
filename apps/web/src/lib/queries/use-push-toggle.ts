@@ -33,7 +33,11 @@ export function usePushDeviceState() {
   return useQuery({
     queryKey: pushDeviceStateQueryKey,
     queryFn: getPushDeviceState,
+    // Fresh forever while the tab is focused, but re-read on every return to
+    // it — the user may have flipped the notification permission in browser
+    // settings, and 'always' is required to bypass the Infinity staleTime.
     staleTime: Infinity,
+    refetchOnWindowFocus: 'always',
   })
 }
 
