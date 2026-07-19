@@ -1,3 +1,10 @@
+## [1.154.1](https://github.com/HartiganHM/concert-crawl/compare/v1.154.0...v1.154.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **admin:** show platform strategy tokens + align topbar height with sidebar ([#1116](https://github.com/HartiganHM/concert-crawl/issues/1116)) ([8f02328](https://github.com/HartiganHM/concert-crawl/commit/8f023289fe776d017cd9a449bee3bd3f25e1f8ea)), closes [#1075](https://github.com/HartiganHM/concert-crawl/issues/1075)
+
 # [1.154.0](https://github.com/HartiganHM/concert-crawl/compare/v1.153.0...v1.154.0) (2026-07-19)
 
 
