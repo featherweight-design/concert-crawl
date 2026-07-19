@@ -27,14 +27,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // render — wiping the inline no-flash script's style tokens and data-theme
   // (seen after Clerk reverification reloads). localStorage is the persisted
   // source of truth (the inline script derives data-theme from it), so it
-  // wins over a divergent attribute; applyTheme is a no-op when the DOM is
-  // already correct.
+  // wins over a divergent attribute; applyTheme rewrites the same tokens the
+  // inline script set, so an already-correct DOM is unchanged.
   useEffect(() => {
     let persisted: string | null = null
     try {
       persisted = localStorage.getItem('cc-theme')
-    } catch {
+    } catch (err) {
       // Storage unavailable (private mode) — fall back to the DOM attribute.
+      console.warn('theme: localStorage unavailable on mount', err)
     }
     const attr = document.documentElement.getAttribute('data-theme')
     const resolved =
