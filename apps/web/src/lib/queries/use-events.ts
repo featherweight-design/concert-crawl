@@ -32,10 +32,14 @@ export function useEvents({
   // service worker can cache the response for offline browsing (it refuses to
   // cache credentialed responses). `error`-status connections still retain
   // follow rows server-side, so they count as having taste; `revoked` purges
-  // rows, so it does not.
+  // rows, so it does not. artistCount is the persisted count of those rows
+  // from the last sync — a connection with zero taste rows gets no
+  // followedArtists from the API, so it keeps the cacheable anonymous fetch.
   const { data: connection } = useSpotifyConnection()
   const hasTaste =
-    connection?.status === 'connected' || connection?.status === 'error'
+    connection != null &&
+    (connection.status === 'connected' || connection.status === 'error') &&
+    connection.artistCount > 0
   return useInfiniteQuery({
     // hasTaste is part of the key so pages fetched anonymously before the
     // connection query resolves aren't reused for the personalized view.
