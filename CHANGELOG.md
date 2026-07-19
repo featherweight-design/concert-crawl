@@ -1,3 +1,10 @@
+# [1.152.0](https://github.com/HartiganHM/concert-crawl/compare/v1.151.0...v1.152.0) (2026-07-19)
+
+
+### Features
+
+* **pwa:** watch.pricedrop fan-out on community-price corroborate ([#1107](https://github.com/HartiganHM/concert-crawl/issues/1107)) ([#1120](https://github.com/HartiganHM/concert-crawl/issues/1120)) ([013be03](https://github.com/HartiganHM/concert-crawl/commit/013be03807a736e96472ffbb23cc7a7f7738f5b5)), closes [#1102](https://github.com/HartiganHM/concert-crawl/issues/1102)
+
 # [1.151.0](https://github.com/HartiganHM/concert-crawl/compare/v1.150.1...v1.151.0) (2026-07-19)
 
 
