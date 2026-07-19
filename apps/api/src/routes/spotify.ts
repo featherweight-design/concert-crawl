@@ -26,6 +26,7 @@ import { apiLogger } from '../lib/logger.js'
 import { checkRateLimit } from '../lib/rate-limit.js'
 import { createSpotifyClient, SpotifyAuthError } from '../lib/spotify.js'
 import {
+  EMPTY_MATCH_SUMMARY,
   getMatchedUpcomingEventIds,
   getSpotifyMatchSummary,
 } from '../lib/spotify-matches.js'
@@ -66,7 +67,12 @@ spotifyRouter.use('*', clerkMiddleware())
 const toView = async (
   row: UserSpotifyConnection,
 ): Promise<SpotifyConnectionView> => {
-  const matches = await getSpotifyMatchSummary(row.userId)
+  // Broken states (error/revoked) render banners, not match stats — skip
+  // the match queries and zero the fields.
+  const matches =
+    row.status === 'connected'
+      ? await getSpotifyMatchSummary(row.userId)
+      : EMPTY_MATCH_SUMMARY
   return {
     status: row.status,
     displayName: row.displayName ?? null,

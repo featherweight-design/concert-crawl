@@ -67,7 +67,7 @@ export const ConnectedCard = ({
 
   const account = connection.displayName
     ? `${connection.displayName}${COPY.accountSuffix}`
-    : 'spotify.com'
+    : COPY.accountFallback
 
   return (
     <div className="flex flex-col">
@@ -148,7 +148,7 @@ export const ConnectedCard = ({
               >
                 {connection.lastSyncedAt
                   ? formatRelativeTime(connection.lastSyncedAt)
-                  : '—'}
+                  : COPY.lastSyncedNever}
               </span>
             )}
           </CardRow>

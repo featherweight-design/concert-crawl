@@ -474,6 +474,31 @@ describe('POST /v1/spotify/connection/sync', () => {
     expect(await getSpotifyFollows(USER)).toHaveLength(1)
   })
 
+  it('zeroes the match summary while the connection is broken', async () => {
+    setAuth(USER)
+    linkSpotifyAccount()
+    spotifyState.followedPages = [[{ id: 'a1', name: 'Beyoncé' }]]
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      artist: 'Beyoncé',
+      canonicalArtist: 'beyonce',
+      date: FUTURE_DATE,
+    })
+    await connect()
+
+    await backdateLastSynced(USER)
+    spotifyState.failStatus = 503
+    const res = await app.request('/v1/spotify/connection/sync', {
+      method: 'POST',
+    })
+    const body = (await res.json()) as ConnectionBody
+    expect(body.data.status).toBe('error')
+    // Broken states skip the match queries entirely — zeroed fields.
+    expect(body.data.denverArtistCount).toBe(0)
+    expect(body.data.denverShowCount).toBe(0)
+    expect(body.data.matchedArtists).toEqual([])
+  })
+
   it('marks the connection error (not revoked) on a transient Clerk failure', async () => {
     setAuth(USER)
     linkSpotifyAccount()
