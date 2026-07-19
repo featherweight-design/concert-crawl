@@ -1,3 +1,17 @@
+# [1.144.0](https://github.com/HartiganHM/concert-crawl/compare/v1.143.0...v1.144.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* derive FollowName.source from Drizzle schema + centralize venue/date separator (Copilot r1) ([fdbf9eb](https://github.com/HartiganHM/concert-crawl/commit/fdbf9ebec2a796bc705d41fbe3fa8da6e9d88e5b))
+* make matchedUpcomingCondition total — FALSE predicate for empty canonical set (Copilot r3) ([a549530](https://github.com/HartiganHM/concert-crawl/commit/a549530aa089a9daacde6a8c5f76d35754cec664))
+
+
+### Features
+
+* **api:** taste-picks discovery endpoint with deterministic ranking ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 8) ([f910662](https://github.com/HartiganHM/concert-crawl/commit/f91066281b3334b2c7dbbf92f7dc8426dc3a4436))
+* **web:** "Based on your taste" discovery shelf on Browse ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 8) ([d62c18d](https://github.com/HartiganHM/concert-crawl/commit/d62c18dece29d6fd9e1c54ebf91a04d2dea3f7e9))
+
 # [1.143.0](https://github.com/HartiganHM/concert-crawl/compare/v1.142.0...v1.143.0) (2026-07-19)
 
 
