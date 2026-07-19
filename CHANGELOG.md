@@ -1,3 +1,29 @@
+# [1.137.0](https://github.com/HartiganHM/concert-crawl/compare/v1.136.1...v1.137.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* **admin:** make Contests tab reachable on mobile Review page ([#1051](https://github.com/HartiganHM/concert-crawl/issues/1051)) ([ef68c59](https://github.com/HartiganHM/concert-crawl/commit/ef68c5936510afcd3cd1f7930250194def19cfde)), closes [#1028](https://github.com/HartiganHM/concert-crawl/issues/1028) [#1028](https://github.com/HartiganHM/concert-crawl/issues/1028)
+* **api:** count digestSent only on real sends ([ddd9461](https://github.com/HartiganHM/concert-crawl/commit/ddd9461f9497ef986f83ffc64c62de5436ba7c9e))
+* **api:** normalize API_PUBLIC_URL + fail-fast digest on missing Clerk key ([ff0f845](https://github.com/HartiganHM/concert-crawl/commit/ff0f845bea558ed9ae8e6a0540b5e4375d7d78e3))
+* **api:** render html error shell on unsubscribe db failure ([f0fedf8](https://github.com/HartiganHM/concert-crawl/commit/f0fedf85cde8b4a5b4c63dda176a5ef10d1902fb))
+* **api:** render HTML page for malformed unsubscribe links ([56e2d36](https://github.com/HartiganHM/concert-crawl/commit/56e2d36f59f4f4525042154349d62d54f3661810))
+* **api:** scope digest matching to spotify follows, count send failures ([a33acdf](https://github.com/HartiganHM/concert-crawl/commit/a33acdf0553964f1fccb3e77bfd29c57e6a1afc7))
+* **api:** treat empty EMAIL_UNSUBSCRIBE_SECRET as unconfigured (503) ([a68c4fa](https://github.com/HartiganHM/concert-crawl/commit/a68c4fae8a607a17d16075e6f584391c6b2a755d))
+
+
+### Features
+
+* **api:** signed one-click email unsubscribe route ([#763](https://github.com/HartiganHM/concert-crawl/issues/763)) ([cebf472](https://github.com/HartiganHM/concert-crawl/commit/cebf47259642a525d7a1c35df89fd5e09a940ec0))
+* **api:** spotify_digest email template + digest family footer ([#763](https://github.com/HartiganHM/concert-crawl/issues/763)) ([5ec5795](https://github.com/HartiganHM/concert-crawl/commit/5ec57959deee170a208b268e92cd153e6939f567))
+* **api:** weekly Spotify sync + digest cron job ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) §8.1) ([4e8979e](https://github.com/HartiganHM/concert-crawl/commit/4e8979e48d4dad73a291c524a8b2f8a8cc421615))
+* **db:** add spotify_digest email template key + config seed ([#763](https://github.com/HartiganHM/concert-crawl/issues/763)) ([56fc142](https://github.com/HartiganHM/concert-crawl/commit/56fc14239fd9b094f305b3f48ba4403bc1e9baad))
+
+
+### Performance Improvements
+
+* **api:** fetch zero-week taste picks once per run ([d0f1b7b](https://github.com/HartiganHM/concert-crawl/commit/d0f1b7b90351614747e39d007b12c4b7545299b7))
+
 ## [1.136.1](https://github.com/HartiganHM/concert-crawl/compare/v1.136.0...v1.136.1) (2026-07-19)
 
 
