@@ -88,8 +88,12 @@ export const OAuthHandoffSheet = ({
 
   // Pick a reload-interrupted connect back up once Clerk has the user again;
   // the freshly verified session goes straight to Spotify's authorize page.
+  // Checked at most once per mount — Clerk hands out a fresh user object on
+  // re-renders, and a re-fired consume would eat the mark mid-flight.
+  const resumeCheckedRef = useRef(false)
   useEffect(() => {
-    if (!user) return
+    if (!user || resumeCheckedRef.current) return
+    resumeCheckedRef.current = true
     if (!consumeSpotifyConnectPending()) return
     setResuming(true)
     void beginHandoff()
@@ -98,6 +102,9 @@ export const OAuthHandoffSheet = ({
 
   const close = () => {
     cancelledRef.current = true
+    // Cancel wins even across a reverification reload — a lingering mark
+    // would auto-resume a connect the user explicitly dismissed.
+    clearSpotifyConnectPending()
     setPhase('rail')
     setStarting(false)
     setResuming(false)

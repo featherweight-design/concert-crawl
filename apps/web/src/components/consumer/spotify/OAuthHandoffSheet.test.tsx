@@ -3,6 +3,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { SpotifyConnectStart } from '@/lib/spotify-connect'
+import type * as spotifyConnectModule from '@/lib/spotify-connect'
 
 const startSpotifyConnect =
   vi.fn<(...args: unknown[]) => Promise<SpotifyConnectStart>>()
@@ -10,7 +11,7 @@ const startSpotifyConnect =
 // Keep the real sessionStorage resume-intent helpers — the resume tests
 // below exercise them against jsdom storage; only the connect call is faked.
 vi.mock('@/lib/spotify-connect', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/lib/spotify-connect')>()
+  const actual = await importOriginal<typeof spotifyConnectModule>()
   return {
     ...actual,
     startSpotifyConnect: (...args: unknown[]) => startSpotifyConnect(...args),
@@ -210,7 +211,29 @@ describe('OAuthHandoffSheet', () => {
     // The sheet opens itself while resuming, even though the parent's open
     // state was reset by the reload.
     expect(screen.getByText(HANDOFF_COPY.title)).toBeTruthy()
+    // The resumed attempt re-marks its own intent while in flight, so a
+    // second reload mid-resume is protected too.
+    expect(sessionStorage.getItem('cc-spotify-connect-resume')).not.toBeNull()
+  })
+
+  it('clears the resume intent when the sheet is dismissed mid-flight', async () => {
+    startSpotifyConnect.mockReturnValue(
+      new Promise<SpotifyConnectStart>(() => undefined),
+    )
+    const onClose = vi.fn()
+    render(<OAuthHandoffSheet open onClose={onClose} />)
+    fireEvent.click(
+      screen.getByRole('button', { name: HANDOFF_COPY.continueCta }),
+    )
+    await waitFor(() => {
+      expect(sessionStorage.getItem('cc-spotify-connect-resume')).not.toBeNull()
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: HANDOFF_COPY.cancelCta }),
+    )
+    // Cancel wins across reloads — no lingering mark to auto-resume from.
     expect(sessionStorage.getItem('cc-spotify-connect-resume')).toBeNull()
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('does not resume from a stale intent', async () => {
