@@ -18,8 +18,8 @@ vi.mock('drizzle-orm', () => ({
   sql: vi.fn((parts, ...vals) => ({ parts, vals })),
 }))
 
-vi.mock('@concert-crawl/db', () => ({
-  db: {
+const { dbMock } = vi.hoisted(() => {
+  const mock: Record<string, unknown> = {
     select: vi.fn().mockReturnThis(),
     from: vi.fn().mockReturnThis(),
     leftJoin: vi.fn().mockReturnThis(),
@@ -33,7 +33,18 @@ vi.mock('@concert-crawl/db', () => ({
     delete: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
-  },
+    // #1107: PATCH /v1/admin/events/:id now runs its pre-state read + update
+    // inside a transaction (SELECT FOR UPDATE serializes concurrent PATCHes).
+    // The mock forwards the callback with the same chained db so tests can
+    // configure `returning` / `limit` as before.
+    transaction: vi.fn((cb: (tx: unknown) => unknown) => cb(mock)),
+    // `.for('update')` on the drizzle select chain used by the same handler.
+    for: vi.fn().mockReturnThis(),
+  }
+  return { dbMock: mock }
+})
+vi.mock('@concert-crawl/db', () => ({
+  db: dbMock,
   events: {
     id: 'id',
     verified: 'verified',

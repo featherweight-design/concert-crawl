@@ -605,13 +605,71 @@ eventsAdminRouter.patch(
     const { id } = ctx.req.valid('param')
     const body = ctx.req.valid('json')
 
-    const [updated] = await db
-      .update(events)
-      .set({ ...body, updatedAt: new Date() })
-      .where(eq(events.id, id))
-      .returning()
+    // Only bother with the transactional pre-state lock when the PATCH
+    // actually touches status or date — every other field is edit-only
+    // and doesn't need a serialize gate.
+    const touchesTransitionField =
+      typeof body.status === 'string' || typeof body.date === 'string'
 
-    if (!updated) {
+    // #1107: read pre-state + write inside a transaction so two concurrent
+    // PATCHes can't both observe the same pre-state and fan out twice.
+    // SELECT FOR UPDATE serializes on the row. Fan-out fires only for the
+    // transaction that actually observed the transition; a losing PATCH
+    // sees the new state and computes category=null.
+    const result = await db.transaction(async (tx) => {
+      let preUpdate: { status: string; date: string } | undefined
+      if (touchesTransitionField) {
+        const rows = await tx
+          .select({ status: events.status, date: events.date })
+          .from(events)
+          .where(eq(events.id, id))
+          .for('update')
+          .limit(1)
+        preUpdate = rows[0]
+      }
+
+      const [updated] = await tx
+        .update(events)
+        .set({ ...body, updatedAt: new Date() })
+        .where(eq(events.id, id))
+        .returning()
+
+      // Watch-update fan-out category — computed inside the tx against the
+      // locked pre-state row. Fires AFTER commit.
+      //
+      // Categories fired:
+      //   - watch.cancelled when status flips upcoming|postponed → cancelled
+      //   - watch.postponed when status flips upcoming|cancelled → postponed
+      //   - watch.postponed on a date change to an upcoming/postponed event
+      //
+      // A date change carries the same signal as a status flip to postponed
+      // (the show is on a different night), so we treat both as
+      // watch.postponed. If both a status flip AND a date change land in the
+      // same PATCH, we still fan out only once — status transitions win.
+      let category: 'watch.cancelled' | 'watch.postponed' | null = null
+      if (preUpdate && updated) {
+        if (
+          typeof body.status === 'string' &&
+          body.status !== preUpdate.status
+        ) {
+          if (body.status === 'cancelled') category = 'watch.cancelled'
+          else if (body.status === 'postponed') category = 'watch.postponed'
+        } else if (
+          typeof body.date === 'string' &&
+          body.date !== preUpdate.date &&
+          // Skip if this event is already cancelled — a stale ticker
+          // somewhere may still emit dates for cancelled events; watchers
+          // already got the cancel notification.
+          preUpdate.status !== 'cancelled'
+        ) {
+          category = 'watch.postponed'
+        }
+      }
+
+      return { updated, category }
+    })
+
+    if (!result.updated) {
       return ctx.json({ success: false, error: 'Not found' } as const, 404)
     }
 
@@ -620,7 +678,20 @@ eventsAdminRouter.patch(
     ctx.set('auditTargetId', id)
     ctx.set('auditActorId', actor.userId)
 
-    return ctx.json({ success: true, data: updated } as const)
+    if (result.category) {
+      await fanoutWatchNotification(
+        {
+          db,
+          notifications,
+          userEvents,
+          events,
+          venues,
+        },
+        { eventId: id, category: result.category },
+      )
+    }
+
+    return ctx.json({ success: true, data: result.updated } as const)
   },
 )
 

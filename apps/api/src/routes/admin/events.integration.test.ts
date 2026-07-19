@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, or } from 'drizzle-orm'
 import {
   auditLog,
   eventReports,
@@ -716,6 +716,140 @@ describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
     })
 
     expect(res.status).toBe(400)
+  })
+
+  it('fans out watch.cancelled to status=watching users when PATCH flips status to cancelled', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-08-05',
+      verified: true,
+      status: 'upcoming',
+    })
+    const WATCHER = 'user_patch_cancel_watcher'
+    const GOING = 'user_patch_cancel_going'
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+    await seedUserEvent(GOING, event.id, { status: 'going' })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'cancelled' }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select({ userId: notifications.userId })
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.cancelled'))
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
+  })
+
+  it('fans out watch.postponed on PATCH status flip to postponed', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-08-06',
+      verified: true,
+      status: 'upcoming',
+    })
+    const WATCHER = 'user_patch_postpone_watcher'
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'postponed' }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select({ userId: notifications.userId })
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'))
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
+  })
+
+  it('fans out watch.postponed on PATCH date change alone (no status change)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-08-07',
+      verified: true,
+      status: 'upcoming',
+    })
+    const WATCHER = 'user_patch_date_watcher'
+    await seedUserEvent(WATCHER, event.id, { status: 'watching' })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ date: '2026-08-14' }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select({ userId: notifications.userId })
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'))
+    expect(rows.map((row) => row.userId)).toEqual([WATCHER])
+  })
+
+  it('does not fan out on a PATCH that explicitly re-sends the current status and date', async () => {
+    // Explicitly PATCH with the same status + date so the handler's pre-
+    // state read + category computation actually run (a PATCH that only
+    // touches title/artist skips those entirely via the touchesTransitionField
+    // gate, which wouldn't exercise the dedup guarantee).
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-08-08',
+      verified: true,
+      status: 'upcoming',
+    })
+    await seedUserEvent('user_noop_watcher', event.id, { status: 'watching' })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({
+        status: 'upcoming',
+        date: '2026-08-08',
+      }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(
+        or(
+          eq(notifications.category, 'watch.cancelled'),
+          eq(notifications.category, 'watch.postponed'),
+        ),
+      )
+    expect(rows).toHaveLength(0)
+  })
+
+  it('does not fan out watch.postponed on a date change to an already-cancelled event', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-08-09',
+      verified: true,
+      status: 'cancelled',
+    })
+    await seedUserEvent('user_cancelled_watcher', event.id, {
+      status: 'watching',
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ date: '2026-08-15' }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select({ id: notifications.id })
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'))
+    expect(rows).toHaveLength(0)
   })
 })
 
