@@ -1,3 +1,18 @@
+# [1.143.0](https://github.com/HartiganHM/concert-crawl/compare/v1.142.0...v1.143.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* address Copilot round 2 on taste filter ([a5a29df](https://github.com/HartiganHM/concert-crawl/commit/a5a29dfdd24e47dd9e8cb84269d90192d87dfb68))
+* **web:** base filtered empty-state on server-confirmed tasteApplied, not raw query param ([4965720](https://github.com/HartiganHM/concert-crawl/commit/496572022b7aa5743de02569ed4ad635546cc0db))
+* **web:** release stale filterTaste param when entitlement resolves locked ([fd216da](https://github.com/HartiganHM/concert-crawl/commit/fd216dad0d2e5a00e312029d385dd3935dce9e24))
+
+
+### Features
+
+* **api:** taste=1 events-list filter gated by spotify-sync entitlement ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 7) ([1dc45df](https://github.com/HartiganHM/concert-crawl/commit/1dc45df0cb5513f4fb68085ed5b1d3f47a06931b))
+* **web:** following taste-filter chip + upsell on the browse filter bar ([#763](https://github.com/HartiganHM/concert-crawl/issues/763) PR 7) ([9b64545](https://github.com/HartiganHM/concert-crawl/commit/9b64545a919a3a0679d36376736a3580bab07f35))
+
 # [1.142.0](https://github.com/HartiganHM/concert-crawl/compare/v1.141.0...v1.142.0) (2026-07-19)
 
 
