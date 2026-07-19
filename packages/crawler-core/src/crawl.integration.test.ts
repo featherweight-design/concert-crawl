@@ -335,6 +335,78 @@ describe('crawlVenue — stale-event detection (#607)', () => {
     expect(rowA?.lastSeenAt.getTime()).toBe(oldSeenAt.getTime())
     expect(rowB?.lastSeenAt.getTime()).toBe(oldSeenAt.getTime())
   })
+
+  it('does not stamp first_missing_at when a successful crawl returns zero events', async () => {
+    // Regression for the Red Rocks incident: a successful HTTP fetch whose
+    // extraction returns zero events (bot-detected DOM, JS-repopulated grid,
+    // LLM whiff) must NOT wipe the venue's entire catalog. Pass 2 stamps
+    // first_missing_at on every unseen upcoming future event; with zero
+    // events seen, that would hide the whole calendar in one crawl —
+    // exactly what took the spotlight venue dark. The guard mirrors Pass 1:
+    // no seen events → touch nothing, and let the #624 went-dark alert flag
+    // it for a human instead.
+    const venue = await seedTestVenue()
+    const dateA = futureDate(14)
+    const dateB = futureDate(21)
+
+    const oldSeenAt = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    await db.insert(events).values([
+      {
+        venueId: venue.id,
+        title: 'Artist A Live',
+        artist: 'Artist A',
+        canonicalArtist: 'artist a',
+        canonicalTitle: 'artist a live',
+        date: dateA,
+        status: 'upcoming',
+        lastSeenAt: oldSeenAt,
+        firstMissingAt: null,
+      },
+      {
+        venueId: venue.id,
+        title: 'Artist B Live',
+        artist: 'Artist B',
+        canonicalArtist: 'artist b',
+        canonicalTitle: 'artist b live',
+        date: dateB,
+        status: 'upcoming',
+        lastSeenAt: oldSeenAt,
+        firstMissingAt: null,
+      },
+    ])
+
+    // Fetch succeeds, extraction returns nothing — the incident's shape.
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+    expect(run.status).toBe('success')
+    expect(run.eventsFound).toBe(0)
+
+    const [rowA] = await db
+      .select()
+      .from(events)
+      .where(and(eq(events.venueId, venue.id), eq(events.artist, 'Artist A')))
+    const [rowB] = await db
+      .select()
+      .from(events)
+      .where(and(eq(events.venueId, venue.id), eq(events.artist, 'Artist B')))
+
+    // Neither event may be flagged stale — a zero-event crawl is treated as
+    // "we learned nothing", not "everything is gone". last_seen_at also
+    // stays put because Pass 1 is skipped when no events were seen.
+    expect(rowA?.firstMissingAt).toBeNull()
+    expect(rowB?.firstMissingAt).toBeNull()
+    expect(rowA?.lastSeenAt.getTime()).toBe(oldSeenAt.getTime())
+    expect(rowB?.lastSeenAt.getTime()).toBe(oldSeenAt.getTime())
+  })
 })
 
 describe('crawlVenue — canonical-title upsert key (#821)', () => {

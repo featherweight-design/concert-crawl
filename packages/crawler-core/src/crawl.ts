@@ -810,18 +810,28 @@ export async function crawlVenue(
           ),
         )
     }
-    await db
-      .update(events)
-      .set({ firstMissingAt: startedAtDate })
-      .where(
-        and(
-          eq(events.venueId, venueId),
-          eq(events.status, 'upcoming'),
-          gte(events.date, DENVER_TODAY),
-          lt(events.lastSeenAt, startedAtDate),
-          isNull(events.firstMissingAt),
-        ),
-      )
+    // Guard Pass 2 the same way as Pass 1: only stamp first_missing_at when
+    // this run actually saw events. A zero-event extraction (bot-detected
+    // DOM, JS-repopulated grid, LLM whiff) is "we learned nothing", NOT
+    // "every show is gone" — without this guard a single empty crawl marks
+    // the venue's entire upcoming catalog missing and the consumer
+    // isNull(first_missing_at) filter hides it, which is exactly how the
+    // spotlight venue went dark. The #624 went-dark alert still fires so a
+    // human is notified; the data stays put until a real crawl confirms it.
+    if (seenEventCoords.length > 0) {
+      await db
+        .update(events)
+        .set({ firstMissingAt: startedAtDate })
+        .where(
+          and(
+            eq(events.venueId, venueId),
+            eq(events.status, 'upcoming'),
+            gte(events.date, DENVER_TODAY),
+            lt(events.lastSeenAt, startedAtDate),
+            isNull(events.firstMissingAt),
+          ),
+        )
+    }
 
     // Notify admin on low-confidence LLM extractions (structured data is always confidence=1.0)
     const lowConfidence =
