@@ -116,6 +116,8 @@ export const SPOTIFY_COPY = {
     pushAria: 'Push alerts when your artists add Denver shows',
     pushDenied:
       "Notifications are blocked for us in this browser. Allow them in your browser's site settings, then flip this on.",
+    pushPromptDismissed:
+      'No worries — flip this on whenever you change your mind and allow notifications.',
     pushUnsupported: "This browser can't do push notifications.",
     pushIosInstall:
       'On iPhone, push needs the app on your Home Screen first — Share → Add to Home Screen, then flip this on.',

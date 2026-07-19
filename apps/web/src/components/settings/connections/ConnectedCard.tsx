@@ -77,8 +77,8 @@ export const ConnectedCard = ({
   const pushSupport = pushDevice.data?.support
   const permissionDenied = pushDevice.data?.permission === 'denied'
   // subscribeToPush reports 'permission-denied' for a dismissed prompt too,
-  // where live permission can still be 'default' — surface the note but keep
-  // the toggle operable so the user can retry.
+  // where live permission can still be 'default' — surface a retry note (not
+  // the blocked wording) and keep the toggle operable.
   const promptRefused =
     pushToggle.data !== undefined &&
     !pushToggle.data.ok &&
@@ -98,11 +98,13 @@ export const ConnectedCard = ({
       ? { text: COPY.pushIosInstall, warning: false }
       : pushSupport === 'unsupported'
         ? { text: COPY.pushUnsupported, warning: false }
-        : permissionDenied || promptRefused
+        : permissionDenied
           ? { text: COPY.pushDenied, warning: true }
-          : pushErrored
-            ? { text: COPY.pushError, warning: true }
-            : null
+          : promptRefused
+            ? { text: COPY.pushPromptDismissed, warning: true }
+            : pushErrored
+              ? { text: COPY.pushError, warning: true }
+              : null
 
   const account = connection.displayName
     ? `${connection.displayName}${COPY.accountSuffix}`
