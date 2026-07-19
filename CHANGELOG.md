@@ -1,3 +1,10 @@
+## [1.146.1](https://github.com/HartiganHM/concert-crawl/compare/v1.146.0...v1.146.1) (2026-07-19)
+
+
+### Bug Fixes
+
+* **pwa:** restore apple-touch-icon so iOS Add-to-Home-Screen uses our art ([#1090](https://github.com/HartiganHM/concert-crawl/issues/1090)) ([2914d48](https://github.com/HartiganHM/concert-crawl/commit/2914d482b983db979de6e39a5d91db87aa65411e))
+
 # [1.146.0](https://github.com/HartiganHM/concert-crawl/compare/v1.145.0...v1.146.0) (2026-07-19)
 
 
