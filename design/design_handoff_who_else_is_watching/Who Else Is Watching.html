@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Who Else Is Watching (#762)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="watchers-data.jsx"></script>
+<script type="text/babel" src="watchers-surface.jsx"></script>
+<script type="text/babel" src="watchers-context.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+const { IOSDevice } = window;
+const { WATCHER_FIXTURES, WATCHERS_COPY, CCMark, NAMED_CAP } = window;
+const { WatchersSurface, AvatarStack, WAvatar, WatchZone, WatchersSkeleton } = window;
+const { EventHeroMobile, EventHeroDesktop } = window;
+
+const PHONE_W = 390, PHONE_H = 812;
+const NARROW_W = 320, NARROW_H = 800;
+const DESK_W = 1000, DESK_H = 700;
+
+// ── Stages ───────────────────────────────────────────────────
+function PhoneStage({ theme = "electric", width = PHONE_W, height = PHONE_H, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>{children}</IOSDevice>
+    </ThemeProvider>
+  );
+}
+function DeskStage({ theme = "electric", width = DESK_W, height = DESK_H, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width, height }}>
+      <div style={{ width, height, background: "var(--bg)", overflow: "hidden" }}>{children}</div>
+    </ThemeProvider>
+  );
+}
+// Bare padded themed stage for anatomy pieces.
+function BareStage({ theme = "electric", pad = 22, width, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad,
+        display: "flex", alignItems: "flex-start", justifyContent: "flex-start", boxSizing: "border-box" }}>
+        <div style={{ width: width || "100%" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+function Eyebrow({ children, color = "var(--fg-subtle)", style }) {
+  return <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+    letterSpacing: "0.14em", textTransform: "uppercase", color, ...style }}>{children}</div>;
+}
+
+// ── Tweaks ───────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "state": "many",
+  "active": false,
+  "loading": false,
+  "expanded": false
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio, TweakToggle } = window;
+const CONSUMER_THEMES = ["electric", "jade", "light"];
+const THEME_OPTS = CONSUMER_THEMES.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+const STATE_OPTS = [
+  { value: "one",  label: "1 named" },
+  { value: "few",  label: "2–3 named" },
+  { value: "many", label: "Named + N others" },
+  { value: "anon", label: "All others (no names)" },
+];
+
+function WatchTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Watchers">
+        <TweakSelect label="State" value={t.state} onChange={(v) => setT("state", v)} options={STATE_OPTS} />
+        <TweakToggle label="Async loading" value={t.loading} onChange={(v) => setT("loading", v)} />
+        <TweakToggle label="Roster expanded" value={t.expanded} onChange={(v) => setT("expanded", v)} />
+      </TweakSection>
+      <TweakSection label="Watch button">
+        <TweakToggle label="Already watching" value={t.active} onChange={(v) => setT("active", v)} />
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakRadio label="Theme" value={t.theme} onChange={(v) => setT("theme", v)} options={THEME_OPTS} />
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+
+function LiveMobile() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return <PhoneStage theme={t.theme}>
+    <EventHeroMobile watchers={WATCHER_FIXTURES[t.state]} active={t.active}
+      loading={t.loading} startExpanded={t.expanded} /></PhoneStage>;
+}
+function LiveDesktop() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return <DeskStage theme={t.theme} height={700}>
+    <EventHeroDesktop watchers={WATCHER_FIXTURES[t.state]} active={t.active}
+      loading={t.loading} startExpanded={t.expanded} /></DeskStage>;
+}
+
+// Small helper: just the surface, on a themed card, for anatomy.
+function SurfaceCard({ theme = "electric", watchers, loading, startExpanded, label, sub }) {
+  return (
+    <BareStage theme={theme} pad={20}>
+      {label && <Eyebrow color="var(--signal)" style={{ marginBottom: 4 }}>{label}</Eyebrow>}
+      {sub && <div style={{ fontFamily: "Inter, system-ui", fontSize: 11.5, color: "var(--fg-subtle)",
+        marginBottom: 12 }}>{sub}</div>}
+      <WatchersSurface watchers={watchers} loading={loading} startExpanded={startExpanded} ring="var(--bg)" />
+    </BareStage>
+  );
+}
+
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="Who Else Is Watching"
+        subtitle="#762 · Track 2 — a warm, honest social-proof surface on the event-detail Watch zone. Shows WHO in the crawl is watching a show (named handles + colored initials), degrading gracefully to an honest count when there are no names to drop. Replaces the retired 'N watching' count tail (Q6). Free tier, signed-in only. Tokens across Electric · Jade · Light, mobile + desktop parity, WCAG AA. Drive states from the Tweaks panel.">
+
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview"
+          subtitle="Flip watcher state (1 named · 2–3 named · named + N others · all-others), the async loading skeleton, roster expansion, watching-state, and theme (Electric · Jade · Light) from the Tweaks panel. Same surface, mobile + desktop.">
+          <DCArtboard id="live-m" label="Event detail · mobile" width={PHONE_W} height={PHONE_H}><LiveMobile/></DCArtboard>
+          <DCArtboard id="live-d" label="Event detail · desktop" width={DESK_W} height={700}><LiveDesktop/></DCArtboard>
+        </DCSection>
+
+        {/* 1 · THE FOUR STATES */}
+        <DCSection id="states" title="1 · The four populated states"
+          subtitle="Brief §4, in situ under the title. Named handles cap at 3 (density call — see README), then everyone else rolls into a '+ N more in the crawl' tail. When no watcher has a handle, the surface tells the truth: a warm count, no faked names.">
+          <DCArtboard id="st-one" label="1 named" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><EventHeroMobile watchers={WATCHER_FIXTURES.one}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="st-few" label="2–3 named" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><EventHeroMobile watchers={WATCHER_FIXTURES.few}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="st-many" label="Named + N others" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><EventHeroMobile watchers={WATCHER_FIXTURES.many}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="st-anon" label="All others · no names" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><EventHeroMobile watchers={WATCHER_FIXTURES.anon}/></PhoneStage>
+          </DCArtboard>
+          <DCPostIt top={-8} right={20}>Named = watcher has a handle. Beta anon users (handle:null) can't be named — they count into "+N". All anon → honest count-only.</DCPostIt>
+        </DCSection>
+
+        {/* 2 · LOADING */}
+        <DCSection id="loading" title="2 · Loading skeleton — async watcher fetch"
+          subtitle="The watcher list is fetched after the show renders (it's not blocking hero paint). While it's in flight: three shimmer discs + a skeleton line, aria-busy, with a visually-hidden 'Counting the crawl…' for screen readers. No layout shift when the real surface lands — the skeleton reserves the same 28px row.">
+          <DCArtboard id="load-m" label="Mobile · fetching" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><EventHeroMobile watchers={WATCHER_FIXTURES.many} loading/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="load-bare" label="Skeleton · isolated" width={420} height={130}>
+            <SurfaceCard theme="electric" watchers={WATCHER_FIXTURES.many} loading label="Loading"/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 3 · ADJACENCY */}
+        <DCSection id="adj" title="3 · Adjacency to the Watch button (Q6)"
+          subtitle="The owned layout spec. The Watch button is unchanged (28px outline, don't restyle). Below it: the watchers surface. The old count tail ('N watching · alerts on price + sold out') is retired per Q6 — the WHO surface replaces the count, and the alerts affordance it carried is rehomed as a muted hint under the inactive button so nothing is lost.">
+          <DCArtboard id="adj-inactive" label="Not watching yet (hint rehomed)" width={440} height={210}>
+            <BareStage theme="electric" pad={22}>
+              <Eyebrow color="var(--signal)" style={{ marginBottom: 12 }}>Watch zone · inactive</Eyebrow>
+              <WatchZone active={false} watchers={WATCHER_FIXTURES.many}/>
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="adj-active" label="Already watching" width={440} height={190}>
+            <BareStage theme="electric" pad={22}>
+              <Eyebrow color="var(--signal)" style={{ marginBottom: 12 }}>Watch zone · active</Eyebrow>
+              <WatchZone active={true} watchers={WATCHER_FIXTURES.many}/>
+            </BareStage>
+          </DCArtboard>
+          <DCPostIt top={-8} right={20}>Column · gap 12px. Button row (28px, untouched) → alerts hint (inactive only) → watchers surface. Avatars 24px, overlap −7px, 2px ring in the surface color behind.</DCPostIt>
+        </DCSection>
+
+        {/* 4 · ROSTER */}
+        <DCSection id="roster" title="4 · Roster expansion — 'see all N'"
+          subtitle="Handle interaction posture: plain text, because no profile pages exist in the codebase. Rather than dead-end links, the whole '+N' is a real button that expands an inline roster — avatars + handles as plain text, anon watchers named honestly as 'someone in the crawl'. This gives the 'who' without inventing navigation we don't have.">
+          <DCArtboard id="ros-collapsed" label="Collapsed (default)" width={440} height={150}>
+            <SurfaceCard theme="electric" watchers={WATCHER_FIXTURES.roster} label="Who else is watching"/>
+          </DCArtboard>
+          <DCArtboard id="ros-open" label="Expanded roster" width={440} height={480}>
+            <SurfaceCard theme="electric" watchers={WATCHER_FIXTURES.roster} startExpanded label="Who else is watching"/>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · ANATOMY */}
+        <DCSection id="anatomy" title="5 · Anatomy — avatars, stack, sentence"
+          subtitle="Colored initials reuse the profile / UserMenu avatarColor pattern (four tones, deterministic from handle) — no new dependency. Each tone doubles as fill and ink and holds WCAG AA on its own 22% tint across all three themes. Anon watchers are a neutral disc, never a faked letter.">
+          <DCArtboard id="an-avatars" label="Named tones + anon disc" width={420} height={150}>
+            <BareStage theme="electric" pad={22}>
+              <Eyebrow color="var(--signal)" style={{ marginBottom: 14 }}>Avatar tones (AA on tint)</Eyebrow>
+              <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                <WAvatar watcher={{ handle: "marisol", avatarColor: "signal" }} size={40}/>
+                <WAvatar watcher={{ handle: "dev", avatarColor: "accent" }} size={40}/>
+                <WAvatar watcher={{ handle: "priya", avatarColor: "success" }} size={40}/>
+                <WAvatar watcher={{ handle: "jonah", avatarColor: "warning" }} size={40}/>
+                <WAvatar watcher={{ handle: null }} size={40}/>
+              </div>
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="an-stacks" label="Stack + overflow chip" width={420} height={200}>
+            <BareStage theme="electric" pad={22}>
+              <Eyebrow style={{ marginBottom: 10 }}>2 named</Eyebrow>
+              <AvatarStack watchers={WATCHER_FIXTURES.few.slice(0,2)}/>
+              <div style={{ height: 14 }}/>
+              <Eyebrow style={{ marginBottom: 10 }}>Named + overflow</Eyebrow>
+              <AvatarStack watchers={WATCHER_FIXTURES.many}/>
+              <div style={{ height: 14 }}/>
+              <Eyebrow style={{ marginBottom: 10 }}>All anon</Eyebrow>
+              <AvatarStack watchers={WATCHER_FIXTURES.anon}/>
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="an-sentences" label="Sentence · all four states" width={460} height={344}>
+            <BareStage theme="electric" pad={22}>
+              {[["1 named","one"],["2–3 named","few"],["Named + N others","many"],["All others","anon"]].map(([lbl,key]) => (
+                <div key={key} style={{ marginBottom: 16 }}>
+                  <Eyebrow style={{ marginBottom: 8 }}>{lbl}</Eyebrow>
+                  <WatchersSurface watchers={WATCHER_FIXTURES[key]} expandable={false} ring="var(--bg)"/>
+                </div>
+              ))}
+            </BareStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 6 · THEME PARITY */}
+        <DCSection id="parity" title="6 · Theme parity — Electric · Jade · Light"
+          subtitle="The 'named + N others' state in each shipped theme. Every color reads from var(--*): handles = --fg, connective = --fg-muted, initials = their own tone token, '+N' chip = --surface-2 / --border-strong. Contrast verified AA in all three.">
+          {CONSUMER_THEMES.map((k) => (
+            <DCArtboard key={k} id={"par-" + k} label={CC_THEMES[k].label} width={PHONE_W} height={PHONE_H}>
+              <PhoneStage theme={k}><EventHeroMobile watchers={WATCHER_FIXTURES.many}/></PhoneStage>
+            </DCArtboard>
+          ))}
+        </DCSection>
+
+        {/* 7 · DESKTOP PARITY */}
+        <DCSection id="desk" title="7 · Desktop parity — same states, wide hero"
+          subtitle="No behavioral asymmetry: the desktop hero mounts the identical WatchZone with the identical states. Two representative states shown; drive the rest from the live desktop artboard in §0.">
+          <DCArtboard id="dk-few" label="Desktop · 2–3 named" width={DESK_W} height={700}>
+            <DeskStage theme="electric" height={700}><EventHeroDesktop watchers={WATCHER_FIXTURES.few}/></DeskStage>
+          </DCArtboard>
+          <DCArtboard id="dk-anon" label="Desktop · all others" width={DESK_W} height={700}>
+            <DeskStage theme="light" height={700}><EventHeroDesktop watchers={WATCHER_FIXTURES.anon}/></DeskStage>
+          </DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+      <WatchTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
