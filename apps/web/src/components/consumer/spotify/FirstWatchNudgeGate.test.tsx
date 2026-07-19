@@ -117,6 +117,40 @@ describe('FirstWatchNudgeGate', () => {
     )
   })
 
+  it('retries on a later watch when the eligibility fetch fails', async () => {
+    fetchEligibility.mockRejectedValueOnce(new Error('network down'))
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+    render(<FirstWatchNudgeGate />)
+    emit(watchSuccess(true))
+    await waitFor(() => expect(fetchEligibility).toHaveBeenCalledTimes(1))
+    expect(screen.queryByTestId('first-watch-nudge')).toBeNull()
+    emit(watchSuccess(true))
+    await waitFor(() => expect(fetchEligibility).toHaveBeenCalledTimes(2))
+    await waitFor(() =>
+      expect(screen.getByTestId('first-watch-nudge')).toBeTruthy(),
+    )
+    consoleError.mockRestore()
+  })
+
+  it('does not re-trigger when only the seen marker fails after display', async () => {
+    markSeen.mockRejectedValueOnce(new Error('network down'))
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+    render(<FirstWatchNudgeGate />)
+    emit(watchSuccess(true))
+    await waitFor(() =>
+      expect(screen.getByTestId('first-watch-nudge')).toBeTruthy(),
+    )
+    await waitFor(() => expect(consoleError).toHaveBeenCalled())
+    emit(watchSuccess(true))
+    await Promise.resolve()
+    expect(fetchEligibility).toHaveBeenCalledTimes(1)
+    consoleError.mockRestore()
+  })
+
   it('checks eligibility only once even across multiple watches', async () => {
     render(<FirstWatchNudgeGate />)
     emit(watchSuccess(true))

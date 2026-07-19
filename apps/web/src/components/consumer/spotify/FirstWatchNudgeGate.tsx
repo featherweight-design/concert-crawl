@@ -62,6 +62,7 @@ export const FirstWatchNudgeGate = () => {
       if (!isWatchOn(event.action.data)) return
       triggeredRef.current = true
       void (async () => {
+        let displayed = false
         try {
           const token = await getToken()
           if (!token) {
@@ -73,9 +74,15 @@ export const FirstWatchNudgeGate = () => {
           const { eligible } = await fetchSpotifyNudgeEligibility(token)
           if (!eligible) return
           setShow(true)
+          displayed = true
           // Marked seen when DISPLAYED — dismissal vs connect doesn't matter.
           await markSpotifyNudgeSeen(token)
         } catch (err) {
+          // Transient failure before the nudge rendered — release the
+          // trigger so a later watch retries (same reasoning as the token
+          // gap). Once displayed, once-per-page stands even if the seen
+          // marker failed.
+          if (!displayed) triggeredRef.current = false
           console.error('Failed to run first-watch Spotify nudge', err)
         }
       })()
