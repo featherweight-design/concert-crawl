@@ -245,13 +245,14 @@ eventsRouter.get(
       .offset(offset)
 
     // followedArtists overlay (#763 PR 6, §9.2): one extra query for any
-    // signed-in viewer (the matcher must load Spotify-sourced follow names
-    // to decide presence); anonymous requests skip it entirely, so the
-    // public path cost is unchanged.
+    // signed-in viewer with results (the matcher must load Spotify-sourced
+    // follow names to decide presence); anonymous and empty-page requests
+    // skip it entirely, so the public path cost is unchanged.
     const listAuth = getAuth(ctx)
-    const followMatcher = listAuth?.userId
-      ? await getFollowedArtistMatcher(listAuth.userId)
-      : null
+    const followMatcher =
+      listAuth?.userId && rows.length > 0
+        ? await getFollowedArtistMatcher(listAuth.userId)
+        : null
 
     // Batch-fetch corroborated submission vendor for community-priced events so the
     // browse card can show the correct trust tier (boxoffice ★, resale R, community C).

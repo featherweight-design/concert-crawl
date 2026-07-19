@@ -8,8 +8,16 @@ import { apiClient } from '@/lib/api'
 import { fetchPublicRead } from './public-read'
 import { useSpotifyConnection } from './use-spotify-connection'
 
-export function eventsQueryKey(paramsString: string, hasTaste: boolean) {
-  return ['events', paramsString, hasTaste] as const
+// personalizedFor is the viewer's userId when the response carries their
+// followedArtists overlay, null for the shared anonymous shape. Scoping the
+// personalized entry by userId matters because the app-level QueryClient
+// outlives sign-in sessions — an account switch must not briefly serve the
+// previous user's followedArtists (same reasoning as planStateQueryKey).
+export function eventsQueryKey(
+  paramsString: string,
+  personalizedFor: string | null,
+) {
+  return ['events', paramsString, personalizedFor] as const
 }
 
 interface UseEventsOptions {
@@ -25,7 +33,7 @@ export function useEvents({
   initialData,
   initialOffset = 0,
 }: UseEventsOptions) {
-  const { getToken } = useAuth()
+  const { getToken, userId } = useAuth()
   // The /v1/events list route personalizes for viewers with Spotify taste rows
   // (#763 PR 6: optional followedArtists per event). Only those viewers need a
   // credentialed fetch — everyone else keeps the anonymous request so the
@@ -40,10 +48,12 @@ export function useEvents({
     connection != null &&
     (connection.status === 'connected' || connection.status === 'error') &&
     connection.artistCount > 0
+  const personalizedFor = hasTaste && userId != null ? userId : null
   return useInfiniteQuery({
-    // hasTaste is part of the key so pages fetched anonymously before the
-    // connection query resolves aren't reused for the personalized view.
-    queryKey: eventsQueryKey(searchParamsString, hasTaste),
+    // personalizedFor is part of the key so pages fetched anonymously before
+    // the connection query resolves aren't reused for the personalized view,
+    // and personalized pages are never shared across viewers.
+    queryKey: eventsQueryKey(searchParamsString, personalizedFor),
     // Fetch anonymously when the viewer has no Spotify taste: an anonymous
     // request returns identical data AND stays cacheable by the service
     // worker, which keeps offline browsing working for the (default,
@@ -55,9 +65,17 @@ export function useEvents({
       params.set('offset', String(pageParam))
       params.set('limit', String(limit))
       const path = `/v1/events?${params.toString()}`
-      if (hasTaste) {
+      if (personalizedFor != null) {
         const token = await getToken()
-        if (token) return apiClient.get<EventsListResponse>(path, token)
+        // Throw instead of falling back to the anonymous fetch — with
+        // staleTime, a cached anonymous page under the personalized key
+        // would stick (no followedArtists) after a transient token gap.
+        // Throwing lets React Query retry (same reasoning as
+        // useSpotifyConnection).
+        if (!token) {
+          throw new Error('Auth token unavailable while fetching events')
+        }
+        return apiClient.get<EventsListResponse>(path, token)
       }
       return fetchPublicRead<EventsListResponse>(path, getToken)
     },
