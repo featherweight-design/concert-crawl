@@ -11,7 +11,7 @@ import {
   formatRunsBreakdown,
   formatLlmCostTotal,
 } from './crawl-stats'
-import type { CrawlRun } from '@concert-crawl/types'
+import type { CrawlRun, ExtractionStrategy } from '@concert-crawl/types'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 export interface CrawlStatusRow {
@@ -42,6 +42,12 @@ interface RawVenueStatus {
   consecutiveFailures: number
   blockedAt: string | null
   lastCrawledAt: string | null
+  // Configured strategy on the venue row — falls back into the Strategy
+  // column when `lastRun.extractionStrategyUsed` is null (never-crawled
+  // or currently-failing venues) so the column doesn't blank out (#1074).
+  // Typed against the canonical `ExtractionStrategy` union to keep invalid
+  // values from slipping through.
+  extractionStrategy: ExtractionStrategy | null
   lastRun: {
     id: string
     venueId: string
@@ -52,6 +58,10 @@ interface RawVenueStatus {
     eventsUpdated: number
     llmCostUsd: number | null
     errorMessage: string | null
+    // `string | null`, not `ExtractionStrategy` — the crawler stores
+    // `platform:<slug>` values on platform-routed runs (see
+    // `packages/crawler-core/src/crawl.ts`), so narrowing here would
+    // misrepresent the API contract.
     extractionStrategyUsed: string | null
     httpStatusCode: number | null
     durationMs: number | null
@@ -81,7 +91,8 @@ function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
     httpStatusCode: venue.lastRun?.httpStatusCode ?? null,
     consecutiveFailures: venue.consecutiveFailures,
     blockedAt: venue.blockedAt,
-    strategy: venue.lastRun?.extractionStrategyUsed ?? '—',
+    strategy:
+      venue.lastRun?.extractionStrategyUsed ?? venue.extractionStrategy ?? '—',
     error: venue.lastRun?.errorMessage ?? null,
   }
 }

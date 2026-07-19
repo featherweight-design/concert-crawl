@@ -376,6 +376,10 @@ crawlAdminRouter.get('/status', async (ctx) => {
       consecutiveFailures: venues.consecutiveFailures,
       blockedAt: venues.blockedAt,
       lastCrawledAt: venues.lastCrawledAt,
+      // #1074 — Dashboard falls back to the configured strategy when a
+      // venue hasn't produced a `lastRun.extractionStrategyUsed` yet
+      // (never-crawled or crawl-failed venues), so surface it here.
+      extractionStrategy: venues.extractionStrategy,
     })
     .from(venues)
     .orderBy(asc(venues.name))

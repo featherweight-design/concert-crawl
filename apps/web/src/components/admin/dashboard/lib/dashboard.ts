@@ -1,4 +1,10 @@
-import type { CrawlRun, DailyCost, Event, Venue } from '@concert-crawl/types'
+import type {
+  CrawlRun,
+  DailyCost,
+  Event,
+  ExtractionStrategy,
+  Venue,
+} from '@concert-crawl/types'
 import { formatCost } from '@/components/admin/primitives'
 
 export const LLM_BUDGET_USD = 20
@@ -80,6 +86,14 @@ export interface RawVenueStatus {
   consecutiveFailures: number
   blockedAt: string | null
   lastCrawledAt: string | null
+  // Configured strategy on the venue row — the Dashboard falls back to
+  // this when `lastRun.extractionStrategyUsed` is null (venue has never
+  // successfully crawled) so the Strategy column doesn't blank out for
+  // never-crawled or freshly-onboarded venues (#1074). Typed against the
+  // canonical `ExtractionStrategy` union rather than a bare string so
+  // invalid values don't slip in silently — matches how `Venue` is typed
+  // in `@concert-crawl/types`.
+  extractionStrategy: ExtractionStrategy | null
   lastRun: {
     id: string
     venueId: string
@@ -88,7 +102,16 @@ export interface RawVenueStatus {
     eventsFound: number
     eventsInserted: number
     errorMessage: string | null
+    // Deliberately typed as `string | null` (not `ExtractionStrategy`) —
+    // the crawler persists `platform:<slug>` values (e.g. `platform:aeg`)
+    // alongside the canonical enum for platform-routed runs. Narrowing
+    // this here would misrepresent the API contract and force awkward
+    // handling for platform rows.
     extractionStrategyUsed: string | null
+    // Per-run LLM spend — feeds the Cost column on the Dashboard's
+    // crawl health table (#1075). Null on runs that predate the cost
+    // instrumentation or never invoked the LLM cascade.
+    llmCostUsd: number | null
   } | null
 }
 
@@ -112,8 +135,16 @@ export function toStatusRow(venue: RawVenueStatus): CrawlStatusRow {
     status: venue.lastRun?.status ?? 'never',
     lastRunAt: venue.lastRun?.createdAt ?? null,
     eventsFound: venue.lastRun?.eventsFound ?? 0,
-    strategy: venue.lastRun?.extractionStrategyUsed ?? null,
-    cost: 0,
+    // #1074 — prefer the strategy actually used on the last run so an
+    // admin can see the cascade's final pick (structured / llm /
+    // manual), but fall back to the configured strategy for venues
+    // that haven't produced a successful run yet — otherwise recently-
+    // added or currently-failing venues would blank out this column.
+    strategy:
+      venue.lastRun?.extractionStrategyUsed ?? venue.extractionStrategy ?? null,
+    // #1075 — reflect the last run's LLM spend, not a hardcoded 0. The
+    // previous behaviour zeroed out the Cost column for every venue.
+    cost: venue.lastRun?.llmCostUsd ?? 0,
     error: venue.lastRun?.errorMessage ?? null,
     consecutiveFailures: venue.consecutiveFailures,
     blockedAt: venue.blockedAt,

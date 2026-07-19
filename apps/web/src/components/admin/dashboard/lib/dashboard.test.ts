@@ -521,6 +521,7 @@ describe('toStatusRow', () => {
       consecutiveFailures: 2,
       blockedAt: '2026-05-01T00:00:00Z',
       lastCrawledAt: '2026-05-01T00:00:00Z',
+      extractionStrategy: 'structured_data',
       lastRun: {
         id: 'run-1',
         venueId: 'v1',
@@ -530,16 +531,51 @@ describe('toStatusRow', () => {
         eventsInserted: 3,
         errorMessage: 'timeout',
         extractionStrategyUsed: 'llm',
+        llmCostUsd: 0.0123,
       },
     }
     const row = toStatusRow(raw)
     expect(row.venueId).toBe('v1')
     expect(row.venueName).toBe('Bluebird')
     expect(row.status).toBe('failed')
+    // Last-run strategy wins over the venue-configured strategy — the
+    // fallback only kicks in when `extractionStrategyUsed` is null.
     expect(row.strategy).toBe('llm')
+    expect(row.cost).toBe(0.0123)
     expect(row.consecutiveFailures).toBe(2)
     expect(row.blockedAt).toBe('2026-05-01T00:00:00Z')
     expect(row.error).toBe('timeout')
+  })
+
+  // #1074 — freshly-added or currently-failing venues have never produced a
+  // `lastRun.extractionStrategyUsed`, so the Strategy column used to blank
+  // out entirely. Fall back to the venue-configured strategy instead.
+  it('falls back to venue.extractionStrategy when lastRun.extractionStrategyUsed is null', () => {
+    const raw: RawVenueStatus = {
+      id: 'v1',
+      name: 'Bluebird',
+      active: true,
+      verified: true,
+      consecutiveFailures: 0,
+      blockedAt: null,
+      lastCrawledAt: '2026-05-01T00:00:00Z',
+      extractionStrategy: 'structured_data',
+      lastRun: {
+        id: 'run-1',
+        venueId: 'v1',
+        status: 'failed',
+        createdAt: '2026-05-01T00:00:00Z',
+        eventsFound: 0,
+        eventsInserted: 0,
+        errorMessage: 'timeout',
+        extractionStrategyUsed: null,
+        llmCostUsd: null,
+      },
+    }
+    const row = toStatusRow(raw)
+    expect(row.strategy).toBe('structured_data')
+    // #1075 — Cost column reflects real LLM spend; null coerces to 0.
+    expect(row.cost).toBe(0)
   })
 
   it('handles venue with no lastRun', () => {
@@ -551,11 +587,13 @@ describe('toStatusRow', () => {
       consecutiveFailures: 0,
       blockedAt: null,
       lastCrawledAt: null,
+      extractionStrategy: null,
       lastRun: null,
     }
     const row = toStatusRow(raw)
     expect(row.status).toBe('never')
     expect(row.strategy).toBeNull()
+    expect(row.cost).toBe(0)
     expect(row.lastRunAt).toBeNull()
   })
 })
