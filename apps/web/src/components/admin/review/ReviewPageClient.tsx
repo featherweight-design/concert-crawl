@@ -671,6 +671,7 @@ export const ReviewPageClient = ({
             priceEventsPage={pagination.page}
             priceEventsPageSize={pagination.pageSize}
             priceEventsTotal={priceEventsTotal}
+            priceEventsLoading={priceEventsQuery.isFetching}
             onTogglePriceFilter={togglePriceFilter}
             onPriceEventsPageChange={(next) =>
               onPaginationChange({ page: next, pageSize: pagination.pageSize })

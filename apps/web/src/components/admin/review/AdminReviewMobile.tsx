@@ -87,6 +87,12 @@ interface AdminReviewMobileProps {
   priceEventsPage: number
   priceEventsPageSize: number
   priceEventsTotal: number
+  // `isFetching` on the price-events query. The underlying React Query
+  // uses `placeholderData: (prev) => prev`, so during an all → missing
+  // toggle `priceEventsTotal` momentarily reflects the previous filter's
+  // total; gating the badge on this flag keeps it hidden until the new
+  // request resolves.
+  priceEventsLoading?: boolean
   onTogglePriceFilter: () => void
   onPriceEventsPageChange: (next: number) => void
   onPriceEventsPageSizeChange: (next: number) => void
@@ -601,6 +607,7 @@ export function AdminReviewMobile({
   priceEventsPage,
   priceEventsPageSize,
   priceEventsTotal,
+  priceEventsLoading = false,
   onTogglePriceFilter,
   onPriceEventsPageChange,
   onPriceEventsPageSizeChange,
@@ -646,8 +653,22 @@ export function AdminReviewMobile({
 
   const noopRowClick = (_id: string): void => undefined
 
-  const missingCount = priceEvents.filter((ev) => ev.priceMin === null).length
-  const priceCount = submissions.length + missingCount
+  // #1080 — the "Needs price" badge and Prices/Missing tab counts previously
+  // used `priceEvents.filter((ev) => ev.priceMin === null).length` and
+  // `missingEvents.length`, which count only the current paginated page —
+  // showing "20" when the true total is 1,183. When `pricesMissingOnly` is
+  // on, `priceEventsTotal` IS the server-side count of events needing a
+  // price; when off, we can't derive that number from the fetched slice,
+  // so mirror the desktop PriceCoverageTable pattern (#710) and hide the
+  // badge. Also gate on `!priceEventsLoading` — the query uses
+  // `placeholderData: (prev) => prev`, so during a filter toggle the badge
+  // would flash the previous filter's total until the new request resolved.
+  // The dropdown tab counts for Prices and Missing were dropped in #1079
+  // on desktop for the same accuracy reason — this keeps mobile in parity.
+  const needsPriceTotal =
+    !priceEventsLoading && pricesMissingOnly && priceEventsTotal > 0
+      ? priceEventsTotal
+      : null
 
   const tabOptions = [
     {
@@ -658,12 +679,12 @@ export function AdminReviewMobile({
     {
       key: 'prices',
       label: ADMIN_COPY.review.adminReviewMobile.tabPrices,
-      count: priceCount,
+      count: 0,
     },
     {
       key: 'missing',
       label: ADMIN_COPY.review.tabs.missing,
-      count: missingEvents.length,
+      count: 0,
     },
     { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents, count: 0 },
     {
@@ -1051,7 +1072,9 @@ export function AdminReviewMobile({
                 >
                   {ADMIN_COPY.review.adminReviewMobile.missingOnly}
                 </AdminButton>
-                <StatusBadge kind="warning">{missingCount}</StatusBadge>
+                {needsPriceTotal !== null && (
+                  <StatusBadge kind="warning">{needsPriceTotal}</StatusBadge>
+                )}
               </div>
             </div>
 
