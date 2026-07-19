@@ -1,3 +1,10 @@
+# [1.141.0](https://github.com/HartiganHM/concert-crawl/compare/v1.140.0...v1.141.0) (2026-07-19)
+
+
+### Features
+
+* **pwa:** [#971](https://github.com/HartiganHM/concert-crawl/issues/971) web push infra layer (schema + API + send pipeline + SW handlers) ([#1060](https://github.com/HartiganHM/concert-crawl/issues/1060)) ([70275b1](https://github.com/HartiganHM/concert-crawl/commit/70275b17dbb7a96cedaaf5c0df59e8a8097e7bd9))
+
 # [1.140.0](https://github.com/HartiganHM/concert-crawl/compare/v1.139.0...v1.140.0) (2026-07-19)
 
 
