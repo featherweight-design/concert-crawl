@@ -263,7 +263,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     params['filterWhere'] ??
     params['filterPrice'] ??
     params['filterVibe'] ??
-    params['filterTaste']
+    (tasteApplied ? '1' : undefined)
   const currentOffset = eventsResult.offset
 
   // Compute week navigation hrefs server-side so they can be passed as plain
