@@ -6,6 +6,7 @@
 // R2 read surfaces (taste filter, discovery, digest, push).
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
+import { zValidator } from '@hono/zod-validator'
 import { createClerkClient } from '@clerk/backend'
 import { eq } from 'drizzle-orm'
 import { z } from 'zod'
@@ -21,14 +22,17 @@ import type {
   SpotifyConnectionResponse,
   SpotifyConnectionView,
   SpotifyNudgeResponse,
+  SpotifyTastePicksResponse,
 } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
 import { checkRateLimit } from '../lib/rate-limit.js'
 import { createSpotifyClient, SpotifyAuthError } from '../lib/spotify.js'
+import { requireFeature } from '../middleware/entitlement.js'
 import {
   EMPTY_MATCH_SUMMARY,
   getMatchedUpcomingEventIds,
   getSpotifyMatchSummary,
+  getTastePicks,
 } from '../lib/spotify-matches.js'
 import {
   getSpotifyAccessToken,
@@ -433,6 +437,44 @@ spotifyRouter.delete('/connection', async (ctx) => {
 
   return ctx.body(null, 204)
 })
+
+// Shelf default is 10 per the spec's endpoint contract; the max is a hard
+// clamp so a tampered limit can't turn the shelf query into a full export.
+const tastePicksQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(25).default(10),
+})
+
+// GET /v1/spotify/taste-picks — "Based on your taste" discovery shelf
+// (#763 PR 8, eng spec §9.4). The one premium-gated route in this file:
+// requireFeature emits the same 401/403 entitlement_required shapes as the
+// events-list taste=1 gate, so the web client's locked-surface routing works
+// identically. Broken links return the connection status with zero picks so
+// the shelf can render the "taste on pause" / Reconnect state (design lock);
+// entitled-but-never-connected viewers get 'disconnected' (shelf hidden).
+spotifyRouter.get(
+  '/taste-picks',
+  requireFeature('spotify-sync'),
+  zValidator('query', tastePicksQuerySchema),
+  async (ctx) => {
+    const auth = getAuth(ctx)
+    // requireFeature already rejected anonymous requests — defensive only.
+    if (!auth?.userId)
+      return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+    const { limit } = ctx.req.valid('query')
+
+    const row = await loadConnection(auth.userId)
+    const data: SpotifyTastePicksResponse =
+      row === null
+        ? { status: 'disconnected', picks: [] }
+        : row.status !== 'connected'
+          ? { status: row.status, picks: [] }
+          : {
+              status: 'connected',
+              picks: await getTastePicks(auth.userId, limit),
+            }
+    return ctx.json({ success: true, data })
+  },
+)
 
 // GET /v1/spotify/nudge — post-first-watch connect nudge gate (PR 5).
 // Eligible only while the user has no connection row AND has never been

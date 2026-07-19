@@ -1036,3 +1036,35 @@ export type SpotifyConnectionResponse =
 export interface SpotifyNudgeResponse {
   eligible: boolean
 }
+
+// GET /v1/spotify/taste-picks — "Based on your taste" discovery shelf
+// (#763 PR 8, eng spec §9.4). Why the event matched, so the UI can render
+// the design's reason chips: top-artist matches carry the listening rank
+// ("In your top 5" / "You play them a lot"), followed-artist matches render
+// "Following". artistName is the display name of the matched artist.
+export type SpotifyTastePickReason =
+  | { kind: 'top'; rank: number; artistName: string }
+  | { kind: 'followed'; artistName: string }
+
+// One shelf card — a lean event projection (the shelf card shows art,
+// artist, venue · date, and a single price), not the full EventWithVenue.
+export interface SpotifyTastePick {
+  eventId: string
+  artist: string
+  title: string
+  imageUrl: string | null
+  date: string // YYYY-MM-DD, event-local (Mountain Time) calendar date
+  showTime: string | null // HH:MM:SS
+  ticketPriceMin: string | null // decimal string, matches events payloads
+  venueName: string
+  venueSlug: string
+  reason: SpotifyTastePickReason
+}
+
+// status mirrors the connection row so the shelf can render the design's
+// failure ("taste on pause" + Reconnect) state without a second request;
+// error/revoked/disconnected responses always carry an empty picks array.
+export interface SpotifyTastePicksResponse {
+  status: SpotifyConnectionStatus | 'disconnected'
+  picks: SpotifyTastePick[]
+}
