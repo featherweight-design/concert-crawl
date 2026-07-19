@@ -7,14 +7,14 @@ export default function AdminDashboardLoading() {
         <div className="admin-skeleton" style={{ width: 160, height: 14 }} />
       </div>
 
-      {/* Stat row */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 16,
-        }}
-      >
+      {/* Stat row — 2×2 on mobile, 4-across from xl up. Mirrors the Venues
+          loading grid rather than the resting-state stat cards, which use
+          `repeat(auto-fit, minmax(180px, 1fr))` and land on 3–4 columns well
+          before xl. The gated breakpoint is a deliberate approximation for
+          the skeleton (Hugh's Venues reference), not a claim of parity —
+          what matters is that the four boxes stop being 80px slivers on
+          320–414px viewports (#1073). */}
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, idx) => (
           <div
             key={idx}

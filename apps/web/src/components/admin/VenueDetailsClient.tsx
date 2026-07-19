@@ -1472,10 +1472,24 @@ export function VenueDetailsClient({ venue }: Props) {
               gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
               gap: 16,
               alignItems: 'start',
+              // #1076 — grid columns default to `min-width: auto`, so
+              // intrinsically-sized descendants (e.g. an input's placeholder
+              // or a `JetBrains Mono` value string) can push a track wider
+              // than 1fr and shove children past the VDSection's overflow-
+              // hidden edge. Force both tracks to shrink and let the width:
+              // 100% inputs actually respect their container.
+              minWidth: 0,
             }}
           >
             {/* Left column */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 16,
+                minWidth: 0,
+              }}
+            >
               {/* Platform routing (#721/#665) — sits BEFORE Extraction
                   Strategy because it overrides it when set */}
               <VDField
@@ -1816,7 +1830,14 @@ export function VenueDetailsClient({ venue }: Props) {
             </div>
 
             {/* Right column */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 16,
+                minWidth: 0,
+              }}
+            >
               {/* Fetch mode */}
               <VDField
                 label={ADMIN_COPY.venueDetailsClient.fields.fetchMode.label}
