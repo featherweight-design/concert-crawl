@@ -89,6 +89,11 @@ export const TEST_EMAIL_OPTIONS: readonly TestEmailOption[] = [
     group: 'Customer',
   },
   { key: 'winback', label: 'Win-back', group: 'Customer' },
+  {
+    key: 'spotify_digest',
+    label: 'Spotify weekly digest',
+    group: 'Customer',
+  },
   { key: 'admin_alert', label: 'Admin alert (generic)', group: 'Operational' },
   { key: 'invite_code', label: 'Invite code', group: 'Operational' },
   { key: 'crawl_failure', label: 'Crawl failure alert', group: 'Operational' },
@@ -163,6 +168,60 @@ const TRANSACTIONAL_TEST_VARS: {
     giftEndsAt: '2026-07-20T00:00:00.000Z',
   },
   winback: { tierName: 'Premium' },
+  spotify_digest: {
+    shows: [
+      {
+        artist: 'Sleep Token',
+        tourName: 'Even In Arcadia Tour',
+        venue: 'Fillmore Auditorium',
+        dateLabel: 'Thu · Jul 17',
+        priceLabel: '$42',
+        url: 'https://concertcrawl.app/events/sample-1',
+      },
+      {
+        artist: 'Wednesday',
+        tourName: 'with Lightning Bug',
+        venue: 'Mission Ballroom',
+        dateLabel: 'Fri · Jul 18',
+        priceLabel: '$30',
+        url: 'https://concertcrawl.app/events/sample-2',
+      },
+      {
+        artist: 'Geese',
+        tourName: '3D Country Tour',
+        venue: 'Ogden Theatre',
+        dateLabel: 'Sat · Jul 19',
+        priceLabel: '$25',
+        url: 'https://concertcrawl.app/events/sample-3',
+      },
+      {
+        artist: 'Mannequin Pussy',
+        tourName: 'I Got Heaven Tour',
+        venue: 'Bluebird Theater',
+        dateLabel: 'Sun · Jul 20',
+        priceLabel: '$28',
+        url: 'https://concertcrawl.app/events/sample-4',
+      },
+      {
+        artist: 'Turnstile',
+        tourName: null,
+        venue: 'Mission Ballroom',
+        dateLabel: 'Mon · Jul 21',
+        priceLabel: null,
+        url: 'https://concertcrawl.app/events/sample-5',
+      },
+      {
+        artist: 'Hop Along',
+        tourName: null,
+        venue: 'Larimer Lounge',
+        dateLabel: 'Tue · Jul 22',
+        priceLabel: '$22',
+        url: 'https://concertcrawl.app/events/sample-6',
+      },
+    ],
+    tastePicks: [],
+    unsubscribeUrl: null,
+  },
 }
 
 // Derived from the fixture map, not a runtime @concert-crawl/db export, so this

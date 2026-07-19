@@ -79,6 +79,36 @@ const sampleVars: { [K in EmailTemplateKey]: EmailTemplateVars[K] } = {
     giftEndsAt: '2026-12-01T12:00:00Z',
   },
   winback: { tierName: 'Premium' },
+  spotify_digest: {
+    shows: [
+      {
+        artist: 'Sleep Token',
+        tourName: 'Even In Arcadia Tour',
+        venue: 'Fillmore Auditorium',
+        dateLabel: 'Thu · Jul 17',
+        priceLabel: '$42',
+        url: 'https://concertcrawl.app/events/sample-1',
+      },
+      {
+        artist: 'Wednesday',
+        tourName: 'with Lightning Bug',
+        venue: 'Mission Ballroom',
+        dateLabel: 'Fri · Jul 18',
+        priceLabel: '$30',
+        url: 'https://concertcrawl.app/events/sample-2',
+      },
+      {
+        artist: 'Geese',
+        tourName: '3D Country Tour',
+        venue: 'Ogden Theatre',
+        dateLabel: 'Sat · Jul 19',
+        priceLabel: '$25',
+        url: 'https://concertcrawl.app/events/sample-3',
+      },
+    ],
+    tastePicks: [],
+    unsubscribeUrl: null,
+  },
 }
 
 // Reads the value after a flag, failing fast if it's missing or is itself

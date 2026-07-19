@@ -17,8 +17,10 @@ import {
   LEGAL_LINE,
   ME,
   escapeHtml,
+  familyUnsubscribeLabel,
   notificationsUrl,
   planUrl,
+  type EmailFamily,
 } from './layout.js'
 import {
   PRICE_PROMISE,
@@ -265,16 +267,25 @@ export const amountHero = ({
 
 // ── EmFooter ─────────────────────────────────────────────────
 interface FooterInput {
-  family: 'billing' | 'product'
+  family: EmailFamily
   showManage: boolean
   note?: string
+  // Per-family one-click unsubscribe URL (digest family, #763 §8.2). When
+  // absent, the per-family link falls back to the Settings page like every
+  // other family.
+  unsubscribeUrl?: string
 }
 
-export const footerRow = ({ family, showManage, note }: FooterInput): string =>
+export const footerRow = ({
+  family,
+  showManage,
+  note,
+  unsubscribeUrl,
+}: FooterInput): string =>
   `<tr><td style="padding: 18px 26px 24px; border-top: 1px solid ${ME.border};">
 ${note === undefined ? '' : `<div style="font-family: ${FONT}; font-size: 11.5px; color: ${ME.subtle}; line-height: 1.6; margin-bottom: 10px;">${escapeHtml(note)}</div>`}
 <div style="font-family: ${FONT}; font-size: 12px; line-height: 1.9;">
-<a href="${escapeHtml(notificationsUrl())}" style="color: ${ME.muted}; text-decoration: underline;">Turn off ${family} emails</a>
+<a href="${escapeHtml(unsubscribeUrl ?? notificationsUrl())}" style="color: ${ME.muted}; text-decoration: underline;">${familyUnsubscribeLabel(family)}</a>
 <span style="color: ${ME.subtle};"> · </span>
 <a href="${escapeHtml(notificationsUrl())}" style="color: ${ME.subtle}; text-decoration: underline;">all email settings</a>
 ${showManage ? `<span style="color: ${ME.subtle};"> · </span><a href="${escapeHtml(planUrl())}" style="color: ${ME.subtle}; text-decoration: underline;">manage subscription</a>` : ''}

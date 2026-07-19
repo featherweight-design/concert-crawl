@@ -17,6 +17,7 @@ import { renderRenewalReceiptAnnual } from './templates/renewal-receipt-annual.j
 import { renderRenewalReceiptMonthly } from './templates/renewal-receipt-monthly.js'
 import { renderWelcomeGifted } from './templates/welcome-gifted.js'
 import { renderWelcomePaid } from './templates/welcome-paid.js'
+import { renderSpotifyDigest } from './templates/spotify-digest.js'
 import { renderWinback } from './templates/winback.js'
 import type { EmailTemplateVars, TemplateRenderer } from './types.js'
 
@@ -34,6 +35,7 @@ const templateRegistry: {
   card_expiring_soon: renderCardExpiringSoon,
   gifting_ending_notice: renderGiftingEndingNotice,
   winback: renderWinback,
+  spotify_digest: renderSpotifyDigest,
 }
 
 export const getTemplateRenderer = <K extends EmailTemplateKey>(

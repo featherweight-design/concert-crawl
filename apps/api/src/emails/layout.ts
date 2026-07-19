@@ -72,10 +72,21 @@ ${bodyRows}
 </body>
 </html>`
 
+// 'digest' is the #763 weekly Spotify digest family — its per-family footer
+// link is a signed one-click unsubscribe URL instead of Settings (spec §8.2),
+// supplied by the template via `unsubscribeUrl`.
+export type EmailFamily = 'billing' | 'product' | 'digest'
+
+export const familyUnsubscribeLabel = (family: EmailFamily): string =>
+  family === 'digest'
+    ? 'Turn off the weekly digest'
+    : `Turn off ${family} emails`
+
 interface TextShellInput {
   body: string
-  family: 'billing' | 'product'
+  family: EmailFamily
   showManage: boolean
+  unsubscribeUrl?: string
 }
 
 const TEXT_RULE = '----------------------------------------'
@@ -87,12 +98,13 @@ export const renderTextShell = ({
   body,
   family,
   showManage,
+  unsubscribeUrl,
 }: TextShellInput): string => {
   const lines = [
     body,
     '',
     TEXT_RULE,
-    `Turn off ${family} emails:  ${notificationsUrl()}`,
+    `${familyUnsubscribeLabel(family)}:  ${unsubscribeUrl ?? notificationsUrl()}`,
     `All email settings:       ${notificationsUrl()}`,
     ...(showManage ? [`Manage subscription:      ${planUrl()}`] : []),
     LEGAL_LINE,

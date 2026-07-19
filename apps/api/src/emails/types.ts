@@ -81,6 +81,28 @@ export interface EmailTemplateVars {
   winback: {
     tierName: string | null
   }
+  spotify_digest: {
+    // All of the week's matched shows — the template features the first 5 and
+    // collapses the rest into "+N more this week". Empty = zero-week variant.
+    shows: DigestEmailShow[]
+    // Up to 2 taste-based picks shown ONLY on zero weeks (design lock: the
+    // email always earns its open).
+    tastePicks: DigestEmailShow[]
+    // Signed one-click opt-out (#763 §8.2). Null when EMAIL_UNSUBSCRIBE_SECRET
+    // is unset — the footer then falls back to the Settings link.
+    unsubscribeUrl: string | null
+  }
+}
+
+// One digest show row (#763 spec §8.2, design mock digest-email.jsx). Labels
+// arrive pre-formatted — the job owns Denver-timezone date and price display.
+export interface DigestEmailShow {
+  artist: string
+  tourName: string | null
+  venue: string
+  dateLabel: string
+  priceLabel: string | null
+  url: string
 }
 
 // Distributive union keeping templateKey ↔ vars correlated, so a queued send
