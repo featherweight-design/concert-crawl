@@ -610,6 +610,34 @@ describe('Admin venue routes', () => {
     expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
   })
 
+  it('PATCH /v1/admin/venues/:id requires a selector for a browser venue whose platformVenueId is an empty string', async () => {
+    adminAuth()
+    // platform='aeg' with an empty-string platformVenueId is NOT handled:
+    // canHandle requires platformVenueId.length > 0. An empty/whitespace id
+    // still falls through to the HTML cascade, so the selector is required —
+    // asking dispatch() directly (rather than a loose != null check) is what
+    // catches this. The PATCH does not touch platform fields, so the platform
+    // orphan guard does not fire first.
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        {
+          ...mockDb._mockVenueRow,
+          crawlWaitForSelector: null,
+          platform: 'aeg',
+          platformVenueId: '',
+          apiProvider: null,
+        },
+      ]),
+    )
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ crawlMode: 'browser' }),
+    })
+    expect(res.status).toBe(400)
+    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
+  })
+
   it('PATCH /v1/admin/venues/:id does not fire the selector guard on an unrelated PATCH', async () => {
     adminAuth()
     mockDb.select.mockReturnValue(

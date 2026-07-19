@@ -583,12 +583,14 @@ venuesAdminRouter.patch(
     // on before capture, so a slow client-side render is captured as an empty
     // DOM → 0 events (how Hi-Dive and Red Rocks went dark on unlucky runs).
     // A venue is exempt only when a platform / API fetcher can FULLY handle
-    // it: dispatch()'s canHandle() also requires the id field (AEG needs
-    // platformVenueId, VenuePilot needs apiAccountId). A venue with the
-    // platform/provider set but no id is NOT handled by any fetcher — it still
-    // falls through to the HTML cascade, so it needs the selector like any
-    // other browser venue. Only checked when the payload touches crawlMode or
-    // the selector, so unrelated PATCHes never fail on a pre-existing venue.
+    // it. We ask dispatch() directly on the merged venue state rather than
+    // re-deriving the match: canHandle() requires more than a non-null id
+    // (AEG needs platformVenueId.length > 0, VenuePilot apiAccountId.trim()
+    // .length > 0), so an empty-string / whitespace id still falls through to
+    // the HTML cascade and needs the selector. A venue with the platform/
+    // provider set but no usable id is NOT handled by any fetcher. Only
+    // checked when the payload touches crawlMode or the selector, so unrelated
+    // PATCHes never fail on a pre-existing venue.
     const nextCrawlMode =
       body.crawlMode !== undefined ? body.crawlMode : existing.crawlMode
     const nextWaitForSelector =
@@ -598,8 +600,13 @@ venuesAdminRouter.patch(
     const touchesBrowserGate =
       body.crawlMode !== undefined || body.crawlWaitForSelector !== undefined
     const platformFetcherHandles =
-      (nextPlatform != null && nextPlatformVenueId != null) ||
-      (nextApiProvider != null && nextApiAccountId != null)
+      dispatch({
+        ...existing,
+        platform: nextPlatform,
+        platformVenueId: nextPlatformVenueId,
+        apiProvider: nextApiProvider,
+        apiAccountId: nextApiAccountId,
+      }) !== null
     if (
       touchesBrowserGate &&
       nextCrawlMode === 'browser' &&
