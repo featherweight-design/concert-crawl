@@ -20,7 +20,7 @@ export const SectionHead = ({
       flexWrap: 'wrap',
     }}
   >
-    <div>
+    <div style={{ minWidth: 0, flex: '1 1 auto' }}>
       {eyebrow && (
         <div
           style={{
@@ -36,6 +36,12 @@ export const SectionHead = ({
           {eyebrow}
         </div>
       )}
+      {/* `overflowWrap: anywhere` lets unbroken tokens (long @handles,
+          email addresses) break rather than run off the right edge at
+          320px — the H1 previously clipped mid-string on admin user
+          detail (#986). Paired with `minWidth: 0` on the flex-child
+          parent so the intrinsic min-content of the H1 doesn't pin the
+          column to the widest token. */}
       <h1
         style={{
           margin: 0,
@@ -44,6 +50,7 @@ export const SectionHead = ({
           fontWeight: 700,
           letterSpacing: '-0.025em',
           color: 'var(--fg)',
+          overflowWrap: 'anywhere',
         }}
       >
         {title}
