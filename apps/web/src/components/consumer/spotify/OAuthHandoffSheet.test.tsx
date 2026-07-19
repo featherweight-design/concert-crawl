@@ -84,6 +84,37 @@ describe('OAuthHandoffSheet', () => {
     expect(screen.getByText(HANDOFF_COPY.title)).toBeTruthy()
   })
 
+  it('does not redirect when cancelled while the handoff is in flight', async () => {
+    let resolveConnect: (value: SpotifyConnectStart) => void = () => undefined
+    startSpotifyConnect.mockReturnValue(
+      new Promise<SpotifyConnectStart>((resolve) => {
+        resolveConnect = resolve
+      }),
+    )
+    const assign = vi.fn()
+    Object.defineProperty(window, 'location', {
+      writable: true,
+      value: { origin: 'http://localhost', assign },
+    })
+    const onClose = vi.fn()
+    render(<OAuthHandoffSheet open onClose={onClose} />)
+    fireEvent.click(
+      screen.getByRole('button', { name: HANDOFF_COPY.continueCta }),
+    )
+    fireEvent.click(
+      screen.getByRole('button', { name: HANDOFF_COPY.cancelCta }),
+    )
+    resolveConnect({
+      status: 'redirect',
+      url: 'https://accounts.spotify.com/authorize',
+    })
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
+    // Let the in-flight promise chain settle before asserting no redirect.
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(assign).not.toHaveBeenCalled()
+  })
+
   it('dismisses the failure state via "Maybe later"', async () => {
     startSpotifyConnect.mockResolvedValue({ status: 'error' })
     const onClose = vi.fn()

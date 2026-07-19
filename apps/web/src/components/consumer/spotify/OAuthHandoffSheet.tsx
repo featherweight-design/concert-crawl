@@ -6,7 +6,7 @@
 // a Clerk instance without the Spotify provider configured) swaps to the
 // "Spotify's not picking up" state — no crash, nothing linked.
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useUser } from '@clerk/nextjs'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
@@ -34,6 +34,9 @@ export const OAuthHandoffSheet = ({
 }: OAuthHandoffSheetProps) => {
   const { user } = useUser()
   const [phase, setPhase] = useState<HandoffPhase>('rail')
+  // Dismissing while startSpotifyConnect is in flight must not redirect the
+  // user to Spotify once the promise settles — cancel wins.
+  const cancelledRef = useRef(false)
 
   const beginHandoff = async () => {
     if (phase === 'starting') return
@@ -41,9 +44,11 @@ export const OAuthHandoffSheet = ({
       setPhase('error')
       return
     }
+    cancelledRef.current = false
     setPhase('starting')
     const redirectUrl = `${window.location.origin}${SPOTIFY_RETURN_PATH}`
     const result = await startSpotifyConnect(user, redirectUrl)
+    if (cancelledRef.current) return
     if (result.status === 'redirect') {
       window.location.assign(result.url)
       return
@@ -52,6 +57,7 @@ export const OAuthHandoffSheet = ({
   }
 
   const close = () => {
+    cancelledRef.current = true
     setPhase('rail')
     onClose()
   }

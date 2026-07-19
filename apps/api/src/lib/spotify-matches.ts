@@ -116,12 +116,12 @@ export async function getSpotifyMatchSummary(
     }
   }
 
-  const matchedArtists: string[] = []
-  for (const canonical of matchedCanonicals) {
-    const display = displayByCanonical.get(canonical)
-    if (display) matchedArtists.push(display)
-    if (matchedArtists.length >= MATCHED_ARTIST_CAP) break
-  }
+  // Sorted before the cap so the chip list is deterministic — the event
+  // query has no ORDER BY, and Set iteration would leak that row order.
+  const matchedArtists = [...matchedCanonicals]
+    .flatMap((canonical) => displayByCanonical.get(canonical) ?? [])
+    .sort((left, right) => left.localeCompare(right))
+    .slice(0, MATCHED_ARTIST_CAP)
 
   return {
     denverArtistCount: matchedCanonicals.size,

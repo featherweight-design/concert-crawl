@@ -701,7 +701,8 @@ describe('denver match summary on the connection payload', () => {
     const body = (await res.json()) as ConnectionBody
     expect(body.data.denverArtistCount).toBe(2)
     expect(body.data.denverShowCount).toBe(2)
-    expect(body.data.matchedArtists.sort()).toEqual(['Beyoncé', 'Sigur Rós'])
+    // No .sort() on the received list — the API sorts deterministically.
+    expect(body.data.matchedArtists).toEqual(['Beyoncé', 'Sigur Rós'])
   })
 
   it('ignores past, hidden, and crawler-missing events', async () => {
