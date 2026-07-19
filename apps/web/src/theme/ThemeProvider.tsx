@@ -40,19 +40,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       console.warn('theme: localStorage unavailable on mount', err)
     }
     const attr = document.documentElement.getAttribute('data-theme')
-    // Functional updater so the state fallback never depends on a captured
-    // `theme` value; applyTheme is idempotent, so a double-invoked updater
-    // (Strict Mode) is harmless.
-    setThemeState((current) => {
-      const resolved =
-        persisted && isThemeName(persisted)
-          ? persisted
-          : attr && isThemeName(attr)
-            ? attr
-            : current
-      applyTheme(resolved)
-      return resolved
-    })
+    const resolved =
+      persisted && isThemeName(persisted)
+        ? persisted
+        : attr && isThemeName(attr)
+          ? attr
+          : theme
+    // applyTheme stays outside the state updater — updaters must be pure
+    // (no DOM writes) under Strict Mode/concurrent rendering.
+    applyTheme(resolved)
+    setThemeState(resolved)
+    // The captured `theme` is the initial state — this mount-only effect runs
+    // before any setTheme can fire, so the closure value is never stale.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   function setTheme(theme: ThemeName) {
