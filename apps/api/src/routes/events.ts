@@ -244,9 +244,10 @@ eventsRouter.get(
       .limit(limit)
       .offset(offset)
 
-    // followedArtists overlay (#763 PR 6, §9.2): exactly one extra query for
-    // signed-in users with Spotify-sourced follows; null (and zero queries)
-    // for everyone else, so the anonymous/public path cost is unchanged.
+    // followedArtists overlay (#763 PR 6, §9.2): one extra query for any
+    // signed-in viewer (the matcher must load Spotify-sourced follow names
+    // to decide presence); anonymous requests skip it entirely, so the
+    // public path cost is unchanged.
     const listAuth = getAuth(ctx)
     const followMatcher = listAuth?.userId
       ? await getFollowedArtistMatcher(listAuth.userId)
@@ -984,8 +985,10 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     }))
   }
 
-  // followedArtists overlay (#763 PR 6, §9.2) — one extra query, only for
-  // signed-in users with Spotify-sourced follow rows; field omitted otherwise.
+  // followedArtists overlay (#763 PR 6, §9.2) — one extra query for any
+  // signed-in viewer (the matcher loads Spotify-sourced follow names to
+  // decide presence); anonymous requests skip it, and the field is omitted
+  // when no Spotify follow rows exist.
   const followMatcher = authInfo?.userId
     ? await getFollowedArtistMatcher(authInfo.userId)
     : null

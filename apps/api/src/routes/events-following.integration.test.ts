@@ -3,17 +3,18 @@
 // Spotify-sourced follow rows get, per event, the display names of their
 // artists that match the event's canonical headliner/supporting set.
 // Anonymous requests and users with no Spotify follows get NO field at all —
-// and, critically, no extra query.
+// and anonymous requests skip the per-user follow query entirely.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-const { authState } = vi.hoisted(() => ({
-  authState: {
-    current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
-    } | null,
-  },
-}))
+interface MockAuth {
+  userId: string
+  sessionClaims: { metadata?: { role?: string } }
+}
+
+const { authState } = vi.hoisted(() => {
+  const state: { current: MockAuth | null } = { current: null }
+  return { authState: state }
+})
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>

@@ -25,7 +25,8 @@ describe('FollowingChip', () => {
     // The Spotify logo is the only glyph in the chip.
     expect(container.querySelector('svg')).not.toBeNull()
     // Design lock: --accent is reserved for Watching — the chip is neutral.
-    const chip = container.firstElementChild as HTMLElement
+    const chip = container.firstElementChild
+    if (!(chip instanceof HTMLElement)) throw new Error('chip did not render')
     expect(chip.className).not.toContain('accent')
     expect(chip.className).toContain('bg-surface-3')
   })
@@ -40,7 +41,8 @@ describe('HeroFollowingBadge', () => {
 
   it('is neutral (surface-1) — never the accent eyebrow treatment', () => {
     const { container } = render(<HeroFollowingBadge />)
-    const badge = container.firstElementChild as HTMLElement
+    const badge = container.firstElementChild
+    if (!(badge instanceof HTMLElement)) throw new Error('badge did not render')
     expect(badge.className).not.toContain('accent')
     expect(badge.className).toContain('bg-surface-1')
     expect(container.querySelector('svg')).not.toBeNull()
