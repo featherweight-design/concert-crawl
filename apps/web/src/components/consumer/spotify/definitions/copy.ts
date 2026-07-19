@@ -197,6 +197,44 @@ export const SPOTIFY_COPY = {
     strip: (artists: readonly string[]) =>
       `You follow ${formatArtistList(artists)} on Spotify`,
   },
+  // Taste filter chip + upsell (#763 PR 7, from the taste-filter.jsx mock).
+  // The chip is the one locked-visible surface in the entitlements matrix —
+  // free/supporter viewers see it locked and tapping opens the upsell.
+  tasteFilter: {
+    chip: 'Following',
+    // READINESS a11y contract: locked chip keeps aria-disabled + this label.
+    chipLockedAria: 'Following filter, paid',
+    chipAria: 'Filter to artists you follow',
+    banner: (count: number) => `${count} Denver shows by artists you follow`,
+    bannerSingular: '1 Denver show by artists you follow',
+    upsell: {
+      eyebrow: 'TASTE FILTER · PREMIUM',
+      title: 'Slice the whole calendar by your taste.',
+      // Body renders with the middle segment bolded (mock: <b>Following</b>).
+      bodyBeforeBold:
+        'Filtering Denver down to just the artists you follow is a paid perk. Connecting Spotify and spotting the odd ',
+      bodyBold: 'Following',
+      bodyAfterBold: ' tag stays free — this is the power tool.',
+      bullets: [
+        {
+          head: 'Following',
+          sub: 'Filter any view to your artists in one tap',
+        },
+        {
+          head: 'Taste picks',
+          sub: "A 'based on your taste' shelf on browse",
+        },
+        {
+          head: 'New-show alerts',
+          sub: 'Push + a weekly Denver digest',
+        },
+      ],
+      cta: 'See plans',
+      footer: 'PREMIUM $5/MO · FOUNDER $3 LOCKED',
+      ariaLabel: 'Taste filter is a paid feature',
+      dismissAria: 'Dismiss',
+    },
+  },
   firstWatchNudge: {
     eyebrow: 'NICE — FIRST ONE SAVED',
     title: 'Want the rest picked for your taste?',

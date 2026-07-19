@@ -1,0 +1,180 @@
+'use client'
+
+// "Following" taste-filter toggle chip — leads the FilterBar chip row
+// (#763 PR 7, taste-filter.jsx mock). Three states:
+//   - off/on toggle for plans with spotify-sync (--signal active treatment),
+//   - locked (dashed border + lock glyph) for everyone else. Locked taps
+//     route per the entitlements matrix: paywall-on-tap → TasteUpsellSheet
+//     (whose "See plans" opens the tier picker), tier-picker-on-tap
+//     (logged-out) → tier picker directly.
+// Renders nothing while the entitlement is still resolving — never flash a
+// locked treatment at a paying user.
+
+import { useState } from 'react'
+import type { PlanState, PickerEntry } from '@concert-crawl/types'
+import { useEntitlement } from '@/lib/queries/use-entitlement'
+import { usePlanState } from '@/lib/queries/use-plan-state'
+import { SpotifyLogo } from '@/components/brand/spotify-logo'
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { TasteUpsellSheet } from './TasteUpsellSheet'
+
+const COPY = SPOTIFY_COPY.tasteFilter
+
+// Tier picker needs a full PlanState; logged-out viewers (and the fail-closed
+// fetch-error case) have none, so mirror derivePlanState's logged-out shape.
+const LOGGED_OUT_PLAN_STATE: PlanState = {
+  plan: 'logged-out',
+  onTrial: false,
+  trialEndsAt: null,
+  status: null,
+  cancelAtPeriodEnd: false,
+  currentPeriodEnd: null,
+  roleComped: false,
+}
+
+const LockGlyph = () => (
+  <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>
+    <rect
+      x="2.2"
+      y="5.4"
+      width="7.6"
+      height="5"
+      rx="1.2"
+      stroke="currentColor"
+      strokeWidth="1.3"
+    />
+    <path
+      d="M4 5.4V4a2 2 0 014 0v1.4"
+      stroke="currentColor"
+      strokeWidth="1.3"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+// Divider between the taste scope chip and the dimension chips (mock:
+// 1×20px --border with 2px side margins). Rendered by the chip itself so
+// it never shows orphaned while the entitlement is still resolving.
+const ChipDivider = () => (
+  <span
+    aria-hidden
+    className="shrink-0"
+    style={{
+      width: 1,
+      height: 20,
+      background: 'var(--border)',
+      margin: '0 2px',
+    }}
+  />
+)
+
+interface TasteFilterChipProps {
+  active: boolean
+  onToggle: (next: boolean) => void
+  // Server-resolved SCA-region boolean, forwarded to the tier picker's
+  // checkout legal block (monetization spec §1.7).
+  scaRegion: boolean
+}
+
+export const TasteFilterChip = ({
+  active,
+  onToggle,
+  scaRegion,
+}: TasteFilterChipProps) => {
+  const { isLoading, surface } = useEntitlement('spotify-sync')
+  const { data: planState } = usePlanState()
+  const [upsellOpen, setUpsellOpen] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall')
+
+  // Hold rendering while the plan resolves — no locked flash.
+  if (isLoading || surface === null) return null
+
+  const usable = surface === 'visible-active'
+
+  if (usable) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => onToggle(!active)}
+          aria-pressed={active}
+          aria-label={COPY.chipAria}
+          className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+          style={{
+            padding: '0 12px 0 8px',
+            fontFamily: 'Inter, system-ui',
+            fontWeight: 700,
+            fontSize: 12,
+            background: active ? 'var(--signal)' : 'transparent',
+            borderColor: active ? 'var(--signal)' : 'var(--border-strong)',
+            color: active ? 'var(--fg-on-accent)' : 'var(--fg)',
+          }}
+        >
+          <SpotifyLogo size={15} />
+          <span style={{ whiteSpace: 'nowrap' }}>{COPY.chip}</span>
+          {active && (
+            <span aria-hidden style={{ fontSize: 12, lineHeight: 1 }}>
+              ✕
+            </span>
+          )}
+        </button>
+        <ChipDivider />
+      </>
+    )
+  }
+
+  const onLockedTap = () => {
+    if (surface === 'tier-picker-on-tap') {
+      // Logged-out: straight to the tier picker.
+      setPickerEntry('logged-out-paywall')
+      setPickerOpen(true)
+      return
+    }
+    // Free / supporter: the taste upsell first.
+    setUpsellOpen(true)
+  }
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onLockedTap}
+        aria-disabled="true"
+        aria-label={COPY.chipLockedAria}
+        className="inline-flex h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        style={{
+          padding: '0 11px 0 9px',
+          fontFamily: 'Inter, system-ui',
+          fontWeight: 700,
+          fontSize: 12,
+          background: 'transparent',
+          border: '1px dashed var(--border-strong)',
+          color: 'var(--fg-subtle)',
+        }}
+      >
+        <SpotifyLogo size={15} />
+        <span style={{ whiteSpace: 'nowrap' }}>{COPY.chip}</span>
+        <LockGlyph />
+      </button>
+      <ChipDivider />
+      <TasteUpsellSheet
+        open={upsellOpen}
+        onClose={() => setUpsellOpen(false)}
+        onSeePlans={() => {
+          setUpsellOpen(false)
+          setPickerEntry('paywall')
+          setPickerOpen(true)
+        }}
+      />
+      <TierPickerSheet
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        planState={planState ?? LOGGED_OUT_PLAN_STATE}
+        scaRegion={scaRegion}
+        entry={pickerEntry}
+      />
+    </>
+  )
+}

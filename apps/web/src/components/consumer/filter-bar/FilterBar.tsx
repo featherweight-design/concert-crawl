@@ -15,6 +15,7 @@ import {
   getFilterOptions,
 } from './filter-defs'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { TasteFilterChip } from './TasteFilterChip'
 
 const copy = CONSUMER_COPY.filterBar
 
@@ -22,6 +23,9 @@ interface FilterBarProps {
   venues: VenuePublic[]
   genres?: string[]
   className?: string
+  // Server-resolved SCA-region boolean for the taste chip's tier-picker
+  // handoff (#763 PR 7). Defaults false for mounts that never resolved it.
+  scaRegion?: boolean
 }
 
 function IconList({ size = 13 }: { size?: number }) {
@@ -82,7 +86,12 @@ function IconChevDown({ size = 11 }: { size?: number }) {
   )
 }
 
-export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
+export function FilterBar({
+  venues,
+  genres = [],
+  className,
+  scaRegion = false,
+}: FilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()
   const searchParams = useSearchParams()
@@ -128,6 +137,9 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
 
   const isCalendarView = (searchParams.get('view') ?? 'list') === 'cal'
   const activeFilterCount = getActiveFilterCount(filterValues)
+  // Taste scope (#763 PR 7) — a mode, not a dimension: excluded from the
+  // active-filter count / Clear all (it has its own ✕ on the chip).
+  const tasteActive = searchParams.get('filterTaste') === '1'
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 640px)')
@@ -289,6 +301,14 @@ export function FilterBar({ venues, genres = [], className }: FilterBarProps) {
             </svg>
           </button>
         )}
+
+        {/* Taste scope chip leads the row (taste-filter.jsx: it's a mode,
+            so it sits before the dimension chips, split by a divider). */}
+        <TasteFilterChip
+          active={tasteActive}
+          onToggle={(next) => updateParams({ filterTaste: next ? '1' : '' })}
+          scaRegion={scaRegion}
+        />
 
         {FILTER_ORDER.map((key) => {
           if (key === 'when' && isCalendarView) return null

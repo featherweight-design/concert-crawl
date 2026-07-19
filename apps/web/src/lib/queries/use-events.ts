@@ -4,7 +4,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useAuth } from '@clerk/nextjs'
 import type { EventsListResponse } from '@concert-crawl/types'
 import { STALE_30_MIN } from '@/lib/query-client'
-import { apiClient } from '@/lib/api'
+import { apiClient, ApiError } from '@/lib/api'
 import { fetchPublicRead } from './public-read'
 import { useSpotifyConnection } from './use-spotify-connection'
 
@@ -48,7 +48,16 @@ export function useEvents({
     connection != null &&
     (connection.status === 'connected' || connection.status === 'error') &&
     connection.artistCount > 0
-  const personalizedFor = hasTaste && userId != null ? userId : null
+  // Taste filter (#763 PR 7): filterTaste=1 in the page URL maps to the API's
+  // taste=1 param, which requires a token + the spotify-sync entitlement.
+  // Logged-out viewers can't hold the entitlement (the chip is locked for
+  // them), so a filterTaste URL without a userId is a tampered/stale link —
+  // drop the flag and fetch the plain list.
+  const tasteRequested =
+    new URLSearchParams(searchParamsString).get('filterTaste') === '1' &&
+    userId != null
+  const personalizedFor =
+    (hasTaste || tasteRequested) && userId != null ? userId : null
   return useInfiniteQuery({
     // personalizedFor is part of the key so pages fetched anonymously before
     // the connection query resolves aren't reused for the personalized view,
@@ -62,6 +71,10 @@ export function useEvents({
     // retries with a token so the UI still works.
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams(searchParamsString)
+      // filterTaste is a page-URL param, not an API one — swap it for the
+      // API's taste=1 (credentialed viewers only; see tasteRequested above).
+      params.delete('filterTaste')
+      if (tasteRequested) params.set('taste', '1')
       params.set('offset', String(pageParam))
       params.set('limit', String(limit))
       const path = `/v1/events?${params.toString()}`
@@ -74,6 +87,30 @@ export function useEvents({
         // useSpotifyConnection).
         if (!token) {
           throw new Error('Auth token unavailable while fetching events')
+        }
+        if (tasteRequested) {
+          try {
+            return await apiClient.get<EventsListResponse>(path, token)
+          } catch (err) {
+            // Entitlement lapsed (or lost) mid-session: fall back to the
+            // unfiltered list rather than erroring the whole browse view.
+            // Mirrors the SSR fallback in events/page.tsx.
+            if (
+              err instanceof ApiError &&
+              (err.status === 401 || err.status === 403)
+            ) {
+              console.error(
+                'taste filter rejected — falling back to unfiltered',
+                err,
+              )
+              params.delete('taste')
+              return apiClient.get<EventsListResponse>(
+                `/v1/events?${params.toString()}`,
+                token,
+              )
+            }
+            throw err
+          }
         }
         return apiClient.get<EventsListResponse>(path, token)
       }

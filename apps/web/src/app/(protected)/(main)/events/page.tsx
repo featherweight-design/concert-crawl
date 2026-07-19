@@ -1,11 +1,13 @@
 import { Suspense } from 'react'
+import { headers } from 'next/headers'
 import type {
   EventsAvailabilityResponse,
   EventsListResponse,
   VenuePublic,
   WatchingShow,
 } from '@concert-crawl/types'
-import { publicApiClient, apiClient } from '@/lib/api'
+import { publicApiClient, apiClient, ApiError } from '@/lib/api'
+import { isScaRegion } from '@/lib/sca-region'
 import { auth } from '@/lib/auth'
 import { fetchWatching } from '@/lib/watching'
 import { HeroEventCard } from '@/components/consumer/hero-event-card'
@@ -25,6 +27,8 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { pickerWindow } from '@/components/consumer/jump-picker/date-math'
 import { fetchAvailability } from '@/lib/queries/availability'
 import { SpotifyStatusBanner } from '@/components/consumer/spotify/SpotifyStatusBanner'
+import { SpotifyLogo } from '@/components/brand/spotify-logo'
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 
 const copy = CONSUMER_COPY
 
@@ -42,6 +46,7 @@ async function fetchEvents(
   params: Record<string, string | string[] | undefined>,
   token: string | null,
   limit = PAGE_LIMIT,
+  taste = false,
 ): Promise<EventsListResponse> {
   const qs = new URLSearchParams()
   if (typeof params['search'] === 'string') qs.set('search', params['search'])
@@ -59,6 +64,7 @@ async function fetchEvents(
     qs.set('filterPrice', params['filterPrice'])
   if (typeof params['filterVibe'] === 'string')
     qs.set('filterVibe', params['filterVibe'])
+  if (taste) qs.set('taste', '1')
   qs.set('limit', String(limit))
   const url = `/v1/events?${qs.toString()}`
   return token
@@ -151,19 +157,60 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     ? fetchWatching(token).catch(() => [])
     : Promise.resolve([])
 
-  // Calendar fetches a bounded week — use the API max (100) so all shows in the
-  // week are returned. List view uses PAGE_LIMIT and paginates client-side.
-  const calendarLimit = 100
-  const [eventsResult, venues, genres, watchedShows] = await Promise.all([
-    fetchEvents(
-      fetchParams,
-      token,
-      view === 'cal' ? calendarLimit : PAGE_LIMIT,
-    ),
-    fetchVenues(token),
-    fetchGenres(token).catch(() => []),
-    watchedShowsPromise,
-  ])
+  // Taste filter (#763 PR 7): server-gated behind the spotify-sync
+  // entitlement, so only send taste=1 with a token. If the API rejects it
+  // (401/403 — signed out mid-session, entitlement lapsed, or a tampered
+  // URL), fall back to the unfiltered list instead of erroring the page;
+  // tasteApplied drives the scope banner so the UI never claims a filter
+  // the API didn't apply.
+  const tasteRequested = params['filterTaste'] === '1' && token != null
+  const eventsPromise: Promise<{
+    response: EventsListResponse
+    tasteApplied: boolean
+  }> = (async () => {
+    // Calendar fetches a bounded week — use the API max (100) so all shows in
+    // the week are returned. List view uses PAGE_LIMIT and paginates
+    // client-side.
+    const viewLimit = view === 'cal' ? 100 : PAGE_LIMIT
+    try {
+      return {
+        response: await fetchEvents(
+          fetchParams,
+          token,
+          viewLimit,
+          tasteRequested,
+        ),
+        tasteApplied: tasteRequested,
+      }
+    } catch (err) {
+      if (
+        tasteRequested &&
+        err instanceof ApiError &&
+        (err.status === 401 || err.status === 403)
+      ) {
+        console.error('taste filter rejected — falling back to unfiltered', err)
+        return {
+          response: await fetchEvents(fetchParams, token, viewLimit, false),
+          tasteApplied: false,
+        }
+      }
+      throw err
+    }
+  })()
+
+  const [eventsFetch, venues, genres, watchedShows, requestHeaders] =
+    await Promise.all([
+      eventsPromise,
+      fetchVenues(token),
+      fetchGenres(token).catch(() => []),
+      watchedShowsPromise,
+      headers(),
+    ])
+  const eventsResult = eventsFetch.response
+  const tasteApplied = eventsFetch.tasteApplied
+  // Monetization spec §1.7: SCA notice gating for the tier picker the locked
+  // taste chip can open. Unknown (local dev, header absent) fails safe to true.
+  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'))
 
   const watchedIds = new Set(watchedShows.map((show) => show.eventId))
 
@@ -215,7 +262,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     params['filterWhen'] ??
     params['filterWhere'] ??
     params['filterPrice'] ??
-    params['filterVibe']
+    params['filterVibe'] ??
+    params['filterTaste']
   const currentOffset = eventsResult.offset
 
   // Compute week navigation hrefs server-side so they can be passed as plain
@@ -269,9 +317,30 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       {/* Filter bar */}
       <div className="mb-5">
         <Suspense>
-          <FilterBar venues={venues} genres={genres} />
+          <FilterBar venues={venues} genres={genres} scaRegion={scaRegion} />
         </Suspense>
       </div>
+
+      {/* Taste scope banner — only when the API actually applied taste=1
+          (taste-filter.jsx mock). */}
+      {tasteApplied && (
+        <div
+          className="mb-4 flex items-center gap-2 rounded-lg px-3 py-2"
+          style={{
+            background:
+              'color-mix(in oklch, var(--signal) 10%, var(--surface-1))',
+            border:
+              '1px solid color-mix(in oklch, var(--signal) 28%, var(--border))',
+          }}
+        >
+          <SpotifyLogo size={16} />
+          <span className="text-xs font-semibold text-fg">
+            {total === 1
+              ? SPOTIFY_COPY.tasteFilter.bannerSingular
+              : SPOTIFY_COPY.tasteFilter.banner(total)}
+          </span>
+        </div>
+      )}
 
       {events.length === 0 && view === 'list' && (
         <EmptyState
