@@ -73,6 +73,40 @@ services:
         value: info
 
   - type: cron
+    name: concert-crawl-spotify-weekly
+    runtime: node
+    region: oregon
+    plan: starter
+    # Monday 15:30 UTC = 9:30 AM MDT / 8:30 AM MST — right after the daily
+    # billing job. Same no-DST-chasing policy as billing-jobs above.
+    schedule: "30 15 * * 1"
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
+    startCommand: node apps/api/dist/jobs/spotify-weekly.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Neon prod branch connection string — enter manually
+      - key: RESEND_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: CLERK_SECRET_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: EMAIL_UNSUBSCRIBE_SECRET
+        sync: false # Must match the API service's value — enter manually
+      - key: API_PUBLIC_URL
+        sync: false # Public API origin, e.g. https://concert-crawl-api.onrender.com
+      - key: ALLOWED_ORIGIN
+        sync: false # Set to https://concertcrawl.app (digest links point at the web app)
+      - key: SPOTIFY_SYNC_DRY_RUN
+        sync: false # Optional: set to 1 for a log-only cycle (no writes, no emails)
+      - key: SENTRY_DSN
+        sync: false # Enter manually in Render dashboard
+      - key: SENTRY_ENVIRONMENT
+        value: production
+      - key: LOG_LEVEL
+        value: info
+
+  - type: cron
     name: concert-crawl-crawler-triggers
     runtime: docker
     region: oregon
@@ -173,6 +207,40 @@ services:
         sync: false # Enter manually in Render dashboard
       - key: CLERK_SECRET_KEY
         sync: false # Staging Clerk secret — enter manually
+      - key: SENTRY_DSN
+        sync: false # Enter manually in Render dashboard
+      - key: SENTRY_ENVIRONMENT
+        value: staging
+      - key: LOG_LEVEL
+        value: info
+
+  - type: cron
+    name: concert-crawl-spotify-weekly-staging
+    runtime: node
+    region: oregon
+    plan: starter
+    # Monday 15:30 UTC = 9:30 AM MDT / 8:30 AM MST — right after the daily
+    # billing job. Same no-DST-chasing policy as billing-jobs above.
+    schedule: "30 15 * * 1"
+    buildCommand: npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api
+    startCommand: node apps/api/dist/jobs/spotify-weekly.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Neon staging branch connection string — enter manually
+      - key: RESEND_API_KEY
+        sync: false # Enter manually in Render dashboard
+      - key: CLERK_SECRET_KEY
+        sync: false # Staging Clerk secret — enter manually
+      - key: EMAIL_UNSUBSCRIBE_SECRET
+        sync: false # Must match the staging API service's value — enter manually
+      - key: API_PUBLIC_URL
+        sync: false # Staging API origin, e.g. https://concert-crawl-api-staging.onrender.com
+      - key: ALLOWED_ORIGIN
+        sync: false # Set to the Vercel preview URL (digest links point at the web app)
+      - key: SPOTIFY_SYNC_DRY_RUN
+        sync: false # Optional: set to 1 for a log-only cycle (no writes, no emails)
       - key: SENTRY_DSN
         sync: false # Enter manually in Render dashboard
       - key: SENTRY_ENVIRONMENT
