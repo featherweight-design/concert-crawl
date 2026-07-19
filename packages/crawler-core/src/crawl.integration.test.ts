@@ -409,37 +409,15 @@ describe('crawlVenue — stale-event detection (#607)', () => {
   })
 })
 
-describe('crawlVenue — canonical-title upsert key (#821)', () => {
-  it('matches existing rows by canonical_title so LLM artist-substring drift across crawls collapses to one row', async () => {
-    // Regression test for issue #821: prod had 47% dupe rate on hidden
-    // events because the LLM extracted non-deterministic artist substrings
-    // from compound titles across crawl runs. Example from prod (Larimer
-    // 7/31): "BPM BINGO! Dombresky / Walker & Royce Edition" produced six
-    // rows under canonical_artist dedup because each crawl picked a
-    // different artist substring (BPM BINGO! / BPM BINGO / Dombresky /
-    // Dombresky / Walker & Royce / Dombresky, Walker & Royce / ...).
-    //
-    // Post-#821: the canonical_title key on the upsert + the partial
-    // UNIQUE index in 0044 collapse all artist-substring variants of the
-    // same listing to a single row.
+describe('crawlVenue — canonical-artist + show_time upsert key (#1053)', () => {
+  // (a) title-variant collapse: same venue/date/canonical_artist/show_time,
+  // different billing titles → 1 row after upsert; canonical_title tracks
+  // the latest crawl.
+  it('collapses billing-title variants of the same show to one row', async () => {
     const venue = await seedTestVenue()
     const showDate = futureDate(14)
 
-    const oldSeenAt = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    await db.insert(events).values({
-      venueId: venue.id,
-      title: 'BPM BINGO! Dombresky / Walker & Royce Edition',
-      artist: 'BPM BINGO!',
-      canonicalArtist: 'bpm bingo!',
-      canonicalTitle: 'bpm bingo! dombresky / walker & royce edition',
-      date: showDate,
-      status: 'upcoming',
-      lastSeenAt: oldSeenAt,
-      firstMissingAt: null,
-    })
-
-    // Re-crawl extracts the same listing but the LLM picks a different
-    // artist substring — what produced the prod dupes.
+    // First crawl: "Hilary Duff" solo billing.
     mockFetchPage.mockResolvedValue({
       html: HTML_BASE,
       httpStatus: 200,
@@ -448,9 +426,9 @@ describe('crawlVenue — canonical-title upsert key (#821)', () => {
     mockExtractWithLlm.mockResolvedValue({
       events: [
         {
-          title: 'BPM BINGO! Dombresky / Walker & Royce Edition',
-          rawTitle: 'BPM BINGO! Dombresky / Walker & Royce Edition',
-          artist: 'Dombresky',
+          title: 'Hilary Duff',
+          rawTitle: 'Hilary Duff',
+          artist: 'Hilary Duff',
           date: showDate,
           confidence: 0.9,
           sourceUrl: venue.url,
@@ -459,44 +437,160 @@ describe('crawlVenue — canonical-title upsert key (#821)', () => {
       usage: { inputTokens: 100, outputTokens: 50 },
     })
 
-    const beforeCrawl = Date.now()
+    const firstRun = await crawlVenue(venue.id, mockBrowser)
+    expect(firstRun.status).toBe('success')
+
+    // Second crawl: same show, now billed with openers.
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE_V2,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Hilary Duff with La Roux',
+          rawTitle: 'Hilary Duff with La Roux',
+          artist: 'Hilary Duff',
+          date: showDate,
+          confidence: 0.9,
+          sourceUrl: venue.url,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const beforeSecondCrawl = Date.now()
+    const secondRun = await crawlVenue(venue.id, mockBrowser)
+    expect(secondRun.status).toBe('success')
+
+    const rows = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+
+    // ONE row — the new key (canonical_artist + show_time) matches the
+    // existing row; the display title updates to the latest billing.
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.canonicalTitle).toBe('hilary duff with la roux')
+    // Pass 1 matched by canonical_artist — last_seen_at advanced.
+    expect(rows[0]!.lastSeenAt.getTime()).toBeGreaterThanOrEqual(
+      beforeSecondCrawl,
+    )
+    expect(rows[0]!.firstMissingAt).toBeNull()
+  })
+
+  // (b) double-header protection: same venue/date/canonical_artist, different
+  // show_time values → 2 rows (matinee + evening stay distinct).
+  it('keeps same-artist same-day double-headers as separate rows when show_time differs', async () => {
+    const venue = await seedTestVenue()
+    const showDate = futureDate(14)
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Hilary Duff Matinee',
+          rawTitle: 'Hilary Duff Matinee',
+          artist: 'Hilary Duff',
+          date: showDate,
+          showTime: '16:00',
+          confidence: 0.9,
+          sourceUrl: venue.url,
+        },
+        {
+          title: 'Hilary Duff Evening',
+          rawTitle: 'Hilary Duff Evening',
+          artist: 'Hilary Duff',
+          date: showDate,
+          showTime: '19:00',
+          confidence: 0.9,
+          sourceUrl: venue.url,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
     const run = await crawlVenue(venue.id, mockBrowser)
     expect(run.status).toBe('success')
 
     const rows = await db
       .select()
       .from(events)
-      .where(
-        and(
-          eq(events.venueId, venue.id),
-          eq(
-            events.canonicalTitle,
-            'bpm bingo! dombresky / walker & royce edition',
-          ),
-        ),
-      )
+      .where(eq(events.venueId, venue.id))
 
-    // ONE row, not two — the partial UNIQUE index and the canonical-title
-    // upsert key collapse "Dombresky" → existing "BPM BINGO!" row.
+    // TWO rows — different show_time values protect each double-header show.
+    expect(rows).toHaveLength(2)
+    const showTimes = rows.map((row) => row.showTime).sort()
+    expect(showTimes).toEqual(['16:00:00', '19:00:00'])
+  })
+
+  // (c) null-showtime collapse: same venue/date/canonical_artist, both null
+  // show_time, different titles → 1 row (NULLS NOT DISTINCT in the index).
+  it('collapses null-show_time variants of the same show to one row', async () => {
+    const venue = await seedTestVenue()
+    const showDate = futureDate(14)
+
+    // First crawl: no show_time, one title.
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Hilary Duff',
+          rawTitle: 'Hilary Duff',
+          artist: 'Hilary Duff',
+          date: showDate,
+          confidence: 0.9,
+          sourceUrl: venue.url,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const firstRun = await crawlVenue(venue.id, mockBrowser)
+    expect(firstRun.status).toBe('success')
+
+    // Second crawl: no show_time, different title — still same show.
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE_V2,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Hilary Duff: Greatest Hits Tour',
+          rawTitle: 'Hilary Duff: Greatest Hits Tour',
+          artist: 'Hilary Duff',
+          date: showDate,
+          confidence: 0.9,
+          sourceUrl: venue.url,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const secondRun = await crawlVenue(venue.id, mockBrowser)
+    expect(secondRun.status).toBe('success')
+
+    const rows = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+
+    // ONE row — NULLS NOT DISTINCT in the index collapses null show_time
+    // variants just as a matching non-null value would.
     expect(rows).toHaveLength(1)
-
-    // Pass 1 found the row by canonical_title — last_seen_at advanced and
-    // first_missing_at stayed NULL. Without the canonical-title match this
-    // would re-flag the row as missing on every extraction that chose a
-    // different artist substring.
-    expect(rows[0]!.lastSeenAt.getTime()).toBeGreaterThanOrEqual(beforeCrawl)
-    expect(rows[0]!.firstMissingAt).toBeNull()
-
-    // The artist field intentionally stays at the original "BPM BINGO!"
-    // form — the ON CONFLICT SET clause doesn't update artist so it
-    // doesn't flip between extractions.
-    expect(rows[0]!.artist).toBe('BPM BINGO!')
-
-    // canonical_artist DOES update on re-crawl — the set clause includes
-    // it so the column tracks the most recent LLM artist-substring choice
-    // (#821 contract). This pins that intended drift-tracking behavior;
-    // without the set clause this would still read 'bpm bingo!'.
-    expect(rows[0]!.canonicalArtist).toBe('dombresky')
+    expect(rows[0]!.showTime).toBeNull()
+    expect(rows[0]!.canonicalTitle).toBe('hilary duff: greatest hits tour')
   })
 })
 
@@ -909,11 +1003,12 @@ describe('crawlVenue — non-concert auto-classification (#696)', () => {
           // preservation rule lives). This exercises the "raw title
           // changes without canonical_title changing" case: the stored
           // title should adopt the new variant while admin overrides stay
-          // sticky. artist also deliberately different to mirror the
-          // real-world LLM artist-substring drift.
+          // sticky. artist kept the same canonical form as the seeded row
+          // so the new (canonical_artist, date, show_time) key resolves
+          // to the existing row (#1053).
           title: 'ORIGINALLY  Misclassified Show',
           rawTitle: 'ORIGINALLY  Misclassified Show',
-          artist: 'Test Artist Featured',
+          artist: 'Test Artist',
           date: dateA,
           confidence: 0.95,
           sourceUrl: venue.url,
@@ -1429,17 +1524,24 @@ describe('crawlVenue — insertedEventIds threading (#763)', () => {
     const first = await crawlVenue(venue.id, mockBrowser)
     expect(first.insertedEventIds).toHaveLength(1)
 
-    // Re-crawl: same listing with a changed showTime (so the source hash
-    // differs and the upsert runs) hits the UPDATE branch — no new insert,
-    // so no id may leak into insertedEventIds (an update must never
-    // re-trigger a "new show" alert downstream).
+    // Re-crawl: same listing with a changed ticket URL (so the source hash
+    // differs and the upsert runs) hits the UPDATE branch — canonical_artist
+    // + date + show_time are unchanged so the conflict target resolves the
+    // existing row. No new insert, so no id may leak into insertedEventIds
+    // (an update must never re-trigger a "new show" alert downstream).
     mockFetchPage.mockResolvedValueOnce({
       html: HTML_BASE_V2,
       httpStatus: 200,
       finalUrl: venue.url,
     })
     mockExtractWithLlm.mockResolvedValueOnce({
-      events: [{ ...baseEvent, showTime: '20:00' }],
+      events: [
+        {
+          ...baseEvent,
+          ticketUrl: `${venue.url}/tickets-updated`,
+          title: 'Fanout Update Artist Live (Updated)',
+        },
+      ],
       usage: { inputTokens: 100, outputTokens: 50 },
     })
     const second = await crawlVenue(venue.id, mockBrowser)

@@ -76,12 +76,11 @@ export async function seedEvent(
   overrides: Partial<typeof events.$inferInsert> = {},
 ): Promise<typeof events.$inferSelect> {
   const artist = overrides.artist ?? 'Test Artist'
-  // Default title derives from artist so seedEvent calls that only override
-  // artist still get distinct canonical_title values. Pre-#821 the partial
-  // UNIQUE was on canonical_artist so each (venue, date, 'artist a') /
-  // ('artist b') tuple was distinct; post-#821 the UNIQUE is on
-  // canonical_title and a hardcoded 'Test Show' default would collide every
-  // call. Callers can still pass an explicit title to override.
+  // Default title derives from artist so seedEvent calls only overriding
+  // artist still get distinct rows. The partial UNIQUE index is on
+  // (venue, date, canonical_artist, show_time) (#1053), so callers seeding
+  // multiple upcoming events for the same headliner on the same date must
+  // pass distinct show_time values to avoid a collision.
   const title = overrides.title ?? `Test Show — ${artist}`
   // Derive canonical_artist + canonical_title from artist/title when not
   // explicitly provided. Production code does the canonicalization in the

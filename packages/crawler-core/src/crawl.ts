@@ -41,6 +41,28 @@ const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
 const AUTO_APPROVE_THRESHOLD = 0.7
 
+// Normalizes a show_time string to the Postgres `time` output form
+// (HH:MM:SS) for building the in-memory dedup key. Null/empty/unparseable
+// → '' — which groups with the DB's NULL under NULLS NOT DISTINCT. DB rows
+// return 'HH:MM:SS' already, so this is idempotent on the existingMap side.
+function showTimeKey(raw: string | null | undefined): string {
+  if (!raw) return ''
+  const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(raw.trim())
+  if (!match) return ''
+  const hours = match[1] ?? ''
+  const minutes = match[2] ?? '00'
+  const seconds = match[3] ?? '00'
+  return `${hours.padStart(2, '0')}:${minutes}:${seconds}`
+}
+
+function dedupKey(
+  canonicalArtist: string,
+  date: string,
+  showTime: string | null | undefined,
+): string {
+  return `${canonicalArtist}|${date}|${showTimeKey(showTime)}`
+}
+
 // Chunk size for HTML capture. Render's log pipeline silently drops stdout
 // lines beyond ~16KB *bytes*. JS String.length is UTF-16 code units, but
 // when a code unit encodes to UTF-8 it can take up to 4 bytes (emoji,
@@ -519,26 +541,30 @@ export async function crawlVenue(
     let eventsInserted = 0
     let eventsUpdated = 0
     // DB ids of rows this run INSERTED (not updated) — recovered from the
-    // upsert's RETURNING clause by checking each returned (canonical_title,
-    // date) key against existingMap. Feeds the Spotify fan-out (#763 §10.1).
+    // upsert's RETURNING clause by checking each returned (canonical_artist,
+    // date, show_time) key against existingMap. Feeds the Spotify fan-out (#763 §10.1).
     const insertedEventIds: string[] = []
-    // Track (canonical_title, date) pairs we've actually upserted this run so
-    // the stale-event detection below can refresh last_seen_at for them.
-    // Includes both the freshly-inserted and the already-existed-with-unchanged-hash
-    // cases — "seen" means "the venue's page still advertised this show",
-    // independent of whether we touched the DB row. Keyed by canonical_title
-    // (not raw title) so minor case/whitespace variation in the LLM's title
-    // transcription doesn't cause Pass 2 below to stamp the row missing.
-    const seenEventCoords: { canonicalTitle: string; date: string }[] = []
+    // Track (canonical_artist, date, show_time) tuples seen this run so the
+    // stale-event detection below can refresh last_seen_at for them. Includes
+    // both freshly-inserted and unchanged-hash events — "seen" means "the
+    // venue's page still advertised this show." Keyed by canonical_artist +
+    // show_time (the new dedup key, #1053) so billing-title variants of the
+    // same show don't cause Pass 2 to stamp the row missing on the
+    // re-extraction that chose a different title.
+    const seenEventCoords: {
+      canonicalArtist: string
+      date: string
+      showTime: string | null
+    }[] = []
     if (normalizedEvents.length > 0) {
       // Compute sourceHash for each extracted event, then deduplicate by
-      // (canonical_title, date). LLM extraction can return the same listing
-      // twice with slightly different artist-substring choices on compound
-      // titles ("BPM BINGO!" vs "Dombresky" vs "Dombresky / Walker & Royce"
-      // for one Larimer 7/31 row — see #821). Both rows would survive a
-      // canonical_artist-keyed dedup and then the ON CONFLICT against the
-      // partial UNIQUE on canonical_title would fail with "cannot affect
-      // row a second time."
+      // (canonical_artist, date, show_time). LLM extraction can return the
+      // same listing twice with slightly different artist-substring choices
+      // on compound titles. Both rows have the same canonical_artist (post
+      // #643 canonicalization is stable across substrings) and the same
+      // show_time, so the second would hit the ON CONFLICT and fail with
+      // "cannot affect row a second time." The in-memory dedup drops it
+      // before the upsert. (#1053)
       const seenEventKeys = new Set<string>()
       const eventsWithHashes = normalizedEvents
         .map((event) => ({
@@ -551,33 +577,40 @@ export async function crawlVenue(
           sourceHash: hashEvent({
             title: event.title,
             date: event.date,
-            doorsTime: event.doorsTime ?? null,
-            showTime: event.showTime ?? null,
+            // Normalize time formats before hashing so a source emitting
+            // 'HH:MM' one crawl and 'HH:MM:SS' the next (or vice-versa)
+            // does not churn the hash and fire a false
+            // crawl.verified_event_changed. Same rationale as excluding
+            // `artist` from the hash (#825); showTimeKey collapses the
+            // format variants a real listing change wouldn't. (#1053)
+            doorsTime: showTimeKey(event.doorsTime),
+            showTime: showTimeKey(event.showTime),
           }),
         }))
         // Defensive: drop any event whose title canonicalizes to '' before
-        // the dedup-by-(canonicalTitle, date) filter below. Distinct events
-        // on the same date whose extractor emitted empty/whitespace-only
-        // titles would otherwise collapse to a single ('|YYYY-MM-DD') key
-        // and the subsequent upsert would risk a UNIQUE violation against
-        // events_venue_date_canonical_title_idx. canonicalizeTitle returns
-        // '' for empty / non-string / whitespace-only input, so this guard
-        // covers all the malformed-extractor cases at once. (#821 R3)
+        // the dedup filter below. canonicalizeTitle returns '' for empty /
+        // non-string / whitespace-only input. (#821 R3)
         .filter((evt) => evt.canonicalTitle !== '')
+        // Defensive: drop any event whose canonical_artist is '' — empty
+        // canonical_artist would collapse all no-artist events on the same
+        // date into a single ('|YYYY-MM-DD|') key, risking spurious UNIQUE
+        // violations against events_venue_date_canonical_artist_showtime_idx.
+        // Mirror the canonical_title guard's rationale. (#1053)
+        .filter((evt) => evt.canonicalArtist !== '')
         .filter((evt) => {
-          const key = `${evt.canonicalTitle}|${evt.date}`
+          const key = dedupKey(evt.canonicalArtist, evt.date, evt.showTime)
           if (seenEventKeys.has(key)) return false
           seenEventKeys.add(key)
           return true
         })
 
       // Load existing UPCOMING events for this venue to compare hashes.
-      // Keyed by canonical_title so a re-extraction with a different
-      // LLM-chosen artist substring hits the row stored under the same
-      // listing's first extraction.
+      // Keyed by (canonical_artist, date, show_time) — the new dedup key
+      // (#1053) — so a re-extraction with a different billing title hits the
+      // row stored under the same headliner + date + time.
       //
       // status='upcoming' filter mirrors the ON CONFLICT target's predicate
-      // (the partial UNIQUE index in 0044). Without it, an admin-cancelled
+      // (the partial UNIQUE index in 0057). Without it, an admin-cancelled
       // row would still appear in existingMap — and a fresh extraction of
       // the same show would be incorrectly classified as an update (when
       // it should INSERT a new upcoming row alongside the cancelled one),
@@ -585,8 +618,10 @@ export async function crawlVenue(
       // changes on rows the admin has already cancelled.
       const existingRows = await db
         .select({
+          canonicalArtist: events.canonicalArtist,
           canonicalTitle: events.canonicalTitle,
           date: events.date,
+          showTime: events.showTime,
           title: events.title,
           sourceHash: events.sourceHash,
           verified: events.verified,
@@ -596,13 +631,19 @@ export async function crawlVenue(
 
       const existingMap = new Map(
         existingRows.map(
-          (row) => [`${row.canonicalTitle}|${row.date}`, row] as const,
+          (row) =>
+            [
+              dedupKey(row.canonicalArtist, row.date, row.showTime),
+              row,
+            ] as const,
         ),
       )
 
       // Notify admin when a verified event's source data has changed
       const changedVerified = eventsWithHashes.filter((evt) => {
-        const existing = existingMap.get(`${evt.canonicalTitle}|${evt.date}`)
+        const existing = existingMap.get(
+          dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
+        )
         return (
           existing &&
           existing.verified === true &&
@@ -626,11 +667,14 @@ export async function crawlVenue(
       // Every event the venue still advertises this run — both newly inserted
       // and unchanged-and-skipped — counts as "seen" for stale detection.
       // Populating before the upsert filter keeps the keys correct even when
-      // the upsert path is skipped because every hash matched.
+      // the upsert path is skipped because every hash matched. Push a
+      // DB-comparable show_time: normalize empty string to null so the value
+      // matches what Postgres stores (the `time` cast rejects empty strings).
       for (const evt of eventsWithHashes) {
         seenEventCoords.push({
-          canonicalTitle: evt.canonicalTitle,
+          canonicalArtist: evt.canonicalArtist,
           date: evt.date,
+          showTime: evt.showTime && evt.showTime !== '' ? evt.showTime : null,
         })
       }
 
@@ -642,7 +686,7 @@ export async function crawlVenue(
         ? eventsWithHashes
         : eventsWithHashes.filter((evt) => {
             const existing = existingMap.get(
-              `${evt.canonicalTitle}|${evt.date}`,
+              dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
             )
             if (!existing) return true // new event
             return (
@@ -713,7 +757,11 @@ export async function crawlVenue(
         })
 
         for (const evt of eventsToUpsert) {
-          if (existingMap.has(`${evt.canonicalTitle}|${evt.date}`)) {
+          if (
+            existingMap.has(
+              dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
+            )
+          ) {
             eventsUpdated++
           } else {
             eventsInserted++
@@ -724,36 +772,38 @@ export async function crawlVenue(
           .insert(events)
           .values(eventValues)
           .onConflictDoUpdate({
-            // Conflict target is the partial UNIQUE index added in 0044 —
-            // (venue_id, date, canonical_title) WHERE status='upcoming'.
-            // targetWhere mirrors the partial index predicate so Postgres
-            // can identify the index for ON CONFLICT resolution. Status
-            // overrides (cancelled, postponed) sit outside this index and
-            // won't be touched by future crawls.
-            target: [events.venueId, events.date, events.canonicalTitle],
+            // Conflict target is the partial UNIQUE index added in 0057 —
+            // (venue_id, date, canonical_artist, show_time) NULLS NOT
+            // DISTINCT WHERE status='upcoming'. targetWhere mirrors the
+            // partial index predicate so Postgres can identify the index
+            // for ON CONFLICT resolution. Status overrides (cancelled,
+            // postponed) sit outside this index and won't be touched by
+            // future crawls. (#1053)
+            target: [
+              events.venueId,
+              events.date,
+              events.canonicalArtist,
+              events.showTime,
+            ],
             targetWhere: eq(events.status, 'upcoming'),
             set: {
               title: sql`excluded.title`,
-              // canonical_title is the dedup key — the ON CONFLICT matched
-              // because incoming canonical_title equaled the existing row's
-              // canonical_title, so writing `excluded.canonical_title` here
-              // is a no-op on the stored value. The set entry exists to
-              // document the lock-step invariant: any future code path that
-              // updates `title` MUST also update `canonical_title`. The pair
-              // is load-bearing for dedup; drift would silently break the
-              // ON CONFLICT match on subsequent crawls.
+              // canonical_title is now a display/search field only (#1053).
+              // We still write it on conflict so the row tracks the latest
+              // billing title from the crawler. Any future code path that
+              // updates `title` MUST also update `canonical_title` to keep
+              // the pair in lock-step.
               canonicalTitle: sql`excluded.canonical_title`,
-              // canonical_artist is no longer a dedup key but DOES still
-              // get written (column kept for search/display per #821). We
-              // also update it here so it tracks artist-substring drift
-              // over crawl runs — the row's canonical_artist will represent
-              // whichever artist substring the most recent crawl picked.
+              // canonical_artist + show_time are the load-bearing dedup
+              // pair (#1053). Writing excluded.* here is a no-op on the
+              // stored values (they matched to reach this conflict), but
+              // keeping them explicit documents the invariant: any future
+              // code path that writes artist/show_time MUST keep
+              // canonical_artist in lock-step.
               canonicalArtist: sql`excluded.canonical_artist`,
               // artist intentionally NOT updated — once the winner row is
-              // established (either via the #821 consolidation backfill or
-              // the first crawl after this PR ships), its artist string
-              // stays. Otherwise the field flips between extractions
-              // ("BPM BINGO!" one day, "Dombresky" the next).
+              // established, its artist string stays. Otherwise the field
+              // could flip between extractions on compound-title shows.
               supportingArtists: sql`excluded.supporting_artists`,
               canonicalSupporting: sql`excluded.canonical_supporting`,
               tourName: sql`excluded.tour_name`,
@@ -775,18 +825,24 @@ export async function crawlVenue(
           })
           .returning({
             id: events.id,
-            canonicalTitle: events.canonicalTitle,
+            canonicalArtist: events.canonicalArtist,
             date: events.date,
+            showTime: events.showTime,
           })
 
-        // A returned row whose (canonical_title, date) key was absent from
-        // existingMap (loaded before the upsert) is a fresh INSERT — the same
-        // classification the eventsInserted counter above uses. If overlapping
-        // crawls of the same venue both classify an event as new, the Spotify
-        // fan-out's spotify_alert_log claim (onConflictDoNothing per
-        // user/event/kind) makes the duplicate fan-out a no-op — no re-alert.
+        // A returned row whose (canonical_artist, date, show_time) key was
+        // absent from existingMap (loaded before the upsert) is a fresh
+        // INSERT — the same classification the eventsInserted counter above
+        // uses. If overlapping crawls of the same venue both classify an
+        // event as new, the Spotify fan-out's spotify_alert_log claim
+        // (onConflictDoNothing per user/event/kind) makes the duplicate
+        // fan-out a no-op — no re-alert.
         for (const row of upsertedRows) {
-          if (!existingMap.has(`${row.canonicalTitle}|${row.date}`)) {
+          if (
+            !existingMap.has(
+              dedupKey(row.canonicalArtist, row.date, row.showTime),
+            )
+          ) {
             insertedEventIds.push(row.id)
           }
         }
@@ -798,11 +854,11 @@ export async function crawlVenue(
     // when we never got a clean read of the venue's page.
     //
     // Pass 1: for every event the crawl actually saw, refresh last_seen_at
-    // and clear first_missing_at. Matched by (venue_id, date, canonical_title)
-    // to mirror the upsert's ON CONFLICT target — without that, a re-crawl
-    // that picked a different LLM artist substring for the same listing
+    // and clear first_missing_at. Matched by (venue_id, date, canonical_artist,
+    // show_time) to mirror the upsert's ON CONFLICT target — without that, a
+    // re-crawl that picked a different billing title for the same listing
     // would fail to match the existing DB row here and Pass 2 below would
-    // stamp it missing on every artist-substring variation.
+    // stamp it missing on every title variation.
     //
     // Pass 2: for every venue event that should have shown up (upcoming,
     // date >= today) but didn't (last_seen_at < this run's start), stamp
@@ -821,17 +877,20 @@ export async function crawlVenue(
           and(
             eq(events.venueId, venueId),
             // status='upcoming' mirrors the ON CONFLICT target's predicate
-            // and the partial UNIQUE index in 0044. Without it, a cancelled
-            // row sharing (venue, date, canonical_title) with a freshly-
-            // upserted upcoming row would also get last_seen_at refreshed
-            // and first_missing_at cleared — but cancelled rows are by
-            // definition outside the crawler's seen-state upkeep.
+            // and the partial UNIQUE index in 0057. Without it, a cancelled
+            // row sharing (venue, date, canonical_artist, show_time) with a
+            // freshly-upserted upcoming row would also get last_seen_at
+            // refreshed and first_missing_at cleared — but cancelled rows
+            // are by definition outside the crawler's seen-state upkeep.
             eq(events.status, 'upcoming'),
             or(
               ...seenEventCoords.map((coord) =>
                 and(
+                  eq(events.canonicalArtist, coord.canonicalArtist),
                   eq(events.date, coord.date),
-                  eq(events.canonicalTitle, coord.canonicalTitle),
+                  coord.showTime == null
+                    ? isNull(events.showTime)
+                    : eq(events.showTime, coord.showTime),
                 ),
               ),
             ),

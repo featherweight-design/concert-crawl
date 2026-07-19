@@ -557,6 +557,52 @@ describe('crawlVenue — event-level sourceHash', () => {
     expect(venueAlert?.body).toContain('Metallica Live')
   })
 
+  it('does NOT fire crawl.verified_event_changed when only the show_time string FORMAT changes (HH:MM vs HH:MM:SS) (#1053)', async () => {
+    const venue = seedVenue()
+    // Same listing, same show time — one crawl emits 'HH:MM', the next
+    // emits the Postgres 'HH:MM:SS' form. showTimeKey normalizes both
+    // before hashing, so the sourceHash must not churn and no verified
+    // alert should fire.
+    const firstCrawlEvent = { ...METALLICA_EVENT, showTime: '20:00' }
+    const secondCrawlEvent = { ...METALLICA_EVENT, showTime: '20:00:00' }
+
+    mockFetchPage
+      .mockResolvedValueOnce({
+        html: HTML_V1,
+        httpStatus: 200,
+        finalUrl: venue.websiteUrl,
+      })
+      .mockResolvedValueOnce({
+        html: HTML_V2,
+        httpStatus: 200,
+        finalUrl: venue.websiteUrl,
+      })
+    mockExtractWithLlm
+      .mockResolvedValueOnce({
+        events: [firstCrawlEvent],
+        usage: { inputTokens: 100, outputTokens: 50 },
+      })
+      .mockResolvedValueOnce({
+        events: [secondCrawlEvent],
+        usage: { inputTokens: 100, outputTokens: 50 },
+      })
+
+    await crawlVenue(venue.id, mockBrowser) // first crawl — inserts unverified event
+
+    await db
+      .update(events)
+      .set({ verified: true })
+      .where(and(eq(events.venueId, venue.id), eq(events.artist, 'Metallica')))
+
+    await crawlVenue(venue.id, mockBrowser) // second crawl — format-only show_time change
+
+    const allAlerts = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.verified_event_changed'))
+    expect(allAlerts).toHaveLength(0)
+  })
+
   it('upserts existing event when sourceHash is null without changed-verified alert', async () => {
     const venue = seedVenue()
     mockFetchPage.mockResolvedValue({
@@ -603,28 +649,28 @@ describe('crawlVenue — event-level sourceHash', () => {
     expect(allAlerts).toHaveLength(0)
   })
 
-  it('does NOT fire crawl.verified_event_changed when only the LLM-picked artist substring drifts (#825)', async () => {
+  it('does NOT fire crawl.verified_event_changed when a re-crawl matches by canonical_artist + show_time and the event hash is unchanged (#825/#1053)', async () => {
     // Production regression: hashEvent used to include `artist`, so a
-    // re-crawl that picked a different headliner substring out of the same
-    // compound title (e.g. "BPM BINGO!" → "Dombresky / Walker & Royce" for
-    // the listing "BPM BINGO! Dombresky / Walker & Royce Edition") would
-    // shift the stored sourceHash and trip the verified-event-changed alert
-    // even though title/date/doors/show were identical.
+    // re-crawl that picked a different headliner substring would shift the
+    // stored sourceHash and trip the verified-event-changed alert even
+    // though title/date/doors/show were identical. hashEvent now ignores
+    // artist. This is the crawlVenue-level end-to-end guard that the
+    // notification path agrees.
     //
-    // hashEvent now ignores artist (covered by the unit test in hash.test.ts);
-    // this is the crawlVenue-level end-to-end guard that the notification
-    // path agrees. Pre-#825 this assertion would fail: the seeded row's
-    // sourceHash (computed via the new signature, no artist) would NOT match
-    // the freshly computed hash (which would have included artist) and the
-    // changedVerified filter would emit an admin alert.
+    // Under the #1053 re-key the dedup lookup now matches by
+    // (canonical_artist, date, show_time), so the seeded row and the
+    // re-crawl must share the same canonical_artist value for the
+    // existingMap lookup to hit and the hash comparison to fire.
     const venue = seedVenue()
-    const sharedTitle = 'BPM BINGO! Dombresky / Walker & Royce Edition'
     const sharedDate = '2026-08-15'
+    const sharedArtist = 'Hilary Duff'
+    const canonicalArtistValue = 'hilary duff'
 
-    // Seed an existing verified row with sourceHash computed under the new
-    // (post-#825) signature — title/date/doors/show only, no artist.
+    // Seed an existing verified row with sourceHash computed under the
+    // post-#825 signature — title/date/doors/show only, no artist.
+    const firstTitle = 'Hilary Duff'
     const seededHash = hashEvent({
-      title: sharedTitle,
+      title: firstTitle,
       date: sharedDate,
       doorsTime: null,
       showTime: null,
@@ -632,10 +678,10 @@ describe('crawlVenue — event-level sourceHash', () => {
     stores.events.push({
       id: crypto.randomUUID(),
       venueId: venue.id,
-      title: sharedTitle,
-      artist: 'BPM BINGO!',
-      canonicalArtist: 'bpm bingo!',
-      canonicalTitle: canonicalizeTitle(sharedTitle),
+      title: firstTitle,
+      artist: sharedArtist,
+      canonicalArtist: canonicalArtistValue,
+      canonicalTitle: canonicalizeTitle(firstTitle),
       date: sharedDate,
       doorsTime: null,
       showTime: null,
@@ -651,14 +697,18 @@ describe('crawlVenue — event-level sourceHash', () => {
       httpStatus: 200,
       finalUrl: venue.websiteUrl,
     })
-    // Re-crawl returns the SAME listing — title/date/doors/show unchanged —
-    // but the LLM picks a different artist substring out of the compound title.
+    // Re-crawl returns the same headliner and the same title, so the hash
+    // (title/date/doors/show — no artist) is unchanged. The point of the
+    // test is the #1053 lookup path: the re-crawl must find the seeded row
+    // via (canonical_artist, date, show_time) and, because the hash matches,
+    // fire no verified-event-changed alert. (A genuine title change would
+    // shift the hash and correctly fire the alert — covered elsewhere.)
     mockExtractWithLlm.mockResolvedValue({
       events: [
         {
-          title: sharedTitle,
-          rawTitle: sharedTitle,
-          artist: 'Dombresky / Walker & Royce',
+          title: firstTitle,
+          rawTitle: firstTitle,
+          artist: sharedArtist,
           date: sharedDate,
           doorsTime: undefined,
           showTime: undefined,
@@ -672,67 +722,53 @@ describe('crawlVenue — event-level sourceHash', () => {
 
     await crawlVenue(venue.id, mockBrowser)
 
-    // No verified-event-changed alert should fire — artist drift is not a
-    // user-visible change and hashEvent ignores it now.
+    // No verified-event-changed alert should fire — hash matches.
     const allAlerts = await db
       .select()
       .from(notifications)
       .where(eq(notifications.category, 'crawl.verified_event_changed'))
     expect(allAlerts).toHaveLength(0)
 
-    // And because the hash matched, the row should NOT have been queued for
-    // upsert — the existing seeded row is the only one with this title.
-    // (The in-memory db mock's onConflictDoUpdate is a no-op append, so we
-    // detect an unwanted upsert by counting rows with this canonical_title.)
-    const venueRowsWithTitle = stores.events.filter(
-      (row: { venueId: string; canonicalTitle: string }) =>
+    // Because the hash matched and the event was skipped, the seeded row
+    // is the only one with this canonical_artist.
+    const venueRowsWithArtist = stores.events.filter(
+      (row: { venueId: string; canonicalArtist: string }) =>
         row.venueId === venue.id &&
-        row.canonicalTitle === canonicalizeTitle(sharedTitle),
+        row.canonicalArtist === canonicalArtistValue,
     )
-    expect(venueRowsWithTitle).toHaveLength(1)
-    // And the seeded artist stays put — the artist-frozen rule from #824
-    // (artist intentionally NOT in onConflictDoUpdate.set) means even an
-    // accidental upsert would preserve it.
-    expect(venueRowsWithTitle[0].artist).toBe('BPM BINGO!')
+    expect(venueRowsWithArtist).toHaveLength(1)
+    // The seeded artist stays put — the artist-frozen rule from #824
+    // (artist intentionally NOT in onConflictDoUpdate.set).
+    expect(venueRowsWithArtist[0].artist).toBe(sharedArtist)
   })
 })
 
 describe('crawlVenue — intra-batch deduplication', () => {
-  it('inserts only one row when LLM returns the same listing with different artist substrings (#821)', async () => {
+  it('inserts only one row when LLM returns the same listing twice with the same canonical_artist (#1053)', async () => {
     const venue = seedVenue()
     mockFetchPage.mockResolvedValue({
       html: HTML_V1,
       httpStatus: 200,
       finalUrl: venue.websiteUrl,
     })
-    // The real #821 case: LLM returns the same listing twice within a
-    // single extraction batch, picking different artist substrings from
-    // the same compound title each time. The artist strings must
-    // canonicalize to DIFFERENT canonical_artist values — otherwise the
-    // old canonical_artist-keyed dedup would have collapsed them too
-    // and the test wouldn't actually exercise the #821 behavior.
-    //
-    // Here: title is stable ("BPM BINGO! Dombresky / Walker & Royce"),
-    // canonicalizeTitle preserves it whole → same canonical_title for
-    // both. But canonicalizeArtist splits on " & " so "BPM BINGO!" and
-    // "Dombresky" produce distinct canonical_artist values ("bpm bingo!"
-    // vs "dombresky"). Pre-#821 these would have produced two rows;
-    // post-#821 canonical_title dedups them to one.
-    const sharedTitle = 'BPM BINGO! Dombresky / Walker & Royce Edition'
+    // #1053 case: LLM returns the same listing twice in a single extraction
+    // batch, with the same headliner but different billing titles and no
+    // show_time. Both have the same (canonical_artist, date, show_time) →
+    // the in-memory dedup key collapses them to one before the upsert.
     mockExtractWithLlm.mockResolvedValue({
       events: [
         {
-          title: sharedTitle,
-          rawTitle: sharedTitle,
-          artist: 'BPM BINGO!',
+          title: 'Hilary Duff',
+          rawTitle: 'Hilary Duff',
+          artist: 'Hilary Duff',
           date: '2026-08-15',
           confidence: 0.9,
           sourceUrl: 'https://test-venue.example.com',
         },
         {
-          title: sharedTitle,
-          rawTitle: sharedTitle,
-          artist: 'Dombresky',
+          title: 'Hilary Duff with La Roux',
+          rawTitle: 'Hilary Duff with La Roux',
+          artist: 'Hilary Duff',
           date: '2026-08-15',
           confidence: 0.9,
           sourceUrl: 'https://test-venue.example.com',

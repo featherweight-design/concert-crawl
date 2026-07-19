@@ -154,22 +154,30 @@ export const events = pgTable(
       'gin',
       table.canonicalSupporting,
     ),
-    // Partial UNIQUE on (venue_id, date, canonical_title) WHERE
-    // status='upcoming' — backs the crawler's ON CONFLICT target. Replaces
-    // the canonical_artist + artist unique indexes from #608 because the
-    // LLM extracts non-deterministic artist substrings from compound titles
-    // across crawl runs (see #821 root-cause analysis). Title is the stable
-    // substring (LLM transcribes verbatim from the page) while artist is
-    // the LLM's interpretation of which substring represents the headliner.
+    // Partial UNIQUE on (venue_id, date, canonical_artist, show_time) WHERE
+    // status='upcoming' — backs the crawler's ON CONFLICT target (#1053).
+    // Replaces the (venue_id, date, canonical_title) unique from #0044, which
+    // under-collapsed on billing/title variants ("Hilary Duff" vs "Hilary Duff
+    // with La Roux, Jade LeMac"). Post-#643 canonical_artist is stable across
+    // those variants. show_time is in the key (NULLS NOT DISTINCT) so genuine
+    // same-artist same-day double-headers (matinee + evening) stay as separate
+    // rows; null show_time still dedups by (venue_id, date, canonical_artist).
+    //
+    // NULLS NOT DISTINCT cannot be expressed on IndexBuilder in drizzle-orm
+    // 0.45.2 (the method exists only on the unique() table-constraint path,
+    // which does not support the partial WHERE predicate). The clause is
+    // applied in the raw SQL migration 0057 — the authoritative source for
+    // this index. This definition models the column set + partial predicate
+    // for type inference and documentation.
     //
     // Status overrides (cancelled, postponed) sit outside this index so
-    // relists at the same venue/date produce a new upcoming row alongside
-    // the cancelled one. canonical_artist remains on the table as a
-    // search/display column with the non-unique btree index above.
-    venueDateCanonicalTitleIdx: uniqueIndex(
-      'events_venue_date_canonical_title_idx',
+    // relists at the same venue/date produce a new upcoming row alongside the
+    // cancelled one. canonical_title remains on the table as a display/search
+    // column with the non-unique btree index above.
+    venueDateCanonicalArtistShowtimeIdx: uniqueIndex(
+      'events_venue_date_canonical_artist_showtime_idx',
     )
-      .on(table.venueId, table.date, table.canonicalTitle)
+      .on(table.venueId, table.date, table.canonicalArtist, table.showTime)
       .where(sql`status = 'upcoming'`),
   }),
 )

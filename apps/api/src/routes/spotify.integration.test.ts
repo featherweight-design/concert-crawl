@@ -738,11 +738,14 @@ describe('denver match summary on the connection payload', () => {
     const venue = await seedVenue()
     // Past show (seedEvent default date is already in the past)
     await seedEvent(venue.id, { canonicalArtist: 'beyonce' })
-    // Hidden from consumers
+    // Hidden from consumers. Distinct show_time keeps this a separate row from
+    // the missing event below under the (venue, date, canonical_artist,
+    // show_time) unique index — both are 'beyonce' on FUTURE_DATE.
     await seedEvent(venue.id, {
       artist: 'Beyoncé Hidden',
       canonicalArtist: 'beyonce',
       date: FUTURE_DATE,
+      showTime: '19:00:00',
       hiddenFromConsumer: true,
     })
     // Crawler flagged missing
@@ -750,6 +753,7 @@ describe('denver match summary on the connection payload', () => {
       artist: 'Beyoncé Missing',
       canonicalArtist: 'beyonce',
       date: FUTURE_DATE,
+      showTime: '20:00:00',
       firstMissingAt: new Date(),
     })
 
