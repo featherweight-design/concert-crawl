@@ -82,7 +82,11 @@ vi.mock('playwright', () => ({
 // Mock crawlVenue and tagEventsWithGenres
 const mockCrawlVenue = vi
   .fn()
-  .mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
+  .mockResolvedValue({
+    id: 'run-uuid-1',
+    status: 'success',
+    insertedEventIds: [],
+  })
 const mockTagEventsWithGenres = vi.fn().mockResolvedValue(undefined)
 // Contract: runSpotifyFanoutSafely never throws (it swallows internally), so
 // the resolved-null default is its worst-case observable behavior.
@@ -190,7 +194,11 @@ describe('runDailyCrawl', () => {
   it('continues processing remaining venues when one fails', async () => {
     mockCrawlVenue
       .mockRejectedValueOnce(new Error('venue-1 blocked'))
-      .mockResolvedValue({ id: 'run-uuid-1', status: 'success' })
+      .mockResolvedValue({
+        id: 'run-uuid-1',
+        status: 'success',
+        insertedEventIds: [],
+      })
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
     expect(mockCrawlVenue).toHaveBeenCalledTimes(4)
