@@ -145,6 +145,54 @@ export async function getSpotifyMatchSummary(
   }
 }
 
+// Per-event follow matcher for the events list/detail `followedArtists`
+// overlay (#763 PR 6, eng spec §9.2). One query per request (the user's
+// Spotify-sourced follow names), then pure in-memory overlap against each
+// row's canonical columns — no per-event queries. Returns null when the user
+// has no Spotify-sourced follow rows (never connected, or revoked-and-purged)
+// so the routes can omit the field entirely; an `error`-status connection
+// retains its rows, so highlighting deliberately continues (§8.4).
+export interface FollowedArtistMatcher {
+  matchEvent: (event: {
+    canonicalArtist: string | null
+    canonicalSupporting: string[] | null
+  }) => string[]
+}
+
+export async function getFollowedArtistMatcher(
+  userId: string,
+): Promise<FollowedArtistMatcher | null> {
+  const follows = await loadSpotifyFollowNames(userId)
+  if (follows.length === 0) return null
+
+  const displayByCanonical = new Map<string, string>()
+  for (const follow of follows) {
+    if (!displayByCanonical.has(follow.canonicalName)) {
+      displayByCanonical.set(follow.canonicalName, follow.artistName)
+    }
+  }
+
+  return {
+    matchEvent: (event) => {
+      const matched = new Set<string>()
+      if (
+        event.canonicalArtist !== null &&
+        displayByCanonical.has(event.canonicalArtist)
+      ) {
+        matched.add(event.canonicalArtist)
+      }
+      for (const supporting of event.canonicalSupporting ?? []) {
+        if (displayByCanonical.has(supporting)) matched.add(supporting)
+      }
+      // localeCompare sort mirrors getSpotifyMatchSummary — deterministic
+      // regardless of row/Set iteration order.
+      return [...matched]
+        .flatMap((canonical) => displayByCanonical.get(canonical) ?? [])
+        .sort((left, right) => left.localeCompare(right))
+    },
+  }
+}
+
 // Event ids for the auto-watch opt-in backfill: every currently-matched
 // upcoming show. PR 10's fan-out only covers events that appear AFTER the
 // toggle flips, so the opt-in moment backfills the existing matches (the

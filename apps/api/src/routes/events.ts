@@ -45,6 +45,7 @@ import {
   pickHeadlinesByTier,
 } from '../lib/price-aggregation/index.js'
 import { narrowLastAdminAction } from '../lib/last-admin-action.js'
+import { getFollowedArtistMatcher } from '../lib/spotify-matches.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -97,279 +98,314 @@ if (process.env.REQUIRE_BETA_AUTH === 'true') {
   eventsRouter.use('*', serviceOrClerkAuth)
 }
 
-// GET /v1/events — public event listing with filters and pagination
-eventsRouter.get('/', zValidator('query', listEventsSchema), async (ctx) => {
-  const {
-    from,
-    to,
-    venueSlug,
-    search,
-    limit,
-    offset,
-    filterPrice,
-    filterVibe,
-  } = ctx.req.valid('query')
+// GET /v1/events — public event listing with filters and pagination.
+// clerkMiddleware() verifies any bearer JWT locally (no network/DB cost) so
+// signed-in requests can opt into the followedArtists overlay; anonymous
+// requests pass straight through and skip every per-user query.
+eventsRouter.get(
+  '/',
+  clerkMiddleware(),
+  zValidator('query', listEventsSchema),
+  async (ctx) => {
+    const {
+      from,
+      to,
+      venueSlug,
+      search,
+      limit,
+      offset,
+      filterPrice,
+      filterVibe,
+    } = ctx.req.valid('query')
 
-  const conditions: SQL[] = [
-    inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
-    gte(events.date, from ?? todayInTimezone('UTC')),
-    // PR 6 — hide events flagged "non-concert" from every consumer query.
-    eq(events.hiddenFromConsumer, false),
-    // Hide rows the crawler flagged as no longer visible on the venue page
-    // (#607). The crawler clears firstMissingAt on the next successful
-    // re-extraction (packages/crawler-core/src/crawl.ts:673-700), so any row
-    // that genuinely re-appears becomes visible again automatically — no
-    // manual intervention needed. Without this filter, every LLM artist-string
-    // drift produces a visible dupe (BASS BINGO – Wooli Edition showed 3 rows
-    // for one show on 2026-06-18).
-    isNull(events.firstMissingAt),
-  ]
+    const conditions: SQL[] = [
+      inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
+      gte(events.date, from ?? todayInTimezone('UTC')),
+      // PR 6 — hide events flagged "non-concert" from every consumer query.
+      eq(events.hiddenFromConsumer, false),
+      // Hide rows the crawler flagged as no longer visible on the venue page
+      // (#607). The crawler clears firstMissingAt on the next successful
+      // re-extraction (packages/crawler-core/src/crawl.ts:673-700), so any row
+      // that genuinely re-appears becomes visible again automatically — no
+      // manual intervention needed. Without this filter, every LLM artist-string
+      // drift produces a visible dupe (BASS BINGO – Wooli Edition showed 3 rows
+      // for one show on 2026-06-18).
+      isNull(events.firstMissingAt),
+    ]
 
-  if (to) {
-    conditions.push(lte(events.date, to))
-  }
-
-  if (venueSlug) {
-    const [venue] = await db
-      .select({ id: venues.id })
-      .from(venues)
-      .where(eq(venues.slug, venueSlug))
-      .limit(1)
-    if (!venue) {
-      return ctx.json({
-        success: true,
-        data: { data: [], total: 0, limit, offset },
-      })
+    if (to) {
+      conditions.push(lte(events.date, to))
     }
-    conditions.push(eq(events.venueId, venue.id))
-  }
 
-  if (search) {
-    const searchCondition = or(
-      ilike(events.title, `%${search}%`),
-      ilike(events.artist, `%${search}%`),
-      ilike(venues.name, `%${search}%`),
-    )
-    if (searchCondition) conditions.push(searchCondition)
-  }
+    if (venueSlug) {
+      const [venue] = await db
+        .select({ id: venues.id })
+        .from(venues)
+        .where(eq(venues.slug, venueSlug))
+        .limit(1)
+      if (!venue) {
+        return ctx.json({
+          success: true,
+          data: { data: [], total: 0, limit, offset },
+        })
+      }
+      conditions.push(eq(events.venueId, venue.id))
+    }
 
-  const priceCondition =
-    filterPrice === 'under-25'
-      ? and(isNotNull(events.ticketPriceMin), lt(events.ticketPriceMin, '25'))
-      : filterPrice === '25-50'
-        ? and(
-            isNotNull(events.ticketPriceMin),
-            gte(events.ticketPriceMin, '25'),
-            lt(events.ticketPriceMin, '50'),
-          )
-        : filterPrice === '50-plus'
+    if (search) {
+      const searchCondition = or(
+        ilike(events.title, `%${search}%`),
+        ilike(events.artist, `%${search}%`),
+        ilike(venues.name, `%${search}%`),
+      )
+      if (searchCondition) conditions.push(searchCondition)
+    }
+
+    const priceCondition =
+      filterPrice === 'under-25'
+        ? and(isNotNull(events.ticketPriceMin), lt(events.ticketPriceMin, '25'))
+        : filterPrice === '25-50'
           ? and(
               isNotNull(events.ticketPriceMin),
-              gte(events.ticketPriceMin, '50'),
+              gte(events.ticketPriceMin, '25'),
+              lt(events.ticketPriceMin, '50'),
             )
-          : filterPrice === 'tbd'
-            ? and(isNull(events.ticketPriceMin), isNull(events.ticketPriceMax))
-            : undefined
+          : filterPrice === '50-plus'
+            ? and(
+                isNotNull(events.ticketPriceMin),
+                gte(events.ticketPriceMin, '50'),
+              )
+            : filterPrice === 'tbd'
+              ? and(
+                  isNull(events.ticketPriceMin),
+                  isNull(events.ticketPriceMax),
+                )
+              : undefined
 
-  if (priceCondition) conditions.push(priceCondition)
+    if (priceCondition) conditions.push(priceCondition)
 
-  if (filterVibe) {
-    conditions.push(sql`${events.genre} && ARRAY[${filterVibe}]::text[]`)
-  }
+    if (filterVibe) {
+      conditions.push(sql`${events.genre} && ARRAY[${filterVibe}]::text[]`)
+    }
 
-  const where = and(...conditions)
+    const where = and(...conditions)
 
-  const countResult = await db
-    .select({ total: count() })
-    .from(events)
-    .innerJoin(venues, eq(events.venueId, venues.id))
-    .where(where)
+    const countResult = await db
+      .select({ total: count() })
+      .from(events)
+      .innerJoin(venues, eq(events.venueId, venues.id))
+      .where(where)
 
-  const total = countResult[0]?.total ?? 0
+    const total = countResult[0]?.total ?? 0
 
-  const rows = await db
-    .select({
-      id: events.id,
-      venueId: events.venueId,
-      title: events.title,
-      artist: events.artist,
-      supportingArtists: events.supportingArtists,
-      tourName: events.tourName,
-      date: events.date,
-      doorsTime: events.doorsTime,
-      showTime: events.showTime,
-      ticketUrl: events.ticketUrl,
-      ticketLinks: events.ticketLinks,
-      ticketPriceMin: events.ticketPriceMin,
-      ticketPriceMax: events.ticketPriceMax,
-      priceSource: events.priceSource,
-      description: events.description,
-      imageUrl: events.imageUrl,
-      genre: events.genre,
-      status: events.status,
-      confidenceScore: events.confidenceScore,
-      verified: events.verified,
-      sourceUrl: events.sourceUrl,
-      createdAt: events.createdAt,
-      updatedAt: events.updatedAt,
-      venue: {
-        id: venues.id,
-        name: venues.name,
-        slug: venues.slug,
-        city: venues.city,
-        timezone: venues.timezone,
-        websiteUrl: venues.websiteUrl,
-      },
-    })
-    .from(events)
-    .innerJoin(venues, eq(events.venueId, venues.id))
-    .where(where)
-    .orderBy(asc(events.date), asc(events.showTime))
-    .limit(limit)
-    .offset(offset)
-
-  // Batch-fetch corroborated submission vendor for community-priced events so the
-  // browse card can show the correct trust tier (boxoffice ★, resale R, community C).
-  const communityEventIds = rows
-    .filter((row) => row.priceSource === 'community')
-    .map((row) => row.id)
-
-  const vendorByEventId: Record<string, string | null> = {}
-  if (communityEventIds.length > 0) {
-    const vendorRows = await db
+    const rows = await db
       .select({
-        eventId: priceSubmissions.eventId,
-        vendor: priceSubmissions.vendor,
+        id: events.id,
+        venueId: events.venueId,
+        title: events.title,
+        artist: events.artist,
+        supportingArtists: events.supportingArtists,
+        tourName: events.tourName,
+        date: events.date,
+        doorsTime: events.doorsTime,
+        showTime: events.showTime,
+        ticketUrl: events.ticketUrl,
+        ticketLinks: events.ticketLinks,
+        ticketPriceMin: events.ticketPriceMin,
+        ticketPriceMax: events.ticketPriceMax,
+        priceSource: events.priceSource,
+        description: events.description,
+        imageUrl: events.imageUrl,
+        genre: events.genre,
+        status: events.status,
+        confidenceScore: events.confidenceScore,
+        verified: events.verified,
+        sourceUrl: events.sourceUrl,
+        createdAt: events.createdAt,
+        updatedAt: events.updatedAt,
+        // Canonical name columns feed the followedArtists overlay below and
+        // are stripped from the response payload — matching happens on the
+        // canonical form (§9.1), display happens with the follow row's name.
+        canonicalArtist: events.canonicalArtist,
+        canonicalSupporting: events.canonicalSupporting,
+        venue: {
+          id: venues.id,
+          name: venues.name,
+          slug: venues.slug,
+          city: venues.city,
+          timezone: venues.timezone,
+          websiteUrl: venues.websiteUrl,
+        },
       })
-      .from(priceSubmissions)
-      .where(
-        and(
-          inArray(priceSubmissions.eventId, communityEventIds),
-          eq(priceSubmissions.status, 'corroborated'),
-        ),
-      )
-      .orderBy(
-        sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${priceSubmissions.vendor} = 'SeatGeek' THEN 2 ELSE 1 END ASC`,
-        desc(priceSubmissions.createdAt),
-      )
+      .from(events)
+      .innerJoin(venues, eq(events.venueId, venues.id))
+      .where(where)
+      .orderBy(asc(events.date), asc(events.showTime))
+      .limit(limit)
+      .offset(offset)
 
-    for (const vRow of vendorRows) {
-      if (!(vRow.eventId in vendorByEventId)) {
-        vendorByEventId[vRow.eventId] = vRow.vendor
+    // followedArtists overlay (#763 PR 6, §9.2): exactly one extra query for
+    // signed-in users with Spotify-sourced follows; null (and zero queries)
+    // for everyone else, so the anonymous/public path cost is unchanged.
+    const listAuth = getAuth(ctx)
+    const followMatcher = listAuth?.userId
+      ? await getFollowedArtistMatcher(listAuth.userId)
+      : null
+
+    // Batch-fetch corroborated submission vendor for community-priced events so the
+    // browse card can show the correct trust tier (boxoffice ★, resale R, community C).
+    const communityEventIds = rows
+      .filter((row) => row.priceSource === 'community')
+      .map((row) => row.id)
+
+    const vendorByEventId: Record<string, string | null> = {}
+    if (communityEventIds.length > 0) {
+      const vendorRows = await db
+        .select({
+          eventId: priceSubmissions.eventId,
+          vendor: priceSubmissions.vendor,
+        })
+        .from(priceSubmissions)
+        .where(
+          and(
+            inArray(priceSubmissions.eventId, communityEventIds),
+            eq(priceSubmissions.status, 'corroborated'),
+          ),
+        )
+        .orderBy(
+          sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${priceSubmissions.vendor} = 'SeatGeek' THEN 2 ELSE 1 END ASC`,
+          desc(priceSubmissions.createdAt),
+        )
+
+      for (const vRow of vendorRows) {
+        if (!(vRow.eventId in vendorByEventId)) {
+          vendorByEventId[vRow.eventId] = vRow.vendor
+        }
       }
     }
-  }
 
-  // priceByTier on the browse list endpoint — closes issue #787 (browse chip
-  // parity). The consumer EventCard now reads `event.priceByTier` directly
-  // via `pickBrowseHeadline()`, which mirrors `pickTierHeadline` /
-  // `compareTierRows` on the API side. This was the locked Browse table #7
-  // sub-task — the legacy `resolveListChipKind(priceSource, priceVendor)`
-  // fallback stays on EventCard for events the API doesn't surface
-  // priceByTier for (defensive only — the list endpoint always populates it
-  // now for events with at least one corroborated submission).
-  //
-  // Cost control: only `headline` is consumed by the browse chip, so we skip
-  // the per-event side-table fetches (pending, counters, handles, reports)
-  // that the /v1/events/:id endpoint runs. Each event row gets the same
-  // TierPriceBlock shape with empty pending / counterSubmission arrays. The
-  // SELECT below pulls priceSubmissions.corroborationCount so confirmsCount
-  // can be derived per-row (submitter counts as observation #1 → the count
-  // we surface is `max(0, corroborationCount - 1)`). Without that derivation
-  // buildHeadline mislabels every fan-corroborated browse row as
-  // approvalKind='admin'.
-  const visibleEventIds = rows.map((row) => row.id)
-  const priceByTierByEventId = new Map<
-    string,
-    Awaited<ReturnType<typeof aggregateByTier>>
-  >()
-  if (visibleEventIds.length > 0) {
-    const corroboratedListRows = await db
-      .select({
-        id: priceSubmissions.id,
-        eventId: priceSubmissions.eventId,
-        tier: priceSubmissions.tier,
-        priceMin: priceSubmissions.priceMin,
-        priceMax: priceSubmissions.priceMax,
-        vendor: priceSubmissions.vendor,
-        sourceCategory: priceSubmissions.sourceCategory,
-        howFound: priceSubmissions.howFound,
-        userId: priceSubmissions.userId,
-        createdAt: priceSubmissions.createdAt,
-        updatedAt: priceSubmissions.updatedAt,
-        corroborationCount: priceSubmissions.corroborationCount,
-      })
-      .from(priceSubmissions)
-      .where(
-        and(
-          inArray(priceSubmissions.eventId, visibleEventIds),
-          eq(priceSubmissions.status, 'corroborated'),
-        ),
-      )
+    // priceByTier on the browse list endpoint — closes issue #787 (browse chip
+    // parity). The consumer EventCard now reads `event.priceByTier` directly
+    // via `pickBrowseHeadline()`, which mirrors `pickTierHeadline` /
+    // `compareTierRows` on the API side. This was the locked Browse table #7
+    // sub-task — the legacy `resolveListChipKind(priceSource, priceVendor)`
+    // fallback stays on EventCard for events the API doesn't surface
+    // priceByTier for (defensive only — the list endpoint always populates it
+    // now for events with at least one corroborated submission).
+    //
+    // Cost control: only `headline` is consumed by the browse chip, so we skip
+    // the per-event side-table fetches (pending, counters, handles, reports)
+    // that the /v1/events/:id endpoint runs. Each event row gets the same
+    // TierPriceBlock shape with empty pending / counterSubmission arrays. The
+    // SELECT below pulls priceSubmissions.corroborationCount so confirmsCount
+    // can be derived per-row (submitter counts as observation #1 → the count
+    // we surface is `max(0, corroborationCount - 1)`). Without that derivation
+    // buildHeadline mislabels every fan-corroborated browse row as
+    // approvalKind='admin'.
+    const visibleEventIds = rows.map((row) => row.id)
+    const priceByTierByEventId = new Map<
+      string,
+      Awaited<ReturnType<typeof aggregateByTier>>
+    >()
+    if (visibleEventIds.length > 0) {
+      const corroboratedListRows = await db
+        .select({
+          id: priceSubmissions.id,
+          eventId: priceSubmissions.eventId,
+          tier: priceSubmissions.tier,
+          priceMin: priceSubmissions.priceMin,
+          priceMax: priceSubmissions.priceMax,
+          vendor: priceSubmissions.vendor,
+          sourceCategory: priceSubmissions.sourceCategory,
+          howFound: priceSubmissions.howFound,
+          userId: priceSubmissions.userId,
+          createdAt: priceSubmissions.createdAt,
+          updatedAt: priceSubmissions.updatedAt,
+          corroborationCount: priceSubmissions.corroborationCount,
+        })
+        .from(priceSubmissions)
+        .where(
+          and(
+            inArray(priceSubmissions.eventId, visibleEventIds),
+            eq(priceSubmissions.status, 'corroborated'),
+          ),
+        )
 
-    // Group by eventId so aggregateByTier sees only this event's corroborated
-    // rows; pending + counters are intentionally empty to keep the browse
-    // endpoint cheap (per the comment block above).
-    const corroboratedByEvent = new Map<string, typeof corroboratedListRows>()
-    for (const sub of corroboratedListRows) {
-      const existing = corroboratedByEvent.get(sub.eventId)
-      if (existing) existing.push(sub)
-      else corroboratedByEvent.set(sub.eventId, [sub])
+      // Group by eventId so aggregateByTier sees only this event's corroborated
+      // rows; pending + counters are intentionally empty to keep the browse
+      // endpoint cheap (per the comment block above).
+      const corroboratedByEvent = new Map<string, typeof corroboratedListRows>()
+      for (const sub of corroboratedListRows) {
+        const existing = corroboratedByEvent.get(sub.eventId)
+        if (existing) existing.push(sub)
+        else corroboratedByEvent.set(sub.eventId, [sub])
+      }
+
+      for (const [eventId, subs] of corroboratedByEvent) {
+        const blocks = aggregateByTier({
+          corroborated: subs.map((sub) => ({
+            id: sub.id,
+            tier: sub.tier,
+            priceMin: sub.priceMin,
+            priceMax: sub.priceMax,
+            vendor: sub.vendor,
+            // Legacy corroborated rows may have sourceCategory === null
+            // (PR 3 backfill predated the column). Infer using the shared
+            // deriveSourceCategory helper so a box-office row (vendor =
+            // VenueBoxOffice or howFound = at_the_venue) doesn't get
+            // mislabeled as 'standard' on the browse chip — same drift
+            // we caught on the consumer edit-flow side (Copilot R9).
+            sourceCategory:
+              sub.sourceCategory ??
+              deriveSourceCategory(sub.vendor, sub.howFound),
+            userId: sub.userId,
+            createdAt: sub.createdAt,
+            updatedAt: sub.updatedAt,
+            // confirmsCount excludes the submitter (who counts as observation #1
+            // per the price_submissions.corroboration_count schema comment).
+            // Without this derivation buildHeadline would compute approvalKind
+            // as 'admin' for every list row, which is wrong for fan-corroborated
+            // submissions and leaks into any consumer that starts reading the
+            // richer priceByTier payload.
+            confirmsCount: Math.max(0, sub.corroborationCount - 1),
+          })),
+          pending: [],
+          counters: [],
+          handles: new Map(),
+          reportsByTier: new Map(),
+          confirmsNeeded: SP_POLICY.confirmsRequired,
+          viewerUserId: null,
+        })
+        priceByTierByEventId.set(eventId, blocks)
+      }
     }
 
-    for (const [eventId, subs] of corroboratedByEvent) {
-      const blocks = aggregateByTier({
-        corroborated: subs.map((sub) => ({
-          id: sub.id,
-          tier: sub.tier,
-          priceMin: sub.priceMin,
-          priceMax: sub.priceMax,
-          vendor: sub.vendor,
-          // Legacy corroborated rows may have sourceCategory === null
-          // (PR 3 backfill predated the column). Infer using the shared
-          // deriveSourceCategory helper so a box-office row (vendor =
-          // VenueBoxOffice or howFound = at_the_venue) doesn't get
-          // mislabeled as 'standard' on the browse chip — same drift
-          // we caught on the consumer edit-flow side (Copilot R9).
-          sourceCategory:
-            sub.sourceCategory ??
-            deriveSourceCategory(sub.vendor, sub.howFound),
-          userId: sub.userId,
-          createdAt: sub.createdAt,
-          updatedAt: sub.updatedAt,
-          // confirmsCount excludes the submitter (who counts as observation #1
-          // per the price_submissions.corroboration_count schema comment).
-          // Without this derivation buildHeadline would compute approvalKind
-          // as 'admin' for every list row, which is wrong for fan-corroborated
-          // submissions and leaks into any consumer that starts reading the
-          // richer priceByTier payload.
-          confirmsCount: Math.max(0, sub.corroborationCount - 1),
-        })),
-        pending: [],
-        counters: [],
-        handles: new Map(),
-        reportsByTier: new Map(),
-        confirmsNeeded: SP_POLICY.confirmsRequired,
-        viewerUserId: null,
-      })
-      priceByTierByEventId.set(eventId, blocks)
-    }
-  }
+    const enrichedRows = rows.map((row) => {
+      const { canonicalArtist, canonicalSupporting, ...publicRow } = row
+      return {
+        ...publicRow,
+        priceVendor:
+          row.priceSource === 'community'
+            ? (vendorByEventId[row.id] ?? null)
+            : null,
+        priceByTier: priceByTierByEventId.get(row.id) ?? null,
+        ...(followMatcher
+          ? {
+              followedArtists: followMatcher.matchEvent({
+                canonicalArtist,
+                canonicalSupporting,
+              }),
+            }
+          : {}),
+      }
+    })
 
-  const enrichedRows = rows.map((row) => ({
-    ...row,
-    priceVendor:
-      row.priceSource === 'community'
-        ? (vendorByEventId[row.id] ?? null)
-        : null,
-    priceByTier: priceByTierByEventId.get(row.id) ?? null,
-  }))
-
-  return ctx.json({
-    success: true,
-    data: { data: enrichedRows, total, limit, offset },
-  })
-})
+    return ctx.json({
+      success: true,
+      data: { data: enrichedRows, total, limit, offset },
+    })
+  },
+)
 
 // GET /v1/events/genres — distinct genres across all upcoming events
 eventsRouter.get('/genres', async (ctx) => {
@@ -477,6 +513,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       setlist: events.setlist,
       createdAt: events.createdAt,
       updatedAt: events.updatedAt,
+      // Feed the followedArtists overlay; stripped from the response below.
+      canonicalArtist: events.canonicalArtist,
+      canonicalSupporting: events.canonicalSupporting,
       venue: {
         id: venues.id,
         name: venues.name,
@@ -945,10 +984,26 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     }))
   }
 
+  // followedArtists overlay (#763 PR 6, §9.2) — one extra query, only for
+  // signed-in users with Spotify-sourced follow rows; field omitted otherwise.
+  const followMatcher = authInfo?.userId
+    ? await getFollowedArtistMatcher(authInfo.userId)
+    : null
+
+  const { canonicalArtist, canonicalSupporting, ...publicRow } = row
+
   return ctx.json({
     success: true,
     data: {
-      ...row,
+      ...publicRow,
+      ...(followMatcher
+        ? {
+            followedArtists: followMatcher.matchEvent({
+              canonicalArtist,
+              canonicalSupporting,
+            }),
+          }
+        : {}),
       watching: watchingCount,
       isWatching,
       priceStatus,

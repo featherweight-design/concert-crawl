@@ -504,6 +504,11 @@ export interface EventWithVenue extends Event {
   // payload is sufficient for the browse chip. Any consumer that wants
   // those fields populated must use `EventDetailResponse` instead.
   priceByTier?: TierPriceBlock[] | null
+  // Display names of the viewer's Spotify-followed artists that match this
+  // event's headliner or supporting set (#763 PR 6, eng spec §9.2). Present
+  // ONLY for signed-in users with Spotify-sourced follow rows — a possibly
+  // empty array per event. Absent entirely for anonymous/unconnected viewers.
+  followedArtists?: string[]
 }
 
 // Per-tier price-aggregation building blocks (issue #644). Surfaced inside
