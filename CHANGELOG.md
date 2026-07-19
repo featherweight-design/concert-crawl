@@ -1,3 +1,10 @@
+# [1.154.0](https://github.com/HartiganHM/concert-crawl/compare/v1.153.0...v1.154.0) (2026-07-19)
+
+
+### Features
+
+* **pwa:** post-watch permission sheet + watch-show-button integration ([#1062](https://github.com/HartiganHM/concert-crawl/issues/1062)) ([#1123](https://github.com/HartiganHM/concert-crawl/issues/1123)) ([120f493](https://github.com/HartiganHM/concert-crawl/commit/120f493d2818e53adab9b9eccff7038f60cc18a6)), closes [#1092](https://github.com/HartiganHM/concert-crawl/issues/1092)
+
 # [1.153.0](https://github.com/HartiganHM/concert-crawl/compare/v1.152.3...v1.153.0) (2026-07-19)
 
 
