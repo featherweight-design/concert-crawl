@@ -88,7 +88,8 @@ emailUnsubscribeRouter.get(
     }
 
     if (!verifyUnsubscribeToken(uid, family, token)) {
-      apiLogger.warn({ family }, 'email unsubscribe token rejected')
+      // uid is loggable for support tracing; the token never is.
+      apiLogger.warn({ uid, family }, 'email unsubscribe token rejected')
       return ctx.html(
         confirmationPage(
           'That link didn’t work.',
@@ -112,7 +113,10 @@ emailUnsubscribeRouter.get(
     } catch (err) {
       // Humans land here from email clients — a DB hiccup must render the
       // same HTML shell, not the app-level JSON 500.
-      apiLogger.error({ err, family }, 'email unsubscribe DB update failed')
+      apiLogger.error(
+        { err, uid, family },
+        'email unsubscribe DB update failed',
+      )
       return ctx.html(
         confirmationPage(
           'Something went wrong.',
@@ -122,7 +126,7 @@ emailUnsubscribeRouter.get(
       )
     }
 
-    apiLogger.info({ family }, 'email unsubscribe applied')
+    apiLogger.info({ uid, family }, 'email unsubscribe applied')
     return ctx.html(
       confirmationPage(
         'You’re unsubscribed.',
