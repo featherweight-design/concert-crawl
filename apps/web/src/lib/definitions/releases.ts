@@ -26,6 +26,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.9.1-beta',
+    date: 'Jul 19, 2026',
+    headline: 'Offline mode looks like it means it now.',
+    items: [
+      {
+        kind: 'changed',
+        text: 'The offline signal is a tiny pill in the header, not a bar across the page. Lose signal deep in the app and you land on a real page — with everything you already loaded still browsable, and honest about what needs a connection.',
+      },
+    ],
+  },
+  {
     version: 'v0.9.0-beta',
     date: 'Jul 19, 2026',
     headline: 'The install nudge grew up.',

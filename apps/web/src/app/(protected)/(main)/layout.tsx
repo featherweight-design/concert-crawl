@@ -1,6 +1,7 @@
 import { AppHeader } from '@/components/consumer/app-header'
 import { BottomNav } from '@/components/consumer/bottom-nav'
 import { InstallSlot } from '@/components/pwa/InstallSlot'
+import { OfflinePill } from '@/components/pwa/OfflinePill'
 
 export default function MainLayout({
   children,
@@ -9,7 +10,14 @@ export default function MainLayout({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-bg">
-      <AppHeader rightSlots={<InstallSlot />} />
+      <AppHeader
+        rightSlots={
+          <>
+            <OfflinePill />
+            <InstallSlot />
+          </>
+        }
+      />
       {children}
       <BottomNav />
     </div>

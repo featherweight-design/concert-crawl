@@ -11,7 +11,6 @@ import { QueryProvider } from '@/components/QueryProvider'
 // module graph.
 import { PostHogProvider } from '@/lib/analytics/PostHogProvider'
 import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration'
-import { OfflineBanner } from '@/components/pwa/OfflineBanner'
 import { Toaster } from 'sonner'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 
@@ -99,7 +98,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
         </head>
         <body className="min-h-screen bg-bg text-fg font-sans antialiased">
           <ServiceWorkerRegistration />
-          <OfflineBanner />
           <QueryProvider>
             <PostHogProvider>
               <ThemeProvider>{children}</ThemeProvider>
