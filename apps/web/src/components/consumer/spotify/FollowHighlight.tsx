@@ -69,7 +69,7 @@ export const DetailFollowStrip = ({ artists }: DetailFollowStripProps) => {
     >
       <SpotifyLogo size={30} />
       <p
-        className="text-fg"
+        className="min-w-0 flex-1 text-fg"
         style={{ fontSize: 13.5, fontWeight: 700, letterSpacing: '-0.01em' }}
       >
         {copy.strip(artists)}
