@@ -252,7 +252,7 @@ describe('monetization schema (execution plan PR 2.1)', () => {
       expect(emailTemplateConfig.enabled.default).toBe(true)
     })
 
-    it('EMAIL_TEMPLATE_KEYS lists exactly the 11 #783 template keys', () => {
+    it('EMAIL_TEMPLATE_KEYS lists the 11 #783 template keys plus spotify_digest (#763)', () => {
       expect(EMAIL_TEMPLATE_KEYS).toEqual([
         'welcome_paid',
         'welcome_gifted',
@@ -265,6 +265,7 @@ describe('monetization schema (execution plan PR 2.1)', () => {
         'cancellation_ack',
         'gifting_ending_notice',
         'winback',
+        'spotify_digest',
       ])
     })
   })

@@ -56,7 +56,8 @@ export const subscriptionEventTypeEnum = pgEnum('subscription_event_type', [
   'data_purged',
 ])
 
-// The 11 #783 transactional email template keys (eng infra spec Part 2 §4.4).
+// The 11 #783 transactional email template keys (eng infra spec Part 2 §4.4),
+// plus the #763 spotify_digest weekly digest key (Spotify sync eng spec §8.2).
 // email_template_config is seeded with one enabled row per key.
 export const EMAIL_TEMPLATE_KEYS = [
   'welcome_paid',
@@ -70,6 +71,7 @@ export const EMAIL_TEMPLATE_KEYS = [
   'cancellation_ack',
   'gifting_ending_notice',
   'winback',
+  'spotify_digest',
 ] as const
 
 export type EmailTemplateKey = (typeof EMAIL_TEMPLATE_KEYS)[number]

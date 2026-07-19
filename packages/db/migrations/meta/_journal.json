@@ -379,6 +379,13 @@
       "when": 1784764800000,
       "tag": "0053_spotify_sync_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1784851200000,
+      "tag": "0054_spotify_digest_template",
+      "breakpoints": true
     }
   ]
 }
