@@ -14,6 +14,7 @@ import {
   AllEventsTabContent,
   type AllEventsApi,
 } from './_tabs/AllEventsTabContent'
+import { ContestsTabContent } from './_tabs/ContestsTabContent'
 import { EMPTY_FILTERS, type AllEventsFilters } from './all/filters'
 import { type AllEvent } from './all/types'
 import { type MissingRowEvent } from './missing/MissingRow'
@@ -80,7 +81,8 @@ interface AdminReviewMobileProps {
     vendor: string,
     howFound: string,
   ) => Promise<void>
-  initialTab?: 'flags' | 'prices' | 'missing' | 'all-events'
+  initialTab?: 'flags' | 'prices' | 'missing' | 'all-events' | 'contests'
+  contestCount?: number
   pricesMissingOnly: boolean
   priceEventsPage: number
   priceEventsPageSize: number
@@ -594,6 +596,7 @@ export function AdminReviewMobile({
   onDenySubmission,
   onAddPrice,
   initialTab = 'flags',
+  contestCount = 0,
   pricesMissingOnly,
   priceEventsPage,
   priceEventsPageSize,
@@ -622,7 +625,7 @@ export function AdminReviewMobile({
   onAllEventsViewDetail,
 }: AdminReviewMobileProps) {
   const [activeTab, setActiveTab] = useState<
-    'flags' | 'prices' | 'missing' | 'all-events'
+    'flags' | 'prices' | 'missing' | 'all-events' | 'contests'
   >(initialTab)
 
   // If the mobile surface mounts already on the Missing tab (deep-link via
@@ -634,8 +637,8 @@ export function AdminReviewMobile({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleTabClick = (
-    key: 'flags' | 'prices' | 'missing' | 'all-events',
+  const onTabChange = (
+    key: 'flags' | 'prices' | 'missing' | 'all-events' | 'contests',
   ) => {
     setActiveTab(key)
     if (key === 'missing' && onEnterMissingTab) onEnterMissingTab()
@@ -645,6 +648,30 @@ export function AdminReviewMobile({
 
   const missingCount = priceEvents.filter((ev) => ev.priceMin === null).length
   const priceCount = submissions.length + missingCount
+
+  const tabOptions = [
+    {
+      key: 'flags',
+      label: ADMIN_COPY.review.adminReviewMobile.tabEventFlags,
+      count: events.length,
+    },
+    {
+      key: 'prices',
+      label: ADMIN_COPY.review.adminReviewMobile.tabPrices,
+      count: priceCount,
+    },
+    {
+      key: 'missing',
+      label: ADMIN_COPY.review.tabs.missing,
+      count: missingEvents.length,
+    },
+    { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents, count: 0 },
+    {
+      key: 'contests',
+      label: ADMIN_COPY.review.tabs.contests,
+      count: contestCount,
+    },
+  ] as const
 
   const cardStyle: React.CSSProperties = {
     background: 'var(--bg-elevated)',
@@ -662,91 +689,38 @@ export function AdminReviewMobile({
         gap: 16,
       }}
     >
-      {/* Tab switcher — not sticky; the component fills available height so the main scroll container never scrolls */}
-      <div
+      {/*
+        Tab switcher — a native <select> rather than a pill row. Five tabs
+        (incl. Contests) can't fit one 320px row without clipping the last tab,
+        and wrapping to a second row eats scarce mobile vertical space. Mirrors
+        the below-`sm` fallback in ReviewTabs (the desktop surface). #1028
+      */}
+      <select
+        aria-label={ADMIN_COPY.review.tabs.ariaLabel}
+        value={activeTab}
+        onChange={(evt) => {
+          const next = tabOptions.find((opt) => opt.key === evt.target.value)
+          if (next) onTabChange(next.key)
+        }}
         style={{
           flexShrink: 0,
-          display: 'flex',
-          padding: 4,
+          width: '100%',
+          padding: '10px 12px',
           background: 'var(--surface-1)',
           borderRadius: 10,
           border: '1px solid var(--border)',
-          gap: 6,
+          fontFamily: "'Inter', sans-serif",
+          fontSize: 13,
+          fontWeight: 700,
+          color: 'var(--fg)',
         }}
       >
-        {(
-          [
-            {
-              key: 'flags',
-              label: ADMIN_COPY.review.adminReviewMobile.tabEventFlags,
-              count: events.length,
-            },
-            {
-              key: 'prices',
-              label: ADMIN_COPY.review.adminReviewMobile.tabPrices,
-              count: priceCount,
-            },
-            {
-              key: 'missing',
-              label: ADMIN_COPY.review.tabs.missing,
-              count: missingEvents.length,
-            },
-            {
-              key: 'all-events',
-              label: ADMIN_COPY.review.tabs.allEvents,
-              count: 0,
-            },
-          ] as const
-        ).map(({ key, label, count }) => {
-          const isActive = activeTab === key
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => handleTabClick(key)}
-              style={{
-                flex: 1,
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                padding: '8px 0',
-                border: 'none',
-                borderRadius: 7,
-                background: isActive ? 'var(--bg-elevated)' : 'transparent',
-                boxShadow: isActive ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                fontFamily: "'Inter', sans-serif",
-                fontSize: 12,
-                fontWeight: 700,
-                color: isActive ? 'var(--fg)' : 'var(--fg-muted)',
-                cursor: 'pointer',
-              }}
-            >
-              {label}
-              {count > 0 && (
-                <span
-                  style={{
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: 10,
-                    fontWeight: 700,
-                    minWidth: 16,
-                    height: 16,
-                    padding: '0 4px',
-                    borderRadius: 8,
-                    background: isActive ? 'var(--signal)' : 'var(--surface-2)',
-                    color: isActive ? 'var(--fg-on-accent)' : 'var(--fg-muted)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {count}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
+        {tabOptions.map(({ key, label, count }) => (
+          <option key={key} value={key}>
+            {count > 0 ? `${label} (${count})` : label}
+          </option>
+        ))}
+      </select>
 
       {/* Event flags tab — fills remaining height, scrolls internally */}
       {activeTab === 'flags' && (
@@ -1170,6 +1144,12 @@ export function AdminReviewMobile({
               ? { onViewDetail: onAllEventsViewDetail }
               : {})}
           />
+        </div>
+      )}
+
+      {activeTab === 'contests' && (
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <ContestsTabContent />
         </div>
       )}
     </div>

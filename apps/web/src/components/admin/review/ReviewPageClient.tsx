@@ -673,8 +673,11 @@ export const ReviewPageClient = ({
                   ? 'prices'
                   : activeTab === 'all-events'
                     ? 'all-events'
-                    : 'flags'
+                    : activeTab === 'contests'
+                      ? 'contests'
+                      : 'flags'
             }
+            contestCount={counts.priceContests}
             pricesMissingOnly={priceFilter === 'missing'}
             priceEventsPage={pagination.page}
             priceEventsPageSize={pagination.pageSize}
