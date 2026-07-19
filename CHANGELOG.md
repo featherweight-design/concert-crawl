@@ -1,3 +1,19 @@
+# [1.145.0](https://github.com/HartiganHM/concert-crawl/compare/v1.144.0...v1.145.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* dismissed permission prompt gets retry copy, not the blocked wording ([37449e8](https://github.com/HartiganHM/concert-crawl/commit/37449e876bb74f945944542ee92b305cf65e5fc6))
+* push toggle never rejects; opt-out PATCH first; dismissed prompt shows denied note ([486cc50](https://github.com/HartiganHM/concert-crawl/commit/486cc50ac4c1310a216cf89482030a42e0b6925d))
+* refetch push device state on window focus so settings changes surface ([0492f2a](https://github.com/HartiganHM/concert-crawl/commit/0492f2a4622cb698253cde7186373d74c95216a8))
+* roll back push subscription when the enable PATCH fails ([d80fde0](https://github.com/HartiganHM/concert-crawl/commit/d80fde085bfbfafc2ec88bd061b75662319a9e1f))
+
+
+### Features
+
+* **web:** [#763](https://github.com/HartiganHM/concert-crawl/issues/763) push alerts toggle in Settings ▸ Connections ([c3a786f](https://github.com/HartiganHM/concert-crawl/commit/c3a786f468988aee1bbcdce68feb139d09b1c3b0))
+* **web:** [#763](https://github.com/HartiganHM/concert-crawl/issues/763) web push client helper + toggle hook ([21bbeb0](https://github.com/HartiganHM/concert-crawl/commit/21bbeb02864d92662f0ab239292df56c6c162697))
+
 # [1.144.0](https://github.com/HartiganHM/concert-crawl/compare/v1.143.0...v1.144.0) (2026-07-19)
 
 
