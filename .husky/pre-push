@@ -1,3 +1,24 @@
+# Skip integration tests when the push is delete-only. Git passes one ref
+# update per stdin line: `<local ref> <local sha> <remote ref> <remote sha>`.
+# For a delete, `<local sha>` is 40 zeros. If EVERY line is a delete, there's
+# no code being pushed and tests can't gate anything meaningful — running them
+# also traps the user if the local test DB is in a bad state (they can't delete
+# a stale branch until they fix an unrelated migration issue).
+ZERO_SHA="0000000000000000000000000000000000000000"
+delete_only=true
+saw_ref=false
+while read -r local_ref local_sha remote_ref remote_sha; do
+  saw_ref=true
+  if [ "$local_sha" != "$ZERO_SHA" ]; then
+    delete_only=false
+  fi
+done
+
+if $saw_ref && $delete_only; then
+  echo "Delete-only push — skipping integration tests."
+  exit 0
+fi
+
 if docker exec concert-crawl-db psql -U postgres -lqt 2>/dev/null | grep -q concert_crawl_test; then
   echo "Building packages for integration tests..."
   pnpm turbo build --filter=@concert-crawl/db --filter=@concert-crawl/types --filter=@concert-crawl/logger --filter=@concert-crawl/price-pipeline --no-daemon
