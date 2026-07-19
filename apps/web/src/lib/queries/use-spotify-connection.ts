@@ -14,18 +14,29 @@ import {
   syncSpotifyConnection,
 } from '@/lib/spotify'
 
-export const spotifyConnectionQueryKey = ['spotify-connection'] as const
+// Prefix key for invalidation (matches every user's entry).
+export const spotifyConnectionQueryKeyBase = ['spotify-connection'] as const
+
+// Scoped by userId: the app-level QueryClient outlives sign-in sessions, so
+// an account switch must not surface the previous user's cached connection
+// (same reasoning as planStateQueryKey).
+export const spotifyConnectionQueryKey = (userId: string | null | undefined) =>
+  [...spotifyConnectionQueryKeyBase, userId ?? null] as const
 
 const DISCONNECTED: SpotifyConnectionResponse = { status: 'disconnected' }
 
 export function useSpotifyConnection() {
-  const { getToken, isSignedIn } = useAuth()
+  const { getToken, isSignedIn, userId } = useAuth()
 
   return useQuery({
-    queryKey: spotifyConnectionQueryKey,
+    queryKey: spotifyConnectionQueryKey(userId),
     queryFn: async (): Promise<SpotifyConnectionResponse> => {
       const token = await getToken()
-      if (!token) return DISCONNECTED
+      // Throw instead of returning a synthetic disconnected response — with
+      // staleTime a cached "disconnected" would stick after the token gap.
+      if (!token) {
+        throw new Error('Auth token unavailable while fetching connection')
+      }
       return fetchSpotifyConnection(token)
     },
     enabled: !!isSignedIn,
@@ -37,7 +48,7 @@ const useConnectionMutation = <TVariables = void>(
   run: (token: string, variables: TVariables) => Promise<SpotifyConnectionView>,
 ) => {
   const queryClient = useQueryClient()
-  const { getToken } = useAuth()
+  const { getToken, userId } = useAuth()
 
   return useMutation({
     mutationFn: async (variables: TVariables) => {
@@ -46,7 +57,7 @@ const useConnectionMutation = <TVariables = void>(
       return run(token, variables)
     },
     onSuccess: (view) => {
-      queryClient.setQueryData(spotifyConnectionQueryKey, view)
+      queryClient.setQueryData(spotifyConnectionQueryKey(userId), view)
     },
   })
 }
@@ -76,7 +87,7 @@ export function useSpotifyPatch() {
 
 export function useSpotifyDisconnect() {
   const queryClient = useQueryClient()
-  const { getToken } = useAuth()
+  const { getToken, userId } = useAuth()
 
   return useMutation({
     mutationFn: async () => {
@@ -85,7 +96,7 @@ export function useSpotifyDisconnect() {
       await disconnectSpotify(token)
     },
     onSuccess: () => {
-      queryClient.setQueryData(spotifyConnectionQueryKey, DISCONNECTED)
+      queryClient.setQueryData(spotifyConnectionQueryKey(userId), DISCONNECTED)
     },
   })
 }

@@ -22,7 +22,11 @@ let patchMutation: MutationStub
 let disconnectMutation: MutationStub
 
 vi.mock('@/lib/queries/use-spotify-connection', () => ({
-  spotifyConnectionQueryKey: ['spotify-connection'],
+  spotifyConnectionQueryKeyBase: ['spotify-connection'],
+  spotifyConnectionQueryKey: (userId: string | null | undefined) => [
+    'spotify-connection',
+    userId ?? null,
+  ],
   useSpotifySync: () => syncMutation,
   useSpotifyPatch: () => patchMutation,
   useSpotifyDisconnect: () => disconnectMutation,

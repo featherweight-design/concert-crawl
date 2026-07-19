@@ -23,7 +23,7 @@ import {
 import { SpotifyStatusBanner } from '@/components/consumer/spotify/SpotifyStatusBanner'
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 import {
-  spotifyConnectionQueryKey,
+  spotifyConnectionQueryKeyBase,
   useSpotifyConnection,
 } from '@/lib/queries/use-spotify-connection'
 import { ConnectEntryCard } from './ConnectEntryCard'
@@ -166,7 +166,7 @@ export const ConnectionsPanel = () => {
           // A cancelled/failed handoff changes nothing server-side, but a
           // stale cache after tab-switching is cheap to guard against.
           void queryClient.invalidateQueries({
-            queryKey: spotifyConnectionQueryKey,
+            queryKey: spotifyConnectionQueryKeyBase,
           })
         }}
       />

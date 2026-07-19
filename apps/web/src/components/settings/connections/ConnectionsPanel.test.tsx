@@ -15,7 +15,11 @@ const makeMutation = () => ({ mutate: vi.fn(), isPending: false, error: null })
 let mutations: ReturnType<typeof makeMutation>[]
 
 vi.mock('@/lib/queries/use-spotify-connection', () => ({
-  spotifyConnectionQueryKey: ['spotify-connection'],
+  spotifyConnectionQueryKeyBase: ['spotify-connection'],
+  spotifyConnectionQueryKey: (userId: string | null | undefined) => [
+    'spotify-connection',
+    userId ?? null,
+  ],
   useSpotifyConnection: () => connectionQuery,
   useSpotifySync: () => mutations[0],
   useSpotifyPatch: () => mutations[1],
