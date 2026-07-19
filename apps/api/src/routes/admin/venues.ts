@@ -577,6 +577,40 @@ venuesAdminRouter.patch(
       }
     }
 
+    // Browser-mode timing-race guard (#1072). A venue that falls through to
+    // the HTML → JSON-LD → LLM cascade in 'browser' mode extracts from
+    // page.content(); without a crawlWaitForSelector there is nothing to gate
+    // on before capture, so a slow client-side render is captured as an empty
+    // DOM → 0 events (how Hi-Dive and Red Rocks went dark on unlucky runs).
+    // Platform / apiProvider venues use an API fetcher instead, so the selector
+    // does not apply to them. Only checked when the payload touches crawlMode
+    // or the selector, so unrelated PATCHes never fail on a pre-existing venue.
+    const nextCrawlMode =
+      body.crawlMode !== undefined ? body.crawlMode : existing.crawlMode
+    const nextWaitForSelector =
+      body.crawlWaitForSelector !== undefined
+        ? body.crawlWaitForSelector
+        : existing.crawlWaitForSelector
+    const touchesBrowserGate =
+      body.crawlMode !== undefined || body.crawlWaitForSelector !== undefined
+    if (
+      touchesBrowserGate &&
+      nextCrawlMode === 'browser' &&
+      nextPlatform == null &&
+      nextApiProvider == null &&
+      nextWaitForSelector == null
+    ) {
+      return ctx.json(
+        {
+          success: false,
+          error:
+            'crawlWaitForSelector is required for browser-mode venues — without it a slow client-side render is captured as an empty page and returns 0 events',
+          field: 'crawlWaitForSelector',
+        },
+        400,
+      )
+    }
+
     const [updated] = await db
       .update(venues)
       .set({

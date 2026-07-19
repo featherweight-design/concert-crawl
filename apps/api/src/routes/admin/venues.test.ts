@@ -467,4 +467,117 @@ describe('Admin venue routes', () => {
     })
     expect(res.status).toBe(400)
   })
+
+  // #1072: browser-mode venues must have a crawlWaitForSelector, or a slow
+  // client-side render is captured as an empty page and returns 0 events.
+  it('PATCH /v1/admin/venues/:id rejects browser crawlMode without a selector', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        { ...mockDb._mockVenueRow, crawlWaitForSelector: null, platform: null },
+      ]),
+    )
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ crawlMode: 'browser' }),
+    })
+    expect(res.status).toBe(400)
+    const body = (await res.json()) as { field: string }
+    expect(body.field).toBe('crawlWaitForSelector')
+  })
+
+  it('PATCH /v1/admin/venues/:id rejects clearing the selector on a browser venue', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        {
+          ...mockDb._mockVenueRow,
+          crawlMode: 'browser',
+          crawlWaitForSelector: '.event-card',
+          platform: null,
+          apiProvider: null,
+        },
+      ]),
+    )
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ crawlWaitForSelector: null }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  it('PATCH /v1/admin/venues/:id accepts browser crawlMode with a selector in the same payload', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        { ...mockDb._mockVenueRow, crawlWaitForSelector: null, platform: null },
+      ]),
+    )
+    mockDb.returning.mockResolvedValue([
+      {
+        ...mockDb._mockVenueRow,
+        crawlMode: 'browser',
+        crawlWaitForSelector: '.listing',
+      },
+    ])
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        crawlMode: 'browser',
+        crawlWaitForSelector: '.listing',
+      }),
+    })
+    expect(res.status).toBe(200)
+  })
+
+  it('PATCH /v1/admin/venues/:id allows browser crawlMode without a selector when a platform fetcher handles the venue', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        {
+          ...mockDb._mockVenueRow,
+          crawlWaitForSelector: null,
+          platform: 'aeg',
+          platformVenueId: 'shard-1',
+          apiProvider: null,
+        },
+      ]),
+    )
+    mockDb.returning.mockResolvedValue([
+      { ...mockDb._mockVenueRow, crawlMode: 'browser', platform: 'aeg' },
+    ])
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ crawlMode: 'browser' }),
+    })
+    expect(res.status).toBe(200)
+  })
+
+  it('PATCH /v1/admin/venues/:id does not fire the selector guard on an unrelated PATCH', async () => {
+    adminAuth()
+    mockDb.select.mockReturnValue(
+      mockDb._makeQueryBuilder([
+        {
+          ...mockDb._mockVenueRow,
+          crawlMode: 'browser',
+          crawlWaitForSelector: null,
+          platform: null,
+          apiProvider: null,
+        },
+      ]),
+    )
+    mockDb.returning.mockResolvedValue([
+      { ...mockDb._mockVenueRow, crawlMode: 'browser', verified: true },
+    ])
+    const res = await createApp().request('/v1/admin/venues/venue-1', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ verified: true }),
+    })
+    expect(res.status).toBe(200)
+  })
 })
