@@ -202,7 +202,8 @@ export const SPOTIFY_COPY = {
   // free/supporter viewers see it locked and tapping opens the upsell.
   tasteFilter: {
     chip: 'Following',
-    // READINESS a11y contract: locked chip keeps aria-disabled + this label.
+    // A11y: the locked chip stays operable (it opens the upsell), so the
+    // paid state is conveyed by this label alone — no aria-disabled.
     chipLockedAria: 'Following filter, paid',
     chipAria: 'Filter to artists you follow',
     banner: (count: number) => `${count} Denver shows by artists you follow`,
