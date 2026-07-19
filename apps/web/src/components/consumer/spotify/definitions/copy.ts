@@ -236,6 +236,36 @@ export const SPOTIFY_COPY = {
       dismissAria: 'Dismiss',
     },
   },
+  // "Based on your taste" shelf pinned atop Browse (#763 PR 8, from the
+  // discovery-surface.jsx mock). Premium + connected only.
+  discovery: {
+    title: 'Based on your taste',
+    eyebrow: (count: number) => `${count} PICKS · REFRESHED WEEKLY`,
+    eyebrowSingular: '1 PICK · REFRESHED WEEKLY',
+    // Reason chip labels — richer than follows alone, so reasons vary.
+    reasonTopFive: 'In your top 5',
+    reasonTop: 'You play them a lot',
+    reasonFollowed: 'Following',
+    // Screen-reader context — the bare chip label is ambiguous without the
+    // Spotify mark.
+    reasonAriaPrefix: 'Picked because: ',
+    priceTba: 'tba',
+    listAria: 'Shows picked for your taste',
+    allShowsDivider: 'All Denver shows',
+    empty: {
+      eyebrow: 'QUIET MONTH',
+      title: 'Your artists are lying low.',
+      body: 'Nobody from your taste has a Denver date this month. We refresh picks weekly — or dig through everything yourself.',
+      cta: 'Browse all shows',
+    },
+    failure: {
+      eyebrow: 'TASTE ON PAUSE',
+      title: "Can't read your taste right now.",
+      body: 'Your Spotify link needs a refresh, so picks are paused. Your saved shows are untouched — reconnect to bring taste back.',
+      primaryCta: 'Reconnect Spotify',
+      secondaryCta: 'Browse all shows',
+    },
+  },
   firstWatchNudge: {
     eyebrow: 'NICE — FIRST ONE SAVED',
     title: 'Want the rest picked for your taste?',

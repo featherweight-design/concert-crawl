@@ -3,6 +3,7 @@ import type {
   SpotifyConnectionResponse,
   SpotifyConnectionView,
   SpotifyNudgeResponse,
+  SpotifyTastePicksResponse,
 } from '@concert-crawl/types'
 import { apiClient } from './api'
 
@@ -57,6 +58,17 @@ export async function patchSpotifyConnection(
 
 export async function disconnectSpotify(token: string): Promise<void> {
   await apiClient.delete<void>('/v1/spotify/connection', token)
+}
+
+// "Based on your taste" shelf (#763 PR 8) — entitlement-gated server-side;
+// carries the connection status so the shelf can render its own failure state.
+export async function fetchTastePicks(
+  token: string,
+): Promise<SpotifyTastePicksResponse> {
+  return apiClient.get<SpotifyTastePicksResponse>(
+    '/v1/spotify/taste-picks',
+    token,
+  )
 }
 
 export async function fetchSpotifyNudgeEligibility(

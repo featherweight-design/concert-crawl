@@ -2,12 +2,13 @@
 // stack) shared by the Spotify empty/failure/success screens (#763 PR 5).
 // Mirrors StateBody/GreenDisc from the design handoff's spotify-states.jsx.
 
-type EyebrowTone = 'muted' | 'signal' | 'danger'
+type EyebrowTone = 'muted' | 'signal' | 'danger' | 'warning'
 
 const EYEBROW_COLOR: Record<EyebrowTone, string> = {
   muted: 'var(--fg-subtle)',
   signal: 'var(--signal)',
   danger: 'var(--danger)',
+  warning: 'var(--warning)',
 }
 
 type DiscTone = 'signal' | 'muted' | 'danger'

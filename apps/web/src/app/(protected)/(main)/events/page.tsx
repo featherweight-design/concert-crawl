@@ -27,6 +27,7 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { pickerWindow } from '@/components/consumer/jump-picker/date-math'
 import { fetchAvailability } from '@/lib/queries/availability'
 import { SpotifyStatusBanner } from '@/components/consumer/spotify/SpotifyStatusBanner'
+import { DiscoveryShelf } from '@/components/consumer/spotify/DiscoveryShelf'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 
@@ -313,6 +314,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       {/* Broken-Spotify-link notice — renders nothing unless the connection
           is in an error/revoked state. */}
       <SpotifyStatusBanner />
+
+      {/* "Based on your taste" shelf (#763 PR 8) — premium + connected only,
+          list view only; renders nothing for everyone else. */}
+      {view === 'list' && <DiscoveryShelf />}
 
       {/* Filter bar */}
       <div className="mb-5">
