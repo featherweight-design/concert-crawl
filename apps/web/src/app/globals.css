@@ -32,6 +32,11 @@
     --scrim: rgba(7, 10, 26, 0.72);
     --image-tint: rgba(7, 10, 26, 0.2);
 
+    /* Spotify brand green — ONLY for the official Spotify logo asset.
+       Never used for buttons, status, or any other UI (design handoff rule);
+       constant across all themes, so it lives here rather than in themes.ts. */
+    --spotify-green: #1db954;
+
     --radius: 0.625rem;
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
