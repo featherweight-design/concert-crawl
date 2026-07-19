@@ -1,3 +1,10 @@
+# [1.138.0](https://github.com/HartiganHM/concert-crawl/compare/v1.137.1...v1.138.0) (2026-07-19)
+
+
+### Features
+
+* **pwa:** [#969](https://github.com/HartiganHM/concert-crawl/issues/969) install slot polish (top-right chrome + iOS how-to sheet) ([#1056](https://github.com/HartiganHM/concert-crawl/issues/1056)) ([1dc652b](https://github.com/HartiganHM/concert-crawl/commit/1dc652ba7900ab36e55517c8f104dd3a9111906a)), closes [#970](https://github.com/HartiganHM/concert-crawl/issues/970)
+
 ## [1.137.1](https://github.com/HartiganHM/concert-crawl/compare/v1.137.0...v1.137.1) (2026-07-19)
 
 
