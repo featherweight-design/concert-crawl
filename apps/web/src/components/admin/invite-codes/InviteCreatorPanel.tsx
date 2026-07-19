@@ -6,8 +6,12 @@ import { mintInviteCodeWithOptions } from '@/app/(protected)/admin/invite-codes/
 
 type ExpiresIn = '7d' | '30d' | 'never'
 
+// #1085 — default the expiry to "never" rather than 30d. Beta invite
+// codes have been long-lived in practice, and a 30-day auto-expiry
+// silently rots the batches Hugh sends to prospects; "never" matches
+// how admins actually use the mint form.
 export function InviteCreatorPanel() {
-  const [expiresIn, setExpiresIn] = useState<ExpiresIn>('30d')
+  const [expiresIn, setExpiresIn] = useState<ExpiresIn>('never')
   const [isPending, startTransition] = useTransition()
   const [result, setResult] = useState<{
     ok: boolean

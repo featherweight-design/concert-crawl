@@ -2031,6 +2031,10 @@ export const ADMIN_COPY = {
       pending: 'Minting…',
       idle: 'Mint code',
     },
+    // #1084 — legacy redemption rows carry `usedBy` but no `usedAt`, so
+    // the Redeemed date cell falls back to a plain textual marker to
+    // avoid blanking the column for those records.
+    redeemedWithoutDate: 'Redeemed',
   },
 
   notificationBell: {

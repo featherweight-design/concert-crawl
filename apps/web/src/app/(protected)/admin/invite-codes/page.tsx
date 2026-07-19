@@ -14,6 +14,7 @@ import {
 } from '@/components/admin/primitives'
 import type { StatusKind } from '@/components/admin/primitives'
 import { InviteCreatorPanel } from '@/components/admin/invite-codes/InviteCreatorPanel'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 type DerivedStatus = 'active' | 'redeemed' | 'expired' | 'revoked'
 
@@ -24,9 +25,15 @@ const INVITE_STATUS_KIND: Record<DerivedStatus, StatusKind> = {
   revoked: 'danger',
 }
 
+// #1084 — `usedBy` is the authoritative signal that a code has been
+// redeemed (the redemption route in `apps/api/src/routes/auth/redeem-code.ts`
+// writes it atomically alongside `usedAt`). Legacy rows exist where
+// `usedBy` is set but `usedAt` is null, so gating only on `usedAt` mis-
+// classifies those as active AND leaves the Redeemed column blank even
+// though the code is spoken-for.
 function deriveStatus(code: InviteCode): DerivedStatus {
   if (code.revokedAt != null) return 'revoked'
-  if (code.usedAt != null) return 'redeemed'
+  if (code.usedBy != null || code.usedAt != null) return 'redeemed'
   if (code.expiresAt != null && new Date(code.expiresAt) < new Date())
     return 'expired'
   return 'active'
@@ -136,9 +143,16 @@ export default async function AdminInviteCodesPage() {
                     {new Date(code.createdAt).toLocaleDateString()}
                   </TD>
                   <TD mono color="var(--fg-muted)">
+                    {/* #1084 — mirror deriveStatus: show the date when we
+                        have it; if only `usedBy` is set (legacy redemption
+                        row with no timestamp) surface the textual marker
+                        rather than blanking the cell. Copy lives in
+                        `ADMIN_COPY.inviteCodes.redeemedWithoutDate`. */}
                     {code.usedAt != null
                       ? new Date(code.usedAt).toLocaleDateString()
-                      : '—'}
+                      : code.usedBy != null
+                        ? ADMIN_COPY.inviteCodes.redeemedWithoutDate
+                        : '—'}
                   </TD>
                   <TD mono color="var(--fg-muted)">
                     {code.expiresAt != null
