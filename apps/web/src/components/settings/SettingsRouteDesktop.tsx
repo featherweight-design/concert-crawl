@@ -37,7 +37,7 @@ const NAV_ITEMS: { key: NavSection; label: string }[] = [
   { key: 'plan', label: 'Plan' },
   { key: 'submissions', label: 'My submissions' },
   { key: 'appearance', label: 'Appearance' },
-  { key: 'connections', label: 'Connections' },
+  { key: 'connections', label: SPOTIFY_COPY.connectEntry.sectionTitle },
   { key: 'account', label: 'Account' },
   { key: 'danger', label: 'Danger zone' },
 ]

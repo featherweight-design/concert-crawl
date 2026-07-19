@@ -4,12 +4,12 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { SpotifyConnectStart } from '@/lib/spotify-connect'
 
-const startSpotifyConnect = vi.fn<() => Promise<SpotifyConnectStart>>()
+const startSpotifyConnect =
+  vi.fn<(...args: unknown[]) => Promise<SpotifyConnectStart>>()
 
 vi.mock('@/lib/spotify-connect', () => ({
   SPOTIFY_RETURN_PATH: '/me?section=connections&spotify=return',
-  startSpotifyConnect: (...args: unknown[]) =>
-    startSpotifyConnect(...(args as [])),
+  startSpotifyConnect: (...args: unknown[]) => startSpotifyConnect(...args),
 }))
 
 vi.mock('@clerk/nextjs', () => ({
