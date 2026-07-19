@@ -483,8 +483,7 @@ describe('Admin venue routes', () => {
       body: JSON.stringify({ crawlMode: 'browser' }),
     })
     expect(res.status).toBe(400)
-    const body = (await res.json()) as { field: string }
-    expect(body.field).toBe('crawlWaitForSelector')
+    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
   })
 
   it('PATCH /v1/admin/venues/:id rejects clearing the selector on a browser venue', async () => {
@@ -608,8 +607,7 @@ describe('Admin venue routes', () => {
       body: JSON.stringify({ crawlMode: 'browser' }),
     })
     expect(res.status).toBe(400)
-    const body = (await res.json()) as { field: string }
-    expect(body.field).toBe('crawlWaitForSelector')
+    expect(await res.json()).toMatchObject({ field: 'crawlWaitForSelector' })
   })
 
   it('PATCH /v1/admin/venues/:id does not fire the selector guard on an unrelated PATCH', async () => {
