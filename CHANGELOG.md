@@ -1,3 +1,15 @@
+# [1.140.0](https://github.com/HartiganHM/concert-crawl/compare/v1.139.0...v1.140.0) (2026-07-19)
+
+
+### Bug Fixes
+
+* never wipe a venue's catalog on a zero-event crawl ([#1058](https://github.com/HartiganHM/concert-crawl/issues/1058)) ([1e51c96](https://github.com/HartiganHM/concert-crawl/commit/1e51c96790a408d7fcd4359e339ffff1260fb29a)), closes [#624](https://github.com/HartiganHM/concert-crawl/issues/624)
+
+
+### Features
+
+* **pwa:** [#970](https://github.com/HartiganHM/concert-crawl/issues/970) offline pill + real fallback page with cached shortcuts ([#1057](https://github.com/HartiganHM/concert-crawl/issues/1057)) ([aa24628](https://github.com/HartiganHM/concert-crawl/commit/aa24628ad3f8bad036dd5b6421e4dc9fb28de461))
+
 # [1.139.0](https://github.com/HartiganHM/concert-crawl/compare/v1.138.0...v1.139.0) (2026-07-19)
 
 
