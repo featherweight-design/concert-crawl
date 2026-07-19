@@ -144,4 +144,12 @@ describe('FirstWatchNudgeGate', () => {
     const { container } = render(<FirstWatchNudgeGate />)
     expect(container.innerHTML).toBe('')
   })
+
+  it('ignores watch toggles fired while on an admin route', async () => {
+    pathname = '/admin/venues'
+    render(<FirstWatchNudgeGate />)
+    emit(watchSuccess(true))
+    await Promise.resolve()
+    expect(fetchEligibility).not.toHaveBeenCalled()
+  })
 })

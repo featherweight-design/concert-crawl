@@ -43,9 +43,14 @@ export const FirstWatchNudgeGate = () => {
   const triggeredRef = useRef(false)
 
   const hidden = pathname.startsWith('/admin')
+  // Ref mirror so the cache listener sees the current route without the
+  // effect re-subscribing on every navigation.
+  const hiddenRef = useRef(hidden)
+  hiddenRef.current = hidden
 
   useEffect(() => {
     const unsubscribe = queryClient.getMutationCache().subscribe((event) => {
+      if (hiddenRef.current) return
       if (triggeredRef.current) return
       if (event.type !== 'updated') return
       if (
