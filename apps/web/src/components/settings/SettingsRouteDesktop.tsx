@@ -11,7 +11,9 @@ import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
 import { EditProfileForm } from './EditProfileForm'
+import { ConnectionsPanel } from './connections'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
 import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
 import type {
@@ -22,13 +24,20 @@ import type {
 const SETTINGS_COPY = CONSUMER_COPY.settings
 
 type NavSection =
-  'profile' | 'plan' | 'appearance' | 'submissions' | 'account' | 'danger'
+  | 'profile'
+  | 'plan'
+  | 'appearance'
+  | 'connections'
+  | 'submissions'
+  | 'account'
+  | 'danger'
 
 const NAV_ITEMS: { key: NavSection; label: string }[] = [
   { key: 'profile', label: 'Profile' },
   { key: 'plan', label: 'Plan' },
   { key: 'submissions', label: 'My submissions' },
   { key: 'appearance', label: 'Appearance' },
+  { key: 'connections', label: 'Connections' },
   { key: 'account', label: 'Account' },
   { key: 'danger', label: 'Danger zone' },
 ]
@@ -75,6 +84,16 @@ const NAV_ICONS: Record<NavSection, React.ReactNode> = {
       <circle cx="6" cy="6" r=".9" fill="currentColor" />
       <circle cx="10" cy="6" r=".9" fill="currentColor" />
       <circle cx="11" cy="9" r=".9" fill="currentColor" />
+    </svg>
+  ),
+  connections: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M6.8 9.2l2.4-2.4M8.5 4.5l1-1a2.3 2.3 0 013.2 3.2l-1 1M7.5 8.3l-1 1a2.3 2.3 0 003.2 3.2l1-1"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
     </svg>
   ),
   account: (
@@ -366,6 +385,20 @@ export function SettingsRouteDesktop({
                   </p>
                 </div>
                 <ThemePickerInline />
+              </div>
+            )}
+
+            {activeSection === 'connections' && (
+              <div className="flex flex-col gap-5">
+                <div>
+                  <h2 className="text-[22px] font-extrabold text-fg">
+                    {SPOTIFY_COPY.connectEntry.sectionTitle}
+                  </h2>
+                  <p className="text-[13px] text-fg-muted">
+                    {SPOTIFY_COPY.connectEntry.sectionSub}
+                  </p>
+                </div>
+                <ConnectionsPanel />
               </div>
             )}
 

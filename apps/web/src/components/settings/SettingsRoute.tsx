@@ -5,6 +5,8 @@ import { PlanPanel } from './plan'
 import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
+import { ConnectionsPanel } from './connections'
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import type {
@@ -96,6 +98,14 @@ export function SettingsRoute({
             </span>
           </div>
           <ThemePickerInline />
+        </div>
+
+        <div className="mx-4 h-px bg-border" />
+
+        {/* Connections (#763) */}
+        <div className="flex flex-col gap-2 px-4">
+          <SectionLabel>{SPOTIFY_COPY.connectEntry.sectionTitle}</SectionLabel>
+          <ConnectionsPanel />
         </div>
 
         <div className="mx-4 h-px bg-border" />

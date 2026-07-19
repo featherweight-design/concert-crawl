@@ -14,6 +14,11 @@ interface SpotifyOAuthUser {
   }>
 }
 
+// Where Spotify sends the user back after the OAuth dance. The `spotify=return`
+// flag is what the return handler on /me watches for; every connect entry
+// point shares this path so the handler mounts in exactly one place.
+export const SPOTIFY_RETURN_PATH = '/me?section=connections&spotify=return'
+
 export type SpotifyConnectStart =
   { status: 'redirect'; url: string } | { status: 'error' }
 

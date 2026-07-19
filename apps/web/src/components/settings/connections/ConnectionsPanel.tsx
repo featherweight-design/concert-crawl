@@ -1,0 +1,148 @@
+'use client'
+
+// Settings ▸ Connections panel (#763 PR 5) — resolves the Spotify connection
+// query into the designed states:
+//   disconnected → entry card (opens the honesty-rail interstitial)
+//   connected    → connected card (refresh · auto-watch · disconnect)
+//   error        → "lost the thread" broken-sync state + Reconnect
+//   revoked      → "unlinked on Spotify's side" state + Reconnect
+// Shared by the mobile settings route and the desktop panel switcher.
+
+import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import type { SpotifyConnectionResponse } from '@concert-crawl/types'
+import { OAuthHandoffSheet } from '@/components/consumer/spotify/OAuthHandoffSheet'
+import {
+  StateBody,
+  StateGlyphDisc,
+} from '@/components/consumer/spotify/StateBody'
+import { SignalButton } from '@/components/consumer/spotify/SpotifyButtons'
+import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
+import {
+  spotifyConnectionQueryKey,
+  useSpotifyConnection,
+} from '@/lib/queries/use-spotify-connection'
+import { ConnectEntryCard } from './ConnectEntryCard'
+import { ConnectedCard } from './ConnectedCard'
+
+// Danger "flatline" glyph for the token-refresh failure (handoff mock).
+const LostThreadGlyph = () => (
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
+    <path
+      d="M16 3v10M16 22v.5"
+      stroke="var(--danger)"
+      strokeWidth="2.6"
+      strokeLinecap="round"
+    />
+    <path
+      d="M27 27a15 15 0 00-22 0"
+      stroke="var(--danger)"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      opacity="0.5"
+    />
+  </svg>
+)
+
+// Severed-link glyph for the external-revoke state (handoff mock).
+const CutLinkGlyph = () => (
+  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
+    <path
+      d="M13 19l6-6m-4.5-3l1.5-1.5a5 5 0 017 7L21 17m-10 0l-1.5 1.5a5 5 0 007 7l1.5-1.5"
+      stroke="var(--fg-muted)"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <path
+      d="M5 5l22 22"
+      stroke="var(--danger)"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+const BrokenState = ({
+  kind,
+  onReconnect,
+}: {
+  kind: 'error' | 'revoked'
+  onReconnect: () => void
+}) => {
+  const copy =
+    kind === 'error'
+      ? SPOTIFY_COPY.failTokenRefresh
+      : SPOTIFY_COPY.failExternalRevoke
+  return (
+    <div className="flex flex-col items-center rounded-2xl border border-border bg-surface-1 px-5 py-7">
+      <StateBody
+        glyph={
+          kind === 'error' ? (
+            <StateGlyphDisc tone="danger">
+              <LostThreadGlyph />
+            </StateGlyphDisc>
+          ) : (
+            <StateGlyphDisc tone="muted">
+              <CutLinkGlyph />
+            </StateGlyphDisc>
+          )
+        }
+        eyebrow={copy.eyebrow}
+        eyebrowTone={kind === 'error' ? 'danger' : 'muted'}
+        title={copy.title}
+        body={copy.body}
+      >
+        <SignalButton withLogo onClick={onReconnect}>
+          {copy.primaryCta}
+        </SignalButton>
+      </StateBody>
+    </div>
+  )
+}
+
+const resolveContent = (
+  data: SpotifyConnectionResponse | undefined,
+  isPending: boolean,
+  openHandoff: () => void,
+): React.ReactNode => {
+  if (isPending) {
+    return (
+      <div
+        aria-hidden
+        className="h-[180px] animate-pulse rounded-2xl border border-border bg-surface-1"
+      />
+    )
+  }
+  // No data (query error) is treated as disconnected: connecting is safe and
+  // idempotent — the POST returns the existing connection if one exists.
+  if (!data || data.status === 'disconnected') {
+    return <ConnectEntryCard onConnect={openHandoff} />
+  }
+  if (data.status === 'connected') {
+    return <ConnectedCard connection={data} />
+  }
+  return <BrokenState kind={data.status} onReconnect={openHandoff} />
+}
+
+export const ConnectionsPanel = () => {
+  const { data, isPending } = useSpotifyConnection()
+  const queryClient = useQueryClient()
+  const [handoffOpen, setHandoffOpen] = useState(false)
+
+  return (
+    <div className="flex flex-col">
+      {resolveContent(data, isPending, () => setHandoffOpen(true))}
+      <OAuthHandoffSheet
+        open={handoffOpen}
+        onClose={() => {
+          setHandoffOpen(false)
+          // A cancelled/failed handoff changes nothing server-side, but a
+          // stale cache after tab-switching is cheap to guard against.
+          void queryClient.invalidateQueries({
+            queryKey: spotifyConnectionQueryKey,
+          })
+        }}
+      />
+    </div>
+  )
+}
