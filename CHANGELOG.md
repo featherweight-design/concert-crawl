@@ -1,3 +1,13 @@
+# [1.146.0](https://github.com/HartiganHM/concert-crawl/compare/v1.145.0...v1.146.0) (2026-07-19)
+
+
+### Features
+
+* **crawler:** spotify new-show fan-out — auto-watch + premium push with exactly-once claims ([0a3b8c0](https://github.com/HartiganHM/concert-crawl/commit/0a3b8c001a453c9aaab84bf7bccd6a867a95c5eb)), closes [#737](https://github.com/HartiganHM/concert-crawl/issues/737)
+* **crawler:** thread inserted-event ids out of crawlVenue for spotify fan-out ([55e1e46](https://github.com/HartiganHM/concert-crawl/commit/55e1e468995d26884cc54bd6e5bb2d2ed757e2eb)), closes [#763](https://github.com/HartiganHM/concert-crawl/issues/763)
+* **crawler:** wire spotify fan-out into both crawler entry paths ([ec0230d](https://github.com/HartiganHM/concert-crawl/commit/ec0230dfb28dad841913c0b04d3c23275dd19baa)), closes [#649](https://github.com/HartiganHM/concert-crawl/issues/649)
+* **web:** v0.11.0-beta release notes for new-show push alerts + crawler env docs ([0707fe7](https://github.com/HartiganHM/concert-crawl/commit/0707fe78c8eea2ed36c5403bd74439497ed47403))
+
 # [1.145.0](https://github.com/HartiganHM/concert-crawl/compare/v1.144.0...v1.145.0) (2026-07-19)
 
 
