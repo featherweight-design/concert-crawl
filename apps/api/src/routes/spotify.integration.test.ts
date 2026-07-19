@@ -891,4 +891,21 @@ describe('spotify nudge', () => {
     expect(profile?.handle).toBe(`huey-${userSeq}`)
     expect(profile?.theme).toBe('jade')
   })
+
+  it('marking seen is idempotent under concurrent double-fire', async () => {
+    setAuth(USER)
+    const [first, second] = await Promise.all([
+      app.request('/v1/spotify/nudge/seen', { method: 'POST' }),
+      app.request('/v1/spotify/nudge/seen', { method: 'POST' }),
+    ])
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(200)
+
+    const profiles = await testDb
+      .select()
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, USER))
+    expect(profiles).toHaveLength(1)
+    expect(profiles[0]?.spotifyNudgeSeenAt).toBeInstanceOf(Date)
+  })
 })

@@ -60,11 +60,12 @@ describe('ConnectSuccessModal', () => {
     // Body bolds: 34 artists / 9 play Denver.
     expect(screen.getByText(`34${COPY.bodyArtistsSuffix}`)).toBeTruthy()
     expect(screen.getByText(COPY.statDenver)).toBeTruthy()
-    // First six chips render; the rest fold into "+28 more" (34 - 6).
+    // First six Denver-matched chips render; the remaining Denver matches
+    // fold into "+3 more" (denverArtistCount 9 - 6 shown).
     expect(screen.getByText('Sleep Token')).toBeTruthy()
     expect(screen.getByText('Bright Eyes')).toBeTruthy()
     expect(screen.queryByText('Wisp')).toBeNull()
-    expect(screen.getByText(COPY.moreChip(28))).toBeTruthy()
+    expect(screen.getByText(COPY.moreChip(3))).toBeTruthy()
   })
 
   it('fires onContinue from the CTA', () => {

@@ -463,23 +463,17 @@ spotifyRouter.post('/nudge/seen', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
 
   try {
+    // Idempotent upsert — the nudge can double-fire (two tabs, StrictMode),
+    // so read-then-insert would race on the user_id unique constraint. The
+    // conflict path touches only the nudge timestamp, never handle/theme.
     const seenAt = new Date()
-    const [existing] = await db
-      .select({ id: userProfiles.id })
-      .from(userProfiles)
-      .where(eq(userProfiles.userId, auth.userId))
-      .limit(1)
-    if (existing) {
-      await db
-        .update(userProfiles)
-        .set({ spotifyNudgeSeenAt: seenAt, updatedAt: seenAt })
-        .where(eq(userProfiles.userId, auth.userId))
-    } else {
-      await db.insert(userProfiles).values({
-        userId: auth.userId,
-        spotifyNudgeSeenAt: seenAt,
+    await db
+      .insert(userProfiles)
+      .values({ userId: auth.userId, spotifyNudgeSeenAt: seenAt })
+      .onConflictDoUpdate({
+        target: userProfiles.userId,
+        set: { spotifyNudgeSeenAt: seenAt, updatedAt: seenAt },
       })
-    }
   } catch (err) {
     apiLogger.error(
       { err, userId: auth.userId },

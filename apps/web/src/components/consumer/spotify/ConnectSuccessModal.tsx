@@ -97,7 +97,9 @@ export const ConnectSuccessModal = ({
   onClose,
 }: ConnectSuccessModalProps) => {
   const chips = connection.matchedArtists.slice(0, CHIPS_SHOWN)
-  const moreCount = connection.artistCount - chips.length
+  // The chip row shows Denver-matched artists only, so the fold counts the
+  // remaining Denver matches — not the full Spotify follow list.
+  const moreCount = connection.denverArtistCount - chips.length
 
   return (
     <ModalShell
