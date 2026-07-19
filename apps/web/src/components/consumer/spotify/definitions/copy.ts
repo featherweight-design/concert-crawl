@@ -42,6 +42,14 @@ export const SPOTIFY_COPY = {
       icon: 'broken-link',
     },
   ],
+  // Not in the mocks: the post-OAuth-return POST runs the first sync inline
+  // (a few seconds), so the return flow needs a visible in-flight state.
+  connectPending: {
+    eyebrow: 'SPOTIFY · LINKING',
+    title: 'Pulling your taste over…',
+    body: 'Asking Spotify which artists you love. Takes a few seconds.',
+    ariaLabel: 'Linking Spotify',
+  },
   connectSuccess: {
     eyebrow: 'SPOTIFY · LINKED',
     title: 'Got it. We know your taste now.',

@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { headers } from 'next/headers'
 import { auth } from '@/lib/auth'
+import { SpotifyReturnFlow } from '@/components/consumer/spotify/SpotifyReturnFlow'
 import { fetchMe, fetchMySubmissions } from '@/lib/users'
 import { isScaRegion } from '@/lib/sca-region'
 import { SettingsRoute } from '@/components/settings/SettingsRoute'
@@ -27,6 +29,12 @@ export default async function MePage() {
   return (
     <>
       <ThemeSync serverTheme={profile.theme} />
+      {/* Post-Spotify-OAuth return handler — mounted ONCE at page level.
+          Both settings routes below stay in the DOM (CSS-hidden), so
+          mounting it inside either would double-fire the connect POST. */}
+      <Suspense fallback={null}>
+        <SpotifyReturnFlow />
+      </Suspense>
       {/* Mobile (< sm) */}
       <div className="sm:hidden">
         <SettingsRoute

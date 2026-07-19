@@ -14,6 +14,7 @@ import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { SPOTIFY_RETURN_PATH, startSpotifyConnect } from '@/lib/spotify-connect'
 import { SPOTIFY_COPY } from './definitions/copy'
 import { HonestyRail } from './HonestyRail'
+import { NoAnswerGlyph } from './glyphs'
 import { StateBody, StateGlyphDisc } from './StateBody'
 import { SignalButton, TextButton } from './SpotifyButtons'
 
@@ -21,25 +22,6 @@ const HANDOFF_COPY = SPOTIFY_COPY.oauthHandoff
 const FAIL_COPY = SPOTIFY_COPY.failConnectDown
 
 type HandoffPhase = 'rail' | 'starting' | 'error'
-
-// Muted "signal lost" glyph for the connect-failure state (from the handoff
-// mock spotify-states.jsx — sound waves with a slash).
-const NoAnswerGlyph = () => (
-  <svg width="34" height="34" viewBox="0 0 34 34" fill="none" aria-hidden>
-    <path
-      d="M6 10s5-4 11-4 11 4 11 4M9 16s3.5-3 8-3 8 3 8 3M12 22s2-1.5 5-1.5 5 1.5 5 1.5"
-      stroke="var(--fg-subtle)"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-    />
-    <path
-      d="M4 4l26 26"
-      stroke="var(--fg-muted)"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-    />
-  </svg>
-)
 
 interface OAuthHandoffSheetProps {
   open: boolean
