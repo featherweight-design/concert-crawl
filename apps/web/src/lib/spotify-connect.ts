@@ -41,16 +41,19 @@ const RESUME_TTL_MS = 10 * 60 * 1000
 export function markSpotifyConnectPending(): void {
   try {
     sessionStorage.setItem(RESUME_KEY, String(Date.now()))
-  } catch {
-    // Storage unavailable (private mode) — resume is a best-effort nicety.
+  } catch (err) {
+    // Storage unavailable (private mode, blocked, or disabled) — resume is a
+    // best-effort nicety.
+    console.warn('spotify connect: could not mark resume intent', err)
   }
 }
 
 export function clearSpotifyConnectPending(): void {
   try {
     sessionStorage.removeItem(RESUME_KEY)
-  } catch {
+  } catch (err) {
     // Storage unavailable — nothing was marked, nothing to clear.
+    console.warn('spotify connect: could not clear resume intent', err)
   }
 }
 
@@ -61,8 +64,13 @@ export function consumeSpotifyConnectPending(): boolean {
     if (!raw) return false
     sessionStorage.removeItem(RESUME_KEY)
     const markedAt = Number(raw)
-    return Number.isFinite(markedAt) && Date.now() - markedAt <= RESUME_TTL_MS
-  } catch {
+    if (!Number.isFinite(markedAt)) return false
+    const age = Date.now() - markedAt
+    // A negative age means a future-dated mark (clock changed between marking
+    // and consuming) — treat it as stale rather than resuming unexpectedly.
+    return age >= 0 && age <= RESUME_TTL_MS
+  } catch (err) {
+    console.warn('spotify connect: could not read resume intent', err)
     return false
   }
 }

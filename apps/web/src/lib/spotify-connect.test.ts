@@ -112,6 +112,15 @@ describe('spotify connect resume intent', () => {
     }
   })
 
+  it('ignores a future-dated mark (clock moved backwards)', () => {
+    sessionStorage.setItem(
+      'cc-spotify-connect-resume',
+      String(Date.now() + 5 * 60 * 1000),
+    )
+    expect(consumeSpotifyConnectPending()).toBe(false)
+    expect(sessionStorage.getItem('cc-spotify-connect-resume')).toBeNull()
+  })
+
   it('ignores a mark with a corrupted timestamp', () => {
     sessionStorage.setItem('cc-spotify-connect-resume', 'not-a-number')
     expect(consumeSpotifyConnectPending()).toBe(false)
