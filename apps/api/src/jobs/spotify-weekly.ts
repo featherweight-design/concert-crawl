@@ -301,7 +301,7 @@ const digestForUser = async (
     return 'sent'
   }
 
-  await sendTransactionalEmail({
+  const sendOutcome = await sendTransactionalEmail({
     templateKey: 'spotify_digest',
     userId,
     dedupeKey,
@@ -311,7 +311,9 @@ const digestForUser = async (
       unsubscribeUrl: buildUnsubscribeUrl(userId, 'digest') ?? null,
     },
   })
-  summary.digestSent += 1
+  // Only a real Resend delivery counts toward digestSent — the pipeline can
+  // no-op (dedupe on cron retry, kill switch, missing env) without throwing.
+  if (sendOutcome === 'sent') summary.digestSent += 1
   return 'sent'
 }
 

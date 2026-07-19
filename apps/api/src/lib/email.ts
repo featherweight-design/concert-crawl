@@ -99,6 +99,13 @@ export async function sendAdminAlertEmail(
   }
 }
 
+// Outcome of a transactional send attempt. Only 'sent' means an email
+// actually left via Resend — callers that count deliveries (e.g. the
+// spotify-weekly summary) must check for it rather than assuming a resolved
+// promise implies a send.
+export type TransactionalSendOutcome =
+  'sent' | 'not-registered' | 'suppressed' | 'deduped' | 'failed'
+
 /**
  * Transactional send pipeline (eng infra spec Part 2 §4.3): registry lookup →
  * per-template kill switch → dedupe-key idempotency → Clerk recipient
@@ -112,7 +119,7 @@ export async function sendTransactionalEmail<
   userId: string
   dedupeKey: string
   vars: EmailTemplateVars[K]
-}): Promise<void> {
+}): Promise<TransactionalSendOutcome> {
   const { templateKey, userId, dedupeKey, vars } = params
   const logContext = { templateKey, userId, dedupeKey }
 
@@ -123,7 +130,7 @@ export async function sendTransactionalEmail<
         logContext,
         'sendTransactionalEmail: template not registered — skipping without a send-log row',
       )
-      return
+      return 'not-registered'
     }
 
     const [config] = await db
@@ -148,7 +155,7 @@ export async function sendTransactionalEmail<
         logContext,
         'sendTransactionalEmail: template disabled (kill switch) — suppressed',
       )
-      return
+      return 'suppressed'
     }
 
     // Claim-then-flip: the row is inserted as 'failed' to consume the dedupe
@@ -165,7 +172,7 @@ export async function sendTransactionalEmail<
         logContext,
         'sendTransactionalEmail: dedupe key already consumed — skipping',
       )
-      return
+      return 'deduped'
     }
 
     const apiKey = process.env.RESEND_API_KEY
@@ -174,7 +181,7 @@ export async function sendTransactionalEmail<
         logContext,
         'sendTransactionalEmail: RESEND_API_KEY not set — send-log row left failed',
       )
-      return
+      return 'failed'
     }
 
     const clerkSecretKey = process.env.CLERK_SECRET_KEY
@@ -183,7 +190,7 @@ export async function sendTransactionalEmail<
         logContext,
         'sendTransactionalEmail: CLERK_SECRET_KEY not set — send-log row left failed',
       )
-      return
+      return 'failed'
     }
 
     const clerkClient = createClerkClient({ secretKey: clerkSecretKey })
@@ -200,7 +207,7 @@ export async function sendTransactionalEmail<
         logContext,
         'sendTransactionalEmail: no Clerk email address — send-log row left failed',
       )
-      return
+      return 'failed'
     }
 
     const rendered = renderer(vars)
@@ -218,18 +225,20 @@ export async function sendTransactionalEmail<
         { ...logContext, resendError: response.error },
         'sendTransactionalEmail: Resend rejected send — send-log row left failed',
       )
-      return
+      return 'failed'
     }
 
     await db
       .update(emailSendLog)
       .set({ status: 'sent', resendId: response.data?.id ?? null })
       .where(eq(emailSendLog.id, claimedRow.id))
+    return 'sent'
   } catch (err) {
     apiLogger.error(
       { err, ...logContext },
       'sendTransactionalEmail: send failed — send-log row (if claimed) left failed',
     )
+    return 'failed'
   }
 }
 

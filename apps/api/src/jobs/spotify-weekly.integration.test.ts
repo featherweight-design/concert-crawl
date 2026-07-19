@@ -277,10 +277,21 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 2)', () => {
     // Signed one-click unsubscribe link in the footer (spec §8.2).
     expect(send?.html).toContain('/v1/email/unsubscribe?uid=')
 
-    // Second run in the same ISO week: dedupe key already consumed.
+    // Second run in the same ISO week: dedupe key already consumed, and the
+    // retry's summary must not report the deduped no-op as a send.
     await runSpotifyWeekly(NOW)
     expect(await getDigestLogRows(USER)).toHaveLength(1)
     expect(resendState.sends).toHaveLength(1)
+    const costs = await testDb
+      .select()
+      .from(costTracking)
+      .where(eq(costTracking.service, 'spotify'))
+    const summaries = costs
+      .filter((row) => (row.metadata ?? '').includes('"job":"spotify-weekly"'))
+      .sort((a, b) => a.recordedAt.getTime() - b.recordedAt.getTime())
+    expect(summaries).toHaveLength(2)
+    expect(summaries[0]?.metadata).toContain('"digestSent":1')
+    expect(summaries[1]?.metadata).toContain('"digestSent":0')
   })
 
   it('matches via canonical_supporting overlap too (§9.1)', async () => {
