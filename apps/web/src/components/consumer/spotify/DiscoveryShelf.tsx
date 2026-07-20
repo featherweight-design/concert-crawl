@@ -59,10 +59,10 @@ const ReasonChip = ({ reason }: { reason: SpotifyTastePickReason }) => (
 const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
   const price = formatPrice(pick.ticketPriceMin, null)
   return (
-    <li className="w-[168px] shrink-0">
+    <li className="flex w-[168px] shrink-0">
       <Link
         href={`/events/${pick.eventId}`}
-        className="block overflow-hidden rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        className="flex w-full flex-col overflow-hidden rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
         style={{
           background: 'var(--surface-1)',
           border: '1px solid var(--border)',
@@ -73,10 +73,11 @@ const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
           alt=""
           artist={pick.artist}
           identityScale="tile"
-          className="h-[116px] w-full"
+          className="h-[116px] w-full shrink-0"
         />
+        {/* flex-1 so every card stretches to the tallest in the row. */}
         <span
-          className="flex flex-col gap-[7px]"
+          className="flex flex-1 flex-col gap-[7px]"
           style={{ padding: '10px 11px 12px' }}
         >
           <span className="flex">

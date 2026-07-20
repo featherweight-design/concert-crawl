@@ -31,7 +31,6 @@ export const EmptyDenverMatchModal = ({
     open={open}
     onClose={onClose}
     ariaLabel={COPY.ariaLabel}
-    header={<div aria-hidden />}
     footer={
       <div className="flex flex-col gap-2.5">
         <SignalButton onClick={onWatch}>{COPY.primaryCta}</SignalButton>

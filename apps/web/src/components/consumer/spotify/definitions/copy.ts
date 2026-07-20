@@ -72,6 +72,8 @@ export const SPOTIFY_COPY = {
     statSyncedValue: 'Now',
     recognizedLabel: 'WE RECOGNIZED',
     moreChip: (count: number) => `+${count} more`,
+    moreChipAria: (count: number) =>
+      `Show ${count} more recognized artist${count === 1 ? '' : 's'}`,
     cta: 'See my Denver shows',
     ariaLabel: 'Spotify linked',
   },

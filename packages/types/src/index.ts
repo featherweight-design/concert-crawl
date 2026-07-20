@@ -1022,8 +1022,8 @@ export interface SpotifyConnectionView {
   // Connections surfaces can show real "N play Denver" numbers (PR 5).
   denverArtistCount: number
   denverShowCount: number
-  // Display names of the Denver-matched artists (capped) for the
-  // "WE RECOGNIZED" chip row on the connect-success screen.
+  // Display names of every Denver-matched artist for the "WE RECOGNIZED"
+  // chip row on the connect-success screen (folds past 6 behind "+N more").
   matchedArtists: string[]
 }
 

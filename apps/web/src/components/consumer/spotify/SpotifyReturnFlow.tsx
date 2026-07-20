@@ -97,7 +97,6 @@ export const SpotifyReturnFlow = () => {
         open={phase === 'connecting'}
         onClose={() => setPhase('idle')}
         ariaLabel={PENDING_COPY.ariaLabel}
-        header={<div aria-hidden />}
       >
         <StateBody
           glyph={
@@ -157,7 +156,6 @@ export const SpotifyReturnFlow = () => {
         open={phase === 'failed'}
         onClose={() => setPhase('idle')}
         ariaLabel={FAIL_COPY.ariaLabel}
-        header={<div aria-hidden />}
         footer={
           <div className="flex flex-col gap-2.5">
             <SignalButton

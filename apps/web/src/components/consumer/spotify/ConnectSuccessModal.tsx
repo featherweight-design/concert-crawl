@@ -4,6 +4,7 @@
 // what you told Spotify you love": check disc, artist/Denver counts, a strip
 // of recognized-artist chips and the "See my Denver shows" CTA.
 
+import { useState } from 'react'
 import type { SpotifyConnectionView } from '@concert-crawl/types'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 import { SPOTIFY_COPY } from './definitions/copy'
@@ -30,7 +31,7 @@ const SyncStat = ({
   label: string
   tone?: 'default' | 'signal'
 }) => (
-  <div className="flex flex-col items-center gap-1">
+  <div className="flex flex-1 flex-col items-center gap-1">
     <span
       className="text-[20px] font-black tracking-[-0.02em]"
       style={{ color: tone === 'signal' ? 'var(--signal)' : 'var(--fg)' }}
@@ -96,17 +97,17 @@ export const ConnectSuccessModal = ({
   onContinue,
   onClose,
 }: ConnectSuccessModalProps) => {
-  const chips = connection.matchedArtists.slice(0, CHIPS_SHOWN)
-  // The chip row shows Denver-matched artists only, so the fold counts the
-  // remaining Denver matches — not the full Spotify follow list.
-  const moreCount = connection.denverArtistCount - chips.length
+  const [chipsExpanded, setChipsExpanded] = useState(false)
+  const chips = chipsExpanded
+    ? connection.matchedArtists
+    : connection.matchedArtists.slice(0, CHIPS_SHOWN)
+  const moreCount = connection.matchedArtists.length - chips.length
 
   return (
     <ModalShell
       open={open}
       onClose={onClose}
       ariaLabel={COPY.ariaLabel}
-      header={<div aria-hidden />}
       footer={<SignalButton onClick={onContinue}>{COPY.cta}</SignalButton>}
     >
       <div className="flex flex-col">
@@ -169,15 +170,18 @@ export const ConnectSuccessModal = ({
                 <ArtistChip key={name} name={name} />
               ))}
               {moreCount > 0 && (
-                <span
-                  className="inline-flex items-center rounded-full bg-surface-2 px-3 py-[6px] text-[11px] text-fg-muted"
+                <button
+                  type="button"
+                  onClick={() => setChipsExpanded(true)}
+                  aria-label={COPY.moreChipAria(moreCount)}
+                  className="inline-flex cursor-pointer items-center rounded-full bg-surface-2 px-3 py-[6px] text-[11px] text-fg-muted transition-colors hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                   style={{
                     border: '1px dashed var(--border-strong)',
                     fontFamily: 'var(--font-mono)',
                   }}
                 >
                   {COPY.moreChip(moreCount)}
-                </span>
+                </button>
               )}
             </div>
           </>

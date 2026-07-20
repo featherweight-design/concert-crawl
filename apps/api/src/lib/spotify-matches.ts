@@ -31,10 +31,6 @@ import { todayInTimezone } from './time.js'
 // events route for the same reasoning.
 const MT_TIME_ZONE = 'America/Denver'
 
-// Chip cap for the connect-success "WE RECOGNIZED" row; the UI renders
-// "+N more" from artistCount, so the payload never needs the full set.
-const MATCHED_ARTIST_CAP = 12
-
 export interface SpotifyMatchSummary {
   denverArtistCount: number
   denverShowCount: number
@@ -120,7 +116,7 @@ const loadMatchedUpcomingEvents = async (
 }
 
 // Full summary for the connection payload: how many of the user's artists
-// have an upcoming Denver show, how many shows that is, and (capped) display
+// have an upcoming Denver show, how many shows that is, and the display
 // names of the matched artists.
 export async function getSpotifyMatchSummary(
   userId: string,
@@ -150,12 +146,13 @@ export async function getSpotifyMatchSummary(
     }
   }
 
-  // Sorted before the cap so the chip list is deterministic — the event
-  // query has no ORDER BY, and Set iteration would leak that row order.
+  // Sorted so the chip list is deterministic — the event query has no
+  // ORDER BY, and Set iteration would leak that row order. Uncapped: the
+  // connect-success "WE RECOGNIZED" row folds past 6 behind an expandable
+  // "+N more", and the set is naturally bounded by the user's Denver matches.
   const matchedArtists = [...matchedCanonicals]
     .flatMap((canonical) => displayByCanonical.get(canonical) ?? [])
     .sort((left, right) => left.localeCompare(right))
-    .slice(0, MATCHED_ARTIST_CAP)
 
   return {
     denverArtistCount: matchedCanonicals.size,

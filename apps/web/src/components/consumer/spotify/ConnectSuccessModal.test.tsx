@@ -60,12 +60,26 @@ describe('ConnectSuccessModal', () => {
     // Body bolds: 34 artists / 9 play Denver.
     expect(screen.getByText(`34${COPY.bodyArtistsSuffix}`)).toBeTruthy()
     expect(screen.getByText(COPY.statDenver)).toBeTruthy()
-    // First six Denver-matched chips render; the remaining Denver matches
-    // fold into "+3 more" (denverArtistCount 9 - 6 shown).
+    // First six Denver-matched chips render; the rest of the matched list
+    // folds into "+1 more" (7 matched - 6 shown).
     expect(screen.getByText('Sleep Token')).toBeTruthy()
     expect(screen.getByText('Bright Eyes')).toBeTruthy()
     expect(screen.queryByText('Wisp')).toBeNull()
-    expect(screen.getByText(COPY.moreChip(3))).toBeTruthy()
+    expect(screen.getByText(COPY.moreChip(1))).toBeTruthy()
+  })
+
+  it('expands the full matched-artist list when the +more chip is clicked', () => {
+    render(
+      <ConnectSuccessModal
+        open
+        connection={CONNECTION}
+        onContinue={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: COPY.moreChipAria(1) }))
+    expect(screen.getByText('Wisp')).toBeTruthy()
+    expect(screen.queryByText(COPY.moreChip(1))).toBeNull()
   })
 
   it('fires onContinue from the CTA', () => {
