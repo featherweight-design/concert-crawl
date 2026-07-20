@@ -156,7 +156,7 @@ jobs:
 
       - name: Setup Node.js
         if: steps.wait_for_live.outputs.should_smoke == 'true'
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: 'pnpm'
