@@ -28,8 +28,18 @@
 // stray extra newlines before step 4 normalizes runs.
 const PARAGRAPH_CLOSING = /<\/(p|div|h[1-6]|blockquote)\s*>/gi
 const TIGHT_CLOSING = /<\/(li|tr)\s*>/gi
+// Self-closing paragraph-level tags — `<p/>`, `<div/>`, `<h2/>`, etc.
+// Some AEG feeds emit these as paragraph separators; a browser renders
+// the empty element with vertical margin, producing a paragraph break.
+// Match that behavior with `\n\n`, same as an explicit `</p>` (#1132).
+// Runs BEFORE BLOCK_OPENING so `<p/>` gets the break treatment instead
+// of being stripped to empty.
+const SELF_CLOSING_PARAGRAPH = /<(p|div|h[1-6]|blockquote)(\s[^>]*)?\/>/gi
 const BLOCK_OPENING = /<(p|div|li|tr|ul|ol|h[1-6]|blockquote)(\s[^>]*)?>/gi
-const BR_TAG = /<br\s*\/?>/gi
+// Leading `\/?` covers the malformed `</br>` closing form of the void
+// `<br>` element that some AEG feeds emit (#1132). Both forms collapse
+// to a single newline — matches what a browser would render.
+const BR_TAG = /<\/?br\s*\/?>/gi
 
 // Whitelist of inline + uncommon block tag names that may survive the
 // block-level pass above. Restricting the "remaining tag" strip to
@@ -136,6 +146,7 @@ export function stripDescriptionHtml(html: string | null | undefined): string {
   //    semantics consumers would have seen in a browser.
   out = out
     .replace(BR_TAG, '\n')
+    .replace(SELF_CLOSING_PARAGRAPH, '\n\n')
     .replace(PARAGRAPH_CLOSING, '\n\n')
     .replace(TIGHT_CLOSING, '\n')
     .replace(BLOCK_OPENING, '')

@@ -168,6 +168,34 @@ describe('stripDescriptionHtml', () => {
     expect(stripDescriptionHtml('Foo &#X2014; Bar')).toBe('Foo — Bar')
   })
 
+  // #1132 — AEG feeds occasionally emit `<p/>` (self-closing paragraph)
+  // and `</br>` (closing form of the void `<br>` element). Both are
+  // malformed HTML but must be stripped so they don't leak through to
+  // consumers. Real-world examples from prod: Fruit Bats + Madeon events
+  // survived the 2026-06-27 backfill with these tag variants intact.
+  it('strips self-closing block tags (<p/>, <div/>)', () => {
+    expect(stripDescriptionHtml('One<p/>Two')).toBe('One\n\nTwo')
+    expect(stripDescriptionHtml('Alpha<div/>Beta')).toBe('Alpha\n\nBeta')
+  })
+
+  // #1132 R1 — the initial fix used a greedy `[^>]*` for the attribute
+  // group, which silently consumed the trailing `/` and left the tag
+  // intact. Widen coverage to include the common whitespace + attribute
+  // variants an author might type by hand or a source might generate.
+  it('strips self-closing block tags with whitespace or attributes', () => {
+    expect(stripDescriptionHtml('One<p />Two')).toBe('One\n\nTwo')
+    expect(stripDescriptionHtml('One<p  />Two')).toBe('One\n\nTwo')
+    expect(stripDescriptionHtml('One<p class="x"/>Two')).toBe('One\n\nTwo')
+    expect(stripDescriptionHtml('One<p class="x" />Two')).toBe('One\n\nTwo')
+    expect(stripDescriptionHtml('One<div id="d"/>Two')).toBe('One\n\nTwo')
+  })
+
+  it('treats </br> as a line break like <br>', () => {
+    expect(stripDescriptionHtml('line one</br>line two')).toBe(
+      'line one\nline two',
+    )
+  })
+
   // #844 Copilot R3 — AEG / RHP-CMS feeds routinely include punctuation
   // entities for curly quotes, dashes, and ellipses. Without explicit
   // decode entries these leaked through to consumers as literal
