@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@sentry/node": "^10.65.0"
+    "@sentry/node": "^10.67.0"
   },
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
