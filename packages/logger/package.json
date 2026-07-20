@@ -31,7 +31,7 @@
     "@typescript-eslint/eslint-plugin": "^8.64.0",
     "@typescript-eslint/parser": "^8.60.0",
     "eslint": "^9.39.5",
-    "hono": "^4.12.30",
+    "hono": "^4.12.31",
     "typescript": "^5.0.0",
     "vitest": "^4.1.10",
     "vite": "^6.0.0"
