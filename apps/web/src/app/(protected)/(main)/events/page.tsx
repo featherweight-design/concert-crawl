@@ -204,11 +204,18 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   // SSR seed for the "Based on your taste" shelf (#763 staging r4): fetch in
   // parallel with the events list so the shelf paints in the same HTML pass
   // instead of popping in after the client entitlement + picks round-trips.
-  // Non-entitled viewers 403 on the gated endpoint (and any other failure
-  // degrades the same way) → undefined → the shelf stays hidden client-side.
+  // 401/403 is the expected non-entitled path; anything else is logged so
+  // real outages stay visible. Every failure degrades to undefined → the
+  // shelf falls back to its client fetch.
   const tastePicksPromise: Promise<SpotifyTastePicksResponse | undefined> =
     view === 'list' && token
-      ? fetchTastePicks(token).catch(() => undefined)
+      ? fetchTastePicks(token).catch((err: unknown) => {
+          const expected =
+            err instanceof ApiError &&
+            (err.status === 401 || err.status === 403)
+          if (!expected) console.error('taste picks SSR prefetch failed', err)
+          return undefined
+        })
       : Promise.resolve(undefined)
 
   const [

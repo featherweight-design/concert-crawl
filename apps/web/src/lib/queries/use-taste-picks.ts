@@ -27,7 +27,10 @@ export function useTastePicks(
 
   return useQuery({
     queryKey: tastePicksQueryKey(userId),
-    ...(initialData !== undefined && { initialData }),
+    // Only seed once userId is known — otherwise the seed would be cached
+    // under the shared `null` key, where a later session with a transiently
+    // unresolved userId could read another user's picks.
+    ...(initialData !== undefined && userId != null && { initialData }),
     queryFn: async (): Promise<SpotifyTastePicksResponse> => {
       const token = await getToken()
       // Throw instead of returning a synthetic empty response — with
