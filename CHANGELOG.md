@@ -1,3 +1,10 @@
+## [1.154.3](https://github.com/HartiganHM/concert-crawl/compare/v1.154.2...v1.154.3) (2026-07-20)
+
+
+### Bug Fixes
+
+* **pwa:** post-watch sheet PATCHes master + settings toggle surfaces errors ([#1130](https://github.com/HartiganHM/concert-crawl/issues/1130)) ([#1134](https://github.com/HartiganHM/concert-crawl/issues/1134)) ([a72e9f9](https://github.com/HartiganHM/concert-crawl/commit/a72e9f93703fa4ca5fd04afc2f21c0d160dd927d))
+
 ## [1.154.2](https://github.com/HartiganHM/concert-crawl/compare/v1.154.1...v1.154.2) (2026-07-20)
 
 
