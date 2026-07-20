@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type {
   SpotifyTastePick,
@@ -172,7 +172,10 @@ describe('DiscoveryShelf', () => {
     ])
     render(<DiscoveryShelf />)
 
-    for (const link of screen.getAllByRole('link')) {
+    // Scope to the shelf list so unrelated links (divider, CTAs) can't
+    // dilute the card-structure assertions.
+    const list = screen.getByRole('list', { name: COPY.listAria })
+    for (const link of within(list).getAllByRole('link')) {
       const imageRegion = link.firstElementChild
       const content = link.lastElementChild
       expect(imageRegion?.className).toContain('flex-1')
