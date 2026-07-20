@@ -16,12 +16,18 @@ export const tastePicksQueryKey = (userId: string | null | undefined) =>
 
 // "Based on your taste" picks (#763 PR 8). `enabled` is driven by the
 // spotify-sync entitlement so non-premium viewers never hit the gated
-// endpoint (which would 403).
-export function useTastePicks(enabled: boolean) {
+// endpoint (which would 403). `initialData` seeds the query from the
+// events-page SSR fetch so the shelf paints with the browse list instead of
+// popping in after the client entitlement + picks round-trips.
+export function useTastePicks(
+  enabled: boolean,
+  initialData?: SpotifyTastePicksResponse,
+) {
   const { getToken, isSignedIn, userId } = useAuth()
 
   return useQuery({
     queryKey: tastePicksQueryKey(userId),
+    ...(initialData !== undefined && { initialData }),
     queryFn: async (): Promise<SpotifyTastePicksResponse> => {
       const token = await getToken()
       // Throw instead of returning a synthetic empty response — with

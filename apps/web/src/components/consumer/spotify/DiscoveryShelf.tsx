@@ -15,6 +15,7 @@ import Link from 'next/link'
 import type {
   SpotifyTastePick,
   SpotifyTastePickReason,
+  SpotifyTastePicksResponse,
 } from '@concert-crawl/types'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
 import { useTastePicks } from '@/lib/queries/use-taste-picks'
@@ -68,16 +69,19 @@ const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
           border: '1px solid var(--border)',
         }}
       >
+        {/* flex-1 (basis 0) so the IMAGE absorbs any extra height when cards
+            equalize in the row — aspect ratio yields, show info never does.
+            Also neutralizes IdentityArt's inline height:100%, which beats a
+            height class and blanked fallback-graphic cards (#763 r4). */}
         <EventImage
           src={pick.imageUrl}
           alt=""
           artist={pick.artist}
           identityScale="tile"
-          className="h-[116px] w-full shrink-0"
+          className="min-h-[116px] w-full flex-1"
         />
-        {/* flex-1 so every card stretches to the tallest in the row. */}
         <span
-          className="flex flex-1 flex-col gap-[7px]"
+          className="flex shrink-0 flex-col gap-[7px]"
           style={{ padding: '10px 11px 12px' }}
         >
           <span className="flex">
@@ -246,13 +250,22 @@ const DiscoveryFailure = () => {
   )
 }
 
-export const DiscoveryShelf = () => {
+export const DiscoveryShelf = ({
+  initialPicks,
+}: {
+  // SSR seed from the events page — the gated endpoint already enforced the
+  // spotify-sync entitlement server-side, so seeded data renders immediately
+  // without waiting on the client plan-state round-trip (no pop-in).
+  initialPicks?: SpotifyTastePicksResponse
+}) => {
   const entitlement = useEntitlement('spotify-sync')
-  const picksQuery = useTastePicks(entitlement.active)
+  const picksQuery = useTastePicks(entitlement.active, initialPicks)
 
-  // Hidden-style surface (spec §7): nothing for non-entitled viewers, and
-  // nothing while resolving — never flash a shelf that may not apply.
-  if (entitlement.isLoading || !entitlement.active) return null
+  // Hidden-style surface (spec §7): nothing once the entitlement resolves
+  // inactive, and nothing without data. While the client entitlement is
+  // still resolving, seeded/cached data renders immediately (the gated
+  // endpoint already proved entitlement) instead of popping in later.
+  if (!entitlement.isLoading && !entitlement.active) return null
 
   const { data, isError, isPending } = picksQuery
   if (isPending || isError || !data || data.status === 'disconnected') {

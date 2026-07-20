@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import type {
   EventsAvailabilityResponse,
   EventsListResponse,
+  SpotifyTastePicksResponse,
   VenuePublic,
   WatchingShow,
 } from '@concert-crawl/types'
@@ -30,7 +31,7 @@ import { SpotifyStatusBanner } from '@/components/consumer/spotify/SpotifyStatus
 import { DiscoveryShelf } from '@/components/consumer/spotify/DiscoveryShelf'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
-import { fetchSpotifyConnection } from '@/lib/spotify'
+import { fetchSpotifyConnection, fetchTastePicks } from '@/lib/spotify'
 
 const copy = CONSUMER_COPY
 
@@ -200,14 +201,31 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     }
   })()
 
-  const [eventsFetch, venues, genres, watchedShows, requestHeaders] =
-    await Promise.all([
-      eventsPromise,
-      fetchVenues(token),
-      fetchGenres(token).catch(() => []),
-      watchedShowsPromise,
-      headers(),
-    ])
+  // SSR seed for the "Based on your taste" shelf (#763 staging r4): fetch in
+  // parallel with the events list so the shelf paints in the same HTML pass
+  // instead of popping in after the client entitlement + picks round-trips.
+  // Non-entitled viewers 403 on the gated endpoint (and any other failure
+  // degrades the same way) → undefined → the shelf stays hidden client-side.
+  const tastePicksPromise: Promise<SpotifyTastePicksResponse | undefined> =
+    view === 'list' && token
+      ? fetchTastePicks(token).catch(() => undefined)
+      : Promise.resolve(undefined)
+
+  const [
+    eventsFetch,
+    venues,
+    genres,
+    watchedShows,
+    initialTastePicks,
+    requestHeaders,
+  ] = await Promise.all([
+    eventsPromise,
+    fetchVenues(token),
+    fetchGenres(token).catch(() => []),
+    watchedShowsPromise,
+    tastePicksPromise,
+    headers(),
+  ])
   const eventsResult = eventsFetch.response
   const tasteApplied = eventsFetch.tasteApplied
   // Monetization spec §1.7: SCA notice gating for the tier picker the locked
@@ -336,7 +354,13 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
       {/* "Based on your taste" shelf (#763 PR 8) — premium + connected only,
           list view only; renders nothing for everyone else. */}
-      {view === 'list' && <DiscoveryShelf />}
+      {view === 'list' && (
+        <DiscoveryShelf
+          {...(initialTastePicks !== undefined && {
+            initialPicks: initialTastePicks,
+          })}
+        />
+      )}
 
       {/* Filter bar */}
       <div className="mb-5">

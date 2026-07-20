@@ -22,14 +22,24 @@ interface PicksQueryState {
 let entitlement: EntitlementState
 let picksQuery: PicksQueryState
 let picksEnabledArg: boolean | undefined
+let picksInitialDataArg: SpotifyTastePicksResponse | undefined
 
 vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlement,
 }))
 
 vi.mock('@/lib/queries/use-taste-picks', () => ({
-  useTastePicks: (enabled: boolean) => {
+  useTastePicks: (
+    enabled: boolean,
+    initialData?: SpotifyTastePicksResponse,
+  ) => {
     picksEnabledArg = enabled
+    picksInitialDataArg = initialData
+    // Mirror react-query initialData semantics: seeded queries resolve
+    // immediately with the seed.
+    if (picksQuery.data === undefined && initialData !== undefined) {
+      return { data: initialData, isPending: false, isError: false }
+    }
     return picksQuery
   },
 }))
@@ -71,11 +81,14 @@ beforeEach(() => {
     isError: false,
   }
   picksEnabledArg = undefined
+  picksInitialDataArg = undefined
 })
 
 describe('DiscoveryShelf', () => {
-  it('renders nothing while the entitlement is resolving', () => {
+  it('renders nothing while the entitlement is resolving with no seeded data', () => {
     entitlement = { isLoading: true, active: false, surface: null }
+    // Query is disabled (entitlement not yet active) and has no SSR seed.
+    picksQuery = { data: undefined, isPending: true, isError: false }
     const { container } = render(<DiscoveryShelf />)
     expect(container.innerHTML).toBe('')
   })
@@ -146,6 +159,49 @@ describe('DiscoveryShelf', () => {
 
     // Hand-off divider into the main list.
     expect(screen.getByText(COPY.allShowsDivider)).toBeTruthy()
+  })
+
+  it('grows the image region to absorb extra card height, keeping the info block natural-height', () => {
+    // Regression (#763 staging r4): a fixed-height image + flex-1 content
+    // squeezed fallback-graphic cards to zero text (IdentityArt's inline
+    // height:100% beats a height class) and stretched the text region on
+    // image cards. The image region flexes; the content block does not.
+    picksQuery.data = connected([
+      pick(), // imageUrl: null → IdentityArt fallback
+      pick({ eventId: 'evt-img', artist: 'Alvvays', imageUrl: 'https://img' }),
+    ])
+    render(<DiscoveryShelf />)
+
+    for (const link of screen.getAllByRole('link')) {
+      const imageRegion = link.firstElementChild
+      const content = link.lastElementChild
+      expect(imageRegion?.className).toContain('flex-1')
+      expect(imageRegion?.className).toContain('min-h-[116px]')
+      expect(imageRegion?.className).not.toContain('shrink-0')
+      expect(content?.className).toContain('shrink-0')
+      expect(content?.className).not.toContain('flex-1')
+    }
+    // Fallback-graphic card still surfaces its show info.
+    expect(screen.getByText('Turnstile')).toBeTruthy()
+  })
+
+  it('renders immediately from initialPicks while client entitlement/query are still resolving', () => {
+    entitlement = { isLoading: true, active: false, surface: null }
+    picksQuery = { data: undefined, isPending: true, isError: false }
+    render(<DiscoveryShelf initialPicks={connected([pick()])} />)
+
+    expect(picksInitialDataArg).toEqual(connected([pick()]))
+    expect(screen.getByRole('region', { name: COPY.title })).toBeTruthy()
+    expect(screen.getByText('Turnstile')).toBeTruthy()
+  })
+
+  it('stays hidden when initialPicks reports disconnected', () => {
+    entitlement = { isLoading: true, active: false, surface: null }
+    picksQuery = { data: undefined, isPending: true, isError: false }
+    const { container } = render(
+      <DiscoveryShelf initialPicks={{ status: 'disconnected', picks: [] }} />,
+    )
+    expect(container.innerHTML).toBe('')
   })
 
   it('uses the singular eyebrow for one pick', () => {
