@@ -31,9 +31,23 @@ export default async function AuthCompletePage() {
       // Clear cookie only after a definitive response (success or already-used)
       if (res.ok || res.status === 409) {
         cookieStore.delete(INVITE_COOKIE_NAME)
+      } else {
+        // Non-OK, non-409 (e.g. 400 bad JSON, 500 API error) — the fetch
+        // resolved so `catch` doesn't fire, but redemption still failed.
+        // Log so it's visible in the Next server logs / Sentry rather
+        // than becoming another silent gap now that #1113 routes every
+        // signup through this page.
+        console.warn('[auth/complete] redeem-code returned non-OK', {
+          status: res.status,
+        })
       }
-    } catch {
-      // Network failure — leave cookie so the next load can retry
+    } catch (err) {
+      // Network failure — leave cookie so the next load can retry. This
+      // page is a Server Component, so the log lands in the Next.js
+      // server runtime logs (surfaced in Vercel logs / Sentry), not the
+      // browser console. Silent swallow used to hide these entirely; now
+      // that #1113 routes every new signup through here they need a trail.
+      console.warn('[auth/complete] redeem-code fetch failed', { err })
     }
   }
 
