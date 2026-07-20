@@ -1,3 +1,10 @@
+# [1.155.0](https://github.com/HartiganHM/concert-crawl/compare/v1.154.6...v1.155.0) (2026-07-20)
+
+
+### Features
+
+* **admin:** make Missing-from-crawl list triageable ([#1122](https://github.com/HartiganHM/concert-crawl/issues/1122)) ([#1141](https://github.com/HartiganHM/concert-crawl/issues/1141)) ([5bad18d](https://github.com/HartiganHM/concert-crawl/commit/5bad18dea954a3bb42fff2ba33106d1fc1b5cd73))
+
 ## [1.154.6](https://github.com/HartiganHM/concert-crawl/compare/v1.154.5...v1.154.6) (2026-07-20)
 
 
