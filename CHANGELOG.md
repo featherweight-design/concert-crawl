@@ -1,3 +1,10 @@
+## [1.154.6](https://github.com/HartiganHM/concert-crawl/compare/v1.154.5...v1.154.6) (2026-07-20)
+
+
+### Bug Fixes
+
+* **push:** rename VAPID_CONTACT_EMAIL → VAPID_SUBJECT (spec name) ([#1130](https://github.com/HartiganHM/concert-crawl/issues/1130)) ([#1136](https://github.com/HartiganHM/concert-crawl/issues/1136)) ([3c09003](https://github.com/HartiganHM/concert-crawl/commit/3c09003849415c5b383deea44a8e3853d38955fd))
+
 ## [1.154.5](https://github.com/HartiganHM/concert-crawl/compare/v1.154.4...v1.154.5) (2026-07-20)
 
 
