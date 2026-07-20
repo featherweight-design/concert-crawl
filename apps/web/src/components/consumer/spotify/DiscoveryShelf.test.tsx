@@ -35,8 +35,9 @@ vi.mock('@/lib/queries/use-taste-picks', () => ({
   ) => {
     picksEnabledArg = enabled
     picksInitialDataArg = initialData
-    // Mirror react-query initialData semantics: seeded queries resolve
-    // immediately with the seed.
+    // Approximates the seeded-query happy path only (seed resolves
+    // immediately). The hook's userId gate on applying initialData is
+    // covered directly in use-taste-picks.test.tsx.
     if (picksQuery.data === undefined && initialData !== undefined) {
       return { data: initialData, isPending: false, isError: false }
     }
