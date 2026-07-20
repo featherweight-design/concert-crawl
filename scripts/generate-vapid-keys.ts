@@ -8,6 +8,9 @@ const keys = webpush.generateVAPIDKeys()
 console.log('VAPID_PUBLIC_KEY=' + keys.publicKey)
 console.log('VAPID_PRIVATE_KEY=' + keys.privateKey)
 console.log(
-  '# Also set VAPID_CONTACT_EMAIL — either a bare email (hugh@concertcrawl.app)',
+  '# Also set VAPID_SUBJECT — either a bare email (hugh@concertcrawl.app),',
 )
-console.log('# or the full mailto: URI. send-push.ts normalizes either form.')
+console.log(
+  '# a full mailto: URI, or an https:// URL. send-push.ts prefixes mailto:',
+)
+console.log('# only for bare emails; already-scoped values pass through.')

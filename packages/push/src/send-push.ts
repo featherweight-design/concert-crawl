@@ -20,20 +20,24 @@ let configured = false
 // Read VAPID vars directly from process.env rather than a validated `env`
 // object so this module doesn't couple to any app's env.ts evaluation on
 // import (apps/api's env.ts calls process.exit(1) on invalid parse — vitest
-// unit tests import route registries without a populated .env). Also accept
-// an optional `mailto:` prefix on the contact email so operators can paste
-// either the bare address or a full mailto: URI without breaking the
-// RFC 8292 subject.
+// unit tests import route registries without a populated .env).
+//
+// VAPID_SUBJECT is the standard name from RFC 8292; its value becomes the
+// JWT `sub` claim on each push request. RFC 8292 permits either a `mailto:`
+// URI or an `https://` URL, so bare emails get the `mailto:` prefix but any
+// value that already carries a URI scheme (e.g. `mailto:`, `https://`) is
+// passed through untouched.
+const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
 const configure = () => {
   if (configured) return true
   const publicKey = process.env['VAPID_PUBLIC_KEY']
   const privateKey = process.env['VAPID_PRIVATE_KEY']
-  const rawContact = process.env['VAPID_CONTACT_EMAIL']
-  if (!publicKey || !privateKey || !rawContact) return false
-  const contactSubject = rawContact.startsWith('mailto:')
-    ? rawContact
-    : `mailto:${rawContact}`
-  webpush.setVapidDetails(contactSubject, publicKey, privateKey)
+  const rawSubject = process.env['VAPID_SUBJECT']
+  if (!publicKey || !privateKey || !rawSubject) return false
+  const vapidSubject = SCHEME_RE.test(rawSubject)
+    ? rawSubject
+    : `mailto:${rawSubject}`
+  webpush.setVapidDetails(vapidSubject, publicKey, privateKey)
   configured = true
   return true
 }

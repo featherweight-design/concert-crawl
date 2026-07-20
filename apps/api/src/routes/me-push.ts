@@ -39,8 +39,11 @@ const preferencesSchema = z.object({
 const requireVapid = () => {
   const publicKey = process.env['VAPID_PUBLIC_KEY']
   const privateKey = process.env['VAPID_PRIVATE_KEY']
-  const contactEmail = process.env['VAPID_CONTACT_EMAIL']
-  if (!publicKey || !privateKey || !contactEmail) return false
+  // VAPID_SUBJECT is the standard name from RFC 8292 — its value becomes
+  // the JWT `sub` claim on each push request. web-push libraries expect
+  // exactly this env key.
+  const subject = process.env['VAPID_SUBJECT']
+  if (!publicKey || !privateKey || !subject) return false
   return true
 }
 

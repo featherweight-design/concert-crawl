@@ -79,7 +79,7 @@ describe('sendPushForNotification', () => {
   it('skips with not_configured when VAPID env is missing', async () => {
     delete process.env['VAPID_PUBLIC_KEY']
     delete process.env['VAPID_PRIVATE_KEY']
-    delete process.env['VAPID_CONTACT_EMAIL']
+    delete process.env['VAPID_SUBJECT']
     const { sendPushForNotification } = await import('./send-push.js')
     const result = await sendPushForNotification({
       userId: 'user_1',
@@ -93,7 +93,7 @@ describe('sendPushForNotification', () => {
   it('skips with master_off when the user has master disabled or never opted in', async () => {
     process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
     process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
-    process.env['VAPID_CONTACT_EMAIL'] = 'ops@example.com'
+    process.env['VAPID_SUBJECT'] = 'ops@example.com'
     dbSelectMock.mockResolvedValueOnce([]) // no prefs row → defaults master=false
     const { sendPushForNotification } = await import('./send-push.js')
     const result = await sendPushForNotification({
@@ -108,7 +108,7 @@ describe('sendPushForNotification', () => {
   it('skips with category_off when the matching sub-toggle is off', async () => {
     process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
     process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
-    process.env['VAPID_CONTACT_EMAIL'] = 'ops@example.com'
+    process.env['VAPID_SUBJECT'] = 'ops@example.com'
     dbSelectMock.mockResolvedValueOnce([
       {
         masterEnabled: true,
@@ -129,7 +129,7 @@ describe('sendPushForNotification', () => {
   it('sends spotify.new_show regardless of watch/price sub-toggles (master only)', async () => {
     process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
     process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
-    process.env['VAPID_CONTACT_EMAIL'] = 'ops@example.com'
+    process.env['VAPID_SUBJECT'] = 'ops@example.com'
     dbSelectMock
       .mockResolvedValueOnce([
         {
@@ -156,7 +156,7 @@ describe('sendPushForNotification', () => {
   it('skips with no_subscriptions when the user has zero active subscriptions', async () => {
     process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
     process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
-    process.env['VAPID_CONTACT_EMAIL'] = 'ops@example.com'
+    process.env['VAPID_SUBJECT'] = 'ops@example.com'
     dbSelectMock
       .mockResolvedValueOnce([
         {
@@ -176,10 +176,10 @@ describe('sendPushForNotification', () => {
     expect(result.skipped).toBe('no_subscriptions')
   })
 
-  it('delivers to all active subscriptions and normalizes mailto: on either input form', async () => {
+  it('delivers to all active subscriptions and passes an already-scoped mailto: subject through untouched', async () => {
     process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
     process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
-    process.env['VAPID_CONTACT_EMAIL'] = 'mailto:ops@example.com'
+    process.env['VAPID_SUBJECT'] = 'mailto:ops@example.com'
     dbSelectMock
       .mockResolvedValueOnce([
         {
@@ -208,10 +208,70 @@ describe('sendPushForNotification', () => {
     )
   })
 
+  it('prefixes mailto: on a bare email subject', async () => {
+    process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
+    process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
+    process.env['VAPID_SUBJECT'] = 'ops@example.com'
+    dbSelectMock
+      .mockResolvedValueOnce([
+        {
+          masterEnabled: true,
+          watchUpdatesEnabled: true,
+          priceDropsEnabled: true,
+        },
+      ])
+      .mockResolvedValueOnce([
+        { id: 'sub-1', endpoint: 'https://x/1', p256dh: 'p1', auth: 'a1' },
+      ])
+    sendNotificationMock.mockResolvedValue({})
+    const { sendPushForNotification } = await import('./send-push.js')
+    await sendPushForNotification({
+      userId: 'user_1',
+      category: 'watch.cancelled',
+      title: 't',
+      body: 'b',
+    })
+    expect(setVapidDetailsMock).toHaveBeenCalledWith(
+      'mailto:ops@example.com',
+      'BPUB',
+      'PRIV',
+    )
+  })
+
+  it('passes an https:// subject through without a mailto: prefix (RFC 8292 allows either)', async () => {
+    process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
+    process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
+    process.env['VAPID_SUBJECT'] = 'https://concertcrawl.app/contact'
+    dbSelectMock
+      .mockResolvedValueOnce([
+        {
+          masterEnabled: true,
+          watchUpdatesEnabled: true,
+          priceDropsEnabled: true,
+        },
+      ])
+      .mockResolvedValueOnce([
+        { id: 'sub-1', endpoint: 'https://x/1', p256dh: 'p1', auth: 'a1' },
+      ])
+    sendNotificationMock.mockResolvedValue({})
+    const { sendPushForNotification } = await import('./send-push.js')
+    await sendPushForNotification({
+      userId: 'user_1',
+      category: 'watch.cancelled',
+      title: 't',
+      body: 'b',
+    })
+    expect(setVapidDetailsMock).toHaveBeenCalledWith(
+      'https://concertcrawl.app/contact',
+      'BPUB',
+      'PRIV',
+    )
+  })
+
   it('soft-disables the subscription on a 404 or 410 response', async () => {
     process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
     process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
-    process.env['VAPID_CONTACT_EMAIL'] = 'ops@example.com'
+    process.env['VAPID_SUBJECT'] = 'ops@example.com'
     dbSelectMock
       .mockResolvedValueOnce([
         {
@@ -241,7 +301,7 @@ describe('sendPushForNotification', () => {
   it('does not throw when the DB read for prefs fails', async () => {
     process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
     process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
-    process.env['VAPID_CONTACT_EMAIL'] = 'ops@example.com'
+    process.env['VAPID_SUBJECT'] = 'ops@example.com'
     dbSelectMock.mockRejectedValueOnce(new Error('db down'))
     const { sendPushForNotification } = await import('./send-push.js')
     const result = await sendPushForNotification({

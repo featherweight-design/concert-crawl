@@ -26,8 +26,19 @@ export const resolveTestDbUrl = (): string => {
 
   let toplevel = ''
   try {
+    // Strip the hook-inherited git env vars before running rev-parse: when
+    // vitest launches from inside a git hook (e.g. pre-push) `GIT_DIR` and
+    // `GIT_WORK_TREE` are set, and `--show-toplevel` under those returns the
+    // CWD instead of the real worktree root — which collapses per-worktree
+    // DB names into per-subdirectory ones (`__fix_foo_apps_api`) and breaks
+    // TRUNCATE against the actually-migrated DB.
+    const { GIT_DIR, GIT_WORK_TREE, GIT_INDEX_FILE, ...cleanEnv } = process.env
+    void GIT_DIR
+    void GIT_WORK_TREE
+    void GIT_INDEX_FILE
     toplevel = execSync('git rev-parse --show-toplevel', {
       encoding: 'utf-8',
+      env: cleanEnv,
     }).trim()
   } catch (err) {
     console.warn('[test-db] git rev-parse failed; using default test DB:', err)
