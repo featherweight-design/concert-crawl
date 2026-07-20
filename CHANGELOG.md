@@ -1,3 +1,10 @@
+## [1.154.2](https://github.com/HartiganHM/concert-crawl/compare/v1.154.1...v1.154.2) (2026-07-20)
+
+
+### Bug Fixes
+
+* **spotify:** round-3 staging feedback — modal gaps, stat centering, chip expand, card heights ([829855e](https://github.com/HartiganHM/concert-crawl/commit/829855efcc0a7b5c2bbc24fcf4a4394af6bd592f))
+
 ## [1.154.1](https://github.com/HartiganHM/concert-crawl/compare/v1.154.0...v1.154.1) (2026-07-19)
 
 
