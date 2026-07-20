@@ -1,5 +1,6 @@
 'use client'
 
+import { type MissingClassification } from '@concert-crawl/types'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import {
   computeMissedSweeps,
@@ -17,6 +18,8 @@ export interface MissingRowEvent {
   showTime: string | null
   lastSeenAt: string | null
   firstMissingAt: string
+  classification: MissingClassification
+  clusterCount: number
 }
 
 export interface MissingRowProps {
@@ -109,7 +112,12 @@ export const MissingRow = ({
             {formatTime(event.showTime)}
           </span>
         </div>
-        <MissingChips missedCount={missed} />
+        <MissingChips
+          missedCount={missed}
+          classification={event.classification}
+          clusterCount={event.clusterCount}
+          venueName={event.venueName}
+        />
       </div>
       <div style={{ textAlign: 'right' }}>
         <div

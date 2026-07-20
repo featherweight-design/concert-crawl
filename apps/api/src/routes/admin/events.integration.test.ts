@@ -397,6 +397,211 @@ describe('POST /v1/admin/events/:id/available', () => {
   })
 })
 
+describe('GET /v1/admin/events?missing=true — classification + cluster', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('classifies missing events and returns venue cluster counts', async () => {
+    const today = new Date().toLocaleDateString('en-CA', {
+      timeZone: 'America/Denver',
+    })
+    const addDays = (base: string, days: number): string => {
+      const dt = new Date(base + 'T12:00:00Z')
+      dt.setUTCDate(dt.getUTCDate() + days)
+      return dt.toISOString().slice(0, 10)
+    }
+
+    const withinHorizonDate = addDays(today, 10)
+    const beyondHorizonDate = addDays(today, 120)
+    const siblingDate = addDays(today, 30)
+    const horizonAnchorDate = addDays(today, 60) // currently-seen event that sets the horizon
+
+    const venue = await seedVenue({ slug: 'classify-test-venue' })
+
+    // Horizon anchor: a live (first_missing_at = null) upcoming event that sets
+    // the venue's crawl horizon to today+60.
+    await seedEvent(venue.id, {
+      title: 'Horizon Anchor Show',
+      artist: 'Anchor Artist',
+      date: horizonAnchorDate,
+      status: 'upcoming',
+      firstMissingAt: null,
+    })
+
+    // Missing within horizon → expect 'removed'
+    await seedEvent(venue.id, {
+      title: 'Within Horizon Show',
+      artist: 'Within Artist',
+      date: withinHorizonDate,
+      status: 'upcoming',
+      firstMissingAt: new Date(),
+      hiddenFromConsumer: false,
+    })
+
+    // Missing beyond horizon → expect 'crawl_gap'
+    await seedEvent(venue.id, {
+      title: 'Beyond Horizon Show',
+      artist: 'Beyond Artist',
+      date: beyondHorizonDate,
+      status: 'upcoming',
+      firstMissingAt: new Date(),
+      hiddenFromConsumer: false,
+    })
+
+    // Live sibling for the duplicate case: a currently-seen row at siblingDate
+    // whose canonical_title contains the missing row's canonical_artist.
+    await seedEvent(venue.id, {
+      title: 'Sibling Headliner Show feat. Dup Artist',
+      artist: 'Sibling Headliner',
+      canonicalArtist: 'sibling headliner',
+      canonicalTitle: 'sibling headliner show feat. dup artist',
+      date: siblingDate,
+      status: 'upcoming',
+      firstMissingAt: null,
+    })
+
+    // Missing row with a live sibling (same venue+date, headliner containment)
+    // → expect 'duplicate'
+    await seedEvent(venue.id, {
+      title: 'Dup Artist Opening Act',
+      artist: 'Dup Artist',
+      canonicalArtist: 'dup artist',
+      canonicalTitle: 'dup artist opening act',
+      date: siblingDate,
+      status: 'upcoming',
+      firstMissingAt: new Date(),
+      hiddenFromConsumer: false,
+    })
+
+    const res = await app.request(
+      '/v1/admin/events?missing=true&count=true&limit=50&offset=0',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(200)
+    const body: {
+      success: boolean
+      data: {
+        rows: Array<{
+          id: string
+          date: string
+          classification: string
+          clusterCount: number
+        }>
+        total: number
+      }
+    } = await res.json()
+
+    const rows = body.data.rows
+
+    const byDate = Object.fromEntries(rows.map((row) => [row.date, row]))
+    expect(byDate[withinHorizonDate]?.classification).toBe('removed')
+    expect(byDate[beyondHorizonDate]?.classification).toBe('crawl_gap')
+    expect(byDate[siblingDate]?.classification).toBe('duplicate')
+
+    // All missing rows at this venue share the cluster count (3 admin-visible missing).
+    for (const row of rows) expect(row.clusterCount).toBe(3)
+
+    // Sorted soonest-show-first.
+    const dates = rows.map((row) => row.date)
+    expect(dates).toEqual([...dates].sort())
+  })
+
+  it('excludes hidden-from-consumer rows from horizon and sibling signals', async () => {
+    const today = new Date().toLocaleDateString('en-CA', {
+      timeZone: 'America/Denver',
+    })
+    const addDays = (base: string, days: number): string => {
+      const dt = new Date(base + 'T12:00:00Z')
+      dt.setUTCDate(dt.getUTCDate() + days)
+      return dt.toISOString().slice(0, 10)
+    }
+
+    const visibleHorizonDate = addDays(today, 60)
+    const hiddenHorizonDate = addDays(today, 120)
+    const beyondVisibleHorizonDate = addDays(today, 90)
+    const siblingDate = addDays(today, 30)
+
+    const venue = await seedVenue({ slug: 'classify-hidden-venue' })
+
+    // Visible live anchor sets the real horizon to today+60.
+    await seedEvent(venue.id, {
+      title: 'Visible Anchor Show',
+      artist: 'Visible Anchor',
+      date: visibleHorizonDate,
+      status: 'upcoming',
+      firstMissingAt: null,
+      hiddenFromConsumer: false,
+    })
+
+    // Hidden live event further out must NOT extend the horizon (the missing
+    // list filters to hidden_from_consumer = false, so its signals must too).
+    await seedEvent(venue.id, {
+      title: 'Hidden Anchor Show',
+      artist: 'Hidden Anchor',
+      date: hiddenHorizonDate,
+      status: 'upcoming',
+      firstMissingAt: null,
+      hiddenFromConsumer: true,
+    })
+
+    // Missing beyond the VISIBLE horizon → 'crawl_gap'. Would misclassify as
+    // 'removed' if the hidden anchor were counted toward the horizon.
+    await seedEvent(venue.id, {
+      title: 'Beyond Visible Horizon Show',
+      artist: 'Beyond Visible Artist',
+      date: beyondVisibleHorizonDate,
+      status: 'upcoming',
+      firstMissingAt: new Date(),
+      hiddenFromConsumer: false,
+    })
+
+    // Hidden live sibling (same venue+date, headliner containment) must NOT
+    // count as a live sibling.
+    await seedEvent(venue.id, {
+      title: 'Hidden Sibling Headliner feat. Dup Artist',
+      artist: 'Hidden Sibling Headliner',
+      canonicalArtist: 'hidden sibling headliner',
+      canonicalTitle: 'hidden sibling headliner feat. dup artist',
+      date: siblingDate,
+      status: 'upcoming',
+      firstMissingAt: null,
+      hiddenFromConsumer: true,
+    })
+
+    // Missing row whose only sibling is hidden → NOT 'duplicate'. Within the
+    // visible horizon (today+30 <= today+60) → 'removed'.
+    await seedEvent(venue.id, {
+      title: 'Dup Artist Opening Act',
+      artist: 'Dup Artist',
+      canonicalArtist: 'dup artist',
+      canonicalTitle: 'dup artist opening act',
+      date: siblingDate,
+      status: 'upcoming',
+      firstMissingAt: new Date(),
+      hiddenFromConsumer: false,
+    })
+
+    const res = await app.request(
+      '/v1/admin/events?missing=true&count=true&limit=50&offset=0',
+      { headers: ADMIN_HEADERS },
+    )
+    expect(res.status).toBe(200)
+    const body: {
+      data: {
+        rows: Array<{ date: string; classification: string }>
+      }
+    } = await res.json()
+
+    const byDate = Object.fromEntries(
+      body.data.rows.map((row) => [row.date, row]),
+    )
+    expect(byDate[beyondVisibleHorizonDate]?.classification).toBe('crawl_gap')
+    expect(byDate[siblingDate]?.classification).toBe('removed')
+  })
+})
+
 describe('GET /v1/admin/events — isSoldOut derivation', () => {
   beforeEach(() => {
     setAdminAuth()
@@ -470,14 +675,14 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     await clearTables()
   })
 
-  it('returns only rows with first_missing_at NOT NULL, ordered DESC', async () => {
+  it('returns only rows with first_missing_at NOT NULL, ordered by date ASC', async () => {
     const venue = await seedVenue({
       name: 'Stale Test Venue',
       slug: 'stale-test-venue',
     })
 
-    // Three rows: one currently-seen, two missing at different timestamps.
-    // The missing pair lets us verify ordering (most recent first).
+    // Three rows: one currently-seen, two missing at different dates.
+    // The missing pair lets us verify ordering (soonest show first).
     const earlier = new Date(Date.now() - 48 * 60 * 60 * 1000)
     const later = new Date(Date.now() - 1 * 60 * 60 * 1000)
 
@@ -491,8 +696,8 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
       firstMissingAt: null,
     })
     await seedEvent(venue.id, {
-      title: 'Older Disappearance',
-      artist: 'Artist Older',
+      title: 'Sooner Disappearance',
+      artist: 'Artist Sooner',
       supportingArtists: null,
       tourName: null,
       date: futureDate(21),
@@ -500,8 +705,8 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
       firstMissingAt: earlier,
     })
     await seedEvent(venue.id, {
-      title: 'Newer Disappearance',
-      artist: 'Artist Newer',
+      title: 'Later Disappearance',
+      artist: 'Artist Later',
       supportingArtists: null,
       tourName: null,
       date: futureDate(28),
@@ -517,8 +722,9 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
     }
     expect(body.success).toBe(true)
     expect(body.data).toHaveLength(2)
-    expect(body.data[0]?.title).toBe('Newer Disappearance')
-    expect(body.data[1]?.title).toBe('Older Disappearance')
+    // Sorted soonest show date first (date ASC).
+    expect(body.data[0]?.title).toBe('Sooner Disappearance')
+    expect(body.data[1]?.title).toBe('Later Disappearance')
     expect(body.data.every((row) => row.firstMissingAt !== null)).toBe(true)
   })
 

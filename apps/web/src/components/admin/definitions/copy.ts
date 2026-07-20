@@ -1518,6 +1518,11 @@ export const ADMIN_COPY = {
       chipMissed: (count: number) =>
         `missed ${count} sweep${count === 1 ? '' : 's'}`,
       chipCadence: 'expected daily',
+      classificationRemoved: 'Likely removed',
+      classificationCrawlGap: 'Possible crawl gap',
+      classificationDuplicate: 'Possible duplicate',
+      clusterBadge: (count: number, venue: string) =>
+        `${count} missing at ${venue}`,
       skeletonAriaLabel: 'Loading missing events',
     },
 

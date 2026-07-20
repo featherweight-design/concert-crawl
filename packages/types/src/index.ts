@@ -70,6 +70,14 @@ export type CrawlStatus = 'success' | 'failed' | 'partial' | 'skipped'
 // Event status
 export type EventStatus = 'upcoming' | 'cancelled' | 'postponed'
 
+/**
+ * Why an event landed on the admin "missing from crawl" list.
+ * - removed: crawl reaches past this date but stopped returning this show (venue de-listed it)
+ * - crawl_gap: event is beyond the furthest date the crawl currently reaches (likely pagination/depth)
+ * - duplicate: a live sibling row for the same show is still being crawled
+ */
+export type MissingClassification = 'removed' | 'crawl_gap' | 'duplicate'
+
 // Price source — identifies where ticket price data originated
 export type PriceSource =
   | 'structured_data'

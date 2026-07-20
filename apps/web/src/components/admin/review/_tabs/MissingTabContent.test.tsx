@@ -16,6 +16,8 @@ const SAMPLE: MissingRowEvent[] = [
     showTime: '20:00',
     lastSeenAt: '2026-06-12T03:00:00Z',
     firstMissingAt: '2026-06-13T03:00:00Z',
+    classification: 'crawl_gap',
+    clusterCount: 1,
   },
 ]
 

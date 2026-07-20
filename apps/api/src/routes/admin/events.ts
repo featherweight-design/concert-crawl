@@ -32,6 +32,7 @@ import {
 } from '@concert-crawl/push'
 import { getAuthUser } from '../../middleware/auth.js'
 import type { AdminVariables } from './index.js'
+import { classifyMissing } from './lib/classify-missing.js'
 
 const eventIdSchema = z.object({ id: z.string().uuid() })
 
@@ -296,8 +297,11 @@ eventsAdminRouter.patch(
 // GET /v1/admin/events?verified=false&limit=50&offset=0
 // GET /v1/admin/events?missing=true — filter to events the crawler stopped
 // returning (stale-event detection, see issue #607). When `missing=true`,
-// the `verified` filter is ignored and rows are ordered by first_missing_at
-// DESC so the most recent disappearances surface first.
+// the `verified` filter is ignored and rows are ordered date ASC so the
+// soonest upcoming show surfaces first. Each missing row is enriched with a
+// `classification` (duplicate | removed | crawl_gap) derived from three
+// per-row SQL signals, and a `clusterCount` of how many missing events share
+// the same venue.
 eventsAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema),
@@ -350,6 +354,92 @@ eventsAdminRouter.get(
       })
       .from(events)
       .leftJoin(venues, eq(events.venueId, venues.id))
+
+    // Missing branch needs three per-row signals computed over the FULL venue
+    // data (not the current page): whether a live sibling still covers this show,
+    // the venue's crawl "event horizon", and how many missing rows cluster at the
+    // venue. Correlated subqueries reference the outer `events` row.
+    const missingSelect = db
+      .select({
+        id: events.id,
+        title: events.title,
+        artist: events.artist,
+        date: events.date,
+        doorsTime: events.doorsTime,
+        showTime: events.showTime,
+        ticketPriceMin: events.ticketPriceMin,
+        ticketPriceMax: events.ticketPriceMax,
+        confidenceScore: sql<number | null>`(${events.confidenceScore})::float`,
+        verified: events.verified,
+        hiddenFromConsumer: events.hiddenFromConsumer,
+        isConcertReviewNeeded: events.isConcertReviewNeeded,
+        status: events.status,
+        extractionStrategy: events.extractionStrategy,
+        sourceUrl: events.sourceUrl,
+        genre: events.genre,
+        createdAt: events.createdAt,
+        lastSeenAt: events.lastSeenAt,
+        firstMissingAt: events.firstMissingAt,
+        venueId: events.venueId,
+        venueName: venues.name,
+        isSoldOut: isSoldOutExpr(),
+        // Live sibling: same show still crawled under another row (headliner
+        // containment — mirrors scripts/2026-07-19-missing-event-orphan-cleanup.sql).
+        hasLiveSibling: sql<boolean>`EXISTS (
+          SELECT 1 FROM events sib
+          WHERE sib.venue_id = ${events.venueId}
+            AND sib.date = ${events.date}
+            AND sib.status = 'upcoming'
+            AND sib.first_missing_at IS NULL
+            AND sib.hidden_from_consumer = false
+            AND sib.id <> ${events.id}
+            AND ${events.canonicalArtist} <> '' AND sib.canonical_artist <> ''
+            AND ${events.canonicalTitle} <> '' AND sib.canonical_title <> ''
+            AND ( strpos(sib.canonical_title, ${events.canonicalArtist}) > 0
+               OR strpos(${events.canonicalTitle}, sib.canonical_artist) > 0 )
+        )`,
+        // Event horizon: furthest date the crawl currently reaches at this venue.
+        venueHorizon: sql<string | null>`(
+          SELECT MAX(h.date) FROM events h
+          WHERE h.venue_id = ${events.venueId}
+            AND h.status = 'upcoming'
+            AND h.first_missing_at IS NULL
+            AND h.hidden_from_consumer = false
+            AND h.date >= ${today}
+        )`,
+        // Cluster size: admin-visible missing rows at this venue (matches the
+        // missing whereClause population below).
+        clusterCount: sql<number>`(
+          SELECT COUNT(*)::int FROM events c
+          WHERE c.venue_id = ${events.venueId}
+            AND c.first_missing_at IS NOT NULL
+            AND c.status = 'upcoming'
+            AND c.date >= ${today}
+            AND c.hidden_from_consumer = false
+        )`,
+      })
+      .from(events)
+      .leftJoin(venues, eq(events.venueId, venues.id))
+
+    // Strip the internal classification signals from the API response and
+    // expose only `classification` (derived) + `clusterCount` (kept).
+    const withClassification = <
+      TRow extends {
+        date: string
+        venueHorizon: string | null
+        hasLiveSibling: boolean
+      },
+    >(
+      rows: TRow[],
+    ) =>
+      rows.map(({ venueHorizon, hasLiveSibling, ...row }) => ({
+        ...row,
+        classification: classifyMissing({
+          date: row.date,
+          venueHorizon,
+          hasLiveSibling,
+        }),
+      }))
 
     // PR 5 filter clauses. Each is undefined when its param is omitted, which
     // drizzle's `and()` treats as a no-op — so callers compose freely.
@@ -428,17 +518,40 @@ eventsAdminRouter.get(
             ...missingDataClauses,
           )
 
-    const rowsPromise = missing
-      ? baseSelect
-          .where(whereClause)
-          .orderBy(desc(events.firstMissingAt))
-          .limit(limit)
-          .offset(offset)
-      : baseSelect
-          .where(whereClause)
-          .orderBy(asc(events.date), desc(events.createdAt))
-          .limit(limit)
-          .offset(offset)
+    // Keep the two branches fully separate so Drizzle's inferred types narrow
+    // correctly for withClassification (which requires venueHorizon +
+    // hasLiveSibling — fields only present in missingSelect).
+    if (missing) {
+      const missingQuery = missingSelect
+        .where(whereClause)
+        .orderBy(asc(events.date), desc(events.firstMissingAt))
+        .limit(limit)
+        .offset(offset)
+
+      if (!count) {
+        const rows = await missingQuery
+        return ctx.json({ success: true, data: withClassification(rows) })
+      }
+
+      const countQuery = db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(events)
+        .leftJoin(venues, eq(events.venueId, venues.id))
+        .where(whereClause)
+
+      const [rows, countResult] = await Promise.all([missingQuery, countQuery])
+      const total = countResult[0]?.total ?? 0
+      return ctx.json({
+        success: true,
+        data: { rows: withClassification(rows), total },
+      })
+    }
+
+    const rowsPromise = baseSelect
+      .where(whereClause)
+      .orderBy(asc(events.date), desc(events.createdAt))
+      .limit(limit)
+      .offset(offset)
 
     if (!count) {
       const rows = await rowsPromise

@@ -215,7 +215,12 @@ export const MissingMobile = ({
               {event.venueName ?? '—'} · {formatEventDate(event.date)}
             </div>
             <div style={{ margin: '12px 0' }}>
-              <MissingChips missedCount={missed} />
+              <MissingChips
+                missedCount={missed}
+                classification={event.classification}
+                clusterCount={event.clusterCount}
+                venueName={event.venueName}
+              />
             </div>
             <MissingRowMenu
               eventId={event.id}
