@@ -293,6 +293,50 @@ describe('NotificationsSection', () => {
     expect(patchMutateAsyncMock).not.toHaveBeenCalled()
   })
 
+  it('surfaces a visible error banner when the subscribe pipeline returns { status: "error" } (#1130)', async () => {
+    // The exact bug that produced "toggle does nothing" on Brave: the
+    // server returned 503 because VAPID wasn't configured, subscribeToPush
+    // resolved to { status: 'error' }, and the previous code silently
+    // skipped the PATCH. This test guards against reverting to that.
+    // Start in the "master off + device already subscribed" state so the
+    // master toggle renders (the empty-state gate `!masterOn &&
+    // !deviceState.subscribed` short-circuits to the CTA when both are
+    // false — we want the toggle path so clicking it exercises
+    // onToggleMaster(false→true→error).
+    useNotificationPreferencesMock.mockReturnValue({
+      data: {
+        masterEnabled: false,
+        watchUpdatesEnabled: true,
+        priceDropsEnabled: true,
+      },
+      isLoading: false,
+    })
+    // A live subscription so the empty-state gate (`!masterOn &&
+    // !deviceState.subscribed`) doesn't render the empty CTA — we want
+    // the master toggle for this test.
+    getPushDeviceStateMock.mockResolvedValue({
+      support: 'supported',
+      permission: 'granted',
+      subscribed: true,
+    })
+    subscribeToPushMock.mockResolvedValue({ status: 'error' })
+    render(withClient(<NotificationsSection />))
+    await waitFor(() => {
+      expect(
+        screen.getByRole('switch', { name: /push notifications/i }),
+      ).not.toBeNull()
+    })
+    fireEvent.click(screen.getByRole('switch', { name: /push notifications/i }))
+    await waitFor(() => {
+      const alert = screen.getByRole('alert')
+      expect(alert).not.toBeNull()
+      expect(alert.textContent).toMatch(/didn't accept|try again/i)
+    })
+    // The PATCH must NOT have fired — we don't want to write master=true
+    // when the subscribe failed.
+    expect(patchMutateAsyncMock).not.toHaveBeenCalled()
+  })
+
   it('renders a dedicated error state when the preferences query fails', () => {
     useNotificationPreferencesMock.mockReturnValue({
       data: undefined,

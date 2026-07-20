@@ -5,8 +5,15 @@ import { useAuth } from '@clerk/nextjs'
 import { Eye, Loader2 } from 'lucide-react'
 import { useWatching } from '@/lib/queries/use-watching'
 import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
-import { useNotificationPreferences } from '@/lib/queries/use-notification-preferences'
-import { getPushSupport, subscribeToPush } from '@/lib/push/client'
+import {
+  useNotificationPreferences,
+  usePatchNotificationPreferences,
+} from '@/lib/queries/use-notification-preferences'
+import {
+  getPushSupport,
+  subscribeToPush,
+  unsubscribeFromPush,
+} from '@/lib/push/client'
 import {
   hasDismissedPostWatchAsk,
   markPostWatchAskDismissed,
@@ -33,6 +40,12 @@ export function WatchShowButton({
   // don't ask the user to opt in a second time on a fresh device after
   // they've already flipped master on somewhere else.
   const { data: prefs } = useNotificationPreferences()
+  // #1130 fix — the sheet's Turn On CTA must PATCH masterEnabled=true after
+  // subscribeToPush succeeds. Prior code only subscribed the browser +
+  // wrote the push_subscriptions row server-side; the master preference
+  // stayed false, so sendPushForNotification gated pushes off and the
+  // Settings surface correctly (but confusingly) rendered "Off".
+  const patch = usePatchNotificationPreferences()
 
   // #1062 sheet state. `promptVariant` is null while dormant; set to
   // 'default' or 'ios' when a successful first watch triggers the ask.
@@ -182,9 +195,34 @@ export function WatchShowButton({
     try {
       const token = await getToken()
       if (!token) return
-      // Best-effort — the settings surface handles retries and error
-      // reporting. Any failure here logs but doesn't block the flow.
-      await subscribeToPush(token)
+      // #1130 fix — mirror the Settings toggle flow so the full opt-in
+      // actually lands: subscribe on the device, then PATCH master=true
+      // on the server. Without the PATCH the push_subscriptions row
+      // exists but sendPushForNotification's master gate stays off,
+      // producing the confusing "Push notifications off" reading in
+      // Settings after a user opted in via the sheet.
+      const result = await subscribeToPush(token)
+      if (result.status !== 'subscribed') {
+        // Browser refused (permission denied/unsupported/error). The
+        // sheet has already been dismissed above; no further state
+        // to record — Settings is the manual retry path.
+        return
+      }
+      try {
+        await patch.mutateAsync({ masterEnabled: true })
+      } catch (patchErr) {
+        // Subscribe landed but the preference PATCH failed. Roll back
+        // the subscription so the user isn't left in a half-committed
+        // state (browser subscribed, server prefs off). Pass the id so
+        // unsubscribe can DELETE without another round-trip.
+        console.warn(
+          'post-watch: prefs patch failed after subscribe; rolling back',
+          patchErr,
+        )
+        await unsubscribeFromPush(token, result.id).catch((rollbackErr) => {
+          console.warn('post-watch: rollback unsubscribe failed', rollbackErr)
+        })
+      }
     } catch (subscribeErr) {
       console.warn('post-watch: subscribe failed', subscribeErr)
     }

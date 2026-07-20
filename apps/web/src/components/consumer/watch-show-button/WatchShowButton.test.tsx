@@ -41,8 +41,17 @@ vi.mock('@/lib/queries/use-watch-toggle', () => ({
 const prefsData = vi.fn<() => { masterEnabled: boolean } | undefined>(
   () => undefined,
 )
+const patchMutateAsyncMock = vi.fn(async (_updates: unknown) => ({
+  masterEnabled: true,
+  watchUpdatesEnabled: true,
+  priceDropsEnabled: true,
+}))
 vi.mock('@/lib/queries/use-notification-preferences', () => ({
   useNotificationPreferences: () => ({ data: prefsData() }),
+  usePatchNotificationPreferences: () => ({
+    mutateAsync: patchMutateAsyncMock,
+    isPending: false,
+  }),
 }))
 
 const pushSupportMock = vi.fn<
@@ -50,10 +59,16 @@ const pushSupportMock = vi.fn<
 >(() => 'supported')
 const subscribeToPushMock = vi.fn(async (_token: string) => ({
   status: 'subscribed' as const,
+  id: 'sub-row-1',
+}))
+const unsubscribeFromPushMock = vi.fn(async (_token: string, _id?: string) => ({
+  status: 'unsubscribed' as const,
 }))
 vi.mock('@/lib/push/client', () => ({
   getPushSupport: () => pushSupportMock(),
   subscribeToPush: (token: string) => subscribeToPushMock(token),
+  unsubscribeFromPush: (token: string, id?: string) =>
+    unsubscribeFromPushMock(token, id),
 }))
 
 // ---- Component under test ------------------------------------------------
@@ -93,6 +108,17 @@ beforeEach(() => {
   pushSupportMock.mockReturnValue('supported')
   toggleMutate.mockClear()
   subscribeToPushMock.mockClear()
+  unsubscribeFromPushMock.mockClear()
+  patchMutateAsyncMock.mockClear()
+  subscribeToPushMock.mockResolvedValue({
+    status: 'subscribed',
+    id: 'sub-row-1',
+  })
+  patchMutateAsyncMock.mockResolvedValue({
+    masterEnabled: true,
+    watchUpdatesEnabled: true,
+    priceDropsEnabled: true,
+  })
   localStorage.clear()
   // Positive default: preferences GET has resolved with masterEnabled=false.
   // Tests that need the "already opted in" or "still loading" states
@@ -307,7 +333,7 @@ describe('WatchShowButton — post-watch sheet integration (#1062)', () => {
     expect(hasDismissedPostWatchAsk()).toBe(true)
   })
 
-  it('calls subscribeToPush when Turn on is clicked in the default variant', async () => {
+  it('calls subscribeToPush AND PATCHes masterEnabled=true when Turn on is clicked (#1130 fix)', async () => {
     renderButton()
     fireEvent.click(screen.getByRole('button', { name: /watch/i }))
     await act(async () => {
@@ -321,13 +347,48 @@ describe('WatchShowButton — post-watch sheet integration (#1062)', () => {
         screen.getByRole('button', { name: /turn on notifications/i }),
       )
     })
-    // The onTurnOn callback awaits getToken() then subscribeToPush() — flush
-    // the microtask queue so both promise chains settle.
+    // The onTurnOn callback awaits getToken → subscribeToPush → PATCH.
+    // Flush the microtask queue enough times for all three promise chains
+    // to settle.
     await act(async () => {
+      await Promise.resolve()
       await Promise.resolve()
       await Promise.resolve()
     })
     expect(subscribeToPushMock).toHaveBeenCalled()
+    // #1130 regression: without this PATCH, the server preference stays
+    // false and sendPushForNotification gates the push off, producing the
+    // "Push notifications off" reading on Settings even though the user
+    // opted in.
+    expect(patchMutateAsyncMock).toHaveBeenCalledWith({ masterEnabled: true })
     expect(hasDismissedPostWatchAsk()).toBe(true)
+  })
+
+  it('rolls back the subscription when the PATCH fails after subscribe (#1130 fix)', async () => {
+    // Simulate subscribe succeeds → server PATCH throws. The recovery path
+    // calls unsubscribeFromPush with the subscribed row id so the user
+    // isn't stranded in the half-committed state (browser subscribed,
+    // server prefs off) — matches the NotificationsSection.onToggleMaster
+    // rollback shape.
+    patchMutateAsyncMock.mockRejectedValueOnce(new Error('server down'))
+    renderButton()
+    fireEvent.click(screen.getByRole('button', { name: /watch/i }))
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+    })
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: /turn on notifications/i }),
+      )
+    })
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(unsubscribeFromPushMock).toHaveBeenCalledWith(
+      'test-token',
+      'sub-row-1',
+    )
   })
 })

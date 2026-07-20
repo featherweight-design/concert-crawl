@@ -47,4 +47,24 @@ export const NOTIFICATIONS_COPY = {
     sub: 'Notifications are on for your account, but not for this device yet.',
     cta: 'Enable on this device',
   },
+  // #1130 fix — visible error banner when the toggle pipeline fails. Prior
+  // behavior was a silent console.warn, which read to the user as "the
+  // toggle does nothing." Three distinct messages so ops can distinguish
+  // client-side (subscribe error, usually server 503) from write-through
+  // (patch error) from unexpected throws.
+  toggleError: {
+    // `subscribeToPush` returns { status: 'error' } for a bunch of things:
+    // server 503 (VAPID missing), missing client-side VAPID key, no
+    // service worker registered, browser subscribe rejection. Keep the
+    // copy neutral so it reads honestly regardless of which end failed.
+    subscribe:
+      "Couldn't turn on push right now — something went wrong wiring up notifications. Try again in a minute; if it keeps failing, something's off on our end.",
+    // Rollback via unsubscribeFromPush is best-effort and can itself
+    // fail (caught + logged). The wording reflects that we attempted
+    // to roll back rather than that we definitely did.
+    patch:
+      "Saved the subscription but couldn't record your preference. We tried to undo it — please try again.",
+    generic:
+      'Something went sideways turning that on. Try again; if it keeps happening let us know.',
+  },
 } as const

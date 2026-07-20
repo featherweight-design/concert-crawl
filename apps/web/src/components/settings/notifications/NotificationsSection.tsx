@@ -52,6 +52,11 @@ export const NotificationsSection = ({
   const { data: prefs, isLoading, isError } = useNotificationPreferences()
   const patch = usePatchNotificationPreferences()
   const [deviceState, setDeviceState] = useState<PushDeviceState | null>(null)
+  // #1130 fix — surface a visible error when the toggle pipeline fails
+  // (subscribe returns error, or PATCH throws). Previously the click just
+  // logged and the toggle stayed off, which read as "clicking does
+  // nothing." Cleared on every fresh toggle attempt.
+  const [toggleError, setToggleError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -100,6 +105,8 @@ export const NotificationsSection = ({
         )
         return
       }
+      // Clear any prior error banner as a fresh attempt starts.
+      setToggleError(null)
       try {
         if (next) {
           // Fire browser permission (if undecided) → subscribe → POST server row.
@@ -126,11 +133,22 @@ export const NotificationsSection = ({
                   )
                 },
               )
+              setToggleError(NOTIFICATIONS_COPY.toggleError.patch)
             }
+          } else if (result.status === 'error') {
+            // Subscribe hit the server (or the browser) and came back with a
+            // generic error — most commonly a 503 from the API when VAPID
+            // isn't configured, or a serviceWorker failure. #1130 makes this
+            // visible: prior code silently swallowed it and the toggle
+            // appeared inert.
+            setToggleError(NOTIFICATIONS_COPY.toggleError.subscribe)
+          } else if (result.status === 'permission-denied') {
+            // Not really an "error" — the device-state effect below will
+            // re-read Notification.permission and the denied banner takes
+            // over on next render. No inline error needed.
           }
-          // permission-denied / unsupported / error → the device state effect
-          // below refreshes and the UI renders the appropriate denied/
-          // unsupported state on next render.
+          // status === 'unsupported' → the toggle was disabled to begin with
+          // and shouldn't have been clickable; nothing to surface.
         } else {
           // Master OFF: PATCH the preference first, then unsubscribe the
           // device. If the PATCH fails, don't unsubscribe — leaving both in
@@ -151,6 +169,7 @@ export const NotificationsSection = ({
         // API rejects) is caught here so the click handler never leaks an
         // unhandled rejection to React.
         console.warn('notifications: master toggle failed', toggleErr)
+        setToggleError(NOTIFICATIONS_COPY.toggleError.generic)
       }
       await refreshDeviceState()
     },
@@ -287,6 +306,15 @@ export const NotificationsSection = ({
 
       {isIosInstalled && !masterOn && (
         <p className="text-xs text-fg-muted">{NOTIFICATIONS_COPY.iosHint}</p>
+      )}
+
+      {toggleError !== null && (
+        <div
+          role="alert"
+          className="rounded-lg border border-border bg-surface-1 p-3 text-xs text-fg"
+        >
+          {toggleError}
+        </div>
       )}
 
       {isDenied ? (
