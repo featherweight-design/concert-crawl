@@ -40,7 +40,11 @@ export function useTastePicks(
       }
       return fetchTastePicks(token)
     },
-    enabled: !!isSignedIn && enabled,
+    // Also gated on userId: while it is transiently unresolved the query
+    // would otherwise fetch and cache real picks under the shared `null`
+    // key, leaking them across account switches (the QueryClient outlives
+    // sign-in sessions).
+    enabled: !!isSignedIn && userId != null && enabled,
     staleTime: 5 * 60 * 1000,
   })
 }
