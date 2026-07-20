@@ -621,6 +621,7 @@ export async function crawlVenue(
           canonicalArtist: events.canonicalArtist,
           canonicalTitle: events.canonicalTitle,
           date: events.date,
+          doorsTime: events.doorsTime,
           showTime: events.showTime,
           title: events.title,
           sourceHash: events.sourceHash,
@@ -639,16 +640,35 @@ export async function crawlVenue(
         ),
       )
 
-      // Notify admin when a verified event's source data has changed
+      // Notify admin when a verified event's source data has changed.
+      //
+      // Compare the underlying fields directly rather than the stored
+      // sourceHash. The hash function has changed over time (e.g. #1053
+      // added showTimeKey normalization), so a row hashed under an older
+      // scheme has a sourceHash that no longer equals the current hash of
+      // identical source data — firing a spurious verified_event_changed
+      // on the first crawl after every hash-scheme change (#1124). Field
+      // comparison is stable across hash-scheme changes: it fires only on
+      // a real change to title, doors time, or show time. Times are run
+      // through showTimeKey so a pure 'HH:MM' ↔ 'HH:MM:SS' format shift
+      // (same rationale as the hash) does not count as a change. The
+      // null-hash guard is retained: a row with no stored hash predates
+      // hash tracking entirely and must not alert on backfill.
       const changedVerified = eventsWithHashes.filter((evt) => {
         const existing = existingMap.get(
           dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
         )
+        if (
+          !existing ||
+          existing.verified !== true ||
+          existing.sourceHash === null
+        ) {
+          return false
+        }
         return (
-          existing &&
-          existing.verified === true &&
-          existing.sourceHash !== null &&
-          existing.sourceHash !== evt.sourceHash
+          existing.title !== evt.title ||
+          showTimeKey(existing.doorsTime) !== showTimeKey(evt.doorsTime) ||
+          showTimeKey(existing.showTime) !== showTimeKey(evt.showTime)
         )
       })
 

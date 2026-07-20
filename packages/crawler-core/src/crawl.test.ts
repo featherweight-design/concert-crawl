@@ -741,6 +741,60 @@ describe('crawlVenue — event-level sourceHash', () => {
     // (artist intentionally NOT in onConflictDoUpdate.set).
     expect(venueRowsWithArtist[0].artist).toBe(sharedArtist)
   })
+
+  it('does NOT fire crawl.verified_event_changed when the stored sourceHash predates a hash-scheme change but the source fields are unchanged (#1124)', async () => {
+    // Regression for the one-time churn observed after #1053 landed
+    // showTimeKey normalization inside hashEvent: every verified row
+    // hashed under the previous scheme has a stored sourceHash that no
+    // longer equals the current hash of identical source data. The old
+    // hash-inequality check fired verified_event_changed on the first
+    // crawl after the scheme change for every such row. The field
+    // comparison must instead see title/doors/show are unchanged and
+    // stay silent.
+    const venue = seedVenue()
+    const sharedDate = '2026-08-15'
+
+    // Seed a verified row whose stored sourceHash is a valid-format hex
+    // string that does NOT match what hashEvent would produce today for
+    // the same fields — simulating a hash written by an older scheme.
+    const staleHash = 'a'.repeat(64)
+    stores.events.push({
+      id: crypto.randomUUID(),
+      venueId: venue.id,
+      title: METALLICA_EVENT.title,
+      artist: METALLICA_EVENT.artist,
+      canonicalArtist: 'metallica',
+      canonicalTitle: canonicalizeTitle(METALLICA_EVENT.title),
+      date: sharedDate,
+      doorsTime: null,
+      showTime: null,
+      sourceHash: staleHash,
+      verified: true,
+      status: 'upcoming',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    // Re-crawl emits the identical listing — same title, no doors/show.
+    mockExtractWithLlm.mockResolvedValue({
+      events: [{ ...METALLICA_EVENT, date: sharedDate }],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    // Source fields unchanged → no alert, despite the stale stored hash.
+    const allAlerts = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.verified_event_changed'))
+    expect(allAlerts).toHaveLength(0)
+  })
 })
 
 describe('crawlVenue — intra-batch deduplication', () => {
