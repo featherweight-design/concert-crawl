@@ -56,8 +56,7 @@ Design brief has merged; Claude Design needs to produce the hi-fi handoff (mocks
 
 | Rank | Ticket | Brief PR | Path to eng handoff | Why this rank |
 |---|---|---|---|---|
-
-_Currently empty — #762 flipped 📐 → 🟢 on 2026-07-19 (PR #1117); moved to 🟢 above. When a new brief locks, restore the table with columns: `Rank | Ticket | Brief PR | Path to eng handoff | Why this rank`._
+| 1 | **#1114** Bespoke per-venue imagery — real venue vibe with a design twist (Launch · Normal) | PR #1129 (2026-07-19) | Design produces the photo treatment recipe + illustrated overlay language + 3-5 sample venues in `design/design_handoff_venue_imagery/` covering all 3 themes. Then Readiness Review → 🟢 → eng-planning. | Only brief-locked item; pulled ahead of #1115 (Artist UI) per Hugh's stated priority at brief-lock time; new venue-table fields (`image_url` / `focal_x` / `focal_y`) required for the asset pipeline. |
 
 **Maintenance note:** when Design produces the handoff, move to 🎨 (audit in flight) → then 🟡 / 🟢 based on verdict.
 
@@ -84,7 +83,6 @@ Ordered by beta-phase urgency + adjacency to already-locked verticals. Consolida
 | # | Phase | Priority | Adjacency / notes |
 |---|---|---|---|
 | **#737** In-app notification surface (bell + panel + endpoints) | Beta | Normal | Push infra (PR #1060) is already writing `user_notification` rows passively — this surface reads them. Deliberate: users who miss the OS push (device off, permission revoked, etc.) need somewhere in-app to catch up. Ticket body already carries a design prompt (bell placement, panel anatomy, mark-read semantics, categories, empty state, mobile-first, action affordances). |
-| **#1114** Bespoke per-venue imagery — real venue vibe with a design twist | Launch | Normal | Displaces the current generic placeholder / genre-color fallback. Denver venues have wildly different vibes (Bluebird marquee vs Ophelia neon vs Larimer brick) and losing that in the product flattens the scene. Style-system + production-model decisions belong to Design. Hugh's stated priority over the Artist UI ask below. |
 | **#1115** Dedicated Artist UI — Spotify photos + upcoming shows + follow/watch flows | Launch | Normal | Spotify sync (#763) shipped 2026-07-19; artist metadata + photos now flow into the app for every connected user's followed artists. Currently no artist-first surface exists (artists are strings in event titles). Design owns landing shape, non-Spotify-artist fallback, follow/watch affordance treatment. |
 | **#794** Logged-out app UX — navigation, header, browse-only shape | Launch | Normal | Adjacencies with monetization paywalls — worth pairing with eng infra work |
 
@@ -104,6 +102,8 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-19 | **#1114** | Bespoke per-venue imagery design brief (this PR) — Track 2 brainstorm through 6 questions locked with Hugh: (Q1) hybrid template + per-venue signature for v1, artist collaboration on the table, fully bespoke as v2 (**#1128**); (Q2) facade/exterior signature as recognizability anchor; (Q3) photo base + illustrated overlay technique for v1; (Q4) theme-independent — one image per venue works across all 3 themes; (Q5) one source per venue with safe-zone composition + focal-point coordinate (adds `image_url` + `focal_x`/`focal_y` to venue table); (Q6) system pattern + venue mark for fallback state. Follow-up **#1128** filed for fully-illustrated v2 (blocked on v1 + house artist). |
+| 2026-07-19 | — | Tracker refresh #24 — **#1114** flips 🕰️ Backlog → 📐 Brief locked (this PR); brief document at `docs/superpowers/specs/2026-07-19-1114-bespoke-per-venue-imagery-design-brief.md`. Backlog count 4 → 3 (**#737** rank 1, **#1115** rank 2, **#794** rank 3). Brief-locked count 0 → 1. |
 | 2026-07-19 | — | Tracker refresh #23 — **#763** Spotify sync and **PWA cluster** (#971 + #969 + #970) drained off 🟢 Green: both eng builds are complete and in test per Hugh (PR #1125). Spotify: full 11-PR epic merged 2026-07-19 — closing PRs include the Following highlighting (PR #1059), taste filter (PR #1066), discovery shelf (PR #1067), web push settings toggle (PR #1068), new-show fan-out (PR #1069) and progress-tracker wrap-up (PR #1071). PWA cluster: install slot (PR #1056), offline pill (PR #1057), push infra (PR #1060), and downstream watch-update fan-out (PR #1102) all shipped. Design track's job on both is done; feature-level status lives in `docs/superpowers/progress.md` from here. Green count 6 → 4. |
 | 2026-07-19 | **#762** | Who else is watching handoff — Green one-pass (PR #1117). Design landed `design/design_handoff_who_else_is_watching/` with 3 authored code files (`watchers-data.jsx` / `watchers-surface.jsx` / `watchers-context.jsx`) + shared infra + README + READINESS. All 9 brief locks honored; both design principles (don't-fake-identity + honest-over-cute) demonstrated; 4 populated states + loading + adjacency + roster expansion + anatomy + theme parity across Electric/Jade/Light. `WATCHERS_COPY` externalized. `NAMED_CAP = 3`. Alerts hint rehomed under inactive Watch button (Q6 improvement). Design's 6 gap-report items all defensible confirmations, no addendum needed. Green count 5 → 6. Brief-locked queue back to empty. |
 | 2026-07-19 | — | Tracker refresh #22 — **#762** flips 📐 → 🟢 (PR #1117). Backlog additions in the same PR: **#1114** Bespoke per-venue imagery (Launch · Normal, rank 2) + **#1115** Dedicated Artist UI (Launch · Normal, rank 3), both new `type: design` tickets Hugh filed today. Backlog count 2 → 4. Order per Hugh: #737 stays rank 1 (Beta), venue-images ahead of Artist UI per his stated priority. |
@@ -168,8 +168,9 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 ## 📋 Immediate TODOs
 
-- [ ] **4 eng plans ready for eng-planning agent:** concert_history · #72 shareable_cards + Passport · **#764** Venue first-timer guide · **#762** Who else is watching. **#763 Spotify** and **PWA cluster** drained 2026-07-19 (refresh #23) — both eng builds complete + in test, feature-level status in `docs/superpowers/progress.md`. No Yellow items remaining. No Brief-locked items remaining.
-- [ ] **Backlog workstream order:** **#737** In-app notifications (Beta · Normal, rank 1) → **#1114** Per-venue imagery (Launch · Normal, rank 2) → **#1115** Artist UI (Launch · Normal, rank 3) → **#794** Logged-out UX (Launch · Normal, rank 4). #737 has push-infra readers already in place. #1114 takes priority over #1115 per Hugh's stated priority. #794's paywalls adjacency suggests pairing with monetization eng infra work.
+- [ ] **4 eng plans ready for eng-planning agent:** concert_history · #72 shareable_cards + Passport · **#764** Venue first-timer guide · **#762** Who else is watching. **#763 Spotify** and **PWA cluster** drained 2026-07-19 (refresh #23) — both eng builds complete + in test, feature-level status in `docs/superpowers/progress.md`. No Yellow items remaining.
+- [ ] **#1114** design handoff production — Claude Design produces the photo treatment recipe + illustrated overlay language + 3-5 sample venues at `design/design_handoff_venue_imagery/`; source brief at `docs/superpowers/specs/2026-07-19-1114-bespoke-per-venue-imagery-design-brief.md`. Handoff prompt delivered in chat (not committed). Artist-collaboration brief is part of the deliverables.
+- [ ] **Backlog workstream order:** **#737** In-app notifications (Beta · Normal, rank 1) → **#1115** Artist UI (Launch · Normal, rank 2) → **#794** Logged-out UX (Launch · Normal, rank 3). #737 has push-infra readers already in place. #1115 leverages Spotify metadata that just shipped. #794's paywalls adjacency suggests pairing with monetization eng infra work.
 
 ---
 
