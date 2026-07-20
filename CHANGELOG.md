@@ -1,3 +1,11 @@
+## [1.154.4](https://github.com/HartiganHM/concert-crawl/compare/v1.154.3...v1.154.4) (2026-07-20)
+
+
+### Bug Fixes
+
+* **crawler-core:** strip <p/> and </br> tag variants ([#1132](https://github.com/HartiganHM/concert-crawl/issues/1132)) ([#1135](https://github.com/HartiganHM/concert-crawl/issues/1135)) ([117c85b](https://github.com/HartiganHM/concert-crawl/commit/117c85b26209c968fb49dc91bbea45d7f7eb9fa2)), closes [Post-#827](https://github.com/Post-/issues/827)
+* **crawler:** stop verified_event_changed churn + one-shot missing-event cleanup ([#1124](https://github.com/HartiganHM/concert-crawl/issues/1124), [#1122](https://github.com/HartiganHM/concert-crawl/issues/1122)) ([#1126](https://github.com/HartiganHM/concert-crawl/issues/1126)) ([2d248b4](https://github.com/HartiganHM/concert-crawl/commit/2d248b4381ffe8f57097cb97fb2c32906773534e)), closes [#1053](https://github.com/HartiganHM/concert-crawl/issues/1053) [#1053](https://github.com/HartiganHM/concert-crawl/issues/1053)
+
 ## [1.154.3](https://github.com/HartiganHM/concert-crawl/compare/v1.154.2...v1.154.3) (2026-07-20)
 
 
