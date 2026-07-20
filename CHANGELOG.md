@@ -1,3 +1,13 @@
+## [1.154.5](https://github.com/HartiganHM/concert-crawl/compare/v1.154.4...v1.154.5) (2026-07-20)
+
+
+### Bug Fixes
+
+* **auth:** route Clerk signup through /auth/complete so invite gets marked used ([#1133](https://github.com/HartiganHM/concert-crawl/issues/1133)) ([5314238](https://github.com/HartiganHM/concert-crawl/commit/531423824d0f4847720983497983d27999c78300)), closes [#1113](https://github.com/HartiganHM/concert-crawl/issues/1113)
+* **spotify:** gate taste-picks seed on resolved userId + log unexpected SSR prefetch failures ([84de700](https://github.com/HartiganHM/concert-crawl/commit/84de700f43e30088f07853c87686f702cb663aa8))
+* **spotify:** taste-pick card image absorbs extra height + SSR-seed shelf to kill pop-in ([924ea46](https://github.com/HartiganHM/concert-crawl/commit/924ea46c0c96d702b416b469c2365cb0477da095))
+* **web:** [#1137](https://github.com/HartiganHM/concert-crawl/issues/1137) R5 — disable taste-picks query until userId resolves ([ecaf90d](https://github.com/HartiganHM/concert-crawl/commit/ecaf90da8fd0fbbac8cbb254190296fe3785543d))
+
 ## [1.154.4](https://github.com/HartiganHM/concert-crawl/compare/v1.154.3...v1.154.4) (2026-07-20)
 
 
