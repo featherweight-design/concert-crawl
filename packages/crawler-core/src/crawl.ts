@@ -13,6 +13,7 @@ import { reportFailure } from '@concert-crawl/logger'
 import { isAllowed } from './lib/robots.js'
 import { sendCrawlFailureEmail } from './lib/email.js'
 import { checkEventCountDrop } from './lib/event-count-alert.js'
+import { reconcileDriftDuplicates } from './reconcile-drift-duplicates.js'
 import {
   fetchPage,
   fetchPageHttp,
@@ -938,6 +939,25 @@ export async function crawlVenue(
             isNull(events.firstMissingAt),
           ),
         )
+    }
+
+    // Runtime drift-duplicate self-heal (#1122). Pass 2 above can freshly
+    // stamp first_missing_at on a title-variant orphan whose live sibling was
+    // just re-seen. Reassign its FK rows onto the sibling and delete it so it
+    // never reaches the admin missing list. Guarded: a reconcile failure must
+    // never fail the crawl (crawl resilience is existential) — log and continue.
+    if (seenEventCoords.length > 0) {
+      try {
+        await reconcileDriftDuplicates(venueId)
+      } catch (err) {
+        reportFailure({
+          event: 'crawl.reconcile_drift_duplicates_failed',
+          severity: 'error',
+          venueId,
+          crawlRunId: id,
+          error: String(err),
+        })
+      }
     }
 
     // Notify admin on low-confidence LLM extractions (structured data is always confidence=1.0)
