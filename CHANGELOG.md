@@ -1,3 +1,10 @@
+# [1.156.0](https://github.com/HartiganHM/concert-crawl/compare/v1.155.0...v1.156.0) (2026-07-21)
+
+
+### Features
+
+* **crawler:** runtime drift-duplicate self-heal after stale-detection pass ([#1122](https://github.com/HartiganHM/concert-crawl/issues/1122)) ([#1143](https://github.com/HartiganHM/concert-crawl/issues/1143)) ([525b6f5](https://github.com/HartiganHM/concert-crawl/commit/525b6f580cb4d97114704638be37b12c0a25347f))
+
 # [1.155.0](https://github.com/HartiganHM/concert-crawl/compare/v1.154.6...v1.155.0) (2026-07-20)
 
 
