@@ -9,7 +9,16 @@ export default function MainLayout({
   children: React.ReactNode
 }) {
   return (
-    <div className="flex min-h-screen flex-col bg-bg">
+    // overflow-x-clip lives on this in-flow block that wraps all page chrome —
+    // not on <html> or the flex-item <main> — to contain the Browse "Based on
+    // your taste" carousel's full-bleed overflow (#763's -mx-4 + overflow-x-auto
+    // shelf). An <html>-level clip (#1156) cropped the header wordmark and left a
+    // dead gap once the document had widened; a clip on the column-flex <main>
+    // (#1149) never caught overflow that propagated above it. `clip` (not
+    // `hidden`) keeps the sticky desktop header working; the fixed
+    // BottomNav/overlays are positioned against the viewport, so an ancestor
+    // overflow:clip never hides them.
+    <div className="flex min-h-screen flex-col overflow-x-clip bg-bg">
       <AppHeader
         rightSlots={
           <>

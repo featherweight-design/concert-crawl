@@ -46,18 +46,6 @@
     @apply border-border;
   }
 
-  /* Root-level horizontal-overflow guard. Every legitimate horizontal scroll
-     in the app is an intentional inner carousel with its own overflow-x-auto
-     (e.g. the Browse "Based on your taste" shelf); nothing is meant to be
-     reached by scrolling the page sideways. Clipping at the viewport catches
-     stray overflow from any subtree — #1149's per-<main> clip could not,
-     because overflow that reaches the document propagates above <main>. `clip`
-     (not `hidden`) is required: it does not establish a scroll container, so
-     the sticky desktop header and fixed overlays keep working. */
-  html {
-    overflow-x: clip;
-  }
-
   body {
     font-family: var(--font-ui);
     font-feature-settings:
