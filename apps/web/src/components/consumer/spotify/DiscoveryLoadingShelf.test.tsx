@@ -80,4 +80,28 @@ describe('DiscoveryLoadingShelf', () => {
     })
     expect(onRetry).not.toHaveBeenCalled()
   })
+
+  it('re-arms the timeout after Retry so a second hang also surfaces the chip', () => {
+    // Regression: without a retry nonce in the effect deps, the timer
+    // never re-fires after Retry — a hanging refetch would shimmer
+    // forever with no second timeout signal.
+    render(<DiscoveryLoadingShelf onRetry={vi.fn()} timeoutMs={100} />)
+
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+    expect(screen.getByText(COPY.eyebrowTimeout)).toBeTruthy()
+
+    fireEvent.click(screen.getByRole('button', { name: COPY.timeout.retryCta }))
+    expect(screen.getByText(COPY.eyebrow)).toBeTruthy()
+
+    // Second hang → chip must reappear.
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+    expect(screen.getByText(COPY.eyebrowTimeout)).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: COPY.timeout.retryCta }),
+    ).toBeTruthy()
+  })
 })

@@ -213,14 +213,19 @@ export const DiscoveryLoadingShelf = ({
   timeoutMs?: number
 }) => {
   const [isTimeout, setIsTimeout] = useState(false)
+  // Bumped on every Retry click so the effect below re-arms the timer.
+  // Without this, a Retry that itself hangs would shimmer forever — the
+  // effect's [timeoutMs] deps don't re-run on isTimeout state changes.
+  const [retryNonce, setRetryNonce] = useState(0)
 
   useEffect(() => {
     const timer = setTimeout(() => setIsTimeout(true), timeoutMs)
     return () => clearTimeout(timer)
-  }, [timeoutMs])
+  }, [timeoutMs, retryNonce])
 
   const handleRetry = () => {
     setIsTimeout(false)
+    setRetryNonce((prev) => prev + 1)
     onRetry()
   }
 
