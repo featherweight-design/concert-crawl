@@ -1,3 +1,10 @@
+## [1.156.1](https://github.com/HartiganHM/concert-crawl/compare/v1.156.0...v1.156.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* contain DiscoveryShelf full-bleed carousel to stop browse page overflow ([#1149](https://github.com/HartiganHM/concert-crawl/issues/1149)) ([c58c32f](https://github.com/HartiganHM/concert-crawl/commit/c58c32f1655e59fcefd7065a8b40ce0e08d35882)), closes [#763](https://github.com/HartiganHM/concert-crawl/issues/763)
+
 # [1.156.0](https://github.com/HartiganHM/concert-crawl/compare/v1.155.0...v1.156.0) (2026-07-21)
 
 
