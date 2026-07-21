@@ -177,21 +177,40 @@ describe('DiscoveryShelf', () => {
     expect(container.innerHTML).toBe('')
   })
 
-  it.each(['disconnected', 'error', 'revoked'] as const)(
-    'hides the shelf when connection is %s even if picks are cached as connected',
+  it('hides the shelf when connection is disconnected even if picks are cached', () => {
+    // Regression: useTastePicks has a 5-min staleTime, so a disconnect
+    // doesn't clear cached "connected" picks. Without the connection
+    // override, the shelf would render stale picks for up to 5 minutes
+    // after the user disconnected. `disconnected` is hidden-style per §7.
+    connection = { data: { status: 'disconnected' } }
+    picksQuery = {
+      data: connected([pick()]),
+      isPending: false,
+      isError: false,
+    }
+    const { container } = render(<DiscoveryShelf />)
+    expect(container.innerHTML).toBe('')
+  })
+
+  it.each(['error', 'revoked'] as const)(
+    'renders the failure shelf immediately when connection is %s (does not wait for picks refetch)',
     (status) => {
-      // Regression: useTastePicks has a 5-min staleTime, so a disconnect
-      // (or error/revoked flip) doesn't clear cached "connected" picks.
-      // Without a connection override, the shelf would render stale picks
-      // for up to 5 minutes after the user disconnected.
+      // Even when picks are cached as connected, an error/revoked
+      // connection should paint the "taste on pause" reconnect state
+      // right away — matching the picks-response-driven failure UI.
       connection = { data: { status } }
       picksQuery = {
         data: connected([pick()]),
         isPending: false,
         isError: false,
       }
-      const { container } = render(<DiscoveryShelf />)
-      expect(container.innerHTML).toBe('')
+      render(<DiscoveryShelf />)
+      expect(screen.getByRole('region', { name: COPY.title })).toBeTruthy()
+      expect(screen.getByText(COPY.failure.eyebrow)).toBeTruthy()
+      expect(screen.getByText(COPY.failure.title)).toBeTruthy()
+      expect(
+        screen.getByRole('button', { name: COPY.failure.primaryCta }),
+      ).toBeTruthy()
     },
   )
 
