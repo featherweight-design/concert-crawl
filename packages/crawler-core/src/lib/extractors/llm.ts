@@ -27,6 +27,7 @@ export const NormalizedEventSchema = z.object({
   doorsTime: z.string().nullable().optional(),
   showTime: z.string().nullable().optional(),
   ticketUrl: z.string().nullable().optional(),
+  eventUrl: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   confidence: z.number().min(0).max(1),
   isConcert: z.boolean().optional(),
@@ -175,7 +176,13 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
             },
             ticketUrl: {
               type: ['string', 'null'],
-              description: 'Ticket purchase URL or null',
+              description:
+                'Direct ticket purchase URL (the checkout/buy link) or null',
+            },
+            eventUrl: {
+              type: ['string', 'null'],
+              description:
+                "The per-event detail page URL on the source site (the link the listing's title/image points to, e.g. the event's own page). Use the absolute URL. Null if the listing has no dedicated detail page.",
             },
             description: {
               type: ['string', 'null'],
@@ -348,6 +355,8 @@ export async function extractWithLlm(
       ...(evt.showTime != null &&
         evt.showTime !== '' && { showTime: evt.showTime }),
       ...(evt.ticketUrl != null && { ticketUrl: evt.ticketUrl }),
+      ...(evt.eventUrl != null &&
+        evt.eventUrl !== '' && { eventUrl: evt.eventUrl }),
       ...(description != null && description !== '' && { description }),
       ...(supportingArtists.length > 0 && { supportingArtists }),
       ...(evt.tourName != null &&

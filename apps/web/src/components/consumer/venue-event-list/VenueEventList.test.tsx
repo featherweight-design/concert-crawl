@@ -33,6 +33,7 @@ function makeEvent(overrides: Partial<EventWithVenue>): EventWithVenue {
     doorsTime: null,
     showTime: '20:00',
     ticketUrl: null,
+    eventUrl: null,
     ticketLinks: null,
     ticketPriceMin: null,
     ticketPriceMax: null,

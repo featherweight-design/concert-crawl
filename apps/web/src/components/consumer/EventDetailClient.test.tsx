@@ -95,6 +95,7 @@ function buildBaseEvent(
     doorsTime: null,
     showTime: null,
     ticketUrl: null,
+    eventUrl: null,
     ticketLinks: null,
     ticketPriceMin: null,
     ticketPriceMax: null,

@@ -286,6 +286,24 @@ describe('GET /v1/events/:id — integration', () => {
     expect(body.data.priceSource).toBe('ticketmaster')
   })
 
+  it('includes eventUrl in the event detail response (#1152)', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      eventUrl: 'https://www.redrocksonline.com/events/griz-1489047/',
+      date: '2027-06-02',
+    })
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { eventUrl: string | null }
+    }
+    expect(body.success).toBe(true)
+    expect(body.data.eventUrl).toBe(
+      'https://www.redrocksonline.com/events/griz-1489047/',
+    )
+  })
+
   it('returns event with venue data', async () => {
     const venue = await seedVenue({
       name: 'Fillmore Auditorium',

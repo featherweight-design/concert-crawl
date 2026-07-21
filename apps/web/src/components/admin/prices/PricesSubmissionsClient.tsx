@@ -23,7 +23,7 @@ import { type StatusKind } from '@/components/admin/primitives/utils'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { BulkActionDock } from '@/components/admin/review/BulkActionDock'
 import { formatPriceRange } from '@/components/admin/review/lib/format-price-range'
-import { isSafeHttpUrl } from './lib/is-safe-http-url'
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 import { isAuthError } from './lib/is-auth-error'
 import { reviewQueryKeys } from '@/lib/queries/use-admin-review'
 import {

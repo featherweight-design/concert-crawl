@@ -58,6 +58,10 @@ export const events = pgTable(
     doorsTime: time('doors_time'),
     showTime: time('show_time'),
     ticketUrl: text('ticket_url'),
+    // The event's own detail page on the source venue site. Serves as the
+    // "Get tickets" deep-link fallback when `ticketUrl` is absent, so users
+    // land on the specific event instead of the venue's generic index (#1152).
+    eventUrl: text('event_url'),
     ticketLinks: jsonb('ticket_links').$type<TicketLink[]>(),
     ticketPriceMin: numeric('ticket_price_min', { precision: 10, scale: 2 }),
     ticketPriceMax: numeric('ticket_price_max', { precision: 10, scale: 2 }),

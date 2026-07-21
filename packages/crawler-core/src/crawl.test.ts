@@ -470,6 +470,54 @@ describe('crawlVenue — ticketLinks derivation', () => {
     expect(insertedEvent?.ticketUrl).toBeNull()
     expect(insertedEvent?.ticketLinks).toBeNull()
   })
+
+  it('persists the extracted eventUrl as the ticket deep-link fallback (#1152)', async () => {
+    const venue = seedVenue()
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          ...METALLICA_EVENT,
+          ticketUrl: undefined,
+          eventUrl: 'https://test-venue.example.com/events/metallica-1489047/',
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const insertedEvent = stores.events.find(
+      (row: { venueId: string }) => row.venueId === venue.id,
+    )
+    expect(insertedEvent?.eventUrl).toBe(
+      'https://test-venue.example.com/events/metallica-1489047/',
+    )
+  })
+
+  it('normalizes an empty-string eventUrl to null (#1152)', async () => {
+    const venue = seedVenue()
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [{ ...METALLICA_EVENT, eventUrl: '' }],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const insertedEvent = stores.events.find(
+      (row: { venueId: string }) => row.venueId === venue.id,
+    )
+    expect(insertedEvent?.eventUrl).toBeNull()
+  })
 })
 
 describe('crawlVenue — event-level sourceHash', () => {

@@ -18,6 +18,16 @@ export interface NormalizedEvent {
   doorsTime?: string
   showTime?: string
   ticketUrl?: string
+  /**
+   * The per-event detail page URL on the source venue site (e.g.
+   * `https://www.redrocksonline.com/events/griz-1489047/`). Distinct from
+   * `ticketUrl` (the purchase link) and `sourceUrl` (the crawled index page).
+   * Used as the "Get tickets" fallback when a listing has no direct ticket
+   * link, so users land on the specific event rather than the venue's
+   * generic events index (#1152). Deriving the deeper AXS purchase URL from
+   * this slug is a follow-up (#1153).
+   */
+  eventUrl?: string
   description?: string
   imageUrl?: string
   sourceUrl: string

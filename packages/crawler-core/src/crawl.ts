@@ -80,12 +80,14 @@ export const DEBUG_CAPTURE_CHUNK_CHARS = 2000
 // want to inspect.
 export const DEBUG_CAPTURE_MAX_CHARS = 80_000
 
-// Normalize an extractor-provided ticket URL. Empty strings become null so
-// events.ticket_url and events.ticket_links agree on "no URL available" —
-// deriveTicketLinks already treats '' as missing, but the column would
-// otherwise persist as a non-null empty string.
+// Normalize an extractor-provided URL (both ticketUrl and eventUrl route
+// through here). Empty or whitespace-only strings become null so
+// events.ticket_url / events.event_url and events.ticket_links agree on "no
+// URL available" — deriveTicketLinks already treats '' as missing, but the
+// column would otherwise persist as a non-null blank string.
 function normalizeTicketUrl(url: string | null | undefined): string | null {
-  return url && url !== '' ? url : null
+  const trimmed = url?.trim()
+  return trimmed ? trimmed : null
 }
 
 interface DebugCaptureContext {
@@ -754,6 +756,10 @@ export async function crawlVenue(
               websiteUrl: venue.websiteUrl,
               ticketVendor: venue.ticketVendor,
             }),
+            // Per-event detail page on the source site — the "Get tickets"
+            // fallback when there's no direct ticketUrl (#1152). Same empty→null
+            // normalization as ticketUrl so '' never persists as a live URL.
+            eventUrl: normalizeTicketUrl(event.eventUrl),
             description: event.description ?? null,
             imageUrl: event.imageUrl ?? null,
             sourceUrl: event.sourceUrl,
@@ -832,6 +838,7 @@ export async function crawlVenue(
               showTime: sql`excluded.show_time`,
               ticketUrl: sql`excluded.ticket_url`,
               ticketLinks: sql`excluded.ticket_links`,
+              eventUrl: sql`excluded.event_url`,
               description: sql`excluded.description`,
               imageUrl: sql`excluded.image_url`,
               status: sql`excluded.status`,

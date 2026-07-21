@@ -380,6 +380,9 @@ export interface Event {
   showTime: string | null
   ticketUrl: string | null
   ticketLinks: TicketLink[] | null
+  // The event's own detail page on the source venue site. Deep-link
+  // fallback for "Get tickets" when ticketUrl is null (#1152).
+  eventUrl: string | null
   ticketPriceMin: string | null
   ticketPriceMax: string | null
   priceSource: PriceSource | null

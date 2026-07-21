@@ -26,6 +26,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.14.0-beta',
+    date: 'Jul 20, 2026',
+    headline: 'Get Tickets now drops you on the actual show page.',
+    items: [
+      {
+        kind: 'fixed',
+        text: "Some venues list a show without a direct ticket link, so Get Tickets used to dump you on the venue's full events page to hunt for the date yourself. Now, when the crawler finds the show's own page, Get Tickets deep-links straight to it — no more scrolling a wall of events to find the one you wanted.",
+      },
+    ],
+  },
+  {
     version: 'v0.13.1-beta',
     date: 'Jul 20, 2026',
     headline: 'Your taste shelf paints faster.',

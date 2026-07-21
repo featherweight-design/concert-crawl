@@ -46,6 +46,7 @@ const baseEvent: EventWithVenue = {
   doorsTime: null,
   showTime: '20:00:00',
   ticketUrl: null,
+  eventUrl: null,
   ticketLinks: null,
   ticketPriceMin: '25',
   ticketPriceMax: '25',

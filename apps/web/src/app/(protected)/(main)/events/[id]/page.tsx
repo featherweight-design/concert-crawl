@@ -9,6 +9,7 @@ import type {
   EventsRelatedResponse,
 } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 import { fetchEventReports } from '@/lib/events'
 import { EventImage } from '@/components/consumer/event-image'
 import { BackButton } from '@/components/consumer/event-detail/BackButton'
@@ -112,6 +113,15 @@ export default async function EventDetailPage({
     doorsTime && showTime
       ? `${doorsTime} / ${showTime}`
       : (showTime ?? doorsTime ?? '—')
+  // ticketUrl/eventUrl are crawler-derived and untrusted — filter the CTA
+  // target to http(s) so a compromised venue page can't inject a
+  // javascript:/data: href into the rendered link (#1152).
+  const safeTicketUrl = isSafeHttpUrl(event.ticketUrl) ? event.ticketUrl : null
+  const safeEventUrl = isSafeHttpUrl(event.eventUrl) ? event.eventUrl : null
+  const ctaHref =
+    safeTicketUrl ??
+    safeEventUrl ??
+    (isSafeHttpUrl(event.venue.websiteUrl) ? event.venue.websiteUrl : null)
 
   return (
     // overflow-x-clip guarantees the 320px mobile baseline never scrolls
@@ -233,8 +243,10 @@ export default async function EventDetailPage({
           {/* Primary CTA — always renders on all events including cancelled/postponed,
               per spec ("PrimaryCTA always renders with no cancelled carve-out").
               Fans may still want to visit the venue site even for cancelled shows.
-              Sold out → disabled button. ticketUrl → "Get Tickets ↗".
-              Fallback → venue website. No URL → disabled "No tickets available". */}
+              Sold out → disabled button. ticketUrl or eventUrl → "Get Tickets ↗"
+              (eventUrl deep-links the venue's specific event page when there's
+              no direct ticket link, #1152). Fallback → venue website. No URL →
+              disabled "No tickets available". */}
           <div className="mt-5">
             {event.priceStatus === 'soldout' ? (
               <button
@@ -262,9 +274,9 @@ export default async function EventDetailPage({
               >
                 {copy.soldOut}
               </button>
-            ) : event.ticketUrl || event.venue.websiteUrl ? (
+            ) : ctaHref ? (
               <a
-                href={event.ticketUrl ?? event.venue.websiteUrl ?? '#'}
+                href={ctaHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex h-12 w-full items-center justify-center gap-1.5 rounded-[10px] text-fg-on-accent"
@@ -278,7 +290,9 @@ export default async function EventDetailPage({
                   whiteSpace: 'nowrap',
                 }}
               >
-                {event.ticketUrl ? copy.getTickets : copy.visitVenueWebsite}
+                {safeTicketUrl || safeEventUrl
+                  ? copy.getTickets
+                  : copy.visitVenueWebsite}
                 <ExternalLinkIcon />
               </a>
             ) : (

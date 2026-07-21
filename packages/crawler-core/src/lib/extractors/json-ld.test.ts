@@ -120,6 +120,76 @@ describe('extractJsonLd', () => {
     expect(event.imageUrl).toBeUndefined()
   })
 
+  it('captures the event detail page as eventUrl from schema.org url (#1152)', () => {
+    const html = makeHtml({
+      '@context': 'https://schema.org',
+      '@type': 'Event',
+      name: 'Deep Link Event',
+      startDate: '2026-08-20T20:00:00',
+      performer: { name: 'Deep Link Band' },
+      url: 'https://example.com/events/deep-link-1489047/',
+    })
+    const events = extractJsonLd(html, SOURCE_URL)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.eventUrl).toBe(
+      'https://example.com/events/deep-link-1489047/',
+    )
+  })
+
+  it('prefers offers.url for ticketUrl while keeping the detail page as eventUrl (#1152)', () => {
+    const html = makeHtml({
+      '@context': 'https://schema.org',
+      '@type': 'Event',
+      name: 'Offer Event',
+      startDate: '2026-08-20T20:00:00',
+      performer: { name: 'Offer Band' },
+      url: 'https://example.com/events/offer-1489047/',
+      offers: {
+        '@type': 'Offer',
+        url: 'https://www.axs.com/events/1489047/offer-tickets',
+      },
+    })
+    const events = extractJsonLd(html, SOURCE_URL)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.ticketUrl).toBe(
+      'https://www.axs.com/events/1489047/offer-tickets',
+    )
+    expect(events[0]?.eventUrl).toBe(
+      'https://example.com/events/offer-1489047/',
+    )
+  })
+
+  it('falls back to the detail page for ticketUrl when no offer URL exists (#1152)', () => {
+    const html = makeHtml({
+      '@context': 'https://schema.org',
+      '@type': 'Event',
+      name: 'No Offer Event',
+      startDate: '2026-08-20T20:00:00',
+      performer: { name: 'No Offer Band' },
+      url: 'https://example.com/events/no-offer/',
+    })
+    const events = extractJsonLd(html, SOURCE_URL)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.ticketUrl).toBe('https://example.com/events/no-offer/')
+    expect(events[0]?.eventUrl).toBe('https://example.com/events/no-offer/')
+  })
+
+  it('ignores a whitespace-only offer URL and falls back to the detail page (#1152)', () => {
+    const html = makeHtml({
+      '@context': 'https://schema.org',
+      '@type': 'Event',
+      name: 'Blank Offer Event',
+      startDate: '2026-08-20T20:00:00',
+      performer: { name: 'Blank Offer Band' },
+      url: 'https://example.com/events/blank-offer/',
+      offers: { '@type': 'Offer', url: '   ' },
+    })
+    const events = extractJsonLd(html, SOURCE_URL)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.ticketUrl).toBe('https://example.com/events/blank-offer/')
+    expect(events[0]?.eventUrl).toBe('https://example.com/events/blank-offer/')
+  })
+
   it('strips HTML from the schema.org description field (#827)', () => {
     // schema.org `Event.description` commonly carries CMS-authored HTML
     // (RHP, Squarespace). Before #827 the markup was stored verbatim and

@@ -94,6 +94,24 @@ function getPerformerNames(performer: unknown): string[] {
   return names
 }
 
+// schema.org `Offer.url` is the actual purchase/checkout link, distinct from
+// `Event.url` (the detail page). `offers` may be a single Offer or an array;
+// take the first entry that carries a string `url`. Untrusted source data, so
+// narrow at runtime rather than casting.
+function getOfferUrl(offers: unknown): string | undefined {
+  const items = Array.isArray(offers) ? offers : [offers]
+  for (const item of items) {
+    if (item && typeof item === 'object' && 'url' in item) {
+      const url = item.url
+      if (typeof url === 'string') {
+        const trimmed = url.trim()
+        if (trimmed.length > 0) return trimmed
+      }
+    }
+  }
+  return undefined
+}
+
 function mapToNormalizedEvent(
   obj: Record<string, unknown>,
   sourceUrl: string,
@@ -120,7 +138,16 @@ function mapToNormalizedEvent(
     typeof obj['doorTime'] === 'string'
       ? extractTimeOnly(obj['doorTime'], timeZone)
       : undefined
-  const ticketUrl = typeof obj['url'] === 'string' ? obj['url'] : undefined
+  // `Event.url` is the event's own detail page; `offers.url` is the real
+  // purchase link. Prefer the purchase link for `ticketUrl`, but fall back to
+  // the detail page when a venue exposes no offer URL (many don't) so existing
+  // JSON-LD venues keep a working ticket link.
+  const detailUrl = typeof obj['url'] === 'string' ? obj['url'] : undefined
+  const ticketUrl = getOfferUrl(obj['offers']) ?? detailUrl
+  // Always capture the detail page as `eventUrl` — the "Get tickets" fallback
+  // so a listing without a direct purchase link still deep-links to the
+  // specific event page rather than the venue's generic index (#1152).
+  const eventUrl = detailUrl
   // schema.org `Event.description` is commonly populated with HTML from
   // the venue's CMS (RHP, Squarespace, etc.). Strip at the extractor
   // boundary so the DB stores plain text and the consumer surface stays
@@ -147,6 +174,7 @@ function mapToNormalizedEvent(
   if (doorsTime !== undefined) event.doorsTime = doorsTime
   if (showTime !== undefined) event.showTime = showTime
   if (ticketUrl !== undefined) event.ticketUrl = ticketUrl
+  if (eventUrl !== undefined) event.eventUrl = eventUrl
   if (description !== undefined) event.description = description
   return event
 }
