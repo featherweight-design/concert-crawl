@@ -177,6 +177,24 @@ describe('DiscoveryShelf', () => {
     expect(container.innerHTML).toBe('')
   })
 
+  it.each(['disconnected', 'error', 'revoked'] as const)(
+    'hides the shelf when connection is %s even if picks are cached as connected',
+    (status) => {
+      // Regression: useTastePicks has a 5-min staleTime, so a disconnect
+      // (or error/revoked flip) doesn't clear cached "connected" picks.
+      // Without a connection override, the shelf would render stale picks
+      // for up to 5 minutes after the user disconnected.
+      connection = { data: { status } }
+      picksQuery = {
+        data: connected([pick()]),
+        isPending: false,
+        isError: false,
+      }
+      const { container } = render(<DiscoveryShelf />)
+      expect(container.innerHTML).toBe('')
+    },
+  )
+
   it('renders the shelf with header, eyebrow, and pick cards', () => {
     picksQuery.data = connected([
       pick(),

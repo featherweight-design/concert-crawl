@@ -270,6 +270,17 @@ export const DiscoveryShelf = ({
   // endpoint already proved entitlement) instead of popping in later.
   if (!entitlement.isLoading && !entitlement.active) return null
 
+  // Connection override: once the connection query resolves to anything
+  // other than 'connected', hide the shelf even if picks are still
+  // cached — useTastePicks' 5-min staleTime otherwise lets a disconnect
+  // paint stale 'connected' picks until the picks response is next
+  // refetched. The picks response itself still drives the failure/empty
+  // sub-states when it has landed.
+  const connectionStatus = connection.data?.status
+  if (connectionStatus !== undefined && connectionStatus !== 'connected') {
+    return null
+  }
+
   const { data, isError, isPending } = picksQuery
 
   // Loading shelf reserves the shelf footprint (zero layout shift) when we
