@@ -19,13 +19,24 @@ interface PicksQueryState {
   isError: boolean
 }
 
+interface ConnectionState {
+  data:
+    { status: 'connected' | 'disconnected' | 'error' | 'revoked' } | undefined
+}
+
 let entitlement: EntitlementState
 let picksQuery: PicksQueryState
+let connection: ConnectionState
 let picksEnabledArg: boolean | undefined
 let picksInitialDataArg: SpotifyTastePicksResponse | undefined
+const picksRefetch = vi.fn()
 
 vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlement,
+}))
+
+vi.mock('@/lib/queries/use-spotify-connection', () => ({
+  useSpotifyConnection: () => connection,
 }))
 
 vi.mock('@/lib/queries/use-taste-picks', () => ({
@@ -39,9 +50,14 @@ vi.mock('@/lib/queries/use-taste-picks', () => ({
     // immediately). The hook's userId gate on applying initialData is
     // covered directly in use-taste-picks.test.tsx.
     if (picksQuery.data === undefined && initialData !== undefined) {
-      return { data: initialData, isPending: false, isError: false }
+      return {
+        data: initialData,
+        isPending: false,
+        isError: false,
+        refetch: picksRefetch,
+      }
     }
-    return picksQuery
+    return { ...picksQuery, refetch: picksRefetch }
   },
 }))
 
@@ -81,8 +97,12 @@ beforeEach(() => {
     isPending: false,
     isError: false,
   }
+  // Connection defaults to connected — the shelf's happy path assumes it.
+  // Individual tests override to disconnected/undefined where needed.
+  connection = { data: { status: 'connected' } }
   picksEnabledArg = undefined
   picksInitialDataArg = undefined
+  picksRefetch.mockReset()
 })
 
 describe('DiscoveryShelf', () => {
@@ -103,6 +123,9 @@ describe('DiscoveryShelf', () => {
   })
 
   it('renders nothing while the query is pending, on error, or disconnected', () => {
+    // Loading branch is gated on a known-connected user, so hold connection
+    // resolution open here to keep the pending case in the hidden-style path.
+    connection = { data: undefined }
     picksQuery = { data: undefined, isPending: true, isError: false }
     const { container, rerender } = render(<DiscoveryShelf />)
     expect(container.innerHTML).toBe('')
@@ -117,6 +140,40 @@ describe('DiscoveryShelf', () => {
       isError: false,
     }
     rerender(<DiscoveryShelf />)
+    expect(container.innerHTML).toBe('')
+  })
+
+  it('renders the loading shelf when entitled + connected + picks pending (SSR seed absent)', () => {
+    // Cold hydration / mid-session upgrade — no seed, no cached data yet.
+    connection = { data: { status: 'connected' } }
+    picksQuery = { data: undefined, isPending: true, isError: false }
+    render(<DiscoveryShelf />)
+
+    // role=status + aria-live=polite makes assistive tech announce the
+    // "loading picks…" region.
+    expect(
+      screen.getByRole('status', { name: COPY.loading.ariaLabel }),
+    ).toBeTruthy()
+    expect(screen.getByText(COPY.title)).toBeTruthy()
+    expect(screen.getByText(COPY.loading.eyebrow)).toBeTruthy()
+  })
+
+  it('stays hidden while picks are pending when the connection query has not resolved', () => {
+    // Without a positive "connected" signal we must NEVER flash the shelf —
+    // that's the whole point of the triple-gate. A pending connection query
+    // (data undefined) should render nothing, not the loading state.
+    connection = { data: undefined }
+    picksQuery = { data: undefined, isPending: true, isError: false }
+    const { container } = render(<DiscoveryShelf />)
+    expect(container.innerHTML).toBe('')
+  })
+
+  it('stays hidden while picks are pending when connection is disconnected', () => {
+    // Disconnected users must never see the loading state either — the
+    // shelf entirely does not apply to them (hidden-style, spec §7).
+    connection = { data: { status: 'disconnected' } }
+    picksQuery = { data: undefined, isPending: true, isError: false }
+    const { container } = render(<DiscoveryShelf />)
     expect(container.innerHTML).toBe('')
   })
 

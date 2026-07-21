@@ -18,8 +18,10 @@ import type {
   SpotifyTastePicksResponse,
 } from '@concert-crawl/types'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
+import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection'
 import { useTastePicks } from '@/lib/queries/use-taste-picks'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
+import { DiscoveryLoadingShelf } from './DiscoveryLoadingShelf'
 import { EventImage } from '@/components/consumer/event-image'
 import {
   formatPrice,
@@ -259,6 +261,7 @@ export const DiscoveryShelf = ({
   initialPicks?: SpotifyTastePicksResponse
 }) => {
   const entitlement = useEntitlement('spotify-sync')
+  const connection = useSpotifyConnection()
   const picksQuery = useTastePicks(entitlement.active, initialPicks)
 
   // Hidden-style surface (spec §7): nothing once the entitlement resolves
@@ -268,6 +271,21 @@ export const DiscoveryShelf = ({
   if (!entitlement.isLoading && !entitlement.active) return null
 
   const { data, isError, isPending } = picksQuery
+
+  // Loading shelf reserves the shelf footprint (zero layout shift) when we
+  // KNOW the user is Spotify-connected but picks haven't returned — the
+  // narrow gap where SSR didn't seed (cold hydration, entitlement upgrade
+  // mid-session, cache miss). All three signals required so we never flash
+  // a shelf that may not apply.
+  if (
+    isPending &&
+    !isError &&
+    entitlement.active &&
+    connection.data?.status === 'connected'
+  ) {
+    return <DiscoveryLoadingShelf onRetry={() => void picksQuery.refetch()} />
+  }
+
   if (isPending || isError || !data || data.status === 'disconnected') {
     return null
   }

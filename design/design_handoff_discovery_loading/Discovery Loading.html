@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · DiscoveryShelf — Loading state</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  a { color: #0080A0; } a:hover { color: #00647d; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="monetization-shared.jsx"></script>
+<script type="text/babel" src="spotify-shared.jsx"></script>
+<script type="text/babel" src="follow-highlight.jsx"></script>
+<script type="text/babel" src="discovery-surface.jsx"></script>
+<script type="text/babel" src="discovery-loading.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEMES, CC_THEME_KEYS } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { MonoEyebrow, A11yNote } = window;
+const { DiscoveryLoadingShelf, DiscoveryLoadingScreen, DiscoveryLoadingDesktop, DiscoveryShelf, DL_MOTION } = window;
+
+const PHONE_W = 402, PHONE_H = 874;
+
+function Phone({ theme = "electric", children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={PHONE_W} height={PHONE_H} dark={theme !== "light"}>
+        <div style={{ width: "100%", height: "100%", position: "relative", overflow: "hidden" }}>{children}</div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function NotePaper({ children }) {
+  return <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "center", padding: 4 }}>{children}</div>;
+}
+
+// ── Tweaks ──────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "shape": "match",
+  "shimmer": "sweep",
+  "motion": "animated",
+  "firstVisit": "off",
+  "state": "loading"
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio } = window;
+const THEME_OPTS = CC_THEME_KEYS.map(k => ({ value: k, label: CC_THEMES[k].label }));
+
+function shelfPropsFrom(t) {
+  return { shape: t.shape, shimmer: t.shimmer, motion: t.motion, firstVisit: t.firstVisit === "on", state: t.state };
+}
+function LiveTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Open questions (Design owns)">
+        <TweakRadio label="① Skeleton shape" value={t.shape} onChange={(v)=>setT("shape",v)} options={[
+          { value: "match", label: "Match-shape (2 cards)" },
+          { value: "slim",  label: "Slim chip" },
+        ]}/>
+        <TweakSelect label="② Shimmer style" value={t.shimmer} onChange={(v)=>setT("shimmer",v)} options={[
+          { value: "sweep",     label: "Horizontal sweep" },
+          { value: "pulse",     label: "Low-opacity pulse" },
+          { value: "segmented", label: "Segmented block-by-block" },
+        ]}/>
+        <TweakSelect label="④ State" value={t.state} onChange={(v)=>setT("state",v)} options={[
+          { value: "loading", label: "Loading (in flight)" },
+          { value: "timeout", label: "Timeout → retry chip" },
+        ]}/>
+        <TweakRadio label="⑤ First-visit acknowledgement" value={t.firstVisit} onChange={(v)=>setT("firstVisit",v)} options={[
+          { value: "off", label: "Generic ('Finding your picks')" },
+          { value: "on",  label: "Cold start ('Reading follows')" },
+        ]}/>
+        <TweakRadio label="⑥ Motion" value={t.motion} onChange={(v)=>setT("motion",v)} options={[
+          { value: "animated", label: "Animated" },
+          { value: "reduced",  label: "Reduced-motion (static)" },
+        ]}/>
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakSelect label="Theme (all 9)" value={t.theme} onChange={(v)=>setT("theme",v)} options={THEME_OPTS}/>
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+function LivePhone() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return <Phone theme={t.theme}><DiscoveryLoadingScreen {...shelfPropsFrom(t)} /></Phone>;
+}
+
+// motion spec table
+function MotionSpec() {
+  const rows = [
+    ["Horizontal sweep", DL_MOTION.sweep, "Light band (11% --fg) crosses each card; cards staggered 220ms. Default."],
+    ["Low-opacity pulse", DL_MOTION.pulse, "Whole card opacity breathes. Calmest; least directional."],
+    ["Segmented", DL_MOTION.seg, "Each bar pulses on a 90ms stagger — block-by-block."],
+    ["Status dot", DL_MOTION.dot, "The 'finding picks' dot in the eyebrow + slim-chip dot."],
+  ];
+  return (
+    <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", padding: "24px 22px", display: "flex", flexDirection: "column", gap: 11, overflowY: "auto" }}>
+      <MonoEyebrow size={10} color="var(--signal)" letterSpacing="0.16em">MOTION SPEC · SHIMMER</MonoEyebrow>
+      {rows.map(([label, m, why], i) => (
+        <div key={i} style={{ padding: 13, borderRadius: 12, background: "var(--surface-1)", border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-0.01em", marginBottom: 6 }}>{label}</div>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: "var(--signal)", letterSpacing: "0.02em", marginBottom: 6 }}>
+            {m.dur} · {m.ease} · {m.iter}
+          </div>
+          <div style={{ fontSize: 12.5, color: "var(--fg-muted)", lineHeight: 1.45 }}>{why}</div>
+        </div>
+      ))}
+      <div style={{ padding: 13, borderRadius: 12, background: "color-mix(in oklch, var(--signal) 8%, var(--surface-1))", border: "1px solid color-mix(in oklch, var(--signal) 26%, var(--border))" }}>
+        <div style={{ fontSize: 12.5, color: "var(--fg-muted)", lineHeight: 1.5 }}>
+          <strong style={{ color: "var(--fg)" }}>prefers-reduced-motion:</strong> all keyframes drop to a static placeholder (bars + image blocks at <code style={{ fontFamily: "'JetBrains Mono', monospace" }}>--surface-2</code>, sweep band removed) via a global <code style={{ fontFamily: "'JetBrains Mono', monospace" }}>@media</code> guard — no per-component logic needed.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── App ─────────────────────────────────────────────────────────
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="DiscoveryShelf · Loading state"
+        subtitle="The transient gap on /events when a user is entitled + Spotify-connected but useTastePicks() hasn't returned (cold hydration, missing seed, mid-session upgrade). Today the shelf renders nothing here — which reads as absent/broken for someone we KNOW is connected. This adds a match-shape skeleton so the shelf announces itself while picks resolve, with zero layout shift when they land. Non-entitled + disconnected stay hidden-style (out of scope). Box model mirrors TastePickCard (PR #1067) verbatim. Flip every open-question answer in Tweaks.">
+
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview" subtitle="Drive all six open-question answers (shape · shimmer · state · first-visit · motion) × 9 themes from the Tweaks panel.">
+          <DCArtboard id="live-phone" label="Responds to Tweaks · /events" width={PHONE_W} height={PHONE_H}><LivePhone/></DCArtboard>
+          <DCArtboard id="live-note" label="When this shows" width={300} height={PHONE_H}>
+            <NotePaper><A11yNote tone="note" title="Gating — all three true" items={[
+              "useEntitlement('spotify-sync') === true (fast; gates the surface).",
+              "useSpotifyConnection() === connected (lightweight; resolves BEFORE picks).",
+              "useTastePicks() still pending (SSR seed absent / cold hydration / mid-session upgrade).",
+              "Any one false → existing behavior: non-entitled + disconnected stay hidden; error/revoked → shipped 'taste on pause'.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 1 · RECOMMENDATION */}
+        <DCSection id="rec" title="1 · Recommendation — match-shape skeleton"
+          subtitle="① match-shape (eng's rec, and mine): header + status eyebrow + 2 shimmering pick cards, ③ each card = image region + reason chip + artist + venue·date + price. ② default shimmer = a subtle horizontal sweep. Same total height as a filled 2-card shelf → real picks drop in with no jump.">
+          <DCArtboard id="rec-mobile" label="Mobile · sweep · match-shape" width={PHONE_W} height={PHONE_H}><Phone theme="electric"><DiscoveryLoadingScreen/></Phone></DCArtboard>
+          <DCArtboard id="rec-desktop" label="Desktop · shelf above the FilterBar" width={1000} height={760}>
+            <ThemeProvider theme="electric" style={{ width: "100%", height: "100%" }}><DiscoveryLoadingDesktop/></ThemeProvider>
+          </DCArtboard>
+          <DCArtboard id="rec-a11y" label="A11y + no-shift" width={300} height={760}>
+            <NotePaper><A11yNote title="Loading skeleton" items={[
+              "Shelf is role=status + aria-live=polite, labelled 'Loading picks based on your taste' — SR announces the wait, then the picks region replaces it.",
+              "Skeleton bars/images are aria-hidden decoration; no fake card text is announced.",
+              "Card box model === TastePickCard (w168 · r14 · image 116 · pad 10/11/12): real picks land with zero layout shift.",
+              "Fewer real picks than the 2-card skeleton is fine — the row condenses; it never grows past the reserved height.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 2 · NO LAYOUT SHIFT */}
+        <DCSection id="shift" title="2 · Skeleton → picks (no layout shift)"
+          subtitle="Left: the loading skeleton. Right: the shipped shelf once useTastePicks() resolves. Header, eyebrow slot, and card boxes line up — the swap is a crossfade, not a reflow.">
+          <DCArtboard id="shift-loading" label="Pending" width={PHONE_W} height={480}>
+            <Phone theme="electric"><div style={{ paddingTop: 54 }}><DiscoveryLoadingShelf/></div></Phone>
+          </DCArtboard>
+          <DCArtboard id="shift-loaded" label="Resolved (shipped shelf)" width={PHONE_W} height={480}>
+            <Phone theme="electric"><div style={{ paddingTop: 54 }}><DiscoveryShelf/></div></Phone>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 3 · SHIMMER OPTIONS */}
+        <DCSection id="shimmer" title="3 · Shimmer options (② + motion spec)"
+          subtitle="Three shimmer languages for review — the page has no prior Browse skeleton, so this SETS the language. My lean: the sweep (most legibly 'loading', least busy). Reduced-motion is a static placeholder in every case.">
+          <DCArtboard id="sh-sweep" label="Sweep (default)" width={PHONE_W} height={330}><Phone theme="electric"><div style={{ paddingTop: 34 }}><DiscoveryLoadingShelf shimmer="sweep"/></div></Phone></DCArtboard>
+          <DCArtboard id="sh-pulse" label="Pulse" width={PHONE_W} height={330}><Phone theme="electric"><div style={{ paddingTop: 34 }}><DiscoveryLoadingShelf shimmer="pulse"/></div></Phone></DCArtboard>
+          <DCArtboard id="sh-seg" label="Segmented" width={PHONE_W} height={330}><Phone theme="electric"><div style={{ paddingTop: 34 }}><DiscoveryLoadingShelf shimmer="segmented"/></div></Phone></DCArtboard>
+          <DCArtboard id="sh-spec" label="Motion spec" width={340} height={560}>
+            <ThemeProvider theme="electric" style={{ width: "100%", height: "100%" }}><MotionSpec/></ThemeProvider>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 4 · SLIM ALT + TIMEOUT + FIRST-VISIT + REDUCED MOTION */}
+        <DCSection id="alts" title="4 · The other open questions"
+          subtitle="① the slim-chip alternative; ④ timeout → a light retry chip (my answer: flip after ~8s — lighter than the shipped 'taste on pause' failure; 'slow', not 'broken'); ⑤ the cold-start acknowledgement; ⑥ the reduced-motion static variant.">
+          <DCArtboard id="alt-slim" label="① Slim chip (alt to match-shape)" width={PHONE_W} height={330}><Phone theme="electric"><div style={{ paddingTop: 34 }}><DiscoveryLoadingShelf shape="slim"/></div></Phone></DCArtboard>
+          <DCArtboard id="alt-timeout" label="④ Timeout → retry chip" width={PHONE_W} height={330}><Phone theme="electric"><div style={{ paddingTop: 34 }}><DiscoveryLoadingShelf state="timeout"/></div></Phone></DCArtboard>
+          <DCArtboard id="alt-first" label="⑤ Cold start · 'Reading your Spotify follows…'" width={PHONE_W} height={330}><Phone theme="electric"><div style={{ paddingTop: 34 }}><DiscoveryLoadingShelf firstVisit/></div></Phone></DCArtboard>
+          <DCArtboard id="alt-reduced" label="⑥ Reduced-motion (static)" width={PHONE_W} height={330}><Phone theme="electric"><div style={{ paddingTop: 34 }}><DiscoveryLoadingShelf motion="reduced"/></div></Phone></DCArtboard>
+          <DCArtboard id="alt-note" label="Recommendations" width={300} height={330}>
+            <NotePaper><A11yNote tone="note" title="My answers" items={[
+              "① match-shape — the shelf keeps its footprint; slim chip risks a jump when 2+ cards land.",
+              "④ flip to retry ~8s — React-Query default (stay in flight) can hang forever; the chip gives an exit without the heavy failure UI.",
+              "⑤ cold-start eyebrow only when SSR wasn't warmed — a small honest touch, not a spinner.",
+              "⑥ static placeholder confirmed — @media guard, no shimmer.",
+            ]}/></NotePaper>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · THEME PARITY */}
+        <DCSection id="parity" title="5 · Theme parity"
+          subtitle="Token-only — the skeleton reskins with the shelf. Sweep band is tied to --fg so it lightens on dark themes and darkens on Light. Flip all 9 in Tweaks.">
+          <DCArtboard id="par-light" label="Light" width={PHONE_W} height={330}><Phone theme="light"><div style={{ paddingTop: 34 }}><DiscoveryLoadingShelf/></div></Phone></DCArtboard>
+          <DCArtboard id="par-jade" label="Jade" width={PHONE_W} height={330}><Phone theme="jade"><div style={{ paddingTop: 34 }}><DiscoveryLoadingShelf/></div></Phone></DCArtboard>
+          <DCArtboard id="par-pulse" label="Pulse" width={PHONE_W} height={330}><Phone theme="pulse"><div style={{ paddingTop: 34 }}><DiscoveryLoadingShelf/></div></Phone></DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+      <LiveTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

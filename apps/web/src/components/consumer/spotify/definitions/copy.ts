@@ -291,6 +291,19 @@ export const SPOTIFY_COPY = {
       primaryCta: 'Reconnect Spotify',
       secondaryCta: 'Browse all shows',
     },
+    // Cold-hydration/mid-session-upgrade loading state — entitled + connected
+    // + picks pending. Reserves the shelf footprint so real data lands with
+    // zero shift. Timeout chip after 8s per the design handoff.
+    loading: {
+      eyebrow: 'READING YOUR SPOTIFY FOLLOWS…',
+      eyebrowTimeout: 'TAKING LONGER THAN USUAL',
+      ariaLabel: 'Loading picks based on your taste',
+      timeout: {
+        eyebrow: 'STILL TUNING',
+        title: 'Picks are taking a beat.',
+        retryCta: 'Retry',
+      },
+    },
   },
   firstWatchNudge: {
     eyebrow: 'NICE — FIRST ONE SAVED',
