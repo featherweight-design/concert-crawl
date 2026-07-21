@@ -5,29 +5,41 @@ updates:
     directory: /
     schedule:
       interval: weekly
-      day: monday
-    open-pull-requests-limit: 20
+      day: saturday
+      time: '06:00'
+      timezone: America/Denver
+    # Cap the fuse — a runaway "dependabot storm" that fills 20 open PRs
+    # (and, at 2 Render builds per PR, chews through the workspace build
+    # budget) should surface as backpressure, not silently absorb.
+    open-pull-requests-limit: 5
     labels:
       - dependencies
       - automated
     groups:
-      # Patch bumps: auto-merged by dependabot-auto-merge.yml after CI passes
-      npm-patch-updates:
+      # Patch + minor bumps folded into ONE weekly PR. Two separate groups
+      # was doubling weekly Render build spend for near-zero review-value
+      # gain — risk delta inside a lockfile bump is small enough to review
+      # together. Auto-merge workflow correctly skips this combined PR
+      # (its update-type resolves to semver-minor, not semver-patch), so
+      # a human still eyeballs the batch.
+      npm-non-major-updates:
         update-types:
           - patch
-      # Minor bumps: batched for human review, but low-risk
-      npm-minor-updates:
-        update-types:
           - minor
       # Major bumps: intentionally ungrouped — one PR per package so each
       # breaking change gets its own focused review and migration PR
 
   - package-ecosystem: github-actions
     directory: /
+    # Monthly — action versions change slowly and the auto-merge workflow
+    # handles them without human review, so there's no benefit to firing
+    # weekly. Dependabot picks the day-of-month based on when this
+    # schedule was first added.
     schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 10
+      interval: monthly
+      time: '06:00'
+      timezone: America/Denver
+    open-pull-requests-limit: 5
     labels:
       - dependencies
       - automated
