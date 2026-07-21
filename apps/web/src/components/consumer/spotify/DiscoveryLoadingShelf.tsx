@@ -88,8 +88,12 @@ const SkeletonCard = ({ className = '' }: { className?: string }) => (
   </li>
 )
 
+// aria-hidden on the whole visible header block: the parent section's
+// aria-label already announces "Loading picks based on your taste" as the
+// SR-only stable message. Keeping the visible eyebrow inside the live
+// region would re-announce every change (e.g. the loading→timeout flip).
 const LoadingHeader = ({ isTimeout }: { isTimeout: boolean }) => (
-  <div className="mb-2.5 flex items-center gap-[9px]">
+  <div aria-hidden className="mb-2.5 flex items-center gap-[9px]">
     <SpotifyLogo size={22} />
     <div className="min-w-0 flex-1">
       <h2
