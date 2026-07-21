@@ -1,3 +1,12 @@
+## [1.158.3](https://github.com/HartiganHM/concert-crawl/compare/v1.158.2...v1.158.3) (2026-07-21)
+
+
+### Bug Fixes
+
+* db seed and overflow issue ([3230e0a](https://github.com/HartiganHM/concert-crawl/commit/3230e0a7460cd957bf8bcdc3f5916587c223d5ae))
+* **seed:** allow local Postgres as prod→sync target by gating ssl on host ([c2c8c81](https://github.com/HartiganHM/concert-crawl/commit/c2c8c8149a97bb15fd77acf8b98a709bf0eddbba))
+* **spotify:** contain DiscoveryShelf carousel at the ul boundary ([#33](https://github.com/HartiganHM/concert-crawl/issues/33)) ([b9355f5](https://github.com/HartiganHM/concert-crawl/commit/b9355f5761285d1b55e71674a5e19aea13a62e6a)), closes [#1149](https://github.com/HartiganHM/concert-crawl/issues/1149) [#1156](https://github.com/HartiganHM/concert-crawl/issues/1156) [#1157](https://github.com/HartiganHM/concert-crawl/issues/1157)
+
 ## [1.158.2](https://github.com/HartiganHM/concert-crawl/compare/v1.158.1...v1.158.2) (2026-07-21)
 
 
