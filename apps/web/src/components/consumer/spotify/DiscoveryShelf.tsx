@@ -339,14 +339,27 @@ export const DiscoveryShelf = ({
                 : COPY.eyebrow(data.picks.length)
             }
           />
-          <ul
-            aria-label={COPY.listAria}
-            className="-mx-4 flex list-none gap-[11px] overflow-x-auto px-4 pb-1 pt-0.5 sm:mx-0 sm:px-0"
-          >
-            {data.picks.map((pick) => (
-              <TastePickCard key={pick.eventId} pick={pick} />
-            ))}
-          </ul>
+          {/* #33: prior fixes (#1149 main, #1156 html, #1157 layout div)
+              tried to contain the carousel's -mx-4 bleed at an ancestor via
+              overflow-x: clip; staging still side-scrolled. Split bleed
+              from scroll: wrapper owns the mobile full-bleed AND local
+              containment (max-width cap + overflow-x-clip right at the
+              carousel boundary), <ul> owns card scroll. This stops
+              depending on ancestor clip propagating through
+              section/main/layoutDiv cleanly. `clip` doesn't establish a
+              scroll container, so the sticky desktop header keeps working;
+              `sm:overflow-x-visible` avoids clipping card focus-rings on
+              desktop where there's no bleed to contain. */}
+          <div className="-mx-4 max-w-[100vw] overflow-x-clip sm:mx-0 sm:max-w-full sm:overflow-x-visible">
+            <ul
+              aria-label={COPY.listAria}
+              className="flex list-none gap-[11px] overflow-x-auto px-4 pb-1 pt-0.5 sm:px-0"
+            >
+              {data.picks.map((pick) => (
+                <TastePickCard key={pick.eventId} pick={pick} />
+              ))}
+            </ul>
+          </div>
           {/* Hand-off divider into the main list (mock: "All Denver shows"). */}
           <div className="flex items-center gap-2 pt-[18px]">
             <span
