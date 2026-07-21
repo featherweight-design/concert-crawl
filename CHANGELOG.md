@@ -1,3 +1,10 @@
+## [1.158.1](https://github.com/HartiganHM/concert-crawl/compare/v1.158.0...v1.158.1) (2026-07-21)
+
+
+### Bug Fixes
+
+* clip horizontal overflow at the viewport to stop browse page side-scroll ([#1156](https://github.com/HartiganHM/concert-crawl/issues/1156)) ([26a35a6](https://github.com/HartiganHM/concert-crawl/commit/26a35a68c31af9861dac2a71ea043e581ec57dd6)), closes [#1149](https://github.com/HartiganHM/concert-crawl/issues/1149)
+
 # [1.158.0](https://github.com/HartiganHM/concert-crawl/compare/v1.157.0...v1.158.0) (2026-07-21)
 
 
