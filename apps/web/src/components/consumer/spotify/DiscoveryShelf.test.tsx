@@ -192,6 +192,18 @@ describe('DiscoveryShelf', () => {
     expect(container.innerHTML).toBe('')
   })
 
+  it('stays hidden when entitlement is still loading + connection is error, even without SSR seed', () => {
+    // Non-entitled users must never see the failure shelf — they'd be
+    // shown a paid-feature UI they aren't entitled to. While entitlement
+    // is loading, only SSR-seeded picks (which proved entitlement
+    // server-side) unlock the connection-driven failure rendering.
+    entitlement = { isLoading: true, active: false, surface: null }
+    connection = { data: { status: 'error' } }
+    picksQuery = { data: undefined, isPending: true, isError: false }
+    const { container } = render(<DiscoveryShelf />)
+    expect(container.innerHTML).toBe('')
+  })
+
   it.each(['error', 'revoked'] as const)(
     'renders the failure shelf immediately when connection is %s (does not wait for picks refetch)',
     (status) => {

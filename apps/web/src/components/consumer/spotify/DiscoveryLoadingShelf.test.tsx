@@ -69,16 +69,20 @@ describe('DiscoveryLoadingShelf', () => {
     ).toBeNull()
   })
 
-  it('does not fire onRetry if unmounted before the timeout', () => {
-    const onRetry = vi.fn()
+  it('clears the timeout timer on unmount so no state update fires after teardown', () => {
+    // React will log a state-update-on-unmounted warning if the setTimeout
+    // fires after unmount without cleanup. Spy on console.error so a
+    // regression (dropped clearTimeout) fails loudly.
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { unmount } = render(
-      <DiscoveryLoadingShelf onRetry={onRetry} timeoutMs={100} />,
+      <DiscoveryLoadingShelf onRetry={vi.fn()} timeoutMs={100} />,
     )
     unmount()
     act(() => {
       vi.advanceTimersByTime(500)
     })
-    expect(onRetry).not.toHaveBeenCalled()
+    expect(errorSpy).not.toHaveBeenCalled()
+    errorSpy.mockRestore()
   })
 
   it('re-arms the timeout after Retry so a second hang also surfaces the chip', () => {

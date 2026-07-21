@@ -277,15 +277,25 @@ export const DiscoveryShelf = ({
   // hidden-style, 'error'/'revoked' render the "taste on pause" failure
   // shelf (§8) with a Reconnect handoff — we don't wait for the picks
   // response to refetch to surface that.
-  const connectionStatus = connection.data?.status
-  if (connectionStatus === 'disconnected') return null
-  if (connectionStatus === 'error' || connectionStatus === 'revoked') {
-    return (
-      <section aria-label={COPY.title} className="mb-5 pt-1.5">
-        <ShelfHeader />
-        <DiscoveryFailure />
-      </section>
-    )
+  //
+  // GATED on entitlement eligibility: while entitlement is still
+  // resolving, a non-entitled user with an error/revoked connection must
+  // NOT see the failure shelf (they'd be shown a paid-feature UI they
+  // aren't entitled to). SSR-seeded initialPicks also proves entitlement
+  // (the gated endpoint enforced it server-side), so it's a valid
+  // eligibility signal even while the client entitlement is loading.
+  const isEligibleForShelf = entitlement.active || initialPicks !== undefined
+  if (isEligibleForShelf) {
+    const connectionStatus = connection.data?.status
+    if (connectionStatus === 'disconnected') return null
+    if (connectionStatus === 'error' || connectionStatus === 'revoked') {
+      return (
+        <section aria-label={COPY.title} className="mb-5 pt-1.5">
+          <ShelfHeader />
+          <DiscoveryFailure />
+        </section>
+      )
+    }
   }
 
   const { data, isError, isPending } = picksQuery
