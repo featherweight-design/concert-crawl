@@ -1,3 +1,10 @@
+## [1.158.2](https://github.com/HartiganHM/concert-crawl/compare/v1.158.1...v1.158.2) (2026-07-21)
+
+
+### Bug Fixes
+
+* contain Browse carousel overflow at the layout block, not <html> ([5beef50](https://github.com/HartiganHM/concert-crawl/commit/5beef503c06bfcd87ee21583349160ed08c3fcfd))
+
 ## [1.158.1](https://github.com/HartiganHM/concert-crawl/compare/v1.158.0...v1.158.1) (2026-07-21)
 
 
