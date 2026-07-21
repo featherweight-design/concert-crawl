@@ -26,6 +26,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.13.1-beta',
+    date: 'Jul 20, 2026',
+    headline: 'Your taste shelf paints faster.',
+    items: [
+      {
+        kind: 'changed',
+        text: 'The "Based on your taste" shelf on Browse no longer disappears while it\'s fetching your picks — you\'ll see a shimmering placeholder that keeps the layout stable, then real cards drop in. If the fetch takes more than a beat, a Retry chip appears instead of leaving you guessing.',
+      },
+    ],
+  },
+  {
     version: 'v0.13.0-beta',
     date: 'Jul 19, 2026',
     headline: 'Watch a show, get asked once about push.',

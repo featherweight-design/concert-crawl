@@ -223,7 +223,7 @@ export const DiscoveryLoadingShelf = ({
     return () => clearTimeout(timer)
   }, [timeoutMs, retryNonce])
 
-  const handleRetry = () => {
+  const retry = () => {
     setIsTimeout(false)
     setRetryNonce((prev) => prev + 1)
     onRetry()
@@ -238,7 +238,7 @@ export const DiscoveryLoadingShelf = ({
     >
       <LoadingHeader isTimeout={isTimeout} />
       {isTimeout ? (
-        <TimeoutRetryChip onRetry={handleRetry} />
+        <TimeoutRetryChip onRetry={retry} />
       ) : (
         <ul
           aria-hidden
