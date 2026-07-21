@@ -354,7 +354,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   })()
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
+    // overflow-x-clip contains the DiscoveryShelf's full-bleed carousel (which
+    // uses -mx-4 + overflow-x-auto to reach the viewport edge on mobile) so its
+    // horizontal scroll never leaks to the page and breaks the 320px baseline.
+    <main className="mx-auto w-full max-w-5xl flex-1 overflow-x-clip px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
       {/* Broken-Spotify-link notice — renders nothing unless the connection
           is in an error/revoked state. */}
       <SpotifyStatusBanner />
