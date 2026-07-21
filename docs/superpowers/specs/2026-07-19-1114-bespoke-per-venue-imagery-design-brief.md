@@ -3,8 +3,10 @@
 **Ticket:** [#1114](https://github.com/HartiganHM/concert-crawl/issues/1114) — Bespoke per-venue imagery — real venue vibe with a design twist
 **Phase / Priority:** Launch · Normal
 **Track:** 2 (needs design)
-**Status:** Brainstorm complete; brief locked; awaiting Claude Design handoff production
-**Follow-up filed:** [#1128](https://github.com/HartiganHM/concert-crawl/issues/1128) — Fully illustrated per-venue imagery (v2 of #1114)
+**Status:** Amended 2026-07-20 (see §10) — 🚦 Paused, awaiting human illustrator engagement
+**Follow-up filed:** [#1128](https://github.com/HartiganHM/concert-crawl/issues/1128) — Fully illustrated per-venue imagery (**superseded by the 2026-07-20 amendment; to be closed**)
+
+> **⚠️ Amended 2026-07-20:** the Q3 technique lock was re-scoped after Claude Design's initial handoff attempt landed 🔴 Red (`design/design_handoff_venue_imagery/READINESS.md`). v1 skips the AI-assisted iteration entirely — illustration is human-commissioned from day one. See §10 for the full amendment. The rest of the brief (Q1, Q2, Q4, Q5, Q6 locks + technical requirements) still holds and shapes what the illustrator delivers within.
 
 ---
 
@@ -114,3 +116,33 @@ The bar is both: **cohesive as a visual system** (all venues feel like siblings)
 Track 2 design ticket per [design-pipeline.md](../design-pipeline.md). After Claude Design produces the R1 handoff to `design/design_handoff_venue_imagery/`, runs Readiness Review before opening the plan PR. Handoff prompt to Claude Design is delivered separately (chat, not committed).
 
 **Artist onboarding note:** because Hugh's willing to bring in an outside artist, the Design deliverables include an artist-collaboration brief (§4) — the scope the artist works within. Design should structure the handoff so the artist can be onboarded with a clear per-venue overlay task, without needing to re-derive the system.
+
+---
+
+## 10. Amendment — 2026-07-20 Path A pivot
+
+**Trigger:** Claude Design's initial handoff (`design/design_handoff_venue_imagery/`) landed 🔴 Red. The system-level thinking (riso treatment recipe, safe-zone composition, overlay grammar, theme-independence) was coherent, but the AI-drawn samples of both facade bases and overlay marks read as placeholder-grade rather than shippable-grade. Hugh's read: *"they just feel like cheap illustrations and the illustrations I'm looking for can't be done by AI."* Full verdict rationale: `design/design_handoff_venue_imagery/READINESS.md`.
+
+**What changes:**
+
+| Section | Before amendment | After amendment |
+|---|---|---|
+| **Q3 lock** (§3 row 3) | "Photo base + illustrated overlay for v1; fully illustrated is v2 (#1128)." | **"Human-commissioned illustration from photo reference, v1 direct."** The AI-assisted iteration is skipped entirely — no photo-base treatment recipe, no overlay-vocab-as-stand-in step. Illustrator produces the finished per-venue art directly. |
+| **§4 What Design will produce** | Photo treatment recipe + illustrated overlay language + AI-drawn samples + safe-zone template + fallback pattern + alt text voice + palette envelope + artist collaboration brief. | **Design's role narrows.** No more AI-drawn samples. Design still owns: safe-zone template (Q5 lock), fallback pattern (Q6 lock), alt text voice pattern, palette envelope, and the **artist-brief document** that the commissioning workflow uses to onboard illustrators. Everything else Design would have generated is now the illustrator's output. |
+| **#1128 (v2 follow-up)** | Was scoped as "fully illustrated from photo reference." | **Superseded by this amendment** — the v1 scope now covers what #1128 was going to. #1128 to be closed as-superseded when this amendment merges. |
+| **Path forward** | Design produces handoff → Readiness Review → 🟢 → eng-planning. | **Hugh drives illustrator engagement offline** using `docs/runbooks/commissioning-illustrators.md`. Ticket sits in 🚦 Paused until first illustrator work lands. Then: illustrator's output becomes the handoff → eng-plan wires it in (venue-table fields, asset storage, fallback rendering per Q5 + Q6 unchanged). |
+
+**What DOESN'T change:**
+
+- **Q1 spirit** — hybrid template + per-venue signature *approach* still holds, but the "template" is now defined by the illustrator's style guide (produced in commission Phase 1), not a code-executed treatment recipe.
+- **Q2 lock** — facade / exterior signature is still the recognizability anchor.
+- **Q4 lock** — theme-independent, one image per venue works across all 3 themes.
+- **Q5 lock** — one source per venue with safe-zone + focal-point coordinate. Illustrator delivers to this spec; eng data model (`image_url`, `focal_x`, `focal_y`) is unchanged.
+- **Q6 lock** — system pattern + venue mark fallback. Design still produces this; it's stateless and doesn't need per-venue artist work.
+- **Voice, tokens, copy externalization, mobile-first, WCAG, tier gate** — all unchanged.
+
+**Preserved as design-thinking reference:**
+
+The Red-verdict handoff at `design/design_handoff_venue_imagery/` stays in-repo. Its treatment recipe, overlay grammar, and composition rules remain defensible ideas the illustrator can consider (not required to execute against). `VENUE_IMAGERY_COPY` from `venue-overlays.jsx` is still the copy anchor for the eng plan when it eventually lands.
+
+**Runbook:** `docs/runbooks/commissioning-illustrators.md` covers where to find illustrators, how to shortlist, three-phase commission structure, rights posture, and Denver-local starting points. Written to be reusable beyond just this ticket.

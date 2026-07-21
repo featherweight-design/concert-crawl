@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Venue Imagery System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="../design-canvas.jsx"></script>
+<script type="text/babel" src="../theme-context.jsx"></script>
+<script type="text/babel" src="venue-treatment.jsx"></script>
+<script type="text/babel" src="venue-overlays.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+const { ThemeProvider, ccTokenVars, CC_THEMES } = window;
+const { INK, INK_ENVELOPE, RisoImage, RECIPE_STEPS, FacadeBase } = window;
+const { SAFE, CROPS, OVERLAY_SPECS, SampleVenue, FallbackCard, VENUES, VENUE_IMAGERY_COPY } = window;
+
+const MONO = "'JetBrains Mono', ui-monospace, monospace";
+const THEMES = ["electric", "jade", "light"];
+
+// ── small shared bits ────────────────────────────────────────────────────────
+function Eyebrow({ children, color = "rgba(0,0,0,0.55)" }) {
+  return <div style={{ fontFamily: MONO, fontSize: 11, fontWeight: 800, letterSpacing: "0.18em", textTransform: "uppercase", color }}>{children}</div>;
+}
+function Body({ children, w = 620, color = "#15131A" }) {
+  return <div style={{ fontSize: 13.5, lineHeight: 1.55, color, textWrap: "pretty", maxWidth: w }}>{children}</div>;
+}
+// A card floated on a given theme background, with a mono theme tag.
+function ThemedPanel({ theme, w, h, children, pad = 26 }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: w, height: h, background: "var(--bg)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, padding: pad }}>
+      <div style={{ position: "absolute", top: 12, left: 14, fontFamily: MONO, fontSize: 9, fontWeight: 800, letterSpacing: "0.18em", color: "var(--fg-subtle)", textTransform: "uppercase" }}>{CC_THEMES[theme].label}</div>
+      {children}
+    </ThemeProvider>
+  );
+}
+
+// ── recipe ladder ──────────────────────────────────────────────────────────
+function RecipeCard({ step }) {
+  const s = RECIPE_STEPS[step - 1] || { n: 0, name: "Raw facade photo", spec: "artist's source · full colour", why: "The input. Any daytime facade shot, focal detail centred." };
+  return (
+    <div style={{ width: 300, background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,.1)" }}>
+      <div style={{ height: 190, position: "relative", background: "#fff" }}>
+        {step === 0
+          ? <div style={{ position: "absolute", inset: 0 }}><FacadeBase kind="bluebird"/></div>
+          : <RisoImage steps={step} radius={0}><FacadeBase kind="bluebird"/></RisoImage>}
+        <div style={{ position: "absolute", top: 8, left: 8, width: 22, height: 22, borderRadius: 11, background: INK.primary, color: INK.paper, fontFamily: MONO, fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center" }}>{s.n}</div>
+      </div>
+      <div style={{ padding: "12px 14px 15px" }}>
+        <div style={{ fontFamily: "Inter", fontWeight: 800, fontSize: 14, color: "#15131A", marginBottom: 3 }}>{s.name}</div>
+        <div style={{ fontFamily: MONO, fontSize: 9.5, color: "#6b6560", lineHeight: 1.4, marginBottom: 7 }}>{s.spec}</div>
+        <div style={{ fontSize: 12, lineHeight: 1.45, color: "#3a3630" }}>{s.why}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── palette envelope ─────────────────────────────────────────────────────────
+function Swatch({ name, hex, role }) {
+  return (
+    <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+      <div style={{ width: 46, height: 46, borderRadius: 8, background: hex, boxShadow: "inset 0 0 0 1px rgba(0,0,0,.12)", flexShrink: 0 }}/>
+      <div>
+        <div style={{ fontFamily: "Inter", fontWeight: 700, fontSize: 13, color: "#15131A" }}>{name} <span style={{ fontFamily: MONO, fontWeight: 500, fontSize: 10, color: "#8a857e" }}>{hex}</span></div>
+        <div style={{ fontSize: 11.5, color: "#4a453f", lineHeight: 1.4, maxWidth: 340 }}>{role}</div>
+      </div>
+    </div>
+  );
+}
+// The two-ink swatch card that must read on every theme bg.
+function InkChip() {
+  return (
+    <div style={{ width: 220, height: 150, borderRadius: 12, background: INK.paper, position: "relative", overflow: "hidden", boxShadow: "0 6px 20px rgba(0,0,0,.28)" }}>
+      <div style={{ position: "absolute", inset: 0, background: `repeating-linear-gradient(135deg, ${INK.primary} 0 18px, ${INK.paper} 18px 36px)`, opacity: 0.14 }}/>
+      <div style={{ position: "absolute", left: 16, top: 16, width: 54, height: 54, borderRadius: 27, background: INK.primary }}/>
+      <div style={{ position: "absolute", left: 40, top: 40, width: 54, height: 54, borderRadius: 27, background: INK.pop, mixBlendMode: "multiply" }}/>
+      <div style={{ position: "absolute", left: 16, bottom: 14, fontFamily: MONO, fontSize: 9, fontWeight: 800, letterSpacing: "0.16em", color: INK.primary }}>BONE · BLUE · PINK</div>
+    </div>
+  );
+}
+
+// ── safe-zone template ───────────────────────────────────────────────────────
+function SafeZoneMaster() {
+  const W = 480, H = 320;
+  const sz = { left: SAFE.left/100*W, top: SAFE.top/100*H, right: SAFE.right/100*W, bottom: SAFE.bottom/100*H };
+  const box = { x: sz.left, y: sz.top, w: W - sz.left - sz.right, h: H - sz.top - sz.bottom };
+  return (
+    <div style={{ position: "relative", width: W, height: H }}>
+      <RisoImage radius={8}><FacadeBase kind="bluebird"/></RisoImage>
+      {/* safe zone */}
+      <div style={{ position: "absolute", left: box.x, top: box.y, width: box.w, height: box.h, border: `2px solid ${INK.pop}`, borderRadius: 4, boxShadow: "0 0 0 9999px rgba(20,20,30,0.32)" }}>
+        <div style={{ position: "absolute", top: -9, left: 8, background: INK.pop, color: "#fff", fontFamily: MONO, fontSize: 8.5, fontWeight: 800, letterSpacing: "0.14em", padding: "2px 6px", borderRadius: 3 }}>SAFE ZONE · SIGNATURE LIVES HERE</div>
+      </div>
+      {/* focal cross */}
+      <div style={{ position: "absolute", left: "50%", top: "27%", width: 12, height: 12, transform: "translate(-50%,-50%)" }}>
+        <div style={{ position: "absolute", inset: 0, border: `2px solid ${INK.paper}`, borderRadius: 8 }}/>
+      </div>
+      <div style={{ position: "absolute", bottom: 8, right: 10, fontFamily: MONO, fontSize: 8.5, fontWeight: 700, color: INK.paper, background: "rgba(27,42,74,0.8)", padding: "2px 6px", borderRadius: 3 }}>focal_x .50 · focal_y .27</div>
+    </div>
+  );
+}
+// Rendered crops proving the signature survives each aspect.
+function CropStrip() {
+  return (
+    <div style={{ display: "flex", gap: 20, alignItems: "flex-end" }}>
+      {CROPS.map(c => {
+        const base = 150, w = c.ratio >= 1 ? base * Math.min(c.ratio, 2.1) : base, h = c.ratio >= 1 ? base : base / c.ratio;
+        return (
+          <div key={c.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ width: w, height: h, borderRadius: 6, overflow: "hidden", position: "relative", boxShadow: "0 3px 10px rgba(0,0,0,.15)" }}>
+              <RisoImage radius={0}><FacadeBase kind="bluebird"/></RisoImage>
+            </div>
+            <div style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: "#4a453f" }}>{c.label}</div>
+            <div style={{ fontFamily: MONO, fontSize: 8.5, color: "#8a857e" }}>{c.note}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── overlay specimen grid ────────────────────────────────────────────────────
+function OverlaySpecimen({ spec }) {
+  const C = spec.c;
+  return (
+    <div style={{ width: 250, background: "#fff", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,.1)" }}>
+      <div style={{ position: "relative", height: 130, background: INK.paper, overflow: "hidden" }}>
+        <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(circle, rgba(27,42,74,0.4) 0 22%, transparent 26%)", backgroundSize: "5px 5px", opacity: 0.25 }}/>
+        <C x="50%" y="50%"/>
+      </div>
+      <div style={{ padding: "11px 13px 14px" }}>
+        <div style={{ fontFamily: "Inter", fontWeight: 800, fontSize: 12.5, color: "#15131A", marginBottom: 4 }}>{spec.name}</div>
+        <div style={{ fontSize: 11.5, lineHeight: 1.45, color: "#3a3630", marginBottom: 6 }}>{spec.role}</div>
+        <div style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: INK.pop }}>{spec.ink}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── alt-text row ─────────────────────────────────────────────────────────────
+function AltRow({ vkey }) {
+  const alt = VENUE_IMAGERY_COPY.alt[vkey];
+  return (
+    <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+      <div style={{ width: 150, flexShrink: 0 }}><SampleVenue vkey={vkey} w={150}/></div>
+      <div style={{ borderLeft: `3px solid ${INK.pop}`, paddingLeft: 14 }}>
+        <div style={{ fontFamily: MONO, fontSize: 9, fontWeight: 800, letterSpacing: "0.14em", color: "#8a857e", marginBottom: 5 }}>alt="{vkey}"</div>
+        <div style={{ fontSize: 14, lineHeight: 1.5, color: "#15131A", maxWidth: 420 }}>{alt}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── doc column ───────────────────────────────────────────────────────────────
+function Col({ head, items, accent }) {
+  return (
+    <div style={{ flex: 1, minWidth: 300 }}>
+      <div style={{ fontFamily: MONO, fontSize: 11, fontWeight: 800, letterSpacing: "0.14em", color: accent, marginBottom: 12, textTransform: "uppercase" }}>{head}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+        {items.map((it, i) => (
+          <div key={i} style={{ display: "flex", gap: 9 }}>
+            <div style={{ width: 6, height: 6, borderRadius: 3, background: accent, marginTop: 6, flexShrink: 0 }}/>
+            <div style={{ fontSize: 12.5, lineHeight: 1.5, color: "#2a2620" }}><strong>{it.t}</strong>{it.d ? " — " + it.d : ""}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const VKEYS = ["bluebird", "larimer", "ophelia", "redrocks", "substation"];
+
+function App() {
+  return (
+    <DesignCanvas
+      title="Venue Imagery — a visual system, not a screen"
+      subtitle="Riso screenprint duotone + hand overlay language. Federal blue + fluorescent pink on bone paper — theme-independent, reads on Electric · Jade · Light. Five venues mocked, safe zone that survives every crop, and an artist brief so Hugh can onboard a house illustrator."
+    >
+
+      {/* 1 · TREATMENT RECIPE */}
+      <DCSection id="recipe" title="1 · Photo treatment recipe" subtitle="Six frames: the raw facade → the finished Concert Crawl base. Every step is real, executable CSS/SVG — an artist (or the renderer) runs the same five on any photo.">
+        <DCArtboard id="ladder" label="Recipe ladder · Bluebird facade" width={1980} height={430}>
+          <div style={{ width: 1980, height: 430, background: "#f0eee9", padding: "34px 40px", display: "flex", gap: 20, alignItems: "flex-start" }}>
+            {[0,1,2,3,4,5].map(n => <RecipeCard key={n} step={n}/>)}
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 2 · PALETTE ENVELOPE */}
+      <DCSection id="palette" title="2 · Palette envelope" subtitle="Two inks + one paper. The image never touches theme tokens — the bone-paper card is its own ground, so it prints identically on all three theme backgrounds.">
+        <DCArtboard id="inks" label="Ink set + acceptable range" width={560} height={556}>
+          <div style={{ width: 560, height: 556, background: "#fff", padding: "30px 34px", display: "flex", flexDirection: "column", gap: 16 }}>
+            <Eyebrow>Locked centres + hue-drift range</Eyebrow>
+            {INK_ENVELOPE.map(s => <Swatch key={s.hex} {...s}/>)}
+            <Body w={480} color="#4a453f">Keep it to two inks + paper. Drift hue only — never add a third ink, never darken the paper. Any text set on an ink must clear <strong>4.5:1</strong> against that ink (AA, SC 1.4.3).</Body>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="on-themes" label="Same chip · three theme grounds" width={780} height={556}>
+          <div style={{ width: 780, height: 556, display: "flex" }}>
+            {THEMES.map(t => (
+              <ThemedPanel key={t} theme={t} w={260} h={556}>
+                <InkChip/>
+                <div style={{ fontFamily: MONO, fontSize: 9, color: "var(--fg-muted)", letterSpacing: "0.1em", marginTop: 4 }}>reads · bordered · unchanged</div>
+              </ThemedPanel>
+            ))}
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 3 · OVERLAY LANGUAGE */}
+      <DCSection id="overlays" title="3 · Illustrated overlay language" subtitle="Eight hand-drawn marks the artist draws per venue. One hero (wordmark) + up to two supporting per image. Specimens below are simple stand-ins carrying the spec.">
+        <DCArtboard id="specimens" label="The eight marks" width={1100} height={640}>
+          <div style={{ width: 1100, height: 640, background: "#f0eee9", padding: "28px 32px", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18, alignContent: "start" }}>
+            {OVERLAY_SPECS.map(s => <OverlaySpecimen key={s.name} spec={s}/>)}
+          </div>
+        </DCArtboard>
+        <DCArtboard id="rules" label="Composition rules" width={520} height={640}>
+          <div style={{ width: 520, height: 640, background: "#fff", padding: "30px 34px", display: "flex", flexDirection: "column", gap: 16 }}>
+            <Eyebrow>How marks get placed</Eyebrow>
+            <Col accent={INK.primary} head="Density" items={[
+              { t: "One hero mark", d: "the wordmark. Always present, always in the safe zone." },
+              { t: "≤ 2 supporting", d: "pick from the other seven. Three marks total, hard cap." },
+              { t: "Pop ink once", d: "the fluoro pink lands on exactly one element per image." },
+            ]}/>
+            <Col accent={INK.primary} head="Placement" items={[
+              { t: "Anchor to the signature", d: "marks point at or frame the real detail, never bury it." },
+              { t: "Stay in the safe zone", d: "hero + signature inside the central 60×66%." },
+              { t: "Follow the architecture", d: "flourish direction tracks the roofline / sign angle." },
+            ]}/>
+            <Col accent={INK.primary} head="Restraint" items={[
+              { t: "No motion", d: "venue images are still. Motion belongs to Showtime heroes." },
+              { t: "Ink, not stickers", d: "everything multiply-blends — it sits in the print, not on it." },
+            ]}/>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 4 · SAFE ZONE */}
+      <DCSection id="safezone" title="4 · Composition safe-zone template" subtitle="One master image, one focal point. The signature detail lives in the safe zone so it survives every downstream crop — square card, wide hero, 4:3 event fallback, share card.">
+        <DCArtboard id="master" label="Master + safe zone + focal point" width={560} height={430}>
+          <div style={{ width: 560, height: 430, background: "#f0eee9", padding: 40, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <SafeZoneMaster/>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="crops" label="Every crop keeps the marquee" width={1180} height={430}>
+          <div style={{ width: 1180, height: 430, background: "#fff", padding: "30px 34px", display: "flex", flexDirection: "column", gap: 18 }}>
+            <Eyebrow>Rendered from the one master via focal_x / focal_y</Eyebrow>
+            <CropStrip/>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 5-7 · SAMPLE VENUES × 3 THEMES */}
+      {THEMES.map(theme => (
+        <DCSection key={theme} id={"samples-" + theme}
+          title={`5 · Sample venues · ${CC_THEMES[theme].label}`}
+          subtitle={theme === "electric"
+            ? "Five venues, fully mocked. Bluebird (blade marquee), Larimer (brick + door), Ophelia's (neon), Red Rocks (geology), and The Substation — the signature-less warehouse, treated with the typographic fallback."
+            : "Identical images on the " + CC_THEMES[theme].label + " ground — proving theme-independence."}>
+          {VKEYS.map(vk => (
+            <DCArtboard key={vk} id={vk} label={vk === "substation" ? "The Substation · signature-less" : vk} width={300} height={280}>
+              <ThemedPanel theme={theme} w={300} h={280} pad={22}>
+                <SampleVenue vkey={vk} w={256}/>
+              </ThemedPanel>
+            </DCArtboard>
+          ))}
+        </DCSection>
+      ))}
+
+      {/* 8 · FALLBACK */}
+      <DCSection id="fallback" title="6 · Fallback pattern · no image yet" subtitle="The only theme-AWARE piece (all colors via var(--*)). System dot-cluster ground + venue monogram + name. Honest, a little cheek — never a broken-image icon.">
+        {THEMES.map(t => (
+          <DCArtboard key={t} id={"fb-" + t} label={CC_THEMES[t].label} width={340} height={300}>
+            <ThemedPanel theme={t} w={340} h={300} pad={22}>
+              <FallbackCard name="The Meadowlark" area="SANTA FE DR" w={280}/>
+            </ThemedPanel>
+          </DCArtboard>
+        ))}
+        <DCArtboard id="fb-note" label="Why this, not a spinner" width={360} height={300}>
+          <div style={{ width: 360, height: 300, background: "#fff", padding: "28px 30px", display: "flex", flexDirection: "column", gap: 14 }}>
+            <Eyebrow>Fallback logic</Eyebrow>
+            <Body w={300}>A venue row with no <code style={{fontFamily:MONO,fontSize:11.5}}>image_url</code> still renders — the monogram + name carry it. The card is theme-aware so it belongs to whatever surface it lands on, unlike the images.</Body>
+            <Body w={300} color="#4a453f">Voice check: <em>"portrait's in the mail"</em> — honest that it's coming, a little cheek, zero apology. Not "image unavailable", not "oops".</Body>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 9 · ALT TEXT */}
+      <DCSection id="alt" title="7 · Alt-text voice" subtitle="WCAG A (SC 1.1.1): one sentence, describes the signature detail the way a local would, no 'image of'. Sour Patch — specific + warm.">
+        <DCArtboard id="alt-list" label="Pattern + per-venue strings" width={640} height={720}>
+          <div style={{ width: 640, height: 720, background: "#f0eee9", padding: "30px 34px", display: "flex", flexDirection: "column", gap: 18 }}>
+            <div style={{ background: "#fff", borderRadius: 8, padding: "14px 16px" }}>
+              <Eyebrow color={INK.pop}>The pattern</Eyebrow>
+              <div style={{ fontFamily: MONO, fontSize: 13, color: "#15131A", marginTop: 7 }}>{"{Name} — {signature detail, described like a local}."}</div>
+            </div>
+            {VKEYS.map(vk => <AltRow key={vk} vkey={vk}/>)}
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 10 · ARTIST BRIEF */}
+      <DCSection id="brief" title="8 · Artist collaboration brief" subtitle="What the house artist delivers per venue, and what the system locks. Hand this to a new illustrator on day one.">
+        <DCArtboard id="split" label="Artist vs. system" width={1080} height={430}>
+          <div style={{ width: 1080, height: 430, background: "#fff", padding: "34px 40px", display: "flex", gap: 40 }}>
+            <Col accent={INK.pop} head="Artist produces · per venue" items={[
+              { t: "Facade photo, treated", d: "one 2400×1600 base run through the 5-step recipe (or shot + we treat)." },
+              { t: "Overlay layer (SVG/PNG, transparent)", d: "1 hero wordmark + ≤2 supporting marks from the eight-mark vocabulary." },
+              { t: "Signature call", d: "which real detail is the hero — marquee, door, neon, geology." },
+              { t: "focal_x / focal_y", d: "the point crops pivot around (0–1)." },
+              { t: "Alt text", d: "one sentence, the pattern, their local knowledge." },
+            ]}/>
+            <div style={{ width: 1, background: "#e4ded3" }}/>
+            <Col accent={INK.primary} head="System defines · locked" items={[
+              { t: "The recipe", d: "5 steps, fixed filter values. Artist doesn't reinvent the look." },
+              { t: "Palette envelope", d: "two inks + bone paper, hue-drift only." },
+              { t: "Safe zone + crop set", d: "central 60×66%; the four aspect ratios." },
+              { t: "Overlay grammar", d: "the eight marks, the density + placement rules." },
+              { t: "Fallback + tokens", d: "no-image card is system-owned + theme-aware." },
+            ]}/>
+          </div>
+        </DCArtboard>
+        <DCArtboard id="deliverable" label="Per-venue deliverable spec" width={440} height={430}>
+          <div style={{ width: 440, height: 430, background: INK.primary, padding: "30px 32px", display: "flex", flexDirection: "column", gap: 13, color: INK.paper }}>
+            <div style={{ fontFamily: MONO, fontSize: 11, fontWeight: 800, letterSpacing: "0.16em", color: INK.pop }}>DELIVER PER VENUE</div>
+            {[
+              ["base.png", "2400×1600, treated, no overlay"],
+              ["overlay.svg", "transparent, ≤3 marks, ink palette only"],
+              ["fields", "image_url · focal_x · focal_y"],
+              ["alt.txt", "one sentence, the pattern"],
+            ].map(([a,b]) => (
+              <div key={a} style={{ borderBottom: "1px solid rgba(242,235,221,0.18)", paddingBottom: 11 }}>
+                <div style={{ fontFamily: MONO, fontSize: 13, fontWeight: 700 }}>{a}</div>
+                <div style={{ fontSize: 12, opacity: 0.82, marginTop: 2 }}>{b}</div>
+              </div>
+            ))}
+            <div style={{ fontSize: 11.5, lineHeight: 1.5, opacity: 0.7, marginTop: 4 }}>New venue-table fields (image_url, focal_x, focal_y) accepted by Hugh. Universal — renders for signed-in + signed-out.</div>
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

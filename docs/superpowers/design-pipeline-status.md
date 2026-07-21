@@ -56,7 +56,8 @@ Design brief has merged; Claude Design needs to produce the hi-fi handoff (mocks
 
 | Rank | Ticket | Brief PR | Path to eng handoff | Why this rank |
 |---|---|---|---|---|
-| 1 | **#1114** Bespoke per-venue imagery — real venue vibe with a design twist (Launch · Normal) | PR #1129 (2026-07-19) | Design produces the photo treatment recipe + illustrated overlay language + 3-5 sample venues in `design/design_handoff_venue_imagery/` covering all 3 themes. Then Readiness Review → 🟢 → eng-planning. | Only brief-locked item; pulled ahead of #1115 (Artist UI) per Hugh's stated priority at brief-lock time; new venue-table fields (`image_url` / `focal_x` / `focal_y`) required for the asset pipeline. |
+
+_Currently empty — #1114 moved to 🚦 Paused on 2026-07-20 (PR #1130) after Claude Design's initial handoff landed 🔴 Red; brief amended, awaiting human-illustrator engagement. When a new brief locks, restore the table with columns: `Rank | Ticket | Brief PR | Path to eng handoff | Why this rank`._
 
 **Maintenance note:** when Design produces the handoff, move to 🎨 (audit in flight) → then 🟡 / 🟢 based on verdict.
 
@@ -70,9 +71,13 @@ _Currently empty — the two most recent audits landed 2026-07-11 (both in 🟡 
 
 ---
 
-## 🚦 Paused (mid-brainstorm)
+## 🚦 Paused
 
-_Currently empty — #763 Spotify brainstorm completed 2026-07-11, brief merged (PR #893), moved to 📐 above._
+Currently paused: brief exists but awaiting an external dependency (Hugh input, third-party engagement, upstream feature ship). Not "mid-brainstorm" — that state uses this section too but is a different substate.
+
+| # / vertical | Brief | Paused-since | Reason |
+|---|---|---|---|
+| **#1114** Bespoke per-venue imagery | PR #1129 (2026-07-19), amended PR #1130 (2026-07-20) | 2026-07-20 | Claude Design's initial handoff landed 🔴 Red — AI-drawn samples don't hit the visual bar. Brief amended (§10) to skip AI iteration entirely; illustration is now human-commissioned from day one. Awaiting Hugh's illustrator engagement per `docs/runbooks/commissioning-illustrators.md`. Ticket resumes when first illustrator's work is in hand → moves to 🎨 In flight → then Readiness Review. |
 
 ---
 
@@ -102,6 +107,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 
 | Shipped | # | What |
 |---|---|---|
+| 2026-07-20 | **#1114** | Path A pivot after 🔴 Red verdict on Claude Design's initial handoff (PR #1130). The AI-drawn samples of both facade bases and overlay marks read as placeholder-grade, not shippable-grade — Hugh's read: *"the illustrations I'm looking for can't be done by AI."* Brief amended in §10 to skip the AI-assisted iteration entirely: v1 is now human-commissioned illustration from photo reference. `docs/runbooks/commissioning-illustrators.md` filed as the reusable playbook (Where to look → Shortlist → Brief → 3-phase commission → Rights → Cold outreach → Anti-patterns → Concert Crawl specifics). System-level design (riso recipe, safe-zone composition, overlay grammar, fallback pattern) from the Red handoff preserved as reference thinking. #1128 (v2 follow-up) superseded by the amendment and to be closed. #1114 moves 📐 → 🚦 Paused. |
 | 2026-07-19 | **#1114** | Bespoke per-venue imagery design brief (this PR) — Track 2 brainstorm through 6 questions locked with Hugh: (Q1) hybrid template + per-venue signature for v1, artist collaboration on the table, fully bespoke as v2 (**#1128**); (Q2) facade/exterior signature as recognizability anchor; (Q3) photo base + illustrated overlay technique for v1; (Q4) theme-independent — one image per venue works across all 3 themes; (Q5) one source per venue with safe-zone composition + focal-point coordinate (adds `image_url` + `focal_x`/`focal_y` to venue table); (Q6) system pattern + venue mark for fallback state. Follow-up **#1128** filed for fully-illustrated v2 (blocked on v1 + house artist). |
 | 2026-07-19 | — | Tracker refresh #24 — **#1114** flips 🕰️ Backlog → 📐 Brief locked (this PR); brief document at `docs/superpowers/specs/2026-07-19-1114-bespoke-per-venue-imagery-design-brief.md`. Backlog count 4 → 3 (**#737** rank 1, **#1115** rank 2, **#794** rank 3). Brief-locked count 0 → 1. |
 | 2026-07-19 | — | Tracker refresh #23 — **#763** Spotify sync and **PWA cluster** (#971 + #969 + #970) drained off 🟢 Green: both eng builds are complete and in test per Hugh (PR #1125). Spotify: full 11-PR epic merged 2026-07-19 — closing PRs include the Following highlighting (PR #1059), taste filter (PR #1066), discovery shelf (PR #1067), web push settings toggle (PR #1068), new-show fan-out (PR #1069) and progress-tracker wrap-up (PR #1071). PWA cluster: install slot (PR #1056), offline pill (PR #1057), push infra (PR #1060), and downstream watch-update fan-out (PR #1102) all shipped. Design track's job on both is done; feature-level status lives in `docs/superpowers/progress.md` from here. Green count 6 → 4. |
@@ -169,7 +175,7 @@ For context on session-start "what's the state of the project" reads. Full histo
 ## 📋 Immediate TODOs
 
 - [ ] **4 eng plans ready for eng-planning agent:** concert_history · #72 shareable_cards + Passport · **#764** Venue first-timer guide · **#762** Who else is watching. **#763 Spotify** and **PWA cluster** drained 2026-07-19 (refresh #23) — both eng builds complete + in test, feature-level status in `docs/superpowers/progress.md`. No Yellow items remaining.
-- [ ] **#1114** design handoff production — Claude Design produces the photo treatment recipe + illustrated overlay language + 3-5 sample venues at `design/design_handoff_venue_imagery/`; source brief at `docs/superpowers/specs/2026-07-19-1114-bespoke-per-venue-imagery-design-brief.md`. Handoff prompt delivered in chat (not committed). Artist-collaboration brief is part of the deliverables.
+- [ ] **#1114** paused, awaiting Hugh's illustrator engagement (offline). Claude Design's initial handoff landed 🔴 Red on 2026-07-20; brief amended to skip AI iteration entirely (see §10 of the brief). Playbook for finding + commissioning an illustrator: `docs/runbooks/commissioning-illustrators.md`. When the first illustrator's work is in hand, ticket resumes → moves to 🎨 In flight → Readiness Review → 🟢 → eng-plan wires it in per Q5/Q6 (venue-table fields + fallback rendering unchanged from the amended brief).
 - [ ] **Backlog workstream order:** **#737** In-app notifications (Beta · Normal, rank 1) → **#1115** Artist UI (Launch · Normal, rank 2) → **#794** Logged-out UX (Launch · Normal, rank 3). #737 has push-infra readers already in place. #1115 leverages Spotify metadata that just shipped. #794's paywalls adjacency suggests pairing with monetization eng infra work.
 
 ---
