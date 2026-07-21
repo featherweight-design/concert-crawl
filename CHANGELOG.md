@@ -1,3 +1,10 @@
+# [1.158.0](https://github.com/HartiganHM/concert-crawl/compare/v1.157.0...v1.158.0) (2026-07-21)
+
+
+### Features
+
+* **crawler:** capture per-event detail URL as Get-tickets fallback ([#1154](https://github.com/HartiganHM/concert-crawl/issues/1154)) ([4fdf92c](https://github.com/HartiganHM/concert-crawl/commit/4fdf92c80d6d4eccd36df545134a4e9587c9686a)), closes [#31](https://github.com/HartiganHM/concert-crawl/issues/31) [1152/#1153](https://github.com/HartiganHM/concert-crawl/issues/1153) [#31](https://github.com/HartiganHM/concert-crawl/issues/31) [#1152](https://github.com/HartiganHM/concert-crawl/issues/1152)
+
 # [1.157.0](https://github.com/HartiganHM/concert-crawl/compare/v1.156.1...v1.157.0) (2026-07-21)
 
 
