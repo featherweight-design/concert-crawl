@@ -339,18 +339,29 @@ export const DiscoveryShelf = ({
                 : COPY.eyebrow(data.picks.length)
             }
           />
-          {/* #33: prior fixes (#1149 main, #1156 html, #1157 layout div)
-              tried to contain the carousel's -mx-4 bleed at an ancestor via
-              overflow-x: clip; staging still side-scrolled. Split bleed
-              from scroll: wrapper owns the mobile full-bleed AND local
-              containment (max-width cap + overflow-x-clip right at the
-              carousel boundary), <ul> owns card scroll. This stops
-              depending on ancestor clip propagating through
-              section/main/layoutDiv cleanly. `clip` doesn't establish a
-              scroll container, so the sticky desktop header keeps working;
-              `sm:overflow-x-visible` avoids clipping card focus-rings on
-              desktop where there's no bleed to contain. */}
-          <div className="-mx-4 max-w-[100vw] overflow-x-clip sm:mx-0 sm:max-w-full sm:overflow-x-visible">
+          {/* #33: FOUR prior fixes tried to contain the carousel via
+              ancestor overflow-x: clip (#1149 main, #1156 html, #1157
+              layout div, #1158 local wrapper). None worked because the
+              actual leak wasn't going through ancestor overflow at all —
+              it was the `<span class="sr-only">` inside each reason
+              chip. Tailwind's `.sr-only` uses `position: absolute` with
+              no top/left/right/bottom offsets. Absolute-positioned
+              elements resolve their containing block to the nearest
+              POSITIONED ancestor; when nothing in the chain is
+              positioned, the containing block collapses to the ROOT
+              (<html>). That routes their rendered rect (at the flex
+              layout's natural x position for card N — off-screen for
+              N>3) straight to `html.scrollWidth`, bypassing every
+              overflow-clip container in between. `display:none` on the
+              <ul> made it vanish because the sr-only spans disappeared
+              with the cards, which is what fooled the earlier diagnoses
+              into thinking the ul itself was the source.
+              Fix: `relative` makes this wrapper a positioned ancestor,
+              so the sr-only spans' containing block becomes the wrapper
+              itself, and its `overflow-hidden` finally contains them.
+              `max-w-[100vw]` + `overflow-hidden` remain as belt-and-
+              suspenders for any other stray overflow. */}
+          <div className="relative -mx-4 max-w-[100vw] overflow-hidden sm:mx-0 sm:max-w-full">
             <ul
               aria-label={COPY.listAria}
               className="flex list-none gap-[11px] overflow-x-auto px-4 pb-1 pt-0.5 sm:px-0"

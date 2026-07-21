@@ -92,15 +92,23 @@ export async function syncEvents(deps: {
       const rowToInsert = { ...rowRest, venueId: stagingVenueId }
 
       if (row.status === 'upcoming') {
-        // Partial UNIQUE index: (venue_id, date, canonical_title) WHERE status='upcoming'.
-        // targetWhere mirrors the partial index predicate so Postgres identifies the
-        // correct index for ON CONFLICT resolution (mirrors the crawler upsert
-        // in packages/crawler-core/src/crawl.ts).
+        // Partial UNIQUE index (#0057): (venue_id, date, canonical_artist,
+        // show_time) NULLS NOT DISTINCT WHERE status='upcoming'. Mirrors the
+        // crawler upsert in packages/crawler-core/src/crawl.ts. The old
+        // (venue_id, date, canonical_title) index was dropped in the same
+        // migration, so ON CONFLICT against the old target now fails with
+        // "no unique or exclusion constraint matching" (blocked local seeding
+        // until this was updated).
         await staging
           .insert(events)
           .values(rowToInsert)
           .onConflictDoUpdate({
-            target: [events.venueId, events.date, events.canonicalTitle],
+            target: [
+              events.venueId,
+              events.date,
+              events.canonicalArtist,
+              events.showTime,
+            ],
             targetWhere: eq(events.status, 'upcoming'),
             set: {
               title: sql`excluded.title`,
