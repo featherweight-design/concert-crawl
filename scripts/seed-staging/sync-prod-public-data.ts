@@ -43,6 +43,7 @@ import { pathToFileURL } from 'node:url'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import * as schema from '../../packages/db/src/schema/index.js'
+import { isLocalConnectionString } from '../../packages/db/src/connection.js'
 import { openProdReadonly } from './prod-readonly-client.js'
 import { syncVenues } from './sync-venues.js'
 import { syncEvents } from './sync-events.js'
@@ -88,7 +89,10 @@ export async function main(): Promise<void> {
     stagingSql = postgres(stagingUrl, {
       max: 2,
       prepare: false,
-      ssl: 'require',
+      // Local docker Postgres has no TLS cert; Neon requires TLS. Gate on
+      // the target host so this script works for both prod→staging and
+      // prod→local seeding without needing an env override.
+      ssl: isLocalConnectionString(stagingUrl) ? false : 'require',
     })
     const staging = drizzle(stagingSql, { schema })
 
