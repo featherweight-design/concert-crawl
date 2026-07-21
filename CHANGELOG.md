@@ -1,3 +1,20 @@
+# [1.157.0](https://github.com/HartiganHM/concert-crawl/compare/v1.156.1...v1.157.0) (2026-07-21)
+
+
+### Bug Fixes
+
+* **a11y:** hide loading shelf header from SR to prevent re-announce (Copilot R5) ([e1d8562](https://github.com/HartiganHM/concert-crawl/commit/e1d8562f18ba33f9c40d02f8176b5efb691de52a))
+* **spotify:** gate connection override on entitlement + make unmount test meaningful (Copilot R6) ([9989593](https://github.com/HartiganHM/concert-crawl/commit/9989593bb3ea3ce54eeb654bac2edc9524a9a0f8))
+* **spotify:** hide shelf when connection ≠ connected, even if picks cached (Copilot R3) ([bd269c0](https://github.com/HartiganHM/concert-crawl/commit/bd269c0a846a293ac53f9d3920adde17239d8ea1))
+* **spotify:** re-arm loading timeout on Retry (Copilot R1) ([6930bc5](https://github.com/HartiganHM/concert-crawl/commit/6930bc510206e246257f840f16e4976a7f23630e))
+* **spotify:** rename handleRetry → retry + add releases.ts entry (Copilot R2) ([5755f0c](https://github.com/HartiganHM/concert-crawl/commit/5755f0c0f8f9a76115df8b6d9a552630ec3e87ff))
+* **spotify:** route connection error/revoked to failure shelf, not hidden (Copilot R4) ([7ad820b](https://github.com/HartiganHM/concert-crawl/commit/7ad820b8656900757cf0b3d5af02bd54e24f65f1))
+
+
+### Features
+
+* **spotify:** add loading state to discovery shelf ([2ffa565](https://github.com/HartiganHM/concert-crawl/commit/2ffa565ce1aa65e1918f695061c42ec14af5ff40))
+
 ## [1.156.1](https://github.com/HartiganHM/concert-crawl/compare/v1.156.0...v1.156.1) (2026-07-21)
 
 
