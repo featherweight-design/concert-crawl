@@ -1,3 +1,10 @@
+## [1.158.9](https://github.com/HartiganHM/concert-crawl/compare/v1.158.8...v1.158.9) (2026-07-25)
+
+
+### Bug Fixes
+
+* **crawler:** key went-dark detection off post-guard usable event count ([#1179](https://github.com/HartiganHM/concert-crawl/issues/1179)) ([a1c34db](https://github.com/HartiganHM/concert-crawl/commit/a1c34dbe88c6cb065425d9f8358560b12fa9d25d)), closes [#624](https://github.com/HartiganHM/concert-crawl/issues/624) [#1167](https://github.com/HartiganHM/concert-crawl/issues/1167) [#1165](https://github.com/HartiganHM/concert-crawl/issues/1165)
+
 ## [1.158.8](https://github.com/HartiganHM/concert-crawl/compare/v1.158.7...v1.158.8) (2026-07-25)
 
 
