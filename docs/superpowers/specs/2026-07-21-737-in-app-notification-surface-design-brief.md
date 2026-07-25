@@ -3,7 +3,7 @@
 **Ticket:** [#737](https://github.com/HartiganHM/concert-crawl/issues/737) — Build the in-app notification surface (bell + panel + endpoints)
 **Phase / Priority:** Beta · Normal
 **Track:** 2 (needs design)
-**Status:** Brainstorm complete; brief locked; awaiting Claude Design handoff production
+**Status:** R1 handoff produced and audited 🟡 Yellow (2026-07-24) — see `design/design_handoff_in_app_notifications/READINESS.md` (**not committed on `main`**; the handoff folder + verdict land together once R2 flips Green). Awaiting Design R2. Two brief errors found by that audit are corrected below (Q2 category set, §5 `last_seen_at` host).
 **Follow-up filed:** [#1150](https://github.com/HartiganHM/concert-crawl/issues/1150) — Notification preferences UI (v2 of #737)
 
 ---
@@ -14,7 +14,9 @@ Ship the consumer-side notification surface (bell + panel + endpoints) that read
 
 ## 2. App context
 
-- **`user_notification` rows write today via:** PWA push infra (PR #1060) for `watch_update` + `price_drop`; admin contest-review (#697) for `contest_resolved`; Spotify sync (#763) for `spotify_new_show`.
+- **Consumer notification rows (`type = 'user_notification'`) write today via:** PWA push infra (PR #1060) for the `watch.*` categories; admin contest-review (#697) for `contest.resolved` + `contest.needs_info`; Spotify sync (#763) for `spotify.new_show`. The authoritative closed set is the Zod union at `packages/push/src/notification-categories.ts` — enumerated in the Q2 lock below.
+- **Admin and consumer rows share one table.** `notifications.type` is a `notification_type` enum (`admin_alert` | `user_notification`) and `notifications.category` is free `text`. The consumer query must filter on **both** `type = 'user_notification'` and `userId`. (The shipped admin route filters `type` but not `userId` — `apps/api/src/routes/admin/notifications.ts:50` — so don't mirror it.)
+- **Per-row `title` and `body` come from the writers, not the panel.** `watch.*` templates live at `packages/push/src/definitions/copy.ts`; contest rows are written by `apps/api/src/lib/contest-notifications.ts`. Production titles run ~70–80 characters. The panel owns its chrome copy (empty / loading / error / labels); it does not own row copy, and re-voicing the writers is out of scope here.
 - **Admin bell precedent exists** at `apps/web/src/components/admin/notification-bell/NotificationBell.tsx`, backed by `apps/api/src/routes/admin/notifications.ts`. Design should look at it for mirror-vs-diverge decisions on the consumer bell.
 - **PWA cluster settings** (from PR #1044) already ships `NotificationsSection` in Settings → Notifications with master + per-category sub-toggles for push preferences. The v2 in-app preferences (#1150) will likely extend that same section.
 - **Existing passive-surfacing pill:** event detail's `lastAdminActionAt` pill (from #697) is separate — see Q4 lock (coexists as a different job).
@@ -26,7 +28,7 @@ Ship the consumer-side notification surface (bell + panel + endpoints) that read
 | # | Decision | Rationale |
 |---|---|---|
 | Q1 | **Placement is Design's call, constrained by "no new persistent nav slots."** Header and bottom-nav are already crowded (PWA install slot + offline pill + existing tabs). Design proposes a nesting/pulse pattern (e.g. profile-icon pulse + panel nested under profile) within that fence. | Respect existing crowding; let Design pick the least-invasive discoverable pattern. |
-| Q2 | **4 categories at v1:** `watch_update`, `price_drop`, `contest_resolved`, `spotify_new_show`. Panel is extensible via a category-map convention. | Ships every category that writes rows today OR imminently lands. Future categories add via just a category-string + label + icon addition, no re-mock. |
+| Q2 | **All 8 shipped categories at v1** — `watch.cancelled`, `watch.postponed`, `watch.soldout`, `watch.backonsale`, `watch.pricedrop`, `contest.resolved`, `contest.needs_info`, `spotify.new_show`. Whether the four `watch.*` sub-types collapse into one visual treatment or split is **Design's call**, but it must be a stated decision — note that `watch.cancelled` and `watch.backonsale` carry opposite valences. Panel stays extensible via a category-map convention. | This is the exact closed set enforced by the Zod union at `packages/push/src/notification-categories.ts:16-25`, which every write site validates against. **Corrected 2026-07-24:** this lock originally named four invented underscore keys (`watch_update`, `price_drop`, `contest_resolved`, `spotify_new_show`) that exist nowhere in the codebase — the R1 handoff built against them and every production row fell through to its fallback treatment. Future categories still add via a category-string + label + icon entry, no re-mock. |
 | Q3 | **Mark-read: panel-open clears the pip via `last_seen_at`; per-item read state on click.** | Standard SaaS convention (Gmail, Slack, Linear). Doesn't over-eagerly clear per-item state; preserves "what did I miss" signal even after opening the panel. |
 | Q4 | **Existing `lastAdminActionAt` pill on event detail coexists** with the bell — different jobs (passive engagement history vs active new-alert). | Two signals doing different jobs; redundancy = discoverability for engaged users; no code churn on the pill. |
 
@@ -35,7 +37,7 @@ Ship the consumer-side notification surface (bell + panel + endpoints) that read
 - **Bell placement + unread-signal design** within the no-new-nav-slots constraint (Design's proposal for how the bell surfaces without a dedicated nav slot).
 - **Panel anatomy** — dropdown vs sheet vs full page; mobile can differ from desktop.
 - **Per-item layout + info hierarchy** — timestamp, category, action affordance, body.
-- **Per-category visual differentiation** for the 4 v1 categories (icons + color cues, or intentionally uniform — Design's call).
+- **Per-category visual differentiation** across the 8 v1 categories (icons + color cues, or intentionally uniform — Design's call). Whether the four `watch.*` sub-types share one treatment or split is Design's call per Q2, but must be stated.
 - **Unread-vs-read visual differentiation** within the panel (weight, background, dot marker, etc.).
 - **Empty state** — Sour Patch voice, no notifications yet.
 - **Loading state** for the poll-on-mount fetch.
@@ -48,9 +50,9 @@ Ship the consumer-side notification surface (bell + panel + endpoints) that read
 ## 5. Technical requirements
 
 - **Poll-on-mount** (ticket-locked) — no real-time push, SSE, or WebSockets in v1.
-- **Backend endpoints already scoped in ticket:** `GET /v1/notifications/me` (paginated), `POST /v1/notifications/:id/read`, `POST /v1/notifications/read-all`. **Plus one new state atom for panel-open pip clearing (Q3):** either `user.last_seen_notifications_at` (recommended — simplest, single field update) or a `POST /v1/notifications/mark-panel-seen` endpoint. Eng-plan locks the choice.
+- **Backend endpoints already scoped in ticket:** `GET /v1/notifications/me` (paginated), `POST /v1/notifications/:id/read`, `POST /v1/notifications/read-all`. **Plus one new state atom for panel-open pip clearing (Q3).** **Corrected 2026-07-24:** the original text recommended a `user.last_seen_notifications_at` field, but **there is no `users` table** — identity is Clerk and local tables key off `text('user_id')`. The nearest precedent is `user_profiles.spotifyNudgeSeenAt` (`packages/db/src/schema/user-profiles.ts:31`); `user_notification_preferences` is the other candidate host. Eng-plan locks where the timestamp lives and whether it's a field write or a `POST /v1/notifications/mark-panel-seen` endpoint.
 - All colors via `var(--*)` tokens; no hardcoded hex.
-- All customer-facing strings in `apps/web/src/components/consumer/definitions/copy.ts`.
+- All customer-facing strings in a `definitions/copy.ts`. The convention is per-surface: this panel gets its own (e.g. `apps/web/src/components/consumer/notifications/definitions/copy.ts`), matching `spotify/`, `tier-picker/`, `reporting/`, and `lifecycle-nudges/`. Shared cross-surface strings live in `apps/web/src/components/consumer/definitions/copy.ts`.
 - Mobile-first 320px baseline; mobile + desktop parity in the same handoff.
 - **WCAG-compliant:**
   - Level A: text alternative on the bell button; semantic markup on panel and items
@@ -80,7 +82,7 @@ Ship the consumer-side notification surface (bell + panel + endpoints) that read
 - **Mobile-first 320px baseline**
 - **All customer-facing strings in `definitions/copy.ts`**
 - **Free tier / signed-in only** for consumer bell surface
-- **`user_notification` schema** at `packages/db/src/schema/notifications.ts` — already exists, no schema changes needed for v1
+- **`notifications` schema** at `packages/db/src/schema/notifications.ts` — already exists. Columns the panel reads: `id`, `userId`, `type`, `category`, `title`, `body`, `actionUrl`, `readAt`, `metadata`, `createdAt`. `actionUrl` is the row's navigation target and `metadata` is a JSON string. No schema changes needed for v1 beyond the Q3 `last_seen_at` atom.
 
 ## 8. Open for Design to call
 
@@ -100,13 +102,17 @@ Ship the consumer-side notification surface (bell + panel + endpoints) that read
 
 - Retention policy (30 / 60 / 90 days / forever)
 - Backfill window cutoff (last N days vs all rows)
-- `last_seen_at` implementation choice (user-table field vs dedicated endpoint)
+- `last_seen_at` implementation choice — which table hosts the timestamp (`user_profiles` and `user_notification_preferences` are the candidates; there is no `users` table) and whether it's a field write or a dedicated endpoint
+- Keyboard completion for the panel — Escape-to-close, focus-in-on-open / restore-on-close, and a focus trap for the mobile sheet. The R1 handoff mocks correct Enter/Space handling on rows but leave these to the build; treat them as required, not optional
+- Whether re-voicing the contest writer's row copy (`'Your price submission was reviewed.'`) gets its own ticket — the R1 handoff mocks voiced contest titles that the shipped writer cannot currently produce
 
 ## 10. Cross-references
 
 - **Source ticket:** [#737](https://github.com/HartiganHM/concert-crawl/issues/737)
 - **Follow-up ticket (v2):** [#1150](https://github.com/HartiganHM/concert-crawl/issues/1150) — Notification preferences UI
-- **Push infra that writes rows:** PR #1060 (watch_update, price_drop)
+- **Push infra that writes rows:** PR #1060 (the `watch.*` categories)
+- **Authoritative category union:** `packages/push/src/notification-categories.ts`
+- **R1 audit verdict:** `design/design_handoff_in_app_notifications/READINESS.md` (🟡 Yellow, 2026-07-24) — **not committed on `main` yet**; folder + verdict land in one PR when R2 flips Green
 - **Admin bell precedent:** `apps/web/src/components/admin/notification-bell/NotificationBell.tsx`
 - **PWA cluster prefs section this may extend later:** `NotificationsSection` from PR #1044 (Settings → Notifications)
 - **Notification schema:** `packages/db/src/schema/notifications.ts`
@@ -118,4 +124,4 @@ Ship the consumer-side notification surface (bell + panel + endpoints) that read
 
 ## Process
 
-Track 2 design ticket per [design-pipeline.md](../design-pipeline.md). After Claude Design produces the R1 handoff to `design/design_handoff_in_app_notifications/`, runs Readiness Review before opening the plan PR. Handoff prompt to Claude Design is delivered separately (chat, not committed).
+Track 2 design ticket per [design-pipeline.md](../design-pipeline.md). After Claude Design produces the R1 handoff to `design/design_handoff_in_app_notifications/` (target path — stays uncommitted while iterating), runs Readiness Review before opening the plan PR. Handoff prompt to Claude Design is delivered separately (chat, not committed).
