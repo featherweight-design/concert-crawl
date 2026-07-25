@@ -1,3 +1,10 @@
+## [1.160.1](https://github.com/HartiganHM/concert-crawl/compare/v1.160.0...v1.160.1) (2026-07-25)
+
+
+### Bug Fixes
+
+* **crawler:** keep anchor hrefs so the LLM can name each event's page ([#1182](https://github.com/HartiganHM/concert-crawl/issues/1182)) ([5b3584d](https://github.com/HartiganHM/concert-crawl/commit/5b3584d46d0de928f0a6f935f286fcdb79880db0)), closes [#1152](https://github.com/HartiganHM/concert-crawl/issues/1152) [#58](https://github.com/HartiganHM/concert-crawl/issues/58)
+
 # [1.160.0](https://github.com/HartiganHM/concert-crawl/compare/v1.159.0...v1.160.0) (2026-07-25)
 
 
