@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Concert Crawl — Vendor Picker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#0A0E22;font-family:Inter,system-ui,sans-serif}
+*{box-sizing:border-box}
+a{color:#7AE6FF;text-decoration:none}a:hover{color:#FF7BD4}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.10);border-radius:999px}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="landing-screens.jsx"></script>
+<script type="text/babel" src="vendor-picker.jsx"></script>
+<script type="text/babel" src="submit-price-screens.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<script type="text/babel">
+function VPPhone({ children, width = 320, height = 720 }) {
+  return (
+    <div style={{
+      width, height, background: "#070A1A", borderRadius: 26, overflow: "hidden",
+      border: "1px solid rgba(255,255,255,0.08)",
+      boxShadow: "0 24px 60px -20px rgba(0,0,0,0.55)", position: "relative",
+    }}>{children}</div>
+  );
+}
+
+function VPDesktop({ children, width = 1180, height = 760 }) {
+  return (
+    <div style={{
+      width, height, background: "#070A1A", borderRadius: 14, overflow: "hidden",
+      border: "1px solid rgba(255,255,255,0.10)",
+      boxShadow: "0 32px 80px -24px rgba(0,0,0,0.6)", position: "relative",
+    }}>{children}</div>
+  );
+}
+
+function VPTag({ kind = "note", children }) {
+  const c = {
+    before: { bg: "rgba(255,176,138,0.10)", bd: "rgba(255,176,138,0.45)", fg: "#FFB08A" },
+    after:  { bg: "rgba(123,255,176,0.10)", bd: "rgba(123,255,176,0.45)", fg: "#7BFFB0" },
+    note:   { bg: "rgba(122,230,255,0.10)", bd: "rgba(122,230,255,0.45)", fg: "#7AE6FF" },
+    rec:    { bg: "rgba(255,230,122,0.10)", bd: "rgba(255,230,122,0.45)", fg: "#FFE67A" },
+  }[kind];
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", padding: "3px 8px", borderRadius: 6,
+      background: c.bg, border: `1px solid ${c.bd}`, color: c.fg,
+      fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700,
+      letterSpacing: "0.14em", textTransform: "uppercase",
+    }}>{children}</span>
+  );
+}
+
+// —— Desktop submit route shell (mirrors the shipped Phase 8 desktop route) ——
+function VPDesktopRoute({ vendorValue, vendorOpen = false, placement = "bottom" }) {
+  return (
+    <div style={{
+      position: "relative", width: "100%", height: "100%",
+      display: "flex", flexDirection: "column", background: "var(--bg)",
+    }}>
+      <header style={{
+        flexShrink: 0, padding: "18px 32px",
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        borderBottom: "1px solid var(--border)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {window.CCClusterMark && <window.CCClusterMark size={22} color="var(--signal)" glow="var(--accent)" />}
+          {window.CCWordmark && <window.CCWordmark size={16} />}
+        </div>
+        <span style={{
+          fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700,
+          color: "var(--fg-muted)", letterSpacing: "0.10em", textTransform: "uppercase",
+        }}>← Back to Habstrakt</span>
+      </header>
+      <div style={{
+        flex: 1, minHeight: 0, display: "flex", justifyContent: "center",
+        padding: "32px 32px 40px", overflowY: "auto",
+      }}>
+        <div style={{ width: "100%", maxWidth: 520 }}>
+          <window.SubmitForm
+            show={window.SP_SAMPLE_SHOW}
+            initialState="empty"
+            vendorSurface="popover"
+            vendorPlacement={placement}
+            vendorOpen={vendorOpen}
+            vendorValue={vendorValue}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// —— Box-office label: the three renderings we ship today vs. one string ——
+function VPMono({ children, color = "var(--fg-muted)", size = 11, ls = "0.04em" }) {
+  return <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: size, fontWeight: 700, color, letterSpacing: ls }}>{children}</span>;
+}
+
+function VPLabelRow({ surface, before, after }) {
+  return (
+    <div style={{
+      display: "grid", gridTemplateColumns: "180px 1fr 1fr", gap: 14, alignItems: "center",
+      padding: "12px 0", borderBottom: "1px solid var(--border)",
+    }}>
+      <div style={{ fontFamily: "Inter, system-ui", fontSize: 12.5, fontWeight: 600, color: "var(--fg-muted)", letterSpacing: "-0.005em" }}>{surface}</div>
+      <div style={{ fontFamily: "Inter, system-ui", fontSize: 13.5, fontWeight: 600, color: "#FFB08A", letterSpacing: "-0.005em" }}>{before}</div>
+      <div style={{ fontFamily: "Inter, system-ui", fontSize: 13.5, fontWeight: 700, color: "#7BFFB0", letterSpacing: "-0.005em" }}>{after}</div>
+    </div>
+  );
+}
+
+function VPBoxOfficeCard() {
+  return (
+    <div style={{
+      width: "100%", height: "100%", padding: "26px 30px", overflowY: "auto",
+      background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 12,
+      color: "var(--fg)", fontFamily: "Inter, system-ui",
+      display: "flex", flexDirection: "column", gap: 16,
+    }}>
+      <div>
+        <VPMono color="var(--accent)" size={10} ls="0.14em">Box-office label · unify</VPMono>
+        <h2 style={{ margin: "8px 0 0", fontSize: 24, fontWeight: 900, letterSpacing: "-0.02em" }}>
+          One vendor string: <span style={{ color: "var(--signal)" }}>Venue box office</span>.
+        </h2>
+        <p style={{ margin: "8px 0 0", fontSize: 13.5, lineHeight: 1.55, color: "var(--fg-muted)", letterSpacing: "-0.005em", maxWidth: 620, textWrap: "pretty" }}>
+          The vendor field is an enum. It renders the same everywhere a <em>vendor</em> is named — chip, submission list,
+          dispute form, price block. Interpolating the venue name made it look like four different vendors and broke
+          truncation at 320.
+        </p>
+      </div>
+
+      <div>
+        <div style={{ display: "grid", gridTemplateColumns: "180px 1fr 1fr", gap: 14, paddingBottom: 6 }}>
+          <VPMono size={10} ls="0.14em" color="var(--fg-subtle)">Surface</VPMono>
+          <VPMono size={10} ls="0.14em" color="#FFB08A">Today</VPMono>
+          <VPMono size={10} ls="0.14em" color="#7BFFB0">Unified</VPMono>
+        </div>
+        <div style={{ borderTop: "1px solid var(--border)" }}>
+          <VPLabelRow surface="Submit form chip" before="Venue" after="Venue box office" />
+          <VPLabelRow surface="Submission list · vendor" before="Venue box office" after="Venue box office" />
+          <VPLabelRow surface="Price block · rail label" before="Box office" after="Venue box office" />
+          <VPLabelRow surface="Price block · alternates" before="{venue} Box Office" after="Venue box office" />
+          <VPLabelRow surface="Dispute form chip" before="Venue box office" after="Venue box office" />
+        </div>
+      </div>
+
+      <div style={{
+        padding: "12px 14px", background: "var(--surface-1)", border: "1px solid var(--border)",
+        borderRadius: 10, display: "flex", flexDirection: "column", gap: 8,
+      }}>
+        <VPMono size={10} ls="0.14em" color="var(--warning)">The one exception</VPMono>
+        <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--fg-muted)", letterSpacing: "-0.005em", textWrap: "pretty" }}>
+          The <strong style={{ color: "var(--fg)" }}>TrustMark pill</strong> on Event Detail keeps its lowercase
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--fg)" }}> box office</span> wording. That pill names a
+          <em> tier</em>, not a vendor — same word, different job. Only the vendor string unifies.
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, paddingTop: 4, flexWrap: "wrap" }}>
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 5, padding: "3px 8px", borderRadius: 999,
+            background: "rgba(255,209,122,0.10)", border: "1px solid oklch(0.66 0.14 78)", color: "oklch(0.78 0.14 78)",
+            fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.10em", textTransform: "uppercase",
+          }}>★ box office</span>
+          <VPMono color="var(--fg-subtle)" size={11}>tier pill — unchanged</VPMono>
+          <span style={{ width: 1, height: 18, background: "var(--border)" }} />
+          <VPMono color="var(--fg-muted)" size={11}>seen on Venue box office</VPMono>
+          <VPMono color="var(--fg-subtle)" size={11}>vendor string — unified</VPMono>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// —— Spec card ——
+function VPSpecCard() {
+  const T = window.VENDOR_TAXONOMY;
+  const Row = ({ k, children }) => (
+    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+      <div style={{ width: 92, flexShrink: 0, paddingTop: 2 }}>
+        <VPMono size={10} ls="0.14em" color="var(--fg-subtle)">{k}</VPMono>
+      </div>
+      <div style={{ flex: 1, minWidth: 0, fontSize: 13.5, lineHeight: 1.55, color: "var(--fg-muted)", letterSpacing: "-0.005em", textWrap: "pretty" }}>{children}</div>
+    </div>
+  );
+  return (
+    <div style={{
+      width: "100%", height: "100%", padding: "26px 30px", overflowY: "auto",
+      background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 12,
+      color: "var(--fg)", fontFamily: "Inter, system-ui",
+      display: "flex", flexDirection: "column", gap: 16,
+    }}>
+      <div>
+        <VPMono color="var(--accent)" size={10} ls="0.14em">Where it's listed · closed set of 12</VPMono>
+        <h2 style={{ margin: "8px 0 0", fontSize: 25, fontWeight: 900, letterSpacing: "-0.02em", textWrap: "balance" }}>
+          Three chips carry the traffic. A fourth opens the rest.
+        </h2>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <Row k="Pinned">
+          <span style={{ color: "var(--fg)", fontWeight: 700 }}>{T.pinned.join(" · ")}</span> — always visible, always in this order.
+        </Row>
+        <Row k="Primary">
+          <span style={{ color: "var(--fg)", fontWeight: 700 }}>{T.groups[0].items.join(" · ")}</span>
+          <div style={{ marginTop: 2, color: "var(--fg-subtle)", fontSize: 12.5 }}>Frequency-first from prod link counts. Etix outranks the rest by roughly two orders of magnitude — it was the single biggest hole.</div>
+        </Row>
+        <Row k="Resale">
+          <span style={{ color: "var(--fg)", fontWeight: 700 }}>{T.groups[1].items.join(" · ")}</span>
+          <div style={{ marginTop: 2, color: "var(--fg-subtle)", fontSize: 12.5 }}>The four <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>KNOWN_RESALE_HOSTS</span> plus SeatGeek, which the price-kind logic already treats as resale. Ordering unverified — no prod frequency behind it.</div>
+        </Row>
+        <Row k="Catch-all">
+          <span style={{ color: "var(--fg)", fontWeight: 700 }}>Somewhere else</span> → submits <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--fg)" }}>vendor: "Other"</span>.
+          Text-free, ungrouped, below a rule. No follow-up prompt — an unnamed vendor is a better outcome than a wrong one.
+        </Row>
+      </div>
+
+      <div style={{ height: 1, background: "var(--border)" }} />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <Row k="Density">
+          The fourth control is a chip, not a select. It shares the row's shape and wrap behaviour, so 320 gets two lines
+          instead of a new field with its own label, border and 44px height.
+        </Row>
+        <Row k="Selected">
+          Picking <span style={{ color: "var(--fg)", fontWeight: 700 }}>Etix</span> turns the More… chip into an active
+          <span style={{ color: "var(--signal)", fontWeight: 700 }}> Etix ✕</span> chip in place — the row never grows, and the
+          choice sits with its siblings instead of in a summary line. The label re-opens the list; ✕ clears back to More….
+        </Row>
+        <Row k="Resale cue">
+          Group header only, in <span style={{ color: "var(--warning)" }}>--warning</span>, with a plain-language caption
+          (<em>priced above face value</em>). No per-row pill — five rows under one header don't each need repeating, and pills
+          would fight the selected checkmark.
+        </Row>
+        <Row k="No search">
+          Nine items in two labelled groups. A filter input costs a keyboard on mobile and buys nothing at this length.
+          Typeahead covers power users.
+        </Row>
+      </div>
+
+      <div style={{ height: 1, background: "var(--border)" }} />
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <Row k="Semantics">
+          The three chips are a real <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--fg)" }}>radiogroup</span> labelled by
+          "Where it's listed". The fourth control sits outside it as a disclosure button —
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--fg)" }}> aria-haspopup="listbox"</span>,
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--fg)" }}> aria-expanded</span>. A button can't be a radio, so
+          when it holds a value its accessible name carries it: <em>"Where it's listed: Etix. Change vendor."</em> The ✕ is its own button,
+          <em> "Clear Etix."</em>
+        </Row>
+        <Row k="Keyboard">
+          ↑ ↓ roving tabindex · Home / End · type-to-jump · Enter or Space commits and closes · Esc closes and returns focus to the trigger.
+          Groups are named <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--fg)" }}>role="group"</span> nodes, so SR announces "Resale, priced above face value" on entry.
+        </Row>
+        <Row k="Surface">
+          Bottom sheet under 520px, anchored popover above it. Same listbox body both ways — one component, two shells.
+          Popover must flip above the trigger on collision. The prototype fakes this with a <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--fg)" }}>placement</span> prop; production measures.
+        </Row>
+        <Row k="Required">
+          Vendor stays required. Error copy unchanged: <em>"Pick where it's listed."</em> The error attaches to the whole control,
+          below the row.
+        </Row>
+      </div>
+
+      <div style={{
+        marginTop: 2, padding: "12px 14px", background: "rgba(122,214,255,0.06)",
+        border: "1px solid rgba(122,214,255,0.30)", borderRadius: 10,
+      }}>
+        <VPMono size={10} ls="0.14em" color="var(--signal)">Settled</VPMono>
+        <div style={{ marginTop: 6, fontSize: 13, lineHeight: 1.55, color: "var(--fg-muted)", letterSpacing: "-0.005em", textWrap: "pretty" }}>
+          <strong style={{ color: "var(--fg)" }}>SeatGeek ships under Resale.</strong> Flagged in the first pass, resolved in
+          REVIEW.md §3 — <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>kindFromVendor</span> already returns
+          resale for it, so Primary would have put the picker in contradiction with the logic behind it. Copy change, no migration.
+          <br /><br />
+          <strong style={{ color: "var(--fg)" }}>The label is "Where it's listed".</strong> Also flagged, also settled — the
+          shipped copy already reads that, with matching error text. The two questions aren't the same, and "Saw the listing"
+          is a valid answer to only one of them.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "surface": "popover"
+}/*EDITMODE-END*/;
+
+function App() {
+  const [theme, setTheme] = window.useThemeState ? window.useThemeState("electric") : React.useState("electric");
+  const [tweaks, setTweak] = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : [TWEAK_DEFAULTS, () => {}];
+  const TP = window.ThemeProvider || (({ children }) => <>{children}</>);
+  const sheetSurface = tweaks.surface || "sheet";
+
+  return (
+    <window.DesignCanvas
+      title="Vendor picker · Where it's listed"
+      subtitle="12-vendor closed set · 3 chips + grouped dropdown · unified box-office label"
+    >
+      <window.DCSection id="system" title="System">
+        <window.DCArtboard id="spec" label="decisions · taxonomy · a11y" width={820} height={1150}>
+          <TP theme={theme}><VPSpecCard /></TP>
+        </window.DCArtboard>
+        <window.DCArtboard id="boxoffice" label={<><VPTag kind="rec">label</VPTag>&nbsp;&nbsp;Box-office string, before / after</>} width={820} height={620}>
+          <TP theme={theme}><VPBoxOfficeCard /></TP>
+        </window.DCArtboard>
+      </window.DCSection>
+
+      <window.DCSection id="mobile" title="Submit route · 320">
+        <window.DCArtboard id="m-closed" label="01 · Empty — four chips, two lines" width={320} height={720}>
+          <VPPhone>
+            <TP theme={theme}>
+              <window.SubmitRoute initialState="empty" vendorSurface={sheetSurface} />
+            </TP>
+          </VPPhone>
+        </window.DCArtboard>
+
+        <window.DCArtboard id="m-open" label={<><VPTag kind="note">open</VPTag>&nbsp;&nbsp;02 · More… → grouped sheet</>} width={320} height={720}>
+          <VPPhone>
+            <TP theme={theme}>
+              <window.SubmitRoute initialState="empty" vendorSurface="sheet" vendorOpen />
+            </TP>
+          </VPPhone>
+        </window.DCArtboard>
+
+        <window.DCArtboard id="m-picked" label={<><VPTag kind="after">selected</VPTag>&nbsp;&nbsp;03 · Etix, in place</>} width={320} height={720}>
+          <VPPhone>
+            <TP theme={theme}>
+              <window.SubmitRoute initialState="empty" vendorSurface={sheetSurface} vendorValue="Etix" />
+            </TP>
+          </VPPhone>
+        </window.DCArtboard>
+
+        <window.DCArtboard id="m-other" label="04 · Somewhere else (vendor: Other)" width={320} height={720}>
+          <VPPhone>
+            <TP theme={theme}>
+              <window.SubmitRoute initialState="empty" vendorSurface={sheetSurface} vendorValue="Somewhere else" />
+            </TP>
+          </VPPhone>
+        </window.DCArtboard>
+
+        <window.DCArtboard id="m-error" label="05 · Vendor missing" width={320} height={720}>
+          <VPPhone>
+            <TP theme={theme}>
+              <window.SubmitRoute initialState="error" vendorSurface={sheetSurface} />
+            </TP>
+          </VPPhone>
+        </window.DCArtboard>
+      </window.DCSection>
+
+      <window.DCSection id="desktop" title="Submit route · desktop">
+        <window.DCArtboard id="d-closed" label="06 · Empty" width={1180} height={760}>
+          <VPDesktop><TP theme={theme}><VPDesktopRoute /></TP></VPDesktop>
+        </window.DCArtboard>
+
+        <window.DCArtboard id="d-open" label={<><VPTag kind="note">open</VPTag>&nbsp;&nbsp;07 · Anchored popover, flipped above on collision</>} width={1180} height={760}>
+          <VPDesktop><TP theme={theme}><VPDesktopRoute vendorOpen placement="top" /></TP></VPDesktop>
+        </window.DCArtboard>
+
+        <window.DCArtboard id="d-picked" label={<><VPTag kind="after">selected</VPTag>&nbsp;&nbsp;08 · Vivid Seats</>} width={1180} height={760}>
+          <VPDesktop><TP theme={theme}><VPDesktopRoute vendorValue="Vivid Seats" /></TP></VPDesktop>
+        </window.DCArtboard>
+      </window.DCSection>
+
+      {window.ThemeSwitcher && <window.ThemeSwitcher value={theme} onChange={setTheme} position="top-left" />}
+
+      {window.TweaksPanel && (
+        <window.TweaksPanel title="Tweaks">
+          <window.TweakSection title="Dropdown">
+            <window.TweakRadio
+              label="Mobile surface"
+              value={sheetSurface}
+              onChange={v => setTweak("surface", v)}
+              options={[{ value: "sheet", label: "Bottom sheet" }, { value: "popover", label: "Popover" }]}
+            />
+          </window.TweakSection>
+        </window.TweaksPanel>
+      )}
+    </window.DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("app")).render(<App />);
+</script>
+</body>
+</html>
