@@ -1,3 +1,10 @@
+## [1.158.5](https://github.com/HartiganHM/concert-crawl/compare/v1.158.4...v1.158.5) (2026-07-25)
+
+
+### Bug Fixes
+
+* **crawler:** record zero-event crawls as partial, not success ([#1165](https://github.com/HartiganHM/concert-crawl/issues/1165)) ([8519887](https://github.com/HartiganHM/concert-crawl/commit/8519887cfa63c0a27ede7e9a2979c80dc8fe12ed)), closes [#1162](https://github.com/HartiganHM/concert-crawl/issues/1162) [#624](https://github.com/HartiganHM/concert-crawl/issues/624)
+
 ## [1.158.4](https://github.com/HartiganHM/concert-crawl/compare/v1.158.3...v1.158.4) (2026-07-25)
 
 
