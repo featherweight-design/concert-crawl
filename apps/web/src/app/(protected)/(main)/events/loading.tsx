@@ -1,3 +1,8 @@
+import { cookies } from 'next/headers'
+import { auth } from '@clerk/nextjs/server'
+import { DiscoveryShelfSkeleton } from '@/components/consumer/spotify/DiscoveryShelfSkeleton'
+import { SHELF_HINT_COOKIE, shouldReserveShelf } from '@/lib/shelf-hint'
+
 function EventCardSkeleton({ delay }: { delay: number }) {
   return (
     <div
@@ -141,7 +146,24 @@ function DateGroupSkeleton({
   )
 }
 
-export default function EventsLoading() {
+// Reads the shelf hint cookie so the fallback reserves the "Based on your
+// taste" shelf's footprint for viewers who actually get one — otherwise the
+// shelf paints with the page and shoves the filter bar and list down. The
+// hint is matched against the signed-in user so a shared browser doesn't
+// reserve a premium slot for whoever signed in after the entitled account.
+//
+// Safe to make this fallback dynamic: the route is already `force-dynamic`
+// (page.tsx), so its loading boundary is server-rendered at <Link> prefetch
+// time (which sends cookies) rather than prebuilt, and Next re-uses a stale
+// entry's loading boundary for up to 5 minutes. Reading a cookie here costs
+// no extra round-trip and no delayed first paint.
+export default async function EventsLoading() {
+  const [cookieStore, { userId }] = await Promise.all([cookies(), auth()])
+  const reserveShelf = shouldReserveShelf(
+    cookieStore.get(SHELF_HINT_COOKIE)?.value,
+    userId,
+  )
+
   return (
     <>
       <div
@@ -155,7 +177,12 @@ export default function EventsLoading() {
           zIndex: 9999,
         }}
       />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
+      {/* overflow-x-clip mirrors page.tsx — the shelf skeleton's card row is
+          full-bleed (-mx-4) on mobile, and the browse page's horizontal
+          overflow regression (#33) came from exactly that row. */}
+      <main className="mx-auto w-full max-w-5xl flex-1 overflow-x-clip px-4 pb-20 pt-4 sm:px-6 sm:pb-6">
+        {reserveShelf && <DiscoveryShelfSkeleton />}
+
         {/* FilterBar skeleton — mirrors FilterBar's flex-col gap-3 */}
         <div className="relative mb-5 flex flex-col gap-3">
           {/* Heading row: title left, List/Cal toggle right */}

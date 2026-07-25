@@ -27,9 +27,14 @@ interface ConnectionState {
 let entitlement: EntitlementState
 let picksQuery: PicksQueryState
 let connection: ConnectionState
+let authUserId: string | null = 'user_viewer'
 let picksEnabledArg: boolean | undefined
 let picksInitialDataArg: SpotifyTastePicksResponse | undefined
 const picksRefetch = vi.fn()
+
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ userId: authUserId }),
+}))
 
 vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlement,
@@ -68,6 +73,7 @@ vi.mock('./OAuthHandoffSheet', () => ({
 
 import { DiscoveryShelf } from './DiscoveryShelf'
 import { SPOTIFY_COPY } from './definitions/copy'
+import { SHELF_HINT_COOKIE } from '@/lib/shelf-hint'
 
 const COPY = SPOTIFY_COPY.discovery
 
@@ -382,4 +388,73 @@ describe('DiscoveryShelf', () => {
       expect(screen.getByTestId('handoff-sheet')).toBeTruthy()
     },
   )
+})
+
+describe('DiscoveryShelf shelf-hint cookie', () => {
+  const readHint = () => {
+    const prefix = `${SHELF_HINT_COOKIE}=`
+    return document.cookie
+      .split(';')
+      .map((row) => row.trim())
+      .find((row) => row.startsWith(prefix))
+      ?.slice(prefix.length)
+  }
+
+  beforeEach(() => {
+    document.cookie = `${SHELF_HINT_COOKIE}=; path=/; max-age=0`
+    authUserId = 'user_viewer'
+  })
+
+  it('records a shelf for an entitled, connected viewer', () => {
+    render(<DiscoveryShelf />)
+    expect(readHint()).toBe('user_viewer:1')
+  })
+
+  it('records no shelf once the entitlement resolves inactive', () => {
+    entitlement = { isLoading: false, active: false, surface: 'paywall-on-tap' }
+    render(<DiscoveryShelf />)
+    expect(readHint()).toBe('user_viewer:0')
+  })
+
+  it('records no shelf when the viewer has disconnected Spotify', () => {
+    connection = { data: { status: 'disconnected' } }
+    render(<DiscoveryShelf />)
+    expect(readHint()).toBe('user_viewer:0')
+  })
+
+  it('still records a shelf when the connection is broken — the failure state occupies the same slot', () => {
+    connection = { data: { status: 'revoked' } }
+    render(<DiscoveryShelf />)
+    expect(readHint()).toBe('user_viewer:1')
+  })
+
+  it('scopes the hint to the signed-in user so a shared browser cannot inherit it', () => {
+    authUserId = 'user_other'
+    render(<DiscoveryShelf />)
+    expect(readHint()).toBe('user_other:1')
+  })
+
+  it('leaves a previously recorded hint untouched while the entitlement is still resolving', () => {
+    // Regression guard: writing mid-resolution would clear the hint on every
+    // cold load, so the fallback could never reserve the shelf footprint —
+    // which is the entire point of the cookie.
+    document.cookie = `${SHELF_HINT_COOKIE}=user_viewer:1; path=/`
+    entitlement = { isLoading: true, active: false, surface: null }
+    render(<DiscoveryShelf />)
+    expect(readHint()).toBe('user_viewer:1')
+  })
+
+  it('leaves the hint untouched while the connection is still resolving', () => {
+    document.cookie = `${SHELF_HINT_COOKIE}=user_viewer:1; path=/`
+    connection = { data: undefined }
+    render(<DiscoveryShelf />)
+    expect(readHint()).toBe('user_viewer:1')
+  })
+
+  it('leaves the hint untouched before Clerk resolves the user', () => {
+    document.cookie = `${SHELF_HINT_COOKIE}=user_viewer:1; path=/`
+    authUserId = null
+    render(<DiscoveryShelf />)
+    expect(readHint()).toBe('user_viewer:1')
+  })
 })

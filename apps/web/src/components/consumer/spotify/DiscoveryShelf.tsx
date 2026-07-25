@@ -10,8 +10,9 @@
 //   failure — TASTE ON PAUSE (connection status error/revoked) with a
 //             Reconnect action that opens the honesty-rail handoff sheet
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useAuth } from '@clerk/nextjs'
 import type {
   SpotifyTastePick,
   SpotifyTastePickReason,
@@ -20,6 +21,7 @@ import type {
 import { useEntitlement } from '@/lib/queries/use-entitlement'
 import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection'
 import { useTastePicks } from '@/lib/queries/use-taste-picks'
+import { writeShelfHint } from '@/lib/shelf-hint'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { DiscoveryLoadingShelf } from './DiscoveryLoadingShelf'
 import { EventImage } from '@/components/consumer/event-image'
@@ -260,9 +262,29 @@ export const DiscoveryShelf = ({
   // without waiting on the client plan-state round-trip (no pop-in).
   initialPicks?: SpotifyTastePicksResponse
 }) => {
+  const { userId } = useAuth()
   const entitlement = useEntitlement('spotify-sync')
   const connection = useSpotifyConnection()
   const picksQuery = useTastePicks(entitlement.active, initialPicks)
+
+  // Record whether this viewer gets a shelf, so the Browse route's loading
+  // fallback can reserve its footprint next time (see lib/shelf-hint).
+  // `null` = not yet resolved: never overwrite a good hint with a guess made
+  // mid-resolution, or every cold load would clear it before it settles.
+  // Deliberately coarser than the render tree below — entitled + a live
+  // connection means SOME shelf paints (picks, quiet-month, or the failure
+  // state), all of which occupy the same slot. Over-reserving on a picks
+  // error costs one empty gap; under-reserving costs the shove we're fixing.
+  const shelfHint: boolean | null = entitlement.isLoading
+    ? null
+    : !entitlement.active
+      ? false
+      : connection.data === undefined
+        ? null
+        : connection.data.status !== 'disconnected'
+  useEffect(() => {
+    if (shelfHint !== null && userId) writeShelfHint(userId, shelfHint)
+  }, [shelfHint, userId])
 
   // Hidden-style surface (spec §7): nothing once the entitlement resolves
   // inactive, and nothing without data. While the client entitlement is
