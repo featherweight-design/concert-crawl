@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · In-App Notifications (#737)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  a { color: #3a6ea5; } a:hover { color: #24466a; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="notifications-data.jsx"></script>
+<script type="text/babel" src="notifications-panel.jsx"></script>
+<script type="text/babel" src="notifications-chrome.jsx"></script>
+<script type="text/babel" src="notifications-scenes.jsx"></script>
+<script type="text/babel" src="submissions-screen.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+const { IOSDevice } = window;
+const { NOTIF_FIXTURES, CATEGORY_MAP, CATEGORY_KEYS, catOf, NOTIF_COPY, unreadCount } = window;
+const { NotifItem, NotifDropdown, NotifSheet, NotifBody, NotifLoading, NotifEmpty, NotifTile, NMono } = window;
+const { NotifPip, NotifAvatarButton, CCTabBar, CCUserMenu, ProfileSegments } = window;
+const { PhoneScene, DesktopScene } = window;
+const { SubmissionsScreen } = window;
+
+const PHONE_W = 390, PHONE_H = 812;
+const NARROW_W = 320, NARROW_H = 800;
+const DESK_W = 1040, DESK_H = 660;
+
+function PhoneStage({ theme = "electric", width = PHONE_W, height = PHONE_H, children }) {
+  return <ThemeProvider theme={theme}>
+    <IOSDevice width={width} height={height} dark={theme !== "light"}>{children}</IOSDevice>
+  </ThemeProvider>;
+}
+function DeskStage({ theme = "electric", width = DESK_W, height = DESK_H, children }) {
+  return <ThemeProvider theme={theme} style={{ width, height }}>
+    <div style={{ width, height, background: "var(--bg)", overflow: "hidden" }}>{children}</div>
+  </ThemeProvider>;
+}
+function BareStage({ theme = "electric", pad = 22, center = false, children }) {
+  return <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+    <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad,
+      display: "flex", alignItems: center ? "center" : "flex-start",
+      justifyContent: center ? "center" : "flex-start", boxSizing: "border-box" }}>
+      <div style={{ width: "100%" }}>{children}</div>
+    </div>
+  </ThemeProvider>;
+}
+function Eyebrow({ children, color = "var(--signal)", style }) {
+  return <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+    letterSpacing: "0.14em", textTransform: "uppercase", color, marginBottom: 10, ...style }}>{children}</div>;
+}
+function CardShell({ children, maxWidth }) {
+  return <div style={{ maxWidth, background: "var(--bg-elevated)", border: "1px solid var(--border)",
+    borderRadius: 12, overflow: "hidden" }}>{children}</div>;
+}
+
+// ── Tweaks ───────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "feed": "fresh",
+  "state": "ready",
+  "placement": "strip",
+  "surface": "sheet",
+  "pipAnim": true
+}/*EDITMODE-END*/;
+
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio, TweakToggle } = window;
+const CONSUMER_THEMES = ["electric", "jade", "light"];
+const THEME_OPTS = CONSUMER_THEMES.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+const FEED_OPTS = [
+  { value: "fresh",    label: "3 unread + read" },
+  { value: "one",      label: "1 unread" },
+  { value: "read",     label: "All read" },
+  { value: "allCategories", label: "All 8 categories" },
+  { value: "backfill", label: "Backfill (deep)" },
+  { value: "empty",    label: "Empty" },
+];
+const STATE_OPTS = [
+  { value: "ready", label: "Ready" }, { value: "loading", label: "Loading" }, { value: "error", label: "Poll failed" },
+];
+const PLACEMENT_OPTS = [
+  { value: "strip", label: "B · Inbox strip ★" },
+  { value: "row",   label: "A · Nested row" },
+  { value: "page",  label: "C · Profile segment" },
+];
+const SURFACE_OPTS = [{ value: "sheet", label: "Panel open" }, { value: "menu", label: "Me menu" },
+  { value: "menuPanel", label: "Menu → panel" }, { value: "none", label: "Closed" }];
+
+function NotifTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Feed">
+        <TweakSelect label="Contents" value={t.feed} onChange={(v) => setT("feed", v)} options={FEED_OPTS}/>
+        <TweakRadio label="Fetch state" value={t.state} onChange={(v) => setT("state", v)} options={STATE_OPTS}/>
+      </TweakSection>
+      <TweakSection label="Placement">
+        <TweakSelect label="Option" value={t.placement} onChange={(v) => setT("placement", v)} options={PLACEMENT_OPTS}/>
+        <TweakSelect label="Mobile layer" value={t.surface} onChange={(v) => setT("surface", v)} options={SURFACE_OPTS}/>
+        <TweakToggle label="Pip pulse" value={t.pipAnim} onChange={(v) => setT("pipAnim", v)}/>
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakRadio label="Theme" value={t.theme} onChange={(v) => setT("theme", v)} options={THEME_OPTS}/>
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+
+function LiveMobile() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  const items = NOTIF_FIXTURES[t.feed];
+  const deep = t.feed === "backfill";
+  if (t.placement === "page") {
+    return <PhoneStage theme={t.theme}>
+      <PhoneScene items={items} activeTab={3} state={t.state}
+        content={<ProfileSegments items={items}/>}/>
+    </PhoneStage>;
+  }
+  const overlay = t.surface === "none" ? null
+    : t.surface === "menuPanel" ? "menuPanel"
+    : t.surface === "menu" ? (t.placement === "row" ? "menuRow" : "menu") : "sheet";
+  return <PhoneStage theme={t.theme}>
+    <PhoneScene items={items} overlay={overlay} state={t.state} hasMore={deep}
+      activeTab={overlay ? 3 : 0}/>
+  </PhoneStage>;
+}
+function LiveDesktop() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  return <DeskStage theme={t.theme}>
+    <DesktopScene items={NOTIF_FIXTURES[t.feed]} state={t.state}
+      hasMore={t.feed === "backfill"} open={t.surface !== "none"}
+      menu={t.surface === "menuPanel" || t.surface === "sheet" ? "panel"
+        : t.placement === "row" ? "row" : "strip"}/>
+  </DeskStage>;
+}
+
+function App() {
+  const fresh = NOTIF_FIXTURES.fresh, backfill = NOTIF_FIXTURES.backfill;
+  return (
+    <>
+      <DesignCanvas
+        title="In-App Notifications"
+        subtitle="#737 · Track 2 — the consumer bell, panel, and per-item surface for user_notification rows written by push infra, contest review, and Spotify sync. Poll-on-mount, free tier, signed-in only. No new persistent nav slots: the signal rides the profile affordance that already exists (the `me` tab on mobile, the avatar on desktop). Four v1 categories, tokens across Electric · Jade · Light, 320px baseline, WCAG AA. Drive every state from the Tweaks panel.">
+
+        {/* 0 · LIVE */}
+        <DCSection id="live" title="0 · Live preview"
+          subtitle="Flip feed contents (unread mix · backfill · empty), fetch state (ready · loading · poll failed), placement option (A · B ★ · C), which layer is open, and theme. Mobile + desktop, same model.">
+          <DCArtboard id="live-m" label="Mobile · live" width={PHONE_W} height={PHONE_H}><LiveMobile/></DCArtboard>
+          <DCArtboard id="live-d" label="Desktop · live" width={DESK_W} height={DESK_H}><LiveDesktop/></DCArtboard>
+        </DCSection>
+
+        {/* 1 · PLACEMENT */}
+        <DCSection id="placement" title="1 · Placement — three options inside the fence"
+          subtitle="Hard constraint: no new persistent nav slots. All three hang the signal on the profile affordance that already exists — the `me` bottom-nav tab on mobile, the top-right avatar on desktop. Nothing is added to either bar; the PWA install slot and offline pill are untouched. They differ only in what the first tap buys you. B is the recommendation — see the post-it.">
+          <DCArtboard id="pl-a" label="A · Nested row (Hugh's shape)" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><PhoneScene items={fresh} overlay="menuRow" activeTab={3}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="pl-b" label="B · Inbox strip ★ recommended" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><PhoneScene items={fresh} overlay="menu" activeTab={3}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="pl-c" label="C · Profile segment" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric">
+              <PhoneScene items={fresh} activeTab={3} content={<ProfileSegments items={fresh}/>}/>
+            </PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="pl-pip" label="Pip anatomy · all three themes" width={420} height={300}>
+            <BareStage theme="electric" pad={22}>
+              <Eyebrow>Pip on the me tab · 8px --signal, 2px ring in the bar's own bg</Eyebrow>
+              {CONSUMER_THEMES.map((k) => (
+                <ThemeProvider key={k} theme={k} style={{ marginBottom: 10 }}>
+                  <div style={{ background: "var(--bg)", borderRadius: 10, border: "1px solid var(--border)", overflow: "hidden" }}>
+                    <CCTabBar active={0} unread={3}/>
+                  </div>
+                </ThemeProvider>
+              ))}
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="pl-desk" label="Desktop · the trailing group it has to fit in" width={DESK_W} height={300}>
+            <BareStage theme="electric" pad={0}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                <window.DesktopHeader unread={3}/>
+                <window.DesktopHeader unread={3} offline/>
+                <window.DesktopHeader unread={0} install={false}/>
+              </div>
+              <div style={{ padding: "14px 32px 0", fontFamily: "Inter, system-ui", fontSize: 11.5,
+                color: "var(--fg-subtle)", lineHeight: 1.5 }}>
+                The real bar from browse-desktop.jsx (TopNavBD), with the PWA install slot and
+                offline pill from the PWA cluster in place. Top: install + pip. Middle: offline
+                takes the slot, pip unaffected. Bottom: neither, no unread. #737 adds an 8px dot
+                to the account disc and nothing else.
+              </div>
+            </BareStage>
+          </DCArtboard>
+          <DCPostIt top={-10} right={16} width={210}>Recommend B. A and B cost the same taps to reach the panel, but B spends the first tap on content instead of a label — you learn WHAT you missed, not just THAT you missed. With zero unread B collapses to exactly A's row, so it's a strict superset. C is the cheapest build but buries the signal a page deep.</DCPostIt>
+        </DCSection>
+
+        {/* 2 · PANEL ANATOMY */}
+        <DCSection id="panel" title="2 · Panel anatomy — sheet on mobile, nested card on desktop"
+          subtitle="One <NotifBody/>, two shells. Mobile: bottom sheet at 88% height with a drag handle, so a deep backfill scrolls without a route change. Desktop: the panel lives INSIDE the existing user menu — 'See all N' swaps the menu body in place behind a 'Menu' back row, rather than opening a second popover from the same avatar. No full-page route in v1.">
+          <DCArtboard id="pa-sheet" label="Mobile · sheet" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><PhoneScene items={fresh} overlay="sheet" activeTab={3}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="pa-drop" label="Desktop · panel inside the menu" width={DESK_W} height={DESK_H}>
+            <DeskStage theme="electric"><DesktopScene items={fresh} menu="panel"/></DeskStage>
+          </DCArtboard>
+          <DCArtboard id="pa-320" label="320px baseline · sheet" width={NARROW_W} height={NARROW_H}>
+            <PhoneStage theme="electric" width={NARROW_W} height={NARROW_H}>
+              <PhoneScene items={fresh} overlay="sheet" activeTab={3}/>
+            </PhoneStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 3 · ITEM + CATEGORIES */}
+        <DCSection id="item" title="3 · Per-item layout at production title length"
+          subtitle="R2 rebuild. R1 sized this row against ~21-char invented titles; production emits ~35–80 (“Tickets for Hurray for the Riff Raff at Gothic Theatre just went back on sale.”). Fix: the timestamp moves OFF the title baseline down to the metadata row, so the title owns the full column; title clamps at 2 lines, body at 2, and 64px becomes a floor rather than a target — rows now run ~92–116px. Whole row is still the target: one role=button, no nested interactives, and the row carries actionUrl.">
+          <DCArtboard id="it-cats" label="All eight categories · unread" width={440} height={1000}>
+            <BareStage theme="electric" pad={20}>
+              <Eyebrow>Ink = valence · glyph = event</Eyebrow>
+              <CardShell>
+                {NOTIF_FIXTURES.allCategories.map((n) => <NotifItem key={n.id} n={n}/>)}
+              </CardShell>
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="it-320" label="320px · longest real title" width={NARROW_W} height={NARROW_H}>
+            <PhoneStage theme="electric" width={NARROW_W} height={NARROW_H}>
+              <PhoneScene items={NOTIF_FIXTURES.allCategories} overlay="sheet" activeTab={3} hasMore/>
+            </PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="it-unread" label="Unread vs read · same row" width={440} height={340}>
+            <BareStage theme="electric" pad={20}>
+              <Eyebrow>Four simultaneous signals, none color-only</Eyebrow>
+              <CardShell>
+                <NotifItem n={{ ...fresh[0], read: false }}/>
+                <NotifItem n={{ ...fresh[0], id: "x", read: true }}/>
+              </CardShell>
+              <div style={{ fontFamily: "Inter, system-ui", fontSize: 11.5, color: "var(--fg-muted)",
+                marginTop: 12, lineHeight: 1.5 }}>
+                Unread: 2px left rail in the category ink · --surface-1 fill · title 700 at --fg · trailing dot.
+                Read: transparent fill, no rail, title 600 at --fg-muted, tile at 55% opacity.
+                Row text is never tinted — the inks are 3:1 graphic tokens, so they stay on the
+                tile, the rail, and the dot.
+              </div>
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="it-tiles" label="Tiles · eight glyphs, five inks" width={420} height={230}>
+            <BareStage theme="electric" pad={22}>
+              <Eyebrow>28px tiles — --surface-2 ground, ink is a theme token</Eyebrow>
+              <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+                {CATEGORY_KEYS.map((k) => <NotifTile key={k} category={k} size={34}/>)}
+              </div>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {CATEGORY_KEYS.map((k) => <NotifTile key={k} category={k} size={34} read/>)}
+              </div>
+            </BareStage>
+          </DCArtboard>
+          <DCPostIt top={-10} right={16} width={210}>Ink encodes VALENCE, glyph encodes EVENT. R1's one-ink-per-category didn't survive eight entries — you run out of distinguishable tokens and color stops meaning anything. danger = cancelled · warning = moved / sold out · success = back on / price drop · muted = a neutral verdict · signal = you owe a reply · accent = discovery.</DCPostIt>
+        </DCSection>
+
+        {/* 4 · STATES */}
+        <DCSection id="states" title="4 · Loading · empty · poll failed"
+          subtitle="Loading is box-identical to the real row (28px tile + two text lines + timestamp) with the horizontal sweep already set as the Browse skeleton language in #1067's discovery shelf — so the panel doesn't reflow when the poll lands. role=status + aria-busy + a visually-hidden 'Checking what you missed…'; a prefers-reduced-motion guard drops the sweep to a static fill.">
+          <DCArtboard id="st-load" label="Loading · poll on mount" width={400} height={400}>
+            <BareStage theme="electric" pad={20}>
+              <Eyebrow>Loading — 3 rows, no layout shift</Eyebrow>
+              <CardShell><NotifLoading/></CardShell>
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="st-empty" label="Empty · Sour Patch" width={400} height={330}>
+            <BareStage theme="electric" pad={20}>
+              <Eyebrow>Empty</Eyebrow>
+              <CardShell><NotifEmpty/></CardShell>
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="st-error" label="Poll failed" width={400} height={260}>
+            <BareStage theme="electric" pad={20}>
+              <Eyebrow>Fetch error</Eyebrow>
+              <CardShell><window.NotifError/></CardShell>
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="st-empty-m" label="Empty · in sheet" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><PhoneScene items={[]} overlay="sheet" activeTab={3} unread={0}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="st-load-m" label="Loading · in sheet" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><PhoneScene items={fresh} overlay="sheet" state="loading" activeTab={3}/></PhoneStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 5 · BACKFILL */}
+        <DCSection id="backfill" title="5 · Backfill — day dividers + load more"
+          subtitle="A returning user's panel is mostly history. Chronological, grouped by day with sticky mono dividers (Today · Yesterday · Sat Jul 19), unread floating naturally at the top because it's newest — no separate 'unread' section to re-sort. Page size 20, an 'Older notifications' button at the foot, no virtualization at this depth. The end-of-list line closes the scroll honestly instead of leaving a dead edge.">
+          <DCArtboard id="bf-sheet" label="Mobile · deep panel" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><PhoneScene items={backfill} overlay="sheet" hasMore activeTab={3}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="bf-desk" label="Desktop · deep dropdown" width={DESK_W} height={DESK_H}>
+            <DeskStage theme="electric"><DesktopScene items={backfill} hasMore/></DeskStage>
+          </DCArtboard>
+          <DCArtboard id="bf-end" label="Foot of list · all read" width={400} height={600}>
+            <BareStage theme="electric" pad={20}>
+              <Eyebrow>All caught up — header flips, rails drop</Eyebrow>
+              <CardShell><NotifBody items={NOTIF_FIXTURES.read}/></CardShell>
+            </BareStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 6 · MARK-READ */}
+        <DCSection id="markread" title="6 · Mark-read choreography (Q3)"
+          subtitle="Panel-open writes last_seen_at and clears the pip immediately — the bell stops shouting the moment you look. Per-item read state survives until you actually click the row, so 'what did I miss' stays legible on the second visit. That's why the panel header and the pip disagree on purpose: pip gone, rails still up.">
+          <DCArtboard id="mr-before" label="1 · Pip up, 3 unread" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><PhoneScene items={fresh} activeTab={0}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="mr-open" label="2 · Panel open — pip cleared, rails stay" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><PhoneScene items={fresh} overlay="sheet" unread={0} activeTab={3}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="mr-after" label="3 · After clicking one row" width={400} height={430}>
+            <BareStage theme="electric" pad={20}>
+              <Eyebrow>Row read on activation — rail + fill drop, order unchanged</Eyebrow>
+              <CardShell>
+                <NotifItem n={{ ...fresh[0], read: true }}/>
+                <NotifItem n={fresh[1]}/>
+                <NotifItem n={fresh[2]}/>
+              </CardShell>
+            </BareStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 7 · THEME PARITY */}
+        <DCSection id="parity" title="7 · Theme parity — Electric · Jade · Light"
+          subtitle="Every color reads from var(--*). Category inks are the existing --signal / --success / --warning / --accent tokens, each already chosen to double as fill and ink, so the glyph clears AA on its --surface-2 tile in all three themes. The pip is --signal with a 2px ring in the host bar's own background.">
+          {CONSUMER_THEMES.map((k) => (
+            <DCArtboard key={k} id={"par-" + k} label={CC_THEMES[k].label} width={PHONE_W} height={PHONE_H}>
+              <PhoneStage theme={k}><PhoneScene items={fresh} overlay="sheet" activeTab={3}/></PhoneStage>
+            </DCArtboard>
+          ))}
+          <DCArtboard id="par-desk-light" label="Light · desktop dropdown" width={DESK_W} height={DESK_H}>
+            <DeskStage theme="light"><DesktopScene items={fresh}/></DeskStage>
+          </DCArtboard>
+          <DCArtboard id="par-strip" label="Inbox strip · Jade" width={340} height={800}>
+            <BareStage theme="jade" pad={20}>
+              <CCUserMenu items={fresh} mode="strip"/>
+            </BareStage>
+          </DCArtboard>
+        </DCSection>
+
+        {/* 8 · A11Y */}
+        <DCSection id="a11y" title="8 · Accessibility spec"
+          subtitle="Level A: the profile affordance carries the whole thing as its accessible name — 'Notifications, 3 unread' — so the pip is never the only announcement. Level AA: unread is signalled four ways (rail, fill, weight, dot), so nothing rides on color; category is repeated in the mono eyebrow; no text renders in a 3:1 graphic token. Keyboard, as shipped here: the affordance is a real button with aria-haspopup=dialog, the panel is role=dialog, and rows are tabbable and fire on Enter/Space. Deliberately NOT asserted: aria-modal was removed in R2 — it claims a focus trap, and claiming one that doesn't exist is worse than omitting it. The trap, Esc handling, and focus return to the trigger are eng-owned at build; they change no visual decision and are recorded as eng-plan notes in the README.">
+          <DCArtboard id="a11y-names" label="Accessible names" width={470} height={430}>
+            <BareStage theme="electric" pad={22}>
+              <Eyebrow>What a screen reader gets</Eyebrow>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {[
+                  ["Profile affordance", NOTIF_COPY.bellLabel(3)],
+                  ["Profile affordance · none", NOTIF_COPY.bellLabel(0)],
+                  ["Row", window.itemLabel(fresh[0])],
+                  ["Row · read", window.itemLabel(fresh[4])],
+                  ["Loading", NOTIF_COPY.loading],
+                ].map(([k, v]) => (
+                  <div key={k}>
+                    <NMono color="var(--fg-subtle)">{k}</NMono>
+                    <div style={{ fontFamily: "Inter, system-ui", fontSize: 12.5, color: "var(--fg)",
+                      marginTop: 4, textWrap: "pretty" }}>“{v}”</div>
+                  </div>
+                ))}
+              </div>
+            </BareStage>
+          </DCArtboard>
+          <DCArtboard id="a11y-focus" label="Focus + hit targets" width={430} height={340}>
+            <BareStage theme="electric" pad={20}>
+              <Eyebrow>Rows ≥64px floor · 44px controls · --focus ring inset</Eyebrow>
+              <CardShell>
+                <div style={{ outline: "2px solid var(--focus)", outlineOffset: -2 }}>
+                  <NotifItem n={fresh[1]}/>
+                </div>
+                <NotifItem n={fresh[2]}/>
+              </CardShell>
+            </BareStage>
+          </DCArtboard>
+          <DCPostIt top={-10} right={16} width={200}>Pip is a dot, not a count. Poll-on-mount means any number is stale on arrival, and a two-digit badge swamps a 34px avatar at 320px. The honest count still appears — in the strip and the panel header, where it's fresh because you just fetched.</DCPostIt>
+        </DCSection>
+
+        {/* 9 · ME MENU */}
+        <DCSection id="me" title="9 · The `me` tab now opens a menu — and what goes in it"
+          subtitle="Knock-on change, flagged rather than smuggled: today `me` routes straight to Settings. Nesting notifications under the profile affordance means `me` has to open a menu first, with Settings as a row inside it. That's a real rework item for eng. The upside is a slot that was never available before — and Submitted prices is the thing that most needs it, since it currently has no mobile screen of its own and is reachable only through Settings. Watching is NOT in this menu: it already owns a bottom-nav tab.">
+          <DCArtboard id="me-menu" label="me · the new sheet" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><PhoneScene items={fresh} overlay="menu" activeTab={3}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="me-panel" label="me → See all · panel in place" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric"><PhoneScene items={fresh} overlay="menuPanel" activeTab={3}/></PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="me-subs" label="Submitted prices · new screen" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric">
+              <PhoneScene items={fresh} activeTab={3} content={<SubmissionsScreen/>}/>
+            </PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="me-subs-empty" label="Submitted prices · empty" width={PHONE_W} height={PHONE_H}>
+            <PhoneStage theme="electric">
+              <PhoneScene items={[]} unread={0} activeTab={3} content={<SubmissionsScreen items={[]}/>}/>
+            </PhoneStage>
+          </DCArtboard>
+          <DCArtboard id="me-nav" label="Bottom nav · corrected labels" width={420} height={230}>
+            <BareStage theme="electric" pad={22}>
+              <Eyebrow>browse · search · watching · me</Eyebrow>
+              <div style={{ background: "var(--bg)", borderRadius: 10, border: "1px solid var(--border)",
+                overflow: "hidden", marginBottom: 12 }}>
+                <CCTabBar active={2} unread={3}/>
+              </div>
+              <div style={{ fontFamily: "Inter, system-ui", fontSize: 11.5, color: "var(--fg-muted)",
+                lineHeight: 1.5 }}>
+                Earlier drafts of this handoff labelled tab 3 “saved.” There is no Saved in this product —
+                Watching is the only tracking concept. Corrected here and written into CLAUDE.md so it
+                doesn't recur.
+              </div>
+            </BareStage>
+          </DCArtboard>
+          <DCPostIt top={-10} right={16} width={210}>Submitted prices statuses are blameless by construction: Live · Pending · Updated. “Updated” means someone logged a different number and it corroborated — yours is archived, not gone. Same Phase 8.5 posture as the Price check notification, and this screen is where that notification deep-links.</DCPostIt>
+        </DCSection>
+
+      </DesignCanvas>
+      <NotifTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

@@ -3,8 +3,8 @@
 **Ticket:** [#737](https://github.com/HartiganHM/concert-crawl/issues/737) — Build the in-app notification surface (bell + panel + endpoints)
 **Phase / Priority:** Beta · Normal
 **Track:** 2 (needs design)
-**Status:** R1 handoff produced and audited 🟡 Yellow (2026-07-24) — see `design/design_handoff_in_app_notifications/READINESS.md` (**not committed on `main`**; the handoff folder + verdict land together once R2 flips Green). Awaiting Design R2. Two brief errors found by that audit are corrected below (Q2 category set, §5 `last_seen_at` host).
-**Follow-up filed:** [#1150](https://github.com/HartiganHM/concert-crawl/issues/1150) — Notification preferences UI (v2 of #737)
+**Status:** 🟢 **Green** — R2 handoff audited and signed off 2026-07-25; verdict at `design/design_handoff_in_app_notifications/READINESS.md`. Ready for an eng plan. Two brief errors found by the R1 audit are corrected below (Q2 category set, §5 `last_seen_at` host).
+**Follow-ups filed:** [#1150](https://github.com/HartiganHM/concert-crawl/issues/1150) Notification preferences UI (v2) · [#1176](https://github.com/HartiganHM/concert-crawl/issues/1176) Submitted prices build
 
 ---
 

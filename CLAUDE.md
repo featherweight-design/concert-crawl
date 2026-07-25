@@ -156,6 +156,18 @@ All design work — both new design tickets and the build of existing handoffs �
 - **New design tickets** (Track 2) use the handoff prompt template — objective problem + app context + technical requirements, design decisions left to Design
 - **Plan PRs** live in `docs/superpowers/plans/` and go through the Copilot review loop (see the canonical merge bar in `~/.claude/CLAUDE.md`) before implementation
 
+#### Customer-facing vocabulary (locked)
+
+Use these exact terms in UI copy, and don't invent synonyms — drift here has already produced one wrong design round.
+
+| Term | Means | Never call it |
+| --- | --- | --- |
+| **Watching** | The only show-tracking concept, on mobile and desktop. Owns bottom-nav tab 3. | "Saved", "Favorites", "Following" |
+| **Submitted prices** | A user's own price submissions and their review status. | "Submissions", "My prices" |
+| **Price check** | The admin review of a submitted/disputed price. Neutral by design — a price update, not a callout. | "Dispute", "Contest", "Challenge" |
+
+There is no "Saved" concept in this product.
+
 ### Testing
 
 - Unit + integration tests: Vitest
