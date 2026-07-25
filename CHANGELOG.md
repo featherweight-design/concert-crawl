@@ -1,3 +1,10 @@
+## [1.160.2](https://github.com/HartiganHM/concert-crawl/compare/v1.160.1...v1.160.2) (2026-07-25)
+
+
+### Bug Fixes
+
+* **crawler:** drop a calendar-index URL handed back as a ticketUrl ([#1187](https://github.com/HartiganHM/concert-crawl/issues/1187)) ([426ac4c](https://github.com/HartiganHM/concert-crawl/commit/426ac4c9c988ab6d0048f7fd5d50fb4fed738a72)), closes [#1152](https://github.com/HartiganHM/concert-crawl/issues/1152) [#1152](https://github.com/HartiganHM/concert-crawl/issues/1152)
+
 ## [1.160.1](https://github.com/HartiganHM/concert-crawl/compare/v1.160.0...v1.160.1) (2026-07-25)
 
 
