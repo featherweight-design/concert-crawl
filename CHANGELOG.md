@@ -1,3 +1,10 @@
+## [1.158.6](https://github.com/HartiganHM/concert-crawl/compare/v1.158.5...v1.158.6) (2026-07-25)
+
+
+### Bug Fixes
+
+* **api:** surface Clerk OAuth verification failures to Sentry ([#1168](https://github.com/HartiganHM/concert-crawl/issues/1168)) ([1d12c0c](https://github.com/HartiganHM/concert-crawl/commit/1d12c0cb467f89cd4074da39ba6792b4c07e450a)), closes [#1159](https://github.com/HartiganHM/concert-crawl/issues/1159) [#1163](https://github.com/HartiganHM/concert-crawl/issues/1163) [#1165](https://github.com/HartiganHM/concert-crawl/issues/1165)
+
 ## [1.158.5](https://github.com/HartiganHM/concert-crawl/compare/v1.158.4...v1.158.5) (2026-07-25)
 
 
