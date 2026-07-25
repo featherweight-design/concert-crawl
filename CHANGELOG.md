@@ -1,3 +1,10 @@
+# [1.162.0](https://github.com/HartiganHM/concert-crawl/compare/v1.161.0...v1.162.0) (2026-07-25)
+
+
+### Features
+
+* **admin:** add click-through links to the Missing tab ([#1195](https://github.com/HartiganHM/concert-crawl/issues/1195)) ([a107f06](https://github.com/HartiganHM/concert-crawl/commit/a107f060313eb718b2d87c9b717d1bd90b7795c4))
+
 # [1.161.0](https://github.com/HartiganHM/concert-crawl/compare/v1.160.3...v1.161.0) (2026-07-25)
 
 
