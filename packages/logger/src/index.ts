@@ -63,7 +63,13 @@ export interface FailureReport {
   event: string
   /** Routing severity. 'error' maps to Sentry level 'error'; 'warn' maps to 'warning'. */
   severity: FailureSeverity
-  /** Arbitrary structured context. Forwarded to Sentry `extra` verbatim. */
+  /**
+   * Arbitrary structured context. Forwarded to Sentry `extra` verbatim.
+   *
+   * Avoid key names containing `token`, `password`, `secret`, `auth`, or
+   * `apikey` — Sentry's default data scrubbing matches those substrings and
+   * nulls the value out, so the field arrives empty on the issue page.
+   */
   [key: string]: unknown
 }
 

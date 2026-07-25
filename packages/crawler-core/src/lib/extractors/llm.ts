@@ -318,8 +318,11 @@ export async function extractWithLlm(
       event: 'llm.output_truncated',
       severity: 'error',
       sourceUrl,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
-      outputTokens: tokenUsage.outputTokens,
+      // Deliberately not named *Tokens: Sentry's default data scrubbing
+      // matches the `token` substring in an extra's key and replaces the
+      // value with null, which left this report with no numbers at all.
+      outputBudget: MAX_OUTPUT_TOKENS,
+      outputUsed: tokenUsage.outputTokens,
     })
   }
 

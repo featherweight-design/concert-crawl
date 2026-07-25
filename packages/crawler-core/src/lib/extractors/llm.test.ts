@@ -633,7 +633,12 @@ describe('extractWithLlm', () => {
         .map((args) => String(args[0]))
         .find((line) => line.includes('llm.output_truncated'))
       expect(truncatedLog).toBeDefined()
-      expect(truncatedLog).toContain('"outputTokens":32000')
+      expect(truncatedLog).toContain('"outputUsed":32000')
+      expect(truncatedLog).toContain('"outputBudget":64000')
+      // Sentry scrubs any extra whose key contains 'token', so a report
+      // that names one arrives on the issue page with a null value.
+      const reportKeys = Object.keys(JSON.parse(truncatedLog ?? '{}'))
+      expect(reportKeys.filter((key) => /token/i.test(key))).toEqual([])
     } finally {
       consoleSpy.mockRestore()
     }
