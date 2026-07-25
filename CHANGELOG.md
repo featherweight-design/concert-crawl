@@ -1,3 +1,15 @@
+# [1.160.0](https://github.com/HartiganHM/concert-crawl/compare/v1.159.0...v1.160.0) (2026-07-25)
+
+
+### Bug Fixes
+
+* **crawler:** re-upsert existing rows once an eventUrl becomes available ([#1186](https://github.com/HartiganHM/concert-crawl/issues/1186)) ([6bd2466](https://github.com/HartiganHM/concert-crawl/commit/6bd24666d22ae1d2db6ff012b1d2043fe09cd094))
+
+
+### Features
+
+* **crawler:** map AEG's per-event AXS page to eventUrl ([#1183](https://github.com/HartiganHM/concert-crawl/issues/1183)) ([e34e9b9](https://github.com/HartiganHM/concert-crawl/commit/e34e9b912410077c0e0da554da3801565d6a07c8))
+
 # [1.159.0](https://github.com/HartiganHM/concert-crawl/compare/v1.158.9...v1.159.0) (2026-07-25)
 
 
