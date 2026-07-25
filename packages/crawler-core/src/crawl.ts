@@ -987,12 +987,25 @@ export async function crawlVenue(
     const durationMs = Date.now() - startedAt
     const llmCostUsd = tokenUsage ? calculateCost(tokenUsage) : null
 
+    // A crawl that fetched the page but came away with nothing is not a
+    // success — it's "we learned nothing". Recording it as 'success' is how
+    // Red Rocks and Cervantes sat at zero events for days while Admin ▸ Crawls
+    // showed green and only the per-venue Crawl Details said "Went Dark"
+    // (#1162). 'partial' already exists in the crawl_status enum and the admin
+    // filter, so this needs no migration and shows up in the list immediately.
+    //
+    // Keyed on seenEventCoords rather than normalizedEvents because the
+    // downstream guards (cross-venue presale filter, empty canonical
+    // artist/title) can drop every extracted row — a run that extracted 10
+    // events and kept none learned just as little as one that extracted zero.
+    const foundNothing = seenEventCoords.length === 0
+
     const [crawlRun] = await db
       .insert(crawlRuns)
       .values({
         id,
         venueId,
-        status: 'success',
+        status: foundNothing ? 'partial' : 'success',
         httpStatusCode: httpStatus,
         robotsTxtBlocked: 'no',
         extractionStrategyUsed: strategy,
@@ -1019,7 +1032,14 @@ export async function crawlVenue(
       .update(venues)
       .set({
         lastCrawledAt: new Date(),
-        consecutiveFailures: 0,
+        // Only a crawl that actually extracted events clears the 3-strikes
+        // counter. Resetting it on a zero-event run meant the auto-pause and
+        // admin notification could never fire for a venue that silently
+        // extracted nothing every day. Not incremented either — the counter
+        // tracks hard failures, and auto-pausing a venue whose calendar is
+        // genuinely empty would stop us crawling it back to life. The
+        // went-dark alert below owns notification for this case.
+        ...(foundNothing ? {} : { consecutiveFailures: 0 }),
         blockedAt: null,
         robotsTxtAllowed: true,
         robotsTxtCheckedAt: new Date(),

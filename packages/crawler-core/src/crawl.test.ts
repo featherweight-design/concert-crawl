@@ -892,6 +892,81 @@ describe('crawlVenue — intra-batch deduplication', () => {
   })
 })
 
+describe('crawlVenue — zero-event crawls (#1162)', () => {
+  it('records partial and leaves the failure counter alone when nothing is extracted', async () => {
+    const venue = seedVenue({ consecutiveFailures: 2 })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [],
+      usage: { inputTokens: 100, outputTokens: 10 },
+    })
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(run.status).toBe('partial')
+    expect(run.eventsFound).toBe(0)
+
+    // The old success path reset this to 0 every night, so a venue that
+    // silently extracted nothing could never reach the 3-strikes auto-pause.
+    const stored = stores.venues.find((row) => row.id === venue.id)
+    expect(stored?.consecutiveFailures).toBe(2)
+  })
+
+  it('records partial when every extracted row is dropped by a downstream guard', async () => {
+    const venue = seedVenue({ consecutiveFailures: 2 })
+    // Extraction produced a row, but the canonical-title guard drops it — the
+    // run learned just as little as one that extracted nothing, so status has
+    // to key off what actually survived, not the raw extraction count.
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: '   ',
+          rawTitle: '   ',
+          artist: '   ',
+          date: '2026-08-15',
+          confidence: 0.9,
+          sourceUrl: 'https://test-venue.example.com',
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(run.status).toBe('partial')
+    expect(run.eventsInserted).toBe(0)
+    // eventsFound stays at the raw extraction count deliberately: it is the
+    // baseline metric #624 averages over historical rows, so it has to keep
+    // meaning "what the extractor returned". Status is what carries "nothing
+    // survived" — see #1167 for the went-dark gap this leaves open.
+    expect(run.eventsFound).toBe(1)
+    const stored = stores.venues.find((row) => row.id === venue.id)
+    expect(stored?.consecutiveFailures).toBe(2)
+  })
+
+  it('records success and clears the failure counter when events are extracted', async () => {
+    const venue = seedVenue({ consecutiveFailures: 2 })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Metallica',
+          rawTitle: 'Metallica',
+          artist: 'Metallica',
+          date: '2026-08-15',
+          confidence: 0.9,
+          sourceUrl: 'https://test-venue.example.com',
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(run.status).toBe('success')
+    const stored = stores.venues.find((row) => row.id === venue.id)
+    expect(stored?.consecutiveFailures).toBe(0)
+  })
+})
+
 describe('crawlVenue — cross-venue presale filter (#605)', () => {
   it('skips events whose title names another known venue and emits a structured log', async () => {
     const sourceVenue = seedVenue({
@@ -938,7 +1013,9 @@ describe('crawlVenue — cross-venue presale filter (#605)', () => {
       candidates,
     )
 
-    expect(run.status).toBe('success')
+    // Every candidate was filtered out, so the run extracted nothing — that
+    // records as 'partial', not 'success' (#1162).
+    expect(run.status).toBe('partial')
     expect(run.eventsInserted).toBe(0)
 
     const sourceRows = await db
@@ -1101,7 +1178,9 @@ describe('crawlVenue — cross-venue presale filter (#605)', () => {
       candidates,
     )
 
-    expect(run.status).toBe('success')
+    // Every candidate was filtered out, so the run extracted nothing — that
+    // records as 'partial', not 'success' (#1162).
+    expect(run.status).toBe('partial')
     expect(run.eventsInserted).toBe(0)
 
     const sourceRows = await db

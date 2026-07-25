@@ -387,7 +387,8 @@ describe('crawlVenue — stale-event detection (#607)', () => {
     })
 
     const run = await crawlVenue(venue.id, mockBrowser)
-    expect(run.status).toBe('success')
+    // Zero events extracted records as 'partial', not 'success' (#1162).
+    expect(run.status).toBe('partial')
     expect(run.eventsFound).toBe(0)
 
     const [rowA] = await db
@@ -845,7 +846,9 @@ describe('crawlVenue — per-platform fetcher dispatch (#623)', () => {
     })
 
     const run = await crawlVenue(venue.id, mockBrowser)
-    expect(run.status).toBe('success')
+    // The LLM ran and returned nothing, so 'partial' — this test is about
+    // strategy selection, not outcome (#1162).
+    expect(run.status).toBe('partial')
     expect(run.extractionStrategyUsed).toBe('llm')
     expect(mockFetchPage).toHaveBeenCalled()
   })
