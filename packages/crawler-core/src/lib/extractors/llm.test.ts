@@ -523,6 +523,92 @@ describe('extractWithLlm', () => {
     expect(bulkInUserMsg).toBeGreaterThan(50_000)
   })
 
+  describe('per-event URLs', () => {
+    const EVENT_HTML = `<html><body>
+      <a href="/events/griz-1489047/"><h3>GRiZ</h3></a>
+      <a href="https://www.axs.com/events/1489047/griz-tickets?skin=redrocks">Buy Tickets</a>
+    </body></html>`
+
+    function grizRow(overrides: object) {
+      return {
+        title: 'GRiZ',
+        rawTitle: 'GRiZ',
+        artist: 'GRiZ',
+        date: '2026-09-12',
+        confidence: 0.95,
+        ...overrides,
+      }
+    }
+
+    it('shows the model each link as a marker before its text', async () => {
+      mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+
+      await extractWithLlm(EVENT_HTML, SOURCE_URL)
+
+      const userContent: string =
+        mockCreate.mock.calls[0]?.[0].messages[0].content
+      expect(userContent).toContain(
+        '[link: https://example.com/events/griz-1489047/] GRiZ',
+      )
+    })
+
+    it('keeps an eventUrl the page actually linked to', async () => {
+      mockCreate.mockResolvedValue(
+        makeAnthropicResponse([
+          grizRow({ eventUrl: 'https://example.com/events/griz-1489047/' }),
+        ]),
+      )
+
+      const result = await extractWithLlm(EVENT_HTML, SOURCE_URL)
+
+      expect(result.events[0]?.eventUrl).toBe(
+        'https://example.com/events/griz-1489047/',
+      )
+    })
+
+    it('keeps a ticketUrl the page actually linked to', async () => {
+      mockCreate.mockResolvedValue(
+        makeAnthropicResponse([
+          grizRow({
+            ticketUrl:
+              'https://www.axs.com/events/1489047/griz-tickets?skin=redrocks',
+          }),
+        ]),
+      )
+
+      const result = await extractWithLlm(EVENT_HTML, SOURCE_URL)
+
+      expect(result.events[0]?.ticketUrl).toBe(
+        'https://www.axs.com/events/1489047/griz-tickets?skin=redrocks',
+      )
+    })
+
+    it('drops a hallucinated URL the page never linked to', async () => {
+      mockCreate.mockResolvedValue(
+        makeAnthropicResponse([
+          grizRow({
+            eventUrl: 'https://example.com/events/griz-tickets-2026/',
+            ticketUrl: 'https://www.axs.com/events/9999999/griz/',
+          }),
+        ]),
+      )
+
+      const result = await extractWithLlm(EVENT_HTML, SOURCE_URL)
+
+      expect(result.events[0]?.eventUrl).toBeUndefined()
+      expect(result.events[0]?.ticketUrl).toBeUndefined()
+    })
+
+    it('omits both URLs when the model returns none', async () => {
+      mockCreate.mockResolvedValue(makeAnthropicResponse([grizRow({})]))
+
+      const result = await extractWithLlm(EVENT_HTML, SOURCE_URL)
+
+      expect(result.events[0]?.eventUrl).toBeUndefined()
+      expect(result.events[0]?.ticketUrl).toBeUndefined()
+    })
+  })
+
   it("logs 'llm.output_truncated' when stop_reason is max_tokens", async () => {
     // reportFailure (severity='error') routes the structured JSON line
     // through console.error (stderr), so we spy there.

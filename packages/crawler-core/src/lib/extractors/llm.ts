@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { z } from 'zod'
 import { reportFailure } from '@concert-crawl/logger'
 import type { LLMResult } from '../../types.js'
+import { cleanHtml, resolveExtractedUrl } from './clean-html.js'
 import { normalizeSupportingArtists } from '../normalize-supporting-artists.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
 import { stripDuplicatedTrailingWord } from '../strip-duplicated-trailing-word.js'
@@ -59,13 +60,6 @@ const MODEL = 'claude-haiku-4-5-20251001'
 // 32K buys ~6 months of catalog growth for the largest current venues
 // without pushing on the model cap.
 const MAX_OUTPUT_TOKENS = 32_000
-
-// Input character cap on the user-message HTML. Haiku 4.5 has a 200K
-// input context; the prior 50K cap was tight enough that yesterday's
-// successful Red Rocks crawl only saw ~half of the rendered event grid
-// in its input window. Bumping to 200K lets the cleaned HTML (post tag
-// strip) reach the model in full for all currently-tracked venues.
-const MAX_INPUT_HTML_CHARS = 200_000
 
 // Shared canonical rule set for isConcert classification. Used by both
 // the live crawler SYSTEM_PROMPT below and the one-shot non-concert
@@ -134,6 +128,10 @@ Rules:
   - "CHIODOS: ITS NOT YOU, ITS ME TOUR" → artist "Chiodos", tourName "It's Not You, It's Me Tour", supportingArtists []
   - "Skillet: Comatose 20 Years, Still Screaming Tour" → artist "Skillet", tourName "Comatose 20 Years, Still Screaming Tour", supportingArtists []
 - When you cannot tell whether a comma separates two acts or sits inside one act's name, prefer keeping the name whole rather than fragmenting a real act.
+- The page text has been flattened from HTML. Navigable http(s) links appear as a "[link: URL]" marker immediately BEFORE the text that was inside that link, so an event card's own URL is the marker directly preceding its title/image text. Use those markers to fill eventUrl and ticketUrl. Links that go nowhere a fan can visit (javascript:, mailto:, page anchors) are deliberately omitted — a missing marker is expected, not an error.
+- eventUrl: the marker belonging to the event card itself — the page a fan reaches by clicking the show's title or image. Prefer the most specific per-event link over any calendar, category, or "see all events" link.
+- ticketUrl: only set this when a marker points at a purchase/checkout page for THAT show (a ticketing host, or a link labelled "Buy"/"Tickets"/"Get Tickets"). If the only link is the venue's own event page, leave ticketUrl null and set eventUrl instead.
+- NEVER invent, complete, or guess a URL. Copy it verbatim from a "[link: …]" marker on the page. If no marker applies to an event, use null. A fabricated URL sends fans to a dead page and is worse than no URL.
 - tourName: only set this when the source names a tour/run distinctly (e.g. "The Eras Tour"). Do not put promoter/presenter text ("AEG Presents"), venue names, or opener names here. Use null when there is no tour name.
 
 Set isConcert on every event using these rules:
@@ -188,12 +186,12 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
             ticketUrl: {
               type: ['string', 'null'],
               description:
-                'Direct ticket purchase URL (the checkout/buy link) or null',
+                'Direct ticket purchase URL (the checkout/buy link) for THIS show, copied verbatim from a "[link: …]" marker on the page. Null when the page only links to the show\'s own detail page — put that in eventUrl instead. Never invent a URL.',
             },
             eventUrl: {
               type: ['string', 'null'],
               description:
-                "The per-event detail page URL on the source site (the link the listing's title/image points to, e.g. the event's own page). Use the absolute URL. Null if the listing has no dedicated detail page.",
+                'The per-event detail page URL on the source site — the "[link: …]" marker immediately preceding this event card\'s title/image text. Copy it verbatim; never invent, complete or guess one. Prefer the most specific per-event link over a calendar or category link. Null if the listing has no dedicated detail page.',
             },
             description: {
               type: ['string', 'null'],
@@ -230,24 +228,12 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
   },
 }
 
-function cleanHtml(html: string): string {
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '')
-    .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, '')
-    .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .substring(0, MAX_INPUT_HTML_CHARS)
-}
-
 export async function extractWithLlm(
   html: string,
   sourceUrl: string,
 ): Promise<LLMResult> {
   const client = new Anthropic()
-  const cleanedHtml = cleanHtml(html)
+  const { text: cleanedHtml, linkUrls } = cleanHtml(html, sourceUrl)
 
   // Use the streaming API. The Anthropic SDK rejects non-streaming
   // requests when `max_tokens` is large enough that the generation
@@ -404,6 +390,11 @@ export async function extractWithLlm(
       artist,
       evt.supportingArtists ?? [],
     )
+    // Both URLs are checked against the page's own anchor set. The model
+    // is told to copy them verbatim out of the "[link: …]" markers, but a
+    // guessed slug would otherwise reach the CTA and 404 on the fan.
+    const ticketUrl = resolveExtractedUrl(evt.ticketUrl, linkUrls)
+    const eventUrl = resolveExtractedUrl(evt.eventUrl, linkUrls)
     return {
       title,
       rawTitle: evt.rawTitle,
@@ -415,9 +406,8 @@ export async function extractWithLlm(
         evt.doorsTime !== '' && { doorsTime: evt.doorsTime }),
       ...(evt.showTime != null &&
         evt.showTime !== '' && { showTime: evt.showTime }),
-      ...(evt.ticketUrl != null && { ticketUrl: evt.ticketUrl }),
-      ...(evt.eventUrl != null &&
-        evt.eventUrl !== '' && { eventUrl: evt.eventUrl }),
+      ...(ticketUrl != null && { ticketUrl }),
+      ...(eventUrl != null && { eventUrl }),
       ...(description != null && description !== '' && { description }),
       ...(supportingArtists.length > 0 && { supportingArtists }),
       ...(evt.tourName != null &&
