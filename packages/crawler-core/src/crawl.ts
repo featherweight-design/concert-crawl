@@ -1011,6 +1011,7 @@ export async function crawlVenue(
         extractionStrategyUsed: strategy,
         pageHash,
         eventsFound: normalizedEvents.length,
+        eventsUsable: seenEventCoords.length,
         eventsInserted,
         eventsUpdated,
         llmCostUsd,
@@ -1061,6 +1062,7 @@ export async function crawlVenue(
         venueId,
         strategy,
         eventsFound: normalizedEvents.length,
+        eventsUsable: seenEventCoords.length,
         eventsInserted,
         eventsUpdated,
         llmCostUsd,
@@ -1068,7 +1070,7 @@ export async function crawlVenue(
       }),
     )
 
-    // #624 — Surface "successful crawl, suspiciously few events" before it
+    // #624 — Surface "crawl didn't fail, suspiciously few events" before it
     // hides in the dashboard. Bluebird was the canary: status 'success'
     // with eventsFound 0 looked healthy because no failure counter ticked
     // up, but the venue was effectively offline. This check runs after
@@ -1080,6 +1082,7 @@ export async function crawlVenue(
       venueName: venue.name,
       crawlRunId: id,
       eventsFound: normalizedEvents.length,
+      eventsUsable: seenEventCoords.length,
       lastEventCountAlertAt: venue.lastEventCountAlertAt,
     })
 

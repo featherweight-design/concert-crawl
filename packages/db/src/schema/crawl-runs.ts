@@ -25,7 +25,12 @@ export const crawlRuns = pgTable('crawl_runs', {
   httpStatusCode: integer('http_status_code'),
   robotsTxtBlocked: text('robots_txt_blocked'), // 'yes' | 'no' | 'unchecked'
   extractionStrategyUsed: text('extraction_strategy_used'),
+  // Raw extractor output, counted before the cross-venue presale filter and
+  // the empty canonical artist/title guards in crawl.ts.
   eventsFound: integer('events_found').notNull().default(0),
+  // What survived those guards (#1167). Went-dark detection keys off this;
+  // eventsFound remains the extraction metric.
+  eventsUsable: integer('events_usable').notNull().default(0),
   eventsInserted: integer('events_inserted').notNull().default(0),
   errorMessage: text('error_message'),
   pageHash: text('page_hash'),

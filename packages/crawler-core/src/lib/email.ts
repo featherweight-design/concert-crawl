@@ -197,7 +197,10 @@ export interface EventCountDropInput {
   venueName: string
   venueId: string
   crawlRunId: string
+  /** Raw extractor output, before the downstream presale + canonical guards. */
   eventsFound: number
+  /** Rows that survived those guards — what the alert is keyed on (#1167). */
+  eventsUsable: number
   baselineCount: number
   dropPercent: number
 }
@@ -206,17 +209,26 @@ export async function sendEventCountDropEmail(
   input: EventCountDropInput,
 ): Promise<void> {
   const url = adminCrawlUrl(input.venueId)
-  const severity = input.eventsFound === 0 ? 'went dark' : 'dropped sharply'
+  const severity = input.eventsUsable === 0 ? 'went dark' : 'dropped sharply'
+  // Extraction worked and the guards dropped everything — a different
+  // diagnosis from "the page gave us nothing", so it gets different copy.
+  const guardsAteEverything = input.eventsUsable === 0 && input.eventsFound > 0
   await sendAdminAlert('sendEventCountDropEmail', {
     subject: `Event count ${severity}: ${input.venueName}`,
     html: `
       <p><strong>${escapeHtml(input.venueName)}</strong> ${severity} on the latest crawl.</p>
       <ul>
-        <li>Events on this run: <strong>${input.eventsFound}</strong></li>
+        <li>Usable events on this run: <strong>${input.eventsUsable}</strong></li>
+        <li>Events extracted before guards: <strong>${input.eventsFound}</strong></li>
         <li>Rolling baseline: <strong>${input.baselineCount.toFixed(1)}</strong></li>
         <li>Drop: <strong>${input.dropPercent.toFixed(0)}%</strong></li>
       </ul>
-      <p>This usually means the venue's site changed shape (hydration, paywall, redesign) and the crawler is no longer pulling events. The crawl returned <code>status: success</code>, so the consecutive-failure path did <em>not</em> trigger — that's why you're getting this alert instead.</p>
+      ${
+        guardsAteEverything
+          ? `<p>Extraction succeeded — all ${input.eventsFound} rows were rejected downstream by the cross-venue presale filter or the empty canonical artist/title guards. Start with the guards and the extracted field values, not the venue's markup.</p>`
+          : `<p>This usually means the venue's site changed shape (hydration, paywall, redesign) and the crawler is no longer pulling events.</p>`
+      }
+      <p>The crawl fetched and parsed the page without a hard failure, so nothing incremented the consecutive-failure counter and that alert path did <em>not</em> trigger — that's why you're getting this one instead.</p>
       <p><a href="${url}">Admin crawl dashboard</a></p>
     `,
   })

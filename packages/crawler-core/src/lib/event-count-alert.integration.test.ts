@@ -67,6 +67,7 @@ async function seedSuccessfulRuns(
         venueId,
         status: 'success',
         eventsFound,
+        eventsUsable: eventsFound,
         eventsInserted: eventsFound,
         eventsUpdated: 0,
         robotsTxtBlocked: 'no',
@@ -95,6 +96,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentRunId,
       eventsFound: 0,
+      eventsUsable: 0,
       lastEventCountAlertAt: null,
     })
 
@@ -107,7 +109,7 @@ describe('checkEventCountDrop', () => {
     expect(notifs).toHaveLength(0)
   })
 
-  it('fires went_dark + inserts notification + updates venue when eventsFound is 0 against a non-zero baseline', async () => {
+  it('fires went_dark + inserts notification + updates venue when eventsUsable is 0 against a non-zero baseline', async () => {
     const venue = await seedVenue()
     // Seed 7 baseline runs averaging 70, plus the current zero-event run
     const ids = await seedSuccessfulRuns(
@@ -121,6 +123,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentRunId,
       eventsFound: 0,
+      eventsUsable: 0,
       lastEventCountAlertAt: null,
     })
 
@@ -148,7 +151,7 @@ describe('checkEventCountDrop', () => {
     expect(mockSendEmail).toHaveBeenCalledOnce()
   })
 
-  it('fires dropped_sharply when eventsFound is below 30% of baseline but > 0', async () => {
+  it('fires dropped_sharply when eventsUsable is below 30% of baseline but > 0', async () => {
     const venue = await seedVenue()
     const ids = await seedSuccessfulRuns(
       venue.id,
@@ -161,6 +164,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentRunId,
       eventsFound: 10,
+      eventsUsable: 10,
       lastEventCountAlertAt: null,
     })
 
@@ -169,7 +173,53 @@ describe('checkEventCountDrop', () => {
     expect(outcome.severity).toBe('dropped_sharply')
   })
 
-  it('does not fire when eventsFound is within range (no_drop)', async () => {
+  it('fires went_dark when extraction found rows but the guards rejected them all (#1167)', async () => {
+    const venue = await seedVenue()
+    await seedSuccessfulRuns(venue.id, [70, 65, 72, 68, 71, 69, 75])
+    // The run under test: the extractor produced 10 rows, the downstream
+    // presale filter + canonical guards kept none. Pre-#1167 this reported
+    // eventsFound: 10 against a ~70 baseline and never crossed the threshold.
+    const [currentRun] = await db
+      .insert(crawlRuns)
+      .values({
+        venueId: venue.id,
+        // 'partial', not 'success' — crawl.ts keys the status off
+        // seenEventCoords.length (#1165), so a zero-usable run lands here.
+        status: 'partial',
+        eventsFound: 10,
+        eventsUsable: 0,
+        eventsInserted: 0,
+        eventsUpdated: 0,
+        robotsTxtBlocked: 'no',
+      })
+      .returning({ id: crawlRuns.id })
+
+    const outcome = await checkEventCountDrop({
+      venueId: venue.id,
+      venueName: venue.name,
+      crawlRunId: currentRun!.id,
+      eventsFound: 10,
+      eventsUsable: 0,
+      lastEventCountAlertAt: null,
+    })
+
+    expect(outcome.fired).toBe(true)
+    if (!outcome.fired) throw new Error('expected outcome.fired')
+    expect(outcome.severity).toBe('went_dark')
+
+    const notifs = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.event_count_dropped'))
+    expect(notifs).toHaveLength(1)
+    expect(notifs[0]!.body).toContain(
+      'none survived the cross-venue presale filter or the empty canonical',
+    )
+    expect(notifs[0]!.metadata).toContain('"eventsFound":10')
+    expect(notifs[0]!.metadata).toContain('"eventsUsable":0')
+  })
+
+  it('does not fire when eventsUsable is within range (no_drop)', async () => {
     const venue = await seedVenue()
     const ids = await seedSuccessfulRuns(
       venue.id,
@@ -182,6 +232,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentRunId,
       eventsFound: 60,
+      eventsUsable: 60,
       lastEventCountAlertAt: null,
     })
 
@@ -204,6 +255,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentRunId,
       eventsFound: 0,
+      eventsUsable: 0,
       lastEventCountAlertAt: threeDaysAgo,
       now,
     })
@@ -231,6 +283,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentRunId,
       eventsFound: 60,
+      eventsUsable: 60,
       lastEventCountAlertAt: threeDaysAgo,
       now,
     })
@@ -272,6 +325,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: healthyRunId,
       eventsFound: 60,
+      eventsUsable: 60,
       lastEventCountAlertAt: yesterday,
       now,
     })
@@ -290,6 +344,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: darkRunId,
       eventsFound: 0,
+      eventsUsable: 0,
       lastEventCountAlertAt: afterRecovery!.lastEventCountAlertAt,
       now,
     })
@@ -324,6 +379,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentRunId,
       eventsFound: 60,
+      eventsUsable: 60,
       lastEventCountAlertAt: staleSnapshot,
       now,
     })
@@ -359,6 +415,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: firstDarkId,
       eventsFound: 0,
+      eventsUsable: 0,
       lastEventCountAlertAt: null,
       now,
     })
@@ -375,6 +432,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: secondDarkId,
       eventsFound: 0,
+      eventsUsable: 0,
       lastEventCountAlertAt: afterFirst!.lastEventCountAlertAt,
       now: new Date(now.getTime() + 24 * 60 * 60 * 1000),
     })
@@ -403,6 +461,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentRunId,
       eventsFound: 0,
+      eventsUsable: 0,
       lastEventCountAlertAt: eightDaysAgo,
       now,
     })
@@ -435,6 +494,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentRunId,
       eventsFound: 0,
+      eventsUsable: 0,
       lastEventCountAlertAt: null,
     })
 
@@ -485,6 +545,7 @@ describe('checkEventCountDrop', () => {
         venueName: venue.name,
         crawlRunId: currentRunId,
         eventsFound: 0,
+        eventsUsable: 0,
         lastEventCountAlertAt: null,
       })
 
@@ -518,6 +579,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentId!,
       eventsFound: 0,
+      eventsUsable: 0,
       lastEventCountAlertAt: null,
     })
 
@@ -544,6 +606,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentId!,
       eventsFound: 0,
+      eventsUsable: 0,
       lastEventCountAlertAt: null,
     })
 
@@ -569,6 +632,7 @@ describe('checkEventCountDrop', () => {
       venueName: venue.name,
       crawlRunId: currentId!,
       eventsFound: 0,
+      eventsUsable: 0,
       lastEventCountAlertAt: null,
     })
 

@@ -1,9 +1,12 @@
-// Detects "successful crawl, suspiciously few events" — the Bluebird gap
-// from #624 where status: 'success' + eventsFound: 0 was being treated as
-// healthy even though the venue normally has ~70 events on calendar. The
-// 3-consecutive-failures path doesn't catch this because the HTTP fetch +
-// extraction nominally succeed; only the count of extracted rows reveals
-// the regression.
+// Detects "the crawl didn't fail, but it learned nothing" — the Bluebird gap
+// from #624, where a run that fetched and parsed fine but came away with 0
+// events was treated as healthy even though the venue normally has ~70 shows
+// on calendar. The 3-consecutive-failures path doesn't catch this because
+// nothing hard-failed; only the count of usable rows reveals the regression.
+//
+// Runs regardless of the crawl_runs status the caller recorded: since #1165 a
+// zero-usable run is written as 'partial' rather than 'success', and both need
+// this check.
 
 import { and, desc, eq, gt, ne } from 'drizzle-orm'
 import { db, crawlRuns, notifications, venues } from '@concert-crawl/db'
@@ -36,7 +39,15 @@ export interface EventCountAlertInput {
   venueId: string
   venueName: string
   crawlRunId: string
+  /** Raw extractor output. Reported for context; does not classify the drop. */
   eventsFound: number
+  /**
+   * Rows that survived the downstream cross-venue presale filter and empty
+   * canonical artist/title guards. Classification and the baseline key off
+   * this (#1167) — a run that extracted 10 rows and kept none learned as
+   * little as one that extracted zero.
+   */
+  eventsUsable: number
   /** venues.last_event_count_alert_at as of the start of this run. */
   lastEventCountAlertAt: Date | null
   /** Override for tests; defaults to new Date(). */
@@ -56,7 +67,7 @@ type AlertOutcome =
     }
 
 /**
- * Check whether the just-completed successful crawl looks suspicious and,
+ * Check whether the just-completed non-failed crawl looks suspicious and,
  * if so, insert an admin notification + send the alert email.
  *
  * Idempotent w.r.t. the cooldown: a second dropped run inside the cooldown
@@ -65,9 +76,9 @@ type AlertOutcome =
  * a venue that has stayed dark continuously.
  *
  * Failures inside this function are swallowed — the crawl itself already
- * succeeded and we don't want to flip a healthy crawl_run into a failure
- * just because an alert insert hit a transient DB error. We log and move
- * on; #624 alerting is non-blocking.
+ * completed and we don't want to flip its crawl_run into a failure just
+ * because an alert insert hit a transient DB error. We log and move on;
+ * #624 alerting is non-blocking.
  */
 export async function checkEventCountDrop(
   input: EventCountAlertInput,
@@ -105,15 +116,20 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
   //     the alert email would understate the regression. The alert still
   //     fires correctly in either case — the threshold ratios held — but
   //     the operator-facing copy was wrong.
+  //   - Averaging events_usable rather than events_found (#1167) so the
+  //     baseline is denominated in the same unit as the current run's count.
+  //     Migration 0059 backfilled events_usable = events_found, so every
+  //     historical row is unchanged under the new semantics and no venue's
+  //     baseline shifts on deploy.
   const recent = await db
-    .select({ eventsFound: crawlRuns.eventsFound })
+    .select({ eventsUsable: crawlRuns.eventsUsable })
     .from(crawlRuns)
     .where(
       and(
         eq(crawlRuns.venueId, input.venueId),
         eq(crawlRuns.status, 'success'),
         ne(crawlRuns.id, input.crawlRunId),
-        gt(crawlRuns.eventsFound, 0),
+        gt(crawlRuns.eventsUsable, 0),
       ),
     )
     .orderBy(desc(crawlRuns.createdAt))
@@ -124,10 +140,10 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
   }
 
   const baselineCount =
-    recent.reduce((sumSoFar, row) => sumSoFar + row.eventsFound, 0) /
+    recent.reduce((sumSoFar, row) => sumSoFar + row.eventsUsable, 0) /
     recent.length
 
-  const severity = classifyDrop(input.eventsFound, baselineCount)
+  const severity = classifyDrop(input.eventsUsable, baselineCount)
   if (!severity) {
     // A healthy run ends the incident, so drop the cooldown marker. Red Rocks
     // (#1174) went dark six nights running; the alert fired on night one and
@@ -170,8 +186,15 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
 
   const dropPercent =
     baselineCount > 0
-      ? ((baselineCount - input.eventsFound) / baselineCount) * 100
+      ? ((baselineCount - input.eventsUsable) / baselineCount) * 100
       : 0
+
+  // When extraction produced rows but the downstream guards ate them all,
+  // that's a different failure than a page returning nothing — the fetch and
+  // parse worked, so the operator should look at the presale filter and the
+  // canonical artist/title guards rather than at the venue's markup. Surfaced
+  // in the notification body and the email.
+  const guardsAteEverything = input.eventsUsable === 0 && input.eventsFound > 0
 
   // Insert notification + bump cooldown atomically. If the cooldown update
   // were a separate statement and failed transiently, the next crawl would
@@ -187,16 +210,19 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
           : `Event count dropped sharply: ${input.venueName}`,
       body:
         severity === 'went_dark'
-          ? `${input.venueName} returned 0 events on a successful crawl (baseline ~${baselineCount.toFixed(1)}).`
-          : `${input.venueName} returned ${input.eventsFound} events (baseline ~${baselineCount.toFixed(1)}, ${dropPercent.toFixed(0)}% drop).`,
+          ? guardsAteEverything
+            ? `${input.venueName} extracted ${input.eventsFound} events on the latest crawl but none survived the cross-venue presale filter or the empty canonical artist/title guards (baseline ~${baselineCount.toFixed(1)} usable).`
+            : `${input.venueName} returned 0 usable events on the latest crawl (baseline ~${baselineCount.toFixed(1)}).`
+          : `${input.venueName} returned ${input.eventsUsable} usable events (baseline ~${baselineCount.toFixed(1)}, ${dropPercent.toFixed(0)}% drop).`,
       metadata: JSON.stringify({
         venueId: input.venueId,
         crawlRunId: input.crawlRunId,
         // severity threads through to the admin Crawl History badge so the
         // UI can label the row "Went dark" vs "Dropped sharply" without
-        // re-classifying off raw eventsFound + baseline (#804).
+        // re-classifying off raw counts + baseline (#804).
         severity,
         eventsFound: input.eventsFound,
+        eventsUsable: input.eventsUsable,
         baselineCount,
         dropPercent,
       }),
@@ -221,6 +247,7 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
       venueId: input.venueId,
       crawlRunId: input.crawlRunId,
       eventsFound: input.eventsFound,
+      eventsUsable: input.eventsUsable,
       baselineCount,
       dropPercent,
     })
@@ -242,11 +269,11 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
 }
 
 function classifyDrop(
-  eventsFound: number,
+  eventsUsable: number,
   baselineCount: number,
 ): 'went_dark' | 'dropped_sharply' | null {
   if (baselineCount <= 0) return null
-  if (eventsFound === 0) return 'went_dark'
-  if (eventsFound < baselineCount * SOFT_DROP_RATIO) return 'dropped_sharply'
+  if (eventsUsable === 0) return 'went_dark'
+  if (eventsUsable < baselineCount * SOFT_DROP_RATIO) return 'dropped_sharply'
   return null
 }

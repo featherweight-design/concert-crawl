@@ -121,13 +121,14 @@ describe('sendEventCountDropEmail', () => {
     process.env = originalEnv
   })
 
-  it('sends "went dark" copy when eventsFound is 0', async () => {
+  it('sends "went dark" copy when eventsUsable is 0', async () => {
     const { sendEventCountDropEmail } = await import('./email.js')
     await sendEventCountDropEmail({
       venueName: 'Bluebird Theater',
       venueId: 'venue-1',
       crawlRunId: 'run-1',
       eventsFound: 0,
+      eventsUsable: 0,
       baselineCount: 70,
       dropPercent: 100,
     })
@@ -141,13 +142,14 @@ describe('sendEventCountDropEmail', () => {
     expect(call.html).toContain('100%')
   })
 
-  it('sends "dropped sharply" copy when eventsFound > 0', async () => {
+  it('sends "dropped sharply" copy when eventsUsable > 0', async () => {
     const { sendEventCountDropEmail } = await import('./email.js')
     await sendEventCountDropEmail({
       venueName: 'Mission Ballroom',
       venueId: 'venue-2',
       crawlRunId: 'run-2',
       eventsFound: 5,
+      eventsUsable: 5,
       baselineCount: 40,
       dropPercent: 87,
     })
@@ -155,6 +157,24 @@ describe('sendEventCountDropEmail', () => {
     const call = mockSend.mock.calls[0][0]
     expect(call.subject).toContain('dropped sharply')
     expect(call.html).toContain('87%')
+  })
+
+  it('blames the downstream guards when extraction found rows but none were usable (#1167)', async () => {
+    const { sendEventCountDropEmail } = await import('./email.js')
+    await sendEventCountDropEmail({
+      venueName: 'Cervantes',
+      venueId: 'venue-3',
+      crawlRunId: 'run-3',
+      eventsFound: 10,
+      eventsUsable: 0,
+      baselineCount: 30,
+      dropPercent: 100,
+    })
+
+    const call = mockSend.mock.calls[0][0]
+    expect(call.subject).toContain('went dark')
+    expect(call.html).toContain('all 10 rows were rejected downstream')
+    expect(call.html).not.toContain("venue's site changed shape")
   })
 
   it('skips sending + logs warning when RESEND_API_KEY is missing', async () => {
@@ -167,6 +187,7 @@ describe('sendEventCountDropEmail', () => {
         venueId: 'venue-1',
         crawlRunId: 'run-1',
         eventsFound: 0,
+        eventsUsable: 0,
         baselineCount: 70,
         dropPercent: 100,
       })
@@ -190,6 +211,7 @@ describe('sendEventCountDropEmail', () => {
       venueId: 'venue-cervantes-abc',
       crawlRunId: 'run-9',
       eventsFound: 0,
+      eventsUsable: 0,
       baselineCount: 137.7,
       dropPercent: 100,
     })
@@ -208,6 +230,7 @@ describe('sendEventCountDropEmail', () => {
       venueId: 'has spaces & ampersand',
       crawlRunId: 'run-x',
       eventsFound: 0,
+      eventsUsable: 0,
       baselineCount: 50,
       dropPercent: 100,
     })
@@ -252,6 +275,7 @@ describe('environment qualification on alert emails (admin-UI feedback)', () => 
       venueId: 'v1',
       crawlRunId: 'r1',
       eventsFound: 0,
+      eventsUsable: 0,
       baselineCount: 100,
       dropPercent: 100,
     })
@@ -269,6 +293,7 @@ describe('environment qualification on alert emails (admin-UI feedback)', () => 
       venueId: 'v1',
       crawlRunId: 'r1',
       eventsFound: 0,
+      eventsUsable: 0,
       baselineCount: 100,
       dropPercent: 100,
     })
@@ -302,6 +327,7 @@ describe('environment qualification on alert emails (admin-UI feedback)', () => 
       venueId: 'v1',
       crawlRunId: 'r1',
       eventsFound: 0,
+      eventsUsable: 0,
       baselineCount: 100,
       dropPercent: 100,
     })
@@ -322,6 +348,7 @@ describe('environment qualification on alert emails (admin-UI feedback)', () => 
       venueId: 'v1',
       crawlRunId: 'r1',
       eventsFound: 0,
+      eventsUsable: 0,
       baselineCount: 100,
       dropPercent: 100,
     })
@@ -339,6 +366,7 @@ describe('environment qualification on alert emails (admin-UI feedback)', () => 
       venueId: 'v1',
       crawlRunId: 'r1',
       eventsFound: 0,
+      eventsUsable: 0,
       baselineCount: 100,
       dropPercent: 100,
     })
@@ -376,6 +404,7 @@ describe('admin crawl URL construction', () => {
       venueId: 'v-1',
       crawlRunId: 'r-1',
       eventsFound: 0,
+      eventsUsable: 0,
       baselineCount: 100,
       dropPercent: 100,
     })
@@ -504,6 +533,7 @@ describe('SENTRY_ENVIRONMENT CR/LF stripping', () => {
       venueId: 'v-1',
       crawlRunId: 'r-1',
       eventsFound: 0,
+      eventsUsable: 0,
       baselineCount: 100,
       dropPercent: 100,
     })
@@ -526,6 +556,7 @@ describe('SENTRY_ENVIRONMENT CR/LF stripping', () => {
       venueId: 'v-1',
       crawlRunId: 'r-1',
       eventsFound: 0,
+      eventsUsable: 0,
       baselineCount: 100,
       dropPercent: 100,
     })
