@@ -43,8 +43,35 @@ export const NormalizedEventSchema = z.object({
 // Deliberately loose: the array shape is validated here, but each element is
 // checked individually below so one malformed row can't void an otherwise
 // good batch. See the per-row loop in `extractWithLlm`.
+//
+// The preprocess step exists because Haiku intermittently ignores the tool
+// schema's `type: 'array'` and emits `events` as a JSON-encoded *string* —
+// `{"events": "[{\"title\": ...}]"}`. It is non-deterministic and independent
+// of page size: on 2026-07-24 it took Hi-Dive (24 events, 4.4K output tokens),
+// Red Rocks and Cervantes to zero on the same night while Larimer Lounge came
+// back fine. Unwrap it rather than rejecting it — a rejection discards every
+// event on the page.
 const ToolInputSchema = z.object({
-  events: z.array(z.unknown()),
+  events: z.preprocess((value) => {
+    if (typeof value !== 'string') return value
+    try {
+      return JSON.parse(value)
+    } catch (err) {
+      // Report the parse error separately: the Zod failure downstream only
+      // says "expected array, received string", which can't distinguish a
+      // payload truncated mid-value from one that was never JSON. Length is
+      // logged instead of the payload itself to keep the event small.
+      reportFailure({
+        event: 'llm.stringified_events_unparseable',
+        severity: 'warn',
+        error: err instanceof Error ? err.message : String(err),
+        payloadChars: value.length,
+      })
+      // Leave it as-is so the array check below reports the real problem
+      // instead of masking a genuinely malformed payload.
+      return value
+    }
+  }, z.array(z.unknown())),
 })
 
 type NormalizedEventRow = z.infer<typeof NormalizedEventSchema>
@@ -57,9 +84,14 @@ const MODEL = 'claude-haiku-4-5-20251001'
 // Anthropic returned `stop_reason: 'max_tokens'` mid-tool-call, the SDK
 // surfaced a truncated tool input where `events` was undefined, Zod
 // rejected, and the crawl reported `success` + 0 events with no error.
-// 32K buys ~6 months of catalog growth for the largest current venues
-// without pushing on the model cap.
-const MAX_OUTPUT_TOKENS = 32_000
+// 64K is Haiku 4.5's ceiling. 32K was not enough headroom: Cervantes' 135
+// events already cost 26–28K in normal array form, and the stringified-events
+// quirk handled by `ToolInputSchema` escapes every quote in the payload, which
+// roughly triples its length — that pushed the 2026-07-25 run to exactly
+// 32,000 output tokens, truncating mid-string. The cap is a ceiling, not a
+// reservation: billing is per token produced, so raising it costs nothing on
+// runs that don't need it.
+const MAX_OUTPUT_TOKENS = 64_000
 
 // Shared canonical rule set for isConcert classification. Used by both
 // the live crawler SYSTEM_PROMPT below and the one-shot non-concert

@@ -491,12 +491,12 @@ describe('extractWithLlm', () => {
   // truncation-detection log so a silent regression of this exact shape
   // cannot recur without an obvious test failure.
 
-  it('requests at least 32K output tokens (Red Rocks 148-event regression guard)', async () => {
+  it('requests at least 64K output tokens (Red Rocks 148-event and Cervantes truncation guards)', async () => {
     mockCreate.mockResolvedValue(makeAnthropicResponse([]))
     await extractWithLlm('<html>test</html>', SOURCE_URL)
 
     const call = mockCreate.mock.calls[0]?.[0]
-    expect(call.max_tokens).toBeGreaterThanOrEqual(32_000)
+    expect(call.max_tokens).toBeGreaterThanOrEqual(64_000)
   })
 
   it('passes more than the legacy 50K char cap to the model (input-window regression guard)', async () => {
@@ -801,6 +801,91 @@ describe('extractWithLlm', () => {
       consoleSpy.mockRestore()
       warnSpy.mockRestore()
     }
+  })
+
+  // Haiku sometimes serializes the whole `events` array into a JSON string
+  // instead of emitting it as an array. Reproduced against the live Cervantes
+  // page on 2026-07-25, and the cause of that venue plus Hi-Dive and Red Rocks
+  // reporting zero events on 2026-07-24.
+  describe('stringified events payload', () => {
+    const stringifiedEvent = {
+      title: 'Kitchen Dwellers',
+      rawTitle: 'Kitchen Dwellers',
+      artist: 'Kitchen Dwellers',
+      date: '2026-09-12',
+      confidence: 0.95,
+      isConcert: true,
+      reviewNeeded: false,
+    }
+
+    it('extracts events when the model returns the array as a JSON string', async () => {
+      mockCreate.mockResolvedValue({
+        content: [
+          {
+            type: 'tool_use',
+            id: 'tool_abc123',
+            name: 'save_events',
+            input: { events: JSON.stringify([stringifiedEvent]) },
+          },
+        ],
+        usage: {
+          input_tokens: 100,
+          output_tokens: 50,
+          cache_read_input_tokens: 0,
+          cache_creation_input_tokens: 0,
+        },
+        stop_reason: 'tool_use',
+      })
+
+      const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+
+      expect(result.events).toHaveLength(1)
+      expect(result.events[0]?.title).toBe('Kitchen Dwellers')
+    })
+
+    it("reports 'llm.invalid_tool_input' when the string is not parseable JSON", async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      try {
+        mockCreate.mockResolvedValue({
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool_abc123',
+              name: 'save_events',
+              input: { events: '[{"title": "truncated mid-str' },
+            },
+          ],
+          usage: {
+            input_tokens: 100,
+            output_tokens: 50,
+            cache_read_input_tokens: 0,
+            cache_creation_input_tokens: 0,
+          },
+          stop_reason: 'tool_use',
+        })
+
+        const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+
+        expect(result.events).toHaveLength(0)
+        const invalidLog = consoleSpy.mock.calls
+          .map((args) => String(args[0]))
+          .find((line) => line.includes('llm.invalid_tool_input'))
+        expect(invalidLog).toBeDefined()
+
+        // The Zod failure alone only says "expected array, received string",
+        // so the parse error is reported separately to distinguish a payload
+        // truncated mid-value from one that was never JSON.
+        const parseWarning = warnSpy.mock.calls
+          .map((args) => String(args[0]))
+          .find((line) => line.includes('llm.stringified_events_unparseable'))
+        expect(parseWarning).toBeDefined()
+        expect(parseWarning).toContain('"payloadChars":29')
+      } finally {
+        consoleSpy.mockRestore()
+        warnSpy.mockRestore()
+      }
+    })
   })
 
   it("does NOT log 'llm.output_truncated' on a healthy tool_use stop", async () => {
