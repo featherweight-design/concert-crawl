@@ -1,3 +1,10 @@
+## [1.158.4](https://github.com/HartiganHM/concert-crawl/compare/v1.158.3...v1.158.4) (2026-07-25)
+
+
+### Bug Fixes
+
+* **crawler:** keep valid events when one LLM row fails validation ([#1163](https://github.com/HartiganHM/concert-crawl/issues/1163)) ([062f66c](https://github.com/HartiganHM/concert-crawl/commit/062f66cb5ea89b3461e9b6e33ed8a5609e4dd435)), closes [#1162](https://github.com/HartiganHM/concert-crawl/issues/1162) [#1162](https://github.com/HartiganHM/concert-crawl/issues/1162)
+
 ## [1.158.3](https://github.com/HartiganHM/concert-crawl/compare/v1.158.2...v1.158.3) (2026-07-21)
 
 
