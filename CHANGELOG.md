@@ -1,3 +1,10 @@
+# [1.159.0](https://github.com/HartiganHM/concert-crawl/compare/v1.158.9...v1.159.0) (2026-07-25)
+
+
+### Features
+
+* **crawler:** platform:livenation fetcher recovers shows past the 36-item ceiling ([#1180](https://github.com/HartiganHM/concert-crawl/issues/1180)) ([98c861c](https://github.com/HartiganHM/concert-crawl/commit/98c861ce436837684eb6d3e6ec7b7c891869d994)), closes [#1127](https://github.com/HartiganHM/concert-crawl/issues/1127)
+
 ## [1.158.9](https://github.com/HartiganHM/concert-crawl/compare/v1.158.8...v1.158.9) (2026-07-25)
 
 
