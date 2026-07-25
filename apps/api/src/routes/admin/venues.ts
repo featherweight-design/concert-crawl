@@ -115,7 +115,7 @@ const updateVenueSchema = createVenueSchema
     // Per-platform fetcher dispatch (#623 / #721 / #665). platform values
     // are validated here (not a Postgres enum) so new adapters only touch
     // application code.
-    platform: z.enum(['aeg']).nullable().optional(),
+    platform: z.enum(['aeg', 'livenation']).nullable().optional(),
     // Empty/whitespace strings normalize to null (clear intent), matching
     // the other nullable string fields in this schema.
     platformVenueId: z
@@ -682,7 +682,7 @@ venuesAdminRouter.patch(
 const PROBE_TIMEOUT_MS = 15_000
 
 const probePlatformSchema = z.object({
-  platform: z.enum(['aeg']).nullable().optional(),
+  platform: z.enum(['aeg', 'livenation']).nullable().optional(),
   // Whitespace-only would pass the fetcher's truthy canHandle() check and
   // turn a missing_config diagnosis into a doomed fetch — normalize to null.
   platformVenueId: z

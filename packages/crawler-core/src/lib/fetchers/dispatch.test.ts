@@ -103,6 +103,32 @@ describe('dispatch', () => {
     expect(dispatch(makeVenue())).toBeNull()
   })
 
+  it('routes a livenation venue to the Live Nation fetcher', () => {
+    const fetcher = dispatch(
+      makeVenue({ platform: 'livenation', platformVenueId: 'KovZpZAE6eJA' }),
+    )
+    expect(fetcher).not.toBeNull()
+    expect(fetcher?.source).toBe('livenation')
+  })
+
+  it('falls back to the cascade for a livenation venue with no platformVenueId', () => {
+    expect(
+      dispatch(makeVenue({ platform: 'livenation', platformVenueId: null })),
+    ).toBeNull()
+  })
+
+  it('prefers VenuePilot over Live Nation when both columns are set (misconfig)', () => {
+    const fetcher = dispatch(
+      makeVenue({
+        platform: 'livenation',
+        platformVenueId: 'KovZpZAE6eJA',
+        apiProvider: 'venuepilot',
+        apiAccountId: '1105',
+      }),
+    )
+    expect(fetcher?.source).toBe('venuepilot')
+  })
+
   it('prefers VenuePilot when both platform and apiProvider are set (misconfig)', () => {
     const fetcher = dispatch(
       makeVenue({

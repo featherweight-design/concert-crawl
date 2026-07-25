@@ -26,6 +26,18 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.15.0-beta',
+    date: 'Jul 25, 2026',
+    headline:
+      'Fillmore and Marquis shows stop disappearing after the first 36.',
+    items: [
+      {
+        kind: 'fixed',
+        text: 'The Fillmore and Marquis websites only publish their first 36 shows in a form we could read, so anything further out simply never made it onto Concert Crawl — no matter how far ahead you scrolled. We now read those venues from their own monthly calendars instead, which brings their whole booked season back into the listings.',
+      },
+    ],
+  },
+  {
     version: 'v0.14.0-beta',
     date: 'Jul 20, 2026',
     headline: 'Get Tickets now drops you on the actual show page.',

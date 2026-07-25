@@ -1508,7 +1508,10 @@ export function VenueDetailsClient({ venue }: Props) {
                   disabled={isDisabled}
                   onChange={(evt) => {
                     const nextPlatform =
-                      evt.target.value === 'aeg' ? 'aeg' : null
+                      evt.target.value === 'aeg' ||
+                      evt.target.value === 'livenation'
+                        ? evt.target.value
+                        : null
                     setPlatformVal(nextPlatform)
                     if (nextPlatform === null) setPlatformVenueIdVal('')
                     setProbeStatus({ kind: 'idle' })
@@ -1530,6 +1533,12 @@ export function VenueDetailsClient({ venue }: Props) {
                         .platform.aeg
                     }
                   </option>
+                  <option value="livenation">
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                        .platform.livenation
+                    }
+                  </option>
                 </VDSelect>
               </VDField>
 
@@ -1541,8 +1550,11 @@ export function VenueDetailsClient({ venue }: Props) {
                   }
                   htmlFor="edit-venue-platform-venue-id"
                   hint={
-                    ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                      .platformVenueId.aegHint
+                    platformVal === 'livenation'
+                      ? ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                          .platformVenueId.livenationHint
+                      : ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                          .platformVenueId.aegHint
                   }
                   {...(fieldErrors.platformVenueId
                     ? { error: fieldErrors.platformVenueId }
@@ -1552,8 +1564,11 @@ export function VenueDetailsClient({ venue }: Props) {
                     id="edit-venue-platform-venue-id"
                     value={platformVenueIdVal}
                     placeholder={
-                      ADMIN_COPY.venueDetailsClient.fields.platformRouting
-                        .platformVenueId.placeholder
+                      platformVal === 'livenation'
+                        ? ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                            .platformVenueId.livenationPlaceholder
+                        : ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                            .platformVenueId.aegPlaceholder
                     }
                     disabled={isDisabled}
                     hasError={Boolean(fieldErrors.platformVenueId)}

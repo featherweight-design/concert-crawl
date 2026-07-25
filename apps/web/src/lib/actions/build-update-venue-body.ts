@@ -117,7 +117,11 @@ export function buildUpdateVenueBody(
   // send null explicitly so the payload states the full intent.
   const platformRaw = formData.get('platform')
   const platform: VenuePlatform | null | undefined =
-    platformRaw === 'aeg' ? 'aeg' : platformRaw === null ? undefined : null
+    platformRaw === 'aeg' || platformRaw === 'livenation'
+      ? platformRaw
+      : platformRaw === null
+        ? undefined
+        : null
   const platformVenueIdRaw = formData.get('platformVenueId')
   const platformVenueIdTrimmed =
     platformVenueIdRaw !== null ? String(platformVenueIdRaw).trim() : ''

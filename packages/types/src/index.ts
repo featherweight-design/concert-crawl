@@ -179,7 +179,7 @@ export type SubscriptionTier = 'free' | 'premium'
 
 // VenuePlatform — per-platform fetcher dispatch (#623). Widen the union
 // as new platform adapters land in packages/crawler-core.
-export type VenuePlatform = 'aeg'
+export type VenuePlatform = 'aeg' | 'livenation'
 
 // PlatformProbeResult — dry-run outcome of POST /v1/admin/venues/:id/probe-platform.
 // Returned inside the standard { success: true, data } envelope with HTTP 200

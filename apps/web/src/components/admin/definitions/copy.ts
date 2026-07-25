@@ -739,12 +739,16 @@ export const ADMIN_COPY = {
           label: 'Platform',
           auto: 'Auto (no platform)',
           aeg: 'AEG',
+          livenation: 'Live Nation',
         },
         platformVenueId: {
           label: 'Platform venue ID',
           aegHint:
             "Events.json shard ID from aegwebprod.blob.core.windows.net/json/events/<shardId>/events.json — find this in the venue's calendar page HTML.",
-          placeholder: 'e.g. 89',
+          livenationHint:
+            "Venue ID from the site's own calendar payload (e.g. KovZpZAE6eJA) — find it as venue.discovery_id in any event record on the venue's /shows/calendar/<YYYY-MM> page.",
+          aegPlaceholder: 'e.g. 89',
+          livenationPlaceholder: 'e.g. KovZpZAE6eJA',
           requiredError: 'Platform venue ID is required when a platform is set',
         },
         probe: {
