@@ -24,9 +24,12 @@ export const COLD_START_MIN_RUNS = 3
 // rollout; can be tightened per-venue later if false positives appear.
 export const SOFT_DROP_RATIO = 0.3
 
-// Don't re-alert the same venue more than once per 7 days. Without this,
-// every daily crawl after a regression would re-fire the alert until the
-// venue is fixed — admin gets the signal once, then has 7 days to act.
+// Don't re-alert a venue that is *still* dark more than once per 7 days.
+// Without this, every daily crawl after a regression would re-fire until the
+// venue is fixed — admin gets the signal once, then has 7 days to act. The
+// cooldown is cleared as soon as a healthy run lands (see runCheck), so a
+// venue that recovers and then goes dark again alerts immediately rather than
+// being silenced for the remainder of the window (#1174).
 export const ALERT_COOLDOWN_DAYS = 7
 
 export interface EventCountAlertInput {
@@ -41,7 +44,10 @@ export interface EventCountAlertInput {
 }
 
 type AlertOutcome =
-  | { fired: false; reason: 'cold_start' | 'cooldown' | 'no_drop' }
+  | {
+      fired: false
+      reason: 'cold_start' | 'cooldown' | 'no_drop' | 'recovered'
+    }
   | {
       fired: true
       severity: 'went_dark' | 'dropped_sharply'
@@ -53,8 +59,10 @@ type AlertOutcome =
  * Check whether the just-completed successful crawl looks suspicious and,
  * if so, insert an admin notification + send the alert email.
  *
- * Idempotent w.r.t. the cooldown: a second call inside the cooldown window
- * is a no-op even if the threshold logic would otherwise fire.
+ * Idempotent w.r.t. the cooldown: a second dropped run inside the cooldown
+ * window is a no-op even if the threshold logic would otherwise fire. A
+ * healthy run clears the cooldown instead, so the window only ever suppresses
+ * a venue that has stayed dark continuously.
  *
  * Failures inside this function are swallowed — the crawl itself already
  * succeeded and we don't want to flip a healthy crawl_run into a failure
@@ -80,15 +88,6 @@ export async function checkEventCountDrop(
 
 async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
   const now = input.now ?? new Date()
-
-  // Cooldown gate. Done before the baseline query so a venue in cooldown
-  // doesn't pay for an unnecessary scan of crawl_runs.
-  if (input.lastEventCountAlertAt) {
-    const cooldownMs = ALERT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000
-    if (now.getTime() - input.lastEventCountAlertAt.getTime() < cooldownMs) {
-      return { fired: false, reason: 'cooldown' }
-    }
-  }
 
   // Pull the last N successful runs that actually returned events, to form
   // the baseline. Three filter notes:
@@ -130,7 +129,43 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
 
   const severity = classifyDrop(input.eventsFound, baselineCount)
   if (!severity) {
+    // A healthy run ends the incident, so drop the cooldown marker. Red Rocks
+    // (#1174) went dark six nights running; the alert fired on night one and
+    // every later night returned 'cooldown', including the nights that
+    // followed a recovery. Clearing here means the next darkening re-alerts.
+    if (input.lastEventCountAlertAt) {
+      // Compare-and-set against the snapshot this run started with. The admin
+      // trigger-crawl path can overlap the nightly cron for one venue, and an
+      // unconditional clear would let a healthy run wipe a marker a concurrent
+      // dropped run had just written — reopening alerting for a venue that is
+      // still dark.
+      const cleared = await db
+        .update(venues)
+        .set({ lastEventCountAlertAt: null, updatedAt: now })
+        .where(
+          and(
+            eq(venues.id, input.venueId),
+            eq(venues.lastEventCountAlertAt, input.lastEventCountAlertAt),
+          ),
+        )
+        .returning({ id: venues.id })
+      // Zero rows means the CAS lost — a newer marker landed while this run
+      // was in flight, so the cooldown stands and nothing recovered.
+      return {
+        fired: false,
+        reason: cleared.length > 0 ? 'recovered' : 'no_drop',
+      }
+    }
     return { fired: false, reason: 'no_drop' }
+  }
+
+  // Cooldown gate. Only reached when this run is itself a drop, so it
+  // throttles a venue that *stays* dark without ever muting a recurrence.
+  if (input.lastEventCountAlertAt) {
+    const cooldownMs = ALERT_COOLDOWN_DAYS * 24 * 60 * 60 * 1000
+    if (now.getTime() - input.lastEventCountAlertAt.getTime() < cooldownMs) {
+      return { fired: false, reason: 'cooldown' }
+    }
   }
 
   const dropPercent =

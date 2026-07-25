@@ -212,6 +212,182 @@ describe('checkEventCountDrop', () => {
     expect(mockSendEmail).not.toHaveBeenCalled()
   })
 
+  it('clears the cooldown marker when a healthy run lands inside the window (#1174)', async () => {
+    const venue = await seedVenue()
+    const ids = await seedSuccessfulRuns(
+      venue.id,
+      [70, 65, 72, 68, 71, 69, 75, 60],
+    )
+    const currentRunId = ids[ids.length - 1]!
+    const now = new Date()
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+    await db
+      .update(venues)
+      .set({ lastEventCountAlertAt: threeDaysAgo })
+      .where(eq(venues.id, venue.id))
+
+    const outcome = await checkEventCountDrop({
+      venueId: venue.id,
+      venueName: venue.name,
+      crawlRunId: currentRunId,
+      eventsFound: 60,
+      lastEventCountAlertAt: threeDaysAgo,
+      now,
+    })
+
+    expect(outcome).toEqual({ fired: false, reason: 'recovered' })
+    expect(mockSendEmail).not.toHaveBeenCalled()
+    const [updatedVenue] = await db
+      .select()
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(updatedVenue!.lastEventCountAlertAt).toBeNull()
+    const notifs = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.event_count_dropped'))
+    expect(notifs).toHaveLength(0)
+  })
+
+  it('re-alerts on a fresh darkening after a recovery inside the window (#1174)', async () => {
+    // The Red Rocks case: night 1 dark (alert fires), night 2 healthy, night 3
+    // dark again. Before #1174 night 3 returned 'cooldown' and the recurrence
+    // went unreported for the remainder of the 7-day window.
+    const venue = await seedVenue()
+    const ids = await seedSuccessfulRuns(
+      venue.id,
+      [70, 65, 72, 68, 71, 69, 75, 60, 0],
+    )
+    const healthyRunId = ids[ids.length - 2]!
+    const darkRunId = ids[ids.length - 1]!
+    const now = new Date()
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+    await db
+      .update(venues)
+      .set({ lastEventCountAlertAt: yesterday })
+      .where(eq(venues.id, venue.id))
+
+    const recovery = await checkEventCountDrop({
+      venueId: venue.id,
+      venueName: venue.name,
+      crawlRunId: healthyRunId,
+      eventsFound: 60,
+      lastEventCountAlertAt: yesterday,
+      now,
+    })
+    expect(recovery).toEqual({ fired: false, reason: 'recovered' })
+
+    // Read the marker back rather than passing null, so the test exercises the
+    // same handoff the crawler does: venues.last_event_count_alert_at as of
+    // the start of the run.
+    const [afterRecovery] = await db
+      .select()
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+
+    const outcome = await checkEventCountDrop({
+      venueId: venue.id,
+      venueName: venue.name,
+      crawlRunId: darkRunId,
+      eventsFound: 0,
+      lastEventCountAlertAt: afterRecovery!.lastEventCountAlertAt,
+      now,
+    })
+
+    expect(outcome.fired).toBe(true)
+    if (!outcome.fired) throw new Error('expected outcome.fired')
+    expect(outcome.severity).toBe('went_dark')
+    expect(mockSendEmail).toHaveBeenCalledOnce()
+  })
+
+  it('leaves a newer cooldown marker alone when a healthy run started before it (#1174)', async () => {
+    // Overlapping crawls for one venue (admin trigger-crawl racing the nightly
+    // cron): the healthy run snapshotted an old marker, but a dropped run has
+    // since written a fresh one. Clearing unconditionally would reopen
+    // alerting for a venue that is still dark.
+    const venue = await seedVenue()
+    const ids = await seedSuccessfulRuns(
+      venue.id,
+      [70, 65, 72, 68, 71, 69, 75, 60],
+    )
+    const currentRunId = ids[ids.length - 1]!
+    const now = new Date()
+    const staleSnapshot = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+    const freshMarker = new Date(now.getTime() - 60_000)
+    await db
+      .update(venues)
+      .set({ lastEventCountAlertAt: freshMarker })
+      .where(eq(venues.id, venue.id))
+
+    const outcome = await checkEventCountDrop({
+      venueId: venue.id,
+      venueName: venue.name,
+      crawlRunId: currentRunId,
+      eventsFound: 60,
+      lastEventCountAlertAt: staleSnapshot,
+      now,
+    })
+
+    // Reports no_drop, not recovered — the CAS matched no rows, so nothing
+    // was cleared and the outcome must not claim otherwise.
+    expect(outcome).toEqual({ fired: false, reason: 'no_drop' })
+    const [updatedVenue] = await db
+      .select()
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(updatedVenue!.lastEventCountAlertAt?.getTime()).toBe(
+      freshMarker.getTime(),
+    )
+  })
+
+  it('alerts once then suppresses a venue that stays dark (#1174)', async () => {
+    // The backstop the cooldown exists for. Unlike the recovery test above,
+    // nothing healthy lands between the two dark runs, so the second must be
+    // throttled. Starts from a null marker so the first run genuinely fires
+    // and writes the cooldown itself, rather than assuming a seeded one.
+    const venue = await seedVenue()
+    const ids = await seedSuccessfulRuns(
+      venue.id,
+      [70, 65, 72, 68, 71, 69, 75, 0, 0],
+    )
+    const firstDarkId = ids[ids.length - 2]!
+    const secondDarkId = ids[ids.length - 1]!
+    const now = new Date()
+
+    const first = await checkEventCountDrop({
+      venueId: venue.id,
+      venueName: venue.name,
+      crawlRunId: firstDarkId,
+      eventsFound: 0,
+      lastEventCountAlertAt: null,
+      now,
+    })
+    expect(first.fired).toBe(true)
+
+    const [afterFirst] = await db
+      .select()
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(afterFirst!.lastEventCountAlertAt).not.toBeNull()
+
+    const second = await checkEventCountDrop({
+      venueId: venue.id,
+      venueName: venue.name,
+      crawlRunId: secondDarkId,
+      eventsFound: 0,
+      lastEventCountAlertAt: afterFirst!.lastEventCountAlertAt,
+      now: new Date(now.getTime() + 24 * 60 * 60 * 1000),
+    })
+    expect(second).toEqual({ fired: false, reason: 'cooldown' })
+
+    expect(mockSendEmail).toHaveBeenCalledOnce()
+    const notifs = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'crawl.event_count_dropped'))
+    expect(notifs).toHaveLength(1)
+  })
+
   it('fires again after the cooldown window has elapsed', async () => {
     const venue = await seedVenue()
     const ids = await seedSuccessfulRuns(
