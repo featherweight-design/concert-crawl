@@ -613,6 +613,9 @@ export interface EventDetailResponse extends EventWithVenue {
   ticketFees?: number | null
   // Community price enrichment — vendor, submitter handle, and observation timestamp
   priceVendor?: string | null
+  // The submitter's "Where's the price from?" answer. Drives the trust mark;
+  // null only for rows predating #641, which fall back to vendor inference.
+  priceSourceCategory?: SourceCategory | null
   priceSubmitterHandle?: string | null
   priceObservedAt?: string | null
   // Approval metadata — who corroborated and when
@@ -623,6 +626,7 @@ export interface EventDetailResponse extends EventWithVenue {
     vendor: string | null
     priceMin: string
     priceMax: string | null
+    sourceCategory?: SourceCategory | null
   }> | null
   // Confirms count for the primary live community price
   priceConfirmsCount?: number | null

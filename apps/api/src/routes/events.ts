@@ -35,6 +35,7 @@ import {
   deriveSourceCategory,
   type AvailabilityDay,
   type EventsAvailabilityResponse,
+  type SourceCategory,
   type Tier,
 } from '@concert-crawl/types'
 import { isImminentEvent, todayInTimezone } from '../lib/time.js'
@@ -707,6 +708,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // fields are deprecated; PR 4 migrates the consumer UI to priceByTier and
   // the Contract PR drops them.
   let priceVendor: string | null = null
+  let priceSourceCategory: SourceCategory | null = null
   let priceSubmitterHandle: string | null = null
   let priceObservedAt: string | null = null
 
@@ -716,6 +718,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     vendor: string | null
     priceMin: string
     priceMax: string | null
+    sourceCategory: SourceCategory | null
   }> = []
   let priceConfirmsCount: number = 0
   let counterSubmission: {
@@ -946,6 +949,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   if (legacyPrimary) {
     const otherSubs = legacySortedCorroborated.slice(1)
     priceVendor = legacyPrimary.vendor
+    priceSourceCategory = legacyPrimary.sourceCategory
     priceObservedAt = legacyPrimary.createdAt.toISOString()
     priceApprovedAt = legacyPrimary.updatedAt.toISOString()
     priceConfirmsCount = confirmsBySubmissionId.get(legacyPrimary.id) ?? 0
@@ -958,6 +962,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       vendor: sub.vendor,
       priceMin: sub.priceMin,
       priceMax: sub.priceMax,
+      sourceCategory: sub.sourceCategory,
     }))
 
     // counterTierRows is sorted newest-first and filtered to tier-match
@@ -1093,6 +1098,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       isWatching,
       priceStatus,
       priceVendor,
+      priceSourceCategory,
       priceSubmitterHandle,
       priceObservedAt,
       priceApprovalKind,

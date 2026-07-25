@@ -720,6 +720,7 @@ export function EventDetailPriceBlock({
           ticketPriceOpenedAt={event.ticketPriceOpenedAt ?? null}
           ticketFees={event.ticketFees ?? null}
           priceVendor={event.priceVendor ?? null}
+          priceSourceCategory={event.priceSourceCategory ?? null}
           priceSubmitterHandle={event.priceSubmitterHandle ?? null}
           priceObservedAt={event.priceObservedAt ?? null}
           priceApprovalKind={event.priceApprovalKind ?? null}
@@ -1537,6 +1538,7 @@ export function EventDetailPriceBlock({
             date={event.date}
             priceStatus="live"
             priceVendor={confirmedSub.vendor}
+            priceSourceCategory={confirmedSub.sourceCategory}
             priceSubmitterHandle={confirmedSub.submitterHandle}
             priceObservedAt={confirmedSub.submittedAt}
             priceApprovalKind="fan"
@@ -1864,6 +1866,7 @@ export function EventDetailPriceBlock({
         ticketPriceOpenedAt={event.ticketPriceOpenedAt ?? null}
         ticketFees={event.ticketFees ?? null}
         priceVendor={event.priceVendor ?? null}
+        priceSourceCategory={event.priceSourceCategory ?? null}
         priceSubmitterHandle={event.priceSubmitterHandle ?? null}
         priceObservedAt={event.priceObservedAt ?? null}
         priceApprovalKind={event.priceApprovalKind ?? null}

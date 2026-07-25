@@ -1177,4 +1177,12 @@ export const CONSUMER_COPY = {
         'You already submitted a {tier} price — edit it from the event page.',
     },
   },
+
+  // ── Vendor labels ───────────────────────────────────────────────
+  // Display labels for stored vendor enum values. Round-3 locked decision #2:
+  // the box-office vendor never renders as the venue's own name, so this label
+  // stays generic. Read it through vendor-display.ts, not directly.
+  vendors: {
+    venueBoxOffice: 'Venue box office',
+  },
 } as const

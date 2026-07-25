@@ -8,6 +8,7 @@ import { ChipGroup } from './ChipGroup'
 import { ArrowGlyph } from './glyphs'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { VENUE_BOX_OFFICE_LABEL } from '@/components/consumer/vendor-display'
 import { SP_POLICY } from '@concert-crawl/types'
 import type { Tier, Vendor } from '@concert-crawl/types'
 
@@ -27,7 +28,7 @@ const VENDOR_OPTIONS: { value: string; label: string }[] = [
   { value: 'SeatGeek', label: 'SeatGeek' },
   { value: 'DICE', label: 'DICE' },
   { value: 'Eventbrite', label: 'Eventbrite' },
-  { value: 'VenueBoxOffice', label: 'Venue box office' },
+  { value: 'VenueBoxOffice', label: VENUE_BOX_OFFICE_LABEL },
 ]
 
 type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'

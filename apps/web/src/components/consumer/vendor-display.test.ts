@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { displayVendor } from './vendor-display'
+import { displayVendor, VENUE_BOX_OFFICE_LABEL } from './vendor-display'
 
 describe('displayVendor', () => {
-  it("maps the 'VenueBoxOffice' enum value to 'Venue' (Round-3 #2 lock)", () => {
-    expect(displayVendor('VenueBoxOffice')).toBe('Venue')
+  it("maps the 'VenueBoxOffice' enum value to the box-office label", () => {
+    expect(displayVendor('VenueBoxOffice')).toBe(VENUE_BOX_OFFICE_LABEL)
+  })
+
+  it('never renders the venue name in place of the vendor (Round-3 #2 lock)', () => {
+    expect(VENUE_BOX_OFFICE_LABEL).toBe('Venue box office')
   })
 
   it.each(['AXS', 'Ticketmaster', 'SeatGeek', 'DICE', 'Eventbrite'])(

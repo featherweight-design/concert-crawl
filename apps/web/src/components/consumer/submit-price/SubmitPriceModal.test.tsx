@@ -3,6 +3,7 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { VENUE_BOX_OFFICE_LABEL } from '@/components/consumer/vendor-display'
 
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
@@ -147,8 +148,8 @@ describe('SubmitPriceModal — form view', () => {
         screen.getByText('Auto-filled because source is box office'),
       ).toBeTruthy(),
     )
-    // The Vendor chip "Venue" should be present (vendor auto-fills to VenueBoxOffice)
-    expect(screen.getByText('Venue')).toBeTruthy()
+    // The box-office vendor chip should be present (auto-fills to VenueBoxOffice)
+    expect(screen.getByText(VENUE_BOX_OFFICE_LABEL)).toBeTruthy()
   })
 
   it('switching source away from boxoffice clears the auto-filled vendor', async () => {

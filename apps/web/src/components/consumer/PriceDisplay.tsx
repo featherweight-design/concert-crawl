@@ -1,9 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import type { PriceSource } from '@concert-crawl/types'
+import type { PriceSource, SourceCategory } from '@concert-crawl/types'
 import { SubmitPriceModal } from '@/components/consumer/submit-price'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { VENUE_BOX_OFFICE_LABEL } from '@/components/consumer/vendor-display'
+import {
+  resolveAlternateKind,
+  resolveSourceKind,
+} from '@/components/consumer/lib/price-source-kind'
 
 const copy = CONSUMER_COPY
 
@@ -68,6 +73,9 @@ interface PriceDisplayProps {
   ticketPriceOpenedAt?: number | null
   ticketFees?: number | null
   priceVendor?: string | null
+  // The submitter's "Where's the price from?" answer. Drives the trust mark;
+  // null only for rows predating #641, which fall back to vendor inference.
+  priceSourceCategory?: SourceCategory | null
   priceSubmitterHandle?: string | null
   priceObservedAt?: string | null
   priceApprovalKind?: 'admin' | 'fan' | null
@@ -76,6 +84,7 @@ interface PriceDisplayProps {
     vendor: string | null
     priceMin: string
     priceMax: string | null
+    sourceCategory?: SourceCategory | null
   }> | null
   // Fan confirms count — passed from optimistic section 4a to show "N fans confirmed"
   priceConfirmsCount?: number | null
@@ -91,19 +100,6 @@ const GOLD = 'oklch(0.66 0.14 78)'
 const COMMUNITY = 'var(--trust-community)'
 
 // ── Helpers ──────────────────────────────────────────────────────
-
-function resolveSourceKind(
-  source: PriceSource | null,
-  vendor?: string | null,
-): 'primary' | 'resale' | 'community' | 'boxoffice' {
-  if (source === 'community') {
-    if (vendor === 'VenueBoxOffice') return 'boxoffice'
-    if (vendor === 'SeatGeek') return 'resale'
-    return 'community'
-  }
-  if (source === 'seatgeek') return 'resale'
-  return 'primary'
-}
 
 function resolveSourceName(
   source: PriceSource | null,
@@ -1070,21 +1066,10 @@ function CommunityHandoffCard({
 // When price is null → community-handoff card.
 // When price exists → full card with headline, breakdown, trust marks, etc.
 // ── Alternate vendor helpers ──────────────────────────────────────
-function resolveAlternateKind(
-  vendor: string | null,
-): 'primary' | 'resale' | 'community' | 'boxoffice' {
-  if (vendor === 'VenueBoxOffice') return 'boxoffice'
-  if (vendor === 'SeatGeek') return 'resale'
-  return 'community'
-}
-
-function resolveAlternateName(
-  vendor: string | null,
-  venueNameStr: string,
-): string | null {
+function resolveAlternateName(vendor: string | null): string | null {
   switch (vendor) {
     case 'VenueBoxOffice':
-      return `${venueNameStr} Box Office`
+      return VENUE_BOX_OFFICE_LABEL
     case 'SeatGeek':
       return 'SeatGeek'
     case 'AXS':
@@ -1115,6 +1100,7 @@ export function PriceDisplay({
   ticketPriceOpenedAt,
   ticketFees,
   priceVendor,
+  priceSourceCategory,
   priceSubmitterHandle,
   priceObservedAt,
   priceApprovalKind,
@@ -1127,7 +1113,11 @@ export function PriceDisplay({
   const parsedMax = priceMax ? parseFloat(priceMax) : null
   const face = parsedMin !== null && !isNaN(parsedMin) ? parsedMin : null
   const faceMax = parsedMax !== null && !isNaN(parsedMax) ? parsedMax : null
-  const sourceKind = resolveSourceKind(priceSource, priceVendor)
+  const sourceKind = resolveSourceKind(
+    priceSource,
+    priceVendor,
+    priceSourceCategory,
+  )
   const sourceName = resolveSourceName(priceSource, venueName, priceVendor)
   const effectiveObservedAt = observedAt ?? priceObservedAt ?? null
   const sourceUrl = ticketUrl
@@ -1170,11 +1160,8 @@ export function PriceDisplay({
           }
         : null,
     alternates: (priceAlternates ?? []).map((alt) => ({
-      source:
-        resolveAlternateName(alt.vendor, venueName) ??
-        alt.vendor ??
-        'Community',
-      sourceKind: resolveAlternateKind(alt.vendor),
+      source: resolveAlternateName(alt.vendor) ?? alt.vendor ?? 'Community',
+      sourceKind: resolveAlternateKind(alt.vendor, alt.sourceCategory),
       face: parseFloat(alt.priceMin),
       fees: null,
       sourceUrl: null,

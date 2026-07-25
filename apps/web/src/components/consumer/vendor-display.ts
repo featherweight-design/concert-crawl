@@ -1,11 +1,14 @@
 // Locked per memory:project_price_source_discoverability — Round-3 #2:
-// "Vendor shows 'Venue', never the venue's name, anywhere it's a vendor
-// value." The shipped API stores the box-office vendor as the enum value
-// 'VenueBoxOffice'; everywhere the consumer-side UI renders that as a
-// display label, this helper maps it to 'Venue'. Other vendors pass
-// through unchanged.
+// the vendor never renders as the venue's own name, anywhere it's a vendor
+// value. The shipped API stores the box-office vendor as the enum value
+// 'VenueBoxOffice'; everywhere the consumer-side UI renders that as a display
+// label, it resolves to VENUE_BOX_OFFICE_LABEL. Other vendors pass through
+// unchanged.
 
 import type { Vendor } from '@concert-crawl/types'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+export const VENUE_BOX_OFFICE_LABEL = CONSUMER_COPY.vendors.venueBoxOffice
 
 /**
  * Map a stored Vendor enum value to its consumer-facing display label.
@@ -16,6 +19,6 @@ import type { Vendor } from '@concert-crawl/types'
  * only for the inverse direction (rendering a stored value back).
  */
 export function displayVendor(vendor: Vendor | string): string {
-  if (vendor === 'VenueBoxOffice') return 'Venue'
+  if (vendor === 'VenueBoxOffice') return VENUE_BOX_OFFICE_LABEL
   return vendor
 }

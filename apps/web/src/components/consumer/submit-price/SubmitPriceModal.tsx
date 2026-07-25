@@ -5,6 +5,7 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { useAuth } from '@clerk/nextjs'
 import { ShieldCheck } from 'lucide-react'
 import { ModalShell } from '@/components/consumer/modal-shell'
+import { VENUE_BOX_OFFICE_LABEL } from '@/components/consumer/vendor-display'
 import { CCMark } from '@/components/brand/cc-mark'
 import { SPNumberField } from '../SPNumberField'
 import { ChipGroup } from '../ChipGroup'
@@ -219,10 +220,10 @@ const TIER_OPTIONS = [
   { value: 'Lawn', label: 'Lawn' },
 ]
 
-// "Venue" label replaces "Venue box office" per round-3 locked decision #2.
+// Round-3 locked decision #2: never show the venue's own name as a vendor.
 // The API value stays `VenueBoxOffice` until the Contract PR retires it.
 const VENDOR_OPTIONS = [
-  { value: 'VenueBoxOffice', label: 'Venue' },
+  { value: 'VenueBoxOffice', label: VENUE_BOX_OFFICE_LABEL },
   { value: 'AXS', label: 'AXS' },
   { value: 'Ticketmaster', label: 'Ticketmaster' },
   { value: 'SeatGeek', label: 'SeatGeek' },
