@@ -1,3 +1,10 @@
+## [1.160.3](https://github.com/HartiganHM/concert-crawl/compare/v1.160.2...v1.160.3) (2026-07-25)
+
+
+### Bug Fixes
+
+* **crawler:** accept save_events payload when Haiku stringifies the events array ([#1192](https://github.com/HartiganHM/concert-crawl/issues/1192)) ([1d96086](https://github.com/HartiganHM/concert-crawl/commit/1d960860c6d993526a96a5a50660fdcf64425d4c))
+
 ## [1.160.2](https://github.com/HartiganHM/concert-crawl/compare/v1.160.1...v1.160.2) (2026-07-25)
 
 
