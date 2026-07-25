@@ -595,6 +595,106 @@ describe('crawlVenue — canonical-artist + show_time upsert key (#1053)', () =>
   })
 })
 
+describe('crawlVenue — event_url self-heal (#1152)', () => {
+  it('re-upserts an otherwise-unchanged event once the extractor supplies an eventUrl', async () => {
+    const venue = await seedTestVenue()
+    const showDate = futureDate(14)
+    const extracted = {
+      title: 'Hilary Duff',
+      rawTitle: 'Hilary Duff',
+      artist: 'Hilary Duff',
+      date: showDate,
+      confidence: 0.9,
+      sourceUrl: venue.url,
+    }
+
+    // First crawl predates the extractor being able to name the show's
+    // own page — the row lands with event_url NULL.
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [extracted],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    expect((await crawlVenue(venue.id, mockBrowser)).status).toBe('success')
+
+    const beforeHeal = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+    expect(beforeHeal[0]!.eventUrl).toBeNull()
+
+    // Second crawl: identical source fields (so the sourceHash matches and
+    // the hash gate alone would skip the write), but now with an eventUrl.
+    // The page HTML has to differ or the page-level hash short-circuits the
+    // whole run before event processing.
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE_V2,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        { ...extracted, eventUrl: 'https://venue.example.com/events/duff/' },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const healRun = await crawlVenue(venue.id, mockBrowser)
+    expect(healRun.status).toBe('success')
+    expect(healRun.eventsUpdated).toBe(1)
+
+    const rows = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.eventUrl).toBe('https://venue.example.com/events/duff/')
+  })
+
+  it('leaves an unchanged event alone when it still has no eventUrl', async () => {
+    const venue = await seedTestVenue()
+    const showDate = futureDate(14)
+    const extracted = {
+      title: 'Hilary Duff',
+      rawTitle: 'Hilary Duff',
+      artist: 'Hilary Duff',
+      date: showDate,
+      confidence: 0.9,
+      sourceUrl: venue.url,
+    }
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [extracted],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE_V2,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    const secondRun = await crawlVenue(venue.id, mockBrowser)
+
+    expect(secondRun.status).toBe('success')
+    // Both counters: eventsInserted alone would still pass if the row were
+    // wrongly re-upserted down the UPDATE path.
+    expect(secondRun.eventsInserted).toBe(0)
+    expect(secondRun.eventsUpdated).toBe(0)
+  })
+})
+
 describe('crawlVenue — email await regression (#649)', () => {
   it('awaits sendCrawlFailureEmail before returning on the 3rd consecutive failure', async () => {
     // Locks in #649: the crawler runs as a Render cron that hard-exits via

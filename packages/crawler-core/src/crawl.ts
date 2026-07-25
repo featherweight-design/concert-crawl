@@ -629,6 +629,7 @@ export async function crawlVenue(
           title: events.title,
           sourceHash: events.sourceHash,
           verified: events.verified,
+          eventUrl: events.eventUrl,
         })
         .from(events)
         .where(and(eq(events.venueId, venueId), eq(events.status, 'upcoming')))
@@ -712,6 +713,16 @@ export async function crawlVenue(
               dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
             )
             if (!existing) return true // new event
+            // event_url is not part of sourceHash, so a row stored before
+            // the extractor could name a show's own page would never be
+            // rewritten by the hash check alone — leaving the "Get tickets"
+            // CTA on the venue's calendar index forever (#1152).
+            if (
+              existing.eventUrl === null &&
+              normalizeTicketUrl(evt.eventUrl) !== null
+            ) {
+              return true
+            }
             return (
               existing.sourceHash === null ||
               existing.sourceHash !== evt.sourceHash
