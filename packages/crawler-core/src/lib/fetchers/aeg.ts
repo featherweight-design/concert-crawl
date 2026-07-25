@@ -63,6 +63,10 @@ const AegEventSchema = z
         // Some AEG shards (e.g. Gothic shard 37) omit `ticketURL` entirely
         // and only ship `url`. Downstream falls back to `url`.
         ticketURL: z.string().nullable().optional(),
+        // The readable AXS event page for the show. Distinct from
+        // `ticketURL`, which on the Bluebird and Ogden shards is an opaque
+        // cart link (shop.axs.com/?c=axs&e=… or tix.axs.com/vnAG…).
+        eventUrl: z.string().nullable().optional(),
       })
       .passthrough()
       .nullable(),
@@ -233,6 +237,10 @@ function normalize(
   const doorsTime = parseDoorTime(event.doorDateTime)
   const ticketUrl =
     event.ticketing?.ticketURL ?? event.ticketing?.url ?? undefined
+  // `ticketing.eventUrl` is the readable AXS event page; `ticketURL` on the
+  // Bluebird and Ogden shards is an opaque cart link, so the two are not
+  // interchangeable for the "Get tickets" CTA.
+  const eventUrl = event.ticketing?.eventUrl?.trim() || undefined
   const imageUrl = pickImageUrl(event.media)
 
   // Build the result with optional fields only included when populated.
@@ -251,6 +259,7 @@ function normalize(
     showTime,
     ...(doorsTime !== undefined ? { doorsTime } : {}),
     ...(ticketUrl !== undefined ? { ticketUrl } : {}),
+    ...(eventUrl !== undefined ? { eventUrl } : {}),
     ...(imageUrl !== undefined ? { imageUrl } : {}),
     ...(description !== undefined ? { description } : {}),
     // sourceUrl is the venue's human-visitable calendar URL (matches the

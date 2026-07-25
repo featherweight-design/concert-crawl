@@ -17,6 +17,17 @@ const FIXTURES_DIR = path.join(
 function loadFixture(name: string): string {
   return readFileSync(path.join(FIXTURES_DIR, name), 'utf-8')
 }
+interface AegPayload {
+  meta: { total: number }
+  events: AegEvent[]
+}
+// A return-type annotation types the fixture without an `as` cast (repo rule).
+// It is a compile-time convenience only — `JSON.parse` returns `any`, so
+// nothing here validates that the file on disk actually matches the shape.
+function parseFixture(raw: string): AegPayload {
+  return JSON.parse(raw)
+}
+
 const BLUEBIRD_FIXTURE = loadFixture('aeg-bluebird.json')
 const BLUEBIRD_EVENTS_COUNT = JSON.parse(BLUEBIRD_FIXTURE).events.length
 const GOTHIC_FIXTURE = loadFixture('aeg-gothic.json')
@@ -170,7 +181,7 @@ describe('aegFetcher.fetch', () => {
     // `<p>` markers as text. After the fix, only plain text should
     // survive — supporting/tour fields remain plain as well, and
     // composition preserves the blank-line separator between sections.
-    const parsed = JSON.parse(BLUEBIRD_FIXTURE) as { events: AegEvent[] }
+    const parsed = parseFixture(BLUEBIRD_FIXTURE)
     const htmlEvent = {
       ...parsed.events[0]!,
       description:
@@ -195,7 +206,7 @@ describe('aegFetcher.fetch', () => {
 
   it('filters inactive events', async () => {
     // Synthesize a payload with one active + one inactive event
-    const parsed = JSON.parse(BLUEBIRD_FIXTURE) as { events: AegEvent[] }
+    const parsed = parseFixture(BLUEBIRD_FIXTURE)
     const inactiveCopy = { ...parsed.events[0]!, active: false }
     const synthetic = JSON.stringify({
       meta: { total: 2 },
@@ -208,7 +219,7 @@ describe('aegFetcher.fetch', () => {
   })
 
   it('filters events with publishStatus !== 1 (drafts)', async () => {
-    const parsed = JSON.parse(BLUEBIRD_FIXTURE) as { events: AegEvent[] }
+    const parsed = parseFixture(BLUEBIRD_FIXTURE)
     const draftCopy = { ...parsed.events[0]!, publishStatus: 0 }
     const synthetic = JSON.stringify({
       meta: { total: 2 },
@@ -256,10 +267,7 @@ describe('aegFetcher.fetch', () => {
   })
 
   it('accepts a ticketing object that omits ticketURL', async () => {
-    const parsed = JSON.parse(BLUEBIRD_FIXTURE) as {
-      meta: { total: number }
-      events: AegEvent[]
-    }
+    const parsed = parseFixture(BLUEBIRD_FIXTURE)
     const event = { ...parsed.events[0]! }
     const ticketingWithoutTicketURL = {
       ...((event.ticketing ?? {}) as Record<string, unknown>),
@@ -279,6 +287,58 @@ describe('aegFetcher.fetch', () => {
     expect(result.events[0]!.ticketUrl).toBe(fallbackUrl)
   })
 
+  // ticketing.ticketURL on the Bluebird/Ogden shards is an opaque AXS cart
+  // link (shop.axs.com/?c=axs&e=… / tix.axs.com/vnAG…), so the readable AXS
+  // event page in ticketing.eventUrl is the only per-event page these venues
+  // expose. See #1152.
+  describe('per-event eventUrl', () => {
+    it('maps ticketing.eventUrl to the event page', async () => {
+      mockFetchOk(BLUEBIRD_FIXTURE)
+
+      const result = await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+
+      expect(result.events[0]!.eventUrl).toBe(
+        'https://www.axs.com/events/1468138/chelsea-cutler-proof-of-life-tickets',
+      )
+      // The cart link stays the purchase target — eventUrl is the fallback.
+      expect(result.events[0]!.ticketUrl).toBe(
+        'https://shop.axs.com/?c=axs&e=20174867067415550',
+      )
+    })
+
+    it('omits eventUrl when the shard has no ticketing object', async () => {
+      const parsed = parseFixture(BLUEBIRD_FIXTURE)
+      const synthetic = JSON.stringify({
+        meta: { total: 1 },
+        events: [{ ...parsed.events[0]!, ticketing: null }],
+      })
+      mockFetchOk(synthetic)
+
+      const result = await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+
+      expect(result.events[0]!.eventUrl).toBeUndefined()
+    })
+
+    it('omits eventUrl when the value is blank', async () => {
+      const parsed = parseFixture(BLUEBIRD_FIXTURE)
+      const event = parsed.events[0]!
+      const synthetic = JSON.stringify({
+        meta: { total: 1 },
+        events: [
+          {
+            ...event,
+            ticketing: { ...(event.ticketing ?? {}), eventUrl: '   ' },
+          },
+        ],
+      })
+      mockFetchOk(synthetic)
+
+      const result = await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+
+      expect(result.events[0]!.eventUrl).toBeUndefined()
+    })
+  })
+
   // Regression: Ogden shard 7 had an event with eventDateTimeISO: "TBD".
   // The previous parser threw, killing the entire crawl run. Now we skip
   // events with unparseable dates so the rest of the shard still ingests.
@@ -294,9 +354,9 @@ describe('aegFetcher.fetch', () => {
     const result = await aegFetcher.fetch(venue, { crawlDelayMs: 0 })
     // Fixture has 57 events total; exactly one has eventDateTimeISO: "TBD".
     // Skip that one, keep the other 56.
-    const tbdCount = (
-      JSON.parse(OGDEN_FIXTURE) as { events: AegEvent[] }
-    ).events.filter((evt) => evt.eventDateTimeISO === 'TBD').length
+    const tbdCount = parseFixture(OGDEN_FIXTURE).events.filter(
+      (evt) => evt.eventDateTimeISO === 'TBD',
+    ).length
     expect(tbdCount).toBe(1)
     expect(result.events.length).toBe(OGDEN_EVENTS_COUNT - 1)
     // Sanity: the TBD event's artist isn't in the result.
@@ -306,10 +366,7 @@ describe('aegFetcher.fetch', () => {
   })
 
   it('skips a synthetic event with eventDateTimeISO === "TBD"', async () => {
-    const parsed = JSON.parse(BLUEBIRD_FIXTURE) as {
-      meta: { total: number }
-      events: AegEvent[]
-    }
+    const parsed = parseFixture(BLUEBIRD_FIXTURE)
     const tbdEvent = {
       ...parsed.events[0]!,
       eventId: 'tbd-1',
