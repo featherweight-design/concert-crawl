@@ -1,3 +1,10 @@
+## [1.158.7](https://github.com/HartiganHM/concert-crawl/compare/v1.158.6...v1.158.7) (2026-07-25)
+
+
+### Bug Fixes
+
+* **spotify:** reserve discovery shelf footprint in the browse loading state ([#1169](https://github.com/HartiganHM/concert-crawl/issues/1169)) ([f6b3f90](https://github.com/HartiganHM/concert-crawl/commit/f6b3f90c460d53b1af7ff8d9dadf11375aa660a4)), closes [#1146](https://github.com/HartiganHM/concert-crawl/issues/1146) [#33](https://github.com/HartiganHM/concert-crawl/issues/33)
+
 ## [1.158.6](https://github.com/HartiganHM/concert-crawl/compare/v1.158.5...v1.158.6) (2026-07-25)
 
 
