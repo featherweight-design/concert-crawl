@@ -75,9 +75,13 @@ async function parseForce(ctx: {
 // rather than dropping the whole notification. All three cases reach the
 // consumer below as "no severity", so the UI falls back to a neutral
 // "Event drop" label and the badge still surfaces.
+//
+// `kind` is the equivalent discriminator for 'crawl.event_ceiling_suspected'
+// (#1185) and gets the same tolerant treatment for the same reasons.
 const alertMetadataSchema = z.object({
   crawlRunId: z.string().uuid().optional(),
   severity: z.enum(['went_dark', 'dropped_sharply']).nullish().catch(undefined),
+  kind: z.enum(['horizon_shrank', 'pinned_count']).nullish().catch(undefined),
 })
 
 // Cap the unread-notification scan. The list endpoint defaults to 10 runs
@@ -250,11 +254,12 @@ crawlAdminRouter.get(
     // the alert set determines which crawl_runs to return; when
     // hasAlert=false (the default — the Zod transform coerces missing
     // params to false) the list rows still need the badge annotation,
-    // so we fetch alerts unconditionally. Scope is the two categories a
-    // crawl row surfaces (`crawl.event_count_dropped` for went-dark /
-    // sharp-drop, `crawl.failed` for the consecutive-failure path) and
-    // only unread rows — once an operator clears the notification, the
-    // badge clears too.
+    // so we fetch alerts unconditionally. Scope is the categories a crawl
+    // row surfaces (`crawl.event_count_dropped` for went-dark / sharp-drop,
+    // `crawl.failed` for the consecutive-failure path,
+    // `crawl.event_ceiling_suspected` for a capped catalogue) and only
+    // unread rows — once an operator clears the notification, the badge
+    // clears too.
     const rawAlerts = await db
       .select({
         id: notifications.id,
@@ -269,6 +274,7 @@ crawlAdminRouter.get(
           inArray(notifications.category, [
             'crawl.event_count_dropped',
             'crawl.failed',
+            'crawl.event_ceiling_suspected',
           ]),
           isNull(notifications.readAt),
         ),
@@ -310,6 +316,10 @@ crawlAdminRouter.get(
           severity:
             category === 'crawl.event_count_dropped' && meta.severity
               ? meta.severity
+              : null,
+          ceilingKind:
+            category === 'crawl.event_ceiling_suspected' && meta.kind
+              ? meta.kind
               : null,
         })
       }

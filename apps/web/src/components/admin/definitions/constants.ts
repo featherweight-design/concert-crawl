@@ -42,6 +42,10 @@ export const CRAWL_STATUS_BADGES: Record<CrawlStatus, CrawlStatusBadgeConfig> =
 // label here instead of a generic "Event drop". Older rows whose metadata
 // predates the severity field fall back to the neutral label.
 //
+// 'crawl.event_ceiling_suspected' (#1185) is a third category and renders
+// 'warning' rather than 'danger' — the run succeeded and the data is real,
+// it just looks truncated, so it shouldn't read as loud as a dark venue.
+//
 // `kind` is `StatusKind` rather than a shadcn Badge variant because the
 // consumer renders via the admin StatusBadge primitive (matches the visual
 // language of the other badges in that table).
@@ -53,6 +57,12 @@ export function resolveCrawlAlertBadge(alert: ActiveCrawlAlert): {
     return {
       label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelFailing,
       kind: 'danger',
+    }
+  }
+  if (alert.category === 'crawl.event_ceiling_suspected') {
+    return {
+      label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelCeilingSuspected,
+      kind: 'warning',
     }
   }
   if (alert.severity === 'went_dark') {

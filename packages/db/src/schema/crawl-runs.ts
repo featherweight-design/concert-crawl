@@ -1,4 +1,5 @@
 import {
+  date,
   doublePrecision,
   integer,
   pgEnum,
@@ -37,6 +38,12 @@ export const crawlRuns = pgTable('crawl_runs', {
   durationMs: integer('duration_ms'),
   llmCostUsd: doublePrecision('llm_cost_usd'),
   eventsUpdated: integer('events_updated').notNull().default(0),
+  // Latest date among the events this run kept — the venue's announced event
+  // horizon (#1185). A venue that starts truncating stops announcing far-out
+  // shows, so this stalls or moves closer while the count stays healthy. NULL
+  // means "no reading": zero-event, skipped, failed and robots-blocked runs,
+  // plus every row that predates migration 0061.
+  furthestEventDate: date('furthest_event_date'),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

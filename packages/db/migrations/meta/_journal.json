@@ -428,6 +428,13 @@
       "when": 1785369600000,
       "tag": "0060_livenation_platform_routing",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1785456000000,
+      "tag": "0061_event_ceiling_guard",
+      "breakpoints": true
     }
   ]
 }

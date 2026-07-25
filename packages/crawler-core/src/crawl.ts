@@ -13,6 +13,7 @@ import { reportFailure } from '@concert-crawl/logger'
 import { isAllowed } from './lib/robots.js'
 import { sendCrawlFailureEmail } from './lib/email.js'
 import { checkEventCountDrop } from './lib/event-count-alert.js'
+import { checkEventCeiling } from './lib/event-ceiling-alert.js'
 import { reconcileDriftDuplicates } from './reconcile-drift-duplicates.js'
 import {
   fetchPage,
@@ -1022,6 +1023,16 @@ export async function crawlVenue(
     // events and kept none learned just as little as one that extracted zero.
     const foundNothing = seenEventCoords.length === 0
 
+    // The venue's announced event horizon (#1185) — recorded per run so the
+    // ceiling check can watch it move. Taken from the usable coords rather than
+    // normalizedEvents so a row the downstream guards dropped can't inflate it.
+    // ISO calendar dates compare correctly as strings.
+    const furthestEventDate = seenEventCoords.reduce<string | null>(
+      (furthest, coord) =>
+        furthest === null || coord.date > furthest ? coord.date : furthest,
+      null,
+    )
+
     const [crawlRun] = await db
       .insert(crawlRuns)
       .values({
@@ -1038,6 +1049,7 @@ export async function crawlVenue(
         eventsUpdated,
         llmCostUsd,
         durationMs,
+        furthestEventDate,
       })
       .returning()
     if (!crawlRun) throw new Error('crawl_runs insert returned no row')
@@ -1106,6 +1118,21 @@ export async function crawlVenue(
       eventsFound: normalizedEvents.length,
       eventsUsable: seenEventCoords.length,
       lastEventCountAlertAt: venue.lastEventCountAlertAt,
+    })
+
+    // #1185 — the other half of "the crawl didn't fail". A hard item cap
+    // returns a healthy, stable count, so the check above can never see it;
+    // The Fillmore published only its first 36 events for months in total
+    // silence. Runs after the crawl_runs insert for the same reason: the
+    // checker reads this run's row as part of its history.
+    await checkEventCeiling({
+      venueId,
+      venueName: venue.name,
+      crawlRunId: id,
+      eventsFound: normalizedEvents.length,
+      eventsUsable: seenEventCoords.length,
+      furthestEventDate,
+      lastEventCeilingAlertAt: venue.lastEventCeilingAlertAt,
     })
 
     return { ...crawlRun, insertedEventIds }

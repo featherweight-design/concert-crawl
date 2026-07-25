@@ -328,11 +328,19 @@ export interface CrawlTrigger {
 
 export interface ActiveCrawlAlert {
   notificationId: string
-  category: 'crawl.event_count_dropped' | 'crawl.failed'
+  category:
+    | 'crawl.event_count_dropped'
+    | 'crawl.failed'
+    | 'crawl.event_ceiling_suspected'
   // Only present for 'crawl.event_count_dropped' — the event-count alert
   // classifies the drop as 'went_dark' (0 events) or 'dropped_sharply'
   // (non-zero but well below baseline). 'crawl.failed' has no sub-severity.
   severity?: 'went_dark' | 'dropped_sharply' | null
+  // Only present for 'crawl.event_ceiling_suspected' — which of the two
+  // capped-catalogue fingerprints tripped (#1185). 'horizon_shrank' means the
+  // furthest announced show moved materially closer; 'pinned_count' means the
+  // extracted count repeated exactly across consecutive runs.
+  ceilingKind?: 'horizon_shrank' | 'pinned_count' | null
 }
 
 // DailyCost — one zero-filled day bucket from GET /v1/admin/costs/daily.

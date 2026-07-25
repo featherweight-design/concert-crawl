@@ -535,6 +535,9 @@ export const ADMIN_COPY = {
     alertBadgeLabelDroppedSharply: 'Dropped sharply',
     alertBadgeLabelEventDrop: 'Event drop',
     alertBadgeLabelFailing: 'Failing',
+    // 'Capped' = the run succeeded, but the catalogue looks truncated by a
+    // pagination/API ceiling rather than genuinely short (#1185).
+    alertBadgeLabelCeilingSuspected: 'Capped',
     filterShowAll: 'Show all',
     filterAlertsOnly: 'Show alerts only',
     filterAriaLabel: 'Filter crawl history by active alert state',

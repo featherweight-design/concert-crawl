@@ -160,6 +160,10 @@ function crawlFailureSubquery() {
         inArray(notifications.category, [
           'crawl.failed',
           'crawl.event_count_dropped',
+          // A capped catalogue (#1185) is a crawl-health problem in the same
+          // sense as the other two — the run reported success, but the venue's
+          // data is wrong — so it lands in the same crawl_failure bucket.
+          'crawl.event_ceiling_suspected',
         ]),
       ),
     )

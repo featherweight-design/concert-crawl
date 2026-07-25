@@ -506,6 +506,7 @@ describe('Admin crawl routes', () => {
             notificationId: string
             category: string
             severity: string | null
+            ceilingKind: string | null
           } | null
         }[]
       }
@@ -513,6 +514,52 @@ describe('Admin crawl routes', () => {
         notificationId: NOTIF_ID,
         category: 'crawl.event_count_dropped',
         severity: 'went_dark',
+        ceilingKind: null,
+      })
+    })
+
+    // #1185: the capped-catalogue guard is a third alert category, and its
+    // fingerprint travels in metadata.kind rather than metadata.severity so
+    // the admin badge can distinguish a shrinking horizon from a pinned count.
+    it('attaches ceilingKind for a capped-catalogue alert', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      const NOTIF_ID = '00000000-0000-0000-0000-0000000000ab'
+      queueAlertsThenRuns(
+        db,
+        [
+          {
+            id: NOTIF_ID,
+            category: 'crawl.event_ceiling_suspected',
+            metadata: JSON.stringify({
+              venueId: VENUE_ID,
+              crawlRunId: RUN_ID,
+              kind: 'horizon_shrank',
+            }),
+            createdAt: new Date(),
+          },
+        ],
+        [mockCrawlRun],
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
+      )
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        data: {
+          activeAlert: {
+            notificationId: string
+            category: string
+            severity: string | null
+            ceilingKind: string | null
+          } | null
+        }[]
+      }
+      expect(body.data[0]?.activeAlert).toEqual({
+        notificationId: NOTIF_ID,
+        category: 'crawl.event_ceiling_suspected',
+        severity: null,
+        ceilingKind: 'horizon_shrank',
       })
     })
 

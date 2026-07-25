@@ -57,6 +57,13 @@ export const venues = pgTable('venues', {
   lastEventCountAlertAt: timestamp('last_event_count_alert_at', {
     withTimezone: true,
   }),
+  // Cooldown marker for the capped-catalogue alert (#1185). Separate from
+  // lastEventCountAlertAt so a went-dark incident can't silence a ceiling
+  // alert, or vice versa — the two describe different failures and an
+  // operator needs to hear about both.
+  lastEventCeilingAlertAt: timestamp('last_event_ceiling_alert_at', {
+    withTimezone: true,
+  }),
   // Per-platform fetcher dispatch (#623). When set, the crawler routes
   // this venue to a platform-specific fetcher (e.g. AEG's JSON blob)
   // instead of the HTML → JSON-LD → LLM cascade. The platform value is
