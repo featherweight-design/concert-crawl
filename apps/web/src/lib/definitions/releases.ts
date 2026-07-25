@@ -26,6 +26,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.15.1-beta',
+    date: 'Jul 25, 2026',
+    headline: 'Get Tickets actually lands on the show now.',
+    items: [
+      {
+        kind: 'fixed',
+        text: "Deep-linking shipped last week, but a lot of shows were still dropping you on the venue's full calendar. Turns out the crawler was reading the calendar link itself as the ticket link and letting it win. It now recognizes that page for what it is, ignores it, and sends you to the show's own page instead.",
+      },
+      {
+        kind: 'fixed',
+        text: 'Shows we crawled before the deep-link feature existed were stuck with the old link forever. The crawler now goes back and fills those in the next time it visits the venue, so older listings catch up on their own.',
+      },
+    ],
+  },
+  {
     version: 'v0.15.0-beta',
     date: 'Jul 25, 2026',
     headline:

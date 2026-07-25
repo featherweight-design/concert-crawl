@@ -695,6 +695,81 @@ describe('crawlVenue — event_url self-heal (#1152)', () => {
   })
 })
 
+describe('crawlVenue — calendar-index ticketUrl rejection (#1152)', () => {
+  // The reported GRiZ row's shape: the extractor named the venue's own
+  // calendar as the ticketUrl, and the consumer CTA prefers ticketUrl over
+  // eventUrl — so the fan landed on a list of every show at the venue
+  // instead of the show's page.
+  it('drops a ticketUrl that is just the crawled calendar index', async () => {
+    const venue = await seedTestVenue()
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'GRiZ',
+          rawTitle: 'GRiZ',
+          artist: 'GRiZ',
+          date: futureDate(14),
+          confidence: 0.9,
+          sourceUrl: venue.url,
+          ticketUrl: `${venue.url}/`,
+          eventUrl: `${venue.url}/events/griz-1489047/`,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const rows = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.ticketUrl).toBeNull()
+    expect(rows[0]!.eventUrl).toBe(`${venue.url}/events/griz-1489047/`)
+  })
+
+  it('keeps a genuine per-event ticketUrl', async () => {
+    const venue = await seedTestVenue()
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_BASE,
+      httpStatus: 200,
+      finalUrl: venue.url,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'GRiZ',
+          rawTitle: 'GRiZ',
+          artist: 'GRiZ',
+          date: futureDate(14),
+          confidence: 0.9,
+          sourceUrl: venue.url,
+          ticketUrl: 'https://www.axs.com/events/1489047/griz-tickets',
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const rows = await db
+      .select()
+      .from(events)
+      .where(eq(events.venueId, venue.id))
+    expect(rows[0]!.ticketUrl).toBe(
+      'https://www.axs.com/events/1489047/griz-tickets',
+    )
+  })
+})
+
 describe('crawlVenue — email await regression (#649)', () => {
   it('awaits sendCrawlFailureEmail before returning on the 3rd consecutive failure', async () => {
     // Locks in #649: the crawler runs as a Render cron that hard-exits via

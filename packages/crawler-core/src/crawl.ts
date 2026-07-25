@@ -36,6 +36,7 @@ import {
 import { canonicalizeTitle } from './lib/canonical-title.js'
 import { hashPage, hashEvent } from './lib/hash.js'
 import { deriveTicketLinks } from './lib/ticket-links/index.js'
+import { isListingPageUrl } from './lib/listing-url.js'
 import type { NormalizedEvent, TokenUsage } from './types.js'
 
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
@@ -737,7 +738,17 @@ export async function crawlVenue(
           // ends up paired with ticketLinks=null (deriveTicketLinks treats
           // '' as missing) and downstream consumers can't tell the two
           // states apart. Compute once and reuse so both columns agree.
-          const normalizedTicketUrl = normalizeTicketUrl(event.ticketUrl)
+          // An extractor that hands back the venue's own calendar index as
+          // a ticketUrl masks a good per-event eventUrl, because the
+          // consumer CTA prefers ticketUrl. Drop it so the CTA falls
+          // through to the show's own page (#1152).
+          const candidateTicketUrl = normalizeTicketUrl(event.ticketUrl)
+          const normalizedTicketUrl = isListingPageUrl(candidateTicketUrl, [
+            venue.websiteUrl,
+            event.sourceUrl,
+          ])
+            ? null
+            : candidateTicketUrl
           return {
             venueId,
             title: event.title,
