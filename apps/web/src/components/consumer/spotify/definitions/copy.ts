@@ -171,6 +171,14 @@ export const SPOTIFY_COPY = {
     primaryCta: 'Try again',
     secondaryCta: 'Maybe later',
     ariaLabel: 'Spotify connection failed',
+    // Copy variant for the API `code: 'no_external_account'` branch —
+    // Clerk has no Spotify link because the OAuth flow silently failed
+    // (most often a Spotify dev-mode allowlist miss). Actionable copy
+    // pointing the user back at Spotify's grant screen instead of the
+    // generic "not picking up" body.
+    noExternalAccountTitle: "Spotify didn't finish signing you in.",
+    noExternalAccountBody:
+      'Complete the Spotify sign-in and grant access, then try again.',
   },
   failTokenRefresh: {
     eyebrow: 'sync · lost the thread',

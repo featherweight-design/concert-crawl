@@ -237,10 +237,18 @@ describe('GET /v1/spotify/connection', () => {
 })
 
 describe('POST /v1/spotify/connection', () => {
-  it('rejects with 400 when no Spotify external account is linked', async () => {
+  it('rejects with 400 + code no_external_account when no Spotify external account is linked', async () => {
     setAuth(USER)
     const res = await connect()
     expect(res.status).toBe(400)
+    // Discriminator field lets the client brand-narrow this specific
+    // failure (usually a Spotify dev-mode allowlist miss) and swap in
+    // actionable "complete the sign-in" copy.
+    const body: unknown = await res.json()
+    expect(body).toMatchObject({
+      success: false,
+      code: 'no_external_account',
+    })
     expect(await getConnectionRow(USER)).toBeNull()
   })
 

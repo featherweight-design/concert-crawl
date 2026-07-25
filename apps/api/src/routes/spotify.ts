@@ -181,8 +181,17 @@ spotifyRouter.post('/connection', async (ctx) => {
     )
   }
   if (!hasSpotifyAccount) {
+    // `code` lets the client brand-narrow this specific failure — most
+    // commonly a Spotify dev-mode allowlist miss: the OAuth flow silently
+    // dropped, Clerk never got a callback, so no external account is
+    // attached. Web surfaces a tailored "complete the sign-in" message
+    // instead of the generic "Spotify's not picking up" copy.
     return ctx.json(
-      { success: false, error: 'No Spotify account is linked to this user' },
+      {
+        success: false,
+        error: 'No Spotify account is linked to this user',
+        code: 'no_external_account',
+      },
       400,
     )
   }

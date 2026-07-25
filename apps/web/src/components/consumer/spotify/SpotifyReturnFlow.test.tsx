@@ -20,8 +20,9 @@ interface ConnectOptions {
 
 let connectView: SpotifyConnectionView | undefined
 let connectFails: boolean
+let connectError: Error | undefined
 const connectMutate = vi.fn((_vars: undefined, opts?: ConnectOptions) => {
-  if (connectFails) opts?.onError?.(new Error('boom'))
+  if (connectFails) opts?.onError?.(connectError ?? new Error('boom'))
   else if (connectView) opts?.onSuccess?.(connectView)
 })
 interface PatchOptions {
@@ -45,6 +46,7 @@ beforeEach(() => {
   params = new URLSearchParams('section=connections&spotify=return')
   connectView = undefined
   connectFails = false
+  connectError = undefined
   patchFails = false
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -62,6 +64,7 @@ beforeEach(() => {
 })
 
 import { SpotifyReturnFlow } from './SpotifyReturnFlow'
+import { ApiError } from '@/lib/api'
 import { SPOTIFY_COPY } from './definitions/copy'
 
 const VIEW: SpotifyConnectionView = {
@@ -182,5 +185,41 @@ describe('SpotifyReturnFlow', () => {
       }),
     )
     expect(connectMutate).toHaveBeenCalledTimes(2)
+  })
+
+  it('surfaces the tailored "complete the sign-in" copy when the API code is no_external_account', () => {
+    // Spotify dev-mode allowlist miss: user tapped Connect, Spotify
+    // silently dropped their consent, Clerk got no callback → the API's
+    // POST /v1/spotify/connection returns 400 with code
+    // 'no_external_account'. The failure modal must swap to the
+    // actionable copy variant (not the generic "Spotify's not picking
+    // up" body).
+    connectFails = true
+    connectError = new ApiError(
+      400,
+      'No Spotify account is linked to this user',
+      'no_external_account',
+    )
+    render(<SpotifyReturnFlow />)
+    expect(
+      screen.getByText(SPOTIFY_COPY.failConnectDown.noExternalAccountTitle),
+    ).toBeTruthy()
+    expect(
+      screen.getByText(SPOTIFY_COPY.failConnectDown.noExternalAccountBody),
+    ).toBeTruthy()
+    // Generic body must NOT render alongside the specific variant.
+    expect(screen.queryByText(SPOTIFY_COPY.failConnectDown.body)).toBeNull()
+  })
+
+  it('falls back to the generic failure copy for non-coded errors', () => {
+    connectFails = true
+    // Plain Error (no ApiError, no code) → generic branch.
+    connectError = new Error('network went sideways')
+    render(<SpotifyReturnFlow />)
+    expect(screen.getByText(SPOTIFY_COPY.failConnectDown.title)).toBeTruthy()
+    expect(screen.getByText(SPOTIFY_COPY.failConnectDown.body)).toBeTruthy()
+    expect(
+      screen.queryByText(SPOTIFY_COPY.failConnectDown.noExternalAccountTitle),
+    ).toBeNull()
   })
 })

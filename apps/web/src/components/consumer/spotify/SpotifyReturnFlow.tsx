@@ -14,6 +14,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
+import { ApiError } from '@/lib/api'
 import {
   useSpotifyConnect,
   useSpotifyPatch,
@@ -43,6 +44,10 @@ export const SpotifyReturnFlow = () => {
   const connect = useSpotifyConnect()
   const patch = useSpotifyPatch()
   const [phase, setPhase] = useState<FlowPhase>('idle')
+  // Distinguishes the "Clerk has no linked Spotify account" 400 (usually a
+  // dev-mode allowlist miss) from generic connect failures, so the failure
+  // modal can swap in actionable "complete the sign-in" copy.
+  const [failCode, setFailCode] = useState<'no_external_account' | null>(null)
   const startedRef = useRef(false)
 
   const runConnect = () => {
@@ -57,7 +62,12 @@ export const SpotifyReturnFlow = () => {
             : current,
         )
       },
-      onError: () => {
+      onError: (err) => {
+        setFailCode(
+          err instanceof ApiError && err.code === 'no_external_account'
+            ? 'no_external_account'
+            : null,
+        )
         setPhase((current) => (current === 'connecting' ? 'failed' : current))
       },
     })
@@ -181,8 +191,16 @@ export const SpotifyReturnFlow = () => {
           }
           eyebrow={FAIL_COPY.eyebrow}
           eyebrowTone="muted"
-          title={FAIL_COPY.title}
-          body={FAIL_COPY.body}
+          title={
+            failCode === 'no_external_account'
+              ? FAIL_COPY.noExternalAccountTitle
+              : FAIL_COPY.title
+          }
+          body={
+            failCode === 'no_external_account'
+              ? FAIL_COPY.noExternalAccountBody
+              : FAIL_COPY.body
+          }
         />
       </ModalShell>
     </>
