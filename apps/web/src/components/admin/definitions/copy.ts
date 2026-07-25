@@ -538,6 +538,12 @@ export const ADMIN_COPY = {
     // 'Capped' = the run succeeded, but the catalogue looks truncated by a
     // pagination/API ceiling rather than genuinely short (#1185).
     alertBadgeLabelCeilingSuspected: 'Capped',
+    // The run succeeded and the events are real, but they carry no per-event
+    // ticket links, so the consumer "Get tickets" CTA falls back to the venue
+    // homepage. 'No links' = the whole upcoming catalogue; 'Some links
+    // missing' = part of it.
+    alertBadgeLabelLinksMissing: 'No links',
+    alertBadgeLabelLinksIncomplete: 'Some links missing',
     filterShowAll: 'Show all',
     filterAlertsOnly: 'Show alerts only',
     filterAriaLabel: 'Filter crawl history by active alert state',

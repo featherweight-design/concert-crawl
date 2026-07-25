@@ -52,4 +52,34 @@ describe('resolveCrawlAlertBadge', () => {
     expect(config.label).toBe('Failing')
     expect(config.kind).toBe('danger')
   })
+
+  it('returns No links for a whole-catalogue coverage gap', () => {
+    const config = resolveCrawlAlertBadge({
+      ...baseAlert,
+      category: 'crawl.url_coverage_gap',
+      coverageSeverity: 'no_coverage',
+    })
+    expect(config.label).toBe('No links')
+    expect(config.kind).toBe('warning')
+  })
+
+  it('returns Some links missing for a partial coverage gap', () => {
+    const config = resolveCrawlAlertBadge({
+      ...baseAlert,
+      category: 'crawl.url_coverage_gap',
+      coverageSeverity: 'partial_gap',
+    })
+    expect(config.label).toBe('Some links missing')
+    expect(config.kind).toBe('warning')
+  })
+
+  // A row written before the discriminator existed still reads as a coverage
+  // alert — the badge just falls back to the louder of the two labels.
+  it('falls back to No links when coverageSeverity is absent', () => {
+    const config = resolveCrawlAlertBadge({
+      ...baseAlert,
+      category: 'crawl.url_coverage_gap',
+    })
+    expect(config.label).toBe('No links')
+  })
 })

@@ -78,10 +78,16 @@ async function parseForce(ctx: {
 //
 // `kind` is the equivalent discriminator for 'crawl.event_ceiling_suspected'
 // (#1185) and gets the same tolerant treatment for the same reasons.
+//
+// `coverage` is the equivalent discriminator for 'crawl.url_coverage_gap' and
+// gets its own key rather than reusing `severity`, which is already bound to
+// the went-dark enum above — a shared key would fail the enum on every
+// coverage row and collapse the discriminator to undefined.
 const alertMetadataSchema = z.object({
   crawlRunId: z.string().uuid().optional(),
   severity: z.enum(['went_dark', 'dropped_sharply']).nullish().catch(undefined),
   kind: z.enum(['horizon_shrank', 'pinned_count']).nullish().catch(undefined),
+  coverage: z.enum(['no_coverage', 'partial_gap']).nullish().catch(undefined),
 })
 
 // Cap the unread-notification scan. The list endpoint defaults to 10 runs
@@ -275,6 +281,7 @@ crawlAdminRouter.get(
             'crawl.event_count_dropped',
             'crawl.failed',
             'crawl.event_ceiling_suspected',
+            'crawl.url_coverage_gap',
           ]),
           isNull(notifications.readAt),
         ),
@@ -320,6 +327,10 @@ crawlAdminRouter.get(
           ceilingKind:
             category === 'crawl.event_ceiling_suspected' && meta.kind
               ? meta.kind
+              : null,
+          coverageSeverity:
+            category === 'crawl.url_coverage_gap' && meta.coverage
+              ? meta.coverage
               : null,
         })
       }

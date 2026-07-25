@@ -64,6 +64,13 @@ export const venues = pgTable('venues', {
   lastEventCeilingAlertAt: timestamp('last_event_ceiling_alert_at', {
     withTimezone: true,
   }),
+  // Cooldown marker for the CTA URL-coverage alert. Its own column for the
+  // same reason as the ceiling marker above: a venue can be simultaneously
+  // capped and serving homepage-only ticket links, and silencing one because
+  // the other fired would hide a live consumer-facing defect.
+  lastUrlCoverageAlertAt: timestamp('last_url_coverage_alert_at', {
+    withTimezone: true,
+  }),
   // Per-platform fetcher dispatch (#623). When set, the crawler routes
   // this venue to a platform-specific fetcher (e.g. AEG's JSON blob)
   // instead of the HTML → JSON-LD → LLM cascade. The platform value is

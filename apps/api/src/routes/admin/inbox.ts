@@ -164,6 +164,9 @@ function crawlFailureSubquery() {
           // sense as the other two — the run reported success, but the venue's
           // data is wrong — so it lands in the same crawl_failure bucket.
           'crawl.event_ceiling_suspected',
+          // Same rationale: the run succeeded and the events are real, but
+          // their ticket links are missing, so the consumer CTA is broken.
+          'crawl.url_coverage_gap',
         ]),
       ),
     )

@@ -332,6 +332,7 @@ export interface ActiveCrawlAlert {
     | 'crawl.event_count_dropped'
     | 'crawl.failed'
     | 'crawl.event_ceiling_suspected'
+    | 'crawl.url_coverage_gap'
   // Only present for 'crawl.event_count_dropped' — the event-count alert
   // classifies the drop as 'went_dark' (0 events) or 'dropped_sharply'
   // (non-zero but well below baseline). 'crawl.failed' has no sub-severity.
@@ -341,6 +342,10 @@ export interface ActiveCrawlAlert {
   // furthest announced show moved materially closer; 'pinned_count' means the
   // extracted count repeated exactly across consecutive runs.
   ceilingKind?: 'horizon_shrank' | 'pinned_count' | null
+  // Only present for 'crawl.url_coverage_gap' — whether the venue's whole
+  // upcoming catalogue lacks per-event ticket links ('no_coverage') or only
+  // part of it does ('partial_gap').
+  coverageSeverity?: 'no_coverage' | 'partial_gap' | null
 }
 
 // DailyCost — one zero-filled day bucket from GET /v1/admin/costs/daily.

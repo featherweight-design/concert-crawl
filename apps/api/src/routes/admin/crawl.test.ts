@@ -507,6 +507,7 @@ describe('Admin crawl routes', () => {
             category: string
             severity: string | null
             ceilingKind: string | null
+            coverageSeverity: string | null
           } | null
         }[]
       }
@@ -515,6 +516,7 @@ describe('Admin crawl routes', () => {
         category: 'crawl.event_count_dropped',
         severity: 'went_dark',
         ceilingKind: null,
+        coverageSeverity: null,
       })
     })
 
@@ -552,6 +554,7 @@ describe('Admin crawl routes', () => {
             category: string
             severity: string | null
             ceilingKind: string | null
+            coverageSeverity: string | null
           } | null
         }[]
       }
@@ -560,6 +563,54 @@ describe('Admin crawl routes', () => {
         category: 'crawl.event_ceiling_suspected',
         severity: null,
         ceilingKind: 'horizon_shrank',
+        coverageSeverity: null,
+      })
+    })
+
+    // The URL-coverage guard is a fourth category, and its discriminator
+    // travels in metadata.coverage — `severity` and `kind` are already spoken
+    // for by the went-dark and ceiling guards respectively.
+    it('attaches coverageSeverity for a URL-coverage alert', async () => {
+      adminAuth()
+      const { db } = await import('@concert-crawl/db')
+      const NOTIF_ID = '00000000-0000-0000-0000-0000000000ac'
+      queueAlertsThenRuns(
+        db,
+        [
+          {
+            id: NOTIF_ID,
+            category: 'crawl.url_coverage_gap',
+            metadata: JSON.stringify({
+              venueId: VENUE_ID,
+              crawlRunId: RUN_ID,
+              coverage: 'partial_gap',
+            }),
+            createdAt: new Date(),
+          },
+        ],
+        [mockCrawlRun],
+      )
+      const res = await createApp().request(
+        `/v1/admin/crawl/runs?venueId=${VENUE_ID}`,
+      )
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        data: {
+          activeAlert: {
+            notificationId: string
+            category: string
+            severity: string | null
+            ceilingKind: string | null
+            coverageSeverity: string | null
+          } | null
+        }[]
+      }
+      expect(body.data[0]?.activeAlert).toEqual({
+        notificationId: NOTIF_ID,
+        category: 'crawl.url_coverage_gap',
+        severity: null,
+        ceilingKind: null,
+        coverageSeverity: 'partial_gap',
       })
     })
 

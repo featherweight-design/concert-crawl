@@ -46,6 +46,11 @@ export const CRAWL_STATUS_BADGES: Record<CrawlStatus, CrawlStatusBadgeConfig> =
 // 'warning' rather than 'danger' — the run succeeded and the data is real,
 // it just looks truncated, so it shouldn't read as loud as a dark venue.
 //
+// 'crawl.url_coverage_gap' is a fourth, also 'warning' and for the same
+// reason: the events are correct, only their ticket links are missing. The
+// API threads `coverageSeverity` so the badge distinguishes a whole catalogue
+// with no links from a partial gap.
+//
 // `kind` is `StatusKind` rather than a shadcn Badge variant because the
 // consumer renders via the admin StatusBadge primitive (matches the visual
 // language of the other badges in that table).
@@ -62,6 +67,15 @@ export function resolveCrawlAlertBadge(alert: ActiveCrawlAlert): {
   if (alert.category === 'crawl.event_ceiling_suspected') {
     return {
       label: ADMIN_COPY.crawlHistoryTable.alertBadgeLabelCeilingSuspected,
+      kind: 'warning',
+    }
+  }
+  if (alert.category === 'crawl.url_coverage_gap') {
+    return {
+      label:
+        alert.coverageSeverity === 'partial_gap'
+          ? ADMIN_COPY.crawlHistoryTable.alertBadgeLabelLinksIncomplete
+          : ADMIN_COPY.crawlHistoryTable.alertBadgeLabelLinksMissing,
       kind: 'warning',
     }
   }

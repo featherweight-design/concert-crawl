@@ -14,6 +14,7 @@ import { isAllowed } from './lib/robots.js'
 import { sendCrawlFailureEmail } from './lib/email.js'
 import { checkEventCountDrop } from './lib/event-count-alert.js'
 import { checkEventCeiling } from './lib/event-ceiling-alert.js'
+import { checkUrlCoverage } from './lib/url-coverage-alert.js'
 import { reconcileDriftDuplicates } from './reconcile-drift-duplicates.js'
 import {
   fetchPage,
@@ -1133,6 +1134,21 @@ export async function crawlVenue(
       eventsUsable: seenEventCoords.length,
       furthestEventDate,
       lastEventCeilingAlertAt: venue.lastEventCeilingAlertAt,
+    })
+
+    // The third "the crawl didn't fail" shape: healthy counts, real events,
+    // but no per-event ticket links, so every consumer CTA silently falls back
+    // to the venue homepage. Both checks above key off counts and are blind to
+    // it. Reads the stored catalogue rather than this run's rows — see the
+    // header note in url-coverage-alert.ts on why the sourceHash gate makes
+    // in-run data the wrong denominator. Runs last so it sees the writes this
+    // crawl just made.
+    await checkUrlCoverage({
+      venueId,
+      venueName: venue.name,
+      crawlRunId: id,
+      eventsUsable: seenEventCoords.length,
+      lastUrlCoverageAlertAt: venue.lastUrlCoverageAlertAt,
     })
 
     return { ...crawlRun, insertedEventIds }
