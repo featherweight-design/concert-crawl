@@ -1,3 +1,10 @@
+## [1.163.1](https://github.com/HartiganHM/concert-crawl/compare/v1.163.0...v1.163.1) (2026-07-25)
+
+
+### Bug Fixes
+
+* **web:** derive price trust mark from sourceCategory, not vendor ([#1200](https://github.com/HartiganHM/concert-crawl/issues/1200)) ([8c87929](https://github.com/HartiganHM/concert-crawl/commit/8c87929f413aa6bcc82f2f1d99428a301a09d68a))
+
 # [1.163.0](https://github.com/HartiganHM/concert-crawl/compare/v1.162.0...v1.163.0) (2026-07-25)
 
 
