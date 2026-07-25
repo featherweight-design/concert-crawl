@@ -1,3 +1,10 @@
+# [1.164.0](https://github.com/HartiganHM/concert-crawl/compare/v1.163.1...v1.164.0) (2026-07-25)
+
+
+### Features
+
+* **web:** vendor picker — twelve vendors grouped by face value vs resale ([#1207](https://github.com/HartiganHM/concert-crawl/issues/1207)) ([7543043](https://github.com/HartiganHM/concert-crawl/commit/75430439597d8950b460c47a363dfe581888fd60)), closes [#1193](https://github.com/HartiganHM/concert-crawl/issues/1193) [#1193](https://github.com/HartiganHM/concert-crawl/issues/1193) [#1200](https://github.com/HartiganHM/concert-crawl/issues/1200)
+
 ## [1.163.1](https://github.com/HartiganHM/concert-crawl/compare/v1.163.0...v1.163.1) (2026-07-25)
 
 
