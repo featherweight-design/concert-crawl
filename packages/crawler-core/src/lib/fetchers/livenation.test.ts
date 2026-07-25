@@ -10,6 +10,7 @@ import {
   parseCalendarUrls,
 } from './livenation.js'
 import type { Venue } from '@concert-crawl/db'
+import { PlatformFetchDeadlineError } from './deadline.js'
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -212,6 +213,30 @@ describe('liveNationFetcher.fetch', () => {
     expect(pageFetchCount(fetchMock)).toBe(13)
     expect(result.sourceUrl).toBe('https://www.fillmoredenver.com/sitemap.xml')
     expect(result.meta?.calendarMonthsFetched).toBe(12)
+  })
+
+  it('abandons the run when the 13 requests overrun the overall budget', async () => {
+    // The admin probe's budget is a wall-clock ceiling, and this adapter is
+    // the reason it has to be: 13 sequential requests against a per-request
+    // timeout could hold an API worker slot for minutes (#1184).
+    const fetchMock = vi.fn(async (url: string) => {
+      await new Promise((resolve) => setTimeout(resolve, 20))
+      let body: string
+      if (url.endsWith('/robots.txt')) body = 'User-agent: *\nAllow: /\n'
+      else if (url.endsWith('/sitemap.xml')) body = SITEMAP_XML
+      else body = CALENDAR_HTML
+      return { ok: true, status: 200, text: async () => body }
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      liveNationFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 0,
+        overallTimeoutMs: 60,
+      }),
+    ).rejects.toThrow(PlatformFetchDeadlineError)
+
+    expect(pageFetchCount(fetchMock)).toBeLessThan(13)
   })
 
   it('dedupes by event id so a show listed on two months is emitted once', async () => {

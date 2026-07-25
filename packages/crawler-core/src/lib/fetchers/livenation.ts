@@ -31,7 +31,12 @@ import type { Venue } from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
 import { isAllowed } from '../robots.js'
-import type { PlatformFetcher, PlatformFetchResult } from './index.js'
+import { createDeadline } from './deadline.js'
+import type {
+  PlatformFetcher,
+  PlatformFetchOptions,
+  PlatformFetchResult,
+} from './index.js'
 
 const logger = createLogger('livenation-fetcher')
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
@@ -40,6 +45,9 @@ const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 // hit the venue on a bot-like fixed interval — mirrors VenuePilot and the
 // cascade fetcher (lib/fetcher.ts).
 function jitter(ms: number): number {
+  // A venue that asks for no delay gets none — without this, jittering zero
+  // would sometimes return up to 499ms and pace the admin probe.
+  if (ms <= 0) return 0
   return Math.max(0, ms + Math.floor(Math.random() * 1000) - 500)
 }
 
@@ -337,11 +345,12 @@ function normalize(
 
 async function liveNationFetch(
   venue: Venue,
-  opts: { crawlDelayMs: number; timeoutMs?: number },
+  opts: PlatformFetchOptions,
 ): Promise<PlatformFetchResult> {
   const origin = new URL(venue.websiteUrl).origin
   const sitemapUrl = `${origin}/sitemap.xml`
   const startedAt = Date.now()
+  const deadline = createDeadline(opts)
 
   // crawl.ts gates on venue.websiteUrl only, which is a different path from
   // the two this adapter requests. robots.txt rules are per-path, so a site
@@ -357,7 +366,9 @@ async function liveNationFetch(
   }
 
   const allCalendarUrls = parseCalendarUrls(
-    await fetchText(sitemapUrl, opts.timeoutMs),
+    await deadline.run('sitemap', (timeoutMs) =>
+      fetchText(sitemapUrl, timeoutMs),
+    ),
     origin,
   )
   if (allCalendarUrls.length === 0) {
@@ -404,13 +415,10 @@ async function liveNationFetch(
   for (const calendarUrl of calendarUrls) {
     // Every month page is a request to the venue's own domain, so the
     // venue's configured per-domain delay applies to each of them.
-    if (opts.crawlDelayMs > 0) {
-      const delay = jitter(opts.crawlDelayMs)
-      if (delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay))
-      }
-    }
-    const html = await fetchText(calendarUrl, opts.timeoutMs)
+    await deadline.wait(jitter(opts.crawlDelayMs))
+    const html = await deadline.run(`calendar ${calendarUrl}`, (timeoutMs) =>
+      fetchText(calendarUrl, timeoutMs),
+    )
     const records = extractEventRecords(reassembleFlightPayload(html))
     rawRecordCount += records.length
 

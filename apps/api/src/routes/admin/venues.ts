@@ -4,7 +4,11 @@ import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
 import { db, venues, events, crawlRuns } from '@concert-crawl/db'
 import { and, avg, count, desc, eq, gte, isNotNull, ne, not } from 'drizzle-orm'
-import { dispatch, AegSchemaError } from '@concert-crawl/crawler-core/fetchers'
+import {
+  dispatch,
+  AegSchemaError,
+  PlatformFetchDeadlineError,
+} from '@concert-crawl/crawler-core/fetchers'
 import type {
   PlatformProbeResult,
   VenueRobotsStatus,
@@ -678,7 +682,10 @@ venuesAdminRouter.patch(
 )
 
 // A hung platform CDN connection must not pin an API worker slot — the
-// probe aborts and reports fetch_error after this window.
+// probe aborts and reports fetch_error after this window. This is the
+// whole-probe ceiling, not a per-request one: the Live Nation adapter
+// reads a sitemap plus a calendar page per rolling month, so a per-request
+// value alone would let one probe run for minutes (#1184).
 const PROBE_TIMEOUT_MS = 15_000
 
 const probePlatformSchema = z.object({
@@ -743,7 +750,8 @@ venuesAdminRouter.post(
       try {
         const result = await fetcher.fetch(candidate, {
           crawlDelayMs: 0,
-          timeoutMs: PROBE_TIMEOUT_MS,
+          perRequestTimeoutMs: PROBE_TIMEOUT_MS,
+          overallTimeoutMs: PROBE_TIMEOUT_MS,
         })
         return {
           ok: true,
@@ -759,6 +767,16 @@ venuesAdminRouter.post(
         const message = err instanceof Error ? err.message : String(err)
         if (err instanceof AegSchemaError) {
           return { ok: false, reason: 'schema_error', error: message }
+        }
+        // Stays fetch_error rather than earning its own reason: the admin's
+        // next step is the same either way, and the message already names
+        // the budget and the request that overran it.
+        if (err instanceof PlatformFetchDeadlineError) {
+          return {
+            ok: false,
+            reason: 'fetch_error',
+            error: `${message} — the platform responded too slowly to finish a probe`,
+          }
         }
         return { ok: false, reason: 'fetch_error', error: message }
       }

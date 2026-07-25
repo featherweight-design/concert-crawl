@@ -17,7 +17,12 @@ import { createLogger } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
 import { CrawlFetchError } from '../fetcher.js'
-import type { PlatformFetcher, PlatformFetchResult } from './index.js'
+import { createDeadline } from './deadline.js'
+import type {
+  PlatformFetcher,
+  PlatformFetchOptions,
+  PlatformFetchResult,
+} from './index.js'
 
 const logger = createLogger('venuepilot-fetcher')
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
@@ -29,6 +34,9 @@ const MAX_PAGES = 50
 // bot-like fixed interval — mirrors the cascade fetcher (lib/fetcher.ts). AEG
 // still uses a flat delay; #985 backfills jitter there too.
 function jitter(ms: number): number {
+  // A venue that asks for no delay gets none — without this, jittering zero
+  // would sometimes return up to 499ms and pace the admin probe.
+  if (ms <= 0) return 0
   return Math.max(0, ms + Math.floor(Math.random() * 1000) - 500)
 }
 
@@ -327,7 +335,7 @@ async function fetchPage(
 
 async function venuePilotFetch(
   venue: Venue,
-  opts: { crawlDelayMs: number; timeoutMs?: number },
+  opts: PlatformFetchOptions,
 ): Promise<PlatformFetchResult> {
   const rawAccountId = venue.apiAccountId?.trim() ?? ''
   if (rawAccountId === '') {
@@ -366,23 +374,16 @@ async function venuePilotFetch(
 
   const startDate = todayInTimezone(venue.timezone, venue.id)
   const startedAt = Date.now()
+  const deadline = createDeadline(opts)
   const events: NormalizedEvent[] = []
   let totalCount = 0
   let totalPages = 1
   let pagesFetched = 0
 
   for (let page = 1; page <= Math.min(totalPages, MAX_PAGES); page += 1) {
-    if (opts.crawlDelayMs > 0) {
-      const delay = jitter(opts.crawlDelayMs)
-      if (delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay))
-      }
-    }
-    const paginated = await fetchPage(
-      accountId,
-      startDate,
-      page,
-      opts.timeoutMs,
+    await deadline.wait(jitter(opts.crawlDelayMs))
+    const paginated = await deadline.run(`page-${page}`, (timeoutMs) =>
+      fetchPage(accountId, startDate, page, timeoutMs),
     )
     pagesFetched += 1
     totalCount = paginated.metadata.totalCount

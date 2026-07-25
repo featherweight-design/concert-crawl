@@ -12,8 +12,10 @@ export {
   AegFetchError,
   AegSchemaError,
 } from './lib/fetchers/aeg.js'
+export { PlatformFetchDeadlineError } from './lib/fetchers/deadline.js'
 export type {
   PlatformFetcher,
+  PlatformFetchOptions,
   PlatformFetchResult,
   VenuePlatform,
 } from './lib/fetchers/index.js'

@@ -25,7 +25,12 @@ import type { Venue } from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
-import type { PlatformFetcher, PlatformFetchResult } from './index.js'
+import { createDeadline } from './deadline.js'
+import type {
+  PlatformFetcher,
+  PlatformFetchOptions,
+  PlatformFetchResult,
+} from './index.js'
 
 const logger = createLogger('aeg-fetcher')
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
@@ -317,7 +322,7 @@ async function fetchAegBlob(
 
 async function aegFetch(
   venue: Venue,
-  opts: { crawlDelayMs: number; timeoutMs?: number },
+  opts: PlatformFetchOptions,
 ): Promise<PlatformFetchResult> {
   if (!venue.platformVenueId) {
     // Dispatcher's canHandle() should have caught this, but be defensive.
@@ -329,17 +334,14 @@ async function aegFetch(
   }
   const url = endpointUrl(venue.platformVenueId)
   const fetchedAt = Date.now()
+  const deadline = createDeadline(opts)
   // Respect the venue's per-domain crawl delay. The platform blob is on
   // a different domain from the venue's website, but rate-limiting our
   // requests to AEG's CDN with the same conservative pacing is the
   // crawl-ethics-conservative call.
-  if (opts.crawlDelayMs > 0) {
-    await new Promise((resolve) => setTimeout(resolve, opts.crawlDelayMs))
-  }
-  const raw = await fetchAegBlob(
-    url,
-    originFromVenueUrl(venue.websiteUrl),
-    opts.timeoutMs,
+  await deadline.wait(opts.crawlDelayMs)
+  const raw = await deadline.run('events-blob', (timeoutMs) =>
+    fetchAegBlob(url, originFromVenueUrl(venue.websiteUrl), timeoutMs),
   )
   const parseResult = AegResponseSchema.safeParse(raw)
   if (!parseResult.success) {

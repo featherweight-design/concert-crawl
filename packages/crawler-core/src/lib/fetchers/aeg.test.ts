@@ -107,7 +107,7 @@ describe('aegFetcher.fetch', () => {
     expect(result.sourceUrl).toBe(calledUrl)
   })
 
-  it('passes an abort signal when timeoutMs is set, none otherwise', async () => {
+  it('passes an abort signal when perRequestTimeoutMs is set, none otherwise', async () => {
     // Fresh Response per call — a shared Response body can only be read once
     fetchSpy.mockImplementation(async () => {
       return new Response(BLUEBIRD_FIXTURE, {
@@ -117,7 +117,10 @@ describe('aegFetcher.fetch', () => {
     })
     const venue = makeVenue({ platformVenueId: '2' })
 
-    await aegFetcher.fetch(venue, { crawlDelayMs: 0, timeoutMs: 15_000 })
+    await aegFetcher.fetch(venue, {
+      crawlDelayMs: 0,
+      perRequestTimeoutMs: 15_000,
+    })
     const withTimeoutInit = fetchSpy.mock.calls[0]?.[1]
     expect(withTimeoutInit?.signal).toBeInstanceOf(AbortSignal)
 

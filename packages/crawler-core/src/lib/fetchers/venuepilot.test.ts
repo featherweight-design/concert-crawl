@@ -3,6 +3,7 @@ import { readFileSync } from 'fs'
 import { fileURLToPath } from 'url'
 import path from 'path'
 import { CrawlFetchError } from '../fetcher.js'
+import { PlatformFetchDeadlineError } from './deadline.js'
 import {
   venuePilotFetcher,
   VenuePilotFetchError,
@@ -407,7 +408,7 @@ describe('venuePilotFetcher.fetch', () => {
     expect(body.variables.args.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
-  it('passes an abort signal only when timeoutMs is set', async () => {
+  it('passes an abort signal only when perRequestTimeoutMs is set', async () => {
     fetchSpy.mockImplementation(
       async () =>
         new Response(LEVITT_FIXTURE, {
@@ -417,7 +418,10 @@ describe('venuePilotFetcher.fetch', () => {
     )
     const venue = makeVenue()
 
-    await venuePilotFetcher.fetch(venue, { crawlDelayMs: 0, timeoutMs: 15_000 })
+    await venuePilotFetcher.fetch(venue, {
+      crawlDelayMs: 0,
+      perRequestTimeoutMs: 15_000,
+    })
     expect(fetchSpy.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal)
 
     await venuePilotFetcher.fetch(venue, { crawlDelayMs: 0 })
@@ -593,5 +597,44 @@ describe('venuePilotFetcher.fetch', () => {
     // Truncation must be visible in meta so operators can alert on partial fetches.
     expect(result.meta?.truncated).toBe(true)
     expect(result.meta?.totalPages).toBe(9999)
+  })
+
+  it('throws instead of returning a partial set when the overall budget runs out', async () => {
+    // A slow page against a 50-page ceiling is the #1184 case: a per-request
+    // timeout alone lets worst-case wall time reach MAX_PAGES × the budget.
+    fetchSpy.mockImplementation(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 30))
+      return new Response(
+        graphqlBody(
+          [
+            {
+              id: 1,
+              name: 'Slow',
+              date: '2026-08-08',
+              doorTime: '18:00:00',
+              startTime: '19:00:00',
+              description: '',
+              ticketsUrl: '',
+              status: 'BUY TICKETS',
+              announceArtists: [{ name: 'S' }],
+              announceImages: [],
+            },
+          ],
+          { totalPages: 40 },
+        ),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      )
+    })
+
+    await expect(
+      venuePilotFetcher.fetch(makeVenue(), {
+        crawlDelayMs: 0,
+        overallTimeoutMs: 90,
+      }),
+    ).rejects.toThrow(PlatformFetchDeadlineError)
+
+    // Loud failure, not a truncated success: crawl.ts's stale-event pass
+    // would read the pages we never reached as shows that had come down.
+    expect(fetchSpy.mock.calls.length).toBeLessThan(40)
   })
 })

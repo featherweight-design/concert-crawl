@@ -36,6 +36,21 @@ export interface PlatformFetchResult {
   meta?: Record<string, unknown>
 }
 
+export interface PlatformFetchOptions {
+  /** Per-domain pacing between this adapter's sequential requests. */
+  crawlDelayMs: number
+  /** Ceiling on any single HTTP request. */
+  perRequestTimeoutMs?: number
+  /**
+   * Ceiling on the whole fetch — every request plus the crawl delays
+   * between them. Adapters make many sequential requests, so a per-request
+   * value alone lets worst-case wall time reach N × the caller's budget.
+   * A breach throws `PlatformFetchDeadlineError` rather than returning the
+   * pages gathered so far (see deadline.ts for why partial is unsafe).
+   */
+  overallTimeoutMs?: number
+}
+
 export interface PlatformFetcher {
   /**
    * Identifies the fetcher for logging + the crawl_runs
@@ -47,12 +62,10 @@ export interface PlatformFetcher {
   /** Returns false if this fetcher can't handle the venue
    * (e.g. missing platformVenueId / apiAccountId). */
   canHandle(venue: Venue): boolean
-  fetch(
-    venue: Venue,
-    opts: { crawlDelayMs: number; timeoutMs?: number },
-  ): Promise<PlatformFetchResult>
+  fetch(venue: Venue, opts: PlatformFetchOptions): Promise<PlatformFetchResult>
 }
 
+export { PlatformFetchDeadlineError, createDeadline } from './deadline.js'
 export { aegFetcher } from './aeg.js'
 export { liveNationFetcher } from './livenation.js'
 export { venuePilotFetcher } from './venuepilot.js'

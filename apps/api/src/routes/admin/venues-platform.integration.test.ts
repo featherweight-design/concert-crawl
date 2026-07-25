@@ -17,13 +17,16 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 // Mock crawler-core's fetchers entry so probe tests never hit the network.
-// venues.ts imports { dispatch, AegSchemaError } — provide both (plus
-// AegFetchError for parity with the real module surface).
-vi.mock('@concert-crawl/crawler-core/fetchers', () => {
-  class AegFetchError extends Error {}
-  class AegSchemaError extends Error {}
-  return { dispatch: dispatchMock, AegFetchError, AegSchemaError }
-})
+// Only dispatch is replaced — the rest of the module is spread in from the
+// real one so the route's `instanceof` checks compare against the real error
+// classes. A hand-listed factory silently resolves any export it forgets to
+// undefined, which turns `err instanceof Missing` into a 500 (#1184).
+vi.mock('@concert-crawl/crawler-core/fetchers', async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import('@concert-crawl/crawler-core/fetchers')
+  >()),
+  dispatch: dispatchMock,
+}))
 
 import { AegSchemaError } from '@concert-crawl/crawler-core/fetchers'
 import { createApp } from '../../app.js'
@@ -401,7 +404,13 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
     // Dry-run: fetch called with zero crawl delay, saved config as candidate
     expect(fetchMock).toHaveBeenCalledWith(
       expect.objectContaining({ platform: 'aeg', platformVenueId: '89' }),
-      { crawlDelayMs: 0, timeoutMs: 15_000 },
+      {
+        crawlDelayMs: 0,
+        perRequestTimeoutMs: 15_000,
+        // The probe's budget is a ceiling on the whole fetch, not on each
+        // of an adapter's sequential requests (#1184).
+        overallTimeoutMs: 15_000,
+      },
     )
     expect(dispatchMock).toHaveBeenCalledWith(
       expect.objectContaining({ platform: 'aeg', platformVenueId: '89' }),
@@ -486,7 +495,13 @@ describe('POST /v1/admin/venues/:id/probe-platform — integration (#665)', () =
       platform: 'aeg',
       fetch: vi
         .fn()
-        .mockRejectedValue(new AegSchemaError('unexpected feed shape')),
+        .mockRejectedValue(
+          new AegSchemaError(
+            'https://example.test/events.json',
+            [],
+            'unexpected feed shape',
+          ),
+        ),
     })
     const venue = await seedVenue({
       name: 'Bad Schema',
