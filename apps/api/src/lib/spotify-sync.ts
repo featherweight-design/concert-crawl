@@ -16,7 +16,9 @@
 //     previous artist set is preserved and the next cycle retries.
 //   - Every run writes a zero-dollar cost_tracking row with call counts (E10).
 import { createClerkClient } from '@clerk/backend'
+import * as Sentry from '@sentry/hono/node'
 import { and, eq, inArray, notInArray, sql } from 'drizzle-orm'
+import { z } from 'zod'
 import {
   db,
   costTracking,
@@ -94,6 +96,80 @@ export type SpotifyTokenResult =
   | { status: 'no-grant' }
   | { status: 'error'; message: string }
 
+// Clerk stores the reason an OAuth link failed on the external account's
+// `verification` object, and it is the only place the useful diagnostic
+// lives — `getUserOauthAccessToken` just returns 200 with an empty array.
+// Parsed rather than cast because this is SDK-shaped data crossing a
+// boundary and every field is optional in practice on a failed link.
+const externalAccountVerificationSchema = z.object({
+  status: z.string().nullish(),
+  error: z
+    .object({
+      code: z.string().nullish(),
+      message: z.string().nullish(),
+      longMessage: z.string().nullish(),
+    })
+    .nullish(),
+})
+
+const UNKNOWN_CLERK_OAUTH_ERROR = 'unknown'
+
+// Best-effort diagnostic read. A failure here must never change the caller's
+// outcome — we are already on the no-grant path and this only enriches it.
+async function reportMissingSpotifyGrant(userId: string): Promise<void> {
+  let verification: z.infer<typeof externalAccountVerificationSchema> | null =
+    null
+  try {
+    const user = await clerkClient.users.getUser(userId)
+    const account = user.externalAccounts.find(
+      (row) => row.provider === 'oauth_spotify' || row.provider === 'spotify',
+    )
+    const parsed = externalAccountVerificationSchema.safeParse(
+      account?.verification,
+    )
+    if (parsed.success) verification = parsed.data
+  } catch (err) {
+    apiLogger.warn(
+      { err, userId },
+      'spotify: could not read Clerk external-account verification state',
+    )
+  }
+
+  const errorCode = verification?.error?.code ?? UNKNOWN_CLERK_OAUTH_ERROR
+  const payload = {
+    userId,
+    verificationStatus: verification?.status ?? UNKNOWN_CLERK_OAUTH_ERROR,
+    clerkErrorCode: errorCode,
+    clerkErrorMessage:
+      verification?.error?.longMessage ?? verification?.error?.message ?? null,
+  }
+  // Guarded separately from the Clerk read: a Sentry transport or config
+  // failure must not propagate out of a best-effort reporter and turn the
+  // caller's `no-grant` into an `error`.
+  try {
+    apiLogger.warn(
+      payload,
+      'spotify: Clerk returned no OAuth token — link never completed',
+    )
+    // Tagged by Clerk's error code so distinct failure modes group separately
+    // in Sentry — `oauth_identification_claimed` (a real account conflict the
+    // user must resolve) should not be averaged in with transient ones (#1159).
+    Sentry.captureMessage(
+      'spotify: Clerk returned no OAuth token — link never completed',
+      {
+        level: 'warning',
+        tags: { spotify_oauth_no_token: '1', clerk_oauth_error: errorCode },
+        extra: payload,
+      },
+    )
+  } catch (err) {
+    apiLogger.warn(
+      { err, userId },
+      'spotify: failed to emit no-OAuth-token telemetry',
+    )
+  }
+}
+
 const hasNumericStatus = (err: unknown): err is { status: number } =>
   typeof err === 'object' &&
   err !== null &&
@@ -115,6 +191,10 @@ export async function getSpotifyAccessToken(
     )
     const token = tokens.data[0]?.token
     if (typeof token !== 'string' || token.length === 0) {
+      // Clerk answers 200-with-no-tokens when the OAuth link exists but
+      // verification never completed. That used to return silently, so the
+      // user saw a generic 400 and we had no telemetry at all (#1159).
+      await reportMissingSpotifyGrant(userId)
       return { status: 'no-grant' }
     }
     return { status: 'ok', token }

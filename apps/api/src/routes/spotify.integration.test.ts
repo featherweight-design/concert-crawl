@@ -11,13 +11,28 @@ const { authState, clerkState } = vi.hoisted(() => ({
     } | null,
   },
   clerkState: {
-    externalAccounts: [] as Array<{ id: string; provider: string }>,
+    externalAccounts: [] as Array<{
+      id: string
+      provider: string
+      verification?: {
+        status?: string
+        error?: { code?: string; message?: string; longMessage?: string }
+      }
+    }>,
     token: null as string | null,
     // Simulates a transient Clerk outage (network/5xx) on the token fetch.
     tokenFetchError: false,
     deleteCalls: [] as Array<{ userId: string; externalAccountId: string }>,
   },
 }))
+
+vi.mock('@sentry/hono/node', async () => {
+  const actual =
+    await vi.importActual<typeof import('@sentry/hono/node')>(
+      '@sentry/hono/node',
+    )
+  return { ...actual, captureMessage: vi.fn() }
+})
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
@@ -53,6 +68,7 @@ vi.mock('@clerk/backend', () => ({
   }),
 }))
 
+import * as Sentry from '@sentry/hono/node'
 import { and, eq, inArray } from 'drizzle-orm'
 import {
   db,
@@ -129,6 +145,7 @@ const spotifyFetchStub = async (
 // network guard while the worker is still live.
 beforeEach(() => {
   vi.stubGlobal('fetch', spotifyFetchStub)
+  vi.mocked(Sentry.captureMessage).mockClear()
 })
 
 // --- helpers ---
@@ -252,6 +269,111 @@ describe('POST /v1/spotify/connection', () => {
     expect(await getConnectionRow(USER)).toBeNull()
   })
 
+  // #1159 — this path used to be entirely silent: Clerk answers 200 with an
+  // empty token array when the OAuth link exists but never verified, so the
+  // user saw a generic 400 and Sentry saw nothing at all. Root-causing the
+  // original incident required curling Clerk's Backend API by hand.
+  it('captures the Clerk verification error to Sentry when the link never verified', async () => {
+    setAuth(USER)
+    clerkState.externalAccounts = [
+      {
+        id: 'eac_1',
+        provider: 'oauth_spotify',
+        verification: {
+          status: 'unverified',
+          error: {
+            code: 'oauth_identification_claimed',
+            message: 'Identification claimed by another user',
+            longMessage:
+              'The email address associated with this OAuth account is already claimed by another user.',
+          },
+        },
+      },
+    ]
+    // Account present but no token — verification never completed.
+    clerkState.token = null
+
+    const res = await connect()
+    expect(res.status).toBe(400)
+
+    expect(Sentry.captureMessage).toHaveBeenCalledTimes(1)
+    const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? []
+    // Tagged by Clerk's code so an account conflict the user must resolve
+    // groups separately from transient failures.
+    expect(options?.tags).toMatchObject({
+      spotify_oauth_no_token: '1',
+      clerk_oauth_error: 'oauth_identification_claimed',
+    })
+    expect(options?.extra).toMatchObject({
+      userId: USER,
+      verificationStatus: 'unverified',
+      clerkErrorCode: 'oauth_identification_claimed',
+    })
+  })
+
+  it('still captures with an unknown code when Clerk exposes no verification error', async () => {
+    setAuth(USER)
+    clerkState.externalAccounts = [{ id: 'eac_1', provider: 'oauth_spotify' }]
+    clerkState.token = null
+
+    const res = await connect()
+    expect(res.status).toBe(400)
+
+    expect(Sentry.captureMessage).toHaveBeenCalledTimes(1)
+    const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? []
+    expect(options?.tags).toMatchObject({
+      spotify_oauth_no_token: '1',
+      clerk_oauth_error: 'unknown',
+    })
+  })
+
+  // Clerk populates `longMessage` on some payloads and only `message` on
+  // others; dropping the short form would leave the Sentry extra blank on
+  // exactly the variants we have the least visibility into.
+  it('falls back to the short Clerk error message when longMessage is absent', async () => {
+    setAuth(USER)
+    clerkState.externalAccounts = [
+      {
+        id: 'eac_1',
+        provider: 'oauth_spotify',
+        verification: {
+          status: 'unverified',
+          error: { code: 'oauth_access_denied', message: 'Access denied' },
+        },
+      },
+    ]
+    clerkState.token = null
+
+    const res = await connect()
+    expect(res.status).toBe(400)
+
+    const [, options] = vi.mocked(Sentry.captureMessage).mock.calls[0] ?? []
+    expect(options?.extra).toMatchObject({
+      clerkErrorCode: 'oauth_access_denied',
+      clerkErrorMessage: 'Access denied',
+    })
+  })
+
+  // The reporter is best-effort telemetry. If Sentry itself is broken, the
+  // caller must still land on the no-grant path — otherwise a transport
+  // failure would masquerade as "Spotify is unavailable" and drive a retry.
+  it('still returns the no-grant response when Sentry capture throws', async () => {
+    setAuth(USER)
+    clerkState.externalAccounts = [{ id: 'eac_1', provider: 'oauth_spotify' }]
+    clerkState.token = null
+    vi.mocked(Sentry.captureMessage).mockImplementationOnce(() => {
+      throw new Error('sentry transport down')
+    })
+
+    const res = await connect()
+    expect(res.status).toBe(400)
+    const body: unknown = await res.json()
+    expect(body).toMatchObject({
+      success: false,
+      error: 'Spotify authorization is incomplete',
+    })
+  })
+
   it('creates the connection and runs the first sync inline', async () => {
     setAuth(USER)
     linkSpotifyAccount()
@@ -293,6 +415,10 @@ describe('POST /v1/spotify/connection', () => {
     expect(top.find((row) => row.spotifyArtistId === 'a1')?.rank).toBe(1)
     expect(top.find((row) => row.spotifyArtistId === 't1')?.rank).toBe(2)
     expect(followed.every((row) => row.rank === null)).toBe(true)
+
+    // The #1159 capture is scoped to the missing-token path — a healthy
+    // connect must stay silent or the signal is worthless.
+    expect(Sentry.captureMessage).not.toHaveBeenCalled()
   })
 
   it('writes a zero-dollar cost_tracking row with call counts (E10)', async () => {
