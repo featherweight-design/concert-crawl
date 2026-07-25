@@ -1,3 +1,10 @@
+# [1.161.0](https://github.com/HartiganHM/concert-crawl/compare/v1.160.3...v1.161.0) (2026-07-25)
+
+
+### Features
+
+* **crawler:** detect capped event catalogues ([#1194](https://github.com/HartiganHM/concert-crawl/issues/1194)) ([35f2ee6](https://github.com/HartiganHM/concert-crawl/commit/35f2ee6b74448c66dd15bc536221cf7283d25f99)), closes [#1185](https://github.com/HartiganHM/concert-crawl/issues/1185)
+
 ## [1.160.3](https://github.com/HartiganHM/concert-crawl/compare/v1.160.2...v1.160.3) (2026-07-25)
 
 
