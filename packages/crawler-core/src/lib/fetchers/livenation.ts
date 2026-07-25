@@ -20,11 +20,18 @@
 // Marquis) with zero titles present in JSON-LD but absent from the
 // calendar, so switching to this source loses nothing.
 //
-// Summit Music Hall is on the same template and is capped the same way,
-// but its calendar months return zero records for every month tested —
-// including months its own JSON-LD proves it has shows in. There is no
-// route to its shows past #36, so it is deliberately NOT onboarded here
-// and stays on the structured-data cascade. See #1127 for follow-up.
+// Summit Music Hall is on the same template and is capped the same way, but
+// is deliberately NOT onboarded here and stays on the structured-data
+// cascade. Its calendar months carry no SWRFallback in the flight payload at
+// all — unlike the sibling venues, that route is client-fetched, and the
+// browser reads its records from an authenticated Live Nation content API
+// that 403s without the key the page ships. Calling that is out by the
+// standing no-ticketing-vendor-API decision, and nothing else the site
+// serves exposes the hidden shows: the per-room pages are each capped at 36
+// in turn, and the sitemap advertises no per-event URLs. Investigated in
+// full under #1196. The #1185 capped-catalogue guard is the accepted
+// mitigation, so expect it to fire on this venue rather than reading that as
+// a regression.
 
 import { z } from 'zod'
 import type { Venue } from '@concert-crawl/db'
