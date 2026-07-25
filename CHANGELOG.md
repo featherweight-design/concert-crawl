@@ -1,3 +1,10 @@
+## [1.158.8](https://github.com/HartiganHM/concert-crawl/compare/v1.158.7...v1.158.8) (2026-07-25)
+
+
+### Bug Fixes
+
+* **crawler:** clear went-dark cooldown on a healthy run so recurrences re-alert ([#1178](https://github.com/HartiganHM/concert-crawl/issues/1178)) ([9a66fe3](https://github.com/HartiganHM/concert-crawl/commit/9a66fe3edd2dd166c5b92cb2258e141743b0cbaf)), closes [#1174](https://github.com/HartiganHM/concert-crawl/issues/1174)
+
 ## [1.158.7](https://github.com/HartiganHM/concert-crawl/compare/v1.158.6...v1.158.7) (2026-07-25)
 
 
