@@ -613,6 +613,110 @@ describe('extractWithLlm', () => {
     expect(result.events[0]?.rawTitle).toBe(billTitle)
   })
 
+  it('keeps valid events when a sibling row fails validation', async () => {
+    // Dropped-row reports are severity 'warn', which reportFailure routes to
+    // console.warn rather than console.error.
+    const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      mockCreate.mockResolvedValue(
+        makeAnthropicResponse([
+          {
+            title: 'Good Show',
+            rawTitle: 'Good Show',
+            artist: 'Real Band',
+            date: '2026-09-01',
+            confidence: 0.9,
+          },
+          // `date` is a number — unparseable, and previously enough to
+          // discard the whole page.
+          {
+            title: 'Broken Row',
+            rawTitle: 'Broken Row',
+            artist: 'Whoever',
+            date: 20260902,
+            confidence: 0.9,
+          },
+          {
+            title: 'Another Good Show',
+            rawTitle: 'Another Good Show',
+            artist: 'Second Band',
+            date: '2026-09-03',
+            confidence: 0.9,
+          },
+        ]),
+      )
+
+      const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+
+      expect(result.events).toHaveLength(2)
+      expect(result.events.map((evt) => evt.artist)).toEqual([
+        'Real Band',
+        'Second Band',
+      ])
+
+      const droppedLog = consoleSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('llm.invalid_event_dropped'))
+      expect(droppedLog).toBeDefined()
+      expect(droppedLog).toContain('"droppedCount":1')
+      expect(droppedLog).toContain('"totalCount":3')
+    } finally {
+      consoleSpy.mockRestore()
+    }
+  })
+
+  it('falls back to the title when the model returns a null artist', async () => {
+    mockCreate.mockResolvedValue(
+      makeAnthropicResponse([
+        {
+          title: 'BPM Bingo',
+          rawTitle: 'BPM Bingo',
+          artist: null,
+          date: '2026-09-01',
+          confidence: 0.9,
+          isConcert: false,
+          reviewNeeded: false,
+        },
+      ]),
+    )
+
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+
+    expect(result.events).toHaveLength(1)
+    expect(result.events[0]?.artist).toBe('BPM Bingo')
+  })
+
+  it("still reports 'llm.invalid_tool_input' when every row fails", async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      mockCreate.mockResolvedValue(
+        makeAnthropicResponse([
+          { title: 'A', rawTitle: 'A', artist: 'A', date: 1, confidence: 0.9 },
+          { title: 'B', rawTitle: 'B', artist: 'B', date: 2, confidence: 0.9 },
+        ]),
+      )
+
+      const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+
+      expect(result.events).toHaveLength(0)
+      const invalidLog = consoleSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('llm.invalid_tool_input'))
+      expect(invalidLog).toBeDefined()
+
+      // A total wipeout reports once, at error severity — the per-row warn
+      // would otherwise double-report the same failure into Sentry.
+      const droppedLog = warnSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('llm.invalid_event_dropped'))
+      expect(droppedLog).toBeUndefined()
+    } finally {
+      consoleSpy.mockRestore()
+      warnSpy.mockRestore()
+    }
+  })
+
   it("does NOT log 'llm.output_truncated' on a healthy tool_use stop", async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     try {
@@ -659,5 +763,16 @@ describe('NormalizedEventSchema', () => {
     })
     expect(parsed.supportingArtists).toBeUndefined()
     expect(parsed.tourName).toBeUndefined()
+  })
+
+  it('accepts a null artist (non-concert listings name no performer)', () => {
+    const parsed = NormalizedEventSchema.parse({
+      title: 'BPM Bingo',
+      rawTitle: 'BPM Bingo',
+      artist: null,
+      date: '2026-08-01',
+      confidence: 0.9,
+    })
+    expect(parsed.artist).toBeNull()
   })
 })

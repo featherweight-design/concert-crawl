@@ -20,7 +20,12 @@ export const NormalizedEventSchema = z.object({
   // detect "Artist AT OTHER VENUE" markers. See issue #826 and the
   // matching property on `NormalizedEvent` in ../../types.ts.
   rawTitle: z.string(),
-  artist: z.string(),
+  // Nullable because non-concert listings (bingo, trivia, movie nights,
+  // themed parties) genuinely have no performer to name, and the model
+  // correctly returns null rather than inventing one. Null is resolved to
+  // the cleaned title in the mapping below, so `NormalizedEvent.artist`
+  // stays a plain string downstream.
+  artist: z.string().nullable(),
   supportingArtists: z.array(z.string()).optional(),
   tourName: z.string().nullable().optional(),
   date: isoDateSchema,
@@ -34,9 +39,14 @@ export const NormalizedEventSchema = z.object({
   reviewNeeded: z.boolean().optional(),
 })
 
+// Deliberately loose: the array shape is validated here, but each element is
+// checked individually below so one malformed row can't void an otherwise
+// good batch. See the per-row loop in `extractWithLlm`.
 const ToolInputSchema = z.object({
-  events: z.array(NormalizedEventSchema),
+  events: z.array(z.unknown()),
 })
+
+type NormalizedEventRow = z.infer<typeof NormalizedEventSchema>
 
 const MODEL = 'claude-haiku-4-5-20251001'
 
@@ -105,6 +115,7 @@ Rules:
 - confidence reflects how certain you are the extraction is accurate (0.0-1.0)
 - Only include actual upcoming events, not past events
 - If artist is unclear, derive it from the event title — but still apply the headliner-only and run-on-splitting rules below (never copy a multi-act title verbatim into artist)
+- If the listing names no performer at all (bingo, trivia, movie night, themed party), set artist to null. Do not invent a performer and do not copy the title into artist — null is expected here and handled downstream
 - Pass an empty events array if no events are found
 - When a date has no year, infer it using today's date (provided in the user message): if the month/day is today or in the future within the current year, use the current year; if the month/day has already passed this year, use next year
 - rawTitle must be the EXACT verbatim copy of the event card's headline string from the page, byte-for-byte. Do NOT combine with subheads (e.g. "AEG Presents"), do NOT strip venue suffixes (e.g. "AT MISSION BALLROOM"), do NOT normalize or clean. The "title" field may be cleaned/combined, but rawTitle must be the unmodified source string. Downstream cross-venue routing depends on this
@@ -150,9 +161,9 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
                 "EXACT verbatim copy of the event card's headline/title string from the page, byte-for-byte. Do not clean, combine with subheads, strip venue suffixes (e.g. 'AT MISSION BALLROOM'), or normalize. Downstream cross-venue routing depends on this being the unmodified source string.",
             },
             artist: {
-              type: 'string',
+              type: ['string', 'null'],
               description:
-                "Headliner only — a single act. Never a run-on list of multiple acts. If the billing joins several acts (commas, 'with', 'w/', 'and', 'feat.', '&', '+', '/'), put the first act here and the rest in supportingArtists. Do NOT fragment a single act's own name that contains a comma or ampersand (e.g. 'Goodnight, Texas', 'Earth, Wind & Fire').",
+                "Headliner only — a single act. Never a run-on list of multiple acts. If the billing joins several acts (commas, 'with', 'w/', 'and', 'feat.', '&', '+', '/'), put the first act here and the rest in supportingArtists. Do NOT fragment a single act's own name that contains a comma or ampersand (e.g. 'Goodnight, Texas', 'Earth, Wind & Fire'). Use null when the listing names no performer at all (bingo, trivia, movie nights, themed parties) — do not invent one and do not copy the title here; the extractor derives a fallback.",
             },
             supportingArtists: {
               type: 'array',
@@ -315,7 +326,51 @@ export async function extractWithLlm(
     return { events: [], usage: tokenUsage }
   }
 
-  const events = parsed.data.events.map((evt) => {
+  // Validate row-by-row rather than as one array. Batch-level parsing meant a
+  // single unparseable event discarded every event on the page — Red Rocks and
+  // Cervantes both went to zero for days because ~10% of their listings came
+  // back with a null artist (#1162).
+  const validRows: NormalizedEventRow[] = []
+  const rowErrors: string[] = []
+  parsed.data.events.forEach((row, index) => {
+    const parsedRow = NormalizedEventSchema.safeParse(row)
+    if (parsedRow.success) {
+      validRows.push(parsedRow.data)
+    } else {
+      rowErrors.push(`[${index}] ${parsedRow.error.message}`)
+    }
+  })
+
+  // Requires `validRows.length > 0`: a total wipeout is reported once below at
+  // error severity, and emitting both would double-report the same failure.
+  if (rowErrors.length > 0 && validRows.length > 0) {
+    reportFailure({
+      event: 'llm.invalid_event_dropped',
+      // Warn, not error: the run still produced usable data.
+      severity: 'warn',
+      sourceUrl,
+      droppedCount: rowErrors.length,
+      totalCount: parsed.data.events.length,
+      // Cap the payload — a wholesale schema drift would otherwise attach one
+      // error per event and blow past Sentry's event size limit.
+      errors: rowErrors.slice(0, 5).join('\n'),
+    })
+  }
+
+  // Every row failing means the response shape drifted, not that one listing
+  // was malformed. Keep the original event name so existing Sentry alerting
+  // and dashboard queries still match.
+  if (validRows.length === 0 && parsed.data.events.length > 0) {
+    reportFailure({
+      event: 'llm.invalid_tool_input',
+      severity: 'error',
+      sourceUrl,
+      error: rowErrors.slice(0, 5).join('\n'),
+    })
+    return { events: [], usage: tokenUsage }
+  }
+
+  const events = validRows.map((evt) => {
     // Defense in depth against HTML leaking into the description field
     // (#827). The system prompt already asks for plain text, but Gothic
     // / RHP CMS pages sometimes prompt the model with `<p>`-wrapped
@@ -339,14 +394,20 @@ export async function extractWithLlm(
     // The prompt instructs the model to exclude the headliner, but a
     // disobedient response would otherwise render it twice — once bold, once
     // in the "with …" openers line (#643).
+    // Non-concert listings have no performer, so the model returns null. Fall
+    // back to the cleaned title: it's what the prompt already tells the model
+    // to do when the artist is merely unclear, and it keeps `artist` a
+    // non-empty string for every downstream consumer (search, dedupe, the
+    // Spotify matcher) rather than pushing null-handling into all of them.
+    const artist = evt.artist?.trim() || title
     const supportingArtists = normalizeSupportingArtists(
-      evt.artist,
+      artist,
       evt.supportingArtists ?? [],
     )
     return {
       title,
       rawTitle: evt.rawTitle,
-      artist: evt.artist,
+      artist,
       date: evt.date,
       confidence: evt.confidence,
       sourceUrl,
