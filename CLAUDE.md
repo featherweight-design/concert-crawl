@@ -162,6 +162,7 @@ All design work — both new design tickets and the build of existing handoffs �
 - E2E tests: Playwright (runs against staging)
 - Smoke tests: Playwright (runs against prod, hourly via GitHub Actions cron)
 - **Branch protection:** all checks must pass before merge to `main`
+- **CI owns the test gate.** There is no `pre-push` hook — `.github/workflows/ci.yml` runs typecheck, lint, unit tests, build, and integration tests on every PR, and branch protection blocks merge until they pass. Don't reintroduce a hook that duplicates a CI job. Running `pnpm typecheck` / `pnpm lint` locally before pushing is still worthwhile (seconds, and it saves a CI round-trip), but it's discipline, not enforcement.
 - **Per-worktree test DBs** — integration tests run against `concert_crawl_test__<worktree>` (derived from the worktree directory; the main repo uses plain `concert_crawl_test`). `apps/api/src/test/setup/global-setup.ts` auto-creates and migrates it on first run. Set `DATABASE_URL_TEST` to override (CI does this per job). This isolates concurrent worktrees so parallel runs never truncate each other's data.
 
 ### Formatting
