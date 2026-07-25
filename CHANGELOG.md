@@ -1,3 +1,16 @@
+# [1.163.0](https://github.com/HartiganHM/concert-crawl/compare/v1.162.0...v1.163.0) (2026-07-25)
+
+
+### Bug Fixes
+
+* **crawler:** give platform fetches a real wall-clock deadline ([#1197](https://github.com/HartiganHM/concert-crawl/issues/1197)) ([4fa76f6](https://github.com/HartiganHM/concert-crawl/commit/4fa76f6c7a3ed8950107cb8e2329cbacf6339910)), closes [#1184](https://github.com/HartiganHM/concert-crawl/issues/1184)
+* **crawler:** rename truncation-report fields Sentry was scrubbing ([#1202](https://github.com/HartiganHM/concert-crawl/issues/1202)) ([52fa646](https://github.com/HartiganHM/concert-crawl/commit/52fa646d8af95ffb3fde8ace87d190ad036537f9)), closes [#1191](https://github.com/HartiganHM/concert-crawl/issues/1191)
+
+
+### Features
+
+* **crawler:** alert when a venue's events lose their ticket links ([#1201](https://github.com/HartiganHM/concert-crawl/issues/1201)) ([0f478d3](https://github.com/HartiganHM/concert-crawl/commit/0f478d3e7dc15ff585563ed11dca36f25a8ae817))
+
 # [1.162.0](https://github.com/HartiganHM/concert-crawl/compare/v1.161.0...v1.162.0) (2026-07-25)
 
 
