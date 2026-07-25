@@ -27,7 +27,7 @@
     "test:all": "vitest run && vitest run --config vitest.integration.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.112.3",
+    "@anthropic-ai/sdk": "^0.112.4",
     "@clerk/backend": "^2.33.6",
     "@concert-crawl/db": "workspace:*",
     "@concert-crawl/entitlements": "workspace:*",
