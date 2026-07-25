@@ -376,6 +376,11 @@ eventsAdminRouter.get(
         status: events.status,
         extractionStrategy: events.extractionStrategy,
         sourceUrl: events.sourceUrl,
+        // The missing list links out to the venue so an admin can confirm a
+        // disappearance without hand-searching. eventUrl is the show's own
+        // page — a 404 or a cancellation notice settles it in one click —
+        // and sourceUrl is the calendar fallback when we never got one.
+        eventUrl: events.eventUrl,
         genre: events.genre,
         createdAt: events.createdAt,
         lastSeenAt: events.lastSeenAt,

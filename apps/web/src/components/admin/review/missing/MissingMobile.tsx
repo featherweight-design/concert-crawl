@@ -9,6 +9,11 @@ import {
   formatLastSeen,
 } from '@/lib/admin/missing'
 import { MissingChips } from './MissingChips'
+import {
+  MissingEventLink,
+  MissingVenueLink,
+  VenueCheckLink,
+} from './MissingLinks'
 import { MissingRowMenu } from './MissingRowMenu'
 import { type MissingRowEvent } from './MissingRow'
 
@@ -167,7 +172,9 @@ export const MissingMobile = ({
                 gap: 10,
               }}
             >
-              <div
+              <MissingEventLink
+                eventId={event.id}
+                title={event.title}
                 style={{
                   fontFamily: "'Inter', sans-serif",
                   fontSize: 14.5,
@@ -175,9 +182,7 @@ export const MissingMobile = ({
                   color: 'var(--fg)',
                   letterSpacing: '-0.01em',
                 }}
-              >
-                {event.title}
-              </div>
+              />
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <div
                   style={{
@@ -210,9 +215,22 @@ export const MissingMobile = ({
                 fontSize: 12,
                 color: 'var(--fg-muted)',
                 marginTop: 3,
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: 6,
               }}
             >
-              {event.venueName ?? '—'} · {formatEventDate(event.date)}
+              <MissingVenueLink
+                venueId={event.venueId}
+                venueName={event.venueName}
+              />
+              <span>· {formatEventDate(event.date)}</span>
+              <VenueCheckLink
+                title={event.title}
+                eventUrl={event.eventUrl}
+                sourceUrl={event.sourceUrl}
+              />
             </div>
             <div style={{ margin: '12px 0' }}>
               <MissingChips

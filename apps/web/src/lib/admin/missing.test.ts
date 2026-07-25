@@ -1,5 +1,41 @@
 import { describe, it, expect } from 'vitest'
-import { computeMissedSweeps, formatEventDate, formatLastSeen } from './missing'
+import {
+  computeMissedSweeps,
+  formatEventDate,
+  formatLastSeen,
+  resolveVenueCheckUrl,
+} from './missing'
+
+describe('resolveVenueCheckUrl', () => {
+  it('prefers the per-event page over the calendar it was found on', () => {
+    expect(
+      resolveVenueCheckUrl(
+        'https://redrocksonline.com/events/griz-1489047/',
+        'https://redrocksonline.com/events/',
+      ),
+    ).toBe('https://redrocksonline.com/events/griz-1489047/')
+  })
+
+  it('falls back to the source calendar when there is no event URL', () => {
+    expect(
+      resolveVenueCheckUrl(null, 'https://redrocksonline.com/events/'),
+    ).toBe('https://redrocksonline.com/events/')
+  })
+
+  it('falls back to the source calendar when the event URL is unsafe', () => {
+    expect(
+      resolveVenueCheckUrl(
+        'javascript:alert(1)',
+        'https://redrocksonline.com/events/',
+      ),
+    ).toBe('https://redrocksonline.com/events/')
+  })
+
+  it('returns null when neither URL is a safe http(s) link', () => {
+    expect(resolveVenueCheckUrl(null, null)).toBeNull()
+    expect(resolveVenueCheckUrl('javascript:alert(1)', 'not-a-url')).toBeNull()
+  })
+})
 
 describe('computeMissedSweeps', () => {
   it('returns the count of full days between firstMissingAt and now', () => {

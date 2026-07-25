@@ -2,8 +2,25 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import React from 'react'
 import { MissingTabContent } from './MissingTabContent'
 import { type MissingRowEvent } from '../missing/MissingRow'
+
+vi.mock('next/link', () => ({
+  default: ({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode
+    href: string
+    [key: string]: unknown
+  }) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}))
 
 const NOW = '2026-06-16T03:00:00Z'
 
@@ -12,10 +29,13 @@ const SAMPLE: MissingRowEvent[] = [
     id: 'evt-1',
     title: 'Lord Huron',
     venueName: 'Mission Ballroom',
+    venueId: 'ven-1',
     date: '2026-06-19',
     showTime: '20:00',
     lastSeenAt: '2026-06-12T03:00:00Z',
     firstMissingAt: '2026-06-13T03:00:00Z',
+    eventUrl: 'https://missionballroom.com/events/lord-huron',
+    sourceUrl: 'https://missionballroom.com/events',
     classification: 'crawl_gap',
     clusterCount: 1,
   },

@@ -1,4 +1,28 @@
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
+
 const MS_PER_DAY = 1000 * 60 * 60 * 24
+
+/**
+ * Where "Check at venue" should point for a missing row.
+ *
+ * Prefers the show's own page, which answers the auditor's question
+ * outright — a 404 or a cancellation notice confirms the disappearance
+ * without scanning a calendar. Falls back to the page the crawler read
+ * (sourceUrl) for venues that never yield a per-event URL, so the link
+ * degrades to the old manual scan rather than disappearing.
+ *
+ * Both values are crawler-derived and therefore untrusted, so each is
+ * scheme-filtered independently: a `javascript:` eventUrl must not
+ * suppress a perfectly good sourceUrl.
+ */
+export const resolveVenueCheckUrl = (
+  eventUrl: string | null,
+  sourceUrl: string | null,
+): string | null => {
+  if (isSafeHttpUrl(eventUrl)) return eventUrl
+  if (isSafeHttpUrl(sourceUrl)) return sourceUrl
+  return null
+}
 
 /**
  * Number of daily sweeps an admin should believe the event has been missing.

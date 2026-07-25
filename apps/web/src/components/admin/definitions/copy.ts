@@ -1531,6 +1531,17 @@ export const ADMIN_COPY = {
       clusterBadge: (count: number, venue: string) =>
         `${count} missing at ${venue}`,
       skeletonAriaLabel: 'Loading missing events',
+      checkAtVenue: 'Check at venue',
+      checkAtVenueAria: (title: string) =>
+        `Check ${title} on the venue's own site, opens in a new tab`,
+      openEventAria: (title: string) => `Edit the event record for ${title}`,
+      // venueName arrives via a LEFT JOIN, so a row can carry a live venueId
+      // with no name. The link still works, so it still needs a label.
+      openVenueAria: (venue: string | null) =>
+        venue === null
+          ? 'Open the admin page for this venue'
+          : `Open the admin page for ${venue}`,
+      venueUnknown: '—',
     },
 
     eventFlags: {

@@ -8,16 +8,24 @@ import {
   formatLastSeen,
 } from '@/lib/admin/missing'
 import { MissingChips } from './MissingChips'
+import {
+  MissingEventLink,
+  MissingVenueLink,
+  VenueCheckLink,
+} from './MissingLinks'
 import { MissingRowMenu } from './MissingRowMenu'
 
 export interface MissingRowEvent {
   id: string
   title: string
   venueName: string | null
+  venueId: string | null
   date: string
   showTime: string | null
   lastSeenAt: string | null
   firstMissingAt: string
+  eventUrl: string | null
+  sourceUrl: string | null
   classification: MissingClassification
   clusterCount: number
 }
@@ -72,7 +80,9 @@ export const MissingRow = ({
             flexWrap: 'wrap',
           }}
         >
-          <span
+          <MissingEventLink
+            eventId={event.id}
+            title={event.title}
             style={{
               fontFamily: "'Inter', sans-serif",
               fontSize: 13.5,
@@ -80,9 +90,7 @@ export const MissingRow = ({
               color: 'var(--fg)',
               letterSpacing: '-0.005em',
             }}
-          >
-            {event.title}
-          </span>
+          />
           <span
             style={{
               fontFamily: "'JetBrains Mono', monospace",
@@ -92,15 +100,15 @@ export const MissingRow = ({
           >
             ·
           </span>
-          <span
+          <MissingVenueLink
+            venueId={event.venueId}
+            venueName={event.venueName}
             style={{
               fontFamily: "'Inter', sans-serif",
               fontSize: 12,
               color: 'var(--fg-muted)',
             }}
-          >
-            {event.venueName ?? '—'}
-          </span>
+          />
           <span
             style={{
               fontFamily: "'JetBrains Mono', monospace",
@@ -111,6 +119,11 @@ export const MissingRow = ({
             {formatEventDate(event.date)}
             {formatTime(event.showTime)}
           </span>
+          <VenueCheckLink
+            title={event.title}
+            eventUrl={event.eventUrl}
+            sourceUrl={event.sourceUrl}
+          />
         </div>
         <MissingChips
           missedCount={missed}
