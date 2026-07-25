@@ -26,6 +26,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.16.0-beta',
+    date: 'Jul 25, 2026',
+    headline: 'Submitting a price? The vendor list finally has your vendor.',
+    items: [
+      {
+        kind: 'added',
+        text: 'The "Where it\'s listed" question used to offer six sellers, and Etix wasn\'t one of them — despite it being the most common place Denver shows actually sell tickets. There are twelve now, including StubHub, Vivid Seats, viagogo and TicketNetwork, plus a "Somewhere else" for anything still missing.',
+      },
+      {
+        kind: 'changed',
+        text: 'The list is grouped too: face-value sellers first, resale marketplaces second, said once in plain words. Resale prices run above face value, and that should be obvious at the moment you pick — not something you piece together afterwards.',
+      },
+    ],
+  },
+  {
     version: 'v0.15.1-beta',
     date: 'Jul 25, 2026',
     headline: 'Get Tickets actually lands on the show now.',

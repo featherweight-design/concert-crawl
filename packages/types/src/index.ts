@@ -92,9 +92,80 @@ export type PriceSource =
 // Ticket tier
 export type Tier = 'GA' | 'Reserved' | 'VIP' | 'Pit' | 'Lawn'
 
-// Ticket vendor
-export type Vendor =
-  'AXS' | 'Ticketmaster' | 'SeatGeek' | 'DICE' | 'Eventbrite' | 'VenueBoxOffice'
+// Ticket vendor. Single source of truth — `z.enum(VENDOR_VALUES)` at every API
+// boundary rather than a hand-written list per route, which is how the six
+// pre-#1193 copies drifted apart.
+export const VENDOR_VALUES = [
+  'AXS',
+  'Ticketmaster',
+  'SeatGeek',
+  'DICE',
+  'Eventbrite',
+  'VenueBoxOffice',
+  'Etix',
+  'StubHub',
+  'VividSeats',
+  'Viagogo',
+  'TicketNetwork',
+  'Other',
+] as const
+
+export type Vendor = (typeof VENDOR_VALUES)[number]
+
+// Vendor picker taxonomy (#1193). Pinned vendors render as always-visible
+// chips; the rest live behind the "More…" disclosure, grouped so a fan can tell
+// a face-value seller from a resale marketplace without reading a legend.
+//
+// Primary ordering is frequency-first from prod ticket links (Etix 237,
+// Eventbrite 2, DICE 0). Resale ordering has no prod frequency behind it and is
+// provisional until submissions land.
+//
+// SeatGeek sits under Resale, not Primary: `kindFromVendor` and
+// `resolveSourceKind` both return 'resale' for it, so the other placement would
+// put the picker in contradiction with the price-kind logic behind it. Link
+// classification disagrees — `host-rules.ts` files seatgeek.com under
+// KNOWN_VENDOR_HOSTS — but the picker follows the price-kind side, because
+// that's the axis a fan reads a trust mark from.
+export type VendorGroupId = 'primary' | 'resale'
+
+export const VENDOR_PINNED: readonly Vendor[] = [
+  'VenueBoxOffice',
+  'AXS',
+  'Ticketmaster',
+]
+
+export const VENDOR_GROUPS: readonly {
+  id: VendorGroupId
+  items: readonly Vendor[]
+}[] = [
+  { id: 'primary', items: ['Etix', 'Eventbrite', 'DICE'] },
+  {
+    id: 'resale',
+    items: ['StubHub', 'SeatGeek', 'VividSeats', 'Viagogo', 'TicketNetwork'],
+  },
+]
+
+export const VENDOR_CATCHALL: Vendor = 'Other'
+
+// Derived from the resale group rather than listed again: the price-trust
+// ordering in events.ts / venues-public.ts previously hardcoded SeatGeek as
+// the only resale vendor, so expanding the enum silently let StubHub and
+// friends outrank a primary-market seller.
+export const RESALE_VENDOR_VALUES: readonly Vendor[] =
+  VENDOR_GROUPS.find((group) => group.id === 'resale')?.items ?? []
+
+const RESALE_VENDORS = new Set<string>(RESALE_VENDOR_VALUES)
+
+export const isResaleVendor = (vendor: string | null | undefined): boolean =>
+  vendor !== null && vendor !== undefined && RESALE_VENDORS.has(vendor)
+
+// Ordering weight for "which corroborated price leads" — box office first,
+// then primary-market sellers, then resale. Shared so the in-memory sort and
+// the SQL CASE expressions can't drift apart.
+export const vendorTrustRank = (vendor: string): number => {
+  if (vendor === 'VenueBoxOffice') return 0
+  return isResaleVendor(vendor) ? 2 : 1
+}
 
 // Ticket vendor — lower-cased for pipeline
 export type TicketVendor =

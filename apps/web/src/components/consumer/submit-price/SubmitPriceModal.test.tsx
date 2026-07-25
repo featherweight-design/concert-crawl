@@ -505,9 +505,9 @@ describe('SubmitPriceModal — multi-tier panels (#832)', () => {
     await waitFor(() => expect(screen.getByText('Floor')).toBeTruthy())
     fireEvent.click(screen.getByText('+ Add another tier'))
     expect(screen.getAllByText("Where's this price from?")).toHaveLength(1)
-    expect(screen.getAllByText('Vendor')).toHaveLength(1)
+    expect(screen.getAllByText(/Where it's listed/)).toHaveLength(1)
     // Vendor (bundle-level) must precede the first Tier group in DOM order
-    const vendorLabel = screen.getByText('Vendor')
+    const vendorLabel = screen.getByText(/Where it's listed/)
     const firstTierLabel = screen.getAllByText('Tier')[0]!
     const orderPosition = vendorLabel.compareDocumentPosition(firstTierLabel)
     expect(orderPosition & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()

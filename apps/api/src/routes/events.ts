@@ -33,6 +33,8 @@ import {
 import {
   SP_POLICY,
   deriveSourceCategory,
+  RESALE_VENDOR_VALUES,
+  vendorTrustRank,
   type AvailabilityDay,
   type EventsAvailabilityResponse,
   type SourceCategory,
@@ -346,7 +348,7 @@ eventsRouter.get(
           ),
         )
         .orderBy(
-          sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${priceSubmissions.vendor} = 'SeatGeek' THEN 2 ELSE 1 END ASC`,
+          sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${inArray(priceSubmissions.vendor, RESALE_VENDOR_VALUES)} THEN 2 ELSE 1 END ASC`,
           desc(priceSubmissions.createdAt),
         )
 
@@ -835,12 +837,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     row.priceSource === 'community' && allCorroboratedRows.length > 0
   const legacySortedCorroborated = isCommunityPriced
     ? [...allCorroboratedRows].sort((left, right) => {
-        const trust = (vendor: string): number => {
-          if (vendor === 'VenueBoxOffice') return 0
-          if (vendor === 'SeatGeek') return 2
-          return 1
-        }
-        const trustDelta = trust(left.vendor) - trust(right.vendor)
+        const trustDelta =
+          vendorTrustRank(left.vendor) - vendorTrustRank(right.vendor)
         if (trustDelta !== 0) return trustDelta
         return right.createdAt.getTime() - left.createdAt.getTime()
       })
@@ -941,7 +939,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     : SP_POLICY.confirmsRequired
 
   // Flat-field derivation for community-priced events — preserves the legacy
-  // vendor-trust ordering (boxoffice=0, SeatGeek=2, else=1, then createdAt
+  // vendor-trust ordering (boxoffice=0, resale=2, else=1, then createdAt
   // desc) so existing consumers keep getting the same priceVendor / priceAlternates
   // / counterSubmission shape during the PR 4 migration window. Reads from
   // the in-memory allCorroboratedRows + side-tables that priceByTier also

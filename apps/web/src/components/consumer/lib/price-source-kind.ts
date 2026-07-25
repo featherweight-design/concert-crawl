@@ -10,6 +10,7 @@
 // resale-vs-primary meaning, so a fan-submitted resale price rendered as
 // "Community" and every vendor outside the original six did too.
 
+import { isResaleVendor } from '@concert-crawl/types'
 import type { PriceSource, SourceCategory } from '@concert-crawl/types'
 
 export type SourceKind = 'primary' | 'resale' | 'community' | 'boxoffice'
@@ -20,7 +21,7 @@ function kindFromVendor(
   vendor?: string | null,
 ): Exclude<SourceKind, 'primary'> {
   if (vendor === 'VenueBoxOffice') return 'boxoffice'
-  if (vendor === 'SeatGeek') return 'resale'
+  if (isResaleVendor(vendor)) return 'resale'
   return 'community'
 }
 

@@ -442,6 +442,13 @@
       "when": 1785542400000,
       "tag": "0062_url_coverage_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1785628800000,
+      "tag": "0063_vendor_picker_values",
+      "breakpoints": true
     }
   ]
 }

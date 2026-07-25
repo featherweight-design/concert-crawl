@@ -17,6 +17,31 @@ describe('displayVendor', () => {
     },
   )
 
+  it.each([
+    ['VividSeats', 'Vivid Seats'],
+    ['Viagogo', 'viagogo'],
+  ])(
+    'renders %s with the picker spelling, not the enum value',
+    (stored, shown) => {
+      expect(displayVendor(stored)).toBe(shown)
+    },
+  )
+
+  // "seen on Somewhere else" reads as a mistake — the catch-all needs its own
+  // wording in the display direction.
+  it('renders the catch-all as a generic seller, not the picker string', () => {
+    expect(displayVendor('Other')).toBe('another seller')
+  })
+
+  // A prototype key must not be mistaken for a vendor — `in` would say yes and
+  // hand back a function where the UI expects a name.
+  it.each(['toString', 'hasOwnProperty', 'constructor'])(
+    'passes the Object.prototype key %s through unchanged',
+    (key) => {
+      expect(displayVendor(key)).toBe(key)
+    },
+  )
+
   it('passes unknown vendor strings through unchanged', () => {
     expect(displayVendor('Unknown Vendor')).toBe('Unknown Vendor')
   })

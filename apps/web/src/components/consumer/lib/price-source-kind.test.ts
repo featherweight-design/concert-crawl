@@ -37,6 +37,19 @@ describe('resolveSourceKind', () => {
       'boxoffice',
     )
     expect(resolveSourceKind('community', 'SeatGeek', null)).toBe('resale')
+  })
+
+  // The legacy fallback named SeatGeek alone; #1193 added four more resale
+  // marketplaces, which would otherwise fall through to the community mark.
+  it.each(['StubHub', 'VividSeats', 'Viagogo', 'TicketNetwork'])(
+    'falls back to the resale mark for %s',
+    (vendor) => {
+      expect(resolveSourceKind('community', vendor, null)).toBe('resale')
+    },
+  )
+
+  it('keeps the community mark for a primary vendor with no category', () => {
+    expect(resolveSourceKind('community', 'Etix', null)).toBe('community')
     expect(resolveSourceKind('community', 'AXS', null)).toBe('community')
   })
 

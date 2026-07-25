@@ -42,6 +42,12 @@ export const submissionVendorEnum = pgEnum('submission_vendor', [
   'DICE',
   'Eventbrite',
   'VenueBoxOffice',
+  'Etix',
+  'StubHub',
+  'VividSeats',
+  'Viagogo',
+  'TicketNetwork',
+  'Other',
 ])
 
 export const submissionHowFoundEnum = pgEnum('submission_how_found', [

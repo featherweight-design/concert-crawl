@@ -123,6 +123,44 @@ describe('POST /v1/events/:id/price-submissions', () => {
     expect(body.data.sourceCategory).toBe('boxoffice')
   })
 
+  it('accepts Etix, the vendor picker value behind the most prod ticket links', async () => {
+    setAuth()
+    const res = await app.request(`/v1/events/${eventId}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({
+        priceMin: 25,
+        tier: 'GA',
+        vendor: 'Etix',
+        howFound: 'bought_myself',
+        sourceCategory: 'standard',
+      }),
+    })
+    expect(res.status).toBe(201)
+    expect(await res.json()).toMatchObject({ data: { vendor: 'Etix' } })
+  })
+
+  it('rejects a vendor outside the enum with 422', async () => {
+    setAuth()
+    const res = await app.request(`/v1/events/${eventId}/price-submissions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer test-token',
+      },
+      body: JSON.stringify({
+        priceMin: 25,
+        tier: 'GA',
+        vendor: 'https://phishing.example.com',
+        howFound: 'bought_myself',
+      }),
+    })
+    expect(res.status).toBe(422)
+  })
+
   it('derives sourceCategory=boxoffice from at_the_venue howFound when omitted', async () => {
     setAuth()
     const res = await app.request(`/v1/events/${eventId}/price-submissions`, {

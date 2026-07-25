@@ -3,7 +3,11 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, desc, eq, gt, ne, sql } from 'drizzle-orm'
 import { db, events, priceSubmissions } from '@concert-crawl/db'
-import { SP_POLICY, deriveSourceCategory } from '@concert-crawl/types'
+import {
+  SP_POLICY,
+  VENDOR_VALUES,
+  deriveSourceCategory,
+} from '@concert-crawl/types'
 import {
   clerkAuth,
   requireAuth,
@@ -18,14 +22,7 @@ const submissionBodySchema = z
     priceMin: z.number().int().min(SP_POLICY.floorMin).max(SP_POLICY.floorMax),
     priceMax: z.number().int().min(1).max(SP_POLICY.ceilingMax).optional(),
     tier: z.enum(['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']),
-    vendor: z.enum([
-      'AXS',
-      'Ticketmaster',
-      'SeatGeek',
-      'DICE',
-      'Eventbrite',
-      'VenueBoxOffice',
-    ]),
+    vendor: z.enum(VENDOR_VALUES),
     howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
     // sourceCategory is the new top-level provenance choice (issue #641).
     // Optional during the expand phase — the submit form (PR 4) will start
@@ -60,14 +57,7 @@ const batchTierRowSchema = z
 
 const batchBodySchema = z
   .object({
-    vendor: z.enum([
-      'AXS',
-      'Ticketmaster',
-      'SeatGeek',
-      'DICE',
-      'Eventbrite',
-      'VenueBoxOffice',
-    ]),
+    vendor: z.enum(VENDOR_VALUES),
     howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
     sourceCategory: z.enum(['boxoffice', 'standard', 'resale']).optional(),
     note: z.string().max(280).optional(),

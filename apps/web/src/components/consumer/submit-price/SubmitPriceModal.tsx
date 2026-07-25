@@ -5,13 +5,14 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { useAuth } from '@clerk/nextjs'
 import { ShieldCheck } from 'lucide-react'
 import { ModalShell } from '@/components/consumer/modal-shell'
-import { VENUE_BOX_OFFICE_LABEL } from '@/components/consumer/vendor-display'
 import { CCMark } from '@/components/brand/cc-mark'
 import { SPNumberField } from '../SPNumberField'
 import { ChipGroup } from '../ChipGroup'
+import { VendorField } from './VendorField'
 import { validateSubmission } from '@/lib/sp-policy'
 import {
   deriveSourceCategory,
+  VENDOR_VALUES,
   type Tier,
   type Vendor,
   type HowFound,
@@ -55,30 +56,28 @@ type PriceSubmissionResponse =
   | { success?: false; error?: string; submission?: PriceSubmission }
 
 const TIERS: readonly Tier[] = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']
-const VENDORS: readonly Vendor[] = [
-  'AXS',
-  'Ticketmaster',
-  'SeatGeek',
-  'DICE',
-  'Eventbrite',
-  'VenueBoxOffice',
-]
 const SOURCE_CATEGORIES: readonly SourceCategory[] = [
   'boxoffice',
   'standard',
   'resale',
 ]
 
+// Sets rather than array `.includes`: a `readonly Tier[]` won't accept an
+// arbitrary string without an `as` cast, and Set<string> narrows honestly.
+const TIER_SET = new Set<string>(TIERS)
+const VENDOR_SET = new Set<string>(VENDOR_VALUES)
+const SOURCE_CATEGORY_SET = new Set<string>(SOURCE_CATEGORIES)
+
 function isTier(value: string): value is Tier {
-  return (TIERS as readonly string[]).includes(value)
+  return TIER_SET.has(value)
 }
 
-function isVendor(value: string): value is Vendor {
-  return (VENDORS as readonly string[]).includes(value)
+function isVendor(value: string | null): value is Vendor {
+  return value !== null && VENDOR_SET.has(value)
 }
 
 function isSourceCategory(value: string): value is SourceCategory {
-  return (SOURCE_CATEGORIES as readonly string[]).includes(value)
+  return SOURCE_CATEGORY_SET.has(value)
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -218,17 +217,6 @@ const TIER_OPTIONS = [
   { value: 'VIP', label: 'VIP' },
   { value: 'Pit', label: 'Pit' },
   { value: 'Lawn', label: 'Lawn' },
-]
-
-// Round-3 locked decision #2: never show the venue's own name as a vendor.
-// The API value stays `VenueBoxOffice` until the Contract PR retires it.
-const VENDOR_OPTIONS = [
-  { value: 'VenueBoxOffice', label: VENUE_BOX_OFFICE_LABEL },
-  { value: 'AXS', label: 'AXS' },
-  { value: 'Ticketmaster', label: 'Ticketmaster' },
-  { value: 'SeatGeek', label: 'SeatGeek' },
-  { value: 'DICE', label: 'DICE' },
-  { value: 'Eventbrite', label: 'Eventbrite' },
 ]
 
 const SOURCE_CATEGORY_OPTIONS = [
@@ -904,18 +892,15 @@ export function SubmitPriceModal({
 
           {/* Vendor — moved above tier panels so bundle-level fields precede
               per-panel fields in DOM order. */}
-          <ChipGroup
-            label={CONSUMER_COPY.submitPriceV2.vendorLabel}
-            options={VENDOR_OPTIONS}
-            value={bundleState.vendor}
+          <VendorField
+            value={isVendor(bundleState.vendor) ? bundleState.vendor : null}
             onChange={(val) =>
               setBundleState((prev) => ({ ...prev, vendor: val }))
             }
             error={bundleErrors['vendor']}
-            req
             // When source=boxoffice, the vendor auto-fills to VenueBoxOffice
             // and handleSubmit unconditionally overrides any other choice.
-            // Lock the chips so the UI selection and the submitted payload
+            // Lock the field so the UI selection and the submitted payload
             // can't diverge (e.g. "AXS" shown while payload sends "Venue").
             disabled={bundleState.sourceCategory === 'boxoffice'}
           />

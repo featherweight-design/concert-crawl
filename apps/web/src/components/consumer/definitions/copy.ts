@@ -1184,5 +1184,47 @@ export const CONSUMER_COPY = {
   // stays generic. Read it through vendor-display.ts, not directly.
   vendors: {
     venueBoxOffice: 'Venue box office',
+    // The picker's catch-all reads "Somewhere else", which only works as a
+    // choice. Rendering a stored value needs a noun: "seen on another seller".
+    otherVendor: 'another seller',
+  },
+} as const
+
+// ── Vendor picker (#1193) ─────────────────────────────────────────
+// Display strings for the "Where it's listed" field. Keyed by the stored enum
+// value so the display string can be re-worded without touching the contract —
+// `viagogo` really is lowercase, and the catch-all reads "Somewhere else" while
+// persisting as `Other`.
+export const VENDOR_PICKER_COPY = {
+  label: "Where it's listed",
+  // The chip reads "More…" so it fits the row; the accessible name spells it
+  // out, since an ellipsis says nothing to a screen reader.
+  moreTrigger: 'More…',
+  // Names the question too: the trigger sits outside the radiogroup, so it
+  // inherits no label from it.
+  moreTriggerLabel: "Where it's listed: more vendors",
+  sheetTitle: "Where it's listed",
+  popoverTitle: 'More vendors',
+  // Accessible name for the fourth chip once it holds a value — the state has
+  // to be in the name, since a disclosure button can't be a radio.
+  selectedTriggerLabel: "Where it's listed: {vendor}. Change vendor",
+  clearLabel: 'Clear {vendor}',
+  groups: {
+    primary: { label: 'Primary', caption: 'sold at face value' },
+    resale: { label: 'Resale', caption: 'priced above face value' },
+  },
+  vendors: {
+    VenueBoxOffice: 'Venue box office',
+    AXS: 'AXS',
+    Ticketmaster: 'Ticketmaster',
+    Etix: 'Etix',
+    Eventbrite: 'Eventbrite',
+    DICE: 'DICE',
+    StubHub: 'StubHub',
+    SeatGeek: 'SeatGeek',
+    VividSeats: 'Vivid Seats',
+    Viagogo: 'viagogo',
+    TicketNetwork: 'TicketNetwork',
+    Other: 'Somewhere else',
   },
 } as const

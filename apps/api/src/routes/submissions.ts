@@ -3,7 +3,11 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, eq, sql } from 'drizzle-orm'
 import { db, priceSubmissions, submissionConfirms } from '@concert-crawl/db'
-import { SP_POLICY, deriveSourceCategory } from '@concert-crawl/types'
+import {
+  SP_POLICY,
+  VENDOR_VALUES,
+  deriveSourceCategory,
+} from '@concert-crawl/types'
 import { clerkAuth, requireAuth, getAuthUser } from '../middleware/auth.js'
 import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js'
 
@@ -91,16 +95,7 @@ const disputeBodySchema = z
     // server unconditionally inherits vendor from the parent submission; this
     // field is purely a no-op now and gets dropped from the schema in the
     // Contract PR once the consumer drops it.
-    vendor: z
-      .enum([
-        'AXS',
-        'Ticketmaster',
-        'SeatGeek',
-        'DICE',
-        'Eventbrite',
-        'VenueBoxOffice',
-      ])
-      .optional(),
+    vendor: z.enum(VENDOR_VALUES).optional(),
   })
   .refine((data) => !data.ceiling || data.ceiling >= data.floor, {
     message: "Ceiling can't be below floor.",
@@ -246,16 +241,7 @@ const patchBodySchema = z
       .optional(),
     ceiling: z.number().int().min(1).max(SP_POLICY.ceilingMax).optional(),
     tier: z.enum(['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']).optional(),
-    vendor: z
-      .enum([
-        'AXS',
-        'Ticketmaster',
-        'SeatGeek',
-        'DICE',
-        'Eventbrite',
-        'VenueBoxOffice',
-      ])
-      .optional(),
+    vendor: z.enum(VENDOR_VALUES).optional(),
     howFound: z
       .enum(['bought_myself', 'saw_listing', 'at_the_venue'])
       .optional(),

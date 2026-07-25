@@ -14,7 +14,11 @@ import {
   isNull,
   sql,
 } from 'drizzle-orm'
-import { SP_POLICY, deriveSourceCategory } from '@concert-crawl/types'
+import {
+  SP_POLICY,
+  deriveSourceCategory,
+  RESALE_VENDOR_VALUES,
+} from '@concert-crawl/types'
 import { todayInTimezone } from '../lib/time.js'
 import { requireAuth } from '../middleware/auth.js'
 import { aggregateByTier } from '../lib/price-aggregation/index.js'
@@ -184,7 +188,7 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
         ),
       )
       .orderBy(
-        sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${priceSubmissions.vendor} = 'SeatGeek' THEN 2 ELSE 1 END ASC`,
+        sql`CASE WHEN ${priceSubmissions.vendor} = 'VenueBoxOffice' THEN 0 WHEN ${inArray(priceSubmissions.vendor, RESALE_VENDOR_VALUES)} THEN 2 ELSE 1 END ASC`,
         desc(priceSubmissions.createdAt),
       )
     for (const vRow of vendorRows) {

@@ -15,7 +15,7 @@ import {
 import { runPricePipeline } from '@concert-crawl/price-pipeline'
 import { fanoutWatchNotification } from '@concert-crawl/push'
 import { createLogger } from '@concert-crawl/logger'
-import { deriveSourceCategory } from '@concert-crawl/types'
+import { VENDOR_VALUES, deriveSourceCategory } from '@concert-crawl/types'
 import { getAuthUser } from '../../middleware/auth.js'
 import { apiLogger } from '../../lib/logger.js'
 import { awardPriceCred } from '../../lib/award-price-cred.js'
@@ -574,14 +574,7 @@ const postAdminSubmissionSchema = z.object({
   eventId: z.string().uuid(),
   priceMin: z.string(),
   priceMax: z.string().optional(),
-  vendor: z.enum([
-    'AXS',
-    'Ticketmaster',
-    'SeatGeek',
-    'DICE',
-    'Eventbrite',
-    'VenueBoxOffice',
-  ]),
+  vendor: z.enum(VENDOR_VALUES),
   howFound: z.enum(['bought_myself', 'saw_listing', 'at_the_venue']),
 })
 
