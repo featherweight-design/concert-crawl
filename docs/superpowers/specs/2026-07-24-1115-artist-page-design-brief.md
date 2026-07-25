@@ -155,7 +155,7 @@ Handoff at `design/design_handoff_artist_page/`, mirroring the structure of `des
 
 ## 5. Technical requirements
 
-- **Themes:** Electric / Jade / Light. Token-only colors via `var(--*)`. No hardcoded hex.
+- **Themes:** mock Electric / Jade / Light (the three base themes; production ships nine off the same token set). Token-only colors via `var(--*)`. No hardcoded hex — with one bounded carve-out the handoff must name explicitly if it uses it: the Spotify iframe accepts only a literal background color and cannot consume a CSS variable, so the value passed *into the embed* may be a hex.
 - **The embed is an un-themeable iframe.** This is the single hardest visual constraint on the page: Spotify's player accepts only a background-color and dimensions, and will not inherit our tokens. Design must decide how a foreign-styled rectangle sits inside three different themes without reading as a bug — including in Light, where the embed's own chrome may clash hardest.
 - **Mobile + desktop parity** is non-negotiable (behavioral parity; visual differences are expected).
 - **WCAG AA.** Colored elements maintain contrast across all three themes. The embed is third-party and cannot be fully controlled — annotate what we *can* control around it (focus order, labeling, whether it's reachable by keyboard in sequence).
@@ -192,7 +192,7 @@ Handoff at `design/design_handoff_artist_page/`, mirroring the structure of `des
 - **Free tier for discovery surfaces:** #72 shareable cards, #762 who-else-is-watching
 - **Supporting artists render as discrete names** (#643, shipped) — the linkable units in 3.9 already exist
 - **`avatarColor` atom** (#762) — available if Design wants a deterministic color for artists without photos
-- **Themes:** 3 shipped (Electric / Jade / Light), not 9
+- **Themes:** 9 ship in production off one identical token set. The three base themes (Electric / Jade / Light) are the *mock* scope — token discipline is what makes a three-theme mock sufficient for nine, and Light is the only structural outlier (its `--scrim` is materially lighter)
 - **Voice:** Sour Patch Kids; banned words include "fraud", "last chance"
 
 ---

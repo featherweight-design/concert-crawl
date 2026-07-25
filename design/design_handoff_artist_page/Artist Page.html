@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Artist Page (#1115)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>html,body{margin:0;padding:0;background:#f0eee9;font-family:Inter,system-ui,sans-serif}*{box-sizing:border-box}</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="artist-data.jsx"></script>
+<script type="text/babel" src="artist-embed.jsx"></script>
+<script type="text/babel" src="artist-surface.jsx"></script>
+<script type="text/babel" src="artist-page.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEMES, CC_THEME_KEYS } = window;
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+const { IOSDevice } = window;
+const { ARTISTS, ARTIST_COPY } = window;
+const { ArtistPageMobile, ArtistPageDesktop, embedPlate, EMBED_H } = window;
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio, TweakToggle } = window;
+
+const PHONE_W = 390, PHONE_H = 920;
+const NARROW_W = 320, NARROW_H = 880;
+const DESK_W = 1060, DESK_H = 760;
+
+const BASE_THEMES = ["electric", "jade", "light"];
+
+function Phone({ theme = "electric", width = PHONE_W, height = PHONE_H, children }) {
+  return <ThemeProvider theme={theme}>
+    <IOSDevice width={width} height={height} dark={CC_THEMES[theme].mode !== "light"}>{children}</IOSDevice>
+  </ThemeProvider>;
+}
+function Desk({ theme = "electric", width = DESK_W, height = DESK_H, children }) {
+  return <ThemeProvider theme={theme} style={{ width, height }}>
+    <div style={{ width, height, background: "var(--bg)", overflow: "hidden" }}>{children}</div>
+  </ThemeProvider>;
+}
+function Bare({ theme = "electric", pad = 22, children }) {
+  return <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+    <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad,
+      overflow: "hidden", fontFamily: "Inter, system-ui" }}>{children}</div>
+  </ThemeProvider>;
+}
+function Eyebrow({ children, color = "var(--fg-subtle)", mb = 10 }) {
+  return <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700,
+    letterSpacing: "0.14em", textTransform: "uppercase", color, marginBottom: mb }}>{children}</div>;
+}
+function Note({ children }) {
+  return <div style={{ fontFamily: "Inter, system-ui", fontSize: 11.5, lineHeight: 1.5,
+    color: "var(--fg-muted)", marginTop: 12, textWrap: "pretty" }}>{children}</div>;
+}
+
+// Mobile page under a given theme, with the embed plate resolved for it.
+function M(p) {
+  const theme = p.theme || "electric";
+  return <Phone theme={theme} width={p.narrow ? NARROW_W : PHONE_W} height={p.h || (p.narrow ? NARROW_H : PHONE_H)}>
+    <ArtistPageMobile {...p} embedBg={embedPlate(theme, p.direction || "mat")}/>
+  </Phone>;
+}
+function D(p) {
+  const theme = p.theme || "electric";
+  return <Desk theme={theme} height={p.height || DESK_H}>
+    <ArtistPageDesktop {...p} embedBg={embedPlate(theme, p.direction || "mat")}/>
+  </Desk>;
+}
+
+// ── Tweaks ───────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "artist": "known",
+  "direction": "mat",
+  "embedHeight": "compact",
+  "following": false,
+  "signedOut": false,
+  "loading": "none",
+  "narrow": false,
+  "scrolled": false,
+  "deskScroll": false
+}/*EDITMODE-END*/;
+
+const ARTIST_OPTS = [
+  { value: "known", label: "1 · Spotify-known" },
+  { value: "fallback", label: "2 · No Spotify" },
+  { value: "emptyKnown", label: "3a · No shows · known" },
+  { value: "emptyFallback", label: "3b · No shows · fallback" },
+  { value: "many", label: "4 · Many shows" },
+];
+const DIR_OPTS = [
+  { value: "mat", label: "B · Mat (rec.)" },
+  { value: "shelf", label: "A · Shelf" },
+  { value: "flush", label: "C · Flush" },
+];
+const LOAD_OPTS = [
+  { value: "none", label: "Loaded" },
+  { value: "artist", label: "Artist fetch" },
+  { value: "embed", label: "Player only" },
+];
+
+function APTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="State">
+        <TweakSelect label="Artist" value={t.artist} onChange={(v) => setT("artist", v)} options={ARTIST_OPTS}/>
+        <TweakSelect label="Loading" value={t.loading} onChange={(v) => setT("loading", v)} options={LOAD_OPTS}/>
+        <TweakToggle label="Following" value={t.following} onChange={(v) => setT("following", v)}/>
+        <TweakToggle label="Signed out" value={t.signedOut} onChange={(v) => setT("signedOut", v)}/>
+      </TweakSection>
+      <TweakSection label="Player">
+        <TweakRadio label="Integration" value={t.direction} onChange={(v) => setT("direction", v)} options={DIR_OPTS}/>
+        <TweakRadio label="Height" value={t.embedHeight} onChange={(v) => setT("embedHeight", v)}
+          options={[{ value: "compact", label: "152" }, { value: "tall", label: "352" }]}/>
+      </TweakSection>
+      <TweakSection label="Viewport">
+        <TweakToggle label="320px narrow" value={t.narrow} onChange={(v) => setT("narrow", v)}/>
+        <TweakToggle label="Scrolled (sticky bar)" value={t.scrolled} onChange={(v) => setT("scrolled", v)}/>
+        <TweakToggle label="Desktop scrolled (rail pins)" value={t.deskScroll} onChange={(v) => setT("deskScroll", v)}/>
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakRadio label="Theme" value={t.theme} onChange={(v) => setT("theme", v)}
+          options={BASE_THEMES.map((k) => ({ value: k, label: CC_THEMES[k].label }))}/>
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+function liveProps(t) {
+  return { artist: ARTISTS[t.artist], theme: t.theme, direction: t.direction,
+    embedHeight: EMBED_H[t.embedHeight], following: t.following, signedOut: t.signedOut,
+    loading: t.loading, narrow: t.narrow, scrolled: t.scrolled, deskScroll: t.deskScroll,
+    h: t.narrow ? 1220 : 1200 };
+}
+function LiveM() { const [t] = useTweaks(TWEAK_DEFAULTS); return M(liveProps(t)); }
+function LiveD() { const [t] = useTweaks(TWEAK_DEFAULTS); const p = liveProps(t);
+  return D({ artist: p.artist, theme: p.theme, direction: p.direction, embedHeight: p.embedHeight,
+    following: p.following, signedOut: p.signedOut, loading: p.loading, height: 1010,
+    scrollTop: p.deskScroll ? 480 : 0 }); }
+
+// Isolated player card for the direction / theme comparisons.
+function PlayerCard({ theme, direction, artist = ARTISTS.known }) {
+  return <Bare theme={theme} pad={18}>
+    <window.ArtistEmbed name={artist.name} spotifyId={artist.spotifyId} direction={direction}
+      height={EMBED_H.compact} bg={embedPlate(theme, direction)} skipTo="upcoming"/>
+  </Bare>;
+}
+
+function App() {
+  return (
+    <>
+      <DesignCanvas
+        title="Artist Page"
+        subtitle="#1115 · a new top-level route, reached from the headliner name, each supporting-artist name, and artist matches in search. Answers the only question that matters on the calendar: should I care about this show? Free tier, fully usable signed-out. Mocked in the three base themes; production ships nine off one identical token set, so token-only colour discipline is the bar. 320 → desktop, WCAG AA. Drive every state from the Tweaks panel.">
+
+        <DCSection id="live" title="0 · Live preview"
+          subtitle="Every state, both viewports. Artist fixture · loading phase · follow · signed-out · embed integration direction · embed height · 320 narrow · scrolled sticky bar · desktop scroll position.">
+          <DCArtboard id="lm" label="Mobile" width={PHONE_W} height={1220}><LiveM/></DCArtboard>
+          <DCArtboard id="ld" label="Desktop" width={DESK_W} height={1010}><LiveD/></DCArtboard>
+        </DCSection>
+
+        <DCSection id="states" title="1 · The six states"
+          subtitle="Same components throughout. The only structural difference between a Spotify-known artist and one we can't resolve is what occupies the player slot — and the fallback occupies it with one honest sentence, not a hole.">
+          <DCArtboard id="s1" label="1 · Populated, Spotify-known" width={PHONE_W} height={1200}>
+            {M({ artist: ARTISTS.known, h: 1200 })}</DCArtboard>
+          <DCArtboard id="s2" label="2 · Populated, no Spotify" width={PHONE_W} height={1040}>
+            {M({ artist: ARTISTS.fallback, h: 1040 })}</DCArtboard>
+          <DCArtboard id="s3a" label="3a · No shows · known" width={PHONE_W} height={1010}>
+            {M({ artist: ARTISTS.emptyKnown, h: 1010 })}</DCArtboard>
+          <DCArtboard id="s3b" label="3b · No shows · fallback" width={PHONE_W} height={PHONE_H}>
+            {M({ artist: ARTISTS.emptyFallback })}</DCArtboard>
+          <DCArtboard id="s4" label="4 · Many shows (residency)" width={PHONE_W} height={1660}>
+            {M({ artist: ARTISTS.many, h: 1660 })}</DCArtboard>
+          <DCArtboard id="s6" label="6 · Following" width={PHONE_W} height={1200}>
+            {M({ artist: ARTISTS.known, following: true, h: 1200 })}</DCArtboard>
+          <DCPostIt top={-10} right={20} width={230}>Unresolved-match artists render 2 verbatim. "We don't know them" and "we're not sure yet" look identical on purpose — it upgrades silently.</DCPostIt>
+        </DCSection>
+
+        <DCSection id="embed" title="2 · The hardest call — three ways to seat a foreign rectangle"
+          subtitle="The embed takes a background colour and dimensions. Nothing else. Its ink is theirs and it is dark-mode ink in every one of our themes. These are the three postures, in Electric and in Light — Light is where each one either survives or doesn't.">
+          <DCArtboard id="e-a-e" label="A · Shelf — Electric" width={430} height={300}>
+            <PlayerCard theme="electric" direction="shelf"/></DCArtboard>
+          <DCArtboard id="e-b-e" label="B · Mat — Electric ★" width={430} height={300}>
+            <PlayerCard theme="electric" direction="mat"/></DCArtboard>
+          <DCArtboard id="e-c-e" label="C · Flush — Electric" width={430} height={300}>
+            <PlayerCard theme="electric" direction="flush"/></DCArtboard>
+          <DCArtboard id="e-a-l" label="A · Shelf — Light" width={430} height={300}>
+            <PlayerCard theme="light" direction="shelf"/></DCArtboard>
+          <DCArtboard id="e-b-l" label="B · Mat — Light ★" width={430} height={300}>
+            <PlayerCard theme="light" direction="mat"/></DCArtboard>
+          <DCArtboard id="e-c-l" label="C · Flush — Light" width={430} height={300}>
+            <PlayerCard theme="light" direction="flush"/></DCArtboard>
+          <DCPostIt top={-10} right={20} width={250} rotate={2}>RECOMMEND B. We stop trying to make it ours. A mono rail names it as someone else's player, and an 8px token mat keeps the two colour systems from ever touching. C only works where their ink happens to resemble ours.</DCPostIt>
+        </DCSection>
+
+        <DCSection id="ninethemes" title="3 · The mat, and the one value we get to send them"
+          subtitle="The bg param is the only thing the iframe accepts from us — so we send the computed --surface-1 and the plate merges into the mat. In Light we deliberately DON'T match: their ink is dark-mode ink in every theme, so a light plate would put near-white type on a near-white field. Light keeps a dark plate and reads as an intentional dark inset, like a photograph. A mat is not supposed to match the artwork. Mocked in the base three; the rule is a function of theme.mode, so it holds for all nine.">
+          {BASE_THEMES.map((k) => (
+            <DCArtboard key={k} id={"nt-" + k} label={CC_THEMES[k].label} width={380} height={252}>
+              <PlayerCard theme={k} direction="mat"/></DCArtboard>
+          ))}
+        </DCSection>
+
+        <DCSection id="empty" title="4 · No upcoming shows — the majority state"
+          subtitle="Most artists on the calendar are between dates. This is not a degraded list, it is the page's strongest conversion moment, so it moves ABOVE the player and the follow button leaves the hero to live inside the pitch. Exactly one live follow affordance at any time.">
+          <DCArtboard id="em-k" label="Known · not following" width={PHONE_W} height={1010}>
+            {M({ artist: ARTISTS.emptyKnown, h: 1010 })}</DCArtboard>
+          <DCArtboard id="em-kf" label="Known · following" width={PHONE_W} height={1010}>
+            {M({ artist: ARTISTS.emptyKnown, following: true, h: 1010 })}</DCArtboard>
+          <DCArtboard id="em-f" label="Fallback · nothing on our map" width={PHONE_W} height={PHONE_H}>
+            {M({ artist: ARTISTS.emptyFallback })}</DCArtboard>
+          <DCArtboard id="em-so" label="Signed out" width={PHONE_W} height={1010}>
+            {M({ artist: ARTISTS.emptyKnown, signedOut: true, h: 1010 })}</DCArtboard>
+          <DCArtboard id="em-sticky" label="Scrolled · sub-header carries NO follow" width={PHONE_W} height={1010}>
+            {M({ artist: ARTISTS.emptyKnown, scrolled: true, h: 1010 })}</DCArtboard>
+          <DCArtboard id="em-d" label="Desktop — follow stays in the rail" width={DESK_W} height={860}>
+            {D({ artist: ARTISTS.emptyKnown, height: 860 })}</DCArtboard>
+          <DCPostIt top={-10} right={20} width={230}>No notification promise. "Lands in your Watching" is a true statement about autoWatch — not a push we haven't shipped.</DCPostIt>
+        </DCSection>
+
+        <DCSection id="many" title="5 · Many upcoming shows — chronological, with runs collapsed"
+          subtitle="Chronological is the default; a venue only becomes a grouping when it earns it. Three or more nights at the same room inside 21 days collapse into one run — five nights at Ophelia's is ONE thing that happens, not five unrelated rows. Beyond five items the list truncates behind an explicit count.">
+          <DCArtboard id="mn-c" label="Collapsed (default) · truncated" width={PHONE_W} height={1660}>
+            {M({ artist: ARTISTS.many, h: 1660 })}</DCArtboard>
+          <DCArtboard id="mn-o" label="List only · truncated at 5 items" width={430} height={620}>
+            <Bare theme="electric" pad={18}><window.UpcomingShows artist={ARTISTS.many} name={ARTISTS.many.name}/></Bare>
+          </DCArtboard>
+          <DCArtboard id="mn-x" label="List only · expanded (Show fewer)" width={430} height={900}>
+            <Bare theme="electric" pad={18}>
+              <div ref={(el) => { if (!el || el.dataset.x) return; el.dataset.x = 1;
+                requestAnimationFrame(() => { const b = el.querySelector("button[aria-expanded]"); if (b) b.click(); }); }}>
+                <window.UpcomingShows artist={ARTISTS.many} name={ARTISTS.many.name}/>
+              </div>
+            </Bare>
+          </DCArtboard>
+          <DCArtboard id="mn-d" label="Desktop" width={DESK_W} height={1460}>
+            {D({ artist: ARTISTS.many, height: 1460 })}</DCArtboard>
+          <DCPostIt top={-10} right={20} width={240}>Grouping is CLUSTERED, not first-vs-last: the Nov 14 return to Ophelia's is correctly left as a one-off rather than swallowed into the August run. Truncation counts in shows, the same unit as the section head.</DCPostIt>
+        </DCSection>
+
+        <DCSection id="loading" title="6 · Two clocks"
+          subtitle="The artist fetch and the third-party embed resolve independently, so they get independent treatments. The page never waits on the player: the shows list can be fully readable while the iframe is still blank, and the player well reserves its exact final height so nothing moves when it paints.">
+          <DCArtboard id="l1" label="Clock 1 · artist fetch" width={PHONE_W} height={1200}>
+            {M({ artist: ARTISTS.known, loading: "artist", h: 1200 })}</DCArtboard>
+          <DCArtboard id="l2" label="Clock 2 · page up, player pending" width={PHONE_W} height={1200}>
+            {M({ artist: ARTISTS.known, loading: "embed", h: 1200 })}</DCArtboard>
+          <DCArtboard id="l3" label="Resolved" width={PHONE_W} height={1200}>
+            {M({ artist: ARTISTS.known, h: 1200 })}</DCArtboard>
+          <DCArtboard id="l4" label="Player well · reserved height" width={430} height={280}>
+            <Bare theme="electric" pad={18}>
+              <Eyebrow color="var(--signal)">Pending → painted, same box</Eyebrow>
+              <window.EmbedLoading height={EMBED_H.compact}/>
+            </Bare></DCArtboard>
+          <DCArtboard id="l5" label="Desktop · player pending" width={DESK_W} height={1010}>
+            {D({ artist: ARTISTS.known, loading: "embed", height: 1010 })}</DCArtboard>
+        </DCSection>
+
+        <DCSection id="follow" title="7 · Follow — one affordance, one mental model"
+          subtitle="Writes user_artist_follows with source:'manual' and carries autoWatch: every show this artist plays goes to Watching. It never writes to the user's Spotify. Identical for non-Spotify artists. If the user's connected Spotify already follows them, the control mounts pre-toggled and says nothing about it.">
+          <DCArtboard id="f-all" label="States" width={430} height={430}>
+            <Bare theme="electric" pad={20}>
+              <Eyebrow>Not following</Eyebrow>
+              <window.FollowBlock name="Nightjar Choir" following={false}/>
+              <div style={{ height: 22 }}/>
+              <Eyebrow>Following</Eyebrow>
+              <window.FollowBlock name="Nightjar Choir" following={true}/>
+              <div style={{ height: 22 }}/>
+              <Eyebrow>Signed out</Eyebrow>
+              <window.FollowBlock name="Nightjar Choir" signedOut={true}/>
+            </Bare></DCArtboard>
+          <DCArtboard id="f-light" label="States · Light" width={430} height={430}>
+            <Bare theme="light" pad={20}>
+              <Eyebrow>Not following</Eyebrow>
+              <window.FollowBlock name="Nightjar Choir" following={false}/>
+              <div style={{ height: 22 }}/>
+              <Eyebrow>Following</Eyebrow>
+              <window.FollowBlock name="Nightjar Choir" following={true}/>
+              <div style={{ height: 22 }}/>
+              <Eyebrow>Signed out</Eyebrow>
+              <window.FollowBlock name="Nightjar Choir" signedOut={true}/>
+            </Bare></DCArtboard>
+          <DCArtboard id="f-stick" label="Scrolled · sticky sub-header" width={PHONE_W} height={1200}>
+            {M({ artist: ARTISTS.known, scrolled: true, h: 1200 })}</DCArtboard>
+          <DCArtboard id="f-stick2" label="Scrolled · following" width={PHONE_W} height={1200}>
+            {M({ artist: ARTISTS.known, scrolled: true, following: true, h: 1200 })}</DCArtboard>
+          <DCArtboard id="f-stick3" label="Scrolled · NO shows — bar carries no follow" width={PHONE_W} height={1010}>
+            {M({ artist: ARTISTS.emptyKnown, scrolled: true, h: 1010 })}</DCArtboard>
+          <DCArtboard id="f-deskrail" label="Desktop · scrolled 420px — rail pinned" width={DESK_W} height={860}>
+            {D({ artist: ARTISTS.many, height: 860, scrollTop: 420 })}</DCArtboard>
+          <DCPostIt top={-10} right={20} width={240}>Mobile: follow rides a sticky sub-header once the name scrolls off — and is suppressed there in the no-shows state, where the empty block already owns the page's one follow. Desktop: position:sticky left rail, so the follow never leaves the viewport and no sub-header exists.</DCPostIt>
+        </DCSection>
+
+        <DCSection id="narrow" title="8 · 320 — where the photo and the iframe fight for height"
+          subtitle="Both want the fold. Below 360px the plate loses: 200 → 150px, name 31 → 27px, gutters 18 → 14px. The player keeps its 152px compact size untouched, because a player scaled below its own minimum is a broken player. Nothing is removed and no behaviour changes — parity is behavioural, not visual.">
+          <DCArtboard id="n1" label="320 · Spotify-known" width={NARROW_W} height={1220}>
+            {M({ artist: ARTISTS.known, narrow: true, h: 1220 })}</DCArtboard>
+          <DCArtboard id="n2" label="320 · fallback" width={NARROW_W} height={1070}>
+            {M({ artist: ARTISTS.fallback, narrow: true, h: 1070 })}</DCArtboard>
+          <DCArtboard id="n3" label="320 · no shows" width={NARROW_W} height={1030}>
+            {M({ artist: ARTISTS.emptyKnown, narrow: true, h: 1030 })}</DCArtboard>
+          <DCArtboard id="n4" label="390 · same page for comparison" width={PHONE_W} height={1200}>
+            {M({ artist: ARTISTS.known, h: 1200 })}</DCArtboard>
+        </DCSection>
+
+        <DCSection id="fallbackchar" title="9 · The fallback's character"
+          subtitle="It leans on IdentityArt, not avatarColor — the artist namespace is already the identity for this artist on the event hero, the browse tile and the search row, so an artist we can't resolve arrives wearing the face it already had everywhere else. Same container as the photo, per the Phase 7.5 hard-swap contract: when a match resolves, one element swaps and nothing moves.">
+          <DCArtboard id="fb-1" label="Wax Harbour" width={PHONE_W} height={1040}>
+            {M({ artist: ARTISTS.fallback, h: 1040 })}</DCArtboard>
+          <DCArtboard id="fb-2" label="Cassette Sunday · nothing at all" width={PHONE_W} height={PHONE_H}>
+            {M({ artist: ARTISTS.emptyFallback })}</DCArtboard>
+          <DCArtboard id="fb-3" label="Photo container (annotated)" width={PHONE_W} height={1200}>
+            {M({ artist: ARTISTS.known, h: 1200 })}</DCArtboard>
+          <DCArtboard id="fb-4" label="Player slot · absent" width={430} height={200}>
+            <Bare theme="electric" pad={18}>
+              <window.EmbedAbsent/>
+              <Note>Three lines, no box, no icon, no retry. A hole would read as an error; a sentence reads as a fact.</Note>
+            </Bare></DCArtboard>
+          <DCPostIt top={-10} right={20} width={240} rotate={2}>FLAG: press photos arrive on expiring signed URLs at arbitrary aspect ratios. This treatment fixes the CONTAINER (fixed height, cover crop) so the image can never set layout — but re-signing on load is an eng call, not solved here.</DCPostIt>
+        </DCSection>
+
+        <DCSection id="parity" title="10 · Theme parity — Electric · Jade · Light"
+          subtitle="The full page, not just the player. Electric is the default; Light is the only light mode we ship. Every colour reads var(--*) except one production-surviving hex — the embed's own bg param, which the iframe cannot inherit. Production ships nine themes off this identical token set, so a colour that only survives in these three is a bug.">
+          {BASE_THEMES.map((k) => (
+            <DCArtboard key={k} id={"p-" + k} label={CC_THEMES[k].label} width={PHONE_W} height={1200}>
+              {M({ artist: ARTISTS.known, theme: k, h: 1200 })}</DCArtboard>
+          ))}
+          <DCArtboard id="p-light-empty" label="Light · no shows" width={PHONE_W} height={1010}>
+            {M({ artist: ARTISTS.emptyKnown, theme: "light", h: 1010 })}</DCArtboard>
+          <DCArtboard id="p-jade-fb" label="Jade · fallback" width={PHONE_W} height={1040}>
+            {M({ artist: ARTISTS.fallback, theme: "jade", h: 1040 })}</DCArtboard>
+        </DCSection>
+
+        <DCSection id="past" title="11 · Previously — the crawl-only past list"
+          subtitle="#1170 blocks deep multi-year history and setlists, not this. Deliberately thinner than Upcoming: date + venue, no price, no link-out, no setlist. It is evidence for the history line rather than a second list to shop from, and it closes with the sentence that names the window — so a list sitting there looking finished can never imply a complete record. It disappears entirely when the crawl has nothing.">
+          <DCArtboard id="pa-1" label="List only" width={430} height={330}>
+            <Bare theme="electric" pad={18}>
+              <window.PastShows artist={ARTISTS.known} name={ARTISTS.known.name}/>
+            </Bare></DCArtboard>
+          <DCArtboard id="pa-2" label="List only · Light" width={430} height={330}>
+            <Bare theme="light" pad={18}>
+              <window.PastShows artist={ARTISTS.known} name={ARTISTS.known.name}/>
+            </Bare></DCArtboard>
+          <DCArtboard id="pa-3" label="One show — history prose + list agree" width={430} height={250}>
+            <Bare theme="electric" pad={18}>
+              <window.HistoryLine artist={ARTISTS.emptyKnown}/>
+              <div style={{ height: 22 }}/>
+              <window.PastShows artist={ARTISTS.emptyKnown} name={ARTISTS.emptyKnown.name}/>
+            </Bare></DCArtboard>
+          <DCArtboard id="pa-4" label="Nothing on our map — section absent" width={430} height={200}>
+            <Bare theme="electric" pad={18}>
+              <window.HistoryLine artist={ARTISTS.emptyFallback}/>
+              <Note>PastShows returns null. No empty list, no "0 shows" head — the prose already said it, and saying it twice would sound defensive.</Note>
+            </Bare></DCArtboard>
+        </DCSection>
+
+        <DCSection id="desktop" title="12 · Desktop parity"
+          subtitle="Same components, same states, same order rule. Crumb instead of the round back chip — matching Event Detail and Venue Profile, which both use the round scrim chip on mobile and a breadcrumb on desktop. The left rail carries plate + follow and is position:sticky, which is the whole reason desktop needs no sub-header.">
+          <DCArtboard id="d1" label="Spotify-known" width={DESK_W} height={1010}>
+            {D({ artist: ARTISTS.known, height: 1010 })}</DCArtboard>
+          <DCArtboard id="d2" label="Fallback" width={DESK_W} height={880}>
+            {D({ artist: ARTISTS.fallback, height: 880 })}</DCArtboard>
+          <DCArtboard id="d3" label="Light" width={DESK_W} height={1010}>
+            {D({ artist: ARTISTS.known, theme: "light", height: 1010 })}</DCArtboard>
+          <DCArtboard id="d4" label="Scrolled 520px — rail still pinned" width={DESK_W} height={860}>
+            {D({ artist: ARTISTS.many, height: 860, scrollTop: 520 })}</DCArtboard>
+        </DCSection>
+
+        <DCSection id="a11y" title="13 · Accessibility — what we can and can't control"
+          subtitle="The embed is third party. We own everything around it and nothing inside it, so the annotation is explicit about the boundary.">
+          <DCArtboard id="a1" label="Focus order + the skip link" width={620} height={600}>
+            <Bare theme="electric" pad={22}>
+              <Eyebrow color="var(--signal)">Document outline</Eyebrow>
+              <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11.5, lineHeight: 1.9,
+                color: "var(--fg-muted)", marginBottom: 18 }}>
+                &lt;main aria-label="Artist page for …"&gt;<br/>
+                &nbsp;&nbsp;h1 — artist name<br/>
+                &nbsp;&nbsp;h2 — Upcoming &nbsp;·&nbsp; h2 — Previously
+              </div>
+              <Eyebrow color="var(--signal)">Focus order</Eyebrow>
+              <ol style={{ margin: "0 0 18px", paddingLeft: 20, color: "var(--fg-muted)", fontSize: 13,
+                lineHeight: 1.85, fontFamily: "Inter, system-ui" }}>
+                <li><b style={{ color: "var(--fg)" }}>Back</b> — 44×44, visible 36px chip on --scrim</li>
+                <li><b style={{ color: "var(--fg)" }}>Follow</b> — aria-pressed, full sentence in aria-label</li>
+                <li><b style={{ color: "var(--fg)" }}>Skip player, go to shows</b> — hidden until focused, and
+                  <b style={{ color: "var(--fg)" }}> not rendered at all</b> when the player is the last block</li>
+                <li><b style={{ color: "var(--fg)" }}>The iframe</b> — an unknown number of stops we don't own</li>
+                <li><b style={{ color: "var(--fg)" }}>Show rows</b> — links, ≥60px; run rows ≥44px</li>
+                <li><b style={{ color: "var(--fg)" }}>Show all N shows</b> — aria-expanded</li>
+              </ol>
+              <Eyebrow color="var(--signal)">The skip link, focused</Eyebrow>
+              <window.EmbedSkipLink targetId="upcoming"/>
+              <div style={{ marginTop: 8, padding: "9px 12px", minHeight: 44, boxSizing: "border-box",
+                lineHeight: "26px", borderRadius: 8, background: "var(--surface-2)", color: "var(--fg)",
+                border: "1px solid var(--focus)", outline: "2px solid var(--focus)", outlineOffset: 2,
+                fontSize: 13, fontWeight: 600, display: "inline-block" }}>{ARTIST_COPY.playerSkip}</div>
+              <Note><b style={{ color: "var(--fg)" }}>What we can't control:</b> the number of tab stops inside
+                the iframe, their labels, their focus rings, and their contrast. What we can: the iframe's
+                title attribute, its position in the sequence, a labelled way past it, and never making it
+                the only route to information. Nothing on this page is available only inside the player.</Note>
+            </Bare></DCArtboard>
+          <DCArtboard id="a2" label="Touch targets · 320" width={NARROW_W} height={1620}>
+            {M({ artist: ARTISTS.many, narrow: true, h: 1620 })}</DCArtboard>
+          <DCArtboard id="a3" label="No-shows · no skip link at all" width={430} height={340}>
+            <Bare theme="electric" pad={18}>
+              <Eyebrow color="var(--signal)">Player is last — nothing to skip to</Eyebrow>
+              <window.ArtistEmbed name={ARTISTS.emptyKnown.name} spotifyId={ARTISTS.emptyKnown.spotifyId}
+                direction="mat" height={EMBED_H.compact} bg={embedPlate("electric", "mat")} skipTo={null}/>
+              <Note>A "skip player, go to shows" link here would send focus BACKWARDS, past a block already read. So it isn't rendered.</Note>
+            </Bare></DCArtboard>
+          <DCPostIt top={-10} right={20} width={230}>44px minimum holds for the tertiary controls too — back chip, show-all, and every date row inside a run.</DCPostIt>
+        </DCSection>
+
+      </DesignCanvas>
+      <APTweaks/>
+    </>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
