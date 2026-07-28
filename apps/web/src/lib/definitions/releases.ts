@@ -26,6 +26,17 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.16.1-beta',
+    date: 'Jul 27, 2026',
+    headline: 'The full vendor list now shows up everywhere you can pick one.',
+    items: [
+      {
+        kind: 'fixed',
+        text: 'Updating a price, or flagging one that looked off, still handed you the old six-seller list — so the twelve vendors we added on Friday were only half true. Both of those now use the same grouped picker as submitting a fresh price.',
+      },
+    ],
+  },
+  {
     version: 'v0.16.0-beta',
     date: 'Jul 25, 2026',
     headline: 'Submitting a price? The vendor list finally has your vendor.',

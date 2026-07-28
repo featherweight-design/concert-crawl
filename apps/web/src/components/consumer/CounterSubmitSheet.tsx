@@ -8,7 +8,7 @@ import { ChipGroup } from './ChipGroup'
 import { ArrowGlyph } from './glyphs'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { VENUE_BOX_OFFICE_LABEL } from '@/components/consumer/vendor-display'
+import { VendorField } from '@/components/consumer/submit-price/VendorField'
 import { SP_POLICY } from '@concert-crawl/types'
 import type { Tier, Vendor } from '@concert-crawl/types'
 
@@ -20,15 +20,6 @@ const TIER_OPTIONS: { value: string; label: string }[] = [
   { value: 'VIP', label: 'VIP' },
   { value: 'Pit', label: 'Pit' },
   { value: 'Lawn', label: 'Lawn' },
-]
-
-const VENDOR_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Ticketmaster', label: 'Ticketmaster' },
-  { value: 'AXS', label: 'AXS' },
-  { value: 'SeatGeek', label: 'SeatGeek' },
-  { value: 'DICE', label: 'DICE' },
-  { value: 'Eventbrite', label: 'Eventbrite' },
-  { value: 'VenueBoxOffice', label: VENUE_BOX_OFFICE_LABEL },
 ]
 
 type HowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'
@@ -102,18 +93,6 @@ const isValidTier = (value: string): value is Tier => {
   return validTiers.includes(value as Tier)
 }
 
-const isValidVendor = (value: string): value is Vendor => {
-  const validVendors: Vendor[] = [
-    'AXS',
-    'Ticketmaster',
-    'SeatGeek',
-    'DICE',
-    'Eventbrite',
-    'VenueBoxOffice',
-  ]
-  return validVendors.includes(value as Vendor)
-}
-
 export function CounterSubmitSheet({
   open,
   onClose,
@@ -131,7 +110,7 @@ export function CounterSubmitSheet({
   const [floor, setFloor] = useState('')
   const [ceiling, setCeiling] = useState('')
   const [tier, setTier] = useState<string | null>(null)
-  const [vendor, setVendor] = useState<string | null>(null)
+  const [vendor, setVendor] = useState<Vendor | null>(null)
   const [howFound, setHowFound] = useState<string | null>(null)
   const [fieldErrors, setFieldErrors] = useState<FormErrors>({})
 
@@ -148,7 +127,6 @@ export function CounterSubmitSheet({
     if (!tier || !vendor || !howFound) return
 
     const resolvedTier = isValidTier(tier) ? tier : 'GA'
-    const resolvedVendor = isValidVendor(vendor) ? vendor : 'Ticketmaster'
     const resolvedHowFound: HowFound = isValidHowFound(howFound)
       ? howFound
       : 'saw_listing'
@@ -172,7 +150,7 @@ export function CounterSubmitSheet({
             priceMin: Number(floor),
             priceMax: ceiling ? Number(ceiling) : undefined,
             tier: resolvedTier,
-            vendor: resolvedVendor,
+            vendor,
             howFound: resolvedHowFound,
             disputedSubmissionId,
           }),
@@ -386,10 +364,7 @@ export function CounterSubmitSheet({
             error={fieldErrors.tier}
           />
 
-          {/* Vendor chips */}
-          <ChipGroup
-            label={copy.vendorLabel}
-            options={VENDOR_OPTIONS}
+          <VendorField
             value={vendor}
             onChange={setVendor}
             error={fieldErrors.vendor}

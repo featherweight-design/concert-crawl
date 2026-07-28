@@ -4,21 +4,12 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { SPNumberField } from './SPNumberField'
-import { ChipGroup } from './ChipGroup'
-import type { PriceSubmission } from '@concert-crawl/types'
+import { VendorField } from '@/components/consumer/submit-price/VendorField'
+import type { PriceSubmission, Vendor } from '@concert-crawl/types'
 import { SP_POLICY } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY
-
-const VENDOR_OPTIONS = [
-  { value: 'AXS', label: 'AXS' },
-  { value: 'Ticketmaster', label: 'Ticketmaster' },
-  { value: 'SeatGeek', label: 'SeatGeek' },
-  { value: 'DICE', label: 'DICE' },
-  { value: 'Eventbrite', label: 'Eventbrite' },
-  { value: 'VenueBoxOffice', label: 'Venue box office' },
-]
 
 interface DisputeFormProps {
   submission: PriceSubmission
@@ -30,7 +21,7 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
   const { getToken } = useAuth()
   const [floor, setFloor] = useState('')
   const [ceiling, setCeiling] = useState('')
-  const [vendor, setVendor] = useState<string | null>(null)
+  const [vendor, setVendor] = useState<Vendor | null>(null)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -143,9 +134,7 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
         />
       </div>
 
-      <ChipGroup
-        label={copy.disputeForm.vendorLabel}
-        options={VENDOR_OPTIONS}
+      <VendorField
         value={vendor}
         onChange={setVendor}
         error={errors['vendor']}
