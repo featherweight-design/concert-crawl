@@ -522,6 +522,70 @@ describe('checkEventCountDrop', () => {
     expect(outcome.fired).toBe(true)
   })
 
+  it('reports the drop to Sentry, at error level for went_dark and warn for dropped_sharply', async () => {
+    // A zero-event crawl succeeds, so Sentry can never infer this on its own —
+    // the signal has to be handed over explicitly. Email and the admin inbox
+    // both went unnoticed for days, which is why this third channel exists.
+    const venue = await seedVenue()
+    const darkIds = await seedSuccessfulRuns(
+      venue.id,
+      [70, 65, 72, 68, 71, 69, 75, 0],
+    )
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      await checkEventCountDrop({
+        venueId: venue.id,
+        venueName: venue.name,
+        crawlRunId: darkIds[darkIds.length - 1]!,
+        eventsFound: 0,
+        eventsUsable: 0,
+        lastEventCountAlertAt: null,
+      })
+
+      const darkLog = errorSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('"event":"crawl.event_count_dropped"'))
+      expect(darkLog).toBeDefined()
+      expect(darkLog).toContain('"severity":"error"')
+      expect(darkLog).toContain('"dropSeverity":"went_dark"')
+      expect(darkLog).toContain(`"venueName":"${venue.name}"`)
+
+      // A partial drop is real but not an outage, so it must not page at the
+      // same level as a venue going fully dark.
+      const softVenue = await seedVenue({
+        name: 'Soft Drop Venue',
+        slug: 'soft-drop-venue',
+      })
+      const softIds = await seedSuccessfulRuns(
+        softVenue.id,
+        [70, 65, 72, 68, 71, 69, 75, 5],
+      )
+      const softOutcome = await checkEventCountDrop({
+        venueId: softVenue.id,
+        venueName: softVenue.name,
+        crawlRunId: softIds[softIds.length - 1]!,
+        eventsFound: 5,
+        eventsUsable: 5,
+        lastEventCountAlertAt: null,
+      })
+      expect(softOutcome.fired).toBe(true)
+      if (!softOutcome.fired) throw new Error('expected softOutcome.fired')
+      expect(softOutcome.severity).toBe('dropped_sharply')
+
+      const softLog = warnSpy.mock.calls
+        .map((args) => String(args[0]))
+        .find((line) => line.includes('"event":"crawl.event_count_dropped"'))
+      expect(softLog).toBeDefined()
+      expect(softLog).toContain('"severity":"warn"')
+      expect(softLog).toContain('"dropSeverity":"dropped_sharply"')
+    } finally {
+      errorSpy.mockRestore()
+      warnSpy.mockRestore()
+    }
+  })
+
   it('logs email failure + still returns fired:true when sendEventCountDropEmail rejects', async () => {
     // The email is a secondary delivery channel — its failure must not
     // change the function's return value, and the notification row above

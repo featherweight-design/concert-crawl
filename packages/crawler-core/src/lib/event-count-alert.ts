@@ -234,6 +234,25 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
       .where(eq(venues.id, input.venueId))
   })
 
+  // Report to Sentry only after the transaction commits, so a Sentry issue
+  // always corresponds to a recorded alert rather than a rolled-back one. A
+  // zero-event crawl *succeeds*, so nothing throws and no amount of Sentry
+  // configuration could detect this on its own — the signal has to be handed
+  // over explicitly. Email and the admin inbox both proved easy to miss.
+  reportFailure({
+    event: 'crawl.event_count_dropped',
+    severity: severity === 'went_dark' ? 'error' : 'warn',
+    venueId: input.venueId,
+    venueName: input.venueName,
+    crawlRunId: input.crawlRunId,
+    dropSeverity: severity,
+    guardsAteEverything,
+    eventsFound: input.eventsFound,
+    eventsUsable: input.eventsUsable,
+    baselineCount,
+    dropPercent,
+  })
+
   // Await the email send. The crawler runs as a Render cron that hard-exits
   // via process.exit(0) the moment main() resolves; a fire-and-forget Promise
   // here gets severed mid-flight before the HTTP request to Resend completes,
