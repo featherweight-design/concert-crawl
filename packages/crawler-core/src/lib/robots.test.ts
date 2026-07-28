@@ -79,6 +79,18 @@ describe('robots.ts', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 
+  it('bounds the robots.txt fetch with an abort signal', async () => {
+    // Runs before every crawl and outside the platform fetchers' deadline
+    // budgets, so an unbounded request here hangs the nightly cron (#1199).
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response('User-agent: *\nAllow: /', { status: 200 }),
+      )
+    await isAllowed('https://signal-test.example/events', USER_AGENT)
+    expect(fetchSpy.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal)
+  })
+
   it('allows a path not listed under Disallow', async () => {
     const robotsTxt = ['User-agent: *', 'Disallow: /admin'].join('\n')
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(

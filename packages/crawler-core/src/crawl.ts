@@ -26,7 +26,7 @@ import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import { calculateCost } from './lib/cost.js'
 import { dispatch } from './lib/fetchers/index.js'
-import type { PlatformSource } from './lib/fetchers/index.js'
+import type { PlatformFetcher, PlatformSource } from './lib/fetchers/index.js'
 import {
   detectCrossVenuePresale,
   type CrossVenueCandidate,
@@ -44,6 +44,41 @@ import type { NormalizedEvent, TokenUsage } from './types.js'
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
 const AUTO_APPROVE_THRESHOLD = 0.7
+
+// Ceiling on any single platform HTTP request (#1199). Without this the
+// adapters omit the AbortSignal entirely, so a hung connection on the
+// nightly cron hangs until something upstream gives up.
+const PLATFORM_PER_REQUEST_TIMEOUT_MS = 20_000
+
+// Multiplier over the analytical worst case, absorbing DNS, TLS, and the
+// jitter the adapters add to each crawl delay.
+const PLATFORM_DEADLINE_HEADROOM = 1.25
+
+/**
+ * Wall-clock budget for a whole platform fetch, derived from the adapter's
+ * declared request count and the venue's own pacing.
+ *
+ * A flat constant can't work across the fetchers: AEG makes one request
+ * while VenuePilot can make 50, and at a 3s crawl delay that's 150s of
+ * deliberate pacing before a single response counts against the budget. A
+ * budget that fits AEG would fail VenuePilot nightly — and a breach records
+ * the run as failed, which feeds consecutiveFailures and the 3-strikes
+ * auto-pause, so a tight budget wouldn't just lose one night's data, it
+ * would take the venue offline.
+ *
+ * Sized to fire only when a fetch is genuinely stuck rather than merely
+ * slow: the per-request timeout is what bounds a single hung connection.
+ */
+function platformOverallTimeoutMs(
+  fetcher: PlatformFetcher,
+  venue: { crawlDelayMs: number },
+): number {
+  const worstCasePerRequest =
+    venue.crawlDelayMs + PLATFORM_PER_REQUEST_TIMEOUT_MS
+  return Math.ceil(
+    fetcher.maxRequests * worstCasePerRequest * PLATFORM_DEADLINE_HEADROOM,
+  )
+}
 
 // Normalizes a show_time string to the Postgres `time` output form
 // (HH:MM:SS) for building the in-memory dedup key. Null/empty/unparseable
@@ -318,6 +353,8 @@ export async function crawlVenue(
     if (platformFetcher) {
       const platformResult = await platformFetcher.fetch(venue, {
         crawlDelayMs: venue.crawlDelayMs,
+        perRequestTimeoutMs: PLATFORM_PER_REQUEST_TIMEOUT_MS,
+        overallTimeoutMs: platformOverallTimeoutMs(platformFetcher, venue),
       })
       extraction = {
         normalizedEvents: platformResult.events,

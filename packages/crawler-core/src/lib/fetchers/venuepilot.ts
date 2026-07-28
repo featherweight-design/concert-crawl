@@ -421,6 +421,8 @@ async function venuePilotFetch(
 
 export const venuePilotFetcher: PlatformFetcher = {
   source: 'venuepilot',
+  // Pagination stops at MAX_PAGES, and page 1 is inside that loop.
+  maxRequests: MAX_PAGES,
   canHandle(venue) {
     // Trim so a whitespace-only api_account_id isn't treated as configured.
     return Boolean(

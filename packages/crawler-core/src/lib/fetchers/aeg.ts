@@ -385,6 +385,8 @@ async function aegFetch(
 
 export const aegFetcher: PlatformFetcher = {
   source: 'aeg',
+  // One events blob per venue, no pagination.
+  maxRequests: 1,
   canHandle(venue) {
     return Boolean(
       venue.platform === 'aeg' &&

@@ -59,6 +59,24 @@ export interface PlatformFetcher {
    * fetcher-local union rather than `VenuePlatform`.
    */
   readonly source: PlatformSource
+  /**
+   * Upper bound on the deadline-wrapped request stages one `fetch` can issue.
+   *
+   * Counts only what runs inside `deadline.run()`. Ancillary network IO an
+   * adapter performs outside that path — Live Nation's robots.txt check, for
+   * one — is bounded by its own timeout and does not count here.
+   *
+   * Callers size `overallTimeoutMs` from this rather than a flat constant,
+   * so a legitimately paginated venue isn't punished for being slow: a
+   * 50-page VenuePilot account against a 3s crawl delay spends 150s on
+   * deliberate pacing alone, and a budget tight enough for AEG's single
+   * request would fail it every night.
+   *
+   * Adapters whose request count is decided upstream (Live Nation reads
+   * however many months its sitemap advertises) declare a ceiling well
+   * above what the site has ever served.
+   */
+  readonly maxRequests: number
   /** Returns false if this fetcher can't handle the venue
    * (e.g. missing platformVenueId / apiAccountId). */
   canHandle(venue: Venue): boolean

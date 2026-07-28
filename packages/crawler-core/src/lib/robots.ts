@@ -2,6 +2,11 @@
 // null = fetch failed (fail-open); string = robots.txt content.
 const robotsTextCache = new Map<string, string | null>()
 
+// robots.txt is a small static file on the same host we're about to crawl, so a
+// slow one signals a sick origin rather than a big payload. Bounded because this
+// runs before every platform fetch and outside their deadline budgets (#1199).
+const ROBOTS_TIMEOUT_MS = 10_000
+
 function getDomain(url: string): string {
   return new URL(url).origin
 }
@@ -69,6 +74,7 @@ async function fetchRobotsTxt(
   try {
     const response = await fetch(robotsUrl, {
       headers: { 'User-Agent': userAgent },
+      signal: AbortSignal.timeout(ROBOTS_TIMEOUT_MS),
     })
 
     if (!response.ok) {

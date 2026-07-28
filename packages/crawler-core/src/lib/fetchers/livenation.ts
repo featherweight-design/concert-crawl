@@ -484,6 +484,10 @@ async function liveNationFetch(
 
 export const liveNationFetcher: PlatformFetcher = {
   source: 'livenation',
+  // One sitemap read plus one page per calendar month it advertises. The
+  // sites have consistently published a 12-month rolling window; this
+  // doubles that so a site that widens the window doesn't start failing.
+  maxRequests: 25,
   canHandle(venue) {
     return Boolean(
       venue.platform === 'livenation' &&

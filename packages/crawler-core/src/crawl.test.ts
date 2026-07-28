@@ -14,6 +14,12 @@ vi.mock('./lib/email.js', () => ({
   sendEventCountDropEmail: mockSendEventCountDropEmail,
 }))
 
+// Platform-fetcher dispatch. Defaults to null so every other test in this
+// file keeps running the HTML → JSON-LD → LLM cascade; the platform-budget
+// tests opt in by returning a fake fetcher.
+const mockDispatch = vi.hoisted(() => vi.fn())
+vi.mock('./lib/fetchers/index.js', () => ({ dispatch: mockDispatch }))
+
 import {
   crawlVenue,
   DEBUG_CAPTURE_CHUNK_CHARS,
@@ -184,6 +190,8 @@ beforeEach(() => {
   mockFetchPage.mockClear()
   mockFetchPageHttp.mockClear()
   mockExtractWithLlm.mockClear()
+  mockDispatch.mockReset()
+  mockDispatch.mockReturnValue(null)
 })
 
 // Push a venue directly into the in-memory store — no DB round-trip needed.
@@ -1280,6 +1288,83 @@ describe('crawlVenue — fetch options', () => {
       venue.crawlDelayMs,
       venue.crawlWaitUntil,
       undefined,
+    )
+  })
+})
+
+describe('crawlVenue — platform fetch budget (#1199)', () => {
+  // Stands in for a real adapter so the assertions are about what crawl.ts
+  // hands down, not about any one platform's request shape.
+  function seedPlatformVenue(maxRequests: number, crawlDelayMs = 3000) {
+    const venue = seedVenue({ crawlDelayMs })
+    const fetch = vi.fn().mockResolvedValue({
+      events: [],
+      sourceUrl: 'https://platform.example.com/events.json',
+    })
+    mockDispatch.mockReturnValue({
+      source: 'aeg',
+      maxRequests,
+      canHandle: () => true,
+      fetch,
+    })
+    return { venue, fetch }
+  }
+
+  it('never issues a platform fetch without a per-request timeout', async () => {
+    // The adapters omit the AbortSignal entirely when the timeout is
+    // undefined, so an unset budget means a hung connection on the nightly
+    // cron hangs indefinitely.
+    const { venue, fetch } = seedPlatformVenue(1)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const opts = fetch.mock.calls[0]?.[1]
+    expect(opts?.perRequestTimeoutMs).toBeGreaterThan(0)
+    expect(opts?.overallTimeoutMs).toBeGreaterThan(0)
+  })
+
+  // One venue per test: the in-memory db mock's `where` is a no-op, so a
+  // second seeded venue would not be distinguishable from the first.
+  it('scales the budget with the adapter’s declared request count', async () => {
+    const { venue, fetch } = seedPlatformVenue(50, 3000)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const opts = fetch.mock.calls[0]?.[1]
+    // 50 requests is 50x the work of AEG's single blob read; a budget that
+    // didn't scale with the count would fit one and starve the other.
+    expect(opts?.overallTimeoutMs).toBeGreaterThan(
+      50 * opts.perRequestTimeoutMs,
+    )
+  })
+
+  it('leaves room for the crawl delay the venue itself asks for', async () => {
+    // 50 pages at a 3s delay is 150s of deliberate pacing before a single
+    // response counts. A budget that ignored the delay would fail a healthy
+    // venue every night, and a failed run feeds the 3-strikes auto-pause.
+    const pages = 50
+    const crawlDelayMs = 3000
+    const { venue, fetch } = seedPlatformVenue(pages, crawlDelayMs)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const opts = fetch.mock.calls[0]?.[1]
+    expect(opts?.overallTimeoutMs).toBeGreaterThan(
+      pages * (crawlDelayMs + opts.perRequestTimeoutMs),
+    )
+  })
+
+  it('scales the budget with the venue-configured crawl delay', async () => {
+    // A venue asking for unusually polite pacing spends far longer waiting
+    // than fetching, so the budget has to follow its own setting rather
+    // than a flat constant.
+    const crawlDelayMs = 30_000
+    const { venue, fetch } = seedPlatformVenue(10, crawlDelayMs)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(fetch.mock.calls[0]?.[1]?.overallTimeoutMs).toBeGreaterThan(
+      10 * crawlDelayMs,
     )
   })
 })
