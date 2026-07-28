@@ -98,7 +98,11 @@ _Currently empty — **#794** was the last item and flipped 📐 Brief locked on
 
 ## ⏳ Ready for design (not in this session's scope)
 
-Open `type: design` issues surfaced by triage but not scheduled — usually fresh beta feedback or new sub-projects. Currently empty; new tickets land here first.
+Open `type: design` issues surfaced by triage but not scheduled — usually fresh beta feedback or new sub-projects. New tickets land here first.
+
+| # | Phase | Priority | Adjacency / notes |
+|---|---|---|---|
+| **#1215** Reconcile admin triage surfaces + hook up admin notifications | launch | high | Admin-only, so it sits outside the consumer-UI design gate — but the call is a product one, not a wiring one. `NotificationBell` is dead code (never imported); `/admin/inbox` is reachable only via one text link in the dashboard's Attention feed and is absent from the admin nav; two read-state systems (`notifications.read_at` vs `inbox_reads`) never sync. Half the inbox's four categories duplicate `/admin/review` and `/admin/prices/submissions`; the other half (`blocked_venue`, `crawl_failure`) has no other home. Design decides the triage model before anything gets wired. Builds on **#542**. Not blocking crawl-health alerting — Sentry is being added as an independent channel. |
 
 ---
 
