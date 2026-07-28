@@ -1,3 +1,10 @@
+## [1.164.3](https://github.com/HartiganHM/concert-crawl/compare/v1.164.2...v1.164.3) (2026-07-28)
+
+
+### Bug Fixes
+
+* **consumer:** drop banned dispute/contest/challenge wording from price copy ([#1213](https://github.com/HartiganHM/concert-crawl/issues/1213)) ([8a2f1f5](https://github.com/HartiganHM/concert-crawl/commit/8a2f1f5b45c18de50347156ba09aedced629031e))
+
 ## [1.164.2](https://github.com/HartiganHM/concert-crawl/compare/v1.164.1...v1.164.2) (2026-07-28)
 
 
