@@ -1,3 +1,10 @@
+## [1.164.1](https://github.com/HartiganHM/concert-crawl/compare/v1.164.0...v1.164.1) (2026-07-28)
+
+
+### Bug Fixes
+
+* **consumer:** use the shared vendor picker when updating or disputing a price ([#1209](https://github.com/HartiganHM/concert-crawl/issues/1209)) ([15314f7](https://github.com/HartiganHM/concert-crawl/commit/15314f786ca48cf0e5613c9c2e09cba5f2e89755)), closes [#1208](https://github.com/HartiganHM/concert-crawl/issues/1208)
+
 # [1.164.0](https://github.com/HartiganHM/concert-crawl/compare/v1.163.1...v1.164.0) (2026-07-25)
 
 
