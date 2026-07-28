@@ -13,6 +13,10 @@ import {
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { SP_POLICY } from '@concert-crawl/types'
 import { PendingCardB, type PendingCardBProps } from './PendingCardB'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const counterPointerLabel =
+  CONSUMER_COPY.priceRegion.dispute.counterPointerLabel
 
 // Anchor a fixed "now" so `formatTimeAgo` is deterministic. Tests that need
 // a different elapsed window set `submittedAt` relative to NOW.
@@ -356,7 +360,7 @@ describe('PendingCardB', () => {
         />,
       )
       const link = screen.getByRole('link', {
-        name: /someone's contesting this/i,
+        name: counterPointerLabel,
       })
       expect(link.getAttribute('href')).toBe('#counter-abc')
       // Coral (oklch) + mono + uppercase per Appendix A.4
@@ -382,7 +386,7 @@ describe('PendingCardB', () => {
       render(<PendingCardB {...buildProps({ view: 'other' })} />)
       expect(screen.getByText(/saw a different/i)).toBeTruthy()
       expect(
-        screen.queryByRole('link', { name: /someone's contesting this/i }),
+        screen.queryByRole('link', { name: counterPointerLabel }),
       ).toBeNull()
     })
   })

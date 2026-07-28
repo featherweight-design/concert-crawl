@@ -13,7 +13,10 @@ import {
 import type { PriceSubmission } from '@concert-crawl/types'
 
 import { DisputeForm } from './DisputeForm'
-import { VENDOR_PICKER_COPY } from '@/components/consumer/definitions/copy'
+import {
+  CONSUMER_COPY,
+  VENDOR_PICKER_COPY,
+} from '@/components/consumer/definitions/copy'
 
 const getToken = vi.fn(async () => 'test-token')
 
@@ -74,6 +77,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
   vi.clearAllMocks()
 })
 
@@ -100,9 +104,44 @@ describe('DisputeForm vendor picker', () => {
       screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
     )
     fireEvent.click(screen.getByRole('option', { name: 'Etix' }))
-    fireEvent.click(screen.getByRole('button', { name: /file dispute/i }))
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: CONSUMER_COPY.disputeForm.submitButton,
+      }),
+    )
 
     await waitFor(() => expect(global.fetch).toHaveBeenCalled())
     expect(lastPostBody()['vendor']).toBe('Etix')
+  })
+})
+
+describe('DisputeForm error handling', () => {
+  it('shows the generic error when the API answers with a non-JSON body', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response('<html>502 Bad Gateway</html>', { status: 502 }),
+      ),
+    )
+    renderForm()
+
+    fireEvent.change(screen.getByLabelText(/floor/i), {
+      target: { value: '55' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: VENDOR_PICKER_COPY.moreTriggerLabel }),
+    )
+    fireEvent.click(screen.getByRole('option', { name: 'Etix' }))
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: CONSUMER_COPY.disputeForm.submitButton,
+      }),
+    )
+
+    expect(
+      await screen.findByText(CONSUMER_COPY.disputeForm.genericError),
+    ).toBeInTheDocument()
   })
 })

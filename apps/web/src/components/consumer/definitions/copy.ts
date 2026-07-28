@@ -69,11 +69,11 @@ export const CONSUMER_COPY = {
   heroTonight: 'Tonight',
   heroCommunityPick: 'Community Pick',
 
-  // ── Dispute form ───────────────────────────────────────────────────
+  // ── Price-update form ──────────────────────────────────────────────
   disputeForm: {
     heading: 'What did you see instead?',
     subheading:
-      'Disputes have to come with a price and a vendor. Keeps it honest.',
+      'Updates have to come with a price and a vendor. Keeps it honest.',
     floorLabel: 'Floor',
     floorPlaceholder: '35',
     floorErrorMin: 'Has to be at least $1.',
@@ -83,11 +83,11 @@ export const CONSUMER_COPY = {
     ceilingErrorMax: 'Cap is $2,000.',
     ceilingErrorBelowFloor: "Ceiling can't be below floor.",
     vendorError: "Pick where it's listed.",
-    authError: 'You must be signed in to file a dispute.',
+    authError: 'You must be signed in to update a price.',
     genericError: 'Something went wrong.',
     cancelButton: 'Cancel',
-    submitButton: 'File dispute',
-    submittingButton: 'Filing…',
+    submitButton: 'Submit update',
+    submittingButton: 'Submitting…',
     successTitle: 'Logged.',
     successBody: 'Your alternate price will show up alongside this one.',
     successCta: 'Back to show',
@@ -96,7 +96,7 @@ export const CONSUMER_COPY = {
   // ── Verify sheet ───────────────────────────────────────────────────
   verifySheet: {
     instructions:
-      'Confirm what you saw, dispute what looks off. Two confirms move a price out of pending.',
+      'Confirm what you saw, update what looks off. Two confirms move a price out of pending.',
     closeButton: 'Close',
   },
 
@@ -199,7 +199,7 @@ export const CONSUMER_COPY = {
     seenOnPrefix: 'seen on',
     confirmingLabel: 'Confirming…',
     confirmButton: 'Confirm',
-    disputeButton: 'Dispute',
+    disputeButton: 'Update',
     noSubmissions: 'No submissions yet.',
   },
 
@@ -1088,7 +1088,7 @@ export const CONSUMER_COPY = {
     },
     // LOCKED §9 Q3 — DisputedPriceCard / PendingCardB footer pointer (Appendix A.4).
     dispute: {
-      counterPointerLabel: "Someone's contesting this — see the counter",
+      counterPointerLabel: 'Someone posted a different price — see it',
     },
     multiSource: {
       eyebrow: 'Tickets',
@@ -1128,7 +1128,7 @@ export const CONSUMER_COPY = {
       },
     },
     disputeRace409Toast:
-      'Another challenge was just filed — refresh to see it.',
+      'Another update was just submitted — refresh to see it.',
     adminDeferPillLabel: 'Admin requested more info',
   },
 

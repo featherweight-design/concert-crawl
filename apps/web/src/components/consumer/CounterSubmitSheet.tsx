@@ -9,6 +9,7 @@ import { ArrowGlyph } from './glyphs'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { VendorField } from '@/components/consumer/submit-price/VendorField'
+import { apiErrorMessage } from '@/components/consumer/lib/api-error-message'
 import { SP_POLICY } from '@concert-crawl/types'
 import type { Tier, Vendor } from '@concert-crawl/types'
 
@@ -157,8 +158,10 @@ export function CounterSubmitSheet({
         },
       )
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string }
-        throw new Error(data.error ?? 'Submission failed')
+        throw new Error(
+          apiErrorMessage(await res.json().catch(() => null)) ??
+            'Submission failed',
+        )
       }
       router.refresh()
       setSheetState('success')

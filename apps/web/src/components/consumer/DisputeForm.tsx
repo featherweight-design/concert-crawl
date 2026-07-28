@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { SPNumberField } from './SPNumberField'
 import { VendorField } from '@/components/consumer/submit-price/VendorField'
+import { apiErrorMessage } from '@/components/consumer/lib/api-error-message'
 import type { PriceSubmission, Vendor } from '@concert-crawl/types'
 import { SP_POLICY } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
@@ -90,11 +91,14 @@ export function DisputeForm({ submission, eventId }: DisputeFormProps) {
         },
       )
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string }
-        throw new Error(data.error ?? 'Dispute failed')
+        throw new Error(
+          apiErrorMessage(await res.json().catch(() => null)) ??
+            copy.disputeForm.genericError,
+        )
       }
       setSuccess(true)
     } catch (err) {
+      console.error('DisputeForm: price update failed', err)
       setErrorMsg(
         err instanceof Error ? err.message : copy.disputeForm.genericError,
       )
