@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · #794 Logged-out App UX</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html,body{margin:0;padding:0;background:#f0eee9;font-family:Inter,system-ui,sans-serif}
+  *{box-sizing:border-box}
+  a{color:var(--signal,#0080a0)}a:hover{color:var(--accent,#e0297a)}
+</style>
+<style id="__om-edit-overrides"></style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="landing-events.jsx"></script>
+<script type="text/babel" src="landing-poster.jsx"></script>
+<script type="text/babel" src="landing-poster-stack.jsx"></script>
+<script type="text/babel" src="lo-primitives.jsx"></script>
+<script type="text/babel" src="lo-shell.jsx"></script>
+<script type="text/babel" src="lo-menu.jsx"></script>
+<script type="text/babel" src="lo-watching.jsx"></script>
+<script type="text/babel" src="lo-gating.jsx"></script>
+<script type="text/babel" src="lo-landing.jsx"></script>
+<script type="text/babel" src="lo-onboarding.jsx"></script>
+<script type="text/babel" src="lo-inventory.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, DesignCanvas, DCSection, DCArtboard } = window;
+const { ShellMobile, ShellDesktop, SlotTable } = window;
+const { MenuStandalone, MenuSheetMobile, MenuDropdownDesktop } = window;
+const { WatchingOutMobile, WatchingOutDesktop, WatchingEmptyIn } = window;
+const { PickerMobile, PickerDesktop, A11ySpec, EyeStates } = window;
+const { LandingDesktop, LandingMobile, PosterStates, CTARetirement } = window;
+const { OnboardStep, SeamClerk, SeamReturn, SeamDiagram } = window;
+const { InventoryTable } = window;
+
+// Every artboard is wrapped so a single theme prop reskins it wholesale —
+// proof that nothing in here carries a hardcoded color.
+function T({ theme = "electric", children }) {
+  return <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>{children}</ThemeProvider>;
+}
+
+function App() {
+  return (
+    <DesignCanvas
+      title="#794 · Logged-out App UX"
+      subtitle="R2 design drop. One shell across the auth boundary — signing in fills slots in."
+    >
+      {/* 1 ───────────────────────────────────────────────────────── */}
+      <DCSection id="shell" title="1 · Signed-out app shell"
+        subtitle="Both breakpoints, all four bottom-nav slots present. Signed-in counterparts sit alongside so the fill-in model is legible.">
+        <DCArtboard id="m-out-390" label="Mobile · signed out · 390" width={390} height={800}>
+          <T><ShellMobile signedOut width={390} height={800}
+            note="Slot 4 is the anonymous disc and it opens the account menu. Nothing returns null; nothing is dimmed." /></T>
+        </DCArtboard>
+        <DCArtboard id="m-in-390" label="Mobile · signed in · 390" width={390} height={800}>
+          <T><ShellMobile signedOut={false} width={390} height={800}
+            note="Same structure. The CTA pair and sign-in rail drop out; the disc becomes the avatar; the eye toggles." /></T>
+        </DCArtboard>
+        <DCArtboard id="m-out-320" label="Mobile · signed out · 320 baseline" width={320} height={800}>
+          <T><ShellMobile signedOut width={320} height={800}
+            note="320px baseline. Header holds one CTA only; Sign in drops to the rail. Four tabs still fit at 56px each." /></T>
+        </DCArtboard>
+        <DCArtboard id="d-out" label="Desktop · signed out" width={1200} height={740}>
+          <T><ShellDesktop signedOut width={1200} height={740}
+            note="Sign in (quiet) + Sign up (filled) sit left of the account disc. The disc already renders signed-out today — only the menu body is new." /></T>
+        </DCArtboard>
+        <DCArtboard id="d-in" label="Desktop · signed in" width={1200} height={740}>
+          <T><ShellDesktop signedOut={false} width={1200} height={740}
+            note="Identical chrome. The CTA pair is the only thing that leaves." /></T>
+        </DCArtboard>
+        <DCArtboard id="slots" label="Slot parity table" width={640} height={510}>
+          <T><SlotTable width={640} height={510} /></T>
+        </DCArtboard>
+        <DCArtboard id="m-out-jade" label="Mobile · signed out · jade" width={390} height={800}>
+          <T theme="jade"><ShellMobile signedOut width={390} height={800} /></T>
+        </DCArtboard>
+        <DCArtboard id="m-out-light" label="Mobile · signed out · light" width={390} height={800}>
+          <T theme="light"><ShellMobile signedOut width={390} height={800} /></T>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 2 ───────────────────────────────────────────────────────── */}
+      <DCSection id="menu" title="2 · Signed-out account menu"
+        subtitle="Still a menu (§3.4). Theme, the welcome tour, legal and version are all auth-independent. The Sign up / Sign in pair takes the identity card's position.">
+        <DCArtboard id="menu-sheet" label="Mobile sheet · in context" width={390} height={980}>
+          <T><MenuSheetMobile width={390} height={980}
+            note="Opened from either the header disc or the me tab — both are the same menu, per parity." /></T>
+        </DCArtboard>
+        <DCArtboard id="menu-drop" label="Desktop dropdown · in context" width={1200} height={900}>
+          <T><MenuDropdownDesktop width={1200} height={900}
+            note="Anchored under the disc, 360 wide, same rows in the same order as the sheet." /></T>
+        </DCArtboard>
+        <DCArtboard id="menu-out" label="Signed out · electric" width={400} height={850}>
+          <T><MenuStandalone width={400} height={850} /></T>
+        </DCArtboard>
+        <DCArtboard id="menu-focus" label="Signed out · first focus stop" width={400} height={850}>
+          <T><MenuStandalone width={400} height={850} focusPrimary /></T>
+        </DCArtboard>
+        <DCArtboard id="menu-in" label="Signed in · for comparison" width={400} height={850}>
+          <T><MenuStandalone signedOut={false} width={400} height={850} /></T>
+        </DCArtboard>
+        <DCArtboard id="menu-jade" label="Signed out · jade" width={400} height={850}>
+          <T theme="jade"><MenuStandalone width={400} height={850} /></T>
+        </DCArtboard>
+        <DCArtboard id="menu-light" label="Signed out · light" width={400} height={850}>
+          <T theme="light"><MenuStandalone width={400} height={850} /></T>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 3 ───────────────────────────────────────────────────────── */}
+      <DCSection id="watching" title="3 · /watching signed out"
+        subtitle="The one screen a visitor reaches by deliberately asking what the feature is. It teaches in words AND with a worked example — the example is aria-hidden with a text alternative.">
+        <DCArtboard id="w-390" label="Mobile · 390" width={390} height={1020}>
+          <T><WatchingOutMobile width={390} height={1020}
+            note="Public route, gated payload. Nothing here is fetched — no watch list exists to leak." /></T>
+        </DCArtboard>
+        <DCArtboard id="w-320" label="Mobile · 320 baseline" width={320} height={1020}>
+          <T><WatchingOutMobile width={320} height={1020}
+            note="At 320 the example list keeps all three rows; art drops to 34px and the meta line truncates." /></T>
+        </DCArtboard>
+        <DCArtboard id="w-desk" label="Desktop" width={1200} height={740}>
+          <T><WatchingOutDesktop width={1200} height={740}
+            note="Two columns: definition + CTA left, example + facts right. Same content, same order for AT." /></T>
+        </DCArtboard>
+        <DCArtboard id="w-in" label="Signed in · empty (unchanged)" width={390} height={680}>
+          <T><WatchingEmptyIn width={390} height={680} /></T>
+        </DCArtboard>
+        <DCArtboard id="w-jade" label="Mobile · jade" width={390} height={1020}>
+          <T theme="jade"><WatchingOutMobile width={390} height={1020} /></T>
+        </DCArtboard>
+        <DCArtboard id="w-light" label="Mobile · light" width={390} height={1020}>
+          <T theme="light"><WatchingOutMobile width={390} height={1020} /></T>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 4 ───────────────────────────────────────────────────────── */}
+      <DCSection id="gating" title="4 · The gating beat"
+        subtitle="Extends the shipped logged-out tier-picker state. Two changes only: replacement header copy for the vocabulary violation, and an honest accessible name behind identical pixels.">
+        <DCArtboard id="p-mobile" label="Tier picker · mobile sheet" width={390} height={960}>
+          <T><PickerMobile width={390} height={960}
+            note="Fires on tap of the Watch eye. Focus moves to the sheet heading; dismissing returns focus to the eye." /></T>
+        </DCArtboard>
+        <DCArtboard id="p-320" label="Tier picker · 320 baseline" width={320} height={980}>
+          <T><PickerMobile width={320} height={980}
+            note="Three tier cards still fit at 320 — feature lines wrap, nothing scrolls horizontally." /></T>
+        </DCArtboard>
+        <DCArtboard id="p-desk" label="Tier picker · desktop modal" width={1200} height={820}>
+          <T><PickerDesktop width={1200} height={820} /></T>
+        </DCArtboard>
+        <DCArtboard id="a11y" label="Same pixels, honest name" width={900} height={720}>
+          <T><A11ySpec width={900} height={720} /></T>
+        </DCArtboard>
+        <DCArtboard id="eye" label="Watch eye · states" width={640} height={300}>
+          <T><EyeStates width={640} height={300} /></T>
+        </DCArtboard>
+        <DCArtboard id="p-light" label="Tier picker · light" width={390} height={960}>
+          <T theme="light"><PickerMobile width={390} height={960} /></T>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 5 ───────────────────────────────────────────────────────── */}
+      <DCSection id="landing" title="5 · Landing CTA block, reworked"
+        subtitle="Browse shows becomes primary; the code and waitlist CTAs retire; the four hero posters become links. The block gets shorter — nothing moves in to fill it.">
+        <DCArtboard id="l-desk" label="Desktop" width={1200} height={880}>
+          <T><LandingDesktop width={1200} height={880} animate intervalMs={20000}
+            note="Poster stack keeps the shipped animation (LandingPosterAnimation mode=&quot;stack&quot;). #794 adds only link chrome to the cards — see the states artboard. Slowed to 20s in the canvas only; production runs the shipped 5.2s. Other landing artboards render the pile at rest." /></T>
+        </DCArtboard>
+        <DCArtboard id="l-390" label="Mobile · 390" width={390} height={910}>
+          <T><LandingMobile width={390} height={910}
+            note="CTAs stack; poster 1 shown in press state. Sign in lives in the top bar at both breakpoints." /></T>
+        </DCArtboard>
+        <DCArtboard id="l-320" label="Mobile · 320 baseline" width={320} height={910}>
+          <T><LandingMobile width={320} height={910} /></T>
+        </DCArtboard>
+        <DCArtboard id="l-states" label="Poster interaction states" width={860} height={490}>
+          <T><PosterStates width={860} height={490} /></T>
+        </DCArtboard>
+        <DCArtboard id="l-retire" label="What retires · and the ISR line" width={700} height={660}>
+          <T><CTARetirement width={700} height={660} /></T>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 6 ───────────────────────────────────────────────────────── */}
+      <DCSection id="onboarding" title="6 · Onboarding, retooled for a public audience"
+        subtitle="Six steps, post-auth, skippable from every one. The theme step and the price-source honesty material survive; the beta voice is gone.">
+        <DCArtboard id="o-1" label="01 · Welcome" width={380} height={780}>
+          <T><OnboardStep step="welcome" width={380} height={780}
+            note="Founder note, public voice. No 'private beta', no 'you're here early on purpose'." /></T>
+        </DCArtboard>
+        <DCArtboard id="o-2" label="02 · How it works (survives)" width={380} height={780}>
+          <T><OnboardStep step="how" width={380} height={780}
+            note="Price-source honesty carries over intact: box office / community / resale, and verifications expire." /></T>
+        </DCArtboard>
+        <DCArtboard id="o-3" label="03 · Today" width={380} height={780}>
+          <T><OnboardStep step="today" width={380} height={780} /></T>
+        </DCArtboard>
+        <DCArtboard id="o-4" label="04 · Make it yours (survives)" width={380} height={780}>
+          <T><OnboardStep step="theme" width={380} height={780}
+            note="Nine themes off one token set. Theme moves BEFORE 'not yet' so the tour ends on momentum, not on a gap list." /></T>
+        </DCArtboard>
+        <DCArtboard id="o-5" label="05 · Not yet" width={380} height={780}>
+          <T><OnboardStep step="notyet" width={380} height={780} /></T>
+        </DCArtboard>
+        <DCArtboard id="o-6" label="06 · That's the tour" width={380} height={780}>
+          <T><OnboardStep step="done" width={380} height={780}
+            note="Ends by returning you. The beta feedback ask is replaced with the price-submission ask, in public voice." /></T>
+        </DCArtboard>
+        <DCArtboard id="o-intent" label="Mid-intent · skip names the destination" width={380} height={780}>
+          <T><OnboardStep step="welcome" intent="Geese" width={380} height={780}
+            note="Arrived from a Watch tap: the rail states the pending action and Skip gains a border and a destination." /></T>
+        </DCArtboard>
+        <DCArtboard id="o-intent-done" label="Mid-intent · final step" width={380} height={780}>
+          <T><OnboardStep step="done" intent="Geese" width={380} height={780} /></T>
+        </DCArtboard>
+        <DCArtboard id="o-menu" label="Entered from the account menu" width={380} height={780}>
+          <T><OnboardStep step="welcome" entry="menu" width={380} height={780}
+            note="No step counter pressure and Skip reads Close — the tour is a place you visited, not a gate you're in." /></T>
+        </DCArtboard>
+        <DCArtboard id="o-light" label="02 · light" width={380} height={780}>
+          <T theme="light"><OnboardStep step="how" width={380} height={780} /></T>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 7 ───────────────────────────────────────────────────────── */}
+      <DCSection id="seam" title="7 · Post-signup return seam"
+        subtitle="How a converted visitor lands back where they were, with the action they came for already done.">
+        <DCArtboard id="s-diagram" label="The seam, as a path" width={1080} height={440}>
+          <T><SeamDiagram width={1080} height={440} /></T>
+        </DCArtboard>
+        <DCArtboard id="s-clerk" label="Clerk sign-up (out of scope)" width={380} height={780}>
+          <T><SeamClerk width={380} height={780} /></T>
+        </DCArtboard>
+        <DCArtboard id="s-tour" label="Tour, carrying the intent" width={380} height={780}>
+          <T><OnboardStep step="welcome" intent="Geese" width={380} height={780} /></T>
+        </DCArtboard>
+        <DCArtboard id="s-return" label="Back where you were · confirmed" width={380} height={780}>
+          <T><SeamReturn width={380} height={780} /></T>
+        </DCArtboard>
+        <DCArtboard id="s-return-quiet" label="Return with no replayable action" width={380} height={780}>
+          <T><SeamReturn width={380} height={780} confirmed={false} /></T>
+        </DCArtboard>
+      </DCSection>
+
+      {/* 8 ───────────────────────────────────────────────────────── */}
+      <DCSection id="inventory" title="8 · Signed-out state inventory"
+        subtitle="Every surface × every state. The artifact the eng plan tasks off.">
+        <DCArtboard id="inv" label="Inventory" width={1400} height={2270}>
+          <T><InventoryTable width={1400} height={2270} /></T>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
