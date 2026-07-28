@@ -1,3 +1,10 @@
+## [1.164.2](https://github.com/HartiganHM/concert-crawl/compare/v1.164.1...v1.164.2) (2026-07-28)
+
+
+### Bug Fixes
+
+* **crawler:** give production crawls a platform fetch budget ([#1210](https://github.com/HartiganHM/concert-crawl/issues/1210)) ([8cad8c2](https://github.com/HartiganHM/concert-crawl/commit/8cad8c25abe58c7f62a974f774b6cc20f7295ca7)), closes [#1199](https://github.com/HartiganHM/concert-crawl/issues/1199)
+
 ## [1.164.1](https://github.com/HartiganHM/concert-crawl/compare/v1.164.0...v1.164.1) (2026-07-28)
 
 
