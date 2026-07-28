@@ -1,3 +1,10 @@
+## [1.164.4](https://github.com/HartiganHM/concert-crawl/compare/v1.164.3...v1.164.4) (2026-07-28)
+
+
+### Bug Fixes
+
+* **crawler:** report went-dark crawls to Sentry ([#1214](https://github.com/HartiganHM/concert-crawl/issues/1214)) ([223ac48](https://github.com/HartiganHM/concert-crawl/commit/223ac48cc5dd55197e9f74969f3a161e2678d8ab))
+
 ## [1.164.3](https://github.com/HartiganHM/concert-crawl/compare/v1.164.2...v1.164.3) (2026-07-28)
 
 
