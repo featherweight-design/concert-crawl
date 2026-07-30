@@ -26,6 +26,29 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.18.0-beta',
+    date: 'Jul 29, 2026',
+    headline: 'The nights you actually went now have a home.',
+    items: [
+      {
+        kind: 'added',
+        text: 'History is the running list of shows you went to — artist, venue, the night, grouped by year. It is not your Watching list looking backwards: a show only lands here if you said you were going, so nothing you merely kept an eye on shows up. It is a paid feature — the page itself tells you which plan opens it.',
+      },
+      {
+        kind: 'added',
+        text: 'Watching and History are two tabs on the same page now, so you can flip between what is coming and what already happened without leaving.',
+      },
+      {
+        kind: 'added',
+        text: 'You can pull your history out as a calendar file and drop it into whatever you already use.',
+      },
+      {
+        kind: 'added',
+        text: 'In the week before a show you are watching, the row asks once whether you are still going. Say yes and it counts toward your history. Say no, or wave it off, and it never asks again.',
+      },
+    ],
+  },
+  {
     version: 'v0.17.0-beta',
     date: 'Jul 29, 2026',
     headline: "You're not the only one watching that show.",

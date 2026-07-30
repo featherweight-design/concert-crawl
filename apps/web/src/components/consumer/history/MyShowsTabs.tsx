@@ -1,0 +1,83 @@
+'use client'
+
+// The "My shows" sub-tab bar — Watching · History (#70).
+//
+// One responsive component, not a mobile/desktop pair: the handoff draws them
+// separately (history-screens.jsx:329 segmented pill, history-routes.jsx:406
+// wider bordered tabs) purely for canvas storyboarding.
+//
+// These are navigations, not tab panels, so they're links carrying
+// aria-current="page" rather than role="tab" buttons — there is no panel to
+// associate and no in-place switching.
+
+import Link from 'next/link'
+import { unlockTierNameFor } from './lib/unlock-tier'
+import { HISTORY_COPY } from './definitions/copy'
+
+const COPY = HISTORY_COPY.tabs
+
+// Resolved once at module scope: a pure matrix lookup, constant per build.
+const UNLOCK_TIER_NAME = unlockTierNameFor('concert-history')
+
+type MyShowsTab = 'watching' | 'history'
+
+const TABS: readonly { key: MyShowsTab; label: string; href: string }[] = [
+  { key: 'watching', label: COPY.watching, href: '/watching' },
+  { key: 'history', label: COPY.history, href: '/history' },
+]
+
+const TierChip = ({ active }: { active: boolean }) =>
+  UNLOCK_TIER_NAME === null ? null : (
+    <span
+      style={{
+        fontFamily: 'var(--font-mono)',
+        fontSize: 8.5,
+        fontWeight: 700,
+        letterSpacing: '0.16em',
+        textTransform: 'uppercase',
+        color: active ? 'var(--accent)' : 'var(--fg-subtle)',
+        border: `1px solid ${
+          active
+            ? 'color-mix(in oklch, var(--accent) 45%, transparent)'
+            : 'var(--border)'
+        }`,
+        padding: '1.5px 5px',
+        borderRadius: 3,
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {COPY.tierChip(UNLOCK_TIER_NAME)}
+    </span>
+  )
+
+export const MyShowsTabs = ({ active }: { active: MyShowsTab }) => (
+  <nav
+    aria-label={COPY.ariaLabel}
+    className="mb-4 flex gap-1 rounded-[10px] border border-border bg-surface-1 p-[3px] sm:mb-6 sm:gap-2 sm:border-transparent sm:bg-transparent sm:p-0"
+  >
+    {TABS.map((tab) => {
+      const current = tab.key === active
+      return (
+        <Link
+          key={tab.key}
+          href={tab.href}
+          aria-current={current ? 'page' : undefined}
+          className="my-shows-tab inline-flex min-h-[44px] flex-1 items-center justify-center gap-1.5 rounded-md px-3.5 sm:flex-none sm:justify-start sm:gap-2 sm:rounded-[9px] sm:px-4"
+          style={{
+            fontFamily: 'var(--font-ui)',
+            fontSize: 12.5,
+            fontWeight: current ? 700 : 500,
+            letterSpacing: '-0.005em',
+            textDecoration: 'none',
+            color: current ? 'var(--fg)' : 'var(--fg-muted)',
+            background: current ? 'var(--surface-3)' : 'transparent',
+            border: `1px solid ${current ? 'var(--border-strong)' : 'transparent'}`,
+          }}
+        >
+          <span style={{ whiteSpace: 'nowrap' }}>{tab.label}</span>
+          {tab.key === 'history' && <TierChip active={current} />}
+        </Link>
+      )
+    })}
+  </nav>
+)

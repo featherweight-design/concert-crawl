@@ -8,6 +8,7 @@ import { WatchingItem } from './WatchingItem'
 import { WatchingEmpty } from './WatchingEmpty'
 import { NotifyFutureRow } from './NotifyFutureRow'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs'
 
 const COPY = CONSUMER_COPY.watching
 
@@ -44,10 +45,7 @@ function countChanges(shows: WatchingShow[]): {
 }
 
 type DateBucket =
-  | 'tonight'
-  | 'thisWeek'
-  | 'nextWeek'
-  | { month: string; year: number }
+  'tonight' | 'thisWeek' | 'nextWeek' | { month: string; year: number }
 
 function classifyDate(dateStr: string): DateBucket {
   const today = new Date()
@@ -148,6 +146,8 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
 
   return (
     <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8">
+      <MyShowsTabs active="watching" />
+
       {/* Headline block */}
       <div className="mb-5 border-b border-border pb-4 sm:mb-6 sm:pb-5">
         <p

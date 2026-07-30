@@ -14,14 +14,13 @@ import type {
 } from '@concert-crawl/types'
 import { apiClient } from '@/lib/api'
 import { watchingQueryKey } from './use-watching'
-
-export const historyQueryKey = ['history'] as const
+import { historyQueryKey } from './use-history'
 
 export type AttendingToggleInput = { eventId: string; going: boolean }
 
 export function useAttendingToggle() {
   const queryClient = useQueryClient()
-  const { getToken } = useAuth()
+  const { getToken, userId } = useAuth()
 
   return useMutation({
     mutationKey: ['attending-toggle'],
@@ -42,13 +41,14 @@ export function useAttendingToggle() {
           )
     },
     onMutate: async ({ eventId, going }: AttendingToggleInput) => {
-      await queryClient.cancelQueries({ queryKey: watchingQueryKey })
-      const previous =
-        queryClient.getQueryData<WatchingShow[]>(watchingQueryKey)
+      await queryClient.cancelQueries({ queryKey: watchingQueryKey(userId) })
+      const previous = queryClient.getQueryData<WatchingShow[]>(
+        watchingQueryKey(userId),
+      )
 
       if (previous) {
         queryClient.setQueryData(
-          watchingQueryKey,
+          watchingQueryKey(userId),
           previous.map((show) =>
             show.eventId === eventId
               ? {
@@ -67,15 +67,15 @@ export function useAttendingToggle() {
       // onMutate wrote nothing, and writing `undefined` back would leave a
       // resolved query with no data for consumers expecting WatchingShow[].
       if (context?.previous !== undefined) {
-        queryClient.setQueryData(watchingQueryKey, context.previous)
+        queryClient.setQueryData(watchingQueryKey(userId), context.previous)
       }
     },
     // Event Detail is server-rendered and has no react-query key — callers on
     // that page refresh it with router.refresh(), the pattern the rest of
     // EventDetailClient already uses for its own mutations.
     onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: watchingQueryKey })
-      void queryClient.invalidateQueries({ queryKey: historyQueryKey })
+      void queryClient.invalidateQueries({ queryKey: watchingQueryKey(userId) })
+      void queryClient.invalidateQueries({ queryKey: historyQueryKey(userId) })
     },
   })
 }

@@ -9,7 +9,7 @@ import { eventWatchersEventKey } from './use-event-watchers'
 
 export function useWatchToggle() {
   const queryClient = useQueryClient()
-  const { getToken } = useAuth()
+  const { getToken, userId } = useAuth()
 
   return useMutation({
     // Identifies watch toggles in the mutation cache so the post-first-watch
@@ -24,9 +24,10 @@ export function useWatchToggle() {
       )
     },
     onMutate: async (eventId: string) => {
-      await queryClient.cancelQueries({ queryKey: watchingQueryKey })
-      const previous =
-        queryClient.getQueryData<WatchingShow[]>(watchingQueryKey)
+      await queryClient.cancelQueries({ queryKey: watchingQueryKey(userId) })
+      const previous = queryClient.getQueryData<WatchingShow[]>(
+        watchingQueryKey(userId),
+      )
 
       // Treat a cold cache (undefined) as empty so the optimistic toggle always
       // applies — even on first interaction before the watching query has loaded.
@@ -63,7 +64,7 @@ export function useWatchToggle() {
       const next = isCurrentlyWatching
         ? current.filter((show) => show.eventId !== eventId)
         : [...current, optimisticStub]
-      queryClient.setQueryData(watchingQueryKey, next)
+      queryClient.setQueryData(watchingQueryKey(userId), next)
 
       return { previous }
     },
@@ -72,11 +73,11 @@ export function useWatchToggle() {
       // `previous` may be undefined when the cache was cold — in that case,
       // remove the optimistic entry rather than setting undefined.
       if (context !== undefined) {
-        queryClient.setQueryData(watchingQueryKey, context.previous)
+        queryClient.setQueryData(watchingQueryKey(userId), context.previous)
       }
     },
     onSettled: (_data, _error, eventId) => {
-      void queryClient.invalidateQueries({ queryKey: watchingQueryKey })
+      void queryClient.invalidateQueries({ queryKey: watchingQueryKey(userId) })
       // Self-exclusion means the viewer's own toggle doesn't change their own
       // numbers — but it changes what other viewers see, so refresh the roster
       // to keep a long-lived tab honest. Scoped to the toggled event: no other

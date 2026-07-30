@@ -14,8 +14,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { WatchingShow } from '@concert-crawl/types'
 
+const TEST_USER_ID = 'user_1'
+
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: async () => 'tok', userId: 'user_1' }),
+  useAuth: () => ({ getToken: async () => 'tok', userId: TEST_USER_ID }),
 }))
 
 const putMock = vi.fn()
@@ -57,7 +59,7 @@ const setup = (seed?: WatchingShow[]) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
-  if (seed) client.setQueryData(watchingQueryKey, seed)
+  if (seed) client.setQueryData(watchingQueryKey(TEST_USER_ID), seed)
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
@@ -97,13 +99,17 @@ describe('useAttendingToggle', () => {
     hook.result.current.mutate({ eventId: 'ev1', going: true })
 
     await waitFor(() => {
-      const rows = client.getQueryData<WatchingShow[]>(watchingQueryKey)
+      const rows = client.getQueryData<WatchingShow[]>(
+        watchingQueryKey(TEST_USER_ID),
+      )
       expect(
         rows?.find((row) => row.eventId === 'ev1')?.attendingAt,
       ).not.toBeNull()
     })
 
-    const rows = client.getQueryData<WatchingShow[]>(watchingQueryKey)
+    const rows = client.getQueryData<WatchingShow[]>(
+      watchingQueryKey(TEST_USER_ID),
+    )
     // Still two watched rows — attendance is not watch membership.
     expect(rows).toHaveLength(2)
     expect(rows?.find((row) => row.eventId === 'ev2')?.attendingAt).toBeNull()
@@ -116,12 +122,14 @@ describe('useAttendingToggle', () => {
     hook.result.current.mutate({ eventId: 'ev1', going: false })
 
     await waitFor(() => {
-      const rows = client.getQueryData<WatchingShow[]>(watchingQueryKey)
+      const rows = client.getQueryData<WatchingShow[]>(
+        watchingQueryKey(TEST_USER_ID),
+      )
       expect(rows?.[0]?.attendingAt).toBeNull()
     })
-    expect(client.getQueryData<WatchingShow[]>(watchingQueryKey)).toHaveLength(
-      1,
-    )
+    expect(
+      client.getQueryData<WatchingShow[]>(watchingQueryKey(TEST_USER_ID)),
+    ).toHaveLength(1)
   })
 
   it('rolls back to the pre-mutation snapshot on failure', async () => {
@@ -133,7 +141,8 @@ describe('useAttendingToggle', () => {
     await waitFor(() => expect(hook.result.current.isError).toBe(true))
 
     expect(
-      client.getQueryData<WatchingShow[]>(watchingQueryKey)?.[0]?.attendingAt,
+      client.getQueryData<WatchingShow[]>(watchingQueryKey(TEST_USER_ID))?.[0]
+        ?.attendingAt,
     ).toBeNull()
   })
 
@@ -146,7 +155,7 @@ describe('useAttendingToggle', () => {
 
     // Rollback must not write `undefined` into the cache — a resolved query
     // with no data would break consumers that expect WatchingShow[].
-    expect(client.getQueryState(watchingQueryKey)).toBeUndefined()
+    expect(client.getQueryState(watchingQueryKey(TEST_USER_ID))).toBeUndefined()
   })
 
   it('surfaces the entitlement code from a 403 so callers can route to the paywall', async () => {

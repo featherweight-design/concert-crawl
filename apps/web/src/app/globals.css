@@ -199,3 +199,15 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+
+/* Concert History (#70) — every interactive element on the surface sets its own
+   inline background/border, so the ring is an outline for the same reason the
+   "I'm going!" CTA uses one. */
+.my-shows-tab:focus-visible,
+.history-item:focus-visible,
+.history-calendar-row:focus-visible,
+.history-passport-teaser:focus-visible,
+.history-locked-cta:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
