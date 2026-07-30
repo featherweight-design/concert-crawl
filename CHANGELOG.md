@@ -1,3 +1,10 @@
+# [1.171.0](https://github.com/HartiganHM/concert-crawl/compare/v1.170.0...v1.171.0) (2026-07-30)
+
+
+### Features
+
+* **web:** /history route, My shows tabs, and Passport teaser ([#70](https://github.com/HartiganHM/concert-crawl/issues/70)) ([#1246](https://github.com/HartiganHM/concert-crawl/issues/1246)) ([17e4700](https://github.com/HartiganHM/concert-crawl/commit/17e470089370bafb30df2e9192ad7683a16ded59)), closes [#1241](https://github.com/HartiganHM/concert-crawl/issues/1241) [#794](https://github.com/HartiganHM/concert-crawl/issues/794) [#1225](https://github.com/HartiganHM/concert-crawl/issues/1225) [#1225](https://github.com/HartiganHM/concert-crawl/issues/1225)
+
 # [1.170.0](https://github.com/HartiganHM/concert-crawl/compare/v1.169.1...v1.170.0) (2026-07-30)
 
 
