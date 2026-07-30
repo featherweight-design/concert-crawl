@@ -1,3 +1,11 @@
+# [1.172.0](https://github.com/HartiganHM/concert-crawl/compare/v1.171.0...v1.172.0) (2026-07-30)
+
+
+### Features
+
+* **db:** retire status = 'going' now that attendance lives on attending_at ([#1250](https://github.com/HartiganHM/concert-crawl/issues/1250)) ([8a5457e](https://github.com/HartiganHM/concert-crawl/commit/8a5457e95325eebdd552615f1a8a047b2ac86595)), closes [#70](https://github.com/HartiganHM/concert-crawl/issues/70) [#70](https://github.com/HartiganHM/concert-crawl/issues/70)
+* **onboarding:** tour becomes a post-signup welcome that hands the show back ([#794](https://github.com/HartiganHM/concert-crawl/issues/794)) ([#1249](https://github.com/HartiganHM/concert-crawl/issues/1249)) ([353ef89](https://github.com/HartiganHM/concert-crawl/commit/353ef895db6fd66b0ba9790b0917cae13c0276ba))
+
 # [1.171.0](https://github.com/HartiganHM/concert-crawl/compare/v1.170.0...v1.171.0) (2026-07-30)
 
 
