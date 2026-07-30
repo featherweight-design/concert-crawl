@@ -1,3 +1,10 @@
+## [1.164.5](https://github.com/HartiganHM/concert-crawl/compare/v1.164.4...v1.164.5) (2026-07-30)
+
+
+### Bug Fixes
+
+* **entitlements:** supporter unlocks concert history + calendar export ([#1225](https://github.com/HartiganHM/concert-crawl/issues/1225)) ([978aa86](https://github.com/HartiganHM/concert-crawl/commit/978aa8611280c3def8f2b9bac9b278e1b3b4f605))
+
 ## [1.164.4](https://github.com/HartiganHM/concert-crawl/compare/v1.164.3...v1.164.4) (2026-07-28)
 
 
