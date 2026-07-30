@@ -1,3 +1,11 @@
+# [1.166.0](https://github.com/HartiganHM/concert-crawl/compare/v1.165.0...v1.166.0) (2026-07-30)
+
+
+### Features
+
+* **auth:** gate protected-layout mounts on isSignedIn ([#794](https://github.com/HartiganHM/concert-crawl/issues/794) PR-C) ([#1237](https://github.com/HartiganHM/concert-crawl/issues/1237)) ([191ff07](https://github.com/HartiganHM/concert-crawl/commit/191ff0733f91b40200fc52d97d4654360d4b91ff))
+* **web:** landing page points at browsing, not at a beta code ([#794](https://github.com/HartiganHM/concert-crawl/issues/794) PR-B) ([#1235](https://github.com/HartiganHM/concert-crawl/issues/1235)) ([1e433c1](https://github.com/HartiganHM/concert-crawl/commit/1e433c1190d31ff650b1fae96fae5abdebf20d94))
+
 # [1.165.0](https://github.com/HartiganHM/concert-crawl/compare/v1.164.6...v1.165.0) (2026-07-30)
 
 
