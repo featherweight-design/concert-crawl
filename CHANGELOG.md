@@ -1,3 +1,11 @@
+# [1.167.0](https://github.com/HartiganHM/concert-crawl/compare/v1.166.0...v1.167.0) (2026-07-30)
+
+
+### Features
+
+* **api:** attending toggle, concert history read, and .ics export ([#1239](https://github.com/HartiganHM/concert-crawl/issues/1239)) ([91c133f](https://github.com/HartiganHM/concert-crawl/commit/91c133ff1f6acc0dea63701c13e90f8b597716cb))
+* **web:** who else is watching — social proof under the Watch button ([#762](https://github.com/HartiganHM/concert-crawl/issues/762)) ([#1238](https://github.com/HartiganHM/concert-crawl/issues/1238)) ([4d1687f](https://github.com/HartiganHM/concert-crawl/commit/4d1687fabfb48ddeaeff7d4b184bb05e019d2935))
+
 # [1.166.0](https://github.com/HartiganHM/concert-crawl/compare/v1.165.0...v1.166.0) (2026-07-30)
 
 
