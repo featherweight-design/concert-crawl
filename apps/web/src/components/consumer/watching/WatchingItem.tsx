@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { WatchingShow } from '@concert-crawl/types'
@@ -7,6 +8,11 @@ import { EventImage } from '../event-image'
 import { DeltaTag } from './DeltaTag'
 import { SourcePill } from './SourcePill'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { GoingNudge } from '@/components/consumer/going/GoingNudge'
+import { isInNudgeWindow } from '@/lib/going/nudge-window'
+import { markNudge, readNudgeState } from '@/lib/going/nudge-dismissal'
+import type { NudgeOutcome } from '@/lib/going/nudge-dismissal'
+import { useAttendingToggle } from '@/lib/queries/use-attending-toggle'
 
 const COPY = CONSUMER_COPY.watching
 
@@ -114,7 +120,26 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
     .filter(Boolean)
     .join(' · ')
 
-  return (
+  const attending = useAttendingToggle()
+
+  // `undefined` means "not read yet". The record lives in localStorage, so the
+  // server render can't know it — starting at undefined keeps the first client
+  // paint identical to the server's and avoids a hydration mismatch.
+  const [answered, setAnswered] = useState<NudgeOutcome | null | undefined>(
+    undefined,
+  )
+  useEffect(() => {
+    setAnswered(readNudgeState(show.eventId))
+  }, [show.eventId])
+
+  const nudging = answered === null && isInNudgeWindow(show)
+
+  const answer = (outcome: NudgeOutcome) => {
+    markNudge(show.eventId, outcome)
+    setAnswered(outcome)
+  }
+
+  const card = (
     <div
       style={{
         display: 'grid',
@@ -366,6 +391,33 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
           />
         </svg>
       </button>
+    </div>
+  )
+
+  if (!nudging) return card
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      {card}
+      <GoingNudge
+        show={show}
+        onYes={() => {
+          // Closes immediately — the mutation is optimistic, and re-asking
+          // mid-flight would read as a failure. But the per-device record is
+          // only written once the server agrees: persisting up front would
+          // silently swallow a failed commitment and leave no way to retry.
+          setAnswered('going')
+          attending.mutate(
+            { eventId: show.eventId, going: true },
+            {
+              onSuccess: () => markNudge(show.eventId, 'going'),
+              onError: () => setAnswered(null),
+            },
+          )
+        }}
+        onDecline={() => answer('declined')}
+        onDismiss={() => answer('dismissed')}
+      />
     </div>
   )
 }

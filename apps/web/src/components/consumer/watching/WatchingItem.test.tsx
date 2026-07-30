@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import React from 'react'
 import type { WatchingShow } from '@concert-crawl/types'
 
@@ -33,8 +33,21 @@ vi.mock('../event-image/EventImage', () => ({
   EventImage: vi.fn(() => <div data-testid="event-image" />),
 }))
 
+// The nudge's "Yes, going" fires a real mutation. Stubbing the hook keeps the
+// item renderable without a QueryClientProvider and lets the call be asserted.
+// The default stub resolves, so tests opt in to the failure path.
+type MutateOptions = { onSuccess?: () => void; onError?: () => void }
+const succeeds = (_input: unknown, options?: MutateOptions) =>
+  options?.onSuccess?.()
+const fails = (_input: unknown, options?: MutateOptions) => options?.onError?.()
+const attendingMutate = vi.fn(succeeds)
+vi.mock('@/lib/queries/use-attending-toggle', () => ({
+  useAttendingToggle: () => ({ mutate: attendingMutate }),
+}))
+
 import { WatchingItem } from './WatchingItem'
 import { EventImage } from '../event-image/EventImage'
+import { GOING_COPY } from '@/components/consumer/going/definitions/copy'
 
 const baseShow: WatchingShow = {
   userEventId: 'ue-1',
@@ -87,5 +100,99 @@ describe('WatchingItem thumbnail', () => {
       }),
       undefined,
     )
+  })
+})
+
+// Two days out in UTC is inside the 0-7 day Mountain-Time window regardless of
+// which side of midnight the offset lands on.
+const soonShow: WatchingShow = {
+  ...baseShow,
+  date: new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10),
+}
+
+const nudge = () => screen.queryByText(GOING_COPY.nudge.heading)
+
+describe('WatchingItem "Still going?" nudge', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    attendingMutate.mockReset()
+    attendingMutate.mockImplementation(succeeds)
+  })
+  afterEach(() => {
+    cleanup()
+    localStorage.clear()
+  })
+
+  it('asks about a show inside the window', () => {
+    render(<WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />)
+    expect(nudge()).not.toBeNull()
+  })
+
+  it('stays quiet for a show months out', () => {
+    render(<WatchingItem show={baseShow} density="cozy" onRemove={() => {}} />)
+    expect(nudge()).toBeNull()
+  })
+
+  it('stays quiet once the user has already committed', () => {
+    render(
+      <WatchingItem
+        show={{ ...soonShow, attendingAt: new Date().toISOString() }}
+        density="cozy"
+        onRemove={() => {}}
+      />,
+    )
+    expect(nudge()).toBeNull()
+  })
+
+  it('marks attendance and closes when the user says yes', () => {
+    render(<WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />)
+    fireEvent.click(screen.getByText(GOING_COPY.nudge.yes))
+
+    expect(attendingMutate).toHaveBeenCalledWith(
+      { eventId: soonShow.eventId, going: true },
+      expect.anything(),
+    )
+    expect(nudge()).toBeNull()
+  })
+
+  it('re-asks when the commitment fails, rather than sticking answered', () => {
+    attendingMutate.mockImplementation(fails)
+    render(<WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />)
+    fireEvent.click(screen.getByText(GOING_COPY.nudge.yes))
+
+    // The optimistic cache update rolls back, so a silently-dismissed banner
+    // would leave the user no way to retry from Watching.
+    expect(nudge()).not.toBeNull()
+    expect(localStorage.getItem('cc-nudge-dismissed')).toBeNull()
+  })
+
+  it('closes without mutating when the user declines', () => {
+    render(<WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />)
+    fireEvent.click(screen.getByText(GOING_COPY.nudge.decline))
+
+    expect(attendingMutate).not.toHaveBeenCalled()
+    expect(nudge()).toBeNull()
+  })
+
+  it('does not ask again after any answer', () => {
+    for (const label of [
+      GOING_COPY.nudge.yes,
+      GOING_COPY.nudge.decline,
+      GOING_COPY.nudge.dismiss,
+    ]) {
+      localStorage.clear()
+      render(
+        <WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />,
+      )
+      fireEvent.click(screen.getByRole('button', { name: label }))
+      cleanup()
+
+      // A remount re-reads the per-device record, so the banner must not return.
+      render(
+        <WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />,
+      )
+      expect(nudge()).toBeNull()
+      cleanup()
+    }
   })
 })

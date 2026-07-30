@@ -20,6 +20,16 @@ export const GOING_COPY = {
     default: 'Going saves the night · Watch tracks the price.',
     going: "We'll add this to your history.",
   },
+  nudge: {
+    heading: 'Still going?',
+    whenTonight: 'Tonight.',
+    whenTomorrow: 'Tomorrow.',
+    whenInDays: (days: number) => `In ${days} days.`,
+    support: 'Mark it so it lands in your history.',
+    yes: 'Yes, going',
+    decline: 'Not me',
+    dismiss: 'Dismiss',
+  },
   error: {
     // Closes the READINESS 🎭 gap — the handoff drew no error state.
     failed: "Couldn't save that. Try again.",

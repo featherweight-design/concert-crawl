@@ -193,3 +193,9 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+
+/* Same restoration for the three "Still going?" nudge actions. */
+.going-nudge-action:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
