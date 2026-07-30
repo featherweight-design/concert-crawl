@@ -673,6 +673,21 @@ export interface TierPriceBlock {
   reports: number
 }
 
+// A single other watcher of an event, as exposed on the social-proof surface.
+export interface EventWatcher {
+  /** Never null — handle-less watchers are never listed by name. */
+  handle: string
+  avatarColor: AvatarColor | null
+}
+
+// GET /v1/events/:id/watchers
+export interface EventWatchersResponse {
+  /** Count of OTHER watchers (excludes the viewer; includes handle-less users). */
+  total: number
+  /** Handle-bearing other watchers, most-recent-first, capped at ROSTER_CAP. */
+  named: EventWatcher[]
+}
+
 // EventDetailResponse — single event detail with computed watch state and setlist
 export interface EventDetailResponse extends EventWithVenue {
   setlist: Setlist | null

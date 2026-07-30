@@ -40,6 +40,7 @@ import {
   type SourceCategory,
   type Tier,
 } from '@concert-crawl/types'
+import { getEventWatchers } from '../lib/event-watchers.js'
 import { isImminentEvent, todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import { serviceOrClerkAuth } from '../middleware/auth.js'
@@ -1210,6 +1211,46 @@ eventsRouter.get('/:id/related', async (ctx) => {
     .limit(3)
 
   return ctx.json({ success: true, data: { data: relatedRows } })
+})
+
+// GET /v1/events/:id/watchers — the social-proof roster for event detail.
+//
+// Deliberately stricter than the sibling '/:id' handler: that one uses optional
+// auth and serves signed-out callers, whereas this one requires a session and
+// returns 401 without one, so the surface renders nothing (#794 owns relaxing
+// this). The response is viewer-specific — the caller is excluded from their own
+// roster — so it must never land in a shared cache.
+eventsRouter.get('/:id/watchers', clerkMiddleware(), async (ctx) => {
+  const parsed = uuidSchema.safeParse(ctx.req.param('id'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Event not found' }, 404)
+  const eventId = parsed.data
+
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  // Same visibility predicate as '/:id' so a hidden event's roster isn't
+  // readable when its detail page 404s.
+  const [visibleEvent] = await db
+    .select({ id: events.id })
+    .from(events)
+    .where(
+      and(
+        eq(events.id, eventId),
+        eq(events.hiddenFromConsumer, false),
+        isNull(events.firstMissingAt),
+      ),
+    )
+    .limit(1)
+
+  if (!visibleEvent)
+    return ctx.json({ success: false, error: 'Event not found' }, 404)
+
+  const data = await getEventWatchers(eventId, authInfo.userId)
+
+  ctx.header('Cache-Control', 'private, no-store')
+  return ctx.json({ success: true, data })
 })
 
 // POST /v1/events/:id/watch — opt in to watching
