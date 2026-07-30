@@ -1,3 +1,10 @@
+## [1.169.1](https://github.com/HartiganHM/concert-crawl/compare/v1.169.0...v1.169.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **api:** stop treating client 4xx as server faults ([acc0523](https://github.com/HartiganHM/concert-crawl/commit/acc0523b82da13e8726c94f14ea82707fe329463))
+
 # [1.169.0](https://github.com/HartiganHM/concert-crawl/compare/v1.168.0...v1.169.0) (2026-07-30)
 
 
