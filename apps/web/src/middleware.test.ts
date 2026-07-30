@@ -16,17 +16,37 @@ vi.mock('@clerk/nextjs/server', () => ({
     }),
 }))
 
+interface ProtectOptions {
+  unauthenticatedUrl: string
+}
+
 type AuthStub = (() => Promise<{ userId: string | null }>) & {
-  protect?: () => Promise<void>
+  protect: ReturnType<typeof vi.fn<(opts: ProtectOptions) => Promise<void>>>
 }
 
 function makeAuth(userId: string | null): AuthStub {
-  const fn: AuthStub = async () => ({ userId })
-  fn.protect = async () => {
+  const fn = async () => ({ userId })
+  // A spy rather than a plain function so the negative cases can assert both
+  // that protection ran and which unauthenticatedUrl it was handed.
+  const protect = vi.fn(async () => {
     if (!userId) throw new Error('Unauthorized')
-  }
-  return fn
+  })
+  return Object.assign(fn, { protect })
 }
+
+const makeReq = (path: string, cookies?: Record<string, string>) =>
+  new NextRequest(
+    `http://localhost${path}`,
+    cookies
+      ? {
+          headers: {
+            cookie: Object.entries(cookies)
+              .map(([name, value]) => `${name}=${value}`)
+              .join('; '),
+          },
+        }
+      : undefined,
+  )
 
 describe('middleware — returning-user redirect (#80)', () => {
   it('redirects unauthenticated user with invite cookie from / to /onboarding', async () => {
@@ -85,7 +105,9 @@ describe('middleware — edge auth gate (#841)', () => {
   it('blocks unauthenticated request to a (protected) route via auth.protect', async () => {
     const { default: middleware } = await import('./middleware')
 
-    const req = new NextRequest('http://localhost/events/abc-123')
+    // Retargeted from /events/abc-123 to /me in #794: browse routes are public
+    // now, so this test needs a route that is still genuinely private.
+    const req = new NextRequest('http://localhost/me')
     const stub = makeAuth(null)
 
     // auth.protect throws on unauthenticated — middleware lets it bubble. In
@@ -109,7 +131,7 @@ describe('middleware — edge auth gate (#841)', () => {
   it('lets authenticated request to a (protected) route through without redirect', async () => {
     const { default: middleware } = await import('./middleware')
 
-    const req = new NextRequest('http://localhost/events/abc-123')
+    const req = new NextRequest('http://localhost/me')
     const result = await (middleware as Function)(makeAuth('user_123'), req)
 
     expect(result).toBeUndefined()
@@ -125,5 +147,181 @@ describe('middleware — edge auth gate (#841)', () => {
     const result = await (middleware as Function)(makeAuth(null), req)
 
     expect(result).toBeUndefined()
+  })
+})
+
+// ⚠️ The createRouteMatcher mock above uses `startsWith`, which is looser than
+// the real path-to-regexp. That looseness is deliberate here: the negative cases
+// fail more readily than production would, so a passing suite is a real signal.
+describe('middleware — public browse routes (#794)', () => {
+  it.each([
+    '/events',
+    '/events/some-event-id',
+    '/venues',
+    '/venues/bluebird-theater',
+    '/search',
+    '/search?q=geese',
+    '/watching',
+    '/onboarding',
+  ])('lets a signed-out visitor through to %s', async (path) => {
+    const { default: middleware } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    const result = await (middleware as Function)(auth, makeReq(path))
+
+    expect(result).toBeUndefined()
+    expect(auth.protect).not.toHaveBeenCalled()
+  })
+
+  // The reason this PR exists: broadening the public set must not open a
+  // private neighbour. Note `/me` is not a prefix of any public pattern.
+  it.each([
+    '/me',
+    '/me?section=watching',
+    '/me/anything',
+    '/admin',
+    '/admin/venues',
+    '/admin/review',
+    '/changelog',
+  ])('still protects %s for a signed-out visitor', async (path) => {
+    const { default: middleware } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    await expect(
+      (middleware as Function)(auth, makeReq(path)),
+    ).rejects.toThrow()
+    expect(auth.protect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        unauthenticatedUrl: expect.stringContaining('/sign-in'),
+      }),
+    )
+  })
+
+  it('preserves the attempted path so sign-in can return the visitor', async () => {
+    const { default: middleware } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    await expect(
+      (middleware as Function)(auth, makeReq('/me?section=watching')),
+    ).rejects.toThrow()
+
+    const url = new URL(auth.protect.mock.calls[0]![0].unauthenticatedUrl)
+    expect(url.pathname).toBe('/sign-in')
+    expect(url.searchParams.get('redirect_url')).toBe('/me?section=watching')
+  })
+
+  it('never puts an absolute origin in redirect_url', async () => {
+    const { default: middleware } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    await expect(
+      (middleware as Function)(auth, makeReq('/me')),
+    ).rejects.toThrow()
+
+    const url = new URL(auth.protect.mock.calls[0]![0].unauthenticatedUrl)
+    // A leading slash followed by neither slash nor backslash: `//evil.example`
+    // and `/\evil.example` are both browser-resolvable as hosts.
+    expect(url.searchParams.get('redirect_url')).toMatch(/^\/[^/\\]/)
+  })
+
+  // These exercise the adversarial pathnames the assertion above only described.
+  // Each one, left unnarrowed, would hand Clerk a redirect target that resolves
+  // off-origin: `//host` and `/\host` are protocol-relative, and the encoded
+  // forms decode to the same thing after a naive prefix check has passed.
+  it.each([
+    '//evil.example',
+    '//evil.example/me',
+    '/\\evil.example',
+    '/%5Cevil.example',
+    '/%2F%2Fevil.example',
+    // Double-encoded. These survive a single decode pass as `/%5Cevil.example`
+    // and `/%2F%2Fevil.example`, which is exactly how a one-pass check gets
+    // bypassed, so decoding runs to a fixed point.
+    '/%255Cevil.example',
+    '/%252F%252Fevil.example',
+    // Triple, to prove the loop is a loop and not two hardcoded passes.
+    '/%25255Cevil.example',
+  ])('rejects %s as a redirect_url and falls back to /events', async (path) => {
+    const { default: middleware } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    await expect(
+      (middleware as Function)(auth, makeReq(path)),
+    ).rejects.toThrow()
+
+    const url = new URL(auth.protect.mock.calls[0]![0].unauthenticatedUrl)
+    const redirectUrl = url.searchParams.get('redirect_url') ?? ''
+    expect(redirectUrl).toBe('/events')
+
+    // Belt and braces: whatever we hand Clerk must resolve back to our own
+    // origin, not just look relative.
+    expect(new URL(redirectUrl, 'https://concertcrawl.app').origin).toBe(
+      'https://concertcrawl.app',
+    )
+  })
+
+  it('still preserves a legitimate path containing an encoded character', async () => {
+    const { default: middleware } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    // Narrowing must not swallow ordinary escaped paths — only off-origin ones.
+    await expect(
+      (middleware as Function)(auth, makeReq('/me/my%20shows?tab=a%26b')),
+    ).rejects.toThrow()
+
+    const url = new URL(auth.protect.mock.calls[0]![0].unauthenticatedUrl)
+    expect(url.searchParams.get('redirect_url')).toBe(
+      '/me/my%20shows?tab=a%26b',
+    )
+  })
+
+  it('no longer bounces a signed-in user off /onboarding', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    const result = await (middleware as Function)(
+      makeAuth('user_1'),
+      makeReq('/onboarding'),
+    )
+
+    expect(result).toBeUndefined()
+  })
+
+  it.each(['/auth/code', '/sign-up', '/'])(
+    'still bounces a signed-in user off %s to /events',
+    async (path) => {
+      const { default: middleware } = await import('./middleware')
+
+      const result = await (middleware as Function)(
+        makeAuth('user_1'),
+        makeReq(path),
+      )
+
+      expect(result?.headers.get('location')).toContain('/events')
+    },
+  )
+
+  it('still sends a signed-out visitor without an invite code from /sign-up to /auth/code', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    const result = await (middleware as Function)(
+      makeAuth(null),
+      makeReq('/sign-up'),
+    )
+
+    expect(result?.headers.get('location')).toContain('/auth/code')
+  })
+
+  // Guards the `/` + invite_verified branch, which is evaluated BEFORE
+  // isAlwaysPublic and must stay that way — reorder those blocks and invited
+  // users stop reaching onboarding from the landing page.
+  it('still redirects a signed-out visitor with an invite cookie from / to /onboarding', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    const result = await (middleware as Function)(
+      makeAuth(null),
+      makeReq('/', { invite_verified: '1' }),
+    )
+
+    expect(result?.headers.get('location')).toContain('/onboarding')
   })
 })

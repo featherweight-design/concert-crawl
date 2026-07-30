@@ -112,17 +112,19 @@ test.describe('smoke: auth protection', () => {
   // render (or 403), and we'd no longer be testing the auth gate.
   test.use({ storageState: { cookies: [], origins: [] } })
 
-  test('admin route redirects unauthenticated users to homepage', async ({
+  test('admin route redirects unauthenticated users to sign-in', async ({
     page,
   }) => {
     await page.goto('/admin')
     await page.waitForLoadState('networkidle')
-    // apps/web/src/middleware.ts redirects all auth-gated routes to
-    // `/` (not `/sign-in`) via `auth.protect({ unauthenticatedUrl })`.
-    // The smoke contract follows the middleware: any landing pathname
-    // other than `/` means the gate failed open.
+    // apps/web/src/middleware.ts sends auth-gated routes to `/sign-in` with a
+    // relative `redirect_url` (#794 — it was `/` while the whole app was
+    // private). The smoke contract follows the middleware: landing anywhere
+    // under /admin means the gate failed open.
     const url = new URL(page.url())
-    expect(url.pathname).toBe('/')
+    expect(url.pathname).not.toMatch(/^\/admin/)
+    expect(url.pathname).toMatch(/sign-in/)
+    expect(url.searchParams.get('redirect_url')).toBe('/admin')
   })
 })
 
