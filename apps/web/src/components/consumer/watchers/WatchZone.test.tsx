@@ -46,6 +46,7 @@ const watchedShow = (eventId: string): WatchingShow => ({
   sourceKind: null,
   eventStatus: 'upcoming',
   watchStatus: 'live',
+  attendingAt: null,
   updatedAt: '2026-07-19T00:00:00Z',
   imageUrl: null,
 })
