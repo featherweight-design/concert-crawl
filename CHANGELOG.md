@@ -1,3 +1,10 @@
+# [1.170.0](https://github.com/HartiganHM/concert-crawl/compare/v1.169.1...v1.170.0) (2026-07-30)
+
+
+### Features
+
+* **web:** /watching signed-out teaching state + Watch-eye gating beat ([#794](https://github.com/HartiganHM/concert-crawl/issues/794) PR-F) ([#1245](https://github.com/HartiganHM/concert-crawl/issues/1245)) ([6e14b70](https://github.com/HartiganHM/concert-crawl/commit/6e14b7006f264a1c32be4d3cc4e43654e752cec5))
+
 ## [1.169.1](https://github.com/HartiganHM/concert-crawl/compare/v1.169.0...v1.169.1) (2026-07-30)
 
 
