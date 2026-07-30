@@ -449,6 +449,13 @@
       "when": 1785628800000,
       "tag": "0063_vendor_picker_values",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1785715200000,
+      "tag": "0064_user_events_attending_at",
+      "breakpoints": true
     }
   ]
 }

@@ -34,7 +34,7 @@
 //     log-skipped with an explicit comment until the schema supports it.
 
 import { pathToFileURL } from 'node:url'
-import { and, eq, isNotNull, lt, lte, sql } from 'drizzle-orm'
+import { and, eq, isNotNull, isNull, lt, lte, ne, or, sql } from 'drizzle-orm'
 import type { SQL } from 'drizzle-orm'
 import {
   db,
@@ -670,8 +670,10 @@ export const runWinback = async (now: Date): Promise<void> => {
  * data_purged event with per-category counts, then clears premiumDataExpiresAt.
  *
  * SCHEMA LIMITATION: only two of the four §5.3 categories have tables today:
- *   - Concert history (attended)  → user_events with status 'going'
+ *   - Concert history (attended)  → user_events with attending_at IS NOT NULL
  *     (Watching = status 'watching' is NEVER touched — Free feature, §5.3).
+ *     Because both concerns share one row (#70), a row that is also watched is
+ *     NULLed rather than deleted; only attendance-only rows are removed.
  *   - Following                   → user_artist_follows rows.
  * Alert prefs and Spotify sync state have NO tables yet (Spotify sync is a
  * future design, #763). Those categories are log-skipped with a count of null
@@ -722,7 +724,12 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
       // already-purged user and write a duplicate data_purged event with zero
       // counts. Committing atomically makes the whole purge a single unit.
       const purgeCounts = await db.transaction(async (tx) => {
-        // Concert history (attended) — status 'going'. NEVER 'watching'.
+        // Concert history (attended) — attending_at IS NOT NULL. NEVER touches
+        // the Watching relationship, which is Free (§5.3). Only status =
+        // 'watching' earns the null-instead-of-delete treatment; every other
+        // status (NULL, and the legacy 'going'/'interested' values still live
+        // until 0065 contracts them) carries no Free relationship worth
+        // keeping, so the whole row goes.
         // Skipped entirely for a live Supporter, who is entitled to keep it.
         const purgeHistory = shouldPurgeFeature(liveTier, 'concert-history')
         const deletedHistory = purgeHistory
@@ -731,7 +738,24 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
               .where(
                 and(
                   eq(userEvents.userId, row.userId),
-                  eq(userEvents.status, 'going'),
+                  isNotNull(userEvents.attendingAt),
+                  or(
+                    isNull(userEvents.status),
+                    ne(userEvents.status, 'watching'),
+                  ),
+                ),
+              )
+              .returning({ id: userEvents.id })
+          : []
+        const nulledHistory = purgeHistory
+          ? await tx
+              .update(userEvents)
+              .set({ attendingAt: null })
+              .where(
+                and(
+                  eq(userEvents.userId, row.userId),
+                  isNotNull(userEvents.attendingAt),
+                  eq(userEvents.status, 'watching'),
                 ),
               )
               .returning({ id: userEvents.id })
@@ -753,7 +777,9 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
           // null (not 0) when the category was skipped, matching the convention
           // below — the audit event distinguishes "nothing to delete" from
           // "not applicable to this user's tier".
-          attendedHistory: purgeHistory ? deletedHistory.length : null,
+          attendedHistory: purgeHistory
+            ? deletedHistory.length + nulledHistory.length
+            : null,
           follows: deletedFollows.length,
           alertPrefs: null,
           spotifySyncState: null,

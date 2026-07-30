@@ -43,7 +43,8 @@ const baseUser = (
       eventTitle: 'Night One',
       eventDate: '2026-06-01',
       venueName: 'Ogden Theatre',
-      status: 'going',
+      status: 'watching',
+      attendingAt: null,
       createdAt: '2026-05-02T00:00:00.000Z',
     },
   ],
@@ -193,6 +194,7 @@ describe('UserDetailClient', () => {
               eventDate: '2026-07-01',
               venueName: null,
               status: 'watching',
+              attendingAt: null,
               createdAt: '2026-05-03T00:00:00.000Z',
             },
           ],
@@ -200,5 +202,55 @@ describe('UserDetailClient', () => {
       />,
     )
     expect(screen.getByText(COPY.watching.unknownVenue)).toBeTruthy()
+  })
+
+  it('renders the attending chip alongside the status chip when a row carries both', () => {
+    render(
+      <UserDetailClient
+        user={baseUser({
+          trackedEvents: [
+            {
+              eventId: 'evt-3',
+              eventTitle: 'Both Shapes',
+              eventDate: '2026-07-01',
+              venueName: 'Bluebird Theater',
+              status: 'watching',
+              attendingAt: '2026-06-02T00:00:00.000Z',
+              createdAt: '2026-05-03T00:00:00.000Z',
+            },
+          ],
+        })}
+      />,
+    )
+    expect(screen.getByText('watching')).toBeTruthy()
+    expect(screen.getByText(COPY.watching.attending)).toBeTruthy()
+  })
+
+  it('renders no status chip for an attending-only row', () => {
+    render(
+      <UserDetailClient
+        user={baseUser({
+          trackedEvents: [
+            {
+              eventId: 'evt-4',
+              eventTitle: 'Attended Only',
+              eventDate: '2026-07-01',
+              venueName: 'Bluebird Theater',
+              status: null,
+              attendingAt: '2026-06-02T00:00:00.000Z',
+              createdAt: '2026-05-03T00:00:00.000Z',
+            },
+          ],
+        })}
+      />,
+    )
+    expect(screen.queryByText('watching')).toBeNull()
+    expect(screen.getByText(COPY.watching.attending)).toBeTruthy()
+  })
+
+  it('renders no attending chip for a watching-only row', () => {
+    render(<UserDetailClient user={baseUser()} />)
+    expect(screen.getByText('watching')).toBeTruthy()
+    expect(screen.queryByText(COPY.watching.attending)).toBeNull()
   })
 })

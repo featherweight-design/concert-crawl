@@ -15,7 +15,10 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }))
 
+import { eq } from 'drizzle-orm'
+import { userEvents } from '@concert-crawl/db'
 import { createApp } from '../app.js'
+import { testDb } from '../test/helpers/db.js'
 import {
   clearTables,
   seedVenue,
@@ -253,5 +256,83 @@ describe('PUT /v1/watching/:eventId', () => {
       method: 'PUT',
     })
     expect(res.status).toBe(404)
+  })
+
+  it('keeps the row when un-watching a show the user is also attending', async () => {
+    setAuth('user_attend_keep')
+    const venue = await seedVenue({ name: 'Gothic', slug: 'gothic' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Khruangbin',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-09-02',
+    })
+    await seedUserEvent('user_attend_keep', event.id, {
+      status: 'watching',
+      attendingAt: new Date('2026-07-01T00:00:00.000Z'),
+    })
+
+    const res = await app.request(`/v1/watching/${event.id}`, {
+      method: 'PUT',
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, 'user_attend_keep'))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.status).toBeNull()
+    expect(rows[0]?.attendingAt).not.toBeNull()
+  })
+
+  it('deletes the row when un-watching a show with no attendance', async () => {
+    setAuth('user_attend_none')
+    const venue = await seedVenue({ name: 'Marquis', slug: 'marquis' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Turnstile',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-09-03',
+    })
+    await seedUserEvent('user_attend_none', event.id, { status: 'watching' })
+
+    await app.request(`/v1/watching/${event.id}`, { method: 'PUT' })
+
+    const rows = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, 'user_attend_none'))
+    expect(rows).toHaveLength(0)
+  })
+
+  it('preserves attendingAt when watching an attending-only row', async () => {
+    setAuth('user_rewatch')
+    const venue = await seedVenue({ name: 'Summit', slug: 'summit' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Idles',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-09-04',
+      ticketPriceMin: '40.00',
+    })
+    await seedUserEvent('user_rewatch', event.id, {
+      status: null,
+      attendingAt: new Date('2026-07-01T00:00:00.000Z'),
+    })
+
+    const res = await app.request(`/v1/watching/${event.id}`, {
+      method: 'PUT',
+    })
+    const body = (await res.json()) as { data: { watching: boolean } }
+    expect(body.data.watching).toBe(true)
+
+    const rows = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, 'user_rewatch'))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.status).toBe('watching')
+    expect(rows[0]?.attendingAt).not.toBeNull()
   })
 })

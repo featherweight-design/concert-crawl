@@ -79,11 +79,17 @@ export async function runSynthetic(deps: {
   // (the rng would be consumed against a different eventIds sequence
   // across runs).
   const eventRows = await staging
-    .select({ id: events.id })
+    .select({ id: events.id, date: events.date })
     .from(events)
     .orderBy(events.id)
     .limit(500)
   const eventIds: readonly string[] = eventRows.map((row) => row.id)
+  // Concert History (#70) only shows past nights, so the user_events generator
+  // needs to know which events already happened to put attendance on them.
+  const todayIso = new Date().toISOString().slice(0, 10)
+  const pastEventIds: readonly string[] = eventRows
+    .filter((row) => typeof row.date === 'string' && row.date < todayIso)
+    .map((row) => row.id)
 
   if (eventIds.length === 0) {
     console.warn(
@@ -96,7 +102,7 @@ export async function runSynthetic(deps: {
   // 3. Create ONE rng instance from seed and thread it through all generators.
   const rng = createRng(seed)
 
-  const generatorDeps = { staging, fixtureUserIds, eventIds, rng }
+  const generatorDeps = { staging, fixtureUserIds, eventIds, pastEventIds, rng }
 
   // 4. Run generators in strict order: profiles → user_events → feedback →
   //    price_submissions → notifications. Generators that require eventIds are

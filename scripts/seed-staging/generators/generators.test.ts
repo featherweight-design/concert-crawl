@@ -27,6 +27,10 @@ const eventIds = Array.from(
     `evt-00000000-0000-0000-0000-${String(idx + 1).padStart(12, '0')}`,
 )
 
+// Half the fixture events already happened, so the user_events generator can
+// reach all three attendance shapes (#70) — attendance only lands on past shows.
+const pastEventIds = eventIds.slice(0, 25)
+
 // ---------------------------------------------------------------------------
 // Staging mock builder
 // ---------------------------------------------------------------------------
@@ -141,6 +145,7 @@ describe('generateUserEvents', () => {
       staging: staging as any,
       fixtureUserIds,
       eventIds,
+      pastEventIds,
       rng: createRng(SEED),
     })
     const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0]
@@ -155,6 +160,7 @@ describe('generateUserEvents', () => {
       staging: staging as any,
       fixtureUserIds,
       eventIds,
+      pastEventIds,
       rng: createRng(SEED),
     })
     const rows: { eventId: string }[] = valuesSpy.mock.calls[0]![0]
@@ -169,6 +175,7 @@ describe('generateUserEvents', () => {
       staging: stagingA as any,
       fixtureUserIds,
       eventIds,
+      pastEventIds,
       rng: createRng(SEED),
     })
 
@@ -177,6 +184,7 @@ describe('generateUserEvents', () => {
       staging: stagingB as any,
       fixtureUserIds,
       eventIds,
+      pastEventIds,
       rng: createRng(SEED),
     })
 
@@ -191,6 +199,7 @@ describe('generateUserEvents', () => {
       staging: staging as any,
       fixtureUserIds,
       eventIds,
+      pastEventIds,
       rng: createRng(SEED),
     })
     const rows: { userId: string }[] = valuesSpy.mock.calls[0]![0]
@@ -202,19 +211,60 @@ describe('generateUserEvents', () => {
     expect(maxCount).toBeGreaterThanOrEqual(25)
   })
 
-  it('covers all status enum values (going, interested, watching)', async () => {
+  it('covers all three attendance shapes', async () => {
     const { staging, valuesSpy } = buildStagingMock()
     await generateUserEvents({
       staging: staging as any,
       fixtureUserIds,
       eventIds,
+      pastEventIds,
       rng: createRng(SEED),
     })
-    const rows: { status: string }[] = valuesSpy.mock.calls[0]![0]
-    const statuses = new Set(rows.map((row) => row.status))
-    expect(statuses).toContain('going')
-    expect(statuses).toContain('interested')
-    expect(statuses).toContain('watching')
+    const rows: { status: string | null; attendingAt: Date | null }[] =
+      valuesSpy.mock.calls[0]![0]
+
+    const shapes = new Set(
+      rows.map((row) => {
+        if (row.attendingAt === null) return 'watching-only'
+        return row.status === null ? 'attending-only' : 'watching-attending'
+      }),
+    )
+    expect(shapes).toContain('watching-only')
+    expect(shapes).toContain('watching-attending')
+    expect(shapes).toContain('attending-only')
+  })
+
+  it("never writes the retired 'going' or 'interested' status", async () => {
+    const { staging, valuesSpy } = buildStagingMock()
+    await generateUserEvents({
+      staging: staging as any,
+      fixtureUserIds,
+      eventIds,
+      pastEventIds,
+      rng: createRng(SEED),
+    })
+    const rows: { status: string | null }[] = valuesSpy.mock.calls[0]![0]
+    for (const row of rows) {
+      expect(row.status === 'watching' || row.status === null).toBe(true)
+    }
+  })
+
+  it('only puts attendance on past-dated events', async () => {
+    const { staging, valuesSpy } = buildStagingMock()
+    await generateUserEvents({
+      staging: staging as any,
+      fixtureUserIds,
+      eventIds,
+      pastEventIds,
+      rng: createRng(SEED),
+    })
+    const rows: { eventId: string; attendingAt: Date | null }[] =
+      valuesSpy.mock.calls[0]![0]
+    for (const row of rows) {
+      if (row.attendingAt !== null) {
+        expect(pastEventIds).toContain(row.eventId)
+      }
+    }
   })
 })
 

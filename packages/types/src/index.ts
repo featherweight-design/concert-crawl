@@ -1065,8 +1065,9 @@ export interface WatchToggleResponse {
 // to the retained user_profiles row when one exists.
 
 // Admin-surface unions — prefixed to avoid colliding with future general
-// domain types. AdminUserEventStatus spans the full tracked-event set (the
-// detail view shows going/interested/watching, not just the watchlist).
+// domain types. AdminUserEventStatus spans the full user_event_status enum, but
+// 'going' and 'interested' are legacy read-only since #70 — attendance is
+// `attendingAt`, and the only value written today is 'watching'.
 export type AdminFeedbackStatus =
   'unread' | 'read' | 'flagged' | 'issue_opened' | 'resolved' | 'archived'
 export type AdminUserEventStatus = 'going' | 'interested' | 'watching'
@@ -1081,15 +1082,16 @@ export interface AdminUserFeedbackItem {
   createdAt: string
 }
 
-// Named for the full tracked-event set (going/interested/watching), not just
-// the watchlist — status can be any AdminUserEventStatus, so "watching" would
-// mislead.
+// Named for the full tracked-event set, not just the watchlist — a row can
+// carry attendance with no Watching relationship at all, so "watching" would
+// mislead. `status: null` is exactly that case (#70).
 export interface AdminUserTrackedEventItem {
   eventId: string
   eventTitle: string
   eventDate: string // ISO YYYY-MM-DD
   venueName: string | null
-  status: AdminUserEventStatus
+  status: AdminUserEventStatus | null
+  attendingAt: string | null // ISO — set when the user marked "I'm going!"
   createdAt: string
 }
 

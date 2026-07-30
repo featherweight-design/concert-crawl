@@ -58,6 +58,7 @@ import { loadPlanState } from '../lib/plan.js'
 import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js'
 import { bucketsPresentIn, expandBucket } from '../lib/genre-buckets.js'
 import { parseGenreRows } from '../lib/parse-genre-rows.js'
+import { releaseWatch } from '../lib/user-events.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -1326,8 +1327,11 @@ eventsRouter.delete('/:id/watch', clerkMiddleware(), async (ctx) => {
     )
     .limit(1)
 
+  // The select above keeps the status='watching' filter, so un-watching a
+  // non-watched row stays a no-op. The mutation routes through releaseWatch so
+  // an attending row survives with status cleared rather than being deleted (#70).
   if (existing) {
-    await db.delete(userEvents).where(eq(userEvents.id, existing.id))
+    await releaseWatch(authInfo.userId, eventId)
   }
 
   return ctx.json({ success: true, data: { watching: false } })

@@ -1554,7 +1554,11 @@ async function seed() {
   // Event-linked data
   // -------------------------------------------------------------------------
   const recentEvents = await db
-    .select({ id: eventsTable.id, venueId: eventsTable.venueId })
+    .select({
+      id: eventsTable.id,
+      venueId: eventsTable.venueId,
+      date: eventsTable.date,
+    })
     .from(eventsTable)
     .orderBy(desc(eventsTable.date))
     .limit(50)
@@ -1565,6 +1569,36 @@ async function seed() {
     )
   } else {
     const eventIds = recentEvents.map((evt) => evt.id)
+    const todayIso = new Date().toISOString().slice(0, 10)
+    // recentEvents is ordered date DESC, so the low eventIds indices are all
+    // upcoming. Concert History only shows nights that already happened, so a
+    // separate past-only list is needed or local History would render empty.
+    const pastIds = recentEvents
+      .filter((evt) => evt.date < todayIso)
+      .map((evt) => evt.id)
+    const pastEventIds = new Set(pastIds)
+
+    // Attendance shapes (#70). `status: 'going'` is retired — attendance is its
+    // own timestamp, and Watching is independent of it. A past show becomes an
+    // attending-only row (status null, the shape a user who never watched it
+    // produces); an upcoming one keeps Watching alongside the commitment, so
+    // local dev exercises both.
+    const attending = (
+      userId: string,
+      eventId: string,
+      savedPrice?: string,
+    ) => {
+      const isPast = pastEventIds.has(eventId)
+      return {
+        userId,
+        eventId,
+        status: isPast ? null : ('watching' as const),
+        attendingAt: isPast
+          ? new Date(Date.now() - 1000 * 60 * 60 * 24 * 30)
+          : new Date(),
+        ...(savedPrice === undefined ? {} : { savedPrice }),
+      }
+    }
 
     // User events
     const userEventRows = [
@@ -1575,12 +1609,7 @@ async function seed() {
         status: 'watching' as const,
         savedPrice: '75.00',
       },
-      {
-        userId: FAKE_USER_IDS.hugh,
-        eventId: eventIds[1]!,
-        status: 'going' as const,
-        savedPrice: '65.00',
-      },
+      attending(FAKE_USER_IDS.hugh, eventIds[1]!, '65.00'),
       {
         userId: FAKE_USER_IDS.hugh,
         eventId: eventIds[2]!,
@@ -1589,7 +1618,7 @@ async function seed() {
       {
         userId: FAKE_USER_IDS.hugh,
         eventId: eventIds[5]!,
-        status: 'interested' as const,
+        status: 'watching' as const,
       },
       // jess
       {
@@ -1598,15 +1627,11 @@ async function seed() {
         status: 'watching' as const,
         savedPrice: '28.00',
       },
-      {
-        userId: FAKE_USER_IDS.jess,
-        eventId: eventIds[4]!,
-        status: 'going' as const,
-      },
+      attending(FAKE_USER_IDS.jess, eventIds[4]!),
       {
         userId: FAKE_USER_IDS.jess,
         eventId: eventIds[6]!,
-        status: 'interested' as const,
+        status: 'watching' as const,
       },
       {
         userId: FAKE_USER_IDS.jess,
@@ -1622,7 +1647,7 @@ async function seed() {
       {
         userId: FAKE_USER_IDS.marco,
         eventId: eventIds[8]!,
-        status: 'interested' as const,
+        status: 'watching' as const,
       },
       {
         userId: FAKE_USER_IDS.marco,
@@ -1630,23 +1655,14 @@ async function seed() {
         status: 'watching' as const,
       },
       // amy
-      {
-        userId: FAKE_USER_IDS.amy,
-        eventId: eventIds[9]!,
-        status: 'going' as const,
-        savedPrice: '55.00',
-      },
+      attending(FAKE_USER_IDS.amy, eventIds[9]!, '55.00'),
       {
         userId: FAKE_USER_IDS.amy,
         eventId: eventIds[12]!,
         status: 'watching' as const,
       },
       // taylor
-      {
-        userId: FAKE_USER_IDS.taylor,
-        eventId: eventIds[13]!,
-        status: 'going' as const,
-      },
+      attending(FAKE_USER_IDS.taylor, eventIds[13]!),
       {
         userId: FAKE_USER_IDS.taylor,
         eventId: eventIds[14]!,
@@ -1656,35 +1672,21 @@ async function seed() {
       {
         userId: FAKE_USER_IDS.taylor,
         eventId: eventIds[15]!,
-        status: 'interested' as const,
+        status: 'watching' as const,
       },
       // riley — power user
-      {
-        userId: FAKE_USER_IDS.riley,
-        eventId: eventIds[0]!,
-        status: 'going' as const,
-        savedPrice: '85.00',
-      },
-      {
-        userId: FAKE_USER_IDS.riley,
-        eventId: eventIds[2]!,
-        status: 'going' as const,
-      },
+      attending(FAKE_USER_IDS.riley, eventIds[0]!, '85.00'),
+      attending(FAKE_USER_IDS.riley, eventIds[2]!),
       {
         userId: FAKE_USER_IDS.riley,
         eventId: eventIds[3]!,
         status: 'watching' as const,
       },
-      {
-        userId: FAKE_USER_IDS.riley,
-        eventId: eventIds[5]!,
-        status: 'going' as const,
-        savedPrice: '65.00',
-      },
+      attending(FAKE_USER_IDS.riley, eventIds[5]!, '65.00'),
       {
         userId: FAKE_USER_IDS.riley,
         eventId: eventIds[7]!,
-        status: 'interested' as const,
+        status: 'watching' as const,
       },
       {
         userId: FAKE_USER_IDS.riley,
@@ -1695,13 +1697,24 @@ async function seed() {
       {
         userId: FAKE_USER_IDS.sam,
         eventId: eventIds[4]!,
-        status: 'interested' as const,
+        status: 'watching' as const,
       },
       {
         userId: FAKE_USER_IDS.sam,
         eventId: eventIds[16]!,
         status: 'watching' as const,
       },
+      // Past nights, so Concert History has something to render locally. These
+      // are attending-only (status null) — the shape a user who marked "I'm
+      // going!" without ever watching the show produces.
+      attending(FAKE_USER_IDS.hugh, pastIds[0]!, '45.00'),
+      attending(FAKE_USER_IDS.hugh, pastIds[1]!),
+      attending(FAKE_USER_IDS.hugh, pastIds[2]!, '90.00'),
+      attending(FAKE_USER_IDS.jess, pastIds[0]!),
+      attending(FAKE_USER_IDS.jess, pastIds[3]!, '32.00'),
+      attending(FAKE_USER_IDS.riley, pastIds[1]!),
+      attending(FAKE_USER_IDS.riley, pastIds[2]!),
+      attending(FAKE_USER_IDS.riley, pastIds[4]!, '120.00'),
     ].filter((row) => row.eventId !== undefined)
 
     const existingUserEventsCount = await db

@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import {
   index,
   integer,
@@ -12,6 +13,15 @@ import {
 } from 'drizzle-orm/pg-core'
 import { events } from './events.js'
 
+/**
+ * `watching` is the only value application code writes.
+ *
+ * `going` and `interested` are legacy read-only (#70): attendance now lives in
+ * `userEvents.attendingAt`, and `going` is derived from `attending_at IS NOT NULL`.
+ * Migration 0065 nulls out the remaining `going` rows. The enum values stay
+ * because recreating a Postgres enum type rewrites every dependent column for
+ * zero benefit — they are simply unreachable. Do not reintroduce writes to them.
+ */
 export const userEventStatusEnum = pgEnum('user_event_status', [
   'going',
   'interested',
@@ -41,8 +51,13 @@ export const userEvents = pgTable(
     eventId: uuid('event_id')
       .notNull()
       .references(() => events.id, { onDelete: 'cascade' }),
-    status: userEventStatusEnum('status').notNull(),
+    // Nullable since 0064: NULL means "no Watching relationship on this row",
+    // which is how an attendance-only row exists under the unique index below.
+    status: userEventStatusEnum('status'),
     savedPrice: numeric('saved_price', { precision: 10, scale: 2 }),
+    // Set when the user explicitly says "I'm going!". Independent of `status` —
+    // Watching is not Attending (#70).
+    attendingAt: timestamp('attending_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -52,6 +67,11 @@ export const userEvents = pgTable(
       table.userId,
       table.eventId,
     ),
+    // Partial — mirrors the WHERE predicate in migration 0064. A full index here
+    // would diverge from the database and produce a spurious drizzle-kit diff.
+    userAttendingIdx: index('user_events_user_attending_idx')
+      .on(table.userId, table.attendingAt)
+      .where(sql`${table.attendingAt} IS NOT NULL`),
   }),
 )
 

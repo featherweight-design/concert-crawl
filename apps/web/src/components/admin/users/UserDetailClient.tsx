@@ -309,12 +309,21 @@ export const UserDetailClient = ({ user }: UserDetailClientProps) => {
                   <TD>{item.venueName ?? COPY.watching.unknownVenue}</TD>
                   <TD mono>{item.eventDate}</TD>
                   <TD>
-                    <StatusBadge
-                      kind={TRACKED_EVENT_STATUS_KIND[item.status]}
-                      dot
-                    >
-                      {item.status}
-                    </StatusBadge>
+                    {/* Watching and Attending are independent (#70) — a row can
+                        show both chips, or only the Attending one. */}
+                    {item.status !== null && (
+                      <StatusBadge
+                        kind={TRACKED_EVENT_STATUS_KIND[item.status]}
+                        dot
+                      >
+                        {item.status}
+                      </StatusBadge>
+                    )}
+                    {item.attendingAt !== null && (
+                      <StatusBadge kind="success" dot>
+                        {COPY.watching.attending}
+                      </StatusBadge>
+                    )}
                   </TD>
                   <TD>
                     <RelTime iso={item.createdAt} />

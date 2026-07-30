@@ -1294,6 +1294,38 @@ eventsAdminRouter.post(
       // user_events: drop conflicting source rows (target wins) before moving
       // the rest. Doing the delete inside the same transaction means a partial
       // failure rolls the drops back too.
+      // Before dropping the losing source rows, salvage their attendance onto
+      // the target: an attended night must not vanish because an admin merged
+      // two listings for the same show (#70). LEAST() keeps the earliest
+      // commitment, which is the honest timestamp for when the user decided.
+      // Postgres LEAST/GREATEST ignore NULL arguments (unlike most other SQL
+      // dialects and unlike ordinary operators) and return NULL only when
+      // every argument is NULL — so a watching-only target with a NULL
+      // attending_at correctly adopts the source's timestamp. No COALESCE
+      // wrapper needed; adding one would be a no-op here.
+      const coalescedAttending = await tx
+        .update(userEvents)
+        .set({
+          attendingAt: sql`LEAST(
+            ${userEvents.attendingAt},
+            (SELECT src.attending_at FROM ${userEvents} src
+              WHERE src.event_id = ${sourceId}
+                AND src.user_id = ${userEvents.userId})
+          )`,
+        })
+        .where(
+          and(
+            eq(userEvents.eventId, targetId),
+            sql`EXISTS (
+              SELECT 1 FROM ${userEvents} src
+              WHERE src.event_id = ${sourceId}
+                AND src.user_id = ${userEvents.userId}
+                AND src.attending_at IS NOT NULL
+            )`,
+          ),
+        )
+        .returning({ id: userEvents.id })
+
       const droppedUserEvents = await tx
         .delete(userEvents)
         .where(
@@ -1352,6 +1384,7 @@ eventsAdminRouter.post(
       const counts = {
         userEventsMoved: movedUserEvents.length,
         userEventsDropped: droppedUserEvents.length,
+        attendingCoalesced: coalescedAttending.length,
         reportsMoved: movedReports.length,
         submissionsMoved: movedSubmissions.length,
         priceLogsMoved: movedLogs.length,

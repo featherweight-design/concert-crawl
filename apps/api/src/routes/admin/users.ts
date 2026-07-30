@@ -183,6 +183,7 @@ usersAdminRouter.get(
           eventDate: events.date,
           venueName: venues.name,
           status: userEvents.status,
+          attendingAt: userEvents.attendingAt,
           createdAt: userEvents.createdAt,
         })
         .from(userEvents)
@@ -225,6 +226,7 @@ usersAdminRouter.get(
         eventDate: row.eventDate,
         venueName: row.venueName,
         status: row.status,
+        attendingAt: row.attendingAt?.toISOString() ?? null,
         createdAt: row.createdAt.toISOString(),
       }),
     )

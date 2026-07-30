@@ -5,8 +5,14 @@
  *   - Some fixture users get 0–1 rows (sparse users)
  *   - Others get 25–40 rows (power users — layout-hostile stress test)
  *
- * Status values (going / interested / watching) are mixed across all rows.
+ * Rows are mixed across the three attendance shapes (#70) — watching-only,
+ * watching + attending, attending-only. `status: 'going'` is retired; attendance
+ * is the `attending_at` timestamp and is independent of Watching.
  * Every eventId is drawn from deps.eventIds.
+ *
+ * Attendance only lands on past-dated events (deps.pastEventIds), because
+ * Concert History shows nights that already happened — putting attending_at on a
+ * future show would leave the staging History page empty.
  *
  * All random draws go through deps.rng — never Math.random().
  */
@@ -19,23 +25,72 @@ export type GeneratorDeps = {
   staging: DrizzleWriteDb
   fixtureUserIds: readonly string[]
   eventIds: readonly string[]
+  /** Subset of eventIds whose show date is in the past. */
+  pastEventIds: readonly string[]
   rng: ReturnType<typeof createRng>
 }
 
 export type GenResult = { inserted: number }
 
-const STATUSES = ['going', 'interested', 'watching'] as const
+/**
+ * The three shapes a user_events row can take since #70. The split is ~60/25/15
+ * so the staging Watching list stays the dominant surface while History and the
+ * attending-only edge case both have real data.
+ */
+export const ATTENDANCE_SHAPES = [
+  'watching-only',
+  'watching-attending',
+  'attending-only',
+] as const
+
+export type AttendanceShape = (typeof ATTENDANCE_SHAPES)[number]
+
+/**
+ * Fixed epoch for synthetic attendance timestamps. Wall-clock time here would
+ * break the same-seed-same-rows contract this file guarantees, so the only
+ * variation comes from an rng-drawn day offset.
+ */
+const ATTENDING_EPOCH_MS = Date.UTC(2026, 0, 1)
+
+const pickShape = (roll: number): AttendanceShape => {
+  if (roll < 60) return 'watching-only'
+  if (roll < 85) return 'watching-attending'
+  return 'attending-only'
+}
 
 export const generateUserEvents = async (
   deps: GeneratorDeps,
 ): Promise<GenResult> => {
-  const { staging, fixtureUserIds, eventIds, rng } = deps
+  const { staging, fixtureUserIds, eventIds, pastEventIds, rng } = deps
+  const pastEventIdSet = new Set(pastEventIds)
 
   const rows: {
     userId: string
     eventId: string
-    status: (typeof STATUSES)[number]
+    status: 'watching' | null
+    attendingAt: Date | null
+    shape: AttendanceShape
   }[] = []
+
+  const buildRow = (
+    userId: string,
+    eventId: string,
+    shape: AttendanceShape,
+  ): (typeof rows)[number] => {
+    // Attendance is meaningless on a show that hasn't happened for History's
+    // purposes, so a future event degrades to watching-only.
+    const canAttend = pastEventIdSet.has(eventId)
+    const attends = canAttend && shape !== 'watching-only'
+    return {
+      userId,
+      eventId,
+      status: attends && shape === 'attending-only' ? null : 'watching',
+      attendingAt: attends
+        ? new Date(ATTENDING_EPOCH_MS + rng.int(0, 120) * 86400000)
+        : null,
+      shape: attends ? shape : 'watching-only',
+    }
+  }
 
   for (const userId of fixtureUserIds) {
     // ~40% chance of being a power user (25–40 rows); otherwise 0–1 rows.
@@ -54,38 +109,51 @@ export const generateUserEvents = async (
       if (usedEventIds.has(eventId)) continue
       usedEventIds.add(eventId)
 
-      const status = rng.pick(STATUSES)
-      rows.push({ userId, eventId, status })
+      rows.push(buildRow(userId, eventId, pickShape(rng.int(0, 99))))
     }
   }
 
-  // Guarantee all three status values appear across the full row set.
+  // Guarantee all three attendance shapes appear across the full row set.
   // Patching must (a) recompute presence after each write so an earlier
   // patch counts as "present", and (b) pick from rows that haven't been
   // patched yet in this loop, so successive patches can't overwrite each
-  // other on a small row set (which would silently leave a status
-  // missing).
+  // other on a small row set (which would silently leave a shape missing).
+  //
+  // Only a row on a past-dated event can carry attendance, so patching prefers
+  // those; when no past event is in play the attending shapes are unreachable
+  // and the guarantee is skipped rather than faked.
   const patchedIndices = new Set<number>()
-  for (const status of STATUSES) {
+  for (const shape of ATTENDANCE_SHAPES) {
     if (rows.length === 0) break
-    const presentStatuses = new Set(rows.map((row) => row.status))
-    if (presentStatuses.has(status)) continue
-    // Prefer an unpatched slot; fall back to any row if all rows are
-    // already patched (row set smaller than STATUSES.length).
-    const unpatched: number[] = []
+    const presentShapes = new Set(rows.map((row) => row.shape))
+    if (presentShapes.has(shape)) continue
+    const eligible: number[] = []
     for (let idx = 0; idx < rows.length; idx++) {
-      if (!patchedIndices.has(idx)) unpatched.push(idx)
+      if (patchedIndices.has(idx)) continue
+      if (
+        shape !== 'watching-only' &&
+        !pastEventIdSet.has(rows[idx]!.eventId)
+      ) {
+        continue
+      }
+      eligible.push(idx)
     }
-    const candidateIdx =
-      unpatched.length > 0
-        ? unpatched[rng.int(0, unpatched.length - 1)]!
-        : rng.int(0, rows.length - 1)
-    rows[candidateIdx]!.status = status
+    if (eligible.length === 0) continue
+    const candidateIdx = eligible[rng.int(0, eligible.length - 1)]!
+    const target = rows[candidateIdx]!
+    rows[candidateIdx] = buildRow(target.userId, target.eventId, shape)
     patchedIndices.add(candidateIdx)
   }
 
   if (rows.length > 0) {
-    await staging.insert(userEvents).values(rows)
+    await staging.insert(userEvents).values(
+      rows.map(({ userId, eventId, status, attendingAt }) => ({
+        userId,
+        eventId,
+        status,
+        attendingAt,
+      })),
+    )
   }
 
   return { inserted: rows.length }

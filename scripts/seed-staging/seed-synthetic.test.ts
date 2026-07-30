@@ -73,7 +73,7 @@ const eventIds = Array.from(
  * deterministic eventIds order across runs) — omitting it here would silently
  * break the tests when the orchestrator adds `.orderBy(events.id)`.
  */
-function buildStagingMock(returnedEventIds: { id: string }[]) {
+function buildStagingMock(returnedEventIds: { id: string; date?: string }[]) {
   return {
     select: vi.fn().mockReturnValue({
       from: vi.fn().mockReturnValue({
@@ -124,7 +124,12 @@ describe('runSynthetic — determinism and idempotency', () => {
     const { generateNotifications } =
       await import('./generators/notifications.js')
 
-    const mappedEventIds = eventIds.map((id) => ({ id }))
+    // Half past-dated so the user_events generator can reach the attending
+    // shapes (#70) — the orchestrator derives pastEventIds from these rows.
+    const mappedEventIds = eventIds.map((id, idx) => ({
+      id,
+      date: idx < 5 ? '2020-01-01' : '2099-01-01',
+    }))
 
     // First run
     const stagingA = buildStagingMock(mappedEventIds)
@@ -187,7 +192,12 @@ describe('runSynthetic — determinism and idempotency', () => {
   })
 
   it('returns deleted and inserted summary counts', async () => {
-    const stagingMock = buildStagingMock(eventIds.map((id) => ({ id })))
+    const stagingMock = buildStagingMock(
+      eventIds.map((id, idx) => ({
+        id,
+        date: idx < 5 ? '2020-01-01' : '2099-01-01',
+      })),
+    )
     const result = await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
@@ -204,7 +214,12 @@ describe('runSynthetic — determinism and idempotency', () => {
     const { generateUserProfiles } =
       await import('./generators/user-profiles.js')
 
-    const stagingMock = buildStagingMock(eventIds.map((id) => ({ id })))
+    const stagingMock = buildStagingMock(
+      eventIds.map((id, idx) => ({
+        id,
+        date: idx < 5 ? '2020-01-01' : '2099-01-01',
+      })),
+    )
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
@@ -224,7 +239,12 @@ describe('runSynthetic — determinism and idempotency', () => {
       await import('./generators/user-profiles.js')
     const { generateUserEvents } = await import('./generators/user-events.js')
 
-    const stagingMock = buildStagingMock(eventIds.map((id) => ({ id })))
+    const stagingMock = buildStagingMock(
+      eventIds.map((id, idx) => ({
+        id,
+        date: idx < 5 ? '2020-01-01' : '2099-01-01',
+      })),
+    )
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,

@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { db, userEvents, events, venues } from '@concert-crawl/db'
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
+import { releaseWatch } from '../lib/user-events.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -130,8 +131,9 @@ watchingRouter.put('/:eventId', async (ctx) => {
     .limit(1)
 
   if (existing?.status === 'watching') {
-    // Already watching — remove it
-    await db.delete(userEvents).where(eq(userEvents.id, existing.id))
+    // Already watching — release it. Not a bare DELETE: the row may also carry
+    // attendance, which must survive un-watching (#70).
+    await releaseWatch(authInfo.userId, eventId)
 
     const response: WatchToggleResponse = { watching: false, savedPrice: null }
     return ctx.json({ success: true, data: response })

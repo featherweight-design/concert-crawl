@@ -2195,6 +2195,52 @@ describe('POST /v1/admin/events/:id/merge', () => {
     expect(userAStatus).toBe('going')
   })
 
+  it('coalesces attending_at onto the surviving target row (#70)', async () => {
+    const venue = await seedVenue()
+    const source = await seedEvent(venue.id, { artist: 'Dup Source' })
+    const target = await seedEvent(venue.id, {
+      artist: 'Dup Target',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-10-05',
+    })
+
+    const earlier = new Date('2026-06-01T00:00:00.000Z')
+
+    // user-a attended on the source row and is only watching the target: the
+    // merge must not lose the night they actually went to.
+    await seedUserEvent('user-a', source.id, {
+      status: null,
+      attendingAt: earlier,
+    })
+    await seedUserEvent('user-a', target.id, { status: 'watching' })
+    // user-b has attendance on the target only — the merge must not clear it.
+    await seedUserEvent('user-b', target.id, {
+      status: 'watching',
+      attendingAt: earlier,
+    })
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: target.id }),
+    })
+    expect(res.status).toBe(200)
+
+    const targetRows = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.eventId, target.id))
+    expect(targetRows).toHaveLength(2)
+
+    const userA = targetRows.find((row) => row.userId === 'user-a')
+    expect(userA?.status).toBe('watching')
+    expect(userA?.attendingAt?.toISOString()).toBe(earlier.toISOString())
+
+    const userB = targetRows.find((row) => row.userId === 'user-b')
+    expect(userB?.attendingAt?.toISOString()).toBe(earlier.toISOString())
+  })
+
   it('writes one audit-log row with source + counts metadata', async () => {
     const venue = await seedVenue()
     const source = await seedEvent(venue.id, { artist: 'Src' })

@@ -1893,6 +1893,7 @@ export const ADMIN_COPY = {
         title: 'Tracked events',
         empty: 'No tracked events.',
         unknownVenue: 'Unknown venue',
+        attending: 'attending',
         columns: {
           event: 'Event',
           venue: 'Venue',
