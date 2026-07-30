@@ -1,8 +1,78 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
+import Link from 'next/link'
 import { LandingPoster } from './LandingPoster'
 import type { LandingShow } from './LandingPoster'
+import { LANDING_POSTER_COPY } from './definitions/copy'
+
+// Link chrome for the top poster in the stack. Hover/focus/press states need
+// real CSS pseudo-classes, and the lift has to compose with the inline stack
+// transform on the layer above it — hence a nested element with its own class
+// rather than more inline style.
+const LP_LINK_CSS = `
+.lp-poster-link {
+  display: block;
+  position: relative;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 140ms, box-shadow 140ms;
+}
+.lp-poster-link:hover,
+.lp-poster-link:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 40px color-mix(in oklch, var(--bg) 62%, transparent);
+}
+.lp-poster-link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.lp-poster-link:active {
+  transform: scale(0.99);
+}
+.lp-poster-arrow {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--signal);
+  color: var(--fg-on-accent);
+  font-weight: 800;
+  font-size: 15px;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity 140ms, transform 140ms;
+  pointer-events: none;
+}
+.lp-poster-link:hover .lp-poster-arrow,
+.lp-poster-link:focus-visible .lp-poster-arrow,
+.lp-poster-link:active .lp-poster-arrow {
+  opacity: 1;
+  transform: translateX(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-poster-link,
+  .lp-poster-arrow {
+    transition: none;
+  }
+  .lp-poster-link:hover,
+  .lp-poster-link:focus-visible,
+  .lp-poster-link:active {
+    transform: none;
+  }
+  .lp-poster-link:hover .lp-poster-arrow,
+  .lp-poster-link:focus-visible .lp-poster-arrow,
+  .lp-poster-link:active .lp-poster-arrow {
+    transform: none;
+  }
+}
+`
 
 function lpShuffle<T>(arr: T[]): T[] {
   const out = arr.slice()
@@ -73,17 +143,8 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
         position: 'relative',
         perspective: 1400,
       }}
-      onClick={advance}
-      onKeyDown={(ev) => {
-        if (ev.key === 'Enter' || ev.key === ' ') {
-          ev.preventDefault()
-          advance()
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      aria-label="Next poster"
     >
+      <style>{LP_LINK_CSS}</style>
       {([0, 1, 2, 3] as const).map((ii) => {
         const layer = layers[ii]
         const isTop = ii === 0
@@ -121,9 +182,18 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
               ? 'brightness(0.96)'
               : 'none'
 
+        const show = order[ii]!
+        const poster = (
+          <LandingPoster show={show} width={width} height={height} />
+        )
+
         return (
           <div
             key={`${idx}-${ii}`}
+            // Only the front poster is reachable. The three behind it are
+            // decoration for the same four shows the pager already exposes, so
+            // exposing them would put duplicate links in the tab order.
+            aria-hidden={isTop ? undefined : true}
             style={{
               position: 'absolute',
               left: padX,
@@ -136,13 +206,29 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
                   ? 'transform 0.85s cubic-bezier(0.32, 0.72, 0.28, 1), opacity 0.7s ease-out'
                   : 'transform 0.4s ease-out, opacity 0.4s ease-out',
               opacity,
-              cursor: 'pointer',
               willChange: 'transform, opacity',
               filter: brightnessFilter,
-              pointerEvents: isOnDeck && phase === 'rest' ? 'none' : 'auto',
+              pointerEvents: isTop && show.href ? 'auto' : 'none',
             }}
           >
-            <LandingPoster show={order[ii]!} width={width} height={height} />
+            {isTop && show.href ? (
+              <Link
+                href={show.href}
+                className="lp-poster-link"
+                aria-label={LANDING_POSTER_COPY.showLinkLabel(
+                  show.artist,
+                  show.venue,
+                  show.dateShort,
+                )}
+              >
+                {poster}
+                <span aria-hidden className="lp-poster-arrow">
+                  →
+                </span>
+              </Link>
+            ) : (
+              poster
+            )}
           </div>
         )
       })}
@@ -162,21 +248,33 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
           {shows.map((_, dotIdx) => {
             const isActive = dotIdx === idx % shows.length
             return (
-              <div
+              // The stage itself is inert now, so the pager is the only manual
+              // advance — it has to be a real button to be keyboard reachable.
+              <button
                 key={dotIdx}
-                onClick={(ev) => {
-                  ev.stopPropagation()
+                type="button"
+                aria-label={LANDING_POSTER_COPY.goToPoster(dotIdx + 1)}
+                aria-current={isActive || undefined}
+                onClick={() => {
                   if (isActive || phase !== 'rest') return
                   setIdx(dotIdx)
                 }}
                 style={{
+                  all: 'unset',
+                  // `all: unset` resets display to inline, where width and
+                  // height are ignored — the dot would render 0x0.
+                  display: 'block',
+                  cursor: 'pointer',
+                  boxSizing: 'content-box',
                   width: isActive ? 16 : 6,
                   height: 6,
+                  padding: '12px 5px',
                   borderRadius: 3,
                   background: isActive
                     ? 'var(--fg, #fff)'
                     : 'rgba(255,255,255,0.30)',
-                  cursor: 'pointer',
+                  // Keeps the dot 6px tall while the button's hit area is 30px.
+                  backgroundClip: 'content-box',
                   transition: 'width 0.3s',
                 }}
               />

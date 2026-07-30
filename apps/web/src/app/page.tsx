@@ -38,9 +38,12 @@ function formatDateShort(date: string): string {
   return `${month} ${dd.getDate().toString().padStart(2, '0')}`
 }
 
+// Day arithmetic and serialization both run in UTC. Mixing local setDate with
+// a UTC toISOString slice shifts the YYYY-MM-DD by a day depending on the
+// runtime's timezone and time of day, which would skew the "this week" count.
 function futureDateString(daysFromNow: number): string {
   const dd = new Date()
-  dd.setDate(dd.getDate() + daysFromNow)
+  dd.setUTCDate(dd.getUTCDate() + daysFromNow)
   return dd.toISOString().slice(0, 10)
 }
 
@@ -110,6 +113,7 @@ async function fetchHeroShows(): Promise<LandingShow[]> {
       showTime: formatShowTime(row.showTime),
       opener: null,
       state: null,
+      href: `/events/${row.id}`,
     }))
 
     return mapped.length >= 2 ? mapped : makeFallbackShows()
@@ -119,6 +123,25 @@ async function fetchHeroShows(): Promise<LandingShow[]> {
       err instanceof ApiError ? `HTTP ${err.status} ${err.message}` : err,
     )
     return makeFallbackShows()
+  }
+}
+
+// The see-all rail says "this week", so the count has to mean that too — a
+// separate `to`-bounded probe rather than the unbounded hero fetch's total.
+// Returns null on any failure so the rail ships its countless variant instead
+// of a wrong number.
+async function fetchWeekCount(): Promise<number | null> {
+  try {
+    const result = await publicApiClient.get<EventsListResponse>(
+      `/v1/events?limit=1&to=${futureDateString(6)}`,
+    )
+    return typeof result?.total === 'number' ? result.total : null
+  } catch (err) {
+    console.error(
+      '[landing] failed to fetch this-week count:',
+      err instanceof ApiError ? `HTTP ${err.status} ${err.message}` : err,
+    )
+    return null
   }
 }
 
@@ -132,6 +155,9 @@ async function fetchHeroShows(): Promise<LandingShow[]> {
 export const revalidate = 300
 
 export default async function LandingPage() {
-  const shows = await fetchHeroShows()
-  return <LandingClientShell shows={shows} />
+  const [shows, weekCount] = await Promise.all([
+    fetchHeroShows(),
+    fetchWeekCount(),
+  ])
+  return <LandingClientShell shows={shows} showCount={weekCount} />
 }

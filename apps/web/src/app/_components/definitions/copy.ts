@@ -1,7 +1,7 @@
 // Single source of truth for all public/landing page copy
 export const LANDING_COPY = {
   nav: {
-    codeLink: 'I have a code →',
+    signIn: 'Sign in',
   },
   hero: {
     headingLine1: "See who's",
@@ -11,9 +11,17 @@ export const LANDING_COPY = {
       'Every show in Denver, in one place. Built for the fans, not the shareholders.',
   },
   cta: {
-    code: 'I have a code →',
-    waitlist: 'Join the waitlist',
-    signIn: 'Already have an account? Sign in →',
+    browse: 'Browse shows',
+    signUp: 'Sign up',
+    noAccountNote: 'No account needed to look around',
+  },
+  rail: {
+    // The count comes from a separate `to`-bounded /v1/events probe, not from
+    // the unbounded hero-poster fetch — the words say "this week", so the
+    // number has to mean that too. When the probe fails there is no honest
+    // number, and the countless variant ships instead of a guess.
+    seeAllCounted: (count: number) => `See all ${count} shows this week →`,
+    seeAll: 'See all shows this week →',
   },
   waitlist: {
     closeButtonAriaLabel: 'Close',

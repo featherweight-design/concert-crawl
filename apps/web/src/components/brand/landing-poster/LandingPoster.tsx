@@ -14,6 +14,9 @@ export interface LandingShow {
   showTime: string
   opener: string | null
   state: 'tonight' | 'soldout' | null
+  // Event detail path, or absent for the canned fallback posters that have no
+  // real event behind them. Unset means the poster renders unlinked.
+  href?: string | null
 }
 
 const LP_STATE_PILLS = {

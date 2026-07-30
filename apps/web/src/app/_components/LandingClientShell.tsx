@@ -1,26 +1,29 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
-import { BetaPill } from '@/components/brand/beta-pill/BetaPill'
 import { LandingPosterAnimation } from '@/components/brand/landing-poster/LandingPosterAnimation'
-import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
 import { CCMark } from '@/components/brand/cc-mark'
 import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster'
 import { LANDING_COPY } from './definitions/copy'
 
 interface LandingClientShellProps {
   shows: LandingShow[]
+  // Shows in the next seven days, from the `to`-bounded probe in page.tsx —
+  // scoped to match the rail's "this week" wording rather than counting all
+  // upcoming shows. Null when that probe failed and there is no honest
+  // number to print.
+  showCount?: number | null
 }
 
-export default function LandingClientShell({ shows }: LandingClientShellProps) {
-  const [waitlistOpen, setWaitlistOpen] = useState(false)
-
-  // "I have a code" is the primary action — it's the path for beta users
-  const ctaCode = (
+export default function LandingClientShell({
+  shows,
+  showCount = null,
+}: LandingClientShellProps) {
+  // Looking around costs nothing, so browsing leads and signing up follows.
+  const ctaBrowse = (
     <Link
-      href="/auth/code"
+      href="/events"
       style={{
         all: 'unset',
         cursor: 'pointer',
@@ -28,9 +31,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        height: 52,
-        paddingLeft: 20,
-        paddingRight: 20,
+        padding: '15px 22px',
         borderRadius: 10,
         background: 'var(--signal)',
         color: 'var(--fg-on-accent)',
@@ -42,13 +43,13 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         whiteSpace: 'nowrap',
       }}
     >
-      {LANDING_COPY.cta.code}
+      {LANDING_COPY.cta.browse}
     </Link>
   )
 
-  const ctaWaitlist = (
-    <button
-      onClick={() => setWaitlistOpen(true)}
+  const ctaSignUp = (
+    <Link
+      href="/sign-up"
       style={{
         all: 'unset',
         cursor: 'pointer',
@@ -56,9 +57,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        height: 52,
-        paddingLeft: 20,
-        paddingRight: 20,
+        padding: '15px 22px',
         borderRadius: 10,
         background: 'transparent',
         color: 'var(--fg)',
@@ -69,8 +68,52 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         whiteSpace: 'nowrap',
       }}
     >
-      {LANDING_COPY.cta.waitlist}
-    </button>
+      {LANDING_COPY.cta.signUp}
+    </Link>
+  )
+
+  const noAccountNote = (
+    <div
+      style={{
+        fontFamily: 'var(--font-mono)',
+        fontSize: 9.5,
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+        color: 'var(--fg-subtle)',
+      }}
+    >
+      {LANDING_COPY.cta.noAccountNote}
+    </div>
+  )
+
+  const ctaBlock = (
+    <>
+      <div className="flex flex-col gap-3 md:flex-row">
+        {ctaBrowse}
+        {ctaSignUp}
+      </div>
+      {noAccountNote}
+    </>
+  )
+
+  const seeAll = (
+    <Link
+      href="/events"
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        minHeight: 44,
+        fontFamily: 'Inter, system-ui',
+        fontSize: 13.5,
+        fontWeight: 700,
+        color: 'var(--signal)',
+        textDecoration: 'none',
+      }}
+    >
+      {showCount === null
+        ? LANDING_COPY.rail.seeAll
+        : LANDING_COPY.rail.seeAllCounted(showCount)}
+    </Link>
   )
 
   return (
@@ -84,7 +127,7 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         flexDirection: 'column',
       }}
     >
-      {/* Header */}
+      {/* Top bar — lockup left, quiet Sign in right, at every breakpoint */}
       <header
         style={{
           flexShrink: 0,
@@ -99,26 +142,24 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
           <CCMark size={26} />
           <CCWordmark size={20} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <BetaPill />
-          <Link
-            href="/auth/code"
-            style={{
-              padding: '8px 14px',
-              borderRadius: 8,
-              border: '1px solid var(--border-strong)',
-              fontFamily: 'Inter, system-ui',
-              fontWeight: 600,
-              fontSize: 13,
-              color: 'var(--fg)',
-              textDecoration: 'none',
-              whiteSpace: 'nowrap',
-            }}
-            className="hidden md:inline-flex items-center"
-          >
-            {LANDING_COPY.nav.codeLink}
-          </Link>
-        </div>
+        <Link
+          href="/sign-in"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            minHeight: 44,
+            paddingLeft: 6,
+            paddingRight: 6,
+            fontFamily: 'Inter, system-ui',
+            fontWeight: 600,
+            fontSize: 13,
+            color: 'var(--fg-muted)',
+            textDecoration: 'none',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {LANDING_COPY.nav.signIn}
+        </Link>
       </header>
 
       {/* Main content — single column on mobile, two-column grid on desktop */}
@@ -126,8 +167,8 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
         className="flex-1 flex flex-col gap-8 md:grid md:grid-cols-2 md:items-start md:gap-x-16 md:gap-y-10"
         style={{ padding: '24px 22px 48px' }}
       >
-        {/* Left column: hero text + CTAs (desktop) */}
-        <div className="flex flex-col gap-8">
+        {/* Hero text — left column on desktop, first block on mobile */}
+        <div className="md:col-start-1 md:row-start-1">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <h1
               style={{
@@ -160,61 +201,24 @@ export default function LandingClientShell({ shows }: LandingClientShellProps) {
               {LANDING_COPY.hero.subheading}
             </p>
           </div>
-
-          {/* CTAs — desktop only (horizontal row: code primary, waitlist secondary) */}
-          <div className="hidden md:flex flex-col gap-3">
-            <div className="flex flex-row gap-3">
-              {ctaCode}
-              {ctaWaitlist}
-            </div>
-            <Link
-              href="/sign-in"
-              style={{
-                fontSize: 13,
-                color: 'var(--fg-muted)',
-                textDecoration: 'none',
-                fontFamily: 'Inter, system-ui',
-                fontWeight: 500,
-              }}
-            >
-              {LANDING_COPY.cta.signIn}
-            </Link>
-          </div>
         </div>
 
-        {/* Right column: poster stack */}
-        <div className="flex justify-center md:justify-end">
+        {/* Poster stack + the see-all rail — right column on desktop */}
+        <div className="flex flex-col items-center gap-1 md:col-start-2 md:row-start-1 md:row-span-2 md:items-end">
           <LandingPosterAnimation
             mode="stack"
             shows={shows}
             width={290}
             intervalMs={5500}
           />
+          {seeAll}
         </div>
 
-        {/* CTAs — mobile only (stacked: code primary, waitlist secondary) */}
-        <div className="flex flex-col gap-3 md:hidden">
-          {ctaCode}
-          {ctaWaitlist}
-          <Link
-            href="/sign-in"
-            style={{
-              fontSize: 13,
-              color: 'var(--fg-muted)',
-              textDecoration: 'none',
-              fontFamily: 'Inter, system-ui',
-              fontWeight: 500,
-            }}
-          >
-            {LANDING_COPY.cta.signIn}
-          </Link>
+        {/* CTAs — one instance, reflowed rather than duplicated per breakpoint */}
+        <div className="flex flex-col gap-[10px] md:col-start-1 md:row-start-2">
+          {ctaBlock}
         </div>
       </main>
-
-      <WaitlistModal
-        open={waitlistOpen}
-        onClose={() => setWaitlistOpen(false)}
-      />
     </div>
   )
 }

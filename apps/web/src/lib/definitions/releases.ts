@@ -26,6 +26,25 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.16.2-beta',
+    date: 'Jul 29, 2026',
+    headline: 'The front page points at the shows, not at a beta code.',
+    items: [
+      {
+        kind: 'changed',
+        text: 'Browse shows is the first thing on the page now, and it goes straight to the calendar. Sign up sits next to it for whenever you want to keep track of something.',
+      },
+      {
+        kind: 'added',
+        text: 'The posters in the hero are links. Click the one on top and you land on that show. The line under the stack tells you how many are playing this week.',
+      },
+      {
+        kind: 'removed',
+        text: 'The "I have a code" button and the waitlist form are gone from the front page. The front door leads to the shows now, not to a gate.',
+      },
+    ],
+  },
+  {
     version: 'v0.16.1-beta',
     date: 'Jul 27, 2026',
     headline: 'The full vendor list now shows up everywhere you can pick one.',
