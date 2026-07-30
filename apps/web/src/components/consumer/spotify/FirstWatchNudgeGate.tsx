@@ -34,7 +34,7 @@ const isWatchOn = (data: unknown): boolean =>
 export const FirstWatchNudgeGate = () => {
   const pathname = usePathname()
   const queryClient = useQueryClient()
-  const { getToken } = useAuth()
+  const { getToken, isSignedIn } = useAuth()
 
   const [show, setShow] = useState(false)
   const [handoffOpen, setHandoffOpen] = useState(false)
@@ -49,6 +49,11 @@ export const FirstWatchNudgeGate = () => {
   hiddenRef.current = hidden
 
   useEffect(() => {
+    // A signed-out visitor can't have a watch toggle succeed, and the
+    // eligibility endpoint is authed. Guarding inside the effect body keeps
+    // the subscription attaching once sign-in lands.
+    if (!isSignedIn) return
+
     const unsubscribe = queryClient.getMutationCache().subscribe((event) => {
       if (hiddenRef.current) return
       if (triggeredRef.current) return
@@ -88,7 +93,7 @@ export const FirstWatchNudgeGate = () => {
       })()
     })
     return unsubscribe
-  }, [queryClient, getToken])
+  }, [queryClient, getToken, isSignedIn])
 
   if (hidden) return null
 

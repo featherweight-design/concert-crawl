@@ -10,9 +10,10 @@ vi.mock('next/navigation', () => ({
 }))
 
 const getToken = vi.fn()
+let signedIn: boolean
 
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken }),
+  useAuth: () => ({ getToken, isSignedIn: signedIn }),
 }))
 
 // Minimal shape of the mutation-cache 'updated' notification the gate
@@ -62,6 +63,7 @@ beforeEach(() => {
   pathname = '/events'
   cacheListeners = []
   eligible = true
+  signedIn = true
 })
 
 import { FirstWatchNudgeGate } from './FirstWatchNudgeGate'
@@ -187,6 +189,18 @@ describe('FirstWatchNudgeGate', () => {
     fireEvent.click(screen.getByRole('button', { name: COPY.primaryCta }))
     expect(screen.queryByTestId('first-watch-nudge')).toBeNull()
     expect(screen.getByTestId('handoff-sheet')).toBeTruthy()
+  })
+
+  // #794: /events is public now, so this gate mounts for anonymous visitors
+  // and must not subscribe or hit the authed eligibility endpoint.
+  it('never subscribes to the mutation cache while signed out', async () => {
+    signedIn = false
+    render(<FirstWatchNudgeGate />)
+    expect(cacheListeners).toHaveLength(0)
+    emit(watchSuccess(true))
+    await Promise.resolve()
+    expect(fetchEligibility).not.toHaveBeenCalled()
+    expect(getToken).not.toHaveBeenCalled()
   })
 
   it('renders nothing on admin routes', () => {
