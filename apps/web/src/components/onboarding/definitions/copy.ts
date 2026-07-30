@@ -1,89 +1,87 @@
 export const ONBOARDING_COPY = {
   founderNote: {
     eyebrow: 'A note from the developer',
-    heading: 'Hey, thanks for trying this thing.',
-    p1: "I'm Hugh. I go to a lot of shows. Concert Crawl is something I’ve always wanted: a place to see what’s playing, what it costs, and who you should drag along with you.",
-    p2: "This is a private beta, so a lot of edges are still rough. But, the core product is there and I’m excited for you to get your hands on it. That weird niche artist none of your friends have heard of? You should know when they’re playing (I know I've kicked myself for missing plenty of shows).",
-    p3: "Friends, you're here early on purpose. I trust your feedback and want your insight. Tell me what works, what’s confusing, what’s missing. I’ll read all of it and the app will be better for it.",
+    heading: 'Thanks for signing up.',
+    p1: "I'm Hugh. I go to a lot of shows. Concert Crawl is the thing I always wanted: one place to see what's playing, what it costs, and who to drag along.",
+    p2: "It covers Denver for now. It tells you where every price came from, and it says so plainly when it doesn't know one.",
+    p3: 'This tour takes about two minutes. You can skip it — your account already works, and it lives in your account menu if you want it later.',
   },
 
   howItWorks: {
     eyebrow: 'How this works',
     heading: 'Honest by design.',
-    lede: "Two minutes on what to expect from the prices, the listings, and what we'll never do.",
+    lede: "Two minutes on where the prices come from, and what we'll never do.",
     rows: [
       {
         kicker: '01',
         title: "We crawl, we don't sell.",
-        body: "Concert Crawl reads public listings from venues. We don't sell tickets and we don't take a cut. See the price, tap a button, go to the source.",
+        body: "We read public listings from venues. We don't sell tickets and we don't take a cut. See the price, tap through, buy at the source.",
       },
       {
         kicker: '02',
-        title: "Prices come from somewhere, we'll tell you where.",
+        title: 'Every price says where it came from.',
         body: null,
       },
       {
         kicker: '03',
         title: 'Verifications expire.',
-        body: "A community price is more trustworthy after another fan confirms it. But, even verified prices go stale after a week. We’ll show you when something is old.",
+        body: "A community price gets more trustworthy once another fan confirms it — but even verified prices go stale after a week. We'll show you when one is old.",
       },
     ],
     priceSources: [
       {
         label: 'BOX OFFICE',
         kind: 'primary' as const,
-        description:
-          "Directly from the venue, that's the gold standard. No markup.",
+        description: 'Straight from the venue. Face value, no markup.',
       },
       {
         label: 'COMMUNITY',
         kind: 'community' as const,
         description:
-          "Reported by a fan, confirmed by others. We’ll show you the ticket vendor.",
+          'Reported by a fan, confirmed by others. We name the vendor.',
       },
       {
         label: 'RESALE',
         kind: 'resale' as const,
         description:
-          "A marketplace listing. Secondary market, not face value. We’ll flag it.",
+          'A marketplace listing. Secondary market, not face value. We flag it.',
       },
     ],
-    noPrice: "If we can’t find a price, we’ll say so.",
+    noPrice: "If we can't find a price, we say so.",
   },
 
   whatItDoesToday: {
     eyebrow: 'Today',
     heading: 'What you can do right now.',
-    lede: "We're starting small and Denver is the pilot. Here’s what’s actually in front of you on day one:",
+    lede: "Denver first. Here's what's actually in front of you.",
     items: [
-      'Browse upcoming shows in the Denver area',
-      'See real prices side-by-side, with their sources',
-      "Watch shows you’re curious about",
-      'Submit a price you saw or report what you paid at the box office',
-      'Plenty of other fun bells and whistles with more on the horizon',
+      'Browse every upcoming show in the Denver area',
+      'Compare real prices side by side, with their sources',
+      "Watch shows you're tracking — we follow the price",
+      'Submit a price you saw, or confirm one someone else did',
     ],
   },
 
   whatItDoesntYet: {
     eyebrow: 'Not yet',
-    heading: "What’s missing.",
-    lede: `Things on this list are coming, not abandoned. We’re aspirational, but won’t ship anything until it’s ready.`,
+    heading: 'What’s missing.',
+    lede: "These are coming, not abandoned. We'd rather say so than fake it.",
     items: [
       {
         title: 'Notifications.',
-        body: "No push, no email alerts yet. We’ll bother you when it’s ready.",
+        body: "No push or email alerts yet. We'll bother you when it's ready.",
       },
       {
         title: 'Cities outside Denver.',
-        body: 'The crawl is regional for now. Other cities will onboard later.',
+        body: 'The crawl is regional for now. Others onboard later.',
       },
       {
         title: 'Artist following.',
-        body: 'Follow an artist and we surface their upcoming shows so nothing slips by.',
+        body: 'Follow a band and we surface their shows before you go looking.',
       },
       {
         title: 'Price alerts.',
-        body: "Watch a show and we’ll ping you when it drops into your range.",
+        body: "Watch a show and we'll ping you when it drops into your range.",
       },
     ],
   },
@@ -91,7 +89,7 @@ export const ONBOARDING_COPY = {
   makeItYours: {
     eyebrow: 'Make it yours',
     heading: 'Pick your drip.',
-    lede: 'Nine themes, different genre flavors. Pick one now, switch it up later in Settings.',
+    lede: 'Nine themes, different genre flavors. Pick one now, switch it any time from the account menu.',
     preview: {
       currentlyUsing: 'Currently using',
       tonight: 'Tonight',
@@ -104,31 +102,44 @@ export const ONBOARDING_COPY = {
   },
 
   youreIn: {
-    eyebrow: "You’re in",
-    heading: 'One last thing.',
-    headingAccent: "You’ll be shaping the app.",
-    lede1:
-      "You're not just here to use the thing, you're here to make it better. When something changes, we’ll ask what you think. When something breaks, we want to know.",
-    lede2:
-      "You’ll notice a little tab on the right side of the app. Tap it and you'll see a feedback form. Did the app crash? Love a feature? Have an idea for something new? Let us know.",
-    personalAskLabel: 'One ask, from me to the homies',
+    eyebrow: "You're in",
+    heading: "That's the tour.",
+    headingAccent: 'Go find something.',
+    personalAskLabel: "One favor, if you're up for it",
     personalAskBody:
-      "Most shows won’t have a price listed. Yet. That’s where you come in. Use the app to look up some shows (maybe buy a ticket) and submit the price. Bother a couple people to cross check what you saw, put the app through its paces. The more prices that are available, the more real the app starts to feel when it launches.",
+      "Most shows don't have a price yet. If you see one — at the box office, on a listing, on your receipt — drop it in. Every price you add makes the calendar more useful for the next person.",
   },
 
   nav: {
-    codeAccepted: 'Code accepted · Welcome',
+    // Replaces the beta-era 'Code accepted · Welcome'. The tour is now a
+    // post-auth welcome on a permanent route, not the end of an invite funnel.
+    railLabel: 'Welcome · The two-minute tour',
     nextButton: 'Next →',
-    continueButton: 'Continue to sign-up →',
     backButton: '← Back',
+    // Terminal step: the tour returns the visitor to what they were doing
+    // rather than sending them on to sign-up.
+    finishButton: (destination: string | null) =>
+      destination ? `Back to ${destination} →` : 'Start browsing →',
+    finishFootnote: (destination: string | null) =>
+      destination
+        ? 'Your show is still watched'
+        : 'The tour lives in your account menu',
     stepCounter: (step: number, total: number) => `Step ${step} of ${total}`,
+    skip: {
+      default: 'Skip',
+      menu: 'Close',
+      midIntent: (destination: string) => `Skip — back to ${destination}`,
+      pending: (destination: string) =>
+        `Watching ${destination} — we'll take you back`,
+      menuRailLabel: 'How it works',
+    },
     stepLabels: {
       welcome: 'WELCOME',
       how: 'HOW IT WORKS',
       today: 'TODAY',
       notyet: 'NOT YET',
       theme: 'MAKE IT YOURS',
-      done: "YOU'RE IN",
+      done: "THAT'S THE TOUR",
     },
   },
 }

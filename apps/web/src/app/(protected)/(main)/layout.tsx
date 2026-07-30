@@ -3,6 +3,8 @@ import { AccountMenuProvider } from '@/components/consumer/user-menu'
 import { BottomNav } from '@/components/consumer/bottom-nav'
 import { InstallSlot } from '@/components/pwa/InstallSlot'
 import { OfflinePill } from '@/components/pwa/OfflinePill'
+import { ReturnSeamReplay } from '@/components/consumer/return-seam/ReturnSeamReplay'
+import { Suspense } from 'react'
 
 export default function MainLayout({
   children,
@@ -31,6 +33,13 @@ export default function MainLayout({
             </>
           }
         />
+        {/* Mounted once here rather than per destination, so every page the
+            post-signup seam can land on replays through the same code path.
+            Suspense because it reads useSearchParams inside a layout that is
+            otherwise statically rendered. */}
+        <Suspense fallback={null}>
+          <ReturnSeamReplay />
+        </Suspense>
         {children}
         <BottomNav />
       </AccountMenuProvider>

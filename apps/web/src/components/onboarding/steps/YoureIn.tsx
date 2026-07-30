@@ -1,4 +1,4 @@
-import { Eyebrow, Lede, StepHeading } from './_primitives'
+import { Eyebrow, StepHeading } from './_primitives'
 import { ONBOARDING_COPY } from '../definitions/copy'
 
 const copy = ONBOARDING_COPY.youreIn
@@ -12,8 +12,6 @@ export function YoureIn() {
         <br />
         <span style={{ color: 'var(--accent)' }}>{copy.headingAccent}</span>
       </StepHeading>
-      <Lede>{copy.lede1}</Lede>
-      <Lede>{copy.lede2}</Lede>
       <div
         style={{
           display: 'flex',

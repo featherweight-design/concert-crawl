@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { ProgressDots } from './ProgressDots'
 import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
 import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
-import { BetaPill } from '@/components/brand/beta-pill/BetaPill'
 import { FounderNote } from './steps/FounderNote'
 import { HowItWorks } from './steps/HowItWorks'
 import { WhatItDoesToday } from './steps/WhatItDoesToday'
@@ -13,10 +12,19 @@ import { WhatItDoesntYet } from './steps/WhatItDoesntYet'
 import { MakeItYours } from './steps/MakeItYours'
 import { YoureIn } from './steps/YoureIn'
 import { ONBOARDING_COPY } from './definitions/copy'
+import { SkipRail, type SkipMode } from './SkipRail'
+import {
+  buildReturnUrl,
+  DEFAULT_RETURN_PATH,
+  sanitizeReturnPath,
+} from '@/lib/auth/intent'
 
 const nav = ONBOARDING_COPY.nav
 
-const FLOW = ['welcome', 'how', 'today', 'notyet', 'theme', 'done'] as const
+// `theme` sits before `notyet` so the tour ends on what the product *will* do
+// rather than on its gaps — the last two steps read as "make it yours, here's
+// what's coming, go browse".
+const FLOW = ['welcome', 'how', 'today', 'theme', 'notyet', 'done'] as const
 type StepKey = (typeof FLOW)[number]
 
 const DESKTOP_CARD_WIDTH = 620
@@ -31,7 +39,22 @@ function StepContent({ stepKey }: { stepKey: StepKey }) {
   return null
 }
 
-export function OnboardingShell() {
+export interface OnboardingShellProps {
+  /** Encoded pending action, already validated by the route. */
+  intent?: string | null | undefined
+  returnPath?: string | null | undefined
+  /** Artist name for the mid-intent copy — null when there is no pending action. */
+  destinationLabel?: string | null | undefined
+  /** `menu` when opened from the account menu, so the rail reads "Close". */
+  entry?: 'default' | 'menu' | undefined
+}
+
+export function OnboardingShell({
+  intent = null,
+  returnPath = null,
+  destinationLabel = null,
+  entry = 'default',
+}: OnboardingShellProps = {}) {
   const [index, setIndex] = useState(0)
   const router = useRouter()
   const mobileScrollRef = useRef<HTMLDivElement>(null)
@@ -40,9 +63,29 @@ export function OnboardingShell() {
   const isLast = index === total - 1
   const stepKey = FLOW[index]!
 
+  const destination = sanitizeReturnPath(returnPath)
+  const hasPendingReturn = !!intent && !!destinationLabel
+  const finishLabel = hasPendingReturn ? destinationLabel : null
+  const finishHref = hasPendingReturn
+    ? buildReturnUrl({
+        returnPath: destination,
+        intent,
+        label: destinationLabel,
+      })
+    : DEFAULT_RETURN_PATH
+  // Mid-intent needs both halves: a label with no intent has nothing to replay,
+  // and an intent with no label cannot be named in the copy. Skipping goes to
+  // the same URL as finishing — leaving early is a choice about the tour, not an
+  // abandonment of the watch the visitor came here to make.
+  const skipMode: SkipMode = hasPendingReturn
+    ? { kind: 'mid-intent', destinationLabel, href: finishHref }
+    : entry === 'menu'
+      ? { kind: 'menu' }
+      : { kind: 'default' }
+
   function goNext() {
     if (isLast) {
-      router.push('/sign-up')
+      router.push(finishHref)
       return
     }
     mobileScrollRef.current?.scrollTo({ top: 0 })
@@ -87,7 +130,7 @@ export function OnboardingShell() {
             />
             <CCWordmark size={16} />
           </div>
-          <BetaPill />
+          <SkipRail mode={skipMode} />
         </header>
 
         {/* Progress strip */}
@@ -169,8 +212,25 @@ export function OnboardingShell() {
               boxShadow: '0 12px 32px -12px var(--signal)',
             }}
           >
-            {isLast ? nav.continueButton : nav.nextButton}
+            {isLast ? nav.finishButton(finishLabel) : nav.nextButton}
           </button>
+
+          {isLast && (
+            <span
+              style={{
+                paddingTop: 10,
+                textAlign: 'center',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.10em',
+                textTransform: 'uppercase',
+                color: 'var(--fg-subtle)',
+              }}
+            >
+              {nav.finishFootnote(finishLabel)}
+            </span>
+          )}
 
           {/* Secondary row: back link + step counter */}
           <div
@@ -226,6 +286,8 @@ export function OnboardingShell() {
           stepKey={stepKey}
           onNext={goNext}
           onBack={goBack}
+          skipMode={skipMode}
+          finishLabel={finishLabel}
         />
       </div>
     </>
@@ -240,6 +302,8 @@ interface DesktopProps {
   stepKey: StepKey
   onNext: () => void
   onBack: () => void
+  skipMode: SkipMode
+  finishLabel: string | null
 }
 
 function OnboardingDesktop({
@@ -250,6 +314,8 @@ function OnboardingDesktop({
   stepKey,
   onNext,
   onBack,
+  skipMode,
+  finishLabel,
 }: DesktopProps) {
   const cardBodyRef = useRef<HTMLDivElement>(null)
   const cardWidth = DESKTOP_CARD_WIDTH
@@ -311,13 +377,13 @@ function OnboardingDesktop({
             color: 'var(--fg-subtle)',
           }}
         >
-          {nav.codeAccepted}
+          {nav.railLabel}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <CCClusterMark size={26} color="var(--signal)" glow="var(--accent)" />
           <CCWordmark size={20} />
         </div>
-        <BetaPill />
+        <SkipRail mode={skipMode} />
       </header>
 
       {/* Centered card */}
@@ -424,8 +490,25 @@ function OnboardingDesktop({
                 boxShadow: '0 12px 32px -12px var(--signal)',
               }}
             >
-              {isLast ? nav.continueButton : nav.nextButton}
+              {isLast ? nav.finishButton(finishLabel) : nav.nextButton}
             </button>
+
+            {isLast && (
+              <span
+                style={{
+                  paddingTop: 10,
+                  textAlign: 'center',
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: '0.10em',
+                  textTransform: 'uppercase',
+                  color: 'var(--fg-subtle)',
+                }}
+              >
+                {nav.finishFootnote(finishLabel)}
+              </span>
+            )}
 
             <div
               style={{

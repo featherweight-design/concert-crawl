@@ -10,7 +10,13 @@ import { CalendarView } from './CalendarView'
 // Repo convention (memory:feedback_no_type_casting): no @testing-library/jest-dom
 // matchers, no user-event. Drive with fireEvent + raw DOM reads.
 const push = vi.fn()
-vi.mock('next/navigation', () => ({ useRouter: () => ({ push }) }))
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push }),
+  // Both read by the nested WatchShowButton to build its signed-out sign-up
+  // link, which carries the current view — query included — through auth.
+  usePathname: () => '/events',
+  useSearchParams: () => new URLSearchParams(),
+}))
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({ getToken: async () => null }),
 }))

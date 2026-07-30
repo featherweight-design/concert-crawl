@@ -26,6 +26,29 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.19.0-beta',
+    date: 'Jul 29, 2026',
+    headline: 'Sign up mid-show and you land back on the show.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Tap Watch on a show before you have an account and we hold onto it. Sign up, take the short tour, and the last button says "Back to Geese" — you land on that show already watching it, with a line explaining what happened while you were away.',
+      },
+      {
+        kind: 'changed',
+        text: 'The tour is a welcome now, not the end of an invite funnel. It lives on its own page you can re-open any time, and you can skip out of it from any step — the show you were watching is still waiting.',
+      },
+      {
+        kind: 'changed',
+        text: 'The tour also ends on a better note: picking your theme comes before the list of things we do not do yet, so the last thing you read is where to go, not what is missing.',
+      },
+      {
+        kind: 'removed',
+        text: 'No more beta pill and no more "Code accepted" on the tour. Getting in is not an event worth a badge.',
+      },
+    ],
+  },
+  {
     version: 'v0.18.0-beta',
     date: 'Jul 29, 2026',
     headline: 'The nights you actually went now have a home.',

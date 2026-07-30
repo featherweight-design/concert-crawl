@@ -53,6 +53,12 @@ interface TierPickerSheetProps {
   // Where the picker was opened from — the `entry` dimension on the
   // monetization_picker_viewed funnel event (spec §8).
   entry: PickerEntry
+  /**
+   * Where the free tier's Sign up CTA goes. Defaults to bare `/sign-up`; a
+   * caller with a pending action passes a URL that carries it through auth so
+   * the tour can hand it back afterwards (#794).
+   */
+  signUpHref?: string | undefined
 }
 
 interface CheckoutContext {
@@ -178,6 +184,7 @@ export const TierPickerSheet = ({
   planState,
   scaRegion,
   entry,
+  signUpHref = '/sign-up',
 }: TierPickerSheetProps) => {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -293,7 +300,7 @@ export const TierPickerSheet = ({
       setErrorText(null)
       setReturnFocusTier(null)
       if (cta.action === 'sign-up') {
-        router.push('/sign-up')
+        router.push(signUpHref)
         return
       }
       if (cta.action === 'manage') {
@@ -346,7 +353,7 @@ export const TierPickerSheet = ({
         })()
       }
     },
-    [getToken, router, abandonSubscription, planState.plan],
+    [getToken, router, abandonSubscription, planState.plan, signUpHref],
   )
 
   // Founder post-claim seat reveal (#781 §3.3) — replaces the sheet after

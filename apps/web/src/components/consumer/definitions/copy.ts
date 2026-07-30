@@ -822,6 +822,15 @@ export const CONSUMER_COPY = {
     },
   },
 
+  // ── Post-signup return seam ─────────────────────────────────────
+  // The strip that explains an action replayed while the visitor was signing up.
+  // "Kept", never "Saved" — there is no Saved concept in this product.
+  returnSeam: {
+    heading: (artist: string) => `Now watching ${artist}.`,
+    subline: 'Kept while you were signing up',
+    viewLink: 'View',
+  },
+
   // ── Who else is watching ────────────────────────────────────────
   // The social-proof surface under the Watch button on event detail (#762).
   // "in the crawl" is the warm handle for "other Concert Crawl users" — never

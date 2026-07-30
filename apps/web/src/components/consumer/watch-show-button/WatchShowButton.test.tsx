@@ -10,6 +10,13 @@ import type { WatchingShow } from '@concert-crawl/types'
 let signedIn: boolean
 let currentToken: string | null
 
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/events/e1',
+  // Both are read to build the signed-out sign-up link, which carries the
+  // current view — query included — through auth.
+  useSearchParams: () => new URLSearchParams({ tab: 'prices' }),
+}))
+
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({
     isSignedIn: signedIn,

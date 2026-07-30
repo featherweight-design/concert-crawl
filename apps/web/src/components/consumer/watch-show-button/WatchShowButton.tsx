@@ -1,8 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
+import { encodeIntent } from '@/lib/auth/intent'
 import { Eye, Loader2 } from 'lucide-react'
 import { useWatching } from '@/lib/queries/use-watching'
 import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
@@ -50,6 +52,8 @@ export function WatchShowButton({
   artist,
 }: WatchShowButtonProps) {
   const { isSignedIn, getToken } = useAuth()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
   const { data: watchedShows } = useWatching()
   const toggle = useWatchToggle()
   // #1062 gate — subscribe to the server-side notification preference so we
@@ -98,6 +102,22 @@ export function WatchShowButton({
   }, [])
 
   const isPending = toggle.isPending
+
+  // The signed-out click carries the watch through auth: Clerk lands on the
+  // tour, which hands the intent back to this page, which replays it. The
+  // button itself never fires the mutation while signed out.
+  const signUpHref = useMemo(() => {
+    // The query is part of where they were — `?tab=prices` is a different view
+    // of the page — so the hand-back returns them to the state they left, not
+    // just to the route.
+    const search = searchParams.toString()
+    const tour = new URLSearchParams({
+      intent: encodeIntent({ action: 'watch', eventId }),
+      return: search ? `${pathname}?${search}` : pathname,
+    })
+    if (artist) tour.set('label', artist)
+    return `/sign-up?redirect_url=${encodeURIComponent(`/onboarding?${tour.toString()}`)}`
+  }, [eventId, pathname, searchParams, artist])
 
   // Derive watching state from the cache when available. If the cache hasn't
   // loaded yet but a mutation is in-flight, apply a local optimistic override
@@ -401,6 +421,7 @@ export function WatchShowButton({
           // in scope.
           scaRegion
           entry="logged-out-watch"
+          signUpHref={signUpHref}
         />
       )}
     </>

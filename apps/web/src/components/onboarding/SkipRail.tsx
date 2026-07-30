@@ -1,0 +1,89 @@
+import Link from 'next/link'
+import { ONBOARDING_COPY } from './definitions/copy'
+import { DEFAULT_RETURN_PATH } from '@/lib/auth/intent'
+
+const copy = ONBOARDING_COPY.nav.skip
+
+export type SkipMode =
+  | { kind: 'default' }
+  | { kind: 'mid-intent'; destinationLabel: string; href: string }
+  /** Entered from the account menu's "How Concert Crawl works" row. */
+  | { kind: 'menu' }
+
+const QUIET_LINK: React.CSSProperties = {
+  fontFamily: "'JetBrains Mono', monospace",
+  fontSize: 10,
+  fontWeight: 700,
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase',
+  color: 'var(--fg-muted)',
+  textDecoration: 'none',
+  minHeight: 44,
+  display: 'flex',
+  alignItems: 'center',
+  padding: '0 2px',
+}
+
+const LOUD_LINK: React.CSSProperties = {
+  fontFamily: 'Inter, system-ui',
+  fontSize: 11.5,
+  fontWeight: 700,
+  color: 'var(--fg)',
+  textDecoration: 'none',
+  border: '1px solid var(--border-strong)',
+  borderRadius: 9,
+  padding: '8px 11px',
+  minHeight: 36,
+  display: 'flex',
+  alignItems: 'center',
+}
+
+/**
+ * Leaving the tour, available in the same rail position on every step — only the
+ * weight changes. Two different people are in this flow: someone who signed up
+ * on purpose shouldn't have an exit shouting at them, while someone who was
+ * three taps from watching a show has a job in progress, and the honest move is
+ * to make leaving *more* attractive than continuing. The tour stays reachable
+ * from the account menu forever either way.
+ */
+export const SkipRail = ({ mode }: { mode: SkipMode }) => {
+  if (mode.kind === 'mid-intent') {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
+          width: '100%',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Link href={mode.href} style={LOUD_LINK}>
+            {copy.midIntent(mode.destinationLabel)}
+          </Link>
+        </div>
+        <div
+          role="status"
+          style={{
+            padding: '8px 10px',
+            borderRadius: 8,
+            background: 'color-mix(in oklch, var(--signal) 8%, transparent)',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 9.5,
+            fontWeight: 700,
+            letterSpacing: '0.06em',
+            color: 'var(--signal)',
+          }}
+        >
+          {copy.pending(mode.destinationLabel)}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <Link href={DEFAULT_RETURN_PATH} style={QUIET_LINK}>
+      {mode.kind === 'menu' ? copy.menu : copy.default}
+    </Link>
+  )
+}
