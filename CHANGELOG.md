@@ -1,3 +1,11 @@
+# [1.168.0](https://github.com/HartiganHM/concert-crawl/compare/v1.167.1...v1.168.0) (2026-07-30)
+
+
+### Features
+
+* **api:** retire REQUIRE_BETA_AUTH — public reads, self-guarded writes ([#794](https://github.com/HartiganHM/concert-crawl/issues/794) PR-D) ([#1240](https://github.com/HartiganHM/concert-crawl/issues/1240)) ([fbb70d5](https://github.com/HartiganHM/concert-crawl/commit/fbb70d54724d6b711b66a10fb7099ddca1fd609a))
+* **web:** "I'm going!" commitment CTA on Event Detail ([#1242](https://github.com/HartiganHM/concert-crawl/issues/1242)) ([582ccf6](https://github.com/HartiganHM/concert-crawl/commit/582ccf673331be54a21563c041ee1f4868a7aba9)), closes [#1238](https://github.com/HartiganHM/concert-crawl/issues/1238) [#1243](https://github.com/HartiganHM/concert-crawl/issues/1243)
+
 ## [1.167.1](https://github.com/HartiganHM/concert-crawl/compare/v1.167.0...v1.167.1) (2026-07-30)
 
 
