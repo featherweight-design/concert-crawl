@@ -1,3 +1,11 @@
+# [1.169.0](https://github.com/HartiganHM/concert-crawl/compare/v1.168.0...v1.169.0) (2026-07-30)
+
+
+### Features
+
+* **web:** "Still going?" nudge on Watching rows ([#1244](https://github.com/HartiganHM/concert-crawl/issues/1244)) ([b1764e1](https://github.com/HartiganHM/concert-crawl/commit/b1764e12d72188a02e06751a7ea39ddca6c6f6c3))
+* **web:** signed-out app shell — CTA pair, anonymous disc, get-in card ([#1241](https://github.com/HartiganHM/concert-crawl/issues/1241)) ([25ab855](https://github.com/HartiganHM/concert-crawl/commit/25ab8553cfe6f119c90e7340c37054892dead577))
+
 # [1.168.0](https://github.com/HartiganHM/concert-crawl/compare/v1.167.1...v1.168.0) (2026-07-30)
 
 
