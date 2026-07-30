@@ -1,3 +1,10 @@
+## [1.164.6](https://github.com/HartiganHM/concert-crawl/compare/v1.164.5...v1.164.6) (2026-07-30)
+
+
+### Bug Fixes
+
+* **web:** correct locked-vocabulary violations in tier picker + settings copy ([#1231](https://github.com/HartiganHM/concert-crawl/issues/1231)) ([5208fbd](https://github.com/HartiganHM/concert-crawl/commit/5208fbd863cec08e35ce8729ae7323eadcd75ba6))
+
 ## [1.164.5](https://github.com/HartiganHM/concert-crawl/compare/v1.164.4...v1.164.5) (2026-07-30)
 
 
