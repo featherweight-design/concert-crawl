@@ -1,3 +1,10 @@
+# [1.173.0](https://github.com/HartiganHM/concert-crawl/compare/v1.172.0...v1.173.0) (2026-07-30)
+
+
+### Features
+
+* **web:** open browse, venues, search, and watching to signed-out visitors ([#1251](https://github.com/HartiganHM/concert-crawl/issues/1251)) ([9a63ddf](https://github.com/HartiganHM/concert-crawl/commit/9a63ddfba892af7f16594b724128081b9fa0e8db)), closes [#794](https://github.com/HartiganHM/concert-crawl/issues/794) [#794](https://github.com/HartiganHM/concert-crawl/issues/794) [#794](https://github.com/HartiganHM/concert-crawl/issues/794) [#794](https://github.com/HartiganHM/concert-crawl/issues/794) [#794](https://github.com/HartiganHM/concert-crawl/issues/794)
+
 # [1.172.0](https://github.com/HartiganHM/concert-crawl/compare/v1.171.0...v1.172.0) (2026-07-30)
 
 
