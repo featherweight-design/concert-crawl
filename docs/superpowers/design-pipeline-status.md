@@ -62,8 +62,7 @@ Design brief has merged; Claude Design needs to produce the hi-fi handoff (mocks
 
 | Rank | Ticket | Brief PR | Path to eng handoff | Why this rank |
 |---|---|---|---|---|
-
-_Currently empty — **#794** was the last item and flipped 🟢 Green on 2026-07-27. **Every forward list the design track controls is now drained**: 🕰️ Backlog, 🟡 Awaiting addendum and 📐 Brief locked are all empty. The track's remaining capacity is whatever arrives in ⏳ Ready for design._
+| 1 | **#1215** Admin triage surfaces (derived-state "Needs attention" panel) | PR #1232 (2026-07-29) — `docs/superpowers/specs/2026-07-29-admin-triage-surfaces-design.md` | `design/design_handoff_admin_triage/` → audit → eng plan | Only item in the list. Single panel on one admin page, six decisions pre-locked in the brief, and it builds on the existing `Panel` primitive + severity tints from `design_handoff_admin_ui_v2` — so the Design surface area is one component's worth of states, not a new screen. |
 
 **Maintenance note:** when Design produces the handoff, move to 🎨 (audit in flight) → then 🟡 / 🟢 based on verdict.
 
@@ -104,7 +103,7 @@ Open `type: design` issues surfaced by triage but not scheduled — usually fres
 
 | # | Phase | Priority | Adjacency / notes |
 |---|---|---|---|
-| **#1215** Reconcile admin triage surfaces + hook up admin notifications | launch | high | Admin-only, so it sits outside the consumer-UI design gate — but the call is a product one, not a wiring one. `NotificationBell` is dead code (never imported); `/admin/inbox` is reachable only via one text link in the dashboard's Attention feed and is absent from the admin nav; two read-state systems (`notifications.read_at` vs `inbox_reads`) never sync. Half the inbox's four categories duplicate `/admin/review` and `/admin/prices/submissions`; the other half (`blocked_venue`, `crawl_failure`) has no other home. Design decides the triage model before anything gets wired. Builds on **#542**. Not blocking crawl-health alerting — Sentry is being added as an independent channel. |
+_Currently empty — **#1215** was the last item and flipped 📐 Brief locked on 2026-07-29._
 
 ---
 
