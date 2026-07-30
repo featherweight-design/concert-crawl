@@ -1,3 +1,11 @@
+# [1.165.0](https://github.com/HartiganHM/concert-crawl/compare/v1.164.6...v1.165.0) (2026-07-30)
+
+
+### Features
+
+* **api:** GET /v1/events/:id/watchers read endpoint ([#1233](https://github.com/HartiganHM/concert-crawl/issues/1233)) ([bcb5977](https://github.com/HartiganHM/concert-crawl/commit/bcb5977ecf662f70fa4b1f8c299d258ead416953)), closes [#762](https://github.com/HartiganHM/concert-crawl/issues/762) [#833](https://github.com/HartiganHM/concert-crawl/issues/833)
+* **db:** attending_at on user_events — Concert History data model ([#1236](https://github.com/HartiganHM/concert-crawl/issues/1236)) ([509e166](https://github.com/HartiganHM/concert-crawl/commit/509e1664e8a778e9ba0a0c38a6dc957463b8dc48)), closes [#70](https://github.com/HartiganHM/concert-crawl/issues/70)
+
 ## [1.164.6](https://github.com/HartiganHM/concert-crawl/compare/v1.164.5...v1.164.6) (2026-07-30)
 
 
