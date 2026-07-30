@@ -1,3 +1,10 @@
+## [1.167.1](https://github.com/HartiganHM/concert-crawl/compare/v1.167.0...v1.167.1) (2026-07-30)
+
+
+### Bug Fixes
+
+* **web:** restore main typecheck — WatchZone fixture missing attendingAt ([#1243](https://github.com/HartiganHM/concert-crawl/issues/1243)) ([db09e0a](https://github.com/HartiganHM/concert-crawl/commit/db09e0a3a2972f59f51c4c95c195466efa478bb5)), closes [#1238](https://github.com/HartiganHM/concert-crawl/issues/1238) [#1239](https://github.com/HartiganHM/concert-crawl/issues/1239)
+
 # [1.167.0](https://github.com/HartiganHM/concert-crawl/compare/v1.166.0...v1.167.0) (2026-07-30)
 
 
