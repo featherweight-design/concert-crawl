@@ -1,4 +1,5 @@
 import { AppHeader } from '@/components/consumer/app-header'
+import { AccountMenuProvider } from '@/components/consumer/user-menu'
 import { BottomNav } from '@/components/consumer/bottom-nav'
 import { InstallSlot } from '@/components/pwa/InstallSlot'
 import { OfflinePill } from '@/components/pwa/OfflinePill'
@@ -19,16 +20,20 @@ export default function MainLayout({
     // BottomNav/overlays are positioned against the viewport, so an ancestor
     // overflow:clip never hides them.
     <div className="flex min-h-screen flex-col overflow-x-clip bg-bg">
-      <AppHeader
-        rightSlots={
-          <>
-            <OfflinePill />
-            <InstallSlot />
-          </>
-        }
-      />
-      {children}
-      <BottomNav />
+      {/* Wraps header and bottom nav so their two account triggers share one
+          open state — otherwise a mobile tap could stack two menu sheets. */}
+      <AccountMenuProvider>
+        <AppHeader
+          rightSlots={
+            <>
+              <OfflinePill />
+              <InstallSlot />
+            </>
+          }
+        />
+        {children}
+        <BottomNav />
+      </AccountMenuProvider>
     </div>
   )
 }

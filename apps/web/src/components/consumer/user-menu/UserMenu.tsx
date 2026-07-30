@@ -1,8 +1,15 @@
 'use client'
 
-import { useState, useRef, useEffect, useCallback } from 'react'
+import {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  createContext,
+  useContext,
+} from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useAuth, useUser, useClerk } from '@clerk/nextjs'
 import { Avatar } from '@/components/settings/Avatar'
 import { ThemeSwatch } from '@/theme/ThemeSwatch'
@@ -14,6 +21,11 @@ import type { ThemeName } from '@/theme/themes'
 import type { AvatarColor } from '@concert-crawl/types'
 import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { AnonDisc } from '@/components/consumer/app-header/AnonDisc'
+import { GetInCard } from './GetInCard'
+import { AccountMenuContext, useAccountMenu } from './account-menu-context'
+import type { AccountMenuState } from './account-menu-context'
+import { useFocusTrap } from './use-focus-trap'
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
 
@@ -70,18 +82,36 @@ function writeAvatarCache(userId: string, value: CachedAvatar): void {
   }
 }
 
-export function UserMenu() {
-  const { getToken, sessionClaims, isLoaded } = useAuth()
+// The menu body is shared by the desktop popover (anchored inside `UserMenu`)
+// and the mobile sheet (rendered by the provider, since the desktop bar that
+// hosts `UserMenu` is `display: none` below sm). Both read the same props from
+// here so exactly one body exists per open menu.
+const AccountMenuBodyContext = createContext<MenuBodyProps | null>(null)
+
+/**
+ * Owns the account menu's open state for every trigger in the app — the
+ * desktop avatar, the mobile header disc, and bottom-nav slot 4. Two triggers
+ * driving one state is what keeps a mobile tap from stacking two sheets.
+ */
+export function AccountMenuProvider({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const { getToken, sessionClaims, isLoaded, isSignedIn } = useAuth()
   const { user } = useUser()
   const { signOut } = useClerk()
   const router = useRouter()
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [submissionCount, setSubmissionCount] = useState(0)
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null)
   const [avatarLoaded, setAvatarLoaded] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const surfaceRef = useRef<HTMLDivElement>(null)
+  // The element that opened the menu, so dismiss can hand focus back to it.
+  const triggerRef = useRef<HTMLElement | null>(null)
 
   const userId = user?.id
 
@@ -121,32 +151,60 @@ export function UserMenu() {
     return () => mql.removeEventListener('change', handler)
   }, [])
 
+  const close = useCallback(() => {
+    setOpen(false)
+    triggerRef.current?.focus()
+  }, [])
+
+  const openFrom = useCallback((trigger: HTMLElement | null) => {
+    triggerRef.current = trigger
+    setOpen(true)
+  }, [])
+
+  const toggleFrom = useCallback(
+    (trigger: HTMLElement | null) => {
+      if (open) {
+        close()
+        return
+      }
+      openFrom(trigger)
+    },
+    [close, open, openFrom],
+  )
+
+  // Rows that navigate within the same layout (the version footer's push to
+  // /changelog) would otherwise leave the menu open on top of the destination.
+  // No focus restore: the trigger the menu came from may not exist on the new
+  // page, and stealing focus back from a fresh page is worse than leaving it.
+  useEffect(() => {
+    setOpen(false)
+  }, [pathname])
+
   // Close on Escape key
   useEffect(() => {
     if (!open) return
     const handleKeyDown = (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') setOpen(false)
+      if (ev.key === 'Escape') close()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [open])
+  }, [close, open])
 
-  // Close on click-outside (only registered when open)
+  // Close on click-outside (only registered when open). The trigger is excluded
+  // as well as the surface — otherwise a click on the trigger would close here
+  // and immediately reopen in the trigger's own handler.
   useEffect(() => {
     if (!open) return
     const handleClickOutside = (ev: MouseEvent) => {
       const target = ev.target
-      if (
-        target instanceof Node &&
-        containerRef.current &&
-        !containerRef.current.contains(target)
-      ) {
-        setOpen(false)
-      }
+      if (!(target instanceof Node)) return
+      if (surfaceRef.current?.contains(target)) return
+      if (triggerRef.current?.contains(target)) return
+      close()
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [open])
+  }, [close, open])
 
   useEffect(() => {
     // Wait for Clerk before treating a null token as "nothing to fetch" —
@@ -206,72 +264,121 @@ export function UserMenu() {
   const buildParts = APP_VERSION.split(' · ')
   const buildLabel = buildParts[0] ?? APP_VERSION
 
+  const bodyProps: MenuBodyProps = {
+    email,
+    isAdmin,
+    buildLabel,
+    submissionCount,
+    avatarHandle,
+    avatarColor,
+    isSignedIn: isSignedIn === true,
+    surfaceRef,
+    open,
+    onDismiss: close,
+    onSettings: () => {
+      // Deliberately not close(): this navigates away, so returning focus to a
+      // trigger that is about to unmount would fight the destination page for it.
+      setOpen(false)
+      void router.push('/me')
+    },
+    onSignOut: handleSignOut,
+  }
+
+  const menuState: AccountMenuState = {
+    open,
+    isSignedIn: isSignedIn === true,
+    avatarHandle,
+    avatarColor,
+    avatarLoaded,
+    openFrom,
+    toggleFrom,
+    close,
+  }
+
   return (
-    <>
-      <div ref={containerRef} className="relative">
-        {/* Avatar trigger */}
-        <button
-          type="button"
-          onClick={() => setOpen((prev) => !prev)}
-          aria-label={CONSUMER_COPY.userMenu.ariaLabels.accountMenu}
-          aria-expanded={open}
-          aria-haspopup="true"
-          className="shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
-        >
+    <AccountMenuContext.Provider value={menuState}>
+      <AccountMenuBodyContext.Provider value={bodyProps}>
+        {children}
+        {/* Mobile sheet lives here, not in `UserMenu`: the desktop bar that
+            hosts the avatar trigger is `display: none` below sm, so a sheet
+            rendered inside it could never be seen. */}
+        {open && isMobile && (
+          <>
+            <div
+              style={{
+                position: 'fixed',
+                inset: 0,
+                zIndex: 90,
+                background: 'var(--scrim)',
+              }}
+              onClick={close}
+            />
+            <UserMenuSheet {...bodyProps} />
+          </>
+        )}
+      </AccountMenuBodyContext.Provider>
+    </AccountMenuContext.Provider>
+  )
+}
+
+/**
+ * The desktop account trigger and its anchored popover. Signed out it shows the
+ * anonymous disc and opens the same menu the signed-in avatar does — the
+ * trigger, its position and its behavior are identical; only the accessible
+ * name and the menu body differ.
+ */
+export function UserMenu() {
+  const {
+    open,
+    isSignedIn,
+    avatarHandle,
+    avatarColor,
+    avatarLoaded,
+    toggleFrom,
+  } = useAccountMenu()
+  const bodyProps = useContext(AccountMenuBodyContext)
+  const [isMobile, setIsMobile] = useState(false)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const mql = window.matchMedia('(max-width: 639px)')
+    setIsMobile(mql.matches)
+    const handler = (ev: MediaQueryListEvent) => setIsMobile(ev.matches)
+    mql.addEventListener('change', handler)
+    return () => mql.removeEventListener('change', handler)
+  }, [])
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => toggleFrom(triggerRef.current)}
+        aria-label={
+          isSignedIn
+            ? CONSUMER_COPY.userMenu.ariaLabels.accountMenu
+            : CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut
+        }
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        className="shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
+      >
+        {isSignedIn ? (
           <Avatar
             handle={avatarHandle}
             avatarColor={avatarColor}
             size={36}
             loading={!avatarLoaded}
           />
-        </button>
-
-        {/* Desktop popover */}
-        {open && !isMobile && (
-          <UserMenuPopover
-            email={email}
-            isAdmin={isAdmin}
-            buildLabel={buildLabel}
-            submissionCount={submissionCount}
-            avatarHandle={avatarHandle}
-            avatarColor={avatarColor}
-            onSettings={() => {
-              setOpen(false)
-              void router.push('/me')
-            }}
-            onSignOut={handleSignOut}
-          />
+        ) : (
+          <AnonDisc size={36} />
         )}
-      </div>
+      </button>
 
-      {/* Mobile sheet rendered outside container so it's not clipped */}
-      {open && isMobile && (
-        <>
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 90,
-              background: 'var(--scrim)',
-            }}
-            onClick={() => setOpen(false)}
-          />
-          <UserMenuSheet
-            email={email}
-            isAdmin={isAdmin}
-            buildLabel={buildLabel}
-            submissionCount={submissionCount}
-            avatarHandle={avatarHandle}
-            avatarColor={avatarColor}
-            onSettings={() => {
-              setOpen(false)
-              void router.push('/me')
-            }}
-            onSignOut={handleSignOut}
-          />
-        </>
+      {open && !isMobile && bodyProps !== null && (
+        <UserMenuPopover {...bodyProps} />
       )}
-    </>
+    </div>
   )
 }
 
@@ -283,9 +390,13 @@ interface MenuBodyProps {
   buildLabel: string
   onSettings: () => void
   onSignOut: () => void
+  onDismiss: () => void
   submissionCount: number
   avatarHandle: string | null
   avatarColor: AvatarColor | null
+  isSignedIn: boolean
+  open: boolean
+  surfaceRef: React.RefObject<HTMLDivElement | null>
 }
 
 // ── Theme row with inline swatch grid ────────────────────────────────────
@@ -412,10 +523,41 @@ function MenuBody({
   buildLabel,
   onSettings,
   onSignOut,
+  onDismiss,
   submissionCount,
   avatarHandle,
   avatarColor,
+  isSignedIn,
 }: MenuBodyProps) {
+  if (!isSignedIn) {
+    return (
+      <>
+        <GetInCard onNavigate={onDismiss} />
+
+        <SectionLabel>{CONSUMER_COPY.userMenu.sections.app}</SectionLabel>
+        <ThemeMenuRow />
+        <MenuRow
+          label={CONSUMER_COPY.userMenu.signedOut.howItWorks}
+          href={CONSUMER_COPY.userMenu.signedOut.howItWorksHref}
+          meta={CONSUMER_COPY.userMenu.signedOut.howItWorksMeta}
+        />
+        {/* Terms and Privacy are reachable through Settings signed in, so this
+            is the only body that needs explicit rows for them. */}
+        <MenuRow
+          label={CONSUMER_COPY.userMenu.signedOut.terms}
+          href={CONSUMER_COPY.userMenu.signedOut.termsHref}
+        />
+        <MenuRow
+          label={CONSUMER_COPY.userMenu.signedOut.privacy}
+          href={CONSUMER_COPY.userMenu.signedOut.privacyHref}
+          last
+        />
+
+        <UserMenuVersionFooter build={buildLabel} />
+      </>
+    )
+  }
+
   return (
     <>
       {/* Identity card */}
@@ -565,8 +707,16 @@ function MenuBody({
 // ── Popover (desktop) ─────────────────────────────────────────────────────
 
 function UserMenuPopover(props: MenuBodyProps) {
+  useFocusTrap(props.surfaceRef, props.open)
   return (
     <div
+      ref={props.surfaceRef}
+      role="dialog"
+      // No aria-modal: the desktop popover has no scrim and leaves the rest of
+      // the page interactive, so claiming modality would misdescribe it. Only
+      // the mobile sheet, which does render a scrim, is genuinely modal.
+      aria-label={CONSUMER_COPY.userMenu.ariaLabels.menuTitle}
+      tabIndex={-1}
       style={{
         position: 'absolute',
         right: 0,
@@ -590,8 +740,14 @@ function UserMenuPopover(props: MenuBodyProps) {
 // ── Bottom sheet (mobile) ─────────────────────────────────────────────────
 
 function UserMenuSheet(props: MenuBodyProps) {
+  useFocusTrap(props.surfaceRef, props.open)
   return (
     <div
+      ref={props.surfaceRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={CONSUMER_COPY.userMenu.ariaLabels.menuTitle}
+      tabIndex={-1}
       style={{
         position: 'fixed',
         left: 0,

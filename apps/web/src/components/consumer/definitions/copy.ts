@@ -493,9 +493,27 @@ export const CONSUMER_COPY = {
   userMenu: {
     ariaLabels: {
       accountMenu: 'Account menu',
+      accountMenuSignedOut: 'Account menu — sign up or sign in',
+      menuTitle: 'Account',
     },
     identity: {
       badge: 'Beta · founder',
+    },
+    signedOut: {
+      eyebrow: 'NOT SIGNED IN',
+      line: 'Browsing as a guest',
+      signUp: 'Sign up free',
+      signUpHref: '/sign-up',
+      alreadyHaveAccount: 'Already have an account?',
+      signIn: 'Sign in',
+      signInHref: '/sign-in',
+      howItWorks: 'How Concert Crawl works',
+      howItWorksMeta: '2 min',
+      howItWorksHref: '/onboarding',
+      terms: 'Terms',
+      termsHref: '/legal/terms',
+      privacy: 'Privacy',
+      privacyHref: '/legal/privacy',
     },
     sections: {
       you: 'You',
@@ -608,9 +626,14 @@ export const CONSUMER_COPY = {
       placeholder: 'Search artists or venues…',
       keyboardShortcut: '⌘K',
     },
-    mobileProfileEntry: {
-      loadErrorLog:
-        'MobileProfileEntry: could not load profile, showing anonymous avatar',
+    auth: {
+      signIn: 'Sign in',
+      signInHref: '/sign-in',
+      signUp: 'Sign up',
+      signUpHref: '/sign-up',
+    },
+    anonDisc: {
+      testId: 'anon-disc',
     },
   },
 
@@ -625,6 +648,7 @@ export const CONSUMER_COPY = {
         { key: 'watching', label: 'watching', href: '/watching' },
       ] as const,
       profileAriaLabel: 'Profile',
+      signedOutProfileAriaLabel: 'Account menu — sign up or sign in',
     },
   },
 

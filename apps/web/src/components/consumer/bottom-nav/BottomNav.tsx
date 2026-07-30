@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { fetchMe } from '@/lib/users'
 import type { AvatarColor } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { AnonDisc } from '@/components/consumer/app-header/AnonDisc'
+import { useAccountMenu } from '@/components/consumer/user-menu/account-menu-context'
 
 const COPY = CONSUMER_COPY.bottomNav
 
@@ -124,6 +126,7 @@ function MeAvatarSkeleton() {
   return (
     <div
       aria-hidden="true"
+      data-testid="me-avatar-skeleton"
       style={{
         width: 28,
         height: 28,
@@ -155,6 +158,8 @@ export function BottomNav() {
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null)
   const [profileLoaded, setProfileLoaded] = useState(false)
+  const { open: menuOpen, toggleFrom } = useAccountMenu()
+  const menuTriggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -220,24 +225,43 @@ export function BottomNav() {
           </Link>
         )
       })}
-      <Link
-        href="/me"
-        aria-label={COPY.nav.profileAriaLabel}
-        className="flex flex-col items-center gap-[3px]"
-        style={{ color: isMeActive ? 'var(--signal)' : 'var(--fg-subtle)' }}
-      >
-        {!profileLoaded ? (
-          <MeAvatarSkeleton />
-        ) : avatarHandle !== null ? (
-          <MeAvatar
-            handle={avatarHandle}
-            avatarColor={avatarColor}
-            isActive={isMeActive}
-          />
-        ) : (
-          <PersonIcon />
-        )}
-      </Link>
+      {!isSignedIn ? (
+        // Signed out slot 4 is a menu trigger, not a link: /me has nothing to
+        // show, and the account menu is where signing up lives. An anonymous
+        // visitor lands on the resolved disc directly and never transits the
+        // loading skeleton.
+        <button
+          ref={menuTriggerRef}
+          type="button"
+          onClick={() => toggleFrom(menuTriggerRef.current)}
+          aria-label={COPY.nav.signedOutProfileAriaLabel}
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          className="flex cursor-pointer flex-col items-center justify-center"
+          style={{ width: 56, minHeight: 44, color: 'var(--fg-subtle)' }}
+        >
+          <AnonDisc size={26} />
+        </button>
+      ) : (
+        <Link
+          href="/me"
+          aria-label={COPY.nav.profileAriaLabel}
+          className="flex flex-col items-center gap-[3px]"
+          style={{ color: isMeActive ? 'var(--signal)' : 'var(--fg-subtle)' }}
+        >
+          {!profileLoaded ? (
+            <MeAvatarSkeleton />
+          ) : avatarHandle !== null ? (
+            <MeAvatar
+              handle={avatarHandle}
+              avatarColor={avatarColor}
+              isActive={isMeActive}
+            />
+          ) : (
+            <PersonIcon />
+          )}
+        </Link>
+      )}
     </nav>
   )
 }

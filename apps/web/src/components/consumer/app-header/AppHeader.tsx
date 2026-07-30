@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
 import { SearchPalette } from '../search-palette/SearchPalette'
+import { AuthCtaPair } from './AuthCtaPair'
+import { SignInRail } from './SignInRail'
+import { MobileProfileEntry } from './MobileProfileEntry'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY.appHeader
@@ -58,6 +61,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
         </Link>
         <div className="flex items-center gap-2">
           {rightSlots}
+          <AuthCtaPair />
           <button
             onClick={() => setPaletteOpen(true)}
             aria-label={copy.search.ariaLabel}
@@ -65,8 +69,12 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
           >
             <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
           </button>
+          <MobileProfileEntry />
         </div>
       </div>
+
+      {/* Sign in drops out of the 320px header row and lands here */}
+      <SignInRail />
 
       {/* ── Desktop TopNav (shown sm+) ──────────────────── */}
       <div className="sticky top-0 z-40 hidden h-16 w-full items-center justify-between border-b border-border bg-bg-elevated px-8 sm:flex">
@@ -126,6 +134,9 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
           </button>
 
           {rightSlots}
+          {/* Not passed through rightSlots — that prop is the PWA slot host and
+              the auth pair's position in the bar is fixed, not caller-chosen. */}
+          <AuthCtaPair />
           <UserMenu />
         </div>
       </div>
