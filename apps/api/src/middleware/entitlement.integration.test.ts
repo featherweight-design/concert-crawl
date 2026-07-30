@@ -38,6 +38,8 @@ app.use('/export', requireFeature('calendar-export'))
 app.get('/export', (ctx) => ctx.json({ success: true }))
 app.use('/watching', requireFeature('watching'))
 app.get('/watching', (ctx) => ctx.json({ success: true }))
+app.use('/following', requireFeature('following'))
+app.get('/following', (ctx) => ctx.json({ success: true }))
 
 async function clearBillingTables(): Promise<void> {
   await testDb.execute(sql`TRUNCATE subscriptions, gifted_comps, user_billing`)
@@ -84,10 +86,17 @@ describe('requireFeature (real plan derivation)', () => {
     expect(body.feature).toBe('concert-history')
   })
 
-  it('403s a supporter on calendar-export', async () => {
+  it('passes a supporter on calendar-export and concert-history', async () => {
     setAuth()
     await seedSubscription({ tier: 'supporter' })
-    const res = await app.request('/export')
+    expect((await app.request('/export')).status).toBe(200)
+    expect((await app.request('/history')).status).toBe(200)
+  })
+
+  it('403s a supporter on following (Premium keeps the active-cost features)', async () => {
+    setAuth()
+    await seedSubscription({ tier: 'supporter' })
+    const res = await app.request('/following')
     expect(res.status).toBe(403)
   })
 

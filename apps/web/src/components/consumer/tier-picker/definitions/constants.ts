@@ -32,7 +32,7 @@ export const TIER_DEFINITIONS: Record<TierKey, TierDefinition> = {
     tagline: TIERS_COPY.supporter.tagline,
     rationale: TIERS_COPY.supporter.rationale,
     features: TIERS_COPY.supporter.features.map((text) => ({ text })),
-    badgeOnlyNote: TIERS_COPY.supporter.badgeOnlyNote,
+    monoNote: TIERS_COPY.supporter.monoNote,
     pricePromise: TIER_PICKER_COPY.card.pricePromise.supporter,
   },
   premium: {

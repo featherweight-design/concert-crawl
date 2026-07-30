@@ -100,9 +100,8 @@ export const PLAN_CARD_COPY = {
     eyebrow: (price: string, periodEnd: string | null) =>
       `${price} / month` + (periodEnd ? ` · renews ${periodEnd}` : ''),
     headline: '$2 a month. Thanks.',
-    body: "Supporter is badge-only — no Premium unlocks. You're chipping in for the stuff we run on existing infrastructure, and the badge says so.",
-    punchline:
-      "—— Want the history, follows, and alerts too? Premium's a tap away.",
+    body: "Your history and calendar exports are on, and the badge is live. You're chipping in for the stuff we run on existing infrastructure.",
+    punchline: "—— Want follows and alerts too? Premium's a tap away.",
     manageCta: 'Manage subscription',
   },
 

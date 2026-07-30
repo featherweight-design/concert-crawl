@@ -46,6 +46,8 @@ import {
   userBilling,
   userEvents,
 } from '@concert-crawl/db'
+import { canUseFeature, USER_PLANS } from '@concert-crawl/entitlements'
+import type { PremiumFeature } from '@concert-crawl/entitlements'
 import { sendTransactionalEmail } from '../lib/email.js'
 import type { PaidEmailTier } from '../emails/types.js'
 import { apiLogger } from '../lib/logger.js'
@@ -69,9 +71,10 @@ const PROCESSED_EVENT_RETENTION_MS = NINETY_DAYS_MS
 export const CARD_EXPIRY_WINDOWS = [30, 14, 7] as const
 export type CardExpiryWindow = (typeof CARD_EXPIRY_WINDOWS)[number]
 
-// Tiers whose premium data is preserved-then-purged (#780 §5). Supporter never
-// held premium data; free is not a paid tier. Mirrors PREMIUM_AND_UP in
-// stripe-webhook-handlers.ts.
+// Tiers whose cancellation starts the preserve-then-purge clock (#780 §5).
+// Supporter's unlocks (concert history, calendar export) are retained rather
+// than purged — see cancellationStartsPurgeClock. Free is not a paid tier.
+// Mirrors PREMIUM_AND_UP in stripe-webhook-handlers.ts.
 const PREMIUM_AND_UP: readonly string[] = ['premium', 'founder']
 
 const TIER_DISPLAY_NAMES: Record<string, string> = {
@@ -194,6 +197,31 @@ export const isPurgeEligible = (input: {
 }
 
 /**
+ * Per-category purge guard. `isPurgeEligible` decides whether a user enters the
+ * purge at all; this decides which categories are actually deleted once they
+ * do. The distinction matters for Supporter: they fall below PREMIUM_AND_UP, so
+ * their follows are still purged, but concert history and calendar export are
+ * Supporter unlocks (2026-07-29 amendment) and deleting their history would
+ * destroy data they are paying for.
+ *
+ * Delegates to the entitlements matrix rather than a second hardcoded tier list
+ * so a future matrix edit can never silently desync from the purge.
+ */
+export const shouldPurgeFeature = (
+  liveTier: string | null,
+  feature: PremiumFeature,
+): boolean => {
+  const plan = USER_PLANS.find((candidate) => candidate === liveTier)
+  // `liveTier` is a subscription-tier string, so an unrecognized or absent
+  // value means no active subscription row grants this feature. Role-comped
+  // entitlement is out of scope here: the caller only reads the subscriptions
+  // table, and a comped user has no premiumDataExpiresAt clock to expire in
+  // the first place, so they never reach the purge.
+  if (plan === undefined) return true
+  return !canUseFeature({ plan, roleComped: false }, feature)
+}
+
+/**
  * Where-clause for the 90-day purge's follows delete (E9): manual rows only.
  * Spotify-sourced follows (source = 'spotify_followed' | 'spotify_top') live
  * and die with the Spotify connection (PR 3 disconnect purge), never the
@@ -217,8 +245,11 @@ export const purgeFollowsWhere = (userId: string): SQL => {
 /**
  * Whether a cancellation of `tier` should start the 90-day preserve-then-purge
  * clock. Mirrors the PREMIUM_AND_UP gate in handleSubscriptionDeleted: only
- * premium/founder held premium data worth preserving; supporter/free/unknown
- * never did. Used by the task-6 lost-webhook reconcile so a synthesized
+ * premium/founder hold data on the purge path. Since the 2026-07-29 amendment
+ * Supporter does unlock concert history and calendar export, but a cancelling
+ * Supporter's logged shows are retained indefinitely (just inaccessible on
+ * Free) rather than purged — expanding deletion is a product decision, not a
+ * consequence of the tier move. Used by the task-6 lost-webhook reconcile so a synthesized
  * cancellation starts the same clock the real webhook would have.
  */
 export const cancellationStartsPurgeClock = (tier: string | null): boolean =>
@@ -692,15 +723,19 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
       // counts. Committing atomically makes the whole purge a single unit.
       const purgeCounts = await db.transaction(async (tx) => {
         // Concert history (attended) — status 'going'. NEVER 'watching'.
-        const deletedHistory = await tx
-          .delete(userEvents)
-          .where(
-            and(
-              eq(userEvents.userId, row.userId),
-              eq(userEvents.status, 'going'),
-            ),
-          )
-          .returning({ id: userEvents.id })
+        // Skipped entirely for a live Supporter, who is entitled to keep it.
+        const purgeHistory = shouldPurgeFeature(liveTier, 'concert-history')
+        const deletedHistory = purgeHistory
+          ? await tx
+              .delete(userEvents)
+              .where(
+                and(
+                  eq(userEvents.userId, row.userId),
+                  eq(userEvents.status, 'going'),
+                ),
+              )
+              .returning({ id: userEvents.id })
+          : []
 
         // Following — manual rows only (E9): Spotify-sourced rows live and
         // die with the Spotify connection (PR 3 disconnect purge), not the
@@ -715,7 +750,10 @@ export const runNinetyDayPurge = async (now: Date): Promise<void> => {
         // purge — they are cleaned up by the PR 3 disconnect flow instead.
         // Recorded as null so the audit event shows they were not applicable.
         const counts = {
-          attendedHistory: deletedHistory.length,
+          // null (not 0) when the category was skipped, matching the convention
+          // below — the audit event distinguishes "nothing to delete" from
+          // "not applicable to this user's tier".
+          attendedHistory: purgeHistory ? deletedHistory.length : null,
           follows: deletedFollows.length,
           alertPrefs: null,
           spotifySyncState: null,

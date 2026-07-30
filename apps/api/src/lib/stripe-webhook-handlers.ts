@@ -55,7 +55,9 @@ const DAY_MS = 24 * 60 * 60 * 1000
 const NINETY_DAYS_MS = 90 * DAY_MS
 
 // Tiers whose data survives 90 days post-downgrade before purge (#780 §5 —
-// "premium-and-up"; supporter never had the premium data).
+// "premium-and-up"). Supporter unlocks concert history + calendar export since
+// the 2026-07-29 amendment, but its data is retained rather than purged — see
+// cancellationStartsPurgeClock in jobs/billing-daily.ts.
 const PREMIUM_AND_UP: readonly DbSubscriptionTier[] = ['premium', 'founder']
 
 const LOOKUP_KEY_TIERS: Record<string, DbSubscriptionTier> = {

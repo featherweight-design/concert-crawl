@@ -38,16 +38,16 @@ Per #781's "Deliverables we expect" section, the final handoff must include:
 
 The picker, Plan card, and entitlements helper all operate on six user states:
 
-| Code           | Display name                            | Notes                                                                                             |
-| -------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `logged-out`   | (no display — visitor)                  | No account. Different surface than `free` because the conversion ask is "pick a tier," not "pay." |
-| `free`         | Free                                    | Signed-in account, no subscription.                                                               |
-| `supporter`    | Supporter                               | $2/mo. Badge-only; no Premium feature unlocks.                                                    |
-| `premium`      | Premium                                 | $5/mo. Full feature set.                                                                          |
-| `founder`      | Founder                                 | $3/mo locked forever. First 100 claimed at launch. Full feature set + Founder badge.              |
-| `gifted`       | (internal code; display name owned by Design) | Lifetime Premium via Clerk `publicMetadata.plan = 'premium_gifted'`. No payment relationship.    |
+| Code         | Display name                                  | Notes                                                                                             |
+| ------------ | --------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `logged-out` | (no display — visitor)                        | No account. Different surface than `free` because the conversion ask is "pick a tier," not "pay." |
+| `free`       | Free                                          | Signed-in account, no subscription.                                                               |
+| `supporter`  | Supporter                                     | $2/mo. Badge + concert history + calendar export (2026-07-29 amendment — see §6).                 |
+| `premium`    | Premium                                       | $5/mo. Full feature set.                                                                          |
+| `founder`    | Founder                                       | $3/mo locked forever. First 100 claimed at launch. Full feature set + Founder badge.              |
+| `gifted`     | (internal code; display name owned by Design) | Lifetime Premium via Clerk `publicMetadata.plan = 'premium_gifted'`. No payment relationship.     |
 
-Each state gets a tailored picker treatment and its own Plan card variant. Most states render within the standard tier picker: `free`, `supporter`, `premium`, and `founder` (during the launch window) each render as a tier card column; `logged-out` sees the same standard picker as the paywall surface per §5.2. `gifted` is the one *picker variant* — the entire surface is replaced with a thank-you panel per §2, no tier cards rendered — because there's no upsell to render for someone on lifetime Premium.
+Each state gets a tailored picker treatment and its own Plan card variant. Most states render within the standard tier picker: `free`, `supporter`, `premium`, and `founder` (during the launch window) each render as a tier card column; `logged-out` sees the same standard picker as the paywall surface per §5.2. `gifted` is the one _picker variant_ — the entire surface is replaced with a thank-you panel per §2, no tier cards rendered — because there's no upsell to render for someone on lifetime Premium.
 
 **Pricing locked:**
 
@@ -80,7 +80,7 @@ Founder opens at **public launch (~Aug 18–22)**, not at the beta wk 3 monetiza
 When a user taps "Become a Founder" and seat #100 was just claimed by someone else mid-tap (server-side atomicity reserves the seat before Stripe charges):
 
 - **Surface:** Honest "Just missed it" full-bleed surface.
-- **Copy direction:** Sour-Patch acknowledgment of the moment. Locked headline pattern: *"Founder filled up. You were seconds away."* (Design owns final copy.)
+- **Copy direction:** Sour-Patch acknowledgment of the moment. Locked headline pattern: _"Founder filled up. You were seconds away."_ (Design owns final copy.)
 - **Card status:** No charge. Stripe customer/checkout flow exits cleanly.
 - **CTA stack:** Primary "Go Premium ($5/mo)" as the natural fallback. Secondary ghost "Back to plans" returns to picker (which now shows Founder in `closed` state).
 - **No consolation pricing.** The race loser is offered regular Premium at $5/mo, not the locked $3/mo Founder price. Reasoning: rewarding intent with the Founder price erodes the scarcity that makes Founder a tier in the first place. Honesty over consolation.
@@ -116,20 +116,20 @@ When a `free` or `supporter` user taps a locked active affordance:
 - **Mobile:** Bottom sheet.
 - **Desktop:** Centered modal.
 - **Content:** Feature-anchored headline ("Save shows you don't want to miss."), one-line benefit, primary CTA "Go Premium" deep-links to `/settings/plan` (the full tier picker), secondary "Maybe later" dismisses.
-- **Scope:** Single CTA path. This sheet is for *upgrade*, not *signup* — they already have an account.
+- **Scope:** Single CTA path. This sheet is for _upgrade_, not _signup_ — they already have an account.
 
 #### 5.2 Logged-out → tier picker (full picker as paywall)
 
 When a `logged-out` visitor taps a locked active affordance:
 
 - **Surface:** The full tier picker is the surface. Not a mini sheet.
-- **Feature anchor:** Picker shows feature-anchored copy at the top — *"Save shows you don't want to miss. Pick a tier. Sign in if you're already in."* Design owns final copy + treatment.
+- **Feature anchor:** Picker shows feature-anchored copy at the top — _"Save shows you don't want to miss. Pick a tier. Sign in if you're already in."_ Design owns final copy + treatment.
 - **Tier set:** Free / Supporter / Premium (+ Founder during the launch window).
 - **Returning user:** Inline "Already have an account? Sign in" link.
 - **Flow on selection:**
-  - Pick Free → Clerk signup → returns to the same screen → heart still locked → next tap shows the small Free→Premium paywall sheet (matrix-consistent with §4 above).
-  - Pick Supporter → Clerk signup → Stripe checkout → returns → heart still locked. Supporter is badge-only (§6); the next tap shows the same Free→Premium paywall sheet as the Free outcome above.
-  - Pick Premium / Founder → Clerk signup → Stripe checkout → returns → heart now active.
+  - Pick Free → Clerk signup → returns to the same screen → follow affordance still locked → next tap shows the small Free→Premium paywall sheet (matrix-consistent with §4 above).
+  - Pick Supporter → Clerk signup → Stripe checkout → returns → follow affordance still locked. Supporter unlocks concert history and calendar export, not following (§6); the next tap shows the same Free→Premium paywall sheet as the Free outcome above.
+  - Pick Premium / Founder → Clerk signup → Stripe checkout → returns → follow affordance now active.
 
 **Why this mechanic:** A logged-out user has two decisions to make (do you have an account? do you want to pay?). A mini paywall sheet implies one. The full picker tells the truth about both, lets the visitor self-select, and frames every premium affordance as the natural entry point to the value ladder. Locked in this brief — see "Round 8" discussion in session notes.
 
@@ -144,23 +144,27 @@ Cell value semantics:
 
 **Entitlement vs. UX routing.** The cell values combine two concerns: whether the user can use the feature (entitlement) and how the locked state surfaces (UX routing). For the runtime `canUseFeature(plan, feature)` helper (per #775), only `visible-active` returns true. The other three values all return false; they differ only in which surface the UI renders when the user attempts the feature (mini paywall sheet, full tier picker, or nothing). Eng treats the matrix as a single source for both questions: the boolean entitlement is the cell's truth value, the UX value tells the renderer what to do on the false case.
 
-| Feature              | logged-out             | free            | supporter       | premium        | founder        | gifted         |
-| -------------------- | ---------------------- | --------------- | --------------- | -------------- | -------------- | -------------- |
-| **Watching** (heart) | tier-picker-on-tap     | visible-active  | visible-active  | visible-active | visible-active | visible-active |
-| **Concert history** (attended) | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
-| **Calendar export**  | tier-picker-on-tap     | paywall-on-tap  | paywall-on-tap  | visible-active | visible-active | visible-active |
-| **Following** (artists) | tier-picker-on-tap  | paywall-on-tap  | paywall-on-tap  | visible-active | visible-active | visible-active |
-| **Alerts** (push/email) | hidden              | hidden          | hidden          | visible-active | visible-active | visible-active |
-| **Spotify sync**     | hidden                 | hidden          | hidden          | visible-active | visible-active | visible-active |
-| **Price drop alerts** | hidden                | hidden          | hidden          | visible-active | visible-active | visible-active |
+| Feature                        | logged-out         | free           | supporter      | premium        | founder        | gifted         |
+| ------------------------------ | ------------------ | -------------- | -------------- | -------------- | -------------- | -------------- |
+| **Watching** (heart)           | tier-picker-on-tap | visible-active | visible-active | visible-active | visible-active | visible-active |
+| **Concert history** (attended) | tier-picker-on-tap | paywall-on-tap | visible-active | visible-active | visible-active | visible-active |
+| **Calendar export**            | tier-picker-on-tap | paywall-on-tap | visible-active | visible-active | visible-active | visible-active |
+| **Following** (artists)        | tier-picker-on-tap | paywall-on-tap | paywall-on-tap | visible-active | visible-active | visible-active |
+| **Alerts** (push/email)        | hidden             | hidden         | hidden         | visible-active | visible-active | visible-active |
+| **Spotify sync**               | hidden             | hidden         | hidden         | visible-active | visible-active | visible-active |
+| **Price drop alerts**          | hidden             | hidden         | hidden         | visible-active | visible-active | visible-active |
 
-**Supporter rationale.** Supporter is a $2/mo "thank you for keeping us alive" gesture. The reward is the Supporter badge, the eyebrow on the Plan card, and the warm feeling of supporting the project — not premium feature unlocks. If Supporter unlocked any Premium feature, the Premium tier's $5 ask becomes harder to justify. The matrix encodes this deliberately.
+**⚠️ AMENDED 2026-07-29 — Supporter unlocks Concert history and Calendar export.** The two cells above are marked `visible-active` for supporter. This reverses the original Premium-and-up call recorded in this brief, restoring the active-vs-passive split from the Beta-to-Launch spec: Supporter covers the features that run on infrastructure we already pay for, Premium covers the four with real ongoing cost (following, alerts, price-drop alerts, Spotify sync).
 
-**Supersedes Beta-to-Launch tier assignments.** This brief moves **Concert history** and **Calendar export** from Supporter to Premium-and-up. The Beta-to-Launch spec's *Premium Features* table (`docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`) is updated in lockstep in this PR so the two docs stay aligned. Future readers should treat this brief as the source of truth on tier assignments.
+The original rationale, superseded and kept for the record, was: _"Supporter is a $2/mo 'thank you for keeping us alive' gesture. The reward is the Supporter badge, the eyebrow on the Plan card, and the warm feeling of supporting the project — not premium feature unlocks. If Supporter unlocked any Premium feature, the Premium tier's $5 ask becomes harder to justify."_
+
+It was reversed because a $2 tier that unlocks nothing has no value proposition — a prospective Supporter may as well go Premium or stay Free, so the tier would draw near-zero sign-ups. Premium's four remaining unlocks carry the $5 ask on their own. Hugh's call.
+
+**Beta-to-Launch tier table.** The original brief claimed to update `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md` in lockstep; it never did, so that spec's _Premium Features_ table still lists concert history and calendar export under Supporter — which this amendment makes correct again. No edit needed there.
 
 **Amendment 2026-06-25 — Watching is Free for signed-in users.** Hugh amended the matrix during the R6 review: Watching (the heart) is a Free feature for every signed-in tier (`free` / `supporter` / `premium` / `founder` / `gifted`). `logged-out` still routes to the tier picker on tap because saving requires an account. Rationale: it's just tracking a show in a DB — cheap to operate, and the framing aligns with the Sour Patch honesty rail. Premium gating remains on the rest: Concert history (attending + history), Calendar export, Following, Alerts, Spotify sync, Price drop alerts. The amendment applies in lockstep with the R6 handoff (`design/design_handoff_monetization_tier_states/`).
 
-**Logged-out rationale.** Logged-out users see the active affordances *visible-locked* (same as Free), but tap routes to the full picker instead of the mini sheet. This is the locked "tiered ask" mechanic — every premium affordance is also a tier-picker entry point. Background features (Spotify sync, Alerts, Price drop alerts) stay hidden — they have no on-page affordance to lock against.
+**Logged-out rationale.** Logged-out users see the active affordances _visible-locked_ (same as Free), but tap routes to the full picker instead of the mini sheet. This is the locked "tiered ask" mechanic — every premium affordance is also a tier-picker entry point. Background features (Spotify sync, Alerts, Price drop alerts) stay hidden — they have no on-page affordance to lock against.
 
 ### 7. "Coming soon" — deliberate non-treatment
 
@@ -174,16 +178,16 @@ This is deliberate: future-Design should not re-introduce "coming soon" treatmen
 
 These were considered and explicitly punted to other tickets. Future iterations should not pull them back into #781 without a coordinated re-scope:
 
-| Concern                              | Owner                                                                                                                       |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| Trial-end day-15 takeover timing     | #780 (subscription lifecycle + management)                                                                                  |
-| Cancel / downgrade / upgrade flows   | #780                                                                                                                        |
-| Payment-failure states (3DS, decline, retry) | #782 (failure states + a11y + microcopy)                                                                              |
-| A11y annotations across the picker   | #782                                                                                                                        |
-| Renewal receipt / welcome / dunning emails | #783 (email touchpoints)                                                                                              |
-| Stripe wiring, schema, entitlements helper plumbing | #775 (eng infra)                                                                                             |
-| Founder seat-counter data contract (poll / SSE / cache) | #775                                                                                                    |
-| `derivePlan` rewrite to check Clerk gifted metadata BEFORE Stripe | #775                                                                                  |
+| Concern                                                                         | Owner                                                 |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Trial-end day-15 takeover timing                                                | #780 (subscription lifecycle + management)            |
+| Cancel / downgrade / upgrade flows                                              | #780                                                  |
+| Payment-failure states (3DS, decline, retry)                                    | #782 (failure states + a11y + microcopy)              |
+| A11y annotations across the picker                                              | #782                                                  |
+| Renewal receipt / welcome / dunning emails                                      | #783 (email touchpoints)                              |
+| Stripe wiring, schema, entitlements helper plumbing                             | #775 (eng infra)                                      |
+| Founder seat-counter data contract (poll / SSE / cache)                         | #775                                                  |
+| `derivePlan` rewrite to check Clerk gifted metadata BEFORE Stripe               | #775                                                  |
 | Logged-out broader UX (nav, header, browse-only mode, persistent signup nudges) | #794 (Track 2 design ticket spun off this brainstorm) |
 
 ## Decisions log (for Design's reference)
@@ -206,7 +210,7 @@ The following inherited decisions from the original handoff README remain locked
 
 New decisions locked by this brief:
 
-- **Tier vocabulary** = 6 states (logged-out, free, supporter, premium, founder, gifted). `gifted` is treated as a picker *variant* — the whole picker surface is replaced with a thank-you panel rather than rendered as a column — because there's no upsell to render.
+- **Tier vocabulary** = 6 states (logged-out, free, supporter, premium, founder, gifted). `gifted` is treated as a picker _variant_ — the whole picker surface is replaced with a thank-you panel rather than rendered as a column — because there's no upsell to render.
 - **Pricing** = Free $0, Supporter $2/mo, Premium $5/mo, Founder $3/mo locked forever.
 - **Founder window timing** = public launch (~Aug 18–22). Hidden during beta.
 - **Founder race loser** = honest "Just missed it" surface → regular Premium offer at $5/mo, no charge, no consolation pricing.
@@ -214,7 +218,7 @@ New decisions locked by this brief:
 - **Gating philosophy** = hybrid (active affordances visible-locked, background features hidden).
 - **Free→Premium paywall surface** = bottom sheet (mobile) / centered modal (desktop), feature-anchored, deep-links to picker.
 - **Logged-out paywall surface** = full tier picker with feature-anchored copy + inline sign-in link. The picker IS the paywall.
-- **Supporter entitlements** = badge-only; no premium feature unlocks.
+- **Supporter entitlements** = badge + concert history + calendar export (2026-07-29 amendment; originally badge-only — see §6).
 - **"Coming soon" rendering** = deliberately not used; tier cards show actually-shipped features only.
 
 ## Open questions deliberately left for Design

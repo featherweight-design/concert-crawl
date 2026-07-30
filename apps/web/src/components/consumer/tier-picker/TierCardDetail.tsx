@@ -1,4 +1,4 @@
-// Shared card internals — rationale rail, feature list, badge-only note,
+// Shared card internals — rationale rail, feature list, mono note,
 // price-promise line. Used by both the desktop card and the expanded
 // mobile row so the two surfaces can never drift.
 

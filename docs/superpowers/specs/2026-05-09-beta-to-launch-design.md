@@ -10,24 +10,24 @@
 
 As of 2026-05-09, the following phases are complete and merged to `main`:
 
-| Phase | Description | PR(s) |
-|---|---|---|
-| 1 | Foundation | — |
-| 2 | Venue Management (Admin) | — |
-| 3 | Crawler v1 | — |
-| 4 | Design System / Theming | — |
-| 5 | Consumer Calendar UI | — |
-| 5b | Consumer UI Polish | #22–24 |
-| 6a | Observability SDK (Pino + Sentry) | #26 |
-| 6b | Integration Tests (Vitest) | #28 |
-| 6c | E2E + Smoke Tests (Playwright) | #29 |
-| 7 | Automation + Scheduling (cron) | #34 |
-| 7.5 | IdentityArt generative engine | #39 |
-| 7.6 | Admin UI Redesign | #44, #50 |
-| 8a | Beta Launch Prep — Landing + Auth | #43, #45 |
-| 8b pt.1 | User Profile + Settings | #49 |
-| — | Price Transparency v2 | #46 |
-| — | Betterment: Crawler separation from API | #51 |
+| Phase   | Description                             | PR(s)    |
+| ------- | --------------------------------------- | -------- |
+| 1       | Foundation                              | —        |
+| 2       | Venue Management (Admin)                | —        |
+| 3       | Crawler v1                              | —        |
+| 4       | Design System / Theming                 | —        |
+| 5       | Consumer Calendar UI                    | —        |
+| 5b      | Consumer UI Polish                      | #22–24   |
+| 6a      | Observability SDK (Pino + Sentry)       | #26      |
+| 6b      | Integration Tests (Vitest)              | #28      |
+| 6c      | E2E + Smoke Tests (Playwright)          | #29      |
+| 7       | Automation + Scheduling (cron)          | #34      |
+| 7.5     | IdentityArt generative engine           | #39      |
+| 7.6     | Admin UI Redesign                       | #44, #50 |
+| 8a      | Beta Launch Prep — Landing + Auth       | #43, #45 |
+| 8b pt.1 | User Profile + Settings                 | #49      |
+| —       | Price Transparency v2                   | #46      |
+| —       | Betterment: Crawler separation from API | #51      |
 
 ### Monorepo packages (current)
 
@@ -53,12 +53,12 @@ packages/
 
 ### Tiers
 
-| Tier | Price | Features |
-|---|---|---|
-| **Free** | $0 forever | Browse, search, filter, save shows (Watching), price transparency, community price submissions |
-| **Supporter** | $2/month | Free + concert history, calendar export (iCal + Google), supporter badge |
-| **Premium** | $5/month | All Supporter + artist following + new show alerts, Spotify sync, price drop alerts |
-| **Founder** | $3/month, locked forever | Full Premium at a permanent discount |
+| Tier          | Price                    | Features                                                                                       |
+| ------------- | ------------------------ | ---------------------------------------------------------------------------------------------- |
+| **Free**      | $0 forever               | Browse, search, filter, save shows (Watching), price transparency, community price submissions |
+| **Supporter** | $2/month                 | Free + concert history, calendar export (iCal + Google), supporter badge                       |
+| **Premium**   | $5/month                 | All Supporter + artist following + new show alerts, Spotify sync, price drop alerts            |
+| **Founder**   | $3/month, locked forever | Full Premium at a permanent discount                                                           |
 
 All new users get a **14-day free trial of Premium** at signup. No credit card required to start.
 
@@ -93,19 +93,19 @@ Set manually per user in the Clerk dashboard. No Stripe subscription row require
 
 Hard blockers — nothing ships to beta users without these:
 
-| Item | Notes |
-|---|---|
-| **Saving shows (Watching)** | Heart button → `user_events` table, Phase 8b Part 2. Design handoff complete (`design_handoff_watching/`). |
-| **Browse filters wired** | Date, venue, price, vibe → URL params, `applyFilters()` hooked up. Currently broken. Designs complete: `design_handoff_phase5b_screens/Browse Home.html` + `Browse Desktop.html`. |
-| **Search implementation** | Command palette (⌘K on desktop, full-screen on mobile). Four states: empty, artist match, venue match, no results. Currently a dead nav link. Designs complete: `design_handoff_phase5b_screens/Search Desktop.html` + `Search Mobile.html`. |
-| **Artist genre data** | `genre: text[]` exists on the events table but is sparsely populated. LLM extraction must be verified to consistently output genre tags before Event Detail v2 can surface them. Audit crawler output and patch extraction prompt if needed. |
-| **Full UI interactions sweep** | Walk every clickable element on every route. Log dead interactions. Fix blockers. |
-| ~~**Invite code error states**~~ | ✅ Done. Invalid code, expired code, no-code wall. |
-| **Feedback modal** | In-app, auth-only, rate-limited (1/hour). Category + message + auto-captured page URL → `feedback` table. |
-| **Empty states** | Per-route — browse (no results for filters), search (no results), Watching (no saved shows). |
-| ~~**FounderNote copy**~~ | ✅ Done. Personal message written and live in `apps/web/src/components/onboarding/definitions/copy.ts`. |
-| **Legal for beta** | One-page "private beta, don't share" doc. T&C + Privacy Policy required before public launch. |
-| ~~**Seed additional venues**~~ | ✅ Done. Mission Ballroom + Fillmore added to active crawl. |
+| Item                             | Notes                                                                                                                                                                                                                                        |
+| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Saving shows (Watching)**      | Heart button → `user_events` table, Phase 8b Part 2. Design handoff complete (`design_handoff_watching/`).                                                                                                                                   |
+| **Browse filters wired**         | Date, venue, price, vibe → URL params, `applyFilters()` hooked up. Currently broken. Designs complete: `design_handoff_phase5b_screens/Browse Home.html` + `Browse Desktop.html`.                                                            |
+| **Search implementation**        | Command palette (⌘K on desktop, full-screen on mobile). Four states: empty, artist match, venue match, no results. Currently a dead nav link. Designs complete: `design_handoff_phase5b_screens/Search Desktop.html` + `Search Mobile.html`. |
+| **Artist genre data**            | `genre: text[]` exists on the events table but is sparsely populated. LLM extraction must be verified to consistently output genre tags before Event Detail v2 can surface them. Audit crawler output and patch extraction prompt if needed. |
+| **Full UI interactions sweep**   | Walk every clickable element on every route. Log dead interactions. Fix blockers.                                                                                                                                                            |
+| ~~**Invite code error states**~~ | ✅ Done. Invalid code, expired code, no-code wall.                                                                                                                                                                                           |
+| **Feedback modal**               | In-app, auth-only, rate-limited (1/hour). Category + message + auto-captured page URL → `feedback` table.                                                                                                                                    |
+| **Empty states**                 | Per-route — browse (no results for filters), search (no results), Watching (no saved shows).                                                                                                                                                 |
+| ~~**FounderNote copy**~~         | ✅ Done. Personal message written and live in `apps/web/src/components/onboarding/definitions/copy.ts`.                                                                                                                                      |
+| **Legal for beta**               | One-page "private beta, don't share" doc. T&C + Privacy Policy required before public launch.                                                                                                                                                |
+| ~~**Seed additional venues**~~   | ✅ Done. Mission Ballroom + Fillmore added to active crawl.                                                                                                                                                                                  |
 
 ---
 
@@ -115,15 +115,15 @@ Hugh is on vacation May 27 – June 13. Beta opens May 25 and runs unattended du
 
 ~20% capacity in each week is reserved for beta bug triage and feedback-driven work.
 
-| Week | Dates | Focus |
-|---|---|---|
-| 1 | Jun 16–22 | Beta feedback review + bug triage. Reactive by design — let findings drive it. Error/loading sweep. |
-| 2 | Jun 23–29 | Cost tracking admin + Phase 7.1 Trust chrome (TrustMark, VerifiedStamp, revised SourceLink — issue #96) + polish (404 page, sign-out → landing transition, returning-user onboarding edge). |
-| 3 | Jun 30 – Jul 6 | Stripe integration: subscription tiers, upgrade flow, gifted premium mechanism in auth layer. |
-| 4 | Jul 7–13 | First premium features: concert history, calendar export (iCal + Google), supporter badge. |
-| 5 | Jul 14–20 | Surprise features: shareable show cards (IdentityArt generative — issue #72) + "who else is watching" aggregate count. |
-| 6 | Jul 21–27 | Engaging features: setlist preview, venue first-timer guide, "last time in Denver" data point. |
-| 7 | Jul 28 – Aug 3 | Spotify sync import (connect account → populate `user_artist_follows`). Teaser UI for artist following notifications (shell only — alerts are a launch feature). |
+| Week | Dates          | Focus                                                                                                                                                                                       |
+| ---- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Jun 16–22      | Beta feedback review + bug triage. Reactive by design — let findings drive it. Error/loading sweep.                                                                                         |
+| 2    | Jun 23–29      | Cost tracking admin + Phase 7.1 Trust chrome (TrustMark, VerifiedStamp, revised SourceLink — issue #96) + polish (404 page, sign-out → landing transition, returning-user onboarding edge). |
+| 3    | Jun 30 – Jul 6 | Stripe integration: subscription tiers, upgrade flow, gifted premium mechanism in auth layer.                                                                                               |
+| 4    | Jul 7–13       | First premium features: concert history, calendar export (iCal + Google), supporter badge.                                                                                                  |
+| 5    | Jul 14–20      | Surprise features: shareable show cards (IdentityArt generative — issue #72) + "who else is watching" aggregate count.                                                                      |
+| 6    | Jul 21–27      | Engaging features: setlist preview, venue first-timer guide, "last time in Denver" data point.                                                                                              |
+| 7    | Jul 28 – Aug 3 | Spotify sync import (connect account → populate `user_artist_follows`). Teaser UI for artist following notifications (shell only — alerts are a launch feature).                            |
 
 ---
 
@@ -132,6 +132,7 @@ Hugh is on vacation May 27 – June 13. Beta opens May 25 and runs unattended du
 Two full weeks. Do not compress this.
 
 ### Security
+
 - Full API auth audit (all routes, role middleware, session expiry)
 - Rate limiting verified on all endpoints
 - CORS locked to production origin only
@@ -141,6 +142,7 @@ Two full weeks. Do not compress this.
 - Run the `security-review` Claude Code skill against the full codebase
 
 ### Legal
+
 - Privacy Policy (data collected, how used, retention period, deletion rights)
 - Terms of Service (user conduct, crawling disclosure, DMCA, refund policy)
 - Cookie/analytics disclosure (PostHog)
@@ -148,12 +150,14 @@ Two full weeks. Do not compress this.
 - GDPR: user data export + deletion endpoints verified end-to-end
 
 ### Regression testing
+
 - Full E2E suite green on staging
 - Smoke tests verified on prod
 - Manual walkthrough: sign up → browse → save → submit price → dispute → profile → settings → upgrade → delete account
 - Cross-browser: Chrome, Safari, Firefox (mobile + desktop)
 
 ### Monitoring + alerting
+
 - Sentry alert rules configured (error rate thresholds, new issue types)
 - Sentry Uptime monitoring active on all three services (replaces UptimeRobot)
 - Sentry Crons monitoring active on daily crawler job (replaces Grafana crawl alert)
@@ -162,11 +166,13 @@ Two full weeks. Do not compress this.
 - Crawl health: at least 2 clean weeks of crawl history before launch
 
 ### Performance
+
 - Core Web Vitals pass (LCP, CLS, FID — especially mobile)
 - Image lazy loading verified
 - API response time baseline documented
 
 ### Launch checklist
+
 - FounderNote copy updated to launch voice (edit `apps/web/src/components/onboarding/definitions/copy.ts` + deploy)
 - Founder window configured (100-person cap or 30-day timer)
 - Stripe live mode keys configured in Render production environment
@@ -184,10 +190,10 @@ Two full weeks. Do not compress this.
 
 Simplified to two systems:
 
-| Concern | Tool |
-|---|---|
-| Errors + performance + uptime + crons | **Sentry** |
-| Infrastructure metrics + logs | **Render native** (CPU, memory, request counts, log drain) |
+| Concern                               | Tool                                                       |
+| ------------------------------------- | ---------------------------------------------------------- |
+| Errors + performance + uptime + crons | **Sentry**                                                 |
+| Infrastructure metrics + logs         | **Render native** (CPU, memory, request counts, log drain) |
 
 No Grafana. No UptimeRobot. Pino structured logs flow to Render's log drain. Sentry handles everything else.
 
@@ -199,12 +205,12 @@ No Grafana. No UptimeRobot. Pino structured logs flow to Render's log drain. Sen
 
 Suggested label taxonomy:
 
-| Label | Values |
-|---|---|
-| `type:` | bug, feature, polish, chore |
-| `source:` | beta-feedback, internal |
-| `phase:` | pre-beta, beta, launch |
-| `priority:` | blocker, high, normal |
+| Label       | Values                      |
+| ----------- | --------------------------- |
+| `type:`     | bug, feature, polish, chore |
+| `source:`   | beta-feedback, internal     |
+| `phase:`    | pre-beta, beta, launch      |
+| `priority:` | blocker, high, normal       |
 
 ---
 
@@ -214,33 +220,33 @@ Suggested label taxonomy:
 
 Features that make users share the app or return to it more often. Not algorithm-driven — deliberately human and surprising.
 
-| Feature | Description | Bucket |
-|---|---|---|
-| **Shareable show cards** | IdentityArt-generated cards for saved/attended shows. Instagram story (9:16), square (1:1), link preview. | Beta |
-| **"Who else is watching"** | Aggregate count of Concert Crawl users who saved a show. Number only — no names. | Beta |
-| **Concert passport** | Visual grid of attended shows, styled like stamps. Designed to screenshot and share. Natural extension of concert history. | Launch |
-| **Venue passport card** | Per-venue attended show recap card ("10 shows at Red Rocks"). Uses venue identity art (generative, on-brand) + typographic layout listing artists, show count, date range. Issue #99. Design alongside Concert passport — same visual language. | Launch |
-| **Artist images via Spotify treatment** | Platform-level Spotify Client Credentials API for artist photos + graphic treatment overlay (pop-art style over licensed image). No user OAuth required. Ships after Spotify sync is proven. Decided 2026-05-09: generative art stays through launch; this is next step for artist imagery. | Post-launch |
-| **Setlist preview** | Most recent tour setlist via Setlist.fm API (free, no approval). Collapsed by default in Event Detail. Degrades gracefully if no data. | Launch |
-| **Venue first-timer guide** | Per-venue info card: parking, entry policy, age restriction, bag rules, "bring cash or not", doors-to-show gap. Crawl-first via Haiku extraction from the venue's "Plan Your Visit" page, refreshed periodically. Admin reviews crawled output before it surfaces to users. Editorial notes field per venue for brand voice and local tips the crawler won't find (e.g. "Red Rocks altitude is brutal — drink water before doors"). Crawled data + editorial note render together; editorial always wins on conflict. Requires `venue_info` data structure + admin editor UI. Red Rocks especially. | Launch |
-| **Support act spotlight** | Surface the opener prominently — same card weight as headliner. How people discover new artists. | Launch |
-| **"Last time in Denver"** | When did this artist last play a show in our events database. Derived from crawl history. City from `user_profiles.city`, defaults to Denver. | Launch |
-| **Concert Roulette** | One random upcoming Denver show, shuffle-style. "I'm feeling lucky." No algorithm. Hold as a surprise — don't tease. | Post-launch |
+| Feature                                 | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         | Bucket      |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| **Shareable show cards**                | IdentityArt-generated cards for saved/attended shows. Instagram story (9:16), square (1:1), link preview.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           | Beta        |
+| **"Who else is watching"**              | Aggregate count of Concert Crawl users who saved a show. Number only — no names.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Beta        |
+| **Concert passport**                    | Visual grid of attended shows, styled like stamps. Designed to screenshot and share. Natural extension of concert history.                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Launch      |
+| **Venue passport card**                 | Per-venue attended show recap card ("10 shows at Red Rocks"). Uses venue identity art (generative, on-brand) + typographic layout listing artists, show count, date range. Issue #99. Design alongside Concert passport — same visual language.                                                                                                                                                                                                                                                                                                                                                     | Launch      |
+| **Artist images via Spotify treatment** | Platform-level Spotify Client Credentials API for artist photos + graphic treatment overlay (pop-art style over licensed image). No user OAuth required. Ships after Spotify sync is proven. Decided 2026-05-09: generative art stays through launch; this is next step for artist imagery.                                                                                                                                                                                                                                                                                                         | Post-launch |
+| **Setlist preview**                     | Most recent tour setlist via Setlist.fm API (free, no approval). Collapsed by default in Event Detail. Degrades gracefully if no data.                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Launch      |
+| **Venue first-timer guide**             | Per-venue info card: parking, entry policy, age restriction, bag rules, "bring cash or not", doors-to-show gap. Crawl-first via Haiku extraction from the venue's "Plan Your Visit" page, refreshed periodically. Admin reviews crawled output before it surfaces to users. Editorial notes field per venue for brand voice and local tips the crawler won't find (e.g. "Red Rocks altitude is brutal — drink water before doors"). Crawled data + editorial note render together; editorial always wins on conflict. Requires `venue_info` data structure + admin editor UI. Red Rocks especially. | Launch      |
+| **Support act spotlight**               | Surface the opener prominently — same card weight as headliner. How people discover new artists.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Launch      |
+| **"Last time in Denver"**               | When did this artist last play a show in our events database. Derived from crawl history. City from `user_profiles.city`, defaults to Denver.                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Launch      |
+| **Concert Roulette**                    | One random upcoming Denver show, shuffle-style. "I'm feeling lucky." No algorithm. Hold as a surprise — don't tease.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Post-launch |
 
 ### Premium Features
 
 Features behind the Supporter or Premium paywall at launch.
 
-| Feature | Tier | Technical notes |
-|---|---|---|
-| Concert history | Premium | `user_events.status = 'attended'`. Filter past events. Simple. Moved to Premium per `docs/superpowers/specs/2026-06-24-monetization-tier-states-entitlements-design.md` (Supporter is badge-only). |
-| Calendar export | Premium | iCal file generation (standard) + Google Calendar URL scheme. Effectively free to operate. Moved to Premium per `docs/superpowers/specs/2026-06-24-monetization-tier-states-entitlements-design.md` (Supporter is badge-only). |
-| Supporter badge | Supporter | Cosmetic. Shown on profile. |
-| Artist following | Premium | `user_artist_follows` table exists. Follow button on artist name anywhere it appears. |
-| New show alerts | Premium | Background job matches new crawled events against followed artists. Notification delivery via Resend (email) + PWA push. Smart batching: multiple events same day = single digest. 60-day lookahead default. Per-artist: instant vs. daily digest preference. **Launch feature — not beta.** |
-| Spotify sync | Premium | Clerk Spotify OAuth → Spotify Web API → populate `user_artist_follows`. Fuzzy artist name matching required. Ships during beta period (week 7). Alerts are a launch feature. |
-| Price drop alerts | Premium | Compare price snapshots. Alert when `price_min` drops for a watched event. Notification via Resend. **Launch feature.** |
-| Founder tier | Founder | $3/month locked. First 100 or 30 days post-launch. Founder badge. |
+| Feature           | Tier      | Technical notes                                                                                                                                                                                                                                                                              |
+| ----------------- | --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Concert history   | Supporter | `user_events.status = 'attended'`. Filter past events. Simple. Briefly moved to Premium by the 2026-06-24 entitlements spec, restored to Supporter by that spec's 2026-07-29 amendment (near-zero marginal cost).                                                                            |
+| Calendar export   | Supporter | iCal file generation (standard) + Google Calendar URL scheme. Effectively free to operate. Same 2026-07-29 amendment as concert history.                                                                                                                                                     |
+| Supporter badge   | Supporter | Cosmetic. Shown on profile.                                                                                                                                                                                                                                                                  |
+| Artist following  | Premium   | `user_artist_follows` table exists. Follow button on artist name anywhere it appears.                                                                                                                                                                                                        |
+| New show alerts   | Premium   | Background job matches new crawled events against followed artists. Notification delivery via Resend (email) + PWA push. Smart batching: multiple events same day = single digest. 60-day lookahead default. Per-artist: instant vs. daily digest preference. **Launch feature — not beta.** |
+| Spotify sync      | Premium   | Clerk Spotify OAuth → Spotify Web API → populate `user_artist_follows`. Fuzzy artist name matching required. Ships during beta period (week 7). Alerts are a launch feature.                                                                                                                 |
+| Price drop alerts | Premium   | Compare price snapshots. Alert when `price_min` drops for a watched event. Notification via Resend. **Launch feature.**                                                                                                                                                                      |
+| Founder tier      | Founder   | $3/month locked. First 100 or 30 days post-launch. Founder badge.                                                                                                                                                                                                                            |
 
 ---
 
@@ -250,36 +256,36 @@ Status key: ✅ Complete · 🎨 Design handoff ready, eng pending · 🔲 Not s
 
 ### Beta bucket (needed before or during beta period)
 
-| # | Feature | Design | Eng | Notes |
-|---|---|---|---|---|
-| 1 | **Event Detail v2** | ✅ `design/design_handoff_event_detail_v2/` | ✅ PRs #205, #329 | Price trail, submit-a-price, setlist stub, "who else is watching" |
-| 2 | **Trust chrome** | ✅ `design/design_handoff_event_detail_v2/` | ✅ `PriceDisplay.tsx` | TrustMark, VerifiedStamp, four-tier trust hierarchy — all implemented |
-| 3 | **404 page** | 🔲 Not started | 🔲 Not started | Eng target beta wk 2 (Jun 23–29) |
-| 4 | **Monetization upgrade flow + badges** | ✅ `design/design_handoff_monetization/` | 🔲 Not started | Tier comparison, payment modal, trial CTA, Founder urgency; role badges (Admin/Promoter/Beta) + cosmetic tier badges (Supporter/Founder); voluntary support state for role-holders; eng target beta wk 3 (Jun 30–Jul 6) |
-| 5 | **Concert history / passport view** | 🔲 Not started | 🔲 Not started | Empty state is primary UX — no import/backfill at launch; eng target beta wk 4 (Jul 7–13) |
-| 6 | **Shareable show cards** | ✅ `design/design_handoff_shareable_cards/` | 🔲 Not started | Riso Poster only; 9:16 / 1:1 / link preview; IdentityArt-based; eng target beta wk 5 (Jul 14–20) |
-| 7 | **"Who else is watching"** | 🔲 Not started | 🔲 Not started | Aggregate count on event detail — number only, no names; eng target beta wk 5 (Jul 14–20) |
-| 8 | **Spotify sync connect flow** | 🔲 Not started | 🔲 Not started | Clerk OAuth connect screen; eng target beta wk 7 (Jul 28–Aug 3) |
+| #   | Feature                                | Design                                      | Eng                   | Notes                                                                                                                                                                                                                   |
+| --- | -------------------------------------- | ------------------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Event Detail v2**                    | ✅ `design/design_handoff_event_detail_v2/` | ✅ PRs #205, #329     | Price trail, submit-a-price, setlist stub, "who else is watching"                                                                                                                                                       |
+| 2   | **Trust chrome**                       | ✅ `design/design_handoff_event_detail_v2/` | ✅ `PriceDisplay.tsx` | TrustMark, VerifiedStamp, four-tier trust hierarchy — all implemented                                                                                                                                                   |
+| 3   | **404 page**                           | 🔲 Not started                              | 🔲 Not started        | Eng target beta wk 2 (Jun 23–29)                                                                                                                                                                                        |
+| 4   | **Monetization upgrade flow + badges** | ✅ `design/design_handoff_monetization/`    | 🔲 Not started        | Tier comparison, payment modal, trial CTA, Founder urgency; role badges (Admin/Promoter/Beta) + cosmetic tier badges (Supporter/Founder); voluntary support state for role-holders; eng target beta wk 3 (Jun 30–Jul 6) |
+| 5   | **Concert history / passport view**    | 🔲 Not started                              | 🔲 Not started        | Empty state is primary UX — no import/backfill at launch; eng target beta wk 4 (Jul 7–13)                                                                                                                               |
+| 6   | **Shareable show cards**               | ✅ `design/design_handoff_shareable_cards/` | 🔲 Not started        | Riso Poster only; 9:16 / 1:1 / link preview; IdentityArt-based; eng target beta wk 5 (Jul 14–20)                                                                                                                        |
+| 7   | **"Who else is watching"**             | 🔲 Not started                              | 🔲 Not started        | Aggregate count on event detail — number only, no names; eng target beta wk 5 (Jul 14–20)                                                                                                                               |
+| 8   | **Spotify sync connect flow**          | 🔲 Not started                              | 🔲 Not started        | Clerk OAuth connect screen; eng target beta wk 7 (Jul 28–Aug 3)                                                                                                                                                         |
 
 ### Launch bucket (needed before public launch)
 
-| # | Feature | Design | Eng | Notes |
-|---|---|---|---|---|
-| 9 | **Artist following UI** | 🔲 Not started | 🔲 Not started | Follow button on artist name; distinct from Watching heart; event card + detail + venue page |
-| 10 | **Venue first-timer guide surface** | 🔲 Not started | 🔲 Not started | Crawl-first; editorial notes layer; admin review UI; eng target beta wk 6 (Jul 21–27) |
-| 11 | **Notification preferences settings** | 🔲 Not started | 🔲 Not started | Per-artist instant vs. digest, 60-day threshold toggle, delivery time preference |
-| 12 | **"Last time in Denver" treatment** | 🔲 Not started | 🔲 Not started | How does this data point appear on event detail / artist surfaces? |
-| 13 | **Support act spotlight treatment** | 🔲 Not started | 🔲 Not started | Opener card weight and placement |
-| 14 | **Alert templates (new show + price drop)** | 🔲 Not started | 🔲 Not started | Email (Resend) + PWA push notification; two alert types with distinct voice |
-| 15 | **Concert passport** | 🔲 Not started | 🔲 Not started | Visual stamp grid of attended shows; designed to screenshot and share; same visual language as venue passport |
-| 16 | **Venue passport card** | 🔲 Not started | 🔲 Not started | Per-venue recap ("10 shows at Red Rocks"); typographic + venue identity art; issue #99; design alongside Concert passport |
+| #   | Feature                                     | Design         | Eng            | Notes                                                                                                                     |
+| --- | ------------------------------------------- | -------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 9   | **Artist following UI**                     | 🔲 Not started | 🔲 Not started | Follow button on artist name; distinct from Watching heart; event card + detail + venue page                              |
+| 10  | **Venue first-timer guide surface**         | 🔲 Not started | 🔲 Not started | Crawl-first; editorial notes layer; admin review UI; eng target beta wk 6 (Jul 21–27)                                     |
+| 11  | **Notification preferences settings**       | 🔲 Not started | 🔲 Not started | Per-artist instant vs. digest, 60-day threshold toggle, delivery time preference                                          |
+| 12  | **"Last time in Denver" treatment**         | 🔲 Not started | 🔲 Not started | How does this data point appear on event detail / artist surfaces?                                                        |
+| 13  | **Support act spotlight treatment**         | 🔲 Not started | 🔲 Not started | Opener card weight and placement                                                                                          |
+| 14  | **Alert templates (new show + price drop)** | 🔲 Not started | 🔲 Not started | Email (Resend) + PWA push notification; two alert types with distinct voice                                               |
+| 15  | **Concert passport**                        | 🔲 Not started | 🔲 Not started | Visual stamp grid of attended shows; designed to screenshot and share; same visual language as venue passport             |
+| 16  | **Venue passport card**                     | 🔲 Not started | 🔲 Not started | Per-venue recap ("10 shows at Red Rocks"); typographic + venue identity art; issue #99; design alongside Concert passport |
 
 ### Post-launch bucket
 
-| # | Feature | Design | Eng | Notes |
-|---|---|---|---|---|
-| 17 | **Concert Roulette** | 🔲 Not started | 🔲 Not started | Shuffle UI; "I'm feeling lucky"; hold as a surprise — don't tease |
-| 18 | **Artist images via Spotify treatment** | 🔲 Not started | 🔲 Not started | Pop-art graphic overlay on licensed artist photos; no user OAuth; ships after Spotify sync proven |
+| #   | Feature                                 | Design         | Eng            | Notes                                                                                             |
+| --- | --------------------------------------- | -------------- | -------------- | ------------------------------------------------------------------------------------------------- |
+| 17  | **Concert Roulette**                    | 🔲 Not started | 🔲 Not started | Shuffle UI; "I'm feeling lucky"; hold as a surprise — don't tease                                 |
+| 18  | **Artist images via Spotify treatment** | 🔲 Not started | 🔲 Not started | Pop-art graphic overlay on licensed artist photos; no user OAuth; ships after Spotify sync proven |
 
 ---
 
@@ -297,10 +303,10 @@ For artist following alerts (launch feature):
 
 ## Artist Following vs. Watching — Model Distinction
 
-| Action | Scope | What it does | Where it lives |
-|---|---|---|---|
-| **Watch (heart)** | Event-level | Track this show; get price change alerts | Event card, Event Detail |
-| **Follow** | Artist-level | Get notified when artist announces a Denver show | Artist name (event card, Event Detail, Venue page) |
+| Action            | Scope        | What it does                                     | Where it lives                                     |
+| ----------------- | ------------ | ------------------------------------------------ | -------------------------------------------------- |
+| **Watch (heart)** | Event-level  | Track this show; get price change alerts         | Event card, Event Detail                           |
+| **Follow**        | Artist-level | Get notified when artist announces a Denver show | Artist name (event card, Event Detail, Venue page) |
 
 These are separate affordances with separate buttons. Following an artist does not auto-watch their shows. Notification settings reflect this split: artist following → new show alerts; watching → price change alerts.
 

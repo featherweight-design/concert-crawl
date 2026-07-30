@@ -53,12 +53,13 @@ export const CANCEL_FLOW_COPY = {
 
   keepUntilLabel: (tierName: string) => `You keep ${tierName} until`,
   periodEndFallback: 'period end',
-  // Premium / Founder: 90-day data-safety note; Supporter is badge-only,
-  // so no down-sell nudge and no data note (README decision #6).
+  // Premium / Founder: 90-day data-safety note. Supporter has no down-sell
+  // nudge (there's no cheaper paid tier to step to) but since the 2026-07-29
+  // amendment it does have unlocks to lose, so it gets its own honest note.
   bodyPremiumUp: (periodEnd: string | null) =>
     `You won't be charged again. On ${periodEnd ?? 'the period end'} you roll to Free — and your history, follows, and alerts stay safe for 90 days in case you come back.`,
   bodySupporter: (periodEnd: string | null) =>
-    `You won't be charged again. On ${periodEnd ?? 'the period end'} you roll to Free and the Supporter badge comes off. Everything you actually use — saved shows, browsing, prices — was always free and stays put.`,
+    `You won't be charged again. On ${periodEnd ?? 'the period end'} you roll to Free: the badge comes off and history and calendar export switch off. Your logged shows aren't deleted — come back and they're still there. Watching, browsing, and prices were always free and stay put.`,
 
   retention: {
     eyebrow: 'Before you go',
@@ -131,18 +132,20 @@ export const UPGRADE_FLOW_COPY = {
 } as const
 
 export const CHANGES_DISCLOSURE_COPY = {
-  summary: 'Your history, follows, and alerts stay safe for 90 days.',
+  summary: 'Your follows and alerts stay safe for 90 days.',
   staysLabel: 'Stays on',
-  // Supporter is badge-only per the #781 §6 matrix; Watching stays because
-  // the R6 amendment moved it to Free for signed-in users.
+  // This disclosure describes Premium → Supporter specifically. Concert history
+  // and calendar export stay on because the 2026-07-29 amendment made them
+  // Supporter unlocks; Watching stays because the R6 amendment moved it to Free
+  // for signed-in users.
   stays: [
     'Watching — your saved shows (Free, never purged)',
+    "Concert history — every show you've logged",
+    'Calendar export — Apple + Google',
     'Supporter badge on your profile',
   ],
   offLabel: 'Switches off · safe 90 days',
   off: [
-    "Concert history — every show you've logged",
-    'Calendar export — Apple + Google',
     'Following artists',
     'New-show alerts',
     'Price-drop alerts',

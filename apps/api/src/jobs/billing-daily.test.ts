@@ -23,6 +23,7 @@ import {
   isWinbackDue,
   purgeFollowsWhere,
   selectCardExpiryWindow,
+  shouldPurgeFeature,
   winbackDedupeKey,
 } from './billing-daily.js'
 import { PgDialect } from 'drizzle-orm/pg-core'
@@ -245,6 +246,26 @@ describe('purgeFollowsWhere (E9 — spotify rows survive the purge)', () => {
     expect(query.params).toHaveLength(2)
     expect(query.params).toEqual(expect.arrayContaining(['user_1', 'manual']))
   })
+})
+
+describe('shouldPurgeFeature (per-category guard once a user is purge-eligible)', () => {
+  it('keeps a live supporter their concert history and calendar export', () => {
+    expect(shouldPurgeFeature('supporter', 'concert-history')).toBe(false)
+    expect(shouldPurgeFeature('supporter', 'calendar-export')).toBe(false)
+  })
+
+  it('still purges a supporter the features Premium keeps', () => {
+    expect(shouldPurgeFeature('supporter', 'following')).toBe(true)
+    expect(shouldPurgeFeature('supporter', 'spotify-sync')).toBe(true)
+  })
+
+  it.each([null, 'free', 'nonsense'])(
+    'purges everything for %s (no live paid subscription)',
+    (tier) => {
+      expect(shouldPurgeFeature(tier, 'concert-history')).toBe(true)
+      expect(shouldPurgeFeature(tier, 'following')).toBe(true)
+    },
+  )
 })
 
 describe('cancellationStartsPurgeClock (task-6 reconcile mirrors the webhook)', () => {

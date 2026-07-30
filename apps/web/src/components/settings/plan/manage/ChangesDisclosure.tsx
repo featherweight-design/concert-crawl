@@ -3,7 +3,9 @@
 // #780 collapsed "what moves" disclosure, rendered by DowngradeFlow between
 // the proration card and the button stack (design table lifecycle-flows.md).
 // The chevron rotate is the ONLY transition in the whole lifecycle design.
-// Stays/off lists are hard-coded per the #781 §6 matrix + R6 amendment.
+// Stays/off lists are hard-coded per the #781 §6 matrix, the R6 amendment, and
+// the 2026-07-29 Supporter-unlocks amendment. DowngradeFlow is Premium →
+// Supporter only, so the lists describe that one transition.
 
 import { useState } from 'react'
 import { CHANGES_DISCLOSURE_COPY } from './definitions/copy'

@@ -171,11 +171,14 @@ describe('welcome_paid', () => {
     )
   })
 
-  it('renders the supporter variant owning the no-unlocks joke', () => {
+  it('renders the supporter variant with its two unlocks plus the badge', () => {
     const rendered = renderWelcomePaid({ tier: 'supporter' })
     expect(rendered.html).toContain('A Supporter badge on your profile')
-    expect(rendered.html).toContain('The warm, smug glow of keeping us alive')
-    expect(rendered.html).not.toContain('Concert history')
+    expect(rendered.html).toContain('Concert history')
+    expect(rendered.html).toContain('Calendar export')
+    // Premium-only unlocks must never appear on the Supporter welcome.
+    expect(rendered.html).not.toContain('Spotify sync')
+    expect(rendered.html).not.toContain('Price-drop alerts')
     expect(rendered.text).toContain('A Supporter badge on your profile')
   })
 

@@ -10,10 +10,12 @@ import {
   type PremiumFeature,
 } from './index.js'
 
-// Independent literal copy of #781 §6 (including the R6 Watching-is-Free
-// amendment and the #763 §7 (E8) spotify-sync override — no longer verbatim
-// #781 for that row). A matrix edit fails these tests until this table is
-// updated in lockstep — that friction is intentional (eng infra spec Part 1).
+// Independent literal copy of #781 §6, including the R6 Watching-is-Free
+// amendment, the #763 §7 (E8) spotify-sync override, and the 2026-07-29
+// Supporter-unlocks amendment (concert-history + calendar-export) — so several
+// rows are no longer verbatim #781. A matrix edit fails these tests until this
+// table is updated in lockstep — that friction is intentional (eng infra spec
+// Part 1).
 const EXPECTED_CELLS: Record<
   PremiumFeature,
   Record<UserPlan, EntitlementCell>
@@ -29,7 +31,7 @@ const EXPECTED_CELLS: Record<
   'concert-history': {
     'logged-out': 'tier-picker-on-tap',
     free: 'paywall-on-tap',
-    supporter: 'paywall-on-tap',
+    supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',
@@ -37,7 +39,7 @@ const EXPECTED_CELLS: Record<
   'calendar-export': {
     'logged-out': 'tier-picker-on-tap',
     free: 'paywall-on-tap',
-    supporter: 'paywall-on-tap',
+    supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',

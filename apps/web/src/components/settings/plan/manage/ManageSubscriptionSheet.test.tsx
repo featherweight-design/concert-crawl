@@ -288,7 +288,7 @@ describe('ManageSubscriptionSheet — cancel flow', () => {
     ).toBeTruthy()
   })
 
-  it('supporter gets the thin flow — no nudge, badge-only body', () => {
+  it('supporter gets the thin flow — no nudge, supporter-specific body', () => {
     renderSheet({ tier: 'supporter' })
     openCancelFlow()
     expect(screen.queryByText(CANCEL_FLOW_COPY.retention.eyebrow)).toBeNull()

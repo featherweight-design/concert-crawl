@@ -242,9 +242,7 @@ export const TierRowMobile = ({
           )}
           <TierRationale tier={tier} />
           <TierFeatureList tier={tier} gap={6} />
-          {tier.badgeOnlyNote !== undefined && (
-            <TierMonoNote text={tier.badgeOnlyNote} />
-          )}
+          {tier.monoNote !== undefined && <TierMonoNote text={tier.monoNote} />}
           {tier.pricePromise !== undefined && (
             <TierMonoNote text={tier.pricePromise} />
           )}

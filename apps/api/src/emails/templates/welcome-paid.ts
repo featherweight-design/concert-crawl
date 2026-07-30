@@ -1,7 +1,7 @@
 // welcome_paid — one template family, three tier variants (#783 brand pass).
 // Voice: slight cheek + honesty rail + warmth. Premium/founder use the signal
-// accent + full unlock list; supporter branches to a badge-only block with an
-// accent CTA. Founder adds the seat stamp when we know the seat number.
+// accent + full unlock list; supporter branches to its own shorter unlock
+// block (history, export, badge) with an accent CTA. Founder adds the seat stamp when we know the seat number.
 
 import {
   button,
@@ -41,8 +41,9 @@ const microcopyRow = (text: string): string =>
   `<div style="font-family: ${EMAIL_MONO}; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">${text}</div>`
 
 const SUPPORTER_FEATURES: FeatureItem[] = [
+  'Concert history — every show you attend, logged',
+  'Calendar export — Apple + Google, one tap',
   'A Supporter badge on your profile',
-  'The warm, smug glow of keeping us alive',
 ]
 
 const FOUNDER_FEATURES: FeatureItem[] = [
@@ -55,12 +56,11 @@ export const renderWelcomePaid: TemplateRenderer<
 > = ({ tier, founderSeatNumber }) => {
   if (tier === 'supporter') {
     const subject = "You're in — and you're keeping the lights on."
-    const preheader =
-      "Your badge is live. No paywalls moved — that's the point."
-    const microcopy = 'No Premium unlocks — that’s the point.'
+    const preheader = 'Your history, your exports, your badge. All live.'
+    const microcopy = 'Both run on servers we already pay for.'
     const title = "You didn't have to. Thanks for backing us."
     const sub =
-      "Supporter doesn't unlock anything new — that's the whole point. You're chipping in so the app stays free for everyone. The glow is real."
+      "Your history and your calendar exports are switched on, and the badge is live on your profile. You're chipping in so the app stays free for everyone — the glow is real."
 
     const bodyRows = [
       headerRow('Welcome · supporter'),

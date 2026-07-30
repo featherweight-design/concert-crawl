@@ -4,8 +4,9 @@
 // Tier-gated shape (README decision #6): Premium/Founder get the full flow
 // with the 90-day data-safety note and the price-led Switch-to-Supporter
 // retention nudge; Supporter gets the thin flow (no cheaper paid tier to
-// step down to, badge-only per the #781 §6 matrix — no nudge, no data
-// note). CTA hierarchy (decision #7): "Cancel subscription" is the honest
+// step down to, so no nudge) with its own body copy naming the unlocks it
+// loses — since the 2026-07-29 amendment Supporter carries concert history
+// and calendar export, not just the badge. CTA hierarchy (decision #7): "Cancel subscription" is the honest
 // primary confirm (danger accent, no glow); "Never mind" is the ghost
 // back-out. Retention lives in the nudge card, never in button burying.
 

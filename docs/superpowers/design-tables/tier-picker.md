@@ -5,12 +5,16 @@ Source files: `design/design_handoff_monetization_tier_states/monetization-tier-
 
 ## Data — R5_TIERS (locked; supersedes shared TIERS)
 
-| Tier      | priceText | priceUnit             | tagline                             | rationale                                                          | features                                                                                                                                                |
-| --------- | --------- | --------------------- | ----------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Free      | $0        | forever               | The whole point. Always free.       | No backend cost to scale, no reason to charge.                     | Browse/search/filter · Save shows you're watching · See community-submitted prices · Submit prices yourself                                             |
-| Supporter | $2        | / month               | Stuff we can run without scaling.   | Existing infrastructure. You're just chipping in.                  | Everything in Free · Supporter badge on your profile · The warm, smug glow of keeping us alive + badgeOnlyNote "No Premium unlocks — that's the point." |
-| Premium   | $5        | / month               | Stuff that actually costs us money. | Notification workers, email at volume, price polling, Spotify API. | Everything in Free · Concert history · Calendar export · Follow artists + new-show alerts · Price-drop alerts + Spotify sync · ★ More coming (future)   |
-| Founder   | $3        | / mo · locked forever | Full Premium. Permanent discount.   | First 100 subscribers. Claimable at public launch.                 | Everything in Premium · $3/mo — never goes up, ever · Founder badge (first 100 only) · ★ More coming (future)                                           |
+Amended 2026-07-29: Concert history and Calendar export moved from Premium to
+Supporter, and `badgeOnlyNote` renamed `monoNote` (the "no unlocks" semantics no
+longer hold). Everything else in this table is unchanged from R6.
+
+| Tier      | priceText | priceUnit             | tagline                             | rationale                                                          | features                                                                                                                                            |
+| --------- | --------- | --------------------- | ----------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Free      | $0        | forever               | The whole point. Always free.       | No backend cost to scale, no reason to charge.                     | Browse/search/filter · Save shows you're watching · See community-submitted prices · Submit prices yourself                                         |
+| Supporter | $2        | / month               | Stuff we can run without scaling.   | Existing infrastructure. You're just chipping in.                  | Everything in Free · Concert history · Calendar export · Supporter badge on your profile + monoNote "Plus the warm, smug glow of keeping us alive." |
+| Premium   | $5        | / month               | Stuff that actually costs us money. | Notification workers, email at volume, price polling, Spotify API. | Everything in Supporter · Follow artists · New-show alerts · Price-drop alerts · Spotify sync · ★ More coming (future)                              |
+| Founder   | $3        | / mo · locked forever | Full Premium. Permanent discount.   | First 100 subscribers. Claimable at public launch.                 | Everything in Premium · $3/mo — never goes up, ever · Founder badge (first 100 only) · ★ More coming (future)                                       |
 
 ## Component: tierShell (tone shells)
 
@@ -81,7 +85,7 @@ Founder card only, when founderState.open. intensity=medium.
 | check svg          | 12×12, path M2 6 L5 9 L10 3, stroke shell.accent, width 1.8, round, margin-top 4 | same    |
 | future ★           | width 12, margin-top 1, color shell.accent, 12px 800 mono, center, lh 1.2        | same    |
 
-### badgeOnlyNote (Supporter)
+### monoNote (Supporter)
 
 mono / 9.5px / var(--fg-subtle) / 0.08em / uppercase.
 
@@ -137,7 +141,7 @@ Shared: inline-flex, mono 800, 0.12em, uppercase, nowrap, lh 1, 1px solid border
 | Popular chip         | premium && !current && state !== 'founder'; padding 2px 7px, radius 4, bg color-mix(signal 14%), mono 800 8.5px 0.14em uppercase var(--signal) |
 | chevron              | 14×14, path M3 5 L7 9 L11 5, sw 1.7, var(--fg-subtle), rotate(180deg) when expanded, transition .18s                                           |
 | expanded region      | id tier-row-detail-{key}, role region, aria-label "{name} tier details", padding 0 14px 14px, column gap 11                                    |
-| expanded content     | scarcity rail (founder+open) → rationale → features (gap 6) → badgeOnlyNote → TierCtaButton                                                    |
+| expanded content     | scarcity rail (founder+open) → rationale → features (gap 6) → monoNote → TierCtaButton                                                         |
 | default expanded     | current plan, else premium, else first                                                                                                         |
 
 ## Component: Picker surface (TierPicker)

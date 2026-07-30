@@ -182,9 +182,7 @@ export const TierCardDesktop = ({
 
       <TierRationale tier={tier} />
       <TierFeatureList tier={tier} />
-      {tier.badgeOnlyNote !== undefined && (
-        <TierMonoNote text={tier.badgeOnlyNote} />
-      )}
+      {tier.monoNote !== undefined && <TierMonoNote text={tier.monoNote} />}
       {tier.pricePromise !== undefined && (
         <TierMonoNote text={tier.pricePromise} />
       )}

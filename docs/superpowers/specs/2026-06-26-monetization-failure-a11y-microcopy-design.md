@@ -47,13 +47,13 @@ Stripe handles dunning automatically over a 7-day window after the renewal charg
 
 Stripe gives us 20+ `decline_code` values on failed charges, **plus** a separate class of errors (network failures, request timeouts, Stripe API errors) that don't carry a `decline_code` at all. We collapse all of these into **5 user-actionable categories**, each with bespoke copy + a next-action affordance. Eng infra (#775) owns the mapping: categories 1–4 map from `decline_code` on card-decline cases; category 5 maps from non-decline error sources (network, timeout, Stripe API error).
 
-| Category key | When it fires (examples) | Source | Next action affordance |
-|---|---|---|---|
-| `insufficient_funds` | `insufficient_funds` | `decline_code` | Retry in place |
-| `expired_or_incorrect_card` | `expired_card`, `incorrect_cvc`, `incorrect_number`, `invalid_expiry_month`, `invalid_expiry_year` | `decline_code` | Retry in place (Stripe Elements re-renders empty) |
-| `issuer_declined` | `do_not_honor`, `generic_decline`, `card_velocity_exceeded`, `currency_not_supported`, most catch-all declines | `decline_code` | Try a different card (reset in place) |
-| `fraud_block` | `fraudulent`, `stolen_card`, `lost_card`, `pickup_card`, `restricted_card` | `decline_code` | Try a different card — **no retry on same card affordance**. One-line contact-bank guidance ("It's worth a quick call to your bank") — not a CTA. |
-| `network_timeout` | network failure, request timeout, Stripe API error (5xx, gateway timeout) | error type / HTTP status (no `decline_code`) | `Try again` (in-place retry) + auto-retry-suggestion microcopy ("If this keeps happening, give it a minute and try again") |
+| Category key                | When it fires (examples)                                                                                       | Source                                       | Next action affordance                                                                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `insufficient_funds`        | `insufficient_funds`                                                                                           | `decline_code`                               | Retry in place                                                                                                                                    |
+| `expired_or_incorrect_card` | `expired_card`, `incorrect_cvc`, `incorrect_number`, `invalid_expiry_month`, `invalid_expiry_year`             | `decline_code`                               | Retry in place (Stripe Elements re-renders empty)                                                                                                 |
+| `issuer_declined`           | `do_not_honor`, `generic_decline`, `card_velocity_exceeded`, `currency_not_supported`, most catch-all declines | `decline_code`                               | Try a different card (reset in place)                                                                                                             |
+| `fraud_block`               | `fraudulent`, `stolen_card`, `lost_card`, `pickup_card`, `restricted_card`                                     | `decline_code`                               | Try a different card — **no retry on same card affordance**. One-line contact-bank guidance ("It's worth a quick call to your bank") — not a CTA. |
+| `network_timeout`           | network failure, request timeout, Stripe API error (5xx, gateway timeout)                                      | error type / HTTP status (no `decline_code`) | `Try again` (in-place retry) + auto-retry-suggestion microcopy ("If this keeps happening, give it a minute and try again")                        |
 
 **Voice rule across all 5:** Sour Patch — honest, not whiny, not blamey. Never surface the literal `decline_code` value. **Never use the word "fraud" in user-facing copy** for the fraud-block category — that's hostile to legit users whose bank flagged something they don't know about. Frame as "Card flagged for review" or similar.
 
@@ -69,7 +69,7 @@ The right surface for retry depends on the user's context.
 
 **Whatever price a user signs up at is locked for that user. Forever.** No price increases on existing tiers, ever.
 
-Rationale (Hugh's framing, 2026-06-26 brainstorm): *"I don't plan on making a living on this project, it's a side project. If I cover my costs, that's great, if I can pay for my own concert tickets, that's an amazing bonus. I could see us charging individually for some sort of super premium feature or partnership something-something, but that seems so far away. I'm inclined to just keep the price where it is forever. If people want to pay more at some point, great, but I'm not really asking for it."*
+Rationale (Hugh's framing, 2026-06-26 brainstorm): _"I don't plan on making a living on this project, it's a side project. If I cover my costs, that's great, if I can pay for my own concert tickets, that's an amazing bonus. I could see us charging individually for some sort of super premium feature or partnership something-something, but that seems so far away. I'm inclined to just keep the price where it is forever. If people want to pay more at some point, great, but I'm not really asking for it."_
 
 **Implications:**
 
@@ -84,21 +84,21 @@ Design produces a per-surface annotation pass covering **every monetization surf
 
 Surfaces in scope + the key a11y concerns per:
 
-| Surface | Owner round | Key annotations |
-|---|---|---|
-| **Tier picker — desktop matrix** | #781 | Reading order: tier name → price → tagline → features → CTA, column-by-column LTR. Render as semantic `<table>` with proper row/column headers (not a CSS grid of divs). `aria-current="true"` (NOT `page` — `page` implies navigation; `true` is the generic "current item" marker) on the current-plan column header, plus a visually-hidden "Current plan" label inside that header for screen-reader clarity. |
-| **Tier picker — mobile accordion** | #781 R6 | `aria-expanded` + `aria-controls` already shipped. Add: `role="group"` on the accordion container, `aria-label` per row, focus moves to expanded content on open. |
-| **Scarcity rail (Founder countdown)** | #781 | `aria-live="polite"` on seat count (NOT assertive — count updates shouldn't interrupt). Visually-hidden sentence pattern: "Founder seats remaining: 47 of 100. Window closes in 3 days." |
-| **Mini paywall sheet** (Free→Premium upsell) | #781 R6 | `role="dialog"` + `aria-modal="true"` + focus trap. Focus returns to the locked affordance that opened it on close. |
-| **Payment surface** | #780/#781 | `role="dialog"` + `aria-modal="true"`. Focus trap. Escape-to-dismiss with focus return. Stripe Elements owns its iframe's internal a11y; we annotate around it. Form labels associated with inputs. |
-| **Settings Plan card** (all variants) | #780 | Inline — no trap. `aria-label` on each variant naming the current state (e.g., "Premium subscription, renews Jul 15"). Status rail uses `aria-live="polite"` for trial countdown updates. |
-| **Cancel / downgrade / upgrade flows** | #780 | `role="dialog"` + focus trap on each sheet/modal. The `ChangesDisclosure` accordion gets `aria-expanded` + `aria-controls`. Proration math rows use semantic `<dl><dt><dd>` so screen readers read "Supporter, from today: two dollars per month" / "Credit toward next bill: two dollars fifty". |
-| **Account-deletion sheet 1** (warning) | #780 | `role="dialog"` + focus trap. The "Gone for good" list uses `<ul>` with semantic items. |
-| **Account-deletion sheet 2** (confirm-twice) | #780 | `role="alertdialog"` (destructive). Email input: `aria-label` + `aria-invalid` when not matching + `aria-describedby` pointing at the match-state line. Destructive button: `aria-disabled="true"` until match. |
-| **Trial-ended takeover** | #780 | `role="alertdialog"` + `aria-modal="true"`. `aria-live="assertive"` announces "Your Premium trial has ended" on mount (this is the one place assertive is correct — it's a state transition the user needs to know about). Focus trap with Escape closing. The tier picker beneath inherits picker a11y. |
-| **Day-13 banner** | #780 | `role="region"` + `aria-label="Trial ending nudge"`. Dismiss has `aria-label="Dismiss trial-end notice"`. `aria-live="polite"` (banner appears between sessions, not mid-session). |
-| **Past-due banner** | #782 (this round) | Same pattern as Day-13: `role="region"` + `aria-label`. Dismiss `aria-label="Dismiss payment notice"`. `aria-live="polite"`. |
-| **5 failure surfaces** + **2 challenge mounts** | #782 (this round) | Each: `role="alertdialog"` + `aria-modal="true"` + `aria-live="assertive"` for the error headline (it's an interrupt by definition). Focus moves to the primary action button (`Try again` / `Try a different card`). Escape dismisses to the picker. Network-timeout: an additional `aria-live="polite"` for the auto-retry-suggestion line. |
+| Surface                                         | Owner round       | Key annotations                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tier picker — desktop matrix**                | #781              | Reading order: tier name → price → tagline → features → CTA, column-by-column LTR. Render as semantic `<table>` with proper row/column headers (not a CSS grid of divs). `aria-current="true"` (NOT `page` — `page` implies navigation; `true` is the generic "current item" marker) on the current-plan column header, plus a visually-hidden "Current plan" label inside that header for screen-reader clarity. |
+| **Tier picker — mobile accordion**              | #781 R6           | `aria-expanded` + `aria-controls` already shipped. Add: `role="group"` on the accordion container, `aria-label` per row, focus moves to expanded content on open.                                                                                                                                                                                                                                                 |
+| **Scarcity rail (Founder countdown)**           | #781              | `aria-live="polite"` on seat count (NOT assertive — count updates shouldn't interrupt). Visually-hidden sentence pattern: "Founder seats remaining: 47 of 100. Window closes in 3 days."                                                                                                                                                                                                                          |
+| **Mini paywall sheet** (Free→Premium upsell)    | #781 R6           | `role="dialog"` + `aria-modal="true"` + focus trap. Focus returns to the locked affordance that opened it on close.                                                                                                                                                                                                                                                                                               |
+| **Payment surface**                             | #780/#781         | `role="dialog"` + `aria-modal="true"`. Focus trap. Escape-to-dismiss with focus return. Stripe Elements owns its iframe's internal a11y; we annotate around it. Form labels associated with inputs.                                                                                                                                                                                                               |
+| **Settings Plan card** (all variants)           | #780              | Inline — no trap. `aria-label` on each variant naming the current state (e.g., "Premium subscription, renews Jul 15"). Status rail uses `aria-live="polite"` for trial countdown updates.                                                                                                                                                                                                                         |
+| **Cancel / downgrade / upgrade flows**          | #780              | `role="dialog"` + focus trap on each sheet/modal. The `ChangesDisclosure` accordion gets `aria-expanded` + `aria-controls`. Proration math rows use semantic `<dl><dt><dd>` so screen readers read "Supporter, from today: two dollars per month" / "Credit toward next bill: two dollars fifty".                                                                                                                 |
+| **Account-deletion sheet 1** (warning)          | #780              | `role="dialog"` + focus trap. The "Gone for good" list uses `<ul>` with semantic items.                                                                                                                                                                                                                                                                                                                           |
+| **Account-deletion sheet 2** (confirm-twice)    | #780              | `role="alertdialog"` (destructive). Email input: `aria-label` + `aria-invalid` when not matching + `aria-describedby` pointing at the match-state line. Destructive button: `aria-disabled="true"` until match.                                                                                                                                                                                                   |
+| **Trial-ended takeover**                        | #780              | `role="alertdialog"` + `aria-modal="true"`. `aria-live="assertive"` announces "Your Premium trial has ended" on mount (this is the one place assertive is correct — it's a state transition the user needs to know about). Focus trap with Escape closing. The tier picker beneath inherits picker a11y.                                                                                                          |
+| **Day-13 banner**                               | #780              | `role="region"` + `aria-label="Trial ending nudge"`. Dismiss has `aria-label="Dismiss trial-end notice"`. `aria-live="polite"` (banner appears between sessions, not mid-session).                                                                                                                                                                                                                                |
+| **Past-due banner**                             | #782 (this round) | Same pattern as Day-13: `role="region"` + `aria-label`. Dismiss `aria-label="Dismiss payment notice"`. `aria-live="polite"`.                                                                                                                                                                                                                                                                                      |
+| **5 failure surfaces** + **2 challenge mounts** | #782 (this round) | Each: `role="alertdialog"` + `aria-modal="true"` + `aria-live="assertive"` for the error headline (it's an interrupt by definition). Focus moves to the primary action button (`Try again` / `Try a different card`). Escape dismisses to the picker. Network-timeout: an additional `aria-live="polite"` for the auto-retry-suggestion line.                                                                     |
 
 **Screen-reader walkthrough scripts** — Design ships short numbered scripts ("how a screen reader user navigates this surface") for three high-complexity surfaces:
 
@@ -138,25 +138,25 @@ Direction: "Whatever you pay, you pay. We won't raise it." Design owns final wor
 
 ## New surfaces — summary
 
-| Surface | Mobile | Desktop | Round owner |
-|---|---|---|---|
-| Insufficient funds failure | sheet | modal | #782 |
-| Expired/incorrect card failure | sheet | modal | #782 |
-| Issuer declined failure | sheet | modal | #782 |
-| Fraud block failure | sheet | modal | #782 |
-| Network/timeout failure | sheet | modal | #782 |
-| 3DS challenge mount | sheet | modal | #782 |
-| SCA challenge mount | sheet | modal | #782 |
-| Past-due Plan card variant | inline | inline | #782 |
-| Past-due top-of-app banner | strip | strip | #782 |
-| Above-CTA legal block | inline | inline | #782 |
-| Tier card price-promise line | inline | inline | #782 |
+| Surface                        | Mobile | Desktop | Round owner |
+| ------------------------------ | ------ | ------- | ----------- |
+| Insufficient funds failure     | sheet  | modal   | #782        |
+| Expired/incorrect card failure | sheet  | modal   | #782        |
+| Issuer declined failure        | sheet  | modal   | #782        |
+| Fraud block failure            | sheet  | modal   | #782        |
+| Network/timeout failure        | sheet  | modal   | #782        |
+| 3DS challenge mount            | sheet  | modal   | #782        |
+| SCA challenge mount            | sheet  | modal   | #782        |
+| Past-due Plan card variant     | inline | inline  | #782        |
+| Past-due top-of-app banner     | strip  | strip   | #782        |
+| Above-CTA legal block          | inline | inline  | #782        |
+| Tier card price-promise line   | inline | inline  | #782        |
 
 ## Locked from prior rounds — do not redesign
 
 - **#781 R5/R6** — tier picker (all 6 states), founder race-loser + post-claim takeover, gifted thank-you panel + Plan card, entitlements matrix, mini paywall sheet, mobile accordion picker.
 - **#780 R2** — all 9 Plan card lifecycle variants, Manage sheet, Cancel / Downgrade / Upgrade flows, account-deletion two-sheet, trial-ended takeover, day-13 banner.
-- **R6 amendments** — Watching is Free for signed-in users, Supporter is badge-only, hybrid management split, immediate-switch proration, 90-day preserve-then-purge, etc.
+- **R6 amendments** — Watching is Free for signed-in users, Supporter is badge-only (superseded 2026-07-29 — Supporter now unlocks concert history + calendar export), hybrid management split, immediate-switch proration, 90-day preserve-then-purge, etc.
 
 #782's surfaces sit on top of these. They don't change the tier picker, don't change the matrix, don't redesign any locked surface. They add failure variants, past-due variants, a11y annotations, and microcopy regions.
 
@@ -177,20 +177,20 @@ Direction: "Whatever you pay, you pay. We won't raise it." Design owns final wor
 
 These were considered and explicitly scoped to other tickets. Future iterations should not pull them back into #782 without a coordinated re-scope:
 
-| Concern | Owner |
-|---|---|
-| Subscription lifecycle, cancel / downgrade / upgrade flows | #780 (✅ done) |
-| Tier vocabulary, entitlements matrix, tier picker visuals, Founder seat counter, gifted comp mechanic | #781 (✅ done) |
-| Email touchpoints (welcome / renewal-receipt / dunning sequence / payment-failed-N / cancel-ack / win-back / day-13 email / pre-purge) | #783 |
-| Stripe wiring (Elements, customer portal endpoint, webhook handler) | #775 |
-| `decline_code` → 5-category mapping logic | #775 |
-| Region detection for SCA-region disclosure (which countries trigger the conditional notice) | #775 |
-| Schema for `past_due_banner_dismissed_at` (per-session timestamp) + the past-due check at session start | #775 |
-| Logged-out broader UX | #794 |
-| Admin refund / dispute tooling | Separate ticket (different audience) |
-| Internationalization beyond required disclosures (full translations) | Out of scope entirely |
-| Refund flows | Separate ticket |
-| Direct support / contact-us routing referenced in fraud-block surface | Existing project support channel (no new design needed; copy direction lives in the failure surface) |
+| Concern                                                                                                                                | Owner                                                                                                |
+| -------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Subscription lifecycle, cancel / downgrade / upgrade flows                                                                             | #780 (✅ done)                                                                                       |
+| Tier vocabulary, entitlements matrix, tier picker visuals, Founder seat counter, gifted comp mechanic                                  | #781 (✅ done)                                                                                       |
+| Email touchpoints (welcome / renewal-receipt / dunning sequence / payment-failed-N / cancel-ack / win-back / day-13 email / pre-purge) | #783                                                                                                 |
+| Stripe wiring (Elements, customer portal endpoint, webhook handler)                                                                    | #775                                                                                                 |
+| `decline_code` → 5-category mapping logic                                                                                              | #775                                                                                                 |
+| Region detection for SCA-region disclosure (which countries trigger the conditional notice)                                            | #775                                                                                                 |
+| Schema for `past_due_banner_dismissed_at` (per-session timestamp) + the past-due check at session start                                | #775                                                                                                 |
+| Logged-out broader UX                                                                                                                  | #794                                                                                                 |
+| Admin refund / dispute tooling                                                                                                         | Separate ticket (different audience)                                                                 |
+| Internationalization beyond required disclosures (full translations)                                                                   | Out of scope entirely                                                                                |
+| Refund flows                                                                                                                           | Separate ticket                                                                                      |
+| Direct support / contact-us routing referenced in fraud-block surface                                                                  | Existing project support channel (no new design needed; copy direction lives in the failure surface) |
 
 ## Decisions inherited
 

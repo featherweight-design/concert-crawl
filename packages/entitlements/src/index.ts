@@ -38,9 +38,15 @@ export const USER_PLANS: readonly UserPlan[] = [
   'gifted',
 ]
 
-// Canonical encoding of #781 §6 (with the R6 Watching-is-Free amendment and
-// the #763 §7 (E8) spotify-sync override: free/supporter are paywall-on-tap
-// and logged-out is tier-picker-on-tap, superseding #781's hidden cells).
+// Canonical encoding of #781 §6, as amended by:
+//   - R6 Watching-is-Free (watching is visible-active for every signed-in tier)
+//   - #763 §7 (E8) spotify-sync: free/supporter are paywall-on-tap and
+//     logged-out is tier-picker-on-tap, superseding #781's hidden cells
+//   - 2026-07-29 Supporter-unlocks amendment: concert-history and
+//     calendar-export are visible-active for supporter, restoring the
+//     active-vs-passive split from the beta-to-launch spec. Both features run
+//     on existing infrastructure; Premium keeps the four features with real
+//     ongoing cost (following, alerts, price-drop-alerts, spotify-sync).
 // Single point of truth for both the boolean entitlement and the locked-tap
 // UX routing — edits here must update the test table in lockstep.
 export const ENTITLEMENTS_MATRIX: Record<
@@ -58,7 +64,7 @@ export const ENTITLEMENTS_MATRIX: Record<
   'concert-history': {
     'logged-out': 'tier-picker-on-tap',
     free: 'paywall-on-tap',
-    supporter: 'paywall-on-tap',
+    supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',
@@ -66,7 +72,7 @@ export const ENTITLEMENTS_MATRIX: Record<
   'calendar-export': {
     'logged-out': 'tier-picker-on-tap',
     free: 'paywall-on-tap',
-    supporter: 'paywall-on-tap',
+    supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',

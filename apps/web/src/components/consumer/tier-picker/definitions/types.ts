@@ -20,8 +20,8 @@ export interface TierDefinition {
   tagline: string
   rationale: string
   features: TierFeature[]
-  /** Supporter's honest "no Premium unlocks" mono note. */
-  badgeOnlyNote?: string
+  /** Mono aside rendered under the feature list. Supporter only today. */
+  monoNote?: string
   /** Paid-tier price-promise microcopy (#782). Founder carries its own bullet. */
   pricePromise?: string
 }

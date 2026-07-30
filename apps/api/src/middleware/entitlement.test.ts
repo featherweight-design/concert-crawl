@@ -118,10 +118,18 @@ describe('requireFeature', () => {
     expect(body.feature).toBe('concert-history')
   })
 
-  it('returns 403 for supporter on calendar-export (paid means premium-and-up)', async () => {
+  it('passes supporter on calendar-export (a Supporter unlock since 2026-07-29)', async () => {
     setAuth()
     setPlan({ plan: 'supporter', status: 'active' })
     const app = buildApp('calendar-export')
+    const res = await app.request('/probe')
+    expect(res.status).toBe(200)
+  })
+
+  it('returns 403 for supporter on following (Premium keeps the active-cost features)', async () => {
+    setAuth()
+    setPlan({ plan: 'supporter', status: 'active' })
+    const app = buildApp('following')
     const res = await app.request('/probe')
     expect(res.status).toBe(403)
   })

@@ -71,9 +71,18 @@ describe('useEntitlement', () => {
     expect(result.current.surface).toBe('paywall-on-tap')
   })
 
-  it('locks calendar-export for a supporter (paid means premium-and-up)', async () => {
+  it('activates calendar-export for a supporter (a Supporter unlock since 2026-07-29)', async () => {
     setProfilePlan(planState('supporter', { status: 'active' }))
     const { result } = renderHook(() => useEntitlement('calendar-export'), {
+      wrapper: withProvider(),
+    })
+    await waitFor(() => expect(result.current.active).toBe(true))
+    expect(result.current.surface).toBe('visible-active')
+  })
+
+  it('locks following for a supporter (Premium keeps the active-cost features)', async () => {
+    setProfilePlan(planState('supporter', { status: 'active' }))
+    const { result } = renderHook(() => useEntitlement('following'), {
       wrapper: withProvider(),
     })
     await waitFor(() => expect(result.current.isLoading).toBe(false))
