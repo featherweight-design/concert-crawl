@@ -26,6 +26,21 @@ export interface Release {
 
 export const RELEASES: Release[] = [
   {
+    version: 'v0.17.0-beta',
+    date: 'Jul 29, 2026',
+    headline: "You're not the only one watching that show.",
+    items: [
+      {
+        kind: 'added',
+        text: 'Every show page now tells you who else in the crawl is watching it — by handle, right under the Watch button. Tap "see all" for the full roster. If nobody else is on it yet you get nothing at all, rather than a lonely zero.',
+      },
+      {
+        kind: 'changed',
+        text: 'The old "3 watching · alerts on price + sold out" line under the Watch button is gone. The count it carried is now the sentence beside the avatars, and the alerts promise gets its own line — so each says one thing clearly instead of sharing a tail.',
+      },
+    ],
+  },
+  {
     version: 'v0.16.2-beta',
     date: 'Jul 29, 2026',
     headline: 'The front page points at the shows, not at a beta code.',

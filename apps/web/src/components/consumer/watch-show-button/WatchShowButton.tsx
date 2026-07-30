@@ -25,13 +25,11 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 interface WatchShowButtonProps {
   eventId: string
   initialWatching?: boolean
-  watchingCount?: number
 }
 
 export function WatchShowButton({
   eventId,
   initialWatching = false,
-  watchingCount = 0,
 }: WatchShowButtonProps) {
   const { isSignedIn, getToken } = useAuth()
   const { data: watchedShows } = useWatching()
@@ -330,36 +328,6 @@ export function WatchShowButton({
             </span>
           )}
         </button>
-
-        {watchingCount > 0 && (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 6,
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9.5,
-              fontWeight: 700,
-              color: 'var(--fg-subtle)',
-              letterSpacing: '0.04em',
-            }}
-          >
-            <span
-              style={{
-                width: 4,
-                height: 4,
-                borderRadius: 2,
-                background: 'var(--accent)',
-                flexShrink: 0,
-              }}
-              aria-hidden
-            />
-            {watchingCount} {CONSUMER_COPY.watchShowButton.watchingCount.suffix}
-            {isWatching
-              ? ''
-              : CONSUMER_COPY.watchShowButton.watchingCount.alertsSuffix}
-          </span>
-        )}
       </div>
       <PostWatchSheet
         open={promptVariant !== null}

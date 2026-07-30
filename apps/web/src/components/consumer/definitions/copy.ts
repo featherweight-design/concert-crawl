@@ -726,10 +726,29 @@ export const CONSUMER_COPY = {
       ariaWatch: 'Watch this show',
       ariaWatching: 'Watching, click to stop',
     },
-    watchingCount: {
-      suffix: 'watching',
-      alertsSuffix: ' · alerts on price + sold out',
-    },
+  },
+
+  // ── Who else is watching ────────────────────────────────────────
+  // The social-proof surface under the Watch button on event detail (#762).
+  // "in the crawl" is the warm handle for "other Concert Crawl users" — never
+  // "users", never "event".
+  watchers: {
+    loading: 'Counting the crawl…',
+    // Sentence tails, joined after the rendered handles:
+    one: 'is watching this one.',
+    areWatching: 'are watching.',
+    plusOthers: (count: number) => `+ ${count} more in the crawl, watching.`,
+    countOnly: (count: number) =>
+      `${count} in the crawl are watching this one.`,
+    countOnlyHonest: "No handles to drop yet — beta's early.",
+    rosterToggle: (count: number) => `see all ${count}`,
+    rosterHide: 'show fewer',
+    rosterTitle: 'The crawl on this show',
+    rosterOthers: (count: number) =>
+      `${count} other ${count === 1 ? 'watcher' : 'watchers'}, no handle yet`,
+    // The alerts affordance the retired "N watching · alerts on price + sold
+    // out" count tail used to carry now rides under the inactive Watch button.
+    watchHint: 'Watch to get pinged on price drops + sold-out.',
   },
 
   // ── Small event row ─────────────────────────────────────────────

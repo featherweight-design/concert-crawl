@@ -15,7 +15,7 @@ import { EventImage } from '@/components/consumer/event-image'
 import { BackButton } from '@/components/consumer/event-detail/BackButton'
 import { EventCard } from '@/components/consumer/event-card/EventCard'
 import { SectionHeader } from '@/components/consumer/section-header'
-import { WatchShowButton } from '@/components/consumer/watch-show-button'
+import { WatchZone } from '@/components/consumer/watchers'
 import { SetlistPreview } from '@/components/consumer/setlist-preview'
 import { GenreChips } from '@/components/consumer/GenreChips'
 import {
@@ -172,11 +172,7 @@ export default async function EventDetailPage({
 
           {/* Watch strip — directly under title */}
           <div className="mt-3">
-            <WatchShowButton
-              eventId={event.id}
-              initialWatching={event.isWatching}
-              watchingCount={event.watching}
-            />
+            <WatchZone eventId={event.id} initialWatching={event.isWatching} />
           </div>
 
           {/* Spotify attribution strip — directly under the Watching pill

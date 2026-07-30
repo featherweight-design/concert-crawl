@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/nextjs'
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types'
 import { apiClient } from '@/lib/api'
 import { watchingQueryKey } from './use-watching'
+import { eventWatchersEventKey } from './use-event-watchers'
 
 export function useWatchToggle() {
   const queryClient = useQueryClient()
@@ -74,8 +75,15 @@ export function useWatchToggle() {
         queryClient.setQueryData(watchingQueryKey, context.previous)
       }
     },
-    onSettled: () => {
+    onSettled: (_data, _error, eventId) => {
       void queryClient.invalidateQueries({ queryKey: watchingQueryKey })
+      // Self-exclusion means the viewer's own toggle doesn't change their own
+      // numbers — but it changes what other viewers see, so refresh the roster
+      // to keep a long-lived tab honest. Scoped to the toggled event: no other
+      // event's roster changed.
+      void queryClient.invalidateQueries({
+        queryKey: eventWatchersEventKey(eventId),
+      })
     },
   })
 }
