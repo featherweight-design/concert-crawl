@@ -186,22 +186,11 @@ describe('GET /v1/venues/:slug — integration', () => {
   })
 })
 
-describe('GET /v1/venues — beta auth gate', () => {
-  it('returns 401 without auth when REQUIRE_BETA_AUTH is true', async () => {
-    const original = process.env.REQUIRE_BETA_AUTH
-    try {
-      process.env.REQUIRE_BETA_AUTH = 'true'
-      vi.resetModules()
-      // Re-import after env change — vi.mock is re-applied on fresh module load
-      const { venuesPublicRouter: freshRouter } =
-        await import('./venues-public.js')
-      const { Hono } = await import('hono')
-      const testApp = new Hono()
-      testApp.route('/v1/venues', freshRouter)
-      const res = await testApp.request('/v1/venues')
-      expect(res.status).toBe(401)
-    } finally {
-      process.env.REQUIRE_BETA_AUTH = original
-    }
+describe('GET /v1/venues — anonymous reads (#794)', () => {
+  // Replaces the REQUIRE_BETA_AUTH 401 assertion. The flag is gone, so the
+  // contract is the inverse: the venue list serves anonymous callers.
+  it('serves the list to an anonymous caller', async () => {
+    const res = await app.request('/v1/venues')
+    expect(res.status).toBe(200)
   })
 })

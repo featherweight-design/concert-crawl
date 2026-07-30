@@ -80,9 +80,9 @@ test.describe('smoke: event data', () => {
 
 test.describe('smoke: search', () => {
   // Exercise search through the SSR page rather than calling the API
-  // directly. The events API is gated by serviceOrClerkAuth when
-  // REQUIRE_BETA_AUTH=true, which a raw Playwright request would 401 on;
-  // SSR uses the service key and is what real users hit anyway.
+  // directly. Reads are public since #794, so a raw request would work — but
+  // SSR is what real users hit, and asserting on the rendered page catches
+  // wiring breaks between the API and the UI that an API-only check misses.
   test('events page renders results or empty state when filtered by search', async ({
     page,
   }) => {

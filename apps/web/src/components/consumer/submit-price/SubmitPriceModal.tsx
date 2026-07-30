@@ -284,8 +284,11 @@ export function SubmitPriceModal({
   const [panelWarnings, setPanelWarnings] = useState<
     Array<Partial<Record<string, string>>>
   >([{}])
+  // SubmissionWithMeta rather than PriceSubmission: the only writer is the
+  // `userSubmission` field of the submissions-list response, whose `userId` is
+  // null for anonymous callers since #794.
   const [existingSubmission, setExistingSubmission] =
-    useState<PriceSubmission | null>(null)
+    useState<SubmissionWithMeta | null>(null)
   const [withdrawError, setWithdrawError] = useState<'network' | 'api' | null>(
     null,
   )
@@ -1199,7 +1202,7 @@ function AlreadySubmittedState({
   onEdit,
   onWithdraw,
 }: {
-  submission: PriceSubmission | null
+  submission: SubmissionWithMeta | null
   onEdit: () => void
   onWithdraw: () => void
 }) {

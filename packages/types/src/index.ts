@@ -519,8 +519,14 @@ export interface PriceSubmission {
   updatedAt: string
 }
 
-// SubmissionWithMeta — single submission + peer-confirm metadata
-export interface SubmissionWithMeta extends PriceSubmission {
+// SubmissionWithMeta — single submission + peer-confirm metadata.
+// `userId` is only populated on the caller's own rows: GET
+// /v1/events/:id/price-submissions is public since #794, and a Clerk user id
+// has no business reaching anyone but its owner. A signed-in caller sees their
+// own id (so the "yours" affordance keeps working) and null everywhere else;
+// an anonymous caller sees null throughout.
+export interface SubmissionWithMeta extends Omit<PriceSubmission, 'userId'> {
+  userId: string | null
   confirms: number
   byYou: boolean
 }

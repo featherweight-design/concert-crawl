@@ -1112,55 +1112,42 @@ describe('GET /v1/events — filterVibe', () => {
   })
 })
 
-describe('GET /v1/events — beta auth gate', () => {
-  it('returns 401 without auth when REQUIRE_BETA_AUTH is true', async () => {
-    const original = process.env.REQUIRE_BETA_AUTH
-    try {
-      process.env.REQUIRE_BETA_AUTH = 'true'
-      vi.resetModules()
-      const { eventsRouter: freshRouter } = await import('./events.js')
-      const { Hono } = await import('hono')
-      const testApp = new Hono()
-      testApp.route('/v1/events', freshRouter)
-      const res = await testApp.request('/v1/events')
-      expect(res.status).toBe(401)
-    } finally {
-      process.env.REQUIRE_BETA_AUTH = original
-    }
+describe('GET /v1/events — anonymous reads (#794)', () => {
+  // These replace the REQUIRE_BETA_AUTH 401 assertions. The flag is gone, so
+  // the contract is the inverse: reads serve anonymous callers, and the
+  // mutating routes still 401 on their own.
+  it('serves the list to an anonymous caller', async () => {
+    const res = await app.request('/v1/events')
+    expect(res.status).toBe(200)
   })
 
-  it('returns 401 on GET /:id without auth when REQUIRE_BETA_AUTH is true', async () => {
-    const original = process.env.REQUIRE_BETA_AUTH
-    try {
-      process.env.REQUIRE_BETA_AUTH = 'true'
-      vi.resetModules()
-      const { eventsRouter: freshRouter } = await import('./events.js')
-      const { Hono } = await import('hono')
-      const testApp = new Hono()
-      testApp.route('/v1/events', freshRouter)
-      const res = await testApp.request(
-        '/v1/events/00000000-0000-0000-0000-000000000001',
-      )
-      expect(res.status).toBe(401)
-    } finally {
-      process.env.REQUIRE_BETA_AUTH = original
-    }
+  it('serves GET /genres to an anonymous caller', async () => {
+    const res = await app.request('/v1/events/genres')
+    expect(res.status).toBe(200)
   })
 
-  it('returns 401 on GET /genres without auth when REQUIRE_BETA_AUTH is true', async () => {
-    const original = process.env.REQUIRE_BETA_AUTH
-    try {
-      process.env.REQUIRE_BETA_AUTH = 'true'
-      vi.resetModules()
-      const { eventsRouter: freshRouter } = await import('./events.js')
-      const { Hono } = await import('hono')
-      const testApp = new Hono()
-      testApp.route('/v1/events', freshRouter)
-      const res = await testApp.request('/v1/events/genres')
-      expect(res.status).toBe(401)
-    } finally {
-      process.env.REQUIRE_BETA_AUTH = original
-    }
+  it('reaches the handler on GET /:id for an anonymous caller', async () => {
+    // 404 rather than 401 — auth no longer intercepts before the lookup.
+    const res = await app.request(
+      '/v1/events/00000000-0000-0000-0000-000000000001',
+    )
+    expect(res.status).toBe(404)
+  })
+
+  it('still rejects an anonymous POST /:id/watch', async () => {
+    const res = await app.request(
+      '/v1/events/00000000-0000-0000-0000-000000000001/watch',
+      { method: 'POST' },
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('still rejects an anonymous DELETE /:id/watch', async () => {
+    const res = await app.request(
+      '/v1/events/00000000-0000-0000-0000-000000000001/watch',
+      { method: 'DELETE' },
+    )
+    expect(res.status).toBe(401)
   })
 })
 

@@ -43,7 +43,6 @@ import {
 import { getEventWatchers } from '../lib/event-watchers.js'
 import { isImminentEvent, todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
-import { serviceOrClerkAuth } from '../middleware/auth.js'
 import {
   aggregateByTier,
   pickHeadlinesByTier,
@@ -116,10 +115,6 @@ function dayCountBetween(from: string, to: string): number {
 }
 
 export const eventsRouter = new Hono()
-
-if (process.env.REQUIRE_BETA_AUTH === 'true') {
-  eventsRouter.use('*', serviceOrClerkAuth)
-}
 
 // GET /v1/events — public event listing with filters and pagination.
 // clerkMiddleware() verifies any bearer JWT locally (no network/DB cost) so

@@ -1,15 +1,9 @@
 import { Hono } from 'hono'
-import { clerkMiddleware } from '@hono/clerk-auth'
 import { db, events, userEvents, venues } from '@concert-crawl/db'
 import { and, asc, desc, eq, gte, isNull, sql } from 'drizzle-orm'
 import { todayInTimezone } from '../lib/time.js'
-import { requireAuth } from '../middleware/auth.js'
 
 export const searchRouter = new Hono()
-
-if (process.env.REQUIRE_BETA_AUTH === 'true') {
-  searchRouter.use('*', clerkMiddleware(), requireAuth)
-}
 
 // GET /v1/search/popular — top 5 upcoming events by watcher count, no auth required
 searchRouter.get('/popular', async (ctx) => {

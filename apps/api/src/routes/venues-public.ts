@@ -1,5 +1,4 @@
 import { Hono } from 'hono'
-import { clerkMiddleware } from '@hono/clerk-auth'
 import { db, events, priceSubmissions, venues } from '@concert-crawl/db'
 import {
   type SQL,
@@ -20,14 +19,9 @@ import {
   RESALE_VENDOR_VALUES,
 } from '@concert-crawl/types'
 import { todayInTimezone } from '../lib/time.js'
-import { requireAuth } from '../middleware/auth.js'
 import { aggregateByTier } from '../lib/price-aggregation/index.js'
 
 export const venuesPublicRouter = new Hono()
-
-if (process.env.REQUIRE_BETA_AUTH === 'true') {
-  venuesPublicRouter.use('*', clerkMiddleware(), requireAuth)
-}
 
 // GET /v1/venues — list active venues with upcoming event counts (public)
 venuesPublicRouter.get('/', async (ctx) => {

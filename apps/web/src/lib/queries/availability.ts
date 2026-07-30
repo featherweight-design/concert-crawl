@@ -11,12 +11,12 @@ export function availabilityPath(from: string, to: string) {
 
 // SSR-only prefetch for the events page (no `'use client'`), so it must not
 // live in the client-only `use-availability` hook module. The client refetch
-// path goes through `fetchPublicRead` in that hook. Follow the sibling SSR
+// path goes through `publicApiClient` in that hook. Follow the sibling SSR
 // fetches (fetchEvents/fetchVenues/fetchGenres in events/page.tsx): prefer an
-// authenticated request when the SSR session carries a token so the calendar
-// prefetch works under beta gating (REQUIRE_BETA_AUTH) without depending on
-// INTERNAL_API_SECRET being configured on the web server. Service workers only
-// intercept browser fetches, so SW caching is irrelevant here.
+// authenticated request when the SSR session carries a token, which keeps the
+// prefetch working without depending on INTERNAL_API_SECRET being configured on
+// the web server. Service workers only intercept browser fetches, so SW caching
+// is irrelevant here.
 export async function fetchAvailability(
   from: string,
   to: string,

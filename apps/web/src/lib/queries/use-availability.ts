@@ -1,11 +1,10 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '@clerk/nextjs'
 import type { EventsAvailabilityResponse } from '@concert-crawl/types'
 import { STALE_30_MIN } from '@/lib/query-client'
+import { publicApiClient } from '@/lib/api'
 import { availabilityQueryKey, availabilityPath } from './availability'
-import { fetchPublicRead } from './public-read'
 
 function toMap(res: EventsAvailabilityResponse): Map<string, number> {
   const map = new Map<string, number>()
@@ -24,13 +23,13 @@ export function useAvailability({
   to,
   initialData,
 }: UseAvailabilityArgs) {
-  const { getToken } = useAuth()
   return useQuery({
     queryKey: availabilityQueryKey(from, to),
     queryFn: async (): Promise<Map<string, number>> => {
-      const res = await fetchPublicRead<EventsAvailabilityResponse>(
+      // Anonymous fetch — GET /v1/events/availability is public since #794, and
+      // an unauthenticated response stays cacheable by the service worker.
+      const res = await publicApiClient.get<EventsAvailabilityResponse>(
         availabilityPath(from, to),
-        getToken,
       )
       return toMap(res)
     },

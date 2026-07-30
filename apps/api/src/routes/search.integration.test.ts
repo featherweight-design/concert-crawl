@@ -143,20 +143,11 @@ describe('GET /v1/search/popular', () => {
   })
 })
 
-describe('GET /v1/search/popular — beta auth gate', () => {
-  it('returns 401 without auth when REQUIRE_BETA_AUTH is true', async () => {
-    const original = process.env.REQUIRE_BETA_AUTH
-    try {
-      process.env.REQUIRE_BETA_AUTH = 'true'
-      vi.resetModules()
-      const { searchRouter: freshRouter } = await import('./search.js')
-      const { Hono } = await import('hono')
-      const testApp = new Hono()
-      testApp.route('/v1/search', freshRouter)
-      const res = await testApp.request('/v1/search/popular')
-      expect(res.status).toBe(401)
-    } finally {
-      process.env.REQUIRE_BETA_AUTH = original
-    }
+describe('GET /v1/search — anonymous reads (#794)', () => {
+  // Replaces the REQUIRE_BETA_AUTH 401 assertion. The flag is gone, so the
+  // contract is the inverse: search serves anonymous callers.
+  it('serves /popular to an anonymous caller', async () => {
+    const res = await app.request('/v1/search/popular')
+    expect(res.status).toBe(200)
   })
 })

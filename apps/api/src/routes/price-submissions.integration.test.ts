@@ -427,24 +427,68 @@ describe('GET /v1/events/:id/price-submissions', () => {
   })
 })
 
-describe('GET /v1/events/:id/price-submissions — beta auth gate', () => {
-  it('returns 401 without auth when REQUIRE_BETA_AUTH is true', async () => {
-    const original = process.env.REQUIRE_BETA_AUTH
-    try {
-      process.env.REQUIRE_BETA_AUTH = 'true'
-      vi.resetModules()
-      const { priceSubmissionsRouter: freshRouter } =
-        await import('./price-submissions.js')
-      const { Hono } = await import('hono')
-      const testApp = new Hono()
-      testApp.route('/v1/events', freshRouter)
-      const res = await testApp.request(
-        '/v1/events/00000000-0000-0000-0000-000000000001/price-submissions',
-      )
-      expect(res.status).toBe(401)
-    } finally {
-      process.env.REQUIRE_BETA_AUTH = original
+describe('price submissions — anonymous access (#794)', () => {
+  // Replaces the REQUIRE_BETA_AUTH 401 assertion. The router-wide gate is gone,
+  // so reading is open while every write keeps its own per-route guard.
+  it('serves GET /:id/price-submissions to an anonymous caller', async () => {
+    await clearTables()
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+
+    const res = await app.request(`/v1/events/${event.id}/price-submissions`)
+    expect(res.status).toBe(200)
+  })
+
+  it('withholds the submitter Clerk id from an anonymous caller', async () => {
+    await clearTables()
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+    await seedPriceSubmission(event.id, 'user_leak_check')
+
+    const res = await app.request(`/v1/events/${event.id}/price-submissions`)
+    const body = (await res.json()) as {
+      data: { submissions: { userId: string | null }[] }
     }
+    expect(body.data.submissions).toHaveLength(1)
+    expect(body.data.submissions[0]?.userId).toBeNull()
+    expect(JSON.stringify(body)).not.toContain('user_leak_check')
+  })
+
+  it('withholds another submitter Clerk id from a signed-in caller', async () => {
+    await clearTables()
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id)
+    await seedPriceSubmission(event.id, 'user_leak_check')
+    await seedPriceSubmission(event.id, 'user_abc123')
+
+    setAuth('user_abc123')
+    const res = await app.request(`/v1/events/${event.id}/price-submissions`, {
+      headers: { Authorization: 'Bearer test-token' },
+    })
+    const body = (await res.json()) as {
+      data: { submissions: { userId: string | null }[] }
+    }
+    // The caller keeps their own id — the "yours" affordance reads it — and
+    // sees null on the other submitter's row.
+    const ids = body.data.submissions.map((sub) => sub.userId)
+    expect(ids).toContain('user_abc123')
+    expect(JSON.stringify(body)).not.toContain('user_leak_check')
+  })
+
+  it('still rejects an anonymous POST /:id/price-submissions', async () => {
+    const res = await app.request(
+      '/v1/events/00000000-0000-0000-0000-000000000001/price-submissions',
+      { method: 'POST' },
+    )
+    expect(res.status).toBe(401)
+  })
+
+  it('still rejects an anonymous POST /:id/price-submissions/batch', async () => {
+    const res = await app.request(
+      '/v1/events/00000000-0000-0000-0000-000000000001/price-submissions/batch',
+      { method: 'POST' },
+    )
+    expect(res.status).toBe(401)
   })
 })
 

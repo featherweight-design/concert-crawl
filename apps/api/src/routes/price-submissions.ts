@@ -127,10 +127,6 @@ const countRecentActs = async (
 
 export const priceSubmissionsRouter = new Hono()
 
-if (process.env.REQUIRE_BETA_AUTH === 'true') {
-  priceSubmissionsRouter.use('*', clerkAuth, requireAuth)
-}
-
 // GET /v1/events/:id/price-submissions — optional auth; returns all non-stale submissions
 priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
   const { id: eventId } = ctx.req.param()
@@ -172,8 +168,13 @@ priceSubmissionsRouter.get('/:id/price-submissions', clerkAuth, async (ctx) => {
     )
     .orderBy(desc(priceSubmissions.createdAt))
 
+  // #794 opened this route to anonymous callers. The only thing that reads
+  // `userId` is the caller's own "yours" affordance, so a caller sees their own
+  // Clerk id and null on every other row — nobody, signed in or not, needs a
+  // stable identifier for another submitter.
   const submissions = subRows.map((row) => ({
     ...row,
+    userId: userId != null && row.userId === userId ? row.userId : null,
     confirms: Number(row.confirms),
     byYou: Boolean(row.byYou),
   }))

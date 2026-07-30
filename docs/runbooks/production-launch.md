@@ -222,22 +222,21 @@ Vercel will show the DNS records needed in Step 7.
 
 In the Render dashboard for this service → **Environment** tab. The service may already exist suspended from the migration; un-suspend after env vars are correct.
 
-| Variable                | Value                                                                                                                                      |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DATABASE_URL`          | `<NEON_PROD_POOLED>` URL from Step 2 (pooled)                                                                                              |
-| `CLERK_SECRET_KEY`      | prod `sk_live_*` from Step 1 (must match Vercel's `CLERK_SECRET_KEY`)                                                                      |
-| `CLERK_PUBLISHABLE_KEY` | prod `pk_live_*` from Step 1                                                                                                               |
-| `ALLOWED_ORIGIN`        | `https://concertcrawl.app`                                                                                                                 |
-| `ANTHROPIC_API_KEY`     | From Anthropic console                                                                                                                     |
-| `RESEND_API_KEY`        | From Step 5                                                                                                                                |
-| `SENTRY_DSN`            | API project DSN from Step 5                                                                                                                |
-| `SENTRY_ENVIRONMENT`    | `production`                                                                                                                               |
-| `LOG_LEVEL`             | `info`                                                                                                                                     |
-| `NODE_ENV`              | `production`                                                                                                                               |
-| `REQUIRE_BETA_AUTH`     | `true` — gates `/v1/events`, `/v1/venues`, `/v1/search` behind Clerk during private beta. Remove or set `false` at public launch (Step 12) |
-| `INTERNAL_API_SECRET`   | **Same value** as set in the Vercel prod project (Step 6)                                                                                  |
-| `POSTHOG_KEY`           | PostHog project API key (`phc_*`) — server-truth monetization funnel analytics. Absent → capture no-ops                                    |
-| `POSTHOG_HOST`          | `https://us.i.posthog.com` (US cloud region)                                                                                               |
+| Variable                | Value                                                                                                   |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`          | `<NEON_PROD_POOLED>` URL from Step 2 (pooled)                                                           |
+| `CLERK_SECRET_KEY`      | prod `sk_live_*` from Step 1 (must match Vercel's `CLERK_SECRET_KEY`)                                   |
+| `CLERK_PUBLISHABLE_KEY` | prod `pk_live_*` from Step 1                                                                            |
+| `ALLOWED_ORIGIN`        | `https://concertcrawl.app`                                                                              |
+| `ANTHROPIC_API_KEY`     | From Anthropic console                                                                                  |
+| `RESEND_API_KEY`        | From Step 5                                                                                             |
+| `SENTRY_DSN`            | API project DSN from Step 5                                                                             |
+| `SENTRY_ENVIRONMENT`    | `production`                                                                                            |
+| `LOG_LEVEL`             | `info`                                                                                                  |
+| `NODE_ENV`              | `production`                                                                                            |
+| `INTERNAL_API_SECRET`   | **Same value** as set in the Vercel prod project (Step 6)                                               |
+| `POSTHOG_KEY`           | PostHog project API key (`phc_*`) — server-truth monetization funnel analytics. Absent → capture no-ops |
+| `POSTHOG_HOST`          | `https://us.i.posthog.com` (US cloud region)                                                            |
 
 > **Build commands — Node-version-dependent + differ between prod and staging.** The current `render.yaml` uses two different build commands:
 >
@@ -438,14 +437,18 @@ The triggers cron's no-pending-triggers code path doesn't exercise Chromium laun
 
 ---
 
-## Step 12 — Flip `REQUIRE_BETA_AUTH` at Public Launch
+## Step 12 — Delete the retired `REQUIRE_BETA_AUTH` var
 
-When transitioning from private beta to public launch:
+#794 removed the flag from the code: `/v1/events`, `/v1/venues`, `/v1/search` and
+`GET /v1/events/:id/price-submissions` now serve anonymous reads unconditionally,
+and every mutating route guards itself. The var is inert once that deploy lands
+(the check was `=== 'true'`, so its mere presence does nothing), but leave no
+stale config behind:
 
-1. Render dashboard → `concert-crawl-api` → **Environment**
-2. Remove `REQUIRE_BETA_AUTH` (or set to `false`)
-3. **Builds tab → Manual Deploy** on `concert-crawl-api`
-4. Verify `/v1/events`, `/v1/venues`, `/v1/search` are accessible without a Clerk token
+1. Confirm the #794 API deploy is live on `concert-crawl-api`
+2. Render dashboard → `concert-crawl-api` → **Environment** → delete `REQUIRE_BETA_AUTH`
+3. No redeploy needed — nothing reads the var. Skip the manual deploy.
+4. Verify `/v1/events`, `/v1/venues`, `/v1/search` answer 200 without a Clerk token
 
 ---
 

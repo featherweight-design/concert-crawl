@@ -4,8 +4,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useAuth } from '@clerk/nextjs'
 import type { EventsListResponse } from '@concert-crawl/types'
 import { STALE_30_MIN } from '@/lib/query-client'
-import { apiClient, ApiError } from '@/lib/api'
-import { fetchPublicRead } from './public-read'
+import { apiClient, ApiError, publicApiClient } from '@/lib/api'
 import { useSpotifyConnection } from './use-spotify-connection'
 
 // personalizedFor is the viewer's userId when the response carries their
@@ -66,9 +65,8 @@ export function useEvents({
     // Fetch anonymously when the viewer has no Spotify taste: an anonymous
     // request returns identical data AND stays cacheable by the service
     // worker, which keeps offline browsing working for the (default,
-    // protected) signed-in case. When the API is beta-gated
-    // (REQUIRE_BETA_AUTH), the anonymous request 401s and fetchPublicRead
-    // retries with a token so the UI still works.
+    // protected) signed-in case. GET /v1/events is unconditionally public
+    // since #794, so there is no 401 to fall back from.
     queryFn: async ({ pageParam }) => {
       const params = new URLSearchParams(searchParamsString)
       // filterTaste is a page-URL param, not an API one — swap it for the
@@ -114,7 +112,7 @@ export function useEvents({
         }
         return apiClient.get<EventsListResponse>(path, token)
       }
-      return fetchPublicRead<EventsListResponse>(path, getToken)
+      return publicApiClient.get<EventsListResponse>(path)
     },
     initialPageParam: initialOffset,
     getNextPageParam: (lastPage: EventsListResponse) => {
