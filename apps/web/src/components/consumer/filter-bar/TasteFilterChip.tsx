@@ -11,27 +11,16 @@
 // locked treatment at a paying user.
 
 import { useEffect, useState } from 'react'
-import type { PlanState, PickerEntry } from '@concert-crawl/types'
+import type { PickerEntry } from '@concert-crawl/types'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
 import { usePlanState } from '@/lib/queries/use-plan-state'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 import { TasteUpsellSheet } from './TasteUpsellSheet'
 
 const COPY = SPOTIFY_COPY.tasteFilter
-
-// Tier picker needs a full PlanState; logged-out viewers (and the fail-closed
-// fetch-error case) have none, so mirror derivePlanState's logged-out shape.
-const LOGGED_OUT_PLAN_STATE: PlanState = {
-  plan: 'logged-out',
-  onTrial: false,
-  trialEndsAt: null,
-  status: null,
-  cancelAtPeriodEnd: false,
-  currentPeriodEnd: null,
-  roleComped: false,
-}
 
 const LockGlyph = () => (
   <svg width="11" height="11" viewBox="0 0 12 12" fill="none" aria-hidden>

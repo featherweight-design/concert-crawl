@@ -22,8 +22,15 @@ export type CheckoutTier = 'supporter' | 'premium' | 'founder'
 export type PaymentFlow = 'new' | 'trial-conversion' | 'upgrade'
 
 // Where the tier picker was opened from (spec §8 `entry` property).
+// `logged-out-watch` is distinct from `logged-out-paywall` on purpose: a gated
+// Watch tap and a gated taste-filter tap are the two halves of the launch's
+// most important funnel, and one shared bucket makes them unmeasurable.
 export type PickerEntry =
-  'settings' | 'paywall' | 'logged-out-paywall' | 'takeover'
+  | 'settings'
+  | 'paywall'
+  | 'logged-out-paywall'
+  | 'logged-out-watch'
+  | 'takeover'
 
 // Per-event property shapes. Keys are the canonical event names; the map is
 // the single source of truth for both `MonetizationEvent` (the name union)

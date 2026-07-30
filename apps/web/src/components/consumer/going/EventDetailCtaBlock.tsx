@@ -8,11 +8,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type {
-  EventDetailResponse,
-  PlanState,
-  PickerEntry,
-} from '@concert-crawl/types'
+import type { EventDetailResponse, PickerEntry } from '@concert-crawl/types'
 import { ApiError } from '@/lib/api'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
 import { usePlanState } from '@/lib/queries/use-plan-state'
@@ -21,19 +17,7 @@ import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerShe
 import { GoingButton } from './GoingButton'
 import { goingStateFor } from './lib/cta-state'
 import { GOING_COPY } from './definitions/copy'
-
-// The tier picker needs a full PlanState; logged-out viewers (and the
-// fail-closed fetch-error case) have none, so mirror derivePlanState's
-// logged-out shape, as TasteFilterChip does.
-const LOGGED_OUT_PLAN_STATE: PlanState = {
-  plan: 'logged-out',
-  onTrial: false,
-  trialEndsAt: null,
-  status: null,
-  cancelAtPeriodEnd: false,
-  currentPeriodEnd: null,
-  roleComped: false,
-}
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 
 // Structurally narrowed to the fields this row actually reads, so an
 // EventDetailResponse satisfies it without dragging the whole payload into

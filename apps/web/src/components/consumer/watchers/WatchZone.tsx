@@ -10,6 +10,8 @@ import { WatchersSurface } from './WatchersSurface'
 interface WatchZoneProps {
   eventId: string
   initialWatching?: boolean
+  /** Headliner name, forwarded to the button's signed-out accessible name. */
+  artist?: string | undefined
 }
 
 /**
@@ -23,6 +25,7 @@ interface WatchZoneProps {
 export const WatchZone = ({
   eventId,
   initialWatching = false,
+  artist,
 }: WatchZoneProps) => {
   const { isSignedIn } = useAuth()
   const { data: watchedShows } = useWatching()
@@ -38,7 +41,11 @@ export const WatchZone = ({
 
   return (
     <div className="flex flex-col items-start gap-3">
-      <WatchShowButton eventId={eventId} initialWatching={initialWatching} />
+      <WatchShowButton
+        eventId={eventId}
+        initialWatching={initialWatching}
+        artist={artist}
+      />
       {!isWatching && (
         <p className="-mt-1 text-[11.5px] tracking-[-0.005em] text-fg-subtle">
           {CONSUMER_COPY.watchers.watchHint}

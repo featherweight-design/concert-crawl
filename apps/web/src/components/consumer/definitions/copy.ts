@@ -682,6 +682,69 @@ export const CONSUMER_COPY = {
       subtitle: 'Coming soon.',
       badge: 'SOON',
     },
+    // The signed-out teaching state. Distinct from `watchingEmpty*` above,
+    // which is the signed-in "no shows yet" state for a different person.
+    signedOut: {
+      eyebrow: 'WATCHING',
+      title: 'Keep an eye on it.',
+      lede:
+        "Watching is your shortlist of shows you don't want to miss — and a " +
+        'price tracker on each one. Nothing to set up. It just needs an ' +
+        'account to save to.',
+      exampleCaption: 'EXAMPLE · NOT YOUR LIST',
+      exampleAlt:
+        'Example: a Watching list showing three shows, one with a ' +
+        'seven-dollar price drop.',
+      exampleRows: [
+        {
+          artist: 'Geese',
+          meta: 'Ogden · Tonight · 9:00 PM',
+          price: '$25',
+          delta: '−$7',
+          tone: 'var(--success)',
+        },
+        {
+          artist: 'Wednesday',
+          meta: 'Mission · Tue · 8:00 PM',
+          price: '$30',
+          delta: 'flat',
+          tone: 'var(--fg-subtle)',
+        },
+        {
+          artist: 'Bright Eyes',
+          meta: 'Red Rocks · May 6 · 7:00 PM',
+          price: '—',
+          delta: 'SOLD OUT',
+          tone: 'var(--warning)',
+        },
+      ],
+      facts: [
+        {
+          key: '01',
+          title: 'The eye is the whole gesture.',
+          body: 'Tap it on any show — card or detail page — and the show lands here.',
+        },
+        {
+          key: '02',
+          title: 'We watch the price, not you.',
+          body:
+            'Drops, spikes, and sell-outs show up against what it cost when ' +
+            'you started watching.',
+        },
+        {
+          key: '03',
+          title: 'Free, and it stays free.',
+          body: 'Watching is on the Free tier. No card, no trial, nothing to cancel.',
+        },
+      ],
+      signUp: 'Sign up free',
+      signUpHref: '/sign-up',
+      alreadyHaveAccount: 'Already have an account?',
+      signIn: 'Sign in',
+      signInHref: '/sign-in',
+      keepBrowsing: 'OR KEEP BROWSING →',
+      keepBrowsingHref: '/events',
+    },
   },
 
   // ── Setlist preview ─────────────────────────────────────────────
@@ -749,6 +812,13 @@ export const CONSUMER_COPY = {
       watchingLabel: 'Watching',
       ariaWatch: 'Watch this show',
       ariaWatching: 'Watching, click to stop',
+      // Signed out the eye opens the tier picker, so the name states that
+      // outcome. No visible word is added — the pixels are identical to
+      // signed-in-at-rest, and only the accessible name differs.
+      ariaWatchSignedOut: (artist: string) =>
+        `Watch ${artist} — sign up to start watching`,
+      // Used when the calling surface has no artist name in scope (WatchZone).
+      thisShowFallback: 'this show',
     },
   },
 

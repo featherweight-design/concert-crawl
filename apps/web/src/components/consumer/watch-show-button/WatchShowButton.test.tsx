@@ -71,6 +71,14 @@ vi.mock('@/lib/push/client', () => ({
     unsubscribeFromPushMock(token, id),
 }))
 
+// The tier picker drags in the router, Stripe, and analytics. What matters
+// here is whether the button opens it and with which funnel entry, so it is
+// reduced to a marker that reports the props it received.
+vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+  TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
+    open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
+}))
+
 // ---- Component under test ------------------------------------------------
 
 import { WatchShowButton } from './WatchShowButton'
@@ -78,6 +86,7 @@ import {
   hasDismissedPostWatchAsk,
   markPostWatchAskDismissed,
 } from '@/lib/pwa/post-watch-dismissal'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const renderButton = () => {
   const client = new QueryClient({
@@ -391,5 +400,169 @@ describe('WatchShowButton — post-watch sheet integration (#1062)', () => {
       'test-token',
       'sub-row-1',
     )
+  })
+})
+
+describe('WatchShowButton — signed-out gating beat (#794)', () => {
+  const renderWith = (artist?: string) => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    })
+    return render(
+      <QueryClientProvider client={client}>
+        <WatchShowButton
+          eventId="evt_1"
+          initialWatching={false}
+          artist={artist}
+        />
+      </QueryClientProvider>,
+    )
+  }
+
+  const theButton = () => screen.getByRole('button', { name: /watch/i })
+
+  // The picker is loaded with next/dynamic, so its chunk resolves a microtask
+  // after the tap rather than in the same commit.
+  const tapAndSettle = async () => {
+    await act(async () => {
+      fireEvent.click(theButton())
+    })
+    await act(async () => {
+      await Promise.resolve()
+    })
+  }
+
+  it('opens the tier picker instead of silently doing nothing', async () => {
+    signedIn = false
+    renderWith('Geese')
+    expect(screen.queryByTestId('tier-picker')).toBeNull()
+    await tapAndSettle()
+    expect(screen.getByTestId('tier-picker')).not.toBeNull()
+    // No watch mutation may be attempted without a session.
+    expect(toggleMutate).not.toHaveBeenCalled()
+  })
+
+  it('does not load the picker chunk until the eye is tapped', () => {
+    // The static import this replaced put @stripe/stripe-js into the bundle of
+    // every page that renders a card, including /watching.
+    signedIn = false
+    renderWith('Geese')
+    expect(screen.queryByTestId('tier-picker')).toBeNull()
+  })
+
+  it('tags the picker with the logged-out-watch funnel entry', async () => {
+    signedIn = false
+    renderWith('Geese')
+    await tapAndSettle()
+    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
+      'logged-out-watch',
+    )
+  })
+
+  it('names the artist in the signed-out accessible name', () => {
+    signedIn = false
+    renderWith('Geese')
+    expect(theButton().getAttribute('aria-label')).toBe(
+      'Watch Geese — sign up to start watching',
+    )
+  })
+
+  it.each([
+    ['undefined', undefined],
+    ['empty string', ''],
+  ])('falls back to "this show" when the artist is %s', (_label, artist) => {
+    signedIn = false
+    renderWith(artist)
+    // Guards against the doubled space a default parameter would leave.
+    expect(theButton().getAttribute('aria-label')).toBe(
+      'Watch this show — sign up to start watching',
+    )
+  })
+
+  it('omits aria-pressed signed out — the eye is a dialog trigger, not a toggle', () => {
+    signedIn = false
+    renderWith('Geese')
+    // Omitted entirely, not "false": aria-pressed="false" would announce an
+    // off switch for a control that never had an on state.
+    expect(theButton().hasAttribute('aria-pressed')).toBe(false)
+  })
+
+  it('advertises the dialog it opens', async () => {
+    signedIn = false
+    renderWith('Geese')
+    expect(theButton().getAttribute('aria-haspopup')).toBe('dialog')
+    expect(theButton().getAttribute('aria-expanded')).toBe('false')
+    await tapAndSettle()
+    expect(theButton().getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('keeps the signed-in toggle semantics untouched', () => {
+    signedIn = true
+    renderWith('Geese')
+    expect(theButton().getAttribute('aria-pressed')).toBe('false')
+    expect(theButton().hasAttribute('aria-haspopup')).toBe(false)
+    expect(theButton().getAttribute('aria-label')).toBe(
+      CONSUMER_COPY.watchShowButton.button.ariaWatch,
+    )
+  })
+
+  it('ignores a watching cache left behind by a signed-out user', () => {
+    // useWatching is `enabled: !!isSignedIn`, which stops refetching but does
+    // not evict — React Query keeps the previous user's rows for the rest of the
+    // SPA session. Rendering them would leak per-user state across sign-out.
+    signedIn = false
+    watchingData.mockReturnValue([
+      {
+        userEventId: 'ue_1',
+        eventId: 'evt_1',
+        artist: 'A',
+        venueName: 'V',
+        venueSlug: 'v',
+        date: '2026-08-14',
+        showTime: null,
+        ticketUrl: null,
+        ticketLinks: null,
+        savedAt: '2026-07-19T00:00:00Z',
+        savedPrice: null,
+        currentPrice: null,
+        sourceKind: null,
+        eventStatus: 'upcoming',
+        watchStatus: 'live',
+        updatedAt: '2026-07-19T00:00:00Z',
+        imageUrl: null,
+        attendingAt: null,
+      },
+    ])
+    renderWith('Geese')
+    expect(theButton().textContent).toContain(
+      CONSUMER_COPY.watchShowButton.button.watchLabel,
+    )
+    expect(theButton().textContent).not.toContain(
+      CONSUMER_COPY.watchShowButton.button.watchingLabel,
+    )
+    expect(theButton().hasAttribute('aria-pressed')).toBe(false)
+    expect(theButton().getAttribute('aria-label')).toBe(
+      'Watch Geese — sign up to start watching',
+    )
+  })
+
+  it('renders pixel-identically to signed-in-at-rest', () => {
+    // The gate is announced, never drawn: no dimming, no lock glyph, no
+    // changed label. Stripping the aria attributes should leave two identical
+    // buttons — if a future change dims the signed-out eye, this fails.
+    const stripAria = (html: string) =>
+      html.replace(/\saria-[a-z]+="[^"]*"/g, '')
+
+    signedIn = false
+    renderWith('Geese')
+    const out = stripAria(theButton().outerHTML)
+    cleanup()
+
+    signedIn = true
+    renderWith('Geese')
+    expect(out).toBe(stripAria(theButton().outerHTML))
   })
 })

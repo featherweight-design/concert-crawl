@@ -141,7 +141,11 @@ export function EventCard({
       </div>
 
       {/* Watch button */}
-      <WatchShowButton eventId={event.id} initialWatching={isWatching} />
+      <WatchShowButton
+        eventId={event.id}
+        initialWatching={isWatching}
+        artist={event.artist}
+      />
 
       {/* Price chip — links to event detail */}
       <Link

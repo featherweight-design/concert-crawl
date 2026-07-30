@@ -187,7 +187,11 @@ export default async function EventDetailPage({
 
           {/* Watch strip */}
           <div className="mt-3">
-            <WatchZone eventId={event.id} initialWatching={event.isWatching} />
+            <WatchZone
+              eventId={event.id}
+              initialWatching={event.isWatching}
+              artist={event.artist}
+            />
           </div>
 
           {/* Spotify attribution strip — directly under the Watching pill

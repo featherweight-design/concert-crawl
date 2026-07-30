@@ -1,11 +1,25 @@
 // Tier data — prices and names are data (locked in design brief #781),
 // customer-facing prose comes from copy.ts.
 
-import type { DeclineCategory } from '@concert-crawl/types'
+import type { DeclineCategory, PlanState } from '@concert-crawl/types'
 import { TIER_PICKER_COPY } from './copy'
 import type { TierDefinition, TierKey } from './types'
 
 const TIERS_COPY = TIER_PICKER_COPY.tiers
+
+// The picker needs a full PlanState, but logged-out viewers (and the
+// fail-closed fetch-error case) have none. Mirrors derivePlanState's logged-out
+// shape. Shared so the surfaces that open the picker without a session can't
+// drift from each other.
+export const LOGGED_OUT_PLAN_STATE: PlanState = {
+  plan: 'logged-out',
+  onTrial: false,
+  trialEndsAt: null,
+  status: null,
+  cancelAtPeriodEnd: false,
+  currentPeriodEnd: null,
+  roleComped: false,
+}
 
 export const TIER_ORDER: readonly TierKey[] = [
   'free',

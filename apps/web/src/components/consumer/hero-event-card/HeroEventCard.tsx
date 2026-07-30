@@ -114,7 +114,11 @@ export function HeroEventCard({
 
       {/* Watch button — outside Link so clicks don't navigate */}
       <div className="absolute bottom-3.5 right-3.5 z-10">
-        <WatchShowButton eventId={event.id} initialWatching={isWatching} />
+        <WatchShowButton
+          eventId={event.id}
+          initialWatching={isWatching}
+          artist={event.artist}
+        />
       </div>
     </div>
   )
