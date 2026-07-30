@@ -642,19 +642,22 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
 
   const authInfo = getAuth(ctx)
   let isWatching = false
+  let attendingAt: string | null = null
   if (authInfo?.userId) {
-    const [watchRow] = await db
-      .select({ id: userEvents.id })
+    // No status filter: the shared user_events row may carry attendance only
+    // (#70), and one read answers both questions.
+    const [trackRow] = await db
+      .select({
+        status: userEvents.status,
+        attendingAt: userEvents.attendingAt,
+      })
       .from(userEvents)
       .where(
-        and(
-          eq(userEvents.userId, authInfo.userId),
-          eq(userEvents.eventId, id),
-          eq(userEvents.status, 'watching'),
-        ),
+        and(eq(userEvents.userId, authInfo.userId), eq(userEvents.eventId, id)),
       )
       .limit(1)
-    isWatching = Boolean(watchRow)
+    isWatching = trackRow?.status === 'watching'
+    attendingAt = trackRow?.attendingAt?.toISOString() ?? null
   }
 
   // Detect a promoted sold-out report — drives the confirmed sold-out UI.
@@ -1096,6 +1099,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         : {}),
       watching: watchingCount,
       isWatching,
+      attendingAt,
       priceStatus,
       priceVendor,
       priceSourceCategory,

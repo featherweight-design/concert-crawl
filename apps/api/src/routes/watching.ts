@@ -54,6 +54,7 @@ watchingRouter.get('/', async (ctx) => {
       eventId: userEvents.eventId,
       savedPrice: userEvents.savedPrice,
       savedAt: userEvents.createdAt,
+      attendingAt: userEvents.attendingAt,
       artist: events.artist,
       date: events.date,
       showTime: events.showTime,
@@ -99,6 +100,7 @@ watchingRouter.get('/', async (ctx) => {
     watchStatus: resolveWatchStatus(row.eventStatus),
     updatedAt: row.updatedAt.toISOString(),
     imageUrl: row.imageUrl ?? null,
+    attendingAt: row.attendingAt?.toISOString() ?? null,
   }))
 
   return ctx.json({ success: true, data })

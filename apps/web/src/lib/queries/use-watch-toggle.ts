@@ -57,6 +57,7 @@ export function useWatchToggle() {
         watchStatus: 'live',
         updatedAt: new Date().toISOString(),
         imageUrl: null,
+        attendingAt: null,
       }
       const next = isCurrentlyWatching
         ? current.filter((show) => show.eventId !== eventId)

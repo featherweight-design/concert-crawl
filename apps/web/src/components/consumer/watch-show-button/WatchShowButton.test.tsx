@@ -171,6 +171,7 @@ describe('WatchShowButton — post-watch sheet integration (#1062)', () => {
         watchStatus: 'live',
         updatedAt: '2026-07-19T00:00:00Z',
         imageUrl: null,
+        attendingAt: null,
       },
     ])
     renderButton()

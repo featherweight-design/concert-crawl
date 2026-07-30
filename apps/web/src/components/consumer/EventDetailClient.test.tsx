@@ -121,6 +121,7 @@ function buildBaseEvent(
     setlist: null,
     watching: 0,
     isWatching: false,
+    attendingAt: null,
     pendingSubmissions: null,
     priceByTier: null,
     soldOutReport: null,

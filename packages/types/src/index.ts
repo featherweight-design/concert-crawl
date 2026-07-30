@@ -693,6 +693,9 @@ export interface EventDetailResponse extends EventWithVenue {
   setlist: Setlist | null
   watching: number
   isWatching: boolean
+  // ISO when the signed-in user said "I'm going!" (#70). Orthogonal to
+  // isWatching — a row can carry either, both, or neither.
+  attendingAt: string | null
   priceStatus?: 'live' | 'soldout' | null
   // Price detail fields — not yet in DB schema; null until added via migration
   ticketPriceOpenedAt?: number | null
@@ -1048,12 +1051,57 @@ export interface WatchingShow {
   watchStatus: 'live' | 'soldout'
   updatedAt: string // ISO — last time event row was updated (for stale check)
   imageUrl: string | null
+  // ISO when the user said "I'm going!", independent of watching (#70). The
+  // 7-day nudge reads it to decide whether it has already been answered.
+  attendingAt: string | null
 }
 
 // WatchToggleResponse — returned by PUT /v1/watching/:eventId
 export interface WatchToggleResponse {
   watching: boolean
   savedPrice: number | null
+}
+
+// --- Concert History (#70) ---
+// Attendance is its own timestamp on user_events, never derived from watching.
+
+// AttendingToggleResponse — returned by PUT/DELETE /v1/attending/:eventId
+export interface AttendingToggleResponse {
+  going: boolean
+  attendingAt: string | null // ISO, null when released
+}
+
+// One attended night — GET /v1/history. dateLabel and showTime arrive
+// pre-formatted in Mountain Time because the row treats date presentation as
+// data, not copy.
+export interface HistoryShow {
+  eventId: string
+  artist: string
+  venueName: string
+  venueSlug: string
+  neighborhood: string | null
+  date: string // YYYY-MM-DD, event local date
+  dateLabel: string // "Mon, Oct 20"
+  showTime: string | null // "8:00 PM"
+  priceFinal: number | null // last observed face price
+  genre: string | null // single word, drives "top genre"
+  attendingAt: string // ISO — non-null by construction on this surface
+}
+
+export interface HistoryStats {
+  nights: number
+  venues: number
+  artists: number
+  topGenre: string | null
+  topVenue: string | null
+  first: string | null // YYYY-MM-DD
+  last: string | null
+  totalSpent: number | null // null when no row has priceFinal
+}
+
+export interface HistoryResponse {
+  shows: HistoryShow[]
+  stats: HistoryStats
 }
 
 // --- Admin user detail (GET /v1/admin/users/:userId) ---

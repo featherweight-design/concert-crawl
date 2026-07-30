@@ -54,6 +54,7 @@ const baseShow: WatchingShow = {
   watchStatus: 'live',
   updatedAt: new Date().toISOString(),
   imageUrl: 'https://venue.com/shows/radiohead.jpg',
+  attendingAt: null,
 }
 
 describe('WatchingItem thumbnail', () => {

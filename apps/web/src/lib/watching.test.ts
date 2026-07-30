@@ -21,6 +21,7 @@ const mockShow: WatchingShow = {
   watchStatus: 'live',
   updatedAt: new Date().toISOString(),
   imageUrl: null,
+  attendingAt: null,
 }
 
 describe('fetchWatching', () => {
