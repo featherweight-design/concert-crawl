@@ -512,6 +512,7 @@ export const TierPickerSheet = ({
             }
           >
             <div
+              data-testid="tier-picker-header"
               style={{
                 display: 'flex',
                 flexDirection: 'column',

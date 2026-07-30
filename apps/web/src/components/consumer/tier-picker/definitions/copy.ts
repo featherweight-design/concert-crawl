@@ -7,10 +7,11 @@ export const TIER_PICKER_COPY = {
     eyebrow: 'Upgrade · pick a lane',
     title: 'Pick a lane.',
     sub: "We run on infrastructure, not VC money. Subscriptions cover what costs us money to run. That's it.",
-    loggedOutEyebrow: 'Save a show · sign in',
-    loggedOutTitle: "Save the ones you can't miss.",
+    loggedOutEyebrow: 'Watching · free with an account',
+    loggedOutTitle: "Keep an eye on the ones you can't miss.",
     loggedOutSub:
-      "Watching's free — you just need an account. Pick a tier to get started, or sign in if you're already in.",
+      'Watching is free — it just needs an account to save to. Start on Free; ' +
+      'pick a lane later if you ever want to chip in.',
     tiersCode: (count: number) => `${count} tiers`,
   },
   signIn: {
@@ -69,7 +70,7 @@ export const TIER_PICKER_COPY = {
       rationale: 'No backend cost to scale, no reason to charge.',
       features: [
         'Browse, search, filter every show',
-        "Save shows you're watching",
+        'Watching — keep an eye on any show',
         'See community-submitted prices',
         'Submit prices yourself',
       ],

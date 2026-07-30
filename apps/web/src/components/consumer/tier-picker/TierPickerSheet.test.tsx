@@ -295,6 +295,19 @@ describe('TierPickerSheet — logged out', () => {
     )
     expect(mockPush).toHaveBeenCalledWith('/sign-up')
   })
+
+  // Locked vocabulary (CLAUDE.md): Watching is never "Saved"/"Favorites"/
+  // "Following". This header is the first thing a gated visitor reads.
+  it('names Watching without the forbidden synonyms', () => {
+    renderSheet(planState('logged-out'))
+    expect(screen.getByText(/watching · free with an account/i)).toBeTruthy()
+    expect(
+      screen.getByText(/keep an eye on the ones you can't miss/i),
+    ).toBeTruthy()
+    const rendered = screen.getByTestId('tier-picker-header').textContent ?? ''
+    expect(rendered).toMatch(/watching/i)
+    expect(rendered).not.toMatch(/\b(saved|favorites?|following)\b/i)
+  })
 })
 
 describe('TierPickerSheet — mobile accordion', () => {

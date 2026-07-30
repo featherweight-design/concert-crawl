@@ -629,7 +629,7 @@ export const CONSUMER_COPY = {
   },
 
   // ── Watching page ───────────────────────────────────────────────
-  // Shown on the Watching page — user's saved shows list
+  // Shown on the Watching page — the shows a user is watching
   watching: {
     watchingContent: {
       eyebrow: 'WATCHING',
@@ -894,7 +894,7 @@ export const CONSUMER_COPY = {
     connectedAccountRow: 'Connected Account',
     passwordRow: 'Password',
     clerkLinkLabel: 'Manage via Clerk →',
-    watchlistRow: 'Saved shows',
+    watchlistRow: 'Watching',
     watchlistComingSoon: 'Coming soon',
   },
 
