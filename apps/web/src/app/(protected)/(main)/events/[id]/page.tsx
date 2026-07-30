@@ -1,5 +1,6 @@
 import { Fragment } from 'react'
 import Link from 'next/link'
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import type {
@@ -10,12 +11,14 @@ import type {
 } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
+import { isScaRegion } from '@/lib/sca-region'
 import { fetchEventReports } from '@/lib/events'
 import { EventImage } from '@/components/consumer/event-image'
 import { BackButton } from '@/components/consumer/event-detail/BackButton'
 import { EventCard } from '@/components/consumer/event-card/EventCard'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { WatchZone } from '@/components/consumer/watchers'
+import { EventDetailCtaBlock } from '@/components/consumer/going'
 import { SetlistPreview } from '@/components/consumer/setlist-preview'
 import { GenreChips } from '@/components/consumer/GenreChips'
 import {
@@ -99,12 +102,17 @@ export default async function EventDetailPage({
   // The new id-keyed /v1/events/:id/related resolves the venue server-side, so
   // all three round-trips run concurrently and the page load drops by one
   // full Vercel→Render hop (~400-700ms warm, much more on cold start).
-  const [event, reports, related] = await Promise.all([
+  const [event, reports, related, requestHeaders] = await Promise.all([
     fetchEvent(id, token),
     fetchReports(id, token),
     fetchRelatedById(id, token),
+    headers(),
   ])
   if (!event) notFound()
+
+  // Monetization spec §1.7: SCA notice gating for the tier picker a locked
+  // "I'm going!" tap can open. Unknown (local dev, header absent) fails safe.
+  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'))
 
   const showTime = formatShowTime(event.showTime)
   const doorsTime = formatShowTime(event.doorsTime)
@@ -170,7 +178,14 @@ export default async function EventDetailPage({
             headlinerAs="h1"
           />
 
-          {/* Watch strip — directly under title */}
+          {/* Commitment strip — directly under title (#70). "I'm going!" is
+              the forward action; the Watch zone below it keeps its own eye,
+              alerts hint, and social proof exactly as #1238 shipped them. */}
+          <div className="mt-3">
+            <EventDetailCtaBlock event={event} scaRegion={scaRegion} />
+          </div>
+
+          {/* Watch strip */}
           <div className="mt-3">
             <WatchZone eventId={event.id} initialWatching={event.isWatching} />
           </div>

@@ -185,3 +185,11 @@
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--signal);
   border-radius: 4px;
 }
+
+/* "I'm going!" CTA focus ring — restores :focus-visible after all:unset.
+   An outline rather than a box-shadow, because the committed state already
+   uses box-shadow for its accent glow. */
+.going-cta:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
