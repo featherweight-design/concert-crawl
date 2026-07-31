@@ -1,3 +1,16 @@
+# [1.177.0](https://github.com/HartiganHM/concert-crawl/compare/v1.176.1...v1.177.0) (2026-07-31)
+
+
+### Bug Fixes
+
+* **admin:** drop the count from the last-fully-covered clause ([2dbe025](https://github.com/HartiganHM/concert-crawl/commit/2dbe025a353343ac6224d57b088c8104dc0822b6))
+* **crawler:** make the coverage completeness stamp monotonic ([b828a6c](https://github.com/HartiganHM/concert-crawl/commit/b828a6c9dd1e339787db2df2c1043dce76f0822f))
+
+
+### Features
+
+* **admin:** record when URL coverage was last complete ([510b711](https://github.com/HartiganHM/concert-crawl/commit/510b711258bd5102fee957e07c5af7511afe0ceb)), closes [#1266](https://github.com/HartiganHM/concert-crawl/issues/1266)
+
 ## [1.176.1](https://github.com/HartiganHM/concert-crawl/compare/v1.176.0...v1.176.1) (2026-07-31)
 
 
