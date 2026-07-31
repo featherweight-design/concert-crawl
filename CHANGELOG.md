@@ -1,3 +1,10 @@
+## [1.174.2](https://github.com/HartiganHM/concert-crawl/compare/v1.174.1...v1.174.2) (2026-07-31)
+
+
+### Bug Fixes
+
+* **api:** attribute Sentry events to Clerk users and scrub PII from bodies ([861abea](https://github.com/HartiganHM/concert-crawl/commit/861abea7c127f46c144f4f352d2e119998c2ed1f))
+
 ## [1.174.1](https://github.com/HartiganHM/concert-crawl/compare/v1.174.0...v1.174.1) (2026-07-31)
 
 
