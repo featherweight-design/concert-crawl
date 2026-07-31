@@ -3,6 +3,8 @@
 import { render, screen, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
+import { TRIAGE_NO_SWEEP } from '@concert-crawl/types'
+
 import { TriagePanel } from './TriagePanel'
 import type { TriageData, TriageFault, TriageQueue } from './definitions/types'
 
@@ -483,13 +485,13 @@ describe('TriagePanel — panel states', () => {
     expect(screen.getAllByText('all clear')).toHaveLength(2)
   })
 
-  // The API sends '—' for sweep.at when no crawl run exists at all.
-  // Interpolating it claims a clean sweep that never ran.
+  // The API sends the no-sweep sentinel for sweep.at when no crawl run exists
+  // at all. Interpolating it claims a clean sweep that never ran.
   it('says no sweep has run rather than "crawled clean at —"', () => {
     const noSweep = data([])
     render(
       <TriagePanel
-        data={{ ...noSweep, sweep: { ...noSweep.sweep, at: '—' } }}
+        data={{ ...noSweep, sweep: { ...noSweep.sweep, at: TRIAGE_NO_SWEEP } }}
       />,
     )
     expect(

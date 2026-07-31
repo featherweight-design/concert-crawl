@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import { TRIAGE_NO_SWEEP } from '@concert-crawl/types'
 import {
   bandForCondition,
   classifyCrawlError,
@@ -187,6 +188,6 @@ describe('deriveSweep', () => {
       now: new Date('2026-07-30T12:00:00Z'),
     })
     expect(sweep.atIso).toBeNull()
-    expect(sweep.at).toBe('—')
+    expect(sweep.at).toBe(TRIAGE_NO_SWEEP)
   })
 })
