@@ -70,10 +70,16 @@ async function fetchDashboardData(token: string) {
       }),
     apiClient
       .get<EventCount>('/v1/admin/events/count', token)
-      .catch(() => ({ pending: 0, approved: 0 })),
+      .catch((err: unknown) => {
+        console.error('[admin] failed to load event counts:', err)
+        return { pending: 0, approved: 0 }
+      }),
     apiClient
       .get<PriceSubmissionCount>('/v1/admin/prices/submissions/count', token)
-      .catch(() => ({ pending: 0 })),
+      .catch((err: unknown) => {
+        console.error('[admin] failed to load price submission counts:', err)
+        return { pending: 0 }
+      }),
     apiClient
       .get<AdminDailyCosts>('/v1/admin/costs/daily?days=30', token)
       .catch((err: unknown) => {
@@ -96,7 +102,10 @@ async function fetchDashboardData(token: string) {
     apiClient
       .get<unknown>('/v1/admin/triage', token)
       .then(parseTriageResponse)
-      .catch(() => null),
+      .catch((err: unknown) => {
+        console.error('[admin] failed to load triage:', err)
+        return null
+      }),
   ])
   return {
     status: rawStatus.map(toStatusRow),
