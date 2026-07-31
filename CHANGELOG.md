@@ -1,3 +1,18 @@
+# [1.175.0](https://github.com/HartiganHM/concert-crawl/compare/v1.174.3...v1.175.0) (2026-07-31)
+
+
+### Bug Fixes
+
+* **api:** close the coverage evidence contract gap and tighten the run query ([6c0a06a](https://github.com/HartiganHM/concert-crawl/commit/6c0a06a095c3c5d15a9035c897fb2be1e4e1bf69))
+* **api:** correct DST-unsafe sweep time and name-collided queue breakdown ([871d99a](https://github.com/HartiganHM/concert-crawl/commit/871d99aedf0e07184ca6cad3d92bec59c06f865d))
+* **api:** count the flag-queue breakdown tail in venues, not events ([64efce2](https://github.com/HartiganHM/concert-crawl/commit/64efce260afd177de6940570380cc030a82f53ae))
+* **api:** select only the run columns triage reads; state wasWhen honestly ([111889a](https://github.com/HartiganHM/concert-crawl/commit/111889a76e178efa24e7fba135cfa017bb4b9abd))
+
+
+### Features
+
+* **api:** derived live triage endpoint for the admin needs-attention panel ([7508497](https://github.com/HartiganHM/concert-crawl/commit/750849724e1253132cec2c13cf7091e17b7ceb5a)), closes [#624](https://github.com/HartiganHM/concert-crawl/issues/624) [#1215](https://github.com/HartiganHM/concert-crawl/issues/1215)
+
 ## [1.174.3](https://github.com/HartiganHM/concert-crawl/compare/v1.174.2...v1.174.3) (2026-07-31)
 
 
