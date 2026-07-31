@@ -50,6 +50,13 @@ interface Props {
   initialTab?: InspectorTab
 }
 
+const isFaulted = (row: CrawlStatusRow | undefined): boolean =>
+  row !== undefined &&
+  (row.status === 'failed' ||
+    row.status === 'blocked' ||
+    row.lastRunStatus === 'failed' ||
+    row.blockedAt !== null)
+
 const STATUS_KIND: Record<
   string,
   'success' | 'danger' | 'warning' | 'neutral'
@@ -285,24 +292,21 @@ export const CrawlSplitView = ({
   // row, and without this guard the effect would overwrite it on mount and
   // land every link on Overview.
   const honouredInitialTab = useRef(initialTab === undefined)
+  // Depending on `initialStatus` itself would reset the tab on every
+  // `router.refresh()` — it is a server prop, so each refresh hands back a new
+  // array identity even when nothing about the venue changed (#1267). The
+  // boolean is value-stable, so the effect fires on a venue switch or a real
+  // change of fault state, not on server-prop churn.
+  const selectedVenueIsFaulted = isFaulted(
+    initialStatus.find((sr) => sr.venueId === selectedId),
+  )
   useEffect(() => {
     if (!honouredInitialTab.current) {
       honouredInitialTab.current = true
       return
     }
-    const row = initialStatus.find((sr) => sr.venueId === selectedId)
-    if (
-      row &&
-      (row.status === 'failed' ||
-        row.status === 'blocked' ||
-        row.lastRunStatus === 'failed' ||
-        row.blockedAt !== null)
-    ) {
-      setActiveTab('diagnostics')
-    } else {
-      setActiveTab('overview')
-    }
-  }, [selectedId, initialStatus])
+    setActiveTab(selectedVenueIsFaulted ? 'diagnostics' : 'overview')
+  }, [selectedId, selectedVenueIsFaulted])
 
   // Close filter panel on outside click
   useEffect(() => {
