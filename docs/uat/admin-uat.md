@@ -25,10 +25,9 @@ live state are marked ⚠️.
 6. [Price management](#6-price-management)
 7. [User management](#7-user-management)
 8. [Feedback triage](#8-feedback-triage)
-9. [Inbox / notifications](#9-inbox--notifications)
-10. [Invite codes](#10-invite-codes)
-11. [Founder window](#11-founder-window)
-12. [Admin settings](#12-admin-settings)
+9. [Invite codes](#9-invite-codes)
+10. [Founder window](#10-founder-window)
+11. [Admin settings](#11-admin-settings)
 
 ---
 
@@ -66,17 +65,20 @@ error or a broken value such as "NaN".
 **Result:** ⬜ Pass / Fail / Blocked / N/A
 **Notes:**
 
-### ADM-03 — Attention feed
+### ADM-03 — Needs attention (triage panel)
 
 **Precondition:** On `/admin`.
 **Steps:**
 
-1. Look at the attention feed (up to ~3 critical items).
-2. Click a quick-action / item if present.
+1. Read the fault rows. Every broken venue appears — the list is never truncated.
+2. Read the queue aggregates below the faults (flagged events, prices).
+3. Click a fault row.
 
-**Expected:** Critical items (failed/blocked venues, pending reviews) show with
-severity badges and link to the right place. If nothing needs attention, an empty
-/ all-clear state is fine.
+**Expected:** Each fault row names a venue, a condition (blocked, failed, went
+dark, ceiling suspected, coverage gap) and the evidence figure that earned it,
+in one of three severity bands. Clicking a row lands on the inspector tab that
+shows that condition — History for went-dark and ceiling, Diagnostics for
+failed. If nothing is wrong, an all-clear state renders.
 **Result:** ⬜ Pass / Fail / Blocked / N/A
 **Notes:**
 
@@ -447,44 +449,12 @@ issue_opened. If you don't want a real issue, read the control and mark N/A.
 
 ---
 
-## 9. Inbox / notifications
-
-`/admin/inbox` is the activity feed — the same signals as the dashboard attention
-card but as a full, filterable log (event flags, pending prices, crawl failures,
-blocked venues).
-
-### ADM-28 — Inbox feed & filters
-
-**Precondition:** On `/admin/inbox`.
-**Steps:**
-
-1. Read the feed; note unread counts per category.
-2. Filter by unread / read / archived.
-
-**Expected:** Notifications group by type with accurate unread counts; filtering
-works.
-**Result:** ⬜ Pass / Fail / Blocked / N/A
-**Notes:**
-
-### ADM-29 — Notification links through
-
-**Precondition:** On `/admin/inbox` with at least one item.
-**Steps:**
-
-1. Click a notification.
-
-**Expected:** It navigates to the relevant review/venue page for that item.
-**Result:** ⬜ Pass / Fail / Blocked / N/A
-**Notes:**
-
----
-
-## 10. Invite codes
+## 9. Invite codes
 
 `/admin/invite-codes` gates the private beta. You generate codes, hand them out,
 and revoke them if needed — this is how you control who gets in.
 
-### ADM-30 — Invite codes list
+### ADM-28 — Invite codes list
 
 **Precondition:** On `/admin/invite-codes`.
 **Steps:**
@@ -496,7 +466,7 @@ and revoke them if needed — this is how you control who gets in.
 **Result:** ⬜ Pass / Fail / Blocked / N/A
 **Notes:**
 
-### ADM-31 — Generate a code ⚠️
+### ADM-29 — Generate a code ⚠️
 
 **Precondition:** On `/admin/invite-codes`.
 **Steps:**
@@ -510,7 +480,7 @@ code is genuinely redeemable at sign-up.
 **Result:** ⬜ Pass / Fail / Blocked / N/A
 **Notes:**
 
-### ADM-32 — Revoke a code ⚠️
+### ADM-30 — Revoke a code ⚠️
 
 **Precondition:** An active, unredeemed code exists (use one you just generated).
 **Steps:**
@@ -523,13 +493,13 @@ code is genuinely redeemable at sign-up.
 
 ---
 
-## 11. Founder window
+## 10. Founder window
 
 `/admin/founder-window` controls the beta founder program — the window during
 which new users are granted lifetime Premium. This is a high-impact control:
 opening it changes what every new signup receives.
 
-### ADM-33 — Founder window state
+### ADM-31 — Founder window state
 
 **Precondition:** On `/admin/founder-window`.
 **Steps:**
@@ -540,7 +510,7 @@ opening it changes what every new signup receives.
 **Result:** ⬜ Pass / Fail / Blocked / N/A
 **Notes:**
 
-### ADM-34 — Adjust founder window ⚠️
+### ADM-32 — Adjust founder window ⚠️
 
 **Precondition:** On `/admin/founder-window`.
 **High-impact — only change this if you intend to.** Otherwise read the controls and mark N/A.
@@ -556,11 +526,11 @@ unless you're deliberately managing the program.
 
 ---
 
-## 12. Admin settings
+## 11. Admin settings
 
 `/admin/settings` holds the admin panel's own preferences and any ops tools.
 
-### ADM-35 — Admin appearance
+### ADM-33 — Admin appearance
 
 **Precondition:** On `/admin/settings`.
 **Steps:**
@@ -572,7 +542,7 @@ unless you're deliberately managing the program.
 **Result:** ⬜ Pass / Fail / Blocked / N/A
 **Notes:**
 
-### ADM-36 — Ops tools ⚠️
+### ADM-34 — Ops tools ⚠️
 
 **Precondition:** On `/admin/settings`. Ops actions (resync, clear cache, etc.) are
 real — read them before running anything.
@@ -590,19 +560,18 @@ you run completes and reports success.
 
 ## Summary tally
 
-| Section                  | Pass | Fail | Blocked | N/A |
-| ------------------------ | ---- | ---- | ------- | --- |
-| 1. Access & dashboard    |      |      |         |     |
-| 2. Review & moderation   |      |      |         |     |
-| 3. Venue management      |      |      |         |     |
-| 4. Crawl monitoring      |      |      |         |     |
-| 5. Event editing         |      |      |         |     |
-| 6. Price management      |      |      |         |     |
-| 7. User management       |      |      |         |     |
-| 8. Feedback triage       |      |      |         |     |
-| 9. Inbox / notifications |      |      |         |     |
-| 10. Invite codes         |      |      |         |     |
-| 11. Founder window       |      |      |         |     |
-| 12. Admin settings       |      |      |         |     |
+| Section                | Pass | Fail | Blocked | N/A |
+| ---------------------- | ---- | ---- | ------- | --- |
+| 1. Access & dashboard  |      |      |         |     |
+| 2. Review & moderation |      |      |         |     |
+| 3. Venue management    |      |      |         |     |
+| 4. Crawl monitoring    |      |      |         |     |
+| 5. Event editing       |      |      |         |     |
+| 6. Price management    |      |      |         |     |
+| 7. User management     |      |      |         |     |
+| 8. Feedback triage     |      |      |         |     |
+| 9. Invite codes        |      |      |         |     |
+| 10. Founder window     |      |      |         |     |
+| 11. Admin settings     |      |      |         |     |
 
 **Tester:** ________________ **Date:** ____________ **Device/browser:** ____________
