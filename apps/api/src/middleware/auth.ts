@@ -7,7 +7,8 @@ export const clerkAuth = clerkMiddleware()
 
 // serviceOrClerkAuth — allows requests that carry a valid INTERNAL_API_SECRET
 // service key header (Next.js SSR calling public endpoints) without requiring a
-// user session. All other requests must pass Clerk auth as normal.
+// user session. All other requests must pass Clerk auth as normal. Once a user
+// session is confirmed, tags the request's Sentry scope with the user id.
 export const serviceOrClerkAuth: MiddlewareHandler = async (
   ctx: Context,
   next: Next,
@@ -37,7 +38,8 @@ export const serviceOrClerkAuth: MiddlewareHandler = async (
 }
 
 // requireAuth — use after clerkAuth on protected routes
-// Returns 401 if no valid session is present
+// Returns 401 if no valid session is present; otherwise tags the request's
+// Sentry scope with the user id before advancing.
 export const requireAuth: MiddlewareHandler = async (
   ctx: Context,
   next: Next,
@@ -66,12 +68,13 @@ export function getAuthUser(ctx: Context): { userId: string } {
   return { userId: auth.userId }
 }
 
-// getAuthOptional — returns userId if authenticated, null if not; for optional-auth routes
+// getAuthOptional — returns userId if authenticated, null if not; for
+// optional-auth routes. When authenticated, also tags the request's Sentry
+// scope with the user id — these routes never pass through requireAuth, so this
+// is the only place a signed-in user on a public endpoint gets attributed.
 export function getAuthOptional(ctx: Context): { userId: string } | null {
   const auth = getAuth(ctx)
   if (!auth?.userId) return null
-  // Optional-auth routes never pass through requireAuth, so this is the only
-  // place a signed-in user on a public endpoint gets attributed.
   setSentryUser(auth.userId)
   return { userId: auth.userId }
 }
