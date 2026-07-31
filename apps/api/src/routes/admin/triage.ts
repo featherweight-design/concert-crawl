@@ -204,6 +204,7 @@ triageAdminRouter.get('/', async (ctx) => {
       blockedAt: venues.blockedAt,
       consecutiveFailures: venues.consecutiveFailures,
       lastUrlCoverageAlertAt: venues.lastUrlCoverageAlertAt,
+      lastUrlCoverageOkAt: venues.lastUrlCoverageOkAt,
     })
     .from(venues)
     .where(eq(venues.verified, true))

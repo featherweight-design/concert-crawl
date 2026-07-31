@@ -463,6 +463,13 @@
       "when": 1785801600000,
       "tag": "0065_user_events_retire_going_status",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1785888000000,
+      "tag": "0066_venue_url_coverage_ok_at",
+      "breakpoints": true
     }
   ]
 }

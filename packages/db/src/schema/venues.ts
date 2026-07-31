@@ -71,6 +71,15 @@ export const venues = pgTable('venues', {
   lastUrlCoverageAlertAt: timestamp('last_url_coverage_alert_at', {
     withTimezone: true,
   }),
+  // When the upcoming catalogue was last FULLY covered — every visible
+  // upcoming event carrying a ticket or event URL. Distinct from the cooldown
+  // marker above, which records when a gap was DETECTED: the two diverge by
+  // however long the venue went uncrawled before the alert fired, and the
+  // triage panel needs the completeness date to say "was 14/14 on Jul 12"
+  // (#1266).
+  lastUrlCoverageOkAt: timestamp('last_url_coverage_ok_at', {
+    withTimezone: true,
+  }),
   // Per-platform fetcher dispatch (#623). When set, the crawler routes
   // this venue to a platform-specific fetcher (e.g. AEG's JSON blob)
   // instead of the HTML → JSON-LD → LLM cascade. The platform value is

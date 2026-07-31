@@ -1,0 +1,14 @@
+-- Records when a venue's upcoming catalogue was last FULLY covered — every
+-- consumer-visible upcoming event carrying a ticket or event URL.
+--
+-- last_url_coverage_alert_at, the existing column, is a cooldown marker
+-- written when a gap is DETECTED. It reads as an honest "uncovered since"
+-- date, but it is not "last fully covered": the two diverge by however long
+-- the venue went uncrawled before the alert fired. The admin triage panel
+-- wants the latter ("was 14/14 on Jul 12"), so it gets its own column rather
+-- than an overloaded reading of the cooldown marker (#1266).
+--
+-- Nullable and unbackfilled: no historical crawl record can evidence when
+-- coverage was last complete, and inventing a date would be worse than the
+-- null the copy already handles. Venues fill it in on their next covered run.
+ALTER TABLE "venues" ADD COLUMN "last_url_coverage_ok_at" timestamp with time zone;

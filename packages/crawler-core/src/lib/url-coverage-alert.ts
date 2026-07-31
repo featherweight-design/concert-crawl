@@ -143,6 +143,20 @@ async function runCheck(
   const upcomingCount = row?.upcomingCount ?? 0
   const uncoveredCount = row?.uncoveredCount ?? 0
 
+  // Stamp completeness ahead of the classifier's early returns. "Fully
+  // covered" is a stricter fact than "no gap detected" — the classifier
+  // tolerates a sub-threshold ratio, and a small catalogue never reaches it at
+  // all — but the triage panel's line claims 14/14, so only a genuine zero
+  // uncovered may set the date (#1266). Deliberately not under the cooldown
+  // compare-and-set below: a concurrent uncovered run can't make this reading
+  // untrue, coverage was complete at this moment either way.
+  if (upcomingCount > 0 && uncoveredCount === 0) {
+    await db
+      .update(venues)
+      .set({ lastUrlCoverageOkAt: now, updatedAt: now })
+      .where(eq(venues.id, input.venueId))
+  }
+
   const condition = evaluateCoverageCondition({ upcomingCount, uncoveredCount })
 
   if (!condition.detected && condition.reason === 'small_catalogue') {

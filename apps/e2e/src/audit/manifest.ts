@@ -115,6 +115,14 @@ const manifest: AuditManifest = validateManifest([
 
   // --- Additional admin routes --------------------------------------------
   {
+    // The dashboard, which hosts the triage panel (#1215). It had no entry, so
+    // the panel's forced-state sweep had nothing to run against.
+    id: 'admin-dashboard',
+    path: '/admin',
+    tags: ['admin'],
+    auth: 'admin',
+  },
+  {
     id: 'admin-settings',
     path: '/admin/settings',
     tags: ['admin'],

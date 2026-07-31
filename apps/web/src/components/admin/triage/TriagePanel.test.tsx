@@ -181,12 +181,25 @@ describe('TriagePanel — evidence per condition', () => {
   it('renders a coverage row from the supplied uncovered count', () => {
     render(<TriagePanel data={data([coverage])} />)
     expect(screen.getByText('9 of 14 events have a ticket link')).toBeTruthy()
-    // "uncovered since", not "was 14/14 on" — wasWhen is an uncovered-since
-    // date (#1266).
+    // wasWhen is a genuine last-fully-covered date now (#1266), so the detail
+    // makes the completeness claim rather than hedging to "uncovered since".
     expect(
       screen.getByText(
-        '5 have neither a ticket nor an event link · uncovered since Jul 12',
+        '5 have neither a ticket nor an event link · was 14/14 on Jul 12',
       ),
+    ).toBeTruthy()
+  })
+
+  it('drops the completeness clause when nothing records a covered run', () => {
+    render(
+      <TriagePanel
+        data={data([
+          { ...coverage, evidence: { ...coverage.evidence, wasWhen: null } },
+        ])}
+      />,
+    )
+    expect(
+      screen.getByText('5 have neither a ticket nor an event link'),
     ).toBeTruthy()
   })
 

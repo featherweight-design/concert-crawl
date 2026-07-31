@@ -65,6 +65,14 @@ async function coverageNotifications(): Promise<
     .where(eq(notifications.category, 'crawl.url_coverage_gap'))
 }
 
+async function coverageOkStamp(venueId: string): Promise<Date | null> {
+  const [row] = await db
+    .select({ stamp: venues.lastUrlCoverageOkAt })
+    .from(venues)
+    .where(eq(venues.id, venueId))
+  return row?.stamp ?? null
+}
+
 const BASE_INPUT = {
   crawlRunId: '00000000-0000-4000-8000-000000000001',
   eventsUsable: 20,
@@ -189,6 +197,72 @@ describe('checkUrlCoverage', () => {
 
     expect(outcome).toEqual({ fired: false, reason: 'covered' })
     expect(await coverageNotifications()).toHaveLength(0)
+    // One straggler is below the alert threshold but is NOT full coverage, so
+    // the completeness stamp must stay unset — the panel would otherwise claim
+    // 128/128 for a catalogue that was 127/128 (#1266).
+    expect(await coverageOkStamp(venue.id)).toBeNull()
+  })
+
+  it('stamps the completeness date on a fully covered run', async () => {
+    const venue = await seedVenue()
+    await seedEvents(
+      venue.id,
+      Array.from({ length: 14 }, () => ({ covered: true })),
+    )
+    const now = new Date('2026-07-12T09:00:00.000Z')
+
+    const outcome = await checkUrlCoverage({
+      ...BASE_INPUT,
+      venueId: venue.id,
+      venueName: venue.name,
+      now,
+    })
+
+    expect(outcome).toEqual({ fired: false, reason: 'covered' })
+    expect(await coverageOkStamp(venue.id)).toEqual(now)
+  })
+
+  it('stamps a fully covered catalogue too small to be classified', async () => {
+    // The classifier returns early for a small catalogue, so the stamp has to
+    // happen ahead of it — otherwise these venues never record completeness.
+    const venue = await seedVenue()
+    await seedEvents(
+      venue.id,
+      Array.from({ length: 2 }, () => ({ covered: true })),
+    )
+    const now = new Date('2026-07-12T09:00:00.000Z')
+
+    const outcome = await checkUrlCoverage({
+      ...BASE_INPUT,
+      venueId: venue.id,
+      venueName: venue.name,
+      now,
+    })
+
+    expect(outcome).toEqual({ fired: false, reason: 'small_catalogue' })
+    expect(await coverageOkStamp(venue.id)).toEqual(now)
+  })
+
+  it('leaves the completeness stamp untouched on an uncovered run', async () => {
+    const venue = await seedVenue()
+    const previouslyOk = new Date('2026-07-12T09:00:00.000Z')
+    await db
+      .update(venues)
+      .set({ lastUrlCoverageOkAt: previouslyOk })
+      .where(eq(venues.id, venue.id))
+    await seedEvents(
+      venue.id,
+      Array.from({ length: 20 }, () => ({ covered: false })),
+    )
+
+    await checkUrlCoverage({
+      ...BASE_INPUT,
+      venueId: venue.id,
+      venueName: venue.name,
+    })
+
+    // The date coverage was last complete does not move because it since broke.
+    expect(await coverageOkStamp(venue.id)).toEqual(previouslyOk)
   })
 
   it('ignores past, hidden, cancelled and already-missing events when measuring coverage', async () => {

@@ -138,6 +138,7 @@ export interface TriageVenueRow {
   blockedAt: Date | null
   consecutiveFailures: number
   lastUrlCoverageAlertAt: Date | null
+  lastUrlCoverageOkAt: Date | null
 }
 
 export interface TriageCoverageRow {
@@ -196,12 +197,10 @@ export interface CoverageEvidence {
   matched: number
   expected: number
   uncovered: number
-  // The day the gap was first detected — NOT the day coverage was last
-  // complete. Nothing persists the latter, and the two differ by however long
-  // the venue went uncrawled before the alert fired. The write path clears the
-  // marker on a covered run, so this is a true "uncovered since" date; PR 3's
-  // copy states it that way rather than the fixture's "was 14/14 on Jul 12",
-  // which would claim a completeness we can't evidence. See #1266.
+  // The day coverage was last COMPLETE, from venues.lastUrlCoverageOkAt —
+  // stamped only on a run where every visible upcoming event carried a link
+  // (#1266). Null for a venue that has not had a fully-covered run since the
+  // column landed; the copy drops the clause rather than guessing.
   wasWhen: string | null
 }
 
@@ -553,8 +552,8 @@ export const deriveFaults = (input: DeriveFaultsInput): TriageFault[] => {
               coverageCondition.uncoveredCount,
             expected: coverageCondition.upcomingCount,
             uncovered: coverageCondition.uncoveredCount,
-            wasWhen: venue.lastUrlCoverageAlertAt
-              ? formatMtDate(venue.lastUrlCoverageAlertAt)
+            wasWhen: venue.lastUrlCoverageOkAt
+              ? formatMtDate(venue.lastUrlCoverageOkAt)
               : null,
           },
         })
