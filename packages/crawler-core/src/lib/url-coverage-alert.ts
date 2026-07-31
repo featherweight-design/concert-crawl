@@ -22,7 +22,7 @@
 //
 // Never fails the crawl: advisory detection layered on a run that completed.
 
-import { and, eq, gte, isNull, sql } from 'drizzle-orm'
+import { and, eq, gte, isNull, lt, or, sql } from 'drizzle-orm'
 import { db, events, notifications, venues } from '@concert-crawl/db'
 import { reportFailure } from '@concert-crawl/logger'
 import { evaluateCoverageCondition } from './triage-conditions.js'
@@ -150,11 +150,26 @@ async function runCheck(
   // genuine zero uncovered may set it (#1266). Deliberately not under the cooldown
   // compare-and-set below: a concurrent uncovered run can't make this reading
   // untrue, coverage was complete at this moment either way.
+  //
+  // The date must only ever move forward. Two covered runs can overlap — the
+  // nightly cron and an admin-triggered crawl — and the one that finishes last
+  // is not necessarily the one that read the catalogue last, so an
+  // unconditional SET could regress "last fully covered" to the earlier
+  // reading. The predicate makes the write monotonic in the database rather
+  // than in the caller.
   if (upcomingCount > 0 && uncoveredCount === 0) {
     await db
       .update(venues)
       .set({ lastUrlCoverageOkAt: now, updatedAt: now })
-      .where(eq(venues.id, input.venueId))
+      .where(
+        and(
+          eq(venues.id, input.venueId),
+          or(
+            isNull(venues.lastUrlCoverageOkAt),
+            lt(venues.lastUrlCoverageOkAt, now),
+          ),
+        ),
+      )
   }
 
   const condition = evaluateCoverageCondition({ upcomingCount, uncoveredCount })

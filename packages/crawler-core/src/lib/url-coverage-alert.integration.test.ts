@@ -243,6 +243,32 @@ describe('checkUrlCoverage', () => {
     expect(await coverageOkStamp(venue.id)).toEqual(now)
   })
 
+  it('never moves the completeness stamp backwards', async () => {
+    // Overlapping covered runs — the nightly cron and an admin-triggered crawl —
+    // can finish in a different order than they read the catalogue, so the later
+    // writer may hold the earlier reading.
+    const venue = await seedVenue()
+    const laterOk = new Date('2026-07-12T09:00:00.000Z')
+    await db
+      .update(venues)
+      .set({ lastUrlCoverageOkAt: laterOk })
+      .where(eq(venues.id, venue.id))
+    await seedEvents(
+      venue.id,
+      Array.from({ length: 14 }, () => ({ covered: true })),
+    )
+
+    const outcome = await checkUrlCoverage({
+      ...BASE_INPUT,
+      venueId: venue.id,
+      venueName: venue.name,
+      now: new Date('2026-07-11T09:00:00.000Z'),
+    })
+
+    expect(outcome).toEqual({ fired: false, reason: 'covered' })
+    expect(await coverageOkStamp(venue.id)).toEqual(laterOk)
+  })
+
   it('leaves the completeness stamp untouched on an uncovered run', async () => {
     const venue = await seedVenue()
     const previouslyOk = new Date('2026-07-12T09:00:00.000Z')
