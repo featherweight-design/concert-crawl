@@ -63,8 +63,8 @@ async function fetchTriage(): Promise<TriageBody['data']> {
 const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
- * Seed crawl runs oldest-first, one per day ending `daysAgo` days back from
- * now, so the derived streaks have real timestamps to walk.
+ * Seed crawl runs oldest-first, one per day, with the newest landing a day
+ * back from now, so the derived streaks have real timestamps to walk.
  */
 async function seedRuns(
   venueId: string,
