@@ -23,13 +23,20 @@ describe('createDeadline', () => {
 
     const deadline = createDeadline({ overallTimeoutMs: 40 })
 
-    await expect(
-      deadline.run('page-1', async () => {
+    const err = await deadline
+      .run('page-1', async () => {
         const abort = new Error('The operation was aborted due to timeout')
         abort.name = 'TimeoutError'
         throw abort
-      }),
-    ).rejects.toThrow(PlatformFetchDeadlineError)
+      })
+      .catch((caught: unknown) => caught)
+
+    expect(err).toBeInstanceOf(PlatformFetchDeadlineError)
+    if (!(err instanceof PlatformFetchDeadlineError))
+      throw new Error('unreachable')
+    // Reported elapsed never undershoots the budget it just blew, however the
+    // two clocks happen to line up.
+    expect(err.elapsedMs).toBeGreaterThanOrEqual(40)
   })
 
   it('passes the per-request timeout through when no overall budget is set', async () => {
@@ -186,16 +193,19 @@ describe('createDeadline', () => {
       overallTimeoutMs: 10_000,
     })
 
-    await expect(
-      deadline.run('page-1', async (timeoutMs) => {
+    const err = await deadline
+      .run('page-1', async (timeoutMs) => {
         const signal = AbortSignal.timeout(timeoutMs ?? 1_000)
         await new Promise((_resolve, reject) => {
           signal.addEventListener('abort', () => reject(signal.reason))
         })
-      }),
-    ).rejects.toThrowError(
-      expect.not.objectContaining({ name: 'PlatformFetchDeadlineError' }),
-    )
+      })
+      .catch((caught: unknown) => caught)
+
+    expect(err).not.toBeInstanceOf(PlatformFetchDeadlineError)
+    expect(err).toBeInstanceOf(Error)
+    if (!(err instanceof Error)) throw new Error('unreachable')
+    expect(['TimeoutError', 'AbortError']).toContain(err.name)
   })
 
   it('leaves a genuine request failure unwrapped', async () => {

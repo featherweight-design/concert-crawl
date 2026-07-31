@@ -132,12 +132,20 @@ export const createDeadline = ({
         ) {
           const spent = elapsed()
           // Relabelling is the one path that discards the original error,
-          // so record what it was before swapping it for the breach.
+          // so record what it was before swapping it for the breach. The log
+          // keeps the raw reading; the error reports at least the budget,
+          // since the same clock skew that motivates `budgetBound` can leave
+          // `spent` a hair short and produce a message claiming a 40ms budget
+          // was exceeded after 39ms.
           logger.debug(
             { stage, abortName: err.name, elapsedMs: spent },
             'platform fetch: abort relabelled as a deadline breach',
           )
-          throw new PlatformFetchDeadlineError(overallTimeoutMs, spent, stage)
+          throw new PlatformFetchDeadlineError(
+            overallTimeoutMs,
+            Math.max(spent, overallTimeoutMs),
+            stage,
+          )
         }
         throw err
       }
