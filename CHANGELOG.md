@@ -1,3 +1,13 @@
+## [1.176.1](https://github.com/HartiganHM/concert-crawl/compare/v1.176.0...v1.176.1) (2026-07-31)
+
+
+### Bug Fixes
+
+* **crawler-core:** clamp reported elapsed and tighten deadline assertions ([7767c2b](https://github.com/HartiganHM/concert-crawl/commit/7767c2b904ed7a20c39c90dc3d479026e1bb01a4))
+* **crawler-core:** decide abort relabelling structurally, not by re-reading the clock ([6a697c4](https://github.com/HartiganHM/concert-crawl/commit/6a697c4bceecf336a3ec633f12682b07d88ca87f))
+* **crawler:** log non-deadline errors before rethrowing ([95ad2d4](https://github.com/HartiganHM/concert-crawl/commit/95ad2d4af90ee161b77f64b2b54b98d6f982149c))
+* **web:** keep a deep-linked crawl inspector tab across router.refresh ([5888107](https://github.com/HartiganHM/concert-crawl/commit/588810741fbeedcfdd1ecec1660caf49e35b996a)), closes [#1267](https://github.com/HartiganHM/concert-crawl/issues/1267)
+
 # [1.176.0](https://github.com/HartiganHM/concert-crawl/compare/v1.175.0...v1.176.0) (2026-07-31)
 
 
