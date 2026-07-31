@@ -147,6 +147,15 @@ export const createDeadline = ({
             stage,
           )
         }
+        logger.debug(
+          {
+            stage,
+            errName: err instanceof Error ? err.name : 'unknown',
+            elapsedMs: elapsed(),
+            budgetBound,
+          },
+          'platform fetch: error rethrown unchanged',
+        )
         throw err
       }
     },
