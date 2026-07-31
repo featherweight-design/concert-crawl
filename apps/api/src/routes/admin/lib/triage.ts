@@ -659,18 +659,32 @@ export const deriveSweep = (input: {
   }
 }
 
-// Next 3 AM Mountain. Derived by asking Intl what hour it currently is in
-// Denver rather than by hardcoding an offset, so it stays right across DST.
-export const nextNightlySweep = (now: Date): Date => {
-  const mtHour = Number(
-    now.toLocaleString('en-US', {
+const mtHourOf = (when: Date): number =>
+  Number(
+    when.toLocaleString('en-US', {
       timeZone: MT_TIME_ZONE,
       hour: 'numeric',
       hour12: false,
     }),
   )
-  const hoursAhead = (NIGHTLY_SWEEP_HOUR_MT - mtHour + 24) % 24 || 24
-  const next = new Date(now.getTime() + hoursAhead * 60 * 60 * 1000)
-  next.setUTCMinutes(0, 0, 0)
-  return next
+
+// Next 3 AM Mountain.
+//
+// Scans forward an hour at a time and re-asks Intl what the Denver clock reads,
+// rather than computing a delta from the current Mountain hour. A delta assumes
+// the offset holds for the whole span, which is false across a DST boundary:
+// on fall-back night the extra hour makes "5 hours ahead" land at 2 AM MT.
+export const nextNightlySweep = (now: Date): Date => {
+  // Start at the top of the next hour so the result is always strictly future,
+  // including when `now` is already inside the 3 AM hour.
+  const candidate = new Date(now.getTime())
+  candidate.setUTCMinutes(0, 0, 0)
+  candidate.setUTCHours(candidate.getUTCHours() + 1)
+
+  // 48 steps covers a full day plus either DST direction.
+  for (let step = 0; step < 48; step += 1) {
+    if (mtHourOf(candidate) === NIGHTLY_SWEEP_HOUR_MT) return candidate
+    candidate.setUTCHours(candidate.getUTCHours() + 1)
+  }
+  return candidate
 }

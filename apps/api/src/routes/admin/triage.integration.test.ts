@@ -482,4 +482,39 @@ describe('GET /v1/admin/triage', () => {
     expect(flags?.count).toBe(3)
     expect(flags?.breakdown).toContain('Queue Venue 3')
   })
+
+  // Only `slug` is unique on venues, so two venues can legitimately share a
+  // name. Grouping the breakdown by name merged their counts into one row.
+  it('keeps two venues sharing a name as separate breakdown rows', async () => {
+    setAuth('admin')
+    const first = await seedVenue({ name: 'The Marquis', slug: 'marquis-a' })
+    const second = await seedVenue({ name: 'The Marquis', slug: 'marquis-b' })
+    await seedRuns(first.id, baselineRuns(4, 12))
+    await seedRuns(second.id, baselineRuns(4, 12))
+
+    const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
+      timeZone: 'America/Denver',
+    })
+    for (let index = 0; index < 3; index += 1) {
+      await seedEvent(first.id, {
+        artist: `First ${index}`,
+        title: `First ${index}`,
+        date: tomorrow,
+        verified: false,
+      })
+    }
+    await seedEvent(second.id, {
+      artist: 'Second 0',
+      title: 'Second 0',
+      date: tomorrow,
+      verified: false,
+    })
+
+    const data = await fetchTriage()
+    const flags = data.queues.find((queue) => queue.kind === 'eventFlags')
+    expect(flags?.count).toBe(4)
+    // Merged, this would read "The Marquis 4" once.
+    expect(flags?.breakdown).toContain('The Marquis 3')
+    expect(flags?.breakdown).toContain('The Marquis 1')
+  })
 })

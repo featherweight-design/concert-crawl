@@ -112,6 +112,36 @@ describe('nextNightlySweep', () => {
       25 * 60 * 60 * 1000,
     )
   })
+
+  const mtHour = (when: Date) =>
+    Number(
+      when.toLocaleString('en-US', {
+        timeZone: 'America/Denver',
+        hour: 'numeric',
+        hour12: false,
+      }),
+    )
+
+  // An hour-delta derived from the current Mountain hour lands at 2 AM on
+  // fall-back night and 4 AM on spring-forward night.
+  it('still lands on 3 AM Mountain across the fall-back transition', () => {
+    // 2026-11-01: Denver falls back 02:00 MDT -> 01:00 MST.
+    const now = new Date('2026-11-01T04:00:00Z')
+    expect(mtHour(nextNightlySweep(now))).toBe(3)
+  })
+
+  it('still lands on 3 AM Mountain across the spring-forward transition', () => {
+    // 2026-03-08: Denver springs forward 02:00 MST -> 03:00 MDT.
+    const now = new Date('2026-03-08T04:00:00Z')
+    expect(mtHour(nextNightlySweep(now))).toBe(3)
+  })
+
+  it('skips to the next day when already inside the 3 AM hour', () => {
+    const now = new Date('2026-07-30T09:30:00Z') // 03:30 MDT
+    const next = nextNightlySweep(now)
+    expect(mtHour(next)).toBe(3)
+    expect(next.getTime() - now.getTime()).toBeGreaterThan(12 * 60 * 60 * 1000)
+  })
 })
 
 const runRow = (overrides: Partial<TriageRunRow>): TriageRunRow => ({

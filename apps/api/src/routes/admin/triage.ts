@@ -259,7 +259,9 @@ triageAdminRouter.get('/', async (ctx) => {
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
     .where(and(eq(events.verified, false), gte(events.date, denverToday)))
-    .groupBy(venues.name)
+    // Grouped by id, not name: only `slug` is unique, so two venues sharing a
+    // name would have their counts merged into one breakdown row.
+    .groupBy(venues.id, venues.name)
     .orderBy(desc(sql`count(*)`))
     .limit(QUEUE_BREAKDOWN_LIMIT)
 
