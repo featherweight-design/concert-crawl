@@ -718,6 +718,7 @@ here so a later audit reads these as decided, not as drift.
 | —                                                       | `degraded` state                            | Added: the triage fetch can fail, and a health panel must not take the dashboard to `error.tsx`.                                       |
 | "was {M}/{M} on {date}" (coverage)                      | "uncovered since {date}"                    | Nothing persists a last-fully-covered timestamp; the marker is a detection date. Issue #1266 tracks making the original copy truthful. |
 | —                                                       | `sweep.at === '—'` branch                   | Reachable when no crawl run exists; interpolating the sentinel read as "crawled clean at —".                                           |
+| "no successful crawl on record" (blocked)               | "no success in recent runs"                 | `lastSuccess` is drawn from the per-venue run-history window, not the venue's lifetime, so a null cannot evidence "never".             |
 
 ### Routing correction
 

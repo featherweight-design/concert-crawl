@@ -2275,9 +2275,13 @@ export const ADMIN_COPY = {
     evidence: {
       blockedStat: (status: number | null) =>
         status === null ? 'Refusing to crawl' : `HTTP ${status}`,
+      // `lastSuccess` is drawn from the endpoint's per-venue run-history
+      // window, not the venue's whole lifetime, so a null means "none in the
+      // recent runs" — not "never crawled successfully". The copy says only
+      // what the data can evidence.
       blockedDetail: (refusals: number, lastSuccess: string | null) =>
         lastSuccess === null
-          ? `${refusals} refusals in a row · no successful crawl on record`
+          ? `${refusals} refusals in a row · no success in recent runs`
           : `${refusals} refusals in a row · last success ${lastSuccess}`,
 
       failedStat: (failures: number) => `${failures} failures in a row`,

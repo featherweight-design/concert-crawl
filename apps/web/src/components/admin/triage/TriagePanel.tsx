@@ -268,12 +268,15 @@ export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
   const dense = faults.length >= denseAt
   const nothing = faults.length === 0 && queues.length === 0
 
-  const announcement =
-    data === null
+  // `isPending` is checked first so a refresh that follows a degraded fetch
+  // still announces "checking". With `data === null` ahead of it the live
+  // region stayed on the degraded message while the Refresh button visibly
+  // said otherwise, and the retry was inaudible to a screen reader.
+  const announcement = isPending
+    ? TRIAGE.a11y.checking
+    : data === null
       ? TRIAGE.a11y.degraded
-      : isPending
-        ? TRIAGE.a11y.checking
-        : TRIAGE.a11y.announce(faults.length, queueTotal)
+      : TRIAGE.a11y.announce(faults.length, queueTotal)
 
   const header = (
     <div

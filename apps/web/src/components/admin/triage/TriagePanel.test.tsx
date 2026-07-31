@@ -261,7 +261,7 @@ describe('TriagePanel — nullable evidence fields', () => {
     expect(container.textContent).not.toContain('undefined')
     expect(screen.getByText('Refusing to crawl')).toBeTruthy()
     expect(
-      screen.getByText('2 refusals in a row · no successful crawl on record'),
+      screen.getByText('2 refusals in a row · no success in recent runs'),
     ).toBeTruthy()
     expect(
       screen.getByText('4 have neither a ticket nor an event link'),
@@ -504,8 +504,11 @@ describe('TriagePanel — panel states', () => {
   })
 
   it('degrades rather than throwing when the fetch failed', () => {
-    render(<TriagePanel data={null} />)
+    const { container } = render(<TriagePanel data={null} />)
     expect(screen.getByText("Couldn't check venue health.")).toBeTruthy()
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      'Venue health could not be checked.',
+    )
     // No badge, no rows, but the panel and its Refresh button survive.
     expect(screen.queryByRole('link')).toBeNull()
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeTruthy()
