@@ -698,3 +698,31 @@ Rendered only when `ordered.length === 0 && queues.length === 0`.
 | Focus order                         | Refresh → each fault row in displayed order → each queue row. One stop per row; ActionLink is not focusable. Identical on mobile and desktop |
 | Touch targets                       | rows ≥ 44 min-height (74–96 desktop / 88–112 mobile rendered); Refresh 44×44; action cell 44 tall                                            |
 | Production swap                     | rows become router `<Link>`; keep `aria-label`                                                                                               |
+
+---
+
+## Amendments applied during the build (2026-07-31)
+
+This table was enumerated from the prototype, which assumed a daily cadence and
+a ticket-link notion of coverage. The shipped API measures neither. Where the
+two disagree the API wins, because it is the thing with data behind it. Recorded
+here so a later audit reads these as decided, not as drift.
+
+| Table said                                              | Ships as                                    | Why                                                                                                                                    |
+| ------------------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| "{N}-day average"                                       | "{N}-run average", window = `series.length` | The series counts crawl runs, not days. A venue crawled twice in a day contributes two entries.                                        |
+| "at the same round number"                              | "at the same count"                         | The detector pins on a repeated count; "round number" describes only some of them.                                                     |
+| "{N} of {M} source URLs"                                | "{N} of {M} events have a ticket link"      | The ratio is over upcoming events carrying a link, not over a URL list.                                                                |
+| "Daily event counts for the last {N} days" (chart aria) | "Event counts across the last {N} runs"     | Same day-vs-run correction, in the accessible name.                                                                                    |
+| One ceiling copy variant                                | Two (`horizon_shrank`, `pinned_count`)      | Both `kind`s are producible by the API; a single sentence left one unlabelled. Plan reconciliation item 4 directs this.                |
+| —                                                       | `degraded` state                            | Added: the triage fetch can fail, and a health panel must not take the dashboard to `error.tsx`.                                       |
+| "was {M}/{M} on {date}" (coverage)                      | "uncovered since {date}"                    | Nothing persists a last-fully-covered timestamp; the marker is a detection date. Issue #1266 tracks making the original copy truthful. |
+| —                                                       | `sweep.at === '—'` branch                   | Reachable when no crawl run exists; interpolating the sentinel read as "crawled clean at —".                                           |
+
+### Routing correction
+
+The table records a "Diagnostics" action on `ceiling`. That pane is gated on a
+failed run, and a ceiling-suspected venue's latest run succeeded, so the link
+opened an empty tab. `failed` now takes Diagnostics — the only condition whose
+run carries an error message — and `ceiling` joins `wentDark` on History, where
+the run series that produced both is shown.

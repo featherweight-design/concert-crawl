@@ -1,5 +1,10 @@
 // Single source of truth for all admin UI copy
 
+// What GET /v1/admin/triage sends for `sweep.at` when no crawl run exists at
+// all. Must stay byte-identical to the em dash in apps/api/src/routes/admin/
+// lib/triage.ts, which is the only producer of this sentinel.
+const NO_SWEEP = '—'
+
 // The crawler's `classifyCrawlError` identifiers, written out for the triage
 // panel. Anything unrecognised falls back to the raw identifier rather than
 // being swallowed — a new classifier value should read oddly, not vanish.
@@ -41,25 +46,6 @@ export const ADMIN_COPY = {
       topSpendEmpty: 'No venue spend yet.',
       chartAriaLabel: (total: string) =>
         `LLM spend over the last 30 days: ${total} total`,
-    },
-    attentionItems: {
-      crawlBlocked: (venueName: string) => `${venueName} — crawl blocked`,
-      crawlFailed: (venueName: string) => `${venueName} — crawl failed`,
-      crawlBlockedMeta: 'Venue blocked · crawl schedule paused',
-      crawlFailedMeta: (status: string) =>
-        `Status: ${status} · check crawl inspector`,
-      crawlTimeLabel: 'recent',
-      openCrawl: 'Open crawl',
-      eventsFlaggedTitle: (count: number) =>
-        `${count} event${count === 1 ? '' : 's'} flagged for review`,
-      eventsFlaggedMeta: 'Needs manual verification before publishing',
-      eventsTimeLabel: 'pending',
-      openReview: 'Open Review',
-      pricesWaitingTitle: (count: number) =>
-        `${count} price submission${count === 1 ? '' : 's'} waiting`,
-      pricesMeta: 'Community submissions need approval or dispute',
-      pricesTimeLabel: 'pending',
-      openPricesReview: 'Open Review',
     },
     summary: {
       venuesNeedAttention: (count: number) =>
@@ -2249,7 +2235,8 @@ export const ADMIN_COPY = {
       faultCount: (count: number) =>
         `${count} ${count === 1 ? 'fault' : 'faults'}`,
       queueCount: (count: number) => `${count} in queue`,
-      syncedAt: (at: string) => `checked ${at}`,
+      syncedAt: (at: string) =>
+        at === NO_SWEEP ? 'no sweep yet' : `checked ${at}`,
       refresh: 'Refresh',
       refreshing: 'Checking…',
     },
@@ -2384,11 +2371,17 @@ export const ADMIN_COPY = {
     empty: {
       eyebrow: 'all clear',
       title: "Nothing's broken.",
+      // `at` is '—' when no crawl run exists at all. Interpolating that reads
+      // as "crawled clean at —", claiming a clean sweep that never ran.
       body: (venues: number, at: string, events: number) =>
-        `All ${venues} venues crawled clean at ${at}. ${events} events came in. Both queues are empty.`,
+        at === NO_SWEEP
+          ? `No crawl has run yet across ${venues} venues. Nothing to report.`
+          : `All ${venues} venues crawled clean at ${at}. ${events} events came in. Both queues are empty.`,
       aside: (next: string) => `Next sweep ${next}`,
       faultsClearStrip: (venues: number, at: string) =>
-        `${venues} venues crawling clean · last checked ${at}`,
+        at === NO_SWEEP
+          ? `${venues} venues · no crawl has run yet`
+          : `${venues} venues crawling clean · last checked ${at}`,
     },
 
     // Shown when the triage fetch fails. A broken health panel must not take

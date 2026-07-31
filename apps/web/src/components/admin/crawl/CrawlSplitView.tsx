@@ -279,8 +279,17 @@ export const CrawlSplitView = ({
     setSelectedRunId(null)
   }, [selectedId])
 
-  // Default to diagnostics tab when selected venue has a failed/blocked run
+  // Default to diagnostics tab when selected venue has a failed/blocked run.
+  // An explicit `?tab=` on the initial venue wins over this default — the
+  // triage panel deep-links to the tab holding the evidence that earned the
+  // row, and without this guard the effect would overwrite it on mount and
+  // land every link on Overview.
+  const honouredInitialTab = useRef(initialTab === undefined)
   useEffect(() => {
+    if (!honouredInitialTab.current) {
+      honouredInitialTab.current = true
+      return
+    }
     const row = initialStatus.find((sr) => sr.venueId === selectedId)
     if (
       row &&

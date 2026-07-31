@@ -358,6 +358,21 @@ describe('TriagePanel — rows and links', () => {
     )
   })
 
+  // The Diagnostics pane only renders for a failed run. A ceiling-suspected
+  // venue's latest run succeeded, so pointing it there opens an empty pane —
+  // its evidence is the run series on History. Asserting the set of hrefs is
+  // not enough; the condition-to-tab mapping is the thing that can invert.
+  it.each([
+    ['failed', failed, 'diagnostics'],
+    ['ceiling', ceilingPinned, 'history'],
+    ['wentDark', wentDark, 'history'],
+  ])('routes a %s row to the %s tab', (_name, fault, tab) => {
+    render(<TriagePanel data={data([fault])} />)
+    expect(screen.getByRole('link').getAttribute('href')).toBe(
+      `/admin/crawl?venueId=${base.venueId}&tab=${tab}`,
+    )
+  })
+
   it('degrades a run-scoped row to the venue page when crawlRunId is null', () => {
     render(<TriagePanel data={data([{ ...failed, crawlRunId: null }])} />)
     expect(screen.getByRole('link').getAttribute('href')).toBe(
@@ -466,6 +481,24 @@ describe('TriagePanel — panel states', () => {
     expect(screen.getByText('Next sweep tomorrow 3:00 AM')).toBeTruthy()
     // Both the header badge and the empty-state eyebrow read "all clear".
     expect(screen.getAllByText('all clear')).toHaveLength(2)
+  })
+
+  // The API sends '—' for sweep.at when no crawl run exists at all.
+  // Interpolating it claims a clean sweep that never ran.
+  it('says no sweep has run rather than "crawled clean at —"', () => {
+    const noSweep = data([])
+    render(
+      <TriagePanel
+        data={{ ...noSweep, sweep: { ...noSweep.sweep, at: '—' } }}
+      />,
+    )
+    expect(
+      screen.getByText(
+        'No crawl has run yet across 30 venues. Nothing to report.',
+      ),
+    ).toBeTruthy()
+    expect(screen.queryByText(/crawled clean at/)).toBeNull()
+    expect(screen.queryByText(/checked —/)).toBeNull()
   })
 
   it('degrades rather than throwing when the fetch failed', () => {

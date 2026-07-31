@@ -5,6 +5,7 @@ import {
   CrawlSplitView,
   CrawlRunAllButton,
 } from '@/components/admin/crawl/CrawlSplitView'
+import type { InspectorTab } from '@/components/admin/crawl/InspectorTabs'
 import { IssuesBanner } from '@/components/admin/crawl/IssuesBanner'
 import {
   formatSweepHint,
@@ -113,6 +114,10 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
     (Array.isArray(rawVenueId) ? rawVenueId[0] : rawVenueId) || undefined
   const rawTab = resolvedParams.tab
   const initialTab = (Array.isArray(rawTab) ? rawTab[0] : rawTab) || undefined
+  // Previously only `history` was forwarded, so a `?tab=diagnostics` deep link
+  // silently landed on Overview.
+  const isInspectorTab = (tab: string | undefined): tab is InspectorTab =>
+    tab === 'overview' || tab === 'diagnostics' || tab === 'history'
   // #804 introduced a page-level `?hasAlert=true` filter surfaced through a
   // "Show alerts only" CTA next to Run all. The CTA read as inert to admins
   // (its effect landed inside the per-venue History tab, not the top-level
@@ -240,7 +245,7 @@ export default async function AdminCrawlPage({ searchParams }: Props) {
         {...(initialVenueId !== undefined && {
           initialSelectedId: initialVenueId,
         })}
-        {...(initialTab === 'history' && { initialTab: 'history' })}
+        {...(isInspectorTab(initialTab) && { initialTab })}
       />
     </div>
   )

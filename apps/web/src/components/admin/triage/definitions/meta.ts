@@ -65,10 +65,15 @@ export const CONDITION_META: Record<
   { band: TriageBand; glyph: TriageGlyph; action: TriageAction }
 > = {
   blocked: { band: 'hard', glyph: 'blocked', action: 'openVenue' },
-  failed: { band: 'hard', glyph: 'failed', action: 'openRun' },
+  // Each row opens the inspector tab that actually holds its evidence. The
+  // Diagnostics pane is gated on a failed run, so `failed` is the only
+  // condition it can render anything for. `wentDark` and `ceiling` are derived
+  // from the run series shown on History, and their latest run succeeded —
+  // pointing them at Diagnostics would open an empty pane.
+  failed: { band: 'hard', glyph: 'failed', action: 'openDiagnostics' },
   wentDark: { band: 'loss', glyph: 'wentDark', action: 'openRun' },
   coverage: { band: 'loss', glyph: 'coverage', action: 'openVenue' },
-  ceiling: { band: 'suspect', glyph: 'ceiling', action: 'openDiagnostics' },
+  ceiling: { band: 'suspect', glyph: 'ceiling', action: 'openRun' },
 }
 
 export type TriageQueueKind = 'eventFlags' | 'priceSubmissions'

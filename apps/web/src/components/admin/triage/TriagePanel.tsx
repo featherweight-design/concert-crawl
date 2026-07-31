@@ -214,9 +214,17 @@ const SummaryBadge = ({
   queueTotal: number
   topBand: TriageBand | null
 }) => {
-  if (faultCount > 0 && topBand !== null) {
+  // Branch on the fault count alone. Keying this on `topBand` too would let a
+  // bandless fault fall through to the queue or all-clear badge, captioning a
+  // visible list of faults as "all clear" — the exact reassuring-but-wrong
+  // summary this panel replaced.
+  if (faultCount > 0) {
     const kind =
-      topBand === 'hard' ? 'danger' : topBand === 'loss' ? 'warning' : 'accent'
+      topBand === 'loss'
+        ? 'warning'
+        : topBand === 'suspect'
+          ? 'accent'
+          : 'danger'
     return (
       <StatusBadge kind={kind} mono>
         {TRIAGE.panel.faultCount(faultCount)}
