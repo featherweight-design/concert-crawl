@@ -37,8 +37,12 @@ const QUEUE_BREAKDOWN_LIMIT = 3
 // Response schema
 // ---------------------------------------------------------------------------
 //
-// Field names match design/design_handoff_admin_triage/triage-data.jsx so the
-// panel in PR 3 needs no adapter.
+// Every field the fixture at design/design_handoff_admin_triage/triage-data.jsx
+// reads is present under the same name, so the panel in PR 3 needs no adapter.
+// Two deliberate divergences: the wrapper is `evidence` rather than the
+// fixture's `d`, which trips the repo's id-length rule and gets adopted by the
+// panel when PR 3 ports it; and coverage carries an extra `uncovered`, which
+// the copy layer derives arithmetically but the detector already knows exactly.
 
 const faultBaseSchema = z.object({
   id: z.string(),
