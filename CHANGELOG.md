@@ -1,3 +1,17 @@
+# [1.176.0](https://github.com/HartiganHM/concert-crawl/compare/v1.175.0...v1.176.0) (2026-07-31)
+
+
+### Bug Fixes
+
+* **web:** announce refresh over degraded, and stop overclaiming last success ([b38e21f](https://github.com/HartiganHM/concert-crawl/commit/b38e21f85a4ad9e5cabd7b1f630935d34ba23bff))
+* **web:** log dashboard fetch failures instead of swallowing them ([791d9fa](https://github.com/HartiganHM/concert-crawl/commit/791d9fa9a2be5e4d7a349dbb90abf84b1428087c))
+* **web:** make the triage panel's deep links actually land on their evidence ([1dfe99b](https://github.com/HartiganHM/concert-crawl/commit/1dfe99bfab1f27b8355141a169e534aa31a9464d))
+
+
+### Features
+
+* **web:** admin triage panel replaces the capped attention feed ([#1215](https://github.com/HartiganHM/concert-crawl/issues/1215)) ([f83132a](https://github.com/HartiganHM/concert-crawl/commit/f83132a7df6168c68127d7e32998905adc03471e))
+
 # [1.175.0](https://github.com/HartiganHM/concert-crawl/compare/v1.174.3...v1.175.0) (2026-07-31)
 
 
