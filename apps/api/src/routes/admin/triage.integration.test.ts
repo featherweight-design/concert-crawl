@@ -534,4 +534,37 @@ describe('GET /v1/admin/triage', () => {
     expect(flags?.breakdown).toContain('The Marquis 3')
     expect(flags?.breakdown).toContain('The Marquis 1')
   })
+
+  // Each breakdown line is a venue, so the "N more" tail collapses venues. A
+  // remainder derived from the event total instead would read "6 more" here.
+  it('counts the breakdown remainder in venues, not flagged events', async () => {
+    setAuth('admin')
+    const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
+      timeZone: 'America/Denver',
+    })
+    // Four venues, descending flag counts, so the fourth is the one collapsed.
+    const counts = [9, 8, 7, 6]
+    for (let venueIndex = 0; venueIndex < counts.length; venueIndex += 1) {
+      const venue = await seedVenue({
+        name: `Tail Venue ${venueIndex}`,
+        slug: `tail-${venueIndex}`,
+      })
+      await seedRuns(venue.id, baselineRuns(4, 12))
+      for (let index = 0; index < counts[venueIndex]!; index += 1) {
+        await seedEvent(venue.id, {
+          artist: `Tail ${venueIndex}-${index}`,
+          title: `Tail ${venueIndex}-${index}`,
+          date: tomorrow,
+          verified: false,
+        })
+      }
+    }
+
+    const flags = (await fetchTriage()).queues.find(
+      (queue) => queue.kind === 'eventFlags',
+    )
+    expect(flags?.count).toBe(30)
+    expect(flags?.breakdown).toContain('1 more')
+    expect(flags?.breakdown).not.toContain('6 more')
+  })
 })

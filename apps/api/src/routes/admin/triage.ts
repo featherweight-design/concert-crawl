@@ -260,7 +260,11 @@ triageAdminRouter.get('/', async (ctx) => {
     .select({
       venueName: venues.name,
       count: sql<number>`count(*)::int`,
-      total: sql<number>`sum(count(*)) over ()::int`,
+      // Both windows run over the grouped result, so `eventTotal` sums the
+      // per-venue counts while `venueTotal` counts the groups themselves. The
+      // pill states events; the "N more" suffix collapses venue lines.
+      eventTotal: sql<number>`sum(count(*)) over ()::int`,
+      venueTotal: sql<number>`count(*) over ()::int`,
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
@@ -313,7 +317,7 @@ triageAdminRouter.get('/', async (ctx) => {
 
   const queues: z.infer<typeof queueSchema>[] = []
 
-  const eventFlagTotal = eventFlagRows[0]?.total ?? 0
+  const eventFlagTotal = eventFlagRows[0]?.eventTotal ?? 0
   if (eventFlagTotal > 0) {
     queues.push({
       id: 'q-flags',
@@ -321,7 +325,7 @@ triageAdminRouter.get('/', async (ctx) => {
       count: eventFlagTotal,
       breakdown: joinBreakdown(
         eventFlagRows.map((row) => `${row.venueName} ${row.count}`),
-        eventFlagTotal - eventFlagRows.reduce((sum, row) => sum + row.count, 0),
+        (eventFlagRows[0]?.venueTotal ?? 0) - eventFlagRows.length,
       ),
       action: 'openReview',
     })
