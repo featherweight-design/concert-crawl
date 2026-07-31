@@ -14,6 +14,10 @@
       "types": "./dist/fetchers.d.ts",
       "import": "./dist/fetchers.js"
     },
+    "./triage-conditions": {
+      "types": "./dist/lib/triage-conditions.d.ts",
+      "import": "./dist/lib/triage-conditions.js"
+    },
     "./canonical": {
       "types": "./dist/lib/canonical-artist.d.ts",
       "import": "./dist/lib/canonical-artist.js"
