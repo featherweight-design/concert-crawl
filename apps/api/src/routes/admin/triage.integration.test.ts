@@ -433,7 +433,7 @@ describe('GET /v1/admin/triage', () => {
     const { eq } = await import('drizzle-orm')
     await testDb
       .update(venuesTable)
-      .set({ lastUrlCoverageAlertAt: new Date('2026-07-12T18:00:00Z') })
+      .set({ lastUrlCoverageOkAt: new Date('2026-07-12T18:00:00Z') })
       .where(eq(venuesTable.id, venue.id))
     const [dated] = (await fetchTriage()).faults
     expect(dated?.evidence['wasWhen']).toBe('Jul 12')
