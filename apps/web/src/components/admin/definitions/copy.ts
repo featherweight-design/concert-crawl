@@ -1,5 +1,19 @@
 // Single source of truth for all admin UI copy
 
+// The crawler's `classifyCrawlError` identifiers, written out for the triage
+// panel. Anything unrecognised falls back to the raw identifier rather than
+// being swallowed — a new classifier value should read oddly, not vanish.
+const TRIAGE_ERROR_CLASS_LABELS: Record<string, string> = {
+  bot_detection: 'Bot detection',
+  server_error: 'Server error',
+  timeout: 'Timed out',
+  robots_disallowed: 'Disallowed by robots.txt',
+  network_error: 'Network error',
+  parse_failure: 'Could not parse the page',
+  crawl_error: 'Crawl error',
+  unknown: 'Unclassified error',
+}
+
 export const ADMIN_COPY = {
   dashboard: {
     statCards: {
@@ -2220,5 +2234,201 @@ export const ADMIN_COPY = {
     prev: 'Prev',
     next: 'Next',
     noResults: (itemLabel: string) => `No ${itemLabel}`,
+  },
+
+  // The dashboard triage panel (#1215). Mirrors
+  // design/design_handoff_admin_triage/triage-copy.jsx with the plan's
+  // handoff-vs-reality reconciliations and the state-coverage audit's copy
+  // actions applied: every nullable evidence field gets a branch rather than
+  // an interpolation, ceiling has two variants, and "day" becomes "run"
+  // wherever the underlying figure counts crawl runs.
+  triage: {
+    panel: {
+      title: 'Needs attention',
+      allClear: 'all clear',
+      faultCount: (count: number) =>
+        `${count} ${count === 1 ? 'fault' : 'faults'}`,
+      queueCount: (count: number) => `${count} in queue`,
+      syncedAt: (at: string) => `checked ${at}`,
+      refresh: 'Refresh',
+      refreshing: 'Checking…',
+    },
+
+    // Tier strips. Lowercase mono — these are labels, not headlines.
+    tiers: {
+      faults: 'broken now',
+      queues: 'work waiting',
+    },
+
+    // Severity bands, only rendered in the dense/banded presentation.
+    bands: {
+      hard: 'not crawling',
+      loss: 'losing events',
+      suspect: 'worth a look',
+    },
+
+    // `label` is the condition chip; `verb` completes the accessible sentence
+    // "Bluebird Theater — {verb}."
+    conditions: {
+      blocked: { label: 'Blocked', verb: 'blocked by the venue' },
+      failed: { label: 'Crawl failing', verb: 'failing to crawl' },
+      wentDark: {
+        label: 'Went dark',
+        verb: 'returning far fewer events than usual',
+      },
+      ceiling: {
+        label: 'Ceiling suspected',
+        verb: 'possibly stuck on page one',
+      },
+      coverage: {
+        label: 'Coverage gap',
+        verb: 'missing ticket links it used to have',
+      },
+    },
+
+    // Evidence lines. `stat` is the figure that earns the row; `detail` is the
+    // context that makes the figure mean something.
+    evidence: {
+      blockedStat: (status: number | null) =>
+        status === null ? 'Refusing to crawl' : `HTTP ${status}`,
+      blockedDetail: (refusals: number, lastSuccess: string | null) =>
+        lastSuccess === null
+          ? `${refusals} refusals in a row · no successful crawl on record`
+          : `${refusals} refusals in a row · last success ${lastSuccess}`,
+
+      failedStat: (failures: number) => `${failures} failures in a row`,
+      failedDetail: (errorClass: string, pauseAt: number) =>
+        `${TRIAGE_ERROR_CLASS_LABELS[errorClass] ?? errorClass} · pauses itself at ${pauseAt}`,
+
+      wentDarkStat: (baselineCount: number, count: number) =>
+        `${baselineCount} → ${count} events`,
+      // `window` is the length of the series actually plotted, not the
+      // BASELINE_RUN_COUNT constant, which overstates the sample on a venue
+      // with fewer than seven baseline runs.
+      wentDarkDetail: (
+        pct: number,
+        window: number,
+        avg: number,
+        threshold: number,
+      ) =>
+        `${pct}% against a ${window}-run average of ${avg} · flags at ${threshold}%`,
+
+      // Ceiling variant 1 — the same count reported run after run.
+      ceilingPinnedStat: (count: number) => `stuck at ${count} events`,
+      ceilingPinnedDetail: (
+        runs: number,
+        was: number | null,
+        wasWhen: string | null,
+      ) => {
+        const head = `${runs} ${runs === 1 ? 'run' : 'runs'} at the same count`
+        if (was === null) return `${head} · no different count on record`
+        if (wasWhen === null) return `${head} · ${was} before that`
+        return `${head} · ${was} before ${wasWhen}`
+      },
+
+      // Ceiling variant 2 — the furthest show on sale pulled back toward now.
+      ceilingHorizonStat: (furthest: string | null, count: number) =>
+        furthest === null
+          ? `stuck at ${count} events`
+          : `furthest show ${furthest}`,
+      ceilingHorizonDetail: (
+        shrankDays: number | null,
+        best: string | null,
+      ) => {
+        const head =
+          shrankDays === null
+            ? 'horizon pulled back'
+            : `horizon pulled back ${shrankDays} days`
+        return best === null ? head : `${head} · reached ${best} before`
+      },
+
+      // Coverage states the covered figure — the panel's evidence line is
+      // consistently "how much is working". `wasWhen` is an uncovered-since
+      // date, not a last-fully-covered date (#1266), and is worded as such.
+      coverageStat: (matched: number, expected: number) =>
+        `${matched} of ${expected} events have a ticket link`,
+      coverageDetail: (uncovered: number, wasWhen: string | null) => {
+        const head = `${uncovered} have neither a ticket nor an event link`
+        return wasWhen === null ? head : `${head} · uncovered since ${wasWhen}`
+      },
+    },
+
+    persistence: {
+      label: 'for',
+    },
+
+    actions: {
+      openRun: 'Open run',
+      openVenue: 'Open venue',
+      openDiagnostics: 'Diagnostics',
+      openReview: 'Open Review',
+      openSubmissions: 'Open prices',
+    },
+
+    queues: {
+      eventFlags: {
+        title: (count: number) => `${count} events flagged for review`,
+        detail: (breakdown: string) =>
+          breakdown.length > 0
+            ? `${breakdown} · below the auto-approve threshold`
+            : 'Below the auto-approve threshold',
+      },
+      priceSubmissions: {
+        title: (count: number) => `${count} price submissions waiting`,
+        detail: (breakdown: string) => breakdown,
+      },
+    },
+
+    // The all-clear is a GOOD state, reported as a result with the numbers
+    // that prove it.
+    empty: {
+      eyebrow: 'all clear',
+      title: "Nothing's broken.",
+      body: (venues: number, at: string, events: number) =>
+        `All ${venues} venues crawled clean at ${at}. ${events} events came in. Both queues are empty.`,
+      aside: (next: string) => `Next sweep ${next}`,
+      faultsClearStrip: (venues: number, at: string) =>
+        `${venues} venues crawling clean · last checked ${at}`,
+    },
+
+    // Shown when the triage fetch fails. A broken health panel must not take
+    // the health page down with it.
+    degraded: {
+      title: "Couldn't check venue health.",
+      body: 'The triage service did not answer. Refresh to try again — crawl health below is unaffected.',
+    },
+
+    a11y: {
+      announce: (faults: number, queued: number) =>
+        faults === 0 && queued === 0
+          ? 'Nothing is broken. Both queues are clear.'
+          : `${faults} ${faults === 1 ? 'fault' : 'faults'}, ${queued} ${queued === 1 ? 'item' : 'items'} in the queues.`,
+      checking: 'Checking venue health…',
+      degraded: 'Venue health could not be checked.',
+      // `suspect` rows are not asserted to be broken — the band exists
+      // because the condition may be a real 20-show venue.
+      rowLabel: (
+        venue: string,
+        verb: string,
+        stat: string,
+        dur: string,
+        band: string,
+      ) =>
+        `${venue} — ${verb}. ${stat}. ${band === 'suspect' ? 'Like this for' : 'Broken for'} ${dur}.`,
+      queueRowLabel: (title: string) => title,
+      severity: {
+        hard: 'Severity: not crawling',
+        loss: 'Severity: losing events',
+        suspect: 'Severity: worth a look',
+      },
+      // Runs, not days — the series is a run history, and skipped runs are
+      // filtered out of it.
+      evidenceChart: (window: number, series: number[], count: number) =>
+        `Event counts across the last ${window} ${window === 1 ? 'run' : 'runs'}: ${series.join(', ')}. Latest ${count}.`,
+    },
+
+    // The absence of a dismiss button is a design decision the admin should
+    // be able to read rather than discover.
+    model: 'Rows clear themselves on the next clean crawl. Nothing to dismiss.',
   },
 } as const

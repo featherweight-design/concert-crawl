@@ -15,11 +15,10 @@ import {
   ProgressBar,
 } from '@/components/admin/primitives'
 import { CrawlHealthTable } from '@/components/admin/dashboard/CrawlHealthTable'
-import { AttentionFeed } from '@/components/admin/dashboard/AttentionFeed'
 import { DashboardGreeting } from '@/components/admin/dashboard/DashboardGreeting'
 import { RunHistoryBlocks } from '@/components/admin/dashboard/RunHistoryBlocks'
 import { CostPanel } from '@/components/admin/dashboard/CostPanel'
-import type { AttentionItemData } from '@/components/admin/dashboard/AttentionFeed'
+import { TriagePanel, parseTriageResponse } from '@/components/admin/triage'
 import {
   LLM_BUDGET_USD,
   toStatusRow,
@@ -48,6 +47,7 @@ async function fetchDashboardData(token: string) {
     priceCounts,
     dailyCosts,
     topSpend,
+    triage,
   ] = await Promise.all([
     apiClient
       .get<RawVenueStatus[]>('/v1/admin/crawl/status', token)
@@ -88,6 +88,15 @@ async function fetchDashboardData(token: string) {
           `Failed to load top LLM spend venues: ${err instanceof Error ? err.message : String(err)}`,
         )
       }),
+    // Deliberately does NOT re-throw. The sibling fetches above take the page
+    // to error.tsx when they fail, which is right for the data the dashboard
+    // is built on. Triage is a health readout: if it cannot be reached the
+    // panel degrades to a one-line explanation and the rest of the dashboard
+    // — including the crawl health table below it — still renders.
+    apiClient
+      .get<unknown>('/v1/admin/triage', token)
+      .then(parseTriageResponse)
+      .catch(() => null),
   ])
   return {
     status: rawStatus.map(toStatusRow),
@@ -97,79 +106,8 @@ async function fetchDashboardData(token: string) {
     pendingPriceCount: priceCounts.pending,
     dailyCosts,
     topSpend,
+    triage,
   }
-}
-
-function buildAttentionItems(
-  status: ReturnType<typeof toStatusRow>[],
-  venues: Venue[],
-  pendingEventCount: number,
-  pendingPriceCount: number,
-): AttentionItemData[] {
-  const items: AttentionItemData[] = []
-
-  const failedVenues = status.filter(
-    (row) => row.status === 'failed' || row.blockedAt !== null,
-  )
-  for (const venue of failedVenues.slice(0, 3)) {
-    const venueName =
-      venues.find((vn) => vn.id === venue.venueId)?.name ?? venue.venueId
-    const isBlocked = venue.blockedAt !== null
-    items.push({
-      id: `crawl-${venue.venueId}`,
-      severity: 'danger',
-      iconName: isBlocked ? 'ShieldAlert' : 'AlertCircle',
-      title: isBlocked
-        ? ADMIN_COPY.dashboard.attentionItems.crawlBlocked(venueName)
-        : ADMIN_COPY.dashboard.attentionItems.crawlFailed(venueName),
-      meta: isBlocked
-        ? ADMIN_COPY.dashboard.attentionItems.crawlBlockedMeta
-        : ADMIN_COPY.dashboard.attentionItems.crawlFailedMeta(venue.status),
-      timeLabel: ADMIN_COPY.dashboard.attentionItems.crawlTimeLabel,
-      action: {
-        label: ADMIN_COPY.dashboard.attentionItems.openCrawl,
-        href: `/admin/crawl?venueId=${venue.venueId}`,
-      },
-    })
-  }
-
-  if (pendingEventCount > 0) {
-    items.push({
-      id: 'events-pending',
-      severity: 'warning',
-      iconName: 'CheckSquare',
-      title:
-        ADMIN_COPY.dashboard.attentionItems.eventsFlaggedTitle(
-          pendingEventCount,
-        ),
-      meta: ADMIN_COPY.dashboard.attentionItems.eventsFlaggedMeta,
-      timeLabel: ADMIN_COPY.dashboard.attentionItems.eventsTimeLabel,
-      action: {
-        label: ADMIN_COPY.dashboard.attentionItems.openReview,
-        href: '/admin/review',
-      },
-    })
-  }
-
-  if (pendingPriceCount > 0) {
-    items.push({
-      id: 'prices-pending',
-      severity: 'signal',
-      iconName: 'DollarSign',
-      title:
-        ADMIN_COPY.dashboard.attentionItems.pricesWaitingTitle(
-          pendingPriceCount,
-        ),
-      meta: ADMIN_COPY.dashboard.attentionItems.pricesMeta,
-      timeLabel: ADMIN_COPY.dashboard.attentionItems.pricesTimeLabel,
-      action: {
-        label: ADMIN_COPY.dashboard.attentionItems.openPricesReview,
-        href: '/admin/review?section=submissions',
-      },
-    })
-  }
-
-  return items
 }
 
 export default async function AdminDashboardPage() {
@@ -188,12 +126,12 @@ export default async function AdminDashboardPage() {
     pendingPriceCount,
     dailyCosts,
     topSpend,
+    triage,
   } = await fetchDashboardData(token)
 
   const greenCount = status.filter(
     (row) => row.status === 'success' || row.status === 'skipped',
   ).length
-  const totalEventsFound = status.reduce((sum, row) => sum + row.eventsFound, 0)
   const blockedCount = status.filter(
     (row) => row.blockedAt !== null || row.status === 'failed',
   ).length
@@ -220,13 +158,6 @@ export default async function AdminDashboardPage() {
   const activeVenuesHint = activeVenuesHintParts.join(' · ')
   const sparklineData = buildSparklineData(runs)
 
-  const attentionItems = buildAttentionItems(
-    status,
-    venues,
-    pendingEventCount,
-    pendingPriceCount,
-  )
-
   const summaryParts: string[] = []
   if (blockedCount > 0)
     summaryParts.push(
@@ -244,24 +175,6 @@ export default async function AdminDashboardPage() {
     summaryParts.push(
       ADMIN_COPY.dashboard.summary.venuesGreen(greenCount, status.length),
     )
-
-  const lastRun = runs[0]
-  const lastSweepLabel = lastRun
-    ? new Date(lastRun.createdAt).toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        timeZone: 'America/Denver',
-      })
-    : null
-
-  const eventsIngested =
-    totalEventsFound > 0 ? ` · ${totalEventsFound} events ingested` : ''
-  const digestLabel =
-    greenCount > 0 && lastSweepLabel
-      ? `${greenCount} venue${greenCount === 1 ? '' : 's'} crawled cleanly · last sweep ${lastSweepLabel}${eventsIngested}`
-      : greenCount > 0
-        ? `${greenCount} venue${greenCount === 1 ? '' : 's'} crawled cleanly${eventsIngested}`
-        : undefined
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -405,13 +318,8 @@ export default async function AdminDashboardPage() {
         />
       </div>
 
-      {/* Attention feed */}
-      <AttentionFeed
-        items={attentionItems}
-        {...(digestLabel ? { digestLabel } : {})}
-        digestHref="/admin/crawl"
-        inboxHref="/admin/inbox"
-      />
+      {/* Triage — every fault the crawler reported, never truncated */}
+      <TriagePanel data={triage} />
 
       {/* LLM spend */}
       <CostPanel

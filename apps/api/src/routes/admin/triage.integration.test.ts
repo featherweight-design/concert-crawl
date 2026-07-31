@@ -17,7 +17,12 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { createApp } from '../../app.js'
-import { clearTables, seedEvent, seedVenue } from '../../test/helpers/seed.js'
+import {
+  clearTables,
+  seedEvent,
+  seedPriceSubmission,
+  seedVenue,
+} from '../../test/helpers/seed.js'
 import { testDb } from '../../test/helpers/db.js'
 import { crawlRuns } from '@concert-crawl/db'
 
@@ -566,5 +571,83 @@ describe('GET /v1/admin/triage', () => {
     expect(flags?.count).toBe(30)
     expect(flags?.breakdown).toContain('1 more')
     expect(flags?.breakdown).not.toContain('6 more')
+  })
+  // The price queue's `${artist} @ ${venueName}` breakdown was the one queue
+  // shape with no end-to-end proof — the panel renders the string verbatim,
+  // so a wrong join here surfaces as wrong copy with nothing to catch it.
+  it('reports the price submissions queue with an artist @ venue breakdown', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Ogden Theatre', slug: 'ogden' })
+    await seedRuns(venue.id, baselineRuns(4, 12))
+
+    const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
+      timeZone: 'America/Denver',
+    })
+    const event = await seedEvent(venue.id, {
+      artist: 'Khruangbin',
+      title: 'Khruangbin',
+      date: tomorrow,
+    })
+    await seedPriceSubmission(event.id, 'user-price-1')
+
+    const prices = (await fetchTriage()).queues.find(
+      (queue) => queue.kind === 'priceSubmissions',
+    )
+    expect(prices?.count).toBe(1)
+    expect(prices?.breakdown).toBe('Khruangbin @ Ogden Theatre')
+  })
+
+  // Only three names are listed before the tail collapses, and the remainder
+  // counts submissions rather than venues — this queue's rows are one line per
+  // submission, unlike the event-flag queue's one line per venue.
+  it('collapses the price queue tail past three submissions', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Larimer Lounge', slug: 'larimer' })
+    await seedRuns(venue.id, baselineRuns(4, 12))
+
+    const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
+      timeZone: 'America/Denver',
+    })
+    for (let index = 0; index < 5; index += 1) {
+      const event = await seedEvent(venue.id, {
+        artist: `Artist ${index}`,
+        title: `Artist ${index}`,
+        date: tomorrow,
+      })
+      await seedPriceSubmission(event.id, `user-price-${index}`)
+    }
+
+    const prices = (await fetchTriage()).queues.find(
+      (queue) => queue.kind === 'priceSubmissions',
+    )
+    expect(prices?.count).toBe(5)
+    expect(prices?.breakdown).toContain('2 more')
+    expect(prices?.breakdown).toContain('@ Larimer Lounge')
+  })
+
+  // A dispute is a child submission; counting it would double-report the
+  // parent price it contests.
+  it('leaves disputes out of the price submissions queue', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Bluebird', slug: 'bluebird-q' })
+    await seedRuns(venue.id, baselineRuns(4, 12))
+
+    const tomorrow = new Date(Date.now() + DAY_MS).toLocaleDateString('en-CA', {
+      timeZone: 'America/Denver',
+    })
+    const event = await seedEvent(venue.id, {
+      artist: 'Wednesday',
+      title: 'Wednesday',
+      date: tomorrow,
+    })
+    const original = await seedPriceSubmission(event.id, 'user-price-orig')
+    await seedPriceSubmission(event.id, 'user-price-disputer', {
+      disputedSubmissionId: original.id,
+    })
+
+    const prices = (await fetchTriage()).queues.find(
+      (queue) => queue.kind === 'priceSubmissions',
+    )
+    expect(prices?.count).toBe(1)
   })
 })
