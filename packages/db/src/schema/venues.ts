@@ -75,8 +75,8 @@ export const venues = pgTable('venues', {
   // upcoming event carrying a ticket or event URL. Distinct from the cooldown
   // marker above, which records when a gap was DETECTED: the two diverge by
   // however long the venue went uncrawled before the alert fired, and the
-  // triage panel needs the completeness date to say "was 14/14 on Jul 12"
-  // (#1266).
+  // triage panel needs the completeness date to say "last fully covered
+  // Jul 12" (#1266).
   lastUrlCoverageOkAt: timestamp('last_url_coverage_ok_at', {
     withTimezone: true,
   }),

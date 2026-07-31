@@ -5,7 +5,7 @@
 -- written when a gap is DETECTED. It reads as an honest "uncovered since"
 -- date, but it is not "last fully covered": the two diverge by however long
 -- the venue went uncrawled before the alert fired. The admin triage panel
--- wants the latter ("was 14/14 on Jul 12"), so it gets its own column rather
+-- wants the latter ("last fully covered Jul 12"), so it gets its own column rather
 -- than an overloaded reading of the cooldown marker (#1266).
 --
 -- Nullable and unbackfilled: no historical crawl record can evidence when

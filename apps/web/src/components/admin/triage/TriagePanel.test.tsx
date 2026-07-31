@@ -182,10 +182,11 @@ describe('TriagePanel — evidence per condition', () => {
     render(<TriagePanel data={data([coverage])} />)
     expect(screen.getByText('9 of 14 events have a ticket link')).toBeTruthy()
     // wasWhen is a genuine last-fully-covered date now (#1266), so the detail
-    // makes the completeness claim rather than hedging to "uncovered since".
+    // names that date rather than hedging to "uncovered since". It carries no
+    // count: today's `expected` says nothing about the catalogue on Jul 12.
     expect(
       screen.getByText(
-        '5 have neither a ticket nor an event link · was 14/14 on Jul 12',
+        '5 have neither a ticket nor an event link · last fully covered Jul 12',
       ),
     ).toBeTruthy()
   })

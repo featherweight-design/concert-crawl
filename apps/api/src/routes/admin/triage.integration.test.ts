@@ -424,7 +424,7 @@ describe('GET /v1/admin/triage', () => {
     expect(fault?.evidence['matched']).toBe(9)
     expect(fault?.evidence['expected']).toBe(14)
     expect(fault?.evidence['uncovered']).toBe(5)
-    // The copy layer interpolates this into "was 14/14 on Jul 12"; nothing has
+    // The copy layer interpolates this into "last fully covered Jul 12"; nothing has
     // recorded a last-covered date yet, so it must be present and null rather
     // than absent — an absent key renders "undefined" in the panel.
     expect(fault?.evidence).toHaveProperty('wasWhen', null)

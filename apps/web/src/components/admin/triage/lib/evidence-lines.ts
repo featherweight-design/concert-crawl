@@ -78,7 +78,7 @@ export const evidenceLines = (fault: TriageFault): EvidenceLines => {
       const { matched, expected, uncovered, wasWhen } = fault.evidence
       return {
         stat: EV.coverageStat(matched, expected),
-        detail: EV.coverageDetail(uncovered, expected, wasWhen),
+        detail: EV.coverageDetail(uncovered, wasWhen),
       }
     }
   }

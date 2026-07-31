@@ -2268,21 +2268,23 @@ export const ADMIN_COPY = {
       },
 
       // Coverage states the covered figure — the panel's evidence line is
-      // consistently "how much is working". `wasWhen` is now a genuine
-      // last-fully-covered date (venues.lastUrlCoverageOkAt, #1266), so the
-      // detail can make the fixture's completeness claim. It stays null for a
-      // venue with no fully-covered run on record, and the clause drops.
+      // consistently "how much is working". `wasWhen` is a genuine
+      // last-fully-covered date (venues.lastUrlCoverageOkAt, #1266); it stays
+      // null for a venue with no fully-covered run on record, and the clause
+      // drops.
+      //
+      // The clause deliberately carries no count. `expected` is TODAY's
+      // upcoming total, while `wasWhen` is a past date — pairing them would
+      // render "was 40/40 on Jul 12" off a catalogue that held some other
+      // number on Jul 12. The date is the only fact the column actually
+      // evidences; `coverageStat` already states the current figures.
       coverageStat: (matched: number, expected: number) =>
         `${matched} of ${expected} events have a ticket link`,
-      coverageDetail: (
-        uncovered: number,
-        expected: number,
-        wasWhen: string | null,
-      ) => {
+      coverageDetail: (uncovered: number, wasWhen: string | null) => {
         const head = `${uncovered} have neither a ticket nor an event link`
         return wasWhen === null
           ? head
-          : `${head} · was ${expected}/${expected} on ${wasWhen}`
+          : `${head} · last fully covered ${wasWhen}`
       },
     },
 
