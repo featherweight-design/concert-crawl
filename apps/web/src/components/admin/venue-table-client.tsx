@@ -1,4 +1,5 @@
 'use client'
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 
 import React, { useState, useTransition, useEffect } from 'react'
 import Link from 'next/link'
@@ -459,23 +460,35 @@ export function VenueTableClient({ venues }: Props) {
                     )}
                   </TD>
                   <TD>
-                    <a
-                      href={venue.websiteUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        color: 'var(--fg-muted)',
-                        textDecoration: 'none',
-                        fontFamily: "'JetBrains Mono', monospace",
-                        fontSize: 12,
-                      }}
-                    >
-                      <ExternalLink size={11} style={{ flexShrink: 0 }} />
-                      {sourceUrl(venue.websiteUrl)}
-                    </a>
+                    {isSafeHttpUrl(venue.websiteUrl) ? (
+                      <a
+                        href={venue.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          color: 'var(--fg-muted)',
+                          textDecoration: 'none',
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 12,
+                        }}
+                      >
+                        <ExternalLink size={11} style={{ flexShrink: 0 }} />
+                        {sourceUrl(venue.websiteUrl)}
+                      </a>
+                    ) : (
+                      <span
+                        style={{
+                          color: 'var(--fg-muted)',
+                          fontFamily: "'JetBrains Mono', monospace",
+                          fontSize: 12,
+                        }}
+                      >
+                        {sourceUrl(venue.websiteUrl)}
+                      </span>
+                    )}
                   </TD>
                   <TD>
                     <StatusBadge

@@ -1,4 +1,5 @@
 'use client'
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 
 import Link from 'next/link'
 import {
@@ -132,7 +133,7 @@ export function VenueQuickView({ venue }: Props) {
               >
                 {vendorLabel}
               </div>
-              {venue.priceUrl && (
+              {isSafeHttpUrl(venue.priceUrl) && (
                 <a
                   href={venue.priceUrl}
                   target="_blank"

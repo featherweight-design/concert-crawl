@@ -106,9 +106,7 @@ const updateVenueSchema = createVenueSchema
     verifiedBy: z.string().max(200).nullable().optional(),
     crawlMode: z.enum(['http', 'browser']).nullable().optional(),
     featured: z.boolean().optional(),
-    priceUrl: z
-      .string()
-      .url()
+    priceUrl: httpUrl()
       .nullable()
       .optional()
       .transform((val) => (val?.trim() === '' ? null : val)),

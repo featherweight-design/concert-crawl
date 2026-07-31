@@ -1,4 +1,5 @@
 'use client'
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 
 import { useState, useRef, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
@@ -1020,16 +1021,18 @@ export function VenueDetailsClient({ venue }: Props) {
                   : ADMIN_COPY.venueDetailsClient.actions.makeFlagship}
               </AdminButton>
               <CrawlTriggerButton venueId={venue.id} />
-              <a
-                href={venue.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ textDecoration: 'none' }}
-              >
-                <AdminButton variant="outline" size="sm" icon={ExternalLink}>
-                  {ADMIN_COPY.venueDetailsClient.actions.viewOnSite}
-                </AdminButton>
-              </a>
+              {isSafeHttpUrl(venue.websiteUrl) && (
+                <a
+                  href={venue.websiteUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <AdminButton variant="outline" size="sm" icon={ExternalLink}>
+                    {ADMIN_COPY.venueDetailsClient.actions.viewOnSite}
+                  </AdminButton>
+                </a>
+              )}
             </div>
           </div>
         )
@@ -1438,7 +1441,7 @@ export function VenueDetailsClient({ venue }: Props) {
                     flex: 1,
                   }}
                 />
-                {priceUrlVal && (
+                {isSafeHttpUrl(priceUrlVal) && (
                   <a
                     href={priceUrlVal}
                     target="_blank"
