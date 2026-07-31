@@ -1238,3 +1238,12 @@ export interface SpotifyTastePicksResponse {
   status: SpotifyConnectionStatus | 'disconnected'
   picks: SpotifyTastePick[]
 }
+
+/**
+ * What `GET /v1/admin/triage` sends for `sweep.at` when no crawl run exists at
+ * all. Shared because the API produces it and the admin triage panel branches
+ * on it: matching by value across two apps meant changing the placeholder here
+ * would silently revert the panel to rendering "crawled clean at —", claiming a
+ * sweep that never ran.
+ */
+export const TRIAGE_NO_SWEEP = '—'

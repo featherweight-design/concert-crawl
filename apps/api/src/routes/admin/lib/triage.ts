@@ -27,6 +27,7 @@ import {
   evaluateCoverageCondition,
   evaluateEventCountCondition,
 } from '@concert-crawl/crawler-core/triage-conditions'
+import { TRIAGE_NO_SWEEP } from '@concert-crawl/types'
 
 export const MT_TIME_ZONE = 'America/Denver'
 
@@ -662,7 +663,7 @@ export const deriveSweep = (input: {
 
   return {
     venues: input.venueCount,
-    at: latest ? formatMtTime(latest.createdAt) : '—',
+    at: latest ? formatMtTime(latest.createdAt) : TRIAGE_NO_SWEEP,
     atIso: latest ? latest.createdAt.toISOString() : null,
     events,
     next: formatMtTime(nextNightlySweep(input.now)),

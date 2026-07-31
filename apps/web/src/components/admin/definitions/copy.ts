@@ -1,9 +1,6 @@
 // Single source of truth for all admin UI copy
 
-// What GET /v1/admin/triage sends for `sweep.at` when no crawl run exists at
-// all. Must stay byte-identical to the em dash in apps/api/src/routes/admin/
-// lib/triage.ts, which is the only producer of this sentinel.
-const NO_SWEEP = '—'
+import { TRIAGE_NO_SWEEP as NO_SWEEP } from '@concert-crawl/types'
 
 // The crawler's `classifyCrawlError` identifiers, written out for the triage
 // panel. Anything unrecognised falls back to the raw identifier rather than
