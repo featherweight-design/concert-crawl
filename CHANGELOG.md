@@ -1,3 +1,10 @@
+## [1.174.1](https://github.com/HartiganHM/concert-crawl/compare/v1.174.0...v1.174.1) (2026-07-31)
+
+
+### Bug Fixes
+
+* **web:** gate the public-browse vertical behind a launch flag ([#1254](https://github.com/HartiganHM/concert-crawl/issues/1254)) ([5723075](https://github.com/HartiganHM/concert-crawl/commit/57230755bf2dfe159affefa9f265de4d35a60947)), closes [#794](https://github.com/HartiganHM/concert-crawl/issues/794) [#794](https://github.com/HartiganHM/concert-crawl/issues/794) [#794](https://github.com/HartiganHM/concert-crawl/issues/794)
+
 # [1.174.0](https://github.com/HartiganHM/concert-crawl/compare/v1.173.0...v1.174.0) (2026-07-31)
 
 
