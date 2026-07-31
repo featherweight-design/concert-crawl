@@ -195,8 +195,12 @@ export interface CoverageEvidence {
   matched: number
   expected: number
   uncovered: number
-  // The date the catalogue was last fully covered, as the copy layer's
-  // "was 14/14 on Jul 12" clause. Null when nothing durable records it.
+  // The day the gap was first detected — NOT the day coverage was last
+  // complete. Nothing persists the latter, and the two differ by however long
+  // the venue went uncrawled before the alert fired. The write path clears the
+  // marker on a covered run, so this is a true "uncovered since" date; PR 3's
+  // copy states it that way rather than the fixture's "was 14/14 on Jul 12",
+  // which would claim a completeness we can't evidence. See #1266.
   wasWhen: string | null
 }
 

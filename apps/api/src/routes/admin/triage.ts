@@ -217,7 +217,10 @@ triageAdminRouter.get('/', async (ctx) => {
            events_found, events_usable, events_inserted, events_updated,
            furthest_event_date, created_at
     FROM (
-      SELECT cr.*,
+      SELECT cr.id, cr.venue_id, cr.status, cr.http_status_code,
+             cr.error_message, cr.events_found, cr.events_usable,
+             cr.events_inserted, cr.events_updated, cr.furthest_event_date,
+             cr.created_at,
              row_number() OVER (
                PARTITION BY cr.venue_id ORDER BY cr.created_at DESC
              ) AS rn
