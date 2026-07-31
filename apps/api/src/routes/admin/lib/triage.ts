@@ -149,9 +149,10 @@ export interface TriageCoverageRow {
 // Evidence payloads
 // ---------------------------------------------------------------------------
 //
-// Field names match design/design_handoff_admin_triage/triage-data.jsx so the
-// panel needs no adapter. `evidence` is the per-condition payload the copy layer
-// interpolates.
+// Inner field names match design/design_handoff_admin_triage/triage-data.jsx so
+// the panel needs no adapter. The one deliberate divergence is the wrapper: the
+// fixture calls it `d`, which trips the repo's id-length rule. PR 3 ports the
+// panel from that fixture and adopts `evidence` with it, so no adapter appears.
 
 export interface BlockedEvidence {
   status: number | null
