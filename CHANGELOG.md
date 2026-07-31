@@ -1,3 +1,10 @@
+# [1.178.0](https://github.com/HartiganHM/concert-crawl/compare/v1.177.0...v1.178.0) (2026-07-31)
+
+
+### Features
+
+* **seed:** Concert History + watcher rosters in local and staging seeds ([#1274](https://github.com/HartiganHM/concert-crawl/issues/1274)) ([8776cea](https://github.com/HartiganHM/concert-crawl/commit/8776cea30b948d5b1d6396bc5bca4f3c63f61b82)), closes [#70](https://github.com/HartiganHM/concert-crawl/issues/70) [#762](https://github.com/HartiganHM/concert-crawl/issues/762)
+
 # [1.177.0](https://github.com/HartiganHM/concert-crawl/compare/v1.176.1...v1.177.0) (2026-07-31)
 
 
