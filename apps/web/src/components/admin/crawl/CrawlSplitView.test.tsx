@@ -36,8 +36,11 @@ const makeStatusRow = () => ({
   error: 'boom',
 })
 
+// Scoped to the three known inspector tabs by accessible name, so an unrelated
+// button elsewhere in the split view can never be mistaken for the active tab.
 const activeTabLabel = (): string | undefined =>
-  Array.from(document.querySelectorAll('button'))
+  Object.values(ADMIN_COPY.crawl.inspectorTabs)
+    .map((label) => screen.getByRole('button', { name: label }))
     .find((btn) => btn.style.borderBottom.includes('var(--signal)'))
     ?.textContent?.trim()
 
@@ -94,7 +97,6 @@ describe('CrawlSplitView inspector tab', () => {
       />,
     )
 
-    expect(screen.getByText(ADMIN_COPY.crawl.inspectorTabs.diagnostics))
     expect(activeTabLabel()).toBe(ADMIN_COPY.crawl.inspectorTabs.diagnostics)
   })
 })
