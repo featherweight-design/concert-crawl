@@ -872,36 +872,6 @@ export interface InviteCode {
   createdAt: string
 }
 
-// Admin Inbox (#542) — the four operational surfaces the unified admin inbox
-// aggregates. Mirrors the DB `inbox_item_type` enum.
-export type InboxItemType =
-  'event_flag' | 'price_submission' | 'blocked_venue' | 'crawl_failure'
-
-// A single inbox row as returned by GET /v1/admin/inbox. Both timestamps are
-// ISO strings — the row is serialized over HTTP. `sourceCreatedAt` is the
-// occurrence timestamp (when the item entered the inbox); `readAt` is non-null
-// only when the item has been read (via a per-item mark or a category
-// watermark).
-export interface InboxItem {
-  itemType: InboxItemType
-  itemId: string
-  title: string
-  body: string
-  actionUrl: string
-  sourceCreatedAt: string
-  readAt: string | null
-}
-
-// GET /v1/admin/inbox response payload. `total` is present only when the
-// request opts in via `count=true`. `unreadCounts` is always computed across
-// the full inbox per category (independent of the list's category/status
-// filters) so the filter-rail badges stay accurate while the list is filtered.
-export interface InboxResponse {
-  items: InboxItem[]
-  total?: number
-  unreadCounts: Record<InboxItemType, number>
-}
-
 // Avatar color token keys — survive theme switches
 export type AvatarColor = 'signal' | 'accent' | 'success' | 'warning'
 

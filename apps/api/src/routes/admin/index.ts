@@ -14,7 +14,6 @@ import { feedbackAdminRouter } from './feedback.js'
 import { contestsAdminRouter } from './contests.js'
 import { costsAdminRouter } from './costs.js'
 import { founderWindowAdminRouter } from './founder-window.js'
-import { inboxAdminRouter } from './inbox.js'
 import { triageAdminRouter } from './triage.js'
 
 export type AdminVariables = {
@@ -152,5 +151,4 @@ adminRouter.route('/feedback', feedbackAdminRouter)
 adminRouter.route('/contests', contestsAdminRouter)
 adminRouter.route('/costs', costsAdminRouter)
 adminRouter.route('/founder-window', founderWindowAdminRouter)
-adminRouter.route('/inbox', inboxAdminRouter)
 adminRouter.route('/triage', triageAdminRouter)

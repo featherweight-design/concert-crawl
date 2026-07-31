@@ -133,12 +133,6 @@ const manifest: AuditManifest = validateManifest([
     auth: 'admin',
   },
   {
-    id: 'admin-inbox',
-    path: '/admin/inbox',
-    tags: ['admin'],
-    auth: 'admin',
-  },
-  {
     id: 'admin-venues',
     path: '/admin/venues',
     tags: ['admin'],

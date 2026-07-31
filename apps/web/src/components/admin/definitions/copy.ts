@@ -64,13 +64,6 @@ export const ADMIN_COPY = {
       afternoon: 'Good afternoon',
       evening: 'Good evening',
     },
-    attentionFeed: {
-      panelTitle: 'Needs your attention',
-      activeSuffix: 'active',
-      empty: 'No items need attention right now.',
-      viewCrawlLog: 'View crawl log',
-      inboxLink: 'Inbox',
-    },
     activityFeed: {
       tabs: {
         all: 'All',
@@ -1790,47 +1783,6 @@ export const ADMIN_COPY = {
     itemLabel: 'submissions',
   },
 
-  adminInbox: {
-    eyebrow: 'operations · triage',
-    title: 'Inbox',
-    subtitle:
-      'Every operational item that needs an admin — flagged events, pending prices, blocked venues, and crawl failures — in one place.',
-    backLink: 'Back to dashboard',
-    panelTitle: 'Items',
-    // Per-category filter labels (plus "All"). Keys match the DB item types.
-    filters: {
-      all: 'All',
-      event_flag: 'Event flags',
-      price_submission: 'Price submissions',
-      blocked_venue: 'Blocked venues',
-      crawl_failure: 'Crawl failures',
-    },
-    // Read/unread status filter.
-    status: {
-      unread: 'Unread',
-      read: 'Read',
-      all: 'All',
-    },
-    markRead: 'Mark read',
-    markReadAria: (title: string) => `Mark "${title}" as read`,
-    markAll: 'Mark all read',
-    markAllInCategory: (label: string) =>
-      `Mark all ${label.toLowerCase()} read`,
-    readIndicator: 'Read',
-    unreadIndicator: 'Unread',
-    open: 'Open',
-    openAria: (title: string) => `Open "${title}"`,
-    // Empty states.
-    empty: 'Inbox zero. Nothing needs your attention.',
-    emptyFiltered: (label: string) => `No ${label.toLowerCase()} to show.`,
-    emptyRead: 'Nothing has been marked read in this view yet.',
-    loadError: 'Couldn’t load the inbox. Refresh to try again.',
-    authError: 'Your session expired. Refresh and sign in to continue.',
-    markError: 'Couldn’t update read state. Try again.',
-    countBadge: (count: number) => `${count} total`,
-    itemLabel: 'items',
-  },
-
   users: {
     page: {
       title: 'Users',
@@ -2062,21 +2014,6 @@ export const ADMIN_COPY = {
     // the Redeemed date cell falls back to a plain textual marker to
     // avoid blanking the column for those records.
     redeemedWithoutDate: 'Redeemed',
-  },
-
-  notificationBell: {
-    button: {
-      ariaLabel: 'Notifications',
-      ariaLabelWithCount: (count: number) => `Notifications, ${count} unread`,
-      unreadOverflow: '9+',
-    },
-    panel: {
-      title: 'Notifications',
-      markAllRead: 'Mark all read',
-      empty: 'No notifications',
-      markAsRead: 'Mark as read',
-      viewAction: 'View →',
-    },
   },
 
   generateField: {

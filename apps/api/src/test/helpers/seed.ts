@@ -4,8 +4,6 @@ import {
   eventReportConfirms,
   eventReports,
   events,
-  inboxReads,
-  inboxReadWatermarks,
   notifications,
   priceRetrievalLog,
   priceSubmissions,
@@ -16,7 +14,6 @@ import {
   userRoles,
   venues,
 } from '@concert-crawl/db'
-import type { InboxItemType } from '@concert-crawl/types'
 import { deriveSourceCategory } from '@concert-crawl/types'
 import { testDb } from './db.js'
 
@@ -27,7 +24,7 @@ export async function clearTables(): Promise<void> {
   await testDb.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(7777)`)
     await tx.execute(
-      sql`TRUNCATE inbox_reads, inbox_read_watermarks, notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking RESTART IDENTITY CASCADE`,
+      sql`TRUNCATE notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking RESTART IDENTITY CASCADE`,
     )
   })
 }
@@ -267,44 +264,6 @@ export async function seedNotification(
     })
     .returning()
   if (!row) throw new Error('seedNotification: insert returned no rows')
-  return row
-}
-
-export async function seedInboxRead(
-  itemType: InboxItemType,
-  itemId: string,
-  sourceCreatedAt: Date,
-  overrides: Partial<typeof inboxReads.$inferInsert> = {},
-): Promise<typeof inboxReads.$inferSelect> {
-  const [row] = await testDb
-    .insert(inboxReads)
-    .values({
-      itemType,
-      itemId,
-      sourceCreatedAt,
-      readBy: 'admin_user',
-      ...overrides,
-    })
-    .returning()
-  if (!row) throw new Error('seedInboxRead: insert returned no rows')
-  return row
-}
-
-export async function seedInboxWatermark(
-  itemType: InboxItemType,
-  readUpTo: Date,
-  overrides: Partial<typeof inboxReadWatermarks.$inferInsert> = {},
-): Promise<typeof inboxReadWatermarks.$inferSelect> {
-  const [row] = await testDb
-    .insert(inboxReadWatermarks)
-    .values({
-      itemType,
-      readUpTo,
-      readBy: 'admin_user',
-      ...overrides,
-    })
-    .returning()
-  if (!row) throw new Error('seedInboxWatermark: insert returned no rows')
   return row
 }
 
