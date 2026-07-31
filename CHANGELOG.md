@@ -1,3 +1,10 @@
+# [1.174.0](https://github.com/HartiganHM/concert-crawl/compare/v1.173.0...v1.174.0) (2026-07-31)
+
+
+### Features
+
+* **web:** rename nav tab 3 to "My shows" and light it on /history ([#1253](https://github.com/HartiganHM/concert-crawl/issues/1253)) ([3d10ba7](https://github.com/HartiganHM/concert-crawl/commit/3d10ba7cd7f2fc29a27fa1f6b8dc6b20100ac98a))
+
 # [1.173.0](https://github.com/HartiganHM/concert-crawl/compare/v1.172.0...v1.173.0) (2026-07-30)
 
 
