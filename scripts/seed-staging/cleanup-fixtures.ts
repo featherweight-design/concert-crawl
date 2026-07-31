@@ -37,12 +37,30 @@ import type { DrizzleWriteDb } from './sync-venues.js'
 export async function cleanupFixtures(deps: {
   staging: DrizzleWriteDb
   fixtureUserIds: readonly string[]
+  /**
+   * Users whose user_events the seeder owns but whose other rows it does not.
+   * The owner account gets a seeded Concert History while also carrying real
+   * hand-made rows — profile, feedback, notifications, price submissions — so
+   * it must never enter the full fixture sweep.
+   */
+  userEventsOnlyUserIds?: readonly string[]
 }): Promise<{ deleted: Record<string, number> }> {
-  const { staging, fixtureUserIds } = deps
+  const { staging, fixtureUserIds, userEventsOnlyUserIds = [] } = deps
 
-  // Empty fixture set → nothing to delete. Drizzle's inArray([]) emits
+  // user_events for the narrow-scope users, deleted ahead of the fixture sweep
+  // so an empty fixture set still clears them. Counted into the same
+  // `userEvents` total the sweep reports.
+  const deletedNarrowUserEvents =
+    userEventsOnlyUserIds.length > 0
+      ? await staging
+          .delete(userEvents)
+          .where(inArray(userEvents.userId, [...userEventsOnlyUserIds]))
+          .returning({ id: userEvents.id })
+      : []
+
+  // Empty fixture set → nothing further to delete. Drizzle's inArray([]) emits
   // `IN ()`, which is invalid Postgres SQL (some drivers substitute
-  // `IN (NULL)` or fail outright); returning zeros up front avoids the
+  // `IN (NULL)` or fail outright); returning up front avoids the
   // driver-dependent behavior and matches the "safe for narrowed subsets"
   // contract other seed-staging helpers rely on.
   if (fixtureUserIds.length === 0) {
@@ -51,7 +69,7 @@ export async function cleanupFixtures(deps: {
         submissionConfirms: 0,
         priceSubmissions: 0,
         feedback: 0,
-        userEvents: 0,
+        userEvents: deletedNarrowUserEvents.length,
         notifications: 0,
         userProfiles: 0,
       },
@@ -127,7 +145,7 @@ export async function cleanupFixtures(deps: {
       submissionConfirms: deletedSubmissionConfirms.length,
       priceSubmissions: deletedPriceSubmissions.length,
       feedback: deletedFeedback.length,
-      userEvents: deletedUserEvents.length,
+      userEvents: deletedUserEvents.length + deletedNarrowUserEvents.length,
       notifications: deletedNotifications.length,
       userProfiles: deletedUserProfiles.length,
     },

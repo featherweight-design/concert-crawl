@@ -468,6 +468,54 @@ export const FAKE_USER_PROFILES = [
   },
 ]
 
+// ---------------------------------------------------------------------------
+// Watcher crowd — "Who else is watching" roster fodder
+//
+// GET /v1/events/:id/watchers returns a `total` plus a `named` roster capped at
+// 25 and restricted to watchers who have a handle. Sixteen fixture users — only
+// some of whom have a handle — spread thinly across events never reaches either
+// boundary, so this pool exists to concentrate watchers on a few showcase
+// events (see the `showcases` array below). These profiles are never signed
+// into — the endpoint reads user_profiles, not Clerk.
+//
+// Every fourth member has a null handle: that is the privacy opt-out (a cleared
+// handle, not a flag), and it is what makes `total` exceed `named.length`.
+// ---------------------------------------------------------------------------
+const CROWD_HANDLE_WORDS = [
+  'reverb',
+  'floorfill',
+  'encore',
+  'setlist',
+  'bassbin',
+  'frontrow',
+  'houselights',
+  'soundcheck',
+  'tapedeck',
+  'lastcall',
+] as const
+
+const CROWD_THEMES = ['electric', 'jade', 'light'] as const
+const CROWD_AVATAR_COLORS = ['signal', 'accent', 'success', 'warning'] as const
+
+export const FAKE_CROWD_USER_IDS: readonly string[] = Array.from(
+  { length: 40 },
+  (_, idx) => `user_fake_crowd_${String(idx).padStart(4, '0')}`,
+)
+
+export const FAKE_CROWD_PROFILES = FAKE_CROWD_USER_IDS.map((userId, idx) => {
+  const word = CROWD_HANDLE_WORDS[idx % CROWD_HANDLE_WORDS.length]!
+  return {
+    userId,
+    // Namespaced: handle is globally UNIQUE and the insert is
+    // onConflictDoNothing, so a clash with a real profile would silently drop
+    // the row and quietly shrink the roster below the 25-entry cap.
+    handle: idx % 4 === 0 ? null : `sc_${word}${idx}`,
+    theme: CROWD_THEMES[idx % CROWD_THEMES.length]!,
+    avatarColor: CROWD_AVATAR_COLORS[idx % CROWD_AVATAR_COLORS.length]!,
+    city: idx % 3 === 0 ? null : 'Denver',
+  }
+})
+
 export const FAKE_USER_ROLES = [
   // admin
   {
@@ -1466,8 +1514,13 @@ async function seed() {
   }
 
   // User profiles
-  await db.insert(userProfiles).values(FAKE_USER_PROFILES).onConflictDoNothing()
-  console.warn(`Inserted ${FAKE_USER_PROFILES.length} user profiles.`)
+  await db
+    .insert(userProfiles)
+    .values([...FAKE_USER_PROFILES, ...FAKE_CROWD_PROFILES])
+    .onConflictDoNothing()
+  console.warn(
+    `Inserted ${FAKE_USER_PROFILES.length} user profiles + ${FAKE_CROWD_PROFILES.length} watcher-crowd profiles.`,
+  )
 
   // User roles — only insert missing
   const existingRoleRows = await db
@@ -1600,8 +1653,38 @@ async function seed() {
       }
     }
 
+    const HISTORY_PRICES = ['28.00', '45.00', '65.00', '85.00', '120.00']
+
+    // Showcase events for "Who else is watching". Hugh already watches all
+    // three below, which matters because the endpoint excludes the viewer —
+    // signed in as Hugh each roster reads one lower than the crowd size here.
+    //   deep   — 34 watchers, so `named` hits its 25 cap and overflows
+    //   mixed  — 12 watchers, some handle-less, so `total` exceeds `named`
+    //   single — 1 watcher, the minimum non-empty roster
+    const showcases: { eventId: string | undefined; watchers: number }[] = [
+      { eventId: eventIds[0], watchers: 34 },
+      { eventId: eventIds[2], watchers: 12 },
+      { eventId: eventIds[5], watchers: 1 },
+    ]
+    const crowdWatchRows = showcases.flatMap(({ eventId, watchers }, idx) =>
+      eventId === undefined
+        ? []
+        : // The mixed showcase draws from the head of the pool so it picks up
+          // the handle-less members; the others draw from the tail so their
+          // rosters come back fully named.
+          (idx === 1
+            ? FAKE_CROWD_USER_IDS.slice(0, watchers)
+            : FAKE_CROWD_USER_IDS.slice(-watchers)
+          ).map((userId) => ({
+            userId,
+            eventId,
+            status: 'watching' as const,
+          })),
+    )
+
     // User events
     const userEventRows = [
+      ...crowdWatchRows,
       // Hugh
       {
         userId: FAKE_USER_IDS.hugh,
@@ -1707,9 +1790,21 @@ async function seed() {
       // Past nights, so Concert History has something to render locally. These
       // are attending-only (status null) — the shape a user who marked "I'm
       // going!" without ever watching the show produces.
-      attending(FAKE_USER_IDS.hugh, pastIds[0]!, '45.00'),
-      attending(FAKE_USER_IDS.hugh, pastIds[1]!),
-      attending(FAKE_USER_IDS.hugh, pastIds[2]!, '90.00'),
+      // Hugh gets a deep run of nights, not a token few: the History stats
+      // block (nights, venues, artists, topGenre, topVenue, totalSpent) needs
+      // enough rows to actually have a *top* anything, and the null savedPrice
+      // entries are what prove totalSpent survives a night with no price.
+      ...pastIds
+        .slice(0, 14)
+        .map((pastId, idx) =>
+          attending(
+            FAKE_USER_IDS.hugh,
+            pastId,
+            idx % 4 === 3
+              ? undefined
+              : HISTORY_PRICES[idx % HISTORY_PRICES.length]!,
+          ),
+        ),
       attending(FAKE_USER_IDS.jess, pastIds[0]!),
       attending(FAKE_USER_IDS.jess, pastIds[3]!, '32.00'),
       attending(FAKE_USER_IDS.riley, pastIds[1]!),

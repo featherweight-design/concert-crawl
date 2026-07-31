@@ -1,7 +1,7 @@
 /**
  * Concert Crawl — synthetic user data seeder orchestrator.
  *
- * Ties together the five generators (Tasks 2–4) into a single idempotent run:
+ * Ties the generators together into a single idempotent run:
  *   1. cleanupFixtures  — delete all fixture-owned rows from staging
  *   2. fetch eventIds   — select up to 500 event IDs from staging
  *   3. generateUserProfiles
@@ -9,6 +9,8 @@
  *   5. generateFeedback
  *   6. generatePriceSubmissions  (skipped if eventIds is empty)
  *   7. generateNotifications
+ *   8. generateWatcherCrowd      (skipped if eventIds is empty)
+ *   9. generateOwnerHistory       (skipped if pastEventIds is empty)
  *
  * Usage:
  *   NEON_PROD_DIRECT=... NEON_STAGING_DIRECT=... pnpm db:seed:staging:synthetic
@@ -34,13 +36,20 @@ import { events } from '../../packages/db/src/schema/index.js'
 import * as schema from '../../packages/db/src/schema/index.js'
 import { cleanupFixtures } from './cleanup-fixtures.js'
 import { createRng } from './seeded-rng.js'
-import { FIXTURE_USER_IDS, FIXTURE_SEED } from './fixture-users.js'
+import {
+  FIXTURE_USER_IDS,
+  FIXTURE_SEED,
+  CROWD_USER_IDS,
+  OWNER_USER_ID,
+} from './fixture-users.js'
 import { assertWriteHostNotProd } from './sync-prod-public-data-helpers.js'
 import { generateUserProfiles } from './generators/user-profiles.js'
 import { generateUserEvents } from './generators/user-events.js'
 import { generateFeedback } from './generators/feedback.js'
 import { generatePriceSubmissions } from './generators/price-submissions.js'
 import { generateNotifications } from './generators/notifications.js'
+import { generateWatcherCrowd } from './generators/watcher-crowd.js'
+import { generateOwnerHistory } from './generators/owner-history.js'
 import type { DrizzleWriteDb } from './sync-venues.js'
 
 // ---------------------------------------------------------------------------
@@ -50,12 +59,16 @@ import type { DrizzleWriteDb } from './sync-venues.js'
 export async function runSynthetic(deps: {
   staging: DrizzleWriteDb
   fixtureUserIds: readonly string[]
+  /** Profile-only accounts backing the "Who else is watching" rosters. */
+  crowdUserIds: readonly string[]
+  /** Hugh's own staging account — user_events only, never a full sweep. */
+  ownerUserId: string
   seed: number
 }): Promise<{
   deleted: Record<string, number>
   inserted: Record<string, number>
 }> {
-  const { staging, fixtureUserIds, seed } = deps
+  const { staging, fixtureUserIds, crowdUserIds, ownerUserId, seed } = deps
 
   // Reject empty fixture sets up front. cleanupFixtures happens to handle
   // it (early-returns zeros), but downstream generators — generateFeedback
@@ -69,8 +82,14 @@ export async function runSynthetic(deps: {
     )
   }
 
-  // 1. Delete all fixture-user-owned rows (idempotency reset).
-  const { deleted } = await cleanupFixtures({ staging, fixtureUserIds })
+  // 1. Delete all fixture-user-owned rows (idempotency reset). The crowd is
+  // swept in full — those accounts exist only to populate watcher rosters. The
+  // owner is narrowed to user_events, because the rest of that account is real.
+  const { deleted } = await cleanupFixtures({
+    staging,
+    fixtureUserIds: [...fixtureUserIds, ...crowdUserIds],
+    userEventsOnlyUserIds: [ownerUserId],
+  })
 
   // 2. Fetch event IDs once — used by event-linked generators.
   // ORDER BY id is REQUIRED: LIMIT without ORDER BY lets Postgres return
@@ -131,11 +150,53 @@ export async function runSynthetic(deps: {
 
   const notificationsResult = await generateNotifications(generatorDeps)
 
+  // Watcher crowd and owner history run last so the rng draw sequence of the
+  // five original generators is unchanged — appending here keeps every
+  // previously-seeded row byte-identical for a given seed.
+  let crowdProfilesInserted = 0
+  let crowdUserEventsInserted = 0
+  let showcaseEventIds: readonly string[] = []
+  if (eventIds.length > 0) {
+    const crowdResult = await generateWatcherCrowd({
+      staging,
+      crowdUserIds,
+      ownerUserId,
+      eventIds,
+      pastEventIds,
+      rng,
+    })
+    crowdProfilesInserted = crowdResult.insertedProfiles
+    crowdUserEventsInserted = crowdResult.insertedUserEvents
+    showcaseEventIds = crowdResult.showcaseEventIds
+  }
+
+  // Concert History is past nights only, so with no past-dated events there is
+  // nothing for this generator to write.
+  let ownerHistoryInserted = 0
+  if (pastEventIds.length > 0) {
+    const ownerHistoryResult = await generateOwnerHistory({
+      staging,
+      ownerUserId,
+      pastEventIds,
+      excludeEventIds: showcaseEventIds,
+      rng,
+    })
+    ownerHistoryInserted = ownerHistoryResult.inserted
+  }
+
+  if (showcaseEventIds.length > 0) {
+    console.log(
+      '[synthetic] Watcher-roster showcase events (deep / mixed / single): ' +
+        showcaseEventIds.join(', '),
+    )
+  }
+
   return {
     deleted,
     inserted: {
-      userProfiles: profilesResult.inserted,
-      userEvents: userEventsInserted,
+      userProfiles: profilesResult.inserted + crowdProfilesInserted,
+      userEvents:
+        userEventsInserted + crowdUserEventsInserted + ownerHistoryInserted,
       feedback: feedbackResult.inserted,
       priceSubmissions: priceSubmissionsInserted,
       submissionConfirms: submissionConfirmsInserted,
@@ -186,6 +247,8 @@ export async function main(): Promise<void> {
     const result = await runSynthetic({
       staging,
       fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
     })
 

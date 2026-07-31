@@ -10,7 +10,12 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { FIXTURE_USER_IDS, FIXTURE_SEED } from './fixture-users.js'
+import {
+  FIXTURE_USER_IDS,
+  FIXTURE_SEED,
+  CROWD_USER_IDS,
+  OWNER_USER_ID,
+} from './fixture-users.js'
 
 // ---------------------------------------------------------------------------
 // Module-level mocks (hoisted so they intercept imports in the module under test)
@@ -54,6 +59,18 @@ vi.mock('./generators/price-submissions.js', () => ({
 
 vi.mock('./generators/notifications.js', () => ({
   generateNotifications: vi.fn().mockResolvedValue({ inserted: 10 }),
+}))
+
+vi.mock('./generators/watcher-crowd.js', () => ({
+  generateWatcherCrowd: vi.fn().mockResolvedValue({
+    insertedProfiles: 40,
+    insertedUserEvents: 50,
+    showcaseEventIds: ['evt-showcase-1'],
+  }),
+}))
+
+vi.mock('./generators/owner-history.js', () => ({
+  generateOwnerHistory: vi.fn().mockResolvedValue({ inserted: 18 }),
 }))
 
 // ---------------------------------------------------------------------------
@@ -136,6 +153,8 @@ describe('runSynthetic — determinism and idempotency', () => {
     await runSynthetic({
       staging: stagingA as any,
       fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
     })
     const argsA = {
@@ -157,6 +176,8 @@ describe('runSynthetic — determinism and idempotency', () => {
     await runSynthetic({
       staging: stagingB as any,
       fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
     })
     const argsB = {
@@ -201,6 +222,8 @@ describe('runSynthetic — determinism and idempotency', () => {
     const result = await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
     })
     expect(result).toHaveProperty('deleted')
@@ -223,6 +246,8 @@ describe('runSynthetic — determinism and idempotency', () => {
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
     })
 
@@ -232,6 +257,58 @@ describe('runSynthetic — determinism and idempotency', () => {
       .mock.invocationCallOrder[0]
 
     expect(cleanupOrder).toBeLessThan(profilesOrder!)
+  })
+
+  it('sweeps the crowd fully but narrows the owner to user_events', async () => {
+    const { cleanupFixtures } = await import('./cleanup-fixtures.js')
+
+    const stagingMock = buildStagingMock(
+      eventIds.map((id, idx) => ({
+        id,
+        date: idx < 5 ? '2020-01-01' : '2099-01-01',
+      })),
+    )
+    await runSynthetic({
+      staging: stagingMock as any,
+      fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
+      seed: FIXTURE_SEED,
+    })
+
+    const args = (cleanupFixtures as ReturnType<typeof vi.fn>).mock.calls[0]![0]
+    expect(args.fixtureUserIds).toEqual([
+      ...FIXTURE_USER_IDS,
+      ...CROWD_USER_IDS,
+    ])
+    // Widening this to the full sweep would delete Hugh's real staging profile,
+    // feedback, notifications and price submissions.
+    expect(args.fixtureUserIds).not.toContain(OWNER_USER_ID)
+    expect(args.userEventsOnlyUserIds).toEqual([OWNER_USER_ID])
+  })
+
+  it('runs the watcher-crowd and owner-history generators', async () => {
+    const { generateWatcherCrowd } =
+      await import('./generators/watcher-crowd.js')
+    const { generateOwnerHistory } =
+      await import('./generators/owner-history.js')
+
+    const stagingMock = buildStagingMock(
+      eventIds.map((id, idx) => ({
+        id,
+        date: idx < 5 ? '2020-01-01' : '2099-01-01',
+      })),
+    )
+    await runSynthetic({
+      staging: stagingMock as any,
+      fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
+      seed: FIXTURE_SEED,
+    })
+
+    expect(generateWatcherCrowd).toHaveBeenCalledTimes(1)
+    expect(generateOwnerHistory).toHaveBeenCalledTimes(1)
   })
 
   it('passes the same rng instance to every generator (same object reference)', async () => {
@@ -248,6 +325,8 @@ describe('runSynthetic — determinism and idempotency', () => {
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
     })
 
@@ -276,6 +355,8 @@ describe('runSynthetic — empty eventIds', () => {
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
     })
 
@@ -290,6 +371,8 @@ describe('runSynthetic — empty eventIds', () => {
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
     })
 
@@ -307,6 +390,8 @@ describe('runSynthetic — empty eventIds', () => {
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
     })
 
@@ -322,6 +407,8 @@ describe('runSynthetic — empty eventIds', () => {
     await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
     })
 
@@ -333,6 +420,8 @@ describe('runSynthetic — empty eventIds', () => {
     const result = await runSynthetic({
       staging: stagingMock as any,
       fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
       seed: FIXTURE_SEED,
     })
 
@@ -356,6 +445,8 @@ describe('runSynthetic — empty fixtureUserIds guard', () => {
       runSynthetic({
         staging: stagingMock as any,
         fixtureUserIds: [],
+        crowdUserIds: CROWD_USER_IDS,
+        ownerUserId: OWNER_USER_ID,
         seed: FIXTURE_SEED,
       }),
     ).rejects.toThrow('fixtureUserIds must not be empty')

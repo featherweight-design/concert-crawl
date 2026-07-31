@@ -23,4 +23,26 @@ export const FIXTURE_USER_IDS = [
 
 export type FixtureUserId = (typeof FIXTURE_USER_IDS)[number]
 
+/**
+ * Hugh's own staging Clerk account. Seeded with a Concert History of its own so
+ * History can be exercised while signed in as the real owner rather than as a
+ * fixture user — the five fixture accounts above can't be logged into casually.
+ *
+ * Only user_events are generated for this ID. The profile, feedback,
+ * notifications and price submissions on this account are real rows created by
+ * hand while testing, and the seeder must never delete them.
+ */
+export const OWNER_USER_ID = 'user_3Cr1V8iMq5Ey5iHsF66tKxIuRe0'
+
+/**
+ * Synthetic watcher-crowd users. "Who else is watching" reports a `total` count
+ * alongside a `named` roster capped at 25, and the five fixture users can't
+ * populate either meaningfully. These IDs are never signed into — the watchers
+ * endpoint reads `user_profiles.handle`, so a crowd needs no Clerk account.
+ */
+export const CROWD_USER_IDS: readonly string[] = Array.from(
+  { length: 40 },
+  (_, idx) => `user_seedcrowd_${String(idx).padStart(4, '0')}`,
+)
+
 export const FIXTURE_SEED = 202607_12
