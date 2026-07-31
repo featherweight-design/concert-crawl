@@ -1,6 +1,3 @@
-/* eslint-disable id-length -- `d` is the evidence-payload field name fixed by
-   design/design_handoff_admin_triage/triage-data.jsx. Renaming it here would
-   force the panel in PR 3 to carry an adapter for a single key. */
 // Pure derivation for GET /v1/admin/triage (#1215).
 //
 // The admin "Needs attention" panel is derived live: a fault row exists because
@@ -153,7 +150,7 @@ export interface TriageCoverageRow {
 // ---------------------------------------------------------------------------
 //
 // Field names match design/design_handoff_admin_triage/triage-data.jsx so the
-// panel needs no adapter. `d` is the per-condition evidence the copy layer
+// panel needs no adapter. `evidence` is the per-condition payload the copy layer
 // interpolates.
 
 export interface BlockedEvidence {
@@ -200,14 +197,14 @@ export interface CoverageEvidence {
 }
 
 export type TriageFault =
-  | (TriageFaultBase & { condition: 'blocked'; d: BlockedEvidence })
-  | (TriageFaultBase & { condition: 'failed'; d: FailedEvidence })
-  | (TriageFaultBase & { condition: 'wentDark'; d: WentDarkEvidence })
-  | (TriageFaultBase & { condition: 'ceiling'; d: CeilingEvidence })
-  | (TriageFaultBase & { condition: 'coverage'; d: CoverageEvidence })
+  | (TriageFaultBase & { condition: 'blocked'; evidence: BlockedEvidence })
+  | (TriageFaultBase & { condition: 'failed'; evidence: FailedEvidence })
+  | (TriageFaultBase & { condition: 'wentDark'; evidence: WentDarkEvidence })
+  | (TriageFaultBase & { condition: 'ceiling'; evidence: CeilingEvidence })
+  | (TriageFaultBase & { condition: 'coverage'; evidence: CoverageEvidence })
 
 // The shape a call site builds before the ordering metadata is stamped on.
-// Distributive so each variant keeps its own `d`: a plain Omit over the union
+// Distributive so each variant keeps its own `evidence`: a plain Omit over the union
 // would collapse the condition/evidence pairing that makes this type worth
 // having.
 type FaultDraft = TriageFault extends infer Variant
@@ -407,7 +404,7 @@ export const deriveFaults = (input: DeriveFaultsInput): TriageFault[] => {
   for (const venue of input.venues) {
     const runs = runsByVenue.get(venue.id) ?? []
     // Switched rather than spread once: a single `faults.push({ ...draft })`
-    // over the union widens `d` to every evidence shape at once and stops
+    // over the union widens `evidence` to every shape at once and stops
     // matching any one variant. Narrowing per condition keeps the
     // condition/evidence pairing the discriminated union exists to enforce.
     const push = (draft: FaultDraft): void => {
@@ -447,7 +444,7 @@ export const deriveFaults = (input: DeriveFaultsInput): TriageFault[] => {
         condition: 'blocked',
         persistedSince: venue.blockedAt.toISOString(),
         crawlRunId: latest?.id ?? null,
-        d: {
+        evidence: {
           status: latest?.httpStatusCode ?? null,
           refusals: venue.consecutiveFailures,
           lastSuccess: lastSuccess ? formatMtDate(lastSuccess.createdAt) : null,
@@ -469,7 +466,7 @@ export const deriveFaults = (input: DeriveFaultsInput): TriageFault[] => {
         condition: 'failed',
         persistedSince: since.toISOString(),
         crawlRunId: latest.id,
-        d: {
+        evidence: {
           failures: venue.consecutiveFailures,
           errorClass: classifyCrawlError(
             latest.errorMessage,
@@ -500,7 +497,7 @@ export const deriveFaults = (input: DeriveFaultsInput): TriageFault[] => {
         condition: 'wentDark',
         persistedSince: since.toISOString(),
         crawlRunId: subject.id,
-        d: {
+        evidence: {
           count: drop.eventsUsable,
           baselineCount: Math.round(drop.baselineCount),
           avg: Math.round(drop.baselineCount * 10) / 10,
@@ -541,7 +538,7 @@ export const deriveFaults = (input: DeriveFaultsInput): TriageFault[] => {
           condition: 'coverage',
           persistedSince: since.toISOString(),
           crawlRunId: subject.id,
-          d: {
+          evidence: {
             matched:
               coverageCondition.upcomingCount -
               coverageCondition.uncoveredCount,
@@ -571,7 +568,7 @@ export const deriveFaults = (input: DeriveFaultsInput): TriageFault[] => {
         condition: 'ceiling',
         persistedSince: since.toISOString(),
         crawlRunId: subject.id,
-        d: {
+        evidence: {
           kind: ceiling.condition,
           count:
             ceiling.condition === 'pinned_count'

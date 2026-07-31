@@ -1,6 +1,3 @@
-/* eslint-disable id-length -- `d` is the evidence-payload field name fixed by
-   design/design_handoff_admin_triage/triage-data.jsx. Renaming it here would
-   force the panel in PR 3 to carry an adapter for a single key. */
 // GET /v1/admin/triage — the derived live state behind the admin dashboard's
 // "Needs attention" panel (#1215).
 //
@@ -57,7 +54,7 @@ const faultBaseSchema = z.object({
 const faultSchema = z.discriminatedUnion('condition', [
   faultBaseSchema.extend({
     condition: z.literal('blocked'),
-    d: z.object({
+    evidence: z.object({
       status: z.number().nullable(),
       refusals: z.number(),
       lastSuccess: z.string().nullable(),
@@ -65,7 +62,7 @@ const faultSchema = z.discriminatedUnion('condition', [
   }),
   faultBaseSchema.extend({
     condition: z.literal('failed'),
-    d: z.object({
+    evidence: z.object({
       failures: z.number(),
       errorClass: z.string(),
       pauseAt: z.number(),
@@ -73,7 +70,7 @@ const faultSchema = z.discriminatedUnion('condition', [
   }),
   faultBaseSchema.extend({
     condition: z.literal('wentDark'),
-    d: z.object({
+    evidence: z.object({
       count: z.number(),
       baselineCount: z.number(),
       avg: z.number(),
@@ -85,7 +82,7 @@ const faultSchema = z.discriminatedUnion('condition', [
   }),
   faultBaseSchema.extend({
     condition: z.literal('ceiling'),
-    d: z.object({
+    evidence: z.object({
       kind: z.enum(['pinned_count', 'horizon_shrank']),
       count: z.number(),
       runs: z.number(),
@@ -99,7 +96,7 @@ const faultSchema = z.discriminatedUnion('condition', [
   }),
   faultBaseSchema.extend({
     condition: z.literal('coverage'),
-    d: z.object({
+    evidence: z.object({
       matched: z.number(),
       expected: z.number(),
       uncovered: z.number(),

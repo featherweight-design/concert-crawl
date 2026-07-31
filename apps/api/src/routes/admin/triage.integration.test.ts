@@ -39,7 +39,7 @@ interface TriageFaultRow {
   days: number
   dur: string
   crawlRunId: string | null
-  d: Record<string, unknown>
+  evidence: Record<string, unknown>
 }
 
 interface TriageBody {
@@ -162,13 +162,13 @@ describe('GET /v1/admin/triage', () => {
     expect(fault).toBeDefined()
     expect(fault?.venue).toBe('Bluebird Theater')
     expect(fault?.band).toBe('loss')
-    expect(fault?.d['count']).toBe(2)
-    expect(fault?.d['baselineCount']).toBe(12)
+    expect(fault?.evidence['count']).toBe(2)
+    expect(fault?.evidence['baselineCount']).toBe(12)
     // Interpolated from SOFT_DROP_RATIO (0.3), not the handoff's assumed -60.
-    expect(fault?.d['threshold']).toBe(-70)
-    expect(fault?.d['window']).toBe(7)
+    expect(fault?.evidence['threshold']).toBe(-70)
+    expect(fault?.evidence['window']).toBe(7)
     // Oldest-to-newest micro-chart: the flat baseline, then the cliff.
-    const series = fault?.d['series']
+    const series = fault?.evidence['series']
     expect(Array.isArray(series)).toBe(true)
     expect(series).toEqual([12, 12, 12, 12, 12, 12, 2])
   })
@@ -233,7 +233,7 @@ describe('GET /v1/admin/triage', () => {
 
     const [fault] = (await fetchTriage()).faults
     expect(fault?.condition).toBe('wentDark')
-    expect(fault?.d['baselineCount']).toBe(12)
+    expect(fault?.evidence['baselineCount']).toBe(12)
   })
 
   // ── blocked ───────────────────────────────────────────────────────
@@ -260,9 +260,9 @@ describe('GET /v1/admin/triage', () => {
     expect(fault?.condition).toBe('blocked')
     expect(fault?.band).toBe('hard')
     expect(fault?.dur).toBe('12d')
-    expect(fault?.d['status']).toBe(403)
-    expect(fault?.d['refusals']).toBe(9)
-    expect(fault?.d['lastSuccess']).toMatch(/\w{3} \d+/)
+    expect(fault?.evidence['status']).toBe(403)
+    expect(fault?.evidence['refusals']).toBe(9)
+    expect(fault?.evidence['lastSuccess']).toMatch(/\w{3} \d+/)
 
     // Lifting the block is not on its own a recovery — the last run still
     // failed, so the venue drops from `blocked` to `failed`. It clears only
@@ -309,9 +309,9 @@ describe('GET /v1/admin/triage', () => {
     const [fault] = (await fetchTriage()).faults
     expect(fault?.condition).toBe('failed')
     expect(fault?.band).toBe('hard')
-    expect(fault?.d['failures']).toBe(2)
-    expect(fault?.d['errorClass']).toBe('timeout')
-    expect(fault?.d['pauseAt']).toBe(3)
+    expect(fault?.evidence['failures']).toBe(2)
+    expect(fault?.evidence['errorClass']).toBe('timeout')
+    expect(fault?.evidence['pauseAt']).toBe(3)
     // Two consecutive failures, one per day.
     expect(fault?.dur).toBe('2d')
 
@@ -333,10 +333,10 @@ describe('GET /v1/admin/triage', () => {
     const [fault] = (await fetchTriage()).faults
     expect(fault?.condition).toBe('ceiling')
     expect(fault?.band).toBe('suspect')
-    expect(fault?.d['kind']).toBe('pinned_count')
-    expect(fault?.d['count']).toBe(20)
-    expect(fault?.d['runs']).toBe(5)
-    expect(fault?.d['was']).toBe(34)
+    expect(fault?.evidence['kind']).toBe('pinned_count')
+    expect(fault?.evidence['count']).toBe(20)
+    expect(fault?.evidence['runs']).toBe(5)
+    expect(fault?.evidence['was']).toBe(34)
 
     await testDb.insert(crawlRuns).values({
       venueId: venue.id,
@@ -379,10 +379,10 @@ describe('GET /v1/admin/triage', () => {
 
     const [fault] = (await fetchTriage()).faults
     expect(fault?.condition).toBe('ceiling')
-    expect(fault?.d['kind']).toBe('horizon_shrank')
-    expect(fault?.d['furthest']).toBe('2026-08-12')
-    expect(fault?.d['best']).toBe('2026-12-01')
-    expect(fault?.d['shrankDays']).toBeGreaterThan(30)
+    expect(fault?.evidence['kind']).toBe('horizon_shrank')
+    expect(fault?.evidence['furthest']).toBe('2026-08-12')
+    expect(fault?.evidence['best']).toBe('2026-12-01')
+    expect(fault?.evidence['shrankDays']).toBeGreaterThan(30)
   })
 
   // ── coverage gap ──────────────────────────────────────────────────
@@ -412,9 +412,9 @@ describe('GET /v1/admin/triage', () => {
     expect(fault?.condition).toBe('coverage')
     expect(fault?.band).toBe('loss')
     // 14 upcoming, 5 uncovered → the evidence line states the 9 that work.
-    expect(fault?.d['matched']).toBe(9)
-    expect(fault?.d['expected']).toBe(14)
-    expect(fault?.d['uncovered']).toBe(5)
+    expect(fault?.evidence['matched']).toBe(9)
+    expect(fault?.evidence['expected']).toBe(14)
+    expect(fault?.evidence['uncovered']).toBe(5)
 
     const { events: eventsTable } = await import('@concert-crawl/db')
     const { inArray } = await import('drizzle-orm')
