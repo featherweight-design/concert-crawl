@@ -24,7 +24,7 @@ import {
   safeHostname,
   type RobotsStatusFilter,
 } from '@/lib/admin/robots-audit'
-import { isHttpUrl } from '@/lib/url'
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 
 const COPY = ADMIN_COPY.robotsAudit
 
@@ -192,7 +192,7 @@ export const RobotsAuditClient = ({ venues }: RobotsAuditClientProps) => {
                       <TR key={venue.id}>
                         <TD>{venue.name}</TD>
                         <TD>
-                          {isHttpUrl(venue.websiteUrl) ? (
+                          {isSafeHttpUrl(venue.websiteUrl) ? (
                             <a
                               href={venue.websiteUrl}
                               target="_blank"

@@ -7,14 +7,20 @@ describe('isSafeHttpUrl', () => {
     expect(isSafeHttpUrl('https://tickets.example.com/evt/1')).toBe(true)
   })
 
-  it('rejects non-navigational protocols', () => {
-    expect(isSafeHttpUrl('javascript:alert(1)')).toBe(false)
-    expect(isSafeHttpUrl('data:text/html,<script>1</script>')).toBe(false)
-    expect(isSafeHttpUrl('mailto:foo@example.com')).toBe(false)
+  it.each([
+    'javascript:alert(1)',
+    'JavaScript:alert(1)',
+    'data:text/html,<script>1</script>',
+    'vbscript:msgbox(1)',
+    'file:///etc/passwd',
+    'mailto:foo@example.com',
+  ])('rejects non-navigational protocol %s', (url) => {
+    expect(isSafeHttpUrl(url)).toBe(false)
   })
 
-  it('rejects null and unparseable values', () => {
+  it('rejects nullish and unparseable values', () => {
     expect(isSafeHttpUrl(null)).toBe(false)
+    expect(isSafeHttpUrl(undefined)).toBe(false)
     expect(isSafeHttpUrl('')).toBe(false)
     expect(isSafeHttpUrl('not a url')).toBe(false)
   })

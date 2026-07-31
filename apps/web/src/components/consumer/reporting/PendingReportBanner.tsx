@@ -3,7 +3,7 @@
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
 import { CheckGlyph, LockGlyph } from '../glyphs'
-import { isHttpUrl } from '@/lib/url'
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 
 // ── Kind glyphs at 14×14 ──────────────────────────────────────────
 
@@ -260,7 +260,7 @@ export const PendingReportBanner = ({
             >
               {evidenceLabel}
             </span>
-            {evidenceUrl && isHttpUrl(evidenceUrl) ? (
+            {isSafeHttpUrl(evidenceUrl) ? (
               <a
                 href={evidenceUrl}
                 target="_blank"

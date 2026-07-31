@@ -3,7 +3,7 @@
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
 import { CheckGlyph, Eyebrow, PendingDot } from '@/components/consumer/glyphs'
-import { isHttpUrl } from '@/lib/url'
+import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 
 const copy = REPORTING_COPY.pendingSoldOutCard
 const tokens = REPORT_TOKENS['sold-out']
@@ -261,7 +261,7 @@ export const PendingSoldOutCard = ({
             >
               {evidenceLabel(evidenceMethod, vendor, note)}
             </span>
-            {evidenceUrl && isHttpUrl(evidenceUrl) && (
+            {isSafeHttpUrl(evidenceUrl) ? (
               <a
                 href={evidenceUrl}
                 target="_blank"
@@ -279,6 +279,22 @@ export const PendingSoldOutCard = ({
               >
                 {copy.viewLink}
               </a>
+            ) : (
+              evidenceUrl && (
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 9,
+                    color: 'var(--fg-subtle)',
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    opacity: 0.4,
+                    flexShrink: 0,
+                  }}
+                >
+                  {copy.viewLink}
+                </span>
+              )
             )}
           </div>
         )}
