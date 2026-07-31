@@ -100,6 +100,7 @@ const faultSchema = z.discriminatedUnion('condition', [
       matched: z.number(),
       expected: z.number(),
       uncovered: z.number(),
+      wasWhen: z.string().nullable(),
     }),
   }),
 ])
@@ -217,6 +218,7 @@ triageAdminRouter.get('/', async (ctx) => {
                PARTITION BY cr.venue_id ORDER BY cr.created_at DESC
              ) AS rn
       FROM crawl_runs cr
+      JOIN venues vn ON vn.id = cr.venue_id AND vn.verified = true
     ) ranked
     WHERE rn <= ${TRIAGE_HISTORY_RUN_COUNT}
   `)

@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-const { authState } = vi.hoisted(() => ({
-  authState: {
-    current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
-    } | null,
-  },
-}))
+interface TestAuth {
+  userId: string
+  sessionClaims: { metadata?: { role?: string } }
+}
+
+const { authState } = vi.hoisted(() => {
+  const state: { current: TestAuth | null } = { current: null }
+  return { authState: state }
+})
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
@@ -415,6 +416,19 @@ describe('GET /v1/admin/triage', () => {
     expect(fault?.evidence['matched']).toBe(9)
     expect(fault?.evidence['expected']).toBe(14)
     expect(fault?.evidence['uncovered']).toBe(5)
+    // The copy layer interpolates this into "was 14/14 on Jul 12"; nothing has
+    // recorded a last-covered date yet, so it must be present and null rather
+    // than absent — an absent key renders "undefined" in the panel.
+    expect(fault?.evidence).toHaveProperty('wasWhen', null)
+
+    const { venues: venuesTable } = await import('@concert-crawl/db')
+    const { eq } = await import('drizzle-orm')
+    await testDb
+      .update(venuesTable)
+      .set({ lastUrlCoverageAlertAt: new Date('2026-07-12T18:00:00Z') })
+      .where(eq(venuesTable.id, venue.id))
+    const [dated] = (await fetchTriage()).faults
+    expect(dated?.evidence['wasWhen']).toBe('Jul 12')
 
     const { events: eventsTable } = await import('@concert-crawl/db')
     const { inArray } = await import('drizzle-orm')

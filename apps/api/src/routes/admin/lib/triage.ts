@@ -195,6 +195,9 @@ export interface CoverageEvidence {
   matched: number
   expected: number
   uncovered: number
+  // The date the catalogue was last fully covered, as the copy layer's
+  // "was 14/14 on Jul 12" clause. Null when nothing durable records it.
+  wasWhen: string | null
 }
 
 export type TriageFault =
@@ -545,6 +548,9 @@ export const deriveFaults = (input: DeriveFaultsInput): TriageFault[] => {
               coverageCondition.uncoveredCount,
             expected: coverageCondition.upcomingCount,
             uncovered: coverageCondition.uncoveredCount,
+            wasWhen: venue.lastUrlCoverageAlertAt
+              ? formatMtDate(venue.lastUrlCoverageAlertAt)
+              : null,
           },
         })
       }
