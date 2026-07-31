@@ -268,9 +268,12 @@ describe('GET /v1/admin/triage', () => {
     // Lifting the block is not on its own a recovery — the last run still
     // failed, so the venue drops from `blocked` to `failed`. It clears only
     // once a run actually succeeds.
+    const { venues: venuesTable } = await import('@concert-crawl/db')
+    const { eq: eqVenue } = await import('drizzle-orm')
     await testDb
-      .update((await import('@concert-crawl/db')).venues)
+      .update(venuesTable)
       .set({ blockedAt: null, consecutiveFailures: 0 })
+      .where(eqVenue(venuesTable.id, venue.id))
     expect((await fetchTriage()).faults[0]?.condition).toBe('failed')
 
     await testDb.insert(crawlRuns).values({
