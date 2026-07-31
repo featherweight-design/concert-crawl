@@ -25,20 +25,15 @@
 import { and, eq, gte, isNull, sql } from 'drizzle-orm'
 import { db, events, notifications, venues } from '@concert-crawl/db'
 import { reportFailure } from '@concert-crawl/logger'
+import { evaluateCoverageCondition } from './triage-conditions.js'
 
-// Below this many upcoming events, a coverage ratio is noise. A venue with
-// three shows on calendar and one missing URL is at 33% without anything being
-// systemically wrong, and small catalogues are exactly where a legitimate
-// one-off (a festival, a dual-room booking) dominates the ratio.
-export const COVERAGE_MIN_CATALOGUE = 10
-
-// Share of the upcoming catalogue that must lack BOTH URLs before this reads
-// as systemic. Tuned generously on purpose, matching SOFT_DROP_RATIO's
-// rationale in event-count-alert.ts: the failure worth catching is a venue
-// whose whole catalogue went URL-less, and individual stragglers are a data
-// nit rather than an incident. A venue with 128 upcoming shows needs ~39
-// uncovered before this fires.
-export const COVERAGE_GAP_RATIO = 0.3
+// Thresholds and the ratio classifier live in triage-conditions.ts so the admin
+// triage read path (#1215) and this write path can never drift. Kept as
+// re-exports here for the existing import sites.
+export {
+  COVERAGE_MIN_CATALOGUE,
+  COVERAGE_GAP_RATIO,
+} from './triage-conditions.js'
 
 // Mirrors ALERT_COOLDOWN_DAYS in event-count-alert.ts. Cleared on a healthy
 // run so a venue that recovers and regresses alerts again rather than staying
@@ -148,13 +143,13 @@ async function runCheck(
   const upcomingCount = row?.upcomingCount ?? 0
   const uncoveredCount = row?.uncoveredCount ?? 0
 
-  if (upcomingCount < COVERAGE_MIN_CATALOGUE) {
+  const condition = evaluateCoverageCondition({ upcomingCount, uncoveredCount })
+
+  if (!condition.detected && condition.reason === 'small_catalogue') {
     return { fired: false, reason: 'small_catalogue' }
   }
 
-  const uncoveredRatio = uncoveredCount / upcomingCount
-
-  if (uncoveredRatio < COVERAGE_GAP_RATIO) {
+  if (!condition.detected) {
     // A healthy run ends the incident, so drop the cooldown marker. Guarded by
     // a compare-and-set against the snapshot this run started with: the admin
     // trigger-crawl path can overlap the nightly cron for one venue, and an
@@ -186,9 +181,7 @@ async function runCheck(
   // Cervantes shape, and almost always an extraction regression rather than a
   // venue that genuinely stopped publishing links. 'partial_gap' is likelier to
   // be a subset of pages changing shape, so the two get different copy.
-  const severity: CoverageSeverity =
-    uncoveredCount === upcomingCount ? 'no_coverage' : 'partial_gap'
-  const uncoveredPercent = uncoveredRatio * 100
+  const { condition: severity, uncoveredPercent } = condition
 
   // Notification insert + cooldown bump in one transaction, matching the two
   // sibling guards. Were these independent statements, a transient failure on

@@ -12,20 +12,19 @@ import { and, desc, eq, gt, ne } from 'drizzle-orm'
 import { db, crawlRuns, notifications, venues } from '@concert-crawl/db'
 import { reportFailure } from '@concert-crawl/logger'
 import { sendEventCountDropEmail } from './email.js'
+import {
+  BASELINE_RUN_COUNT,
+  evaluateEventCountCondition,
+} from './triage-conditions.js'
 
-// How many recent successful runs to average for the baseline. 7 days of
-// daily crawls' worth — long enough to ride out a slow Tuesday but short
-// enough that the baseline tracks recent venue programming.
-export const BASELINE_RUN_COUNT = 7
-
-// Below this number of successful historical runs, we don't have enough
-// signal to call a "drop". New venues get a grace period.
-export const COLD_START_MIN_RUNS = 3
-
-// Soft alert threshold — if current run < baseline * 0.3, that's a
-// meaningful drop. Tuned generously to avoid noise during initial
-// rollout; can be tightened per-venue later if false positives appear.
-export const SOFT_DROP_RATIO = 0.3
+// Thresholds and the classifier itself live in triage-conditions.ts so the
+// admin triage read path (#1215) and this write path can never drift. Kept as
+// re-exports here for the existing import sites.
+export {
+  BASELINE_RUN_COUNT,
+  COLD_START_MIN_RUNS,
+  SOFT_DROP_RATIO,
+} from './triage-conditions.js'
 
 // Don't re-alert a venue that is *still* dark more than once per 7 days.
 // Without this, every daily crawl after a regression would re-fire until the
@@ -135,16 +134,16 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
     .orderBy(desc(crawlRuns.createdAt))
     .limit(BASELINE_RUN_COUNT)
 
-  if (recent.length < COLD_START_MIN_RUNS) {
+  const condition = evaluateEventCountCondition({
+    eventsUsable: input.eventsUsable,
+    baselineUsableCounts: recent.map((row) => row.eventsUsable),
+  })
+
+  if (!condition.detected && condition.reason === 'cold_start') {
     return { fired: false, reason: 'cold_start' }
   }
 
-  const baselineCount =
-    recent.reduce((sumSoFar, row) => sumSoFar + row.eventsUsable, 0) /
-    recent.length
-
-  const severity = classifyDrop(input.eventsUsable, baselineCount)
-  if (!severity) {
+  if (!condition.detected) {
     // A healthy run ends the incident, so drop the cooldown marker. Red Rocks
     // (#1174) went dark six nights running; the alert fired on night one and
     // every later night returned 'cooldown', including the nights that
@@ -184,10 +183,7 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
     }
   }
 
-  const dropPercent =
-    baselineCount > 0
-      ? ((baselineCount - input.eventsUsable) / baselineCount) * 100
-      : 0
+  const { condition: severity, baselineCount, dropPercent } = condition
 
   // When extraction produced rows but the downstream guards ate them all,
   // that's a different failure than a page returning nothing — the fetch and
@@ -285,14 +281,4 @@ async function runCheck(input: EventCountAlertInput): Promise<AlertOutcome> {
     baselineCount,
     dropPercent,
   }
-}
-
-function classifyDrop(
-  eventsUsable: number,
-  baselineCount: number,
-): 'went_dark' | 'dropped_sharply' | null {
-  if (baselineCount <= 0) return null
-  if (eventsUsable === 0) return 'went_dark'
-  if (eventsUsable < baselineCount * SOFT_DROP_RATIO) return 'dropped_sharply'
-  return null
 }

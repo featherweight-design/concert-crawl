@@ -29,40 +29,29 @@
 import { and, desc, eq, ne } from 'drizzle-orm'
 import { db, crawlRuns, notifications, venues } from '@concert-crawl/db'
 import { reportFailure } from '@concert-crawl/logger'
+import {
+  CEILING_HISTORY_RUN_COUNT,
+  evaluateCeilingCondition,
+} from './triage-conditions.js'
+import type { CeilingConditionKind as CeilingKind } from './triage-conditions.js'
 
-// How many prior runs to read for both detections. Long enough that a single
-// odd night can't trip either fingerprint, short enough to stay inside a
-// venue's current programming rhythm.
-export const CEILING_HISTORY_RUN_COUNT = 7
-
-// Minimum prior readings before either detection will classify. Both need a
-// sense of "normal" first, and migration 0061 deliberately leaves
-// furthest_event_date NULL on historical rows, so the horizon check arms
-// itself a few nightly crawls after deploy rather than firing on empty history.
-export const CEILING_COLD_START_MIN_RUNS = 3
-
-// How far the horizon must fall below its recent best to count. Generous on
-// purpose: a single far-out show being cancelled or rescheduled moves the
-// horizon legitimately, and that is a normal week at a venue. A truncation
-// bites off months.
-export const HORIZON_SHRINK_DAYS = 30
-
-// Consecutive *successful* runs (this one included) that must report an
-// identical eventsFound before it reads as pinned. See the header note on why
-// failed and skipped runs are passed over rather than breaking the streak.
-export const PINNED_RUN_COUNT = 5
-
-// Below this count, an exactly-repeating number is unremarkable — a venue with
-// four shows on calendar can genuinely report four for a week. The caps worth
-// catching are large enough to look healthy, which is what made #1127 invisible.
-export const PINNED_MIN_COUNT = 10
+// Thresholds and both detections live in triage-conditions.ts so the admin
+// triage read path (#1215) and this write path can never drift. Kept as
+// re-exports here for the existing import sites.
+export {
+  CEILING_HISTORY_RUN_COUNT,
+  CEILING_COLD_START_MIN_RUNS,
+  HORIZON_SHRINK_DAYS,
+  PINNED_RUN_COUNT,
+  PINNED_MIN_COUNT,
+} from './triage-conditions.js'
 
 // Mirrors ALERT_COOLDOWN_DAYS in event-count-alert.ts. Cleared on a healthy
 // run, so a venue that recovers and re-caps alerts again instead of staying
 // silenced for the rest of the window (the #1174 lesson).
 export const CEILING_ALERT_COOLDOWN_DAYS = 7
 
-export type CeilingKind = 'horizon_shrank' | 'pinned_count'
+export type { CeilingConditionKind as CeilingKind } from './triage-conditions.js'
 
 export interface EventCeilingAlertInput {
   venueId: string
@@ -149,15 +138,17 @@ async function runCheck(
     .orderBy(desc(crawlRuns.createdAt))
     .limit(CEILING_HISTORY_RUN_COUNT)
 
-  if (recent.length < CEILING_COLD_START_MIN_RUNS) {
+  const detected = evaluateCeilingCondition({
+    eventsFound: input.eventsFound,
+    furthestEventDate: input.furthestEventDate,
+    recent,
+  })
+
+  if (!detected.detected && detected.reason === 'cold_start') {
     return { fired: false, reason: 'cold_start' }
   }
 
-  const detected =
-    detectHorizonShrink(input.furthestEventDate, recent) ??
-    detectPinnedCount(input.eventsFound, recent)
-
-  if (!detected) {
+  if (!detected.detected) {
     // A healthy run ends the incident, so drop the cooldown marker. Guarded by
     // a compare-and-set against the snapshot this run started with: the admin
     // trigger-crawl path can overlap the nightly cron for one venue, and an
@@ -198,7 +189,7 @@ async function runCheck(
       metadata: JSON.stringify({
         venueId: input.venueId,
         crawlRunId: input.crawlRunId,
-        kind: detected.kind,
+        kind: detected.condition,
         eventsFound: input.eventsFound,
         furthestEventDate: input.furthestEventDate,
       }),
@@ -210,66 +201,5 @@ async function runCheck(
       .where(eq(venues.id, input.venueId))
   })
 
-  return { fired: true, kind: detected.kind, detail: detected.body }
-}
-
-interface Detection {
-  kind: CeilingKind
-  body: string
-}
-
-function detectHorizonShrink(
-  furthestEventDate: string | null,
-  recent: { furthestEventDate: string | null }[],
-): Detection | null {
-  if (!furthestEventDate) return null
-
-  const readings = recent
-    .map((row) => row.furthestEventDate)
-    .filter((value): value is string => value !== null)
-
-  if (readings.length < CEILING_COLD_START_MIN_RUNS) return null
-
-  // Compare against the best recent reading rather than the previous run's, so
-  // a cap that ratchets the horizon in over several nights still trips instead
-  // of each night looking like a small acceptable step.
-  const best = readings.reduce(
-    (furthest, value) => (value > furthest ? value : furthest),
-    readings[0]!,
-  )
-  const shrankDays = differenceInDays(best, furthestEventDate)
-  if (shrankDays < HORIZON_SHRINK_DAYS) return null
-
-  return {
-    kind: 'horizon_shrank',
-    body: `The furthest show announced by this venue moved ${shrankDays} days closer — now ${furthestEventDate}, against ${best} on a recent crawl. The crawl itself looks healthy, so check whether the venue's page has started truncating its calendar.`,
-  }
-}
-
-function detectPinnedCount(
-  eventsFound: number,
-  recent: { eventsFound: number }[],
-): Detection | null {
-  if (eventsFound < PINNED_MIN_COUNT) return null
-
-  const priorNeeded = PINNED_RUN_COUNT - 1
-  if (recent.length < priorNeeded) return null
-
-  const streak = recent.slice(0, priorNeeded)
-  if (!streak.every((row) => row.eventsFound === eventsFound)) return null
-
-  return {
-    kind: 'pinned_count',
-    body: `This venue has reported exactly ${eventsFound} events on its last ${PINNED_RUN_COUNT} successful crawls. An unchanged page is recorded as skipped, so an exactly repeating count on changed pages is the signature of a hard item cap rather than a stable calendar.`,
-  }
-}
-
-// Both operands are 'YYYY-MM-DD' calendar dates from Postgres `date` columns,
-// so parsing them as UTC midnight keeps the difference free of DST skew.
-function differenceInDays(later: string, earlier: string): number {
-  const msPerDay = 24 * 60 * 60 * 1000
-  return Math.round(
-    (Date.parse(`${later}T00:00:00Z`) - Date.parse(`${earlier}T00:00:00Z`)) /
-      msPerDay,
-  )
+  return { fired: true, kind: detected.condition, detail: detected.body }
 }
