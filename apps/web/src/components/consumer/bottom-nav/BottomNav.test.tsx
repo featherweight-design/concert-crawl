@@ -19,8 +19,10 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => mockAuth,
 }))
 
+const pathname = { current: '/events' }
+
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/events',
+  usePathname: () => pathname.current,
 }))
 
 vi.mock('@/lib/users', () => ({
@@ -29,6 +31,7 @@ vi.mock('@/lib/users', () => ({
 
 beforeEach(() => {
   mockAuth = { isSignedIn: false, isLoaded: true, getToken: async () => null }
+  pathname.current = '/events'
 })
 
 afterEach(cleanup)
@@ -72,12 +75,24 @@ describe('BottomNav slot 4 (#794)', () => {
     expect(screen.queryByTestId('me-avatar-skeleton')).toBeNull()
   })
 
+  it('lights "my shows" on both of the routes it owns', () => {
+    for (const route of ['/watching', '/history']) {
+      pathname.current = route
+      const { unmount } = render(<BottomNav />)
+      expect(
+        screen.getByRole('link', { name: 'my shows' }).style.color,
+        route,
+      ).toBe('var(--signal)')
+      unmount()
+    }
+  })
+
   it('leaves the three static tabs untouched', () => {
     render(<BottomNav />)
     for (const [label, href] of [
       ['browse', '/events'],
       ['venues', '/venues'],
-      ['watching', '/watching'],
+      ['my shows', '/watching'],
     ] as const) {
       expect(
         screen.getByRole('link', { name: label }).getAttribute('href'),

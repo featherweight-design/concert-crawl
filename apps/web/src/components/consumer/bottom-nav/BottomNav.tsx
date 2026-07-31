@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { fetchMe } from '@/lib/users'
+import { isTabActive } from '@/lib/nav-tab-active'
 import type { AvatarColor } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { AnonDisc } from '@/components/consumer/app-header/AnonDisc'
@@ -69,6 +70,7 @@ const STATIC_TABS = [
     key: COPY.nav.tabs[2].key,
     label: COPY.nav.tabs[2].label,
     href: COPY.nav.tabs[2].href,
+    matchPrefixes: COPY.nav.tabs[2].matchPrefixes,
     icon: (
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
         <path
@@ -204,7 +206,7 @@ export function BottomNav() {
       aria-label={COPY.nav.ariaLabel}
     >
       {STATIC_TABS.map((tab) => {
-        const isActive = pathname.startsWith(tab.href)
+        const isActive = isTabActive(tab, pathname)
         return (
           <Link
             key={tab.key}

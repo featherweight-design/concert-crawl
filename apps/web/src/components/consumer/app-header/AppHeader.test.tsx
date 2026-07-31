@@ -14,8 +14,10 @@ vi.mock('@clerk/nextjs', () => ({
   useAuth: () => mockAuth,
 }))
 
+const pathname = { current: '/events' }
+
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/events',
+  usePathname: () => pathname.current,
 }))
 
 vi.mock('../user-menu', () => ({
@@ -28,6 +30,7 @@ vi.mock('../search-palette/SearchPalette', () => ({
 
 beforeEach(() => {
   mockAuth = { isSignedIn: false, isLoaded: true }
+  pathname.current = '/events'
 })
 
 afterEach(cleanup)
@@ -100,12 +103,24 @@ describe('AppHeader — signed-out auth affordances (#794)', () => {
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
   })
 
+  it('lights "My shows" on both of the routes it owns', () => {
+    for (const route of ['/watching', '/history']) {
+      pathname.current = route
+      const { unmount } = render(<AppHeader />)
+      expect(
+        screen.getByRole('link', { name: 'My shows' }).className,
+        route,
+      ).toContain('font-bold')
+      unmount()
+    }
+  })
+
   it('leaves the nav tabs alone', () => {
     render(<AppHeader />)
     for (const [label, href] of [
       ['Browse', '/events'],
       ['Venues', '/venues'],
-      ['Watching', '/watching'],
+      ['My shows', '/watching'],
     ] as const) {
       expect(
         screen.getByRole('link', { name: label }).getAttribute('href'),

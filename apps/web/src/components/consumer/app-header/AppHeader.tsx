@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { isTabActive } from '@/lib/nav-tab-active'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
 import { SearchPalette } from '../search-palette/SearchPalette'
@@ -94,8 +95,8 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
           </Link>
 
           <nav className="flex gap-1 overflow-x-auto">
-            {copy.nav.tabs.map((tab: { label: string; href: string }) => {
-              const isActive = pathname.startsWith(tab.href)
+            {copy.nav.tabs.map((tab) => {
+              const isActive = isTabActive(tab, pathname)
               return (
                 <Link
                   key={tab.href}

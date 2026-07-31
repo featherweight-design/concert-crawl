@@ -618,7 +618,13 @@ export const CONSUMER_COPY = {
       tabs: [
         { label: 'Browse', href: '/events' },
         { label: 'Venues', href: '/venues' },
-        { label: 'Watching', href: '/watching' },
+        // "My shows" is the container for Watching + History; the href stays
+        // /watching because that is still the default landing sub-tab.
+        {
+          label: 'My shows',
+          href: '/watching',
+          matchPrefixes: ['/history'],
+        },
       ] as const,
     },
     search: {
@@ -645,7 +651,12 @@ export const CONSUMER_COPY = {
       tabs: [
         { key: 'browse', label: 'browse', href: '/events' },
         { key: 'venues', label: 'venues', href: '/venues' },
-        { key: 'watching', label: 'watching', href: '/watching' },
+        {
+          key: 'watching',
+          label: 'my shows',
+          href: '/watching',
+          matchPrefixes: ['/history'],
+        },
       ] as const,
       profileAriaLabel: 'Profile',
       signedOutProfileAriaLabel: 'Account menu — sign up or sign in',
