@@ -1,10 +1,37 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { PlatformFetchDeadlineError, createDeadline } from './deadline.js'
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 describe('createDeadline', () => {
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // Regression guard for #1263. The abort timer and `Date.now()` are separate
+  // clocks, so the timer can fire a fraction before the wall clock agrees the
+  // budget is spent. The relabel used to re-read the clock and, on that
+  // reading, decline — letting the raw TimeoutError escape and failing the
+  // suite intermittently under CI load. Pinning the clock one millisecond
+  // short of the budget reproduces that reading every time.
+  it('relabels a budget abort even when the clock reads just short of the budget', async () => {
+    const startedAt = 1_000_000
+    vi.spyOn(Date, 'now')
+      .mockReturnValueOnce(startedAt) // createDeadline's startedAt
+      .mockReturnValue(startedAt + 39) // every later read: 39ms of a 40ms budget
+
+    const deadline = createDeadline({ overallTimeoutMs: 40 })
+
+    await expect(
+      deadline.run('page-1', async () => {
+        const abort = new Error('The operation was aborted due to timeout')
+        abort.name = 'TimeoutError'
+        throw abort
+      }),
+    ).rejects.toThrow(PlatformFetchDeadlineError)
+  })
+
   it('passes the per-request timeout through when no overall budget is set', async () => {
     const deadline = createDeadline({ perRequestTimeoutMs: 5_000 })
     const seen: (number | undefined)[] = []
@@ -148,6 +175,27 @@ describe('createDeadline', () => {
         })
       }),
     ).rejects.toThrow(PlatformFetchDeadlineError)
+  })
+
+  it('leaves an abort caused by the per-request cap unwrapped', async () => {
+    // The per-request cap, not the budget, is what aborts here — a slow single
+    // request rather than an exhausted budget, so the caller should still see
+    // the original abort.
+    const deadline = createDeadline({
+      perRequestTimeoutMs: 20,
+      overallTimeoutMs: 10_000,
+    })
+
+    await expect(
+      deadline.run('page-1', async (timeoutMs) => {
+        const signal = AbortSignal.timeout(timeoutMs ?? 1_000)
+        await new Promise((_resolve, reject) => {
+          signal.addEventListener('abort', () => reject(signal.reason))
+        })
+      }),
+    ).rejects.toThrowError(
+      expect.not.objectContaining({ name: 'PlatformFetchDeadlineError' }),
+    )
   })
 
   it('leaves a genuine request failure unwrapped', async () => {
