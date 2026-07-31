@@ -1,8 +1,9 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
+import { isPublicBrowseEnabled } from '@/lib/launch-mode'
 
 /**
- * Routes any visitor may reach, signed in or out.
+ * Routes any visitor may reach, signed in or out, in either launch mode.
  *
  * ⚠️ Adding a pattern here removes ALL auth from every path underneath it.
  * `/me` and `/admin` must never be reachable from this list, directly or as a
@@ -19,14 +20,31 @@ const isAlwaysPublic = createRouteMatcher([
   // blank. Scoped to /icon* so future /api/pwa handlers aren't public by default.
   '/api/pwa/icon(.*)',
   '/legal(.*)',
-  // #794 — browse-only shape. Payload gating for these lives in the page
-  // components and in apps/api, not here. `/watching` is public as a route and
-  // gated as a payload, so its bottom-nav tab is never dead.
+])
+
+/**
+ * The #794 browse-only shape — public once, and only once, the launch flag is
+ * on. Payload gating for these lives in the page components and in apps/api,
+ * not here. `/watching` is public as a route and gated as a payload, so its
+ * bottom-nav tab is never dead.
+ *
+ * Until launch these fall through to the same treatment they had before #794:
+ * signed-out visitors are sent to sign-in, and the front door is the invite
+ * code. Nothing about the vertical is deleted — it is just unreachable.
+ */
+const isPublicOnceLaunched = createRouteMatcher([
   '/events(.*)',
   '/venues(.*)',
   '/search(.*)',
   '/watching(.*)',
   '/onboarding(.*)',
+  // `/sign-up` belongs here for the same reason as the rest: once the product
+  // is public, an invite code is no longer the price of an account. #794 left
+  // it unconditionally invite-gated, which meant the public landing page's
+  // "Sign up" button — and PR-F's signed-out watch → sign-up hand-off — both
+  // bounced the visitor to /auth/code. Opening it is what makes the launched
+  // shape actually complete.
+  '/sign-up(.*)',
 ])
 
 /** Where a signed-out visitor is returned to when the attempted path is unsafe. */
@@ -80,25 +98,40 @@ const toSafeReturnPath = (pathname: string, search: string): string => {
   return SAFE_RETURN_FALLBACK
 }
 
-/** Sign-up still requires an invite code during private beta. */
+/**
+ * Sign-up requires an invite code before launch. After launch it is public —
+ * see the `/sign-up` note in isPublicOnceLaunched, which is checked first.
+ */
 const isInviteGated = createRouteMatcher(['/sign-up(.*)'])
 
 /**
- * Signed-in users get bounced off these back to /events. `/onboarding` is
- * absent deliberately: it is a permanent post-auth route reachable from the
- * account menu, so bouncing would make that menu row appear to do nothing.
+ * Before launch, onboarding is part of the invite funnel and needs the cookie —
+ * the landing page sends a returning code-holder straight there.
+ */
+const isInviteGatedBeforeLaunch = createRouteMatcher(['/onboarding(.*)'])
+
+/**
+ * Signed-in users get bounced off these back to /events. Once launched,
+ * `/onboarding` drops out: it becomes a permanent post-auth route reachable
+ * from the account menu, so bouncing would make that menu row do nothing.
  */
 const isPreAuth = createRouteMatcher(['/auth/code(.*)', '/sign-up(.*)'])
+const isPreAuthBeforeLaunch = createRouteMatcher(['/onboarding(.*)'])
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth()
+  const launched = isPublicBrowseEnabled()
 
   // Authenticated users skip directly to the app; no reason to see pre-auth pages
   // or the marketing landing. Redirecting from `/` here (rather than in the page
   // server component) keeps the landing route eligible for ISR — calling auth()
   // inside the page would force dynamic rendering. See #842.
   if (userId) {
-    if (isPreAuth(req) || req.nextUrl.pathname === '/') {
+    if (
+      isPreAuth(req) ||
+      (!launched && isPreAuthBeforeLaunch(req)) ||
+      req.nextUrl.pathname === '/'
+    ) {
       return NextResponse.redirect(new URL('/events', req.url))
     }
     return
@@ -114,8 +147,9 @@ export default clerkMiddleware(async (auth, req) => {
   }
 
   if (isAlwaysPublic(req)) return
+  if (launched && isPublicOnceLaunched(req)) return
 
-  if (isInviteGated(req)) {
+  if (isInviteGated(req) || (!launched && isInviteGatedBeforeLaunch(req))) {
     const cookieValue = req.cookies.get('invite_verified')?.value
     if (!cookieValue) {
       return NextResponse.redirect(new URL('/auth/code', req.url))

@@ -24,26 +24,12 @@ export interface Release {
   spotlight?: ReleaseSpotlight
 }
 
+// The v0.20.0-beta entry announcing public browse was pulled when that vertical
+// was put behind the NEXT_PUBLIC_PUBLIC_BROWSE launch gate (see
+// `src/lib/launch-mode.ts`): it is built but unreachable until the flag flips,
+// and a changelog cannot truthfully announce something nobody can do yet.
+// Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
-  {
-    version: 'v0.20.0-beta',
-    date: 'Jul 29, 2026',
-    headline: 'Look around before you sign up.',
-    items: [
-      {
-        kind: 'changed',
-        text: 'Every show, every venue, and every search is now open — no account, no invite code, nothing to fill in first. Watching is open too: you can see the page and what it is for before you have anything on it.',
-      },
-      {
-        kind: 'added',
-        text: 'Tap the eye on a show you want and we hold it while you make an account, then drop you right back where you were with it already watched.',
-      },
-      {
-        kind: 'changed',
-        text: 'THE ONE THING WE STILL ASK FOR is an account, and only when you want us to remember something for you. Land on a page that needs one and you get sign-in with your place kept, not the front door.',
-      },
-    ],
-  },
   {
     version: 'v0.19.0-beta',
     date: 'Jul 29, 2026',

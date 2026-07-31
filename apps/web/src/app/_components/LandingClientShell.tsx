@@ -1,10 +1,14 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { CCWordmark } from '@/components/brand/cc-wordmark/CCWordmark'
+import { BetaPill } from '@/components/brand/beta-pill/BetaPill'
 import { LandingPosterAnimation } from '@/components/brand/landing-poster/LandingPosterAnimation'
+import { WaitlistModal } from '@/components/waitlist/WaitlistModal'
 import { CCMark } from '@/components/brand/cc-mark'
 import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster'
+import { isPublicBrowseEnabled } from '@/lib/launch-mode'
 import { LANDING_COPY } from './definitions/copy'
 
 interface LandingClientShellProps {
@@ -16,60 +20,100 @@ interface LandingClientShellProps {
   showCount?: number | null
 }
 
+const PRIMARY_CTA_STYLE = {
+  all: 'unset',
+  cursor: 'pointer',
+  textAlign: 'center',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '15px 22px',
+  borderRadius: 10,
+  background: 'var(--signal)',
+  color: 'var(--fg-on-accent)',
+  fontFamily: 'Inter, system-ui',
+  fontWeight: 800,
+  fontSize: 16,
+  letterSpacing: '-0.01em',
+  boxShadow: '0 8px 24px -8px var(--signal)',
+  whiteSpace: 'nowrap',
+} as const satisfies React.CSSProperties
+
+const SECONDARY_CTA_STYLE = {
+  all: 'unset',
+  cursor: 'pointer',
+  textAlign: 'center',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '15px 22px',
+  borderRadius: 10,
+  background: 'transparent',
+  color: 'var(--fg)',
+  border: '1px solid var(--border-strong)',
+  fontFamily: 'Inter, system-ui',
+  fontWeight: 600,
+  fontSize: 15,
+  whiteSpace: 'nowrap',
+} as const satisfies React.CSSProperties
+
+// `all: 'unset'` on the CTAs strips the browser's default focus ring along with
+// everything else, so every interactive element on this page restores one
+// explicitly. Matches the ring used across the consumer surfaces.
+const FOCUS_RING =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal'
+
+const QUIET_LINK_STYLE = {
+  fontSize: 13,
+  color: 'var(--fg-muted)',
+  textDecoration: 'none',
+  fontFamily: 'Inter, system-ui',
+  fontWeight: 500,
+} as const satisfies React.CSSProperties
+
 export default function LandingClientShell({
   shows,
   showCount = null,
 }: LandingClientShellProps) {
+  const [waitlistOpen, setWaitlistOpen] = useState(false)
+
+  // Before launch the browse surfaces are gated, so every affordance that
+  // points at one has to disappear with them — otherwise the landing page
+  // advertises doors that redirect. See #794.
+  const launched = isPublicBrowseEnabled()
+
+  // Poster tiles deep-link into /events/:id, which is gated before launch.
+  const posterShows = launched
+    ? shows
+    : shows.map(({ href: _href, ...rest }) => rest)
+
   // Looking around costs nothing, so browsing leads and signing up follows.
   const ctaBrowse = (
-    <Link
-      href="/events"
-      style={{
-        all: 'unset',
-        cursor: 'pointer',
-        textAlign: 'center',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '15px 22px',
-        borderRadius: 10,
-        background: 'var(--signal)',
-        color: 'var(--fg-on-accent)',
-        fontFamily: 'Inter, system-ui',
-        fontWeight: 800,
-        fontSize: 16,
-        letterSpacing: '-0.01em',
-        boxShadow: '0 8px 24px -8px var(--signal)',
-        whiteSpace: 'nowrap',
-      }}
-    >
+    <Link href="/events" className={FOCUS_RING} style={PRIMARY_CTA_STYLE}>
       {LANDING_COPY.cta.browse}
     </Link>
   )
 
   const ctaSignUp = (
-    <Link
-      href="/sign-up"
-      style={{
-        all: 'unset',
-        cursor: 'pointer',
-        textAlign: 'center',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '15px 22px',
-        borderRadius: 10,
-        background: 'transparent',
-        color: 'var(--fg)',
-        border: '1px solid var(--border-strong)',
-        fontFamily: 'Inter, system-ui',
-        fontWeight: 600,
-        fontSize: 15,
-        whiteSpace: 'nowrap',
-      }}
-    >
+    <Link href="/sign-up" className={FOCUS_RING} style={SECONDARY_CTA_STYLE}>
       {LANDING_COPY.cta.signUp}
     </Link>
+  )
+
+  const ctaCode = (
+    <Link href="/auth/code" className={FOCUS_RING} style={PRIMARY_CTA_STYLE}>
+      {LANDING_COPY.cta.code}
+    </Link>
+  )
+
+  const ctaWaitlist = (
+    <button
+      onClick={() => setWaitlistOpen(true)}
+      className={FOCUS_RING}
+      style={SECONDARY_CTA_STYLE}
+    >
+      {LANDING_COPY.cta.waitlist}
+    </button>
   )
 
   const noAccountNote = (
@@ -86,7 +130,7 @@ export default function LandingClientShell({
     </div>
   )
 
-  const ctaBlock = (
+  const ctaBlock = launched ? (
     <>
       <div className="flex flex-col gap-3 md:flex-row">
         {ctaBrowse}
@@ -94,11 +138,22 @@ export default function LandingClientShell({
       </div>
       {noAccountNote}
     </>
+  ) : (
+    <>
+      <div className="flex flex-col gap-3 md:flex-row">
+        {ctaCode}
+        {ctaWaitlist}
+      </div>
+      <Link href="/sign-in" className={FOCUS_RING} style={QUIET_LINK_STYLE}>
+        {LANDING_COPY.cta.signIn}
+      </Link>
+    </>
   )
 
-  const seeAll = (
+  const seeAll = launched ? (
     <Link
       href="/events"
+      className={FOCUS_RING}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -114,7 +169,7 @@ export default function LandingClientShell({
         ? LANDING_COPY.rail.seeAll
         : LANDING_COPY.rail.seeAllCounted(showCount)}
     </Link>
-  )
+  ) : null
 
   return (
     <div
@@ -142,24 +197,48 @@ export default function LandingClientShell({
           <CCMark size={26} />
           <CCWordmark size={20} />
         </div>
-        <Link
-          href="/sign-in"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            minHeight: 44,
-            paddingLeft: 6,
-            paddingRight: 6,
-            fontFamily: 'Inter, system-ui',
-            fontWeight: 600,
-            fontSize: 13,
-            color: 'var(--fg-muted)',
-            textDecoration: 'none',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {LANDING_COPY.nav.signIn}
-        </Link>
+        {launched ? (
+          <Link
+            href="/sign-in"
+            className={FOCUS_RING}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              minHeight: 44,
+              paddingLeft: 6,
+              paddingRight: 6,
+              fontFamily: 'Inter, system-ui',
+              fontWeight: 600,
+              fontSize: 13,
+              color: 'var(--fg-muted)',
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {LANDING_COPY.nav.signIn}
+          </Link>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <BetaPill />
+            <Link
+              href="/auth/code"
+              className={`hidden md:inline-flex items-center ${FOCUS_RING}`}
+              style={{
+                padding: '8px 14px',
+                borderRadius: 8,
+                border: '1px solid var(--border-strong)',
+                fontFamily: 'Inter, system-ui',
+                fontWeight: 600,
+                fontSize: 13,
+                color: 'var(--fg)',
+                textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {LANDING_COPY.nav.codeLink}
+            </Link>
+          </div>
+        )}
       </header>
 
       {/* Main content — single column on mobile, two-column grid on desktop */}
@@ -207,7 +286,7 @@ export default function LandingClientShell({
         <div className="flex flex-col items-center gap-1 md:col-start-2 md:row-start-1 md:row-span-2 md:items-end">
           <LandingPosterAnimation
             mode="stack"
-            shows={shows}
+            shows={posterShows}
             width={290}
             intervalMs={5500}
           />
@@ -219,6 +298,11 @@ export default function LandingClientShell({
           {ctaBlock}
         </div>
       </main>
+
+      <WaitlistModal
+        open={waitlistOpen}
+        onClose={() => setWaitlistOpen(false)}
+      />
     </div>
   )
 }

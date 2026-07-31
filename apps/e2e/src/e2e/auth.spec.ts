@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { PUBLIC_BROWSE_ENABLED } from '../helpers/launch-mode'
 
 test.describe('unauthenticated access', () => {
   // An explicit empty state, not `undefined`. Passing `undefined` to a fixture
@@ -48,6 +49,11 @@ test.describe('unauthenticated access', () => {
   test('public /events serves unauthenticated requests directly (#794)', async ({
     request,
   }) => {
+    test.skip(
+      !PUBLIC_BROWSE_ENABLED,
+      '/events is invite-gated until launch (#794)',
+    )
+
     // The inverse of the assertion this test used to make. `/events` joined
     // `isAlwaysPublic`, so the edge gate must NOT redirect it — a 307 here
     // means the browse-only shape regressed and signed-out visitors are

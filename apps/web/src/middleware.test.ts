@@ -1,5 +1,16 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest } from 'next/server'
+
+// The launch gate defaults to closed (#794), but every suite below this line
+// describes the launched shape. Beta-mode behaviour has its own suite at the
+// bottom of the file which stubs the flag off.
+beforeEach(() => {
+  vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'true')
+})
+
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
 // clerkMiddleware returns the handler directly so we can call it with our own auth stub
 vi.mock('@clerk/nextjs/server', () => ({
@@ -300,15 +311,18 @@ describe('middleware — public browse routes (#794)', () => {
     },
   )
 
-  it('still sends a signed-out visitor without an invite code from /sign-up to /auth/code', async () => {
+  // Inverted from the assertion #794 shipped. Leaving /sign-up invite-gated
+  // while the landing page advertised "Sign up" meant the public shape's own
+  // primary conversion path bounced to /auth/code. Once launched, an account
+  // costs no invite code; the pre-launch case lives in the beta suite below.
+  it('lets a signed-out visitor reach /sign-up without an invite code', async () => {
     const { default: middleware } = await import('./middleware')
+    const auth = makeAuth(null)
 
-    const result = await (middleware as Function)(
-      makeAuth(null),
-      makeReq('/sign-up'),
-    )
+    const result = await (middleware as Function)(auth, makeReq('/sign-up'))
 
-    expect(result?.headers.get('location')).toContain('/auth/code')
+    expect(result).toBeUndefined()
+    expect(auth.protect).not.toHaveBeenCalled()
   })
 
   // Guards the `/` + invite_verified branch, which is evaluated BEFORE
@@ -323,5 +337,147 @@ describe('middleware — public browse routes (#794)', () => {
     )
 
     expect(result?.headers.get('location')).toContain('/onboarding')
+  })
+})
+
+describe('middleware — private-beta launch gate (#794)', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
+  })
+
+  it.each(['/events', '/events/abc', '/venues', '/search', '/watching'])(
+    'gates %s from signed-out visitors before launch',
+    async (path) => {
+      const { default: middleware } = await import('./middleware')
+      const auth = makeAuth(null)
+
+      await expect(
+        (middleware as Function)(auth, makeReq(path)),
+      ).rejects.toThrow()
+      expect(auth.protect).toHaveBeenCalled()
+    },
+  )
+
+  it('sends a signed-out visitor without the invite cookie from /onboarding to /auth/code', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    const result = await (middleware as Function)(
+      makeAuth(null),
+      makeReq('/onboarding'),
+    )
+
+    expect(result.status).toBe(307)
+    expect(result.headers.get('location')).toContain('/auth/code')
+  })
+
+  it('lets an invite-cookie holder through to /onboarding', async () => {
+    const { default: middleware } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    const result = await (middleware as Function)(
+      auth,
+      makeReq('/onboarding', { invite_verified: 'abc123' }),
+    )
+
+    expect(result).toBeUndefined()
+    expect(auth.protect).not.toHaveBeenCalled()
+  })
+
+  it('still bounces a signed-in user off /onboarding before launch', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    const result = await (middleware as Function)(
+      makeAuth('user_1'),
+      makeReq('/onboarding'),
+    )
+
+    expect(result.status).toBe(307)
+    expect(result.headers.get('location')).toContain('/events')
+  })
+
+  it('leaves the landing page and the invite funnel reachable', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    for (const path of ['/', '/auth/code', '/sign-in', '/legal/terms']) {
+      const auth = makeAuth(null)
+      await (middleware as Function)(auth, makeReq(path))
+      expect(auth.protect).not.toHaveBeenCalled()
+    }
+  })
+
+  it('treats an unset flag as closed', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', '')
+    const { default: middleware } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    await expect(
+      (middleware as Function)(auth, makeReq('/events')),
+    ).rejects.toThrow()
+    expect(auth.protect).toHaveBeenCalled()
+  })
+
+  it('sends a signed-out visitor from /sign-up to /auth/code before launch', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    const result = await (middleware as Function)(
+      makeAuth(null),
+      makeReq('/sign-up'),
+    )
+
+    expect(result.status).toBe(307)
+    expect(result.headers.get('location')).toContain('/auth/code')
+  })
+
+  // #794 left /sign-up unconditionally invite-gated, so the public landing
+  // page's own "Sign up" button bounced to /auth/code. The launched shape is
+  // only complete if an account costs no invite code.
+  it('opens /sign-up to a signed-out visitor after launch', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'true')
+    const { default: middleware } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    const result = await (middleware as Function)(auth, makeReq('/sign-up'))
+
+    expect(result).toBeUndefined()
+    expect(auth.protect).not.toHaveBeenCalled()
+  })
+
+  it('still bounces a signed-in user off /sign-up in both modes', async () => {
+    for (const flag of ['false', 'true']) {
+      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', flag)
+      const { default: middleware } = await import('./middleware')
+
+      const result = await (middleware as Function)(
+        makeAuth('user_1'),
+        makeReq('/sign-up'),
+      )
+
+      expect(result.status).toBe(307)
+      expect(result.headers.get('location')).toContain('/events')
+    }
+  })
+
+  it('opens the same routes as soon as the flag flips, with no other change', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'true')
+    const { default: middleware } = await import('./middleware')
+
+    for (const path of ['/events', '/venues', '/search', '/watching']) {
+      const auth = makeAuth(null)
+      const result = await (middleware as Function)(auth, makeReq(path))
+      expect(result).toBeUndefined()
+      expect(auth.protect).not.toHaveBeenCalled()
+    }
+  })
+
+  it('keeps /me and /admin private in both modes', async () => {
+    const { default: middleware } = await import('./middleware')
+
+    for (const path of ['/me', '/admin']) {
+      const auth = makeAuth(null)
+      await expect(
+        (middleware as Function)(auth, makeReq(path)),
+      ).rejects.toThrow()
+      expect(auth.protect).toHaveBeenCalled()
+    }
   })
 })

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import LandingClientShell from './LandingClientShell'
 import type { LandingShow } from '@/components/brand/landing-poster/LandingPoster'
@@ -32,7 +32,15 @@ const SHOWS: LandingShow[] = [
   },
 ]
 
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
+
 describe('LandingClientShell — public CTAs (#794)', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'true')
+  })
+
   it('renders Browse shows as the primary CTA pointing at /events', () => {
     render(<LandingClientShell shows={SHOWS} />)
     const browse = screen.getByRole('link', { name: /browse shows/i })
@@ -79,5 +87,51 @@ describe('LandingClientShell — public CTAs (#794)', () => {
       screen.getByRole('link', { name: /^see all shows this week/i }),
     ).toBeTruthy()
     expect(screen.queryByText(/see all \d+ shows/i)).toBeNull()
+  })
+})
+
+describe('LandingClientShell — private-beta CTAs (#794 launch gate)', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
+  })
+
+  it('renders the invite-code CTA pointing at /auth/code', () => {
+    render(<LandingClientShell shows={SHOWS} />)
+    const code = screen.getAllByRole('link', { name: /i have a code/i })
+    expect(code.length).toBeGreaterThan(0)
+    expect(
+      code.every((link) => link.getAttribute('href') === '/auth/code'),
+    ).toBe(true)
+  })
+
+  it('renders the waitlist CTA and the beta pill', () => {
+    render(<LandingClientShell shows={SHOWS} />)
+    expect(
+      screen.getByRole('button', { name: /join the waitlist/i }),
+    ).toBeTruthy()
+    expect(screen.getByText(/private beta/i)).toBeTruthy()
+  })
+
+  it('offers sign-in to existing beta users', () => {
+    render(<LandingClientShell shows={SHOWS} />)
+    const signIn = screen.getByRole('link', {
+      name: /already have an account/i,
+    })
+    expect(signIn.getAttribute('href')).toBe('/sign-in')
+  })
+
+  it('shows no affordance pointing at a gated browse surface', () => {
+    render(<LandingClientShell shows={SHOWS} showCount={214} />)
+    expect(screen.queryByText(/browse shows/i)).toBeNull()
+    expect(screen.queryByText(/no account needed/i)).toBeNull()
+    expect(screen.queryByText(/see all/i)).toBeNull()
+    expect(document.querySelector('a[href^="/events"]')).toBeNull()
+  })
+
+  it('treats an unset flag as beta mode', () => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', '')
+    render(<LandingClientShell shows={SHOWS} />)
+    expect(screen.queryByText(/browse shows/i)).toBeNull()
+    expect(screen.getByText(/private beta/i)).toBeTruthy()
   })
 })

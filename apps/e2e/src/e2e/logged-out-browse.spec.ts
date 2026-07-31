@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { PUBLIC_BROWSE_ENABLED } from '../helpers/launch-mode'
 
 // Unit tests prove the matcher; only a real browser proves the vertical.
 test.describe('logged-out browse (#794)', () => {
@@ -10,6 +11,13 @@ test.describe('logged-out browse (#794)', () => {
   test('a signed-out visitor can browse, and is offered a way in', async ({
     page,
   }) => {
+    // The /me and /admin cases below hold in both modes and stay unskipped —
+    // they are the ones that would matter most if the gate went wrong.
+    test.skip(
+      !PUBLIC_BROWSE_ENABLED,
+      'browse surfaces are invite-gated until launch (#794)',
+    )
+
     await page.goto('/events')
     await page.waitForLoadState('networkidle')
     await expect(
