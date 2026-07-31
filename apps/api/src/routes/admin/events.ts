@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
+import { httpUrl } from '../../lib/url-schema.js'
 import {
   and,
   asc,
@@ -849,7 +850,7 @@ const markSoldOutSchema = z.object({
     .enum(['venue_site', 'saw_listing', 'bought_myself', 'other'])
     .optional()
     .default('other'),
-  evidenceUrl: z.string().url().max(500).optional(),
+  evidenceUrl: httpUrl(500).optional(),
   note: z.string().max(280).optional(),
 })
 

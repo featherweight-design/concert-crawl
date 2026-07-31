@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
+import { httpUrl } from '../../lib/url-schema.js'
 import Anthropic from '@anthropic-ai/sdk'
 import { db, venues, events, crawlRuns } from '@concert-crawl/db'
 import { and, avg, count, desc, eq, gte, isNotNull, ne, not } from 'drizzle-orm'
@@ -29,7 +30,7 @@ const createVenueSchema = z.object({
       /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/,
       'Slug must be lowercase alphanumeric with hyphens, starting and ending with alphanumeric',
     ),
-  websiteUrl: z.string().url(),
+  websiteUrl: httpUrl(),
   city: z.string().default('Denver'),
   active: z.boolean().default(true),
   crawlDelayMs: z.number().int().min(1000).max(30000).default(3000),

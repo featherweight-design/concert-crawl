@@ -21,7 +21,7 @@ import {
 import type { StatusKind } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { FEEDBACK_STATUS_KIND } from '@/components/admin/definitions/constants'
-import { isHttpUrl } from '@/lib/admin/robots-audit'
+import { isHttpUrl } from '@/lib/url'
 
 const COPY = ADMIN_COPY.users.detail
 

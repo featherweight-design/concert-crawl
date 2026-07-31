@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
+import { httpUrl } from '../../lib/url-schema.js'
 import { eq, desc, sql } from 'drizzle-orm'
 import { db, feedback } from '@concert-crawl/db'
 import { getAuthUser } from '../../middleware/auth.js'
@@ -20,7 +21,7 @@ const patchBodySchema = z.object({
     .enum(['unread', 'read', 'flagged', 'issue_opened', 'resolved', 'archived'])
     .optional(),
   adminNotes: z.string().nullable().optional(),
-  issueUrl: z.union([z.string().url(), z.null()]).optional(),
+  issueUrl: z.union([httpUrl(), z.null()]).optional(),
 })
 
 export const feedbackAdminRouter = new Hono<AdminVariables>()

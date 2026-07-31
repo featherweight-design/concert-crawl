@@ -41,18 +41,6 @@ export function safeHostname(url: string): string {
   }
 }
 
-// Only http(s) URLs are safe to render as a clickable link — Zod's url()
-// validator accepts javascript:/data: schemes, so guard before linking to
-// avoid a stored-XSS vector in the admin table.
-export function isHttpUrl(url: string): boolean {
-  try {
-    const { protocol } = new URL(url)
-    return protocol === 'http:' || protocol === 'https:'
-  } catch {
-    return false
-  }
-}
-
 export function countRobotsStatuses(
   venues: VenueRobotsStatus[],
 ): RobotsStatusCounts {

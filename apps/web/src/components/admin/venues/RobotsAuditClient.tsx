@@ -21,10 +21,10 @@ import {
   ROBOTS_STATUS_KIND,
   countRobotsStatuses,
   deriveRobotsStatus,
-  isHttpUrl,
   safeHostname,
   type RobotsStatusFilter,
 } from '@/lib/admin/robots-audit'
+import { isHttpUrl } from '@/lib/url'
 
 const COPY = ADMIN_COPY.robotsAudit
 

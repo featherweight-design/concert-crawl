@@ -3,6 +3,7 @@
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
 import { CheckGlyph, Eyebrow, PendingDot } from '@/components/consumer/glyphs'
+import { isHttpUrl } from '@/lib/url'
 
 const copy = REPORTING_COPY.pendingSoldOutCard
 const tokens = REPORT_TOKENS['sold-out']
@@ -260,7 +261,7 @@ export const PendingSoldOutCard = ({
             >
               {evidenceLabel(evidenceMethod, vendor, note)}
             </span>
-            {evidenceUrl && (
+            {evidenceUrl && isHttpUrl(evidenceUrl) && (
               <a
                 href={evidenceUrl}
                 target="_blank"
