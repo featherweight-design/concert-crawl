@@ -1,3 +1,11 @@
+## [1.174.3](https://github.com/HartiganHM/concert-crawl/compare/v1.174.2...v1.174.3) (2026-07-31)
+
+
+### Bug Fixes
+
+* **security:** guard venue priceUrl and websiteUrl against non-http schemes ([c97a1ff](https://github.com/HartiganHM/concert-crawl/commit/c97a1ff6b2dbed49192cf4295b18971dc1ebb099))
+* **security:** reject non-http(s) URLs on write and guard them at render ([4958746](https://github.com/HartiganHM/concert-crawl/commit/4958746120f1fa9d3037b0443416a5ed306244f0))
+
 ## [1.174.2](https://github.com/HartiganHM/concert-crawl/compare/v1.174.1...v1.174.2) (2026-07-31)
 
 
