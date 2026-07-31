@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Admin Triage Surfaces (#1215)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html,body{margin:0;padding:0;background:#f0eee9;font-family:Inter,system-ui,sans-serif}
+  *{box-sizing:border-box}
+  a{color:#3a6ea5}a:hover{color:#24466a}
+  [role="link"]:focus-visible{outline:2px solid var(--focus,#7AE6FF);outline-offset:-2px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="admin-primitives.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="triage-copy.jsx"></script>
+<script type="text/babel" src="triage-icons.jsx"></script>
+<script type="text/babel" src="triage-data.jsx"></script>
+<script type="text/babel" src="triage-panel.jsx"></script>
+<script type="text/babel" src="triage-scenes.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio, TweakToggle } = window;
+const { AttentionPanel, FaultRow, QueueRow, TriageEmpty, ConditionChip } = window;
+const { Stage, Note, Eyebrow, DashboardScene, MobileScene, ViewportFrame } = window;
+const { SCENARIOS, ONE_OF_EACH, FAULTS, QUEUES, SWEEP, CONDITION_META, BAND_KEYS, SEVERITY, sevTint } = window;
+const { CC_THEMES, MonoLabel, ADMIN_FONT, ADMIN_MONO } = window;
+const T = window.TRIAGE_COPY;
+
+const BASE = ["electric", "jade", "light"];
+const PANEL_W = 700, DASH_W = 1180, MOB_W = 320;
+
+// Panel on its own, on the dashboard's page background.
+function PanelStage({ theme = "electric", faults, queues, compact, refreshing, denseAt, pad = 18 }) {
+  return <Stage theme={theme} pad={pad}>
+    <AttentionPanel faults={faults} queues={queues} compact={compact}
+      refreshing={refreshing} denseAt={denseAt}/>
+  </Stage>;
+}
+
+// ── Tweaks ───────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "scenario": "both",
+  "layout": "desktop",
+  "banded": false,
+  "refreshing": false,
+  "context": true
+}/*EDITMODE-END*/;
+
+const SCEN_OPTS = Object.keys(SCENARIOS).map((k) => ({ value: k, label: SCENARIOS[k].label }));
+
+function TriageTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Contents">
+        <TweakSelect label="Scenario" value={t.scenario} onChange={(v) => setT("scenario", v)} options={SCEN_OPTS}/>
+        <TweakToggle label="Force banded" value={t.banded} onChange={(v) => setT("banded", v)}/>
+        <TweakToggle label="Refreshing" value={t.refreshing} onChange={(v) => setT("refreshing", v)}/>
+      </TweakSection>
+      <TweakSection label="Layout">
+        <TweakRadio label="Viewport" value={t.layout} onChange={(v) => setT("layout", v)}
+          options={[{ value: "desktop", label: "Desktop" }, { value: "mobile", label: "320px" }]}/>
+        <TweakToggle label="Dashboard context" value={t.context} onChange={(v) => setT("context", v)}/>
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakRadio label="Theme" value={t.theme} onChange={(v) => setT("theme", v)}
+          options={BASE.map((k) => ({ value: k, label: CC_THEMES[k].label }))}/>
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+
+function Live() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  const s = SCENARIOS[t.scenario];
+  const denseAt = t.banded ? 1 : undefined;
+  if (t.layout === "mobile") {
+    return <ViewportFrame width={MOB_W} height={860} theme={t.theme}>
+      <MobileScene scenario={s} refreshing={t.refreshing} showChrome={t.context} denseAt={denseAt}/>
+    </ViewportFrame>;
+  }
+  return t.context
+    ? <Stage theme={t.theme}><DashboardScene scenario={s} refreshing={t.refreshing} denseAt={denseAt}/></Stage>
+    : <PanelStage theme={t.theme} faults={s.faults} queues={s.queues} refreshing={t.refreshing} denseAt={denseAt}/>;
+}
+
+// ── Anatomy callouts ────────────────────────────────────────
+const ANATOMY = [
+  ["01 · severity rail", "3px left border in the band ink. The only full-height colour on the row — the eye can count reds down the list without reading anything."],
+  ["02 · glyph tile", "28px, one glyph per condition, ink from the band. Five glyphs, three inks: the glyph tells you WHAT, the ink tells you HOW BAD."],
+  ["03 · venue name", "13.5/700. The row is about a venue, so the venue leads. This is also the thing the action link opens."],
+  ["04 · condition chip", "The severity band written as words. Mono uppercase, tinted — but the text stands alone if the tint is gone."],
+  ["05 · evidence", "The figure that earns the row, at --fg in tabular mono. “12 → 2 events” is the news; “this is broken” is not."],
+  ["06 · micro-chart", "7 daily counts for the two trend conditions. Last bar in the band ink. Never the only carrier — the same numbers are written beside it."],
+  ["07 · context line", "What makes the figure mean something: the baseline, the threshold that flagged it, what it used to be. Muted, 11.5."],
+  ["08 · persistence", "Right-hand column, tabular, muted. It is the second sort key, so it gets a column where values line up down the list."],
+  ["09 · action", "One deep-link per condition — run, venue, or diagnostics. 44px cell; the whole row is also the target."],
+];
+
+function AnatomyBoard() {
+  return (
+    <Stage theme="electric" pad={20}>
+      <Eyebrow>Fault row · went dark · annotated</Eyebrow>
+      <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <FaultRow f={FAULTS.bluebird}/>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 22px", marginTop: 18 }}>
+        {ANATOMY.map(([k, v]) => (
+          <div key={k}>
+            <MonoLabel color="var(--fg-muted)">{k}</MonoLabel>
+            <Note>{v}</Note>
+          </div>
+        ))}
+      </div>
+      <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border)" }}>
+        <MonoLabel color="var(--fg-subtle)">what stays behind the link</MonoLabel>
+        <Note max={860}>Inline is whatever decides <em>whether to open it</em>: the drop, the baseline, the threshold, how long
+          it has been true. Everything that decides <em>what to do about it</em> — per-day run history, the raw source
+          snapshot, extraction strategy, the staged-fix options — already lives on /admin/crawl and stays there. The row
+          never repeats a specialist view; it earns the click.</Note>
+      </div>
+    </Stage>
+  );
+}
+
+function ConditionsBoard() {
+  return (
+    <Stage theme="electric" pad={20}>
+      <Eyebrow>Five conditions · three bands · five glyphs</Eyebrow>
+      <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        {ONE_OF_EACH.map((f) => <FaultRow key={f.id} f={f}/>)}
+      </div>
+      <Note max={860} color="var(--fg-muted)">
+        Reading down: two reds, two ambers, one violet. That ratio is the point — <strong style={{ color: "var(--fg)" }}>red is
+        reserved for “not crawling”</strong>, so a bad night looks bad and an ordinary night looks ordinary.
+      </Note>
+    </Stage>
+  );
+}
+
+function BandsBoard() {
+  const rows = [
+    ["hard", "Blocked · Crawl failing", "The crawl is not running. Zero new events, certainly, until someone fixes it."],
+    ["loss", "Went dark · Coverage gap", "The crawl reports success and quietly drops events. Certain data loss, nothing on fire — the shape that stayed invisible for weeks."],
+    ["suspect", "Ceiling suspected", "Usually a pagination ceiling, occasionally a venue that really does have 20 shows. Needs a look, not a fix."],
+  ];
+  return (
+    <Stage theme="electric" pad={22}>
+      <Eyebrow>Severity model</Eyebrow>
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {rows.map(([k, conds, why]) => {
+          const t = sevTint(k);
+          return (
+            <div key={k} style={{ display: "grid", gridTemplateColumns: "132px 1fr", gap: 16, alignItems: "start",
+              paddingBottom: 14, borderBottom: "1px solid var(--border)" }}>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 3, height: 26, background: t.ink, borderRadius: 2 }}/>
+                  <span style={{ width: 26, height: 26, borderRadius: 7, background: t.fill, border: `1px solid ${t.edge}`,
+                    color: t.ink, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                    <window.TriageIcon name={k === "hard" ? "blocked" : k === "loss" ? "wentDark" : "ceiling"} size={14}/>
+                  </span>
+                </div>
+                <div style={{ marginTop: 8 }}><MonoLabel color={t.ink}>{T.bands[k]}</MonoLabel></div>
+                <div style={{ marginTop: 4 }}><MonoLabel color="var(--fg-subtle)" size={9}>
+                  {k === "hard" ? "--danger" : k === "loss" ? "--warning" : "--accent-2"}</MonoLabel></div>
+              </div>
+              <div>
+                <div style={{ fontFamily: ADMIN_FONT, fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>{conds}</div>
+                <Note max={620}>{why}</Note>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <Note max={620} color="var(--fg-subtle)">
+        Rejected: one ink per condition. Five distinguishable severity tokens do not exist in a set that has to survive nine
+        themes, and a fifth colour would have meant inventing one. Also rejected: everything-red-with-different-glyphs — it
+        makes the panel unreadable on exactly the night it matters.
+      </Note>
+    </Stage>
+  );
+}
+
+function TierBoundaryBoard() {
+  return (
+    <Stage theme="electric" pad={20}>
+      <Eyebrow>Tier boundary</Eyebrow>
+      <AttentionPanel faults={[FAULTS.bluebird, FAULTS.redrocks]} queues={QUEUES}/>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 18 }}>
+        <div>
+          <MonoLabel color="var(--fg-muted)">how the drop reads</MonoLabel>
+          <Note>Three changes at once, no divider line doing all the work: the queue rows sit on <code>--surface-1</code> instead of
+            the card ground, they lose the severity rail entirely, and their tile goes to a neutral outline. Titles step 13.5 → 12.5.
+            The tier is a shelf under the list, not more list.</Note>
+        </div>
+        <div>
+          <MonoLabel color="var(--fg-muted)">not an afterthought</MonoLabel>
+          <Note>Queues keep the count in the title, a real breakdown line, a full 44px target and their own deep link. They are
+            quieter, not smaller in function — you can still act on them without leaving the front door.</Note>
+        </div>
+      </div>
+    </Stage>
+  );
+}
+
+function A11yBoard() {
+  const rows = [
+    ["Panel", "h2 “Needs attention” + summary badge. Badge text is real text, not a colour."],
+    ["Tier / band strip", "h3. “broken now”, “work waiting” — or, banded, “not crawling / losing events / worth a look”."],
+    ["Fault row", T.a11y.rowLabel("Bluebird Theater", T.conditions.wentDark.verb, T.evidence.wentDark(FAULTS.bluebird.d).stat, "6d")],
+    ["Severity, spoken", T.a11y.severity.loss + " — visually hidden, appended after the chip, so band is never colour-only."],
+    ["Micro-chart", T.a11y.evidenceChart({ window: 7, series: FAULTS.bluebird.d.series, count: 2 })],
+    ["Queue row", T.a11y.queueRowLabel(T.queues.eventFlags.title(12))],
+    ["Refresh, live region", "aria-live=polite, atomic: “" + T.a11y.announce(5, 16) + "”"],
+    ["Refresh, in flight", "“" + T.a11y.checking + "”"],
+    ["All clear", "“" + T.a11y.announce(0, 0) + "”"],
+  ];
+  return (
+    <Stage theme="electric" pad={22}>
+      <Eyebrow>What a screen reader gets</Eyebrow>
+      <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+        {rows.map(([k, v]) => (
+          <div key={k}>
+            <MonoLabel color="var(--fg-subtle)">{k}</MonoLabel>
+            <div style={{ fontFamily: ADMIN_FONT, fontSize: 12.5, color: "var(--fg)", marginTop: 3, textWrap: "pretty", lineHeight: 1.5 }}>{v}</div>
+          </div>
+        ))}
+      </div>
+    </Stage>
+  );
+}
+
+function A11yFocusBoard() {
+  return (
+    <Stage theme="electric" pad={20}>
+      <Eyebrow>Focus order · never colour-only · 44px</Eyebrow>
+      <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+        <div style={{ outline: "2px solid var(--focus)", outlineOffset: -2 }}><FaultRow f={FAULTS.redrocks}/></div>
+        <FaultRow f={FAULTS.gothic}/>
+        <QueueRow q={QUEUES[0]}/>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 16 }}>
+        <div><MonoLabel color="var(--fg-muted)">focus order</MonoLabel>
+          <Note>Refresh → each fault row in displayed order → each queue row. One stop per row, whichever viewport: the row is
+            the link and the action label inside it is not separately focusable, so desktop and mobile produce the identical
+            tab sequence. Nothing in the panel opens a layer, so there is no trap to manage.</Note></div>
+        <div><MonoLabel color="var(--fg-muted)">severity without colour</MonoLabel>
+          <Note>Four carriers per row: the condition chip's words, the glyph, the visually-hidden severity sentence, and
+            position in the list (severity-first ordering). Colour is the fifth. AA holds because no text is ever painted in a
+            band ink except the chip label, which sits on its own 14%-tint ground and is checked in all three base themes.</Note></div>
+        <div><MonoLabel color="var(--fg-muted)">44px</MonoLabel>
+          <Note>Rows run 74–96px desktop, 88–112px at 320. Refresh is a 44×44 target. The action cell is 44px tall inside the
+            row so pointer users get a labelled hit area and the row keeps the rest.</Note></div>
+      </div>
+    </Stage>
+  );
+}
+
+function App() {
+  const S = SCENARIOS;
+  return (
+    <>
+      <DesignCanvas
+        title="Admin Triage Surfaces"
+        subtitle="#1215 · Track 2 — the /admin dashboard 'Needs attention' panel, rebuilt around one question: what is wrong right now? Pure derived state: rows appear when a condition becomes true and vanish when it stops being true. No read state, no unread count, nothing to dismiss. Two tiers (faults, then queues), five fault conditions across three severity bands, faults never truncated. Built on the existing Panel primitive and the danger/warning/signal/neutral tints from admin_ui_v2; every colour is a token, checked across Electric · Jade · Light. Drive every state from the Tweaks panel.">
+
+        <DCSection id="live" title="0 · Live preview"
+          subtitle="Flip scenario (empty · queues only · faults only · both · 16 faults), viewport, banding, refresh state and theme. Dashboard context on shows the panel among its sibling cards; off shows the panel alone.">
+          <DCArtboard id="live-d" label="Live · desktop" width={DASH_W} height={1080}><Live/></DCArtboard>
+        </DCSection>
+
+        <DCSection id="panel" title="1 · The panel, both tiers populated"
+          subtitle="Five faults and two queues. Ordering is locked: severity band first, then how long the condition has persisted, longest first — Red Rocks at 12 days sits above Marquis at 4 even though both are red. The header states the total; the footnote states the model, because the absence of a dismiss button should be readable rather than discoverable.">
+          <DCArtboard id="pn-both" label="Both tiers · desktop" width={PANEL_W} height={620}>
+            <PanelStage faults={S.both.faults} queues={S.both.queues}/>
+          </DCArtboard>
+          <DCArtboard id="pn-dash" label="In context · the dashboard front door" width={DASH_W} height={1080}>
+            <Stage theme="electric"><DashboardScene scenario={S.both}/></Stage>
+          </DCArtboard>
+          <DCPostIt top={-10} right={16} width={215}>Header count is a fault count, not a total. “5 faults” is a number Hugh can act on; “21 things” would blend broken venues into a price queue and be alarming every single day. The queue total rides its own tier strip, where it belongs.</DCPostIt>
+        </DCSection>
+
+        <DCSection id="anatomy" title="2 · Fault row anatomy"
+          subtitle="One row shape for all five conditions, with a per-condition evidence line. The three conditions that have never been designed — went dark, ceiling suspected, coverage gap — are the ones that carry real quantitative evidence, so the row is built around the figure rather than around the headline.">
+          <DCArtboard id="an-row" label="Annotated · went dark" width={880} height={520}><AnatomyBoard/></DCArtboard>
+          <DCArtboard id="an-all" label="All five conditions" width={PANEL_W} height={520}><ConditionsBoard/></DCArtboard>
+          <DCArtboard id="an-new" label="The three new ones, alone" width={PANEL_W} height={360}>
+            <PanelStage faults={S.newOnly.faults} queues={[]}/>
+          </DCArtboard>
+          <DCPostIt top={-10} right={16} width={215}>Evidence beats adjectives. “Bluebird went dark” could mean anything; “12 → 2 events, −82% against a 7-day average of 11.4, flags at −60%” tells you it is real, how bad, and that the detector was not being twitchy — all before you click.</DCPostIt>
+        </DCSection>
+
+        <DCSection id="severity" title="3 · Severity across five conditions, without a wall of red"
+          subtitle="Three bands, not five. The band answers 'how certain are we, and what is it costing right now' — which is also the order to work in. Only two of the five conditions are ever red, so red keeps meaning 'not running'.">
+          <DCArtboard id="sv-bands" label="The three bands" width={760} height={520}><BandsBoard/></DCArtboard>
+          <DCArtboard id="sv-glyphs" label="Five glyphs · three inks" width={420} height={300}>
+            <Stage theme="electric" pad={22}>
+              <Eyebrow>glyph = condition · ink = band</Eyebrow>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                {Object.keys(CONDITION_META).map((k) => {
+                  const t = sevTint(CONDITION_META[k].tier);
+                  return (
+                    <div key={k} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ width: 28, height: 28, borderRadius: 8, background: t.fill, border: `1px solid ${t.edge}`,
+                        color: t.ink, display: "inline-flex", alignItems: "center", justifyContent: "center" }}>
+                        <window.TriageIcon name={CONDITION_META[k].glyph} size={15}/>
+                      </span>
+                      <ConditionChip condition={k} tier={CONDITION_META[k].tier}/>
+                      <MonoLabel color="var(--fg-subtle)" size={9}>lucide</MonoLabel>
+                    </div>
+                  );
+                })}
+              </div>
+            </Stage>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="tiers" title="4 · The tier boundary"
+          subtitle="Faults and queues are different categories of news, so the queue tier changes ground, loses the rail, and drops a type step — three quiet signals instead of one loud divider. It keeps its counts, its breakdown and its deep link, so subordinate never becomes decorative.">
+          <DCArtboard id="tb-board" label="Boundary · annotated" width={PANEL_W + 40} height={560}><TierBoundaryBoard/></DCArtboard>
+        </DCSection>
+
+        <DCSection id="states" title="5 · States"
+          subtitle="Empty · queues only · faults only · both · high volume. The panel is read every day and most days it says nothing is wrong, so the empty state is the state that gets the most use — it is written as a result, not as an absence.">
+          <DCArtboard id="st-empty" label="Empty — a good state" width={PANEL_W} height={260}>
+            <PanelStage faults={[]} queues={[]}/>
+          </DCArtboard>
+          <DCArtboard id="st-queues" label="Queues only" width={PANEL_W} height={320}>
+            <PanelStage faults={[]} queues={QUEUES}/>
+          </DCArtboard>
+          <DCArtboard id="st-faults" label="Faults only" width={PANEL_W} height={420}>
+            <PanelStage faults={S.faultsOnly.faults} queues={[]}/>
+          </DCArtboard>
+          <DCArtboard id="st-one" label="One fault" width={PANEL_W} height={280}>
+            <PanelStage faults={S.one.faults} queues={[]}/>
+          </DCArtboard>
+          <DCArtboard id="st-refresh" label="Refreshing" width={PANEL_W} height={420}>
+            <PanelStage faults={S.faultsOnly.faults} queues={[]} refreshing/>
+          </DCArtboard>
+          <DCPostIt top={-10} right={16} width={215}>“Nothing is broken” is a finding, so it gets numbers: 11 venues, 3:02 AM, 89 events, next sweep 6:00 PM. Reassurance you can check. No mascot, no shrug, no “all caught up” — and success ink appears exactly once, as a 34px check.</DCPostIt>
+        </DCSection>
+
+        <DCSection id="volume" title="5b · High volume — sixteen faults, uncapped"
+          subtitle="A cap is the same failure as a missing condition, so nothing is dropped, collapsed, or put behind an inner scrollbar. What changes at seven-plus is structure, not quantity: the single faults strip is replaced by band strips, so the list gains headings and a shape without losing a row. The queues tier stays bounded by construction and stays at the bottom.">
+          <DCArtboard id="hv-panel" label="16 faults + 2 queues · banded" width={PANEL_W} height={1560}>
+            <PanelStage faults={S.highVolume.faults} queues={S.highVolume.queues}/>
+          </DCArtboard>
+          <DCArtboard id="hv-dash" label="In context · the bad night" width={DASH_W} height={1980}>
+            <Stage theme="electric"><DashboardScene scenario={S.highVolume}/></Stage>
+          </DCArtboard>
+          <DCPostIt top={-10} right={16} width={215}>Rejected: internal scroll with a fixed max-height. It caps what you see while claiming not to — the exact failure mode that let went-dark hide. A long page on a bad night is the honest cost of an uncapped list, and the band strips mean you can still find the reds in one flick.</DCPostIt>
+        </DCSection>
+
+        <DCSection id="mobile" title="6 · Mobile · 320px baseline"
+          subtitle="Full behavioural parity: same rows, same order, same deep links, same uncapped list, same tab sequence. Visual differences only — the persistence column collapses to a chip beside the venue name, the action label moves beside the chevron, and in banded mode the context line drops so the figure survives the narrow column. The evidence figure and micro-chart never drop.">
+          <DCArtboard id="mb-both" label="Both tiers · 320" width={MOB_W} height={800}>
+            <ViewportFrame width={MOB_W} height={800}><MobileScene scenario={S.both}/></ViewportFrame>
+          </DCArtboard>
+          <DCArtboard id="mb-empty" label="Empty · 320" width={MOB_W} height={320}>
+            <ViewportFrame width={MOB_W} height={320}><MobileScene scenario={S.empty}/></ViewportFrame>
+          </DCArtboard>
+          <DCArtboard id="mb-hv" label="16 faults · 320 · banded" width={MOB_W} height={1720}>
+            <ViewportFrame width={MOB_W} height={1720}><MobileScene scenario={S.highVolume}/></ViewportFrame>
+          </DCArtboard>
+          <DCArtboard id="mb-rows" label="Row at 320 · all five conditions" width={MOB_W + 24} height={620}>
+            <Stage theme="electric" pad={12}>
+              <div style={{ background: "var(--bg-elevated)", border: "1px solid var(--border)", borderRadius: 12, overflow: "hidden" }}>
+                {ONE_OF_EACH.map((f) => <FaultRow key={f.id} f={f} compact/>)}
+              </div>
+            </Stage>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="parity" title="7 · Theme parity — Electric · Jade · Light"
+          subtitle="Every colour is a token. The three severity inks are --danger, --warning and --accent-2 (defined in all nine production themes), each used as ink on its own 14% tint with a 34% edge, so the chip and glyph clear AA on every ground. Queue rows use --surface-1 against --bg-elevated, which holds in the light theme where the two are closest.">
+          {BASE.map((k) => (
+            <DCArtboard key={k} id={"pr-" + k} label={CC_THEMES[k].label} width={PANEL_W} height={620}>
+              <PanelStage theme={k} faults={S.both.faults} queues={S.both.queues}/>
+            </DCArtboard>
+          ))}
+          {BASE.map((k) => (
+            <DCArtboard key={"e" + k} id={"pre-" + k} label={CC_THEMES[k].label + " · empty"} width={PANEL_W} height={260}>
+              <PanelStage theme={k} faults={[]} queues={[]}/>
+            </DCArtboard>
+          ))}
+          <DCArtboard id="pr-light-dash" label="Light · in context" width={DASH_W} height={1080}>
+            <Stage theme="light"><DashboardScene scenario={S.both}/></Stage>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="a11y" title="8 · Accessibility"
+          subtitle="WCAG AA. Severity is carried four ways before colour. Heading structure runs h1 dashboard → h2 panel → h3 tier/band, so the fault list is reachable as a landmark path rather than a wall of divs. Refresh announces one sentence, not sixteen rows.">
+          <DCArtboard id="a11y-names" label="Accessible names + live region" width={620} height={520}><A11yBoard/></DCArtboard>
+          <DCArtboard id="a11y-focus" label="Focus order · 44px · never colour-only" width={PANEL_W + 40} height={660}><A11yFocusBoard/></DCArtboard>
+          <DCPostIt top={-10} right={16} width={215}>Derived state pays off here too: with no read state there is nothing to announce as changed, no per-item toggle in the tab order, and no stale count to reconcile. The live region only ever reports the current answer to “what is wrong right now.”</DCPostIt>
+        </DCSection>
+
+      </DesignCanvas>
+      <TriageTweaks/>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
