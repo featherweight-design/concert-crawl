@@ -282,10 +282,29 @@ describe('TierPickerSheet — logged out', () => {
   it('shows the logged-out header and inline sign-in link', () => {
     renderSheet(planState('logged-out'))
     expect(
-      screen.getByText(TIER_PICKER_COPY.header.loggedOutTitle),
+      screen.getByText(TIER_PICKER_COPY.header.loggedOut.default.title),
     ).toBeTruthy()
     const signInLink = screen.getByText(TIER_PICKER_COPY.signIn.link)
     expect(signInLink.getAttribute('href')).toBe('/sign-in')
+  })
+
+  // One gate, several reaches: an "I'm going!" tap is a reach for Concert
+  // History, so the Watching wording would name the wrong feature.
+  it('names Concert History when opened from the going CTA', () => {
+    render(
+      <TierPickerSheet
+        open
+        onClose={vi.fn()}
+        planState={planState('logged-out')}
+        scaRegion
+        entry="logged-out-going"
+      />,
+    )
+    const going = TIER_PICKER_COPY.header.loggedOut['logged-out-going']
+    expect(screen.getByText(going.title)).toBeTruthy()
+    expect(
+      screen.queryByText(TIER_PICKER_COPY.header.loggedOut.default.title),
+    ).toBeNull()
   })
 
   it('tier CTAs route to sign-up', () => {

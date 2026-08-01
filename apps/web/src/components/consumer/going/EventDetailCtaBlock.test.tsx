@@ -131,9 +131,11 @@ describe('EventDetailCtaBlock', () => {
     }
     renderBlock()
     fireEvent.click(screen.getByRole('button'))
+    // Not `logged-out-paywall`: this reach is for Concert History, and the
+    // entry keys the gate's copy as well as the funnel dimension.
     expect(screen.getByTestId('tier-picker')).toHaveAttribute(
       'data-entry',
-      'logged-out-paywall',
+      'logged-out-going',
     )
   })
 

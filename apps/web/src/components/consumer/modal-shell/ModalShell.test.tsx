@@ -24,6 +24,22 @@ beforeEach(() => {
 const Header = () => <div>Modal Header</div>
 
 describe('ModalShell', () => {
+  // Triggers sit inside clipping and transformed ancestors — the filter rail
+  // scrolls horizontally, and a transformed ancestor makes `position: fixed`
+  // resolve against that box, which rendered the gate sheet inside its chip.
+  it('escapes its trigger by portalling to the body', () => {
+    const { container } = render(
+      <div style={{ overflow: 'hidden', transform: 'translateX(0)' }}>
+        <ModalShell open onClose={vi.fn()} ariaLabel="Test">
+          <div>Content</div>
+        </ModalShell>
+      </div>,
+    )
+    const dialog = screen.getByRole('dialog')
+    expect(container.contains(dialog)).toBe(false)
+    expect(dialog.parentElement).toBe(document.body)
+  })
+
   it('renders nothing when closed', () => {
     render(
       <ModalShell

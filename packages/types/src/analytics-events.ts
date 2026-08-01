@@ -30,6 +30,7 @@ export type PickerEntry =
   | 'paywall'
   | 'logged-out-paywall'
   | 'logged-out-watch'
+  | 'logged-out-going'
   | 'takeover'
 
 // Per-event property shapes. Keys are the canonical event names; the map is

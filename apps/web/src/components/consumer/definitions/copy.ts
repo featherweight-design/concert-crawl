@@ -817,8 +817,6 @@ export const CONSUMER_COPY = {
   // Shown on event cards and the event detail page — the primary CTA to watch/unwatch a show
   watchShowButton: {
     button: {
-      watchLabel: 'Watch this show',
-      watchingLabel: 'Watching',
       ariaWatch: 'Watch this show',
       ariaWatching: 'Watching, click to stop',
       // Signed out the eye opens the tier picker, so the name states that

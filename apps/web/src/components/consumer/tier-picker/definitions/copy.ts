@@ -7,11 +7,25 @@ export const TIER_PICKER_COPY = {
     eyebrow: 'Upgrade · pick a lane',
     title: 'Pick a lane.',
     sub: "We run on infrastructure, not VC money. Subscriptions cover what costs us money to run. That's it.",
-    loggedOutEyebrow: 'Watching · free with an account',
-    loggedOutTitle: "Keep an eye on the ones you can't miss.",
-    loggedOutSub:
-      'Watching is free — it just needs an account to save to. Start on Free; ' +
-      'pick a lane later if you ever want to chip in.',
+    // Keyed by the entry point that opened the picker, so the gate names the
+    // thing the visitor just reached for. `default` covers every signed-out
+    // entry that isn't a specific feature reach.
+    loggedOut: {
+      default: {
+        eyebrow: 'Watching · free with an account',
+        title: "Keep an eye on the ones you can't miss.",
+        sub:
+          'Watching is free — it just needs an account to save to. Start on Free; ' +
+          'pick a lane later if you ever want to chip in.',
+      },
+      'logged-out-going': {
+        eyebrow: 'Concert History · free with an account',
+        title: 'Keep a record of every show you go to.',
+        sub:
+          "Saying you're going is free — it just needs an account to save to. " +
+          'Start on Free; pick a lane later if you ever want to chip in.',
+      },
+    },
     tiersCode: (count: number) => `${count} tiers`,
   },
   signIn: {

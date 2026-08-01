@@ -57,8 +57,10 @@ export const EventDetailCtaBlock = ({
   })
 
   const openUpgrade = () => {
+    // Signed out this is a reach for Concert History, not the taste paywall —
+    // the entry keys the gate's copy as well as the funnel dimension.
     setPickerEntry(
-      surface === 'tier-picker-on-tap' ? 'logged-out-paywall' : 'paywall',
+      surface === 'tier-picker-on-tap' ? 'logged-out-going' : 'paywall',
     )
     setPickerOpen(true)
   }

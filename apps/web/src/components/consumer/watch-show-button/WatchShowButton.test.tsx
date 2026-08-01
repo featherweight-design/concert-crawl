@@ -544,12 +544,9 @@ describe('WatchShowButton — signed-out gating beat (#794)', () => {
       },
     ])
     renderWith('Geese')
-    expect(theButton().textContent).toContain(
-      CONSUMER_COPY.watchShowButton.button.watchLabel,
-    )
-    expect(theButton().textContent).not.toContain(
-      CONSUMER_COPY.watchShowButton.button.watchingLabel,
-    )
+    // The eye is the whole gesture at every breakpoint — a visible label would
+    // make it a mobile shorthand rather than the affordance itself.
+    expect(theButton().textContent).toBe('')
     expect(theButton().hasAttribute('aria-pressed')).toBe(false)
     expect(theButton().getAttribute('aria-label')).toBe(
       'Watch Geese — sign up to start watching',

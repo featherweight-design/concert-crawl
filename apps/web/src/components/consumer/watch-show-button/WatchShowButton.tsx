@@ -92,15 +92,6 @@ export function WatchShowButton({
     masterEnabledRef.current = prefs?.masterEnabled
   }, [prefs?.masterEnabled])
 
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 639px)')
-    setIsMobile(mq.matches)
-    const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
-  }, [])
-
   const isPending = toggle.isPending
 
   // The signed-out click carries the watch through auth: Clerk lands on the
@@ -290,9 +281,11 @@ export function WatchShowButton({
     boxSizing: 'border-box',
     display: 'inline-flex',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    // Square: the eye is the whole gesture on every breakpoint, so there is no
+    // label to make room for and a pill would read as a truncated button.
     height: 28,
-    padding: '0 11px',
+    width: 28,
     borderRadius: 7,
     fontFamily: 'var(--font-ui)',
     fontWeight: 600,
@@ -355,46 +348,12 @@ export function WatchShowButton({
               aria-hidden
               style={{ animation: 'fbSpin 0.7s linear infinite' }}
             />
-          ) : isMobile ? (
-            <Eye size={12} aria-hidden style={{ flexShrink: 0 }} />
-          ) : renderedWatching ? (
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 12 12"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M2.5 6.5l2.5 2.5L9.5 4"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
           ) : (
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 12 12"
-              fill="none"
-              aria-hidden
-            >
-              <path
-                d="M6 2.5v7M2.5 6h7"
-                stroke="currentColor"
-                strokeWidth="1.8"
-                strokeLinecap="round"
-              />
-            </svg>
-          )}
-          {!isMobile && (
-            <span>
-              {renderedWatching
-                ? CONSUMER_COPY.watchShowButton.button.watchingLabel
-                : CONSUMER_COPY.watchShowButton.button.watchLabel}
-            </span>
+            // One affordance at every breakpoint. A desktop-only "+ Watch this
+            // show" label made the eye a mobile shorthand rather than the
+            // gesture itself; state is carried by the fill, and the accessible
+            // name carries it for screen readers.
+            <Eye size={14} aria-hidden style={{ flexShrink: 0 }} />
           )}
         </button>
       </div>

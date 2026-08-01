@@ -43,6 +43,14 @@ import type {
 
 const HEADER_COPY = TIER_PICKER_COPY.header
 
+// The signed-out gate is one surface serving several reaches. Entries without
+// their own variant fall back to the Watching wording.
+function loggedOutHeader(entry: PickerEntry) {
+  return entry === 'logged-out-going'
+    ? HEADER_COPY.loggedOut['logged-out-going']
+    : HEADER_COPY.loggedOut.default
+}
+
 interface TierPickerSheetProps {
   open: boolean
   onClose: () => void
@@ -414,7 +422,7 @@ export const TierPickerSheet = ({
       : checkout !== null
         ? TIER_PICKER_COPY.checkout.eyebrow
         : loggedOut
-          ? HEADER_COPY.loggedOutEyebrow
+          ? loggedOutHeader(entry).eyebrow
           : HEADER_COPY.eyebrow)
   const code =
     surfaceRail?.code ??
@@ -536,7 +544,7 @@ export const TierPickerSheet = ({
                   color: 'var(--fg)',
                 }}
               >
-                {loggedOut ? HEADER_COPY.loggedOutTitle : HEADER_COPY.title}
+                {loggedOut ? loggedOutHeader(entry).title : HEADER_COPY.title}
               </div>
               <div
                 style={{
@@ -548,7 +556,7 @@ export const TierPickerSheet = ({
                   maxWidth: 560,
                 }}
               >
-                {loggedOut ? HEADER_COPY.loggedOutSub : HEADER_COPY.sub}
+                {loggedOut ? loggedOutHeader(entry).sub : HEADER_COPY.sub}
               </div>
               {loggedOut && isMobile && (
                 <span style={{ marginTop: 2 }}>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 
 interface ModalShellProps {
   open: boolean
@@ -38,6 +39,11 @@ export function ModalShell({
   ariaDescribedBy,
 }: ModalShellProps) {
   const [isMobile, setIsMobile] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 639px)')
@@ -60,11 +66,15 @@ export function ModalShell({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, handleKeyDown])
 
-  if (!open) return null
+  if (!open || !mounted) return null
 
   const heightValue = sheetHeight === 'tall' ? '85%' : '62%'
 
-  return (
+  // Portalled to the body: triggers live inside clipping and transformed
+  // ancestors — the filter rail scrolls horizontally, and a transformed
+  // ancestor makes `position: fixed` resolve against that box instead of the
+  // viewport, which rendered the gate sheet inside its own chip.
+  return createPortal(
     <>
       <div
         data-testid="modal-scrim"
@@ -209,6 +219,7 @@ export function ModalShell({
           )}
         </div>
       )}
-    </>
+    </>,
+    document.body,
   )
 }
