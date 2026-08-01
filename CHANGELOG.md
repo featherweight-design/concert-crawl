@@ -1,3 +1,10 @@
+## [1.178.6](https://github.com/HartiganHM/concert-crawl/compare/v1.178.5...v1.178.6) (2026-08-01)
+
+
+### Bug Fixes
+
+* **web:** drop the duplicate account-menu trigger from the mobile header ([#1293](https://github.com/HartiganHM/concert-crawl/issues/1293)) ([52803b9](https://github.com/HartiganHM/concert-crawl/commit/52803b961bc86c142c7fe37f186745d8b640a19e))
+
 ## [1.178.5](https://github.com/HartiganHM/concert-crawl/compare/v1.178.4...v1.178.5) (2026-08-01)
 
 
