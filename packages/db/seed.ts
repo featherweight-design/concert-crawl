@@ -325,6 +325,27 @@ export const SEED_VENUES: NewVenue[] = [
     about:
       'Free outdoor concerts under the sky. Levitt books solid local and touring acts without gouging your wallet. Summer staple for people who actually want to hear music, not just be seen.',
   },
+  {
+    name: 'The Oriental Theater',
+    slug: 'oriental-theater',
+    websiteUrl: 'https://www.theorientaltheater.com/events',
+    city: 'Denver',
+    timezone: 'America/Denver',
+    active: true,
+    verified: true,
+    crawlDelayMs: 3000,
+    crawlMode: 'http',
+    crawlWaitUntil: 'domcontentloaded' as const,
+    address: '4335 W 44th Ave, Denver, CO 80212',
+    capacity: 700,
+    venueType: 'Theater',
+    neighborhood: 'Berkeley',
+    lat: 39.7757,
+    lng: -105.0533,
+    ticketVendor: 'unknown' as const,
+    about:
+      'Restored 1927 movie house on Tennyson Street with a marquee you can spot from blocks away. Books everything from touring indie and metal to comedy and burlesque, and stays refreshingly weird about it.',
+  },
 ]
 
 // ---------------------------------------------------------------------------

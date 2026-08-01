@@ -45,12 +45,17 @@ function partsInTimezone(
   }
 }
 
+// Naive datetimes may separate date from time with `T` or, as Hold My Ticket
+// emits, a space ("2026-08-01 20:00:00"). Splitting on `T` alone leaves the
+// whole string as the "date" and loses the show time.
+const NAIVE_DATETIME_SEPARATOR = /[T ]/
+
 function extractDateOnly(dateStr: string, timeZone: string): string {
   if (HAS_EXPLICIT_TZ.test(dateStr)) {
     return partsInTimezone(new Date(dateStr), timeZone).date
   }
   // Naive datetimes and date-only strings → take the date portion as-is.
-  return dateStr.split('T')[0] ?? dateStr
+  return dateStr.trim().split(NAIVE_DATETIME_SEPARATOR)[0] ?? dateStr
 }
 
 function extractTimeOnly(
@@ -60,7 +65,7 @@ function extractTimeOnly(
   if (HAS_EXPLICIT_TZ.test(dateStr)) {
     return partsInTimezone(new Date(dateStr), timeZone).time
   }
-  const parts = dateStr.split('T')
+  const parts = dateStr.trim().split(NAIVE_DATETIME_SEPARATOR)
   if (parts.length < 2) return undefined
   // Strip any malformed trailing timezone fragment defensively.
   return parts[1]?.split(/[+\-Z]/)[0]
@@ -98,15 +103,27 @@ function getPerformerNames(performer: unknown): string[] {
 // `Event.url` (the detail page). `offers` may be a single Offer or an array;
 // take the first entry that carries a string `url`. Untrusted source data, so
 // narrow at runtime rather than casting.
+//
+// An `AggregateOffer` carries no `url` of its own — it nests the real Offers
+// under its own `offers` key, one per price tier. The Oriental Theater ships
+// every event that way, so without unwrapping it all 41 of its events arrive
+// with no ticket link at all.
 function getOfferUrl(offers: unknown): string | undefined {
   const items = Array.isArray(offers) ? offers : [offers]
   for (const item of items) {
-    if (item && typeof item === 'object' && 'url' in item) {
+    if (!item || typeof item !== 'object') continue
+
+    if ('url' in item) {
       const url = item.url
       if (typeof url === 'string') {
         const trimmed = url.trim()
         if (trimmed.length > 0) return trimmed
       }
+    }
+
+    if ('offers' in item) {
+      const nested = getOfferUrl(item.offers)
+      if (nested !== undefined) return nested
     }
   }
   return undefined

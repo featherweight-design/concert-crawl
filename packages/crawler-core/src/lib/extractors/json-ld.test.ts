@@ -403,4 +403,58 @@ describe('extractJsonLd', () => {
     expect(events[0]?.artist).toBe('Wednesday')
     expect(events[0]?.supportingArtists).toEqual(['Hotline TNT'])
   })
+
+  // Hold My Ticket — the Oriental Theater's vendor — emits both of these
+  // shapes on every event. See issue #1287.
+  describe('Hold My Ticket shapes', () => {
+    it('splits a space-separated naive datetime into date and show time', () => {
+      const html = makeHtml({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'Carnivale De Sensuale',
+        startDate: '2026-08-01 20:00:00',
+        doorTime: '2026-08-01 19:00:00',
+      })
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
+      expect(events[0]?.date).toBe('2026-08-01')
+      expect(events[0]?.showTime).toBe('20:00:00')
+      expect(events[0]?.doorsTime).toBe('19:00:00')
+    })
+
+    it('unwraps an AggregateOffer to find the purchase link', () => {
+      const html = makeHtml({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'Tiered Pricing Show',
+        startDate: '2026-08-01 20:00:00',
+        offers: {
+          '@type': 'AggregateOffer',
+          offers: [
+            { '@type': 'Offer', url: 'https://holdmyticket.com/tickets/1' },
+            { '@type': 'Offer', url: 'https://holdmyticket.com/tickets/2' },
+          ],
+        },
+      })
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
+      expect(events[0]?.ticketUrl).toBe('https://holdmyticket.com/tickets/1')
+    })
+
+    it('prefers a top-level offer url over a nested one', () => {
+      const html = makeHtml({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'Direct Offer Show',
+        startDate: '2026-08-01 20:00:00',
+        offers: {
+          '@type': 'Offer',
+          url: 'https://holdmyticket.com/tickets/direct',
+          offers: [{ '@type': 'Offer', url: 'https://example.com/nested' }],
+        },
+      })
+      const events = extractJsonLd(html, SOURCE_URL, 'America/Denver')
+      expect(events[0]?.ticketUrl).toBe(
+        'https://holdmyticket.com/tickets/direct',
+      )
+    })
+  })
 })
