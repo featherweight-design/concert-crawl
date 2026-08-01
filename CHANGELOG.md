@@ -1,3 +1,10 @@
+## [1.178.4](https://github.com/HartiganHM/concert-crawl/compare/v1.178.3...v1.178.4) (2026-08-01)
+
+
+### Bug Fixes
+
+* **consumer:** account menu from bottom nav, centered sheet on desktop ([#1291](https://github.com/HartiganHM/concert-crawl/issues/1291)) ([bd4ecfc](https://github.com/HartiganHM/concert-crawl/commit/bd4ecfcc4f9559381a866d8ad199bf957548f537))
+
 ## [1.178.3](https://github.com/HartiganHM/concert-crawl/compare/v1.178.2...v1.178.3) (2026-08-01)
 
 
