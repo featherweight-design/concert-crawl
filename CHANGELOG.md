@@ -1,3 +1,10 @@
+## [1.178.5](https://github.com/HartiganHM/concert-crawl/compare/v1.178.4...v1.178.5) (2026-08-01)
+
+
+### Bug Fixes
+
+* **history:** polish Concert History from the staging walk ([#1290](https://github.com/HartiganHM/concert-crawl/issues/1290)) ([0728796](https://github.com/HartiganHM/concert-crawl/commit/0728796d43c8f2d4f638b8fb34ffa0b5ef0d66e7))
+
 ## [1.178.4](https://github.com/HartiganHM/concert-crawl/compare/v1.178.3...v1.178.4) (2026-08-01)
 
 
