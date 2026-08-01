@@ -1,3 +1,10 @@
+## [1.178.3](https://github.com/HartiganHM/concert-crawl/compare/v1.178.2...v1.178.3) (2026-08-01)
+
+
+### Bug Fixes
+
+* **web:** open the changelog and gate price submission before the form ([#1283](https://github.com/HartiganHM/concert-crawl/issues/1283)) ([7919c24](https://github.com/HartiganHM/concert-crawl/commit/7919c24f25d16bbe787ac6031cce00261c576095))
+
 ## [1.178.2](https://github.com/HartiganHM/concert-crawl/compare/v1.178.1...v1.178.2) (2026-08-01)
 
 
