@@ -103,7 +103,12 @@ venuesPublicRouter.get('/:slug', async (ctx) => {
       lng: venues.lng,
     })
     .from(venues)
-    .where(eq(venues.slug, slug))
+    // Inactive venues are 404, not just unlisted (#1292). Without this the
+    // list route hides a deactivated venue while its detail page stays live
+    // and indexable at a direct URL. Admin reads venues by id through
+    // /v1/admin/venues/:id, so nothing internal depends on reaching an
+    // inactive venue by slug here.
+    .where(and(eq(venues.slug, slug), eq(venues.active, true)))
 
   if (!venue) {
     return ctx.json({ success: false, error: 'Venue not found' }, 404)

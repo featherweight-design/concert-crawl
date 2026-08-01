@@ -160,6 +160,21 @@ describe('GET /v1/venues/:slug — integration', () => {
     expect(body.error).toBe('Venue not found')
   })
 
+  it('returns 404 for an inactive venue rather than serving its page', async () => {
+    const venue = await seedVenue({
+      name: 'Closed Venue',
+      slug: 'closed-venue',
+      active: false,
+    })
+    await seedEvent(venue.id, { artist: 'Someone', date: '2027-06-05' })
+
+    const res = await app.request('/v1/venues/closed-venue')
+    expect(res.status).toBe(404)
+    const body = (await res.json()) as { success: boolean; error: string }
+    expect(body.success).toBe(false)
+    expect(body.error).toBe('Venue not found')
+  })
+
   it('serializes supportingArtists and tourName on venue-profile events', async () => {
     const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' })
     await seedEvent(venue.id, {
