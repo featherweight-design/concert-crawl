@@ -508,7 +508,6 @@ export const CONSUMER_COPY = {
       signIn: 'Sign in',
       signInHref: '/sign-in',
       howItWorks: 'How Concert Crawl works',
-      howItWorksMeta: '2 min',
       howItWorksHref: '/onboarding',
       terms: 'Terms',
       termsHref: '/legal/terms',
@@ -702,7 +701,6 @@ export const CONSUMER_COPY = {
         "Watching is your shortlist of shows you don't want to miss — and a " +
         'price tracker on each one. Nothing to set up. It just needs an ' +
         'account to save to.',
-      exampleCaption: 'EXAMPLE · NOT YOUR LIST',
       exampleAlt:
         'Example: a Watching list showing three shows, one with a ' +
         'seven-dollar price drop.',
@@ -745,7 +743,7 @@ export const CONSUMER_COPY = {
         {
           key: '03',
           title: 'Free, and it stays free.',
-          body: 'Watching is on the Free tier. No card, no trial, nothing to cancel.',
+          body: 'Watching is on the Free tier. No card, no trial.',
         },
       ],
       signUp: 'Sign up free',

@@ -19,19 +19,20 @@ export const TIER_PICKER_COPY = {
     link: 'Sign in →',
   },
   footer: {
-    desktop: 'Cancel any time · billed monthly · Stripe handles cards',
-    mobile: 'Tap a tier to compare · cancel any time · Stripe handles cards',
+    desktop: 'Cancel any time · billed monthly · your price never goes up',
+    mobile:
+      'Tap a tier to compare · cancel any time · your price never goes up',
   },
   card: {
     yourPlan: 'Your plan',
     yourPlanFounder: 'Your plan · locked $3/mo',
     yourPlanInline: '· Your plan',
     popular: 'Popular',
-    // Grandfather-everyone-forever promise (#782 §4, locked wording).
-    // Founder's line reinforces its locked-$3 stamp rather than duplicating.
+    // Grandfather-everyone-forever promise (#782 §4). The generic form applies
+    // to every tier, so it is stated once on the footer rail rather than per
+    // card. Founder keeps a line because its locked-$3 stamp says something the
+    // generic promise does not.
     pricePromise: {
-      supporter: 'Whatever you pay, you pay. We never raise it.',
-      premium: 'Whatever you pay, you pay. We never raise it.',
       founder: '$3 is $3. New folks may pay double someday — never you.',
     },
     founderPreLaunch: 'Opens at public launch',

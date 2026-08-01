@@ -539,7 +539,6 @@ function MenuBody({
         <MenuRow
           label={CONSUMER_COPY.userMenu.signedOut.howItWorks}
           href={CONSUMER_COPY.userMenu.signedOut.howItWorksHref}
-          meta={CONSUMER_COPY.userMenu.signedOut.howItWorksMeta}
         />
         {/* Terms and Privacy are reachable through Settings signed in, so this
             is the only body that needs explicit rows for them. */}

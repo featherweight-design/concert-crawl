@@ -47,7 +47,6 @@ export const TIER_DEFINITIONS: Record<TierKey, TierDefinition> = {
     rationale: TIERS_COPY.supporter.rationale,
     features: TIERS_COPY.supporter.features.map((text) => ({ text })),
     monoNote: TIERS_COPY.supporter.monoNote,
-    pricePromise: TIER_PICKER_COPY.card.pricePromise.supporter,
   },
   premium: {
     key: 'premium',
@@ -60,7 +59,6 @@ export const TIER_DEFINITIONS: Record<TierKey, TierDefinition> = {
       ...TIERS_COPY.premium.features.map((text) => ({ text })),
       { text: TIERS_COPY.premium.futureFeature, future: true },
     ],
-    pricePromise: TIER_PICKER_COPY.card.pricePromise.premium,
   },
   founder: {
     key: 'founder',

@@ -143,7 +143,6 @@ describe('account menu — signed out (#794)', () => {
 
     const copy = CONSUMER_COPY.userMenu.signedOut
     expect(screen.getByText(copy.howItWorks)).toBeTruthy()
-    expect(screen.getByText(copy.howItWorksMeta)).toBeTruthy()
     expect(
       screen.getByRole('link', { name: copy.terms }).getAttribute('href'),
     ).toBe(copy.termsHref)

@@ -193,11 +193,11 @@ describe('TierPickerSheet — visibility and states', () => {
     expect(screen.getByTestId('scarcity-rail')).toBeTruthy()
   })
 
-  it('price promise renders per tier with locked wording', () => {
+  it('states the price promise once, not per tier', () => {
     renderSheet(planState('free'))
-    expect(
-      screen.getAllByText(TIER_PICKER_COPY.card.pricePromise.supporter),
-    ).toHaveLength(2) // supporter + premium share the line
+    expect(screen.getByText(TIER_PICKER_COPY.footer.desktop)).toBeTruthy()
+    // Founder keeps a card line because its locked-$3 stamp says something the
+    // generic promise does not.
     expect(
       screen.getByText(TIER_PICKER_COPY.card.pricePromise.founder),
     ).toBeTruthy()

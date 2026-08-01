@@ -16,29 +16,14 @@ const copy = CONSUMER_COPY.watching.signedOut
  */
 
 /**
- * The worked example. Marked as a sample three redundant ways — the dashed
- * container, the visible caption, and `aria-hidden` plus a screen-reader
- * alternative — because a screen-reader user mistaking these rows for their own
- * shows is the worst failure available on this page.
+ * The worked example. The dashed container reads as a sample to sighted users
+ * without a caption saying so; `aria-hidden` plus a screen-reader alternative
+ * carries the same signal for screen-reader users, because mistaking these rows
+ * for their own shows is the worst failure available on this page.
  */
 function ExampleList() {
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: '0.14em',
-            color: 'var(--fg-subtle)',
-          }}
-        >
-          {copy.exampleCaption}
-        </span>
-        <span className="h-px flex-1" style={{ background: 'var(--border)' }} />
-      </div>
-
       <span className="sr-only">{copy.exampleAlt}</span>
 
       <div

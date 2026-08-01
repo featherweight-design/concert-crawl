@@ -54,6 +54,7 @@ export const REPORTING_COPY = {
       "We'll ask how you know on the next step. An email from the venue, an artist's social post, or a venue announcement all count — anything we can point other fans at.",
 
     continueButton: 'Continue →',
+    continueHint: 'Pick what changed to continue',
   },
 
   // ── EvidenceForm ─────────────────────────────────────────────────

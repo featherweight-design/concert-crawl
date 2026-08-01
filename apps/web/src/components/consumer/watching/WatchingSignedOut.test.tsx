@@ -46,10 +46,10 @@ describe('WatchingSignedOut (#794)', () => {
     render(<WatchingSignedOut />)
     const example = screen.getByTestId('watching-example')
     expect(example.getAttribute('aria-hidden')).toBe('true')
-    // All three signals are required: a screen-reader user mistaking these for
-    // their own shows is the worst failure available on this page.
+    // With the visible caption gone, this alternative is the only thing
+    // standing between a screen-reader user and mistaking these for their own
+    // shows — the worst failure available on this page.
     expect(screen.getByText(copy.exampleAlt)).toBeTruthy()
-    expect(screen.getByText(copy.exampleCaption)).toBeTruthy()
   })
 
   it('works the example with a drop, a flat, and a sell-out', () => {

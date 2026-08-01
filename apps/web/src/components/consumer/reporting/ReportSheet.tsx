@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
 import { ReportTypeMark } from './ReportTypeMark'
@@ -271,6 +271,7 @@ export const ReportSheet = ({
   onSelect,
 }: ReportSheetProps) => {
   const [selectedType, setSelectedType] = useState<ReportType | null>(null)
+  const hintId = useId()
 
   const visibleOptions = getVisibleOptions(liveStatus)
   const sheetHeight: 'tall' | 'short' =
@@ -355,26 +356,42 @@ export const ReportSheet = ({
         </>
       }
       footer={
-        <button
-          onClick={handleContinue}
-          disabled={selectedType === null}
-          style={{
-            background: 'var(--signal)',
-            height: 48,
-            borderRadius: 10,
-            fontFamily: 'Inter, sans-serif',
-            fontWeight: 800,
-            fontSize: 14.5,
-            color: 'var(--fg-on-accent)',
-            border: 'none',
-            cursor: selectedType !== null ? 'pointer' : 'not-allowed',
-            opacity: selectedType !== null ? 1 : 0.45,
-            width: '100%',
-            transition: 'opacity 0.12s',
-          }}
-        >
-          {copy.continueButton}
-        </button>
+        <div className="flex w-full flex-col items-center gap-2">
+          <button
+            onClick={handleContinue}
+            disabled={selectedType === null}
+            aria-describedby={selectedType === null ? hintId : undefined}
+            style={{
+              background: 'var(--signal)',
+              height: 48,
+              borderRadius: 10,
+              fontFamily: 'Inter, sans-serif',
+              fontWeight: 800,
+              fontSize: 14.5,
+              color: 'var(--fg-on-accent)',
+              border: 'none',
+              cursor: selectedType !== null ? 'pointer' : 'not-allowed',
+              opacity: selectedType !== null ? 1 : 0.45,
+              width: '100%',
+              transition: 'opacity 0.12s',
+            }}
+          >
+            {copy.continueButton}
+          </button>
+          {selectedType === null && (
+            <p
+              id={hintId}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                color: 'var(--fg-subtle)',
+                margin: 0,
+              }}
+            >
+              {copy.continueHint}
+            </p>
+          )}
+        </div>
       }
     >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
