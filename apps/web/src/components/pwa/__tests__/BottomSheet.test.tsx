@@ -27,6 +27,26 @@ describe('BottomSheet', () => {
     expect(dialog.getAttribute('aria-modal')).toBe('true')
   })
 
+  // Anchored to the bottom edge of a wide viewport this read as a stray
+  // drawer, so it centers from sm up — one media query, not a second tree.
+  it('is a bottom sheet on mobile and a centered modal from sm up', () => {
+    render(
+      <BottomSheet open onClose={() => {}} title="test">
+        <button>inside</button>
+      </BottomSheet>,
+    )
+    const dialog = screen.getByRole('dialog')
+
+    expect(dialog.className).toContain('bottom-0')
+    expect(dialog.className).toContain('rounded-t-2xl')
+
+    expect(dialog.className).toContain('sm:inset-0')
+    expect(dialog.className).toContain('sm:m-auto')
+    expect(dialog.className).toContain('sm:h-fit')
+    expect(dialog.className).toContain('sm:max-w-md')
+    expect(dialog.className).toContain('sm:rounded-2xl')
+  })
+
   it('closes on Escape', () => {
     const onClose = vi.fn()
     render(

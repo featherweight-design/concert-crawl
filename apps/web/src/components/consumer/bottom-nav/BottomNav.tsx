@@ -12,6 +12,7 @@ import { AnonDisc } from '@/components/consumer/app-header/AnonDisc'
 import { useAccountMenu } from '@/components/consumer/user-menu/account-menu-context'
 
 const COPY = CONSUMER_COPY.bottomNav
+const MENU_LABELS = CONSUMER_COPY.userMenu.ariaLabels
 
 const STATIC_TABS = [
   {
@@ -227,43 +228,44 @@ export function BottomNav() {
           </Link>
         )
       })}
-      {!isSignedIn ? (
-        // Signed out slot 4 is a menu trigger, not a link: /me has nothing to
-        // show, and the account menu is where signing up lives. An anonymous
-        // visitor lands on the resolved disc directly and never transits the
-        // loading skeleton.
-        <button
-          ref={menuTriggerRef}
-          type="button"
-          onClick={() => toggleFrom(menuTriggerRef.current)}
-          aria-label={COPY.nav.signedOutProfileAriaLabel}
-          aria-haspopup="dialog"
-          aria-expanded={menuOpen}
-          className="flex cursor-pointer flex-col items-center justify-center"
-          style={{ width: 56, minHeight: 44, color: 'var(--fg-subtle)' }}
-        >
+      {/* Slot 4 opens the account menu in both auth states. Signed in it used to
+          link straight to /me, which skipped past every other destination the
+          menu holds; the menu is the nav affordance and Settings is one row in
+          it. Signed out it's the same trigger, and an anonymous visitor lands on
+          the resolved disc directly rather than transiting the skeleton. */}
+      <button
+        ref={menuTriggerRef}
+        type="button"
+        onClick={() => toggleFrom(menuTriggerRef.current)}
+        aria-label={
+          isSignedIn
+            ? MENU_LABELS.accountMenu
+            : MENU_LABELS.accountMenuSignedOut
+        }
+        aria-haspopup="dialog"
+        aria-expanded={menuOpen}
+        className="flex cursor-pointer flex-col items-center justify-center gap-[3px]"
+        style={{
+          width: 56,
+          minHeight: 44,
+          color:
+            isSignedIn && isMeActive ? 'var(--signal)' : 'var(--fg-subtle)',
+        }}
+      >
+        {!isSignedIn ? (
           <AnonDisc size={26} />
-        </button>
-      ) : (
-        <Link
-          href="/me"
-          aria-label={COPY.nav.profileAriaLabel}
-          className="flex flex-col items-center gap-[3px]"
-          style={{ color: isMeActive ? 'var(--signal)' : 'var(--fg-subtle)' }}
-        >
-          {!profileLoaded ? (
-            <MeAvatarSkeleton />
-          ) : avatarHandle !== null ? (
-            <MeAvatar
-              handle={avatarHandle}
-              avatarColor={avatarColor}
-              isActive={isMeActive}
-            />
-          ) : (
-            <PersonIcon />
-          )}
-        </Link>
-      )}
+        ) : !profileLoaded ? (
+          <MeAvatarSkeleton />
+        ) : avatarHandle !== null ? (
+          <MeAvatar
+            handle={avatarHandle}
+            avatarColor={avatarColor}
+            isActive={isMeActive}
+          />
+        ) : (
+          <PersonIcon />
+        )}
+      </button>
     </nav>
   )
 }

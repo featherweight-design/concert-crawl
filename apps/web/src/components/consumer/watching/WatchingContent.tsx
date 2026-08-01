@@ -6,7 +6,6 @@ import { useWatching } from '@/lib/queries/use-watching'
 import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
 import { WatchingItem } from './WatchingItem'
 import { WatchingEmpty } from './WatchingEmpty'
-import { NotifyFutureRow } from './NotifyFutureRow'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs'
 
@@ -240,7 +239,6 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
               </div>
             </section>
           ))}
-          <NotifyFutureRow />
         </div>
       )}
     </main>

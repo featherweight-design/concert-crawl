@@ -37,16 +37,21 @@ beforeEach(() => {
 afterEach(cleanup)
 
 describe('BottomNav slot 4 (#794)', () => {
-  it('keeps slot 4 as a link to /me when signed in', () => {
+  // Slot 4 used to link straight to /me when signed in, which skipped past
+  // every other destination the account menu holds. It's a menu trigger in
+  // both auth states now; Settings is one row inside the menu.
+  it('renders slot 4 as a menu trigger when signed in', () => {
     mockAuth = {
       isSignedIn: true,
       isLoaded: true,
       getToken: async () => 'token',
     }
     render(<BottomNav />)
-    expect(
-      screen.getByRole('link', { name: /profile/i }).getAttribute('href'),
-    ).toBe('/me')
+
+    expect(screen.queryByRole('link', { name: /account menu/i })).toBeNull()
+    const trigger = screen.getByRole('button', { name: 'Account menu' })
+    expect(trigger.getAttribute('aria-haspopup')).toBe('dialog')
+    expect(trigger.getAttribute('aria-expanded')).toBe('false')
   })
 
   it('renders slot 4 as a menu trigger when signed out', () => {

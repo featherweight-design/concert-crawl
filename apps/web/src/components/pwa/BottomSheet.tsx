@@ -108,7 +108,10 @@ export const BottomSheet = ({
         // fallback for the zero-focusable-children case (see focus handling
         // in the useEffect above).
         tabIndex={-1}
-        className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-border bg-surface-1 p-6 shadow-2xl focus:outline-none"
+        // A bottom sheet on mobile, a centered modal from sm up: anchored to the
+        // bottom edge of a wide viewport it read as a stray drawer. One media
+        // query rather than a second tree, so the focus trap above is shared.
+        className="fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t border-border bg-surface-1 p-6 shadow-2xl focus:outline-none sm:inset-0 sm:m-auto sm:h-fit sm:w-full sm:max-w-md sm:rounded-2xl sm:border"
       >
         <h2 id={titleId} className="sr-only">
           {title}

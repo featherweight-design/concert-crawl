@@ -299,7 +299,7 @@ describe('account menu — signed out (#794)', () => {
         }),
       )
         .getByRole('button', {
-          name: CONSUMER_COPY.bottomNav.nav.signedOutProfileAriaLabel,
+          name: CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut,
         })
         .click()
     })

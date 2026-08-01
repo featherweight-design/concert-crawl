@@ -657,8 +657,8 @@ export const CONSUMER_COPY = {
           matchPrefixes: ['/history'],
         },
       ] as const,
-      profileAriaLabel: 'Profile',
-      signedOutProfileAriaLabel: 'Account menu — sign up or sign in',
+      // Slot 4's accessible name comes from userMenu.ariaLabels — it opens the
+      // same menu as every other account trigger, so it names the same thing.
     },
   },
 
@@ -686,11 +686,6 @@ export const CONSUMER_COPY = {
       staleTooltip: (relTime: string) =>
         `Last checked ${relTime} — could be stale`,
       stalePrefix: 'Stale · ',
-    },
-    notifyFutureRow: {
-      title: 'Price drop alerts',
-      subtitle: 'Coming soon.',
-      badge: 'SOON',
     },
     // The signed-out teaching state. Distinct from `watchingEmpty*` above,
     // which is the signed-in "no shows yet" state for a different person.
