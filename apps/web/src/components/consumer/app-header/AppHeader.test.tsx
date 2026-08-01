@@ -4,6 +4,7 @@ import React from 'react'
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { AppHeader } from './AppHeader'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 let mockAuth: { isSignedIn: boolean; isLoaded: boolean } = {
   isSignedIn: false,
@@ -88,19 +89,16 @@ describe('AppHeader — signed-out auth affordances (#794)', () => {
     expect(railed.length).toBeGreaterThan(0)
   })
 
-  it('mounts the mobile profile entry in the mobile bar', () => {
+  it('keeps the account menu out of the mobile bar', () => {
+    // Slot 4 of the bottom nav is the only account-menu entry on mobile; a
+    // second trigger in the header duplicates it a thumb's width away.
     render(<AppHeader />)
-    expect(screen.getByTestId('mobile-profile-entry')).toBeTruthy()
-  })
-
-  it('gives the signed-out mobile entry the sign-up-or-sign-in name', () => {
-    render(<AppHeader />)
-    const trigger = screen.getByTestId('mobile-profile-entry')
-    expect(trigger.getAttribute('aria-label')).toBe(
-      'Account menu — sign up or sign in',
-    )
-    expect(trigger.getAttribute('aria-haspopup')).toBe('dialog')
-    expect(trigger.getAttribute('aria-expanded')).toBe('false')
+    // Named rather than by test id: the point is that no control in the mobile
+    // bar opens the account menu, not that one particular component is gone.
+    const labels = CONSUMER_COPY.userMenu.ariaLabels
+    for (const name of [labels.accountMenu, labels.accountMenuSignedOut]) {
+      expect(screen.queryByRole('button', { name })).toBeNull()
+    }
   })
 
   it('lights "My shows" on both of the routes it owns', () => {

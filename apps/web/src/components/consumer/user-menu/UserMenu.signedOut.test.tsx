@@ -274,8 +274,8 @@ describe('account menu — signed out (#794)', () => {
   })
 
   it('never renders more than one dialog, whichever trigger opens it', () => {
-    // The header disc and bottom-nav slot 4 are separate triggers over one
-    // state. Two dialogs would mean two stacked sheets on a single tap.
+    // The desktop header menu and bottom-nav slot 4 are separate triggers over
+    // one state. Two dialogs would mean two stacked sheets on a single tap.
     render(
       <AccountMenuProvider>
         <AppHeader />
@@ -285,23 +285,28 @@ describe('account menu — signed out (#794)', () => {
 
     expect(screen.queryAllByRole('dialog')).toHaveLength(0)
 
+    // Each trigger is scoped to its own landmark: they carry the same
+    // accessible name, which is itself the point — they are one control in
+    // more than one place.
+    const navTrigger = within(
+      screen.getByRole('navigation', {
+        name: CONSUMER_COPY.bottomNav.nav.ariaLabel,
+      }),
+    ).getByRole('button', {
+      name: CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut,
+    })
+    const headerTrigger = within(screen.getByRole('banner')).getByRole(
+      'button',
+      { name: CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut },
+    )
+
     act(() => {
-      screen.getByTestId('mobile-profile-entry').click()
+      navTrigger.click()
     })
     expect(screen.queryAllByRole('dialog')).toHaveLength(1)
 
-    // Scoped to the nav: all three triggers carry the same accessible name,
-    // which is itself the point — they are one control in three places.
     act(() => {
-      within(
-        screen.getByRole('navigation', {
-          name: CONSUMER_COPY.bottomNav.nav.ariaLabel,
-        }),
-      )
-        .getByRole('button', {
-          name: CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut,
-        })
-        .click()
+      headerTrigger.click()
     })
     expect(screen.queryAllByRole('dialog').length).toBeLessThanOrEqual(1)
   })

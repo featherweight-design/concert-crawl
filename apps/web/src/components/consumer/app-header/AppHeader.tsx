@@ -11,7 +11,6 @@ import { UserMenu } from '../user-menu'
 import { SearchPalette } from '../search-palette/SearchPalette'
 import { AuthCtaPair } from './AuthCtaPair'
 import { SignInRail } from './SignInRail'
-import { MobileProfileEntry } from './MobileProfileEntry'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY.appHeader
@@ -70,7 +69,6 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
           >
             <Search size={16} className="text-fg-muted" strokeWidth={1.5} />
           </button>
-          <MobileProfileEntry />
         </div>
       </div>
 
