@@ -409,6 +409,10 @@ describe('detectCrossVenuePresale', () => {
         'a protocol-relative href',
         '//www.etix.com/ticket/p/1/brother-ali-denver-the-black-sheep',
       ],
+      [
+        'a scheme-less relative href',
+        'ticket/p/1/brother-ali-denver-the-black-sheep',
+      ],
     ])('corroborates against %s', (_label, ticketUrl) => {
       const result = detectCrossVenuePresale({
         ...CERVANTES,

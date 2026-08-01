@@ -91,14 +91,20 @@ function alphanumeric(value: string): string {
  *
  * Parsed by hand rather than with `new URL()` so a malformed href is just a
  * value that corroborates nothing, rather than an exception we'd have to
- * swallow. Relative hrefs work too — they have no scheme or host to strip.
+ * swallow. Relative hrefs work too: an href with no authority is already a path,
+ * so it's returned whole — slicing from its first slash would drop the leading
+ * segment, which is often the one naming the venue.
  * Returns '' when there is no path, which never corroborates.
  */
+const AUTHORITY_PREFIX = /^([a-z][a-z0-9+.-]*:)?\/\//i
+
 function ticketPath(url: string): string {
   const withoutQuery = url.split(/[?#]/)[0] ?? ''
-  const withoutScheme = withoutQuery.replace(/^([a-z][a-z0-9+.-]*:)?\/\//i, '')
-  const pathStart = withoutScheme.indexOf('/')
-  return pathStart === -1 ? '' : withoutScheme.slice(pathStart)
+  if (!AUTHORITY_PREFIX.test(withoutQuery)) return withoutQuery
+
+  const withoutAuthority = withoutQuery.replace(AUTHORITY_PREFIX, '')
+  const pathStart = withoutAuthority.indexOf('/')
+  return pathStart === -1 ? '' : withoutAuthority.slice(pathStart)
 }
 
 // Shortest source-venue token we'll trust for URL corroboration. Below this,
