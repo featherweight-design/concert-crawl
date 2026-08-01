@@ -1,3 +1,12 @@
+## [1.178.2](https://github.com/HartiganHM/concert-crawl/compare/v1.178.1...v1.178.2) (2026-08-01)
+
+
+### Bug Fixes
+
+* **web:** cut copy the UI already says, explain the disabled Continue ([#1280](https://github.com/HartiganHM/concert-crawl/issues/1280)) ([97fcb4b](https://github.com/HartiganHM/concert-crawl/commit/97fcb4b44dfd74087478bd59b89af2e64aa33107)), closes [#794](https://github.com/HartiganHM/concert-crawl/issues/794)
+* **web:** one eye affordance everywhere, portal the gate, and name the reach ([#1282](https://github.com/HartiganHM/concert-crawl/issues/1282)) ([3676b71](https://github.com/HartiganHM/concert-crawl/commit/3676b711e1d5c57a51ef4349e1dd243fe43dddcc))
+* **web:** stop landing pager dots growing and make the hover arrow advance ([#1281](https://github.com/HartiganHM/concert-crawl/issues/1281)) ([de3bd6f](https://github.com/HartiganHM/concert-crawl/commit/de3bd6f45ad279a9ba85f2487ea93d91796c04b8))
+
 ## [1.178.1](https://github.com/HartiganHM/concert-crawl/compare/v1.178.0...v1.178.1) (2026-08-01)
 
 
