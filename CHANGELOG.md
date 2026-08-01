@@ -1,3 +1,10 @@
+# [1.179.0](https://github.com/HartiganHM/concert-crawl/compare/v1.178.7...v1.179.0) (2026-08-01)
+
+
+### Features
+
+* **crawler:** onboard The Oriental Theater ([e0a8ebc](https://github.com/HartiganHM/concert-crawl/commit/e0a8ebca53a2b1c87d6bbaa1245a6eb8b4f5b8a2))
+
 ## [1.178.7](https://github.com/HartiganHM/concert-crawl/compare/v1.178.6...v1.178.7) (2026-08-01)
 
 
