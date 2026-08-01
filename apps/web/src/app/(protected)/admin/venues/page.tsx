@@ -11,7 +11,7 @@ import {
 import type { VenueWithEventCount } from '@concert-crawl/types'
 import { VenueTableClient } from '@/components/admin/venue-table-client'
 import { deriveVenueStatus, venueHealthPercent } from '@/lib/admin/venue-status'
-import { MobileAddVenueButton } from '@/components/admin/venues/MobileAddVenueButton'
+import { AddVenueButton } from '@/components/admin/venues/AddVenueButton'
 import { VenueStatusFilterButton } from '@/components/admin/venues/VenueStatusFilterButton'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
@@ -80,6 +80,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
                 {ADMIN_COPY.venuesPage.page.robotsAuditButton}
               </AdminButton>
             </Link>
+            <AddVenueButton placement="desktop" />
           </>
         }
       />
@@ -124,7 +125,7 @@ export default async function AdminVenuesPage({ searchParams }: Props) {
         />
       </div>
 
-      <MobileAddVenueButton />
+      <AddVenueButton placement="mobile" />
 
       <Panel padding={0}>
         <VenueTableClient venues={filtered} />
