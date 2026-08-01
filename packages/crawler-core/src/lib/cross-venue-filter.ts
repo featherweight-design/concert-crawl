@@ -29,10 +29,21 @@ export interface CrossVenueCandidate {
 }
 
 export interface CrossVenueMatch {
-  matchedVenueId: string
-  matchedVenueSlug: string
+  /** Null when the marker named a venue we don't have in the DB. */
+  matchedVenueId: string | null
+  /** Null when the marker named a venue we don't have in the DB. */
+  matchedVenueSlug: string | null
+  /** The candidate's seeded name, or the verbatim marker text when unknown. */
   matchedVenueName: string
+  reason: CrossVenueReason
 }
+
+/**
+ * `known-venue` — the marker named another venue in `candidates`.
+ * `ticket-url` — the marker named a venue we don't crawl, and the ticket URL
+ * independently names that same venue. See issue #1286.
+ */
+export type CrossVenueReason = 'known-venue' | 'ticket-url'
 
 // Matches " AT <name>" or " @ <name>" near the end of the title.
 //
@@ -60,6 +71,58 @@ const VENUE_SUFFIX =
 // Leading "The " is also dropped because some venues are seeded with it
 // ("The Fillmore Auditorium") and some event titles drop it ("AT FILLMORE").
 const THE_PREFIX = /^the\s+/i
+
+// Collapses a string to lowercase alphanumerics. Ticket vendors slugify venue
+// names inconsistently — Etix renders "Cervantes' Masterpiece Ballroom" as
+// `cervantesmasterpiece-ballroom`, dropping the apostrophe AND the space after
+// it — so neither raw substring nor hyphen-slug comparison is reliable.
+// Alphanumeric-only comparison survives every punctuation scheme we've seen.
+function alphanumeric(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+/**
+ * Path portion of a ticket URL, with the query string and fragment dropped.
+ *
+ * This is load-bearing, not tidying: Etix appends `?cobrand=Cervantes` to every
+ * link Cervantes sells — including the off-site ones — so the query string
+ * names the SELLING venue and would veto every skip. Only the path encodes the
+ * host venue. Falls back to a manual split for non-absolute URLs, which `new
+ * URL()` rejects.
+ */
+function ticketPath(url: string): string {
+  try {
+    return new URL(url).pathname
+  } catch {
+    return url.split(/[?#]/)[0] ?? ''
+  }
+}
+
+// Shortest source-venue token we'll trust for URL corroboration. Below this,
+// incidental substring hits get too likely.
+const MIN_SOURCE_TOKEN_LENGTH = 4
+
+// Alphanumeric characters of the marker that must appear in the URL residue.
+// Long enough that an incidental hit is implausible, short enough to survive a
+// vendor truncating the venue name.
+const MIN_MARKER_PREFIX_LENGTH = 10
+
+/**
+ * The source venue's distinguishing first word, alphanumeric-only — the token
+ * we look for in a ticket URL. Deliberately the FIRST word rather than the
+ * whole name: Cervantes sells for two rooms under one venue row, and its Other
+ * Side listings slugify to `cervantesother-side`, which the full-name token
+ * `cervantesmasterpieceballroom` would not match. Matching on `cervantes`
+ * covers both rooms.
+ *
+ * Erring short is the safe direction here: a shorter, more generic token
+ * matches MORE URLs, which means fewer skips — false negatives (a bad row we
+ * fail to drop), never false positives (a legitimate row we wrongly drop).
+ */
+function sourceVenueToken(sourceVenueName: string): string {
+  const [firstWord] = normalizeVenueName(sourceVenueName).split(/\s+/)
+  return alphanumeric(firstWord ?? '')
+}
 
 /**
  * Returns a lowercase, trimmed form of a venue name with the leading "The "
@@ -93,17 +156,22 @@ export function normalizeVenueName(name: string): string {
  * title pattern ("AT RED ROCKS" against seed "Red Rocks Amphitheatre") while
  * still flagging unambiguous full-name matches.
  *
+ * When no candidate matches, falls back to ticket-URL corroboration so shows at
+ * venues we don't crawl are caught too (issue #1286).
+ *
  * Returns `null` when:
  *   - the title contains no AT/@ marker
- *   - no candidate venue matches the marker text (full or normalized)
  *   - the matching candidate IS the source venue (legitimate self-naming)
+ *   - no candidate matches AND the ticket URL doesn't corroborate the marker
  */
 export function detectCrossVenuePresale(args: {
   title: string
   sourceVenueId: string
+  sourceVenueName: string
+  ticketUrl?: string | null | undefined
   candidates: CrossVenueCandidate[]
 }): CrossVenueMatch | null {
-  const { title, sourceVenueId, candidates } = args
+  const { title, sourceVenueId, sourceVenueName, ticketUrl, candidates } = args
 
   const markerMatch = AT_MARKER.exec(title)
   if (!markerMatch) return null
@@ -139,8 +207,73 @@ export function detectCrossVenuePresale(args: {
       matchedVenueId: candidate.id,
       matchedVenueSlug: candidate.slug,
       matchedVenueName: candidate.name,
+      reason: 'known-venue',
     }
   }
 
-  return null
+  return detectViaTicketUrl({ title, markerText, sourceVenueName, ticketUrl })
+}
+
+/**
+ * Fallback for markers naming a venue we don't crawl (issue #1286). The known-
+ * venue lookup can't help there, so the ticket URL has to supply the second
+ * signal — but only a POSITIVE one counts.
+ *
+ * The tempting rule, "the URL never mentions the source venue, so the show must
+ * be elsewhere", is wrong. Ticketmaster encodes the city, not the venue
+ * (`/emei-night-at-the-opera-tour-denver-colorado-10-08-2026/event/…`), so its
+ * links never mention any venue and that rule drops legitimate shows. A dry run
+ * over 946 upcoming prod rows on 2026-08-01 produced six such false positives.
+ *
+ * So we require the URL to name the marker's venue *on its own*: strip the
+ * slugified title out of the path, and look for the marker in what's left. Etix
+ * appends the host venue after the title
+ * (`/brother-ali-at-the-black-sheep-denver-the-black-sheep`), so the residue
+ * says `the-black-sheep` independently of the title. Vendors that encode only a
+ * city leave a residue that corroborates nothing, and we correctly keep the row.
+ */
+function detectViaTicketUrl(args: {
+  title: string
+  markerText: string
+  sourceVenueName: string
+  ticketUrl?: string | null | undefined
+}): CrossVenueMatch | null {
+  const { title, markerText, sourceVenueName, ticketUrl } = args
+
+  if (!ticketUrl) return null
+
+  const token = sourceVenueToken(sourceVenueName)
+  if (token.length < MIN_SOURCE_TOKEN_LENGTH) return null
+
+  // The marker names the source venue, so the title isn't pointing elsewhere
+  // regardless of what the URL says.
+  const markerAlnum = alphanumeric(markerText)
+  if (markerAlnum.includes(token)) return null
+
+  const pathAlnum = alphanumeric(ticketPath(ticketUrl))
+
+  // The URL names the source venue — it's saying the show is right here.
+  if (pathAlnum.includes(token)) return null
+
+  // Everything in the path that isn't the title. Vendors truncate long titles,
+  // in which case nothing is removed and the residue is the whole path — still
+  // safe, because the marker then has to survive the prefix test below against
+  // a string that already failed to contain the source venue.
+  const residue = pathAlnum.split(alphanumeric(title)).join('')
+
+  // Compare on a prefix, not the whole marker: Etix renders
+  // "TWO RIVERS PARK, GLENWOOD SPRINGS" as just `two-rivers-park`, so requiring
+  // the full marker would miss it. The prefix must be long enough that an
+  // incidental hit is implausible — markers shorter than this can't be
+  // corroborated at all, which drops "…At Once Tour" and "…(Pre-Fest at Ratio)".
+  if (markerAlnum.length < MIN_MARKER_PREFIX_LENGTH) return null
+  if (!residue.includes(markerAlnum.slice(0, MIN_MARKER_PREFIX_LENGTH)))
+    return null
+
+  return {
+    matchedVenueId: null,
+    matchedVenueSlug: null,
+    matchedVenueName: markerText,
+    reason: 'ticket-url',
+  }
 }

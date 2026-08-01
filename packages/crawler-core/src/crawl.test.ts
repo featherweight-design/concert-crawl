@@ -1097,7 +1097,7 @@ describe('crawlVenue — cross-venue presale filter (#605)', () => {
     expect(run.eventsInserted).toBe(1)
   })
 
-  it('does NOT skip when no candidates are provided (default empty list)', async () => {
+  it('does NOT skip when no candidates are provided and the ticket URL names the source venue', async () => {
     const sourceVenue = seedVenue()
 
     mockFetchPage.mockResolvedValue({
@@ -1114,7 +1114,8 @@ describe('crawlVenue — cross-venue presale filter (#605)', () => {
           date: '2026-08-15',
           doorsTime: undefined,
           showTime: undefined,
-          ticketUrl: 'https://cervantes.example.com/tickets',
+          ticketUrl:
+            'https://tickets.example.com/p/1/earl-sweatshirt-denver-test-venue',
           sourceUrl: sourceVenue.websiteUrl,
           confidence: 0.9,
         },
@@ -1122,11 +1123,45 @@ describe('crawlVenue — cross-venue presale filter (#605)', () => {
       usage: { inputTokens: 100, outputTokens: 50 },
     })
 
-    // Don't pass candidates → defaults to [] → filter is a no-op.
+    // Don't pass candidates → defaults to []. The known-venue path can't fire,
+    // and the ticket URL names the source venue, so nothing is skipped.
     const run = await crawlVenue(sourceVenue.id, mockBrowser)
 
     expect(run.status).toBe('success')
     expect(run.eventsInserted).toBe(1)
+  })
+
+  it('skips an un-crawled venue via ticket-URL corroboration (#1286)', async () => {
+    const sourceVenue = seedVenue()
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: sourceVenue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Brother Ali AT THE BLACK SHEEP',
+          rawTitle: 'Brother Ali AT THE BLACK SHEEP',
+          artist: 'Brother Ali',
+          date: '2026-08-15',
+          doorsTime: undefined,
+          showTime: undefined,
+          // The Black Sheep is in Colorado Springs and isn't a venue we crawl,
+          // so no candidate can match. The URL path is the only other signal.
+          ticketUrl:
+            'https://tickets.example.com/p/1/brother-ali-denver-the-black-sheep',
+          sourceUrl: sourceVenue.websiteUrl,
+          confidence: 0.9,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const run = await crawlVenue(sourceVenue.id, mockBrowser)
+
+    expect(run.eventsInserted).toBe(0)
   })
 
   // Regression test for the 2026-06-26 Cervantes Mission-Ballroom duplicate

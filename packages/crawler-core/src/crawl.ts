@@ -564,6 +564,8 @@ export async function crawlVenue(
       const match = detectCrossVenuePresale({
         title: evt.rawTitle,
         sourceVenueId: venueId,
+        sourceVenueName: venue.name,
+        ticketUrl: evt.ticketUrl,
         candidates: crossVenueCandidates,
       })
       if (!match) return true
@@ -573,6 +575,8 @@ export async function crawlVenue(
           sourceUrl: evt.sourceUrl,
           sourceVenueSlug: venue.slug,
           matchedVenueSlug: match.matchedVenueSlug,
+          matchedVenueName: match.matchedVenueName,
+          reason: match.reason,
           title: evt.title,
           rawTitle: evt.rawTitle,
         }),

@@ -46,6 +46,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: 'Earl Sweatshirt & MIKE w/ Harrison (Surf Gang) AT OGDEN THEATRE',
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
     })
 
@@ -53,6 +54,7 @@ describe('detectCrossVenuePresale', () => {
       matchedVenueId: 'venue-ogden',
       matchedVenueSlug: 'ogden-theatre',
       matchedVenueName: 'Ogden Theatre',
+      reason: 'known-venue',
     })
   })
 
@@ -60,6 +62,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: 'Earl Sweatshirt & MIKE at ogden theatre',
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
     })
 
@@ -70,6 +73,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: 'Earl Sweatshirt & MIKE @ Ogden Theatre',
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
     })
 
@@ -80,6 +84,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: 'Some Artist AT Ogden Theatre',
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
     })
 
@@ -90,6 +95,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: 'Artist AT OGDEN THEATRE   ',
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
     })
 
@@ -100,6 +106,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: 'Live At Last',
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
     })
 
@@ -110,6 +117,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: 'Acoustic Set @ home',
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
     })
 
@@ -122,6 +130,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: "Some Band AT CERVANTES' MASTERPIECE BALLROOM",
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
     })
 
@@ -132,6 +141,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: 'Earl Sweatshirt Home on the Range Tour',
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
     })
 
@@ -142,6 +152,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: 'Artist AT OGDEN THEATRE',
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: [],
     })
 
@@ -152,6 +163,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: 'Indie Band w/ Support AT BLUEBIRD THEATER',
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
     })
 
@@ -163,6 +175,7 @@ describe('detectCrossVenuePresale', () => {
     const result = detectCrossVenuePresale({
       title: 'Artist AT OGDEN THEATRE BALCONY',
       sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
       candidates: CANDIDATES,
     })
 
@@ -174,6 +187,7 @@ describe('detectCrossVenuePresale', () => {
       const result = detectCrossVenuePresale({
         title: 'Jam Band Tour AT RED ROCKS',
         sourceVenueId: 'venue-cervantes',
+        sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
       })
 
@@ -184,6 +198,7 @@ describe('detectCrossVenuePresale', () => {
       const result = detectCrossVenuePresale({
         title: 'Artist On Tour AT OGDEN',
         sourceVenueId: 'venue-cervantes',
+        sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
       })
 
@@ -194,6 +209,7 @@ describe('detectCrossVenuePresale', () => {
       const result = detectCrossVenuePresale({
         title: 'Headliner AT FILLMORE',
         sourceVenueId: 'venue-cervantes',
+        sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
       })
 
@@ -204,6 +220,7 @@ describe('detectCrossVenuePresale', () => {
       const result = detectCrossVenuePresale({
         title: 'Headliner AT THE FILLMORE',
         sourceVenueId: 'venue-cervantes',
+        sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
       })
 
@@ -217,6 +234,7 @@ describe('detectCrossVenuePresale', () => {
       const result = detectCrossVenuePresale({
         title: 'Artist AT SUMMIT MUSIC',
         sourceVenueId: 'venue-cervantes',
+        sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
       })
 
@@ -229,6 +247,7 @@ describe('detectCrossVenuePresale', () => {
       const result = detectCrossVenuePresale({
         title: 'Artist AT LAST',
         sourceVenueId: 'venue-cervantes',
+        sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
       })
 
@@ -240,7 +259,172 @@ describe('detectCrossVenuePresale', () => {
       const result = detectCrossVenuePresale({
         title: "Band AT CERVANTES' MASTERPIECE",
         sourceVenueId: 'venue-cervantes',
+        sourceVenueName: "Cervantes' Masterpiece Ballroom",
         candidates: CANDIDATES,
+      })
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('ticket-URL corroboration for venues we do not crawl (#1286)', () => {
+    // Etix encodes the host venue in the purchase link, after the slugified
+    // title: `<title>-<city>-<venue>`. These URLs are copied verbatim from
+    // prod rows on 2026-08-01.
+    const CERVANTES = {
+      sourceVenueId: 'venue-cervantes',
+      sourceVenueName: "Cervantes' Masterpiece Ballroom",
+      candidates: CANDIDATES,
+    }
+
+    it('ignores the ?cobrand= query param, which names the SELLING venue on every link', () => {
+      const result = detectCrossVenuePresale({
+        ...CERVANTES,
+        title: 'Brother Ali AT THE BLACK SHEEP',
+        ticketUrl:
+          'https://www.etix.com/ticket/p/1/brother-ali-denver-the-black-sheep?cobrand=Cervantes&partner_id=100',
+      })
+
+      expect(result?.reason).toBe('ticket-url')
+    })
+
+    it('skips a show at an un-crawled venue when the ticket URL agrees', () => {
+      const result = detectCrossVenuePresale({
+        ...CERVANTES,
+        title: 'Brother Ali AT THE BLACK SHEEP',
+        ticketUrl:
+          'https://www.etix.com/ticket/p/53930568/brother-ali-at-the-black-sheep-denver-the-black-sheep?cobrand=Cervantes',
+      })
+
+      expect(result).toEqual({
+        matchedVenueId: null,
+        matchedVenueSlug: null,
+        matchedVenueName: 'THE BLACK SHEEP',
+        reason: 'ticket-url',
+      })
+    })
+
+    it('skips an out-of-town park with no venue suffix in its name', () => {
+      const result = detectCrossVenuePresale({
+        ...CERVANTES,
+        title: 'Terrapin Roadshow AT TWO RIVERS PARK, GLENWOOD SPRINGS',
+        ticketUrl:
+          'https://www.etix.com/ticket/p/58446797/terrapin-roadshow-at-two-rivers-parkglenwood-springs-denver-two-rivers-park?cobrand=Cervantes',
+      })
+
+      expect(result?.reason).toBe('ticket-url')
+    })
+
+    it('does NOT skip a legitimate show whose title merely contains "At"', () => {
+      // Real prod listing. The marker regex fires on "At Best World Tour", but
+      // the Etix link names Cervantes, so the URL vetoes the skip.
+      const result = detectCrossVenuePresale({
+        ...CERVANTES,
+        title: 'Brenn! Amateur At Best World Tour',
+        ticketUrl:
+          'https://www.etix.com/ticket/p/35599410/brenn-denver-cervantesmasterpiece-ballroom-and-cervantes-other-side?cobrand=Cervantes',
+      })
+
+      expect(result).toBeNull()
+    })
+
+    it('does NOT skip a second-room listing (Etix slugifies it as "cervantesother-side")', () => {
+      const result = detectCrossVenuePresale({
+        ...CERVANTES,
+        title: 'Some Band At Sundown',
+        ticketUrl:
+          'https://www.etix.com/ticket/p/38246630/some-band-at-sundown-denver-cervantesother-side?cobrand=Cervantes',
+      })
+
+      expect(result).toBeNull()
+    })
+
+    it('does NOT skip when there is no ticket URL to corroborate the marker', () => {
+      const result = detectCrossVenuePresale({
+        ...CERVANTES,
+        title: 'Brother Ali AT THE BLACK SHEEP',
+        ticketUrl: null,
+      })
+
+      expect(result).toBeNull()
+    })
+
+    it('does NOT skip when the marker itself names the source venue', () => {
+      const result = detectCrossVenuePresale({
+        ...CERVANTES,
+        title: "Band AT CERVANTES' OTHER SIDE",
+        ticketUrl: 'https://tickets.example.com/p/12345/band-denver',
+      })
+
+      expect(result).toBeNull()
+    })
+
+    // Vendors that encode only the CITY corroborate nothing. Requiring a
+    // positive marker hit in the URL — rather than merely the ABSENCE of the
+    // source venue — is what keeps these real prod listings.
+    it.each([
+      [
+        'Summit Music Hall',
+        'EMEI - Night at the Opera Tour',
+        'https://www.ticketmaster.com/emei-night-at-the-opera-tour-denver-colorado-10-08-2026/event/1E0064962A0475C3',
+      ],
+      [
+        'Ball Arena',
+        'Gracie Abrams: The Look at My Life Tour presented by Capital One',
+        'https://www.ticketmaster.com/gracie-abrams-the-look-at-my-denver-colorado-12-03-2026/event/1E0064BAFCFA70CC',
+      ],
+      [
+        'Marquis Theater',
+        'BL\u00dc EYES: Two People At Once Tour',
+        'https://www.ticketmaster.com/blu-eyes-two-people-at-once-denver-colorado-10-18-2026/event/1E0064C6106FACE8',
+      ],
+      [
+        'The Fillmore Auditorium',
+        'Decibel - Metal & Beer Festival: 3-DAY PASS (Pre-Fest at Ratio)',
+        'https://www.ticketmaster.com/decibel-metal-beer-festival-3day-pass-denver-colorado-12-03-2026/event/1E006490A2EB96C9',
+      ],
+      [
+        'Larimer Lounge',
+        "Campground \u2013 BASS BINGO AFTERS \u2013 Afters at Kevin's ft. Kevin, Phatjazz",
+        'https://www.etix.com/ticket/p/57982079/campground-bass-bingo-afters-afters-at-kevins-ftkevinphatjazz-denver-campground?partner_id=100',
+      ],
+    ])(
+      'does NOT skip the %s listing %j',
+      (sourceVenueName, title, ticketUrl) => {
+        const result = detectCrossVenuePresale({
+          title,
+          sourceVenueId: 'venue-source',
+          sourceVenueName,
+          ticketUrl,
+          candidates: CANDIDATES,
+        })
+
+        expect(result).toBeNull()
+      },
+    )
+
+    it('prefers a known-venue match over URL corroboration', () => {
+      const result = detectCrossVenuePresale({
+        ...CERVANTES,
+        title: 'Headliner AT OGDEN THEATRE',
+        ticketUrl:
+          'https://www.etix.com/ticket/p/1/headliner-denver-ogden-theatre',
+      })
+
+      expect(result?.reason).toBe('known-venue')
+      expect(result?.matchedVenueId).toBe('venue-ogden')
+    })
+
+    it('does NOT skip when the source venue name is too short to be a reliable token', () => {
+      // A one-to-three character first word would hit incidental substrings, so
+      // corroboration bails rather than risk dropping a real show.
+      const result = detectCrossVenuePresale({
+        sourceVenueId: 'venue-hq',
+        sourceVenueName: 'HQ',
+        candidates: [],
+        title: 'Artist AT THE BLACK SHEEP',
+        ticketUrl:
+          'https://www.etix.com/ticket/p/1/artist-denver-the-black-sheep',
       })
 
       expect(result).toBeNull()
