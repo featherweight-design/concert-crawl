@@ -1,3 +1,10 @@
+## [1.178.1](https://github.com/HartiganHM/concert-crawl/compare/v1.178.0...v1.178.1) (2026-08-01)
+
+
+### Bug Fixes
+
+* **admin:** restore the Add venue button on desktop ([b281c64](https://github.com/HartiganHM/concert-crawl/commit/b281c641e2b62ac8a1b843b8347bb6d8e0d8a97d))
+
 # [1.178.0](https://github.com/HartiganHM/concert-crawl/compare/v1.177.0...v1.178.0) (2026-07-31)
 
 
