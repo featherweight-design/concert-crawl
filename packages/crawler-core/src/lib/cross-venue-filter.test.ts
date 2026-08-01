@@ -403,6 +403,36 @@ describe('detectCrossVenuePresale', () => {
       },
     )
 
+    it.each([
+      ['a relative href', '/ticket/p/1/brother-ali-denver-the-black-sheep'],
+      [
+        'a protocol-relative href',
+        '//www.etix.com/ticket/p/1/brother-ali-denver-the-black-sheep',
+      ],
+    ])('corroborates against %s', (_label, ticketUrl) => {
+      const result = detectCrossVenuePresale({
+        ...CERVANTES,
+        title: 'Brother Ali AT THE BLACK SHEEP',
+        ticketUrl,
+      })
+
+      expect(result?.reason).toBe('ticket-url')
+    })
+
+    it.each([
+      ['a malformed URL', 'https://'],
+      ['a host with no path', 'https://www.etix.com'],
+      ['an empty string', ''],
+    ])('does NOT skip when the ticket URL is %s', (_label, ticketUrl) => {
+      const result = detectCrossVenuePresale({
+        ...CERVANTES,
+        title: 'Brother Ali AT THE BLACK SHEEP',
+        ticketUrl,
+      })
+
+      expect(result).toBeNull()
+    })
+
     it('prefers a known-venue match over URL corroboration', () => {
       const result = detectCrossVenuePresale({
         ...CERVANTES,

@@ -87,15 +87,18 @@ function alphanumeric(value: string): string {
  * This is load-bearing, not tidying: Etix appends `?cobrand=Cervantes` to every
  * link Cervantes sells — including the off-site ones — so the query string
  * names the SELLING venue and would veto every skip. Only the path encodes the
- * host venue. Falls back to a manual split for non-absolute URLs, which `new
- * URL()` rejects.
+ * host venue.
+ *
+ * Parsed by hand rather than with `new URL()` so a malformed href is just a
+ * value that corroborates nothing, rather than an exception we'd have to
+ * swallow. Relative hrefs work too — they have no scheme or host to strip.
+ * Returns '' when there is no path, which never corroborates.
  */
 function ticketPath(url: string): string {
-  try {
-    return new URL(url).pathname
-  } catch {
-    return url.split(/[?#]/)[0] ?? ''
-  }
+  const withoutQuery = url.split(/[?#]/)[0] ?? ''
+  const withoutScheme = withoutQuery.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '')
+  const pathStart = withoutScheme.indexOf('/')
+  return pathStart === -1 ? '' : withoutScheme.slice(pathStart)
 }
 
 // Shortest source-venue token we'll trust for URL corroboration. Below this,
