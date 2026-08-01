@@ -1,3 +1,12 @@
+## [1.178.7](https://github.com/HartiganHM/concert-crawl/compare/v1.178.6...v1.178.7) (2026-08-01)
+
+
+### Bug Fixes
+
+* **crawler:** catch cross-venue shows at venues we don't crawl ([401bcc2](https://github.com/HartiganHM/concert-crawl/commit/401bcc2da8ab7c64af4f1a92aecfe0e84bf28d75)), closes [#1286](https://github.com/HartiganHM/concert-crawl/issues/1286)
+* **crawler:** keep the first segment of scheme-less ticket hrefs ([024f4f3](https://github.com/HartiganHM/concert-crawl/commit/024f4f3154a8d08ce1b0db7bbf363b2c1022535a))
+* **crawler:** strip the host from protocol-relative ticket URLs ([4bc1420](https://github.com/HartiganHM/concert-crawl/commit/4bc1420ef2a860811babee64e60875a70753a394))
+
 ## [1.178.6](https://github.com/HartiganHM/concert-crawl/compare/v1.178.5...v1.178.6) (2026-08-01)
 
 
