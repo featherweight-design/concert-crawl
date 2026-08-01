@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.21.0-beta',
+    date: 'Aug 1, 2026',
+    headline: 'The Oriental Theater is on the calendar.',
+    items: [
+      {
+        kind: 'added',
+        text: 'The Oriental Theater — the 1927 marquee on Tennyson — now shows up in browse and search, with every upcoming night, door and show times, and a ticket link that goes straight to checkout.',
+      },
+    ],
+  },
+  {
     version: 'v0.19.0-beta',
     date: 'Jul 29, 2026',
     headline: 'Sign up mid-show and you land back on the show.',
