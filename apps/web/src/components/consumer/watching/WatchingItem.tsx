@@ -13,6 +13,7 @@ import { isInNudgeWindow } from '@/lib/going/nudge-window'
 import { markNudge, readNudgeState } from '@/lib/going/nudge-dismissal'
 import type { NudgeOutcome } from '@/lib/going/nudge-dismissal'
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle'
+import { isOptimisticWatchRow } from '@/lib/queries/optimistic-watch-row'
 
 const COPY = CONSUMER_COPY.watching
 
@@ -128,14 +129,22 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
   const [answered, setAnswered] = useState<NudgeOutcome | null | undefined>(
     undefined,
   )
+  // Keyed on the watch row, so unwatching and re-watching clears the answer and
+  // the nudge is free to ask again.
   useEffect(() => {
-    setAnswered(readNudgeState(show.eventId))
-  }, [show.eventId])
+    setAnswered(readNudgeState(show.userEventId))
+  }, [show.userEventId])
 
-  const nudging = answered === null && isInNudgeWindow(show)
+  // An optimistic row's id is a placeholder the server response replaces, so an
+  // answer recorded against it would be forgotten the moment the real id lands
+  // and the nudge would reappear. Hold it back for that one network hop.
+  const nudging =
+    answered === null &&
+    !isOptimisticWatchRow(show.userEventId) &&
+    isInNudgeWindow(show)
 
   const answer = (outcome: NudgeOutcome) => {
-    markNudge(show.eventId, outcome)
+    markNudge(show.userEventId, outcome)
     setAnswered(outcome)
   }
 
@@ -410,12 +419,11 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
           attending.mutate(
             { eventId: show.eventId, going: true },
             {
-              onSuccess: () => markNudge(show.eventId, 'going'),
+              onSuccess: () => markNudge(show.userEventId, 'going'),
               onError: () => setAnswered(null),
             },
           )
         }}
-        onDecline={() => answer('declined')}
         onDismiss={() => answer('dismissed')}
       />
     </div>

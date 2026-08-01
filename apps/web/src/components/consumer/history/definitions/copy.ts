@@ -14,13 +14,11 @@ export const HISTORY_COPY = {
     ariaLabel: 'My shows',
     watching: 'Watching',
     history: 'History',
-    tierChip: (tierName: string) => `+ ${tierName}`,
   },
 
   header: {
     eyebrow: 'HISTORY',
     range: 'all time',
-    tierChip: (tierName: string) => `+ ${tierName}`,
     since: (label: string) => `since ${label}`,
     stats: {
       nightsSingular: 'night',

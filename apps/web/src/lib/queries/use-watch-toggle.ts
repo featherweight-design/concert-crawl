@@ -6,6 +6,7 @@ import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types'
 import { apiClient } from '@/lib/api'
 import { watchingQueryKey } from './use-watching'
 import { eventWatchersEventKey } from './use-event-watchers'
+import { OPTIMISTIC_ID_PREFIX } from './optimistic-watch-row'
 
 export function useWatchToggle() {
   const queryClient = useQueryClient()
@@ -36,11 +37,12 @@ export function useWatchToggle() {
         (show) => show.eventId === eventId,
       )
 
-      // Use a unique userEventId placeholder so concurrent in-flight optimistic
-      // entries (multiple toggles in quick succession) never share the same key.
+      // A prefixed, per-event userEventId placeholder: unique across concurrent
+      // optimistic entries, and recognisable as not-yet-real via
+      // isOptimisticWatchRow until the server's id replaces it.
       const todayIso = new Date().toISOString().slice(0, 10)
       const optimisticStub: WatchingShow = {
-        userEventId: `optimistic-${eventId}`,
+        userEventId: `${OPTIMISTIC_ID_PREFIX}${eventId}`,
         eventId,
         artist: '',
         venueName: '',

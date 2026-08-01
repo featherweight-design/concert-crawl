@@ -1,19 +1,27 @@
-// Per-device record of answered "Still going?" nudges (#70).
+// Per-device record of answered "Going to this show?" nudges (#70).
 //
 // localStorage for v1, deliberately — no user-record sync. The accepted cost is
 // that a second device may ask once more; the alternative is a write endpoint
 // and a migration for a banner that fires at most once per show.
+//
+// Records are keyed by `userEventId` — the watch row — not by `eventId`.
+// Unwatching deletes that row, so re-watching mints a new id and the nudge gets
+// to ask again. Keying by event made a single dismissal permanent for that show
+// no matter how many times the user re-watched it.
 //
 // Read/write/guard shape follows the shipped lib/pwa/post-watch-dismissal.ts,
 // and the parsed blob goes through a type guard the way install-dismissal.ts
 // does — `apps/web` carries no Zod dependency, and localStorage is untrusted
 // input, so it must be narrowed rather than cast.
 
-const KEY = 'cc-nudge-dismissed'
+// Distinct from the retired `cc-nudge-dismissed`: both the key space
+// (userEventId, not eventId) and the outcome set changed, so a fresh key avoids
+// the guard rejecting a whole legacy store over one unrecognised value.
+const KEY = 'cc-nudge-answered'
 
-export type NudgeOutcome = 'going' | 'declined' | 'dismissed'
+export type NudgeOutcome = 'going' | 'dismissed'
 
-const OUTCOMES: readonly string[] = ['going', 'declined', 'dismissed']
+const OUTCOMES: readonly string[] = ['going', 'dismissed']
 
 const isStore = (value: unknown): value is Record<string, NudgeOutcome> => {
   // Arrays and null are typeof 'object' — both must be rejected before the
@@ -39,15 +47,15 @@ const readStore = (): Record<string, NudgeOutcome> => {
   }
 }
 
-export const readNudgeState = (eventId: string): NudgeOutcome | null =>
-  readStore()[eventId] ?? null
+export const readNudgeState = (userEventId: string): NudgeOutcome | null =>
+  readStore()[userEventId] ?? null
 
-export const markNudge = (eventId: string, outcome: NudgeOutcome): void => {
+export const markNudge = (userEventId: string, outcome: NudgeOutcome): void => {
   try {
     if (typeof localStorage === 'undefined') return
     localStorage.setItem(
       KEY,
-      JSON.stringify({ ...readStore(), [eventId]: outcome }),
+      JSON.stringify({ ...readStore(), [userEventId]: outcome }),
     )
   } catch (writeErr) {
     // Quota-exceeded or disabled storage — no-op so a failed persist can't

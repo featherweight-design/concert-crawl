@@ -89,12 +89,14 @@ describe('GoingButton', () => {
     },
   )
 
-  it('disables and dims while pending', () => {
+  // Blocks a second tap but stays undimmed: the caller commits optimistically,
+  // so dimming here would undo the point of the optimistic state.
+  it('blocks a second tap while pending without dimming', () => {
     const onChange = vi.fn()
     render(<GoingButton show={SHOW} pending onChange={onChange} />)
     const button = screen.getByRole('button')
     expect(button).toBeDisabled()
-    expect(button.style.opacity).toBe('0.6')
+    expect(button.style.opacity).toBe('1')
     fireEvent.click(button)
     expect(onChange).not.toHaveBeenCalled()
   })

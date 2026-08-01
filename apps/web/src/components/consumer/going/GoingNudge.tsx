@@ -6,7 +6,7 @@
 // Appears beneath a Watching row while the night is still ahead. Tone is
 // helpful, not nagging — one line, accent-tinted, no exclamation. The caller
 // owns the window check and the per-device memory; this component only draws
-// and reports which of the three actions was taken.
+// and reports whether the night was committed to or the nudge dismissed.
 
 import type { CSSProperties } from 'react'
 import type { WatchingShow } from '@concert-crawl/types'
@@ -17,7 +17,6 @@ import { daysUntilLabel } from '@/lib/going/nudge-window'
 type GoingNudgeProps = {
   show: Pick<WatchingShow, 'artist' | 'date'>
   onYes: () => void
-  onDecline: () => void
   onDismiss: () => void
 }
 
@@ -68,12 +67,7 @@ const RESET: CSSProperties = {
   fontFamily: 'var(--font-ui)',
 }
 
-export const GoingNudge = ({
-  show,
-  onYes,
-  onDecline,
-  onDismiss,
-}: GoingNudgeProps) => {
+export const GoingNudge = ({ show, onYes, onDismiss }: GoingNudgeProps) => {
   const accent = stampAccentFor(show.artist)
 
   return (
@@ -150,22 +144,8 @@ export const GoingNudge = ({
         {GOING_COPY.nudge.yes}
       </button>
 
-      <button
-        type="button"
-        className="going-nudge-action"
-        onClick={onDecline}
-        style={{
-          ...RESET,
-          padding: '7px 9px',
-          borderRadius: 7,
-          color: 'var(--fg-muted)',
-          fontSize: 12,
-          fontWeight: 600,
-        }}
-      >
-        {GOING_COPY.nudge.decline}
-      </button>
-
+      {/* No "Not me" twin — the dismiss X already covers "not answering this",
+          and two ways to say no on one banner is one too many. */}
       <button
         type="button"
         className="going-nudge-action"

@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { readNudgeState, markNudge } from './nudge-dismissal'
 
-const KEY = 'cc-nudge-dismissed'
+const KEY = 'cc-nudge-answered'
 
 beforeEach(() => {
   localStorage.clear()
@@ -16,14 +16,19 @@ describe('nudge-dismissal', () => {
     expect(readNudgeState('ev1')).toBeNull()
   })
 
-  it('remembers each outcome against its own show', () => {
-    markNudge('ev1', 'going')
-    markNudge('ev2', 'declined')
-    markNudge('ev3', 'dismissed')
+  it('remembers each outcome against its own watch row', () => {
+    markNudge('ue1', 'going')
+    markNudge('ue2', 'dismissed')
 
-    expect(readNudgeState('ev1')).toBe('going')
-    expect(readNudgeState('ev2')).toBe('declined')
-    expect(readNudgeState('ev3')).toBe('dismissed')
+    expect(readNudgeState('ue1')).toBe('going')
+    expect(readNudgeState('ue2')).toBe('dismissed')
+  })
+
+  // Unwatching deletes the user_events row, so a re-watch mints a new id and
+  // the nudge is free to ask again — the bug that keying on eventId caused.
+  it('forgets the answer when the show is re-watched under a new watch row', () => {
+    markNudge('ue1', 'dismissed')
+    expect(readNudgeState('ue2')).toBeNull()
   })
 
   it('keeps earlier answers when a later show is answered', () => {

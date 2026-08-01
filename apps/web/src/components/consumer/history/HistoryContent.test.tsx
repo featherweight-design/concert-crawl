@@ -200,7 +200,7 @@ describe('HistoryContent', () => {
     expect(screen.getByText('March')).toBeInTheDocument()
   })
 
-  it('stacks the rail below the list on mobile and sticks it at lg', () => {
+  it('stacks the rail above the list on mobile and sticks it at lg', () => {
     // One component, one media query — not a second desktop tree.
     const { container } = render(
       <HistoryContent
@@ -211,15 +211,21 @@ describe('HistoryContent', () => {
     )
 
     const rail = screen.getByTestId('history-rail')
-    expect(rail.className).toContain('mt-4')
+    expect(rail.className).toContain('mb-4')
     expect(rail.className).toContain('lg:sticky')
-    expect(rail.className).toContain('lg:mt-0')
+    expect(rail.className).toContain('lg:mb-0')
 
     const grid = container.querySelector('.lg\\:grid')
     expect(grid).not.toBeNull()
     expect(grid?.className).toContain('lg:grid-cols-[1fr_320px]')
-    // The rail is inside the grid, after the list column.
     expect(grid?.contains(rail)).toBe(true)
+
+    // First in the DOM so the export and Passport sit above the list on mobile,
+    // where the tail of a long history buried them. Explicit grid placement puts
+    // the rail back in the right-hand column at lg.
+    expect(grid?.firstElementChild).toBe(rail)
+    expect(rail.className).toContain('lg:col-start-2')
+    expect(rail.className).toContain('lg:row-start-1')
   })
 
   it('mounts the calendar row and the Passport teaser in the rail', () => {

@@ -48,6 +48,19 @@ const event = (over: Partial<GoingCtaEvent> = {}): GoingCtaEvent => ({
 const renderBlock = (over: Partial<GoingCtaEvent> = {}) =>
   render(<EventDetailCtaBlock event={event(over)} scaRegion={false} />)
 
+// The block renders two buttons — the commitment CTA and the explainer tooltip
+// trigger — so every query has to say which one it means.
+const goingButton = (): HTMLElement => {
+  const found = screen
+    .getAllByRole('button')
+    .find(
+      (btn) =>
+        btn.getAttribute('aria-label') !== GOING_COPY.explainer.triggerLabel,
+    )
+  if (found === undefined) throw new Error('no commitment CTA rendered')
+  return found
+}
+
 describe('EventDetailCtaBlock', () => {
   beforeEach(() => {
     mutate.mockReset()
@@ -59,28 +72,22 @@ describe('EventDetailCtaBlock', () => {
 
   it('offers the commitment on an upcoming show the user has not marked', () => {
     renderBlock()
-    expect(screen.getByRole('button')).toHaveTextContent(
-      GOING_COPY.button.default,
-    )
+    expect(goingButton()).toHaveTextContent(GOING_COPY.button.default)
   })
 
   it('reflects the commitment on an upcoming show already marked', () => {
     renderBlock({ attendingAt: '2026-01-01T00:00:00.000Z' })
-    expect(screen.getByRole('button')).toHaveTextContent(
-      GOING_COPY.button.going,
-    )
+    expect(goingButton()).toHaveTextContent(GOING_COPY.button.going)
   })
 
   it('shows the attended state on a past show that was marked', () => {
     renderBlock({ date: '2020-10-14', attendingAt: '2020-10-14T00:00:00.000Z' })
-    expect(screen.getByRole('button')).toHaveTextContent('You went')
+    expect(goingButton()).toHaveTextContent('You went')
   })
 
   it('shows the declined state on a past show that was never marked', () => {
     renderBlock({ date: '2020-10-14' })
-    expect(screen.getByRole('button')).toHaveTextContent(
-      GOING_COPY.button.pastNo,
-    )
+    expect(goingButton()).toHaveTextContent(GOING_COPY.button.pastNo)
   })
 
   it('renders nothing for a cancelled show', () => {
@@ -96,7 +103,7 @@ describe('EventDetailCtaBlock', () => {
 
   it('commits and refreshes the server-rendered page on tap', () => {
     renderBlock()
-    fireEvent.click(screen.getByRole('button'))
+    fireEvent.click(goingButton())
     expect(mutate).toHaveBeenCalledWith(
       { eventId: 'ev1', going: true },
       expect.anything(),
@@ -105,7 +112,7 @@ describe('EventDetailCtaBlock', () => {
 
   it('releases the commitment when tapped while going', () => {
     renderBlock({ attendingAt: '2026-01-01T00:00:00.000Z' })
-    fireEvent.click(screen.getByRole('button'))
+    fireEvent.click(goingButton())
     expect(mutate).toHaveBeenCalledWith(
       { eventId: 'ev1', going: false },
       expect.anything(),
@@ -115,7 +122,7 @@ describe('EventDetailCtaBlock', () => {
   it('routes a locked tap to the upgrade path instead of mutating', () => {
     entitlement = { isLoading: false, active: false, surface: 'paywall-on-tap' }
     renderBlock()
-    fireEvent.click(screen.getByRole('button'))
+    fireEvent.click(goingButton())
     expect(mutate).not.toHaveBeenCalled()
     expect(screen.getByTestId('tier-picker')).toHaveAttribute(
       'data-entry',
@@ -130,7 +137,7 @@ describe('EventDetailCtaBlock', () => {
       surface: 'tier-picker-on-tap',
     }
     renderBlock()
-    fireEvent.click(screen.getByRole('button'))
+    fireEvent.click(goingButton())
     // Not `logged-out-paywall`: this reach is for Concert History, and the
     // entry keys the gate's copy as well as the funnel dimension.
     expect(screen.getByTestId('tier-picker')).toHaveAttribute(
@@ -139,20 +146,62 @@ describe('EventDetailCtaBlock', () => {
     )
   })
 
-  it('explains what the two affordances do before a commitment exists', () => {
+  // The going-vs-watch distinction now sits behind a tooltip rather than a
+  // standing line, so the CTAs aren't buried under explanatory copy.
+  it('keeps the difference explainer behind a tooltip trigger', () => {
     renderBlock()
-    expect(screen.getByText(GOING_COPY.support.default)).toBeInTheDocument()
+    expect(
+      screen.queryByText(GOING_COPY.explainer.content),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: GOING_COPY.explainer.triggerLabel }),
+    )
+    expect(screen.getByText(GOING_COPY.explainer.content)).toBeInTheDocument()
   })
 
-  it('promises the history entry once committed', () => {
-    renderBlock({ attendingAt: '2026-01-01T00:00:00.000Z' })
-    expect(screen.getByText(GOING_COPY.support.going)).toBeInTheDocument()
+  // The mutation only lands in the tree via router.refresh(), so without a
+  // local override the button sat unchanged until the server HTML arrived.
+  it('shows the committed state immediately, before the server agrees', () => {
+    mutate.mockImplementation(() => {})
+    renderBlock()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: GOING_COPY.button.ariaNotGoing }),
+    )
+    expect(screen.getByText(GOING_COPY.button.going)).toBeInTheDocument()
+  })
+
+  // Go, then release before the first refresh lands. When that first refresh
+  // finally arrives it carries the now-stale "going" state — the UI has to keep
+  // showing the second tap rather than flashing back.
+  it('holds the latest tap when a stale refresh arrives', () => {
+    mutate.mockImplementation(() => {})
+    const { rerender } = render(
+      <EventDetailCtaBlock event={event()} scaRegion={false} />,
+    )
+
+    fireEvent.click(goingButton())
+    fireEvent.click(goingButton())
+    expect(goingButton().getAttribute('aria-label')).toBe(
+      GOING_COPY.button.ariaNotGoing,
+    )
+
+    rerender(
+      <EventDetailCtaBlock
+        event={event({ attendingAt: '2099-10-01T00:00:00.000Z' })}
+        scaRegion={false}
+      />,
+    )
+    expect(goingButton().getAttribute('aria-label')).toBe(
+      GOING_COPY.button.ariaNotGoing,
+    )
   })
 
   it('surfaces a failure without leaving the row silent', () => {
     mutate.mockImplementation((_input, options) => options.onError())
     renderBlock()
-    fireEvent.click(screen.getByRole('button'))
+    fireEvent.click(goingButton())
     expect(screen.getByText(GOING_COPY.error.failed)).toBeInTheDocument()
   })
 
@@ -163,7 +212,7 @@ describe('EventDetailCtaBlock', () => {
       ),
     )
     renderBlock()
-    fireEvent.click(screen.getByRole('button'))
+    fireEvent.click(goingButton())
     expect(screen.getByTestId('tier-picker')).toBeInTheDocument()
     expect(screen.queryByText(GOING_COPY.error.failed)).toBeNull()
   })
@@ -171,13 +220,13 @@ describe('EventDetailCtaBlock', () => {
   it('refreshes the page after a successful commitment', () => {
     mutate.mockImplementation((_input, options) => options.onSuccess())
     renderBlock()
-    fireEvent.click(screen.getByRole('button'))
+    fireEvent.click(goingButton())
     expect(refresh).toHaveBeenCalled()
   })
 
   it('disables the commitment while the toggle is in flight', () => {
     isPending = true
     renderBlock()
-    expect(screen.getByRole('button')).toBeDisabled()
+    expect(goingButton()).toBeDisabled()
   })
 })

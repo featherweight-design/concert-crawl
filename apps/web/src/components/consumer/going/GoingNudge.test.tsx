@@ -14,17 +14,9 @@ const SHOW = { artist: 'Wednesday', date: '2099-01-05' }
 
 const renderNudge = () => {
   const onYes = vi.fn()
-  const onDecline = vi.fn()
   const onDismiss = vi.fn()
-  render(
-    <GoingNudge
-      show={SHOW}
-      onYes={onYes}
-      onDecline={onDecline}
-      onDismiss={onDismiss}
-    />,
-  )
-  return { onYes, onDecline, onDismiss }
+  render(<GoingNudge show={SHOW} onYes={onYes} onDismiss={onDismiss} />)
+  return { onYes, onDismiss }
 }
 
 describe('GoingNudge', () => {
@@ -40,26 +32,20 @@ describe('GoingNudge', () => {
     expect(banner.getAttribute('aria-live')).toBe('polite')
   })
 
-  it('offers the three actions in commitment-first order', () => {
+  // Two actions, not three: the dismiss X is the only way to say no, so there
+  // is no "Not me" twin beside the commitment.
+  it('offers only the commitment and the dismiss', () => {
     renderNudge()
     expect(screen.getAllByRole('button').map((btn) => btn.textContent)).toEqual(
-      [GOING_COPY.nudge.yes, GOING_COPY.nudge.decline, ''],
+      [GOING_COPY.nudge.yes, ''],
     )
   })
 
   it('reports a commitment', () => {
-    const { onYes, onDecline, onDismiss } = renderNudge()
+    const { onYes, onDismiss } = renderNudge()
     fireEvent.click(screen.getByText(GOING_COPY.nudge.yes))
     expect(onYes).toHaveBeenCalledTimes(1)
-    expect(onDecline).not.toHaveBeenCalled()
     expect(onDismiss).not.toHaveBeenCalled()
-  })
-
-  it('reports a decline', () => {
-    const { onYes, onDecline } = renderNudge()
-    fireEvent.click(screen.getByText(GOING_COPY.nudge.decline))
-    expect(onDecline).toHaveBeenCalledTimes(1)
-    expect(onYes).not.toHaveBeenCalled()
   })
 
   it('reports a dismiss from the labelled close control', () => {

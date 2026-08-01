@@ -5,15 +5,10 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { MyShowsTabs } from './MyShowsTabs'
 import { HISTORY_COPY } from './definitions/copy'
-import { unlockTierNameFor } from './lib/unlock-tier'
 
 afterEach(cleanup)
 
 const COPY = HISTORY_COPY.tabs
-
-// Derived, never named — the tier that unlocks History has moved once (#1225).
-const TIER_NAME = unlockTierNameFor('concert-history')
-if (TIER_NAME === null) throw new Error('concert-history unlocks no tier')
 
 describe('MyShowsTabs', () => {
   it('renders both tabs as links to their routes', () => {
@@ -59,9 +54,14 @@ describe('MyShowsTabs', () => {
     ).toBeInTheDocument()
   })
 
-  it('carries the tier chip on the History tab only', () => {
+  // The locked takeover is where an unentitled user meets the price; the tab
+  // itself never names a tier.
+  it('carries no tier chip on either tab', () => {
     render(<MyShowsTabs active="history" />)
 
-    expect(screen.getAllByText(COPY.tierChip(TIER_NAME))).toHaveLength(1)
+    // Match the chip's shape ("+ <tier>"), not one tier's name — renaming the
+    // tier shouldn't let the chip regress past this test.
+    expect(screen.queryByText(/^\+\s*\S/)).toBeNull()
+    expect(screen.getByRole('link', { name: COPY.history })).toBeInTheDocument()
   })
 })

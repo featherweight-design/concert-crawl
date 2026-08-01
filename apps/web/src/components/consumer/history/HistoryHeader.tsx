@@ -10,13 +10,9 @@
 // numbers, so they always render.
 
 import type { HistoryStats } from '@concert-crawl/types'
-import { unlockTierNameFor } from './lib/unlock-tier'
 import { HISTORY_COPY } from './definitions/copy'
 
 const COPY = HISTORY_COPY.header
-
-// Resolved once at module scope: a pure matrix lookup, constant per build.
-const UNLOCK_TIER_NAME = unlockTierNameFor('concert-history')
 
 // dt precedes dd in the DOM because HTML requires that order inside a <dl>
 // wrapper div; flex-col-reverse puts the big number back on top visually.
@@ -131,7 +127,9 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
 
   return (
     <header className="mb-5 border-b border-border pb-4 sm:mb-6 sm:pb-5">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
+      {/* The tier chip that used to sit opposite the eyebrow is gone — this
+          page only renders for a plan that already unlocked it. */}
+      <div className="mb-3">
         <p
           style={{
             fontFamily: 'var(--font-mono)',
@@ -145,26 +143,6 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
         >
           {COPY.eyebrow} · {COPY.range}
         </p>
-        {/* The one place --accent is spent on this surface: tier brand presence. */}
-        {UNLOCK_TIER_NAME !== null && (
-          <span
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 9,
-              fontWeight: 700,
-              letterSpacing: '0.16em',
-              textTransform: 'uppercase',
-              color: 'var(--accent)',
-              border:
-                '1px solid color-mix(in oklch, var(--accent) 45%, transparent)',
-              padding: '2px 6px',
-              borderRadius: 3,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {COPY.tierChip(UNLOCK_TIER_NAME)}
-          </span>
-        )}
       </div>
 
       {/* Wraps instead of scrolling at 320px — six tiles never fit one row. */}

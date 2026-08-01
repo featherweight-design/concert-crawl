@@ -11,13 +11,9 @@
 // associate and no in-place switching.
 
 import Link from 'next/link'
-import { unlockTierNameFor } from './lib/unlock-tier'
 import { HISTORY_COPY } from './definitions/copy'
 
 const COPY = HISTORY_COPY.tabs
-
-// Resolved once at module scope: a pure matrix lookup, constant per build.
-const UNLOCK_TIER_NAME = unlockTierNameFor('concert-history')
 
 type MyShowsTab = 'watching' | 'history'
 
@@ -25,30 +21,6 @@ const TABS: readonly { key: MyShowsTab; label: string; href: string }[] = [
   { key: 'watching', label: COPY.watching, href: '/watching' },
   { key: 'history', label: COPY.history, href: '/history' },
 ]
-
-const TierChip = ({ active }: { active: boolean }) =>
-  UNLOCK_TIER_NAME === null ? null : (
-    <span
-      style={{
-        fontFamily: 'var(--font-mono)',
-        fontSize: 8.5,
-        fontWeight: 700,
-        letterSpacing: '0.16em',
-        textTransform: 'uppercase',
-        color: active ? 'var(--accent)' : 'var(--fg-subtle)',
-        border: `1px solid ${
-          active
-            ? 'color-mix(in oklch, var(--accent) 45%, transparent)'
-            : 'var(--border)'
-        }`,
-        padding: '1.5px 5px',
-        borderRadius: 3,
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {COPY.tierChip(UNLOCK_TIER_NAME)}
-    </span>
-  )
 
 export const MyShowsTabs = ({ active }: { active: MyShowsTab }) => (
   <nav
@@ -74,8 +46,9 @@ export const MyShowsTabs = ({ active }: { active: MyShowsTab }) => (
             border: `1px solid ${current ? 'var(--border-strong)' : 'transparent'}`,
           }}
         >
+          {/* No tier chip: a subscriber shouldn't be sold the plan they're on,
+              and HistoryLocked is where an unentitled user meets the price. */}
           <span style={{ whiteSpace: 'nowrap' }}>{tab.label}</span>
-          {tab.key === 'history' && <TierChip active={current} />}
         </Link>
       )
     })}

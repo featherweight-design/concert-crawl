@@ -29,8 +29,3 @@ export const unlockTierFor = (
   }
   return null
 }
-
-// The brand-presence chips need only the name, and must render nothing at all
-// rather than an empty "+ " if the matrix ever exposes no purchasable lane.
-export const unlockTierNameFor = (feature: PremiumFeature): string | null =>
-  unlockTierFor(feature)?.name ?? null

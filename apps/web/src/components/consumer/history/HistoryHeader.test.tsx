@@ -6,15 +6,10 @@ import { render, screen, cleanup } from '@testing-library/react'
 import type { HistoryStats } from '@concert-crawl/types'
 import { HistoryHeader, historyTilesFor } from './HistoryHeader'
 import { HISTORY_COPY } from './definitions/copy'
-import { unlockTierNameFor } from './lib/unlock-tier'
 
 afterEach(cleanup)
 
 const COPY = HISTORY_COPY.header
-
-// Derived, never named — the tier that unlocks History has moved once (#1225).
-const TIER_NAME = unlockTierNameFor('concert-history')
-if (TIER_NAME === null) throw new Error('concert-history unlocks no tier')
 
 const STATS: HistoryStats = {
   nights: 12,
@@ -72,13 +67,17 @@ describe('historyTilesFor', () => {
 })
 
 describe('HistoryHeader', () => {
-  it('renders the eyebrow and the tier chip', () => {
+  // No tier chip: this header only renders for a plan that already unlocked
+  // History, so naming the tier here sells a subscriber their own plan.
+  it('renders the eyebrow without naming a tier', () => {
     render(<HistoryHeader stats={STATS} />)
 
     expect(
       screen.getByText(`${COPY.eyebrow} · ${COPY.range}`),
     ).toBeInTheDocument()
-    expect(screen.getByText(COPY.tierChip(TIER_NAME))).toBeInTheDocument()
+    // Match the chip's shape ("+ <tier>"), not one tier's name — renaming the
+    // tier shouldn't let the chip regress past this test.
+    expect(screen.queryByText(/^\+\s*\S/)).toBeNull()
   })
 
   it('renders every stat tile with its value', () => {

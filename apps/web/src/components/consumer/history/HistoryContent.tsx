@@ -93,7 +93,18 @@ export const HistoryContent = ({
       <HistoryHeader stats={history.stats} />
 
       <div className="lg:grid lg:grid-cols-[1fr_320px] lg:items-start lg:gap-8">
-        <div className="flex flex-col gap-2 sm:gap-3">
+        {/* First in the DOM so the export and the passport sit above the list on
+            mobile, where the tail of a long history buried them. The explicit
+            grid placement puts the rail back in the right-hand column at lg. */}
+        <aside
+          data-testid="history-rail"
+          className="mb-4 flex flex-col gap-3.5 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:mb-0"
+        >
+          <SaveCalendarRow count={history.shows.length} />
+          <PassportTeaser stats={history.stats} shows={history.shows} />
+        </aside>
+
+        <div className="flex flex-col gap-2 sm:gap-3 lg:col-start-1 lg:row-start-1">
           {buckets.map((bucket) => (
             <section key={bucket.key}>
               <div className="flex items-baseline gap-2 px-1 pb-1 pt-2.5">
@@ -132,15 +143,6 @@ export const HistoryContent = ({
             </section>
           ))}
         </div>
-
-        {/* Below the list on mobile, a sticky rail from lg up. */}
-        <aside
-          data-testid="history-rail"
-          className="mt-4 flex flex-col gap-3.5 lg:sticky lg:top-6 lg:mt-0"
-        >
-          <SaveCalendarRow count={history.shows.length} />
-          <PassportTeaser stats={history.stats} shows={history.shows} />
-        </aside>
       </div>
     </Shell>
   )

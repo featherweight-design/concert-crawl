@@ -128,6 +128,19 @@ describe('WatchingItem "Still going?" nudge', () => {
     expect(nudge()).not.toBeNull()
   })
 
+  // The optimistic row's id is a placeholder, so an answer keyed to it would be
+  // dropped the instant the server's real id arrived.
+  it('stays quiet while the watch row is still optimistic', () => {
+    render(
+      <WatchingItem
+        show={{ ...soonShow, userEventId: 'optimistic-ev-1' }}
+        density="cozy"
+        onRemove={() => {}}
+      />,
+    )
+    expect(nudge()).toBeNull()
+  })
+
   it('stays quiet for a show months out', () => {
     render(<WatchingItem show={baseShow} density="cozy" onRemove={() => {}} />)
     expect(nudge()).toBeNull()
@@ -163,23 +176,11 @@ describe('WatchingItem "Still going?" nudge', () => {
     // The optimistic cache update rolls back, so a silently-dismissed banner
     // would leave the user no way to retry from Watching.
     expect(nudge()).not.toBeNull()
-    expect(localStorage.getItem('cc-nudge-dismissed')).toBeNull()
-  })
-
-  it('closes without mutating when the user declines', () => {
-    render(<WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />)
-    fireEvent.click(screen.getByText(GOING_COPY.nudge.decline))
-
-    expect(attendingMutate).not.toHaveBeenCalled()
-    expect(nudge()).toBeNull()
+    expect(localStorage.getItem('cc-nudge-answered')).toBeNull()
   })
 
   it('does not ask again after any answer', () => {
-    for (const label of [
-      GOING_COPY.nudge.yes,
-      GOING_COPY.nudge.decline,
-      GOING_COPY.nudge.dismiss,
-    ]) {
+    for (const label of [GOING_COPY.nudge.yes, GOING_COPY.nudge.dismiss]) {
       localStorage.clear()
       render(
         <WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />,

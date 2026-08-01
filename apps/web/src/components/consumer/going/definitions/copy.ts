@@ -16,18 +16,20 @@ export const GOING_COPY = {
     stateChangeGoing: 'Marked as going',
     stateChangeReleased: 'No longer going',
   },
-  support: {
-    default: 'Going saves the night · Watch tracks the price.',
-    going: "We'll add this to your history.",
+  // The going-vs-watch distinction is real but secondary — it sits behind a
+  // tooltip rather than a standing line, so the two CTAs aren't buried under
+  // explanatory text.
+  explainer: {
+    triggerLabel: "What's the difference between going and watching?",
+    content: 'Going saves the night · Watch tracks the price.',
   },
   nudge: {
-    heading: 'Still going?',
+    heading: 'Going to this show?',
     whenTonight: 'Tonight.',
     whenTomorrow: 'Tomorrow.',
     whenInDays: (days: number) => `In ${days} days.`,
     support: 'Mark it so it lands in your history.',
     yes: 'Yes, going',
-    decline: 'Not me',
     dismiss: 'Dismiss',
   },
   error: {

@@ -138,7 +138,9 @@ export const GoingButton = ({
     fontWeight: 700,
     fontSize: sizes.font,
     letterSpacing: '-0.01em',
-    opacity: pending ? 0.6 : isDeclined ? 0.7 : 1,
+    // `pending` blocks a second tap but is deliberately invisible: the caller
+    // commits optimistically, so dimming here would undo the point of it.
+    opacity: isDeclined ? 0.7 : 1,
     boxShadow: isOn
       ? `0 8px 24px -10px color-mix(in oklch, ${accent} 70%, transparent)`
       : 'none',
