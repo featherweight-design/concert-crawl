@@ -31,12 +31,14 @@ const LP_LINK_CSS = `
 .lp-poster-link:active {
   transform: scale(0.99);
 }
-.lp-poster-arrow {
+.lp-poster-next {
   position: absolute;
   right: 10px;
   bottom: 10px;
   width: 32px;
   height: 32px;
+  padding: 0;
+  border: none;
   border-radius: 32px;
   display: flex;
   align-items: center;
@@ -45,20 +47,26 @@ const LP_LINK_CSS = `
   color: var(--fg-on-accent);
   font-weight: 800;
   font-size: 15px;
+  cursor: pointer;
   opacity: 0;
   transform: translateX(-4px);
   transition: opacity 140ms, transform 140ms;
   pointer-events: none;
+  z-index: 2;
 }
-.lp-poster-link:hover .lp-poster-arrow,
-.lp-poster-link:focus-visible .lp-poster-arrow,
-.lp-poster-link:active .lp-poster-arrow {
+.lp-poster-slot:hover .lp-poster-next,
+.lp-poster-slot:focus-within .lp-poster-next {
   opacity: 1;
   transform: translateX(0);
+  pointer-events: auto;
+}
+.lp-poster-next:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
 }
 @media (prefers-reduced-motion: reduce) {
   .lp-poster-link,
-  .lp-poster-arrow {
+  .lp-poster-next {
     transition: none;
   }
   .lp-poster-link:hover,
@@ -66,9 +74,8 @@ const LP_LINK_CSS = `
   .lp-poster-link:active {
     transform: none;
   }
-  .lp-poster-link:hover .lp-poster-arrow,
-  .lp-poster-link:focus-visible .lp-poster-arrow,
-  .lp-poster-link:active .lp-poster-arrow {
+  .lp-poster-slot:hover .lp-poster-next,
+  .lp-poster-slot:focus-within .lp-poster-next {
     transform: none;
   }
 }
@@ -190,6 +197,7 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
         return (
           <div
             key={`${idx}-${ii}`}
+            className="lp-poster-slot"
             // Only the front poster is reachable. The three behind it are
             // decoration for the same four shows the pager already exposes, so
             // exposing them would put duplicate links in the tab order.
@@ -222,12 +230,21 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
                 )}
               >
                 {poster}
-                <span aria-hidden className="lp-poster-arrow">
-                  →
-                </span>
               </Link>
             ) : (
               poster
+            )}
+            {/* Outside the Link on purpose: nested inside it, every click on
+                the arrow navigated to the show instead of advancing. */}
+            {isTop && shows.length > 1 && (
+              <button
+                type="button"
+                className="lp-poster-next"
+                aria-label={LANDING_POSTER_COPY.nextPoster}
+                onClick={advance}
+              >
+                <span aria-hidden>→</span>
+              </button>
             )}
           </div>
         )
@@ -270,7 +287,11 @@ function LPStack({ shows, width, height, intervalMs = 5200 }: LPStackProps) {
                   height: 6,
                   padding: '12px 5px',
                   borderRadius: 3,
-                  background: isActive
+                  // Longhand, not the `background` shorthand: React only
+                  // rewrites changed properties, and a shorthand write resets
+                  // background-clip, which then never gets re-applied — the dot
+                  // permanently paints its full 30px padding box.
+                  backgroundColor: isActive
                     ? 'var(--fg, #fff)'
                     : 'rgba(255,255,255,0.30)',
                   // Keeps the dot 6px tall while the button's hit area is 30px.

@@ -43,9 +43,19 @@ describe('LandingPosterAnimation — stack links (#794)', () => {
     expect(screen.queryAllByRole('link')).toHaveLength(0)
   })
 
-  it('drops the old stage-wide Next poster button', () => {
+  // Nested inside the Link, the hover arrow navigated to the show on every
+  // click instead of advancing the stack.
+  it('renders the hover arrow outside the poster link', () => {
     render(<LandingPosterAnimation mode="stack" shows={LINKED} width={200} />)
-    expect(screen.queryByRole('button', { name: /next poster/i })).toBeNull()
+    const next = screen.getByRole('button', { name: /next poster/i })
+    expect(next.closest('a')).toBeNull()
+  })
+
+  it('gives the on-deck layers no arrow of their own', () => {
+    render(<LandingPosterAnimation mode="stack" shows={LINKED} width={200} />)
+    expect(
+      screen.getAllByRole('button', { name: /next poster/i }),
+    ).toHaveLength(1)
   })
 
   it('keeps manual advance on a keyboard-reachable pager', () => {
@@ -63,6 +73,19 @@ describe('LandingPosterAnimation — stack links (#794)', () => {
       name: /go to poster \d/i,
     })) {
       expect(dot.style.display).toBe('block')
+    }
+  })
+
+  // The `background` shorthand resets background-clip. React rewrites only
+  // changed properties, so once the active dot's colour changed the clip was
+  // gone for good and the dot painted its full 30px padding box.
+  it('sets the dot colour with a longhand so background-clip survives', () => {
+    render(<LandingPosterAnimation mode="stack" shows={LINKED} width={200} />)
+    for (const dot of screen.getAllByRole('button', {
+      name: /go to poster \d/i,
+    })) {
+      expect(dot.style.background).toBe('')
+      expect(dot.style.backgroundClip).toBe('content-box')
     }
   })
 
