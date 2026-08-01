@@ -37,6 +37,7 @@ import {
 } from '@/lib/admin/venue-status'
 import { deriveBulkVisibility } from './venue-table-bulk'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { ADMIN_MOBILE_VIEWPORT_QUERY } from '@/components/admin/definitions/constants'
 
 function sourceUrl(url: string): string {
   return url.replace(/^https?:\/\//, '')
@@ -75,7 +76,7 @@ export function VenueTableClient({ venues }: Props) {
   const [isMobile, setIsMobile] = useState(false)
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 640px)')
+    const mq = window.matchMedia(ADMIN_MOBILE_VIEWPORT_QUERY)
     setIsMobile(mq.matches)
     const handler = (evt: MediaQueryListEvent) => setIsMobile(evt.matches)
     mq.addEventListener('change', handler)

@@ -7,6 +7,13 @@ import type { CrawlStatusBadgeConfig } from '@/types/badge'
 import type { StatusKind } from '@/components/admin/primitives/utils'
 import { ADMIN_COPY } from './copy'
 
+// Keyed to the Tailwind `sm:` breakpoint (min-width: 640px), so mobile ends at
+// 639px — matching TRIAGE_COMPACT_QUERY and the consumer tree. Shared by the
+// venues page's table and its Add-venue trigger, which switch layouts together:
+// a one-pixel disagreement would card-stack the table while the header still
+// showed the desktop button.
+export const ADMIN_MOBILE_VIEWPORT_QUERY = '(max-width: 639px)'
+
 // Single source of truth for the feedback status → badge-kind mapping, shared
 // by the inbox row (FeedbackRow) and the user-detail feedback history so the
 // two views can't drift when a status is added or recoloured. Exhaustive over

@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { AddVenueButton } from './AddVenueButton'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { ADMIN_MOBILE_VIEWPORT_QUERY } from '@/components/admin/definitions/constants'
 
 // The real modal pulls in server actions and Base UI's dialog; the trigger's
 // label is all this component's contract needs.
@@ -58,5 +59,12 @@ describe('AddVenueButton', () => {
     isMobileViewport = true
     render(<AddVenueButton placement="desktop" />)
     expect(trigger()).toBeNull()
+  })
+
+  // The venues table switches to its card stack off the same constant. A local
+  // copy of the query here would let the two drift by a pixel.
+  it('subscribes to the shared admin mobile breakpoint', () => {
+    render(<AddVenueButton placement="desktop" />)
+    expect(window.matchMedia).toHaveBeenCalledWith(ADMIN_MOBILE_VIEWPORT_QUERY)
   })
 })
