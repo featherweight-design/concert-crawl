@@ -419,6 +419,19 @@ describe('detectCrossVenuePresale', () => {
       expect(result?.reason).toBe('ticket-url')
     })
 
+    it('ignores the host, so a source-venue subdomain does not veto the skip', () => {
+      // Etix serves Cervantes under a branded host. Only the path names the
+      // venue that actually hosts the show.
+      const result = detectCrossVenuePresale({
+        ...CERVANTES,
+        title: 'Brother Ali AT THE BLACK SHEEP',
+        ticketUrl:
+          '//cervantes.etix.com/ticket/p/1/brother-ali-denver-the-black-sheep',
+      })
+
+      expect(result?.reason).toBe('ticket-url')
+    })
+
     it.each([
       ['a malformed URL', 'https://'],
       ['a host with no path', 'https://www.etix.com'],

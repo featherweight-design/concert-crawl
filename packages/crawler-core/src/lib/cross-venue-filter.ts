@@ -96,7 +96,7 @@ function alphanumeric(value: string): string {
  */
 function ticketPath(url: string): string {
   const withoutQuery = url.split(/[?#]/)[0] ?? ''
-  const withoutScheme = withoutQuery.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '')
+  const withoutScheme = withoutQuery.replace(/^([a-z][a-z0-9+.-]*:)?\/\//i, '')
   const pathStart = withoutScheme.indexOf('/')
   return pathStart === -1 ? '' : withoutScheme.slice(pathStart)
 }
