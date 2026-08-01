@@ -139,6 +139,22 @@ describe('middleware — edge auth gate (#841)', () => {
     expect(result).toBeUndefined()
   })
 
+  // Not merely public-once-launched: the account menu offers "What's new" to
+  // signed-out visitors in both launch modes, and the page has no user data.
+  it('lets a signed-out visitor read the changelog before launch', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
+    const { default: middleware } = await import('./middleware')
+
+    const auth = makeAuth(null)
+    const result = await (middleware as Function)(
+      auth,
+      new NextRequest('http://localhost/changelog'),
+    )
+
+    expect(result).toBeUndefined()
+    expect(auth.protect).not.toHaveBeenCalled()
+  })
+
   it('lets authenticated request to a (protected) route through without redirect', async () => {
     const { default: middleware } = await import('./middleware')
 
@@ -193,7 +209,6 @@ describe('middleware — public browse routes (#794)', () => {
     '/admin',
     '/admin/venues',
     '/admin/review',
-    '/changelog',
   ])('still protects %s for a signed-out visitor', async (path) => {
     const { default: middleware } = await import('./middleware')
     const auth = makeAuth(null)

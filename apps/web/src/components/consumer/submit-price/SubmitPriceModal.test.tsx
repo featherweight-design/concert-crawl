@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 
+import '@testing-library/jest-dom'
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -20,11 +21,23 @@ beforeEach(() => {
     })),
   })
   vi.clearAllMocks()
+  isSignedIn = true
+  isLoaded = true
 })
 
-const mockGetToken = vi.fn().mockResolvedValue('test-token')
+let isSignedIn = true
+let isLoaded = true
+// Matches Clerk: no token exists before load or while signed out.
+const mockGetToken = vi.fn(async () =>
+  isLoaded && isSignedIn ? 'test-token' : null,
+)
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: mockGetToken }),
+  useAuth: () => ({ getToken: mockGetToken, isLoaded, isSignedIn }),
+}))
+vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+  TierPickerSheet: ({ entry }: { entry: string }) => (
+    <div data-testid="tier-picker" data-entry={entry} />
+  ),
 }))
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
@@ -73,6 +86,37 @@ async function fillForm() {
   const floorInput = screen.getByLabelText(/Face value/i) as HTMLInputElement
   fireEvent.change(floorInput, { target: { value: '32' } })
 }
+
+describe('SubmitPriceModal — signed-out gate', () => {
+  it('offers an account instead of a form the API will reject', async () => {
+    isSignedIn = false
+    render(<SubmitPriceModal {...defaultProps} />)
+
+    expect(screen.getByTestId('tier-picker')).toHaveAttribute(
+      'data-entry',
+      'logged-out-price',
+    )
+    expect(screen.queryByText('Box office')).toBeNull()
+  })
+
+  it('shows neither form nor gate while Clerk is still resolving', () => {
+    isLoaded = false
+    isSignedIn = false
+    render(<SubmitPriceModal {...defaultProps} />)
+
+    // Neither surface may render yet: the form would flash a submission the
+    // API will reject, and the gate would flash at a signed-in submitter.
+    expect(screen.queryByTestId('tier-picker')).toBeNull()
+    expect(screen.queryByText('Box office')).toBeNull()
+  })
+
+  it('leaves a signed-in submitter on the form', async () => {
+    render(<SubmitPriceModal {...defaultProps} />)
+
+    await waitFor(() => expect(screen.getByText('Box office')).toBeTruthy())
+    expect(screen.queryByTestId('tier-picker')).toBeNull()
+  })
+})
 
 describe('SubmitPriceModal — form view', () => {
   it('renders nothing when closed', () => {

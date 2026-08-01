@@ -307,6 +307,23 @@ describe('TierPickerSheet — logged out', () => {
     ).toBeNull()
   })
 
+  it('names submitted prices when opened from the price form', () => {
+    render(
+      <TierPickerSheet
+        open
+        onClose={vi.fn()}
+        planState={planState('logged-out')}
+        scaRegion
+        entry="logged-out-price"
+      />,
+    )
+    const price = TIER_PICKER_COPY.header.loggedOut['logged-out-price']
+    expect(screen.getByText(price.title)).toBeTruthy()
+    expect(
+      screen.queryByText(TIER_PICKER_COPY.header.loggedOut.default.title),
+    ).toBeNull()
+  })
+
   it('tier CTAs route to sign-up', () => {
     renderSheet(planState('logged-out'))
     fireEvent.click(

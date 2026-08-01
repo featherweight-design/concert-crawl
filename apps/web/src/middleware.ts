@@ -20,6 +20,10 @@ const isAlwaysPublic = createRouteMatcher([
   // blank. Scoped to /icon* so future /api/pwa handlers aren't public by default.
   '/api/pwa/icon(.*)',
   '/legal(.*)',
+  // "What's new" is reachable from the signed-out account menu and renders a
+  // static release list with no user data — gating it sent that menu row to
+  // sign-up.
+  '/changelog(.*)',
 ])
 
 /**

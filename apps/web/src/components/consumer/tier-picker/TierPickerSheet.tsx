@@ -46,9 +46,10 @@ const HEADER_COPY = TIER_PICKER_COPY.header
 // The signed-out gate is one surface serving several reaches. Entries without
 // their own variant fall back to the Watching wording.
 function loggedOutHeader(entry: PickerEntry) {
-  return entry === 'logged-out-going'
-    ? HEADER_COPY.loggedOut['logged-out-going']
-    : HEADER_COPY.loggedOut.default
+  const variants: Partial<
+    Record<PickerEntry, { eyebrow: string; title: string; sub: string }>
+  > = HEADER_COPY.loggedOut
+  return variants[entry] ?? HEADER_COPY.loggedOut.default
 }
 
 interface TierPickerSheetProps {
