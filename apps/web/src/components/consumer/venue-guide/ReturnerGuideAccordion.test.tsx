@@ -183,6 +183,25 @@ describe('ReturnerGuideAccordion', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 
+  it('hands focus back to the header toggle, since the collapse control unmounts itself', () => {
+    renderReturner()
+    const toggle = screen.getByRole('button', {
+      name: copy.returner.toggleAriaLabel,
+    })
+    fireEvent.click(toggle)
+
+    const collapse = screen.getByRole('button', {
+      name: copy.returner.collapseLabel,
+    })
+    collapse.focus()
+    expect(document.activeElement).toBe(collapse)
+
+    fireEvent.click(collapse)
+    // Without the handoff this would be <body> — focus stranded on a node that
+    // no longer exists, with no keyboard route back into the guide.
+    expect(document.activeElement).toBe(toggle)
+  })
+
   it('keeps the chevron rotation under reduced motion, dropping only the transition', () => {
     renderReturner()
     const chevron = screen

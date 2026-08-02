@@ -1,6 +1,6 @@
 'use client'
 
-import { useId, useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import type { VenueGuideChip } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '../definitions/copy'
 
@@ -26,6 +26,7 @@ export const ReturnerGuideAccordion = ({
 }: ReturnerGuideAccordionProps) => {
   const [open, setOpen] = useState(false)
   const summaryId = useId()
+  const toggleRef = useRef<HTMLButtonElement>(null)
 
   const previewLabels = chips
     .slice(0, PREVIEW_CHIP_COUNT)
@@ -43,6 +44,7 @@ export const ReturnerGuideAccordion = ({
       }}
     >
       <button
+        ref={toggleRef}
         type="button"
         onClick={() => setOpen((wasOpen) => !wasOpen)}
         aria-expanded={open}
@@ -136,7 +138,14 @@ export const ReturnerGuideAccordion = ({
               chevron is off-screen by the time you finish reading. */}
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={() => {
+              setOpen(false)
+              // This button unmounts on the same click, so focus would be left
+              // on a removed node. Hand it back to the header toggle, which is
+              // both the thing that re-opens the guide and where a sighted
+              // user's attention lands after the collapse.
+              toggleRef.current?.focus()
+            }}
             className="mt-3 flex w-full cursor-pointer items-center justify-center"
             style={{
               minHeight: 44,
