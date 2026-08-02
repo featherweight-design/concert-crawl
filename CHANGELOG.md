@@ -1,3 +1,11 @@
+## [1.189.1](https://github.com/HartiganHM/concert-crawl/compare/v1.189.0...v1.189.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* **venue-guide:** polish the returner guide from a cold-eyes pass ([bad101a](https://github.com/HartiganHM/concert-crawl/commit/bad101a62809ee9d99e70ffe7c9526850afb5b8a)), closes [#764](https://github.com/HartiganHM/concert-crawl/issues/764) [#764](https://github.com/HartiganHM/concert-crawl/issues/764)
+* **venue-guide:** return focus to the toggle when the footer collapse unmounts ([6da2f86](https://github.com/HartiganHM/concert-crawl/commit/6da2f869248a8399e94ac7e5a68835ec27b3da53))
+
 # [1.189.0](https://github.com/HartiganHM/concert-crawl/compare/v1.188.0...v1.189.0) (2026-08-02)
 
 
