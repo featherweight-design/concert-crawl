@@ -444,6 +444,34 @@ export const SEED_VENUES: NewVenue[] = [
     about:
       'Convergence Station books shows inside the art installation, so the room is never just a room. Music leans electronic and experimental, and the crowd is there for both the set and the building.',
   },
+  {
+    name: 'The Junkyard',
+    slug: 'the-junkyard',
+    websiteUrl: 'https://www.thejunkyard.com/shows',
+    city: 'Denver',
+    timezone: 'America/Denver',
+    active: true,
+    verified: true,
+    crawlDelayMs: 3000,
+    // Every show is published as a MusicEvent JSON-LD block in the static
+    // HTML with an explicit-offset startDate, so the free structured-data
+    // path covers the whole calendar and no browser is needed.
+    //
+    // The LLM fallback is effectively unavailable here: cleanHtml strips the
+    // scripts and leaves ~84 characters of body text with no anchors. If the
+    // site ever drops its JSON-LD the crawl returns zero rather than
+    // degrading, which the event-count-drop alert is what catches.
+    crawlMode: 'http',
+    crawlWaitUntil: 'domcontentloaded' as const,
+    address: '2323 W Mulberry Pl, Denver, CO 80204',
+    venueType: 'Amphitheater',
+    neighborhood: 'La Alma-Lincoln Park',
+    lat: 39.7323,
+    lng: -105.0143,
+    ticketVendor: 'ticketmaster' as const,
+    about:
+      'Live Nation’s outdoor room just west of the South Platte, built on a scrapyard lot and named for it. Books arena-scale touring acts under an open sky.',
+  },
 ]
 
 // ---------------------------------------------------------------------------
