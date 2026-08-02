@@ -158,6 +158,18 @@ vi.mock('./lib/fetcher.js', () => ({
       super(message)
     }
   },
+  CrawlSelectorTimeoutError: class CrawlSelectorTimeoutError extends Error {
+    constructor(
+      public selector: string,
+      public html: string | null,
+      public finalUrl: string,
+      public httpStatus: number,
+      message: string,
+    ) {
+      super(message)
+      this.name = 'CrawlSelectorTimeoutError'
+    }
+  },
 }))
 vi.mock('./lib/robots.js', () => ({
   isAllowed: vi.fn().mockResolvedValue(true),
@@ -166,7 +178,11 @@ vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
 }))
 
-import { fetchPage, fetchPageHttp } from './lib/fetcher.js'
+import {
+  fetchPage,
+  fetchPageHttp,
+  CrawlSelectorTimeoutError,
+} from './lib/fetcher.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import {
   db,
@@ -1692,6 +1708,52 @@ describe('crawlVenue — crawlMode orchestration', () => {
 
     const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
     expect(savedVenue?.blockedAt).toBeNull()
+  })
+
+  // CrawlSelectorTimeoutError renames the underlying Playwright TimeoutError,
+  // so without an explicit instanceof branch a browser-mode venue whose
+  // selector never resolves would never reach the 3-strikes auto-pause.
+  it('sets blockedAt when a selector timeout is the 3rd consecutive failure', async () => {
+    const venue = seedVenue({ consecutiveFailures: 2 })
+    mockFetchPage.mockRejectedValue(
+      new CrawlSelectorTimeoutError(
+        '.event-card',
+        '<html><body>challenge</body></html>',
+        'https://example.com',
+        200,
+        'page.waitForSelector: Timeout 30000ms exceeded.',
+      ),
+    )
+
+    const result = await crawlVenue(venue.id, mockBrowser)
+
+    expect(result.status).toBe('failed')
+    const savedVenue = stores.venues.find((vv) => vv.id === venue.id)
+    expect(savedVenue?.blockedAt).not.toBeNull()
+  })
+
+  it('logs the captured html when a selector timeout hits a debug-capture venue', async () => {
+    const venue = seedVenue({ debugCaptureHtml: true })
+    mockFetchPage.mockRejectedValue(
+      new CrawlSelectorTimeoutError(
+        '.event-card',
+        '<html><body>challenge page</body></html>',
+        'https://example.com/blocked',
+        200,
+        'page.waitForSelector: Timeout 30000ms exceeded.',
+      ),
+    )
+    const logSpy = vi.spyOn(console, 'log')
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const captureLines = logSpy.mock.calls
+      .map(([line]) => String(line))
+      .filter((line) => line.includes('debug.html_capture'))
+    expect(captureLines.length).toBeGreaterThan(0)
+    expect(captureLines.join('')).toContain('challenge page')
+
+    logSpy.mockRestore()
   })
 })
 

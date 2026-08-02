@@ -20,6 +20,7 @@ import {
   fetchPage,
   fetchPageHttp,
   CrawlFetchError,
+  CrawlSelectorTimeoutError,
   type FetchResult,
 } from './lib/fetcher.js'
 import { extractJsonLd } from './lib/extractors/json-ld.js'
@@ -1249,6 +1250,20 @@ export async function crawlVenue(
 
     return { ...crawlRun, insertedEventIds }
   } catch (err) {
+    // A selector timeout carries the HTML the page was showing when it gave up.
+    // This is the only capture point for that failure — the successful-fetch
+    // capture above is never reached when the selector never resolves.
+    if (err instanceof CrawlSelectorTimeoutError && venue.debugCaptureHtml) {
+      logDebugHtmlCapture(err.html ?? '', {
+        venueId,
+        venueSlug: venue.slug,
+        crawlRunId: id,
+        mode: 'browser',
+        finalUrl: err.finalUrl,
+        httpStatus: err.httpStatus,
+      })
+    }
+
     const isHttpBlocked =
       err instanceof CrawlFetchError &&
       (err.httpStatus === 403 || err.httpStatus === 429)
@@ -1256,9 +1271,13 @@ export async function crawlVenue(
     // (no HTTP error, just no response). When the current error is a TimeoutError
     // and consecutiveFailures is already ≥2 (i.e. this is the 3rd failure), treat
     // it the same as a 403/429 block so the venue is paused and admin is notified.
+    // CrawlSelectorTimeoutError wraps a Playwright TimeoutError to carry the
+    // captured HTML, which renames it — it must still count as a timeout here
+    // or a browser-mode venue would never reach the 3-strikes auto-pause.
     const isTimeoutBlock =
       err instanceof Error &&
-      err.name === 'TimeoutError' &&
+      (err.name === 'TimeoutError' ||
+        err instanceof CrawlSelectorTimeoutError) &&
       venue.consecutiveFailures >= 2 // becomes 3 after the increment below
     const isBlocked = isHttpBlocked || isTimeoutBlock
 

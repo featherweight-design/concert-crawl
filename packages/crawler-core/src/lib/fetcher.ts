@@ -12,6 +12,22 @@ export class CrawlFetchError extends Error {
   }
 }
 
+// A selector timeout means the page loaded but never rendered what we expected.
+// The HTML at that moment is the only evidence of why — a bot challenge, a geo
+// redirect, a changed layout — and the throw would otherwise discard it.
+export class CrawlSelectorTimeoutError extends Error {
+  constructor(
+    public readonly selector: string,
+    public readonly html: string | null,
+    public readonly finalUrl: string,
+    public readonly httpStatus: number,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'CrawlSelectorTimeoutError'
+  }
+}
+
 export interface FetchResult {
   html: string
   httpStatus: number
@@ -78,7 +94,29 @@ export async function fetchPage(
     }
 
     if (waitForSelector) {
-      await page.waitForSelector(waitForSelector, { timeout: 30_000 })
+      try {
+        await page.waitForSelector(waitForSelector, { timeout: 30_000 })
+      } catch (err) {
+        // Reading content() can itself fail if the page died; a null html still
+        // beats losing the whole error.
+        const captured = await page.content().catch(() => null)
+        console.log(
+          JSON.stringify({
+            event: 'fetch.selector_timeout',
+            url,
+            selector: waitForSelector,
+            finalUrl: page.url(),
+            htmlBytes: captured?.length ?? 0,
+          }),
+        )
+        throw new CrawlSelectorTimeoutError(
+          waitForSelector,
+          captured,
+          page.url(),
+          finalStatus,
+          err instanceof Error ? err.message : String(err),
+        )
+      }
     }
 
     const html = await page.content()

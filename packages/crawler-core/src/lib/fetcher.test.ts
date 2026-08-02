@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchPage, fetchPageHttp, CrawlFetchError } from './fetcher.js'
+import {
+  fetchPage,
+  fetchPageHttp,
+  CrawlFetchError,
+  CrawlSelectorTimeoutError,
+} from './fetcher.js'
 import type { Browser, BrowserContext, Page, Response } from 'playwright'
 
 // jitter(0) = Math.floor(random * 1000) - 500; with random=0.5 → 0ms delay
@@ -108,6 +113,54 @@ describe('fetchPage — waitForSelector', () => {
       ),
     ).rejects.toThrow('HTTP 403')
     expect(page.waitForSelector).not.toHaveBeenCalled()
+  })
+
+  it('captures the rendered html on the error when waitForSelector times out', async () => {
+    const page = makeMockPage({
+      waitForSelector: vi
+        .fn()
+        .mockRejectedValue(
+          new Error('page.waitForSelector: Timeout 30000ms exceeded.'),
+        ),
+      content: vi.fn().mockResolvedValue('<html><body>challenge</body></html>'),
+      url: vi.fn().mockReturnValue('https://example.com/blocked'),
+    })
+    const browser = makeMockBrowser(page)
+
+    const err = await fetchPage(
+      'https://example.com',
+      browser,
+      0,
+      'networkidle',
+      '.event-card',
+    ).catch((caught: unknown) => caught)
+
+    expect(err).toBeInstanceOf(CrawlSelectorTimeoutError)
+    const timeout = err as CrawlSelectorTimeoutError
+    expect(timeout.html).toBe('<html><body>challenge</body></html>')
+    expect(timeout.finalUrl).toBe('https://example.com/blocked')
+    expect(timeout.httpStatus).toBe(200)
+    expect(timeout.selector).toBe('.event-card')
+    expect(timeout.message).toContain('Timeout 30000ms exceeded')
+  })
+
+  it('still throws when the page content is unreadable after a selector timeout', async () => {
+    const page = makeMockPage({
+      waitForSelector: vi.fn().mockRejectedValue(new Error('Timeout')),
+      content: vi.fn().mockRejectedValue(new Error('page closed')),
+    })
+    const browser = makeMockBrowser(page)
+
+    const err = await fetchPage(
+      'https://example.com',
+      browser,
+      0,
+      'networkidle',
+      '.event-card',
+    ).catch((caught: unknown) => caught)
+
+    expect(err).toBeInstanceOf(CrawlSelectorTimeoutError)
+    expect((err as CrawlSelectorTimeoutError).html).toBeNull()
   })
 
   it('returns html and status on success', async () => {
