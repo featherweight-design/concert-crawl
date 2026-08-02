@@ -33,23 +33,26 @@ export const groupShows = (shows: ArtistShow[]): ShowItem[] => {
     const sorted = [...list].sort(
       (one, two) => dayStart(one.iso) - dayStart(two.iso),
     )
-    let cluster: ArtistShow[] = [sorted[0]]
+    const first = sorted[0]
+    if (!first) continue
+    let cluster: ArtistShow[] = [first]
 
     // Two tests, not one. The GAP test below decides where a cluster ENDS;
     // this SPAN test decides whether the cluster earns the word "run".
-    const isRun = (): boolean =>
+    const isRun = (head: ArtistShow, tail: ArtistShow): boolean =>
       cluster.length >= RESIDENCY_MIN &&
-      (dayStart(cluster[cluster.length - 1].iso) - dayStart(cluster[0].iso)) /
-        DAY <=
-        RESIDENCY_WINDOW
+      (dayStart(tail.iso) - dayStart(head.iso)) / DAY <= RESIDENCY_WINDOW
 
     const flush = (): void => {
-      if (isRun()) {
+      const head = cluster[0]
+      const tail = cluster[cluster.length - 1]
+      if (!head || !tail) return
+      if (isRun(head, tail)) {
         items.push({
           kind: 'run',
           venue,
-          venueSlug: cluster[0].venueSlug,
-          city: cluster[0].city,
+          venueSlug: head.venueSlug,
+          city: head.city,
           shows: cluster,
         })
       } else {
@@ -58,14 +61,17 @@ export const groupShows = (shows: ArtistShow[]): ShowItem[] => {
     }
 
     for (let i = 1; i < sorted.length; i++) {
+      const current = sorted[i]
+      const previous = sorted[i - 1]
+      if (!current || !previous) continue
       if (
-        (dayStart(sorted[i].iso) - dayStart(sorted[i - 1].iso)) / DAY <=
+        (dayStart(current.iso) - dayStart(previous.iso)) / DAY <=
         RESIDENCY_WINDOW
       ) {
-        cluster.push(sorted[i])
+        cluster.push(current)
       } else {
         flush()
-        cluster = [sorted[i]]
+        cluster = [current]
       }
     }
     flush()

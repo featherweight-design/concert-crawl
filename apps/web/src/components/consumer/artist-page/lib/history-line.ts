@@ -5,10 +5,10 @@ import { ARTIST_COPY } from '../definitions/copy'
 
 /** "A", "A & B", "A, B & C" — never an Oxford-comma-free three-way ambiguity. */
 export const joinList = (values: string[]): string => {
-  if (!values.length) return ''
-  if (values.length === 1) return values[0]
-  if (values.length === 2) return `${values[0]} & ${values[1]}`
-  return `${values.slice(0, -1).join(', ')} & ${values[values.length - 1]}`
+  if (values.length <= 1) return values[0] ?? ''
+  const last = values[values.length - 1] ?? ''
+  if (values.length === 2) return `${values[0] ?? ''} & ${last}`
+  return `${values.slice(0, -1).join(', ')} & ${last}`
 }
 
 /**
@@ -24,7 +24,8 @@ export const historyLine = (
   if (!count) return ARTIST_COPY.historyNone(since)
   // No venue on a count of 1 → fall back to the zero phrasing rather than
   // emitting "We've caught them once — once."
-  if (count === 1 && !venues[0]) return ARTIST_COPY.historyNone(since)
-  if (count === 1) return ARTIST_COPY.historyOne(venues[0], since)
+  const only = venues[0]
+  if (count === 1 && !only) return ARTIST_COPY.historyNone(since)
+  if (count === 1 && only) return ARTIST_COPY.historyOne(only, since)
   return ARTIST_COPY.historyMany(count, joinList(venues), since)
 }

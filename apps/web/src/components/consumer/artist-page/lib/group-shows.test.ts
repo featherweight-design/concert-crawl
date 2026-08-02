@@ -1,6 +1,8 @@
 import type { ArtistShow } from '@concert-crawl/types'
 import { describe, expect, it } from 'vitest'
 
+import { firstIso } from '../definitions/types'
+
 import { groupShows } from './group-shows'
 
 const show = (iso: string, venue: string, city = 'Denver'): ArtistShow => ({
@@ -30,9 +32,9 @@ describe('groupShows', () => {
       show('2026-08-07', "Ophelia's"),
     ])
     expect(items).toHaveLength(1)
-    const [run] = items
-    expect(run.kind).toBe('run')
-    if (run.kind !== 'run') throw new Error('expected a run')
+    const run = items[0]
+    expect(run?.kind).toBe('run')
+    if (!run || run.kind !== 'run') throw new Error('expected a run')
     expect(run.shows).toHaveLength(3)
     expect(run.venue).toBe("Ophelia's")
   })
@@ -57,10 +59,12 @@ describe('groupShows', () => {
       show('2026-08-22', 'Gothic Theatre'),
     ])
     expect(items).toHaveLength(3)
-    expect(items[0].kind).toBe('run')
-    expect(
-      items.map((item) => (item.kind === 'run' ? item.shows[0].iso : item.iso)),
-    ).toEqual(['2026-08-05', '2026-08-22', '2026-09-11'])
+    expect(items[0]?.kind).toBe('run')
+    expect(items.map((item) => firstIso(item))).toEqual([
+      '2026-08-05',
+      '2026-08-22',
+      '2026-09-11',
+    ])
   })
 
   it('cuts a new cluster when the same venue is revisited months later', () => {

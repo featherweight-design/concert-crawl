@@ -19,6 +19,10 @@ export type ShowItem =
 export const showsInItem = (item: ShowItem): number =>
   item.kind === 'run' ? item.shows.length : 1
 
-/** The first date an item occupies, used for chronological ordering. */
+/**
+ * The first date an item occupies, used for chronological ordering. A run is
+ * never constructed empty, so the `''` arm is only there to satisfy
+ * `noUncheckedIndexedAccess` — it sorts such an item first and harms nothing.
+ */
 export const firstIso = (item: ShowItem): string =>
-  item.kind === 'run' ? item.shows[0].iso : item.iso
+  item.kind === 'run' ? (item.shows[0]?.iso ?? '') : item.iso

@@ -5,7 +5,7 @@ import React, { useMemo, useState } from 'react'
 
 import { SHOWS_VISIBLE } from './definitions/constants'
 import { ARTIST_COPY } from './definitions/copy'
-import { showsInItem } from './definitions/types'
+import { firstIso, showsInItem } from './definitions/types'
 import { groupShows } from './lib/group-shows'
 import { RunGroup } from './RunGroup'
 import { SectionHead } from './SectionHead'
@@ -38,7 +38,7 @@ export const UpcomingShows = ({ name, shows }: UpcomingShowsProps) => {
           <React.Fragment
             key={
               item.kind === 'run'
-                ? `run-${item.venueSlug}-${item.shows[0].iso}`
+                ? `run-${item.venueSlug}-${firstIso(item)}`
                 : item.eventId
             }
           >
@@ -46,7 +46,7 @@ export const UpcomingShows = ({ name, shows }: UpcomingShowsProps) => {
                 already carries its own edge. */}
             {index > 0 &&
             item.kind === 'one' &&
-            visible[index - 1].kind === 'one' ? (
+            visible[index - 1]?.kind === 'one' ? (
               <div
                 aria-hidden="true"
                 style={{
