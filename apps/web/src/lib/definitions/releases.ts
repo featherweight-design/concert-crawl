@@ -31,6 +31,18 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.24.0-beta',
+    date: 'Aug 2, 2026',
+    headline:
+      "Never been to a venue? Now you'll know what you're walking into.",
+    items: [
+      {
+        kind: 'added',
+        text: "Venue pages now carry a first-timer guide: where to park, what the age policy actually is, whether there's a bag check, and the one thing a regular would tell you. Accessibility leads every guide — and when a venue hasn't confirmed theirs, we say so plainly instead of leaving a blank. Event pages get a small link through to the guide for the room you're headed to.",
+      },
+    ],
+  },
+  {
     version: 'v0.23.0-beta',
     date: 'Aug 2, 2026',
     headline: 'Meow Wolf Denver is on the calendar.',

@@ -8,6 +8,12 @@ interface StillGatheringProps {
   /** The chip keys this venue has nothing for yet. Derived, never hard-coded. */
   chipTypes: GuideChipKey[]
   venueShortName: string
+  /**
+   * The closing line reads "that's the lot — this venue is new to us," which is
+   * only true of a thin guide. On a populated one the ghost pills still belong,
+   * but that sentence would contradict the five chips sitting above it.
+   */
+  showFooter: boolean
 }
 
 /**
@@ -17,6 +23,7 @@ interface StillGatheringProps {
 export const StillGathering = ({
   chipTypes,
   venueShortName,
+  showFooter,
 }: StillGatheringProps) => {
   if (chipTypes.length === 0) return null
 
@@ -58,17 +65,19 @@ export const StillGathering = ({
           </li>
         ))}
       </ul>
-      <p
-        style={{
-          marginTop: 10,
-          fontSize: '12px',
-          fontStyle: 'italic',
-          letterSpacing: '-0.005em',
-          color: 'var(--fg-subtle)',
-        }}
-      >
-        {copy.thinFooter(venueShortName)}
-      </p>
+      {showFooter && (
+        <p
+          style={{
+            marginTop: 10,
+            fontSize: '12px',
+            fontStyle: 'italic',
+            letterSpacing: '-0.005em',
+            color: 'var(--fg-subtle)',
+          }}
+        >
+          {copy.thinFooter(venueShortName)}
+        </p>
+      )}
     </div>
   )
 }

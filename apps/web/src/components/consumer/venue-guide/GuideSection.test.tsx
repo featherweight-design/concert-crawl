@@ -152,6 +152,15 @@ describe('GuideSection', () => {
     expect(screen.getByText(copy.thinFooter('Roxy'))).toBeInTheDocument()
   })
 
+  it('withholds the "new to us" footer from a populated guide', () => {
+    // The ghost pills still belong on a populated guide, but the closing line
+    // says the venue is new to us — beside an insider tip and several authored
+    // chips that reads as a lie.
+    render(<GuideSection venueName="The Roxy" guide={guide()} />)
+    expect(screen.getByTestId('guide-still-gathering')).toBeInTheDocument()
+    expect(screen.queryByText(copy.thinFooter('Roxy'))).toBeNull()
+  })
+
   it('marks every decorative svg aria-hidden', () => {
     const { container } = render(
       <GuideSection venueName="The Roxy" guide={guide()} />,

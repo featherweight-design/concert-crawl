@@ -1,4 +1,8 @@
-import { GUIDE_CHIP_ORDER, type VenueGuide } from '@concert-crawl/types'
+import {
+  GUIDE_CHIP_ORDER,
+  deriveGuideDensity,
+  type VenueGuide,
+} from '@concert-crawl/types'
 import { CONSUMER_COPY } from '../definitions/copy'
 import { AccessPlaceholderRow } from './AccessPlaceholderRow'
 import { GUIDE_ANCHOR_ID } from './FirstTimerCallout'
@@ -114,6 +118,12 @@ export const GuideSection = ({
       <StillGathering
         chipTypes={unauthoredChipKeys(authoredForGathering)}
         venueShortName={shortName}
+        showFooter={
+          deriveGuideDensity({
+            chips: authoredForGathering,
+            insiderTip: guide.insiderTip,
+          }) === 'thin'
+        }
       />
     </section>
   )
