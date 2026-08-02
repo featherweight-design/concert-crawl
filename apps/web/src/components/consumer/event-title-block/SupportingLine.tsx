@@ -1,4 +1,5 @@
 import React from 'react'
+import Link from 'next/link'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import {
   formatMoreCount,
@@ -21,6 +22,17 @@ interface SupportingLineProps {
   separator?: SeparatorKey
   maxInline?: number | null
   dim?: boolean
+  /**
+   * #1115 PR-G — artist-page slugs, positionally aligned with `artists`:
+   * index i of one is index i of the other, `null` where that name has no
+   * `artists` row. Ignored entirely unless `linkArtists` is set.
+   */
+  slugs?: Array<string | null> | null
+  /**
+   * Opt-in. Only the event-detail surface turns this on; card and hero render
+   * exactly the markup they always have, whether slugs are available or not.
+   */
+  linkArtists?: boolean
 }
 
 export const SupportingLine = ({
@@ -29,6 +41,8 @@ export const SupportingLine = ({
   separator = 'middot',
   maxInline = null,
   dim = false,
+  slugs = null,
+  linkArtists = false,
 }: SupportingLineProps): React.JSX.Element | null => {
   if (artists.length === 0) return null
   const ramp = RAMP[surface]
@@ -41,6 +55,27 @@ export const SupportingLine = ({
   // `detail` shows the full roster and may wrap to multiple lines (no clipping);
   // `card`/`hero` stay one line via `truncate`. Mirrors EventTitleBlock's headliner.
   const runClass = surface === 'detail' ? 'whitespace-normal' : 'truncate'
+
+  const linkedSlugs = linkArtists ? (slugs ?? []) : []
+  const hasAnyLink = shown.some(
+    (_, index) => (linkedSlugs[index] ?? null) !== null,
+  )
+
+  // A focusable link must never sit inside an `aria-hidden` subtree — a keyboard
+  // user would tab to something no screen reader can announce. So the run is
+  // hidden from AT only while it contains nothing focusable (every card and
+  // hero, and any detail bill whose names have no pages); the moment a name
+  // becomes a link the run is exposed, and the decorative bits (lead-in,
+  // separators, "+N more") carry their own aria-hidden instead. The group's
+  // composed aria-label is byte-identical either way.
+  const hideRunFromAt = !hasAnyLink
+
+  // One shared style object so a linked name and a plain one sit on exactly the
+  // same RAMP — the affordance is hover/focus underline, never a size change.
+  const nameStyle: React.CSSProperties = {
+    fontSize: ramp.name,
+    letterSpacing: '-0.005em',
+  }
 
   return (
     <div
@@ -56,27 +91,44 @@ export const SupportingLine = ({
       >
         {lead}
       </span>
-      <span className={`min-w-0 ${runClass}`} aria-hidden="true">
-        {shown.map((name, index) => (
-          <span key={`${name}-${index}`}>
-            {index > 0 && (
-              <span
-                className="px-1.5 font-normal text-fg-subtle"
-                style={{ fontSize: ramp.name }}
-              >
-                {sep}
-              </span>
-            )}
-            <span
-              className={`font-semibold ${nameColor}`}
-              style={{ fontSize: ramp.name, letterSpacing: '-0.005em' }}
-            >
-              {name}
+      <span
+        className={`min-w-0 ${runClass}`}
+        {...(hideRunFromAt ? { 'aria-hidden': true } : {})}
+      >
+        {shown.map((name, index) => {
+          const slug = linkedSlugs[index] ?? null
+          return (
+            <span key={`${name}-${index}`}>
+              {index > 0 && (
+                <span
+                  aria-hidden="true"
+                  className="px-1.5 font-normal text-fg-subtle"
+                  style={{ fontSize: ramp.name }}
+                >
+                  {sep}
+                </span>
+              )}
+              {slug === null ? (
+                <span
+                  className={`font-semibold ${nameColor}`}
+                  style={nameStyle}
+                >
+                  {name}
+                </span>
+              ) : (
+                <Link
+                  href={`/artists/${slug}`}
+                  className={`font-semibold underline-offset-2 hover:underline focus-visible:underline ${nameColor}`}
+                  style={nameStyle}
+                >
+                  {name}
+                </Link>
+              )}
             </span>
-          </span>
-        ))}
+          )
+        })}
         {hidden > 0 && (
-          <>
+          <span aria-hidden="true">
             <span
               className="px-1.5 text-fg-subtle"
               style={{ fontSize: ramp.name }}
@@ -89,7 +141,7 @@ export const SupportingLine = ({
             >
               {formatMoreCount(hidden)}
             </span>
-          </>
+          </span>
         )}
       </span>
     </div>

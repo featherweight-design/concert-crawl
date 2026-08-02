@@ -40,6 +40,7 @@ import {
   type SourceCategory,
   type Tier,
 } from '@concert-crawl/types'
+import { resolveArtistSlugs } from '../lib/artist-slugs.js'
 import { getEventWatchers } from '../lib/event-watchers.js'
 import { isImminentEvent, todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
@@ -1083,6 +1084,12 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     ? await getFollowedArtistMatcher(authInfo.userId)
     : null
 
+  // #1115 PR-G — slugs for the artist-page links on the detail title block.
+  const { artistSlug, supportingArtistSlugs } = await resolveArtistSlugs(
+    row.artist,
+    row.supportingArtists,
+  )
+
   const {
     canonicalArtist,
     canonicalSupporting,
@@ -1094,6 +1101,8 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     success: true,
     data: {
       ...publicRow,
+      artistSlug,
+      supportingArtistSlugs,
       venueGuidePublished: venueGuidePublishedAt !== null,
       ...(followMatcher
         ? {

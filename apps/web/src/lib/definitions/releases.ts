@@ -29,11 +29,30 @@ export interface Release {
 // `src/lib/launch-mode.ts`): it is built but unreachable until the flag flips,
 // and a changelog cannot truthfully announce something nobody can do yet.
 // Restore it, redated, as part of launch.
-// Same reasoning as the note above: the artist page is built and complete, but
-// nothing in the app links to it yet — the event-detail and search entry points
-// are the next PR in #1115. The entry lands with them, so "tap an artist's name"
-// is true the day it is published.
 export const RELEASES: Release[] = [
+  {
+    version: 'v0.27.0-beta',
+    date: 'Aug 2, 2026',
+    headline: 'Artists have their own page now — and you can follow them.',
+    items: [
+      {
+        kind: 'added',
+        text: "Tap an artist's name on any show — the headliner or anyone on the undercard — and you land on their page: every date they're playing in Denver, in order. Three nights at the same room show up as one run instead of three near-identical rows, so the page reads like a tour and not a spreadsheet. Everything they've already played sits at the bottom, so you can see whether you missed them last spring.",
+      },
+      {
+        kind: 'added',
+        text: "Follow an artist and you're on the hook for whatever they announce next. Every row on the page keeps its own Watch control, so you can follow the act and still pick the one night you actually want.",
+      },
+      {
+        kind: 'added',
+        text: "If we can match them on Spotify you get a photo and a couple of tracks to jog your memory before you commit. If we can't, we say so — no invented artwork, no wrong band with a similar name.",
+      },
+      {
+        kind: 'added',
+        text: 'Search knows about artist pages now: type a name and the artists who have one come back first, above the shows.',
+      },
+    ],
+  },
   {
     version: 'v0.26.0-beta',
     date: 'Aug 2, 2026',

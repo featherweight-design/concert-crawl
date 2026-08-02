@@ -80,6 +80,20 @@ const EVENTS_RESPONSE = {
   },
 }
 
+// #1115 PR-G — artists that have their own page. A separate endpoint from the
+// event-derived artist rows above, and a separate section in the results.
+const ARTIST_PAGES_RESPONSE = {
+  success: true,
+  data: [
+    {
+      name: 'Radiohead',
+      slug: 'radiohead',
+      photoUrl: 'https://img.example/radiohead.jpg',
+      upcomingShowCount: 2,
+    },
+  ],
+}
+
 beforeEach(() => {
   vi.useFakeTimers()
   localStorage.clear()
@@ -88,6 +102,11 @@ beforeEach(() => {
   global.fetch = vi.fn().mockImplementation((url: string) => {
     if ((url as string).includes('/v1/search/popular')) {
       return Promise.resolve({ json: async () => POPULAR_RESPONSE } as Response)
+    }
+    if ((url as string).includes('/v1/search/artists')) {
+      return Promise.resolve({
+        json: async () => ARTIST_PAGES_RESPONSE,
+      } as Response)
     }
     return Promise.resolve({ json: async () => EVENTS_RESPONSE } as Response)
   })
@@ -326,5 +345,74 @@ describe('useSearch — navigateTo', () => {
     })
 
     expect(mockPush).toHaveBeenCalledWith('/venues/bluebird-theater')
+  })
+})
+
+describe('useSearch — artist pages (#1115 PR-G)', () => {
+  it('fetches artist pages after the debounce', async () => {
+    const { result } = renderHook(() => useSearch())
+
+    act(() => {
+      result.current.setQuery('radio')
+    })
+
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/v1/search/artists?q=radio'),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
+    expect(result.current.artistPageResults).toHaveLength(1)
+    expect(result.current.artistPageResults[0]?.slug).toBe('radiohead')
+    expect(result.current.artistPageResults[0]?.upcomingShowCount).toBe(2)
+  })
+
+  it('does not query artist pages below the two-character floor', () => {
+    const { result } = renderHook(() => useSearch())
+
+    act(() => {
+      result.current.setQuery('r')
+    })
+
+    expect(fetch).not.toHaveBeenCalledWith(
+      expect.stringContaining('/v1/search/artists'),
+      expect.anything(),
+    )
+    expect(result.current.artistPageResults).toEqual([])
+  })
+
+  it('clears artist pages when the query is cleared', async () => {
+    const { result } = renderHook(() => useSearch())
+
+    act(() => {
+      result.current.setQuery('radio')
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    act(() => {
+      result.current.clearQuery()
+    })
+
+    expect(result.current.artistPageResults).toEqual([])
+  })
+
+  it('navigates to the artist page, not a filtered browse query', () => {
+    const { result } = renderHook(() => useSearch())
+
+    act(() => {
+      result.current.setQuery('radiohead')
+    })
+    act(() => {
+      result.current.navigateTo('artistPage', { slug: 'radiohead' })
+    })
+
+    expect(mockPush).toHaveBeenCalledWith('/artists/radiohead')
   })
 })

@@ -726,6 +726,17 @@ export interface EventWatchersResponse {
 // EventDetailResponse — single event detail with computed watch state and setlist
 export interface EventDetailResponse extends EventWithVenue {
   setlist: Setlist | null
+  // #1115 PR-G — artist-page entry points. The headliner's `artists.slug`, or
+  // null when the projection has no row for that canonical name (an unresolved
+  // name renders as plain text rather than a dead link).
+  artistSlug: string | null
+  // Positionally aligned with `supportingArtists`: index i of one is index i of
+  // the other, null where that name has no `artists` row. The UI zips the two
+  // arrays, so alignment is the contract. Deliberately NOT derived from
+  // `events.canonical_supporting`, which dedupes and sorts (see
+  // canonicalizeSupporting) and therefore cannot be zipped against the display
+  // names. Null exactly when `supportingArtists` is null (a legacy row).
+  supportingArtistSlugs: Array<string | null> | null
   watching: number
   isWatching: boolean
   // ISO when the signed-in user said "I'm going!" (#70). Orthogonal to

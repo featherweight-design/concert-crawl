@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import type { ArtistSearchResult } from '@concert-crawl/types'
 import { useAuthToken } from './useAuthToken'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
@@ -110,6 +111,11 @@ export function useSearch() {
   const [recentSearches, setRecentSearches] = useState<string[]>([])
   const [popularEvents, setPopularEvents] = useState<PopularEvent[]>([])
   const [artistResults, setArtistResults] = useState<ArtistResult[]>([])
+  // #1115 PR-G — artists with their own page. Distinct from `artistResults`,
+  // which is derived from matching events and routes to a filtered browse.
+  const [artistPageResults, setArtistPageResults] = useState<
+    ArtistSearchResult[]
+  >([])
   const [venueResults, setVenueResults] = useState<VenueResult[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -144,6 +150,7 @@ export function useSearch() {
     const trimmed = query.trim()
     if (trimmed.length < 2) {
       setArtistResults([])
+      setArtistPageResults([])
       setVenueResults([])
       setIsLoading(false)
       return
@@ -178,6 +185,27 @@ export function useSearch() {
             .finally(() => {
               if (!controller.signal.aborted) setIsLoading(false)
             })
+
+          // #1115 PR-G — artist pages, fetched alongside (not chained after)
+          // the event query. It is a garnish on a search whose primary answer
+          // is shows, so it shares the abort signal but never gates isLoading:
+          // a slow or failed artist lookup must not hold back the event rows.
+          fetch(
+            `${API_URL}/v1/search/artists?q=${encodeURIComponent(trimmed)}`,
+            {
+              signal: controller.signal,
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            },
+          )
+            .then((res) => res.json())
+            .then((body: { success: boolean; data: ArtistSearchResult[] }) => {
+              if (body.success) setArtistPageResults(body.data)
+            })
+            .catch((err: unknown) => {
+              if (err instanceof DOMException && err.name === 'AbortError')
+                return
+              console.error(err)
+            })
         } catch (err) {
           if (err instanceof DOMException && err.name === 'AbortError') return
           console.error(err)
@@ -194,12 +222,13 @@ export function useSearch() {
   const clearQuery = useCallback(() => {
     setQuery('')
     setArtistResults([])
+    setArtistPageResults([])
     setVenueResults([])
   }, [])
 
   const navigateTo = useCallback(
     (
-      type: 'artist' | 'venue',
+      type: 'artist' | 'artistPage' | 'venue',
       value: string | { slug: string; matchingEventId?: string },
     ) => {
       if (query.trim()) {
@@ -210,6 +239,9 @@ export function useSearch() {
 
       if (type === 'artist' && typeof value === 'string') {
         router.push(`/events?search=${encodeURIComponent(value)}`)
+      } else if (type === 'artistPage' && typeof value === 'object') {
+        // The artist's own page — not a filtered browse query.
+        router.push(`/artists/${value.slug}`)
       } else if (type === 'venue' && typeof value === 'object') {
         const url = value.matchingEventId
           ? `/venues/${value.slug}?highlight=${value.matchingEventId}`
@@ -231,6 +263,7 @@ export function useSearch() {
     recentSearches,
     popularEvents,
     artistResults,
+    artistPageResults,
     venueResults,
     venueFirst,
     isLoading,

@@ -101,6 +101,11 @@ vi.mock('@concert-crawl/db', () => ({
   },
   auditLog: {},
   inviteCodes: {},
+  // #1115 PR-G — the detail route resolves artist-page slugs through this table.
+  artists: {
+    canonicalName: 'canonicalName',
+    slug: 'slug',
+  },
 }))
 
 import { createApp } from '../app.js'
@@ -251,6 +256,10 @@ describe('GET /v1/events/:id', () => {
     mockDb.where.mockResolvedValueOnce([]) // 4
     mockDb.where.mockResolvedValueOnce([]) // 5
     mockDb.where.mockReturnValueOnce(mockDb) // 6 (chain into groupBy)
+    // 7. artist-page slugs (#1115 PR-G) — select().from().where() → terminal.
+    // Empty: this fixture's artist has no `artists` row, so both slug fields
+    // come back null and the UI renders plain text.
+    mockDb.where.mockResolvedValueOnce([]) // 7
     // sold-out report orderBy → limit terminal
     mockDb.orderBy.mockReturnValueOnce(mockDb)
     mockDb.limit.mockResolvedValueOnce([])

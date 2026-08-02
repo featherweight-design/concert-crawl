@@ -617,10 +617,18 @@ export const CONSUMER_COPY = {
     // SearchResultsState section headers (count appended at runtime)
     artistsSectionPrefix: 'Artists',
     venuesSectionPrefix: 'Venues',
+    // #1115 PR-G — artists that have their own page. A separate section from
+    // the event-derived "Artists" rows above, which route to a filtered browse.
+    artistPagesSectionPrefix: 'Artist pages',
 
     // SearchResultsState venue sub-label
     upcomingShowSingular: 'upcoming show',
     upcomingShowPlural: 'upcoming shows',
+
+    // SearchResultsState artist-page row — sub-label when the artist has a page
+    // but nothing on the calendar, and the trailing tag on every such row.
+    artistPageNoUpcoming: 'Past shows only',
+    artistPageRowTag: 'Artist page',
   },
 
   // ── Filter bar ──────────────────────────────────────────────────

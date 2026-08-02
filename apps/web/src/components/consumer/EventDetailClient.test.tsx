@@ -91,6 +91,8 @@ function buildBaseEvent(
     title: 'Test Show',
     artist: 'Test Artist',
     supportingArtists: null,
+    artistSlug: null,
+    supportingArtistSlugs: null,
     tourName: null,
     date: '2099-07-15',
     doorsTime: null,

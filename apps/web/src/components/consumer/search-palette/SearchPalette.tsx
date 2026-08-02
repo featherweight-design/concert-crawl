@@ -45,12 +45,19 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
     }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { artistResults, venueResults, venueFirst, navigateTo } = search
+  const {
+    artistResults,
+    artistPageResults,
+    venueResults,
+    venueFirst,
+    navigateTo,
+  } = search
 
   useEffect(() => {
     if (!open) return
 
-    const totalResults = artistResults.length + venueResults.length
+    const totalResults =
+      artistPageResults.length + artistResults.length + venueResults.length
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
@@ -67,7 +74,18 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
         setSelectedIdx(nextIdx)
       } else if (event.key === 'Enter' && selectedIdxRef.current >= 0) {
         event.preventDefault()
-        const currentIdx = selectedIdxRef.current
+        const rawIdx = selectedIdxRef.current
+        // #1115 PR-G — artist-page rows own indices 0..n-1, ahead of both
+        // event-derived sections; everything below indexes into the remainder.
+        if (rawIdx < artistPageResults.length) {
+          const artistPage = artistPageResults[rawIdx]
+          if (artistPage) {
+            navigateTo('artistPage', { slug: artistPage.slug })
+            onClose()
+          }
+          return
+        }
+        const currentIdx = rawIdx - artistPageResults.length
         if (venueFirst) {
           const venueCount = venueResults.length
           if (currentIdx < venueCount) {
@@ -110,12 +128,22 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, artistResults, venueResults, venueFirst, navigateTo, onClose])
+  }, [
+    open,
+    artistResults,
+    artistPageResults,
+    venueResults,
+    venueFirst,
+    navigateTo,
+    onClose,
+  ])
 
   if (!open) return null
 
   const hasResults =
-    search.artistResults.length > 0 || search.venueResults.length > 0
+    search.artistPageResults.length > 0 ||
+    search.artistResults.length > 0 ||
+    search.venueResults.length > 0
 
   return (
     <div
@@ -232,6 +260,7 @@ export function SearchPalette({ open, onClose }: SearchPaletteProps) {
           {search.query.trim() !== '' && !search.isLoading && hasResults && (
             <SearchResultsState
               artistResults={search.artistResults}
+              artistPageResults={search.artistPageResults}
               venueResults={search.venueResults}
               venueFirst={search.venueFirst}
               selectedIdx={selectedIdx}

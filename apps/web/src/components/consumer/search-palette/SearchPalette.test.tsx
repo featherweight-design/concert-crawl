@@ -37,6 +37,14 @@ const mockHookState = {
     { name: 'Radiohead', nextDate: '2027-06-01', venueShort: 'Red Rocks' },
     { name: 'Godspeed', nextDate: '2027-06-05', venueShort: 'Bluebird' },
   ],
+  // #1115 PR-G — artists with their own page. Empty by default so the existing
+  // keyboard-arithmetic tests below keep asserting the pre-PR-G index layout.
+  artistPageResults: [] as Array<{
+    name: string
+    slug: string
+    photoUrl: string | null
+    upcomingShowCount: number
+  }>,
   venueResults: [
     {
       name: 'Red Rocks',
@@ -75,6 +83,7 @@ beforeEach(() => {
     },
   ]
   mockHookState.venueFirst = false
+  mockHookState.artistPageResults = []
 })
 
 describe('SearchPalette', () => {
@@ -198,5 +207,40 @@ describe('SearchPalette', () => {
       slug: 'red-rocks',
       matchingEventId: 'ev-1',
     })
+  })
+})
+
+describe('SearchPalette — artist pages (#1115 PR-G)', () => {
+  beforeEach(() => {
+    mockHookState.artistPageResults = [
+      {
+        name: 'Radiohead',
+        slug: 'radiohead',
+        photoUrl: null,
+        upcomingShowCount: 2,
+      },
+    ]
+  })
+
+  it('opens the artist page when the first row is selected with Enter', () => {
+    render(<SearchPalette open onClose={onClose} />)
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+
+    expect(mockNavigateTo).toHaveBeenCalledWith('artistPage', {
+      slug: 'radiohead',
+    })
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('still reaches the event-derived artist rows below the artist pages', () => {
+    render(<SearchPalette open onClose={onClose} />)
+
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'ArrowDown' })
+    fireEvent.keyDown(window, { key: 'Enter' })
+
+    expect(mockNavigateTo).toHaveBeenCalledWith('artist', 'Radiohead')
   })
 })

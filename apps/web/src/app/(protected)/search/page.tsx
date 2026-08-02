@@ -15,12 +15,16 @@ export default function SearchPage() {
     recentSearches,
     popularEvents,
     artistResults,
+    artistPageResults,
     venueResults,
     isLoading,
     navigateTo,
   } = useSearch()
 
-  const hasResults = artistResults.length > 0 || venueResults.length > 0
+  const hasResults =
+    artistPageResults.length > 0 ||
+    artistResults.length > 0 ||
+    venueResults.length > 0
 
   return (
     <div
@@ -53,6 +57,7 @@ export default function SearchPage() {
         {query.trim() !== '' && !isLoading && hasResults && (
           <SearchResultsState
             artistResults={artistResults}
+            artistPageResults={artistPageResults}
             venueResults={venueResults}
             onNavigateTo={navigateTo}
           />

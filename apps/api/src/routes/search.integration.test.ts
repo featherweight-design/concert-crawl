@@ -9,6 +9,7 @@ vi.mock('@hono/clerk-auth', () => ({
 import { createApp } from '../app.js'
 import {
   clearTables,
+  seedArtist,
   seedVenue,
   seedEvent,
   seedUserEvent,
@@ -148,6 +149,121 @@ describe('GET /v1/search — anonymous reads (#794)', () => {
   // contract is the inverse: search serves anonymous callers.
   it('serves /popular to an anonymous caller', async () => {
     const res = await app.request('/v1/search/popular')
+    expect(res.status).toBe(200)
+  })
+})
+
+// #1115 PR-G — artists become first-class search results that route to their
+// own page, alongside the event-derived rows the palette already renders.
+describe('GET /v1/search/artists — integration (#1115 PR-G)', () => {
+  beforeEach(async () => {
+    await clearTables()
+  })
+
+  it('rejects a query shorter than two characters', async () => {
+    const res = await app.request('/v1/search/artists?q=a')
+    expect(res.status).toBe(400)
+  })
+
+  it('returns a matching artist with its slug and upcoming show count', async () => {
+    const venue = await seedVenue({ slug: 'artist-search-venue' })
+    await seedArtist({ name: 'King Gizzard', photoUrl: 'https://img/kg.jpg' })
+    await seedEvent(venue.id, {
+      artist: 'King Gizzard',
+      date: '2027-09-01',
+      showTime: '20:00:00',
+    })
+
+    const res = await app.request('/v1/search/artists?q=gizz')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: Array<{
+        name: string
+        slug: string
+        photoUrl: string | null
+        upcomingShowCount: number
+      }>
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]).toMatchObject({
+      name: 'King Gizzard',
+      slug: 'king-gizzard',
+      photoUrl: 'https://img/kg.jpg',
+      upcomingShowCount: 1,
+    })
+  })
+
+  it('counts support-slot appearances toward an artist being returned', async () => {
+    const venue = await seedVenue({ slug: 'support-search-venue' })
+    await seedArtist({ name: 'Opening Act' })
+    await seedEvent(venue.id, {
+      artist: 'Some Headliner',
+      supportingArtists: ['Opening Act'],
+      canonicalSupporting: ['opening act'],
+      date: '2027-09-02',
+    })
+
+    const res = await app.request('/v1/search/artists?q=opening')
+    const body = (await res.json()) as {
+      data: Array<{ slug: string; upcomingShowCount: number }>
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.slug).toBe('opening-act')
+    expect(body.data[0]?.upcomingShowCount).toBe(1)
+  })
+
+  it('omits an artist whose only events are hidden from consumers', async () => {
+    const venue = await seedVenue({ slug: 'hidden-search-venue' })
+    await seedArtist({ name: 'Hidden Only' })
+    await seedEvent(venue.id, {
+      artist: 'Hidden Only',
+      date: '2027-09-03',
+      hiddenFromConsumer: true,
+    })
+
+    const res = await app.request('/v1/search/artists?q=hidden')
+    const body = (await res.json()) as { data: unknown[] }
+    expect(body.data).toHaveLength(0)
+  })
+
+  it('omits an artist with no events at all', async () => {
+    await seedArtist({ name: 'Orphan Artist' })
+
+    const res = await app.request('/v1/search/artists?q=orphan')
+    const body = (await res.json()) as { data: unknown[] }
+    expect(body.data).toHaveLength(0)
+  })
+
+  it('ranks an exact canonical match above a partial one', async () => {
+    const venue = await seedVenue({ slug: 'rank-search-venue' })
+    await seedArtist({ name: 'Wolf' })
+    await seedArtist({ name: 'Wolf Alice' })
+    await seedEvent(venue.id, { artist: 'Wolf', date: '2027-09-04' })
+    await seedEvent(venue.id, { artist: 'Wolf Alice', date: '2027-09-05' })
+
+    const res = await app.request('/v1/search/artists?q=wolf')
+    const body = (await res.json()) as { data: Array<{ slug: string }> }
+    expect(body.data.map((row) => row.slug)).toEqual(['wolf', 'wolf-alice'])
+  })
+
+  it('caps the artist section so it cannot crowd out event rows', async () => {
+    const venue = await seedVenue({ slug: 'cap-search-venue' })
+    for (let i = 0; i < 6; i += 1) {
+      await seedArtist({ name: `Capped Artist ${i}` })
+      await seedEvent(venue.id, {
+        artist: `Capped Artist ${i}`,
+        date: `2027-09-1${i}`,
+      })
+    }
+
+    const res = await app.request('/v1/search/artists?q=capped')
+    const body = (await res.json()) as { data: unknown[] }
+    expect(body.data.length).toBeLessThanOrEqual(3)
+  })
+
+  it('serves an anonymous caller', async () => {
+    const res = await app.request('/v1/search/artists?q=anything')
     expect(res.status).toBe(200)
   })
 })

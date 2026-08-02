@@ -185,6 +185,9 @@ export default async function EventDetailPage({
             status={event.status}
             surface="detail"
             headlinerAs="h1"
+            artistSlug={event.artistSlug}
+            supportingArtistSlugs={event.supportingArtistSlugs}
+            linkArtists
           />
 
           {/* Commitment strip — directly under title (#70). "I'm going!" is

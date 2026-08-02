@@ -1,4 +1,5 @@
 import React from 'react'
+import Link from 'next/link'
 import type { EventStatus } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { StatusPill } from '@/components/consumer/StatusPill'
@@ -21,6 +22,19 @@ interface EventTitleBlockProps {
   status?: EventStatus
   maxInline?: number | null
   headlinerAs?: 'h1' | 'div'
+  /**
+   * #1115 PR-G — the headliner's artist-page slug, or null when the projection
+   * has no row for that name. Ignored unless `linkArtists` is set.
+   */
+  artistSlug?: string | null
+  /** Positionally aligned with `supportingArtists`. See SupportingLine. */
+  supportingArtistSlugs?: Array<string | null> | null
+  /**
+   * Opt-in artist-page links. Off everywhere but the event-detail surface, so
+   * cards and heroes keep their whole-card tap target intact — a nested link
+   * inside a card link is both invalid markup and a bad tap target.
+   */
+  linkArtists?: boolean
 }
 
 export const EventTitleBlock = ({
@@ -32,6 +46,9 @@ export const EventTitleBlock = ({
   status = 'upcoming',
   maxInline = null,
   headlinerAs = 'div',
+  artistSlug = null,
+  supportingArtistSlugs = null,
+  linkArtists = false,
 }: EventTitleBlockProps): React.JSX.Element => {
   const ramp = RAMP[surface]
   const dim = status !== 'upcoming'
@@ -90,7 +107,19 @@ export const EventTitleBlock = ({
             : {}),
         }}
       >
-        {headliner}
+        {/* The link lives INSIDE the heading so the h1 keeps its text and its
+            place in the document outline; wrapping the heading would move the
+            landmark. Sizing is inherited, so the RAMP is untouched. */}
+        {linkArtists && artistSlug !== null ? (
+          <Link
+            href={`/artists/${artistSlug}`}
+            className="underline-offset-4 hover:underline focus-visible:underline"
+          >
+            {headliner}
+          </Link>
+        ) : (
+          headliner
+        )}
       </Headliner>
 
       {hasOpeners && (
@@ -99,6 +128,8 @@ export const EventTitleBlock = ({
           surface={surface}
           maxInline={maxInline}
           dim={dim}
+          slugs={supportingArtistSlugs}
+          linkArtists={linkArtists}
         />
       )}
 

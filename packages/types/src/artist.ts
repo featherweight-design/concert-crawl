@@ -62,6 +62,21 @@ export interface ArtistDetailResponse {
   following: boolean | null
 }
 
+/**
+ * One row of `GET /v1/search/artists` (#1115 PR-G) — an artist who has a page
+ * worth landing on. Structurally distinct from the event-derived artist rows
+ * the search palette already renders: these carry a `slug` and route to
+ * `/artists/{slug}`, not to a filtered browse query.
+ */
+export interface ArtistSearchResult {
+  name: string
+  slug: string
+  /** Cached Spotify image, or null — the row renders a glyph either way. */
+  photoUrl: string | null
+  /** Consumer-visible upcoming shows. May be 0 for an artist with only past shows. */
+  upcomingShowCount: number
+}
+
 /** Response body for POST/DELETE `/v1/artists/:slug/follow`. */
 export interface ArtistFollowResponse {
   following: boolean

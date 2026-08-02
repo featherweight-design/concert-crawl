@@ -13,6 +13,7 @@ import { testDb } from '../test/helpers/db.js'
 import {
   clearTables,
   seedVenue,
+  seedArtist,
   seedEvent,
   seedUserProfile,
   seedPriceSubmission,
@@ -285,6 +286,77 @@ describe('GET /v1/events/:id — integration', () => {
     expect(body.data.venueGuidePublished).toBe(false)
     // The raw timestamp is an internal detail — only the boolean ships.
     expect(body.data.venueGuidePublishedAt).toBeUndefined()
+  })
+
+  // #1115 PR-G — the event-detail page links artist names to their pages.
+  describe('artist slugs (#1115 PR-G)', () => {
+    it('resolves the headliner slug and a positionally aligned supporting array', async () => {
+      const venue = await seedVenue({ slug: 'slug-venue' })
+      await seedArtist({ name: 'Ghost Bath' })
+      // Deliberately seeding only the SECOND opener: the null must land at
+      // index 0 so the UI zip lines names up with slugs.
+      await seedArtist({ name: 'Second Opener' })
+
+      const event = await seedEvent(venue.id, {
+        artist: 'Ghost Bath',
+        supportingArtists: ['First Opener', 'Second Opener'],
+        date: '2027-07-01',
+      })
+
+      const res = await app.request(`/v1/events/${event.id}`)
+      expect(res.status).toBe(200)
+      const body = (await res.json()) as {
+        data: {
+          supportingArtists: string[]
+          artistSlug: string | null
+          supportingArtistSlugs: Array<string | null>
+        }
+      }
+      expect(body.data.artistSlug).toBe('ghost-bath')
+      expect(body.data.supportingArtists).toEqual([
+        'First Opener',
+        'Second Opener',
+      ])
+      expect(body.data.supportingArtistSlugs).toEqual([null, 'second-opener'])
+    })
+
+    it('returns a null headliner slug when the artists projection has no row', async () => {
+      const venue = await seedVenue({ slug: 'unresolved-venue' })
+      const event = await seedEvent(venue.id, {
+        artist: 'Never Projected',
+        supportingArtists: null,
+        date: '2027-07-02',
+      })
+
+      const res = await app.request(`/v1/events/${event.id}`)
+      const body = (await res.json()) as {
+        data: {
+          artistSlug: string | null
+          supportingArtistSlugs: Array<string | null> | null
+        }
+      }
+      expect(body.data.artistSlug).toBeNull()
+      // Null supportingArtists (legacy row) yields a null slug array, not [].
+      expect(body.data.supportingArtistSlugs).toBeNull()
+    })
+
+    it('keeps duplicate opener names aligned rather than deduping them', async () => {
+      const venue = await seedVenue({ slug: 'dupe-venue' })
+      await seedArtist({ name: 'Echo Act' })
+      const event = await seedEvent(venue.id, {
+        artist: 'Headliner Only',
+        // canonicalizeSupporting() would collapse and sort this; the response
+        // array must not, or the UI zip silently shifts.
+        supportingArtists: ['Echo Act', 'Echo Act'],
+        date: '2027-07-03',
+      })
+
+      const res = await app.request(`/v1/events/${event.id}`)
+      const body = (await res.json()) as {
+        data: { supportingArtistSlugs: Array<string | null> }
+      }
+      expect(body.data.supportingArtistSlugs).toEqual(['echo-act', 'echo-act'])
+    })
   })
 
   it('includes priceSource in event detail response', async () => {

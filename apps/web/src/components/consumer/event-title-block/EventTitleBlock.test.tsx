@@ -89,3 +89,76 @@ describe('EventTitleBlock', () => {
     ).toBeInTheDocument()
   })
 })
+
+// #1115 PR-G — the block can link the whole bill to artist pages, opt-in.
+describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
+  it('renders no anchors on the card surface even when slugs are supplied', () => {
+    const { container } = render(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={['Hotline TNT']}
+        tourName={null}
+        artistSlug="wednesday"
+        supportingArtistSlugs={['hotline-tnt']}
+        surface="card"
+      />,
+    )
+    expect(container.querySelectorAll('a')).toHaveLength(0)
+  })
+
+  it('renders no anchors on the hero surface even when slugs are supplied', () => {
+    const { container } = render(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={['Hotline TNT']}
+        tourName={null}
+        artistSlug="wednesday"
+        supportingArtistSlugs={['hotline-tnt']}
+        surface="hero"
+      />,
+    )
+    expect(container.querySelectorAll('a')).toHaveLength(0)
+  })
+
+  it('links the headliner and openers on the detail surface', () => {
+    const { container } = render(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={['Hotline TNT', 'No Page Act']}
+        tourName={null}
+        artistSlug="wednesday"
+        supportingArtistSlugs={['hotline-tnt', null]}
+        surface="detail"
+        headlinerAs="h1"
+        linkArtists
+      />,
+    )
+    const hrefs = Array.from(container.querySelectorAll('a')).map((anchor) =>
+      anchor.getAttribute('href'),
+    )
+    expect(hrefs).toEqual(['/artists/wednesday', '/artists/hotline-tnt'])
+    // The heading is still the heading — the link lives inside it.
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Wednesday',
+    )
+  })
+
+  it('leaves the headliner as plain text when it has no slug', () => {
+    const { container } = render(
+      <EventTitleBlock
+        headliner="Unprojected Act"
+        supportingArtists={[]}
+        tourName={null}
+        artistSlug={null}
+        supportingArtistSlugs={[]}
+        surface="detail"
+        headlinerAs="h1"
+        linkArtists
+      />,
+    )
+    expect(container.querySelectorAll('a')).toHaveLength(0)
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(
+      'Unprojected Act',
+    )
+  })
+})
