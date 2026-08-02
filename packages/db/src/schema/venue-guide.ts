@@ -34,7 +34,7 @@ export const venueGuideChips = pgTable(
       .defaultNow(),
   },
   (table) => ({
-    venueTypeIdx: uniqueIndex('venue_guide_chips_venue_type_idx').on(
+    venueChipTypeIdx: uniqueIndex('venue_guide_chips_venue_type_idx').on(
       table.venueId,
       table.chipType,
     ),

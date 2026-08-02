@@ -1078,8 +1078,11 @@ async function seedVenueGuides(
       .where(eq(venues.id, venue.id))
   }
 
-  // Every other venue stays unpublished so the no-guide consumer path is
-  // reachable locally too.
+  // On a fresh DB every other venue is left unpublished, so the no-guide
+  // consumer path is reachable locally too. Note this only ever publishes the
+  // fixture venues — it does not clear `guide_published_at` / `insider_tip` on
+  // venues outside SEED_VENUE_GUIDES, so anything published by hand in an
+  // existing local DB stays published across a re-seed.
   console.warn(
     `Seeded ${SEED_VENUE_GUIDES.length} venue guides (populated / thin / placeholder).`,
   )
