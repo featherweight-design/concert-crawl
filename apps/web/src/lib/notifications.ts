@@ -118,6 +118,17 @@ const sameOriginPathOrNull = (raw: string | null): string | null => {
 const isTimestamp = (value: unknown): value is string =>
   typeof value === 'string' && !Number.isNaN(Date.parse(value))
 
+const isNullableTimestamp = (value: unknown): value is string | null =>
+  value === null || isTimestamp(value)
+
+/**
+ * Counts render verbatim in the header and the pip, so "-1 new" or "2.5 new"
+ * would reach the screen. Every count crossing this boundary goes through
+ * here.
+ */
+const isCount = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0
+
 const parseItem = (value: unknown): ConsumerNotification | null => {
   if (!isRecord(value)) return null
   const { id, category, title, body, actionUrl, readAt, createdAt, metadata } =
@@ -154,14 +165,7 @@ export const safeParseNotificationList = (
   if (!Array.isArray(items)) {
     return { success: false, error: 'Notification payload has no items array' }
   }
-  // A count is a non-negative integer, and this is an API boundary. A negative
-  // or fractional value would flow straight into the header and the pip, which
-  // render it verbatim — "-1 new" is worse than a rejected payload.
-  if (
-    typeof unreadCount !== 'number' ||
-    !Number.isInteger(unreadCount) ||
-    unreadCount < 0
-  ) {
+  if (!isCount(unreadCount)) {
     return {
       success: false,
       error: 'Notification unreadCount is not a non-negative integer',
@@ -173,8 +177,13 @@ export const safeParseNotificationList = (
   if (!isNullableString(nextCursor)) {
     return { success: false, error: 'Notification nextCursor is not a string' }
   }
-  if (!isNullableString(seenAt)) {
-    return { success: false, error: 'Notification seenAt is not a string' }
+  // Not merely a string: `seenAt` is a watermark that gets compared against
+  // row timestamps, so an unparseable one fails downstream rather than here.
+  if (!isNullableTimestamp(seenAt)) {
+    return {
+      success: false,
+      error: 'Notification seenAt is not a parseable timestamp',
+    }
   }
 
   const parsed: ConsumerNotification[] = []
@@ -237,8 +246,8 @@ export async function markAllNotificationsRead(token: string): Promise<number> {
     token,
     {},
   )
-  if (!isRecord(body) || typeof body['updated'] !== 'number') {
-    throw new ApiError(502, 'read-all returned no updated count')
+  if (!isRecord(body) || !isCount(body['updated'])) {
+    throw new ApiError(502, 'read-all returned no usable updated count')
   }
   return body['updated']
 }
@@ -249,8 +258,8 @@ export async function markPanelSeen(token: string): Promise<string | null> {
     token,
     {},
   )
-  if (!isRecord(body) || !isNullableString(body['seenAt'])) {
-    throw new ApiError(502, 'mark-panel-seen returned no watermark')
+  if (!isRecord(body) || !isNullableTimestamp(body['seenAt'])) {
+    throw new ApiError(502, 'mark-panel-seen returned no usable watermark')
   }
   return body['seenAt']
 }

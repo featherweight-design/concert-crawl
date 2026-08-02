@@ -151,6 +151,10 @@ describe('safeParseNotificationList', () => {
     ['a non-boolean hasMore', { ...payload, hasMore: 'yes' }],
     ['a non-string nextCursor', { ...payload, nextCursor: 12 }],
     ['a non-string seenAt', { ...payload, seenAt: 0 }],
+    [
+      'a seenAt that is a string but not a parseable date',
+      { ...payload, seenAt: 'last tuesday' },
+    ],
     ['a row missing an id', { ...payload, items: [{ ...row, id: undefined }] }],
     [
       'a row with a numeric title',
@@ -259,6 +263,19 @@ describe('the write endpoints', () => {
     )
   })
 
+  it.each([-1, 2.5, Number.NaN])(
+    'throws an ApiError when read-all returns %s',
+    async (updated) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => okResponse({ updated })),
+      )
+      await expect(markAllNotificationsRead('tok')).rejects.toBeInstanceOf(
+        ApiError,
+      )
+    },
+  )
+
   it('posts the panel-seen watermark', async () => {
     const fetchMock = vi.fn((_url: unknown, _init?: unknown) =>
       okResponse({ seenAt: null }),
@@ -270,5 +287,13 @@ describe('the write endpoints', () => {
     const [url, init] = fetchMock.mock.calls[0] ?? []
     expect(String(url)).toContain('/v1/notifications/mark-panel-seen')
     expect(init).toMatchObject({ method: 'POST' })
+  })
+
+  it('throws an ApiError when the watermark is not a parseable date', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => okResponse({ seenAt: 'just now' })),
+    )
+    await expect(markPanelSeen('tok')).rejects.toBeInstanceOf(ApiError)
   })
 })
