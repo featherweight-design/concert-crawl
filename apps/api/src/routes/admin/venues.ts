@@ -20,6 +20,7 @@ import { apiLogger } from '../../lib/logger.js'
 import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js'
 import { runBackgroundTask } from '../../lib/background-tasks.js'
 import type { AdminVariables } from './index.js'
+import { venueGuideAdminRouter } from './venue-guide.js'
 
 const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
@@ -160,6 +161,10 @@ const updateVenueSchema = createVenueSchema
   )
 
 export const venuesAdminRouter = new Hono<AdminVariables>()
+
+// #764 first-timer guide authoring — a distinct resource with its own publish
+// gate, so it lives in its own file rather than growing this one further.
+venuesAdminRouter.route('/:id/guide', venueGuideAdminRouter)
 
 // GET /v1/admin/venues — list all venues with upcoming event counts
 venuesAdminRouter.get('/', async (ctx) => {
