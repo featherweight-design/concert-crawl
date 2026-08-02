@@ -9,8 +9,13 @@ import type {
 // test are pure, so a stub keeps this a node-environment unit test.
 vi.mock('@clerk/nextjs', () => ({ useAuth: () => ({}) }))
 
-const { notificationsQueryKey, flattenNotifications, unreadCountOf, seenAtOf } =
-  await import('./use-notifications')
+const {
+  notificationsQueryKey,
+  flattenNotifications,
+  unreadCountOf,
+  seenAtOf,
+  stampRead,
+} = await import('./use-notifications')
 
 const item = (id: string): ConsumerNotification => ({
   id,
@@ -95,5 +100,51 @@ describe('seenAtOf', () => {
 
   it('is null before any page has loaded, indistinguishable by design', () => {
     expect(seenAtOf(undefined)).toBeNull()
+  })
+})
+
+describe('stampRead', () => {
+  const READ_AT = '2026-08-02T06:30:00-06:00'
+
+  it('moves the header count when the marked row lives on a later page', () => {
+    // The header reads page 0 (`unreadCountOf`). Decrementing each page by its
+    // own matches would leave page 0 untouched here, so the count would sit
+    // still until the refetch landed.
+    const data = pages([
+      page({ items: [item('a')], unreadCount: 5 }),
+      page({ items: [item('b')], unreadCount: 5 }),
+    ])
+    const next = stampRead(data, READ_AT, (row) => row.id === 'b')
+
+    expect(unreadCountOf(next)).toBe(4)
+    expect(next.pages[1]?.items[0]?.readAt).toBe(READ_AT)
+    expect(next.pages[0]?.items[0]?.readAt).toBeNull()
+  })
+
+  it('writes one window-wide count to every page, never a per-page one', () => {
+    const data = pages([
+      page({ items: [item('a'), item('b')], unreadCount: 5 }),
+      page({ items: [item('c')], unreadCount: 5 }),
+    ])
+    const next = stampRead(data, READ_AT, () => true)
+
+    expect(next.pages.map((each) => each.unreadCount)).toEqual([2, 2])
+  })
+
+  it('never counts an already-read row twice', () => {
+    const data = pages([
+      page({ items: [{ ...item('a'), readAt: READ_AT }], unreadCount: 1 }),
+    ])
+    const next = stampRead(data, '2026-08-02T07:00:00-06:00', () => true)
+
+    expect(unreadCountOf(next)).toBe(1)
+    expect(next.pages[0]?.items[0]?.readAt).toBe(READ_AT)
+  })
+
+  it('floors the count at zero', () => {
+    const data = pages([
+      page({ items: [item('a'), item('b')], unreadCount: 1 }),
+    ])
+    expect(unreadCountOf(stampRead(data, READ_AT, () => true))).toBe(0)
   })
 })

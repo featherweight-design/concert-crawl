@@ -95,16 +95,34 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isNullableString = (value: unknown): value is string | null =>
   value === null || typeof value === 'string'
 
+/**
+ * `actionUrl` is untrusted: it is written by backend fan-outs into a DB column
+ * and rendered back here, so a bad row must not become an open redirect once
+ * PR-C makes the row navigable. Only a same-origin absolute path survives —
+ * anything else degrades to `null`, which renders a non-navigating row rather
+ * than dropping the notification entirely.
+ *
+ * This is deliberately stricter than `safeSameOriginPath` in `app/sw.ts`: that
+ * one resolves against `self.location.origin`, which does not exist during SSR.
+ * A leading `//` is rejected because it is protocol-relative, not a path.
+ */
+const sameOriginPathOrNull = (raw: string | null): string | null => {
+  if (raw === null || !raw.startsWith('/') || raw.startsWith('//')) return null
+  return raw
+}
+
 const parseItem = (value: unknown): ConsumerNotification | null => {
   if (!isRecord(value)) return null
   const { id, category, title, body, actionUrl, readAt, createdAt, metadata } =
     value
+
   if (typeof id !== 'string') return null
   if (typeof category !== 'string') return null
   if (typeof title !== 'string') return null
   if (typeof body !== 'string') return null
   if (typeof createdAt !== 'string') return null
   if (!isNullableString(actionUrl)) return null
+  const safeActionUrl = sameOriginPathOrNull(actionUrl)
   if (!isNullableString(readAt)) return null
   if (metadata !== null && !isRecord(metadata)) return null
   return {
@@ -112,7 +130,7 @@ const parseItem = (value: unknown): ConsumerNotification | null => {
     category,
     title,
     body,
-    actionUrl,
+    actionUrl: safeActionUrl,
     readAt,
     createdAt,
     metadata,

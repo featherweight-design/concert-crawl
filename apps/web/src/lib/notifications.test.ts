@@ -40,6 +40,38 @@ describe('safeParseNotificationList', () => {
     expect(result.data.seenAt).toBeNull()
   })
 
+  it.each([
+    ['https://evil.example/steal', 'an absolute cross-origin URL'],
+    ['//evil.example/steal', 'a protocol-relative URL'],
+    ['javascript:alert(1)', 'a javascript: URL'],
+    ['events/e1', 'a relative path with no leading slash'],
+  ])(
+    'degrades %s to null (%s) rather than dropping the notification',
+    (actionUrl) => {
+      const result = safeParseNotificationList({
+        ...payload,
+        items: [{ ...row, actionUrl }],
+      })
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      // The row still renders — it just does not navigate.
+      expect(result.data.items).toHaveLength(1)
+      expect(result.data.items[0]?.actionUrl).toBeNull()
+    },
+  )
+
+  it('keeps a same-origin path with a query string intact', () => {
+    const result = safeParseNotificationList({
+      ...payload,
+      items: [{ ...row, actionUrl: '/events/e1?from=notifications' }],
+    })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.items[0]?.actionUrl).toBe(
+      '/events/e1?from=notifications',
+    )
+  })
+
   it('accepts a null actionUrl, a null metadata and an ISO readAt', () => {
     const result = safeParseNotificationList({
       ...payload,

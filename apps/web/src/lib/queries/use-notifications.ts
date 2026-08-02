@@ -16,6 +16,9 @@ import {
   type NotificationListResult,
 } from '@/lib/notifications'
 
+/** First page has no cursor. Typed here so the query needs no `as` cast. */
+const INITIAL_CURSOR: string | null = null
+
 // Scoped by userId for the same reason as watchingQueryKey: the app-level
 // QueryClient outlives a sign-in session, and an unscoped key would briefly
 // serve the previous account's notifications after an account switch.
@@ -47,7 +50,7 @@ export function useNotifications() {
       return fetchNotifications(token, pageParam ?? undefined)
     },
     // The cursor is opaque — echoed back verbatim, never parsed or built.
-    initialPageParam: null as string | null,
+    initialPageParam: INITIAL_CURSOR,
     getNextPageParam: (lastPage) =>
       lastPage.hasMore ? lastPage.nextCursor : undefined,
     enabled: !!isSignedIn && !!userId,
@@ -83,27 +86,41 @@ export const unreadCountOf = (data: NotificationPages | undefined): number =>
 export const seenAtOf = (data: NotificationPages | undefined): string | null =>
   data?.pages[0]?.seenAt ?? null
 
-/** Applies a read stamp to matching rows across every loaded page. */
-const stampRead = (
+/**
+ * Applies a read stamp to matching rows across every loaded page.
+ *
+ * `unreadCount` is WINDOW-WIDE, not per-page — the API repeats the same number
+ * on every page. So the decrement is computed once from every loaded page and
+ * written identically to all of them. Decrementing each page by its own
+ * matches would leave the pages disagreeing, and since the header reads page 0
+ * (`unreadCountOf`), marking a row that lives on page 2 would not move the
+ * count at all until the refetch landed.
+ */
+export const stampRead = (
   data: NotificationPages,
   readAt: string,
   matches: (item: ConsumerNotification) => boolean,
-): NotificationPages => ({
-  ...data,
-  pages: data.pages.map((page) => {
-    const items = page.items.map((item) =>
-      item.readAt === null && matches(item) ? { ...item, readAt } : item,
-    )
-    const marked = page.items.filter(
-      (item) => item.readAt === null && matches(item),
-    ).length
-    return {
+): NotificationPages => {
+  const willMark = (item: ConsumerNotification): boolean =>
+    item.readAt === null && matches(item)
+
+  const marked = data.pages.reduce(
+    (total, page) => total + page.items.filter(willMark).length,
+    0,
+  )
+  const unreadCount = Math.max(0, (data.pages[0]?.unreadCount ?? 0) - marked)
+
+  return {
+    ...data,
+    pages: data.pages.map((page) => ({
       ...page,
-      items,
-      unreadCount: Math.max(0, page.unreadCount - marked),
-    }
-  }),
-})
+      items: page.items.map((item) =>
+        willMark(item) ? { ...item, readAt } : item,
+      ),
+      unreadCount,
+    })),
+  }
+}
 
 /**
  * Optimistic read mutations.
