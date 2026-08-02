@@ -1,3 +1,10 @@
+# [1.195.0](https://github.com/HartiganHM/concert-crawl/compare/v1.194.1...v1.195.0) (2026-08-02)
+
+
+### Features
+
+* **admin:** hide non-artist rows from the public artist pages ([2bf1b71](https://github.com/HartiganHM/concert-crawl/commit/2bf1b711809f33e584136d437d5f5ddf98eee6c5)), closes [#1342](https://github.com/HartiganHM/concert-crawl/issues/1342)
+
 ## [1.194.1](https://github.com/HartiganHM/concert-crawl/compare/v1.194.0...v1.194.1) (2026-08-02)
 
 
