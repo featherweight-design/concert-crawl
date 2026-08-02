@@ -23,7 +23,16 @@ const matchStatusSchema = z.enum([
 
 const listQuerySchema = z.object({
   status: matchStatusSchema.optional(),
-  search: z.string().trim().min(1).max(200).optional(),
+  // An empty `search=` is what a controlled input sends when the admin clears
+  // it, and that means "no filter" — not a bad request.
+  search: z
+    .string()
+    .trim()
+    .max(200)
+    .optional()
+    .transform((value) =>
+      value === undefined || value === '' ? undefined : value,
+    ),
   limit: z.coerce.number().int().min(1).max(200).default(100),
 })
 

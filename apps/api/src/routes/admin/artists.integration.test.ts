@@ -77,6 +77,18 @@ describe('admin artists routes', () => {
       expect(body.data[0].canonicalName).toBe('nirvana')
     })
 
+    it('treats an empty search as no filter', async () => {
+      await seedArtist({ canonicalName: 'nirvana', matchStatus: 'ambiguous' })
+
+      const res = await app.request('/v1/admin/artists?search=', {
+        headers: ADMIN_HEADERS,
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.data).toHaveLength(1)
+    })
+
     it('rejects an unknown status with a 400', async () => {
       const res = await app.request('/v1/admin/artists?status=bogus', {
         headers: ADMIN_HEADERS,

@@ -233,7 +233,10 @@ export default function AdminArtistsPage() {
                     <TD mono color="var(--fg-subtle)">
                       {row.matchCheckedAt === null
                         ? COPY.never
-                        : new Date(row.matchCheckedAt).toLocaleDateString()}
+                        : new Date(row.matchCheckedAt).toLocaleDateString(
+                            'en-US',
+                            { timeZone: 'America/Denver' },
+                          )}
                     </TD>
                     <TD align="right">
                       <div
