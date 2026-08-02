@@ -8,12 +8,12 @@ import { MapPlaceholder } from '@/components/consumer/map-placeholder'
 import { EmptyState } from '@/components/consumer/empty-state'
 import { googleMapsUrl } from '@/components/consumer/definitions/lib'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-
-const copy = CONSUMER_COPY
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
 import { VenueEventList } from '@/components/consumer/venue-event-list/VenueEventList'
 import { StatPill } from '@/components/consumer/venue-profile/StatPill'
 import { BackChip } from '@/components/consumer/back-chip/BackChip'
+
+const copy = CONSUMER_COPY
 
 interface VenueProfilePageProps {
   params: Promise<{ slug: string }>
