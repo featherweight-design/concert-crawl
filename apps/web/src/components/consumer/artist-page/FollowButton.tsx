@@ -114,6 +114,9 @@ export const FollowButton = ({
     <>
       <button
         type="button"
+        // `all: unset` in `style` wipes the browser focus ring; `.ap-follow`
+        // puts it back. A :focus-visible rule cannot be expressed inline.
+        className="ap-follow"
         onClick={onClick}
         // Signed out this is a dialog trigger, not a toggle — `aria-pressed` is
         // omitted entirely rather than set to false, which would announce an

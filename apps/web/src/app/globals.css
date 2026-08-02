@@ -200,6 +200,14 @@
   outline-offset: 2px;
 }
 
+/* Artist-page Follow control — same all:unset restoration. This is the page's
+   primary conversion control, so an invisible keyboard focus is the worst
+   place on the page to have one. */
+.ap-follow:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 /* Same restoration for the three "Still going?" nudge actions. */
 .going-nudge-action:focus-visible {
   outline: 2px solid var(--focus);

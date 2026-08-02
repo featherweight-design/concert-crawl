@@ -126,6 +126,21 @@ describe('FollowButton', () => {
     expect(compact.style.fontSize).toBe('13.5px')
   })
 
+  it('keeps the focus-ring hook that all:unset would otherwise destroy', () => {
+    // `all: unset` wipes the browser outline. `.ap-follow:focus-visible` in
+    // globals.css puts it back, so losing the class silently makes keyboard
+    // focus invisible on the page's primary conversion control.
+    const { getByRole } = render(
+      <FollowButton
+        name="Wax Harbour"
+        following={false}
+        signedOut={false}
+        onToggle={noop}
+      />,
+    )
+    expect(getByRole('button').className).toContain('ap-follow')
+  })
+
   it('carries state in the glyph as well as the fill, and announces it', () => {
     const { getByRole, unmount } = render(
       <FollowButton
