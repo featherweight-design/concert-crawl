@@ -243,6 +243,48 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
       expect(res.status).toBe(404)
     })
 
+    // A save replaces the authored set, but `chip_type` is plain text and the
+    // read path skips keys outside the current pool. A venue-wide delete would
+    // therefore destroy rows this admin never saw — and so could not re-send.
+    it('leaves chip rows outside GUIDE_CHIP_ORDER untouched', async () => {
+      setAuth('admin')
+      const venue = await seedVenue({ slug: 'guide-put-preserves-unknown' })
+      await testDb
+        .insert(venueGuideChips)
+        .values([{ venueId: venue.id, chipType: 'weather', body: 'Cold.' }])
+
+      const res = await putGuide(venue.id, {
+        chips: [{ chipType: 'accessibility', body: 'Step-free entry.' }],
+      })
+      expect(res.status).toBe(200)
+
+      const rows = await testDb
+        .select()
+        .from(venueGuideChips)
+        .where(
+          and(
+            eq(venueGuideChips.venueId, venue.id),
+            eq(venueGuideChips.chipType, 'weather'),
+          ),
+        )
+      expect(rows).toHaveLength(1)
+    })
+
+    it('404s for a malformed venue id on every guide endpoint', async () => {
+      setAuth('admin')
+      expect((await putGuide('not-a-uuid', { chips: [] })).status).toBe(404)
+      expect(
+        (await app.request('/v1/admin/venues/not-a-uuid/guide')).status,
+      ).toBe(404)
+      for (const action of ['publish', 'unpublish']) {
+        const res = await app.request(
+          `/v1/admin/venues/not-a-uuid/guide/${action}`,
+          { method: 'POST' },
+        )
+        expect(res.status).toBe(404)
+      }
+    })
+
     it('403s for a non-admin caller', async () => {
       setAuth('user')
       const venue = await seedVenue({ slug: 'guide-put-403' })

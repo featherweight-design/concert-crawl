@@ -1,8 +1,8 @@
-import { Hono } from 'hono'
+import { Hono, type Context } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { db, venueGuideChips, venues } from '@concert-crawl/db'
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import {
   GUIDE_CHIP_ORDER,
   GUIDE_FIELD_MAX_LENGTH,
@@ -75,6 +75,20 @@ export const saveGuideSchema = z
       }
     })
   })
+
+const venueIdParamSchema = z.object({ id: z.string().uuid() })
+
+/**
+ * Hono cannot infer the parent's `:id` through the mount, so `zValidator('param')`
+ * would type it as never — the id is parsed off the raw params instead, which
+ * validates it just as strictly without a cast. A malformed id 404s rather than
+ * 400s: it is indistinguishable from a venue that does not exist, and the
+ * handlers' own not-found branch already says exactly that.
+ */
+const readVenueId = (ctx: Context): string | null => {
+  const parsed = venueIdParamSchema.safeParse(ctx.req.param())
+  return parsed.success ? parsed.data.id : null
+}
 
 interface VenueGuideRow {
   insiderTip: string | null
@@ -150,10 +164,7 @@ function accessibilityGateInput(chips: VenueGuideChip[]): {
 
 // GET /v1/admin/venues/:id/guide
 venueGuideAdminRouter.get('/', async (ctx) => {
-  const id = ctx.req.param('id')
-
-  // Hono cannot infer the parent's `:id` through the mount, so narrow it here
-  // rather than casting. An absent id is unreachable via the mounted path.
+  const id = readVenueId(ctx)
   if (!id) {
     return ctx.json({ success: false, error: 'Venue not found' }, 404)
   }
@@ -171,10 +182,7 @@ venueGuideAdminRouter.put(
   '/',
   zValidator('json', saveGuideSchema),
   async (ctx) => {
-    const id = ctx.req.param('id')
-
-    // Hono cannot infer the parent's `:id` through the mount, so narrow it here
-    // rather than casting. An absent id is unreachable via the mounted path.
+    const id = readVenueId(ctx)
     if (!id) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404)
     }
@@ -199,7 +207,18 @@ venueGuideAdminRouter.put(
     const insiderTip = body.insiderTip ?? null
 
     await db.transaction(async (tx) => {
-      await tx.delete(venueGuideChips).where(eq(venueGuideChips.venueId, id))
+      // Scoped to the keys this endpoint can author. `chip_type` is a plain
+      // text column, so a bare venue-wide delete would silently drop rows a
+      // newer deploy or a #997 key wrote — rows the read path already skips
+      // rather than crashing on, and which this admin never saw to re-send.
+      await tx
+        .delete(venueGuideChips)
+        .where(
+          and(
+            eq(venueGuideChips.venueId, id),
+            inArray(venueGuideChips.chipType, [...GUIDE_CHIP_ORDER]),
+          ),
+        )
       if (persistable.length > 0) {
         await tx
           .insert(venueGuideChips)
@@ -233,10 +252,7 @@ venueGuideAdminRouter.put(
 
 // POST /v1/admin/venues/:id/guide/publish
 venueGuideAdminRouter.post('/publish', async (ctx) => {
-  const id = ctx.req.param('id')
-
-  // Hono cannot infer the parent's `:id` through the mount, so narrow it here
-  // rather than casting. An absent id is unreachable via the mounted path.
+  const id = readVenueId(ctx)
   if (!id) {
     return ctx.json({ success: false, error: 'Venue not found' }, 404)
   }
@@ -288,10 +304,7 @@ venueGuideAdminRouter.post('/publish', async (ctx) => {
 // against production. Idempotent by design — unpublishing an already-draft
 // guide is a 200 no-op, not an error.
 venueGuideAdminRouter.post('/unpublish', async (ctx) => {
-  const id = ctx.req.param('id')
-
-  // Hono cannot infer the parent's `:id` through the mount, so narrow it here
-  // rather than casting. An absent id is unreachable via the mounted path.
+  const id = readVenueId(ctx)
   if (!id) {
     return ctx.json({ success: false, error: 'Venue not found' }, 404)
   }
