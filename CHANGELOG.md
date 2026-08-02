@@ -1,3 +1,20 @@
+# [1.196.0](https://github.com/HartiganHM/concert-crawl/compare/v1.195.0...v1.196.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **crawler:** capture rendered HTML when waitForSelector times out ([a455522](https://github.com/HartiganHM/concert-crawl/commit/a4555229ff1c0366b13bac03b6d3cc799554e25f)), closes [#1340](https://github.com/HartiganHM/concert-crawl/issues/1340) [#1340](https://github.com/HartiganHM/concert-crawl/issues/1340)
+* **crawler:** carry selector and URL in the timeout error message ([751e207](https://github.com/HartiganHM/concert-crawl/commit/751e207a9f4c95771b1653c9bac30a32e2a17217))
+* **crawler:** guard debug capture on null, not falsiness ([7e09354](https://github.com/HartiganHM/concert-crawl/commit/7e0935496279ed5f0f2f69588f052d2f7903b456))
+* **crawler:** log non-timeout selector errors, skip empty debug capture ([78645f9](https://github.com/HartiganHM/concert-crawl/commit/78645f9a4097930f713b8ee22e211b24a46897b2))
+* **crawler:** log why HTML capture failed after a selector timeout ([9011472](https://github.com/HartiganHM/concert-crawl/commit/9011472083d9d8e176fdb35bba7b0d921d417484))
+* **crawler:** only wrap genuine selector timeouts ([b5bcdb4](https://github.com/HartiganHM/concert-crawl/commit/b5bcdb4cadcabd17a32443116665b88a4c7f0057))
+
+
+### Features
+
+* **web:** add the [#72](https://github.com/HartiganHM/concert-crawl/issues/72) share print render kit ([3fee10c](https://github.com/HartiganHM/concert-crawl/commit/3fee10c74a04fb5c856e141bcf07db23d795c428))
+
 # [1.195.0](https://github.com/HartiganHM/concert-crawl/compare/v1.194.1...v1.195.0) (2026-08-02)
 
 
