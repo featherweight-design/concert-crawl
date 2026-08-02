@@ -736,6 +736,9 @@ export const ADMIN_COPY = {
       },
       field: {
         remove: 'REMOVE',
+        // Disambiguates this control from the picker toggle, which carries the
+        // same "Remove <chip>" name.
+        removeSuffix: 'from this guide',
       },
       state: {
         blank: 'Blank',

@@ -7,6 +7,7 @@ import Link from 'next/link'
 import type {
   ApiProvider,
   PlatformProbeResult,
+  VenueGuide,
   VenuePlatform,
   VenueWithCrawlHealth,
 } from '@concert-crawl/types'
@@ -25,6 +26,7 @@ import {
   RelTime,
   SectionHead,
 } from '@/components/admin/primitives'
+import { VenueGuideBlock } from '@/components/admin/venue-guide/VenueGuideBlock'
 import { deriveVenueStatus } from '@/lib/admin/venue-status'
 import {
   IdentityArt,
@@ -487,9 +489,17 @@ function RobotsHint({ allowed }: { allowed: boolean | null }) {
 
 interface Props {
   venue: VenueWithCrawlHealth
+  /** #764 first-timer guide draft, fetched server-side alongside the venue. */
+  guide?: VenueGuide
 }
 
-export function VenueDetailsClient({ venue }: Props) {
+const EMPTY_GUIDE: VenueGuide = {
+  chips: [],
+  insiderTip: null,
+  publishedAt: null,
+}
+
+export function VenueDetailsClient({ venue, guide = EMPTY_GUIDE }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const { setPageTitle } = usePageTitle()
@@ -2064,6 +2074,14 @@ export function VenueDetailsClient({ venue }: Props) {
             </div>
           </div>
         </VDSection>
+
+        {/* #764 first-timer guide — its own resource with its own publish
+            gate, so it renders as a standalone block rather than a VDSection. */}
+        <VenueGuideBlock
+          venueId={venue.id}
+          venueName={venue.name}
+          initialGuide={guide}
+        />
 
         {/* 04 · editorial */}
         <VDSection
