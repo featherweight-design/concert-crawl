@@ -577,8 +577,9 @@ export async function crawlVenue(
     // display bug and closes that filter blind spot in one pass (#1338).
     // `rawTitle` is typed as required on NormalizedEvent but is absent on
     // some real extractor outputs, so it is decoded only when present rather
-    // than assumed — an undefined here previously took the whole run to
-    // `failed`.
+    // than assumed — calling `.replace` on an undefined throws and takes the
+    // whole run to `failed`. The filter call below is the softer half of the
+    // same problem: it doesn't throw, it just matches the wrong string.
     const decodedEvents = extraction.normalizedEvents.map((evt) => ({
       ...evt,
       title: decodeHtmlEntities(evt.title),

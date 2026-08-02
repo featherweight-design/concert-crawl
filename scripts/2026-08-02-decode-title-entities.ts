@@ -130,8 +130,14 @@ export const runDecode = async (opts: {
   }
 
   console.warn('---')
+  // Phrase the headline off what actually got written, not off the flag that
+  // was passed — a run that updates nothing (already backfilled, or every row
+  // lost to a concurrent edit) reporting "Committed" contradicts the
+  // `committed: false` it returns just below.
   console.warn(
-    `Committed. Updated ${updatedCount} rows. Skipped ${skippedCount} (concurrent edit).`,
+    updatedCount > 0
+      ? `Committed. Updated ${updatedCount} rows. Skipped ${skippedCount} (concurrent edit).`
+      : `Nothing written — 0 rows updated. Skipped ${skippedCount} (concurrent edit).`,
   )
 
   return {
