@@ -25,6 +25,7 @@ import { AnonDisc } from '@/components/consumer/app-header/AnonDisc'
 import { InboxStrip } from '@/components/consumer/notifications/InboxStrip'
 import { NotifMenuPanel } from '@/components/consumer/notifications/NotifMenuPanel'
 import { NotifPip } from '@/components/consumer/notifications/NotifPip'
+import { NOTIFICATIONS_COPY } from '@/components/consumer/notifications/definitions/copy'
 import {
   useNotifications,
   unreadCountOf,
@@ -102,8 +103,15 @@ const AccountMenuBodyContext = createContext<MenuBodyProps | null>(null)
  */
 export type AccountMenuMode = 'menu' | 'notifications'
 
-/** The desktop popover's panel height, per the handoff (mobile sheet grows). */
-const PANEL_MAX_HEIGHT = 520
+/**
+ * The desktop popover's panel height (the mobile sheet grows to its content).
+ *
+ * 340, not the 520 that `NotifDropdown` defaults to: 520 is the STANDALONE
+ * dropdown's budget, and this panel is nested inside a 360px-wide account menu
+ * that carries the identity card above it. The handoff's nested-menu component
+ * takes `panelMaxHeight = 340` for exactly that reason.
+ */
+const PANEL_MAX_HEIGHT = 340
 
 /**
  * Owns the account menu's open state for every trigger in the app — the
@@ -473,6 +481,21 @@ interface MenuBodyProps {
  * bounded. Signed-out never reaches notifications mode — there is nothing to
  * show and no account to show it for.
  */
+/**
+ * The dialog's accessible name has to follow the body it is showing. Both
+ * shells swap NotifBody in place, so a shell that always announces "Account"
+ * would tell a screen-reader user nothing changed when "See all" replaced the
+ * entire surface — the one moment the name is load-bearing.
+ */
+const shellLabelOf = (props: MenuBodyProps): string =>
+  isNotifMode(props)
+    ? NOTIFICATIONS_COPY.panelTitle
+    : CONSUMER_COPY.userMenu.ariaLabels.menuTitle
+
+/** Notifications mode is signed-in-only, and both readers must agree on that. */
+const isNotifMode = (props: MenuBodyProps): boolean =>
+  props.mode === 'notifications' && props.isSignedIn
+
 function MenuShellContent({
   props,
   panelMaxHeight,
@@ -480,7 +503,7 @@ function MenuShellContent({
   props: MenuBodyProps
   panelMaxHeight?: number
 }) {
-  if (props.mode === 'notifications' && props.isSignedIn) {
+  if (isNotifMode(props)) {
     return (
       <NotifMenuPanel
         onBack={props.onBackToMenu}
@@ -813,7 +836,7 @@ function UserMenuPopover(props: MenuBodyProps) {
       // No aria-modal: the desktop popover has no scrim and leaves the rest of
       // the page interactive, so claiming modality would misdescribe it. Only
       // the mobile sheet, which does render a scrim, is genuinely modal.
-      aria-label={CONSUMER_COPY.userMenu.ariaLabels.menuTitle}
+      aria-label={shellLabelOf(props)}
       tabIndex={-1}
       style={{
         position: 'absolute',
@@ -844,7 +867,7 @@ function UserMenuSheet(props: MenuBodyProps) {
       ref={props.surfaceRef}
       role="dialog"
       aria-modal="true"
-      aria-label={CONSUMER_COPY.userMenu.ariaLabels.menuTitle}
+      aria-label={shellLabelOf(props)}
       tabIndex={-1}
       style={{
         position: 'fixed',

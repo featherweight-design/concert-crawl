@@ -354,6 +354,24 @@ describe('#737 inbox strip', () => {
     ).toBeInTheDocument()
   })
 
+  it('never claims "All caught up." while the count says otherwise', async () => {
+    signIn()
+    // The window-wide count is the truth; the LOADED page can hold no unread
+    // rows while the account still has five. Saying "All caught up." here
+    // contradicts the same row's own "5 unread" label — and the pip that sent
+    // them here.
+    fetchNotifications.mockResolvedValue(
+      page([notification({ readAt: '2026-07-24T19:00:00-06:00' })], 5),
+    )
+    await renderChrome(<UserMenu />)
+    await click(desktopTrigger())
+
+    const row = screen.getByRole('button', {
+      name: NOTIFICATIONS_COPY.bellLabel(5),
+    })
+    expect(within(row).queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull()
+  })
+
   it('opens the panel from the collapsed row on Enter and on Space', async () => {
     signIn()
     fetchNotifications.mockResolvedValue(page([], 0))
@@ -403,6 +421,29 @@ describe('#737 notifications mode — one shell, one escape', () => {
     expect(screen.queryAllByRole('dialog')).toHaveLength(1)
     expect(before).toHaveLength(0)
     expect(screen.queryByText(CONSUMER_COPY.userMenu.sections.app)).toBeNull()
+  })
+
+  it('renames the dialog when the body swaps, on both shells', async () => {
+    // The swap replaces the ENTIRE surface. A dialog that keeps announcing
+    // "Account" tells a screen-reader user nothing happened at the one moment
+    // the accessible name is load-bearing.
+    for (const isMobile of [false, true]) {
+      cleanup()
+      setViewport(isMobile)
+      signIn()
+      await renderChrome(<UserMenu />)
+      await click(desktopTrigger())
+      expect(screen.getByRole('dialog')).toHaveAccessibleName(
+        CONSUMER_COPY.userMenu.ariaLabels.menuTitle,
+      )
+
+      await click(
+        screen.getByRole('button', { name: NOTIFICATIONS_COPY.seeAll(1) }),
+      )
+      expect(screen.getByRole('dialog')).toHaveAccessibleName(
+        NOTIFICATIONS_COPY.panelTitle,
+      )
+    }
   })
 
   it('marks the panel seen exactly once per entry', async () => {

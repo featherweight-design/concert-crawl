@@ -45,7 +45,14 @@ export const InboxStrip = ({ onSeeAll }: { onSeeAll: () => void }) => {
         count={count}
         // Loading and error have nothing to claim: "All caught up." while the
         // first page is still in flight would be a guess presented as a fact.
-        {...(settled ? { meta: NOTIFICATIONS_COPY.markedAll } : {})}
+        //
+        // `count === 0` matters just as much. The window-wide count can be
+        // non-zero while the LOADED page holds no unread rows, and "All caught
+        // up." beside a row that also announces "5 unread" contradicts itself
+        // — and contradicts the pip that sent them here.
+        {...(settled && count === 0
+          ? { meta: NOTIFICATIONS_COPY.markedAll }
+          : {})}
         onActivate={onSeeAll}
       />
     )
