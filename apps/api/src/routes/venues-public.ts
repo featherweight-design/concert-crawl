@@ -1,7 +1,13 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { db, events, priceSubmissions, venues } from '@concert-crawl/db'
+import {
+  db,
+  events,
+  priceSubmissions,
+  venueGuideChips,
+  venues,
+} from '@concert-crawl/db'
 import {
   type SQL,
   and,
@@ -16,8 +22,12 @@ import {
   sql,
 } from 'drizzle-orm'
 import {
+  GUIDE_CHIP_ORDER,
   SP_POLICY,
+  type VenueGuide,
+  type VenueGuideChip,
   deriveSourceCategory,
+  isGuideChipKey,
   RESALE_VENDOR_VALUES,
 } from '@concert-crawl/types'
 import { todayInTimezone } from '../lib/time.js'
@@ -118,6 +128,11 @@ venuesPublicRouter.get(
         featured: venues.featured,
         lat: venues.lat,
         lng: venues.lng,
+        // #764 first-timer guide. Both columns are stripped from the venue
+        // object below — they only feed the assembled `guide`, and a draft
+        // insiderTip must never reach the consumer surface.
+        insiderTip: venues.insiderTip,
+        guidePublishedAt: venues.guidePublishedAt,
       })
       .from(venues)
       // Inactive venues are 404, not just unlisted (#1292). Without this the
@@ -129,6 +144,59 @@ venuesPublicRouter.get(
 
     if (!venue) {
       return ctx.json({ success: false, error: 'Venue not found' }, 404)
+    }
+
+    // Split off the two guide-only columns so the venue object serialized to
+    // the consumer can never carry a draft insiderTip.
+    const { insiderTip, guidePublishedAt, ...venuePublic } = venue
+
+    // #764 — the published guide. Only queried when the venue has actually
+    // published, so a draft costs zero extra round-trips and can never leak.
+    // Chips are sorted in JS by GUIDE_CHIP_ORDER index: the pool is 8 items,
+    // so an ORDER BY CASE would be noise on the query for no measurable win.
+    // A row whose chip_type is outside the v1 pool (a #997 key promoted in a
+    // later deploy, read by an older API instance) is dropped rather than
+    // appended in arbitrary order — the consumer has no label for it.
+    let guide: VenueGuide | null = null
+    if (guidePublishedAt !== null) {
+      const chipRows = await db
+        .select({
+          chipType: venueGuideChips.chipType,
+          body: venueGuideChips.body,
+          isPlaceholder: venueGuideChips.isPlaceholder,
+        })
+        .from(venueGuideChips)
+        .where(eq(venueGuideChips.venueId, venue.id))
+
+      const chips: VenueGuideChip[] = chipRows
+        .flatMap((row) =>
+          isGuideChipKey(row.chipType)
+            ? [
+                {
+                  chipType: row.chipType,
+                  body: row.body,
+                  isPlaceholder: row.isPlaceholder,
+                },
+              ]
+            : [],
+        )
+        .sort(
+          (left, right) =>
+            GUIDE_CHIP_ORDER.indexOf(left.chipType) -
+            GUIDE_CHIP_ORDER.indexOf(right.chipType),
+        )
+
+      // A published guide with no chips has no drawn state — accessibility is
+      // the publish gate, so this only happens if the rows were deleted out
+      // from under the flag. Serving `null` renders the pre-guide page rather
+      // than an empty section header.
+      if (chips.length > 0) {
+        guide = {
+          chips,
+          insiderTip,
+          publishedAt: guidePublishedAt.toISOString(),
+        }
+      }
     }
 
     const today = todayInTimezone(venue.timezone)
@@ -301,8 +369,12 @@ venuesPublicRouter.get(
     return ctx.json({
       success: true,
       data: {
-        venue: { ...venue, upcomingCount },
+        venue: { ...venuePublic, upcomingCount, guide },
         upcomingEvents: enrichedEvents,
+        // #764 — always null until PR-4 reads user_events.attending_at (#70).
+        // `null` means "we cannot know"; it must never collapse to `false`,
+        // which would be a positive claim that the viewer has never been.
+        viewerHasAttended: null,
       },
     })
   },

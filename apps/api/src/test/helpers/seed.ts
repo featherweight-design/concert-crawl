@@ -13,8 +13,10 @@ import {
   userEvents,
   userProfiles,
   userRoles,
+  venueGuideChips,
   venues,
 } from '@concert-crawl/db'
+import type { GuideChipKey } from '@concert-crawl/types'
 import { artistSlug, deriveSourceCategory } from '@concert-crawl/types'
 import { testDb } from './db.js'
 
@@ -94,6 +96,27 @@ export async function seedArtist(
 
   if (!artist) throw new Error('seedArtist: insert returned no rows')
   return artist
+}
+
+// #764 — one row per authored or placeholder guide chip. Callers pass chips in
+// whatever order they like; the route owns display ordering.
+export async function seedVenueGuideChips(
+  venueId: string,
+  chips: Array<{
+    chipType: GuideChipKey
+    body: string
+    isPlaceholder?: boolean
+  }>,
+): Promise<void> {
+  if (chips.length === 0) return
+  await testDb.insert(venueGuideChips).values(
+    chips.map((chip) => ({
+      venueId,
+      chipType: chip.chipType,
+      body: chip.body,
+      isPlaceholder: chip.isPlaceholder ?? false,
+    })),
+  )
 }
 
 export async function seedEvent(

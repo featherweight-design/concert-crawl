@@ -7,7 +7,12 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { createApp } from '../app.js'
-import { clearTables, seedEvent, seedVenue } from '../test/helpers/seed.js'
+import {
+  clearTables,
+  seedEvent,
+  seedVenue,
+  seedVenueGuideChips,
+} from '../test/helpers/seed.js'
 
 const app = createApp()
 
@@ -209,6 +214,158 @@ describe('GET /v1/venues/:slug — integration', () => {
       'Hotline TNT',
     ])
     expect(body.data.upcomingEvents[0]?.tourName).toBe('Rat Saw God Tour')
+  })
+})
+
+describe('GET /v1/venues/:slug — first-timer guide (#764)', () => {
+  beforeEach(async () => {
+    await clearTables()
+  })
+
+  interface GuideBody {
+    success: boolean
+    data: {
+      venue: {
+        slug: string
+        guide: {
+          chips: {
+            chipType: string
+            body: string
+            isPlaceholder: boolean
+          }[]
+          insiderTip: string | null
+          publishedAt: string | null
+        } | null
+      }
+      viewerHasAttended: boolean | null
+    }
+  }
+
+  it('serves the published guide with chips ordered by GUIDE_CHIP_ORDER', async () => {
+    const venue = await seedVenue({
+      name: 'Guide Venue',
+      slug: 'guide-venue',
+      insiderTip: 'Runs loud — grab earplugs at the bar.',
+      guidePublishedAt: new Date('2026-08-01T12:00:00Z'),
+    })
+    // Inserted deliberately out of display order so the assertion proves the
+    // route sorts rather than echoing insertion order.
+    await seedVenueGuideChips(venue.id, [
+      { chipType: 'transit', body: 'A-line to 38th & Blake.' },
+      { chipType: 'parking', body: 'Paid lot on Blake, $15 cash.' },
+      { chipType: 'accessibility', body: 'Step-free entrance on the north.' },
+    ])
+
+    const res = await app.request('/v1/venues/guide-venue')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as GuideBody
+    const guide = body.data.venue.guide
+    expect(guide).not.toBeNull()
+    expect(guide?.chips.map((chip) => chip.chipType)).toEqual([
+      'accessibility',
+      'parking',
+      'transit',
+    ])
+    expect(guide?.insiderTip).toBe('Runs loud — grab earplugs at the bar.')
+    expect(guide?.publishedAt).toBe('2026-08-01T12:00:00.000Z')
+  })
+
+  it('carries isPlaceholder through so the honest accessibility row can render', async () => {
+    const venue = await seedVenue({
+      name: 'Placeholder Venue',
+      slug: 'placeholder-venue',
+      guidePublishedAt: new Date('2026-08-01T12:00:00Z'),
+    })
+    await seedVenueGuideChips(venue.id, [
+      { chipType: 'accessibility', body: '', isPlaceholder: true },
+    ])
+
+    const res = await app.request('/v1/venues/placeholder-venue')
+    const body = (await res.json()) as GuideBody
+    expect(body.data.venue.guide?.chips).toEqual([
+      { chipType: 'accessibility', body: '', isPlaceholder: true },
+    ])
+  })
+
+  it('never leaks a draft guide — unpublished venue serves guide null even with chip rows', async () => {
+    const venue = await seedVenue({
+      name: 'Draft Venue',
+      slug: 'draft-venue',
+      insiderTip: 'Draft tip nobody should read yet.',
+      guidePublishedAt: null,
+    })
+    await seedVenueGuideChips(venue.id, [
+      { chipType: 'accessibility', body: 'Draft accessibility copy.' },
+    ])
+
+    const res = await app.request('/v1/venues/draft-venue')
+    const body = (await res.json()) as GuideBody
+    expect(body.data.venue.guide).toBeNull()
+    const serialized = JSON.stringify(body)
+    expect(serialized).not.toContain('Draft tip nobody should read')
+    expect(serialized).not.toContain('Draft accessibility copy')
+  })
+
+  it('serves guide null for a published venue with no chip rows', async () => {
+    await seedVenue({
+      name: 'Empty Guide Venue',
+      slug: 'empty-guide-venue',
+      guidePublishedAt: new Date('2026-08-01T12:00:00Z'),
+    })
+
+    const res = await app.request('/v1/venues/empty-guide-venue')
+    const body = (await res.json()) as GuideBody
+    expect(body.data.venue.guide).toBeNull()
+  })
+
+  it('reports viewerHasAttended as null — we do not know, and false would be a claim', async () => {
+    await seedVenue({ name: 'Detection Venue', slug: 'detection-venue' })
+
+    const res = await app.request('/v1/venues/detection-venue')
+    const body = (await res.json()) as GuideBody
+    expect(body.data.viewerHasAttended).toBeNull()
+  })
+
+  it('serves the identical guide payload to an unauthenticated caller (#794)', async () => {
+    const venue = await seedVenue({
+      name: 'Anon Venue',
+      slug: 'anon-venue',
+      insiderTip: 'Sound is best dead center.',
+      guidePublishedAt: new Date('2026-08-01T12:00:00Z'),
+    })
+    await seedVenueGuideChips(venue.id, [
+      { chipType: 'accessibility', body: 'Step-free entrance on 13th.' },
+      { chipType: 'coat_check', body: 'Coat check is $3, cash only.' },
+    ])
+
+    const anonRes = await app.request('/v1/venues/anon-venue')
+    const authRes = await app.request('/v1/venues/anon-venue', {
+      headers: { Authorization: 'Bearer test-token' },
+    })
+    const anonBody = (await anonRes.json()) as GuideBody
+    const authBody = (await authRes.json()) as GuideBody
+
+    expect(anonBody.data.venue.guide).not.toBeNull()
+    expect(anonBody.data.venue.guide).toEqual(authBody.data.venue.guide)
+  })
+
+  it('leaves the venue index untouched — no guide on the list response', async () => {
+    const venue = await seedVenue({
+      name: 'Index Venue',
+      slug: 'index-venue',
+      insiderTip: 'Tip that belongs to the detail page only.',
+      guidePublishedAt: new Date('2026-08-01T12:00:00Z'),
+    })
+    await seedVenueGuideChips(venue.id, [
+      { chipType: 'accessibility', body: 'Step-free entrance.' },
+    ])
+
+    const res = await app.request('/v1/venues')
+    const body = (await res.json()) as { data: Record<string, unknown>[] }
+    const row = body.data.find((entry) => entry.slug === 'index-venue')
+    expect(row).toBeDefined()
+    expect(row).not.toHaveProperty('guide')
+    expect(row).not.toHaveProperty('insiderTip')
   })
 })
 
