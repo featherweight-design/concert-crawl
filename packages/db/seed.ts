@@ -389,6 +389,33 @@ export const SEED_VENUES: NewVenue[] = [
     about:
       'Restored 1927 movie house on Tennyson Street with a marquee you can spot from blocks away. Books everything from touring indie and metal to comedy and burlesque, and stays refreshingly weird about it.',
   },
+  {
+    name: 'Meow Wolf Denver',
+    slug: 'meow-wolf-denver',
+    // The Denver listing lives under /events/denver/, not /denver/ — the
+    // latter is the exhibition page and carries no event list.
+    websiteUrl: 'https://tickets.meowwolf.com/events/denver/',
+    city: 'Denver',
+    timezone: 'America/Denver',
+    active: true,
+    verified: true,
+    crawlDelayMs: 3000,
+    // Next.js, but the full event list is server-rendered into __NEXT_DATA__,
+    // so a plain fetch sees everything and there is nothing to wait on past
+    // the document. Roughly a third of the calendar is burlesque and comedy;
+    // the LLM's isConcert=false verdict hides those via hiddenFromConsumer.
+    crawlMode: 'http',
+    crawlWaitUntil: 'domcontentloaded' as const,
+    address: '1338 1st St, Denver, CO 80204',
+    capacity: 488,
+    venueType: 'Club',
+    neighborhood: 'Sun Valley',
+    lat: 39.7325,
+    lng: -105.008,
+    ticketVendor: 'unknown' as const,
+    about:
+      'Convergence Station books shows inside the art installation, so the room is never just a room. Music leans electronic and experimental, and the crowd is there for both the set and the building.',
+  },
 ]
 
 // ---------------------------------------------------------------------------

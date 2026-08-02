@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.23.0-beta',
+    date: 'Aug 2, 2026',
+    headline: 'Meow Wolf Denver is on the calendar.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Convergence Station books live music inside the art installation, and now those nights show up in browse and search with times and a ticket link. The electronic and experimental bookings are the draw; the burlesque and comedy nights stay off the concert calendar.',
+      },
+    ],
+  },
+  {
     version: 'v0.22.0-beta',
     date: 'Aug 2, 2026',
     headline: 'Globe Hall and Lost Lake are on the calendar.',
