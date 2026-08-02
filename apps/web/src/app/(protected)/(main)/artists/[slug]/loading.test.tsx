@@ -30,11 +30,13 @@ const LOADED: ArtistDetailResponse = {
   artist: {
     slug: 'nightjar-choir',
     name: 'Nightjar Choir',
+    spotifyArtistId: null,
     photoUrl: null,
   },
   shows: [],
   past: [],
-  history: { firstSeen: null, showCount: 0 },
+  history: { count: 0, venues: [] },
+  following: null,
 }
 
 describe('artist route skeleton', () => {
