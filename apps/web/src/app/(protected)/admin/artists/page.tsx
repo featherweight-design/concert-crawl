@@ -187,7 +187,12 @@ export default function AdminArtistsPage() {
             key={tab}
             size="sm"
             variant={tab === status ? 'primary' : 'outline'}
-            onClick={() => setStatus(tab)}
+            onClick={() => {
+              // A picker left open on another tab reopens — and spends a fresh
+              // Spotify search on mount — the moment the admin comes back.
+              setOpenCandidatesFor(null)
+              setStatus(tab)
+            }}
           >
             {COPY.statusChips[tab]}
           </AdminButton>
