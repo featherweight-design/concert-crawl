@@ -13,8 +13,8 @@ interface FirstTimerCalloutProps {
 }
 
 /**
- * The "New here" nudge above the guide. Jumps to the guide via a plain anchor,
- * so it works with JS off and keeps the venue page a server component.
+ * The "New here" nudge directly above the guide. It carries no jump control —
+ * the guide it would scroll to is already on screen beneath it.
  */
 export const FirstTimerCallout = ({
   venueName,
@@ -104,39 +104,6 @@ export const FirstTimerCallout = ({
             : copy.callout.populatedSub}
         </p>
       </div>
-
-      <a
-        href={`#${GUIDE_ANCHOR_ID}`}
-        aria-label={copy.jumpAriaLabel}
-        className="flex shrink-0 flex-col items-center justify-center rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)]"
-        style={{ minWidth: 44, minHeight: 44, color: 'var(--signal)' }}
-      >
-        <svg
-          width={16}
-          height={16}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={1.8}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          <path d="M12 5v14M5 12l7 7 7-7" />
-        </svg>
-        <span
-          aria-hidden="true"
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '8px',
-            fontWeight: 700,
-            letterSpacing: '0.1em',
-          }}
-        >
-          {copy.jumpLabel}
-        </span>
-      </a>
     </div>
   )
 }

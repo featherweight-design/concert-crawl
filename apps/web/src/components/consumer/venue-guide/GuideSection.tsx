@@ -75,19 +75,21 @@ export const GuideSection = ({
         >
           {copy.sectionTitle}
         </h2>
-        <span
-          className="shrink-0"
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '9px',
-            fontWeight: 700,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            color: 'var(--signal)',
-          }}
-        >
-          {copy.sectionEyebrow}
-        </span>
+        {!followsCallout && (
+          <span
+            className="shrink-0"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '9px',
+              fontWeight: 700,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'var(--signal)',
+            }}
+          >
+            {copy.sectionEyebrow}
+          </span>
+        )}
         <div className="h-px flex-1 bg-border" />
       </div>
 

@@ -99,17 +99,41 @@ describe('GuideSection', () => {
       screen.getByText(copy.accessibilityNotDocumented),
     ).toBeInTheDocument()
     expect(screen.getByText(copy.accessibilityPlaceholder)).toBeInTheDocument()
-    // The star badge belongs to an authored row only.
-    expect(screen.queryByText(copy.accessibilityAlwaysHere)).toBeNull()
   })
 
   it('lists only the unauthored chips as still gathering', () => {
     render(<GuideSection venueName="The Roxy" guide={guide()} />)
     const gathering = screen.getByTestId('guide-still-gathering')
-    expect(gathering).toHaveTextContent(copy.chipLabels.coat_check)
-    expect(gathering).not.toHaveTextContent(copy.chipLabels.parking)
-    expect(gathering).not.toHaveTextContent(copy.chipLabels.transit)
-    expect(gathering).not.toHaveTextContent(copy.chipLabels.accessibility)
+    expect(gathering).toHaveTextContent(
+      copy.stillGathering([
+        copy.chipLabels.age_policy,
+        copy.chipLabels.bag_check,
+        copy.chipLabels.coat_check,
+        copy.chipLabels.will_call,
+        copy.chipLabels.food_drink,
+      ]),
+    )
+  })
+
+  it('states the missing topics as prose, not as tappable-looking pills', () => {
+    // Dashed pills carry the visual grammar of filter chips; there is nothing
+    // behind these to open, so a user tapping one gets silence.
+    render(<GuideSection venueName="The Roxy" guide={guide()} />)
+    const gathering = screen.getByTestId('guide-still-gathering')
+    expect(gathering.querySelector('li')).toBeNull()
+    expect(gathering.querySelector('button')).toBeNull()
+    expect(gathering.querySelector('a')).toBeNull()
+  })
+
+  it('drops the duplicate section eyebrow when the callout already sits above', () => {
+    const { rerender } = render(
+      <GuideSection venueName="The Roxy" guide={guide()} />,
+    )
+    expect(screen.getByText(copy.sectionEyebrow)).toBeInTheDocument()
+    rerender(
+      <GuideSection venueName="The Roxy" guide={guide()} followsCallout />,
+    )
+    expect(screen.queryByText(copy.sectionEyebrow)).toBeNull()
   })
 
   it('omits the still-gathering block when every chip is authored', () => {

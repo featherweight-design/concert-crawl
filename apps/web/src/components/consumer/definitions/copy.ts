@@ -53,20 +53,17 @@ export const CONSUMER_COPY = {
       populatedSub: 'Two minutes of stuff worth knowing before you walk in.',
       thinSub: "Here's what we've got so far.",
     },
-    jumpAriaLabel: 'Jump to the first-timer guide',
-    jumpLabel: 'GUIDE',
     eventChip: (venueShortName: string) =>
       `First time at ${venueShortName}? Guide`,
     eventChipArrow: '→',
     insiderTipEyebrow: 'Insider tip',
-    // Split so the glyph can be hidden from screen readers — announced on its
-    // own it reads as "black star", which says nothing.
-    accessibilityAlwaysHereStar: '★',
-    accessibilityAlwaysHere: 'ALWAYS HERE',
     accessibilityNotDocumented: 'NOT DOCUMENTED',
     accessibilityPlaceholder:
-      'Not documented yet. Best to call the venue and ask before you head out — details are on the main page.',
-    thinLabel: 'Still gathering',
+      'Not documented yet — worth calling the venue before you head out.',
+    // Lowercased here rather than at the call site — the labels are sentence
+    // openers elsewhere, and none of them is a proper noun.
+    stillGathering: (chipLabels: string[]) =>
+      `Still gathering: ${chipLabels.map((label) => label.toLowerCase()).join(', ')}.`,
     thinFooter: (venueShortName: string) =>
       `That's the lot for now — ${venueShortName}'s new to us.`,
     chipLabels: {

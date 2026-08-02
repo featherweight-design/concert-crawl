@@ -43,12 +43,9 @@ describe('FirstTimerCallout', () => {
     expect(screen.getByText(copy.callout.thinSub)).toBeInTheDocument()
   })
 
-  it('jumps to the guide anchor with a labelled 44px target', () => {
+  it('offers no jump control — the guide it would scroll to is already below', () => {
     render(<FirstTimerCallout venueName="The Roxy" guide={populated} />)
-    const jump = screen.getByRole('link', { name: copy.jumpAriaLabel })
-    expect(jump).toHaveAttribute('href', '#ft-guide')
-    expect(jump.style.minWidth).toBe('44px')
-    expect(jump.style.minHeight).toBe('44px')
+    expect(screen.queryByRole('link')).toBeNull()
   })
 
   it('marks every decorative svg aria-hidden', () => {

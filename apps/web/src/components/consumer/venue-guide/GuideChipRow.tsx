@@ -51,22 +51,6 @@ export const GuideChipRow = ({ chipType, body, first }: GuideChipRowProps) => {
           >
             {copy.chipLabels[chipType]}
           </span>
-          {isAccessibility && (
-            <span
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: '8px',
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                color: 'var(--signal)',
-              }}
-            >
-              <span aria-hidden="true">
-                {copy.accessibilityAlwaysHereStar}{' '}
-              </span>
-              {copy.accessibilityAlwaysHere}
-            </span>
-          )}
         </div>
         <p
           style={{
