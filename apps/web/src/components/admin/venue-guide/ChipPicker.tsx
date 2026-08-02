@@ -11,7 +11,8 @@ import { GuideIcon } from './GuideIcon'
 const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide
 
 // Accessibility is pinned and never appears in the picker — it is always
-// authored, so there is nothing to add or remove.
+// present (authored, blank, or in placeholder mode), so there is nothing to
+// add or remove.
 const OPTIONAL_KEYS = GUIDE_CHIP_ORDER.filter((key) => key !== 'accessibility')
 
 interface ChipPickerProps {
