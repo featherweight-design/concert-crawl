@@ -27,4 +27,13 @@ describe('backfill-artists CLI entry', () => {
     expect(source).toMatch(/import\s*\{\s*db\s*\}\s*from\s*'\.\.\/client\.js'/)
     expect(source).toMatch(/backfillArtists\(\s*db\s*\)/)
   })
+
+  it('only runs when it is the process entrypoint', () => {
+    const source = read('src/scripts/run-backfill-artists.ts')
+    // A bare top-level `main()` would backfill — and then `process.exit` —
+    // on any import.
+    expect(source).toMatch(
+      /if\s*\(\s*isEntrypoint\(\)\s*\)\s*\{\s*\n\s*main\(\)/,
+    )
+  })
 })
