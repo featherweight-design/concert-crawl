@@ -44,4 +44,16 @@ describe('venue guide actions — auth failure (#764)', () => {
       success: false,
     })
   })
+
+  // The auth throw is a plain Error, not an ApiError, so its raw message must
+  // not ride back to the UI — the block shows the copy.ts fallback instead.
+  it('withholds a non-ApiError message from the result', async () => {
+    for (const result of [
+      await saveVenueGuide('venue-1', { insiderTip: null, chips: [] }),
+      await publishVenueGuide('venue-1'),
+      await unpublishVenueGuide('venue-1'),
+    ]) {
+      expect(result.error).toBeUndefined()
+    }
+  })
 })

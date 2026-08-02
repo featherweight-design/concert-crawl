@@ -334,11 +334,13 @@ export async function saveVenueGuide(
     return { success: true, data }
   } catch (err: unknown) {
     console.error('saveVenueGuide: failed', { venueId, err })
-    // Non-Error throws carry no usable message; the component falls back to
-    // GUIDE_COPY.status.saveError so the string stays in copy.ts.
+    // Only an ApiError carries a message the API meant for a human. Anything
+    // else — an expired getToken(), a network fault — would put raw auth or
+    // infra strings in front of the admin, so the component falls back to
+    // GUIDE_COPY.status.saveError and the string stays in copy.ts.
     return {
       success: false,
-      ...(err instanceof Error ? { error: err.message } : {}),
+      ...(err instanceof ApiError ? { error: err.message } : {}),
     }
   }
 }
@@ -366,11 +368,13 @@ export async function publishVenueGuide(
       return { success: false, error: err.message, field: 'accessibility' }
     }
     console.error('publishVenueGuide: unexpected error', { venueId, err })
-    // Non-Error throws carry no usable message; the component falls back to
-    // GUIDE_COPY.status.saveError so the string stays in copy.ts.
+    // Only an ApiError carries a message the API meant for a human. Anything
+    // else — an expired getToken(), a network fault — would put raw auth or
+    // infra strings in front of the admin, so the component falls back to
+    // GUIDE_COPY.status.saveError and the string stays in copy.ts.
     return {
       success: false,
-      ...(err instanceof Error ? { error: err.message } : {}),
+      ...(err instanceof ApiError ? { error: err.message } : {}),
     }
   }
 }
@@ -390,11 +394,13 @@ export async function unpublishVenueGuide(
     return { success: true, data }
   } catch (err: unknown) {
     console.error('unpublishVenueGuide: failed', { venueId, err })
-    // Non-Error throws carry no usable message; the component falls back to
-    // GUIDE_COPY.status.saveError so the string stays in copy.ts.
+    // Only an ApiError carries a message the API meant for a human. Anything
+    // else — an expired getToken(), a network fault — would put raw auth or
+    // infra strings in front of the admin, so the component falls back to
+    // GUIDE_COPY.status.saveError and the string stays in copy.ts.
     return {
       success: false,
-      ...(err instanceof Error ? { error: err.message } : {}),
+      ...(err instanceof ApiError ? { error: err.message } : {}),
     }
   }
 }
