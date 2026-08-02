@@ -2,8 +2,13 @@
 // without a database.
 
 // The fields the upsert writes with a plain `excluded.<col>`, so a straight
-// value comparison models them exactly. `address` is handled separately —
-// see addressDiffers — because its COALESCE gives it different semantics.
+// value comparison models them exactly.
+//
+// Two deliberate omissions: `address` is handled separately (see
+// addressDiffers) because its COALESCE gives it different semantics, and
+// `active` / `featured` / `verified` are create-only in the upsert, so seed
+// drift against them is never a pending write. Reporting them would promise
+// changes a --commit does not make.
 export const COMPARED_FIELDS = [
   'name',
   'websiteUrl',
@@ -18,9 +23,6 @@ export const COMPARED_FIELDS = [
   'crawlWaitUntil',
   'crawlWaitForSelector',
   'crawlDelayMs',
-  'featured',
-  'active',
-  'verified',
 ] as const
 
 type ComparedField = (typeof COMPARED_FIELDS)[number]

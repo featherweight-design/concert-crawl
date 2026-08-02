@@ -38,10 +38,22 @@ import {
   type ColumnDefaults,
 } from './sync-venues-helpers.js'
 
-// Mirrors the `set` block in seed()'s venue upsert. Kept deliberately
-// column-for-column identical: if the two drift, a venue means one thing
-// locally and another in prod, which is the class of bug this script was
-// written to end.
+// Follows seed()'s venue upsert, with one deliberate divergence: the three
+// operationally-managed flags are create-only here.
+//
+// `active`, `featured` and `verified` describe what has happened to a venue
+// in the environment, not what the venue is. The crawler auto-pauses a
+// venue by setting `active = false` on its third consecutive non-block
+// failure (packages/crawler-core/src/crawl.ts), and all three are editable
+// from the admin UI; `featured` is additionally exclusive, so writing it
+// would clear whichever venue an admin had promoted. Carrying
+// `excluded.<col>` into the UPDATE branch would let a routine sync silently
+// un-pause a broken venue and undo admin curation.
+//
+// Omitting them from the `set` block leaves the existing values untouched
+// on conflict while still seeding them on insert — which is what we want.
+// seed() can afford to clobber them because it targets a throwaway local
+// DB; this script targets prod.
 const UPSERT_SET = {
   name: sql`excluded.name`,
   websiteUrl: sql`excluded.website_url`,
@@ -57,9 +69,6 @@ const UPSERT_SET = {
   crawlWaitUntil: sql`excluded.crawl_wait_until`,
   crawlWaitForSelector: sql`excluded.crawl_wait_for_selector`,
   crawlDelayMs: sql`excluded.crawl_delay_ms`,
-  featured: sql`excluded.featured`,
-  active: sql`excluded.active`,
-  verified: sql`excluded.verified`,
 }
 
 // Read from the Drizzle table rather than hardcoded, so a schema default

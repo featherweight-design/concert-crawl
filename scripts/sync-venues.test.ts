@@ -103,33 +103,48 @@ describe('diffVenues', () => {
     expect(result.unchanged).toEqual(['summit'])
   })
 
-  // A seed that omits `featured` still writes the column default on insert,
-  // and carries it through `excluded.featured` on update. Comparing the
+  // A seed that omits a field still writes the column default on insert,
+  // and carries it through `excluded.<col>` on update. Comparing the
   // omission against the default is what keeps every such venue from
   // reading as permanently dirty.
   it('resolves an omitted seed field against the schema default', () => {
-    const { featured: _omitted, ...seedVenue } = venue('hi-dive')
+    const { crawlDelayMs: _omitted, ...seedVenue } = venue('hi-dive')
 
     const result = diffVenues(
       [seedVenue],
-      [venue('hi-dive', { featured: false })],
-      { featured: false },
+      [venue('hi-dive', { crawlDelayMs: 3000 })],
+      { crawlDelayMs: 3000 },
     )
 
     expect(result.unchanged).toEqual(['hi-dive'])
   })
 
   it('reports drift when an omitted field would reset a non-default value', () => {
-    const { featured: _omitted, ...seedVenue } = venue('marquis')
+    const { crawlDelayMs: _omitted, ...seedVenue } = venue('marquis')
 
     const result = diffVenues(
       [seedVenue],
-      [venue('marquis', { featured: true })],
-      { featured: false },
+      [venue('marquis', { crawlDelayMs: 9000 })],
+      { crawlDelayMs: 3000 },
     )
 
     expect(result.toUpdate).toEqual(['marquis'])
   })
+
+  // These three are create-only in the upsert: the crawler auto-pauses a
+  // venue via `active`, and admins curate `featured` / `verified` in prod.
+  // The seed never overwrites them, so it must never report them either.
+  it.each(['active', 'featured', 'verified'])(
+    'ignores drift in the create-only flag %s',
+    (flag) => {
+      const result = diffVenues(
+        [venue('summit', { [flag]: true })],
+        [venue('summit', { [flag]: false })],
+      )
+
+      expect(result.unchanged).toEqual(['summit'])
+    },
+  )
 
   // SQL NULL and '' are different values: `excluded.<col>` writing NULL over
   // a stored empty string is a real change the diff must not swallow.
