@@ -157,7 +157,10 @@ searchRouter.get('/artists', async (ctx) => {
   )
 
   // The consumer filter pair every public query applies: non-concert rows are
-  // hidden, and crawler-flagged stale rows are suppressed (#607).
+  // hidden, and crawler-flagged stale rows are suppressed (#607). Aggregating
+  // in JS rather than SQL is safe because ARTIST_CANDIDATE_LIMIT caps the
+  // canonical-name list, so this reads at most 25 artists' events over four
+  // columns — small enough that a UNION + unnest rewrite buys nothing.
   const billRows = await db
     .select({
       canonicalArtist: events.canonicalArtist,
