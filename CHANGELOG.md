@@ -1,3 +1,25 @@
+# [1.192.0](https://github.com/HartiganHM/concert-crawl/compare/v1.191.1...v1.192.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **artist-page:** drop the "shows are below" pointer when nothing follows ([4970b78](https://github.com/HartiganHM/concert-crawl/commit/4970b7810f5809b35c60b06f8763d41d97d9345d))
+* **artist-page:** drop the right-side bleed on the run-group link ([1e6ede4](https://github.com/HartiganHM/concert-crawl/commit/1e6ede4014a5fc0b0b563e4b075163df321f6292))
+* **artist-page:** lazy-load the tier picker and correct the viewport-hook comment ([affcda1](https://github.com/HartiganHM/concert-crawl/commit/affcda161e2d03ed5d42e93c83345573d0ae8642))
+* **artist-page:** restore the Follow control's focus ring after all:unset ([3de1356](https://github.com/HartiganHM/concert-crawl/commit/3de1356925076901fe070df596cafe2f97277495))
+* **artist-page:** roll back unreadable follow responses and make the skip link move focus ([c4dd3f1](https://github.com/HartiganHM/concert-crawl/commit/c4dd3f10242df90a4b61787664fa825da5d759c3))
+* **artist-page:** stop the show row link bleeding under the Watch control ([288b196](https://github.com/HartiganHM/concert-crawl/commit/288b19684c41e624ffc2fe7dead468cdf19947a2))
+
+
+### Features
+
+* **artist-page:** follow, watch rows, sticky bar and the empty state ([4090a18](https://github.com/HartiganHM/concert-crawl/commit/4090a1854b39e23099478819a53d3ea616cbb9be)), closes [#1115](https://github.com/HartiganHM/concert-crawl/issues/1115)
+
+
+### Performance Improvements
+
+* **artist-page:** write scroll state only on threshold crossings ([7f4c95a](https://github.com/HartiganHM/concert-crawl/commit/7f4c95aad42b37db62de0e9098268f1e619b2fed))
+
 ## [1.191.1](https://github.com/HartiganHM/concert-crawl/compare/v1.191.0...v1.191.1) (2026-08-02)
 
 
