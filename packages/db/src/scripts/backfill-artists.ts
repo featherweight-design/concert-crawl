@@ -11,8 +11,11 @@
  * `onConflictDoNothing` — a row is skipped on a `canonical_name` collision (the
  * expected re-run case) and equally on a `slug` collision, which is what a
  * concurrent crawl write-through produces. Safe to re-run against local,
- * staging or prod, and wired into `pnpm db:seed` so no environment needs a
- * manual step.
+ * staging or prod.
+ *
+ * `pnpm db:seed` calls this, which covers local only — deployed environments
+ * run migrations but never the seed, so they need the one-shot in
+ * `run-backfill-artists.ts` once, after 0069 lands.
  */
 
 import { sql } from 'drizzle-orm'

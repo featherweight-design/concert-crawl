@@ -21,7 +21,8 @@
     "test": "vitest run",
     "db:generate": "NODE_OPTIONS='--require=tsx/cjs' drizzle-kit generate",
     "db:migrate": "tsx src/migrate.ts",
-    "db:seed": "tsx seed.ts"
+    "db:seed": "tsx seed.ts",
+    "db:backfill-artists": "tsx src/scripts/run-backfill-artists.ts"
   },
   "dependencies": {
     "@concert-crawl/types": "workspace:*",
