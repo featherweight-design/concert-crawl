@@ -39,7 +39,18 @@ export const useScrolledPast = (threshold: number): boolean => {
   const [past, setPast] = useState(false)
 
   useEffect(() => {
-    const apply = () => setPast(window.scrollY > threshold)
+    // Scroll fires at frame rate; React would bail out on an unchanged boolean,
+    // but only after scheduling the update. The ref skips that entirely, so a
+    // long scroll costs one state write per threshold crossing, not per frame.
+    // null, not false: a threshold change re-runs this effect while `past` may
+    // already be true, and seeding with a guess would swallow the correction.
+    let current: boolean | null = null
+    const apply = () => {
+      const next = window.scrollY > threshold
+      if (next === current) return
+      current = next
+      setPast(next)
+    }
     apply()
     window.addEventListener('scroll', apply, { passive: true })
     return () => window.removeEventListener('scroll', apply)
