@@ -74,15 +74,22 @@ artistFollowsRouter.post('/:slug/follow', slugValidator, async (ctx) => {
     .limit(1)
 
   if (!existing) {
-    await db.insert(userArtistFollows).values({
-      userId: authInfo.userId,
-      artistName: artist.name,
-      canonicalName: artist.canonicalName,
-      // Copied from the projection when the artist is matched, so a later
-      // Spotify sync can reconcile against the same id. Null is fine.
-      spotifyArtistId: artist.spotifyArtistId,
-      source: 'manual',
-    })
+    await db
+      .insert(userArtistFollows)
+      .values({
+        userId: authInfo.userId,
+        artistName: artist.name,
+        canonicalName: artist.canonicalName,
+        // Copied from the projection when the artist is matched, so a later
+        // Spotify sync can reconcile against the same id. Null is fine.
+        spotifyArtistId: artist.spotifyArtistId,
+        source: 'manual',
+      })
+      // The SELECT above can't close the window between two concurrent
+      // follows — a double-tap would otherwise hit the
+      // (user_id, source, spotify_artist_id) unique index and 500. That index
+      // doesn't cover a null spotifyArtistId, which is why the SELECT stays.
+      .onConflictDoNothing()
   }
 
   const data: ArtistFollowResponse = { following: true }
