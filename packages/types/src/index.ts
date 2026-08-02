@@ -17,6 +17,18 @@ import type { VenueGuide } from './venue-guide.js'
 // only package both can depend on without a workspace build cycle.
 export * from './artist-slug.js'
 
+// Artist canonicalization (#608/#763) lives here rather than in crawler-core
+// so packages/db can canonicalize at seed/backfill time: crawler-core depends
+// on db, so db importing from crawler-core would be a workspace build cycle.
+// crawler-core re-exports both from './lib/canonical-artist.js', keeping the
+// `@concert-crawl/crawler-core/canonical` subpath and every call site intact.
+export * from './canonical-artist.js'
+
+// Shared by canonicalizeArtist here and canonicalizeTitle in crawler-core —
+// the precomposed Latin Extended letters (Ø, Đ, …) that NFD will not split
+// into base + combining mark.
+export * from './latin-extended-map.js'
+
 // #1115 artist page — GET /v1/artists/:slug response contract, shared by the
 // API handler and the web route shell.
 export * from './artist.js'

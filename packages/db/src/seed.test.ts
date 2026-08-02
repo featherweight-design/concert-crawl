@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, it, expect } from 'vitest'
 import {
   SEED_VENUES,
@@ -6,6 +9,7 @@ import {
   SEED_INVITE_CODES,
   SEED_FEEDBACK,
   SEED_NOTIFICATIONS,
+  withCanonicalArtist,
 } from '../seed.js'
 
 describe('seed data', () => {
@@ -125,6 +129,79 @@ describe('seed data', () => {
         expect(fb.pageUrl).toBeTruthy()
         expect(fb.category).toBeTruthy()
         expect(fb.message).toBeTruthy()
+      }
+    })
+  })
+
+  // Regression guard: the seed used to insert events without setting
+  // `canonicalArtist`, which defaults to ''. The artists backfill selects
+  // `WHERE canonical_artist <> ''`, so it reported "0 inserted of 0
+  // discovered", the `artists` table stayed empty, and every /artists/<slug>
+  // route 404'd on local and staging alike.
+  describe('canonicalArtist on seeded events', () => {
+    it('stamps a non-empty canonicalArtist on every row', () => {
+      const rows = withCanonicalArtist([
+        { artist: 'Radiohead' },
+        { artist: 'Bon Iver' },
+        { artist: '[P8.5] Cancelled Live Artist' },
+      ])
+
+      expect(rows.map((row) => row.canonicalArtist)).toEqual([
+        'radiohead',
+        'bon iver',
+        '[p8.5] cancelled live artist',
+      ])
+      for (const row of rows) {
+        expect(row.canonicalArtist).not.toBe('')
+      }
+    })
+
+    it('preserves the other row fields', () => {
+      const [row] = withCanonicalArtist([
+        { artist: 'Phish', title: 'Phish at Dillon', verified: false },
+      ])
+
+      expect(row).toMatchObject({
+        artist: 'Phish',
+        title: 'Phish at Dillon',
+        verified: false,
+        canonicalArtist: 'phish',
+      })
+    })
+
+    it('canonicalizes with the same rules the crawler writes with', () => {
+      // Separator split + diacritic strip — the drift-collapsing behaviour the
+      // artists projection keys on.
+      expect(
+        withCanonicalArtist([{ artist: 'Sigur Rós' }])[0]?.canonicalArtist,
+      ).toBe('sigur ros')
+      expect(
+        withCanonicalArtist([{ artist: 'Earl Sweatshirt & MIKE' }])[0]
+          ?.canonicalArtist,
+      ).toBe('earl sweatshirt')
+    })
+
+    it('routes every event insert through withCanonicalArtist', () => {
+      // Structural guard: a new `insert(eventsTable)` block that forgets the
+      // helper silently reintroduces blank canonical_artist rows, which no
+      // value-level assertion here would catch.
+      const seedPath = path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '..',
+        'seed.ts',
+      )
+      const source = readFileSync(seedPath, 'utf8')
+
+      // Each `.insert(eventsTable)` must have a `.values(` whose argument
+      // begins with the helper call.
+      const insertBlocks = source
+        .split(/\.insert\(eventsTable\)/)
+        .slice(1)
+        .map((chunk) => chunk.slice(0, chunk.indexOf('.returning')))
+
+      expect(insertBlocks.length).toBe(5)
+      for (const block of insertBlocks) {
+        expect(block).toMatch(/\.values\(\s*withCanonicalArtist\(/)
       }
     })
   })

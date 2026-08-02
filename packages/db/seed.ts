@@ -9,7 +9,11 @@ import {
   ne,
   sql,
 } from 'drizzle-orm'
-import { deriveSourceCategory, type GuideChipKey } from '@concert-crawl/types'
+import {
+  canonicalizeArtist,
+  deriveSourceCategory,
+  type GuideChipKey,
+} from '@concert-crawl/types'
 import { db } from './src/client.js'
 import { backfillArtists } from './src/scripts/backfill-artists.js'
 import {
@@ -49,6 +53,28 @@ function isEventStatus(value: string | undefined): value is EventStatus {
 // smuggle an invalid enum value past the type checker.
 function toEventStatus(value: string | undefined): EventStatus {
   return isEventStatus(value) ? value : 'upcoming'
+}
+
+/**
+ * Stamps `canonicalArtist` onto seed event rows using the same helper the
+ * crawler applies on every upsert.
+ *
+ * `events.canonical_artist` defaults to `''`, and the artists backfill selects
+ * `WHERE canonical_artist <> ''` — so a seed that omits it reports
+ * "0 inserted of 0 discovered", leaves the `artists` table empty, and makes
+ * every `/artists/<slug>` route 404 in every seeded environment.
+ *
+ * Applied at each `insert(eventsTable)` boundary rather than on the individual
+ * row literals so new seed rows inherit it automatically and cannot silently
+ * reintroduce the blank column.
+ */
+export function withCanonicalArtist<TRow extends { artist: string }>(
+  rows: TRow[],
+): (TRow & { canonicalArtist: string })[] {
+  return rows.map((row) => ({
+    ...row,
+    canonicalArtist: canonicalizeArtist(row.artist),
+  }))
 }
 
 // ---------------------------------------------------------------------------
@@ -1650,7 +1676,7 @@ async function seed() {
 
     const insertedEvents = await db
       .insert(eventsTable)
-      .values(sampleEventRows)
+      .values(withCanonicalArtist(sampleEventRows))
       .returning()
     console.warn(`Inserted ${insertedEvents.length} events.`)
 
@@ -1678,51 +1704,53 @@ async function seed() {
     if (venueForTests) {
       await db
         .insert(eventsTable)
-        .values([
-          {
-            venueId: venueForTests.id,
-            title: '[Test] Cancelled Show',
-            artist: '[Test] Cancelled Artist',
-            date: '2026-09-10',
-            status: 'cancelled' as const,
-          },
-          {
-            venueId: venueForTests.id,
-            title: '[Test] Postponed Show',
-            artist: '[Test] Postponed Artist',
-            date: '2026-09-15',
-            status: 'postponed' as const,
-          },
-          {
-            venueId: venueForTests.id,
-            title: '[Test] Show With Setlist',
-            artist: '[Test] Setlist Artist',
-            date: '2026-09-20',
-            status: 'upcoming' as const,
-            confidenceScore: '0.92',
-            setlist: {
-              songs: [
-                'Opening Track',
-                'Second Song',
-                'Fan Favorite',
-                'Deep Cut',
-                'Popular Hit',
-                'Slow Ballad',
-              ],
-              encore: ['Classic Closer', 'Surprise Cover'],
-              source: 'Setlist.fm',
-              when: 'last tour',
+        .values(
+          withCanonicalArtist([
+            {
+              venueId: venueForTests.id,
+              title: '[Test] Cancelled Show',
+              artist: '[Test] Cancelled Artist',
+              date: '2026-09-10',
+              status: 'cancelled' as const,
             },
-          },
-          {
-            venueId: venueForTests.id,
-            title: '[Test] Low Confidence Event',
-            artist: '[Test] Low Confidence Artist',
-            date: '2026-09-25',
-            status: 'upcoming' as const,
-            confidenceScore: '0.45',
-          },
-        ])
+            {
+              venueId: venueForTests.id,
+              title: '[Test] Postponed Show',
+              artist: '[Test] Postponed Artist',
+              date: '2026-09-15',
+              status: 'postponed' as const,
+            },
+            {
+              venueId: venueForTests.id,
+              title: '[Test] Show With Setlist',
+              artist: '[Test] Setlist Artist',
+              date: '2026-09-20',
+              status: 'upcoming' as const,
+              confidenceScore: '0.92',
+              setlist: {
+                songs: [
+                  'Opening Track',
+                  'Second Song',
+                  'Fan Favorite',
+                  'Deep Cut',
+                  'Popular Hit',
+                  'Slow Ballad',
+                ],
+                encore: ['Classic Closer', 'Surprise Cover'],
+                source: 'Setlist.fm',
+                when: 'last tour',
+              },
+            },
+            {
+              venueId: venueForTests.id,
+              title: '[Test] Low Confidence Event',
+              artist: '[Test] Low Confidence Artist',
+              date: '2026-09-25',
+              status: 'upcoming' as const,
+              confidenceScore: '0.45',
+            },
+          ]),
+        )
         .onConflictDoNothing()
       console.warn('Inserted 4 test events for UI state coverage.')
     }
@@ -2954,7 +2982,7 @@ async function seed() {
 
       const insertedPhase85Events = await db
         .insert(eventsTable)
-        .values(phase85EventRows)
+        .values(withCanonicalArtist(phase85EventRows))
         .returning()
       console.warn(
         `Inserted ${insertedPhase85Events.length} Phase 8.5 test events.`,
@@ -3880,7 +3908,7 @@ async function seed() {
 
       const insertedKP = await db
         .insert(eventsTable)
-        .values(phase85KPRows)
+        .values(withCanonicalArtist(phase85KPRows))
         .returning()
       console.warn(`Inserted ${insertedKP.length} Phase 8.5 K–P test events.`)
 
@@ -4239,7 +4267,10 @@ async function seed() {
 
       const insertedPr4 =
         newPr4EventRows.length > 0
-          ? await db.insert(eventsTable).values(newPr4EventRows).returning()
+          ? await db
+              .insert(eventsTable)
+              .values(withCanonicalArtist(newPr4EventRows))
+              .returning()
           : []
       console.warn(
         `Inserted ${insertedPr4.length} PR4 test events (${existingPr4.length} already present).`,

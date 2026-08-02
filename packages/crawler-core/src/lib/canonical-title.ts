@@ -60,10 +60,7 @@
  * that use bold for the headline rather than an annotation.
  */
 
-import {
-  LATIN_EXTENDED_MAP,
-  LATIN_EXTENDED_REGEX,
-} from './latin-extended-map.js'
+import { LATIN_EXTENDED_MAP, LATIN_EXTENDED_REGEX } from '@concert-crawl/types'
 
 // Markdown emphasis: bold (`**...**`, `__...__`) and italic (`*...*`,
 // `_..._`). Two-character markers run first so the single-character pass
