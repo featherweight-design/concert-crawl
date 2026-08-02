@@ -70,6 +70,9 @@ export const ARTIST_COPY = {
   playerNone: "We don't have them on Spotify.",
   playerNoneSub:
     "Doesn't mean much — plenty of good bands aren't. Their shows are below.",
+  // The same fact minus the pointer, for when the player is the last block on
+  // the page and there is nothing below it to point at.
+  playerNoneSubLast: "Doesn't mean much — plenty of good bands aren't.",
   // DELTA vs the handoff: new. The player is a <section>; an unlabelled region
   // is a landmark a screen reader can only announce as "region".
   playerAria: (name: string) => `Player for ${name}`,
