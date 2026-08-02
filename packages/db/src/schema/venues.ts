@@ -99,6 +99,13 @@ export const venues = pgTable('venues', {
   venueType: text('venue_type'),
   about: text('about'),
   neighborhood: text('neighborhood'),
+  // #764 first-timer guide. The insider tip is 1:1 with the venue and renders
+  // with its own treatment (it LEADS the guide) — it is not a chip, so it
+  // lives here rather than in venue_guide_chips.
+  insiderTip: text('insider_tip'),
+  // Draft vs. live. NULL = never published; the consumer endpoint omits the
+  // guide entirely until the publish gate sets this.
+  guidePublishedAt: timestamp('guide_published_at', { withTimezone: true }),
   featured: boolean('featured').notNull().default(false),
   lat: doublePrecision('lat'),
   lng: doublePrecision('lng'),

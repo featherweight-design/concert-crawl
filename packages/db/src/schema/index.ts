@@ -1,4 +1,5 @@
 export * from './venues.js'
+export * from './venue-guide.js'
 export * from './events.js'
 export * from './crawl-runs.js'
 export * from './crawl-triggers.js'

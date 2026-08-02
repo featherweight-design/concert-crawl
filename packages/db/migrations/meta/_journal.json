@@ -477,6 +477,13 @@
       "when": 1785974400000,
       "tag": "0067_drop_inbox_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1786060800000,
+      "tag": "0068_venue_first_timer_guide",
+      "breakpoints": true
     }
   ]
 }
