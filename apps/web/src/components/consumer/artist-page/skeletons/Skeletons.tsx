@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { ARTIST_COPY } from '../definitions/copy'
+import { CRUMB_BOX } from '../Crumb'
 
 /**
  * Two independent loading clocks live on this page: the artist payload and the
@@ -49,6 +50,20 @@ export const TextSkeleton = ({
     aria-hidden="true"
     style={skel({ width, height, marginTop, borderRadius: 4 })}
   />
+)
+
+/**
+ * Desktop crumb placeholder. Reuses `CRUMB_BOX` — the real crumb's own metrics —
+ * and keeps the "Events /" text real so the line box resolves to exactly the
+ * height the loaded page uses; only the artist name, which isn't known yet,
+ * shimmers. Design table §12 requires the crumb to render on the skeleton.
+ */
+export const CrumbSkeleton = () => (
+  <div aria-hidden="true" style={CRUMB_BOX}>
+    <span>{ARTIST_COPY.crumbRoot}</span>
+    <span style={{ color: 'var(--fg-subtle)' }}>/</span>
+    <span style={skel({ width: 140, height: 13, borderRadius: 4 })} />
+  </div>
 )
 
 export const ShowsSkeleton = ({ rows }: { rows: number }) => (

@@ -6,6 +6,7 @@
 import React from 'react'
 
 import {
+  CrumbSkeleton,
   HeroSkeleton,
   ShowsSkeleton,
   TextSkeleton,
@@ -20,6 +21,12 @@ const ArtistLoading = () => (
     </div>
 
     <div className="ap-shell">
+      {/* Desktop crumb — mirrors ArtistPageContent's own `hidden md:block`
+          wrapper. Omitting it dropped the entire grid 38px when content
+          landed (name top 98 → 136). Design table §12 requires it here. */}
+      <div className="hidden md:block">
+        <CrumbSkeleton />
+      </div>
       <div className="ap-grid">
         <div className="ap-rail hidden md:block">
           <div style={{ borderRadius: 14, overflow: 'hidden' }}>
@@ -46,10 +53,14 @@ const ArtistLoading = () => (
             <TextSkeleton width="58%" height={12} marginTop={8} />
           </div>
 
-          {/* Follow control (PR-F) keeps its slot so the page does not jump. */}
-          <div style={{ marginTop: 20 }}>
-            <TextSkeleton width="100%" height={48} />
-          </div>
+          {/* NOTE (PR-F): the Follow control's 48px slot is deliberately NOT
+              reserved here. PR-E renders no Follow button at either viewport,
+              so reserving it made the skeleton 68px taller than the page it
+              stands in for — the same layout-shift lie the missing crumb was.
+              Design table §12 does list a Follow bar; that row describes the
+              finished page. PR-F must restore it alongside the button, and per
+              §12 the DESKTOP slot belongs in the left rail (in its marginTop:16
+              slot), not in this content column. */}
 
           <div className="mt-[30px] md:mt-[34px]">
             <div className="md:hidden">
