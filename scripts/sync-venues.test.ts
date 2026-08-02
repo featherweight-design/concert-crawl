@@ -131,6 +131,28 @@ describe('diffVenues', () => {
     expect(result.toUpdate).toEqual(['marquis'])
   })
 
+  // SQL NULL and '' are different values: `excluded.<col>` writing NULL over
+  // a stored empty string is a real change the diff must not swallow.
+  it('distinguishes an empty string from null', () => {
+    const result = diffVenues(
+      [venue('gothic', { about: null })],
+      [venue('gothic', { about: '' })],
+    )
+
+    expect(result.toUpdate).toEqual(['gothic'])
+  })
+
+  // COALESCE treats only NULL as absent, so a stored empty-string address
+  // still wins over the seed value — it is not a gap to fill.
+  it('does not treat an empty-string address as a gap to fill', () => {
+    const result = diffVenues(
+      [venue('ogden', { address: '935 E Colfax Ave' })],
+      [venue('ogden', { address: '' })],
+    )
+
+    expect(result.unchanged).toEqual(['ogden'])
+  })
+
   it('ignores DB venues that are not in SEED_VENUES', () => {
     const result = diffVenues(
       [venue('globe-hall')],

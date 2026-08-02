@@ -39,8 +39,17 @@ export interface VenueDiff {
 // a seed literal may be `3000` where the DB row is the numeric string
 // `'3000'`. Normalising both sides to a string keeps the diff from
 // reporting churn that the upsert would not actually write.
-const normalize = (value: unknown): string =>
-  value === undefined || value === null ? '' : String(value)
+// A sentinel rather than '' because SQL NULL and an empty string are
+// genuinely different values here: writing `excluded.<col>` over a DB `''`
+// with a seed NULL is a real change, and collapsing both to '' would hide
+// it.
+const NULLISH = Symbol('nullish')
+
+const isNullish = (value: unknown): boolean =>
+  value === undefined || value === null
+
+const normalize = (value: unknown): string | typeof NULLISH =>
+  isNullish(value) ? NULLISH : String(value)
 
 // A field the seed omits is not "no value" — the INSERT writes the column
 // default, and `excluded.<col>` therefore carries that default into the
@@ -53,14 +62,14 @@ export type ColumnDefaults = Partial<Record<ComparedField, unknown>>
 // `address` is written as COALESCE(venues.address, excluded.address), so an
 // existing non-null value always wins and seed drift against it is not a
 // pending write — reporting it would be a lie the operator has to talk
-// themselves out of on every run. The one case that IS a write is a null
+// themselves out of on every run. The one case that IS a write is a NULL
 // current address filled in from the seed, which a plain value comparison
-// would miss entirely.
+// would miss entirely. COALESCE treats only NULL as absent, so a DB empty
+// string still wins and must not be read as a gap to fill.
 const addressDiffers = (
   seedVenue: ComparableVenue,
   current: ComparableVenue,
-): boolean =>
-  normalize(current.address) === '' && normalize(seedVenue.address) !== ''
+): boolean => isNullish(current.address) && !isNullish(seedVenue.address)
 
 export const diffVenues = (
   seedVenues: readonly ComparableVenue[],
