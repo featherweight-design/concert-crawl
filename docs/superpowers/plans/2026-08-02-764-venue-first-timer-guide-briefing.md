@@ -71,13 +71,13 @@ Not a risk here: performance, concurrency, fan-out, data volume.
 
 ## Launch gating — REQUIRED
 
-**Verdict: gated, twice over — and both gates are already in place. No PR in this
-plan opens either one.**
+**Verdict: gated, twice over — and both launch gates are already in place. No PR
+in this plan opens either one.**
 
 (The epic-run template offers three shapes: *reachable on merge*, *gated behind a
 named flag*, or *dark until a runbook step*. This epic is the second, doubled.)
 
-**Gate 1 — content.** The consumer endpoint returns a guide only when
+**Launch gate 1 — content.** The consumer endpoint returns a guide only when
 `venues.guide_published_at IS NOT NULL`. On merge of PR-3, every venue in prod
 has a NULL `guide_published_at`, so **the vertical ships dark and stays dark until
 a human authors and publishes a guide in admin.** There is no backfill, no
@@ -85,7 +85,7 @@ seed-to-prod, and no default. This is the safest possible shape and it is
 deliberate: the feature cannot embarrass us with empty chrome, because with no
 content there is no chrome.
 
-**Gate 2 — audience.** `/venues(.*)` sits in `isPublicOnceLaunched`
+**Launch gate 2 — audience.** `/venues(.*)` sits in `isPublicOnceLaunched`
 (`middleware.ts:39-52`), so signed-out visitors reach it only when
 `NEXT_PUBLIC_PUBLIC_BROWSE === 'true'`. That variable defaults to `false`,
 fails closed on typo or absence, and is inlined at build time. **This run does
