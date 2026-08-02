@@ -1,3 +1,10 @@
+## [1.193.1](https://github.com/HartiganHM/concert-crawl/compare/v1.193.0...v1.193.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* **web:** stop promising that following an artist fills your Watching ([fac318b](https://github.com/HartiganHM/concert-crawl/commit/fac318bc4c7d926acbc3c56f85d6fc1a2a25acce)), closes [#1306](https://github.com/HartiganHM/concert-crawl/issues/1306)
+
 # [1.193.0](https://github.com/HartiganHM/concert-crawl/compare/v1.192.0...v1.193.0) (2026-08-02)
 
 
