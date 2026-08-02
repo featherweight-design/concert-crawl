@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useClerk } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useErrorBoundaryRetry } from '@/lib/hooks/useErrorBoundaryRetry'
 
 const copy = CONSUMER_COPY.error
 
@@ -15,6 +16,7 @@ interface ProtectedErrorProps {
 export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
   const { signOut } = useClerk()
   const router = useRouter()
+  const retry = useErrorBoundaryRetry(reset)
 
   useEffect(() => {
     console.error('[app error]', error)
@@ -86,7 +88,7 @@ export default function ProtectedError({ error, reset }: ProtectedErrorProps) {
       >
         <button
           type="button"
-          onClick={reset}
+          onClick={retry}
           style={{
             padding: '10px 20px',
             borderRadius: 10,
