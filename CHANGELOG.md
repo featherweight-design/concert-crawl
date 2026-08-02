@@ -1,3 +1,12 @@
+## [1.194.1](https://github.com/HartiganHM/concert-crawl/compare/v1.194.0...v1.194.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* **crawler:** decode HTML entities in event titles ([5fd20ca](https://github.com/HartiganHM/concert-crawl/commit/5fd20ca3d743e170c2adcbb922a8b9d5e000fdf6)), closes [#8217](https://github.com/HartiganHM/concert-crawl/issues/8217) [#8211](https://github.com/HartiganHM/concert-crawl/issues/8211) [#8217](https://github.com/HartiganHM/concert-crawl/issues/8217) [#827](https://github.com/HartiganHM/concert-crawl/issues/827) [#8217](https://github.com/HartiganHM/concert-crawl/issues/8217) [#1338](https://github.com/HartiganHM/concert-crawl/issues/1338)
+* **crawler:** fall back to title when rawTitle is absent ([756b0f0](https://github.com/HartiganHM/concert-crawl/commit/756b0f0b1657bffa2e0a38c465f37984b14abeab))
+* **scripts:** correct no-op headline and rawTitle comment ([b8ca646](https://github.com/HartiganHM/concert-crawl/commit/b8ca646684a7e5b2540a4be56c179f015136c25e))
+
 # [1.194.0](https://github.com/HartiganHM/concert-crawl/compare/v1.193.1...v1.194.0) (2026-08-02)
 
 
