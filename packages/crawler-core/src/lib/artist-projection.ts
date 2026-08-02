@@ -1,5 +1,10 @@
 import { artists, db } from '@concert-crawl/db'
-import { artistSlug, resolveSlug } from '@concert-crawl/types'
+import { eq, inArray, like, or } from 'drizzle-orm'
+import {
+  ARTIST_SLUG_FALLBACK_PREFIX,
+  artistSlug,
+  resolveSlug,
+} from '@concert-crawl/types'
 import { reportFailure } from '@concert-crawl/logger'
 
 /**
@@ -47,9 +52,36 @@ export async function projectArtists(
     }
     if (byCanonical.size === 0) return 0
 
+    // Narrowed deliberately: the crawler runs every 10 minutes and `artists`
+    // grows without bound, so a full-table read here would become a hot path.
+    // Two predicates are enough — the canonical names we might insert, and any
+    // slug that could collide with one of our base slugs. `resolveSlug` only
+    // ever appends `-<n>`, so `base` plus `base-%` covers every collision it
+    // can produce.
+    const canonicalNames = [...byCanonical.keys()]
+    const baseSlugs = canonicalNames.map((canonicalName) =>
+      artistSlug(canonicalName),
+    )
+    const slugPredicates = baseSlugs
+      .filter((base) => base !== '')
+      .flatMap((base) => [
+        eq(artists.slug, base),
+        like(artists.slug, `${base}-%`),
+      ])
+    // A name that slugs to nothing falls back to `artist-<hash>`; the hash is
+    // internal to resolveSlug, so pull the whole fallback namespace instead.
+    if (baseSlugs.some((base) => base === '')) {
+      slugPredicates.push(
+        like(artists.slug, `${ARTIST_SLUG_FALLBACK_PREFIX}-%`),
+      )
+    }
+
     const existing = await database
       .select({ canonicalName: artists.canonicalName, slug: artists.slug })
       .from(artists)
+      .where(
+        or(inArray(artists.canonicalName, canonicalNames), ...slugPredicates),
+      )
     const taken = new Set(existing.map((row) => row.slug))
     const alreadyProjected = new Set(existing.map((row) => row.canonicalName))
 
