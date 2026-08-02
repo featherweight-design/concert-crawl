@@ -16,6 +16,7 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }))
 
+import { randomUUID } from 'node:crypto'
 import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import { userProfiles } from '@concert-crawl/db'
@@ -325,7 +326,7 @@ describe('GET /v1/notifications', () => {
   it('rejects a cursor whose timestamp half is not castable', async () => {
     setAuth('user_owner')
     const forged = Buffer.from(
-      `not-a-timestamp|${crypto.randomUUID()}`,
+      `not-a-timestamp|${randomUUID()}`,
       'utf8',
     ).toString('base64url')
     const res = await app.request(`/v1/notifications?cursor=${forged}`)
