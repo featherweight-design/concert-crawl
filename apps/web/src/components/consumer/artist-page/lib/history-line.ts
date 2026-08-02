@@ -3,7 +3,7 @@ import type { ArtistHistory } from '@concert-crawl/types'
 import { CRAWL_SINCE } from '../definitions/constants'
 import { ARTIST_COPY } from '../definitions/copy'
 
-/** "A", "A & B", "A, B & C" — never an Oxford-comma-free three-way ambiguity. */
+/** "A", "A & B", "A, B & C" — ampersand before the last name, no Oxford comma. */
 export const joinList = (values: string[]): string => {
   if (values.length <= 1) return values[0] ?? ''
   const last = values[values.length - 1] ?? ''

@@ -9,6 +9,7 @@ import {
   pickCalendarSelectedDate,
   type CalendarWeekDayLite,
 } from './lib'
+import { CONSUMER_COPY } from './copy'
 
 vi.mock('@/lib/time', () => ({
   localDateString: vi.fn(),
@@ -307,7 +308,7 @@ describe('formatDollars', () => {
   })
 
   it('calls a zero price free rather than "$0"', () => {
-    expect(formatDollars(0)).toBe('Free')
+    expect(formatDollars(0)).toBe(CONSUMER_COPY.freeLabel)
   })
 })
 
@@ -315,7 +316,7 @@ describe('formatPrice', () => {
   it('renders a single price, a range and free', () => {
     expect(formatPrice('25', null)).toBe('$25')
     expect(formatPrice('25.5', '40.2')).toBe('$26–$40')
-    expect(formatPrice('0', null)).toBe('Free')
+    expect(formatPrice('0', null)).toBe(CONSUMER_COPY.freeLabel)
     expect(formatPrice(null, null)).toBeNull()
   })
 })

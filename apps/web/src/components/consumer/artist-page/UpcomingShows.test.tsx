@@ -5,6 +5,8 @@ import type { ArtistShow } from '@concert-crawl/types'
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { CONSUMER_COPY } from '../definitions/copy'
+
 import { ARTIST_COPY } from './definitions/copy'
 import { UpcomingShows } from './UpcomingShows'
 
@@ -135,7 +137,7 @@ describe('UpcomingShows', () => {
         shows={[show('2026-08-08', 'Hi-Dive', 15, 'cancelled')]}
       />,
     )
-    expect(getByText('Cancelled')).toBeTruthy()
+    expect(getByText(CONSUMER_COPY.cancelledLabel)).toBeTruthy()
     expect(getByText('Hi-Dive')).toBeTruthy()
   })
 
@@ -146,7 +148,7 @@ describe('UpcomingShows', () => {
         shows={[show('2026-08-08', 'Hi-Dive', 15, 'postponed')]}
       />,
     )
-    expect(getByText('Postponed')).toBeTruthy()
+    expect(getByText(CONSUMER_COPY.postponedLabel)).toBeTruthy()
   })
 
   it('labels a residency as a run and links every night', () => {
