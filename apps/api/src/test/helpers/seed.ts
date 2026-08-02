@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import {
+  artists,
   crawlRuns,
   eventReportConfirms,
   eventReports,
@@ -66,6 +67,24 @@ export async function seedVenue(
 
   if (!venue) throw new Error('seedVenue: insert returned no rows')
   return venue
+}
+
+export async function seedArtist(
+  overrides: Partial<typeof artists.$inferInsert> = {},
+): Promise<typeof artists.$inferSelect> {
+  const name = overrides.name ?? 'Test Artist'
+  const [artist] = await testDb
+    .insert(artists)
+    .values({
+      name,
+      canonicalName: name.toLowerCase().trim(),
+      slug: name.toLowerCase().trim().replace(/\s+/g, '-'),
+      ...overrides,
+    })
+    .returning()
+
+  if (!artist) throw new Error('seedArtist: insert returned no rows')
+  return artist
 }
 
 export async function seedEvent(

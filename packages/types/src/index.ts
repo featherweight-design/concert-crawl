@@ -17,6 +17,10 @@ import type { VenueGuide } from './venue-guide.js'
 // only package both can depend on without a workspace build cycle.
 export * from './artist-slug.js'
 
+// #1115 artist page — GET /v1/artists/:slug response contract, shared by the
+// API handler and the web route shell.
+export * from './artist.js'
+
 // User roles — mirrors Clerk publicMetadata.role
 // Role always takes precedence over plan in access checks:
 //   admin/promoter/beta/sub_admin get full premium access regardless of subscription.
