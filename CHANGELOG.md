@@ -1,3 +1,10 @@
+# [1.181.0](https://github.com/HartiganHM/concert-crawl/compare/v1.180.0...v1.181.0) (2026-08-02)
+
+
+### Features
+
+* **db:** onboard Meow Wolf Denver ([e102a7a](https://github.com/HartiganHM/concert-crawl/commit/e102a7a008a1ed481cf52950fed56efa20940fea)), closes [#1289](https://github.com/HartiganHM/concert-crawl/issues/1289)
+
 # [1.180.0](https://github.com/HartiganHM/concert-crawl/compare/v1.179.1...v1.180.0) (2026-08-02)
 
 
