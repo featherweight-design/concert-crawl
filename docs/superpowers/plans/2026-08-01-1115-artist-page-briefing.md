@@ -2,8 +2,17 @@
 
 Companion to `docs/superpowers/plans/2026-07-27-1115-artist-page.md`. The plan owns sequencing
 and per-task detail; this file carries only the facts the epic-run skill needs and the plan
-does not state. Where the two disagree, **the plan wins** — that was Hugh's explicit ruling on
-2026-08-01 when an agent-generated kickoff prompt contradicted it.
+does not state.
+
+Where the two disagree about **what to build** — sequencing, scope, task detail, design
+decisions — **the plan wins**. That was Hugh's explicit ruling on 2026-08-01, when an
+agent-generated kickoff prompt contradicted it.
+
+Where they disagree about **what already exists**, the **codebase wins**, and the Current State
+section below records what was verified against it. The plan was written on 2026-07-27 and its
+description of shipped code has already drifted in at least one place (the middleware shape).
+A plan is a statement of intent, not an observation — never take its word for the state of a
+file you can just read.
 
 ## Source of truth (read in this order)
 
