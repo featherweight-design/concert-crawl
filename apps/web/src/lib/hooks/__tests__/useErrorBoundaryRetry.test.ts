@@ -89,7 +89,8 @@ describe('useErrorBoundaryRetry', () => {
       const source = readFileSync(boundary, 'utf8')
       expect(source).toContain('useErrorBoundaryRetry')
       // Bare `onClick={reset}` is the exact defect — refetch never happens.
-      expect(source).not.toMatch(/onClick=\{reset\}/)
+      // Whitespace-tolerant so a reformat cannot silently retire the guard.
+      expect(source).not.toMatch(/onClick=\s*\{\s*reset\s*\}/)
     }
   })
 })

@@ -195,7 +195,9 @@ describe('seed data', () => {
       // Anchored at the head of each chunk rather than searched within it: the
       // `.values(` that follows the insert is the only one that belongs to it,
       // and not every insert ends with `.returning` to bound a search against.
-      const insertBlocks = source.split(/\.insert\(eventsTable\)/).slice(1)
+      const insertBlocks = source
+        .split(/\.insert\(\s*eventsTable\s*\)/)
+        .slice(1)
 
       expect(insertBlocks.length).toBe(5)
       for (const block of insertBlocks) {
