@@ -551,8 +551,8 @@ layout shift.**
 | `followAria(name)`     | `Follow {name} — every show they book is added to your Watching`                                            | follow `aria-label`         |
 | `followingAria(name)`  | `Following {name}. Activate to stop following.`                                                             | follow `aria-label`         |
 | `historyNone(since)`   | `First time we've caught them. Our crawl only goes back to {since}, so that's not saying much.`             | history line                |
-| `historyOne(v, since)` | `We've caught them once — {venue}. That's everything since {since}, which is as far back as our map goes.`   | history line                |
-| `historyMany(n,v,s)`   | `{n} shows on our map — {venues}. That's since {since}; anything earlier they played, we missed.`           | history line                |
+| `historyOne(venue, since)` | `We've caught them once — {venue}. That's everything since {since}, which is as far back as our map goes.`   | history line                |
+| `historyMany(n, venues, since)`   | `{n} shows on our map — {venues}. That's since {since}; anything earlier they played, we missed.`           | history line                |
 | `pastTitle`            | `Previously`                                                                                                | past section head           |
 | `pastNote(since)`      | `Our record starts when the crawl did, {since}. Older gigs exist; we just weren't there.`                   | past section closer         |
 | `playerRail`           | `Player · Spotify`                                                                                          | embed rail, left            |

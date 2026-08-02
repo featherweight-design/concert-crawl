@@ -137,7 +137,7 @@ noted.
 1. Signed out, open `/artists/{slug}` with `NEXT_PUBLIC_PUBLIC_BROWSE=true`.
 2. Confirm the Follow control is **pixel-identical at rest** to the signed-in not-following
    skin — #794 §3.10 wins over the handoff here. Honesty lives in the accessible name
-   (`ARTIST_COPY.followSignedOutAria`) and `aria-haspopup="dialog"`.
+   (`ARTIST_COPY.followSignedOutAria(name)`) and `aria-haspopup="dialog"`.
 3. Tap it. → Sign-up hand-off, not a silent no-op.
 4. **Resume:** complete sign-up. → Land back on the artist page, not bounced to `/events`.
    (See the `forceRedirectUrl` seam noted in the #794 pickup memory — verify, do not assume.)
