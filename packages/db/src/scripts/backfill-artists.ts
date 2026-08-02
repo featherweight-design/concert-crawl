@@ -7,8 +7,10 @@
  * raw spelling for that canonical name.
  *
  * Idempotent by construction: slugs are resolved against everything already
- * stored plus everything derived in this pass, and the insert is
- * `onConflictDoNothing` on `canonical_name`. Safe to re-run against local,
+ * stored plus everything derived in this pass, and the insert is an untargeted
+ * `onConflictDoNothing` — a row is skipped on a `canonical_name` collision (the
+ * expected re-run case) and equally on a `slug` collision, which is what a
+ * concurrent crawl write-through produces. Safe to re-run against local,
  * staging or prod, and wired into `pnpm db:seed` so no environment needs a
  * manual step.
  */
