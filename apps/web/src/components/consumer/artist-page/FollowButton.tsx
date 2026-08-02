@@ -1,12 +1,24 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
+import dynamic from 'next/dynamic'
 import { usePathname, useSearchParams } from 'next/navigation'
 
-import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 
 import { ARTIST_COPY } from './definitions/copy'
+
+// Same reasoning as WatchShowButton: the sheet drags @stripe/stripe-js in via
+// CheckoutPanel, and only a signed-out visitor can ever open it — a static
+// import would put the Stripe chunk in every artist page's bundle.
+// ssr:false because the picker is a modal that is always closed on first paint.
+const TierPickerSheet = dynamic(
+  () =>
+    import('@/components/consumer/tier-picker/TierPickerSheet').then(
+      (mod) => mod.TierPickerSheet,
+    ),
+  { ssr: false },
+)
 
 export interface FollowButtonProps {
   /** Artist name — used only to build the accessible name. */

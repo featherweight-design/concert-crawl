@@ -11,8 +11,12 @@ export const AP_DESKTOP_QUERY = '(min-width: 768px)'
  * but still mounts a second button, so the one place we genuinely need to know
  * the viewport in JS is deciding which follow slot renders at all.
  *
- * Starts false so the server render and the first client render agree; the
- * effect corrects it before paint.
+ * Starts false so the server render and the first client render agree. The
+ * effect then corrects it on the commit after hydration — i.e. after the first
+ * paint, so a desktop visitor briefly gets the mobile follow slot. That is
+ * deliberate: `useLayoutEffect` would close the gap but warns under SSR, and
+ * the slot is height-reserved either way, so the correction costs no layout
+ * shift.
  */
 export const useIsDesktop = (): boolean => {
   const [isDesktop, setIsDesktop] = useState(false)
