@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.22.0-beta',
+    date: 'Aug 2, 2026',
+    headline: 'Globe Hall and Lost Lake are on the calendar.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Two more of the rooms people actually go to: Globe Hall, the Globeville barbecue joint with the Americana calendar, and Lost Lake Lounge, the Colfax dive that books the punk and garage shows. Both now show up in browse and search with every upcoming night and a ticket link.',
+      },
+    ],
+  },
+  {
     version: 'v0.21.0-beta',
     date: 'Aug 1, 2026',
     headline: 'The Oriental Theater is on the calendar.',
