@@ -22,6 +22,13 @@ import type { AvatarColor } from '@concert-crawl/types'
 import { UserMenuVersionFooter } from '@/components/consumer/release-notes/UserMenuVersionFooter'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { AnonDisc } from '@/components/consumer/app-header/AnonDisc'
+import { InboxStrip } from '@/components/consumer/notifications/InboxStrip'
+import { NotifMenuPanel } from '@/components/consumer/notifications/NotifMenuPanel'
+import { NotifPip } from '@/components/consumer/notifications/NotifPip'
+import {
+  useNotifications,
+  unreadCountOf,
+} from '@/lib/queries/use-notifications'
 import { GetInCard } from './GetInCard'
 import { AccountMenuContext, useAccountMenu } from './account-menu-context'
 import type { AccountMenuState } from './account-menu-context'
@@ -89,6 +96,16 @@ function writeAvatarCache(userId: string, value: CachedAvatar): void {
 const AccountMenuBodyContext = createContext<MenuBodyProps | null>(null)
 
 /**
+ * Which body the one shell is showing. `'notifications'` swaps NotifBody in
+ * place of MenuBody INSIDE the same popover/sheet — see NotifMenuPanel for why
+ * this is a mode rather than a second surface.
+ */
+export type AccountMenuMode = 'menu' | 'notifications'
+
+/** The desktop popover's panel height, per the handoff (mobile sheet grows). */
+const PANEL_MAX_HEIGHT = 520
+
+/**
  * Owns the account menu's open state for every trigger in the app — the
  * desktop avatar, the mobile header disc, and bottom-nav slot 4. Two triggers
  * driving one state is what keeps a mobile tap from stacking two sheets.
@@ -104,6 +121,7 @@ export function AccountMenuProvider({
   const router = useRouter()
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [mode, setMode] = useState<AccountMenuMode>('menu')
   const [isMobile, setIsMobile] = useState(false)
   const [submissionCount, setSubmissionCount] = useState(0)
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
@@ -151,13 +169,26 @@ export function AccountMenuProvider({
     return () => mql.removeEventListener('change', handler)
   }, [])
 
+  // ONE query subscription for the whole chrome. React Query dedupes the two
+  // other call sites (the strip, the panel) onto this same cache entry, and the
+  // query is itself `enabled: !!isSignedIn` — but the pip is guarded a second
+  // time below, because a stale cache entry surviving a sign-out must not put a
+  // pip on an anonymous visitor's disc.
+  const notifications = useNotifications()
+  const unreadCount =
+    isSignedIn === true ? unreadCountOf(notifications.data) : 0
+
   const close = useCallback(() => {
     setOpen(false)
+    // Closing always returns to the menu body: reopening into the panel would
+    // strand someone who dismissed from notifications and expected the menu.
+    setMode('menu')
     triggerRef.current?.focus()
   }, [])
 
   const openFrom = useCallback((trigger: HTMLElement | null) => {
     triggerRef.current = trigger
+    setMode('menu')
     setOpen(true)
   }, [])
 
@@ -178,6 +209,7 @@ export function AccountMenuProvider({
   // page, and stealing focus back from a fresh page is worse than leaving it.
   useEffect(() => {
     setOpen(false)
+    setMode('menu')
   }, [pathname])
 
   // Close on Escape key
@@ -274,11 +306,20 @@ export function AccountMenuProvider({
     isSignedIn: isSignedIn === true,
     surfaceRef,
     open,
+    mode,
+    onOpenNotifications: () => setMode('notifications'),
+    onBackToMenu: () => setMode('menu'),
+    onNavigateAway: () => {
+      // Same reasoning as onSettings: focus stays with the destination page.
+      setOpen(false)
+      setMode('menu')
+    },
     onDismiss: close,
     onSettings: () => {
       // Deliberately not close(): this navigates away, so returning focus to a
       // trigger that is about to unmount would fight the destination page for it.
       setOpen(false)
+      setMode('menu')
       void router.push('/me')
     },
     onSignOut: handleSignOut,
@@ -290,6 +331,7 @@ export function AccountMenuProvider({
     avatarHandle,
     avatarColor,
     avatarLoaded,
+    unreadCount,
     openFrom,
     toggleFrom,
     close,
@@ -299,6 +341,14 @@ export function AccountMenuProvider({
     <AccountMenuContext.Provider value={menuState}>
       <AccountMenuBodyContext.Provider value={bodyProps}>
         {children}
+        {/* One polite region for the whole app: the pip is aria-hidden, so a
+            count that changes while the page is open would otherwise be
+            silent. Rendered empty at zero — "0 unread" is not news. */}
+        <span className="sr-only" role="status" aria-live="polite">
+          {unreadCount > 0
+            ? CONSUMER_COPY.userMenu.ariaLabels.unreadAnnouncement(unreadCount)
+            : ''}
+        </span>
         {/* Mobile sheet lives here, not in `UserMenu`: the desktop bar that
             hosts the avatar trigger is `display: none` below sm, so a sheet
             rendered inside it could never be seen. */}
@@ -334,6 +384,7 @@ export function UserMenu() {
     avatarHandle,
     avatarColor,
     avatarLoaded,
+    unreadCount,
     toggleFrom,
   } = useAccountMenu()
   const bodyProps = useContext(AccountMenuBodyContext)
@@ -348,6 +399,11 @@ export function UserMenu() {
     return () => mql.removeEventListener('change', handler)
   }, [])
 
+  // The pip is signed-in-only, twice over: `unreadCount` is already zeroed for
+  // anonymous visitors in the provider, and this second read makes the rule
+  // local to the render that draws the dot.
+  const piped = isSignedIn && unreadCount > 0
+
   return (
     <div className="relative">
       <button
@@ -355,13 +411,15 @@ export function UserMenu() {
         type="button"
         onClick={() => toggleFrom(triggerRef.current)}
         aria-label={
-          isSignedIn
-            ? CONSUMER_COPY.userMenu.ariaLabels.accountMenu
-            : CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut
+          !isSignedIn
+            ? CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut
+            : piped
+              ? CONSUMER_COPY.userMenu.ariaLabels.accountMenuUnread(unreadCount)
+              : CONSUMER_COPY.userMenu.ariaLabels.accountMenu
         }
         aria-expanded={open}
         aria-haspopup="dialog"
-        className="shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
+        className="relative shrink-0 cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)]"
       >
         {isSignedIn ? (
           <Avatar
@@ -372,6 +430,12 @@ export function UserMenu() {
           />
         ) : (
           <AnonDisc size={36} />
+        )}
+        {piped && (
+          <NotifPip
+            ring="var(--bg-elevated)"
+            style={{ position: 'absolute', top: -1, right: -1 }}
+          />
         )}
       </button>
 
@@ -396,7 +460,36 @@ interface MenuBodyProps {
   avatarColor: AvatarColor | null
   isSignedIn: boolean
   open: boolean
+  mode: AccountMenuMode
+  onOpenNotifications: () => void
+  onBackToMenu: () => void
+  onNavigateAway: () => void
   surfaceRef: React.RefObject<HTMLDivElement | null>
+}
+
+/**
+ * The one place the mode switch happens. Both shells call it, so the popover
+ * and the sheet cannot drift on which body they show or how the panel is
+ * bounded. Signed-out never reaches notifications mode — there is nothing to
+ * show and no account to show it for.
+ */
+function MenuShellContent({
+  props,
+  panelMaxHeight,
+}: {
+  props: MenuBodyProps
+  panelMaxHeight?: number
+}) {
+  if (props.mode === 'notifications' && props.isSignedIn) {
+    return (
+      <NotifMenuPanel
+        onBack={props.onBackToMenu}
+        onNavigate={props.onNavigateAway}
+        {...(panelMaxHeight === undefined ? {} : { maxHeight: panelMaxHeight })}
+      />
+    )
+  }
+  return <MenuBody {...props} />
 }
 
 // ── Theme row with inline swatch grid ────────────────────────────────────
@@ -528,6 +621,7 @@ function MenuBody({
   avatarHandle,
   avatarColor,
   isSignedIn,
+  onOpenNotifications,
 }: MenuBodyProps) {
   if (!isSignedIn) {
     return (
@@ -632,6 +726,11 @@ function MenuBody({
         </span>
       </div>
 
+      {/* #737 inbox strip — directly under the identity card, so the pip's
+          promise is paid out at the first tap rather than the second. Signed
+          out there is no strip at all. */}
+      <InboxStrip onSeeAll={onOpenNotifications} />
+
       {/* You section */}
       <SectionLabel>{CONSUMER_COPY.userMenu.sections.you}</SectionLabel>
       <MenuRow
@@ -731,7 +830,7 @@ function UserMenuPopover(props: MenuBodyProps) {
         color: 'var(--fg)',
       }}
     >
-      <MenuBody {...props} />
+      <MenuShellContent props={props} panelMaxHeight={PANEL_MAX_HEIGHT} />
     </div>
   )
 }
@@ -782,7 +881,9 @@ function UserMenuSheet(props: MenuBodyProps) {
           }}
         />
       </div>
-      <MenuBody {...props} />
+      {/* No maxHeight: the sheet is bottom-anchored and grows to its content,
+          where the popover has to be bounded against the viewport. */}
+      <MenuShellContent props={props} />
     </div>
   )
 }

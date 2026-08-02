@@ -91,6 +91,12 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 }
+/* #737 unread pip. Scale + opacity together so the pulse still reads at 8px
+   on a light theme, where an opacity-only pulse is nearly invisible. */
+@keyframes notifPip {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.18); opacity: 0.72; }
+}
 @keyframes skeletonPulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
@@ -277,6 +283,11 @@
   .notif-shimmer {
     animation: none !important;
     background: var(--surface-2) !important;
+  }
+  /* The pip stops pulsing but must NOT disappear — it is the only visual
+     carrier of "there is something unread" in the chrome. */
+  .notif-pip {
+    animation: none !important;
   }
 }
 

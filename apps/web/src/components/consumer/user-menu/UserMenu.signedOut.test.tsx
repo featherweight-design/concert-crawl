@@ -3,6 +3,7 @@
 import React from 'react'
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, cleanup, act, within } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AccountMenuProvider, UserMenu } from './UserMenu'
 import { AppHeader } from '@/components/consumer/app-header/AppHeader'
 import { BottomNav } from '@/components/consumer/bottom-nav/BottomNav'
@@ -56,6 +57,22 @@ vi.mock('@/theme', () => ({
 
 const SIGNED_OUT_LABEL = CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut
 
+// The provider now reads the notification count (#737), so it needs a query
+// client above it even signed out — where the query itself stays disabled.
+function Providers({ children }: { children: React.ReactNode }) {
+  const [client] = React.useState(
+    () =>
+      new QueryClient({
+        defaultOptions: { queries: { retry: false, gcTime: 0 } },
+      }),
+  )
+  return (
+    <QueryClientProvider client={client}>
+      <AccountMenuProvider>{children}</AccountMenuProvider>
+    </QueryClientProvider>
+  )
+}
+
 /** Widen the viewport past `sm` so the desktop popover branch is the one taken. */
 function setViewport(matchesSm: boolean): void {
   window.matchMedia = (query: string) => ({
@@ -98,9 +115,9 @@ function openDesktopMenu(): void {
 describe('account menu — signed out (#794)', () => {
   it('leads with the get-in card and never a "you" section', () => {
     render(
-      <AccountMenuProvider>
+      <Providers>
         <UserMenu />
-      </AccountMenuProvider>,
+      </Providers>,
     )
     openDesktopMenu()
 
@@ -112,9 +129,9 @@ describe('account menu — signed out (#794)', () => {
 
   it('omits the signed-in rows rather than rendering them disabled', () => {
     render(
-      <AccountMenuProvider>
+      <Providers>
         <UserMenu />
-      </AccountMenuProvider>,
+      </Providers>,
     )
     openDesktopMenu()
 
@@ -135,9 +152,9 @@ describe('account menu — signed out (#794)', () => {
 
   it('keeps the theme picker, the how-it-works row, and the legal pair', () => {
     render(
-      <AccountMenuProvider>
+      <Providers>
         <UserMenu />
-      </AccountMenuProvider>,
+      </Providers>,
     )
     openDesktopMenu()
 
@@ -155,9 +172,9 @@ describe('account menu — signed out (#794)', () => {
 
   it('picks a theme locally without a server round-trip', async () => {
     render(
-      <AccountMenuProvider>
+      <Providers>
         <UserMenu />
-      </AccountMenuProvider>,
+      </Providers>,
     )
     openDesktopMenu()
 
@@ -180,9 +197,9 @@ describe('account menu — signed out (#794)', () => {
 
   it('is a dialog whose surface takes focus, so the first Tab lands on Sign up free', () => {
     render(
-      <AccountMenuProvider>
+      <Providers>
         <UserMenu />
-      </AccountMenuProvider>,
+      </Providers>,
     )
     openDesktopMenu()
 
@@ -200,9 +217,9 @@ describe('account menu — signed out (#794)', () => {
   it('marks the mobile sheet modal, since that surface does render a scrim', () => {
     setViewport(true)
     render(
-      <AccountMenuProvider>
+      <Providers>
         <UserMenu />
-      </AccountMenuProvider>,
+      </Providers>,
     )
     openDesktopMenu()
 
@@ -212,9 +229,9 @@ describe('account menu — signed out (#794)', () => {
 
   it('returns focus to the trigger when dismissed by an outside click', () => {
     render(
-      <AccountMenuProvider>
+      <Providers>
         <UserMenu />
-      </AccountMenuProvider>,
+      </Providers>,
     )
     const trigger = screen.getByRole('button', { name: SIGNED_OUT_LABEL })
     act(() => {
@@ -232,9 +249,9 @@ describe('account menu — signed out (#794)', () => {
 
   it('pulls focus back inside when Tab is pressed from outside the surface', () => {
     render(
-      <AccountMenuProvider>
+      <Providers>
         <UserMenu />
-      </AccountMenuProvider>,
+      </Providers>,
     )
     openDesktopMenu()
     const dialog = screen.getByRole('dialog')
@@ -253,9 +270,9 @@ describe('account menu — signed out (#794)', () => {
 
   it('dismisses itself when a row navigates within the same layout', () => {
     const { rerender } = render(
-      <AccountMenuProvider>
+      <Providers>
         <UserMenu />
-      </AccountMenuProvider>,
+      </Providers>,
     )
     openDesktopMenu()
     expect(screen.queryByRole('dialog')).not.toBeNull()
@@ -265,9 +282,9 @@ describe('account menu — signed out (#794)', () => {
     mockPathname = '/changelog'
     act(() => {
       rerender(
-        <AccountMenuProvider>
+        <Providers>
           <UserMenu />
-        </AccountMenuProvider>,
+        </Providers>,
       )
     })
     expect(screen.queryByRole('dialog')).toBeNull()
@@ -277,10 +294,10 @@ describe('account menu — signed out (#794)', () => {
     // The desktop header menu and bottom-nav slot 4 are separate triggers over
     // one state. Two dialogs would mean two stacked sheets on a single tap.
     render(
-      <AccountMenuProvider>
+      <Providers>
         <AppHeader />
         <BottomNav />
-      </AccountMenuProvider>,
+      </Providers>,
     )
 
     expect(screen.queryAllByRole('dialog')).toHaveLength(0)

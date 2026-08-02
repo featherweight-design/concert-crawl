@@ -548,6 +548,16 @@ export const CONSUMER_COPY = {
       accountMenu: 'Account menu',
       accountMenuSignedOut: 'Account menu — sign up or sign in',
       menuTitle: 'Account',
+      // #737: the pip is a DOT, never a count — the number is announced here
+      // instead. Used by the desktop avatar trigger AND bottom-nav slot 4, so
+      // both account affordances name the same thing the same way.
+      accountMenuUnread: (count: number): string =>
+        `Account menu, ${count} unread ${
+          count === 1 ? 'notification' : 'notifications'
+        }`,
+      /** Polite live-region text, announced when the unread count changes. */
+      unreadAnnouncement: (count: number): string =>
+        `${count} unread ${count === 1 ? 'notification' : 'notifications'}`,
     },
     identity: {
       badge: 'Beta · founder',

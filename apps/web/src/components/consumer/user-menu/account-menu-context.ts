@@ -9,6 +9,13 @@ export interface AccountMenuState {
   avatarHandle: string | null
   avatarColor: AvatarColor | null
   avatarLoaded: boolean
+  /**
+   * #737 — unread notifications, distributed from ONE query subscription in
+   * the provider so the desktop trigger and bottom-nav slot 4 can never
+   * disagree about whether the pip is up. Always 0 when signed out: an
+   * anonymous visitor has no notifications and must never see a pip.
+   */
+  unreadCount: number
   /** Opens the menu and records the trigger so focus can return to it. */
   openFrom: (trigger: HTMLElement | null) => void
   toggleFrom: (trigger: HTMLElement | null) => void
@@ -25,6 +32,7 @@ const INERT: AccountMenuState = {
   avatarHandle: null,
   avatarColor: null,
   avatarLoaded: true,
+  unreadCount: 0,
   openFrom: () => {},
   toggleFrom: () => {},
   close: () => {},

@@ -15,6 +15,11 @@ export {
 export { NotifHeader } from './NotifHeader'
 export { NotifBody } from './NotifBody'
 export type { NotifPanelState } from './NotifBody'
+export { NotifPip } from './NotifPip'
+export { MenuNotifRow } from './MenuNotifRow'
+export { InboxStrip } from './InboxStrip'
+export { NotifMenuPanel, panelStateOf } from './NotifMenuPanel'
+export { activateOnKey } from './lib/activate-keys'
 export { NotifGlyph, GLYPH } from './glyphs'
 export type { GlyphName } from './glyphs'
 export {

@@ -10,6 +10,7 @@ import type { AvatarColor } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { AnonDisc } from '@/components/consumer/app-header/AnonDisc'
 import { useAccountMenu } from '@/components/consumer/user-menu/account-menu-context'
+import { NotifPip } from '@/components/consumer/notifications/NotifPip'
 
 const COPY = CONSUMER_COPY.bottomNav
 const MENU_LABELS = CONSUMER_COPY.userMenu.ariaLabels
@@ -161,7 +162,7 @@ export function BottomNav() {
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null)
   const [profileLoaded, setProfileLoaded] = useState(false)
-  const { open: menuOpen, toggleFrom } = useAccountMenu()
+  const { open: menuOpen, toggleFrom, unreadCount } = useAccountMenu()
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -196,6 +197,9 @@ export function BottomNav() {
   }, [getToken, isSignedIn])
 
   const isMeActive = pathname.startsWith('/me')
+  // Signed-in only, and guarded here rather than trusting the provider alone —
+  // an anonymous visitor must never see a pip on the account slot.
+  const piped = isSignedIn === true && unreadCount > 0
 
   return (
     <nav
@@ -238,9 +242,11 @@ export function BottomNav() {
         type="button"
         onClick={() => toggleFrom(menuTriggerRef.current)}
         aria-label={
-          isSignedIn
-            ? MENU_LABELS.accountMenu
-            : MENU_LABELS.accountMenuSignedOut
+          !isSignedIn
+            ? MENU_LABELS.accountMenuSignedOut
+            : piped
+              ? MENU_LABELS.accountMenuUnread(unreadCount)
+              : MENU_LABELS.accountMenu
         }
         aria-haspopup="dialog"
         aria-expanded={menuOpen}
@@ -252,19 +258,30 @@ export function BottomNav() {
             isSignedIn && isMeActive ? 'var(--signal)' : 'var(--fg-subtle)',
         }}
       >
-        {!isSignedIn ? (
-          <AnonDisc size={26} />
-        ) : !profileLoaded ? (
-          <MeAvatarSkeleton />
-        ) : avatarHandle !== null ? (
-          <MeAvatar
-            handle={avatarHandle}
-            avatarColor={avatarColor}
-            isActive={isMeActive}
-          />
-        ) : (
-          <PersonIcon />
-        )}
+        {/* The pip rides the glyph in EVERY branch — skeleton included. An
+            avatar that is still loading is not a reason to swallow the one
+            signal that says something happened. */}
+        <span style={{ position: 'relative', display: 'inline-flex' }}>
+          {!isSignedIn ? (
+            <AnonDisc size={26} />
+          ) : !profileLoaded ? (
+            <MeAvatarSkeleton />
+          ) : avatarHandle !== null ? (
+            <MeAvatar
+              handle={avatarHandle}
+              avatarColor={avatarColor}
+              isActive={isMeActive}
+            />
+          ) : (
+            <PersonIcon />
+          )}
+          {piped && (
+            <NotifPip
+              ring="var(--bg-elevated)"
+              style={{ position: 'absolute', top: -2, right: -4 }}
+            />
+          )}
+        </span>
       </button>
     </nav>
   )

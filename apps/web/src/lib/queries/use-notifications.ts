@@ -28,6 +28,16 @@ export const notificationsQueryKey = (userId: string | null | undefined) =>
 type NotificationPages = InfiniteData<NotificationListResult, string | null>
 
 /**
+ * What the READ helpers below accept.
+ *
+ * `useInfiniteQuery` widens its page-param type to `unknown` on the returned
+ * data, so demanding the full `NotificationPages` at every read site would
+ * force a cast at each caller. The readers only ever touch `pages`, so that is
+ * all they ask for — the write helpers still take the exact cached shape.
+ */
+type NotificationPagesRead = Pick<NotificationPages, 'pages'>
+
+/**
  * `undefined` — never `null` — is what stops paging. `null` is a VALID page
  * param here (it is the first page), so handing it back for an unpaginatable
  * page would refetch page 1 forever and duplicate every row.
@@ -81,7 +91,7 @@ export function useNotifications() {
 
 /** Flattens the pages the panel actually renders. */
 export const flattenNotifications = (
-  data: NotificationPages | undefined,
+  data: NotificationPagesRead | undefined,
 ): ConsumerNotification[] => data?.pages.flatMap((page) => page.items) ?? []
 
 /**
@@ -90,8 +100,9 @@ export const flattenNotifications = (
  * pages repeat the same number, and reading page 0 avoids depending on how far
  * someone has scrolled.
  */
-export const unreadCountOf = (data: NotificationPages | undefined): number =>
-  data?.pages[0]?.unreadCount ?? 0
+export const unreadCountOf = (
+  data: NotificationPagesRead | undefined,
+): number => data?.pages[0]?.unreadCount ?? 0
 
 /**
  * The panel's last-opened watermark.
@@ -100,8 +111,9 @@ export const unreadCountOf = (data: NotificationPages | undefined): number =>
  * no account has ever opened this panel. It does not mean "everything is
  * backfill", and callers must not treat it as a zero timestamp.
  */
-export const seenAtOf = (data: NotificationPages | undefined): string | null =>
-  data?.pages[0]?.seenAt ?? null
+export const seenAtOf = (
+  data: NotificationPagesRead | undefined,
+): string | null => data?.pages[0]?.seenAt ?? null
 
 /**
  * Applies a read stamp to matching rows across every loaded page.

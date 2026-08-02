@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.26.0-beta',
+    date: 'Aug 2, 2026',
+    headline: 'The app can finally tell you something happened.',
+    items: [
+      {
+        kind: 'added',
+        text: "Prices drop, dates move, shows sell out — and until now you had to go looking. A small dot on your avatar means there's something new, on your phone and on desktop. Tap it and the newest couple sit right at the top of your account menu, with everything else one tap behind them. It's a DOT, not a number screaming 47 at you. Opening the list is enough to make the dot go away, and which ones you've actually dealt with is tracked separately, so nothing gets quietly buried.",
+      },
+      {
+        kind: 'added',
+        text: "Everything you get told about comes from the shows you're Watching, so the list stays short and it stays yours.",
+      },
+    ],
+  },
+  {
     version: 'v0.25.0-beta',
     date: 'Aug 2, 2026',
     headline: "The guide gets out of your way once you've been.",

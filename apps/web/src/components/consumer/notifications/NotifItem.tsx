@@ -13,12 +13,12 @@
 // left rail in the category ink, a --surface-1 row fill, a 700-weight title,
 // and a trailing dot. Any one of them can be missed; all four cannot.
 
-import type { KeyboardEvent } from 'react'
 import type { ConsumerNotification } from '@/lib/notifications'
 import { categoryFor } from './definitions/categories'
 import { NMono } from './NMono'
 import { NotifTile } from './NotifTile'
 import { itemLabel, isUnread, relTime } from './lib/format-time'
+import { activateOnKey } from './lib/activate-keys'
 
 export const NotifItem = ({
   item,
@@ -39,15 +39,9 @@ export const NotifItem = ({
     onOpen?.(item)
   }
 
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (event.key !== 'Enter' && event.key !== ' ') return
-    // preventDefault runs on every repeat, or holding Space scrolls the page
-    // out from under the panel. Activation does not: keydown auto-repeats, and
-    // a held key would otherwise fire one read mutation and navigation per tick.
-    event.preventDefault()
-    if (event.repeat) return
-    open()
-  }
+  // Shared with every other `role="button"` row in this feature — see
+  // lib/activate-keys.ts for why Space is preventDefault'd on repeat.
+  const onKeyDown = activateOnKey(open)
 
   // `onOpen` is optional, so the button semantics have to be too: a row that
   // announces itself as a button, takes focus and then does nothing is worse
