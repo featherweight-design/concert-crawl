@@ -1,3 +1,17 @@
+# [1.194.0](https://github.com/HartiganHM/concert-crawl/compare/v1.193.1...v1.194.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **scripts:** distinguish SQL NULL from empty string in the venue diff ([ac7b367](https://github.com/HartiganHM/concert-crawl/commit/ac7b367e4ff8792323588528bbabf8be4f2042c2))
+* **scripts:** make active/featured/verified create-only in the venue sync ([9159643](https://github.com/HartiganHM/concert-crawl/commit/9159643945d59cea8709fd6ffb59224642dc92ee))
+* **scripts:** model the address COALESCE in the venue sync diff ([d24ac43](https://github.com/HartiganHM/concert-crawl/commit/d24ac43cde9ae50a4727acdf811a1b914e4308e1))
+
+
+### Features
+
+* **scripts:** add venue-only prod sync from SEED_VENUES ([db1ec59](https://github.com/HartiganHM/concert-crawl/commit/db1ec599a0d126ff5684ec1d506b8d510e029116))
+
 ## [1.193.1](https://github.com/HartiganHM/concert-crawl/compare/v1.193.0...v1.193.1) (2026-08-02)
 
 
