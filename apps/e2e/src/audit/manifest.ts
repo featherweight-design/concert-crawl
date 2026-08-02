@@ -16,7 +16,9 @@
  * event-detail is a hardcoded UUID and venue-detail a slug, both from the
  * prod→staging public-data sync (stable because the sync upserts by natural
  * key); admin-contests is a hardcoded UUID from the synthetic seeder, which is
- * deterministic from FIXTURE_SEED. If an id or slug 404s, the sweep records a
+ * deterministic from FIXTURE_SEED. artist-detail is the one exception — the
+ * staging seeder does not populate `artists`, so it needs the separate backfill
+ * noted on its entry. If an id or slug 404s, the sweep records a
  * load error (spec: "route fails to load → recorded as a sweep error in the
  * report"). All consumer routes live under Next's `(protected)` group, so they
  * require an authenticated user — auth:'user', not 'none'.
