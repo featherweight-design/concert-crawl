@@ -14,7 +14,7 @@ import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 import { isScaRegion } from '@/lib/sca-region'
 import { fetchEventReports } from '@/lib/events'
 import { EventImage } from '@/components/consumer/event-image'
-import { BackButton } from '@/components/consumer/event-detail/BackButton'
+import { BackChip } from '@/components/consumer/back-chip/BackChip'
 import { EventCard } from '@/components/consumer/event-card/EventCard'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { WatchZone } from '@/components/consumer/watchers'
@@ -158,7 +158,7 @@ export default async function EventDetailPage({
         {/* Floating back button — history-aware so filters/scroll on the
             previous page are restored when the user navigated here from
             within the app (#637). */}
-        <BackButton />
+        <BackChip top={56} fallbackHref="/events" />
       </div>
 
       {/* Scrollable content — 880px max-width centered column, -60px hero overlap on desktop */}

@@ -762,14 +762,6 @@ export const CONSUMER_COPY = {
     viaPrefix: 'via',
   },
 
-  // ── Venue profile ───────────────────────────────────────────────
-  // Shown on individual venue pages (/venues/:slug)
-  venueProfile: {
-    backButton: {
-      ariaLabel: 'Go back',
-    },
-  },
-
   // ── Venues index ────────────────────────────────────────────────
   // Shown on the /venues page — venue cards, filter bar, and empty states
   venuesIndex: {
@@ -875,7 +867,9 @@ export const CONSUMER_COPY = {
   // ── Event detail ────────────────────────────────────────────────
   // Shown on the event detail page
   eventDetail: {
-    backAriaLabel: 'Back to browse',
+    // The back chip's accessible name now lives in BACK_CHIP_COPY.label
+    // (components/consumer/back-chip/definitions/copy.ts) — one string shared
+    // by every surface that renders the chip.
 
     // Info row labels
     venueLabel: 'Venue',

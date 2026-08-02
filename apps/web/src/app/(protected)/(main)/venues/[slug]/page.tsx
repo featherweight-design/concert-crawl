@@ -13,7 +13,7 @@ const copy = CONSUMER_COPY
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
 import { VenueEventList } from '@/components/consumer/venue-event-list/VenueEventList'
 import { StatPill } from '@/components/consumer/venue-profile/StatPill'
-import { BackButton } from '@/components/consumer/venue-profile/BackButton'
+import { BackChip } from '@/components/consumer/back-chip/BackChip'
 
 interface VenueProfilePageProps {
   params: Promise<{ slug: string }>
@@ -93,7 +93,7 @@ export default async function VenueProfilePage({
           aria-hidden
         />
         {/* Floating back button */}
-        <BackButton />
+        <BackChip top={56} fallbackHref="/events" />
       </div>
 
       {/* Content */}
