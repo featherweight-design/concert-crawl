@@ -460,7 +460,7 @@ export const SEED_VENUES: NewVenue[] = [
     // The LLM fallback is effectively unavailable here: cleanHtml strips the
     // scripts and leaves ~84 characters of body text with no anchors. If the
     // site ever drops its JSON-LD the crawl returns zero rather than
-    // degrading, which the event-count-drop alert is what catches.
+    // degrading gracefully, which is what the event-count-drop alert catches.
     crawlMode: 'http',
     crawlWaitUntil: 'domcontentloaded' as const,
     address: '2323 W Mulberry Pl, Denver, CO 80204',

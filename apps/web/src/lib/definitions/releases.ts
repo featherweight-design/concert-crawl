@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.28.0-beta',
+    date: 'Aug 2, 2026',
+    headline: 'The Junkyard is on the calendar.',
+    items: [
+      {
+        kind: 'added',
+        text: 'The outdoor room on the old scrapyard lot west of the South Platte books arena-scale touring acts under an open sky. Every upcoming night now shows up in browse and search with show times and a ticket link.',
+      },
+    ],
+  },
+  {
     version: 'v0.27.1-beta',
     date: 'Aug 2, 2026',
     items: [
