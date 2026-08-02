@@ -1,3 +1,11 @@
+## [1.179.1](https://github.com/HartiganHM/concert-crawl/compare/v1.179.0...v1.179.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* **api:** 404 inactive venues from the public detail route ([1b1d22f](https://github.com/HartiganHM/concert-crawl/commit/1b1d22f68f7c9685c6c870ecaf41a756e3fb90fd)), closes [#1292](https://github.com/HartiganHM/concert-crawl/issues/1292)
+* **api:** validate the venue slug param with Zod ([a3e02df](https://github.com/HartiganHM/concert-crawl/commit/a3e02dfb9f9052bcbb55c897293d44beed64f2ee))
+
 # [1.179.0](https://github.com/HartiganHM/concert-crawl/compare/v1.178.7...v1.179.0) (2026-08-01)
 
 
