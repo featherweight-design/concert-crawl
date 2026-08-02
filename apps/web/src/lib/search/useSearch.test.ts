@@ -371,6 +371,38 @@ describe('useSearch — artist pages (#1115 PR-G)', () => {
     expect(result.current.artistPageResults[0]?.upcomingShowCount).toBe(2)
   })
 
+  it('drops the previous query results when the new artist lookup fails', async () => {
+    const { result } = renderHook(() => useSearch())
+
+    act(() => {
+      result.current.setQuery('radio')
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+    expect(result.current.artistPageResults).toHaveLength(1)
+
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if ((url as string).includes('/v1/search/artists')) {
+        return Promise.reject(new Error('artist lookup failed'))
+      }
+      return Promise.resolve({ json: async () => EVENTS_RESPONSE } as Response)
+    })
+
+    act(() => {
+      result.current.setQuery('bluebird')
+    })
+    await act(async () => {
+      vi.advanceTimersByTime(300)
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(result.current.artistPageResults).toHaveLength(0)
+  })
+
   it('does not query artist pages below the two-character floor', () => {
     const { result } = renderHook(() => useSearch())
 

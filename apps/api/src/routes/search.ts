@@ -92,6 +92,8 @@ const ARTIST_RESULT_LIMIT = 3
 // slack a single such row could empty the section.
 const ARTIST_CANDIDATE_LIMIT = 25
 
+const UPCOMING_STATUSES = new Set(['upcoming', 'cancelled', 'postponed'])
+
 // Two characters is the same floor the client debouncer uses; below it the
 // ILIKE degenerates into "most of the table". Validated as a bare string rather
 // than an object because the param name (`q`) is a single character, which the
@@ -181,7 +183,11 @@ searchRouter.get('/artists', async (ctx) => {
       ...(row.canonicalArtist === null ? [] : [row.canonicalArtist]),
       ...(row.canonicalSupporting ?? []),
     ])
-    const isUpcoming = row.status === 'upcoming' && row.date >= today
+    // Same status triple the artist page's own upcoming section uses
+    // (artists-public.ts) — counting only 'upcoming' would undercount, and
+    // read "Past shows only" for an artist whose next date is postponed.
+    const isUpcoming =
+      UPCOMING_STATUSES.has(row.status ?? '') && row.date >= today
     for (const canonical of onBill) {
       hasVisibleEvent.add(canonical)
       if (isUpcoming) {

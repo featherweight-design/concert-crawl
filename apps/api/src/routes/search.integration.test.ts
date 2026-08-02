@@ -194,6 +194,30 @@ describe('GET /v1/search/artists — integration (#1115 PR-G)', () => {
     })
   })
 
+  it('counts a future cancelled or postponed show as upcoming, matching the artist page', async () => {
+    const venue = await seedVenue({ slug: 'status-search-venue' })
+    await seedArtist({ name: 'Status Band' })
+    await seedEvent(venue.id, {
+      artist: 'Status Band',
+      canonicalArtist: 'status band',
+      date: '2027-09-03',
+      status: 'cancelled',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Status Band',
+      canonicalArtist: 'status band',
+      date: '2027-09-04',
+      status: 'postponed',
+    })
+
+    const res = await app.request('/v1/search/artists?q=status band')
+    const body = (await res.json()) as {
+      data: Array<{ slug: string; upcomingShowCount: number }>
+    }
+    expect(body.data[0]?.slug).toBe('status-band')
+    expect(body.data[0]?.upcomingShowCount).toBe(2)
+  })
+
   it('counts support-slot appearances toward an artist being returned', async () => {
     const venue = await seedVenue({ slug: 'support-search-venue' })
     await seedArtist({ name: 'Opening Act' })

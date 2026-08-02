@@ -160,6 +160,13 @@ export function useSearch() {
     debounceRef.current = setTimeout(() => {
       const controller = new AbortController()
       abortRef.current = controller
+      // Drop the previous query's answers before asking the new one. Each
+      // result set is only reassigned on its own fetch succeeding, so a slow
+      // or failed request would otherwise leave rows from the old query on
+      // screen once isLoading flips false.
+      setArtistResults([])
+      setArtistPageResults([])
+      setVenueResults([])
       void (async () => {
         try {
           const token = await getToken()
