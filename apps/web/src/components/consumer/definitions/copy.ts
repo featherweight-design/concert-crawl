@@ -948,6 +948,9 @@ export const CONSUMER_COPY = {
     doorsShowLabel: 'Doors / Show',
     agesLabel: 'Ages',
     allAges: 'All Ages',
+    // Read-only price row on the public mirror (#72). The authed page renders
+    // the full price block instead, so this label has exactly one caller.
+    priceRowLabel: 'Tickets',
 
     // Primary CTA
     getTickets: 'Get Tickets',

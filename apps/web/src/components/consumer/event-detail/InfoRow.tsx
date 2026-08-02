@@ -103,6 +103,20 @@ export function IconUsers() {
   )
 }
 
+export function IconTag() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M2 2h5.2L14 8.8 8.8 14 2 7.2V2Z"
+        stroke="var(--fg-subtle)"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <circle cx="5" cy="5" r="1.1" fill="var(--fg-subtle)" />
+    </svg>
+  )
+}
+
 export function ExternalLinkIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>

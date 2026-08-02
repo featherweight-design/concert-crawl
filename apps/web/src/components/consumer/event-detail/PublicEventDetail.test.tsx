@@ -5,9 +5,9 @@ import type { EventDetailResponse } from '@concert-crawl/types'
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
-// Heavy client subtrees are stubbed. EventDetailPriceBlock in particular pulls
-// in Clerk's useAuth and the whole price-submission machinery; what these
-// assertions are about is what the mirror does and does not render around it.
+// Heavy client subtrees are stubbed. EventDetailClient is stubbed even though
+// the mirror no longer imports it — the stub is what makes the "never renders
+// the price block" assertion below meaningful rather than vacuous.
 vi.mock('@/components/consumer/EventDetailClient', () => ({
   EventDetailPriceBlock: () => <div data-testid="price-block" />,
 }))
@@ -111,6 +111,53 @@ describe('PublicEventDetail (#72)', () => {
     expect(screen.queryByText(/add a price/i)).toBeNull()
     expect(container.querySelector('.lucide-heart')).toBeNull()
     expect(container.querySelector('.lucide-eye')).toBeNull()
+    // EventDetailPriceBlock reaches price submission, tier-add and report
+    // modals through useAuth. It must not render here at all — suppressing the
+    // CTAs one by one would leave the next one added to it exposed.
+    expect(screen.queryByTestId('price-block')).toBeNull()
+  })
+
+  it('shows the price as a flat read-only row', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({ ticketPriceMin: '25', ticketPriceMax: '35' })}
+        related={[]}
+      />,
+    )
+
+    const row = screen.getByTestId('public-event-price')
+    expect(row.textContent).toContain('$25\u2013$35')
+    expect(row.querySelector('button')).toBeNull()
+  })
+
+  it('says sold out rather than showing a stale price', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({
+          ticketPriceMin: '25',
+          ticketPriceMax: '35',
+          priceStatus: 'soldout',
+        })}
+        related={[]}
+      />,
+    )
+
+    expect(screen.getByTestId('public-event-price').textContent).toContain(
+      detailCopy.soldOut,
+    )
+  })
+
+  // The only honest thing to put in an empty price row is an invitation to
+  // submit one, and that is exactly the affordance this surface can't offer.
+  it('renders no price row at all when there is no price', () => {
+    render(
+      <PublicEventDetail
+        event={buildEvent({ ticketPriceMin: null, ticketPriceMax: null })}
+        related={[]}
+      />,
+    )
+
+    expect(screen.queryByTestId('public-event-price')).toBeNull()
   })
 
   it('keeps the ticket CTA on an upcoming show', () => {

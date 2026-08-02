@@ -5,8 +5,9 @@
 // with every account-shaped affordance removed:
 //
 //   NOT rendered — WatchZone / WatchShowButton, the "I'm going!" commitment
-//   strip, DetailFollowStrip, price submission, community reports, the
-//   first-timer guide chip, and the report footer.
+//   strip, DetailFollowStrip, EventDetailPriceBlock and every price-submission
+//   path inside it, community reports, the first-timer guide chip, and the
+//   report footer. The price appears as a flat read-only row instead.
 //
 // Related shows DO render: they go through the same EventCard the public browse
 // list uses, so nothing account-shaped rides along with them.
@@ -25,16 +26,23 @@ import { EventImage } from '@/components/consumer/event-image'
 import { GenreChips } from '@/components/consumer/GenreChips'
 import { EventTitleBlock } from '@/components/consumer/event-title-block'
 import { SetlistPreview } from '@/components/consumer/setlist-preview'
-import { EventDetailPriceBlock } from '@/components/consumer/EventDetailClient'
 import {
   formatEventDate,
+  formatPrice,
   formatShowTime,
   isEventPast,
 } from '@/components/consumer/definitions/lib'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 
-import { InfoRow, IconPin, IconCalendar, IconClock, IconUsers } from './InfoRow'
+import {
+  InfoRow,
+  IconPin,
+  IconCalendar,
+  IconClock,
+  IconUsers,
+  IconTag,
+} from './InfoRow'
 import { EventTicketCta } from './EventTicketCta'
 
 const copy = CONSUMER_COPY.eventDetail
@@ -74,19 +82,12 @@ export const PublicEventDetail = ({
   // pointing at a dead vendor page is the first thing a new visitor would tap.
   const past = isEventPast(event.date, event.venue.timezone)
 
-  // EventDetailPriceBlock is reused for display, but every interactive
-  // submission path inside it is unreachable without an account, so the fields
-  // that route into those branches are dropped before it sees the event. What
-  // survives is the corroborated headline price; pending, counter and per-tier
-  // submission cards (which carry confirm / dispute / add-tier actions) do not
-  // render at all. `reports` is empty for the same reason — the mirror never
-  // fetches them.
-  const displayEvent: EventDetailResponse = {
-    ...event,
-    pendingSubmissions: null,
-    counterSubmission: null,
-    priceByTier: null,
-  }
+  // Sold out beats a stale number: a shared link is often opened after the
+  // show sold out, and a price next to a gone show reads as availability.
+  const priceLabel =
+    event.priceStatus === 'soldout'
+      ? copy.soldOut
+      : formatPrice(event.ticketPriceMin, event.ticketPriceMax)
 
   return (
     // overflow-x-clip guarantees the 320px mobile baseline never scrolls
@@ -151,14 +152,21 @@ export const PublicEventDetail = ({
               label={copy.agesLabel}
               value={copy.allAges}
             />
-          </div>
-
-          <div className="mt-4">
-            <EventDetailPriceBlock
-              event={displayEvent}
-              reports={[]}
-              currentUserId={null}
-            />
+            {/* A flat, read-only price line rather than EventDetailPriceBlock.
+                That block is a client component that wires up price submission,
+                tier-add and report modals behind `useAuth` — on a signed-out
+                mirror its community handoff card would invite a visitor with no
+                account to submit a price. When we have no price we render
+                nothing at all, because the only honest thing to put there is
+                that same invitation. */}
+            {priceLabel && (
+              <InfoRow
+                icon={<IconTag />}
+                label={copy.priceRowLabel}
+                value={priceLabel}
+                data-testid="public-event-price"
+              />
+            )}
           </div>
 
           {event.setlist && (
