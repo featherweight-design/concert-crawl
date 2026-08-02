@@ -1,3 +1,19 @@
+# [1.185.0](https://github.com/HartiganHM/concert-crawl/compare/v1.184.0...v1.185.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **artists:** bound slug generation at the length the routes accept ([957a472](https://github.com/HartiganHM/concert-crawl/commit/957a4722f114a242050e6724ce67588009b31a35))
+* **artists:** drop the stale beta gate and type the cancelled-show filter ([3e213ab](https://github.com/HartiganHM/concert-crawl/commit/3e213ab5d10807834fc190f6c1b1c424fabafa8c))
+* **artists:** make the manual follow insert idempotent under concurrency ([eb0c4b7](https://github.com/HartiganHM/concert-crawl/commit/eb0c4b79aea175881c5cc15f933b5a013c91dc52))
+* **follows:** guarantee manual-follow uniqueness with a partial index ([5e0e935](https://github.com/HartiganHM/concert-crawl/commit/5e0e9353c1046295484220e55a4b178939dc079d))
+* **follows:** report the effective follow state after unfollow ([4dc31e4](https://github.com/HartiganHM/concert-crawl/commit/4dc31e4b1439af038fc9d538a4ce481a0994665d))
+
+
+### Features
+
+* **api:** artist detail endpoint + follow writes ([#1115](https://github.com/HartiganHM/concert-crawl/issues/1115) PR-D) ([c29746f](https://github.com/HartiganHM/concert-crawl/commit/c29746f08ce95b737652b3eadfe1113e20ac4482))
+
 # [1.184.0](https://github.com/HartiganHM/concert-crawl/compare/v1.183.0...v1.184.0) (2026-08-02)
 
 
