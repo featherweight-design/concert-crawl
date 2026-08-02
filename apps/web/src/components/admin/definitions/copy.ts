@@ -2331,6 +2331,8 @@ export const ADMIN_COPY = {
       'Spotify search is not configured on the API, so candidates cannot be fetched. Paste an artist id instead.',
     candidatesRateLimited:
       'Spotify is rate limiting us. Wait a moment and search again.',
+    candidatesCredentialsRejected:
+      'Spotify rejected our app credentials. Check SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET on the API.',
     exactMatchBadge: 'Exact name',
     useCandidate: 'Use this one',
     candidateSearchLabel: 'Search Spotify for',

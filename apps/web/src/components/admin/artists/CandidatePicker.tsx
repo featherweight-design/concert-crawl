@@ -68,11 +68,13 @@ export const CandidatePicker = ({
           { headers: { Authorization: `Bearer ${token}` } },
         )
         if (!resp.ok) {
-          // The two states an admin can act on get their own message: one says
-          // "wait", the other says "stop and provision credentials". A shared
+          // Every state an admin can act on gets its own message: wait,
+          // provision credentials, or fix the credentials that exist. A shared
           // "could not search" would send them looking for the wrong problem.
           if (resp.status === 503) setError(COPY.candidatesDormant)
           else if (resp.status === 429) setError(COPY.candidatesRateLimited)
+          else if (resp.status === 502)
+            setError(COPY.candidatesCredentialsRejected)
           else setError(COPY.candidatesError)
           setCandidates([])
           return
