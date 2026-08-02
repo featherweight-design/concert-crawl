@@ -1,23 +1,25 @@
 import React from 'react'
 
+import { formatEventDate } from '../definitions/lib'
+
 interface DateStampProps {
   iso: string
   /** Cancelled and postponed nights render dimmed. */
   dim?: boolean
 }
 
-/** `YYYY-MM-DD` split into its display parts, read at 8pm local so a DST */
-/** boundary can never roll the day backwards. */
+/**
+ * `YYYY-MM-DD` split into its display parts. Routed through `formatEventDate`
+ * so the date a viewer sees is anchored to the venue's zone rather than their
+ * own — a bespoke local parse here would drift for anyone outside Mountain.
+ */
 export const fmtDate = (
   iso: string,
-): { dow: string; mon: string; day: string } => {
-  const date = new Date(`${iso}T20:00:00`)
-  return {
-    dow: date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
-    mon: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-    day: String(date.getDate()),
-  }
-}
+): { dow: string; mon: string; day: string } => ({
+  dow: formatEventDate(iso, undefined, { weekday: 'short' }).toUpperCase(),
+  mon: formatEventDate(iso, undefined, { month: 'short' }).toUpperCase(),
+  day: formatEventDate(iso, undefined, { day: 'numeric' }),
+})
 
 export const DateStamp = ({ iso, dim = false }: DateStampProps) => {
   const { dow, mon, day } = fmtDate(iso)

@@ -1,5 +1,7 @@
 import { localDateString } from '@/lib/time'
 
+import { CONSUMER_COPY } from './copy'
+
 // Concert Crawl is a Denver-only app — Mountain Time is the user's reference frame
 // for "Today/Tonight" grouping labels and date display. The detail page passes
 // event.venue.timezone explicitly for the rare cross-zone case.
@@ -38,6 +40,16 @@ export function formatShowTime(timeStr: string | null): string | null {
   }).format(date)
 }
 
+/**
+ * One dollar amount, the way every consumer surface shows one. Prices reach the
+ * client as `parseFloat` output, so rounding here is what stops a `$15.5` from
+ * reaching a price chip on any surface that forgets to round for itself.
+ */
+export function formatDollars(value: number): string {
+  if (value === 0) return CONSUMER_COPY.freeLabel
+  return `$${value.toFixed(0)}`
+}
+
 export function formatPrice(
   min: string | null,
   max: string | null,
@@ -45,12 +57,12 @@ export function formatPrice(
   if (!min && !max) return null
   const lo = min ? parseFloat(min) : null
   const hi = max ? parseFloat(max) : null
-  if (lo === 0) return 'Free'
+  if (lo === 0) return CONSUMER_COPY.freeLabel
   if (lo !== null && hi !== null && lo !== hi) {
-    return `$${lo.toFixed(0)}–$${hi.toFixed(0)}`
+    return `${formatDollars(lo)}–${formatDollars(hi)}`
   }
-  if (lo !== null) return `$${lo.toFixed(0)}`
-  if (hi !== null) return `$${hi.toFixed(0)}`
+  if (lo !== null) return formatDollars(lo)
+  if (hi !== null) return formatDollars(hi)
   return null
 }
 

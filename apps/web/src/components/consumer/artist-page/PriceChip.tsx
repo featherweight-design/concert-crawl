@@ -1,5 +1,7 @@
 import React from 'react'
 
+import { formatDollars } from '../definitions/lib'
+
 import { ARTIST_COPY } from './definitions/copy'
 
 interface PriceChipProps {
@@ -43,7 +45,7 @@ export const PriceChip = ({ price }: PriceChipProps) => {
         flexShrink: 0,
       }}
     >
-      ${price}
+      {formatDollars(price)}
     </span>
   )
 }
