@@ -1,3 +1,29 @@
+# [1.184.0](https://github.com/HartiganHM/concert-crawl/compare/v1.183.0...v1.184.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **admin:** keep the whole guide surface inert when the draft failed to load ([3a37b30](https://github.com/HartiganHM/concert-crawl/commit/3a37b3040b4849ec43cbc4ec49c7ec18fd9be88a))
+* **admin:** make insiderTip required and guard every guide action on pending ([71541a1](https://github.com/HartiganHM/concert-crawl/commit/71541a1d694510c396975362993abc35c8d535c8))
+* **admin:** make the placeholder switch genuinely inert and move quotes into copy ([574723e](https://github.com/HartiganHM/concert-crawl/commit/574723e4f9e7737d09d9ea341d9f433c10d970e6))
+* **admin:** withhold non-ApiError messages from the guide action results ([9100160](https://github.com/HartiganHM/concert-crawl/commit/9100160741084ede66a62e955f83c32cdf0e93d7))
+* **api:** validate the guide venue id and scope the chip delete ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([e359fb3](https://github.com/HartiganHM/concert-crawl/commit/e359fb3d64d0121c046683fdcaa721b18da015a4))
+* **artists:** address Copilot review round 1 on the match pipeline ([2def1b7](https://github.com/HartiganHM/concert-crawl/commit/2def1b7add6849e8fac2c63efb058ec25b558695))
+* **artists:** address Copilot round 2 on the admin match queue ([5a732b0](https://github.com/HartiganHM/concert-crawl/commit/5a732b01d86e37a3a1a43e1c2952f98767ade8d4))
+* **artists:** drop the cached photo when an identity is repointed ([9648334](https://github.com/HartiganHM/concert-crawl/commit/9648334ae8dbce8f2d680f7415f746f40a394c90))
+* **spotify:** never treat Retry-After: 0 as an immediate retry ([7bb3480](https://github.com/HartiganHM/concert-crawl/commit/7bb34808897810823fd77fafdbff1ccd57a04e18))
+* **web:** guard guide authoring behind a successful load; wire ⌘↵ and field caps ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([1ccddc9](https://github.com/HartiganHM/concert-crawl/commit/1ccddc9704484fc3e08c1fbf12aac025328e512f))
+* **web:** keep guide auth failures inside the action; flag failed saves ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([dbd216b](https://github.com/HartiganHM/concert-crawl/commit/dbd216b75ce072265321494fdb274af78ae6a47c))
+
+
+### Features
+
+* **api:** admin venue guide save + publish endpoints with audit logging ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([76a9b81](https://github.com/HartiganHM/concert-crawl/commit/76a9b81d678bd3afa7c7fc592b146c3a2180e45c))
+* **api:** schedule the artist match job on Render ([9e5e592](https://github.com/HartiganHM/concert-crawl/commit/9e5e592aa6a2cd52d6411ae2c784afc2f82a6461))
+* **artists:** spotify identity match via client-credentials app token ([599a65e](https://github.com/HartiganHM/concert-crawl/commit/599a65e91a47f1daf72ca249d302f98a0c74b54a)), closes [#1115](https://github.com/HartiganHM/concert-crawl/issues/1115)
+* **web:** admin first-timer guide authoring block ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([56ae064](https://github.com/HartiganHM/concert-crawl/commit/56ae06432dd7f75a9b0ea598b3329dfa17b05c1a))
+* **web:** venue guide server actions + admin copy ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([923cd65](https://github.com/HartiganHM/concert-crawl/commit/923cd65f8aaafe396241c0335b7cdb883a0327ba))
+
 # [1.183.0](https://github.com/HartiganHM/concert-crawl/compare/v1.182.1...v1.183.0) (2026-08-02)
 
 
