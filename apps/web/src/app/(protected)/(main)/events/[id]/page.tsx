@@ -16,6 +16,7 @@ import { isScaRegion } from '@/lib/sca-region'
 import { fetchEventReports } from '@/lib/events'
 import { EventImage } from '@/components/consumer/event-image'
 import { BackChip } from '@/components/consumer/back-chip/BackChip'
+import { ShareButton } from '@/components/consumer/event-detail/ShareButton'
 import { EventCard } from '@/components/consumer/event-card/EventCard'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { WatchZone } from '@/components/consumer/watchers'
@@ -103,8 +104,18 @@ export default async function EventDetailPage({
   params,
 }: EventDetailPageProps) {
   const { id } = await params
-  const { getToken, userId } = await auth()
+  const { getToken, userId, sessionClaims } = await auth()
   const token = await getToken()
+
+  // The `@handle` signed onto a shared poster. Clerk's username is the only
+  // public-facing name this product has — there is no handle column of our own
+  // — and it is optional, so most posters go out unsigned, which the card
+  // handles by drawing no signature line at all.
+  const claimUsername = sessionClaims?.['username']
+  const shareHandle =
+    typeof claimUsername === 'string' && claimUsername !== ''
+      ? claimUsername
+      : null
 
   // Parallel fetch — closes #833. Previously fetchRelated ran serially after
   // fetchEvent because it needed event.venue.slug to query the list endpoint.
@@ -175,6 +186,9 @@ export default async function EventDetailPage({
             previous page are restored when the user navigated here from
             within the app (#637). */}
         <BackChip top={56} fallbackHref="/events" />
+        {/* Share sits opposite Back on the same optical line. Nothing else
+            goes in the hero — Watching is the eye control below the title. */}
+        <ShareButton event={event} handle={shareHandle} />
       </div>
 
       {/* Scrollable content — 880px max-width centered column, -60px hero overlap on desktop */}

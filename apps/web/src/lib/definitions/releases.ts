@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.29.0-beta',
+    date: 'Aug 2, 2026',
+    headline: 'Shows you can actually post.',
+    items: [
+      {
+        kind: 'added',
+        text: "There's a share button in the top right of every show now. Tap it and you get a poster — the artwork we generate for that artist, their name across the bottom in type you can read from the back of the room, the date, the venue, and a line that is either funny or embarrassing depending on how the night goes. Story shape, square, or the wide one for a link preview.",
+      },
+      {
+        kind: 'added',
+        text: "Hand it straight to Instagram or Messages through your phone's own share sheet, save the image to your camera roll, or just copy the link. Whoever you send it to lands on a page that works whether or not they have an account.",
+      },
+    ],
+  },
+  {
     version: 'v0.28.0-beta',
     date: 'Aug 2, 2026',
     headline: 'The Junkyard is on the calendar.',

@@ -1,0 +1,205 @@
+'use client'
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { BottomSheet } from '@/components/pwa/BottomSheet'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import {
+  DEFAULT_SHARE_RATIO,
+  SHARE_RATIOS,
+  type ShareRatio,
+} from '@/components/consumer/share/definitions/ratios'
+import {
+  canSystemShare,
+  copyLink,
+  posterFileName,
+  posterImageUrl,
+  publicEventUrl,
+  systemShare,
+  type ShareCapabilities,
+} from '@/lib/share/destinations'
+import type { PosterEvent } from '@/lib/share/poster-event'
+import { posterStateLabel } from '@/lib/share/taglines'
+
+const COPY = CONSUMER_COPY.share
+
+export interface ShareSheetProps {
+  open: boolean
+  onClose: () => void
+  event: PosterEvent
+  /** The sharer's handle, or null for an anonymous poster. */
+  handle: string | null
+  /**
+   * Injected so every branch of the destination list is reachable from a test.
+   * Defaults to the real `navigator` in the browser.
+   */
+  capabilities?: ShareCapabilities
+}
+
+/**
+ * The share sheet.
+ *
+ * Deliberately built on `components/pwa/BottomSheet` rather than a new dialog:
+ * that component already owns the focus trap, the Escape handler, the
+ * return-focus behaviour and the mobile-sheet → centred-dialog switch, and a
+ * second implementation of any of those is a second thing to get wrong.
+ *
+ * There is no direction switcher — only the Poster direction ships — so the
+ * shape picker is the whole of the sheet's configuration.
+ */
+export const ShareSheet = ({
+  open,
+  onClose,
+  event,
+  handle,
+  capabilities,
+}: ShareSheetProps) => {
+  const [ratio, setRatio] = useState<ShareRatio>(DEFAULT_SHARE_RATIO)
+  const [status, setStatus] = useState<string | null>(null)
+
+  // Stale "Link copied" hanging around on a reopened sheet reads as if the
+  // action fired again.
+  useEffect(() => {
+    if (!open) setStatus(null)
+  }, [open])
+
+  // Memoised because the destination callbacks depend on it: rebuilt every
+  // render, it would re-bind `navigator.share` on each keystroke elsewhere in
+  // the tree and invalidate them all.
+  const caps: ShareCapabilities = useMemo(
+    () =>
+      capabilities ??
+      (typeof navigator === 'undefined'
+        ? {}
+        : {
+            ...(typeof navigator.share === 'function' && {
+              share: navigator.share.bind(navigator),
+            }),
+            ...(typeof navigator.canShare === 'function' && {
+              canShare: navigator.canShare.bind(navigator),
+            }),
+            ...(navigator.clipboard !== undefined && {
+              clipboard: navigator.clipboard,
+            }),
+          }),
+    [capabilities],
+  )
+
+  const imageUrl = posterImageUrl({ eventId: event.id, ratio, by: handle })
+  const origin = typeof window === 'undefined' ? '' : window.location.origin
+  const linkUrl = publicEventUrl(event.id, origin)
+  const title = `${event.artist} · ${event.venue}`
+  const altText = COPY.altTemplate
+    .replace('{artist}', event.artist)
+    .replace('{venue}', event.venue)
+    .replace('{date}', event.dateShort)
+    .replace('{state}', posterStateLabel(event.state))
+
+  const onSystemShare = useCallback(async () => {
+    const outcome = await systemShare(caps, {
+      title,
+      url: linkUrl,
+      imageUrl,
+      fileName: posterFileName(event),
+    })
+    if (outcome === 'failed' || outcome === 'unsupported') {
+      setStatus(COPY.shareFailed)
+    } else {
+      setStatus(null)
+    }
+  }, [caps, title, linkUrl, imageUrl, event])
+
+  const onCopyLink = useCallback(async () => {
+    const outcome = await copyLink(caps, linkUrl)
+    setStatus(outcome === 'shared' ? COPY.copyLinkDone : COPY.shareFailed)
+  }, [caps, linkUrl])
+
+  return (
+    <BottomSheet open={open} onClose={onClose} title={COPY.sheetTitle}>
+      <div className="flex flex-col gap-4">
+        {/* Grabber. Decorative — the sheet is dismissed by Escape or the
+            backdrop, both of which BottomSheet already owns. */}
+        <div
+          aria-hidden="true"
+          className="mx-auto h-[5px] w-11 rounded-full"
+          style={{ background: 'var(--border-strong)' }}
+        />
+
+        <p className="text-[9px] font-medium uppercase tracking-[0.1em] text-fg-subtle">
+          {COPY.eyebrow}
+        </p>
+
+        {/* Live preview — the same route the destinations hand out, so what is
+            previewed is byte-for-byte what gets shared. */}
+        <div className="flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element -- next/image
+              would optimise a PNG that is already the render target, and the
+              route is not in the images allowlist. */}
+          <img
+            src={imageUrl}
+            alt={altText}
+            className="h-auto w-40 rounded-lg border border-border"
+          />
+        </div>
+
+        <fieldset className="flex flex-col gap-2">
+          <legend className="text-xs font-medium text-fg-muted">
+            {COPY.ratioLabel}
+          </legend>
+          <div className="flex gap-2">
+            {SHARE_RATIOS.map((option) => (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={option === ratio}
+                onClick={() => setRatio(option)}
+                className={`min-h-11 flex-1 rounded-full border px-3 text-sm ${
+                  option === ratio
+                    ? 'border-accent bg-accent text-fg-on-accent'
+                    : 'border-border text-fg-muted'
+                }`}
+              >
+                {COPY.ratios[option]}
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        <div className="flex flex-col gap-2">
+          {canSystemShare(caps) && (
+            <button
+              type="button"
+              onClick={() => {
+                void onSystemShare()
+              }}
+              className="min-h-11 rounded-full bg-accent px-4 text-sm font-medium text-fg-on-accent"
+            >
+              {COPY.destinations.systemShare}
+            </button>
+          )}
+          <a
+            href={imageUrl}
+            download={posterFileName(event)}
+            className="flex min-h-11 items-center justify-center rounded-full border border-border px-4 text-sm font-medium text-fg"
+          >
+            {COPY.destinations.saveImage}
+          </a>
+          <button
+            type="button"
+            onClick={() => {
+              void onCopyLink()
+            }}
+            className="min-h-11 rounded-full border border-border px-4 text-sm font-medium text-fg"
+          >
+            {COPY.destinations.copyLink}
+          </button>
+        </div>
+
+        {/* Polite rather than assertive: a copy confirmation should not
+            interrupt whatever the user is already reading. */}
+        <p aria-live="polite" className="min-h-4 text-xs text-fg-muted">
+          {status}
+        </p>
+      </div>
+    </BottomSheet>
+  )
+}

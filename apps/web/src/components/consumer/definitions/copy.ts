@@ -1424,15 +1424,34 @@ export const CONSUMER_COPY = {
       soldout: 'Sold out',
       drop: 'Price drop',
     },
-    // Share sheet destinations.
-    destinations: {
+    // Trigger + sheet chrome.
+    triggerLabel: 'Share this show',
+    sheetTitle: 'Share this show',
+    previewAlt: 'Preview of the poster being shared',
+    // Poster shape. Only the Poster direction ships, so there is no direction
+    // switcher — the shape picker is the whole of the sheet's configuration.
+    ratioLabel: 'Shape',
+    ratios: {
       story: 'Story',
-      feed: 'Feed',
-      xPost: 'X',
-      messages: 'Messages',
+      square: 'Square',
+      link: 'Link',
+    },
+    // Share sheet destinations.
+    //
+    // ⚠️ The handoff prototype mocked six tiles — Instagram Story, Instagram
+    // Feed, X, Messages, Save, Copy. The first four have no honest web
+    // implementation: no URL scheme hands a PNG to Instagram or Messages from
+    // a browser, and a tile that opens a compose window with the image missing
+    // is worse than no tile at all. The OS share sheet does all four properly
+    // wherever the platform supports it, so that is the one tile.
+    destinations: {
+      systemShare: 'Share…',
       saveImage: 'Save image',
       copyLink: 'Copy link',
     },
+    // Transient states on the destination buttons.
+    copyLinkDone: 'Link copied',
+    shareFailed: "Couldn't share — try saving the image instead",
     // Alt text for the rendered poster. {artist}, {venue}, {date} and {state}
     // are substituted at render time.
     altTemplate:

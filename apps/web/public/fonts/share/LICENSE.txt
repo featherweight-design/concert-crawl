@@ -1,0 +1,20 @@
+Fonts in this directory are bundled solely so the server-side share-card
+renderer (`next/og` / satori) has embeddable font data — satori ships no system
+fonts, and `next/font/google` output is not reachable from a route handler.
+
+  inter-400.ttf, inter-700.ttf, inter-900.ttf
+    Inter — Copyright (c) 2016 The Inter Project Authors
+    SIL Open Font License, Version 1.1
+    https://github.com/rsms/inter
+
+  jbmono-700.ttf
+    JetBrains Mono — Copyright (c) 2020 The JetBrains Mono Project Authors
+    SIL Open Font License, Version 1.1
+    https://github.com/JetBrains/JetBrainsMono
+
+Both are licensed under the SIL Open Font License 1.1, which permits bundling
+and redistribution. Full licence text: https://openfontlicense.org
+
+These are the static TTF builds served by Google Fonts. They are the same
+families the app already loads on the client via `next/font/google` in
+`src/app/layout.tsx`, so the PNG matches the on-screen preview.

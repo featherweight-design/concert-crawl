@@ -73,11 +73,10 @@ describe('state labels', () => {
 describe('share sheet copy', () => {
   it('exposes the eyebrow, destinations and alt template', () => {
     expect(CONSUMER_COPY.share.eyebrow).toBe('Share')
+    // Three, not the prototype's six — see the note in copy.ts. The other
+    // three tiles had no honest web implementation.
     expect(CONSUMER_COPY.share.destinations).toEqual({
-      story: 'Story',
-      feed: 'Feed',
-      xPost: 'X',
-      messages: 'Messages',
+      systemShare: 'Share…',
       saveImage: 'Save image',
       copyLink: 'Copy link',
     })

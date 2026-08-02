@@ -37,6 +37,7 @@ import {
 } from '@/components/consumer/definitions/lib'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
+import { ShareButton } from './ShareButton'
 
 import {
   InfoRow,
@@ -112,6 +113,12 @@ export const PublicEventDetail = ({
           style={{ background: 'linear-gradient(transparent, var(--bg))' }}
           aria-hidden
         />
+        {/* The mirror has no BackChip — there is nowhere to go back to — but it
+            does share. A visitor who landed here from someone else's post is
+            exactly the person most likely to pass it on, and the poster is Free
+            for everyone including the logged out. Anonymous, so it renders no
+            signature line. */}
+        <ShareButton event={event} />
       </div>
 
       <div className="relative -mt-5 sm:-mt-[60px] sm:z-[1] flex-1">
