@@ -278,6 +278,7 @@
     animation: none !important;
     background: var(--surface-2) !important;
   }
+}
 
 /* ── Artist page (#1115) ─────────────────────────────────────────────────
    Breakpoints live here rather than in two component trees: mobile and
