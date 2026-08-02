@@ -49,6 +49,12 @@ const manifest: AuditManifest = validateManifest([
     auth: 'user',
   },
   {
+    id: 'artist-detail',
+    path: '/artists/andrea-bocelli',
+    tags: ['consumer'],
+    auth: 'user',
+  },
+  {
     id: 'my-shows',
     path: '/watching',
     tags: ['consumer'],
