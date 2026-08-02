@@ -1,3 +1,17 @@
+# [1.188.0](https://github.com/HartiganHM/concert-crawl/compare/v1.187.0...v1.188.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **venues:** a returner has been, not is going ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([6d5f780](https://github.com/HartiganHM/concert-crawl/commit/6d5f780ed1dc821e50526e2e32f7179e89e850e5))
+* **venues:** describe the returner toggle with its preview text ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([1b35d3b](https://github.com/HartiganHM/concert-crawl/commit/1b35d3b738baa70d2b5e0270a31efaa4b772083a))
+
+
+### Features
+
+* **api:** resolve viewerHasAttended for first-timer detection ([#764](https://github.com/HartiganHM/concert-crawl/issues/764), depends on [#70](https://github.com/HartiganHM/concert-crawl/issues/70)) ([3c112d1](https://github.com/HartiganHM/concert-crawl/commit/3c112d1b48afb2b9871df9d42ec5025b93fbd03e))
+* **venues:** collapse the first-timer guide for returners ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([0e7c5de](https://github.com/HartiganHM/concert-crawl/commit/0e7c5dea0343651b5630638da08c4aa3f4e24c41))
+
 # [1.187.0](https://github.com/HartiganHM/concert-crawl/compare/v1.186.0...v1.187.0) (2026-08-02)
 
 
