@@ -1,3 +1,18 @@
+# [1.182.0](https://github.com/HartiganHM/concert-crawl/compare/v1.181.0...v1.182.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **db:** clarify seed publish scope + rename chip index handle ([7020516](https://github.com/HartiganHM/concert-crawl/commit/7020516e490a88eabdd38d9c2c11cd0f57d647a6))
+* **db:** wrap guide seed replace in a transaction; align guide-null docs and fixture venue name ([bacce4c](https://github.com/HartiganHM/concert-crawl/commit/bacce4ca5ac9d9a99713c04631dfcdc79fd45df6))
+
+
+### Features
+
+* **db:** seed venue guide fixtures for populated/thin/placeholder states ([3291839](https://github.com/HartiganHM/concert-crawl/commit/3291839e7a484ad9cdfd6566bfd477fb150fc7b9))
+* **db:** venue_guide_chips table + insider_tip / guide_published_at on venues ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([8ae913d](https://github.com/HartiganHM/concert-crawl/commit/8ae913d9708b891a658553cf319446226397d237))
+* **types:** venue first-timer guide chip pool, chip-state + publish-state derivation ([2afe8c2](https://github.com/HartiganHM/concert-crawl/commit/2afe8c2e538723347381c3e9126035d7c3711243))
+
 # [1.181.0](https://github.com/HartiganHM/concert-crawl/compare/v1.180.0...v1.181.0) (2026-08-02)
 
 
