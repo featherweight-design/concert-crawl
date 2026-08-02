@@ -1,3 +1,15 @@
+# [1.180.0](https://github.com/HartiganHM/concert-crawl/compare/v1.179.1...v1.180.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **db:** set crawlWaitUntil explicitly on the two new venues ([8f53d0b](https://github.com/HartiganHM/concert-crawl/commit/8f53d0b37fc6c797bee4912db7eb8feeee11c043))
+
+
+### Features
+
+* **crawler:** onboard Globe Hall and Lost Lake Lounge ([a19bb73](https://github.com/HartiganHM/concert-crawl/commit/a19bb73e6c892a20535b4fd7d5dc010a80c21819)), closes [#1288](https://github.com/HartiganHM/concert-crawl/issues/1288)
+
 ## [1.179.1](https://github.com/HartiganHM/concert-crawl/compare/v1.179.0...v1.179.1) (2026-08-02)
 
 
