@@ -1253,8 +1253,12 @@ export async function crawlVenue(
     // A selector timeout carries the HTML the page was showing when it gave up.
     // This is the only capture point for that failure — the successful-fetch
     // capture above is never reached when the selector never resolves.
-    if (err instanceof CrawlSelectorTimeoutError && venue.debugCaptureHtml) {
-      logDebugHtmlCapture(err.html ?? '', {
+    if (
+      err instanceof CrawlSelectorTimeoutError &&
+      venue.debugCaptureHtml &&
+      err.html
+    ) {
+      logDebugHtmlCapture(err.html, {
         venueId,
         venueSlug: venue.slug,
         crawlRunId: id,

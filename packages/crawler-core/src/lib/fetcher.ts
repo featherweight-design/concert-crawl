@@ -100,7 +100,17 @@ export async function fetchPage(
         // Only a genuine timeout means "loaded but never rendered". Other
         // failures here (invalid selector syntax, a closed page) are real
         // errors and must not be reclassified — blockedAt keys off this class.
-        if (!(err instanceof Error) || err.name !== 'TimeoutError') throw err
+        if (!(err instanceof Error) || err.name !== 'TimeoutError') {
+          console.log(
+            JSON.stringify({
+              event: 'fetch.selector_error',
+              url,
+              selector: waitForSelector,
+              error: err instanceof Error ? err.message : String(err),
+            }),
+          )
+          throw err
+        }
 
         // Reading content() can itself fail if the page died; a null html still
         // beats losing the whole error.
