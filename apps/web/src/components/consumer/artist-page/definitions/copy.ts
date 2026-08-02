@@ -18,21 +18,28 @@ export const ARTIST_COPY = {
   // text of its first link — a screen reader announces "<label> navigation".
   crumbAria: 'Breadcrumb',
 
-  // Follow — ONE affordance, one mental model (autoWatch semantics).
-  // A show is WATCHED; an artist is FOLLOWED. "Watching" below names the
-  // destination list a follow feeds, not the artist relationship.
+  // Follow — ONE affordance, one mental model.
+  // A show is WATCHED; an artist is FOLLOWED. These are separate concepts and
+  // this copy never conflates them.
+  //
+  // ⚠️ Nothing here may promise that following an artist puts their shows in
+  // your Watching. It doesn't: the Spotify fan-out that auto-watches shows is
+  // scoped to `spotify_followed` / `spotify_top` sources, while this button
+  // writes `source: 'manual'` (see packages/crawler-core/src/lib/
+  // spotify-fanout — and issue #1306, which is the deliberate scope call).
+  // The staging walk for Gate 5 followed an artist with two upcoming shows and
+  // /watching still read "0 shows". The behaviour stays; the claim goes.
   follow: 'Follow',
   following: 'Following',
-  followPitch: 'Every show they book lands in your Watching.',
-  followPitchActive: 'Their shows land in your Watching.',
+  followPitch: 'Marks them as one of yours. Their dates live on this page.',
+  followPitchActive: "You're following. Their dates live on this page.",
   // DELTA vs the handoff: `followSignedOut` ("Sign in to follow") is dropped.
   // #794 locked the identical-pixels rule — a signed-out visitor sees the same
   // control a signed-in one does, and the sign-in happens on activation. A
   // different visible label would leak auth state back into the layout.
   followSignedOutPitch:
     "Following needs an account. Everything else here doesn't.",
-  followAria: (name: string) =>
-    `Follow ${name} — every show they book is added to your Watching`,
+  followAria: (name: string) => `Follow ${name}`,
   followingAria: (name: string) =>
     `Following ${name}. Activate to stop following.`,
   // DELTA vs the handoff: new. The visible label stays "Follow" for a
@@ -89,9 +96,9 @@ export const ARTIST_COPY = {
   // Empty upcoming — first-class, the conversion moment (rendered by PR-F).
   emptyTitle: 'Nothing on the calendar.',
   emptyBody:
-    'No dates booked that we can see. Follow them and the next one shows up in your Watching without you checking.',
+    'No dates booked that we can see. Follow them and check back — this page is where the next one turns up.',
   emptyBodyFollowing:
-    "No dates booked that we can see. You're following, so the next one lands in your Watching on its own.",
+    "No dates booked that we can see. You're following, so check back — this page is where the next one turns up.",
 
   // Loading
   loadingArtist: 'Finding them…',

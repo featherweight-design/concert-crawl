@@ -158,3 +158,127 @@ briefing asks for is part of the staging walk.
 - J6 → staging, against the backfilled artist set.
 
 The epic is not done until those are walked and this file records them.
+
+---
+
+# Staging walk — 2026-08-02, after PR-G merged as `25175318`
+
+Run against `https://staging.concertcrawl.app` once the Staging Smoke Tests workflow on
+`25175318` went green (12:04Z). Driven through headless Chromium signed in as
+`E2E_AUDIT_USER_EMAIL`, which is a real user in the **staging** Clerk instance — the account
+that did not exist locally and is the whole reason these passes were deferred here.
+
+Fixtures are the real backfilled `artists` set, not hand-seeded rows: `andrea-bocelli`
+(2 upcoming), `the-afghan-whigs-40th-anniversary-tour` (0 upcoming, 1 past), `el-tri`,
+`congress-the-band`, `an-album-tribute-to-wilcos-sky-blue-sky`.
+
+## J2 — Follow and unfollow, signed in (all four passes)
+
+| Pass        | What was run                                                                          | Result                                                                                                                                                   |
+| ----------- | ------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Forward** | click Follow on `/artists/andrea-bocelli` under CDP throttling (400 ms added latency) | `aria-pressed` `false`→`true`, name → _"Following Andrea Bocelli. Activate to stop following."_; exactly one `POST /v1/artists/andrea-bocelli/follow` ✅ |
+| Forward     | reload after the write                                                                | still `pressed="true"` — the optimistic flip matched the server, no snap-back ✅                                                                         |
+| **Reverse** | click again                                                                           | `pressed="false"`, name back to the pre-action _"Follow Andrea Bocelli — …"_; exactly one `DELETE …/follow`; survives a reload ✅                        |
+| **Repeat**  | do → undo → redo                                                                      | `["true","false","true"]`, and a reload after the redo still reads `true` — no keyed-state residue, nothing that outlives the row it describes ✅        |
+| **Resume**  | reload mid-journey, then a **second independent browser context** on the same session | both read `pressed="true"` — nothing is held only in component state or one tab's memory ✅                                                              |
+
+Zero console errors across the whole J2 walk.
+
+### Mutation-feedback sub-check — measured, not inferred
+
+Click → visible `aria-pressed="true"` was **49 ms** with 400 ms of added round-trip latency
+emulated through CDP `Network.emulateNetworkConditions`. The paint therefore cannot have waited
+on the request. This is the measurement the PR-F artifact could only assert from reading the
+code, and it clears the #70 "I'm going!" shape.
+
+### ⚠️ Finding — the Follow copy promises something the product does not do
+
+The walk followed an artist with **2 upcoming shows**, then loaded `/watching`, which read
+`0 shows` / _"No shows, grandpa."_ The shows never arrive.
+
+This is not a PR-G regression. It is the **manual-follow black hole** the briefing already
+documents and issue **#1306** already tracks: the Follow control writes `source: 'manual'`, and
+the fan-out that would auto-watch a new show filters on
+`SPOTIFY_FOLLOW_SOURCES = ['spotify_followed','spotify_top']`
+(`packages/crawler-core/src/lib/spotify-fanout/index.ts:52`, whose own comment reads
+_"Spotify-sourced follows only — manual follows are out of scope"_). Manual follows feed nothing.
+
+What the walk adds is that **the UI says the promise out loud**, in three places:
+
+- `followLabel` — _"Follow {name} — every show they book is added to your Watching"_
+- `followPitch` / `followPitchActive` — _"Every show they book lands in your Watching."_
+- `emptyUpcomingBody` — _"Follow them and the next one shows up in your Watching without you checking."_
+
+Fixing the behavior is out of scope by the briefing's explicit instruction (#1306 is a
+monetization call, not an engineering one). Fixing the **claim** is not — a page whose history
+line was deliberately built as an honesty rail should not carry a capability promise that is
+false for every follow this button can create. Taken into the polish PR as a copy change only;
+#1306 stays open and untouched.
+
+## J3 — Follow, signed out: the resume pass
+
+Staging does not run with `NEXT_PUBLIC_PUBLIC_BROWSE` on, so a signed-out visit to
+`/artists/andrea-bocelli` is intercepted by Clerk before the page renders:
+
+```
+307 → /sign-in?redirect_url=%2Fartists%2Fandrea-bocelli
+```
+
+Completing sign-in from that page landed back on `/artists/andrea-bocelli` with
+`h1 = "Andrea Bocelli"` ✅ — the return hand-off the local walk could not reach past Turnstile.
+
+Stated honestly: this closes the **return** leg only. The signed-out tier-picker dialog is
+unreachable on staging because the route never renders signed out, so that half of J3 rests on
+the local pass recorded above, which did exercise it.
+
+## J6 — Long-tail slugs, real backfilled set
+
+390×844, signed in.
+
+| Slug                                      | HTTP | `h1`                                                    | `h2`                 | follow controls | h-overflow |
+| ----------------------------------------- | ---- | ------------------------------------------------------- | -------------------- | --------------- | ---------- |
+| `an-album-tribute-to-wilcos-sky-blue-sky` | 200  | An Album Tribute to Wilco's Sky Blue Sky                | Upcoming, Previously | 1               | none       |
+| `the-afghan-whigs-40th-anniversary-tour`  | 200  | The Afghan Whigs 40th Anniversary Tour With Mercury Rev | Upcoming, Previously | 1               | none       |
+| `el-tri`                                  | 200  | El Tri                                                  | Upcoming             | 1               | none       |
+| `congress-the-band`                       | 200  | Congress The Band                                       | Upcoming             | 1               | none       |
+| `this-artist-does-not-exist-at-all`       | 200  | Nothing here.                                           | —                    | 0               | none       |
+
+The apostrophe-stripped slug round-trips to a name that still carries its apostrophe; the long
+tour name wraps across three lines in the desktop hero without overflowing; the unknown slug
+renders a coherent not-found page and correctly offers no follow control. Never 0 and never 2
+follow controls on a real artist — the single-affordance invariant holds on the real data set,
+not just on fixtures.
+
+## Cold-eyes finding 3 — re-checked after PR-F, **still present**
+
+The finding was _"Nothing below the shows list. On desktop the right column ends at ~40%
+viewport height and reads as a page that failed to load,"_ dispositioned "re-check after PR-F."
+PR-F has landed. Measured at 1280×900:
+
+| Slug                                      | content ends at | viewport | `document.scrollHeight` | scrollable |
+| ----------------------------------------- | --------------- | -------- | ----------------------- | ---------- |
+| `andrea-bocelli` (2 upcoming)             | ~270 px (30%)   | 900 px   | 900                     | no         |
+| `the-afghan-whigs-…` (0 upcoming, 1 past) | ~380 px (42%)   | 900 px   | 900                     | no         |
+
+Screenshots confirm it visually — below the last show row the page is empty to the fold. It is
+not missing page chrome: `/events` and `/venues` have no `<footer>` either (`footer: false` on
+all three), they are simply long enough that it never shows. The artist page is the first
+surface short enough to expose it.
+
+The finding survives PR-F. **Disposition: filed as issue #1334, not fixed in the polish PR.**
+Because `/events` and `/venues` share the absence, fixing it on `/artists/[slug]` alone would
+make that one route diverge from its siblings. The call is app-wide bottom chrome — a footer,
+a min-height, or a deliberate nothing — and it is not one route's polish PR to make.
+
+---
+
+## Standing residue — closed
+
+- J2 (all four passes) → ✅ walked on staging above.
+- J3 resume → ✅ walked on staging above.
+- J5 → ✅ PR-G.
+- J6 → ✅ walked on staging above.
+
+Gate 5 is complete for #1115. Two items came out of it: the false Watching promise in the
+Follow copy, fixed in the polish PR; and cold-eyes finding 3, filed as #1334 because it is
+app-wide rather than artist-page-shaped.

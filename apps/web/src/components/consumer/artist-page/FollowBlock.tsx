@@ -9,8 +9,8 @@ type FollowBlockProps = Omit<FollowButtonProps, 'size'>
 
 /**
  * The full-width follow bar plus the one line that says what a follow actually
- * does. The pitch is the honesty rail: it never promises a notification, only
- * that the artist's shows land in Watching.
+ * does. The pitch is the honesty rail: it promises neither a notification nor
+ * an automatic entry in Watching, because a manual follow delivers neither.
  */
 export const FollowBlock = ({
   name,

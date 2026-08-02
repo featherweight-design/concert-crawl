@@ -24,6 +24,24 @@ const sourceFiles = () => walk(ROOT).filter((file) => /\.tsx?$/.test(file))
 const BAN_CHECK_SENTINEL = 'VOCABULARY-BAN-CHECK'
 const assertsTheBan = (body: string) => body.includes(BAN_CHECK_SENTINEL)
 
+/**
+ * Every string a user can read that describes what following an artist does —
+ * including the two empty-upcoming bodies, which are where the pitch is made
+ * hardest and where the false promise survived longest.
+ */
+const followCopy = () => [
+  ARTIST_COPY.follow,
+  ARTIST_COPY.following,
+  ARTIST_COPY.followPitch,
+  ARTIST_COPY.followPitchActive,
+  ARTIST_COPY.followSignedOutPitch,
+  ARTIST_COPY.emptyBody,
+  ARTIST_COPY.emptyBodyFollowing,
+  ARTIST_COPY.followAria('Nightjar Choir'),
+  ARTIST_COPY.followingAria('Nightjar Choir'),
+  ARTIST_COPY.followSignedOutAria('Nightjar Choir'),
+]
+
 // VOCABULARY-BAN-CHECK
 describe('artist page vocabulary', () => {
   // A show is WATCHED; an artist is FOLLOWED. The watching affordance is an
@@ -46,23 +64,26 @@ describe('artist page vocabulary', () => {
     }
   })
 
-  it('never labels an artist relationship as Watching', () => {
-    // "Watching" is legitimate as the DESTINATION a follow feeds ("lands in
-    // your Watching") — it is never the name of the artist relationship, so
-    // every occurrence must be possessive.
-    const artistFacing = [
-      ARTIST_COPY.follow,
-      ARTIST_COPY.following,
-      ARTIST_COPY.followPitch,
-      ARTIST_COPY.followPitchActive,
-      ARTIST_COPY.followAria('Nightjar Choir'),
-      ARTIST_COPY.followingAria('Nightjar Choir'),
-      ARTIST_COPY.followSignedOutAria('Nightjar Choir'),
-    ]
-    for (const line of artistFacing) {
-      expect(line.replace(/your Watching/g, 'that list')).not.toMatch(
-        /\bWatching\b/,
-      )
+  it('never mentions Watching in follow copy at all', () => {
+    // This used to allow "Watching" as the DESTINATION a follow feeds ("lands
+    // in your Watching"). The Gate 5 staging walk proved that destination does
+    // not exist for a manual follow — the Spotify fan-out only auto-watches
+    // `spotify_followed` / `spotify_top` follows, and this button writes
+    // `manual` (#1306). So the word is banned outright here, not just as a
+    // label for the relationship.
+    for (const line of followCopy()) {
+      expect(line).not.toMatch(/\bWatching\b/)
+    }
+  })
+
+  it('never promises that a follow adds shows anywhere on its own', () => {
+    // The shape of the old lie, independent of the word "Watching": any claim
+    // that shows arrive somewhere without the user coming back to look.
+    for (const line of followCopy()) {
+      expect(line).not.toMatch(/\blands? in\b/i)
+      expect(line).not.toMatch(/\badded to\b/i)
+      expect(line).not.toMatch(/without you checking/i)
+      expect(line).not.toMatch(/\bon its own\b/i)
     }
   })
 })

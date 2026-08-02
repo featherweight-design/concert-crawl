@@ -41,7 +41,7 @@ export const RELEASES: Release[] = [
       },
       {
         kind: 'added',
-        text: "Follow an artist and you're on the hook for whatever they announce next. Every row on the page keeps its own Watch control, so you can follow the act and still pick the one night you actually want.",
+        text: 'Follow an artist to mark them as one of yours — their page is where their dates live. Every row on that page keeps its own Watch control, so you follow the act and still pick the one night you actually want.',
       },
       {
         kind: 'added',
