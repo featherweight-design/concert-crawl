@@ -39,6 +39,11 @@ const isAlwaysPublic = createRouteMatcher([
 const isPublicOnceLaunched = createRouteMatcher([
   '/events(.*)',
   '/venues(.*)',
+  // Artist pages (#1115) sit exactly where venue pages do: browsable once the
+  // product is public, invite-gated until then. Deliberately NOT in
+  // `isAlwaysPublic` — putting a browse vertical there is what made a private
+  // beta publicly readable in #794.
+  '/artists(.*)',
   '/search(.*)',
   '/watching(.*)',
   '/onboarding(.*)',

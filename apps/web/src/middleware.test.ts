@@ -186,6 +186,9 @@ describe('middleware — public browse routes (#794)', () => {
     '/events/some-event-id',
     '/venues',
     '/venues/bluebird-theater',
+    // #1115 — artist pages join the browse set on exactly the venue terms.
+    '/artists',
+    '/artists/nightjar-choir',
     '/search',
     '/search?q=geese',
     '/watching',
@@ -360,18 +363,23 @@ describe('middleware — private-beta launch gate (#794)', () => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
   })
 
-  it.each(['/events', '/events/abc', '/venues', '/search', '/watching'])(
-    'gates %s from signed-out visitors before launch',
-    async (path) => {
-      const { default: middleware } = await import('./middleware')
-      const auth = makeAuth(null)
+  it.each([
+    '/events',
+    '/events/abc',
+    '/venues',
+    '/artists',
+    '/artists/nightjar-choir',
+    '/search',
+    '/watching',
+  ])('gates %s from signed-out visitors before launch', async (path) => {
+    const { default: middleware } = await import('./middleware')
+    const auth = makeAuth(null)
 
-      await expect(
-        (middleware as Function)(auth, makeReq(path)),
-      ).rejects.toThrow()
-      expect(auth.protect).toHaveBeenCalled()
-    },
-  )
+    await expect(
+      (middleware as Function)(auth, makeReq(path)),
+    ).rejects.toThrow()
+    expect(auth.protect).toHaveBeenCalled()
+  })
 
   it('sends a signed-out visitor without the invite cookie from /onboarding to /auth/code', async () => {
     const { default: middleware } = await import('./middleware')
@@ -476,7 +484,13 @@ describe('middleware — private-beta launch gate (#794)', () => {
     vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'true')
     const { default: middleware } = await import('./middleware')
 
-    for (const path of ['/events', '/venues', '/search', '/watching']) {
+    for (const path of [
+      '/events',
+      '/venues',
+      '/artists',
+      '/search',
+      '/watching',
+    ]) {
       const auth = makeAuth(null)
       const result = await (middleware as Function)(auth, makeReq(path))
       expect(result).toBeUndefined()
