@@ -145,8 +145,18 @@ export const safeParseNotificationList = (
   if (!Array.isArray(items)) {
     return { success: false, error: 'Notification payload has no items array' }
   }
-  if (typeof unreadCount !== 'number' || !Number.isFinite(unreadCount)) {
-    return { success: false, error: 'Notification unreadCount is not a number' }
+  // A count is a non-negative integer, and this is an API boundary. A negative
+  // or fractional value would flow straight into the header and the pip, which
+  // render it verbatim — "-1 new" is worse than a rejected payload.
+  if (
+    typeof unreadCount !== 'number' ||
+    !Number.isInteger(unreadCount) ||
+    unreadCount < 0
+  ) {
+    return {
+      success: false,
+      error: 'Notification unreadCount is not a non-negative integer',
+    }
   }
   if (typeof hasMore !== 'boolean') {
     return { success: false, error: 'Notification hasMore is not a boolean' }

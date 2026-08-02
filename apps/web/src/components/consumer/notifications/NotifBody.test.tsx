@@ -278,7 +278,7 @@ describe('NotifBody — unwired controls never render', () => {
 
 describe('NotifItem', () => {
   it('gives an unread row a category rail, a dot and a bold title', () => {
-    render(<NotifItem item={notification()} now={NOW} />)
+    render(<NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />)
     const row = screen.getByRole('button')
     // jsdom drops a `border-left` shorthand carrying a var(), so assert on
     // the serialised inline style rather than the computed one.
@@ -295,6 +295,7 @@ describe('NotifItem', () => {
     render(
       <NotifItem
         item={notification({ readAt: '2026-07-24T19:00:00-06:00' })}
+        onOpen={vi.fn()}
         now={NOW}
       />,
     )
@@ -309,8 +310,16 @@ describe('NotifItem', () => {
     expect(row.getAttribute('aria-label')).not.toContain('Unread')
   })
 
-  it('is a single target with no nested interactives', () => {
+  it('is not announced as a button when no open handler is wired', () => {
+    // An inert focusable row is worse for a keyboard or screen-reader user
+    // than a plain one — the text still reads either way.
     render(<NotifItem item={notification()} now={NOW} />)
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getByText(notification().title)).toBeInTheDocument()
+  })
+
+  it('is a single target with no nested interactives', () => {
+    render(<NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />)
     expect(screen.getAllByRole('button')).toHaveLength(1)
     expect(screen.getByRole('button')).toHaveAttribute('tabindex', '0')
   })
@@ -323,7 +332,11 @@ describe('NotifItem', () => {
 
   it('falls back to a neutral presentation for an unknown category', () => {
     render(
-      <NotifItem item={notification({ category: 'venue.gone' })} now={NOW} />,
+      <NotifItem
+        item={notification({ category: 'venue.gone' })}
+        onOpen={vi.fn()}
+        now={NOW}
+      />,
     )
     expect(screen.getByText('Update')).toBeInTheDocument()
     expect(screen.getByRole('button').getAttribute('style')).toContain(
@@ -375,7 +388,7 @@ describe('NotifItem', () => {
   })
 
   it('carries the action url as data, not as a nested link', () => {
-    render(<NotifItem item={notification()} now={NOW} />)
+    render(<NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />)
     expect(screen.getByRole('button')).toHaveAttribute(
       'data-action-url',
       '/events/e1',
@@ -384,7 +397,13 @@ describe('NotifItem', () => {
   })
 
   it('omits the data attribute when there is nowhere to go', () => {
-    render(<NotifItem item={notification({ actionUrl: null })} now={NOW} />)
+    render(
+      <NotifItem
+        item={notification({ actionUrl: null })}
+        onOpen={vi.fn()}
+        now={NOW}
+      />,
+    )
     expect(screen.getByRole('button')).not.toHaveAttribute('data-action-url')
   })
 })

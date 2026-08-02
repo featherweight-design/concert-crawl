@@ -45,22 +45,34 @@ export const NotifItem = ({
     open()
   }
 
+  // `onOpen` is optional, so the button semantics have to be too: a row that
+  // announces itself as a button, takes focus and then does nothing is worse
+  // for a keyboard or screen-reader user than a plain one, whose text still
+  // reads normally. Same rule as every button in this panel — nothing that
+  // looks actionable is left unwired.
+  const interactive =
+    onOpen === undefined
+      ? {}
+      : {
+          role: 'button',
+          tabIndex: 0,
+          'aria-label': itemLabel(item, now),
+          onClick: open,
+          onKeyDown,
+        }
+
   return (
     <div
       className="notif-row"
-      role="button"
-      tabIndex={0}
-      aria-label={itemLabel(item, now)}
+      {...interactive}
       data-action-url={item.actionUrl ?? undefined}
-      onClick={open}
-      onKeyDown={onKeyDown}
       style={{
         display: 'flex',
         gap: 10,
         alignItems: 'flex-start',
         padding: compact ? '11px 14px 11px 12px' : '13px 14px 13px 12px',
         minHeight: 64,
-        cursor: 'pointer',
+        cursor: onOpen === undefined ? 'default' : 'pointer',
         background: unread ? 'var(--surface-1)' : 'transparent',
         borderLeft: `2px solid ${unread ? cat.ink : 'transparent'}`,
         borderBottom: '1px solid var(--border)',
