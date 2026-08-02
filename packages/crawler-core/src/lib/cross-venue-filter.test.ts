@@ -505,3 +505,42 @@ describe('detectCrossVenuePresale', () => {
     })
   })
 })
+
+// #1338 — Cervantes' feed serves entity-encoded headlines. An encoded
+// apostrophe in the "AT <venue>" marker defeats every comparison form the
+// filter uses, so the presale row leaked through as a duplicate of the host
+// venue's own listing. crawl.ts now decodes titles before calling in; these
+// pin both halves of that contract.
+describe('detectCrossVenuePresale — entity-encoded markers', () => {
+  const encoded =
+    'Sublime &amp; Slightly Stoopid AT CERVANTES&#8217; MASTERPIECE BALLROOM'
+  const decoded =
+    'Sublime & Slightly Stoopid AT CERVANTES’ MASTERPIECE BALLROOM'
+
+  it('does not match while the marker is still entity-encoded', () => {
+    expect(
+      detectCrossVenuePresale({
+        title: encoded,
+        sourceVenueId: 'venue-ogden',
+        sourceVenueName: 'Ogden Theatre',
+        candidates: CANDIDATES,
+      }),
+    ).toBeNull()
+  })
+
+  it('matches once the marker has been decoded', () => {
+    expect(
+      detectCrossVenuePresale({
+        title: decoded,
+        sourceVenueId: 'venue-ogden',
+        sourceVenueName: 'Ogden Theatre',
+        candidates: CANDIDATES,
+      }),
+    ).toEqual({
+      matchedVenueId: 'venue-cervantes',
+      matchedVenueSlug: 'cervantes-masterpiece-ballroom',
+      matchedVenueName: "Cervantes' Masterpiece Ballroom",
+      reason: 'known-venue',
+    })
+  })
+})

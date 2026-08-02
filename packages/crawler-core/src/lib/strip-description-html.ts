@@ -92,7 +92,16 @@ const NAMED_ENTITY_RE = /&([a-zA-Z]+);/g
 // `&#X2014;` appear in the wild (#844 Copilot R2).
 const NUMERIC_ENTITY_RE = /&#(x?)([0-9a-fA-F]+);/gi
 
-function decodeEntities(input: string): string {
+/**
+ * Decode named + numeric HTML entities to their characters. Unknown named
+ * entities and out-of-range numeric ones are left verbatim rather than
+ * dropped, so the transform is lossless for non-entity text and idempotent
+ * on already-decoded input.
+ *
+ * Exported for `title` / `rawTitle`, which need entity decoding but NOT the
+ * tag-stripping passes `stripDescriptionHtml` layers on top (#1338).
+ */
+export function decodeHtmlEntities(input: string): string {
   return input
     .replace(NAMED_ENTITY_RE, (match, name: string) => {
       const decoded = NAMED_ENTITIES[name.toLowerCase()]
@@ -135,7 +144,7 @@ export function stripDescriptionHtml(html: string | null | undefined): string {
   //    to a non-tag construct (e.g. `&lt;heart&gt;` → `<heart>`) is
   //    still preserved as user content, so this reorder doesn't break
   //    the round-trip / idempotency contract from R1.
-  let out = decodeEntities(html)
+  let out = decodeHtmlEntities(html)
 
   // 2. Block boundaries → newlines. Closing tag emits `\n\n` (paragraph
   //    break); opening tag drops to empty so adjacent `</p><p>` doesn't

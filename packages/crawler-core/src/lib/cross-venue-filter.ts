@@ -190,10 +190,19 @@ export function detectCrossVenuePresale(args: {
 
   const markerFull = markerText.toLowerCase()
   const markerShort = normalizeVenueName(markerText)
+  // Punctuation-insensitive form. Apostrophes in particular are unstable
+  // across sources: the seed stores "Cervantes' Masterpiece Ballroom" with a
+  // straight U+0027, while a feed's `&#8217;` decodes to a curly U+2019, and
+  // neither the full nor the suffix-stripped comparison survives that swap.
+  // Collapsing to alphanumerics is the same tactic the ticket-URL path
+  // already uses for vendor slugs (#1338).
+  const markerAlnum = alphanumeric(markerText)
 
   for (const candidate of candidates) {
     const candidateFull = candidate.name.trim().toLowerCase()
     const candidateShort = normalizeVenueName(candidate.name)
+    const candidateAlnum = alphanumeric(candidate.name)
+    const candidateShortAlnum = alphanumeric(candidateShort)
     if (candidateFull.length === 0) continue
     // Don't fall through to substring matching on an empty short form —
     // "" is a substring of every string, which would match every venue.
@@ -205,7 +214,12 @@ export function detectCrossVenuePresale(args: {
       markerShort === candidateShort ||
       markerShort.includes(candidateShort) ||
       markerFull.includes(candidateShort) ||
-      markerShort.includes(candidateFull)
+      markerShort.includes(candidateFull) ||
+      // Guarded on non-empty so a punctuation-only candidate name can't
+      // collapse to '' and match every marker.
+      (candidateAlnum.length > 0 && markerAlnum.includes(candidateAlnum)) ||
+      (candidateShortAlnum.length > 0 &&
+        markerAlnum.includes(candidateShortAlnum))
 
     if (!matchesName) continue
 

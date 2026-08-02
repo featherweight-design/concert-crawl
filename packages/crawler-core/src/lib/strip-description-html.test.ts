@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { stripDescriptionHtml } from './strip-description-html.js'
+import {
+  decodeHtmlEntities,
+  stripDescriptionHtml,
+} from './strip-description-html.js'
 
 describe('stripDescriptionHtml', () => {
   it('returns empty string for empty input', () => {
@@ -211,5 +214,37 @@ describe('stripDescriptionHtml', () => {
     expect(stripDescriptionHtml('Doors 7&ndash;9pm')).toBe('Doors 7–9pm')
     expect(stripDescriptionHtml('Show&mdash;preview')).toBe('Show—preview')
     expect(stripDescriptionHtml('Loading&hellip;')).toBe('Loading…')
+  })
+})
+
+// #1338 — titles need entity decoding but must NOT go through the
+// tag-stripping passes, so the decoder is exercised on its own.
+describe('decodeHtmlEntities', () => {
+  it('decodes the entity forms seen in real Cervantes titles', () => {
+    expect(decodeHtmlEntities('TF Marz &amp; Friends')).toBe(
+      'TF Marz & Friends',
+    )
+    expect(decodeHtmlEntities('Daniel Donato&#8217;s Cosmic Country')).toBe(
+      'Daniel Donato’s Cosmic Country',
+    )
+    expect(decodeHtmlEntities('CANCELED &#8211; Fenix Flexin')).toBe(
+      'CANCELED – Fenix Flexin',
+    )
+  })
+
+  it('leaves already-decoded text unchanged', () => {
+    expect(decodeHtmlEntities('TF Marz & Friends')).toBe('TF Marz & Friends')
+  })
+
+  it('preserves an unknown named entity rather than dropping it', () => {
+    expect(decodeHtmlEntities('Band &notanentity; Friends')).toBe(
+      'Band &notanentity; Friends',
+    )
+  })
+
+  // Unlike stripDescriptionHtml, no tag pass follows — a title that decodes
+  // to markup keeps it verbatim rather than being silently emptied.
+  it('does not strip tags that decoding produces', () => {
+    expect(decodeHtmlEntities('&lt;b&gt;Loud&lt;/b&gt;')).toBe('<b>Loud</b>')
   })
 })

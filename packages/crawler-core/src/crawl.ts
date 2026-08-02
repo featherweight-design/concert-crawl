@@ -36,6 +36,7 @@ import {
   canonicalizeSupporting,
 } from './lib/canonical-artist.js'
 import { canonicalizeTitle } from './lib/canonical-title.js'
+import { decodeHtmlEntities } from './lib/strip-description-html.js'
 import { projectArtists } from './lib/artist-projection.js'
 import { hashPage, hashEvent } from './lib/hash.js'
 import { deriveTicketLinks } from './lib/ticket-links/index.js'
@@ -561,7 +562,32 @@ export async function crawlVenue(
     // tool schema; JSON-LD and platform JSON mirror title into rawTitle at
     // the extractor seam) so the filter always sees the verbatim string.
     // See issue #826.
-    const normalizedEvents = extraction.normalizedEvents.filter((evt) => {
+    // Decode HTML entities in the title pair before anything reads them.
+    // Cervantes' feed serves entity-encoded headlines (`&amp;`, `&#8217;`)
+    // that reached `events.title` verbatim and rendered as literal
+    // `&#8217;` to consumers. Description already decodes at the extractor
+    // seam; titles had no equivalent pass.
+    //
+    // This runs BEFORE the cross-venue filter, not after, because the
+    // filter compares the marker text against venue names character by
+    // character — an encoded "AT FIDDLER&#8217;S GREEN AMPHITHEATRE" never
+    // matches the seeded "Fiddler's Green Amphitheatre" under any of the
+    // filter's comparison forms, so the presale row leaked through as a
+    // duplicate of the host venue's own listing. Decoding first fixes the
+    // display bug and closes that filter blind spot in one pass (#1338).
+    // `rawTitle` is typed as required on NormalizedEvent but is absent on
+    // some real extractor outputs, so it is decoded only when present rather
+    // than assumed — an undefined here previously took the whole run to
+    // `failed`.
+    const decodedEvents = extraction.normalizedEvents.map((evt) => ({
+      ...evt,
+      title: decodeHtmlEntities(evt.title),
+      ...(typeof evt.rawTitle === 'string'
+        ? { rawTitle: decodeHtmlEntities(evt.rawTitle) }
+        : {}),
+    }))
+
+    const normalizedEvents = decodedEvents.filter((evt) => {
       const match = detectCrossVenuePresale({
         title: evt.rawTitle,
         sourceVenueId: venueId,

@@ -31,6 +31,20 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.27.1-beta',
+    date: 'Aug 2, 2026',
+    items: [
+      {
+        kind: 'fixed',
+        text: 'Some Cervantes shows were printing raw web gibberish in the middle of the band name — "Daniel Donato&#8217;s Cosmic Country" instead of the apostrophe you were expecting. Fixed going forward, and the ones already listed are cleaned up.',
+      },
+      {
+        kind: 'fixed',
+        text: 'That same gibberish was hiding presale announcements from our duplicate check, so a few shows turned up twice — once under the venue actually hosting them, once under the venue selling the tickets. They only show up once now.',
+      },
+    ],
+  },
+  {
     version: 'v0.27.0-beta',
     date: 'Aug 2, 2026',
     headline: 'Artists have their own page now — and you can follow them.',
