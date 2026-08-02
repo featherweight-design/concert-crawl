@@ -40,7 +40,7 @@ export const RELEASES: Release[] = [
       },
       {
         kind: 'fixed',
-        text: 'That same gibberish was hiding presale announcements from our duplicate check, so a few shows turned up twice — once under the venue actually hosting them, once under the venue selling the tickets. They only show up once now.',
+        text: 'That same gibberish was hiding presale announcements from our duplicate check, so a show could turn up twice — once under the venue actually hosting it, once under the venue selling the tickets. The one that slipped through is gone, and the check now catches the rest.',
       },
     ],
   },
