@@ -97,6 +97,11 @@ export async function fetchPage(
       try {
         await page.waitForSelector(waitForSelector, { timeout: 30_000 })
       } catch (err) {
+        // Only a genuine timeout means "loaded but never rendered". Other
+        // failures here (invalid selector syntax, a closed page) are real
+        // errors and must not be reclassified — blockedAt keys off this class.
+        if (!(err instanceof Error) || err.name !== 'TimeoutError') throw err
+
         // Reading content() can itself fail if the page died; a null html still
         // beats losing the whole error.
         const captured = await page.content().catch(() => null)
@@ -106,7 +111,7 @@ export async function fetchPage(
             url,
             selector: waitForSelector,
             finalUrl: page.url(),
-            htmlBytes: captured?.length ?? 0,
+            htmlChars: captured?.length ?? 0,
           }),
         )
         throw new CrawlSelectorTimeoutError(
@@ -114,7 +119,7 @@ export async function fetchPage(
           captured,
           page.url(),
           finalStatus,
-          err instanceof Error ? err.message : String(err),
+          err.message,
         )
       }
     }

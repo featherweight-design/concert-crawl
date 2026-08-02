@@ -15,6 +15,13 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+// Playwright signals selector timeouts by error name, not by class.
+function makeTimeoutError(message: string): Error {
+  const err = new Error(message)
+  err.name = 'TimeoutError'
+  return err
+}
+
 function makeMockPage(overrides: Partial<Page> = {}): Page {
   return {
     on: vi.fn(),
@@ -120,7 +127,7 @@ describe('fetchPage — waitForSelector', () => {
       waitForSelector: vi
         .fn()
         .mockRejectedValue(
-          new Error('page.waitForSelector: Timeout 30000ms exceeded.'),
+          makeTimeoutError('page.waitForSelector: Timeout 30000ms exceeded.'),
         ),
       content: vi.fn().mockResolvedValue('<html><body>challenge</body></html>'),
       url: vi.fn().mockReturnValue('https://example.com/blocked'),
@@ -135,18 +142,19 @@ describe('fetchPage — waitForSelector', () => {
       '.event-card',
     ).catch((caught: unknown) => caught)
 
-    expect(err).toBeInstanceOf(CrawlSelectorTimeoutError)
-    const timeout = err as CrawlSelectorTimeoutError
-    expect(timeout.html).toBe('<html><body>challenge</body></html>')
-    expect(timeout.finalUrl).toBe('https://example.com/blocked')
-    expect(timeout.httpStatus).toBe(200)
-    expect(timeout.selector).toBe('.event-card')
-    expect(timeout.message).toContain('Timeout 30000ms exceeded')
+    if (!(err instanceof CrawlSelectorTimeoutError)) {
+      throw new Error('expected a CrawlSelectorTimeoutError')
+    }
+    expect(err.html).toBe('<html><body>challenge</body></html>')
+    expect(err.finalUrl).toBe('https://example.com/blocked')
+    expect(err.httpStatus).toBe(200)
+    expect(err.selector).toBe('.event-card')
+    expect(err.message).toContain('Timeout 30000ms exceeded')
   })
 
   it('still throws when the page content is unreadable after a selector timeout', async () => {
     const page = makeMockPage({
-      waitForSelector: vi.fn().mockRejectedValue(new Error('Timeout')),
+      waitForSelector: vi.fn().mockRejectedValue(makeTimeoutError('Timeout')),
       content: vi.fn().mockRejectedValue(new Error('page closed')),
     })
     const browser = makeMockBrowser(page)
@@ -159,8 +167,10 @@ describe('fetchPage — waitForSelector', () => {
       '.event-card',
     ).catch((caught: unknown) => caught)
 
-    expect(err).toBeInstanceOf(CrawlSelectorTimeoutError)
-    expect((err as CrawlSelectorTimeoutError).html).toBeNull()
+    if (!(err instanceof CrawlSelectorTimeoutError)) {
+      throw new Error('expected a CrawlSelectorTimeoutError')
+    }
+    expect(err.html).toBeNull()
   })
 
   it('returns html and status on success', async () => {
