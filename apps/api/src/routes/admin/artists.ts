@@ -6,6 +6,7 @@
 // press photo on a public page. An admin resolves it by picking from the
 // candidates the matcher saw, or by pasting a Spotify artist id by hand.
 import { Hono } from 'hono'
+import { createLogger } from '@concert-crawl/logger'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, asc, desc, eq, ilike, sql } from 'drizzle-orm'
@@ -16,6 +17,8 @@ import { httpUrl } from '../../lib/url-schema.js'
 import { createSpotifyAppClient } from '../../lib/spotify-app-client.js'
 import { SpotifyAuthError, SpotifyRateLimitError } from '../../lib/spotify.js'
 import type { AdminVariables } from './index.js'
+
+const logger = createLogger('admin:artists')
 
 const matchStatusSchema = z.enum([
   'unmatched',
@@ -201,7 +204,7 @@ artistsAdminRouter.patch(
   },
 )
 
-// GET /v1/admin/artists/:id/candidates?q= — what Spotify returns for this row.
+// GET /v1/admin/artists/:id/candidates?query= — what Spotify returns for this row.
 //
 // The matcher already fetched these and threw them away, keeping only its
 // verdict (#1345). Re-running the search on demand is the cheapest way to get
@@ -210,7 +213,7 @@ artistsAdminRouter.patch(
 // spend the app-token search quota that MATCH_BATCH_SIZE exists to ration.
 // One row, one admin click, one search.
 //
-// `q` overrides the query. `no_match` usually means the artist exists under a
+// `query` overrides the search term. `no_match` usually means the artist exists under a
 // spelling exact matching cannot reach ("Michael Smoak" vs "Mike Smoak"), and
 // without an override the endpoint would keep returning the same empty list.
 //
@@ -283,6 +286,10 @@ artistsAdminRouter.get(
 
       return ctx.json({ success: true, data, query: searchTerm })
     } catch (err) {
+      logger.warn(
+        { err, artistId: id, searchTerm },
+        'candidate search failed against Spotify',
+      )
       if (err instanceof SpotifyRateLimitError) {
         return ctx.json(
           {

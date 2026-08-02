@@ -172,7 +172,7 @@ export const CandidatePicker = ({
                 images.remotePatterns is a config change per host. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={candidate.images[0]?.url ?? ''}
+              src={candidate.images[0]?.url}
               alt=""
               width={56}
               height={56}
