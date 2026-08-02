@@ -5,12 +5,17 @@ import { firstIso } from '../definitions/types'
 
 import { groupShows } from './group-shows'
 
-const show = (iso: string, venue: string, city = 'Denver'): ArtistShow => ({
-  eventId: `${venue}-${iso}`,
+const show = (
+  iso: string,
+  venue: string,
+  city = 'Denver',
+  venueSlug = venue.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+): ArtistShow => ({
+  eventId: `${venueSlug}-${iso}`,
   iso,
   showTime: null,
   venue,
-  venueSlug: venue.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+  venueSlug,
   city,
   price: null,
   status: 'upcoming',
@@ -37,6 +42,17 @@ describe('groupShows', () => {
     if (!run || run.kind !== 'run') throw new Error('expected a run')
     expect(run.shows).toHaveLength(3)
     expect(run.venue).toBe("Ophelia's")
+  })
+
+  // Only `venues.slug` is unique in the schema, so a shared name is not a
+  // shared room — three nights split across two of them is not a residency.
+  it('keeps two same-named venues apart', () => {
+    const items = groupShows([
+      show('2026-08-05', 'The Venue', 'Denver', 'the-venue-denver'),
+      show('2026-08-06', 'The Venue', 'Denver', 'the-venue-denver'),
+      show('2026-08-07', 'The Venue', 'Boulder', 'the-venue-boulder'),
+    ])
+    expect(items.map((item) => item.kind)).toEqual(['one', 'one', 'one'])
   })
 
   it('does not call three shows spanning 30 days a run', () => {

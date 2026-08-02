@@ -25,16 +25,19 @@ const dayStart = (iso: string): number => Date.parse(`${iso}T00:00:00Z`)
  * each cluster is then judged on its own, on BOTH count and total span.
  */
 export const groupShows = (shows: ArtistShow[]): ShowItem[] => {
+  // Keyed by slug, not name: only `venues.slug` is unique in the schema, so two
+  // distinct rooms sharing a name would otherwise merge into one residency. The
+  // display name comes off the rows in the bucket.
   const byVenue = new Map<string, ArtistShow[]>()
   for (const show of shows) {
-    const bucket = byVenue.get(show.venue)
+    const bucket = byVenue.get(show.venueSlug)
     if (bucket) bucket.push(show)
-    else byVenue.set(show.venue, [show])
+    else byVenue.set(show.venueSlug, [show])
   }
 
   const items: ShowItem[] = []
 
-  for (const [venue, list] of byVenue) {
+  for (const list of byVenue.values()) {
     const sorted = [...list].sort(
       (one, two) => dayStart(one.iso) - dayStart(two.iso),
     )
@@ -55,7 +58,7 @@ export const groupShows = (shows: ArtistShow[]): ShowItem[] => {
       if (isRun(head, tail)) {
         items.push({
           kind: 'run',
-          venue,
+          venue: head.venue,
           venueSlug: head.venueSlug,
           city: head.city,
           shows: cluster,
