@@ -1,3 +1,10 @@
+## [1.191.1](https://github.com/HartiganHM/concert-crawl/compare/v1.191.0...v1.191.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* **notifications:** size the sheet and give it a way out ([#737](https://github.com/HartiganHM/concert-crawl/issues/737)) ([9d28d8f](https://github.com/HartiganHM/concert-crawl/commit/9d28d8ffbe0c4b4f547135594585cf8ab0eee3f0))
+
 # [1.191.0](https://github.com/HartiganHM/concert-crawl/compare/v1.190.1...v1.191.0) (2026-08-02)
 
 
