@@ -73,12 +73,16 @@ export async function seedArtist(
   overrides: Partial<typeof artists.$inferInsert> = {},
 ): Promise<typeof artists.$inferSelect> {
   const name = overrides.name ?? 'Test Artist'
+  // The slug follows the canonical name, not the display name — seeding a row
+  // whose slug disagrees with its identity makes a test pass on the wrong
+  // artist.
+  const canonicalName = overrides.canonicalName ?? name.toLowerCase().trim()
   const [artist] = await testDb
     .insert(artists)
     .values({
       name,
-      canonicalName: name.toLowerCase().trim(),
-      slug: artistSlug(name.toLowerCase().trim()),
+      canonicalName,
+      slug: artistSlug(canonicalName),
       ...overrides,
     })
     .returning()

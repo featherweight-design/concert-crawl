@@ -9,7 +9,7 @@ import {
   userArtistFollows,
   venues,
 } from '@concert-crawl/db'
-import { and, asc, desc, eq, gte, isNull, lt, or, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gte, isNull, lt, ne, or, sql } from 'drizzle-orm'
 import { ARTIST_SLUG_MAX_LENGTH } from '@concert-crawl/types'
 import type {
   ArtistDetailResponse,
@@ -17,7 +17,6 @@ import type {
   ArtistShow,
 } from '@concert-crawl/types'
 import { todayInTimezone } from '../lib/time.js'
-import { requireAuth } from '../middleware/auth.js'
 
 export const artistsPublicRouter = new Hono()
 
@@ -35,16 +34,16 @@ const MT_TIME_ZONE = 'America/Denver'
 const PAST_LIMIT = 50
 const UPCOMING_LIMIT = 50
 
-// Public route, same beta posture as venues-public.ts: when the app is still
-// invite-only the whole router requires a session; otherwise it is open and
-// the handler reads the session optionally.
-if (process.env.REQUIRE_BETA_AUTH === 'true') {
-  artistsPublicRouter.use('*', clerkMiddleware(), requireAuth)
-} else {
-  // Mounted unconditionally so `getAuth(ctx)` can resolve a session when one
-  // is present. It never rejects — anonymous readers get `following: null`.
-  artistsPublicRouter.use('*', clerkMiddleware())
-}
+// Public, like every other /v1 read route. The plan described a
+// REQUIRE_BETA_AUTH router gate copied from venues-public.ts, but that flag was
+// removed repo-wide before this branch existed — reinstating it here would make
+// this one surface uniquely capable of 401ing on a setting nothing else reads.
+// Reachability for logged-out visitors is decided in the web middleware
+// matcher, not here.
+//
+// Clerk is mounted so `getAuth(ctx)` can resolve a session when one is present.
+// It never rejects — anonymous readers get `following: null`.
+artistsPublicRouter.use('*', clerkMiddleware())
 
 // Mirrors artistSlug() output (packages/types/src/artist-slug.ts). A param that
 // cannot be a slug is answered with the same 404 as a slug that simply doesn't
@@ -144,7 +143,7 @@ artistsPublicRouter.get(
           // A cancelled show never happened, so it is not part of "we've
           // caught them N times". Postponed rows stay: the date moved, the
           // show still occurred on our map.
-          sql`${events.status} <> 'cancelled'`,
+          ne(events.status, 'cancelled'),
         ),
       )
       .orderBy(desc(events.date), desc(events.showTime))
