@@ -174,6 +174,9 @@ describe('GET /v1/venues/:slug — integration', () => {
       slug: 'closed-venue',
       active: false,
     })
+    // Seeded deliberately: the venue has real content, so a regression that
+    // drops the active filter would serve a populated page rather than an
+    // empty one — this asserts we 404 even when there is something to show.
     await seedEvent(venue.id, { artist: 'Someone', date: '2027-06-05' })
 
     const res = await app.request('/v1/venues/closed-venue')
