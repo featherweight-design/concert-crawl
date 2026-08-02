@@ -2,10 +2,12 @@ import type { ArtistShow } from '@concert-crawl/types'
 import Link from 'next/link'
 import React from 'react'
 
+import { StatusPill } from '@/components/consumer/StatusPill'
+
+import { AP_PILL_FONT_SIZE } from './definitions/constants'
 import { ARTIST_COPY } from './definitions/copy'
 import { fmtDate } from './DateStamp'
 import { PriceChip } from './PriceChip'
-import { StatusPill } from './ShowRow'
 
 interface RunGroupProps {
   venue: string
@@ -106,7 +108,7 @@ export const RunGroup = ({ venue, city, shows }: RunGroupProps) => (
               {`${dow} ${mon} ${day}`}
             </span>
             <span style={{ flex: 1, minWidth: 0 }}>
-              <StatusPill status={show.status} />
+              <StatusPill status={show.status} fontSize={AP_PILL_FONT_SIZE} />
             </span>
             <PriceChip price={show.price} />
           </Link>

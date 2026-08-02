@@ -1,6 +1,7 @@
 import React from 'react'
 import type { EventStatus } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { StatusPill } from '@/components/consumer/StatusPill'
 import { SupportingLine } from './SupportingLine'
 
 type Surface = 'card' | 'hero' | 'detail'
@@ -9,22 +10,6 @@ const RAMP: Record<Surface, { head: number; tour: number; gap: number }> = {
   card: { head: 15, tour: 9, gap: 2 },
   hero: { head: 22, tour: 10, gap: 3 },
   detail: { head: 34, tour: 12, gap: 5 },
-}
-
-// Labels come from CONSUMER_COPY (copy-rule). The pill span carries the
-// `uppercase` class, so 'Cancelled'/'Postponed' still render all-caps.
-const STATUS_PILL: Record<
-  Exclude<EventStatus, 'upcoming'>,
-  { label: string; tone: string }
-> = {
-  cancelled: {
-    label: CONSUMER_COPY.cancelledLabel,
-    tone: 'text-danger border-danger',
-  },
-  postponed: {
-    label: CONSUMER_COPY.postponedLabel,
-    tone: 'text-warning border-warning',
-  },
 }
 
 interface EventTitleBlockProps {
@@ -58,26 +43,21 @@ export const EventTitleBlock = ({
   // headliner alone, never the legacy title. Strict `=== null`: `null` is the
   // sole legacy marker, and the prop is required so `undefined` cannot reach here.
   const isLegacyRow = supportingArtists === null
-  const pill = status !== 'upcoming' ? STATUS_PILL[status] : null
+  // The pill itself decides whether to render; this only drives whether the
+  // row that would contain it exists at all.
+  const hasPill = status !== 'upcoming'
   const Headliner = headlinerAs
   const showLegacyFallback =
     isLegacyRow && !!fallbackTitle && fallbackTitle !== headliner
 
   return (
     <div className="flex min-w-0 flex-col" style={{ gap: ramp.gap }}>
-      {(pill || tourName) && (
+      {(hasPill || tourName) && (
         <div
           className="flex min-w-0 items-center gap-2"
           style={{ marginBottom: 1 }}
         >
-          {pill && (
-            <span
-              className={`inline-flex shrink-0 items-center rounded border font-mono font-bold uppercase tracking-widest ${pill.tone}`}
-              style={{ fontSize: ramp.tour, padding: '2px 7px', lineHeight: 1 }}
-            >
-              {pill.label}
-            </span>
-          )}
+          <StatusPill status={status} fontSize={ramp.tour} />
           {tourName && (
             <div
               aria-label={CONSUMER_COPY.eventTitle.tourAriaLabel(tourName)}

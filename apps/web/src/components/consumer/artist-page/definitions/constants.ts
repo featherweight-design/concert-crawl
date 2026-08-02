@@ -30,5 +30,13 @@ export const AP_HERO_H = { wide: 200, narrow: 150 } as const
 /** Below this width the page uses the narrow type ramp and padding. */
 export const AP_NARROW_BP = 360
 
+/**
+ * Cancelled/postponed pill size on this page's show rows — a half-point below
+ * the events card's 9px ramp step. Everything else about the pill is shared
+ * with `components/consumer/StatusPill`, so a tone or label change lands on
+ * both surfaces at once.
+ */
+export const AP_PILL_FONT_SIZE = 9.5
+
 /** Spotify embed heights (consumed by PR-F). */
 export const EMBED_H = { compact: 152, tall: 352 } as const

@@ -1,39 +1,12 @@
-import type { ArtistShow, EventStatus } from '@concert-crawl/types'
+import type { ArtistShow } from '@concert-crawl/types'
 import Link from 'next/link'
 import React from 'react'
 
-import { CONSUMER_COPY } from '../definitions/copy'
+import { StatusPill } from '@/components/consumer/StatusPill'
 
+import { AP_PILL_FONT_SIZE } from './definitions/constants'
 import { DateStamp } from './DateStamp'
 import { PriceChip } from './PriceChip'
-
-/** Same treatment the events list uses, so one show reads the same everywhere. */
-const STATUS_PILL: Record<
-  Exclude<EventStatus, 'upcoming'>,
-  { label: string; tone: string }
-> = {
-  cancelled: {
-    label: CONSUMER_COPY.cancelledLabel,
-    tone: 'text-danger border-danger',
-  },
-  postponed: {
-    label: CONSUMER_COPY.postponedLabel,
-    tone: 'text-warning border-warning',
-  },
-}
-
-export const StatusPill = ({ status }: { status: EventStatus }) => {
-  if (status === 'upcoming') return null
-  const pill = STATUS_PILL[status]
-  return (
-    <span
-      className={`inline-flex shrink-0 items-center rounded border font-mono font-bold uppercase tracking-widest ${pill.tone}`}
-      style={{ fontSize: 9.5, padding: '2px 7px', lineHeight: 1 }}
-    >
-      {pill.label}
-    </span>
-  )
-}
 
 /** The whole row is one link — no nested targets, one 60px tap area. */
 export const ShowRow = ({ show }: { show: ArtistShow }) => {
@@ -80,7 +53,7 @@ export const ShowRow = ({ show }: { show: ArtistShow }) => {
           >
             {show.venue}
           </span>
-          <StatusPill status={show.status} />
+          <StatusPill status={show.status} fontSize={AP_PILL_FONT_SIZE} />
         </div>
         {show.city ? (
           <div
