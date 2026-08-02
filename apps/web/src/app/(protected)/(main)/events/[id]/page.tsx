@@ -317,7 +317,7 @@ export default async function EventDetailPage({
               </p>
               <p
                 className="text-[13px] leading-[1.55] text-fg-muted"
-                style={{ textWrap: 'pretty' } as React.CSSProperties}
+                style={{ textWrap: 'pretty' }}
               >
                 {event.description}
               </p>

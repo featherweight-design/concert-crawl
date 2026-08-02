@@ -39,6 +39,7 @@ const EVENT_ID = '11111111-1111-4111-8111-111111111111'
 beforeEach(() => {
   vi.clearAllMocks()
   mockAuth.mockResolvedValue({ userId: null })
+  vi.spyOn(console, 'error').mockImplementation(() => {})
 })
 
 const loadPage = async () => (await import('./page')).default
@@ -103,7 +104,21 @@ describe('/e/[id] — public event mirror (#72)', () => {
     expect(mockPublicGet).not.toHaveBeenCalled()
   })
 
-  it('404s when the event fetch fails', async () => {
+  // A malformed id is a dead link for everyone. Redirecting it would just hand
+  // the same garbage to /events/:id instead of showing the branded 404.
+  it('404s a signed-in visitor on a non-UUID id rather than redirecting', async () => {
+    mockAuth.mockResolvedValue({ userId: 'user_1' })
+    const Page = await loadPage()
+
+    await expect(
+      Page({ params: Promise.resolve({ id: 'not-a-uuid' }) }),
+    ).rejects.toThrow('NEXT_NOT_FOUND')
+
+    expect(mockRedirect).not.toHaveBeenCalled()
+    expect(mockPublicGet).not.toHaveBeenCalled()
+  })
+
+  it('404s when the event fetch fails, and logs why', async () => {
     mockPublicGet.mockRejectedValue(new Error('404'))
     const Page = await loadPage()
 
@@ -112,6 +127,12 @@ describe('/e/[id] — public event mirror (#72)', () => {
     ).rejects.toThrow('NEXT_NOT_FOUND')
 
     expect(mockNotFound).toHaveBeenCalled()
+    // A swallowed fetch failure here is a silently blank shared link; it has to
+    // be diagnosable from the server logs.
+    expect(console.error).toHaveBeenCalledWith(
+      '[public event] event fetch failed',
+      expect.objectContaining({ id: EVENT_ID }),
+    )
   })
 
   it('still renders when only the related fetch fails', async () => {
