@@ -1256,7 +1256,7 @@ export async function crawlVenue(
     if (
       err instanceof CrawlSelectorTimeoutError &&
       venue.debugCaptureHtml &&
-      err.html
+      err.html !== null
     ) {
       logDebugHtmlCapture(err.html, {
         venueId,
