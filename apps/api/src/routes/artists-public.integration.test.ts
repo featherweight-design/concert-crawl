@@ -137,18 +137,41 @@ describe('GET /v1/artists/:slug — integration', () => {
     expect(body.data.following).toBeNull()
   })
 
-  it('returns an artist with no shows at all', async () => {
+  // #1343 — a projection row with nothing consumer-visible behind it is not an
+  // artist. Rendering a name and a follow button over an empty list reads as
+  // lost data; a 404 says the page was never real.
+  it('404s an artist with no shows at all', async () => {
     await seedArtist({
       name: 'Quiet Signal',
       canonicalName: 'quiet signal',
     })
 
     const res = await getArtist('quiet-signal')
-    expect(res.status).toBe(200)
-    const body: SuccessBody = await res.json()
-    expect(body.data.shows).toEqual([])
-    expect(body.data.past).toEqual([])
-    expect(body.data.history).toEqual({ count: 0, venues: [] })
+    expect(res.status).toBe(404)
+  })
+
+  it('404s an artist whose every event is hidden from consumers', async () => {
+    await seedArtist({
+      name: 'Bass Bingo',
+      canonicalName: 'bass bingo',
+    })
+    const venue = await seedVenue({ name: 'Black Box', slug: 'black-box' })
+
+    await seedEvent(venue.id, {
+      artist: 'BASS BINGO',
+      canonicalArtist: 'bass bingo',
+      date: '2099-08-01',
+      hiddenFromConsumer: true,
+    })
+    await seedEvent(venue.id, {
+      artist: 'BASS BINGO',
+      canonicalArtist: 'bass bingo',
+      date: '2020-08-01',
+      hiddenFromConsumer: true,
+    })
+
+    const res = await getArtist('bass-bingo')
+    expect(res.status).toBe(404)
   })
 
   it('includes shows where the artist appears only as a supporting act', async () => {
@@ -302,6 +325,17 @@ describe('GET /v1/artists/:slug — integration', () => {
       name: 'Followed Act',
       canonicalName: 'followed act',
     })
+    // The route 404s an artist with nothing consumer-visible behind it, so a
+    // follow-state assertion needs a real show to hang off.
+    const followedVenue = await seedVenue({
+      name: 'Larimer Lounge',
+      slug: 'larimer-lounge-followed',
+    })
+    await seedEvent(followedVenue.id, {
+      artist: 'Followed Act',
+      canonicalArtist: 'followed act',
+      date: '2099-09-01',
+    })
 
     const anon: SuccessBody = await (await getArtist('followed-act')).json()
     expect(anon.data.following).toBeNull()
@@ -330,6 +364,15 @@ describe('GET /v1/artists/:slug — integration', () => {
       name: 'Synced Act',
       canonicalName: 'synced act',
     })
+    const syncedVenue = await seedVenue({
+      name: 'Bluebird',
+      slug: 'bluebird-synced',
+    })
+    await seedEvent(syncedVenue.id, {
+      artist: 'Synced Act',
+      canonicalArtist: 'synced act',
+      date: '2099-09-02',
+    })
     authState.current = { userId: 'user_artist_sync' }
     await testDb.insert(userArtistFollows).values({
       userId: 'user_artist_sync',
@@ -348,6 +391,12 @@ describe('GET /v1/artists/:slug — integration', () => {
     // Counting it would render the button pre-engaged, and unfollowing would
     // do nothing visible because DELETE is scoped to `source = 'manual'`.
     await seedArtist({ name: 'Top Act', canonicalName: 'top act' })
+    const topVenue = await seedVenue({ name: 'Gothic', slug: 'gothic-top' })
+    await seedEvent(topVenue.id, {
+      artist: 'Top Act',
+      canonicalArtist: 'top act',
+      date: '2099-09-03',
+    })
     authState.current = { userId: 'user_artist_top' }
     await testDb.insert(userArtistFollows).values({
       userId: 'user_artist_top',

@@ -154,6 +154,29 @@ describe('backfill-artists integration', () => {
     ])
   })
 
+  // #1343 — an admin hides an event because it is not a concert. Projecting
+  // its billing string manufactures an artist page for a bingo night.
+  it('skips events hidden from consumers, headliner and support alike', async () => {
+    const venue = await seedVenue({ slug: `hidden-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'BASS BINGO',
+      canonicalArtist: 'bass bingo',
+      canonicalSupporting: ['dj scoreboard'],
+      hiddenFromConsumer: true,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Real Artist',
+      canonicalArtist: 'real artist',
+      canonicalSupporting: [],
+      date: '2026-06-02',
+    })
+
+    await backfillArtists(testDb)
+
+    const rows = await listArtists()
+    expect(rows.map((row) => row.canonicalName)).toEqual(['real artist'])
+  })
+
   it('is idempotent — a second run inserts nothing and changes no slug', async () => {
     const venue = await seedVenue({ slug: `idempotent-${Date.now()}` })
     await seedEvent(venue.id, {

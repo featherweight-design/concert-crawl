@@ -56,16 +56,25 @@ export async function backfillArtists(
   // name. A later crawl that bills them as a headliner does not overwrite it —
   // the insert is conflict-do-nothing by design, and PR-C's admin surface is
   // where a human corrects a name.
+  //
+  // `hidden_from_consumer` rows are skipped on both branches (#1343). An admin
+  // hides an event because it is not a concert — a bingo night, a yoga class, a
+  // festival shuttle pickup — and projecting its billing string creates an
+  // artist page for something that was never an artist. `/artists/:slug`
+  // applies the same filter when it counts shows, so a row discovered here
+  // would render an empty page anyway.
   const rows = await database.execute<CanonicalRow>(sql`
     WITH names AS (
       SELECT canonical_artist AS canonical_name, artist AS display_name
       FROM events
       WHERE canonical_artist IS NOT NULL AND canonical_artist <> ''
+        AND hidden_from_consumer = false
       UNION ALL
       SELECT supporting.value AS canonical_name, supporting.value AS display_name
       FROM events
       CROSS JOIN LATERAL unnest(COALESCE(canonical_supporting, ARRAY[]::text[])) AS supporting(value)
       WHERE supporting.value IS NOT NULL AND supporting.value <> ''
+        AND hidden_from_consumer = false
     ),
     ranked AS (
       SELECT

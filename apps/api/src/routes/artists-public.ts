@@ -187,6 +187,16 @@ artistsPublicRouter.get(
       city: row.city,
     }))
 
+    // The gate `search.ts` already applies and this route did not: an artist
+    // is only real if at least one consumer-visible event bills them (#1343).
+    // Every event hidden means the projection captured something that is not a
+    // performer, and the page would otherwise render a name, a follow button
+    // and no shows at all — worse than a 404, because it looks like we lost
+    // the data rather than never having had an artist.
+    if (shows.length === 0 && past.length === 0) {
+      return ctx.json({ success: false, error: 'Artist not found' }, 404)
+    }
+
     // Derived from `past` itself — never a separate COUNT(*), which would
     // drift past PAST_LIMIT and make the history sentence contradict the list
     // rendered underneath it.
