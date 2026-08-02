@@ -9,6 +9,15 @@ export {
   canonicalizeArtist,
   canonicalizeSupporting,
 } from './lib/canonical-artist.js'
+// artistSlug/resolveSlug live in @concert-crawl/types: packages/db needs them
+// for the artists backfill and cannot depend on crawler-core without a
+// workspace build cycle. Re-exported here so callers get the
+// canonicalize → slug pair from a single import.
+export {
+  artistSlug,
+  resolveSlug,
+  ARTIST_SLUG_FALLBACK_PREFIX,
+} from '@concert-crawl/types'
 export { crawlVenue, type CrawlVenueResult } from './crawl.js'
 export { tagEventsWithGenres } from './lib/genre-tagger.js'
 export type { GenreTagInput } from './lib/genre-tagger.js'

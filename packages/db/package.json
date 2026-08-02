@@ -9,6 +9,10 @@
     ".": {
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
+    },
+    "./scripts/backfill-artists": {
+      "import": "./dist/scripts/backfill-artists.js",
+      "types": "./dist/scripts/backfill-artists.d.ts"
     }
   },
   "scripts": {
@@ -20,12 +24,12 @@
     "db:seed": "tsx seed.ts"
   },
   "dependencies": {
+    "@concert-crawl/types": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "postgres": "^3.4.0"
   },
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
-    "@concert-crawl/types": "workspace:*",
     "@types/node": "^26.1.1",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.23.1",

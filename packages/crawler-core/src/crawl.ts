@@ -36,6 +36,7 @@ import {
   canonicalizeSupporting,
 } from './lib/canonical-artist.js'
 import { canonicalizeTitle } from './lib/canonical-title.js'
+import { projectArtists } from './lib/artist-projection.js'
 import { hashPage, hashEvent } from './lib/hash.js'
 import { deriveTicketLinks } from './lib/ticket-links/index.js'
 import { isListingPageUrl } from './lib/listing-url.js'
@@ -939,6 +940,29 @@ export async function crawlVenue(
             insertedEventIds.push(row.id)
           }
         }
+
+        // Keep the `artists` projection fresh so a show announced today has
+        // an artist page today rather than after the next backfill (#1115).
+        // Runs AFTER the event upsert and outside its transaction, and
+        // swallows its own failures: crawl data is the product's core value,
+        // and an artist-projection hiccup must never cost an event row.
+        // Headliners and supporting acts both get a row — an artist who only
+        // ever opens still has a page.
+        await projectArtists(
+          eventValues.flatMap((evt) => [
+            { name: evt.artist, canonicalName: evt.canonicalArtist },
+            ...evt.canonicalSupporting.map((canonicalName) => ({
+              // No raw spelling is recoverable per supporting artist:
+              // canonical_supporting is deduped and sorted, so it is not
+              // positionally aligned with supporting_artists. The canonical
+              // string seeds the display name; the backfill's
+              // most-frequent-spelling pass corrects it when the artist later
+              // headlines.
+              name: canonicalName,
+              canonicalName,
+            })),
+          ]),
+        )
       }
     }
 

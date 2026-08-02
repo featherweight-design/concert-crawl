@@ -11,6 +11,7 @@ import {
 } from 'drizzle-orm'
 import { deriveSourceCategory, type GuideChipKey } from '@concert-crawl/types'
 import { db } from './src/client.js'
+import { backfillArtists } from './src/scripts/backfill-artists.js'
 import {
   venues,
   venueGuideChips,
@@ -5007,6 +5008,14 @@ async function seed() {
   // #764 venue first-timer guide fixtures
   // -------------------------------------------------------------------------
   await seedVenueGuides(venueBySlug)
+  // Project every seeded artist — headliner and support — into the `artists`
+  // table so /artists/{slug} resolves locally and on staging with no manual
+  // step (#1115). Idempotent, so it runs unconditionally at the end of the
+  // seed, after every event insert above.
+  const artistBackfill = await backfillArtists(db)
+  console.warn(
+    `Artists projection: ${artistBackfill.inserted} inserted of ${artistBackfill.discovered} discovered.`,
+  )
 
   process.exit(0)
 }

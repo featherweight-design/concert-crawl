@@ -12,6 +12,10 @@ export * from './venue-guide.js'
 // Re-exported above; imported explicitly because `export *` does not bring
 // the name into this module's scope for use in VenuePublic below.
 import type { VenueGuide } from './venue-guide.js'
+// URL-safe artist slug derivation (#1115) — shared by the crawler
+// write-through and the packages/db backfill. Lives here because it is the
+// only package both can depend on without a workspace build cycle.
+export * from './artist-slug.js'
 
 // User roles — mirrors Clerk publicMetadata.role
 // Role always takes precedence over plan in access checks:
