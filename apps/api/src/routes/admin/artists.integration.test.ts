@@ -198,6 +198,45 @@ describe('admin artists routes', () => {
       expect(body.data.photoFetchedAt).toBeNull()
     })
 
+    it('clears the photo when a matched row is repointed at a new identity', async () => {
+      const id = await seedArtist({
+        canonicalName: 'nirvana',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp_wrong',
+        photoUrl: 'https://i.scdn.co/image/wrong.jpg',
+      })
+
+      const res = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ spotifyArtistId: 'sp_right' }),
+      })
+      const body = await res.json()
+
+      expect(body.data.spotifyArtistId).toBe('sp_right')
+      expect(body.data.photoUrl).toBeNull()
+      expect(body.data.photoFetchedAt).toBeNull()
+    })
+
+    it('keeps the photo when the identity is unchanged', async () => {
+      const id = await seedArtist({
+        canonicalName: 'nirvana',
+        matchStatus: 'ambiguous',
+        spotifyArtistId: 'sp_same',
+        photoUrl: 'https://i.scdn.co/image/keep.jpg',
+      })
+
+      const res = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ spotifyArtistId: 'sp_same' }),
+      })
+      const body = await res.json()
+
+      expect(body.data.matchStatus).toBe('matched')
+      expect(body.data.photoUrl).toBe('https://i.scdn.co/image/keep.jpg')
+    })
+
     it('rejects a non-matched status carrying an id', async () => {
       const id = await seedArtist({ canonicalName: 'nirvana' })
 

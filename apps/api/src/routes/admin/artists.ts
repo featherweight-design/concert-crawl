@@ -141,18 +141,32 @@ artistsAdminRouter.patch(
       )
     }
 
-    // Demoting a row drops its photo with it. The photo came from the Spotify
-    // identity being removed, so keeping it would leave the page showing a
-    // stranger's face.
+    const [existing] = await db
+      .select({ spotifyArtistId: artists.spotifyArtistId })
+      .from(artists)
+      .where(eq(artists.id, id))
+
+    if (!existing) {
+      return ctx.json({ success: false, error: 'Artist not found' }, 404)
+    }
+
+    // The cached photo belongs to the Spotify identity it was fetched for, so
+    // it dies whenever that identity does — whether the row is demoted or
+    // repointed at a different artist. Leaving it behind is how a stranger's
+    // face ends up on a public page, which is the exact failure this queue
+    // exists to prevent. The job re-fetches on its next pass.
+    const identityChanged = body.spotifyArtistId !== existing.spotifyArtistId
     const photoFields =
       nextStatus !== 'matched'
         ? { photoUrl: null, photoFetchedAt: null }
-        : body.photoUrl === undefined
-          ? {}
-          : {
+        : body.photoUrl !== undefined
+          ? {
               photoUrl: body.photoUrl,
               photoFetchedAt: body.photoUrl === null ? null : new Date(),
             }
+          : identityChanged
+            ? { photoUrl: null, photoFetchedAt: null }
+            : {}
 
     const [updated] = await db
       .update(artists)

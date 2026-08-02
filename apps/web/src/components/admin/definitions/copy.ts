@@ -2323,7 +2323,7 @@ export const ADMIN_COPY = {
     saveError: 'Could not save that artist.',
     never: 'never',
     dormantNotice:
-      'Matching is dormant until SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET are set on the API. Rows stay unmatched until then.',
+      'Automatic matching needs SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET on the API. If those are not set, rows stay unmatched and can only be resolved by hand here.',
   },
 
   // The dashboard triage panel (#1215). Mirrors
