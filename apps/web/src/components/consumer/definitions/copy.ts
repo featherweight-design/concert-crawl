@@ -976,6 +976,16 @@ export const CONSUMER_COPY = {
     signOutButton: 'Sign out',
   },
 
+  // ── Route not-found ─────────────────────────────────────────────
+  // Shown when a route calls notFound() — an artist, venue or event slug that
+  // isn't in the database. Deliberately separate from `error`: nothing broke,
+  // so the page offers a way onward rather than a retry.
+  notFound: {
+    heading: 'Nothing here.',
+    body: "That page doesn't exist. The link may be old, or the show may have come off the calendar.",
+    browseButton: 'Browse shows',
+  },
+
   // ── PendingCardB ────────────────────────────────────────────────
   // Shown on the event detail page — pending price card for community and box-office tiers
   pendingCardB: {
