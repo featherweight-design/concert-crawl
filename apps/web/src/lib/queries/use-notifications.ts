@@ -113,6 +113,13 @@ export const stampRead = (
   data: NotificationPages,
   readAt: string,
   matches: (item: ConsumerNotification) => boolean,
+  /**
+   * Forced count for the read-all case. The decrement below can only see
+   * LOADED pages, but read-all marks the whole window server-side — so
+   * deriving it would leave "Mark all read" showing a non-zero header until
+   * the refetch landed, which reads as a button that did not work.
+   */
+  countAfter?: number,
 ): NotificationPages => {
   const willMark = (item: ConsumerNotification): boolean =>
     item.readAt === null && matches(item)
@@ -121,7 +128,8 @@ export const stampRead = (
     (total, page) => total + page.items.filter(willMark).length,
     0,
   )
-  const unreadCount = Math.max(0, (data.pages[0]?.unreadCount ?? 0) - marked)
+  const unreadCount =
+    countAfter ?? Math.max(0, (data.pages[0]?.unreadCount ?? 0) - marked)
 
   return {
     ...data,
@@ -196,7 +204,7 @@ export function useNotificationMutations() {
         const now = new Date().toISOString()
         queryClient.setQueryData(
           key,
-          stampRead(context.previous, now, () => true),
+          stampRead(context.previous, now, () => true, 0),
         )
       }
       return context

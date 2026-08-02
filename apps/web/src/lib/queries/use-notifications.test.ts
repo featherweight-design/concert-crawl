@@ -168,4 +168,14 @@ describe('stampRead', () => {
     ])
     expect(unreadCountOf(stampRead(data, READ_AT, () => true))).toBe(0)
   })
+
+  it('honours a forced count when the window is wider than the loaded pages', () => {
+    // The read-all case. Only one page is loaded but the server marks all 9;
+    // deriving the count would leave the header at 8 after "Mark all read".
+    const data = pages([page({ items: [item('a')], unreadCount: 9 })])
+    const next = stampRead(data, READ_AT, () => true, 0)
+
+    expect(unreadCountOf(next)).toBe(0)
+    expect(next.pages[0]?.items[0]?.readAt).toBe(READ_AT)
+  })
 })

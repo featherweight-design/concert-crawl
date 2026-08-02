@@ -371,7 +371,7 @@ Recorded so nothing is lost; **do not build these in the panel-body PR.**
 - `aria-expanded` on the trigger (READINESS open item 3) — a chrome-side attribute.
 - Panel-open clears the pip via a `last_seen_at` write; per-item read fires on row activation. Pip and rails deliberately disagree.
 - Mobile `me` becoming a menu (mounting the existing `UserMenuSheet` and deciding what `/me` routes to).
-- Endpoint wiring context: `GET /v1/notifications/me` (page size 20), `POST /v1/notifications/:id/read`, `POST /v1/notifications/read-all`.
+- Endpoint wiring context: `GET /v1/notifications` (page size 20), `POST /v1/notifications/:id/read`, `POST /v1/notifications/read-all`, `POST /v1/notifications/mark-panel-seen`.
 
 ---
 

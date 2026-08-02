@@ -52,7 +52,9 @@ so the UI build is unblocked.
 ## Not verified here
 
 - Nothing was driven in a browser — that is Gate 2's job, and it runs inside
-  PR-B before `gh pr create`. This gate read the route and the response type.
+  PR-C, the first PR that mounts the panel in the app. PR-B ships the
+  components but nothing renders them, so there is no state to force there.
+  This gate read the route and the response type.
 - `unreadCount` is uncapped by deliberate choice (see the comment at `:227`);
   whether a render layer caps it at "9+" is a PR-B decision and is not a
   contract question.
