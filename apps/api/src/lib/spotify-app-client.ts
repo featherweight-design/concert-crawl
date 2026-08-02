@@ -194,12 +194,14 @@ export const getAppToken = async (
 }
 
 // Retry-After is delta-seconds or an HTTP-date (RFC 9110 §10.2.3); Spotify
-// sends seconds, but honor both. Unparseable or negative → 1s.
+// sends seconds, but honor both. Unparseable or non-positive → 1s, matching
+// spotify.ts — a literal `Retry-After: 0` must not become a tight retry loop
+// against an endpoint that is already rate-limiting us.
 const parseRetryAfterMs = (header: string | null): number => {
   if (header === null) return 1000
   const seconds = Number(header)
   if (Number.isFinite(seconds)) {
-    return seconds >= 0 ? seconds * 1000 : 1000
+    return seconds > 0 ? seconds * 1000 : 1000
   }
   const dateMs = Date.parse(header)
   if (!Number.isNaN(dateMs) && dateMs > Date.now()) {
