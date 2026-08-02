@@ -65,7 +65,7 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
   })
 
   it('401s without a session', async () => {
-    await seedArtist({ name: 'Gate Act', slug: 'gate-act' })
+    await seedArtist({ name: 'Gate Act' })
     const res = await follow('gate-act')
     expect(res.status).toBe(401)
     expect(await followRows()).toHaveLength(0)
@@ -83,7 +83,6 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
     await seedArtist({
       name: 'Nightjar Choir',
       canonicalName: 'nightjar choir',
-      slug: 'nightjar-choir',
       spotifyArtistId: 'sp_nightjar',
     })
     authState.current = { userId: USER_ID }
@@ -108,7 +107,6 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
     await seedArtist({
       name: 'Wax Harbour',
       canonicalName: 'wax harbour',
-      slug: 'wax-harbour',
     })
     authState.current = { userId: USER_ID }
 
@@ -122,7 +120,6 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
     await seedArtist({
       name: 'Wax Harbour',
       canonicalName: 'wax harbour',
-      slug: 'wax-harbour',
     })
     authState.current = { userId: USER_ID }
 
@@ -140,7 +137,6 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
     await seedArtist({
       name: 'Wax Harbour',
       canonicalName: 'wax harbour',
-      slug: 'wax-harbour',
     })
     authState.current = { userId: USER_ID }
 
@@ -161,7 +157,6 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
     await seedArtist({
       name: 'Synced Act',
       canonicalName: 'synced act',
-      slug: 'synced-act',
       spotifyArtistId: 'sp_synced',
     })
     authState.current = { userId: USER_ID }
@@ -176,7 +171,6 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
     await seedArtist({
       name: 'Free Act',
       canonicalName: 'free act',
-      slug: 'free-act',
     })
     // No subscriptions row at all: the default free plan.
     authState.current = { userId: 'user_free_plan' }
@@ -195,7 +189,7 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
   })
 
   it('401s without a session', async () => {
-    await seedArtist({ name: 'Gate Act', slug: 'gate-act' })
+    await seedArtist({ name: 'Gate Act' })
     const res = await unfollow('gate-act')
     expect(res.status).toBe(401)
   })
@@ -204,7 +198,6 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
     await seedArtist({
       name: 'Wax Harbour',
       canonicalName: 'wax harbour',
-      slug: 'wax-harbour',
     })
     authState.current = { userId: USER_ID }
 
@@ -224,7 +217,6 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
     await seedArtist({
       name: 'Synced Act',
       canonicalName: 'synced act',
-      slug: 'synced-act',
       spotifyArtistId: 'sp_synced',
     })
     authState.current = { userId: USER_ID }
@@ -239,7 +231,13 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
     await follow('synced-act')
     expect(await followRows()).toHaveLength(2)
 
-    await unfollow('synced-act')
+    // The response reports the effective state, so it agrees with the GET
+    // below rather than claiming a follow that is still there is gone.
+    const unfollowRes = await unfollow('synced-act')
+    const unfollowBody: { data: { following: boolean } } =
+      await unfollowRes.json()
+    expect(unfollowBody.data.following).toBe(true)
+
     const remaining = await testDb
       .select()
       .from(userArtistFollows)

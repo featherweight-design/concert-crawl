@@ -70,7 +70,10 @@ export async function seedVenue(
 }
 
 export async function seedArtist(
-  overrides: Partial<typeof artists.$inferInsert> = {},
+  // `slug` is deliberately not overridable — it is always derived below, and
+  // accepting one the helper then ignores is how a test ends up asserting
+  // against an artist it never seeded.
+  overrides: Omit<Partial<typeof artists.$inferInsert>, 'slug'> = {},
 ): Promise<typeof artists.$inferSelect> {
   const name = overrides.name ?? 'Test Artist'
   // The slug follows the canonical name, not the display name — seeding a row

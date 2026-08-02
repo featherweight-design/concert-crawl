@@ -120,6 +120,21 @@ artistFollowsRouter.delete('/:slug/follow', slugValidator, async (ctx) => {
       ),
     )
 
-  const data: ArtistFollowResponse = { following: false }
+  // Report the effective state, not the intent. GET /v1/artists/:slug counts a
+  // follow from ANY source, so a synced user still reads as following after
+  // their manual row goes — answering a flat `false` here would contradict the
+  // very next read and flicker the button back on.
+  const [remaining] = await db
+    .select({ id: userArtistFollows.id })
+    .from(userArtistFollows)
+    .where(
+      and(
+        eq(userArtistFollows.userId, authInfo.userId),
+        eq(userArtistFollows.canonicalName, artist.canonicalName),
+      ),
+    )
+    .limit(1)
+
+  const data: ArtistFollowResponse = { following: Boolean(remaining) }
   return ctx.json({ success: true, data })
 })

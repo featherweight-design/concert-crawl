@@ -53,7 +53,6 @@ describe('GET /v1/artists/:slug — integration', () => {
     await seedArtist({
       name: 'Nightjar Choir',
       canonicalName: 'nightjar choir',
-      slug: 'nightjar-choir',
       spotifyArtistId: 'sp_nightjar',
       photoUrl: 'https://i.example.com/nightjar.jpg',
     })
@@ -142,7 +141,6 @@ describe('GET /v1/artists/:slug — integration', () => {
     await seedArtist({
       name: 'Quiet Signal',
       canonicalName: 'quiet signal',
-      slug: 'quiet-signal',
     })
 
     const res = await getArtist('quiet-signal')
@@ -157,7 +155,6 @@ describe('GET /v1/artists/:slug — integration', () => {
     await seedArtist({
       name: 'Wax Harbour',
       canonicalName: 'wax harbour',
-      slug: 'wax-harbour',
     })
     const venue = await seedVenue({ name: 'Hi-Dive', slug: 'hi-dive' })
 
@@ -186,7 +183,6 @@ describe('GET /v1/artists/:slug — integration', () => {
     await seedArtist({
       name: 'Filtered Act',
       canonicalName: 'filtered act',
-      slug: 'filtered-act',
     })
     const venue = await seedVenue({ name: 'Lost Lake', slug: 'lost-lake' })
 
@@ -237,7 +233,6 @@ describe('GET /v1/artists/:slug — integration', () => {
     await seedArtist({
       name: 'Called Off',
       canonicalName: 'called off',
-      slug: 'called-off',
     })
     const venue = await seedVenue({ name: 'Bluebird', slug: 'bluebird' })
 
@@ -274,7 +269,6 @@ describe('GET /v1/artists/:slug — integration', () => {
     await seedArtist({
       name: 'Followed Act',
       canonicalName: 'followed act',
-      slug: 'followed-act',
     })
 
     const anon: SuccessBody = await (await getArtist('followed-act')).json()
@@ -303,7 +297,6 @@ describe('GET /v1/artists/:slug — integration', () => {
     await seedArtist({
       name: 'Synced Act',
       canonicalName: 'synced act',
-      slug: 'synced-act',
     })
     authState.current = { userId: 'user_artist_sync' }
     await testDb.insert(userArtistFollows).values({
@@ -322,7 +315,6 @@ describe('GET /v1/artists/:slug — integration', () => {
     await seedArtist({
       name: 'Prolific Act',
       canonicalName: 'prolific act',
-      slug: 'prolific-act',
     })
     const venue = await seedVenue({ name: 'Ophelias', slug: 'ophelias' })
 
