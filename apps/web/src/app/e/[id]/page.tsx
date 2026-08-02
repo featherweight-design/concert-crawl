@@ -26,8 +26,13 @@ interface PublicEventPageProps {
 // Vercel→Render round-trip. A type guard rather than a cast — `zod` is not a
 // dependency of apps/web, so this mirrors the UUID matcher already used by
 // lib/pwa/route-cache.ts.
+// Matches `z.string().uuid()` — version nibble 1–5 and an RFC4122 variant —
+// rather than the bare 8-4-4-4-12 hex shape, so the guard rejects exactly what
+// the API would 400 on. A looser shape would let some malformed ids through to
+// a round-trip that then logs as a fetch failure. (lib/pwa/route-cache.ts keeps
+// the loose shape on purpose: it only picks a cache bucket, it gates nothing.)
 const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 const isUuid = (value: string): boolean => UUID_PATTERN.test(value)
 

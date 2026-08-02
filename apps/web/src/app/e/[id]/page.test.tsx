@@ -118,6 +118,22 @@ describe('/e/[id] — public event mirror (#72)', () => {
     expect(mockPublicGet).not.toHaveBeenCalled()
   })
 
+  // The guard has to reject exactly what the API's z.string().uuid() rejects,
+  // otherwise a malformed id still costs a round-trip and logs as a failure.
+  it.each([
+    ['a bad version nibble', '11111111-1111-6111-8111-111111111111'],
+    ['a bad variant nibble', '11111111-1111-4111-c111-111111111111'],
+    ['the wrong group lengths', '1111111-1111-4111-8111-111111111111'],
+    ['a non-hex character', '1111111g-1111-4111-8111-111111111111'],
+  ])('404s on %s without calling the API', async (_label, id) => {
+    const Page = await loadPage()
+
+    await expect(Page({ params: Promise.resolve({ id }) })).rejects.toThrow(
+      'NEXT_NOT_FOUND',
+    )
+    expect(mockPublicGet).not.toHaveBeenCalled()
+  })
+
   it('404s when the event fetch fails, and logs why', async () => {
     mockPublicGet.mockRejectedValue(new Error('404'))
     const Page = await loadPage()
