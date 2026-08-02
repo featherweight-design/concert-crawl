@@ -16,6 +16,7 @@
     "db:seed:staging": "pnpm db:seed:staging:sync && pnpm db:seed:staging:synthetic",
     "db:seed:staging:sync": "tsx scripts/seed-staging/sync-prod-public-data.ts",
     "db:seed:staging:synthetic": "tsx scripts/seed-staging/seed-synthetic.ts",
+    "venues:sync": "tsx scripts/sync-venues.ts",
     "worktree:prune": "scripts/worktree-prune.sh",
     "release:draft": "tsx scripts/draft-release.ts",
     "test:scripts": "vitest run --config vitest.scripts.config.ts",
