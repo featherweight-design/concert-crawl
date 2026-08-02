@@ -1,3 +1,17 @@
+# [1.197.0](https://github.com/HartiganHM/concert-crawl/compare/v1.196.0...v1.197.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **web:** log public-event fetch failures and validate the id first ([8351ab4](https://github.com/HartiganHM/concert-crawl/commit/8351ab4668be3f7b7e932d4331d3d3eb31cccf17))
+* **web:** match the API's UUID contract in the /e/:id guard ([875c30f](https://github.com/HartiganHM/concert-crawl/commit/875c30f84c6052501686cee288664d48dada6945))
+* **web:** render a read-only price row on the public mirror ([ce4432c](https://github.com/HartiganHM/concert-crawl/commit/ce4432ce09abd8225d09d471782980d2546a420c))
+
+
+### Features
+
+* **web:** add public /e/:id event mirror for shared links ([36234fb](https://github.com/HartiganHM/concert-crawl/commit/36234fbb75650512eac381e43148f8acbd2667f5)), closes [#794](https://github.com/HartiganHM/concert-crawl/issues/794)
+
 # [1.196.0](https://github.com/HartiganHM/concert-crawl/compare/v1.195.0...v1.196.0) (2026-08-02)
 
 
