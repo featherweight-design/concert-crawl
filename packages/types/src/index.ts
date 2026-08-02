@@ -6,6 +6,13 @@ export * from './decline-category.js'
 // event names + property shapes for web (posthog-js) and API (posthog-node).
 export * from './analytics-events.js'
 
+// #764 venue first-timer guide — chip pool, chip-state / publish-state /
+// viewer-mode / density derivation. One implementation, imported by both apps.
+export * from './venue-guide.js'
+// Re-exported above; imported explicitly because `export *` does not bring
+// the name into this module's scope for use in VenuePublic below.
+import type { VenueGuide } from './venue-guide.js'
+
 // User roles — mirrors Clerk publicMetadata.role
 // Role always takes precedence over plan in access checks:
 //   admin/promoter/beta/sub_admin get full premium access regardless of subscription.
@@ -843,6 +850,9 @@ export interface VenuePublic {
   lat: number | null
   lng: number | null
   upcomingCount: number
+  // #764 first-timer guide. `null` when the venue has no published guide —
+  // drafts never leak to the consumer surface.
+  guide: VenueGuide | null
 }
 
 // VenueWithEvents — venue profile page response
@@ -856,6 +866,11 @@ export interface VenueWithEvents {
   // enrichment field types (minus its `venue`, which lives on the parent) so
   // the two surfaces can't drift.
   upcomingEvents: Array<Omit<EventWithVenue, 'venue'>>
+  // #764 first-timer detection. `null` means "we cannot know" — either the
+  // request is unauthenticated, or detection is not wired yet. It is always
+  // `null` until PR-4 consumes `user_events.attending_at` from #70; the field
+  // is declared now so that PR is a data change and not a type churn.
+  viewerHasAttended: boolean | null
 }
 
 // InviteCode — represents the JSON-serialized API response shape.
