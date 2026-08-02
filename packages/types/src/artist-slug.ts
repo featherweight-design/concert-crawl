@@ -33,6 +33,14 @@
 const INTRA_WORD_PUNCTUATION = /['’‘`´.!?¡¿*"“”]/g
 
 /**
+ * Longest slug this function will emit, and therefore the longest slug the
+ * public routes need to accept. The bound is enforced here rather than only at
+ * the route boundary: a cap that exists on one side alone makes a legitimately
+ * stored row permanently unreachable at its own URL.
+ */
+export const ARTIST_SLUG_MAX_LENGTH = 120
+
+/**
  * Derives a URL-safe slug from an already-canonical artist name.
  *
  * Not idempotent-safe on raw input — always pass `canonicalizeArtist()`
@@ -45,11 +53,16 @@ export const artistSlug = (canonicalName: string): string => {
     return ''
   }
 
-  return canonicalName
-    .toLowerCase()
-    .replace(INTRA_WORD_PUNCTUATION, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
+  return (
+    canonicalName
+      .toLowerCase()
+      .replace(INTRA_WORD_PUNCTUATION, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .slice(0, ARTIST_SLUG_MAX_LENGTH)
+      // Trim after the slice too: cutting mid-separator would otherwise leave a
+      // trailing hyphen.
+      .replace(/^-+|-+$/g, '')
+  )
 }
 
 /**
@@ -95,8 +108,13 @@ export const resolveSlug = (
   }
 
   let suffix = 2
-  while (taken.has(`${base}-${suffix}`)) {
+  // Room for the de-collision suffix has to come out of the base, or a
+  // maximum-length slug would grow past the bound the routes accept.
+  const withSuffix = (nth: number): string =>
+    `${base.slice(0, ARTIST_SLUG_MAX_LENGTH - `-${nth}`.length).replace(/-+$/, '')}-${nth}`
+
+  while (taken.has(withSuffix(suffix))) {
     suffix++
   }
-  return `${base}-${suffix}`
+  return withSuffix(suffix)
 }

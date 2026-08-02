@@ -15,7 +15,7 @@ import {
   userRoles,
   venues,
 } from '@concert-crawl/db'
-import { deriveSourceCategory } from '@concert-crawl/types'
+import { artistSlug, deriveSourceCategory } from '@concert-crawl/types'
 import { testDb } from './db.js'
 
 export async function clearTables(): Promise<void> {
@@ -78,7 +78,7 @@ export async function seedArtist(
     .values({
       name,
       canonicalName: name.toLowerCase().trim(),
-      slug: name.toLowerCase().trim().replace(/\s+/g, '-'),
+      slug: artistSlug(name.toLowerCase().trim()),
       ...overrides,
     })
     .returning()

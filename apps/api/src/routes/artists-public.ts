@@ -10,6 +10,7 @@ import {
   venues,
 } from '@concert-crawl/db'
 import { and, asc, desc, eq, gte, isNull, lt, or, sql } from 'drizzle-orm'
+import { ARTIST_SLUG_MAX_LENGTH } from '@concert-crawl/types'
 import type {
   ArtistDetailResponse,
   ArtistPastShow,
@@ -52,7 +53,7 @@ const slugParamSchema = z.object({
   slug: z
     .string()
     .min(1)
-    .max(120)
+    .max(ARTIST_SLUG_MAX_LENGTH)
     .regex(/^[a-z0-9-]+$/),
 })
 

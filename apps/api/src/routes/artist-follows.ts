@@ -4,6 +4,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, eq } from 'drizzle-orm'
 import { db, artists, userArtistFollows } from '@concert-crawl/db'
+import { ARTIST_SLUG_MAX_LENGTH } from '@concert-crawl/types'
 import type { ArtistFollowResponse } from '@concert-crawl/types'
 
 /**
@@ -25,7 +26,7 @@ const slugParamSchema = z.object({
   slug: z
     .string()
     .min(1)
-    .max(120)
+    .max(ARTIST_SLUG_MAX_LENGTH)
     .regex(/^[a-z0-9-]+$/),
 })
 

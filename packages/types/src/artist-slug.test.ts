@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { artistSlug, resolveSlug } from './artist-slug.js'
+import {
+  ARTIST_SLUG_MAX_LENGTH,
+  artistSlug,
+  resolveSlug,
+} from './artist-slug.js'
 
 describe('artistSlug', () => {
   it.each([
@@ -95,5 +99,23 @@ describe('resolveSlug', () => {
   it('still de-collides a hashed fallback', () => {
     const first = resolveSlug('', new Set(), '!!!')
     expect(resolveSlug('', new Set([first]), '!!!')).toBe(`${first}-2`)
+  })
+})
+
+describe('slug length bound', () => {
+  const longName = 'the '.repeat(80).trim()
+
+  it('caps a generated slug at the length the public routes accept', () => {
+    const slug = artistSlug(longName)
+    expect(slug.length).toBeLessThanOrEqual(ARTIST_SLUG_MAX_LENGTH)
+    expect(slug).toMatch(/^[a-z0-9-]+$/)
+  })
+
+  it('keeps a de-collided slug inside the bound too', () => {
+    const base = artistSlug(longName)
+    const resolved = resolveSlug(base, new Set([base]), longName)
+    expect(resolved).not.toBe(base)
+    expect(resolved.length).toBeLessThanOrEqual(ARTIST_SLUG_MAX_LENGTH)
+    expect(resolved).toMatch(/^[a-z0-9-]+$/)
   })
 })
