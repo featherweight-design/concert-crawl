@@ -6,6 +6,8 @@ import { apiClient, ApiError } from '@/lib/api'
 import type {
   PlatformProbeResult,
   Venue,
+  VenueGuide,
+  VenueGuideChip,
   VenuePlatform,
 } from '@concert-crawl/types'
 import { buildUpdateVenueBody } from './build-update-venue-body'
@@ -293,4 +295,95 @@ export async function bulkDeactivateVenues(ids: string[]): Promise<void> {
     ),
   )
   revalidatePath('/admin/venues')
+}
+
+// --- #764 first-timer guide -------------------------------------------------
+//
+// Three actions mirroring the three admin endpoints. Saving a draft never
+// touches publication; publishing re-derives the accessibility gate server-side
+// and can fail with a 400 the block renders inline, so the gate result is
+// returned rather than thrown.
+
+export interface VenueGuideActionResult {
+  success: boolean
+  data?: VenueGuide
+  error?: string
+  field?: 'accessibility'
+}
+
+export interface SaveVenueGuidePayload {
+  insiderTip: string | null
+  chips: VenueGuideChip[]
+}
+
+export async function saveVenueGuide(
+  venueId: string,
+  payload: SaveVenueGuidePayload,
+): Promise<VenueGuideActionResult> {
+  const token = await getToken()
+
+  try {
+    const data = await apiClient.put<VenueGuide>(
+      `/v1/admin/venues/${venueId}/guide`,
+      token,
+      payload,
+    )
+    revalidatePath(`/admin/venues/${venueId}`)
+    return { success: true, data }
+  } catch (err: unknown) {
+    console.error('saveVenueGuide: failed', { venueId, err })
+    const message =
+      err instanceof Error ? err.message : 'Could not save the guide'
+    return { success: false, error: message }
+  }
+}
+
+export async function publishVenueGuide(
+  venueId: string,
+): Promise<VenueGuideActionResult> {
+  const token = await getToken()
+
+  try {
+    const data = await apiClient.post<VenueGuide>(
+      `/v1/admin/venues/${venueId}/guide/publish`,
+      token,
+      {},
+    )
+    revalidatePath(`/admin/venues/${venueId}`)
+    return { success: true, data }
+  } catch (err: unknown) {
+    // A 400 here is the accessibility publish gate, not a malformed request —
+    // the body carries no Zod issues because nothing was validated.
+    if (err instanceof ApiError && err.status === 400 && !err.zodIssues) {
+      console.warn('publishVenueGuide: blocked by accessibility gate', {
+        venueId,
+      })
+      return { success: false, error: err.message, field: 'accessibility' }
+    }
+    console.error('publishVenueGuide: unexpected error', { venueId, err })
+    const message =
+      err instanceof Error ? err.message : 'Could not publish the guide'
+    return { success: false, error: message }
+  }
+}
+
+export async function unpublishVenueGuide(
+  venueId: string,
+): Promise<VenueGuideActionResult> {
+  const token = await getToken()
+
+  try {
+    const data = await apiClient.post<VenueGuide>(
+      `/v1/admin/venues/${venueId}/guide/unpublish`,
+      token,
+      {},
+    )
+    revalidatePath(`/admin/venues/${venueId}`)
+    return { success: true, data }
+  } catch (err: unknown) {
+    console.error('unpublishVenueGuide: failed', { venueId, err })
+    const message =
+      err instanceof Error ? err.message : 'Could not unpublish the guide'
+    return { success: false, error: message }
+  }
 }

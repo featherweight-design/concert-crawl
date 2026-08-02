@@ -646,6 +646,135 @@ export const ADMIN_COPY = {
   },
 
   venueDetailsClient: {
+    // #764 first-timer guide authoring block. Strings are lifted verbatim from
+    // design/design_handoff_venue_first_timer_guide/guide-data.jsx; the
+    // `unpublish` group is newly authored (Design never drew that state).
+    guide: {
+      blockTitle: 'First-timer guide',
+      blockSub:
+        "Concert-goer voice only. Write it like you're texting a friend who's never been — specific beats generic, honest beats hype.",
+      voiceReminder:
+        "“$15 cash, Blake St.” beats “paid parking available.” If you can't say it like a regular would, leave it blank.",
+      badge: {
+        ready: 'Ready to publish',
+        readyWithPlaceholder: 'Publishable · access marked undocumented',
+        blocked: 'Blocked · accessibility required',
+      },
+      insiderTip: {
+        label: 'Insider tip',
+        marker: 'SURFACED FIRST',
+        placeholder:
+          "e.g. Never been? Roxy runs loud — earplugs at the bar. The line's brutal after 8:30, come early.",
+        help: "Surfaced first on the venue page — the thing you'd tell a friend who's never been. Altitude, loudness, the brutal line, a real heads-up. This is what sets us apart.",
+      },
+      banner: {
+        title: "Can't publish yet.",
+        body: "Accessibility is the one field every venue needs. Fill it in, or flip “Can't document yet” to publish the honest placeholder.",
+      },
+      accessibility: {
+        label: 'Accessibility',
+        requiredTag: 'REQUIRED',
+        placeholder:
+          'e.g. Step-free entry on the north side. Accessible restroom, main floor. No elevator to the balcony.',
+        help: 'Required. Publish is blocked until this is filled — or explicitly marked not-yet-documented.',
+        error:
+          'Accessibility is required to publish — author it or mark it not-yet-documented.',
+        toggleLabel: "Can't document yet",
+        previewIntro: 'Will show the honest placeholder on the venue page:',
+        previewBody:
+          'Not documented yet. Best to call the venue and ask before you head out — details are on the main page.',
+      },
+      picker: {
+        heading: 'Add more chips',
+        countSeparator: ' of ',
+        addLabel: 'Add',
+        removeLabel: 'Remove',
+        soonMarker: 'SOON · #997',
+        soonHint: 'Coming in a later release — not authorable yet.',
+      },
+      chipLabel: {
+        accessibility: 'Accessibility',
+        parking: 'Parking',
+        age_policy: 'Age policy',
+        bag_check: 'Bag check',
+        coat_check: 'Coat check',
+        will_call: 'Will-call / entry',
+        food_drink: 'Food + drink',
+        transit: 'Getting there',
+      },
+      chipHint: {
+        accessibility:
+          "Step-free entry, restrooms, elevator, seating. Required — a first-timer with a mobility need can't guess.",
+        parking: 'Lot vs street, price, cash-only, how early it fills.',
+        age_policy: '18+/21+, where they check ID, wristband rules.',
+        bag_check: "Size limit, whether there's a check, pat-down at the door.",
+        coat_check: 'Price, cash-only, where it is, worth-it call.',
+        will_call: 'Which door, ID needed, do digital tickets scan cleanly.',
+        food_drink: 'Bars, in-house food, the cart out front, re-entry.',
+        transit: 'Nearest train/bus, walk time, where rideshare should drop.',
+      },
+      chipPlaceholder: {
+        parking:
+          'e.g. Paid lot on Blake, $15 cash. Street opens up on Walnut after 7.',
+        age_policy: 'e.g. 18+ in, 21+ to drink. IDs checked on the sidewalk.',
+        bag_check:
+          'e.g. Nothing bigger than a small purse. No check — leave it in the car.',
+        coat_check:
+          'e.g. $3, cash only, back-left by merch. Worth it in winter.',
+        will_call:
+          'e.g. Will-call is the right door, bring ID. Screenshots scan fine.',
+        food_drink:
+          'e.g. Two bars. No food inside; green-chile cart out front till close.',
+        transit:
+          'e.g. A-line to 38th & Blake, 6-min walk. Rideshare drops on Walnut.',
+      },
+      v2Chip: {
+        weather: 'Weather',
+        restrooms: 'Restrooms',
+        atm: 'ATMs',
+        cell_service: 'Cell service',
+      },
+      field: {
+        remove: 'REMOVE',
+      },
+      state: {
+        blank: 'Blank',
+        authored: 'Authored',
+        honest_placeholder: 'Honest placeholder',
+      },
+      legend: {
+        heading: 'Chip state indicators',
+        blankBody:
+          'No content yet. Optional chips stay hidden on the venue page — never shown empty.',
+        authoredBody:
+          'A concert-goer-voice line the admin wrote and voice-passed. This is what ships to display.',
+        placeholderBody:
+          'Accessibility only. Satisfies the publish gate without faking content — shows “not documented yet, call the venue.”',
+      },
+      footer: {
+        publishHint: ' publish',
+        saveDraft: 'Save draft',
+        publish: 'Publish guide',
+        saving: 'Saving…',
+        publishing: 'Publishing…',
+      },
+      // Newly authored for the unpublish flow — no design reference exists.
+      unpublish: {
+        liveNote: 'Live on the venue page.',
+        action: 'Unpublish',
+        confirmPrompt:
+          'Take this guide off the venue page? The draft is kept, so you can publish it again whenever you want.',
+        confirmAction: 'Yes, unpublish',
+        cancel: 'Cancel',
+        working: 'Unpublishing…',
+      },
+      status: {
+        saved: 'Draft saved.',
+        published: 'Guide published.',
+        unpublished: 'Guide unpublished.',
+        saveError: 'Could not save the guide. Try again.',
+      },
+    },
     header: {
       eyebrow: 'Venues · edit',
       title: 'Venue detail',
