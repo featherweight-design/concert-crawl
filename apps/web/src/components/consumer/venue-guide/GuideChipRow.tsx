@@ -44,7 +44,7 @@ export const GuideChipRow = ({ chipType, body, first }: GuideChipRowProps) => {
               fontFamily: 'var(--font-mono)',
               fontSize: '9px',
               fontWeight: 700,
-              letterSpacing: '0.1em',
+              letterSpacing: '0.14em',
               textTransform: 'uppercase',
               color: isAccessibility ? 'var(--signal)' : 'var(--fg-subtle)',
             }}
@@ -61,6 +61,9 @@ export const GuideChipRow = ({ chipType, body, first }: GuideChipRowProps) => {
                 color: 'var(--signal)',
               }}
             >
+              <span aria-hidden="true">
+                {copy.accessibilityAlwaysHereStar}{' '}
+              </span>
               {copy.accessibilityAlwaysHere}
             </span>
           )}
@@ -70,6 +73,8 @@ export const GuideChipRow = ({ chipType, body, first }: GuideChipRowProps) => {
             marginTop: 3,
             fontSize: '13.5px',
             lineHeight: 1.5,
+            letterSpacing: '-0.005em',
+            textWrap: 'pretty',
             color: 'var(--fg)',
           }}
         >

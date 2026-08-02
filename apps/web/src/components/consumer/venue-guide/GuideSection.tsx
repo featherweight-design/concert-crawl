@@ -12,9 +12,18 @@ const copy = CONSUMER_COPY.venueGuide
 interface GuideSectionProps {
   venueName: string
   guide: VenueGuide | null
+  /**
+   * The callout sits directly above and already reads as the guide's opener,
+   * so the gap tightens when it is present and opens up when it is not.
+   */
+  followsCallout?: boolean
 }
 
-export const GuideSection = ({ venueName, guide }: GuideSectionProps) => {
+export const GuideSection = ({
+  venueName,
+  guide,
+  followsCallout = false,
+}: GuideSectionProps) => {
   if (guide === null) return null
 
   const shortName = venueShortName(venueName)
@@ -43,7 +52,13 @@ export const GuideSection = ({ venueName, guide }: GuideSectionProps) => {
   ]
 
   return (
-    <section id={GUIDE_ANCHOR_ID} data-testid="venue-guide" className="mt-6">
+    <section
+      id={GUIDE_ANCHOR_ID}
+      data-testid="venue-guide"
+      // scrollMarginTop keeps the heading clear of the viewport edge when the
+      // in-page jump or the cross-page #ft-guide deep link lands here.
+      style={{ marginTop: followsCallout ? 16 : 22, scrollMarginTop: 12 }}
+    >
       <div className="mb-3 flex items-center gap-2">
         <h2
           className="shrink-0 whitespace-nowrap"

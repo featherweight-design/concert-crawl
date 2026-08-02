@@ -63,6 +63,7 @@ export const StillGathering = ({
           marginTop: 10,
           fontSize: '12px',
           fontStyle: 'italic',
+          letterSpacing: '-0.005em',
           color: 'var(--fg-subtle)',
         }}
       >

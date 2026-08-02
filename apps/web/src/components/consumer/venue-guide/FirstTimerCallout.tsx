@@ -81,6 +81,7 @@ export const FirstTimerCallout = ({
         </span>
         <p
           style={{
+            marginTop: 3,
             fontSize: '15.5px',
             fontWeight: 800,
             letterSpacing: '-0.02em',
@@ -89,7 +90,15 @@ export const FirstTimerCallout = ({
         >
           {copy.callout.question(shortName)}
         </p>
-        <p style={{ fontSize: '12.5px', color: 'var(--fg-muted)' }}>
+        <p
+          style={{
+            marginTop: 2,
+            fontSize: '12.5px',
+            lineHeight: 1.4,
+            textWrap: 'pretty',
+            color: 'var(--fg-muted)',
+          }}
+        >
           {density === 'thin'
             ? copy.callout.thinSub
             : copy.callout.populatedSub}

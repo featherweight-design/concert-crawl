@@ -38,6 +38,8 @@ export const InsiderTip = ({ body }: InsiderTipProps) => (
         marginTop: 6,
         fontSize: '14.5px',
         lineHeight: 1.55,
+        letterSpacing: '-0.01em',
+        textWrap: 'pretty',
         color: 'var(--fg)',
       }}
     >

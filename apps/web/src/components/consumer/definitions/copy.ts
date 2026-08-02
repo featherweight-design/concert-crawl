@@ -59,7 +59,10 @@ export const CONSUMER_COPY = {
       `First time at ${venueShortName}? Guide`,
     eventChipArrow: '→',
     insiderTipEyebrow: 'Insider tip',
-    accessibilityAlwaysHere: '★ ALWAYS HERE',
+    // Split so the glyph can be hidden from screen readers — announced on its
+    // own it reads as "black star", which says nothing.
+    accessibilityAlwaysHereStar: '★',
+    accessibilityAlwaysHere: 'ALWAYS HERE',
     accessibilityNotDocumented: 'NOT DOCUMENTED',
     accessibilityPlaceholder:
       'Not documented yet. Best to call the venue and ask before you head out — details are on the main page.',

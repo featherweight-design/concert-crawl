@@ -40,7 +40,7 @@ export const AccessPlaceholderRow = ({ first }: AccessPlaceholderRowProps) => (
             fontFamily: 'var(--font-mono)',
             fontSize: '9px',
             fontWeight: 700,
-            letterSpacing: '0.1em',
+            letterSpacing: '0.14em',
             textTransform: 'uppercase',
             color: 'var(--fg-subtle)',
           }}

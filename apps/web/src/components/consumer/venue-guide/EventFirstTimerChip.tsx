@@ -33,36 +33,46 @@ export const EventFirstTimerChip = ({
       href={`/venues/${venueSlug}#${GUIDE_ANCHOR_ID}`}
       data-testid="event-first-timer-chip"
       className="inline-flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--signal)]"
-      style={{
-        gap: 6,
-        // The pill reads at 32px; the extra height is transparent padding so the
-        // touch target clears the 44px floor without inflating the visual.
-        minHeight: 44,
-        padding: '0 11px',
-        borderRadius: 999,
-        background: 'color-mix(in oklab, var(--signal) 14%, transparent)',
-        border: '1px solid color-mix(in oklab, var(--signal) 34%, transparent)',
-        color: 'var(--signal)',
-      }}
+      // The link is the touch target and stays unpainted, so clearing the 44px
+      // floor adds transparent height above and below rather than growing the
+      // pill. The painted 32px pill is the inner span.
+      style={{ minHeight: 44, borderRadius: 999, color: 'var(--signal)' }}
     >
-      <svg
-        width={13}
-        height={13}
-        viewBox="0 0 20 20"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <circle cx="5" cy="14.5" r="1.6" fill="currentColor" opacity={0.55} />
-        <circle cx="10" cy="10" r="2.1" fill="currentColor" opacity={0.8} />
-        <circle cx="15" cy="5" r="2.8" fill="currentColor" />
-      </svg>
       <span
-        style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '-0.005em' }}
+        className="inline-flex items-center"
+        style={{
+          gap: 6,
+          height: 32,
+          padding: '0 11px',
+          borderRadius: 999,
+          background: 'color-mix(in oklab, var(--signal) 14%, transparent)',
+          border:
+            '1px solid color-mix(in oklab, var(--signal) 34%, transparent)',
+        }}
       >
-        {copy.eventChip(venueShortName(venueName))}
-      </span>
-      <span aria-hidden="true" style={{ fontSize: '13px', fontWeight: 700 }}>
-        {copy.eventChipArrow}
+        <svg
+          width={13}
+          height={13}
+          viewBox="0 0 20 20"
+          aria-hidden="true"
+          focusable="false"
+        >
+          <circle cx="5" cy="14.5" r="1.6" fill="currentColor" opacity={0.55} />
+          <circle cx="10" cy="10" r="2.1" fill="currentColor" opacity={0.8} />
+          <circle cx="15" cy="5" r="2.8" fill="currentColor" />
+        </svg>
+        <span
+          style={{
+            fontSize: '12px',
+            fontWeight: 700,
+            letterSpacing: '-0.005em',
+          }}
+        >
+          {copy.eventChip(venueShortName(venueName))}
+        </span>
+        <span aria-hidden="true" style={{ fontSize: '13px', fontWeight: 700 }}>
+          {copy.eventChipArrow}
+        </span>
       </span>
     </Link>
   )
