@@ -318,6 +318,13 @@ describe('NotifItem', () => {
     expect(screen.getByText(notification().title)).toBeInTheDocument()
   })
 
+  it('drops the hover and focus affordances along with the semantics', () => {
+    // `.notif-row` is purely interaction styling — hover fill, focus ring,
+    // chevron reveal — so an unwired row must not carry it either.
+    const { container } = render(<NotifItem item={notification()} now={NOW} />)
+    expect(container.querySelector('.notif-row')).toBeNull()
+  })
+
   it('is a single target with no nested interactives', () => {
     render(<NotifItem item={notification()} onOpen={vi.fn()} now={NOW} />)
     expect(screen.getAllByRole('button')).toHaveLength(1)

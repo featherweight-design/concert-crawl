@@ -67,7 +67,11 @@ export const NotifItem = ({
 
   return (
     <div
-      className="notif-row"
+      // Every `.notif-row` rule is an interaction affordance — hover fill,
+      // focus ring, chevron reveal — so an unwired row drops the class along
+      // with the button semantics. Otherwise it still lights up under the
+      // cursor and looks actionable.
+      className={onOpen === undefined ? undefined : 'notif-row'}
       {...interactive}
       data-action-url={item.actionUrl ?? undefined}
       style={{
