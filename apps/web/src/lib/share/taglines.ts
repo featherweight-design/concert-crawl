@@ -15,9 +15,9 @@ export const isPosterState = (candidate: string): candidate is PosterState =>
 // Widened views so a runtime miss falls back instead of yielding undefined.
 // The copy object is `as const`, so a direct index would be total to the type
 // checker and hide the fallback from it.
-const TAGLINES: Record<string, string | undefined> =
+const TAGLINES: Readonly<Record<string, string | undefined>> =
   CONSUMER_COPY.share.taglines
-const STATE_LABELS: Record<string, string | undefined> =
+const STATE_LABELS: Readonly<Record<string, string | undefined>> =
   CONSUMER_COPY.share.stateLabels
 
 /**
