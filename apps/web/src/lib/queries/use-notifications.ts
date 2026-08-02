@@ -116,7 +116,8 @@ export const seenAtOf = (
 ): string | null => data?.pages[0]?.seenAt ?? null
 
 /**
- * The PIP's count — unread AND newer than the last panel open.
+ * Whether the PIP should be drawn — is anything unread AND newer than the last
+ * panel open?
  *
  * SEEN ≠ READ, and the pip answers the seen question: "has anything arrived
  * since you last looked?" Opening the panel advances the watermark, which is
@@ -126,14 +127,14 @@ export const seenAtOf = (
  * `seenAt === null` means the account has never opened the panel, so every
  * unread row is unseen — not "everything is backfill".
  *
- * Deriving this from the LOADED pages is exact, not an approximation: the list
- * is ordered `createdAt DESC`, so anything newer than the watermark is
- * necessarily at the top of page 1. An unseen row cannot hide on an unloaded
- * page — if enough arrived to overflow page 1, page 1 is entirely unseen.
+ * Deliberately a BOOLEAN, not a count. The list is ordered `createdAt DESC`, so
+ * anything newer than the watermark is necessarily at the top of page 1, which
+ * makes the yes/no exact off the loaded pages alone. A *count* would not be:
+ * page 1 holds 20 rows, so 25 unseen arrivals would report 20 until page 2 was
+ * fetched. The dot never needs the number — and a number nobody can trust
+ * should not be reachable from the context in the first place.
  */
-export const unseenCountOf = (
-  data: NotificationPagesRead | undefined,
-): number => {
+export const hasUnseen = (data: NotificationPagesRead | undefined): boolean => {
   const seenAt = seenAtOf(data)
   const watermark = seenAt === null ? null : Date.parse(seenAt)
   const isUnseen = (item: ConsumerNotification): boolean => {
@@ -145,7 +146,7 @@ export const unseenCountOf = (
     const created = Date.parse(item.createdAt)
     return Number.isNaN(created) || created > watermark
   }
-  return flattenNotifications(data).filter(isUnseen).length
+  return flattenNotifications(data).some(isUnseen)
 }
 
 /**

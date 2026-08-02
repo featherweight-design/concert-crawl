@@ -20,9 +20,9 @@ export interface AccountMenuState {
    * #737 — unread AND newer than the last panel open. This, not `unreadCount`,
    * is what DRAWS the pip: the dot means "something arrived since you last
    * looked", so opening the panel clears it while the unread rails survive.
-   * Always 0 when signed out — an anonymous visitor must never see a pip.
+   * Always false when signed out — an anonymous visitor must never see a pip.
    */
-  unseenCount: number
+  hasUnseen: boolean
   /** Opens the menu and records the trigger so focus can return to it. */
   openFrom: (trigger: HTMLElement | null) => void
   toggleFrom: (trigger: HTMLElement | null) => void
@@ -40,7 +40,7 @@ const INERT: AccountMenuState = {
   avatarColor: null,
   avatarLoaded: true,
   unreadCount: 0,
-  unseenCount: 0,
+  hasUnseen: false,
   openFrom: () => {},
   toggleFrom: () => {},
   close: () => {},

@@ -14,7 +14,7 @@ const {
   flattenNotifications,
   unreadCountOf,
   seenAtOf,
-  unseenCountOf,
+  hasUnseen,
   stampRead,
   nextPageParamOf,
 } = await import('./use-notifications')
@@ -84,7 +84,7 @@ describe('unreadCountOf', () => {
     expect(unreadCountOf(data)).toBe(41)
   })
 
-  it('reports zero before anything has loaded', () => {
+  it('is false before anything has loaded', () => {
     expect(unreadCountOf(undefined)).toBe(0)
   })
 })
@@ -105,17 +105,17 @@ describe('seenAtOf', () => {
   })
 })
 
-describe('unseenCountOf', () => {
+describe('hasUnseen', () => {
   const at = (id: string, createdAt: string): ConsumerNotification => ({
     ...item(id),
     createdAt,
   })
 
-  it('counts every unread row when the panel has never been opened', () => {
+  it('is true when the panel has never been opened and a row is unread', () => {
     const data = pages([
       page({ items: [at('a', '2026-07-24T18:00:00Z')], seenAt: null }),
     ])
-    expect(unseenCountOf(data)).toBe(1)
+    expect(hasUnseen(data)).toBe(true)
   })
 
   it('ignores unread rows OLDER than the watermark — the pip is down', () => {
@@ -130,10 +130,10 @@ describe('unseenCountOf', () => {
       }),
     ])
     expect(unreadCountOf(data)).toBe(2)
-    expect(unseenCountOf(data)).toBe(0)
+    expect(hasUnseen(data)).toBe(false)
   })
 
-  it('counts an unread row NEWER than the watermark — the pip is back up', () => {
+  it('is true for an unread row NEWER than the watermark — the pip is back up', () => {
     const data = pages([
       page({
         items: [
@@ -143,10 +143,10 @@ describe('unseenCountOf', () => {
         seenAt: '2026-07-24T19:00:00Z',
       }),
     ])
-    expect(unseenCountOf(data)).toBe(1)
+    expect(hasUnseen(data)).toBe(true)
   })
 
-  it('never counts a row that has already been read', () => {
+  it('is false for a row that has already been read', () => {
     const data = pages([
       page({
         items: [
@@ -158,7 +158,7 @@ describe('unseenCountOf', () => {
         seenAt: null,
       }),
     ])
-    expect(unseenCountOf(data)).toBe(0)
+    expect(hasUnseen(data)).toBe(false)
   })
 
   it('compares instants, not strings — offsets must not decide the pip', () => {
@@ -170,18 +170,18 @@ describe('unseenCountOf', () => {
         seenAt: '2026-07-24T20:00:00Z',
       }),
     ])
-    expect(unseenCountOf(data)).toBe(1)
+    expect(hasUnseen(data)).toBe(true)
   })
 
   it('keeps the pip up rather than dropping it on an unparsable stamp', () => {
     const data = pages([
       page({ items: [at('a', 'not-a-date')], seenAt: '2026-07-24T19:00:00Z' }),
     ])
-    expect(unseenCountOf(data)).toBe(1)
+    expect(hasUnseen(data)).toBe(true)
   })
 
-  it('reports zero before anything has loaded', () => {
-    expect(unseenCountOf(undefined)).toBe(0)
+  it('is false before anything has loaded', () => {
+    expect(hasUnseen(undefined)).toBe(false)
   })
 })
 

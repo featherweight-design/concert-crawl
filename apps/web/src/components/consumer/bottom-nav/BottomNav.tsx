@@ -166,7 +166,7 @@ export function BottomNav() {
     open: menuOpen,
     toggleFrom,
     unreadCount,
-    unseenCount,
+    hasUnseen,
   } = useAccountMenu()
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
 
@@ -207,7 +207,7 @@ export function BottomNav() {
   //
   // UNSEEN draws the dot (it clears on panel open); UNREAD is still what the
   // accessible name announces, since that is what is waiting inside.
-  const piped = isSignedIn === true && unseenCount > 0
+  const piped = isSignedIn === true && hasUnseen
   // Deliberately NOT `piped` — see the same split on the desktop trigger. The
   // dot is "something arrived"; the label is "something is still waiting".
   const announcesUnread = isSignedIn === true && unreadCount > 0

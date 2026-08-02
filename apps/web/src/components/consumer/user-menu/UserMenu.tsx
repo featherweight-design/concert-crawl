@@ -29,7 +29,7 @@ import { NOTIFICATIONS_COPY } from '@/components/consumer/notifications/definiti
 import {
   useNotifications,
   unreadCountOf,
-  unseenCountOf,
+  hasUnseen as hasUnseenNotifications,
 } from '@/lib/queries/use-notifications'
 import { GetInCard } from './GetInCard'
 import { AccountMenuContext, useAccountMenu } from './account-menu-context'
@@ -192,8 +192,8 @@ export function AccountMenuProvider({
   // SEEN ≠ READ. The dot is the unseen question — it drops the moment the
   // panel is opened (which advances the watermark), while the spoken count
   // stays UNREAD, because unread is what is actually waiting inside.
-  const unseenCount =
-    isSignedIn === true ? unseenCountOf(notifications.data) : 0
+  const hasUnseen =
+    isSignedIn === true && hasUnseenNotifications(notifications.data)
 
   const close = useCallback(() => {
     setOpen(false)
@@ -363,7 +363,7 @@ export function AccountMenuProvider({
     avatarColor,
     avatarLoaded,
     unreadCount,
-    unseenCount,
+    hasUnseen,
     openFrom,
     toggleFrom,
     close,
@@ -373,14 +373,14 @@ export function AccountMenuProvider({
     <AccountMenuContext.Provider value={menuState}>
       <AccountMenuBodyContext.Provider value={bodyProps}>
         {children}
-        {/* One polite region for the whole app: the pip is aria-hidden, so a
-            count that changes while the page is open would otherwise be
-            silent. Rendered empty at zero — "0 unread" is not news. */}
+        {/* One polite region for the whole app: the pip is aria-hidden, so an
+            arrival while the page is open would otherwise be silent. */}
         <span className="sr-only" role="status" aria-live="polite">
-          {/* Gated on the SAME rule as the pip so the announcement and the dot
-              can never disagree; the number stays the unread one, matching the
-              trigger's accessible name. */}
-          {unseenCount > 0
+          {/* Gated on the SAME rule as the pip — UNSEEN, not unread — so the
+              announcement and the dot can never disagree, and so marking a row
+              read never re-reads a count the user already heard. The number
+              inside stays the unread one, matching the trigger's name. */}
+          {hasUnseen
             ? CONSUMER_COPY.userMenu.ariaLabels.unreadAnnouncement(unreadCount)
             : ''}
         </span>
@@ -420,7 +420,7 @@ export function UserMenu() {
     avatarColor,
     avatarLoaded,
     unreadCount,
-    unseenCount,
+    hasUnseen,
     toggleFrom,
   } = useAccountMenu()
   const bodyProps = useContext(AccountMenuBodyContext)
@@ -435,14 +435,14 @@ export function UserMenu() {
     return () => mql.removeEventListener('change', handler)
   }, [])
 
-  // The pip is signed-in-only, twice over: `unseenCount` is already zeroed for
+  // The pip is signed-in-only, twice over: `hasUnseen` is already false for
   // anonymous visitors in the provider, and this second read makes the rule
   // local to the render that draws the dot.
   //
   // UNSEEN drives the dot, UNREAD drives the words. The dot only says
   // "something arrived since you last looked" — opening the panel clears it —
   // while the accessible name announces what is still waiting inside.
-  const piped = isSignedIn && unseenCount > 0
+  const piped = isSignedIn && hasUnseen
   // Deliberately NOT `piped`. Sighted users keep the unread rows in view after
   // the dot clears; gating the label on the dot would delete that standing
   // information for screen-reader users at the exact moment they opened the
