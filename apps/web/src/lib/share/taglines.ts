@@ -1,8 +1,10 @@
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
-export type PosterState = 'going' | 'soldout' | 'drop'
-
 export const POSTER_STATES = ['going', 'soldout', 'drop'] as const
+
+// Derived rather than declared alongside, so one edit to POSTER_STATES moves
+// the type, the guard and the copy lookups together.
+export type PosterState = (typeof POSTER_STATES)[number]
 
 export const DEFAULT_POSTER_STATE: PosterState = 'going'
 
