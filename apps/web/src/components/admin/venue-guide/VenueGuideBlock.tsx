@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import { AlertTriangle, Check } from 'lucide-react'
 import {
   GUIDE_CHIP_ORDER,
+  GUIDE_FIELD_MAX_LENGTH,
   deriveChipState,
   deriveGuidePublishState,
   type GuideChipKey,
@@ -36,6 +37,10 @@ interface VenueGuideBlockProps {
   venueId: string
   venueName: string
   initialGuide: VenueGuide
+  /** The server-side guide fetch failed, so `initialGuide` is an empty
+      fallback rather than this venue's real draft. Saving it would delete
+      every existing chip, so authoring is disabled until a reload succeeds. */
+  loadFailed?: boolean
 }
 
 /**
@@ -51,6 +56,7 @@ export const VenueGuideBlock = ({
   venueId,
   venueName,
   initialGuide,
+  loadFailed = false,
 }: VenueGuideBlockProps) => {
   const accessibilityChip = initialGuide.chips.find(
     (chip) => chip.chipType === 'accessibility',
@@ -141,6 +147,7 @@ export const VenueGuideBlock = ({
   }
 
   const saveDraft = () => {
+    if (loadFailed) return
     setStatus(null)
     startTransition(async () => {
       const result = await saveVenueGuide(venueId, buildPayload())
@@ -153,6 +160,7 @@ export const VenueGuideBlock = ({
   }
 
   const publish = () => {
+    if (loadFailed) return
     if (blocked) {
       setShowError(true)
       return
@@ -189,8 +197,19 @@ export const VenueGuideBlock = ({
     })
   }
 
+  // The ⌘↵ hint in the footer is only honest if the shortcut actually fires.
+  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+      event.preventDefault()
+      publish()
+    }
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div
+      style={{ display: 'flex', flexDirection: 'column', gap: 16 }}
+      onKeyDown={onKeyDown}
+    >
       <Panel
         title={
           <span
@@ -224,6 +243,27 @@ export const VenueGuideBlock = ({
           >
             {GUIDE_COPY.blockSub}
           </p>
+
+          {loadFailed && (
+            <p
+              role="alert"
+              style={{
+                margin: 0,
+                padding: 12,
+                borderRadius: 10,
+                background:
+                  'color-mix(in oklab, var(--danger) 10%, transparent)',
+                border:
+                  '1px solid color-mix(in oklab, var(--danger) 32%, transparent)',
+                fontFamily: 'var(--font-sans)',
+                fontSize: 12.5,
+                color: 'var(--fg)',
+                lineHeight: 1.5,
+              }}
+            >
+              {GUIDE_COPY.loadError}
+            </p>
+          )}
 
           {/* Insider tip — surfaced first, per the locked layout order. */}
           <div
@@ -282,6 +322,8 @@ export const VenueGuideBlock = ({
               id="venue-guide-insider-tip"
               value={insiderTip}
               rows={3}
+              maxLength={GUIDE_FIELD_MAX_LENGTH}
+              disabled={loadFailed}
               onChange={(event) => setInsiderTip(event.target.value)}
               placeholder={GUIDE_COPY.insiderTip.placeholder}
               aria-describedby="venue-guide-insider-tip-help"
@@ -334,8 +376,12 @@ export const VenueGuideBlock = ({
             value={accessibility}
             onChange={setAccessibility}
             placeholderMode={placeholderMode}
-            onTogglePlaceholder={() => setPlaceholderMode((prev) => !prev)}
+            onTogglePlaceholder={() => {
+              if (loadFailed) return
+              setPlaceholderMode((prev) => !prev)
+            }}
             error={accessError}
+            disabled={loadFailed}
           />
 
           <div>
@@ -449,6 +495,8 @@ export const VenueGuideBlock = ({
                       id={fieldId}
                       value={body}
                       rows={2}
+                      maxLength={GUIDE_FIELD_MAX_LENGTH}
+                      disabled={loadFailed}
                       onChange={(event) =>
                         setBodies((current) => ({
                           ...current,
@@ -604,18 +652,22 @@ export const VenueGuideBlock = ({
                 variant="ghost"
                 size="sm"
                 onClick={saveDraft}
-                disabled={pending}
+                disabled={pending || loadFailed}
               >
-                {GUIDE_COPY.footer.saveDraft}
+                {pending
+                  ? GUIDE_COPY.footer.saving
+                  : GUIDE_COPY.footer.saveDraft}
               </AdminButton>
               <AdminButton
                 variant="primary"
                 size="sm"
                 icon={Check}
                 onClick={publish}
-                disabled={pending}
+                disabled={pending || loadFailed}
               >
-                {GUIDE_COPY.footer.publish}
+                {pending
+                  ? GUIDE_COPY.footer.publishing
+                  : GUIDE_COPY.footer.publish}
               </AdminButton>
             </div>
           </div>

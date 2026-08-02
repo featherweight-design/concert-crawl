@@ -332,9 +332,12 @@ export async function saveVenueGuide(
     return { success: true, data }
   } catch (err: unknown) {
     console.error('saveVenueGuide: failed', { venueId, err })
-    const message =
-      err instanceof Error ? err.message : 'Could not save the guide'
-    return { success: false, error: message }
+    // Non-Error throws carry no usable message; the component falls back to
+    // GUIDE_COPY.status.saveError so the string stays in copy.ts.
+    return {
+      success: false,
+      ...(err instanceof Error ? { error: err.message } : {}),
+    }
   }
 }
 
@@ -361,9 +364,12 @@ export async function publishVenueGuide(
       return { success: false, error: err.message, field: 'accessibility' }
     }
     console.error('publishVenueGuide: unexpected error', { venueId, err })
-    const message =
-      err instanceof Error ? err.message : 'Could not publish the guide'
-    return { success: false, error: message }
+    // Non-Error throws carry no usable message; the component falls back to
+    // GUIDE_COPY.status.saveError so the string stays in copy.ts.
+    return {
+      success: false,
+      ...(err instanceof Error ? { error: err.message } : {}),
+    }
   }
 }
 
@@ -382,8 +388,11 @@ export async function unpublishVenueGuide(
     return { success: true, data }
   } catch (err: unknown) {
     console.error('unpublishVenueGuide: failed', { venueId, err })
-    const message =
-      err instanceof Error ? err.message : 'Could not unpublish the guide'
-    return { success: false, error: message }
+    // Non-Error throws carry no usable message; the component falls back to
+    // GUIDE_COPY.status.saveError so the string stays in copy.ts.
+    return {
+      success: false,
+      ...(err instanceof Error ? { error: err.message } : {}),
+    }
   }
 }

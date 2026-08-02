@@ -31,20 +31,30 @@ export default async function VenueDetailPage({ params }: Props) {
     notFound()
   }
 
-  // #764 — a guide fetch failure must not take down the whole venue page; the
-  // block falls back to an empty draft the admin can still author into.
+  // #764 — a guide fetch failure must not take down the whole venue page. It
+  // MUST, however, disable authoring: the empty fallback is indistinguishable
+  // from a genuinely empty guide, and saving it would send `chips: []`, which
+  // the PUT handler treats as "delete every chip for this venue".
   let guide: VenueGuide = EMPTY_GUIDE
+  let guideLoadFailed = false
   try {
     guide = await apiClient.get<VenueGuide>(
       `/v1/admin/venues/${id}/guide`,
       token,
     )
   } catch (err: unknown) {
+    guideLoadFailed = true
     console.error('VenueDetailPage: could not load the first-timer guide', {
       id,
       err,
     })
   }
 
-  return <VenueDetailsClient venue={venue} guide={guide} />
+  return (
+    <VenueDetailsClient
+      venue={venue}
+      guide={guide}
+      guideLoadFailed={guideLoadFailed}
+    />
+  )
 }

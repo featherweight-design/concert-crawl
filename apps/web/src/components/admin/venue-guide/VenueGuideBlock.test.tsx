@@ -8,7 +8,7 @@ import {
   waitFor,
   cleanup,
 } from '@testing-library/react'
-import type { VenueGuide } from '@concert-crawl/types'
+import { GUIDE_FIELD_MAX_LENGTH, type VenueGuide } from '@concert-crawl/types'
 import { ADMIN_COPY } from '../definitions/copy'
 import { VenueGuideBlock } from './VenueGuideBlock'
 
@@ -43,12 +43,13 @@ const populatedGuide: VenueGuide = {
   publishedAt: null,
 }
 
-const renderBlock = (guide: VenueGuide = emptyGuide) =>
+const renderBlock = (guide: VenueGuide = emptyGuide, loadFailed = false) =>
   render(
     <VenueGuideBlock
       venueId="venue-1"
       venueName="The Roxy"
       initialGuide={guide}
+      loadFailed={loadFailed}
     />,
   )
 
@@ -236,6 +237,47 @@ describe('VenueGuideBlock (#764)', () => {
     )
     await waitFor(() =>
       expect(unpublishVenueGuide).toHaveBeenCalledWith('venue-1'),
+    )
+  })
+
+  // A failed guide fetch hands the block an EMPTY draft. Saving that would
+  // send `chips: []`, which the PUT handler reads as "delete every chip for
+  // this venue" — so a transient 500 must not be able to wipe real content.
+  it('disables authoring and warns when the guide failed to load', () => {
+    renderBlock(emptyGuide, true)
+
+    expect(screen.getByText(GUIDE_COPY.loadError)).toBeTruthy()
+
+    const save = screen.getByRole('button', {
+      name: GUIDE_COPY.footer.saveDraft,
+    })
+    fireEvent.click(save)
+    expect(saveVenueGuide).not.toHaveBeenCalled()
+
+    const publish = screen.getByRole('button', {
+      name: GUIDE_COPY.footer.publish,
+    })
+    fireEvent.click(publish)
+    expect(publishVenueGuide).not.toHaveBeenCalled()
+  })
+
+  it('caps every authored field at the shared max length', () => {
+    renderBlock(populatedGuide)
+    for (const field of screen.getAllByRole('textbox')) {
+      expect(field.getAttribute('maxLength')).toBe(
+        String(GUIDE_FIELD_MAX_LENGTH),
+      )
+    }
+  })
+
+  it('publishes on ⌘↵', async () => {
+    renderBlock(populatedGuide)
+    fireEvent.keyDown(screen.getByText(GUIDE_COPY.blockSub), {
+      key: 'Enter',
+      metaKey: true,
+    })
+    await waitFor(() =>
+      expect(publishVenueGuide).toHaveBeenCalledWith('venue-1'),
     )
   })
 

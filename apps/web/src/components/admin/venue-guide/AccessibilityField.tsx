@@ -1,6 +1,6 @@
 'use client'
 
-import { deriveChipState } from '@concert-crawl/types'
+import { GUIDE_FIELD_MAX_LENGTH, deriveChipState } from '@concert-crawl/types'
 import { ADMIN_COPY } from '../definitions/copy'
 import { ChipStateDot } from './ChipStateDot'
 import { GuideIcon } from './GuideIcon'
@@ -13,6 +13,7 @@ interface AccessibilityFieldProps {
   placeholderMode: boolean
   onTogglePlaceholder: () => void
   error: boolean
+  disabled?: boolean
 }
 
 const FIELD_ID = 'venue-guide-accessibility'
@@ -24,6 +25,7 @@ export const AccessibilityField = ({
   placeholderMode,
   onTogglePlaceholder,
   error,
+  disabled = false,
 }: AccessibilityFieldProps) => {
   const state = deriveChipState({ body: value, isPlaceholder: placeholderMode })
 
@@ -105,9 +107,12 @@ export const AccessibilityField = ({
         <textarea
           id={FIELD_ID}
           value={value}
-          rows={3}
+          rows={2}
+          maxLength={GUIDE_FIELD_MAX_LENGTH}
+          disabled={disabled}
           onChange={(event) => onChange(event.target.value)}
           placeholder={GUIDE_COPY.accessibility.placeholder}
+          aria-required
           aria-invalid={error}
           aria-describedby={HELP_ID}
           style={{
@@ -158,6 +163,7 @@ export const AccessibilityField = ({
           onClick={onTogglePlaceholder}
           role="switch"
           aria-checked={placeholderMode}
+          aria-disabled={disabled}
           style={{
             all: 'unset',
             cursor: 'pointer',

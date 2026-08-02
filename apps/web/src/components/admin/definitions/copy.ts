@@ -777,6 +777,9 @@ export const ADMIN_COPY = {
         unpublished: 'Guide unpublished.',
         saveError: 'Could not save the guide. Try again.',
       },
+      loadError:
+        'Couldn’t load this guide, so editing is off — saving now would wipe whatever is already there. Refresh to try again.',
+      charsLeft: (remaining: number) => `${remaining} characters left`,
     },
     header: {
       eyebrow: 'Venues · edit',

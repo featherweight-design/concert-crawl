@@ -5,6 +5,7 @@ import { db, venueGuideChips, venues } from '@concert-crawl/db'
 import { eq } from 'drizzle-orm'
 import {
   GUIDE_CHIP_ORDER,
+  GUIDE_FIELD_MAX_LENGTH,
   deriveChipState,
   deriveGuidePublishState,
   isGuideChipKey,
@@ -27,12 +28,10 @@ import type { AdminVariables } from './index.js'
 
 export const venueGuideAdminRouter = new Hono<AdminVariables>()
 
-const MAX_FIELD_LENGTH = 400
-
 /** Trim, and treat an empty/whitespace-only string as an explicit clear. */
 const nullableTrimmedText = z
   .string()
-  .max(MAX_FIELD_LENGTH)
+  .max(GUIDE_FIELD_MAX_LENGTH)
   .nullable()
   .optional()
   .transform((val) => {
@@ -43,7 +42,7 @@ const nullableTrimmedText = z
 
 const guideChipSchema = z.object({
   chipType: z.enum(GUIDE_CHIP_ORDER),
-  body: z.string().max(MAX_FIELD_LENGTH),
+  body: z.string().max(GUIDE_FIELD_MAX_LENGTH),
   isPlaceholder: z.boolean().default(false),
 })
 

@@ -27,6 +27,15 @@ export const GUIDE_CHIP_ORDER = [
 export type GuideChipKey = (typeof GUIDE_CHIP_ORDER)[number]
 
 /**
+ * Max length of any authored guide field — each chip body and the insider tip.
+ *
+ * Lives here so the Zod schema that rejects an over-long body and the
+ * `maxLength` that stops the admin typing one are the same number. Drift
+ * between them costs the admin their whole save to a raw validation error.
+ */
+export const GUIDE_FIELD_MAX_LENGTH = 400
+
+/**
  * Reserved for #997. Rendered as disabled ghosts in the admin picker and
  * rejected by `isGuideChipKey`. Because `venue_guide_chips.chip_type` is a
  * text column, promoting one of these is a pure application-code change —

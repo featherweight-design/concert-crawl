@@ -491,6 +491,9 @@ interface Props {
   venue: VenueWithCrawlHealth
   /** #764 first-timer guide draft, fetched server-side alongside the venue. */
   guide?: VenueGuide
+  /** True when that fetch failed — authoring is disabled so an empty fallback
+      draft can't be saved over real chips. */
+  guideLoadFailed?: boolean
 }
 
 const EMPTY_GUIDE: VenueGuide = {
@@ -499,7 +502,11 @@ const EMPTY_GUIDE: VenueGuide = {
   publishedAt: null,
 }
 
-export function VenueDetailsClient({ venue, guide = EMPTY_GUIDE }: Props) {
+export function VenueDetailsClient({
+  venue,
+  guide = EMPTY_GUIDE,
+  guideLoadFailed = false,
+}: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const { setPageTitle } = usePageTitle()
@@ -2081,6 +2088,7 @@ export function VenueDetailsClient({ venue, guide = EMPTY_GUIDE }: Props) {
           venueId={venue.id}
           venueName={venue.name}
           initialGuide={guide}
+          loadFailed={guideLoadFailed}
         />
 
         {/* 04 · editorial */}
