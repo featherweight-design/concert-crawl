@@ -163,4 +163,38 @@ describe('UpcomingShows', () => {
     expect(getByText(ARTIST_COPY.residencyRun(3))).toBeTruthy()
     expect(container.querySelectorAll('a')).toHaveLength(3)
   })
+
+  it('rules under every one-off that has something below it', () => {
+    // Item order: one-off, one-off, run. Two rules — the second one-off still
+    // needs a bottom edge even though a run card follows it.
+    const { container } = render(
+      <UpcomingShows
+        name="The Cold Fronts"
+        shows={[
+          show('2026-08-01', 'Solo One'),
+          show('2026-08-02', 'Solo Two'),
+          show('2026-09-05', "Ophelia's"),
+          show('2026-09-06', "Ophelia's"),
+          show('2026-09-07', "Ophelia's"),
+        ]}
+      />,
+    )
+    expect(container.querySelectorAll('[data-show-divider]')).toHaveLength(2)
+  })
+
+  it('draws no rule above the first item or under a run card', () => {
+    // Item order: run, one-off. The run card carries its own edge.
+    const { container } = render(
+      <UpcomingShows
+        name="The Cold Fronts"
+        shows={[
+          show('2026-08-05', "Ophelia's"),
+          show('2026-08-06', "Ophelia's"),
+          show('2026-08-07', "Ophelia's"),
+          show('2026-09-20', 'Solo One'),
+        ]}
+      />,
+    )
+    expect(container.querySelectorAll('[data-show-divider]')).toHaveLength(0)
+  })
 })

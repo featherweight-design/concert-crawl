@@ -33,7 +33,7 @@ export const ArtistPageContent = ({ data }: { data: ArtistDetailResponse }) => {
   const body = (
     <>
       {hasShows ? <UpcomingShows name={artist.name} shows={shows} /> : null}
-      <div style={{ marginTop: 26 }}>
+      <div className="ap-block-past">
         <PastShows name={artist.name} past={past} />
       </div>
     </>
@@ -72,7 +72,7 @@ export const ArtistPageContent = ({ data }: { data: ArtistDetailResponse }) => {
           <div style={{ minWidth: 0 }}>
             <h1 className="ap-name">{artist.name}</h1>
             <p className="ap-history">{historyLine(history, CRAWL_SINCE)}</p>
-            <div style={{ marginTop: 24 }}>{body}</div>
+            <div className="ap-block-shows">{body}</div>
           </div>
         </div>
       </div>

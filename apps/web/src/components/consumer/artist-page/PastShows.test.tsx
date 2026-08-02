@@ -65,4 +65,25 @@ describe('PastShows', () => {
       ARTIST_COPY.pastTitle,
     )
   })
+
+  it('counts the rows in the section head, the way Upcoming does', () => {
+    const { getByText, rerender } = render(
+      <PastShows
+        name="Nightjar Choir"
+        past={[
+          past('2026-06-21', 'Larimer Lounge'),
+          past('2026-05-09', 'Globe Hall'),
+        ]}
+      />,
+    )
+    expect(getByText(ARTIST_COPY.showCount(2))).toBeTruthy()
+
+    rerender(
+      <PastShows
+        name="Nightjar Choir"
+        past={[past('2026-06-21', 'Larimer Lounge')]}
+      />,
+    )
+    expect(getByText(ARTIST_COPY.showCount(1))).toBeTruthy()
+  })
 })

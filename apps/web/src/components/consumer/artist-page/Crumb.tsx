@@ -6,7 +6,7 @@ import { ARTIST_COPY } from './definitions/copy'
 /** Desktop-only wayfinding. Mobile uses the BackChip over the plate instead. */
 export const Crumb = ({ name }: { name: string }) => (
   <nav
-    aria-label={ARTIST_COPY.crumbRoot}
+    aria-label={ARTIST_COPY.crumbAria}
     style={{
       display: 'flex',
       alignItems: 'center',

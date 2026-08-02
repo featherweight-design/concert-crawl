@@ -16,7 +16,7 @@ const ArtistLoading = () => (
   <main className="ap-page">
     {/* Mobile: the full-bleed plate. */}
     <div className="ap-hero-wrap md:hidden">
-      <HeroSkeleton height={AP_HERO_H.wide} />
+      <HeroSkeleton height={AP_HERO_H.wide} className="ap-hero" />
     </div>
 
     <div className="ap-shell">

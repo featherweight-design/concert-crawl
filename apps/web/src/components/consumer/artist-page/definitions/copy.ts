@@ -10,8 +10,13 @@
 
 export const ARTIST_COPY = {
   // Chrome
-  backLabel: 'Back',
+  // DELTA vs the handoff: `backLabel` ("Back") is not duplicated here. The
+  // back chip is shared with event detail and venue profile, so its accessible
+  // name lives once in BACK_CHIP_COPY.label.
   crumbRoot: 'Browse',
+  // The breadcrumb <nav> landmark needs a description of the landmark, not the
+  // text of its first link — a screen reader announces "<label> navigation".
+  crumbAria: 'Breadcrumb',
 
   // Follow — ONE affordance, one mental model (autoWatch semantics).
   // A show is WATCHED; an artist is FOLLOWED. "Watching" below names the

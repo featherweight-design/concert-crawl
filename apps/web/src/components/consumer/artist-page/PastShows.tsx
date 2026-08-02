@@ -21,7 +21,10 @@ export const PastShows = ({ name, past }: PastShowsProps) => {
 
   return (
     <section aria-label={ARTIST_COPY.pastListAria(name)}>
-      <SectionHead title={ARTIST_COPY.pastTitle} />
+      <SectionHead
+        title={ARTIST_COPY.pastTitle}
+        count={ARTIST_COPY.showCount(past.length)}
+      />
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {past.map((show, index) => {
           const { mon, day } = fmtDate(show.iso)
@@ -55,6 +58,8 @@ export const PastShows = ({ name, past }: PastShowsProps) => {
                   fontSize: 13,
                   fontWeight: 600,
                   color: 'var(--fg-muted)',
+                  flex: 1,
+                  minWidth: 0,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -73,6 +78,7 @@ export const PastShows = ({ name, past }: PastShowsProps) => {
           fontSize: 11.5,
           lineHeight: 1.5,
           color: 'var(--fg-subtle)',
+          textWrap: 'pretty',
         }}
       >
         {ARTIST_COPY.pastNote(CRAWL_SINCE)}

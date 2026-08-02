@@ -68,9 +68,13 @@ export const ArtistPlate = ({
         className="pointer-events-none absolute inset-0"
         style={{ background: 'var(--image-tint)' }}
       />
+      {/* Mobile only: the full-bleed hero fades into the page. `.ap-hero-fade`
+          drops it at the desktop breakpoint, where the plate is a radius-14
+          box in the rail and a fade to page background reads as a bug. CSS,
+          not a viewport check, so a resize needs no re-render. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
+        className="ap-hero-fade pointer-events-none absolute inset-x-0 bottom-0 h-20"
         style={{ background: 'linear-gradient(transparent, var(--bg))' }}
       />
     </div>

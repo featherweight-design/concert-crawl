@@ -17,8 +17,20 @@ const skel = (extra: React.CSSProperties = {}): React.CSSProperties => ({
   ...extra,
 })
 
-export const HeroSkeleton = ({ height }: { height: number }) => (
-  <div aria-hidden="true" style={skel({ width: '100%', height })} />
+export const HeroSkeleton = ({
+  height,
+  className,
+}: {
+  height: number
+  /** `ap-hero` on the mobile plate, so the skeleton takes the same narrow
+   *  breakpoint the real plate does and the page never jumps at 320px. */
+  className?: string
+}) => (
+  <div
+    aria-hidden="true"
+    className={className}
+    style={skel({ width: '100%', height })}
+  />
 )
 
 interface TextSkeletonProps {

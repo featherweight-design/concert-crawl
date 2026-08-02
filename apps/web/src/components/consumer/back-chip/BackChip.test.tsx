@@ -36,6 +36,13 @@ describe('BackChip', () => {
     return screen.getByRole('button', { name: BACK_CHIP_COPY.label })
   }
 
+  it('is announced as "Back" on every surface that shares it', () => {
+    render(<BackChip />)
+
+    expect(BACK_CHIP_COPY.label).toBe('Back')
+    expect(screen.getByRole('button', { name: 'Back' })).toBeTruthy()
+  })
+
   it('renders a 44x44 hit target around a 36px visual disc', () => {
     render(<BackChip />)
 

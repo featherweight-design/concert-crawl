@@ -52,8 +52,8 @@ export const RunGroup = ({ venue, city, shows }: RunGroupProps) => (
           background: 'color-mix(in oklab, var(--signal) 12%, transparent)',
           border:
             '1px solid color-mix(in oklab, var(--signal) 40%, transparent)',
-          borderRadius: 6,
-          padding: '2px 7px',
+          borderRadius: 5,
+          padding: '4px 8px',
           flexShrink: 0,
         }}
       >

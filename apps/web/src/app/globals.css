@@ -283,9 +283,20 @@
    Breakpoints live here rather than in two component trees: mobile and
    desktop are one responsive page, not a parity risk. */
 .ap-page a { color: var(--signal); }
+.ap-page a:hover { color: var(--fg); }
 .ap-row:hover { background: var(--overlay-hover); }
 
-.ap-shell { position: relative; padding: 0 18px 48px; margin-top: -26px; }
+/* The mobile hero fades into the page; the desktop rail plate must not — it is
+   a radius-14 box, and a fade to page background inside it reads as a bug. */
+.ap-hero-fade { display: block; }
+
+/* Bottom padding reserves the fixed mobile bottom nav, same 80px every other
+   consumer page reserves with `pb-20`. */
+.ap-shell { position: relative; padding: 0 18px 80px; margin-top: -26px; }
+
+/* Block rhythm steps up on desktop (design table §1). */
+.ap-block-shows { margin-top: 24px; }
+.ap-block-past { margin-top: 26px; }
 .ap-name {
   margin: 0;
   font-family: Inter, system-ui, sans-serif;
@@ -325,6 +336,9 @@
     align-items: start;
   }
   .ap-rail { position: sticky; top: 24px; }
+  .ap-hero-fade { display: none; }
+  .ap-block-shows { margin-top: 30px; }
+  .ap-block-past { margin-top: 34px; }
   .ap-name { font-size: 42px; line-height: 1.04; letter-spacing: -0.04em; }
   .ap-history { max-width: 560px; }
 }

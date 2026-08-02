@@ -42,13 +42,13 @@ export const UpcomingShows = ({ name, shows }: UpcomingShowsProps) => {
                 : item.eventId
             }
           >
-            {/* A hairline only between two consecutive one-offs — a run card
-                already carries its own edge. */}
-            {index > 0 &&
-            item.kind === 'one' &&
-            visible[index - 1]?.kind === 'one' ? (
+            {/* A hairline under any one-off that has something below it. A run
+                card is a card — it needs no rule above another card, but a
+                one-off still needs its own bottom edge. */}
+            {index > 0 && visible[index - 1]?.kind === 'one' ? (
               <div
                 aria-hidden="true"
+                data-show-divider=""
                 style={{
                   height: 1,
                   background: 'var(--border)',
@@ -74,7 +74,7 @@ export const UpcomingShows = ({ name, shows }: UpcomingShowsProps) => {
           onClick={() => setExpanded((prior) => !prior)}
           aria-expanded={expanded}
           style={{
-            marginTop: 12,
+            marginTop: 10,
             width: '100%',
             minHeight: 44,
             borderRadius: 10,
