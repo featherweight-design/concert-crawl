@@ -94,7 +94,10 @@ artistsPublicRouter.get(
         photoUrl: artists.photoUrl,
       })
       .from(artists)
-      .where(eq(artists.slug, slug))
+      // A hidden row (#1342) answers exactly like a slug that never existed —
+      // an admin hid it because it doesn't name a performer, so there is
+      // nothing for a reader to learn from the difference.
+      .where(and(eq(artists.slug, slug), eq(artists.hidden, false)))
 
     if (!artist) {
       return ctx.json({ success: false, error: 'Artist not found' }, 404)

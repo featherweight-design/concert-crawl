@@ -505,6 +505,13 @@
       "when": 1786320000000,
       "tag": "0071_notifications_seen_at",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1786406400000,
+      "tag": "0072_artists_hidden",
+      "breakpoints": true
     }
   ]
 }

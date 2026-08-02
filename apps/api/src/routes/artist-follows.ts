@@ -51,7 +51,11 @@ artistFollowsRouter.post('/:slug/follow', slugValidator, async (ctx) => {
       spotifyArtistId: artists.spotifyArtistId,
     })
     .from(artists)
-    .where(eq(artists.slug, slug))
+    // A hidden row (#1342) 404s here exactly like the detail route: you cannot
+    // start following something with no page. DELETE deliberately does NOT
+    // filter — a user who followed before an admin hid the row must still be
+    // able to unfollow it.
+    .where(and(eq(artists.slug, slug), eq(artists.hidden, false)))
 
   if (!artist) return ctx.json(notFound, 404)
 

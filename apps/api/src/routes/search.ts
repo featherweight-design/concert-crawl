@@ -133,7 +133,11 @@ searchRouter.get('/artists', async (ctx) => {
     })
     .from(artists)
     .where(
-      or(ilike(artists.name, pattern), ilike(artists.canonicalName, pattern)),
+      and(
+        or(ilike(artists.name, pattern), ilike(artists.canonicalName, pattern)),
+        // Hidden rows have no page to route to (#1342).
+        eq(artists.hidden, false),
+      ),
     )
     .orderBy(asc(matchRank), asc(artists.name))
     .limit(ARTIST_CANDIDATE_LIMIT)

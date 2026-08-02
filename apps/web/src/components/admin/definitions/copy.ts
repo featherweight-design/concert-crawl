@@ -2299,7 +2299,7 @@ export const ADMIN_COPY = {
     eyebrow: 'Artists',
     title: 'Spotify match',
     subtitle:
-      'Ambiguous rows had more than one exact Spotify hit. Pick the right artist id — a wrong photo is worse than no photo.',
+      'Ambiguous rows had more than one exact Spotify hit. Pick the right artist id — a wrong photo is worse than no photo. Hide takes down the public page for a row that is not a performer, such as a festival ticket package.',
     statusChips: {
       ambiguous: 'Ambiguous',
       unmatched: 'Unmatched',
@@ -2317,6 +2317,10 @@ export const ADMIN_COPY = {
     idPlaceholder: 'Spotify artist id',
     save: 'Save',
     clear: 'Clear',
+    hide: 'Hide',
+    restore: 'Restore',
+    hiddenBadge: 'Hidden',
+    visibilityError: 'Could not change that artist’s visibility.',
     loadingState: 'Loading artists…',
     emptyState: 'Nothing in this queue.',
     errorState: 'Could not load artists.',

@@ -197,3 +197,40 @@ artistsAdminRouter.patch(
     return ctx.json({ success: true, data: updated })
   },
 )
+
+// PATCH /v1/admin/artists/:id/visibility — hide or restore an artist page.
+//
+// Deliberately its own endpoint rather than a field on the identity PATCH
+// above. Visibility is orthogonal to the match state machine, and that body
+// requires `spotifyArtistId`, so folding hiding into it would mean resending
+// an identity just to hide a row — one typo away from wiping it.
+//
+// Hiding never touches matchStatus: a hidden row keeps flowing through the
+// match job, so restoring it needs no repair pass.
+artistsAdminRouter.patch(
+  '/:id/visibility',
+  zValidator('param', artistIdSchema),
+  zValidator('json', z.object({ hidden: z.boolean() }).strict()),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+    const { hidden } = ctx.req.valid('json')
+
+    const [updated] = await db
+      .update(artists)
+      .set({ hidden, updatedAt: new Date() })
+      .where(eq(artists.id, id))
+      .returning()
+
+    if (!updated) {
+      return ctx.json({ success: false, error: 'Artist not found' }, 404)
+    }
+
+    const actor = getAuthUser(ctx)
+    ctx.set('auditAction', 'artist.visibility.update')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', actor.userId)
+    ctx.set('auditMeta', { hidden, slug: updated.slug })
+
+    return ctx.json({ success: true, data: updated })
+  },
+)

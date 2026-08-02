@@ -34,6 +34,7 @@ interface AdminArtist {
   matchStatus: MatchStatus
   photoUrl: string | null
   matchCheckedAt: string | null
+  hidden: boolean
 }
 
 const STATUS_TABS: MatchStatus[] = [
@@ -114,6 +115,35 @@ export default function AdminArtistsPage() {
     }
   }
 
+  // Visibility is its own endpoint, not a field on the identity PATCH above:
+  // that body requires a spotifyArtistId, so hiding through it would mean
+  // resending an identity just to take a page down (#1342).
+  const setHidden = async (id: string, hidden: boolean) => {
+    try {
+      const token = await getToken()
+      if (!token) return
+      const resp = await fetch(
+        `${API_BASE}/v1/admin/artists/${id}/visibility`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ hidden }),
+        },
+      )
+      if (!resp.ok) {
+        setError(COPY.visibilityError)
+        return
+      }
+      await load()
+    } catch (err) {
+      console.error('[admin artists] visibility change failed', err)
+      setError(COPY.visibilityError)
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <SectionHead
@@ -188,9 +218,25 @@ export default function AdminArtistsPage() {
                     <TD>{row.name}</TD>
                     <TD mono>{row.canonicalName}</TD>
                     <TD>
-                      <StatusBadge kind={STATUS_KIND[row.matchStatus]}>
-                        {COPY.statusChips[row.matchStatus]}
-                      </StatusBadge>
+                      <div
+                        style={{
+                          display: 'inline-flex',
+                          gap: 6,
+                          flexWrap: 'wrap',
+                        }}
+                      >
+                        <StatusBadge kind={STATUS_KIND[row.matchStatus]}>
+                          {COPY.statusChips[row.matchStatus]}
+                        </StatusBadge>
+                        {/* Visibility is orthogonal to the match state, so it
+                            reads as a second badge rather than replacing the
+                            first — a hidden row is still matched or not. */}
+                        {row.hidden && (
+                          <StatusBadge kind="warning">
+                            {COPY.hiddenBadge}
+                          </StatusBadge>
+                        )}
+                      </div>
                     </TD>
                     <TD>
                       <label
@@ -261,6 +307,16 @@ export default function AdminArtistsPage() {
                           onClick={() => void save(row.id, null)}
                         >
                           {COPY.clear}
+                        </AdminButton>
+                        {/* On every row, not just the ambiguous tab: the
+                            festival packages that motivated this land in
+                            no_match. */}
+                        <AdminButton
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void setHidden(row.id, !row.hidden)}
+                        >
+                          {row.hidden ? COPY.restore : COPY.hide}
                         </AdminButton>
                       </div>
                     </TD>

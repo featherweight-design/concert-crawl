@@ -11,7 +11,7 @@
 // positionally against `events.supporting_artists`.
 
 import { db, artists } from '@concert-crawl/db'
-import { inArray } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 import { canonicalizeArtist } from '@concert-crawl/types'
 
 export interface ResolvedArtistSlugs {
@@ -50,7 +50,15 @@ export const resolveArtistSlugs = async (
             slug: artists.slug,
           })
           .from(artists)
-          .where(inArray(artists.canonicalName, lookup))
+          // A hidden row (#1342) resolves to null, which the caller already
+          // renders as plain text — the same degradation as a name the
+          // projection has no row for at all.
+          .where(
+            and(
+              inArray(artists.canonicalName, lookup),
+              eq(artists.hidden, false),
+            ),
+          )
 
   const slugByCanonical = new Map(
     rows.map((row) => [row.canonicalName, row.slug]),

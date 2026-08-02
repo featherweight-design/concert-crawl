@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   numeric,
   pgEnum,
@@ -56,6 +57,16 @@ export const artists = pgTable(
     /** Cached Spotify image URL. May be a signed URL that expires — the UI must onError-swap. */
     photoUrl: text('photo_url'),
     photoFetchedAt: timestamp('photo_fetched_at', { withTimezone: true }),
+    /**
+     * Admin kill switch for a row that doesn't name a performer (#1342) — a
+     * festival ticket package, a benefit bill. Every public surface excludes
+     * hidden rows; nothing in the match pipeline reads it, so the row keeps
+     * being worked and an unhide needs no repair.
+     *
+     * Not a delete: the projection is insert-only and would recreate the row
+     * from its events on the next crawl.
+     */
+    hidden: boolean('hidden').notNull().default(false),
     matchCheckedAt: timestamp('match_checked_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

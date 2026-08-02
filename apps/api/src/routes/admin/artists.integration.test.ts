@@ -312,4 +312,85 @@ describe('admin artists routes', () => {
       expect(res.status).toBe(404)
     })
   })
+
+  describe('PATCH /:id/visibility', () => {
+    it('hides and restores a row without touching its match state', async () => {
+      setAdminAuth()
+      const id = await seedArtist({
+        canonicalName: 'ghost canyon weekend passes',
+        matchStatus: 'no_match',
+      })
+
+      const hide = await app.request(`/v1/admin/artists/${id}/visibility`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ hidden: true }),
+      })
+      expect(hide.status).toBe(200)
+      const hidden = await testDb
+        .select()
+        .from(artists)
+        .where(eq(artists.id, id))
+      expect(hidden[0]?.hidden).toBe(true)
+      // Visibility is orthogonal to identity — the match job must keep working
+      // the row so an unhide needs no repair pass.
+      expect(hidden[0]?.matchStatus).toBe('no_match')
+
+      const restore = await app.request(`/v1/admin/artists/${id}/visibility`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ hidden: false }),
+      })
+      expect(restore.status).toBe(200)
+      const restored = await testDb
+        .select()
+        .from(artists)
+        .where(eq(artists.id, id))
+      expect(restored[0]?.hidden).toBe(false)
+    })
+
+    it('writes an audit row', async () => {
+      setAdminAuth()
+      const id = await seedArtist({ canonicalName: 'audited package' })
+
+      await app.request(`/v1/admin/artists/${id}/visibility`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ hidden: true }),
+      })
+
+      const rows = await testDb
+        .select()
+        .from(auditLog)
+        .where(
+          and(
+            eq(auditLog.actorId, 'admin_artist_test'),
+            eq(auditLog.action, 'artist.visibility.update'),
+          ),
+        )
+      expect(rows).toHaveLength(1)
+    })
+
+    it('rejects a non-boolean and 404s an unknown artist', async () => {
+      setAdminAuth()
+      const id = await seedArtist({ canonicalName: 'strict body' })
+
+      const bad = await app.request(`/v1/admin/artists/${id}/visibility`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ hidden: 'yes' }),
+      })
+      expect(bad.status).toBe(400)
+
+      const missing = await app.request(
+        '/v1/admin/artists/11111111-1111-1111-1111-111111111111/visibility',
+        {
+          method: 'PATCH',
+          headers: ADMIN_HEADERS,
+          body: JSON.stringify({ hidden: true }),
+        },
+      )
+      expect(missing.status).toBe(404)
+    })
+  })
 })

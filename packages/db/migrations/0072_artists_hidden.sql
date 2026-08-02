@@ -1,0 +1,13 @@
+-- #1342 artist visibility — expand-only.
+--
+-- Every distinct `events.canonical_artist` is projected into `artists` with no
+-- judgment about whether the string names a performer, and the public routes
+-- served every row unconditionally. A festival ticket package ("Ghost Canyon
+-- (Weekend Passes)") therefore had a permanent public artist page with no way
+-- to take it down.
+--
+-- `hidden` is admin-controlled and reversible. It is deliberately NOT a delete:
+-- the row must survive so the projection's insert-only write-through doesn't
+-- simply recreate it on the next crawl, and so a mis-hidden real artist can be
+-- restored without touching the database.
+ALTER TABLE "artists" ADD COLUMN IF NOT EXISTS "hidden" boolean NOT NULL DEFAULT false;
