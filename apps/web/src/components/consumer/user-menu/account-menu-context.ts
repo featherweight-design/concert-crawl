@@ -12,10 +12,17 @@ export interface AccountMenuState {
   /**
    * #737 — unread notifications, distributed from ONE query subscription in
    * the provider so the desktop trigger and bottom-nav slot 4 can never
-   * disagree about whether the pip is up. Always 0 when signed out: an
-   * anonymous visitor has no notifications and must never see a pip.
+   * disagree. This is the number the triggers ANNOUNCE — what is still waiting
+   * inside the panel. Always 0 when signed out.
    */
   unreadCount: number
+  /**
+   * #737 — unread AND newer than the last panel open. This, not `unreadCount`,
+   * is what DRAWS the pip: the dot means "something arrived since you last
+   * looked", so opening the panel clears it while the unread rails survive.
+   * Always 0 when signed out — an anonymous visitor must never see a pip.
+   */
+  unseenCount: number
   /** Opens the menu and records the trigger so focus can return to it. */
   openFrom: (trigger: HTMLElement | null) => void
   toggleFrom: (trigger: HTMLElement | null) => void
@@ -33,6 +40,7 @@ const INERT: AccountMenuState = {
   avatarColor: null,
   avatarLoaded: true,
   unreadCount: 0,
+  unseenCount: 0,
   openFrom: () => {},
   toggleFrom: () => {},
   close: () => {},

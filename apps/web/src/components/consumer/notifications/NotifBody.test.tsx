@@ -41,12 +41,35 @@ describe('NotifBody — panel states', () => {
     expect(screen.queryByRole('list')).not.toBeInTheDocument()
   })
 
-  it('shows "All caught up." in the header while loading, not a stale count', () => {
+  it('drops the header subtitle while loading — neither a stale count nor a claim', () => {
+    // "All caught up." before the first page lands is a guess presented as a
+    // fact, and the same string sat directly above "Couldn't reach the crawl."
+    // in the error state. An unsettled query says nothing at all.
     render(<NotifBody state="loading" unreadCount={4} now={NOW} />)
-    expect(screen.getByText(NOTIFICATIONS_COPY.markedAll)).toBeInTheDocument()
+    expect(screen.queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull()
+    expect(screen.queryByText(NOTIFICATIONS_COPY.panelSub(4))).toBeNull()
     expect(
       screen.queryByRole('button', { name: NOTIFICATIONS_COPY.markAll }),
     ).not.toBeInTheDocument()
+  })
+
+  it('drops the header subtitle in the error state too', () => {
+    render(<NotifBody state="error" unreadCount={4} now={NOW} />)
+    expect(screen.queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull()
+  })
+
+  it('renders an inline notice under the header when one is supplied', () => {
+    render(
+      <NotifBody
+        state="ready"
+        unreadCount={0}
+        now={NOW}
+        notice={NOTIFICATIONS_COPY.actionFailed}
+      />,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      NOTIFICATIONS_COPY.actionFailed,
+    )
   })
 
   it('renders the error state as an alert with a wired Retry', async () => {

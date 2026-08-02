@@ -39,6 +39,7 @@ export const NotifBody = ({
   showClose = false,
   maxHeight,
   now,
+  notice,
 }: {
   items?: ConsumerNotification[]
   state?: NotifPanelState
@@ -56,6 +57,12 @@ export const NotifBody = ({
   showClose?: boolean
   maxHeight?: number | string
   now?: Date
+  /**
+   * An inline failure line under the header — currently a read mutation that
+   * rolled back. Deliberately not a toast: the failure belongs to the surface
+   * whose numbers just moved back.
+   */
+  notice?: string
 }) => {
   const derived = unreadCount ?? countUnread(items)
   // Loading and error headers read zero: there is nothing on screen to mark.
@@ -68,10 +75,28 @@ export const NotifBody = ({
     <>
       <NotifHeader
         count={headerCount}
+        settled={state === 'ready'}
         onMarkAll={onMarkAll}
         onClose={onClose}
         showClose={showClose}
       />
+      {notice !== undefined && (
+        <div
+          role="alert"
+          style={{
+            padding: '8px 14px',
+            borderBottom: '1px solid var(--border)',
+            background: 'var(--bg-elevated)',
+            fontFamily: 'Inter, system-ui',
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--warning)',
+            flexShrink: 0,
+          }}
+        >
+          {notice}
+        </div>
+      )}
       <div
         className="notif-scroll"
         style={{

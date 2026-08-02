@@ -35,6 +35,11 @@ export const NOTIFICATIONS_COPY = {
   error: "Couldn't reach the crawl.",
   errorBody: "Poll failed. Nothing's lost — it's all still on the server.",
   errorAction: 'Retry',
+  /**
+   * A read mutation that failed and rolled back. Without this the count snaps
+   * back to where it was and the button reads as if it undid itself.
+   */
+  actionFailed: "That didn't stick. Nothing changed — try again.",
   emptyTitle: 'All quiet.',
   emptyBody:
     "Nothing's dropped, moved, or sold out on you yet. We'll make noise when it does.",

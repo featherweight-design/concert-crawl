@@ -14,6 +14,7 @@ const {
   flattenNotifications,
   unreadCountOf,
   seenAtOf,
+  unseenCountOf,
   stampRead,
   nextPageParamOf,
 } = await import('./use-notifications')
@@ -101,6 +102,86 @@ describe('seenAtOf', () => {
 
   it('is null before any page has loaded, indistinguishable by design', () => {
     expect(seenAtOf(undefined)).toBeNull()
+  })
+})
+
+describe('unseenCountOf', () => {
+  const at = (id: string, createdAt: string): ConsumerNotification => ({
+    ...item(id),
+    createdAt,
+  })
+
+  it('counts every unread row when the panel has never been opened', () => {
+    const data = pages([
+      page({ items: [at('a', '2026-07-24T18:00:00Z')], seenAt: null }),
+    ])
+    expect(unseenCountOf(data)).toBe(1)
+  })
+
+  it('ignores unread rows OLDER than the watermark — the pip is down', () => {
+    const data = pages([
+      page({
+        items: [
+          at('a', '2026-07-24T18:00:00Z'),
+          at('bb', '2026-07-24T17:00:00Z'),
+        ],
+        seenAt: '2026-07-24T19:00:00Z',
+        unreadCount: 2,
+      }),
+    ])
+    expect(unreadCountOf(data)).toBe(2)
+    expect(unseenCountOf(data)).toBe(0)
+  })
+
+  it('counts an unread row NEWER than the watermark — the pip is back up', () => {
+    const data = pages([
+      page({
+        items: [
+          at('a', '2026-07-24T20:00:00Z'),
+          at('bb', '2026-07-24T17:00:00Z'),
+        ],
+        seenAt: '2026-07-24T19:00:00Z',
+      }),
+    ])
+    expect(unseenCountOf(data)).toBe(1)
+  })
+
+  it('never counts a row that has already been read', () => {
+    const data = pages([
+      page({
+        items: [
+          {
+            ...at('a', '2026-07-24T20:00:00Z'),
+            readAt: '2026-07-24T21:00:00Z',
+          },
+        ],
+        seenAt: null,
+      }),
+    ])
+    expect(unseenCountOf(data)).toBe(0)
+  })
+
+  it('compares instants, not strings — offsets must not decide the pip', () => {
+    // 18:10-06:00 is 00:10Z the NEXT day, i.e. after the watermark. A raw
+    // string compare would read "2026-07-24…" as older and hide the pip.
+    const data = pages([
+      page({
+        items: [at('a', '2026-07-24T18:10:00-06:00')],
+        seenAt: '2026-07-24T20:00:00Z',
+      }),
+    ])
+    expect(unseenCountOf(data)).toBe(1)
+  })
+
+  it('keeps the pip up rather than dropping it on an unparsable stamp', () => {
+    const data = pages([
+      page({ items: [at('a', 'not-a-date')], seenAt: '2026-07-24T19:00:00Z' }),
+    ])
+    expect(unseenCountOf(data)).toBe(1)
+  })
+
+  it('reports zero before anything has loaded', () => {
+    expect(unseenCountOf(undefined)).toBe(0)
   })
 })
 

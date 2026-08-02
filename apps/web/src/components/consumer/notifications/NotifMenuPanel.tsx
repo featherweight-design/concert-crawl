@@ -132,6 +132,12 @@ export const NotifMenuPanel = ({
         onRetry={() => void query.refetch()}
         onMarkAll={() => markAllRead.mutate()}
         onOpen={open}
+        // A failed read mutation rolls the cache back silently — the count
+        // walks back to where it was and the button looks like it undid
+        // itself. One inline line, no toast, no retry queue.
+        {...(markRead.isError || markAllRead.isError
+          ? { notice: NOTIFICATIONS_COPY.actionFailed }
+          : {})}
         onAction={() => {
           onNavigate()
           router.push(NOTIFICATIONS_EMPTY_ACTION_HREF)

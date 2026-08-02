@@ -110,10 +110,11 @@ const notification = (
 const page = (
   items: ConsumerNotification[],
   unreadCount: number,
+  seenAt: string | null = null,
 ): NotificationListResult => ({
   items,
   unreadCount,
-  seenAt: null,
+  seenAt,
   hasMore: false,
   nextCursor: null,
 })
@@ -312,6 +313,74 @@ describe('#737 pip — signed in', () => {
   })
 })
 
+// SEEN ≠ READ. The dot answers "anything since you last looked?", so the
+// watermark — not the read stamps — decides whether it is drawn. Before this,
+// `notifications_seen_at` was written on every open and read by nothing, which
+// meant opening the panel did not clear the pip at all.
+describe('#737 pip — the seen watermark', () => {
+  const OLD = '2026-07-24T18:00:00Z'
+  const NEW = '2026-07-24T20:00:00Z'
+  const WATERMARK = '2026-07-24T19:00:00Z'
+
+  it('shows NO pip when every unread row predates the watermark', async () => {
+    signIn()
+    fetchNotifications.mockResolvedValue(
+      page([notification({ createdAt: OLD })], 1, WATERMARK),
+    )
+    await renderChrome()
+
+    expect(fetchNotifications).toHaveBeenCalled()
+    expect(pips()).toHaveLength(0)
+    // The row is still UNREAD — only the dot is down. Nothing about the
+    // account's read state changed, so the label keeps its plain name.
+    expect(desktopTrigger().getAttribute('aria-label')).toBe(LABELS.accountMenu)
+    expect(screen.getByRole('status')).toHaveTextContent('')
+  })
+
+  it('shows a pip when an unread row postdates the watermark', async () => {
+    signIn()
+    fetchNotifications.mockResolvedValue(
+      page([notification({ createdAt: NEW })], 1, WATERMARK),
+    )
+    await renderChrome()
+
+    await waitFor(() => expect(pips()).toHaveLength(2))
+    // The dot says "something arrived"; the words still count what is waiting.
+    expect(desktopTrigger().getAttribute('aria-label')).toBe(
+      LABELS.accountMenuUnread(1),
+    )
+    expect(screen.getByRole('status')).toHaveTextContent(
+      LABELS.unreadAnnouncement(1),
+    )
+  })
+
+  it('clears the pip when the panel is opened, without marking anything read', async () => {
+    signIn()
+    let seenAt: string | null = null
+    fetchNotifications.mockImplementation(async () =>
+      page([notification({ createdAt: NEW })], 1, seenAt),
+    )
+    markPanelSeen.mockImplementation(async () => {
+      seenAt = '2026-07-24T21:00:00Z'
+      return seenAt
+    })
+    await renderChrome()
+    await waitFor(() => expect(pips()).toHaveLength(2))
+
+    await click(desktopTrigger())
+    await click(
+      screen.getByRole('button', { name: NOTIFICATIONS_COPY.seeAll(1) }),
+    )
+
+    // The strip's own static pip lives inside the menu body, which the panel
+    // has now replaced — so every remaining pip is a trigger pip.
+    await waitFor(() => expect(pips()).toHaveLength(0))
+    expect(markPanelSeen).toHaveBeenCalledTimes(1)
+    expect(markNotificationRead).not.toHaveBeenCalled()
+    expect(markAllNotificationsRead).not.toHaveBeenCalled()
+  })
+})
+
 describe('#737 inbox strip', () => {
   it('previews at most two unread rows and links to the rest', async () => {
     signIn()
@@ -484,6 +553,22 @@ describe('#737 notifications mode — one shell, one escape', () => {
     ).toBeInTheDocument()
   })
 
+  it('keeps focus inside the dialog when the back row returns to the menu', async () => {
+    // The panel surface that held focus unmounts on the way back, which drops
+    // focus to <body> while the dialog is still open — a keyboard user is
+    // stranded outside the surface they are looking at.
+    signIn()
+    await renderChrome(<UserMenu />)
+    await enterPanel()
+    await click(
+      screen.getByRole('button', { name: NOTIFICATIONS_COPY.menuBack }),
+    )
+
+    const dialog = screen.getByRole('dialog')
+    expect(document.activeElement).not.toBe(document.body)
+    expect(dialog.contains(document.activeElement)).toBe(true)
+  })
+
   it('closes the WHOLE menu on Escape instead of popping back', async () => {
     signIn()
     await renderChrome(<UserMenu />)
@@ -589,6 +674,42 @@ describe.each([
     expect(
       screen.getByRole('button', { name: NOTIFICATIONS_COPY.errorAction }),
     ).toBeInTheDocument()
+  })
+
+  it('never claims "All caught up." in the header while erroring', async () => {
+    // Observed live: the header read "ALL CAUGHT UP." directly above a body
+    // reading "Couldn't reach the crawl." Zero unread is not what a failed
+    // poll knows — it knows nothing.
+    signIn()
+    fetchNotifications.mockRejectedValue(new Error('offline'))
+    await openPanel()
+    expect(screen.queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull()
+  })
+
+  it('never claims "All caught up." in the header while still loading', async () => {
+    signIn()
+    fetchNotifications.mockReturnValue(new Promise(() => {}))
+    await openPanel()
+    expect(screen.queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull()
+  })
+
+  it('says so out loud when a read mutation fails and rolls back', async () => {
+    // The optimistic decrement makes the count walk 1 NEW → ALL CAUGHT UP. →
+    // 1 NEW on its own. Silent, it reads as a button that undid itself.
+    signIn()
+    markAllNotificationsRead.mockRejectedValue(new Error('boom'))
+    await openPanel()
+    await click(
+      screen.getByRole('button', { name: NOTIFICATIONS_COPY.markAll }),
+    )
+
+    await waitFor(() =>
+      expect(
+        screen.getByText(NOTIFICATIONS_COPY.actionFailed),
+      ).toBeInTheDocument(),
+    )
+    // Rolled back, not left optimistically zeroed.
+    expect(screen.getByText(NOTIFICATIONS_COPY.panelSub(1))).toBeInTheDocument()
   })
 
   it('renders the loading state as a polite busy region', async () => {

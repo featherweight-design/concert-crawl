@@ -19,11 +19,19 @@ import { NMono } from './NMono'
 
 export const NotifHeader = ({
   count,
+  settled = true,
   onMarkAll,
   onClose,
   showClose = false,
 }: {
   count: number
+  /**
+   * Whether the first page has actually landed. "All caught up." while the
+   * query is still in flight — or has failed outright — is a guess presented
+   * as a fact, and it has been observed sitting directly above "Couldn't reach
+   * the crawl." Same rule as InboxStrip's `settled`.
+   */
+  settled?: boolean | undefined
   onMarkAll?: (() => void) | undefined
   onClose?: (() => void) | undefined
   showClose?: boolean | undefined
@@ -59,11 +67,15 @@ export const NotifHeader = ({
       >
         {NOTIFICATIONS_COPY.panelTitle}
       </span>
-      <NMono color={count > 0 ? 'var(--signal)' : 'var(--fg-muted)'}>
-        {count > 0
-          ? NOTIFICATIONS_COPY.panelSub(count)
-          : NOTIFICATIONS_COPY.markedAll}
-      </NMono>
+      {/* Nothing to claim until the query settles: the subtitle is dropped
+          entirely rather than defaulting to the reassuring string. */}
+      {(count > 0 || settled) && (
+        <NMono color={count > 0 ? 'var(--signal)' : 'var(--fg-muted)'}>
+          {count > 0
+            ? NOTIFICATIONS_COPY.panelSub(count)
+            : NOTIFICATIONS_COPY.markedAll}
+        </NMono>
+      )}
     </div>
     {count > 0 && onMarkAll !== undefined && (
       <button

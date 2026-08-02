@@ -162,7 +162,12 @@ export function BottomNav() {
   const [avatarHandle, setAvatarHandle] = useState<string | null>(null)
   const [avatarColor, setAvatarColor] = useState<AvatarColor | null>(null)
   const [profileLoaded, setProfileLoaded] = useState(false)
-  const { open: menuOpen, toggleFrom, unreadCount } = useAccountMenu()
+  const {
+    open: menuOpen,
+    toggleFrom,
+    unreadCount,
+    unseenCount,
+  } = useAccountMenu()
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -199,7 +204,10 @@ export function BottomNav() {
   const isMeActive = pathname.startsWith('/me')
   // Signed-in only, and guarded here rather than trusting the provider alone —
   // an anonymous visitor must never see a pip on the account slot.
-  const piped = isSignedIn === true && unreadCount > 0
+  //
+  // UNSEEN draws the dot (it clears on panel open); UNREAD is still what the
+  // accessible name announces, since that is what is waiting inside.
+  const piped = isSignedIn === true && unseenCount > 0
 
   return (
     <nav

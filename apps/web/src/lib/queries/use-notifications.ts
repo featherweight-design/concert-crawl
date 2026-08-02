@@ -116,6 +116,39 @@ export const seenAtOf = (
 ): string | null => data?.pages[0]?.seenAt ?? null
 
 /**
+ * The PIP's count — unread AND newer than the last panel open.
+ *
+ * SEEN ≠ READ, and the pip answers the seen question: "has anything arrived
+ * since you last looked?" Opening the panel advances the watermark, which is
+ * what drops the dot; the per-row read rails still answer "which of these have
+ * I dealt with" on the next visit, so the trigger's spoken count stays UNREAD.
+ *
+ * `seenAt === null` means the account has never opened the panel, so every
+ * unread row is unseen — not "everything is backfill".
+ *
+ * Deriving this from the LOADED pages is exact, not an approximation: the list
+ * is ordered `createdAt DESC`, so anything newer than the watermark is
+ * necessarily at the top of page 1. An unseen row cannot hide on an unloaded
+ * page — if enough arrived to overflow page 1, page 1 is entirely unseen.
+ */
+export const unseenCountOf = (
+  data: NotificationPagesRead | undefined,
+): number => {
+  const seenAt = seenAtOf(data)
+  const watermark = seenAt === null ? null : Date.parse(seenAt)
+  const isUnseen = (item: ConsumerNotification): boolean => {
+    if (item.readAt !== null) return false
+    // Never seen, or an unparsable stamp on either side: fail towards showing
+    // the pip. A dot that lingers costs one open; a dot that never appears
+    // costs the notification.
+    if (watermark === null || Number.isNaN(watermark)) return true
+    const created = Date.parse(item.createdAt)
+    return Number.isNaN(created) || created > watermark
+  }
+  return flattenNotifications(data).filter(isUnseen).length
+}
+
+/**
  * Applies a read stamp to matching rows across every loaded page.
  *
  * `unreadCount` is WINDOW-WIDE, not per-page — the API repeats the same number

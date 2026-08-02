@@ -29,6 +29,7 @@ import { NOTIFICATIONS_COPY } from '@/components/consumer/notifications/definiti
 import {
   useNotifications,
   unreadCountOf,
+  unseenCountOf,
 } from '@/lib/queries/use-notifications'
 import { GetInCard } from './GetInCard'
 import { AccountMenuContext, useAccountMenu } from './account-menu-context'
@@ -138,6 +139,9 @@ export function AccountMenuProvider({
   const surfaceRef = useRef<HTMLDivElement>(null)
   // The element that opened the menu, so dismiss can hand focus back to it.
   const triggerRef = useRef<HTMLElement | null>(null)
+  // Set only by the `‹ Menu` back row, so the focus move below can't fire on
+  // an ordinary open (where the shell's own trap already places focus).
+  const returningToMenu = useRef(false)
 
   const userId = user?.id
 
@@ -185,6 +189,11 @@ export function AccountMenuProvider({
   const notifications = useNotifications()
   const unreadCount =
     isSignedIn === true ? unreadCountOf(notifications.data) : 0
+  // SEEN ≠ READ. The dot is the unseen question — it drops the moment the
+  // panel is opened (which advances the watermark), while the spoken count
+  // stays UNREAD, because unread is what is actually waiting inside.
+  const unseenCount =
+    isSignedIn === true ? unseenCountOf(notifications.data) : 0
 
   const close = useCallback(() => {
     setOpen(false)
@@ -219,6 +228,17 @@ export function AccountMenuProvider({
     setOpen(false)
     setMode('menu')
   }, [pathname])
+
+  // Returning from the panel unmounts the element focus was sitting on (the
+  // panel surface), which drops focus to <body> while the dialog is still
+  // open — a keyboard user is then stranded outside the surface they are
+  // looking at. Mirrors NotifMenuPanel's entry focus, in the other direction.
+  // Escape needs no equivalent: it closes the shell and restores the trigger.
+  useEffect(() => {
+    if (mode !== 'menu' || !returningToMenu.current) return
+    returningToMenu.current = false
+    surfaceRef.current?.focus()
+  }, [mode])
 
   // Close on Escape key
   useEffect(() => {
@@ -316,7 +336,10 @@ export function AccountMenuProvider({
     open,
     mode,
     onOpenNotifications: () => setMode('notifications'),
-    onBackToMenu: () => setMode('menu'),
+    onBackToMenu: () => {
+      returningToMenu.current = true
+      setMode('menu')
+    },
     onNavigateAway: () => {
       // Same reasoning as onSettings: focus stays with the destination page.
       setOpen(false)
@@ -340,6 +363,7 @@ export function AccountMenuProvider({
     avatarColor,
     avatarLoaded,
     unreadCount,
+    unseenCount,
     openFrom,
     toggleFrom,
     close,
@@ -353,7 +377,10 @@ export function AccountMenuProvider({
             count that changes while the page is open would otherwise be
             silent. Rendered empty at zero — "0 unread" is not news. */}
         <span className="sr-only" role="status" aria-live="polite">
-          {unreadCount > 0
+          {/* Gated on the SAME rule as the pip so the announcement and the dot
+              can never disagree; the number stays the unread one, matching the
+              trigger's accessible name. */}
+          {unseenCount > 0
             ? CONSUMER_COPY.userMenu.ariaLabels.unreadAnnouncement(unreadCount)
             : ''}
         </span>
@@ -393,6 +420,7 @@ export function UserMenu() {
     avatarColor,
     avatarLoaded,
     unreadCount,
+    unseenCount,
     toggleFrom,
   } = useAccountMenu()
   const bodyProps = useContext(AccountMenuBodyContext)
@@ -407,10 +435,14 @@ export function UserMenu() {
     return () => mql.removeEventListener('change', handler)
   }, [])
 
-  // The pip is signed-in-only, twice over: `unreadCount` is already zeroed for
+  // The pip is signed-in-only, twice over: `unseenCount` is already zeroed for
   // anonymous visitors in the provider, and this second read makes the rule
   // local to the render that draws the dot.
-  const piped = isSignedIn && unreadCount > 0
+  //
+  // UNSEEN drives the dot, UNREAD drives the words. The dot only says
+  // "something arrived since you last looked" — opening the panel clears it —
+  // while the accessible name announces what is still waiting inside.
+  const piped = isSignedIn && unseenCount > 0
 
   return (
     <div className="relative">
