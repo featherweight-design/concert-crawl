@@ -13,6 +13,7 @@ import { deriveSourceCategory } from '@concert-crawl/types'
 import { db } from './src/client.js'
 import {
   venues,
+  venueGuideChips,
   events as eventsTable,
   eventStatusEnum,
   priceRetrievalLog,
@@ -972,6 +973,117 @@ export const SEED_NOTIFICATIONS = [
     readAt: new Date(now.getTime() - 4 * 86_400_000),
   },
 ]
+
+// ---------------------------------------------------------------------------
+// #764 venue first-timer guide fixtures
+//
+// Three published shapes so every consumer state is reachable locally without
+// hand-editing SQL: populated (insider tip + accessibility + 4 chips), thin
+// (accessibility only, no tip) and placeholder (accessibility as the honest
+// placeholder). Every other venue is left unpublished so the no-guide path is
+// exercised too.
+//
+// Bodies are the voice-passed ROXY_GUIDE_COPY / ROXY_THIN_COPY samples from
+// design/design_handoff_venue_first_timer_guide/guide-data.jsx, verbatim.
+// They are sample content, not shipped copy — the shipped strings live in the
+// *_COPY maps that PR-2 and PR-3 lift into definitions/copy.ts.
+// ---------------------------------------------------------------------------
+type SeedGuideChip = { chipType: string; body: string; isPlaceholder?: boolean }
+
+type SeedGuide = {
+  venueSlug: string
+  insiderTip: string | null
+  chips: SeedGuideChip[]
+}
+
+const SEED_VENUE_GUIDES: SeedGuide[] = [
+  // Populated — insider tip + accessibility + 4 more chips.
+  {
+    venueSlug: 'ogden-theatre',
+    insiderTip:
+      "Roxy runs loud — grab earplugs at the bar if you forgot. The line's rough after 8:30, so come early. Sound's best dead center, about ten feet back off the rail.",
+    chips: [
+      {
+        chipType: 'accessibility',
+        body: "Step-free entrance on the north side — ask any staffer to open it. One accessible restroom on the main floor. No elevator to the balcony, so it's floor-only if stairs are a no.",
+      },
+      {
+        chipType: 'parking',
+        body: 'Paid lot on Blake, $15 cash. Street usually opens up a block over on Walnut after 7.',
+      },
+      {
+        chipType: 'age_policy',
+        body: '18+ to get in, 21+ with a wristband to drink. They check IDs on the sidewalk, so have it out before the line.',
+      },
+      {
+        chipType: 'will_call',
+        body: 'Will-call is the right-hand door, bring your ID. Screenshots scan fine; crank your brightness up before you get to the scanner.',
+      },
+      {
+        chipType: 'transit',
+        body: 'A-line to 38th & Blake, then a 6-minute walk. Tell your driver to drop on Walnut — the front’s a zoo right at doors.',
+      },
+    ],
+  },
+  // Thin — accessibility only, no insider tip.
+  {
+    venueSlug: 'hi-dive',
+    insiderTip: null,
+    chips: [
+      {
+        chipType: 'accessibility',
+        body: "Step-free entrance around the side on 13th. Accessible restroom on the main floor. Call ahead about balcony seating — it's stairs-only.",
+      },
+    ],
+  },
+  // Placeholder — accessibility marked honestly undocumented.
+  {
+    venueSlug: 'globe-hall',
+    insiderTip: null,
+    chips: [{ chipType: 'accessibility', body: '', isPlaceholder: true }],
+  },
+]
+
+async function seedVenueGuides(
+  venueBySlug: Record<string, { id: string } | undefined>,
+): Promise<void> {
+  for (const guide of SEED_VENUE_GUIDES) {
+    const venue = venueBySlug[guide.venueSlug]
+    if (!venue) {
+      console.warn(
+        `Guide seed: venue ${guide.venueSlug} not found, skipping its guide.`,
+      )
+      continue
+    }
+
+    // Replace rather than merge — a chip removed from the fixture above must
+    // disappear on the next seed run, exactly like the admin PUT replaces the
+    // venue's chip set.
+    await db
+      .delete(venueGuideChips)
+      .where(eq(venueGuideChips.venueId, venue.id))
+
+    await db.insert(venueGuideChips).values(
+      guide.chips.map((chip) => ({
+        venueId: venue.id,
+        chipType: chip.chipType,
+        body: chip.body,
+        isPlaceholder: chip.isPlaceholder ?? false,
+      })),
+    )
+
+    await db
+      .update(venues)
+      .set({ insiderTip: guide.insiderTip, guidePublishedAt: new Date() })
+      .where(eq(venues.id, venue.id))
+  }
+
+  // Every other venue stays unpublished so the no-guide consumer path is
+  // reachable locally too.
+  console.warn(
+    `Seeded ${SEED_VENUE_GUIDES.length} venue guides (populated / thin / placeholder).`,
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Seed function
@@ -4877,6 +4989,11 @@ async function seed() {
   } else {
     console.warn('PR4 test events already seeded, skipping.')
   }
+
+  // -------------------------------------------------------------------------
+  // #764 venue first-timer guide fixtures
+  // -------------------------------------------------------------------------
+  await seedVenueGuides(venueBySlug)
 
   process.exit(0)
 }
