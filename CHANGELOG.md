@@ -1,3 +1,21 @@
+# [1.187.0](https://github.com/HartiganHM/concert-crawl/compare/v1.186.0...v1.187.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **web:** act on the cold-eyes review of the first-timer guide ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([6896409](https://github.com/HartiganHM/concert-crawl/commit/6896409ea962bc539a83447ceda937b7f504eb5c))
+* **web:** close the Gate 4 design-table gaps on the first-timer guide ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([6578eff](https://github.com/HartiganHM/concert-crawl/commit/6578eff123997f7ac38e30bce6c9af2c9336595a))
+* **web:** keep the thin-guide footer off a populated guide ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([cfda04e](https://github.com/HartiganHM/concert-crawl/commit/cfda04eb9beb9e149fd5a04e1708857287c0874f))
+* **web:** scroll to the guide on a client-side jump from the event chip ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([6840b8a](https://github.com/HartiganHM/concert-crawl/commit/6840b8ae29d1d548a839ab0d6958d053486ceeb3))
+
+
+### Features
+
+* **api:** serve published venue guide on the public venue endpoint ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([86c0cc6](https://github.com/HartiganHM/concert-crawl/commit/86c0cc606d6d8a127c4daf6a05f77378e77c88ce))
+* **web:** event-detail first-timer chip anchoring to the venue guide ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([2b19130](https://github.com/HartiganHM/concert-crawl/commit/2b1913022bca1644c170ade9948ce10199013eb7))
+* **web:** mount first-timer guide on the venue profile, drop the map placeholder ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([cccf1b0](https://github.com/HartiganHM/concert-crawl/commit/cccf1b0509115780fc3ac7355c692b43de575ac3))
+* **web:** venue first-timer guide consumer components ([#764](https://github.com/HartiganHM/concert-crawl/issues/764)) ([6a30399](https://github.com/HartiganHM/concert-crawl/commit/6a30399aeec605b0bf84c6139bbed88eec59c169))
+
 # [1.186.0](https://github.com/HartiganHM/concert-crawl/compare/v1.185.0...v1.186.0) (2026-08-02)
 
 
