@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { GuideChipKey } from '@concert-crawl/types'
 
 // Tokenized stroke icons lifted from the #764 handoff (guide-data.jsx), rekeyed
@@ -9,7 +10,7 @@ interface GuideIconProps {
   size?: number
 }
 
-const PATHS: Record<GuideChipKey, React.ReactNode> = {
+const PATHS: Record<GuideChipKey, ReactNode> = {
   accessibility: (
     <>
       <circle cx="12" cy="4" r="2" />

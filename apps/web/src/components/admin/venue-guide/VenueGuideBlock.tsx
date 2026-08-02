@@ -1,6 +1,11 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import {
+  useState,
+  useTransition,
+  type CSSProperties,
+  type KeyboardEvent,
+} from 'react'
 import { AlertTriangle, Check } from 'lucide-react'
 import {
   GUIDE_CHIP_ORDER,
@@ -211,7 +216,7 @@ export const VenueGuideBlock = ({
   }
 
   // The ⌘↵ hint in the footer is only honest if the shortcut actually fires.
-  const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       event.preventDefault()
       publish()
@@ -699,7 +704,7 @@ export const VenueGuideBlock = ({
   )
 }
 
-const TEXTAREA_STYLE: React.CSSProperties = {
+const TEXTAREA_STYLE: CSSProperties = {
   boxSizing: 'border-box',
   display: 'block',
   width: '100%',
@@ -715,7 +720,7 @@ const TEXTAREA_STYLE: React.CSSProperties = {
   resize: 'vertical',
 }
 
-const HELP_STYLE: React.CSSProperties = {
+const HELP_STYLE: CSSProperties = {
   margin: 0,
   marginTop: 6,
   fontFamily: 'var(--font-sans)',

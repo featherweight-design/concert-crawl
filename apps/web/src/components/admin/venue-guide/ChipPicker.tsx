@@ -1,6 +1,10 @@
 'use client'
 
-import { GUIDE_CHIP_ORDER, type GuideChipKey } from '@concert-crawl/types'
+import {
+  GUIDE_CHIP_ORDER,
+  GUIDE_CHIP_V2_KEYS,
+  type GuideChipKey,
+} from '@concert-crawl/types'
 import { ADMIN_COPY } from '../definitions/copy'
 import { GuideIcon } from './GuideIcon'
 
@@ -9,9 +13,6 @@ const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide
 // Accessibility is pinned and never appears in the picker — it is always
 // authored, so there is nothing to add or remove.
 const OPTIONAL_KEYS = GUIDE_CHIP_ORDER.filter((key) => key !== 'accessibility')
-
-// #997 pool preview, ghosted so the finite-but-growing model is legible.
-const V2_KEYS = ['weather', 'restrooms', 'atm', 'cell_service'] as const
 
 interface ChipPickerProps {
   selected: GuideChipKey[]
@@ -77,7 +78,8 @@ export const ChipPicker = ({
       )
     })}
 
-    {V2_KEYS.map((key) => (
+    {/* #997 pool preview, ghosted so the finite-but-growing model is legible. */}
+    {GUIDE_CHIP_V2_KEYS.map((key) => (
       <span
         key={key}
         style={{
