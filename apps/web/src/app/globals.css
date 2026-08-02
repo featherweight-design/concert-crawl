@@ -211,3 +211,71 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+/* ── In-app notifications (#737) ──────────────────────────────────────────
+   The panel is a port of design_handoff_in_app_notifications, whose components
+   style themselves inline. These four rules are the ones inline styles cannot
+   express — a keyframe, :hover/:focus-visible, and a pseudo-element — so they
+   live here rather than in the notifications directory. */
+
+@keyframes notifSweep {
+  0% {
+    background-position: -220% 0;
+  }
+  100% {
+    background-position: 320% 0;
+  }
+}
+
+.notif-row {
+  transition: background 0.12s ease;
+}
+.notif-row:hover {
+  background: var(--overlay-hover) !important;
+}
+.notif-row:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+/* The chevron reveals on focus as well as hover: the mock's CSS had :hover
+   alone, which hid the affordance from keyboard users entirely. */
+.notif-row:hover .notif-chev,
+.notif-row:focus-visible .notif-chev {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.notif-scroll {
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* The panel's small buttons keep their drawn size (that sizing is a locked
+   design decision) and gain a transparent 44px target on top of it, so
+   WCAG 2.5.8 is met without redrawing the design.
+
+   These buttons style themselves with `all: unset`, which writes `position`
+   and `outline` as INLINE declarations that outrank anything here. So they
+   re-declare `position: relative` inline (this rule is the intent, not the
+   mechanism) and restore their focus ring with `outline: revert`. A
+   `.notif-hit44:focus-visible` rule here would never apply. */
+.notif-hit44 {
+  position: relative;
+}
+.notif-hit44::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  min-width: 44px;
+  min-height: 44px;
+  width: 100%;
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif-shimmer {
+    animation: none !important;
+    background: var(--surface-2) !important;
+  }
+}
