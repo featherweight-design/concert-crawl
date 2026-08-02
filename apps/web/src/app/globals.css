@@ -278,4 +278,57 @@
     animation: none !important;
     background: var(--surface-2) !important;
   }
+
+/* ── Artist page (#1115) ─────────────────────────────────────────────────
+   Breakpoints live here rather than in two component trees: mobile and
+   desktop are one responsive page, not a parity risk. */
+.ap-page a { color: var(--signal); }
+.ap-row:hover { background: var(--overlay-hover); }
+
+.ap-shell { position: relative; padding: 0 18px 48px; margin-top: -26px; }
+.ap-name {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  font-weight: 900;
+  font-size: 31px;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  color: var(--fg);
+  text-wrap: balance;
+}
+.ap-history {
+  margin: 10px 0 0;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--fg-muted);
+  text-wrap: pretty;
+}
+
+/* 320px is the floor. Below 360 the type ramp and padding step down. */
+@media (max-width: 359px) {
+  .ap-shell { padding-left: 14px; padding-right: 14px; }
+  .ap-name { font-size: 27px; }
+  .ap-hero { height: 150px !important; }
+}
+
+@media (min-width: 768px) {
+  .ap-shell {
+    max-width: 940px;
+    margin: 0 auto;
+    padding: 34px 40px 60px;
+  }
+  .ap-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 40px;
+    align-items: start;
+  }
+  .ap-rail { position: sticky; top: 24px; }
+  .ap-name { font-size: 42px; line-height: 1.04; letter-spacing: -0.04em; }
+  .ap-history { max-width: 560px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ap-page [style*='skeletonPulse'] { animation: none !important; }
 }
