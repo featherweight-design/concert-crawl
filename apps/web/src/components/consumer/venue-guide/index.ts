@@ -1,6 +1,7 @@
 export * from './AccessPlaceholderRow'
 export * from './EventFirstTimerChip'
 export * from './FirstTimerCallout'
+export * from './GuideAnchorScroll'
 export * from './GuideChipRow'
 export * from './GuideIcon'
 export * from './GuideSection'

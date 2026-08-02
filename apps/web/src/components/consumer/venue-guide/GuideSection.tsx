@@ -6,6 +6,7 @@ import {
 import { CONSUMER_COPY } from '../definitions/copy'
 import { AccessPlaceholderRow } from './AccessPlaceholderRow'
 import { GUIDE_ANCHOR_ID } from './FirstTimerCallout'
+import { GuideAnchorScroll } from './GuideAnchorScroll'
 import { GuideChipRow } from './GuideChipRow'
 import { InsiderTip } from './InsiderTip'
 import { StillGathering } from './StillGathering'
@@ -63,6 +64,7 @@ export const GuideSection = ({
       // in-page jump or the cross-page #ft-guide deep link lands here.
       style={{ marginTop: followsCallout ? 16 : 22, scrollMarginTop: 12 }}
     >
+      <GuideAnchorScroll />
       <div className="mb-3 flex items-center gap-2">
         <h2
           className="shrink-0 whitespace-nowrap"
