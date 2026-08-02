@@ -167,6 +167,55 @@ describe('admin artists routes', () => {
       expect(body.data.spotifyArtistId).toBeNull()
     })
 
+    it('clears the photo when a matched row is demoted', async () => {
+      const id = await seedArtist({
+        canonicalName: 'nirvana',
+        matchStatus: 'matched',
+        spotifyArtistId: 'sp_wrong',
+        photoUrl: 'https://i.scdn.co/image/wrong.jpg',
+      })
+
+      const res = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ spotifyArtistId: null }),
+      })
+      const body = await res.json()
+
+      expect(body.data.photoUrl).toBeNull()
+      expect(body.data.photoFetchedAt).toBeNull()
+    })
+
+    it('rejects a non-matched status carrying an id', async () => {
+      const id = await seedArtist({ canonicalName: 'nirvana' })
+
+      const res = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          spotifyArtistId: 'sp_1',
+          matchStatus: 'ambiguous',
+        }),
+      })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('rejects a non-matched status carrying a photoUrl', async () => {
+      const id = await seedArtist({ canonicalName: 'nirvana' })
+
+      const res = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          spotifyArtistId: null,
+          photoUrl: 'https://i.scdn.co/image/x.jpg',
+        }),
+      })
+
+      expect(res.status).toBe(400)
+    })
+
     it('rejects matched without an id', async () => {
       const id = await seedArtist({ canonicalName: 'nirvana' })
 

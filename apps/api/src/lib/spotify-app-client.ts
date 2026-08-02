@@ -90,6 +90,10 @@ interface CachedToken {
 // batch, so one mint per run is the norm.
 let cachedToken: CachedToken | null = null
 
+// Counts token mints that actually hit the network, so a client built on a
+// cached token doesn't claim an HTTP call it never made.
+let tokenMintCount = 0
+
 /** Test seam — drops the in-process token cache. */
 export const resetAppTokenCache = (): void => {
   cachedToken = null
@@ -181,6 +185,7 @@ export const getAppToken = async (
     )
   }
 
+  tokenMintCount += 1
   cachedToken = {
     token: parsed.data.access_token,
     expiresAtMs: now() + parsed.data.expires_in * 1000 - TOKEN_EXPIRY_SKEW_MS,
@@ -211,12 +216,14 @@ const parseRetryAfterMs = (header: string | null): number => {
 export const createSpotifyAppClient = async (
   options: SpotifyAppClientOptions = {},
 ): Promise<SpotifyAppClient | null> => {
+  const mintsBefore = tokenMintCount
   const token = await getAppToken(options)
   if (token === null) return null
 
   const fetchFn = options.fetchFn ?? fetch
   const sleepFn = options.sleepFn ?? defaultSleep
-  let callCount = 1 // the token mint
+  // 1 when this call minted a fresh token, 0 when it reused a cached one.
+  let callCount = tokenMintCount - mintsBefore
 
   const requestJson = async (
     path: string,

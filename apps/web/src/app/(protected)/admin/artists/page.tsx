@@ -102,6 +102,11 @@ export default function AdminArtistsPage() {
         setError(COPY.saveError)
         return
       }
+      // Drop the draft so the reloaded row wins. Without this, clearing a row
+      // leaves the typed id in the input, still overriding the saved null.
+      setDrafts((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([key]) => key !== id)),
+      )
       await load()
     } catch (err) {
       console.error('[admin artists] save failed', err)

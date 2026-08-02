@@ -110,6 +110,41 @@ artistsAdminRouter.patch(
       )
     }
 
+    // An identity and a photo only mean anything on a matched row. Rather than
+    // let a client write `ambiguous` alongside a live spotifyArtistId — a state
+    // the job and the artist page would both read as matched — reject it.
+    if (nextStatus !== 'matched' && body.spotifyArtistId !== null) {
+      return ctx.json(
+        {
+          success: false,
+          error: `matchStatus "${nextStatus}" requires spotifyArtistId to be null`,
+        },
+        400,
+      )
+    }
+    if (nextStatus !== 'matched' && body.photoUrl) {
+      return ctx.json(
+        {
+          success: false,
+          error: `matchStatus "${nextStatus}" cannot carry a photoUrl`,
+        },
+        400,
+      )
+    }
+
+    // Demoting a row drops its photo with it. The photo came from the Spotify
+    // identity being removed, so keeping it would leave the page showing a
+    // stranger's face.
+    const photoFields =
+      nextStatus !== 'matched'
+        ? { photoUrl: null, photoFetchedAt: null }
+        : body.photoUrl === undefined
+          ? {}
+          : {
+              photoUrl: body.photoUrl,
+              photoFetchedAt: body.photoUrl === null ? null : new Date(),
+            }
+
     const [updated] = await db
       .update(artists)
       .set({
@@ -118,12 +153,7 @@ artistsAdminRouter.patch(
         matchConfidence: null,
         matchCheckedAt: new Date(),
         updatedAt: new Date(),
-        ...(body.photoUrl === undefined
-          ? {}
-          : {
-              photoUrl: body.photoUrl,
-              photoFetchedAt: body.photoUrl === null ? null : new Date(),
-            }),
+        ...photoFields,
       })
       .where(eq(artists.id, id))
       .returning()

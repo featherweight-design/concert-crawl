@@ -168,9 +168,11 @@ export const runMatchArtists = async (
         summary.noMatch += 1
       }
     } catch (err) {
-      // A rate limit or a rejected app token is a whole-batch condition:
-      // abort without writing, so the untouched rows retry on the next run
-      // rather than being poisoned with a bogus verdict.
+      // A rate limit or a rejected app token is a whole-batch condition. Rows
+      // already resolved earlier in this batch keep their verdicts — those
+      // writes are committed and correct. What we stop is processing the
+      // remainder, and we decline to write a verdict for the current row, so
+      // the untouched rows retry on the next run rather than being poisoned.
       if (err instanceof SpotifyRateLimitError) {
         summary.abortedReason = 'rate_limit'
         summary.considered -= 1
