@@ -1,3 +1,15 @@
+# [1.193.0](https://github.com/HartiganHM/concert-crawl/compare/v1.192.0...v1.193.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **search:** count cancelled/postponed as upcoming, clear stale results ([9790d9e](https://github.com/HartiganHM/concert-crawl/commit/9790d9ec69f7a206cebb63243403a68e3b417134)), closes [#1115](https://github.com/HartiganHM/concert-crawl/issues/1115)
+
+
+### Features
+
+* **web:** artist page entry points — event detail + search ([#1115](https://github.com/HartiganHM/concert-crawl/issues/1115)) ([8f61956](https://github.com/HartiganHM/concert-crawl/commit/8f619568bfa1607dad59d05b35a6079fa458cb13))
+
 # [1.192.0](https://github.com/HartiganHM/concert-crawl/compare/v1.191.1...v1.192.0) (2026-08-02)
 
 
