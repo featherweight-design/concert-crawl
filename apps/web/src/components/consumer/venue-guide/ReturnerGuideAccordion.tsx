@@ -88,7 +88,7 @@ export const ReturnerGuideAccordion = ({
               color: 'var(--accent)',
             }}
           >
-            {copy.sectionEyebrow}
+            {copy.returner.eyebrow}
           </span>
           <span
             id={summaryId}
@@ -129,7 +129,30 @@ export const ReturnerGuideAccordion = ({
           />
         </svg>
       </button>
-      {open && <div style={{ padding: '0 14px 14px' }}>{children}</div>}
+      {open && (
+        <div style={{ padding: '0 14px 14px' }}>
+          {children}
+          {/* Expanded, the card runs well past a phone screen, so the header
+              chevron is off-screen by the time you finish reading. */}
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="mt-3 flex w-full cursor-pointer items-center justify-center"
+            style={{
+              minHeight: 44,
+              fontFamily: 'var(--font-mono)',
+              fontSize: '11px',
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: 'var(--accent)',
+              borderTop:
+                '1px solid color-mix(in oklab, var(--accent) 20%, transparent)',
+            }}
+          >
+            {copy.returner.collapseLabel}
+          </button>
+        </div>
+      )}
     </div>
   )
 }

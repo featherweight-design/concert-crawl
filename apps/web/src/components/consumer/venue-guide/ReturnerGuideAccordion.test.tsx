@@ -154,6 +154,35 @@ describe('ReturnerGuideAccordion', () => {
     expect(screen.getByTestId('guide-chip-accessibility')).toBeInTheDocument()
   })
 
+  it('labels the card state-neutrally, since a returner is not a first-timer', () => {
+    renderReturner()
+    const card = screen.getByTestId('returner-guide-accordion')
+    expect(card).toHaveTextContent(copy.returner.eyebrow)
+    expect(card).not.toHaveTextContent(copy.sectionEyebrow)
+  })
+
+  it('offers a collapse control at the foot, where the reader actually ends up', () => {
+    renderReturner()
+    const toggle = screen.getByRole('button', {
+      name: copy.returner.toggleAriaLabel,
+    })
+    fireEvent.click(toggle)
+
+    const collapse = screen.getByRole('button', {
+      name: copy.returner.collapseLabel,
+    })
+    // It must sit after the chips, or it solves nothing.
+    const lastChip = screen.getByTestId('guide-chip-food_drink')
+    expect(
+      lastChip.compareDocumentPosition(collapse) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(collapse.style.minHeight).toBe('44px')
+
+    fireEvent.click(collapse)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  })
+
   it('keeps the chevron rotation under reduced motion, dropping only the transition', () => {
     renderReturner()
     const chevron = screen

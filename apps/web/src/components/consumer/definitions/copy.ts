@@ -69,12 +69,20 @@ export const CONSUMER_COPY = {
     // Returner — collapsed by default for someone who has already been to the
     // room, so the guide stays one tap away without taking the page over.
     returner: {
-      /** Collapsed: the topics inside, so the tap is an informed one. */
+      // `sectionEyebrow` would label the one card a returner can see with the
+      // reason it isn't for them. Same guide, state-neutral name.
+      eyebrow: 'Venue guide',
+      /**
+       * Collapsed: the topics inside, so the tap is an informed one. The bare
+       * `+N` is deliberate — at 390px the strip truncates, and spelling out
+       * "+N more" clips the number it was meant to clarify.
+       */
       preview: (chipLabels: string[], extraCount: number) =>
         `${chipLabels.join(' · ')}${extraCount > 0 ? ` +${extraCount}` : ''}`,
       /** Expanded: the strip has nothing left to preview, so it says why. */
       expandedSummary: 'The stuff worth knowing before you walk in',
-      toggleAriaLabel: 'First-timer guide',
+      toggleAriaLabel: 'Venue guide',
+      collapseLabel: 'Hide the guide',
     },
     chipLabels: {
       accessibility: 'Accessibility',
