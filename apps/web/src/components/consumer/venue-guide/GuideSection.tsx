@@ -1,6 +1,7 @@
 import {
   GUIDE_CHIP_ORDER,
   deriveGuideDensity,
+  type GuideViewerMode,
   type VenueGuide,
 } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '../definitions/copy'
@@ -9,6 +10,7 @@ import { GUIDE_ANCHOR_ID } from './FirstTimerCallout'
 import { GuideAnchorScroll } from './GuideAnchorScroll'
 import { GuideChipRow } from './GuideChipRow'
 import { InsiderTip } from './InsiderTip'
+import { ReturnerGuideAccordion } from './ReturnerGuideAccordion'
 import { StillGathering } from './StillGathering'
 import { unauthoredChipKeys, venueShortName } from './lib'
 
@@ -22,12 +24,18 @@ interface GuideSectionProps {
    * so the gap tightens when it is present and opens up when it is not.
    */
   followsCallout?: boolean
+  /**
+   * `returner` collapses the whole guide into an accent-tinted accordion —
+   * someone who has been to the room already does not need it opened for them.
+   */
+  mode?: GuideViewerMode
 }
 
 export const GuideSection = ({
   venueName,
   guide,
   followsCallout = false,
+  mode = 'first_timer',
 }: GuideSectionProps) => {
   if (guide === null) return null
 
@@ -55,6 +63,49 @@ export const GuideSection = ({
     ...(accessibility === undefined ? [] : [accessibility]),
     ...otherChips,
   ]
+
+  const chipRows = (
+    <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-7">
+      {accessibility !== undefined &&
+        (accessibility.isPlaceholder ||
+        accessibility.body.trim().length === 0 ? (
+          <AccessPlaceholderRow first />
+        ) : (
+          <GuideChipRow
+            chipType="accessibility"
+            body={accessibility.body}
+            first
+          />
+        ))}
+      {otherChips.map((chip, index) => (
+        <GuideChipRow
+          key={chip.chipType}
+          chipType={chip.chipType}
+          body={chip.body}
+          first={accessibility === undefined && index === 0}
+        />
+      ))}
+    </div>
+  )
+
+  // The returner card is a self-contained peer in the single column — no
+  // section header, and no "still gathering" note. Someone who has been here
+  // is not shopping the guide for completeness; they came back for one fact.
+  if (mode === 'returner') {
+    return (
+      <section
+        id={GUIDE_ANCHOR_ID}
+        data-testid="venue-guide"
+        style={{ marginTop: 22, scrollMarginTop: 12 }}
+      >
+        <GuideAnchorScroll />
+        <ReturnerGuideAccordion chips={authoredForGathering}>
+          {insiderTip.length > 0 && <InsiderTip body={insiderTip} />}
+          {chipRows}
+        </ReturnerGuideAccordion>
+      </section>
+    )
+  }
 
   return (
     <section
@@ -97,27 +148,7 @@ export const GuideSection = ({
 
       {insiderTip.length > 0 && <InsiderTip body={insiderTip} />}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 sm:gap-x-7">
-        {accessibility !== undefined &&
-          (accessibility.isPlaceholder ||
-          accessibility.body.trim().length === 0 ? (
-            <AccessPlaceholderRow first />
-          ) : (
-            <GuideChipRow
-              chipType="accessibility"
-              body={accessibility.body}
-              first
-            />
-          ))}
-        {otherChips.map((chip, index) => (
-          <GuideChipRow
-            key={chip.chipType}
-            chipType={chip.chipType}
-            body={chip.body}
-            first={accessibility === undefined && index === 0}
-          />
-        ))}
-      </div>
+      {chipRows}
 
       <StillGathering
         chipTypes={unauthoredChipKeys(authoredForGathering)}

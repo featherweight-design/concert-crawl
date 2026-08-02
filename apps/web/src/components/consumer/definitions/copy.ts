@@ -66,6 +66,16 @@ export const CONSUMER_COPY = {
       `Still gathering: ${chipLabels.map((label) => label.toLowerCase()).join(', ')}.`,
     thinFooter: (venueShortName: string) =>
       `That's the lot for now — ${venueShortName}'s new to us.`,
+    // Returner — collapsed by default for someone who has already been to the
+    // room, so the guide stays one tap away without taking the page over.
+    returner: {
+      /** Collapsed: the topics inside, so the tap is an informed one. */
+      preview: (chipLabels: string[], extraCount: number) =>
+        `${chipLabels.join(' · ')}${extraCount > 0 ? ` +${extraCount}` : ''}`,
+      /** Expanded: the strip has nothing left to preview, so it says why. */
+      expandedSummary: 'The stuff worth knowing before you walk in',
+      toggleAriaLabel: 'First-timer guide',
+    },
     chipLabels: {
       accessibility: 'Accessibility',
       parking: 'Parking',

@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.25.0-beta',
+    date: 'Aug 2, 2026',
+    headline: "The guide gets out of your way once you've been.",
+    items: [
+      {
+        kind: 'changed',
+        text: "The first-timer guide now folds itself down once you've marked yourself as going to a show at that venue, and it stays one tap away. You've been to the room — you don't need the parking situation explained to you again.",
+      },
+    ],
+  },
+  {
     version: 'v0.24.0-beta',
     date: 'Aug 2, 2026',
     headline:

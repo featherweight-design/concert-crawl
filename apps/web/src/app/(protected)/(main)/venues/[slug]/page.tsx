@@ -69,9 +69,6 @@ export default async function VenueProfilePage({
     },
   }))
 
-  // Wired now even though `viewerHasAttended` is always null today (PR-4 reads
-  // it from user_events), so switching the returner state on later is a data
-  // change rather than a page refactor.
   const guideViewerMode = resolveGuideViewerMode({
     isSignedIn: token !== null,
     hasAttendedVenue: result.viewerHasAttended,
@@ -242,6 +239,7 @@ export default async function VenueProfilePage({
             venueName={venue.name}
             guide={venue.guide}
             followsCallout={guideViewerMode === 'first_timer'}
+            mode={guideViewerMode}
           />
 
           {/* Upcoming shows */}
