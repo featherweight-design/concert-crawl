@@ -4,7 +4,7 @@
 // plan PR-C Task 9). Explicitly exempt from the design pipeline — a plain
 // table on the existing admin primitives, nothing custom.
 
-import { useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import {
   AdminButton,
@@ -18,6 +18,7 @@ import {
   TR,
 } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { CandidatePicker } from '@/components/admin/artists/CandidatePicker'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
@@ -58,6 +59,10 @@ export default function AdminArtistsPage() {
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // One row at a time — every open picker spends a Spotify search.
+  const [openCandidatesFor, setOpenCandidatesFor] = useState<string | null>(
+    null,
+  )
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -87,7 +92,14 @@ export default function AdminArtistsPage() {
     void load()
   }, [load])
 
-  const save = async (id: string, spotifyArtistId: string | null) => {
+  // `photoUrl` is only passed when the id came from the candidate picker,
+  // which already has the artist's image in hand. Sending it saves waiting a
+  // full match-job cycle for the plate to fill in.
+  const save = async (
+    id: string,
+    spotifyArtistId: string | null,
+    photoUrl?: string | null,
+  ) => {
     try {
       const token = await getToken()
       if (!token) return
@@ -97,7 +109,11 @@ export default function AdminArtistsPage() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ spotifyArtistId }),
+        body: JSON.stringify(
+          photoUrl === undefined
+            ? { spotifyArtistId }
+            : { spotifyArtistId, photoUrl },
+        ),
       })
       if (!resp.ok) {
         setError(COPY.saveError)
@@ -214,113 +230,147 @@ export default function AdminArtistsPage() {
               {rows.map((row) => {
                 const draft = drafts[row.id] ?? row.spotifyArtistId ?? ''
                 return (
-                  <TR key={row.id}>
-                    <TD>{row.name}</TD>
-                    <TD mono>{row.canonicalName}</TD>
-                    <TD>
-                      <div
-                        style={{
-                          display: 'inline-flex',
-                          gap: 6,
-                          flexWrap: 'wrap',
-                        }}
-                      >
-                        <StatusBadge kind={STATUS_KIND[row.matchStatus]}>
-                          {COPY.statusChips[row.matchStatus]}
-                        </StatusBadge>
-                        {/* Visibility is orthogonal to the match state, so it
+                  <Fragment key={row.id}>
+                    <TR>
+                      <TD>{row.name}</TD>
+                      <TD mono>{row.canonicalName}</TD>
+                      <TD>
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            gap: 6,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          <StatusBadge kind={STATUS_KIND[row.matchStatus]}>
+                            {COPY.statusChips[row.matchStatus]}
+                          </StatusBadge>
+                          {/* Visibility is orthogonal to the match state, so it
                             reads as a second badge rather than replacing the
                             first — a hidden row is still matched or not. */}
-                        {row.hidden && (
-                          <StatusBadge kind="warning">
-                            {COPY.hiddenBadge}
-                          </StatusBadge>
-                        )}
-                      </div>
-                    </TD>
-                    <TD>
-                      <label
-                        htmlFor={`spotify-id-${row.id}`}
-                        style={{
-                          position: 'absolute',
-                          width: 1,
-                          height: 1,
-                          overflow: 'hidden',
-                          clip: 'rect(0 0 0 0)',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {COPY.idPlaceholder}
-                      </label>
-                      <input
-                        id={`spotify-id-${row.id}`}
-                        value={draft}
-                        placeholder={COPY.idPlaceholder}
-                        onChange={(ev) =>
-                          setDrafts((prev) => ({
-                            ...prev,
-                            [row.id]: ev.target.value,
-                          }))
-                        }
-                        style={{
-                          width: '100%',
-                          minWidth: 200,
-                          minHeight: 36,
-                          padding: '6px 10px',
-                          borderRadius: 6,
-                          border: '1px solid var(--border-strong)',
-                          background: 'var(--bg)',
-                          color: 'var(--fg)',
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: 12,
-                        }}
-                      />
-                    </TD>
-                    <TD mono color="var(--fg-subtle)">
-                      {row.matchCheckedAt === null
-                        ? COPY.never
-                        : new Date(row.matchCheckedAt).toLocaleDateString(
-                            'en-US',
-                            { timeZone: 'America/Denver' },
+                          {row.hidden && (
+                            <StatusBadge kind="warning">
+                              {COPY.hiddenBadge}
+                            </StatusBadge>
                           )}
-                    </TD>
-                    <TD align="right">
-                      <div
-                        style={{
-                          display: 'inline-flex',
-                          gap: 8,
-                          justifyContent: 'flex-end',
-                        }}
-                      >
-                        <AdminButton
-                          size="sm"
-                          variant="primary"
-                          disabled={draft.trim().length === 0}
-                          onClick={() => void save(row.id, draft.trim())}
+                        </div>
+                      </TD>
+                      <TD>
+                        <label
+                          htmlFor={`spotify-id-${row.id}`}
+                          style={{
+                            position: 'absolute',
+                            width: 1,
+                            height: 1,
+                            overflow: 'hidden',
+                            clip: 'rect(0 0 0 0)',
+                            whiteSpace: 'nowrap',
+                          }}
                         >
-                          {COPY.save}
-                        </AdminButton>
-                        <AdminButton
-                          size="sm"
-                          variant="ghost"
-                          disabled={row.spotifyArtistId === null}
-                          onClick={() => void save(row.id, null)}
+                          {COPY.idPlaceholder}
+                        </label>
+                        <input
+                          id={`spotify-id-${row.id}`}
+                          value={draft}
+                          placeholder={COPY.idPlaceholder}
+                          onChange={(ev) =>
+                            setDrafts((prev) => ({
+                              ...prev,
+                              [row.id]: ev.target.value,
+                            }))
+                          }
+                          style={{
+                            width: '100%',
+                            minWidth: 200,
+                            minHeight: 36,
+                            padding: '6px 10px',
+                            borderRadius: 6,
+                            border: '1px solid var(--border-strong)',
+                            background: 'var(--bg)',
+                            color: 'var(--fg)',
+                            fontFamily: "'JetBrains Mono', monospace",
+                            fontSize: 12,
+                          }}
+                        />
+                      </TD>
+                      <TD mono color="var(--fg-subtle)">
+                        {row.matchCheckedAt === null
+                          ? COPY.never
+                          : new Date(row.matchCheckedAt).toLocaleDateString(
+                              'en-US',
+                              { timeZone: 'America/Denver' },
+                            )}
+                      </TD>
+                      <TD align="right">
+                        <div
+                          style={{
+                            display: 'inline-flex',
+                            gap: 8,
+                            justifyContent: 'flex-end',
+                          }}
                         >
-                          {COPY.clear}
-                        </AdminButton>
-                        {/* On every row, not just the ambiguous tab: the
+                          <AdminButton
+                            size="sm"
+                            variant="primary"
+                            disabled={draft.trim().length === 0}
+                            onClick={() => void save(row.id, draft.trim())}
+                          >
+                            {COPY.save}
+                          </AdminButton>
+                          <AdminButton
+                            size="sm"
+                            variant="ghost"
+                            disabled={row.spotifyArtistId === null}
+                            onClick={() => void save(row.id, null)}
+                          >
+                            {COPY.clear}
+                          </AdminButton>
+                          {/* On every row, including `matched`: a matched row can
+                            still be matched to the wrong artist, and this is
+                            the only way to see the alternatives. */}
+                          <AdminButton
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setOpenCandidatesFor((current) =>
+                                current === row.id ? null : row.id,
+                              )
+                            }
+                          >
+                            {openCandidatesFor === row.id
+                              ? COPY.hideCandidates
+                              : COPY.findOnSpotify}
+                          </AdminButton>
+                          {/* On every row, not just the ambiguous tab: the
                             festival packages that motivated this land in
                             no_match. */}
-                        <AdminButton
-                          size="sm"
-                          variant="outline"
-                          onClick={() => void setHidden(row.id, !row.hidden)}
-                        >
-                          {row.hidden ? COPY.restore : COPY.hide}
-                        </AdminButton>
-                      </div>
-                    </TD>
-                  </TR>
+                          <AdminButton
+                            size="sm"
+                            variant="outline"
+                            onClick={() => void setHidden(row.id, !row.hidden)}
+                          >
+                            {row.hidden ? COPY.restore : COPY.hide}
+                          </AdminButton>
+                        </div>
+                      </TD>
+                    </TR>
+                    {openCandidatesFor === row.id && (
+                      <TR>
+                        <TD colSpan={6}>
+                          <CandidatePicker
+                            artistId={row.id}
+                            canonicalName={row.canonicalName}
+                            apiBase={API_BASE}
+                            getToken={getToken}
+                            onPick={(spotifyArtistId, photoUrl) => {
+                              setOpenCandidatesFor(null)
+                              void save(row.id, spotifyArtistId, photoUrl)
+                            }}
+                          />
+                        </TD>
+                      </TR>
+                    )}
+                  </Fragment>
                 )
               })}
             </tbody>

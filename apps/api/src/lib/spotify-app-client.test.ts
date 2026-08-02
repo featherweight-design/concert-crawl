@@ -147,6 +147,10 @@ describe('createSpotifyAppClient().searchArtists', () => {
                 name: 'Khruangbin',
                 images: [{ url: 'https://i.scdn.co/image/one' }],
                 popularity: 70,
+                genres: ['psychedelic soul'],
+                external_urls: {
+                  spotify: 'https://open.spotify.com/artist/sp1',
+                },
               },
             ],
           },
@@ -162,10 +166,35 @@ describe('createSpotifyAppClient().searchArtists', () => {
         name: 'Khruangbin',
         images: [{ url: 'https://i.scdn.co/image/one' }],
         popularity: 70,
+        genres: ['psychedelic soul'],
+        spotifyUrl: 'https://open.spotify.com/artist/sp1',
       },
     ])
     const searchUrl = fetchFn.mock.calls[1]?.[0]
     expect(String(searchUrl)).toContain('/search?q=Khruangbin&type=artist')
+  })
+
+  it('defaults the fields Spotify omits rather than dropping the candidate', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(
+        jsonResponse({ artists: { items: [{ id: 'sp2', name: 'Nobody' }] } }),
+      )
+
+    const client = await createSpotifyAppClient({ fetchFn })
+    const candidates = await client?.searchArtists('Nobody')
+
+    expect(candidates).toEqual([
+      {
+        id: 'sp2',
+        name: 'Nobody',
+        images: [],
+        popularity: null,
+        genres: [],
+        spotifyUrl: null,
+      },
+    ])
   })
 
   it('surfaces a persistent 429 as SpotifyRateLimitError', async () => {

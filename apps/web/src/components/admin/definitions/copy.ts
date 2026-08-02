@@ -2299,7 +2299,7 @@ export const ADMIN_COPY = {
     eyebrow: 'Artists',
     title: 'Spotify match',
     subtitle:
-      'Ambiguous rows had more than one exact Spotify hit. Pick the right artist id — a wrong photo is worse than no photo. Hide takes down the public page for a row that is not a performer, such as a festival ticket package.',
+      'Ambiguous rows had more than one exact Spotify hit. Find on Spotify shows what the matcher saw, so you can pick one — a wrong photo is worse than no photo. Hide takes down the public page for a row that is not a performer, such as a festival ticket package.',
     statusChips: {
       ambiguous: 'Ambiguous',
       unmatched: 'Unmatched',
@@ -2321,6 +2321,23 @@ export const ADMIN_COPY = {
     restore: 'Restore',
     hiddenBadge: 'Hidden',
     visibilityError: 'Could not change that artist’s visibility.',
+    findOnSpotify: 'Find on Spotify',
+    hideCandidates: 'Close',
+    candidatesLoading: 'Searching Spotify…',
+    candidatesEmpty:
+      'Spotify returned nothing for this search. Try a different spelling.',
+    candidatesError: 'Could not search Spotify.',
+    candidatesDormant:
+      'Spotify search is not configured on the API, so candidates cannot be fetched. Paste an artist id instead.',
+    candidatesRateLimited:
+      'Spotify is rate limiting us. Wait a moment and search again.',
+    exactMatchBadge: 'Exact name',
+    useCandidate: 'Use this one',
+    candidateSearchLabel: 'Search Spotify for',
+    candidateSearch: 'Search',
+    openInSpotify: 'Open in Spotify',
+    popularity: 'Popularity',
+    noGenres: 'No genres listed',
     loadingState: 'Loading artists…',
     emptyState: 'Nothing in this queue.',
     errorState: 'Could not load artists.',

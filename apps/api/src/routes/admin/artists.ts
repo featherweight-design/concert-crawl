@@ -3,15 +3,18 @@
 // Admin review surface for the Spotify identity match (#1115, plan PR-C
 // Task 9). `ambiguous` is a human queue, not an error: more than one Spotify
 // artist matched the canonical name exactly, and guessing would put the wrong
-// press photo on a public page. An admin resolves it by pasting the correct
-// Spotify artist id.
+// press photo on a public page. An admin resolves it by picking from the
+// candidates the matcher saw, or by pasting a Spotify artist id by hand.
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, asc, desc, eq, ilike, sql } from 'drizzle-orm'
 import { artists, db } from '@concert-crawl/db'
+import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical'
 import { getAuthUser } from '../../middleware/auth.js'
 import { httpUrl } from '../../lib/url-schema.js'
+import { createSpotifyAppClient } from '../../lib/spotify-app-client.js'
+import { SpotifyAuthError, SpotifyRateLimitError } from '../../lib/spotify.js'
 import type { AdminVariables } from './index.js'
 
 const matchStatusSchema = z.enum([
@@ -195,6 +198,108 @@ artistsAdminRouter.patch(
     })
 
     return ctx.json({ success: true, data: updated })
+  },
+)
+
+// GET /v1/admin/artists/:id/candidates?q= — what Spotify returns for this row.
+//
+// The matcher already fetched these and threw them away, keeping only its
+// verdict (#1345). Re-running the search on demand is the cheapest way to get
+// them back: caching them would mean a column that goes stale the moment an
+// artist changes their Spotify profile, and prefetching the whole table would
+// spend the app-token search quota that MATCH_BATCH_SIZE exists to ration.
+// One row, one admin click, one search.
+//
+// `q` overrides the query. `no_match` usually means the artist exists under a
+// spelling exact matching cannot reach ("Michael Smoak" vs "Mike Smoak"), and
+// without an override the endpoint would keep returning the same empty list.
+//
+// `isExactMatch` marks the candidates the matcher itself accepted — on an
+// `ambiguous` row those are precisely the ones that collided, which is the
+// question the admin is actually trying to answer.
+artistsAdminRouter.get(
+  '/:id/candidates',
+  zValidator('param', artistIdSchema),
+  zValidator(
+    'query',
+    z.object({
+      query: z
+        .string()
+        .trim()
+        .max(200)
+        .optional()
+        .transform((value) =>
+          value === undefined || value === '' ? undefined : value,
+        ),
+    }),
+  ),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+    const { query } = ctx.req.valid('query')
+
+    const [artist] = await db
+      .select({ canonicalName: artists.canonicalName })
+      .from(artists)
+      .where(eq(artists.id, id))
+
+    if (!artist) {
+      return ctx.json({ success: false, error: 'Artist not found' }, 404)
+    }
+
+    const client = await createSpotifyAppClient()
+    // Null means SPOTIFY_CLIENT_ID/SECRET are unset — the dormant path the
+    // whole match feature is built around. That is a configuration state, not
+    // a failure of this request, so it gets its own status and message rather
+    // than a generic 500.
+    if (client === null) {
+      return ctx.json(
+        {
+          success: false,
+          error: 'Spotify app credentials are not configured',
+        },
+        503,
+      )
+    }
+
+    const searchTerm = query ?? artist.canonicalName
+
+    try {
+      const candidates = await client.searchArtists(searchTerm)
+
+      // Spotify can echo one artist across a rescored result; the admin should
+      // see each artist once.
+      const seen = new Set<string>()
+      const data = candidates
+        .filter((candidate) => {
+          if (seen.has(candidate.id)) return false
+          seen.add(candidate.id)
+          return true
+        })
+        .map((candidate) => ({
+          ...candidate,
+          isExactMatch:
+            canonicalizeArtist(candidate.name) === artist.canonicalName,
+        }))
+
+      return ctx.json({ success: true, data, query: searchTerm })
+    } catch (err) {
+      if (err instanceof SpotifyRateLimitError) {
+        return ctx.json(
+          {
+            success: false,
+            error: 'Spotify is rate limiting us — try again shortly',
+          },
+          429,
+        )
+      }
+      if (err instanceof SpotifyAuthError) {
+        return ctx.json(
+          { success: false, error: 'Spotify rejected our app credentials' },
+          502,
+        )
+      }
+      throw err
+    }
   },
 )
 

@@ -51,6 +51,10 @@ const searchArtistSchema = z.object({
   name: z.string(),
   images: z.array(artistImageSchema).nullish(),
   popularity: z.number().nullish(),
+  // Carried for the admin candidate picker (#1345), which needs enough to tell
+  // two identically-named artists apart. The matcher ignores both.
+  genres: z.array(z.string()).nullish(),
+  external_urls: z.object({ spotify: z.string().min(1) }).nullish(),
 })
 
 const searchResponseSchema = z.object({
@@ -62,6 +66,8 @@ export interface SpotifyArtistCandidate {
   name: string
   images: { url: string }[]
   popularity: number | null
+  genres: string[]
+  spotifyUrl: string | null
 }
 
 /** The matcher's only dependency on Spotify — injected so artist-match.ts
@@ -278,6 +284,8 @@ export const createSpotifyAppClient = async (
       name: item.name,
       images: item.images ?? [],
       popularity: item.popularity ?? null,
+      genres: item.genres ?? [],
+      spotifyUrl: item.external_urls?.spotify ?? null,
     }))
   }
 
