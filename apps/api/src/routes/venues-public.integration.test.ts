@@ -163,7 +163,7 @@ describe('GET /v1/venues/:slug — integration', () => {
   it('returns 404, not 400, for a param that cannot be a slug', async () => {
     const res = await app.request('/v1/venues/Not%20A%20Slug')
     expect(res.status).toBe(404)
-    const body = (await res.json()) as { success: boolean; error: string }
+    const body: { success: boolean; error: string } = await res.json()
     expect(body.success).toBe(false)
     expect(body.error).toBe('Venue not found')
   })
@@ -178,7 +178,7 @@ describe('GET /v1/venues/:slug — integration', () => {
 
     const res = await app.request('/v1/venues/closed-venue')
     expect(res.status).toBe(404)
-    const body = (await res.json()) as { success: boolean; error: string }
+    const body: { success: boolean; error: string } = await res.json()
     expect(body.success).toBe(false)
     expect(body.error).toBe('Venue not found')
   })

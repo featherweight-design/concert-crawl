@@ -21,6 +21,7 @@ import {
   RESALE_VENDOR_VALUES,
 } from '@concert-crawl/types'
 import { todayInTimezone } from '../lib/time.js'
+import { venueSlug } from '../lib/venue-slug-schema.js'
 import { aggregateByTier } from '../lib/price-aggregation/index.js'
 
 export const venuesPublicRouter = new Hono()
@@ -81,18 +82,12 @@ venuesPublicRouter.get('/', async (ctx) => {
   return ctx.json({ success: true, data })
 })
 
-// Venue slugs are generated, not user-chosen: lowercase alphanumeric words
-// joined by single hyphens. A param that can't be a slug is answered with the
-// same 404 as a slug that simply doesn't exist — a public reader learns
-// nothing from the difference, and a 400 here would turn today's 404 for a
-// malformed URL into a new status code for callers.
-const slugParamSchema = z.object({
-  slug: z
-    .string()
-    .min(1)
-    .max(200)
-    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
-})
+// Same rule the admin API creates slugs with, so this route can never reject a
+// venue that was legitimately created. A param that can't be a slug is answered
+// with the same 404 as a slug that simply doesn't exist — a public reader
+// learns nothing from the difference, and a 400 here would turn today's 404 for
+// a malformed URL into a new status code for callers.
+const slugParamSchema = z.object({ slug: venueSlug() })
 
 // GET /v1/venues/:slug — venue detail + upcoming events (public)
 venuesPublicRouter.get(
