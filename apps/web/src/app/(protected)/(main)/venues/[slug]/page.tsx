@@ -1,10 +1,14 @@
 import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import type { VenueWithEvents, EventWithVenue } from '@concert-crawl/types'
+import { resolveGuideViewerMode } from '@concert-crawl/types'
 import { publicApiClient, apiClient } from '@/lib/api'
 import { fetchWatching } from '@/lib/watching'
 import { SectionHeader } from '@/components/consumer/section-header'
-import { MapPlaceholder } from '@/components/consumer/map-placeholder'
+import {
+  FirstTimerCallout,
+  GuideSection,
+} from '@/components/consumer/venue-guide'
 import { EmptyState } from '@/components/consumer/empty-state'
 import { googleMapsUrl } from '@/components/consumer/definitions/lib'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
@@ -64,6 +68,14 @@ export default async function VenueProfilePage({
       timezone: venue.timezone,
     },
   }))
+
+  // Wired now even though `viewerHasAttended` is always null today (PR-4 reads
+  // it from user_events), so switching the returner state on later is a data
+  // change rather than a page refactor.
+  const guideViewerMode = resolveGuideViewerMode({
+    isSignedIn: token !== null,
+    hasAttendedVenue: result.viewerHasAttended,
+  })
 
   const mapSearchQuery = `${venue.name}, ${venue.city}`
   const hasStats = venue.capacity != null || venue.venueType != null
@@ -219,13 +231,14 @@ export default async function VenueProfilePage({
             </div>
           )}
 
-          {/* Map */}
-          <div className="mt-5">
-            <MapPlaceholder
-              venueAddress={venue.address}
-              searchQuery={mapSearchQuery}
-            />
-          </div>
+          {/* First-timer guide (#764) — callout leads, guide follows. Both are
+              suppressed entirely when the venue has not published a guide. */}
+          {venue.guide !== null && guideViewerMode === 'first_timer' && (
+            <div className="mt-5">
+              <FirstTimerCallout venueName={venue.name} guide={venue.guide} />
+            </div>
+          )}
+          <GuideSection venueName={venue.name} guide={venue.guide} />
 
           {/* Upcoming shows */}
           <div className="mt-5">
