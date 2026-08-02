@@ -1,3 +1,10 @@
+# [1.186.0](https://github.com/HartiganHM/concert-crawl/compare/v1.185.0...v1.186.0) (2026-08-02)
+
+
+### Features
+
+* **notifications:** consumer read path for in-app notifications ([#737](https://github.com/HartiganHM/concert-crawl/issues/737)) ([d9a07c9](https://github.com/HartiganHM/concert-crawl/commit/d9a07c98f4171792d3388de17bdef30a4b7febdb))
+
 # [1.185.0](https://github.com/HartiganHM/concert-crawl/compare/v1.184.0...v1.185.0) (2026-08-02)
 
 
