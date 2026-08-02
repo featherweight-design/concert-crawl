@@ -540,15 +540,19 @@ const shellLabelOf = (props: MenuBodyProps): string =>
 function MenuShellContent({
   props,
   panelMaxHeight,
+  panelClosable = false,
 }: {
   props: MenuBodyProps
   panelMaxHeight?: number
+  /** See NotifMenuPanel's `onClose` — the sheet sets it, the popover does not. */
+  panelClosable?: boolean
 }) {
   if (isNotifMode(props)) {
     return (
       <NotifMenuPanel
         onBack={props.onBackToMenu}
         onNavigate={props.onNavigateAway}
+        {...(panelClosable ? { onClose: props.onDismiss } : {})}
         {...(panelMaxHeight === undefined ? {} : { maxHeight: panelMaxHeight })}
       />
     )
@@ -925,6 +929,18 @@ function UserMenuSheet(props: MenuBodyProps) {
         overflow: 'hidden',
         fontFamily: 'var(--font-ui)',
         color: 'var(--fg)',
+        // The menu body grows to its content — it is a short, known list. The
+        // notifications panel does not: it is a backfill you scroll, so it
+        // takes the handoff's fixed 88% and scrolls inside itself. Growing to
+        // content there gives a six-row account a card that ends mid-screen
+        // with the page showing beneath it, and a fifty-row account a sheet
+        // that runs off the top with nothing to scroll.
+        //
+        // `svh`, not `vh`: on iOS `vh` is the tallest viewport, so a sheet
+        // pinned to the bottom would sit partly behind the URL bar.
+        ...(isNotifMode(props)
+          ? { height: '88svh', display: 'flex', flexDirection: 'column' }
+          : {}),
       }}
     >
       {/* Drag handle */}
@@ -947,7 +963,7 @@ function UserMenuSheet(props: MenuBodyProps) {
       </div>
       {/* No maxHeight: the sheet is bottom-anchored and grows to its content,
           where the popover has to be bounded against the viewport. */}
-      <MenuShellContent props={props} />
+      <MenuShellContent props={props} panelClosable />
     </div>
   )
 }

@@ -38,11 +38,19 @@ export const panelStateOf = (
 export const NotifMenuPanel = ({
   onBack,
   onNavigate,
+  onClose,
   maxHeight,
 }: {
   onBack: () => void
   /** Dismisses the menu after a row navigates away from under it. */
   onNavigate: () => void
+  /**
+   * Dismisses the whole menu from inside the panel. Supplied by the mobile
+   * sheet only: the desktop popover answers Escape, so a second dismiss there
+   * would be a redundant control, but on a touch sheet `‹ Menu` is the only
+   * way out and it costs two gestures — back, then dismiss.
+   */
+  onClose?: () => void
   maxHeight?: number
 }) => {
   const router = useRouter()
@@ -85,7 +93,21 @@ export const NotifMenuPanel = ({
   }
 
   return (
-    <div ref={surfaceRef} tabIndex={-1} style={{ outline: 'none' }}>
+    <div
+      ref={surfaceRef}
+      tabIndex={-1}
+      style={{
+        outline: 'none',
+        // A column so NotifBody's scroll region can claim the leftover space
+        // when a shell hands this panel a fixed height (the sheet's 88svh).
+        // Inert in the desktop popover, whose parent is not a flex container
+        // and which bounds the panel with `maxHeight` instead.
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+      }}
+    >
       {/* A real `<button>`: nothing interactive is nested inside it, so the
           platform's keyboard activation and focus ring beat a hand-rolled
           pair. */}
@@ -137,6 +159,7 @@ export const NotifMenuPanel = ({
         onRetry={() => void query.refetch()}
         onMarkAll={() => markAllRead.mutate()}
         onOpen={open}
+        {...(onClose === undefined ? {} : { showClose: true, onClose })}
         // A failed read mutation rolls the cache back silently — the count
         // walks back to where it was and the button looks like it undid
         // itself. One inline line, no toast, no retry queue.

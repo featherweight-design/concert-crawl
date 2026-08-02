@@ -735,3 +735,63 @@ describe.each([
     expect(screen.queryByRole('list')).toBeNull()
   })
 })
+
+// The two shells deliberately DISAGREE here, so this cannot live in the parity
+// table above. Both findings came from the mid-run cold-eyes review of #737.
+describe('#737 panel — the sheet is not the popover', () => {
+  async function openPanel(): Promise<void> {
+    signIn()
+    await renderChrome(<UserMenu />)
+    await click(desktopTrigger())
+    await click(
+      screen.getByRole('button', {
+        name: (name) =>
+          name.startsWith('See ') || name === NOTIFICATIONS_COPY.bellLabel(0),
+      }),
+    )
+  }
+
+  it('gives the sheet a fixed height so the backfill has room to scroll', async () => {
+    setViewport(true)
+    await openPanel()
+
+    // Growing to content is right for the menu body and wrong here: a six-row
+    // account gets a card ending mid-screen with the page showing beneath it,
+    // and a fifty-row account gets a sheet running off the top with nothing to
+    // scroll. The handoff specs 88%.
+    const sheet = screen.getByRole('dialog')
+    expect(sheet.style.height).toBe('88svh')
+    expect(sheet.style.flexDirection).toBe('column')
+  })
+
+  it('leaves the popover growing to content — Escape is its way out', async () => {
+    setViewport(false)
+    await openPanel()
+
+    const popover = screen.getByRole('dialog')
+    expect(popover.style.height).toBe('')
+  })
+
+  it('offers a close button on the sheet, where there is no Escape key', async () => {
+    setViewport(true)
+    await openPanel()
+
+    // `‹ Menu` alone costs two gestures to leave a touch sheet — back, then
+    // dismiss. NotifBody has supported showClose/onClose all along; nothing
+    // wired it.
+    const close = screen.getByRole('button', {
+      name: NOTIFICATIONS_COPY.closeLabel,
+    })
+    await click(close)
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('omits the close button on the popover, which answers Escape', async () => {
+    setViewport(false)
+    await openPanel()
+
+    expect(
+      screen.queryByRole('button', { name: NOTIFICATIONS_COPY.closeLabel }),
+    ).toBeNull()
+  })
+})
