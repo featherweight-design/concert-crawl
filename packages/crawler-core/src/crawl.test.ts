@@ -1131,6 +1131,54 @@ describe('crawlVenue — cross-venue presale filter (#605)', () => {
     expect(run.eventsInserted).toBe(1)
   })
 
+  // #1338 — `rawTitle` is typed as required on NormalizedEvent but is absent
+  // on some real extractor outputs. Passing it through undefined doesn't
+  // throw (the marker regex coerces it to the literal "undefined"), so the
+  // filter used to go quiet for those sources instead of failing loudly.
+  it('falls back to title when rawTitle is absent (#1338)', async () => {
+    const sourceVenue = seedVenue()
+    const candidates = [
+      {
+        id: '00000000-0000-4000-8000-000000000abc',
+        slug: 'ogden-theatre',
+        name: 'Ogden Theatre',
+      },
+    ]
+
+    mockFetchPage.mockResolvedValue({
+      html: HTML_V1,
+      httpStatus: 200,
+      finalUrl: sourceVenue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [
+        {
+          title: 'Earl Sweatshirt AT OGDEN THEATRE',
+          artist: 'Earl Sweatshirt',
+          date: '2026-08-15',
+          doorsTime: undefined,
+          showTime: undefined,
+          ticketUrl: 'https://tickets.example.com/p/1/earl-sweatshirt',
+          sourceUrl: sourceVenue.websiteUrl,
+          confidence: 0.9,
+        },
+      ],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const run = await crawlVenue(
+      sourceVenue.id,
+      mockBrowser,
+      undefined,
+      candidates,
+    )
+
+    // The only event was filtered out, so the run extracted nothing — that
+    // records as 'partial', not 'success' (#1162).
+    expect(run.status).toBe('partial')
+    expect(run.eventsInserted).toBe(0)
+  })
+
   it('skips an un-crawled venue via ticket-URL corroboration (#1286)', async () => {
     const sourceVenue = seedVenue()
 

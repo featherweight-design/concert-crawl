@@ -589,7 +589,11 @@ export async function crawlVenue(
 
     const normalizedEvents = decodedEvents.filter((evt) => {
       const match = detectCrossVenuePresale({
-        title: evt.rawTitle,
+        // `rawTitle` is typed as required but is absent on some real extractor
+        // outputs. An undefined here doesn't throw — the regex coerces it to
+        // the literal "undefined" — it silently tests the wrong string, so the
+        // filter quietly stops catching presale markers for that source.
+        title: evt.rawTitle ?? evt.title,
         sourceVenueId: venueId,
         sourceVenueName: venue.name,
         ticketUrl: evt.ticketUrl,
