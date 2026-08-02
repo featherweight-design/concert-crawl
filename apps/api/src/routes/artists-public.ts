@@ -193,8 +193,22 @@ artistsPublicRouter.get(
     // performer, and the page would otherwise render a name, a follow button
     // and no shows at all — worse than a 404, because it looks like we lost
     // the data rather than never having had an artist.
+    //
+    // Asked of `events` directly rather than of `shows`/`past`, which are
+    // narrower: a past cancelled show is dropped from both lists but still
+    // means a real performer played here, and the two lists are additionally
+    // capped by LIMIT. Only "nothing consumer-visible bills them at all" is a
+    // 404 — the same question search.ts asks.
     if (shows.length === 0 && past.length === 0) {
-      return ctx.json({ success: false, error: 'Artist not found' }, 404)
+      const [billed] = await db
+        .select({ id: events.id })
+        .from(events)
+        .where(and(appearsOnBill, consumerVisible))
+        .limit(1)
+
+      if (!billed) {
+        return ctx.json({ success: false, error: 'Artist not found' }, 404)
+      }
     }
 
     // Derived from `past` itself — never a separate COUNT(*), which would

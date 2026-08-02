@@ -150,6 +150,29 @@ describe('GET /v1/artists/:slug — integration', () => {
     expect(res.status).toBe(404)
   })
 
+  // The gate asks "does anything consumer-visible bill them", not "did the two
+  // rendered lists come back empty". A past cancelled show is dropped from both
+  // lists and still proves a real performer.
+  it('serves an artist whose only show is a past cancelled one', async () => {
+    await seedArtist({ name: 'Called Off', canonicalName: 'called off' })
+    const venue = await seedVenue({
+      name: 'Marquis',
+      slug: 'marquis-calledoff',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Called Off',
+      canonicalArtist: 'called off',
+      date: '2020-05-01',
+      status: 'cancelled',
+    })
+
+    const res = await getArtist('called-off')
+    expect(res.status).toBe(200)
+    const body: SuccessBody = await res.json()
+    expect(body.data.shows).toHaveLength(0)
+    expect(body.data.past).toHaveLength(0)
+  })
+
   it('404s an artist whose every event is hidden from consumers', async () => {
     await seedArtist({
       name: 'Bass Bingo',
