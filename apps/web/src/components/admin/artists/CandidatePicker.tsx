@@ -52,9 +52,17 @@ export const CandidatePicker = ({
     async (query: string) => {
       setIsLoading(true)
       setError(null)
+      // Results from the previous term stay clickable otherwise, so an admin
+      // can pick a candidate that does not belong to the search they are
+      // looking at — the exact wrong-identity mistake this queue exists to
+      // prevent.
+      setCandidates([])
       try {
         const token = await getToken()
-        if (!token) return
+        if (!token) {
+          setError(COPY.candidatesError)
+          return
+        }
         const resp = await fetch(
           `${apiBase}/v1/admin/artists/${artistId}/candidates?query=${encodeURIComponent(query)}`,
           { headers: { Authorization: `Bearer ${token}` } },
@@ -92,7 +100,10 @@ export const CandidatePicker = ({
         style={{ display: 'flex', gap: 8, alignItems: 'center' }}
         onSubmit={(ev) => {
           ev.preventDefault()
-          void search(term)
+          // Enter submits past the disabled button, and an empty term would
+          // spend a Spotify search re-running the canonical one.
+          if (term.trim().length === 0) return
+          void search(term.trim())
         }}
       >
         <label

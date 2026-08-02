@@ -69,7 +69,10 @@ export default function AdminArtistsPage() {
     setError(null)
     try {
       const token = await getToken()
-      if (!token) return
+      if (!token) {
+        setError(COPY.errorState)
+        return
+      }
       const resp = await fetch(
         `${API_BASE}/v1/admin/artists?status=${status}&limit=200`,
         { headers: { Authorization: `Bearer ${token}` } },
@@ -102,7 +105,10 @@ export default function AdminArtistsPage() {
   ) => {
     try {
       const token = await getToken()
-      if (!token) return
+      if (!token) {
+        setError(COPY.saveError)
+        return
+      }
       const resp = await fetch(`${API_BASE}/v1/admin/artists/${id}`, {
         method: 'PATCH',
         headers: {
@@ -137,7 +143,10 @@ export default function AdminArtistsPage() {
   const setHidden = async (id: string, hidden: boolean) => {
     try {
       const token = await getToken()
-      if (!token) return
+      if (!token) {
+        setError(COPY.visibilityError)
+        return
+      }
       const resp = await fetch(
         `${API_BASE}/v1/admin/artists/${id}/visibility`,
         {
