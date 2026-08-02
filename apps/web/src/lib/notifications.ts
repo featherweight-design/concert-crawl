@@ -203,11 +203,23 @@ export const safeParseNotificationList = (
   // Degraded rather than rejected. Rejecting would blank the whole panel over a
   // field that only controls a button, and rows past an unpaginatable cursor
   // are unreachable either way — so this keeps the list and drops the button.
-  const canPage = hasMore && nextCursor !== null
+  //
+  // An EMPTY STRING is the same contradiction wearing a different type. It is
+  // not a cursor the route can resolve, and every truthiness check downstream
+  // reads it as "no cursor" — i.e. page 1. Normalised to null here so the one
+  // fix covers the whole chain rather than each consumer re-deriving it.
+  const cursor = nextCursor === '' ? null : nextCursor
+  const canPage = hasMore && cursor !== null
 
   return {
     success: true,
-    data: { items: parsed, unreadCount, hasMore: canPage, nextCursor, seenAt },
+    data: {
+      items: parsed,
+      unreadCount,
+      hasMore: canPage,
+      nextCursor: cursor,
+      seenAt,
+    },
   }
 }
 
@@ -215,9 +227,14 @@ export async function fetchNotifications(
   token: string,
   cursor?: string,
 ): Promise<NotificationListResult> {
-  const query = cursor
-    ? `?limit=${NOTIFICATION_PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`
-    : `?limit=${NOTIFICATION_PAGE_SIZE}`
+  // `!== undefined`, not truthiness: an empty-string cursor that reached here
+  // would otherwise be dropped from the query and silently serve page 1. The
+  // parse boundary normalises `''` to null, so this is the second guard —
+  // and it fails loudly server-side rather than duplicating rows.
+  const query =
+    cursor === undefined
+      ? `?limit=${NOTIFICATION_PAGE_SIZE}`
+      : `?limit=${NOTIFICATION_PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`
   const body = await apiClient.get<unknown>(`/v1/notifications${query}`, token)
   const result = safeParseNotificationList(body)
   if (!result.success) {

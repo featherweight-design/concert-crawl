@@ -37,7 +37,11 @@ type NotificationPages = InfiniteData<NotificationListResult, string | null>
 export const nextPageParamOf = (
   lastPage: NotificationListResult,
 ): string | undefined =>
-  lastPage.hasMore && lastPage.nextCursor !== null
+  lastPage.hasMore &&
+  lastPage.nextCursor !== null &&
+  // An empty string is the same hazard as null — every truthiness check
+  // downstream reads it as "no cursor", i.e. page 1.
+  lastPage.nextCursor !== ''
     ? lastPage.nextCursor
     : undefined
 

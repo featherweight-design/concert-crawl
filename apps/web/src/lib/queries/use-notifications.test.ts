@@ -122,6 +122,14 @@ describe('nextPageParamOf', () => {
     expect(param).toBeUndefined()
     expect(param).not.toBeNull()
   })
+
+  it('treats an empty-string cursor as no cursor at all', () => {
+    // '' is read as "no cursor" by every truthiness check downstream, so
+    // honouring it would refetch page 1 forever exactly as null would.
+    expect(
+      nextPageParamOf(page({ hasMore: true, nextCursor: '' })),
+    ).toBeUndefined()
+  })
 })
 
 describe('stampRead', () => {

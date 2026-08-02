@@ -128,6 +128,21 @@ describe('safeParseNotificationList', () => {
     expect(result.data.items).toHaveLength(1)
   })
 
+  it('normalises an empty-string nextCursor to null, so paging cannot loop', () => {
+    // Same hazard as null in a different type: every truthiness check
+    // downstream would read '' as "no cursor" and serve page 1 forever.
+    const result = safeParseNotificationList({
+      ...payload,
+      hasMore: true,
+      nextCursor: '',
+    })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.nextCursor).toBeNull()
+    expect(result.data.hasMore).toBe(false)
+    expect(result.data.items).toHaveLength(1)
+  })
+
   it('carries an opaque nextCursor through verbatim', () => {
     const cursor = 'MjAyNi0wOC0wMSAxMjowMDowMCswMHxhYmM'
     const result = safeParseNotificationList({
@@ -208,6 +223,18 @@ describe('fetchNotifications', () => {
       `/v1/notifications?limit=${NOTIFICATION_PAGE_SIZE}`,
     )
     expect(String(url)).not.toContain('cursor=')
+  })
+
+  it('sends an empty cursor rather than silently refetching page 1', async () => {
+    const fetchMock = vi.fn((_url: unknown, _init?: unknown) =>
+      okResponse(payload),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    await fetchNotifications('tok', '')
+
+    const [url] = fetchMock.mock.calls[0] ?? []
+    expect(String(url)).toContain('cursor=')
   })
 
   it('echoes the opaque cursor back verbatim, url-encoded', async () => {
