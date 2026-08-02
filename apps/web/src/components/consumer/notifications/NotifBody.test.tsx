@@ -370,6 +370,29 @@ describe('NotifItem', () => {
     expect(notCancelled).toBe(false)
   })
 
+  it('opens once when Space is held down, not once per repeat', () => {
+    const onOpen = vi.fn()
+    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />)
+    const row = screen.getByRole('button')
+    fireEvent.keyDown(row, { key: ' ' })
+    fireEvent.keyDown(row, { key: ' ', repeat: true })
+    fireEvent.keyDown(row, { key: ' ', repeat: true })
+    expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('still blocks page scroll on a repeated Space', () => {
+    const onOpen = vi.fn()
+    render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />)
+    const event = new KeyboardEvent('keydown', {
+      key: ' ',
+      repeat: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    fireEvent(screen.getByRole('button'), event)
+    expect(event.defaultPrevented).toBe(true)
+  })
+
   it('ignores keys that are not activation keys, and lets them through', () => {
     const onOpen = vi.fn()
     render(<NotifItem item={notification()} onOpen={onOpen} now={NOW} />)

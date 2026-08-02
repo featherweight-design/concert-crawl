@@ -109,6 +109,15 @@ const sameOriginPathOrNull = (raw: string | null): string | null => {
   return raw
 }
 
+/**
+ * A timestamp has to be PARSEABLE, not merely a string. `relTime`, `dayKey`
+ * and `itemLabel` all hand these to `Intl.DateTimeFormat.format()`, which
+ * throws `RangeError: Invalid time value` on an unparseable date — that is a
+ * crashed panel, not a degraded row, so it is caught at the boundary.
+ */
+const isTimestamp = (value: unknown): value is string =>
+  typeof value === 'string' && !Number.isNaN(Date.parse(value))
+
 const parseItem = (value: unknown): ConsumerNotification | null => {
   if (!isRecord(value)) return null
   const { id, category, title, body, actionUrl, readAt, createdAt, metadata } =
@@ -118,10 +127,10 @@ const parseItem = (value: unknown): ConsumerNotification | null => {
   if (typeof category !== 'string') return null
   if (typeof title !== 'string') return null
   if (typeof body !== 'string') return null
-  if (typeof createdAt !== 'string') return null
+  if (!isTimestamp(createdAt)) return null
   if (!isNullableString(actionUrl)) return null
   const safeActionUrl = sameOriginPathOrNull(actionUrl)
-  if (!isNullableString(readAt)) return null
+  if (readAt !== null && !isTimestamp(readAt)) return null
   if (metadata !== null && !isRecord(metadata)) return null
   return {
     id,

@@ -161,6 +161,14 @@ describe('safeParseNotificationList', () => {
       { ...payload, items: [{ ...row, createdAt: undefined }] },
     ],
     [
+      'a row whose createdAt is a string but not a parseable date',
+      { ...payload, items: [{ ...row, createdAt: 'not a date' }] },
+    ],
+    [
+      'a row whose readAt is a string but not a parseable date',
+      { ...payload, items: [{ ...row, readAt: 'whenever' }] },
+    ],
+    [
       'a row with array metadata',
       { ...payload, items: [{ ...row, metadata: [1, 2] }] },
     ],

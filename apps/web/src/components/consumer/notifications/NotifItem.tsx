@@ -41,7 +41,11 @@ export const NotifItem = ({
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (event.key !== 'Enter' && event.key !== ' ') return
+    // preventDefault runs on every repeat, or holding Space scrolls the page
+    // out from under the panel. Activation does not: keydown auto-repeats, and
+    // a held key would otherwise fire one read mutation and navigation per tick.
     event.preventDefault()
+    if (event.repeat) return
     open()
   }
 
