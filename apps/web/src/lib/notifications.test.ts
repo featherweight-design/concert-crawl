@@ -114,6 +114,20 @@ describe('safeParseNotificationList', () => {
     expect(result.data.items[0]?.id).not.toBe(result.data.items[1]?.id)
   })
 
+  it('drops hasMore when nextCursor is null, so paging cannot loop', () => {
+    // null is also the first-page param, so honouring this contradiction would
+    // refetch page 1 forever. The rows still render; only the button goes.
+    const result = safeParseNotificationList({
+      ...payload,
+      hasMore: true,
+      nextCursor: null,
+    })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.hasMore).toBe(false)
+    expect(result.data.items).toHaveLength(1)
+  })
+
   it('carries an opaque nextCursor through verbatim', () => {
     const cursor = 'MjAyNi0wOC0wMSAxMjowMDowMCswMHxhYmM'
     const result = safeParseNotificationList({

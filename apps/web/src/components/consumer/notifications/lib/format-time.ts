@@ -42,6 +42,15 @@ const DIVIDER_DATE = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
 })
 
+// Module scope like the three above: `dayKey` calls this twice per row, so
+// constructing a formatter inside it would allocate one per row per render.
+const DAY_PARTS = new Intl.DateTimeFormat('en-CA', {
+  timeZone: DISPLAY_TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
 /**
  * Compact, for the metadata row. Sub-minute floors to "1m" rather than "0m" —
  * a notification that just landed reads as one minute old, not as nothing.
@@ -74,12 +83,7 @@ export const relTimeLong = (iso: string, now: Date = new Date()): string => {
 
 /** Midnight-in-Denver for an instant, as a UTC-anchored millisecond count. */
 const startOfDenverDay = (date: Date): number => {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: DISPLAY_TIME_ZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date)
+  const parts = DAY_PARTS.formatToParts(date)
   const year = Number(parts.find((part) => part.type === 'year')?.value)
   const month = Number(parts.find((part) => part.type === 'month')?.value)
   const day = Number(parts.find((part) => part.type === 'day')?.value)

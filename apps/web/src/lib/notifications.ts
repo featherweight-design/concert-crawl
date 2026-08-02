@@ -169,9 +169,19 @@ export const safeParseNotificationList = (
     parsed.push(item)
   }
 
+  // `hasMore: true` with `nextCursor: null` is a contradiction the route should
+  // never emit, and it is the one inconsistency with teeth: `getNextPageParam`
+  // would hand back null, which is also the FIRST-page param, so "Older
+  // notifications" would refetch page 1 forever and duplicate every row.
+  //
+  // Degraded rather than rejected. Rejecting would blank the whole panel over a
+  // field that only controls a button, and rows past an unpaginatable cursor
+  // are unreachable either way — so this keeps the list and drops the button.
+  const canPage = hasMore && nextCursor !== null
+
   return {
     success: true,
-    data: { items: parsed, unreadCount, hasMore, nextCursor, seenAt },
+    data: { items: parsed, unreadCount, hasMore: canPage, nextCursor, seenAt },
   }
 }
 
