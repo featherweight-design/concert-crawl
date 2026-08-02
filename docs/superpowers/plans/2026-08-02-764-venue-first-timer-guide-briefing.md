@@ -32,9 +32,13 @@ the plan is five days stale on a fast-moving repo.
 | `VenueDetailsClient.tsx` is huge | ✅ 2717 lines. `admin/venues.ts` 915 lines. `venues-public.ts` 309. | The plan's separate-file discipline holds — do not inline the block or the routes. |
 | `venue_guide_chips` / `insider_tip` / `guide_published_at` exist | ✅ Confirmed absent. Nothing to expand around. | PR-1 creates all three. |
 
-Local services: Postgres via `docker compose up -d`. Per-worktree test DB —
-set `DATABASE_URL_TEST=postgres://postgres:postgres@localhost:5432/concert_crawl_test__764_<pr>`
-before integration tests, per CLAUDE.md.
+Local services: Postgres via `docker compose up -d`. **Integration tests need no
+DB setup.** Per CLAUDE.md, `apps/api/src/test/setup/global-setup.ts` derives
+`concert_crawl_test__<worktree>` from the worktree directory and auto-creates and
+migrates it on first run. `DATABASE_URL_TEST` is an *override* (CI sets it per
+job) — do not set it by hand in a worktree, and do not invent a database name;
+doing so bypasses the isolation this convention exists to provide. Post-run
+pruning drops these automatically via `pnpm worktree:prune <branch>`.
 
 ---
 
@@ -67,8 +71,11 @@ Not a risk here: performance, concurrency, fan-out, data volume.
 
 ## Launch gating — REQUIRED
 
-**(b) Gated, twice over — and both gates are already in place. No PR in this plan
-opens either one.**
+**Verdict: gated, twice over — and both gates are already in place. No PR in this
+plan opens either one.**
+
+(The epic-run template offers three shapes: *reachable on merge*, *gated behind a
+named flag*, or *dark until a runbook step*. This epic is the second, doubled.)
 
 **Gate 1 — content.** The consumer endpoint returns a guide only when
 `venues.guide_published_at IS NOT NULL`. On merge of PR-3, every venue in prod
