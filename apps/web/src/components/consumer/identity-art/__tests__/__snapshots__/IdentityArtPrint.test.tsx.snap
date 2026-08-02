@@ -1,0 +1,46 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`flattened template output > 'blueprint'/'venue' emits no unsupported CSS and stable fills 1`] = `
+[
+  "#15131A",
+  "#e74861",
+  "#ffc94e",
+  "none",
+  "rgba(241,230,213,0.18)",
+  "rgba(241,230,213,0.32)",
+  "rgba(255,201,78,0.85)",
+]
+`;
+
+exports[`flattened template output > 'concentric'/'artist' emits no unsupported CSS and stable fills 1`] = `
+[
+  "#0e776c",
+  "#F0E5D0",
+  "#f05f1d",
+  "none",
+]
+`;
+
+exports[`flattened template output > 'halftone'/'artist' emits no unsupported CSS and stable fills 1`] = `
+[
+  "#0e776c",
+  "#F0E5D0",
+  "#f05f1d",
+]
+`;
+
+exports[`flattened template output > 'mesh'/'artist' emits no unsupported CSS and stable fills 1`] = `
+[
+  "#F0E5D0",
+  "rgba(14,119,108,0.22)",
+  "rgba(240,95,29,0.22)",
+]
+`;
+
+exports[`flattened template output > 'stripes'/'artist' emits no unsupported CSS and stable fills 1`] = `
+[
+  "#0e776c",
+  "#F0E5D0",
+  "#f05f1d",
+]
+`;

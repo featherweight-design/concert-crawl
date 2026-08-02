@@ -32,8 +32,9 @@ export interface IdentityArtProps {
   name: string
   kind?: Kind
   scale?: Scale
-  width?: number
-  height?: number
+  // `number | string` so callers can pass a CSS length such as "100%".
+  width?: number | string
+  height?: number | string
   showInitials?: boolean
   /**
    * Distance from the bottom of the art to the monogram chip, px. Defaults to
@@ -61,7 +62,10 @@ export const ia_hashName = (name: string, namespace: string): number => {
   return hash >>> 0
 }
 
-const ia_rngFromHash = (hash: number): (() => number) => {
+// Exported so the satori-safe <IdentityArtPrint /> can reproduce identical
+// geometry from the same hash rather than duplicating the generator and
+// drifting from it.
+export const ia_rngFromHash = (hash: number): (() => number) => {
   let state = (hash || 1) >>> 0
   return () => {
     state = (Math.imul(state, 1664525) + 1013904223) >>> 0
@@ -69,7 +73,7 @@ const ia_rngFromHash = (hash: number): (() => number) => {
   }
 }
 
-const ia_pick = <T,>(rng: () => number, arr: T[]): T =>
+export const ia_pick = <T,>(rng: () => number, arr: T[]): T =>
   arr[Math.floor(rng() * arr.length) % arr.length]!
 
 // ── Perceived luminance ────────────────────────────────────────

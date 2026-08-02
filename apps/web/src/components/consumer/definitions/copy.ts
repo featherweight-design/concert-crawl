@@ -1385,6 +1385,40 @@ export const CONSUMER_COPY = {
     // choice. Rendering a stored value needs a noun: "seen on another seller".
     otherVendor: 'another seller',
   },
+
+  // ── Shareable cards (#72) ───────────────────────────────────────
+  share: {
+    // Sheet chrome.
+    eyebrow: 'Share',
+    // Poster taglines. ⚠️ VERBATIM — these are the signed-off output of the
+    // voice pass (#782) recorded in the handoff README's voice table. Do not
+    // rewrite, re-punctuate, or sentence-case them. Read them through
+    // `lib/share/taglines.ts`, never by indexing this object directly.
+    taglines: {
+      going: 'found this one on Concert Crawl. see you in the pit.',
+      soldout: "sold out. now we're all refreshing stubhub at 2am together.",
+      drop: "price dropped. so did my dignity, but that's unrelated.",
+    },
+    // The badge drawn on the poster for each state.
+    stateLabels: {
+      going: "I'm going",
+      soldout: 'Sold out',
+      drop: 'Price drop',
+    },
+    // Share sheet destinations.
+    destinations: {
+      story: 'Story',
+      feed: 'Feed',
+      xPost: 'X',
+      messages: 'Messages',
+      saveImage: 'Save image',
+      copyLink: 'Copy link',
+    },
+    // Alt text for the rendered poster. {artist}, {venue}, {date} and {state}
+    // are substituted at render time.
+    altTemplate:
+      'Concert Crawl poster for {artist} at {venue}, {date}. {state}.',
+  },
 } as const
 
 // ── Vendor picker (#1193) ─────────────────────────────────────────
