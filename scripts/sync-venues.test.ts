@@ -52,13 +52,33 @@ describe('diffVenues', () => {
 
   // The upsert COALESCEs address, so an existing non-null value always wins.
   // Surfacing it as pending would report a change the commit never makes.
-  it('ignores address drift', () => {
+  it('ignores address drift when the current address is already set', () => {
     const result = diffVenues(
       [venue('oriental', { address: '4335 W 44th Ave' })],
       [venue('oriental', { address: 'Manually corrected address' })],
     )
 
     expect(result.unchanged).toEqual(['oriental'])
+  })
+
+  // The other side of the COALESCE: a null current address IS filled in by
+  // the seed, so hiding it would under-report what --commit writes.
+  it('reports an update when a null address would be filled from the seed', () => {
+    const result = diffVenues(
+      [venue('globe-hall', { address: '4483 Logan St' })],
+      [venue('globe-hall', { address: null })],
+    )
+
+    expect(result.toUpdate).toEqual(['globe-hall'])
+  })
+
+  it('ignores a null address the seed also leaves unset', () => {
+    const result = diffVenues(
+      [venue('hi-dive', { address: null })],
+      [venue('hi-dive', { address: null })],
+    )
+
+    expect(result.unchanged).toEqual(['hi-dive'])
   })
 
   // Numeric columns come back from postgres as strings; treating that as

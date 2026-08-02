@@ -1,10 +1,9 @@
 // Pure diff logic for scripts/sync-venues.ts, split out so it can be tested
 // without a database.
 
-// Only the fields the upsert actually writes are compared. `address` is
-// excluded because its COALESCE means an existing non-null value always
-// wins — reporting it as a pending change would be a lie the operator then
-// has to talk themselves out of on every run.
+// The fields the upsert writes with a plain `excluded.<col>`, so a straight
+// value comparison models them exactly. `address` is handled separately —
+// see addressDiffers — because its COALESCE gives it different semantics.
 export const COMPARED_FIELDS = [
   'name',
   'websiteUrl',
@@ -26,7 +25,7 @@ export const COMPARED_FIELDS = [
 
 type ComparedField = (typeof COMPARED_FIELDS)[number]
 
-export type ComparableVenue = { slug: string } & Partial<
+export type ComparableVenue = { slug: string; address?: unknown } & Partial<
   Record<ComparedField, unknown>
 >
 
@@ -51,6 +50,18 @@ const normalize = (value: unknown): string =>
 // omission that would genuinely reset a hand-edited value reads as clean.
 export type ColumnDefaults = Partial<Record<ComparedField, unknown>>
 
+// `address` is written as COALESCE(venues.address, excluded.address), so an
+// existing non-null value always wins and seed drift against it is not a
+// pending write — reporting it would be a lie the operator has to talk
+// themselves out of on every run. The one case that IS a write is a null
+// current address filled in from the seed, which a plain value comparison
+// would miss entirely.
+const addressDiffers = (
+  seedVenue: ComparableVenue,
+  current: ComparableVenue,
+): boolean =>
+  normalize(current.address) === '' && normalize(seedVenue.address) !== ''
+
 export const diffVenues = (
   seedVenues: readonly ComparableVenue[],
   existingVenues: readonly ComparableVenue[],
@@ -72,10 +83,11 @@ export const diffVenues = (
       continue
     }
 
-    const differs = COMPARED_FIELDS.some(
-      (field) =>
-        normalize(seedValue(seedVenue, field)) !== normalize(current[field]),
-    )
+    const differs =
+      COMPARED_FIELDS.some(
+        (field) =>
+          normalize(seedValue(seedVenue, field)) !== normalize(current[field]),
+      ) || addressDiffers(seedVenue, current)
 
     if (differs) {
       toUpdate.push(seedVenue.slug)
