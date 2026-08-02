@@ -260,6 +260,33 @@ describe('GET /v1/events/:id — integration', () => {
     expect(res.status).toBe(404)
   })
 
+  it('reports venueGuidePublished true when the venue has published a guide (#764)', async () => {
+    const venue = await seedVenue({
+      slug: 'guide-published-venue',
+      guidePublishedAt: new Date('2026-08-01T12:00:00.000Z'),
+    })
+    const event = await seedEvent(venue.id, { date: '2027-06-05' })
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    const body = (await res.json()) as {
+      data: { venueGuidePublished: boolean }
+    }
+    expect(body.data.venueGuidePublished).toBe(true)
+  })
+
+  it('reports venueGuidePublished false for an unpublished venue guide (#764)', async () => {
+    const venue = await seedVenue({ slug: 'guide-draft-venue' })
+    const event = await seedEvent(venue.id, { date: '2027-06-06' })
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    const body = (await res.json()) as {
+      data: { venueGuidePublished: boolean; venueGuidePublishedAt?: unknown }
+    }
+    expect(body.data.venueGuidePublished).toBe(false)
+    // The raw timestamp is an internal detail — only the boolean ships.
+    expect(body.data.venueGuidePublishedAt).toBeUndefined()
+  })
+
   it('includes priceSource in event detail response', async () => {
     const venue = await seedVenue()
     await seedEvent(venue.id, {

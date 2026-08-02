@@ -51,6 +51,16 @@ vi.mock('@concert-crawl/db', () => ({
     websiteUrl: 'websiteUrl',
     active: 'active',
     verified: 'verified',
+    insiderTip: 'insiderTip',
+    guidePublishedAt: 'guidePublishedAt',
+  },
+  // #764 — the guide chip table is only queried for a published venue, but the
+  // module-level mock must still export it or the import throws.
+  venueGuideChips: {
+    venueId: 'venueId',
+    chipType: 'chipType',
+    body: 'body',
+    isPlaceholder: 'isPlaceholder',
   },
   priceSubmissions: {
     id: 'id',
@@ -82,6 +92,8 @@ const mockVenue = {
   websiteUrl: 'https://venue.example.com',
   active: true,
   verified: true,
+  insiderTip: null,
+  guidePublishedAt: null,
 }
 
 const mockEvent = {

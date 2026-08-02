@@ -717,6 +717,9 @@ export interface EventDetailResponse extends EventWithVenue {
   // ISO when the signed-in user said "I'm going!" (#70). Orthogonal to
   // isWatching — a row can carry either, both, or neither.
   attendingAt: string | null
+  // #764 — whether this event's venue has a published first-timer guide, so the
+  // event page can decide whether to show the chip that links to it.
+  venueGuidePublished: boolean
   priceStatus?: 'live' | 'soldout' | null
   // Price detail fields — not yet in DB schema; null until added via migration
   ticketPriceOpenedAt?: number | null

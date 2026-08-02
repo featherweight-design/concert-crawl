@@ -599,6 +599,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       // Feed the followedArtists overlay; stripped from the response below.
       canonicalArtist: events.canonicalArtist,
       canonicalSupporting: events.canonicalSupporting,
+      // #764 — only whether the venue's first-timer guide is published. The
+      // guide body itself lives on GET /v1/venues/:slug; the event page just
+      // needs to know whether the chip has anywhere to point. Stripped from the
+      // response below in favour of the boolean.
+      venueGuidePublishedAt: venues.guidePublishedAt,
       venue: {
         id: venues.id,
         name: venues.name,
@@ -1078,12 +1083,18 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     ? await getFollowedArtistMatcher(authInfo.userId)
     : null
 
-  const { canonicalArtist, canonicalSupporting, ...publicRow } = row
+  const {
+    canonicalArtist,
+    canonicalSupporting,
+    venueGuidePublishedAt,
+    ...publicRow
+  } = row
 
   return ctx.json({
     success: true,
     data: {
       ...publicRow,
+      venueGuidePublished: venueGuidePublishedAt !== null,
       ...(followMatcher
         ? {
             followedArtists: followMatcher.matchEvent({

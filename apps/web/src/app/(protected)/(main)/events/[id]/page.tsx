@@ -9,6 +9,8 @@ import type {
   EventWithVenue,
   EventsRelatedResponse,
 } from '@concert-crawl/types'
+import { resolveGuideViewerMode } from '@concert-crawl/types'
+import { EventFirstTimerChip } from '@/components/consumer/venue-guide'
 import { publicApiClient, apiClient } from '@/lib/api'
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 import { isScaRegion } from '@/lib/sca-region'
@@ -124,6 +126,13 @@ export default async function EventDetailPage({
   // ticketUrl/eventUrl are crawler-derived and untrusted — filter the CTA
   // target to http(s) so a compromised venue page can't inject a
   // javascript:/data: href into the rendered link (#1152).
+  // #764 — wired now even though `hasAttendedVenue` is always null until PR-4
+  // reads it from user_events, so the returner state becomes a data change.
+  const guideViewerMode = resolveGuideViewerMode({
+    isSignedIn: token !== null,
+    hasAttendedVenue: null,
+  })
+
   const safeTicketUrl = isSafeHttpUrl(event.ticketUrl) ? event.ticketUrl : null
   const safeEventUrl = isSafeHttpUrl(event.eventUrl) ? event.eventUrl : null
   const ctaHref =
@@ -206,13 +215,26 @@ export default async function EventDetailPage({
 
           {/* Info block */}
           <div className="mt-4 border-y border-border py-1">
-            <InfoRow
-              icon={<IconPin />}
-              label={copy.venueLabel}
-              value={event.venue.name}
-              href={`/venues/${event.venue.slug}`}
-              data-testid="event-venue-name"
-            />
+            {/* The venue row and its guide chip are siblings, not nested —
+                InfoRow wraps its whole row in a link when `href` is set, and an
+                anchor inside an anchor is invalid HTML. */}
+            <div>
+              <InfoRow
+                icon={<IconPin />}
+                label={copy.venueLabel}
+                value={event.venue.name}
+                href={`/venues/${event.venue.slug}`}
+                data-testid="event-venue-name"
+              />
+              <div className="flex justify-end">
+                <EventFirstTimerChip
+                  venueName={event.venue.name}
+                  venueSlug={event.venue.slug}
+                  venueGuidePublished={event.venueGuidePublished}
+                  mode={guideViewerMode}
+                />
+              </div>
+            </div>
             <InfoRow
               icon={<IconCalendar />}
               label={copy.dateLabel}

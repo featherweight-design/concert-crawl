@@ -87,6 +87,7 @@ function buildBaseEvent(
   return {
     id: 'evt-1',
     venueId: 'venue-1',
+    venueGuidePublished: false,
     title: 'Test Show',
     artist: 'Test Artist',
     supportingArtists: null,
