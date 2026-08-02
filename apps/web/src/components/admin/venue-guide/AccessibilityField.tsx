@@ -100,7 +100,7 @@ export const AccessibilityField = ({
               fontStyle: 'italic',
             }}
           >
-            “{GUIDE_COPY.accessibility.previewBody}”
+            {GUIDE_COPY.accessibility.previewBody}
           </span>
         </div>
       ) : (
@@ -163,10 +163,13 @@ export const AccessibilityField = ({
           onClick={onTogglePlaceholder}
           role="switch"
           aria-checked={placeholderMode}
-          aria-disabled={disabled}
+          disabled={disabled}
           style={{
+            // `all: unset` also drops the UA disabled styling, so the inert
+            // state has to be drawn explicitly.
             all: 'unset',
-            cursor: 'pointer',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.5 : 1,
             boxSizing: 'border-box',
             flexShrink: 0,
             // 44px floor — the handoff drew a 15px-tall switch (§C.1).

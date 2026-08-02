@@ -681,8 +681,10 @@ export const ADMIN_COPY = {
           'Accessibility is required to publish — author it or mark it not-yet-documented.',
         toggleLabel: "Can't document yet",
         previewIntro: 'Will show the honest placeholder on the venue page:',
+        // Quote marks live in the string, not in JSX — the block assembles no
+        // display text of its own.
         previewBody:
-          'Not documented yet. Best to call the venue and ask before you head out — details are on the main page.',
+          '“Not documented yet. Best to call the venue and ask before you head out — details are on the main page.”',
       },
       picker: {
         heading: 'Add more chips',

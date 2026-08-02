@@ -280,6 +280,17 @@ describe('VenueGuideBlock (#764)', () => {
     expect(screen.getByLabelText(GUIDE_COPY.chipLabel.parking)).toBeTruthy()
   })
 
+  it('leaves the placeholder switch inert when the guide failed to load', () => {
+    renderBlock(emptyGuide, true)
+
+    const toggle = screen.getByRole('switch', {
+      name: GUIDE_COPY.accessibility.toggleLabel,
+    })
+    expect(toggle.hasAttribute('disabled')).toBe(true)
+    fireEvent.click(toggle)
+    expect(screen.queryByText(GUIDE_COPY.accessibility.previewBody)).toBeNull()
+  })
+
   it('caps every authored field at the shared max length', () => {
     renderBlock(populatedGuide)
     for (const field of screen.getAllByRole('textbox')) {
