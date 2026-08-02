@@ -352,9 +352,9 @@ describe('GET /v1/venues/:slug — first-timer guide (#764)', () => {
       expect(await readAttended('cold-venue')).toBe(false)
     })
 
-    it('is true when the viewer has an attending_at row at this venue', async () => {
+    it('is true when the viewer attended a past show at this venue', async () => {
       const venue = await seedVenue({ name: 'Been Here', slug: 'been-here' })
-      const event = await seedEvent(venue.id)
+      const event = await seedEvent(venue.id, { date: '2026-06-01' })
       await seedUserEvent(VIEWER, event.id, {
         status: null,
         attendingAt: new Date('2026-05-01T02:00:00Z'),
@@ -362,6 +362,36 @@ describe('GET /v1/venues/:slug — first-timer guide (#764)', () => {
       mockUserId = VIEWER
 
       expect(await readAttended('been-here')).toBe(true)
+    })
+
+    // The bug this guards: "I'm going" to a show that has not happened yet made
+    // the viewer a returner and collapsed the guide on the one person who most
+    // needs it — a first-timer holding a ticket.
+    it('is false when the only attending row is a future show at this venue', async () => {
+      const venue = await seedVenue({ name: 'Not Yet', slug: 'not-yet' })
+      const event = await seedEvent(venue.id, { date: '2099-01-01' })
+      await seedUserEvent(VIEWER, event.id, {
+        status: null,
+        attendingAt: new Date('2026-05-01T02:00:00Z'),
+      })
+      mockUserId = VIEWER
+
+      expect(await readAttended('not-yet')).toBe(false)
+    })
+
+    it('is false when the past show they were going to was cancelled', async () => {
+      const venue = await seedVenue({ name: 'Called Off', slug: 'called-off' })
+      const event = await seedEvent(venue.id, {
+        date: '2026-06-01',
+        status: 'cancelled',
+      })
+      await seedUserEvent(VIEWER, event.id, {
+        status: null,
+        attendingAt: new Date('2026-05-01T02:00:00Z'),
+      })
+      mockUserId = VIEWER
+
+      expect(await readAttended('called-off')).toBe(false)
     })
 
     it('is false when the row at this venue is Watching only — Watching is not Attending', async () => {

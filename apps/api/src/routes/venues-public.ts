@@ -21,6 +21,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  ne,
   sql,
 } from 'drizzle-orm'
 import {
@@ -33,6 +34,11 @@ import {
   RESALE_VENDOR_VALUES,
 } from '@concert-crawl/types'
 import { todayInTimezone } from '../lib/time.js'
+
+// Matches history.ts — "already happened" is a Mountain Time calendar-day call,
+// not a UTC one, or a late show reads as past hours before it starts.
+const MT_TIME_ZONE = 'America/Denver'
+
 import { venueSlug } from '../lib/venue-slug-schema.js'
 import { aggregateByTier } from '../lib/price-aggregation/index.js'
 
@@ -378,7 +384,9 @@ venuesPublicRouter.get(
     // that they have never been. Anonymous readers add zero queries.
     //
     // Watching is not Attending (#70): only `attending_at IS NOT NULL` counts,
-    // so a watched-but-never-attended row leaves the viewer a first-timer.
+    // so a watched-but-never-attended row leaves the viewer a first-timer. And
+    // "attending" is not "attended" — the predicate is the one documented in
+    // history.ts, past date included.
     const authInfo = getAuth(ctx)
     let viewerHasAttended: boolean | null = null
     if (authInfo?.userId) {
@@ -391,6 +399,12 @@ venuesPublicRouter.get(
             eq(userEvents.userId, authInfo.userId),
             eq(events.venueId, venue.id),
             isNotNull(userEvents.attendingAt),
+            // Attending a show that has not happened yet does not make you a
+            // returner — it makes you a first-timer with a ticket, which is
+            // exactly who the guide is for. Same "past date, not cancelled"
+            // definition of a night that happened as history.ts (#1212).
+            sql`${events.date} < (NOW() AT TIME ZONE ${MT_TIME_ZONE})::date`,
+            ne(events.status, 'cancelled'),
           ),
         )
         .limit(1)

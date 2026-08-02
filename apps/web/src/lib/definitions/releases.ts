@@ -37,7 +37,7 @@ export const RELEASES: Release[] = [
     items: [
       {
         kind: 'changed',
-        text: "The first-timer guide now folds itself down once you've marked yourself as going to a show at that venue, and it stays one tap away. You've been to the room — you don't need the parking situation explained to you again.",
+        text: "The first-timer guide now folds itself down once a show you said you were going to at that venue has actually happened, and it stays one tap away. You've been to the room — you don't need the parking situation explained to you again. Holding a ticket to a room you've never been to still gets you the full guide.",
       },
     ],
   },
