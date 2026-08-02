@@ -6,6 +6,11 @@
 // spoken form is one visually-hidden sentence inside a single
 // role="status"/aria-busy region, not one per skeleton.
 //
+// Both buttons render only when their handler is wired. The props are
+// optional, so an unwired caller would otherwise draw a live-looking control
+// that does nothing — and an inert Retry is a worse error state than one that
+// only explains itself. Same rule as NotifHeader's controls.
+//
 // The Retry and empty CTA buttons keep their DRAWN size (they are ~34px and
 // ~36px tall by design) and gain a 44px hit area from `.notif-hit44`, a
 // transparent pseudo-element in globals.css. Both requirements are satisfied:
@@ -158,36 +163,38 @@ export const NotifEmpty = ({
     >
       {NOTIFICATIONS_COPY.emptyBody}
     </div>
-    <button
-      type="button"
-      className="notif-hit44"
-      onClick={onAction}
-      style={{
-        all: 'unset',
-        // all:unset writes `outline` inline, beating the
-        // `.notif-hit44:focus-visible` rule in every state; `revert`
-        // restores the UA ring.
-        outline: 'revert',
-        // all:unset resets display to inline and position to static; the
-        // latter outranks `.notif-hit44 { position: relative }`.
-        display: 'inline-flex',
-        alignItems: 'center',
-        position: 'relative',
-        cursor: 'pointer',
-        marginTop: 8,
-        padding: '9px 18px',
-        borderRadius: 8,
-        background: 'var(--surface-2)',
-        border: '1px solid var(--border-strong)',
-        fontFamily: 'Inter, system-ui',
-        fontSize: 12.5,
-        fontWeight: 700,
-        color: 'var(--signal)',
-        letterSpacing: '-0.01em',
-      }}
-    >
-      {NOTIFICATIONS_COPY.emptyAction}
-    </button>
+    {onAction !== undefined && (
+      <button
+        type="button"
+        className="notif-hit44"
+        onClick={onAction}
+        style={{
+          all: 'unset',
+          // all:unset writes `outline` inline, beating the
+          // `.notif-hit44:focus-visible` rule in every state; `revert`
+          // restores the UA ring.
+          outline: 'revert',
+          // all:unset resets display to inline and position to static; the
+          // latter outranks `.notif-hit44 { position: relative }`.
+          display: 'inline-flex',
+          alignItems: 'center',
+          position: 'relative',
+          cursor: 'pointer',
+          marginTop: 8,
+          padding: '9px 18px',
+          borderRadius: 8,
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-strong)',
+          fontFamily: 'Inter, system-ui',
+          fontSize: 12.5,
+          fontWeight: 700,
+          color: 'var(--signal)',
+          letterSpacing: '-0.01em',
+        }}
+      >
+        {NOTIFICATIONS_COPY.emptyAction}
+      </button>
+    )}
   </div>
 )
 
@@ -226,34 +233,36 @@ export const NotifError = ({
     >
       {NOTIFICATIONS_COPY.errorBody}
     </div>
-    <button
-      type="button"
-      className="notif-hit44"
-      onClick={onRetry}
-      style={{
-        all: 'unset',
-        // all:unset writes `outline` inline, beating the
-        // `.notif-hit44:focus-visible` rule in every state; `revert`
-        // restores the UA ring.
-        outline: 'revert',
-        // all:unset resets display to inline and position to static; the
-        // latter outranks `.notif-hit44 { position: relative }`.
-        display: 'inline-flex',
-        alignItems: 'center',
-        position: 'relative',
-        cursor: 'pointer',
-        marginTop: 4,
-        padding: '8px 16px',
-        borderRadius: 8,
-        background: 'var(--surface-2)',
-        border: '1px solid var(--border-strong)',
-        fontFamily: 'Inter, system-ui',
-        fontSize: 12.5,
-        fontWeight: 700,
-        color: 'var(--signal)',
-      }}
-    >
-      {NOTIFICATIONS_COPY.errorAction}
-    </button>
+    {onRetry !== undefined && (
+      <button
+        type="button"
+        className="notif-hit44"
+        onClick={onRetry}
+        style={{
+          all: 'unset',
+          // all:unset writes `outline` inline, beating the
+          // `.notif-hit44:focus-visible` rule in every state; `revert`
+          // restores the UA ring.
+          outline: 'revert',
+          // all:unset resets display to inline and position to static; the
+          // latter outranks `.notif-hit44 { position: relative }`.
+          display: 'inline-flex',
+          alignItems: 'center',
+          position: 'relative',
+          cursor: 'pointer',
+          marginTop: 4,
+          padding: '8px 16px',
+          borderRadius: 8,
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border-strong)',
+          fontFamily: 'Inter, system-ui',
+          fontSize: 12.5,
+          fontWeight: 700,
+          color: 'var(--signal)',
+        }}
+      >
+        {NOTIFICATIONS_COPY.errorAction}
+      </button>
+    )}
   </div>
 )

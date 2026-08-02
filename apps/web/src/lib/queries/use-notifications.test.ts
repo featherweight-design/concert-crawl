@@ -15,6 +15,7 @@ const {
   unreadCountOf,
   seenAtOf,
   stampRead,
+  nextPageParamOf,
 } = await import('./use-notifications')
 
 const item = (id: string): ConsumerNotification => ({
@@ -100,6 +101,26 @@ describe('seenAtOf', () => {
 
   it('is null before any page has loaded, indistinguishable by design', () => {
     expect(seenAtOf(undefined)).toBeNull()
+  })
+})
+
+describe('nextPageParamOf', () => {
+  it('returns the cursor when there is a real next page', () => {
+    expect(nextPageParamOf(page({ hasMore: true, nextCursor: 'cur' }))).toBe(
+      'cur',
+    )
+  })
+
+  it('stops at the end of the list', () => {
+    expect(nextPageParamOf(page({ hasMore: false }))).toBeUndefined()
+  })
+
+  it('returns undefined, never null, when hasMore has no cursor', () => {
+    // null is also the FIRST-page param, so handing it back would refetch
+    // page 1 forever and duplicate every row.
+    const param = nextPageParamOf(page({ hasMore: true, nextCursor: null }))
+    expect(param).toBeUndefined()
+    expect(param).not.toBeNull()
   })
 })
 

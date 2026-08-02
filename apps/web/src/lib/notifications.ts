@@ -22,17 +22,7 @@ import { apiClient, ApiError } from './api'
  * bundle. If a ninth category lands there, add it here too — an unrecognised
  * value still renders, via CATEGORY_FALLBACK.
  */
-export type NotificationCategory =
-  | 'watch.cancelled'
-  | 'watch.postponed'
-  | 'watch.soldout'
-  | 'watch.backonsale'
-  | 'watch.pricedrop'
-  | 'contest.resolved'
-  | 'contest.needs_info'
-  | 'spotify.new_show'
-
-export const NOTIFICATION_CATEGORIES: readonly NotificationCategory[] = [
+export const NOTIFICATION_CATEGORIES = [
   'watch.cancelled',
   'watch.postponed',
   'watch.soldout',
@@ -41,7 +31,15 @@ export const NOTIFICATION_CATEGORIES: readonly NotificationCategory[] = [
   'contest.resolved',
   'contest.needs_info',
   'spotify.new_show',
-]
+] as const
+
+/**
+ * Derived from the array above, not declared alongside it: the runtime guard
+ * and the compile-time union have to be the same list, and two hand-kept
+ * copies drift silently — a real category added to only one of them would be
+ * rejected by `isNotificationCategory` at runtime while typechecking fine.
+ */
+export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number]
 
 const CATEGORY_LOOKUP: ReadonlySet<string> = new Set(NOTIFICATION_CATEGORIES)
 

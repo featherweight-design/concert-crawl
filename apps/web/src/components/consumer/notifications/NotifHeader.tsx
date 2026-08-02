@@ -5,6 +5,12 @@
 // read disappears at zero rather than sitting disabled — a dead control is
 // worse than no control.
 //
+// That same rule is why every control here is also gated on its handler being
+// present, not just on its state: each prop is optional, so a caller that
+// forgets to wire one would otherwise ship a button that looks live and does
+// nothing. Every button in this panel follows this — see NotifStates and the
+// load-more in NotifBody.
+//
 // The close button is 44×44 already. "Mark all read" is ~31px drawn and keeps
 // that size; `.notif-hit44` gives it the 44px hit area without redrawing it.
 
@@ -59,7 +65,7 @@ export const NotifHeader = ({
           : NOTIFICATIONS_COPY.markedAll}
       </NMono>
     </div>
-    {count > 0 && (
+    {count > 0 && onMarkAll !== undefined && (
       <button
         type="button"
         className="notif-hit44"
@@ -90,7 +96,7 @@ export const NotifHeader = ({
         {NOTIFICATIONS_COPY.markAll}
       </button>
     )}
-    {showClose && (
+    {showClose && onClose !== undefined && (
       <button
         type="button"
         onClick={onClose}

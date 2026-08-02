@@ -105,7 +105,7 @@ export const NotifBody = ({
                 justifyContent: 'center',
               }}
             >
-              {hasMore ? (
+              {hasMore && onLoadMore !== undefined ? (
                 <button
                   type="button"
                   className="notif-hit44"

@@ -28,6 +28,20 @@ export const notificationsQueryKey = (userId: string | null | undefined) =>
 type NotificationPages = InfiniteData<NotificationListResult, string | null>
 
 /**
+ * `undefined` — never `null` — is what stops paging. `null` is a VALID page
+ * param here (it is the first page), so handing it back for an unpaginatable
+ * page would refetch page 1 forever and duplicate every row.
+ * `safeParseNotificationList` already drops `hasMore` on that contradiction;
+ * this is the second guard, at the layer that consumes the value.
+ */
+export const nextPageParamOf = (
+  lastPage: NotificationListResult,
+): string | undefined =>
+  lastPage.hasMore && lastPage.nextCursor !== null
+    ? lastPage.nextCursor
+    : undefined
+
+/**
  * The panel's read path.
  *
  * ⚠ NO SERVER PREFETCH, NO `initialData`, NO `placeholderData`. The loading
@@ -51,8 +65,7 @@ export function useNotifications() {
     },
     // The cursor is opaque — echoed back verbatim, never parsed or built.
     initialPageParam: INITIAL_CURSOR,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasMore ? lastPage.nextCursor : undefined,
+    getNextPageParam: nextPageParamOf,
     enabled: !!isSignedIn && !!userId,
     // Notifications are the one surface where staleness is the whole failure
     // mode, so it polls; 60s is well inside the crawl cadence that writes them.

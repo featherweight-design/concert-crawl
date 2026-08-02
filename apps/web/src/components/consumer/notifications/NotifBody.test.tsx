@@ -220,6 +220,7 @@ describe('NotifBody — paging footer', () => {
         items={[notification()]}
         hasMore
         isLoadingMore
+        onLoadMore={vi.fn()}
       />,
     )
     const button = screen.getByRole('button', {
@@ -227,6 +228,51 @@ describe('NotifBody — paging footer', () => {
     })
     expect(button).toBeDisabled()
     expect(button).toHaveAttribute('aria-busy', 'true')
+  })
+})
+
+describe('NotifBody — unwired controls never render', () => {
+  // Every handler on this component is optional, so a caller that forgets one
+  // would otherwise ship a button that looks live and does nothing. Hiding is
+  // the panel's rule for a dead control, already used for mark-all at zero.
+
+  it('hides "Mark all read" when no handler is wired, despite a count', () => {
+    render(<NotifBody state="ready" items={[notification()]} unreadCount={3} />)
+    expect(
+      screen.queryByRole('button', { name: NOTIFICATIONS_COPY.markAll }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('hides the close button when showClose is set but onClose is not', () => {
+    render(<NotifBody state="ready" items={[notification()]} showClose />)
+    expect(
+      screen.queryByRole('button', { name: NOTIFICATIONS_COPY.closeLabel }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('hides Retry rather than showing an inert one', () => {
+    render(<NotifBody state="error" />)
+    // The error still explains itself; only the dead control is gone.
+    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: NOTIFICATIONS_COPY.errorAction }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('hides the empty-state CTA rather than showing an inert one', () => {
+    render(<NotifBody state="ready" items={[]} />)
+    expect(screen.getByText(NOTIFICATIONS_COPY.emptyBody)).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: NOTIFICATIONS_COPY.emptyAction }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('falls back to the end-of-list line when hasMore has no onLoadMore', () => {
+    render(<NotifBody state="ready" items={[notification()]} hasMore />)
+    expect(
+      screen.queryByRole('button', { name: NOTIFICATIONS_COPY.loadMore }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText(NOTIFICATIONS_COPY.endOfList)).toBeInTheDocument()
   })
 })
 
