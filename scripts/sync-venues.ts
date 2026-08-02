@@ -127,6 +127,14 @@ export const runSync = async ({
     return summary
   }
 
+  // Every conflicting row is re-updated, including the ones the summary
+  // reported as unchanged — Postgres runs the UPDATE regardless without a
+  // WHERE. That is deliberate. The rewrite is unobservable here: `venues`
+  // carries no triggers and UPSERT_SET does not touch `updatedAt`, so the
+  // only cost is a handful of dead tuples across ~17 rows. Gating it would
+  // mean restating the whole comparison as a SQL predicate — a second
+  // source of truth to keep in sync with UPSERT_SET, which is the exact
+  // drift this script exists to prevent.
   await db
     .insert(venues)
     .values(SEED_VENUES)
