@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react'
 
 import { ARTIST_COPY } from '../definitions/copy'

@@ -45,8 +45,10 @@ export const ShowRow = ({ show, artist }: ShowRowProps) => {
           flex: 1,
           minWidth: 0,
           minHeight: 60,
-          padding: '8px 8px',
-          margin: '0 -8px',
+          // No horizontal inset here: unlike RunGroup, the wrapper above already
+          // does the -8/+8 bleed. Repeating it pushed the link box 8px past the
+          // gutter and under the Watch control sitting beside it.
+          padding: '8px 0',
           borderRadius: 8,
           textDecoration: 'none',
           color: 'inherit',
