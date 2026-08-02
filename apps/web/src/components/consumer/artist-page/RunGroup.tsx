@@ -100,8 +100,11 @@ export const RunGroup = ({ venue, city, shows, artist }: RunGroupProps) => (
                 flex: 1,
                 minWidth: 0,
                 minHeight: 44,
-                padding: '0 8px',
-                margin: '0 -8px',
+                // Left only: the bleed pulls the hover background out to the
+                // gutter, but a right-side bleed would push the anchor box
+                // under the sibling Watch control across the 8px flex gap.
+                paddingLeft: 8,
+                marginLeft: -8,
                 borderRadius: 8,
                 textDecoration: 'none',
                 color: 'inherit',
