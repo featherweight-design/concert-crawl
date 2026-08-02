@@ -1,3 +1,17 @@
+# [1.191.0](https://github.com/HartiganHM/concert-crawl/compare/v1.190.1...v1.191.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **notifications:** announce unread after the pip clears ([#737](https://github.com/HartiganHM/concert-crawl/issues/737)) ([6d034ed](https://github.com/HartiganHM/concert-crawl/commit/6d034ede1c497e93a04a5571f0783cd6a6fb24ec))
+* **notifications:** close four defects found by the runtime gates ([#737](https://github.com/HartiganHM/concert-crawl/issues/737)) ([c3ef65e](https://github.com/HartiganHM/concert-crawl/commit/c3ef65e9e7108cb7cde407733727e51404313522))
+* **notifications:** close the three Gate 4 design-review gaps ([#737](https://github.com/HartiganHM/concert-crawl/issues/737)) ([d1b1354](https://github.com/HartiganHM/concert-crawl/commit/d1b1354f554f86c7bd377560d087d25035b5663c))
+
+
+### Features
+
+* **notifications:** mount the panel in the account menu chrome ([#737](https://github.com/HartiganHM/concert-crawl/issues/737)) ([4acec60](https://github.com/HartiganHM/concert-crawl/commit/4acec6091668d7d431fa34cf67cc5345c1e12d4f))
+
 ## [1.190.1](https://github.com/HartiganHM/concert-crawl/compare/v1.190.0...v1.190.1) (2026-08-02)
 
 
