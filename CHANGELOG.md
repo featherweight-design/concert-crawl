@@ -1,3 +1,15 @@
+# [1.183.0](https://github.com/HartiganHM/concert-crawl/compare/v1.182.1...v1.183.0) (2026-08-02)
+
+
+### Features
+
+* **db:** add artists projection table, slug derivation, backfill and crawler write-through ([fb08721](https://github.com/HartiganHM/concert-crawl/commit/fb087211790b8defd4f765db49d4f70b259849ce)), closes [#1115](https://github.com/HartiganHM/concert-crawl/issues/1115)
+
+
+### Performance Improvements
+
+* **crawler:** narrow artist projection lookup to candidate names and colliding slugs ([9e120e2](https://github.com/HartiganHM/concert-crawl/commit/9e120e21b0a7776678246dcc4ff209e6e146afae))
+
 ## [1.182.1](https://github.com/HartiganHM/concert-crawl/compare/v1.182.0...v1.182.1) (2026-08-02)
 
 
