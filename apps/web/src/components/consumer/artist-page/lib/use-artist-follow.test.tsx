@@ -52,6 +52,20 @@ describe('useArtistFollow', () => {
     await waitFor(() => expect(result.current.following).toBe(false))
   })
 
+  it('rolls back when a 2xx body has an unreadable shape', async () => {
+    // A success we cannot parse is not a success — keeping the optimistic
+    // guess would strand the UI out of sync with the server.
+    post.mockResolvedValue({ ok: 'sure' })
+    const { result } = renderHook(() => useArtistFollow('wax-harbour', false))
+
+    act(() => {
+      result.current.toggle()
+    })
+    expect(result.current.following).toBe(true)
+
+    await waitFor(() => expect(result.current.following).toBe(false))
+  })
+
   it('takes the server state when it disagrees with the optimistic flip', async () => {
     // Unfollowing a Spotify-sourced artist leaves the follow standing — the
     // API returns the EFFECTIVE state, and that is what we must render.

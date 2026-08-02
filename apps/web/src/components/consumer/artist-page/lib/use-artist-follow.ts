@@ -51,7 +51,13 @@ export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
         const result = next
           ? await apiClient.post<unknown>(path, token, {})
           : await apiClient.delete<unknown>(path, token)
-        if (isFollowResponse(result)) setFollowing(result.following)
+        // A 2xx whose body we can't read is not a success we can act on —
+        // keeping the optimistic guess would strand the UI out of sync with a
+        // server we just failed to understand. Throw into the rollback below.
+        if (!isFollowResponse(result)) {
+          throw new Error('Unexpected follow response shape')
+        }
+        setFollowing(result.following)
       } catch (err) {
         console.warn('artist follow toggle failed; rolling back', err)
         setFollowing(previous)

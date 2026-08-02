@@ -7,16 +7,17 @@ export const AP_DESKTOP_QUERY = '(min-width: 768px)'
 
 /**
  * Layout is CSS everywhere on this page EXCEPT the follow control, which must
- * exist exactly once in the accessibility tree. `hidden md:block` hides pixels
- * but still mounts a second button, so the one place we genuinely need to know
- * the viewport in JS is deciding which follow slot renders at all.
+ * exist exactly once. A CSS-only split would render two buttons and hide one;
+ * `display: none` does keep the hidden one out of the accessibility tree, but
+ * both would still be mounted, both would subscribe to the same follow state,
+ * and a `getByRole` query resolves to two nodes. Choosing the slot in JS is
+ * what keeps it genuinely singular.
  *
  * Starts false so the server render and the first client render agree. The
- * effect then corrects it on the commit after hydration — i.e. after the first
- * paint, so a desktop visitor briefly gets the mobile follow slot. That is
- * deliberate: `useLayoutEffect` would close the gap but warns under SSR, and
- * the slot is height-reserved either way, so the correction costs no layout
- * shift.
+ * effect corrects it on the commit after hydration — after first paint — so a
+ * desktop visitor gets the mobile slot for one frame and the control then
+ * moves between slots. `useLayoutEffect` would close that gap but warns under
+ * SSR; the flash is judged the cheaper cost.
  */
 export const useIsDesktop = (): boolean => {
   const [isDesktop, setIsDesktop] = useState(false)
