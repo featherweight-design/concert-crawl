@@ -17,18 +17,25 @@ preference.
 
 ---
 
-## Plan corrections (verified against `main` @ `004fea2e`, 2026-08-01)
+## Plan corrections (verified against `origin/main`, 2026-08-01)
+
+> **Verify against `origin/main`, never the main working directory.** The primary
+> repo checkout is Hugh's and is routinely tens of commits behind — it was 38 behind
+> when this briefing was first written, which is exactly how correction #4 below got
+> its facts backwards on the first pass. Use `git ls-tree -r origin/main` and
+> `git grep -n <term> origin/main -- <path>`, and `git fetch` first. A `grep` of the
+> working tree is not verification.
 
 The plan was written 2026-07-27. Six of its factual claims are now stale. Five
 of the six *reduce* scope; none changes the feature's intent.
 
 | # | Plan says | Actually, now | Impact |
 |---|---|---|---|
-| 1 | Next migration is `0064`, journal `when` > `1785628800000` | `0064`–`0067` all exist. Last journal entry is `idx: 67`, `when: 1785974400000`, tag `0067_drop_inbox_reads` | **Ship `0068_notifications_seen_at`** with `when` > `1785974400000`. A `0064` would collide and `db:migrate` would misorder. |
+| 1 | Next migration is `0064`, journal `when` > `1785628800000` | `0064`–`0068` all exist — and `0068_venue_first_timer_guide` landed *during* this epic's PR-A review, forcing a renumber mid-flight | **Shipped as `0069_notifications_seen_at`.** Re-check the journal tail immediately before pushing a migration, not just when the branch is cut; a four-day-old number is a guess. |
 | 2 | "the only bell in the app is admin-only" and cites `apps/api/src/routes/admin/notifications.ts` for the route-ordering comment, plus `admin/notification-bell/NotificationBell.tsx` for the 30s-`setInterval` anti-pattern | **PR #1269 (merged 2026-07-31) deleted the reader surfaces.** `admin/notification-bell/` is gone entirely, and the admin router's `GET /`, `POST /read-all`, `PATCH /:id/read` were removed. The **file** `admin/notifications.ts` survives — but it now hosts only `GET /test-email/options` and `POST /test-email`, which `OpsToolsSection` calls | The consumer router is fully greenfield — nothing to harmonize with and no sibling to cite. Keep the `/read-all`-before-`/:id/read` ordering comment; write it as original prose, not "the admin router carries this same comment", because the route it referred to no longer exists. |
-| 3 | Task 12: the 4th bottom-nav slot "hard-navigates to `/me`" and must be converted into a menu trigger; `UserMenuSheet` is "currently unreachable" | **PR #794 already did this.** `BottomNav.tsx:239` calls `toggleFrom(menuTriggerRef.current)`; `UserMenuSheet` renders at `UserMenu.tsx:305` under `open && isMobile` and **is reachable** | **Task 12 Steps 1–2 are already done.** Do not re-do them. Steps 3–4 (sheet-mode panel body swap, parity tests) remain. This materially shrinks PR-C. |
-| 4 | `MobileProfileEntry.tsx` has "zero importers"; delete it if unused | The file is present (`apps/web/src/components/consumer/app-header/MobileProfileEntry.tsx`, 1366 bytes, last touched 2026-07-30) and it **is** live: `import { MobileProfileEntry } from './MobileProfileEntry'` at `AppHeader.tsx:14`, rendered at `:73` | **Do not delete it.** The plan's "reuse or delete" row in the Files table is resolved to *neither* — leave it alone unless PR-C's mount genuinely supersedes it. Verify with `ls` + `grep -rn MobileProfileEntry apps/web/src` before acting on any claim that it is absent. |
-| 5 | Update `bottomNav.nav.profileAriaLabel` at `consumer/definitions/copy.ts:620-630` | **That key does not exist.** `bottomNav.nav` has only `ariaLabel` and `tabs`. Slot 4's name comes from `userMenu.ariaLabels` — `MENU_LABELS.accountMenu` / `.accountMenuSignedOut` (`BottomNav.tsx:241-244`), and a comment at `copy.ts:660-661` says so deliberately | Carry the unread count on **`userMenu.ariaLabels.accountMenu`**, which fixes desktop and mobile in one edit. Do not reintroduce a `bottomNav` label — that comment exists because the two triggers name the same thing. |
+| 3 | Task 12: the 4th bottom-nav slot "hard-navigates to `/me`" and must be converted into a menu trigger; `UserMenuSheet` is "currently unreachable" | **PR #794 already did this.** `BottomNav.tsx:239` calls `toggleFrom(menuTriggerRef.current)`; `UserMenuSheet` renders at `UserMenu.tsx:316` (declared `:741`) under `open && isMobile` and **is reachable** | **Task 12 Steps 1–2 are already done.** Do not re-do them. Steps 3–4 (sheet-mode panel body swap, parity tests) remain. This materially shrinks PR-C. |
+| 4 | `MobileProfileEntry.tsx` has "zero importers"; delete it if unused | **It is already gone from `main`.** PR #1293 (`fix(web): drop the duplicate account-menu trigger from the mobile header`) deleted the file and its `AppHeader` import. `git ls-tree -r origin/main --name-only \| grep MobileProfile` returns nothing | **Moot — no action for PR-C.** The plan's "reuse or delete" row resolved itself to "delete" via someone else's PR. Do not try to reuse it, and do not recreate it. |
+| 5 | Update `bottomNav.nav.profileAriaLabel` at `consumer/definitions/copy.ts:620-630` | **That key does not exist.** `bottomNav.nav` has only `ariaLabel` and `tabs`. Slot 4's name comes from `userMenu.ariaLabels` — `MENU_LABELS.accountMenu` / `.accountMenuSignedOut` (`copy.ts:495-496`), which both triggers share deliberately | Carry the unread count on **`userMenu.ariaLabels.accountMenu`**, which fixes desktop and mobile in one edit. Do not reintroduce a `bottomNav` label — that comment exists because the two triggers name the same thing. |
 | 6 | Task 6: wire the prune into "the existing daily cron alongside the 3 AM MT crawl job" | **No 3 AM MT job exists in `apps/api`.** The daily cron is `apps/api/src/jobs/billing-daily.ts` (Render Cron Job `concert-crawl-billing-jobs`, `0 15 * * *`), which already hosts seven independently try/caught sub-tasks | Add the prune as **task 8 in `billing-daily.ts`**, matching the existing per-task try/catch + `apiLogger` shape. No new Render cron job, no `render.yaml` change. |
 
 **Also stale: every line number in PR-C's tasks.** Current values —
