@@ -1,3 +1,24 @@
+# [1.189.0](https://github.com/HartiganHM/concert-crawl/compare/v1.188.0...v1.189.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **737:** drop button semantics from an unwired row, tighten unreadCount ([9ec3fb1](https://github.com/HartiganHM/concert-crawl/commit/9ec3fb1fe1c45de62981a0a20304de1dde039be7))
+* **737:** drop notif-row styling from an unwired row ([57faa42](https://github.com/HartiganHM/concert-crawl/commit/57faa42ee0dccd27e7a2169578575be4954be04b))
+* **737:** never render a control whose handler is unwired ([9104172](https://github.com/HartiganHM/concert-crawl/commit/91041724d38eec825a4181ff5d9fbe1701a0962d))
+* **737:** reject unparseable timestamps, guard key auto-repeat ([17a5284](https://github.com/HartiganHM/concert-crawl/commit/17a528436c4ba65b25b8be69f94297e13d12ccc6))
+* **notifications:** constrain actionUrl, fix window-wide unread decrement ([#737](https://github.com/HartiganHM/concert-crawl/issues/737)) ([463e70c](https://github.com/HartiganHM/concert-crawl/commit/463e70cea11b0953eaea6fd475ee74b3c5c44708))
+* **notifications:** skip a malformed row instead of blanking the panel ([691d026](https://github.com/HartiganHM/concert-crawl/commit/691d02650da4628e99ddf2f231be69dbb40990f5))
+* **notifications:** stop an unpaginatable hasMore looping the load-more ([#737](https://github.com/HartiganHM/concert-crawl/issues/737)) ([d7c3393](https://github.com/HartiganHM/concert-crawl/commit/d7c3393f3d8bcba29070b59e16395394db256f84))
+* **notifications:** treat an empty-string cursor as no cursor everywhere ([3cdc492](https://github.com/HartiganHM/concert-crawl/commit/3cdc492befac73f10f646a59d9b5b059de1d6a5c))
+* **notifications:** validate counts and watermarks at every write boundary ([efb4b51](https://github.com/HartiganHM/concert-crawl/commit/efb4b519a3e332a94c56a1f1739a342b88297673))
+* **notifications:** zero the header count optimistically on mark-all-read ([15e9b33](https://github.com/HartiganHM/concert-crawl/commit/15e9b3336a9f398d193ab4c409d60972f3633c44))
+
+
+### Features
+
+* **notifications:** panel components, category map and query hook ([#737](https://github.com/HartiganHM/concert-crawl/issues/737)) ([192b4b0](https://github.com/HartiganHM/concert-crawl/commit/192b4b0640a96d7d41676c907d30d0ac884a358b))
+
 # [1.188.0](https://github.com/HartiganHM/concert-crawl/compare/v1.187.0...v1.188.0) (2026-08-02)
 
 
