@@ -1,3 +1,11 @@
+## [1.182.1](https://github.com/HartiganHM/concert-crawl/compare/v1.182.0...v1.182.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* **a11y:** extract shared BackChip with a 44px hit area ([491d459](https://github.com/HartiganHM/concert-crawl/commit/491d45964cd02cd444d4fb2e3fe14c4c7e48285a)), closes [#1115](https://github.com/HartiganHM/concert-crawl/issues/1115)
+* **venues:** move copy alias below imports on venue profile page ([26a1f99](https://github.com/HartiganHM/concert-crawl/commit/26a1f99b88b828919032984b13c3e7b303f5d212))
+
 # [1.182.0](https://github.com/HartiganHM/concert-crawl/compare/v1.181.0...v1.182.0) (2026-08-02)
 
 
