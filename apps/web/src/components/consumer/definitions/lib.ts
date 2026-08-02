@@ -26,6 +26,25 @@ export function formatEventDate(
   }).format(date)
 }
 
+/**
+ * Whether an event's date has already passed in the venue's own timezone.
+ *
+ * Both sides are YYYY-MM-DD, which sorts lexicographically, so no Date parsing
+ * is involved and no host-timezone drift can creep in (#596). The comparison is
+ * date-granular on purpose: a show is "past" only once its calendar day is over
+ * in the venue's zone, so an 11pm set still counts as tonight.
+ *
+ * Used by the public share mirror to suppress a ticket CTA on a show that has
+ * already happened — a poster link is often opened days after the gig, and a
+ * "Get tickets" button pointing at a dead vendor page is worse than nothing.
+ */
+export function isEventPast(
+  dateStr: string,
+  timezone = DEFAULT_DISPLAY_TIMEZONE,
+): boolean {
+  return dateStr < localDateString(timezone)
+}
+
 export function formatShowTime(timeStr: string | null): string | null {
   if (!timeStr) return null
   // timeStr is HH:MM:SS from Postgres time column

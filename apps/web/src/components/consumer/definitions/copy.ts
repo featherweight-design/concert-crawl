@@ -1004,6 +1004,22 @@ export const CONSUMER_COPY = {
     browseButton: 'Browse shows',
   },
 
+  // ── Public event mirror (/e/:id) ────────────────────────────────
+  // The read-only page someone lands on from a shared poster link (#72). It
+  // has no Watching pill, no price submission and no reports — those all need
+  // an account — so the one thing it offers instead is a way in.
+  publicEvent: {
+    signInPrompt: 'Watch this show, track prices, and get alerts.',
+    signInButton: 'Sign in to Concert Crawl',
+    // The mirror's own 404. A shared link outlives the show it points at, so
+    // "old link" is the likeliest story, not "you typed it wrong".
+    notFoundHeading: 'This show is gone.',
+    notFoundBody:
+      "We couldn't find that show. The link may be old, or the show may have come off the calendar.",
+    notFoundHomeButton: 'Go to Concert Crawl',
+    notFoundBrowseButton: 'Browse shows',
+  },
+
   // ── PendingCardB ────────────────────────────────────────────────
   // Shown on the event detail page — pending price card for community and box-office tiers
   pendingCardB: {

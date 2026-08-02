@@ -1,5 +1,4 @@
 import { Fragment } from 'react'
-import Link from 'next/link'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
@@ -35,6 +34,14 @@ import {
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { EventTitleBlock } from '@/components/consumer/event-title-block'
 import { DetailFollowStrip } from '@/components/consumer/spotify/FollowHighlight'
+import {
+  InfoRow,
+  IconPin,
+  IconCalendar,
+  IconClock,
+  IconUsers,
+  EventTicketCta,
+} from '@/components/consumer/event-detail'
 
 const copy = CONSUMER_COPY.eventDetail
 
@@ -288,80 +295,11 @@ export default async function EventDetailPage({
               no direct ticket link, #1152). Fallback → venue website. No URL →
               disabled "No tickets available". */}
           <div className="mt-5">
-            {event.priceStatus === 'soldout' ? (
-              <button
-                type="button"
-                disabled
-                aria-label={copy.soldOutAriaLabel}
-                style={{
-                  all: 'unset',
-                  boxSizing: 'border-box',
-                  cursor: 'not-allowed',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  height: 48,
-                  borderRadius: 10,
-                  background: 'var(--surface-1)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--fg-subtle)',
-                  fontFamily: 'var(--font-ui)',
-                  fontWeight: 700,
-                  fontSize: 14,
-                  letterSpacing: '-0.005em',
-                }}
-              >
-                {copy.soldOut}
-              </button>
-            ) : ctaHref ? (
-              <a
-                href={ctaHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex h-12 w-full items-center justify-center gap-1.5 rounded-[10px] text-fg-on-accent"
-                style={{
-                  background: 'var(--accent)',
-                  fontFamily: 'var(--font-ui)',
-                  fontWeight: 800,
-                  fontSize: 15,
-                  letterSpacing: '-0.01em',
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {safeTicketUrl || safeEventUrl
-                  ? copy.getTickets
-                  : copy.visitVenueWebsite}
-                <ExternalLinkIcon />
-              </a>
-            ) : (
-              <button
-                type="button"
-                disabled
-                aria-label={copy.noTicketsAriaLabel}
-                style={{
-                  all: 'unset',
-                  boxSizing: 'border-box',
-                  cursor: 'not-allowed',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  height: 48,
-                  borderRadius: 10,
-                  background: 'var(--surface-1)',
-                  border: '1px solid var(--border)',
-                  color: 'var(--fg-subtle)',
-                  fontFamily: 'var(--font-ui)',
-                  fontWeight: 700,
-                  fontSize: 14,
-                  letterSpacing: '-0.005em',
-                }}
-              >
-                {copy.noTicketsAvailable}
-              </button>
-            )}
+            <EventTicketCta
+              soldOut={event.priceStatus === 'soldout'}
+              href={ctaHref}
+              hasDirectLink={Boolean(safeTicketUrl || safeEventUrl)}
+            />
           </div>
 
           {/* About — after CTA, per design */}
@@ -411,211 +349,6 @@ export default async function EventDetailPage({
           <EventDetailFooter event={event} reports={reports} />
         </div>
       </div>
-    </div>
-  )
-}
-
-// ── Icon components ──────────────────────────────────────────────
-
-function IconPin() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M8 1.5C5.24 1.5 3 3.74 3 6.5C3 10.25 8 14.5 8 14.5C8 14.5 13 10.25 13 6.5C13 3.74 10.76 1.5 8 1.5Z"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <circle
-        cx="8"
-        cy="6.5"
-        r="2"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.5"
-      />
-    </svg>
-  )
-}
-
-function IconCalendar() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <rect
-        x="2"
-        y="3"
-        width="12"
-        height="11"
-        rx="2"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.5"
-      />
-      <path d="M2 7h12" stroke="var(--fg-subtle)" strokeWidth="1.5" />
-      <path
-        d="M5.5 1.5v3M10.5 1.5v3"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function IconClock() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle
-        cx="8"
-        cy="8"
-        r="6.5"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.5"
-      />
-      <path
-        d="M8 4.5V8l3 1.5"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-function IconUsers() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle
-        cx="6"
-        cy="5"
-        r="2.5"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.5"
-      />
-      <path
-        d="M1 14c0-2.8 2.2-4.5 5-4.5s5 1.7 5 4.5"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      <circle
-        cx="11.5"
-        cy="5.5"
-        r="2"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.2"
-      />
-      <path
-        d="M12.5 9.5c1.8.4 3 1.6 3 3.5"
-        stroke="var(--fg-subtle)"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-    </svg>
-  )
-}
-
-function ExternalLinkIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M7 3H3a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V9"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M13 3h-4m4 0v4m0-4L7 9"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  )
-}
-
-// ── InfoRow ──────────────────────────────────────────────────────
-
-interface InfoRowProps {
-  icon: React.ReactNode
-  label: string
-  value: string
-  signal?: boolean
-  href?: string
-  'data-testid'?: string
-}
-
-function InfoRow({
-  icon,
-  label,
-  value,
-  signal = false,
-  href,
-  'data-testid': dataTestId,
-}: InfoRowProps) {
-  const inner = (
-    <>
-      <div className="h-4 w-4 shrink-0">{icon}</div>
-      <div className="min-w-0 flex-1">
-        <p
-          className="uppercase text-fg-subtle"
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: '9px',
-            letterSpacing: '0.06em',
-          }}
-        >
-          {label}
-        </p>
-        <p
-          className="mt-[1px] flex min-w-0 items-center gap-0.5 text-[14px] font-semibold tracking-[-0.01em]"
-          style={{ color: signal ? 'var(--signal)' : 'var(--fg)' }}
-        >
-          {href ? (
-            <>
-              <span className="min-w-0 truncate">{value}</span>
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 16 16"
-                fill="none"
-                className="shrink-0 text-fg-subtle"
-                aria-hidden
-              >
-                <path
-                  d="M6 4l4 4-4 4"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </>
-          ) : (
-            value
-          )}
-        </p>
-      </div>
-    </>
-  )
-
-  const baseClass = 'flex items-center gap-2.5 py-2'
-
-  if (href) {
-    return (
-      <Link
-        href={href}
-        data-testid={dataTestId}
-        className={`${baseClass} transition-colors hover:text-signal`}
-      >
-        {inner}
-      </Link>
-    )
-  }
-  return (
-    <div data-testid={dataTestId} className={baseClass}>
-      {inner}
     </div>
   )
 }

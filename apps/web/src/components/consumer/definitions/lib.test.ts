@@ -5,6 +5,7 @@ import {
   formatEventDate,
   formatPrice,
   dateGroupLabel,
+  isEventPast,
   isToday,
   pickCalendarSelectedDate,
   type CalendarWeekDayLite,
@@ -318,5 +319,26 @@ describe('formatPrice', () => {
     expect(formatPrice('25.5', '40.2')).toBe('$26–$40')
     expect(formatPrice('0', null)).toBe(CONSUMER_COPY.freeLabel)
     expect(formatPrice(null, null)).toBeNull()
+  })
+})
+
+describe('isEventPast (#72)', () => {
+  it('is false on the day of the show and true only once it is over', () => {
+    mockLocalDate.mockReturnValue('2026-08-02')
+
+    // A show tonight is not past — the comparison is date-granular in the
+    // venue's zone, so an 11pm set still counts as today.
+    expect(isEventPast('2026-08-02', 'America/Denver')).toBe(false)
+    expect(isEventPast('2026-08-03', 'America/Denver')).toBe(false)
+    expect(isEventPast('2026-08-01', 'America/Denver')).toBe(true)
+    expect(isEventPast('2025-12-31', 'America/Denver')).toBe(true)
+  })
+
+  it('asks for today in the venue timezone it was given', () => {
+    mockLocalDate.mockReturnValue('2026-08-02')
+
+    isEventPast('2026-08-02', 'America/New_York')
+
+    expect(mockLocalDate).toHaveBeenCalledWith('America/New_York')
   })
 })

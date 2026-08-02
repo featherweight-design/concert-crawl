@@ -493,6 +493,60 @@ describe('middleware — private-beta launch gate (#794)', () => {
     }
   })
 
+  // #72 — the share loop's two routes join the browse set on exactly the
+  // /artists terms: closed before launch, open after. The negative neighbours
+  // below are the proof that widening the matcher opened nothing else.
+  it.each([
+    '/e/11111111-1111-4111-8111-111111111111',
+    '/share/11111111-1111-4111-8111-111111111111/link.png',
+  ])('gates %s from signed-out visitors before launch', async (path) => {
+    const { middlewareHandler } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    await expect(middlewareHandler(auth, makeReq(path))).rejects.toThrow()
+    expect(auth.protect).toHaveBeenCalledWith(
+      expect.objectContaining({
+        unauthenticatedUrl: expect.stringContaining('/sign-in'),
+      }),
+    )
+
+    // The visitor's place is kept: sign-in returns them to the shared link
+    // rather than dropping them on the calendar with the show lost.
+    const url = new URL(auth.protect.mock.calls[0]![0].unauthenticatedUrl)
+    expect(url.searchParams.get('redirect_url')).toBe(path)
+    expect(url.searchParams.get('redirect_url')).toMatch(/^\/[^/\\]/)
+  })
+
+  it.each([
+    '/e/11111111-1111-4111-8111-111111111111',
+    '/share/11111111-1111-4111-8111-111111111111/link.png',
+  ])('lets a signed-out visitor reach %s after launch', async (path) => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'true')
+    const { middlewareHandler } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    const result = await middlewareHandler(auth, makeReq(path))
+
+    expect(result).toBeUndefined()
+    expect(auth.protect).not.toHaveBeenCalled()
+  })
+
+  // The required negative case for the two new patterns: neither `/e/` nor
+  // `/share/` is a prefix of anything private, in either launch mode.
+  it.each(['false', 'true'])(
+    'keeps /me and /admin private with the flag %s alongside the share routes',
+    async (flag) => {
+      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', flag)
+      const { middlewareHandler } = await import('./middleware')
+
+      for (const path of ['/me', '/me/anything', '/admin', '/admin/venues']) {
+        const auth = makeAuth(null)
+        await expect(middlewareHandler(auth, makeReq(path))).rejects.toThrow()
+        expect(auth.protect).toHaveBeenCalled()
+      }
+    },
+  )
+
   it('keeps /me and /admin private in both modes', async () => {
     const { middlewareHandler } = await import('./middleware')
 

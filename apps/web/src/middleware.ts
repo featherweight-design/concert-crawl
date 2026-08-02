@@ -54,6 +54,16 @@ const isPublicOnceLaunched = createRouteMatcher([
   // bounced the visitor to /auth/code. Opening it is what makes the launched
   // shape actually complete.
   '/sign-up(.*)',
+  // #72 share loop. `/e/:id` is the read-only public mirror of an event page
+  // and `/share/:id/...` renders its poster PNG — both are the landing surface
+  // for a link pasted into iMessage or Slack, so they have to resolve without a
+  // session once the product is public. They sit HERE and not in
+  // `isAlwaysPublic` for the same reason `/artists` does: a share link that
+  // leaks event data out of a private beta is the #794 incident again. Before
+  // launch a shared link behaves like every other browse URL — sign-in, then
+  // straight back to the event.
+  '/e/(.*)',
+  '/share/(.*)',
 ])
 
 /** Where a signed-out visitor is returned to when the attempted path is unsafe. */
