@@ -9,7 +9,7 @@ import {
   ne,
   sql,
 } from 'drizzle-orm'
-import { deriveSourceCategory } from '@concert-crawl/types'
+import { deriveSourceCategory, type GuideChipKey } from '@concert-crawl/types'
 import { db } from './src/client.js'
 import {
   venues,
@@ -988,7 +988,13 @@ export const SEED_NOTIFICATIONS = [
 // They are sample content, not shipped copy — the shipped strings live in the
 // *_COPY maps that PR-2 and PR-3 lift into definitions/copy.ts.
 // ---------------------------------------------------------------------------
-type SeedGuideChip = { chipType: string; body: string; isPlaceholder?: boolean }
+type SeedGuideChip = {
+  // Typed to the v1 union so a fixture typo fails at compile time — chip_type
+  // is TEXT in the DB, so a bad key would otherwise persist silently.
+  chipType: GuideChipKey
+  body: string
+  isPlaceholder?: boolean
+}
 
 type SeedGuide = {
   venueSlug: string

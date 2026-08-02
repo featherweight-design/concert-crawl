@@ -122,6 +122,13 @@ export interface VenueGuide {
   /** Ordered by GUIDE_CHIP_ORDER — accessibility first. */
   chips: VenueGuideChip[]
   insiderTip: string | null
-  /** ISO 8601. Non-null on every guide the consumer endpoint returns. */
+  /**
+   * ISO 8601, or null for a guide that has never been published.
+   *
+   * Nullable because the same shape serves the admin draft read, where an
+   * unpublished guide is the normal case. The consumer endpoint never returns
+   * an unpublished guide at all — it omits `guide` entirely — so a non-null
+   * value there is an invariant of that route, not of this type.
+   */
   publishedAt: string | null
 }
