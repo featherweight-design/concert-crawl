@@ -27,16 +27,16 @@ preference.
 > working tree is not verification.
 
 The plan was written 2026-07-27. Six of its factual claims are now stale. Five
-of the six *reduce* scope; none changes the feature's intent.
+of the six _reduce_ scope; none changes the feature's intent.
 
-| # | Plan says | Actually, now | Impact |
-|---|---|---|---|
-| 1 | Next migration is `0064`, journal `when` > `1785628800000` | `0064`–`0068` all exist — and `0068_venue_first_timer_guide` landed *during* this epic's PR-A review, forcing a renumber mid-flight — and then `0069_artists_projection` landed too, forcing a second one | **PR-A carries it as `0070_notifications_seen_at`** — not yet on `main`, so the number is only final once PR-A merges. Re-check the journal tail immediately before pushing a migration, not just when the branch is cut; a four-day-old number is a guess, and so is a four-hour-old one. |
-| 2 | "the only bell in the app is admin-only" and cites `apps/api/src/routes/admin/notifications.ts` for the route-ordering comment, plus `admin/notification-bell/NotificationBell.tsx` for the 30s-`setInterval` anti-pattern | **PR #1269 (merged 2026-07-31) deleted the reader surfaces.** `admin/notification-bell/` is gone entirely, and the admin router's `GET /`, `POST /read-all`, `PATCH /:id/read` were removed. The **file** `admin/notifications.ts` survives — but it now hosts only `GET /test-email/options` and `POST /test-email`, which `OpsToolsSection` calls | The consumer router is fully greenfield — nothing to harmonize with and no sibling to cite. Keep the `/read-all`-before-`/:id/read` ordering comment; write it as original prose, not "the admin router carries this same comment", because the route it referred to no longer exists. |
-| 3 | Task 12: the 4th bottom-nav slot "hard-navigates to `/me`" and must be converted into a menu trigger; `UserMenuSheet` is "currently unreachable" | **PR #794 already did this.** `BottomNav.tsx:239` calls `toggleFrom(menuTriggerRef.current)`; `UserMenuSheet` renders at `UserMenu.tsx:316` (declared `:741`) under `open && isMobile` and **is reachable** | **Task 12 Steps 1–2 are already done.** Do not re-do them. Steps 3–4 (sheet-mode panel body swap, parity tests) remain. This materially shrinks PR-C. |
-| 4 | `MobileProfileEntry.tsx` has "zero importers"; delete it if unused | **It is already gone from `main`.** PR #1293 (`fix(web): drop the duplicate account-menu trigger from the mobile header`) deleted the file and its `AppHeader` import. a `MobileProfile` search of `git ls-tree -r origin/main --name-only` returns nothing | **Moot — no action for PR-C.** The plan's "reuse or delete" row resolved itself to "delete" via someone else's PR. Do not try to reuse it, and do not recreate it. |
-| 5 | Update `bottomNav.nav.profileAriaLabel` at `consumer/definitions/copy.ts:620-630` | **That key does not exist.** `bottomNav.nav` has only `ariaLabel` and `tabs`. Slot 4's name comes from `userMenu.ariaLabels` — `MENU_LABELS.accountMenu` / `.accountMenuSignedOut` (`copy.ts:495-496`), which both triggers share deliberately | Carry the unread count on **`userMenu.ariaLabels.accountMenu`**, which fixes desktop and mobile in one edit. Do not reintroduce a `bottomNav` label — that comment exists because the two triggers name the same thing. |
-| 6 | Task 6: wire the prune into "the existing daily cron alongside the 3 AM MT crawl job" | **No 3 AM MT job exists in `apps/api`.** The daily cron is `apps/api/src/jobs/billing-daily.ts` (Render Cron Job `concert-crawl-billing-jobs`, `0 15 * * *`), which already hosts seven sub-tasks, each wrapped in its own try/catch | Add the prune as **task 8 in `billing-daily.ts`**, matching the existing per-task try/catch + `apiLogger` shape. No new Render cron job, no `render.yaml` change. |
+| #   | Plan says                                                                                                                                                                                                                  | Actually, now                                                                                                                                                                                                                                                                                                                                       | Impact                                                                                                                                                                                                                                                                                     |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Next migration is `0064`, journal `when` > `1785628800000`                                                                                                                                                                 | `0064`–`0070` all exist — three of them (`0068_venue_first_timer_guide`, `0069_artists_projection`, `0070_manual_follow_unique`) landed _during_ this epic's PR-A review, forcing three renumbers mid-flight                                                                                                                                        | **PR-A carries it as `0071_notifications_seen_at`** — not yet on `main`, so the number is only final once PR-A merges. Re-check the journal tail immediately before pushing a migration, not just when the branch is cut; a four-day-old number is a guess, and so is a four-hour-old one. |
+| 2   | "the only bell in the app is admin-only" and cites `apps/api/src/routes/admin/notifications.ts` for the route-ordering comment, plus `admin/notification-bell/NotificationBell.tsx` for the 30s-`setInterval` anti-pattern | **PR #1269 (merged 2026-07-31) deleted the reader surfaces.** `admin/notification-bell/` is gone entirely, and the admin router's `GET /`, `POST /read-all`, `PATCH /:id/read` were removed. The **file** `admin/notifications.ts` survives — but it now hosts only `GET /test-email/options` and `POST /test-email`, which `OpsToolsSection` calls | The consumer router is fully greenfield — nothing to harmonize with and no sibling to cite. Keep the `/read-all`-before-`/:id/read` ordering comment; write it as original prose, not "the admin router carries this same comment", because the route it referred to no longer exists.     |
+| 3   | Task 12: the 4th bottom-nav slot "hard-navigates to `/me`" and must be converted into a menu trigger; `UserMenuSheet` is "currently unreachable"                                                                           | **PR #794 already did this.** `BottomNav.tsx:239` calls `toggleFrom(menuTriggerRef.current)`; `UserMenuSheet` renders at `UserMenu.tsx:316` (declared `:741`) under `open && isMobile` and **is reachable**                                                                                                                                         | **Task 12 Steps 1–2 are already done.** Do not re-do them. Steps 3–4 (sheet-mode panel body swap, parity tests) remain. This materially shrinks PR-C.                                                                                                                                      |
+| 4   | `MobileProfileEntry.tsx` has "zero importers"; delete it if unused                                                                                                                                                         | **It is already gone from `main`.** PR #1293 (`fix(web): drop the duplicate account-menu trigger from the mobile header`) deleted the file and its `AppHeader` import. a `MobileProfile` search of `git ls-tree -r origin/main --name-only` returns nothing                                                                                         | **Moot — no action for PR-C.** The plan's "reuse or delete" row resolved itself to "delete" via someone else's PR. Do not try to reuse it, and do not recreate it.                                                                                                                         |
+| 5   | Update `bottomNav.nav.profileAriaLabel` at `consumer/definitions/copy.ts:620-630`                                                                                                                                          | **That key does not exist.** `bottomNav.nav` has only `ariaLabel` and `tabs`. Slot 4's name comes from `userMenu.ariaLabels` — `MENU_LABELS.accountMenu` / `.accountMenuSignedOut` (`copy.ts:495-496`), which both triggers share deliberately                                                                                                      | Carry the unread count on **`userMenu.ariaLabels.accountMenu`**, which fixes desktop and mobile in one edit. Do not reintroduce a `bottomNav` label — that comment exists because the two triggers name the same thing.                                                                    |
+| 6   | Task 6: wire the prune into "the existing daily cron alongside the 3 AM MT crawl job"                                                                                                                                      | **No 3 AM MT job exists in `apps/api`.** The daily cron is `apps/api/src/jobs/billing-daily.ts` (Render Cron Job `concert-crawl-billing-jobs`, `0 15 * * *`), which already hosts seven sub-tasks, each wrapped in its own try/catch                                                                                                                | Add the prune as **task 8 in `billing-daily.ts`**, matching the existing per-task try/catch + `apiLogger` shape. No new Render cron job, no `render.yaml` change.                                                                                                                          |
 
 **Also stale: every line number in PR-C's tasks.** Current values —
 `UserMenu.tsx` trigger button `:353`, `aria-expanded` `:362`, avatar/`AnonDisc`
@@ -65,7 +65,7 @@ at `:31` is the adjacency anchor for the new column; the shipped
   - `packages/push/src/watch-fanout.ts` — five `watch.*` categories. Called from `apps/api/src/routes/event-reports.ts:382` and `apps/api/src/routes/admin/events.ts`.
   - `apps/api/src/lib/contest-notifications.ts` — `contest.resolved` / `contest.needs_info`, `actionUrl = /events/${eventId}` (`:135`). Called from `admin/contests.ts:799` and `:1021`.
   - `packages/crawler-core/src/lib/spotify-fanout/index.ts` — `spotify.new_show`. Called on venue-crawl completion.
-- **Idempotency of the writers is uneven, and that is pre-existing, not this epic's to fix:** only `spotify-fanout` has true exactly-once (claims `(userId, eventId, kind)` in `spotifyAlertLog` via `onConflictDoNothing().returning()` before writing). `watch-fanout` is guarded only by `hasEventStateChanged()`; `contest-notifications` has no replay protection at all. **Consequence for this epic:** the panel must render a duplicate pair sanely (it will — two rows, same title, distinct ids) and Gate 6's "fires once" check will *fail* for two of three writers. Record that as an observation with a filed follow-up issue; do **not** widen this epic to add dedupe.
+- **Idempotency of the writers is uneven, and that is pre-existing, not this epic's to fix:** only `spotify-fanout` has true exactly-once (claims `(userId, eventId, kind)` in `spotifyAlertLog` via `onConflictDoNothing().returning()` before writing). `watch-fanout` is guarded only by `hasEventStateChanged()`; `contest-notifications` has no replay protection at all. **Consequence for this epic:** the panel must render a duplicate pair sanely (it will — two rows, same title, distinct ids) and Gate 6's "fires once" check will _fail_ for two of three writers. Record that as an observation with a filed follow-up issue; do **not** widen this epic to add dedupe.
 - **`E2E_AUDIT_*` credentials are present in the shell** (4 vars). The cold-eyes capture can run for real via `pnpm --filter @concert-crawl/e2e audit:sweep` against staging. `apps/e2e/src/audit/audit-auth.ts` exports `prepareAuditAuth('user' | 'admin')`. Note the manifest currently uses only `'user'` and `'admin'`; a signed-out sweep entry may need `auth` support added.
 - **Known anomaly to ignore:** the staging crawler is intentionally paused. Notification rows on staging therefore come from seeds and admin actions, not from live crawls — the `spotify.new_show` path is the one writer that cannot be triggered naturally on staging.
 - **Deliberately does not exist yet:** the Submitted-prices screen (#1176). Until it lands, `contest.*` rows keep pointing at `/events/${eventId}`. This epic changes no `actionUrl`.
@@ -74,7 +74,7 @@ at `:31` is the adjacency anchor for the new column; the shipped
 
 ## Risk shape — **event-driven**
 
-The feature's core is a record created by something *else* happening, and the
+The feature's core is a record created by something _else_ happening, and the
 whole surface is a reader over rows this epic does not write. Bugs will come
 from two places, neither of which a screenshot can show:
 
@@ -86,7 +86,7 @@ from two places, neither of which a screenshot can show:
 2. **The two-level read model.** `seenAt` (panel-open watermark, clears the pip)
    and `readAt` (per-row, clears the unread rail) are deliberately different, and
    the `greatest(...)` guard on `mark-panel-seen` exists because `now()` is
-   transaction-start time. Every bug here is a *repeat*-pass bug: open, close,
+   transaction-start time. Every bug here is a _repeat_-pass bug: open, close,
    receive a new row, reopen.
 
 **Therefore: Gate 6 is the ballgame, and Gate 5's repeat pass is second.**
@@ -114,8 +114,8 @@ That is safe, and here is the reasoning rather than an assertion:
 - **Backfill is the intended first impression, not an accident.** Every existing
   user has `notifications_seen_at IS NULL` on merge, which by design means "every
   row in the 30-day window is unread." A user with a month of watch alerts will
-  open to a populated panel behind a pip. The panel is literally titled *"What
-  you missed"* and the fresh/backfill divider exists to frame exactly this. No
+  open to a populated panel behind a pip. The panel is literally titled _"What
+  you missed"_ and the fresh/backfill divider exists to frame exactly this. No
   backfill suppression, no "mark everything seen at deploy time" migration —
   that would throw away the feature's best first run.
 
@@ -136,17 +136,17 @@ offers them a sign-up card.
 
 ## Off-happy-path homes
 
-| New state | Where it lives in the IA | How the user reaches it | Reversible? |
-|---|---|---|---|
-| Has unread notifications | Pip on the profile affordance (avatar desktop / slot 4 mobile) + `InboxStrip` at the top of the account menu | Any page — the affordance is in persistent chrome | Yes — reading clears it |
-| Opened the panel but read no rows | Pip cleared (`seenAt` advanced), rows keep their unread rail | Reopen the menu; `InboxStrip` still shows the newest rows | Yes — rows stay unread until clicked or "Mark all read" |
-| Read everything | Panel's all-read state; `InboxStrip` shows its zero-unread branch | Same affordance | No — `readAt` is a one-way stamp. Deliberate: there is no "mark unread", it was not in the brief and is not being invented here |
-| Never had any notification | `NotifEmpty` — "All quiet." + CTA to `/events` | Same affordance | n/a. **This is what every brand-new user sees first** — it gets a real design pass, not a leftover |
-| Notification older than 30 days | Nowhere. Excluded from the list and from the unread count | Not reachable by design | No. Row survives to 90 days for a future digest, then the prune deletes it |
-| Notification whose `actionUrl` target is gone (event deleted/merged) | The row renders normally; the click lands on `/events/{id}`, which owns its own not-found handling | Panel | n/a — the panel renders whatever the writer stored and composes no sentences |
-| `contest.*` row while #1176 is unbuilt | Lands on the event page, not a submissions screen | Panel | n/a — a known, documented seam. #1176 reroutes it later |
-| Duplicate rows from a replayed `watch.*` / `contest.*` fan-out | Two adjacent rows, same title, distinct ids | Panel | n/a — pre-existing writer behaviour. File a follow-up issue; do not fix here |
-| Signed out | **No pip, no panel, no `InboxStrip`.** The account menu shows `GetInCard` | n/a | Signing in reveals the surface |
+| New state                                                            | Where it lives in the IA                                                                                     | How the user reaches it                                   | Reversible?                                                                                                                     |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Has unread notifications                                             | Pip on the profile affordance (avatar desktop / slot 4 mobile) + `InboxStrip` at the top of the account menu | Any page — the affordance is in persistent chrome         | Yes — reading clears it                                                                                                         |
+| Opened the panel but read no rows                                    | Pip cleared (`seenAt` advanced), rows keep their unread rail                                                 | Reopen the menu; `InboxStrip` still shows the newest rows | Yes — rows stay unread until clicked or "Mark all read"                                                                         |
+| Read everything                                                      | Panel's all-read state; `InboxStrip` shows its zero-unread branch                                            | Same affordance                                           | No — `readAt` is a one-way stamp. Deliberate: there is no "mark unread", it was not in the brief and is not being invented here |
+| Never had any notification                                           | `NotifEmpty` — "All quiet." + CTA to `/events`                                                               | Same affordance                                           | n/a. **This is what every brand-new user sees first** — it gets a real design pass, not a leftover                              |
+| Notification older than 30 days                                      | Nowhere. Excluded from the list and from the unread count                                                    | Not reachable by design                                   | No. Row survives to 90 days for a future digest, then the prune deletes it                                                      |
+| Notification whose `actionUrl` target is gone (event deleted/merged) | The row renders normally; the click lands on `/events/{id}`, which owns its own not-found handling           | Panel                                                     | n/a — the panel renders whatever the writer stored and composes no sentences                                                    |
+| `contest.*` row while #1176 is unbuilt                               | Lands on the event page, not a submissions screen                                                            | Panel                                                     | n/a — a known, documented seam. #1176 reroutes it later                                                                         |
+| Duplicate rows from a replayed `watch.*` / `contest.*` fan-out       | Two adjacent rows, same title, distinct ids                                                                  | Panel                                                     | n/a — pre-existing writer behaviour. File a follow-up issue; do not fix here                                                    |
+| Signed out                                                           | **No pip, no panel, no `InboxStrip`.** The account menu shows `GetInCard`                                    | n/a                                                       | Signing in reveals the surface                                                                                                  |
 
 Every row is filled and none required a product call from Hugh. The one that
 came closest — "should merge suppress the backfill?" — is answered in Launch
@@ -171,8 +171,8 @@ Entry: signed in, ≥3 seeded `user_notification` rows across ≥2 days, `notifi
 4. Rows grouped by day, newest first, "Today"/"Yesterday" dividers sticky. Unread rows carry a 2px left rail in the category ink.
 5. Click a row → `readAt` set optimistically, rail clears, navigate to its `actionUrl`.
 
-- **Reverse:** `‹ Menu` returns to the menu body; Escape from panel mode closes the *whole* menu in one press (locked "one Escape"). Focus restores to the originating trigger in both paths.
-- **Repeat:** reopen → panel opens at the menu, not mid-panel (`mode` resets on close). Pip stays clear. Insert a new row → pip returns. **The critical assertion:** the pip must come back for a *new* row after a previous panel-open, i.e. unread is derived from `readAt`, not from "has the panel ever been opened".
+- **Reverse:** `‹ Menu` returns to the menu body; Escape from panel mode closes the _whole_ menu in one press (locked "one Escape"). Focus restores to the originating trigger in both paths.
+- **Repeat:** reopen → panel opens at the menu, not mid-panel (`mode` resets on close). Pip stays clear. Insert a new row → pip returns. **The critical assertion:** the pip must come back for a _new_ row after a previous panel-open, i.e. unread is derived from `readAt`, not from "has the panel ever been opened".
 - **Resume:** reload mid-panel → the menu is closed (component state, expected), pip state matches the server. Open in a second browser → `seenAt` already advanced, and the per-row read state agrees.
 
 ### Journey 2 — Mark all read
@@ -194,7 +194,7 @@ Force each state and record what was forced: **loading** (throttle), **error**
 - **Repeat:** Retry after a restored network must succeed, not stay stuck in error.
 - **Resume:** reload after paging → back to page 1, no crash.
 
-### Journey 4 — A real fan-out row, end to end *(staging only)*
+### Journey 4 — A real fan-out row, end to end _(staging only)_
 
 Local dev cannot produce a genuine fan-out row. On staging: trigger a real
 `contest.resolved` via the admin contest-resolve action, and a real `watch.*`
@@ -203,7 +203,7 @@ panel with the writer's verbatim `title`/`body`. `spotify.new_show` cannot be
 triggered naturally (staging crawler is paused) — seed it directly and say so.
 
 **Second-account check (Gate 6):** every one of the above is confirmed
-*absent* from a second user's panel. Fan-out audience bugs are invisible from
+_absent_ from a second user's panel. Fan-out audience bugs are invisible from
 one account.
 
 ---

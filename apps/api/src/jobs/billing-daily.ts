@@ -8,8 +8,9 @@
 // deploy build as the API, no new package and no `tsx` at runtime. Env:
 // DATABASE_URL, STRIPE_SECRET_KEY, RESEND_API_KEY, CLERK_SECRET_KEY.
 //
-// Seven independent sub-tasks (§5.1), each wrapped in its own try/catch and
-// logged via apiLogger — one failure never blocks the rest. Idempotency comes
+// Eight independent sub-tasks (§5.1, plus the #737 notification prune), each
+// wrapped in its own try/catch and logged via apiLogger — one failure never
+// blocks the rest. Idempotency comes
 // from the email dedupe keys + subscription_events existence checks, so a
 // re-run (or a missed day catching up) is safe.
 //
@@ -20,6 +21,12 @@
 //   runNinetyDayPurge       — task 5  (§5.3 preserve-then-purge)
 //   runDunningFallbackSweep — task 6  (past_due > 8d webhook-loss safety net)
 //   runHousekeeping         — task 7  (prune processed events; retry failed sends)
+//   runNotificationPrune    — task 8  (#737: delete user_notification rows past
+//                                      the 90-day retention window)
+//
+// Task 8 is not a billing concern; it lives here because this is the only daily
+// cron in apps/api and a per-watcher fan-out table needs a daily prune. Adding a
+// second Render cron for one DELETE would not earn its keep.
 //
 // SCHEMA LIMITATIONS called out where they bite (see the per-task headers):
 //   - No card-cache columns on `subscriptions` yet (the `customer.updated` /
@@ -51,6 +58,7 @@ import type { PremiumFeature } from '@concert-crawl/entitlements'
 import { sendTransactionalEmail } from '../lib/email.js'
 import type { PaidEmailTier } from '../emails/types.js'
 import { apiLogger } from '../lib/logger.js'
+import { pruneNotifications } from '../lib/prune-notifications.js'
 import {
   getBillingJobStripeClient,
   type BillingJobStripeClient,
@@ -982,11 +990,28 @@ export const runHousekeeping = async (now: Date): Promise<void> => {
 }
 
 // ---------------------------------------------------------------------------
+// Task 8 — Notification retention prune (#737)
+// ---------------------------------------------------------------------------
+
+/**
+ * Deletes `user_notification` rows past the retention window. Thin wrapper so
+ * the orchestrator's task table stays uniform; all the logic (and the
+ * admin-alert exclusion) lives in prune-notifications.ts.
+ */
+export const runNotificationPrune = async (now: Date): Promise<void> => {
+  const { deleted } = await pruneNotifications(db, now)
+  apiLogger.info(
+    { deletedCount: deleted },
+    'billing-daily task8: pruned expired user notifications',
+  )
+}
+
+// ---------------------------------------------------------------------------
 // Orchestrator
 // ---------------------------------------------------------------------------
 
 /**
- * Runs all seven sub-tasks, each in its own try/catch so one failure never
+ * Runs all eight sub-tasks, each in its own try/catch so one failure never
  * blocks the rest (§5.1). Returns nothing; the outer entry guard exits
  * non-zero only on a catastrophic (setup) failure, never on a single sub-task.
  */
@@ -1002,6 +1027,7 @@ export const runBillingDaily = async (
     ['ninety-day-purge', () => runNinetyDayPurge(now)],
     ['dunning-fallback-sweep', () => runDunningFallbackSweep(now, stripe)],
     ['housekeeping', () => runHousekeeping(now)],
+    ['notification-prune', () => runNotificationPrune(now)],
   ]
 
   for (const [name, run] of tasks) {

@@ -498,6 +498,13 @@
       "when": 1786233600000,
       "tag": "0070_manual_follow_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1786320000000,
+      "tag": "0071_notifications_seen_at",
+      "breakpoints": true
     }
   ]
 }

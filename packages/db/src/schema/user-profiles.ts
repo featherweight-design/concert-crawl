@@ -31,6 +31,12 @@ export const userProfiles = pgTable('user_profiles', {
   spotifyNudgeSeenAt: timestamp('spotify_nudge_seen_at', {
     withTimezone: true,
   }),
+  // Set when the user opens the in-app notification panel (#737). Drives the
+  // "fresh vs. backfill" divider and the unread pip. NULL = never opened, so
+  // every row in the backfill window counts as unseen.
+  notificationsSeenAt: timestamp('notifications_seen_at', {
+    withTimezone: true,
+  }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),

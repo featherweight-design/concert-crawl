@@ -19,6 +19,7 @@ import { feedbackRouter } from './feedback.js'
 import { searchRouter } from './search.js'
 import { spotifyRouter } from './spotify.js'
 import { mePushRouter } from './me-push.js'
+import { notificationsRouter } from './notifications.js'
 import { emailUnsubscribeRouter } from './email-unsubscribe.js'
 import { createBillingRouter } from './billing.js'
 import { createBillingManageRouter } from './billing-manage.js'
@@ -55,6 +56,8 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/search', searchRouter)
   app.route('/v1/spotify', spotifyRouter)
   app.route('/v1/me', mePushRouter)
+  // Viewer-scoped collection, so no `/me` prefix — same shape as /v1/watching.
+  app.route('/v1/notifications', notificationsRouter)
   // Signed one-click unsubscribe — no auth by design (#763 §8.2).
   app.route('/v1/email', emailUnsubscribeRouter)
   app.route('/v1/billing', createBillingRouter(getStripeClient))
