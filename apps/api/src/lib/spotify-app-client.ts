@@ -19,6 +19,7 @@
 // failures. Every response crosses a system boundary and is Zod-validated —
 // no `as` casts.
 import { z } from 'zod'
+import { httpUrl } from './url-schema.js'
 import {
   SpotifyApiError,
   SpotifyAuthError,
@@ -44,7 +45,12 @@ const tokenResponseSchema = z.object({
   expires_in: z.number().positive(),
 })
 
-const artistImageSchema = z.object({ url: z.string().min(1) })
+// Both URLs below reach a browser — the image as an `src`, the profile link as
+// an `href` — so they get the scheme guard rather than a bare non-empty string.
+// `.catch()` degrades a bad value to null instead of failing the whole
+// candidate: an unrenderable link is not a reason to hide an artist from the
+// match queue.
+const artistImageSchema = z.object({ url: httpUrl() }).nullable().catch(null)
 
 const searchArtistSchema = z.object({
   id: z.string().min(1),
@@ -54,7 +60,7 @@ const searchArtistSchema = z.object({
   // Carried for the admin candidate picker (#1345), which needs enough to tell
   // two identically-named artists apart. The matcher ignores both.
   genres: z.array(z.string()).nullish(),
-  external_urls: z.object({ spotify: z.string().min(1) }).nullish(),
+  external_urls: z.object({ spotify: httpUrl() }).nullable().catch(null),
 })
 
 const searchResponseSchema = z.object({
@@ -282,7 +288,7 @@ export const createSpotifyAppClient = async (
     return parsed.data.artists.items.map((item) => ({
       id: item.id,
       name: item.name,
-      images: item.images ?? [],
+      images: (item.images ?? []).filter((image) => image !== null),
       popularity: item.popularity ?? null,
       genres: item.genres ?? [],
       spotifyUrl: item.external_urls?.spotify ?? null,

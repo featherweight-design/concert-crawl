@@ -197,6 +197,43 @@ describe('createSpotifyAppClient().searchArtists', () => {
     ])
   })
 
+  // Both URLs are rendered by the admin picker — the image as a src, the
+  // profile as an href — so a non-http scheme is dropped rather than passed on.
+  it('drops non-http URLs without dropping the candidate', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          artists: {
+            items: [
+              {
+                id: 'sp3',
+                name: 'Sketchy',
+                // eslint-disable-next-line no-script-url
+                images: [{ url: 'javascript:alert(1)' }],
+                external_urls: { spotify: 'javascript:alert(1)' },
+              },
+            ],
+          },
+        }),
+      )
+
+    const client = await createSpotifyAppClient({ fetchFn })
+    const candidates = await client?.searchArtists('Sketchy')
+
+    expect(candidates).toEqual([
+      {
+        id: 'sp3',
+        name: 'Sketchy',
+        images: [],
+        popularity: null,
+        genres: [],
+        spotifyUrl: null,
+      },
+    ])
+  })
+
   it('surfaces a persistent 429 as SpotifyRateLimitError', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
