@@ -107,7 +107,12 @@ export const VenueGuideBlock = ({
           }
         : { kind: 'danger' as const, label: GUIDE_COPY.badge.blocked }
 
+  // `loadFailed` means `initialGuide` is an empty fallback, not this venue's
+  // draft — so the whole authoring surface stays inert, not just the actions.
+  // Letting the picker still toggle would look editable while every edit is
+  // unsaveable.
   const toggleChip = (key: GuideChipKey) => {
+    if (loadFailed) return
     if (!isOptionalChipKey(key)) return
     setSelected((current) =>
       current.includes(key)
@@ -419,7 +424,11 @@ export const VenueGuideBlock = ({
                 {OPTIONAL_KEYS.length}
               </span>
             </div>
-            <ChipPicker selected={selected} onToggle={toggleChip} />
+            <ChipPicker
+              selected={selected}
+              onToggle={toggleChip}
+              disabled={loadFailed}
+            />
           </div>
 
           {selected.length > 0 && (
@@ -479,10 +488,12 @@ export const VenueGuideBlock = ({
                         <button
                           type="button"
                           onClick={() => toggleChip(key)}
+                          disabled={loadFailed}
                           aria-label={`${GUIDE_COPY.picker.removeLabel} ${GUIDE_COPY.chipLabel[key]} ${GUIDE_COPY.field.removeSuffix}`}
                           style={{
                             all: 'unset',
-                            cursor: 'pointer',
+                            cursor: loadFailed ? 'not-allowed' : 'pointer',
+                            opacity: loadFailed ? 0.5 : 1,
                             boxSizing: 'border-box',
                             minHeight: 44,
                             display: 'inline-flex',

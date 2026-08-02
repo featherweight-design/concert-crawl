@@ -16,9 +16,14 @@ const V2_KEYS = ['weather', 'restrooms', 'atm', 'cell_service'] as const
 interface ChipPickerProps {
   selected: GuideChipKey[]
   onToggle: (key: GuideChipKey) => void
+  disabled?: boolean
 }
 
-export const ChipPicker = ({ selected, onToggle }: ChipPickerProps) => (
+export const ChipPicker = ({
+  selected,
+  onToggle,
+  disabled = false,
+}: ChipPickerProps) => (
   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
     {OPTIONAL_KEYS.map((key) => {
       const on = selected.includes(key)
@@ -28,11 +33,15 @@ export const ChipPicker = ({ selected, onToggle }: ChipPickerProps) => (
           key={key}
           type="button"
           onClick={() => onToggle(key)}
+          disabled={disabled}
           aria-pressed={on}
           aria-label={`${on ? GUIDE_COPY.picker.removeLabel : GUIDE_COPY.picker.addLabel} ${label}`}
           style={{
+            // `all: unset` also drops the UA disabled styling, so the
+            // inert state has to be drawn explicitly.
             all: 'unset',
-            cursor: 'pointer',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            opacity: disabled ? 0.5 : 1,
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,

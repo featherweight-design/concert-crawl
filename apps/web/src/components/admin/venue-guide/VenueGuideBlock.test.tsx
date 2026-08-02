@@ -261,6 +261,25 @@ describe('VenueGuideBlock (#764)', () => {
     expect(publishVenueGuide).not.toHaveBeenCalled()
   })
 
+  // The whole surface goes inert, not just the actions — a picker that still
+  // toggles looks editable while every edit is unsaveable.
+  it('leaves the chip picker inert when the guide failed to load', () => {
+    renderBlock(populatedGuide, true)
+
+    const add = screen.getByRole('button', {
+      name: addLabelFor(GUIDE_COPY.chipLabel.transit),
+    })
+    expect(add.hasAttribute('disabled')).toBe(true)
+    fireEvent.click(add)
+    expect(screen.queryByLabelText(GUIDE_COPY.chipLabel.transit)).toBeNull()
+
+    const remove = screen.getByRole('button', {
+      name: pickerRemoveLabelFor(GUIDE_COPY.chipLabel.parking),
+    })
+    fireEvent.click(remove)
+    expect(screen.getByLabelText(GUIDE_COPY.chipLabel.parking)).toBeTruthy()
+  })
+
   it('caps every authored field at the shared max length', () => {
     renderBlock(populatedGuide)
     for (const field of screen.getAllByRole('textbox')) {
