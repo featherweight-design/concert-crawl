@@ -41,6 +41,12 @@ services:
         sync: false # Enter manually in Render dashboard
       - key: ALLOWED_ORIGIN
         sync: false # Set to https://concertcrawl.app
+      # Client-credentials app token for the artist identity match (#1115).
+      # Unset = the matcher is dormant and no-ops; nothing else degrades.
+      - key: SPOTIFY_CLIENT_ID
+        sync: false # Spotify Developer Dashboard → app → Settings
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false # Same page → "View client secret"
 
   - type: cron
     name: concert-crawl-billing-jobs
@@ -183,6 +189,11 @@ services:
         sync: false # Staging Clerk secret — enter manually
       - key: ALLOWED_ORIGIN
         sync: false # Set to the Vercel preview URL (e.g. https://concert-crawl-git-main-<team>.vercel.app)
+      # See the prod API service above — unset means the matcher is dormant.
+      - key: SPOTIFY_CLIENT_ID
+        sync: false # Spotify Developer Dashboard → app → Settings
+      - key: SPOTIFY_CLIENT_SECRET
+        sync: false # Same page → "View client secret"
 
   - type: cron
     name: concert-crawl-billing-jobs-staging

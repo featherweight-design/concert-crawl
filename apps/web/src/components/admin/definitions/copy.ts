@@ -2293,6 +2293,39 @@ export const ADMIN_COPY = {
     noResults: (itemLabel: string) => `No ${itemLabel}`,
   },
 
+  // The Spotify artist match-review queue (#1115, PR-C). Deliberately plain:
+  // this surface is exempt from the design pipeline.
+  artists: {
+    eyebrow: 'Artists',
+    title: 'Spotify match',
+    subtitle:
+      'Ambiguous rows had more than one exact Spotify hit. Pick the right artist id — a wrong photo is worse than no photo.',
+    statusChips: {
+      ambiguous: 'Ambiguous',
+      unmatched: 'Unmatched',
+      no_match: 'No match',
+      matched: 'Matched',
+    },
+    columns: {
+      name: 'Artist',
+      canonicalName: 'Canonical name',
+      status: 'Status',
+      spotifyArtistId: 'Spotify artist id',
+      checkedAt: 'Last checked',
+      actions: '',
+    },
+    idPlaceholder: 'Spotify artist id',
+    save: 'Save',
+    clear: 'Clear',
+    loadingState: 'Loading artists…',
+    emptyState: 'Nothing in this queue.',
+    errorState: 'Could not load artists.',
+    saveError: 'Could not save that artist.',
+    never: 'never',
+    dormantNotice:
+      'Matching is dormant until SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET are set on the API. Rows stay unmatched until then.',
+  },
+
   // The dashboard triage panel (#1215). Mirrors
   // design/design_handoff_admin_triage/triage-copy.jsx with the plan's
   // handoff-vs-reality reconciliations and the state-coverage audit's copy

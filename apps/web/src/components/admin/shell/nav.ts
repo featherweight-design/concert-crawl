@@ -44,6 +44,13 @@ export const NAV_V2: NavItem[] = [
     section: 'operations',
   },
   {
+    key: 'artists',
+    label: 'Artists',
+    href: '/admin/artists',
+    iconName: 'Music',
+    section: 'operations',
+  },
+  {
     key: 'feedback',
     label: 'Feedback',
     href: '/admin/feedback',
