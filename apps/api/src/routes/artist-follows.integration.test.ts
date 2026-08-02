@@ -3,9 +3,12 @@
 // Two invariants are load-bearing here:
 //   1. Follow writes OUR table only — it must never touch the user's Spotify
 //      account (design brief §3.5). Asserted by spying the Spotify client.
-//   2. Manual follows are deduped at the API layer, because the unique index
-//      is (user_id, source, spotify_artist_id) and an unmatched artist has a
-//      NULL spotify_artist_id, which Postgres treats as always distinct.
+//   2. A manual follow lands at most once per user per artist. The API's
+//      read-before-insert handles the common repeat; the partial unique index
+//      on (user_id, canonical_name) WHERE source='manual' (migration 0070) is
+//      what holds when two requests race, since the older
+//      (user_id, source, spotify_artist_id) index can't dedupe the NULL
+//      spotify_artist_id of an unmatched artist.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const { authState, spotifyMock } = vi.hoisted(() => ({

@@ -80,10 +80,12 @@ export async function seedArtist(
   const [artist] = await testDb
     .insert(artists)
     .values({
+      ...overrides,
       name,
       canonicalName,
+      // Derived last so an override can't seed a row whose slug disagrees with
+      // its own canonical name.
       slug: artistSlug(canonicalName),
-      ...overrides,
     })
     .returning()
 
