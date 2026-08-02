@@ -295,8 +295,10 @@ export const SEED_VENUES: NewVenue[] = [
     verified: true,
     crawlDelayMs: 3000,
     // Server-rendered WordPress, same Rock House Presents theme as Larimer
-    // Lounge — the listing is in the initial HTML, so no browser is needed.
+    // Lounge — the listing is in the initial HTML, so no browser is needed and
+    // there is nothing to wait on past the document itself.
     crawlMode: 'http',
+    crawlWaitUntil: 'domcontentloaded' as const,
     capacity: 250,
     venueType: 'Bar',
     neighborhood: 'Globeville',
@@ -316,6 +318,7 @@ export const SEED_VENUES: NewVenue[] = [
     verified: true,
     crawlDelayMs: 3000,
     crawlMode: 'http',
+    crawlWaitUntil: 'domcontentloaded' as const,
     capacity: 250,
     venueType: 'Bar',
     neighborhood: 'City Park West',
