@@ -49,6 +49,10 @@ const manifest: AuditManifest = validateManifest([
     auth: 'user',
   },
   {
+    // Needs the `artists` projection populated. `db:seed:staging` syncs venues,
+    // events and price_log but not `artists`, so after a staging reset this
+    // route 404s until `pnpm --filter @concert-crawl/db db:backfill-artists`
+    // is run against the target. Tracked in #1326.
     id: 'artist-detail',
     path: '/artists/andrea-bocelli',
     tags: ['consumer'],
