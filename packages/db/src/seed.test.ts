@@ -192,16 +192,14 @@ describe('seed data', () => {
       )
       const source = readFileSync(seedPath, 'utf8')
 
-      // Each `.insert(eventsTable)` must have a `.values(` whose argument
-      // begins with the helper call.
-      const insertBlocks = source
-        .split(/\.insert\(eventsTable\)/)
-        .slice(1)
-        .map((chunk) => chunk.slice(0, chunk.indexOf('.returning')))
+      // Anchored at the head of each chunk rather than searched within it: the
+      // `.values(` that follows the insert is the only one that belongs to it,
+      // and not every insert ends with `.returning` to bound a search against.
+      const insertBlocks = source.split(/\.insert\(eventsTable\)/).slice(1)
 
       expect(insertBlocks.length).toBe(5)
       for (const block of insertBlocks) {
-        expect(block).toMatch(/\.values\(\s*withCanonicalArtist\(/)
+        expect(block).toMatch(/^\s*\.values\(\s*withCanonicalArtist\(/)
       }
     })
   })
