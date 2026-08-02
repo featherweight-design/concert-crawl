@@ -302,11 +302,46 @@
    a radius-14 box, and a fade to page background inside it reads as a bug. */
 .ap-hero-fade { display: block; }
 
+/* The route past the iframe. Hidden until focus, then a real 44px target —
+   a `:focus` rule cannot be expressed inline, which is why it lives here. */
+.ap-skip {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.ap-skip:focus {
+  position: static;
+  display: inline-block;
+  width: auto;
+  height: auto;
+  min-height: 44px;
+  overflow: visible;
+  clip: auto;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  line-height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--focus);
+  background: var(--surface-2);
+  color: var(--fg);
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 /* Bottom padding reserves the fixed mobile bottom nav, same 80px every other
    consumer page reserves with `pb-20`. */
 .ap-shell { position: relative; padding: 0 18px 80px; margin-top: -26px; }
 
 /* Block rhythm steps up on desktop (design table §1). */
+.ap-block-follow { margin-top: 20px; }
+.ap-block-player { margin-top: 24px; }
 .ap-block-shows { margin-top: 24px; }
 .ap-block-past { margin-top: 26px; }
 .ap-name {
@@ -349,6 +384,7 @@
   }
   .ap-rail { position: sticky; top: 24px; }
   .ap-hero-fade { display: none; }
+  .ap-block-player { margin-top: 30px; }
   .ap-block-shows { margin-top: 30px; }
   .ap-block-past { margin-top: 34px; }
   .ap-name { font-size: 42px; line-height: 1.04; letter-spacing: -0.04em; }

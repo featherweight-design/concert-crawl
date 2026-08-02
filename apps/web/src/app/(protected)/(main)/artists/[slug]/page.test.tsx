@@ -40,6 +40,26 @@ vi.mock('next/navigation', () => ({
   // BackChip renders inside the page tree and reaches for the router.
   useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
   usePathname: () => '/artists/nightjar-choir',
+  useSearchParams: () => new URLSearchParams(),
+}))
+
+// The follow control and the Watch eye both reach for Clerk; the player asks
+// the provider which plate colour to hand Spotify. This test is about the
+// page's data path and document outline, not either of those.
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ getToken: async () => null, isSignedIn: false }),
+}))
+
+vi.mock('@/theme', () => ({
+  useTheme: () => ({ theme: 'electric', setTheme: () => undefined }),
+}))
+
+vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+  TierPickerSheet: () => null,
+}))
+
+vi.mock('@/components/consumer/watch-show-button/WatchShowButton', () => ({
+  WatchShowButton: () => <button data-testid="watch-stub" type="button" />,
 }))
 
 vi.mock('next/link', () => ({
@@ -172,9 +192,9 @@ describe('ArtistPage', () => {
   })
 
   it('keeps the previously list on the page when there is nothing upcoming', async () => {
-    // The order rule is state-dependent: with no shows, the upcoming block (and
-    // in PR-F the empty-state pitch) leads. PR-E has no player yet, so what is
-    // assertable here is that the past list still renders and stays last.
+    // The order rule is state-dependent: with no shows the EMPTY upcoming
+    // block leads — it keeps its "Upcoming" head, because the section still
+    // exists, it is simply empty — and the past list still renders below it.
     mockPublicGet.mockResolvedValue(payload({ shows: [] }))
 
     const html = renderToString(await ArtistPage({ params }))
@@ -183,6 +203,6 @@ describe('ArtistPage', () => {
       (node) => node.textContent,
     )
 
-    expect(heads).toEqual([ARTIST_COPY.pastTitle])
+    expect(heads).toEqual([ARTIST_COPY.upcomingTitle, ARTIST_COPY.pastTitle])
   })
 })

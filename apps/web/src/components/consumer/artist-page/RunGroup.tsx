@@ -3,6 +3,7 @@ import Link from 'next/link'
 import React from 'react'
 
 import { StatusPill } from '@/components/consumer/StatusPill'
+import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton'
 
 import { AP_PILL_FONT_SIZE } from './definitions/constants'
 import { ARTIST_COPY } from './definitions/copy'
@@ -13,10 +14,12 @@ interface RunGroupProps {
   venue: string
   city: string | null
   shows: ArtistShow[]
+  /** Headliner name — only used to build the Watch control's signed-out name. */
+  artist: string
 }
 
 /** A residency reads as one booking with several nights, not several bookings. */
-export const RunGroup = ({ venue, city, shows }: RunGroupProps) => (
+export const RunGroup = ({ venue, city, shows, artist }: RunGroupProps) => (
   <div
     data-show-item=""
     style={{
@@ -76,42 +79,56 @@ export const RunGroup = ({ venue, city, shows }: RunGroupProps) => (
       {shows.map((show) => {
         const { dow, mon, day } = fmtDate(show.iso)
         return (
-          <Link
+          // Each night is its own booking, so each night gets its own Watch —
+          // beside the link, never inside it.
+          <div
             key={show.eventId}
-            href={`/events/${show.eventId}`}
-            className="ap-row"
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 12,
+              gap: 8,
               minHeight: 44,
-              padding: '0 8px',
-              margin: '0 -8px',
-              borderRadius: 8,
-              textDecoration: 'none',
-              color: 'inherit',
             }}
           >
-            <span
+            <Link
+              href={`/events/${show.eventId}`}
+              className="ap-row"
               style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: 11.5,
-                fontWeight: 700,
-                letterSpacing: '0.06em',
-                color: 'var(--fg-muted)',
-                width: 92,
-                flexShrink: 0,
-                textDecoration:
-                  show.status === 'cancelled' ? 'line-through' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                flex: 1,
+                minWidth: 0,
+                minHeight: 44,
+                padding: '0 8px',
+                margin: '0 -8px',
+                borderRadius: 8,
+                textDecoration: 'none',
+                color: 'inherit',
               }}
             >
-              {`${dow} ${mon} ${day}`}
-            </span>
-            <span style={{ flex: 1, minWidth: 0 }}>
-              <StatusPill status={show.status} fontSize={AP_PILL_FONT_SIZE} />
-            </span>
-            <PriceChip price={show.price} />
-          </Link>
+              <span
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  letterSpacing: '0.06em',
+                  color: 'var(--fg-muted)',
+                  width: 92,
+                  flexShrink: 0,
+                  textDecoration:
+                    show.status === 'cancelled' ? 'line-through' : 'none',
+                }}
+              >
+                {`${dow} ${mon} ${day}`}
+              </span>
+              <span style={{ flex: 1, minWidth: 0 }}>
+                <StatusPill status={show.status} fontSize={AP_PILL_FONT_SIZE} />
+              </span>
+              <PriceChip price={show.price} />
+            </Link>
+            <WatchShowButton eventId={show.eventId} artist={artist} />
+          </div>
         )
       })}
     </div>

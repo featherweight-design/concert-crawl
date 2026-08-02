@@ -25,6 +25,12 @@ vi.mock('next/link', () => ({
   ),
 }))
 
+// Every row carries the app-wide Watch control, which reaches for Clerk and
+// React Query. What matters here is the list, not the control.
+vi.mock('@/components/consumer/watch-show-button/WatchShowButton', () => ({
+  WatchShowButton: () => <button data-testid="watch-stub" type="button" />,
+}))
+
 afterEach(cleanup)
 
 const show = (
@@ -61,12 +67,13 @@ const thirteenShows = (): ArtistShow[] => [
 ]
 
 describe('UpcomingShows', () => {
-  it('counts SHOWS in the heading while capping ITEMS in the list', () => {
-    const { container, getByText } = render(
+  it('counts SHOWS in the show-all control while capping ITEMS in the list', () => {
+    const { container, getByText, queryByText } = render(
       <UpcomingShows name="The Cold Fronts" shows={thirteenShows()} />,
     )
+    // The head carries no count — it duplicated "Upcoming" and clipped at 320px.
+    expect(queryByText(ARTIST_COPY.showCount(13))).toBeNull()
     // A run is one item; the label is always in shows.
-    expect(getByText(ARTIST_COPY.showCount(13))).toBeTruthy()
     expect(container.querySelectorAll('[data-show-item]')).toHaveLength(5)
     expect(getByText(ARTIST_COPY.showAll(13))).toBeTruthy()
   })
@@ -92,13 +99,16 @@ describe('UpcomingShows', () => {
   })
 
   it('omits the toggle when everything already fits', () => {
+    // Scoped by name: every row now carries a Watch control, so "no buttons at
+    // all" is no longer the same claim as "no show-all toggle".
     const { queryByRole } = render(
       <UpcomingShows
         name="Wax Harbour"
         shows={[show('2026-08-08', 'Hi-Dive', 15)]}
       />,
     )
-    expect(queryByRole('button')).toBeNull()
+    expect(queryByRole('button', { name: ARTIST_COPY.showAll(1) })).toBeNull()
+    expect(queryByRole('button', { name: ARTIST_COPY.showFewer })).toBeNull()
   })
 
   it('links each row to its event and labels the list', () => {

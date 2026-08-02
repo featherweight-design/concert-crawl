@@ -37,6 +37,10 @@ export const SectionHead = ({ id, title, count }: SectionHeadProps) => (
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           color: 'var(--fg-subtle)',
+          // At 320px the rule steals the count's width and the last character
+          // clips. The count is the shortest thing in the row; it never gives.
+          flexShrink: 0,
+          whiteSpace: 'nowrap',
         }}
       >
         {count}

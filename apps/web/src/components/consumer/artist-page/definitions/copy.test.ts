@@ -16,6 +16,15 @@ const walk = (dir: string): string[] =>
 
 const sourceFiles = () => walk(ROOT).filter((file) => /\.tsx?$/.test(file))
 
+/**
+ * A file that asserts the ban has to name the banned words to do it. Any such
+ * file carries this sentinel and excludes itself — a bare filename allow-list
+ * silently stops covering a file the day it is renamed.
+ */
+const BAN_CHECK_SENTINEL = 'VOCABULARY-BAN-CHECK'
+const assertsTheBan = (body: string) => body.includes(BAN_CHECK_SENTINEL)
+
+// VOCABULARY-BAN-CHECK
 describe('artist page vocabulary', () => {
   // A show is WATCHED; an artist is FOLLOWED. The watching affordance is an
   // EYE — no heart icon exists anywhere in this product, and "Saved" /
@@ -23,16 +32,15 @@ describe('artist page vocabulary', () => {
   it('never mentions a heart', () => {
     for (const file of sourceFiles()) {
       const body = readFileSync(file, 'utf8')
-      // Self-exclude: this test file necessarily names the forbidden strings.
-      if (file.endsWith('copy.test.ts')) continue
+      if (assertsTheBan(body)) continue
       expect(body.toLowerCase(), file).not.toContain('heart')
     }
   })
 
   it('never says Saved or Favorites', () => {
     for (const file of sourceFiles()) {
-      if (file.endsWith('copy.test.ts')) continue
       const body = readFileSync(file, 'utf8')
+      if (assertsTheBan(body)) continue
       expect(body, file).not.toMatch(/\bSaved\b/)
       expect(body, file).not.toMatch(/\bFavou?rites?\b/i)
     }

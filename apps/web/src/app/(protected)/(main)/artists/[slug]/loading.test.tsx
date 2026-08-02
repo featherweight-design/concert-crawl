@@ -13,6 +13,19 @@ import ArtistLoading from './loading'
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ back: vi.fn(), push: vi.fn() }),
   usePathname: () => '/artists/nightjar-choir',
+  useSearchParams: () => new URLSearchParams(),
+}))
+
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ getToken: async () => null, isSignedIn: false }),
+}))
+
+vi.mock('@/theme', () => ({
+  useTheme: () => ({ theme: 'electric', setTheme: () => undefined }),
+}))
+
+vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+  TierPickerSheet: () => null,
 }))
 
 vi.mock('next/link', () => ({
@@ -99,17 +112,20 @@ describe('artist route skeleton', () => {
   // PR-E renders no Follow button at either viewport, so the skeleton must not
   // reserve one — a 48px + 20px slot that collapses on load is the same
   // layout-shift lie as the missing crumb, just in the other direction.
-  it('reserves no Follow slot while PR-E ships no Follow button', () => {
+  it('reserves the Follow slot at the height the loaded page uses', () => {
+    // PR-E deliberately reserved nothing here, because PR-E rendered no Follow
+    // button and a reserved slot would have been a 68px layout-shift lie. PR-F
+    // ships the button, so the lie is now the other way round: leaving the box
+    // out makes the page jump the moment the payload lands.
     const skeleton = render(<ArtistLoading />).container
     const loaded = render(<ArtistPageContent data={LOADED} />).container
 
-    // No control at all inside the shell yet — the only button on the loaded
-    // page is the mobile BackChip, which sits over the plate, not in the shell.
-    expect(loaded.querySelector('.ap-shell button')).toBeNull()
+    // The loaded page puts a Follow control inside the shell at every viewport.
+    expect(loaded.querySelector('.ap-shell button[aria-label]')).not.toBeNull()
 
     const heights = Array.from(
       skeleton.querySelectorAll<HTMLElement>('[style]'),
     ).map((node) => node.style.height)
-    expect(heights).not.toContain('48px')
+    expect(heights).toContain('48px')
   })
 })

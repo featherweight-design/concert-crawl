@@ -7,6 +7,7 @@ import React from 'react'
 
 import {
   CrumbSkeleton,
+  FollowSkeleton,
   HeroSkeleton,
   ShowsSkeleton,
   TextSkeleton,
@@ -32,6 +33,11 @@ const ArtistLoading = () => (
           <div style={{ borderRadius: 14, overflow: 'hidden' }}>
             <HeroSkeleton height={320} />
           </div>
+          {/* Design table §12: on DESKTOP the Follow slot belongs in the rail,
+              in the same marginTop:16 box the real control occupies. */}
+          <div style={{ marginTop: 16 }}>
+            <FollowSkeleton />
+          </div>
         </div>
 
         <div style={{ minWidth: 0 }}>
@@ -53,14 +59,13 @@ const ArtistLoading = () => (
             <TextSkeleton width="58%" height={12} marginTop={8} />
           </div>
 
-          {/* NOTE (PR-F): the Follow control's 48px slot is deliberately NOT
-              reserved here. PR-E renders no Follow button at either viewport,
-              so reserving it made the skeleton 68px taller than the page it
-              stands in for — the same layout-shift lie the missing crumb was.
-              Design table §12 does list a Follow bar; that row describes the
-              finished page. PR-F must restore it alongside the button, and per
-              §12 the DESKTOP slot belongs in the left rail (in its marginTop:16
-              slot), not in this content column. */}
+          {/* Mobile only — the desktop slot is in the rail above. The loaded
+              page puts the mobile control here too, so the two agree. This
+              skeleton always reserves it: the empty state renders a Follow at
+              this viewport as well, so the box is occupied either way. */}
+          <div className="ap-block-follow md:hidden">
+            <FollowSkeleton />
+          </div>
 
           <div className="mt-[30px] md:mt-[34px]">
             <div className="md:hidden">

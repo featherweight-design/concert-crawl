@@ -28,11 +28,11 @@ export const UpcomingShows = ({ name, shows }: UpcomingShowsProps) => {
 
   return (
     <section aria-label={ARTIST_COPY.showsListAria(name)}>
-      <SectionHead
-        id="upcoming"
-        title={ARTIST_COPY.upcomingTitle}
-        count={ARTIST_COPY.showCount(showCount)}
-      />
+      {/* No count. In a short list "Upcoming" and "2 SHOWS" say the same thing
+          twice, and the mono count is the string that clips at 320px. The
+          number still appears where it does work: the "Show all N shows"
+          control below, which is the only place it is news. */}
+      <SectionHead id="upcoming" title={ARTIST_COPY.upcomingTitle} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {visible.map((item, index) => (
           <React.Fragment
@@ -61,9 +61,10 @@ export const UpcomingShows = ({ name, shows }: UpcomingShowsProps) => {
                 venue={item.venue}
                 city={item.city}
                 shows={item.shows}
+                artist={name}
               />
             ) : (
-              <ShowRow show={item} />
+              <ShowRow show={item} artist={name} />
             )}
           </React.Fragment>
         ))}

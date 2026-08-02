@@ -70,6 +70,9 @@ export const ARTIST_COPY = {
   playerNone: "We don't have them on Spotify.",
   playerNoneSub:
     "Doesn't mean much — plenty of good bands aren't. Their shows are below.",
+  // DELTA vs the handoff: new. The player is a <section>; an unlabelled region
+  // is a landmark a screen reader can only announce as "region".
+  playerAria: (name: string) => `Player for ${name}`,
 
   // Upcoming shows
   upcomingTitle: 'Upcoming',

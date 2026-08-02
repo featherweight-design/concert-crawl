@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.27.0-beta',
+    date: 'Aug 2, 2026',
+    headline: 'Artists have their own page now — and you can follow them.',
+    items: [
+      {
+        kind: 'added',
+        text: "Tap an artist's name anywhere and you land on a page built for them: every upcoming Denver date we know about, a run at one venue shown as a run instead of three near-identical rows, and where they've played since we started crawling. Follow an artist and they stay on your radar. If we've matched them on Spotify you get a preview player, and if we haven't, we say so rather than showing you an empty box.",
+      },
+      {
+        kind: 'added',
+        text: 'Every show on an artist page carries the same Watch control the rest of the app uses, so you can start watching a night without leaving the page.',
+      },
+    ],
+  },
+  {
     version: 'v0.26.0-beta',
     date: 'Aug 2, 2026',
     headline: 'The app can finally tell you something happened.',

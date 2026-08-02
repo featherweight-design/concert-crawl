@@ -18,12 +18,19 @@ interface BackChipProps {
   top?: number
   /** Route pushed when there is no history entry to pop. Defaults to `'/events'`. */
   fallbackHref?: string
+  /**
+   * Lay the chip out in flow instead of over artwork — for bars that already
+   * provide their own background (the artist page's sticky sub-header). `top`
+   * is ignored in this mode.
+   */
+  inline?: boolean
   className?: string
 }
 
 export function BackChip({
   top = 56,
   fallbackHref = '/events',
+  inline = false,
   className,
 }: BackChipProps) {
   const router = useRouter()
@@ -46,15 +53,25 @@ export function BackChip({
       }}
       aria-label={BACK_CHIP_COPY.label}
       className={cn(
-        'absolute left-2.5 z-10 flex h-11 w-11 items-center justify-center',
+        'z-10 flex h-11 w-11 items-center justify-center',
+        inline ? 'relative shrink-0' : 'absolute left-2.5',
         className,
       )}
-      style={{ top: top - HIT_AREA_OFFSET_PX }}
+      style={inline ? undefined : { top: top - HIT_AREA_OFFSET_PX }}
     >
       <span
         aria-hidden="true"
         className="flex h-9 w-9 items-center justify-center rounded-full"
-        style={{ background: 'var(--scrim)' }}
+        style={{
+          // `--scrim` is a dark wash on every theme, which puts dark ink on a
+          // dark disc in Light mode over light artwork — the chevron all but
+          // disappeared. A background mixed from `--bg` is opposite the
+          // foreground in every theme by construction, so the chevron holds
+          // contrast wherever the chip lands.
+          background: 'color-mix(in oklab, var(--bg) 82%, transparent)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+        }}
       >
         <svg width="10" height="16" viewBox="0 0 10 16" fill="none">
           <path

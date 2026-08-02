@@ -6,7 +6,12 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { ARTIST_COPY } from '../definitions/copy'
 
-import { HeroSkeleton, ShowsSkeleton, TextSkeleton } from './Skeletons'
+import {
+  FollowSkeleton,
+  HeroSkeleton,
+  ShowsSkeleton,
+  TextSkeleton,
+} from './Skeletons'
 
 afterEach(cleanup)
 
@@ -38,5 +43,15 @@ describe('artist page skeletons', () => {
     expect(
       container.querySelectorAll('[role="status"] > [aria-hidden="true"]'),
     ).toHaveLength(3)
+  })
+
+  // Design table §12 lists a Follow bar on the skeleton. It has to match the
+  // real control's 48px box or the page jumps the moment the payload lands.
+  it('reserves the Follow control at its real height, decoratively', () => {
+    const { container } = render(<FollowSkeleton />)
+    const bar = container.querySelector('[aria-hidden="true"]')
+    expect(bar).not.toBeNull()
+    expect(bar?.getAttribute('style')).toContain('height: 48px')
+    expect(bar?.getAttribute('style')).toContain('border-radius: 10px')
   })
 })

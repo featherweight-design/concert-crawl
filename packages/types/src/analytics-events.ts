@@ -32,6 +32,10 @@ export type PickerEntry =
   | 'logged-out-watch'
   | 'logged-out-going'
   | 'logged-out-price'
+  // A gated Follow tap on the artist page (#1115). Following is its own reach —
+  // bucketing it with `logged-out-watch` would hide which of the two the
+  // artist page actually converts on.
+  | 'logged-out-follow'
   | 'takeover'
 
 // Per-event property shapes. Keys are the canonical event names; the map is

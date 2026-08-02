@@ -25,6 +25,13 @@ export const TIER_PICKER_COPY = {
           "Saying you're going is free — it just needs an account to save to. " +
           'Start on Free; pick a lane later if you ever want to chip in.',
       },
+      'logged-out-follow': {
+        eyebrow: 'Following · free with an account',
+        title: 'Never miss the next one they book.',
+        sub:
+          'Following is free — it just needs an account to save to. ' +
+          'Start on Free; pick a lane later if you ever want to chip in.',
+      },
       'logged-out-price': {
         eyebrow: 'Submitted prices · free with an account',
         title: 'Tell everyone what it actually cost.',

@@ -66,6 +66,19 @@ export const CrumbSkeleton = () => (
   </div>
 )
 
+/**
+ * The Follow control's reserved box. 48px and radius 10 are `FollowButton`'s
+ * own `size="full"` metrics, copied deliberately — a skeleton taller or
+ * shorter than the control it stands in for is the same layout-shift lie the
+ * missing crumb was.
+ */
+export const FollowSkeleton = () => (
+  <div
+    aria-hidden="true"
+    style={skel({ width: '100%', height: 48, borderRadius: 10 })}
+  />
+)
+
 export const ShowsSkeleton = ({ rows }: { rows: number }) => (
   <div
     role="status"

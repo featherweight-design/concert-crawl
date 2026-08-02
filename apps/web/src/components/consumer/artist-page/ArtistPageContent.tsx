@@ -1,14 +1,29 @@
+'use client'
+
 import type { ArtistDetailResponse } from '@concert-crawl/types'
 import React from 'react'
+
+import { useTheme } from '@/theme'
 
 import { BackChip } from '../back-chip/BackChip'
 
 import { ArtistPlate } from './ArtistPlate'
 import { Crumb } from './Crumb'
-import { AP_HERO_H, CRAWL_SINCE } from './definitions/constants'
+import {
+  AP_HERO_H,
+  AP_MONOGRAM_BOTTOM,
+  AP_STICKY_AFTER,
+  CRAWL_SINCE,
+} from './definitions/constants'
 import { ARTIST_COPY } from './definitions/copy'
+import { ArtistEmbed } from './embed/ArtistEmbed'
+import { EmptyUpcoming } from './EmptyUpcoming'
+import { FollowBlock } from './FollowBlock'
 import { historyLine } from './lib/history-line'
+import { useArtistFollow } from './lib/use-artist-follow'
+import { useIsDesktop, useScrolledPast } from './lib/use-viewport'
 import { PastShows } from './PastShows'
+import { StickyBar } from './StickyBar'
 import { UpcomingShows } from './UpcomingShows'
 
 /**
@@ -17,34 +32,69 @@ import { UpcomingShows } from './UpcomingShows'
  * non-negotiable here, so the breakpoints live in `.ap-*` CSS instead.
  *
  * ORDER IS STATE-DEPENDENT, deliberately:
- *   has shows → name · history · shows · previously
+ *   has shows → name · history · follow · player · shows · previously
  *   no shows  → the empty upcoming block stays the first thing after the
  *               history line, because it is the strongest conversion moment
- *               on the page and must never be pushed below anything.
+ *               on the page and must never be pushed below anything. The
+ *               player falls to last, which is also why it ships no skip link
+ *               in that state — there is nothing below to skip to.
  *
- * The player, the follow control and the empty-upcoming block are PR-F; the
- * order rule is expressed once here so PR-F slots into it rather than
- * re-deriving it.
+ * EXACTLY ONE LIVE FOLLOW AFFORDANCE, always, enforced here in code rather
+ * than by convention. `hidden md:block` would hide pixels while still mounting
+ * a second button in the accessibility tree, so the viewport decision is made
+ * in JS (`useIsDesktop`) and only one slot is ever rendered:
+ *   desktop            → the sticky left rail owns it for the whole scroll
+ *   mobile, has shows  → the inline block until the page scrolls past the
+ *                        hero, then the sticky sub-header takes over
+ *   mobile, no shows   → the empty-upcoming block owns it, and the sub-header
+ *                        is told not to grow one (`showFollow={false}`)
  */
 export const ArtistPageContent = ({ data }: { data: ArtistDetailResponse }) => {
   const { artist, shows, past, history } = data
   const hasShows = shows.length > 0
 
-  const body = (
-    <>
-      {hasShows ? <UpcomingShows name={artist.name} shows={shows} /> : null}
-      {/* The wrapper carries the top margin, so it has to disappear with its
-          contents — an empty `.ap-block-past` leaves a gap under the last row. */}
-      {past.length > 0 ? (
-        <div className="ap-block-past">
-          <PastShows name={artist.name} past={past} />
-        </div>
-      ) : null}
-    </>
+  // `null` is the API's word for "nobody is signed in" — distinct from `false`,
+  // which is a real signed-in user who does not follow this artist.
+  const signedOut = data.following === null
+  const { following, toggle } = useArtistFollow(
+    artist.slug,
+    data.following ?? false,
+  )
+
+  const isDesktop = useIsDesktop()
+  const scrolled = useScrolledPast(AP_STICKY_AFTER)
+  const { theme } = useTheme()
+
+  const followProps = {
+    name: artist.name,
+    following,
+    signedOut,
+    onToggle: toggle,
+  }
+
+  // Mobile hands the follow control to the sub-header the moment the bar
+  // arrives; desktop never renders the bar, so its rail keeps it throughout.
+  const inlineFollow = hasShows && !isDesktop && !scrolled
+
+  const player = (
+    <ArtistEmbed
+      name={artist.name}
+      spotifyArtistId={artist.spotifyArtistId}
+      // With no shows the player is the last block on the page, so there is
+      // nothing to skip forward to.
+      skipTo={hasShows ? 'upcoming' : null}
+      themeKey={theme}
+    />
   )
 
   return (
     <main className="ap-page" aria-label={ARTIST_COPY.pageAria(artist.name)}>
+      <StickyBar
+        {...followProps}
+        visible={!isDesktop && scrolled}
+        showFollow={hasShows}
+      />
+
       {/* Mobile: full-bleed plate with the back chip over it. */}
       <div className="ap-hero-wrap relative md:hidden">
         <ArtistPlate
@@ -52,14 +102,17 @@ export const ArtistPageContent = ({ data }: { data: ArtistDetailResponse }) => {
           photo={artist.photoUrl}
           height={AP_HERO_H.wide}
           className="ap-hero"
+          // `.ap-shell` is tucked up over the plate, so the monogram's default
+          // offset lands under the plate's visible edge and through the name.
+          monogramBottom={AP_MONOGRAM_BOTTOM}
         />
         <BackChip top={56} fallbackHref="/events" />
       </div>
 
       <div className="ap-shell">
         {/* Desktop: breadcrumb + a sticky left rail. No sub-header — the rail
-            keeps wayfinding (and, in PR-F, the follow control) on screen for
-            the whole scroll. */}
+            keeps wayfinding and the follow control on screen for the whole
+            scroll. */}
         <div className="hidden md:block">
           <Crumb name={artist.name} />
         </div>
@@ -72,11 +125,45 @@ export const ArtistPageContent = ({ data }: { data: ArtistDetailResponse }) => {
                 height={320}
               />
             </div>
+            {isDesktop ? (
+              <div style={{ marginTop: 16 }}>
+                <FollowBlock {...followProps} />
+              </div>
+            ) : null}
           </div>
           <div style={{ minWidth: 0 }}>
             <h1 className="ap-name">{artist.name}</h1>
             <p className="ap-history">{historyLine(history, CRAWL_SINCE)}</p>
-            <div className="ap-block-shows">{body}</div>
+
+            {inlineFollow ? (
+              <div className="ap-block-follow">
+                <FollowBlock {...followProps} />
+              </div>
+            ) : null}
+
+            {hasShows ? (
+              <>
+                <div className="ap-block-player">{player}</div>
+                <div className="ap-block-shows">
+                  <UpcomingShows name={artist.name} shows={shows} />
+                </div>
+              </>
+            ) : (
+              <div className="ap-block-shows">
+                <EmptyUpcoming {...followProps} inlineFollow={!isDesktop} />
+              </div>
+            )}
+
+            {/* The wrapper carries the top margin, so it has to disappear with
+                its contents — an empty `.ap-block-past` leaves a gap under the
+                last row. */}
+            {past.length > 0 ? (
+              <div className="ap-block-past">
+                <PastShows name={artist.name} past={past} />
+              </div>
+            ) : null}
+
+            {hasShows ? null : <div className="ap-block-player">{player}</div>}
           </div>
         </div>
       </div>

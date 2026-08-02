@@ -35,6 +35,12 @@ export interface IdentityArtProps {
   width?: number
   height?: number
   showInitials?: boolean
+  /**
+   * Distance from the bottom of the art to the monogram chip, px. Defaults to
+   * 12. Raise it when the art is deliberately overlapped by content below it,
+   * so the chip stays inside the visible plate.
+   */
+  initialsBottom?: number
   grain?: number
   templateOverride?: string
   paletteOverride?: string
@@ -584,6 +590,7 @@ export const IdentityArt = ({
   width,
   height,
   showInitials,
+  initialsBottom = 12,
   grain = 0.1,
   templateOverride,
   paletteOverride,
@@ -655,10 +662,11 @@ export const IdentityArt = ({
 
       {initialsOn && (
         <div
+          data-identity-monogram=""
           style={{
             position: 'absolute',
             left: 12,
-            bottom: 12,
+            bottom: initialsBottom,
             padding: scale === 'hero' ? '6px 12px' : '3px 8px',
             borderRadius: scale === 'hero' ? 10 : 6,
             background: chipBg,
