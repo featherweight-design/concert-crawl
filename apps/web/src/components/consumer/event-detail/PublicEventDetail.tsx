@@ -9,8 +9,11 @@
 //   path inside it, community reports, the first-timer guide chip, and the
 //   report footer. The price appears as a flat read-only row instead.
 //
-// Related shows DO render: they go through the same EventCard the public browse
-// list uses, so nothing account-shaped rides along with them.
+// Related shows DO render, through the same EventCard the public browse list
+// uses. Its watch control is therefore live for a signed-out visitor and opens
+// the tier picker with the `logged-out-watch` funnel entry — that is #794's
+// shipped conversion path, not a leak, and the mirror deliberately does not
+// diverge from browse here.
 //
 // In their place there is exactly one sign-in CTA. The Watching affordance on
 // the authed page is the lucide Eye; the mirror simply omits it rather than
@@ -239,8 +242,9 @@ export const PublicEventDetail = ({
             </div>
           )}
 
-          {/* Related shows use the same EventCard the public browse list does,
-              so nothing account-shaped rides along. */}
+          {/* Same EventCard as the public browse list, watch control included.
+              A signed-out tap opens the tier picker (`logged-out-watch`), which
+              is the intended #794 conversion path. */}
           {related.length > 0 && (
             <div className="mt-6">
               <SectionHeader
