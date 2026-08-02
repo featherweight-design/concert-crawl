@@ -80,4 +80,24 @@ describe('groupShows', () => {
   it('returns nothing for no shows', () => {
     expect(groupShows([])).toEqual([])
   })
+
+  // This runs on the client, so the viewer's clock must not change the answer.
+  // A local-time parse makes a cluster spanning a DST boundary an hour longer
+  // than the calendar says, which tips a span sitting exactly on
+  // RESIDENCY_WINDOW over the line and silently un-groups a real residency.
+  it('groups a span sitting exactly on the window across a DST boundary', () => {
+    const originalTz = process.env.TZ
+    process.env.TZ = 'America/Denver'
+    try {
+      // 2026-10-25 → 2026-11-15 is 21 calendar days, and US DST ends 2026-11-01.
+      const items = groupShows([
+        show('2026-10-25', "Ophelia's"),
+        show('2026-11-04', "Ophelia's"),
+        show('2026-11-15', "Ophelia's"),
+      ])
+      expect(items.map((item) => item.kind)).toEqual(['run'])
+    } finally {
+      process.env.TZ = originalTz
+    }
+  })
 })

@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
-import { NextResponse } from 'next/server'
+import { NextResponse, type NextRequest } from 'next/server'
 import { isPublicBrowseEnabled } from '@/lib/launch-mode'
 
 /**
@@ -127,7 +127,23 @@ const isInviteGatedBeforeLaunch = createRouteMatcher(['/onboarding(.*)'])
 const isPreAuth = createRouteMatcher(['/auth/code(.*)', '/sign-up(.*)'])
 const isPreAuthBeforeLaunch = createRouteMatcher(['/onboarding(.*)'])
 
-export default clerkMiddleware(async (auth, req) => {
+/**
+ * Only the slice of Clerk's auth helper this middleware actually touches.
+ * Clerk's richer object is assignable to it, and tests can pass a small stub.
+ */
+interface MiddlewareAuth {
+  (): Promise<{ userId: string | null }>
+  protect(options: { unauthenticatedUrl: string }): Promise<unknown>
+}
+
+/**
+ * Exported for middleware.test.ts, which needs a callable signature — the
+ * default export's opaque type forced a cast at every one of its call sites.
+ */
+export const middlewareHandler = async (
+  auth: MiddlewareAuth,
+  req: NextRequest,
+): Promise<NextResponse | undefined> => {
   const { userId } = await auth()
   const launched = isPublicBrowseEnabled()
 
@@ -178,7 +194,9 @@ export default clerkMiddleware(async (auth, req) => {
     toSafeReturnPath(req.nextUrl.pathname, req.nextUrl.search),
   )
   await auth.protect({ unauthenticatedUrl: signInUrl.toString() })
-})
+}
+
+export default clerkMiddleware(middlewareHandler)
 
 export const config = {
   matcher: [

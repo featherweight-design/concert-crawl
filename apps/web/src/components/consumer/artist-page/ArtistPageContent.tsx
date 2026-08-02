@@ -33,9 +33,13 @@ export const ArtistPageContent = ({ data }: { data: ArtistDetailResponse }) => {
   const body = (
     <>
       {hasShows ? <UpcomingShows name={artist.name} shows={shows} /> : null}
-      <div className="ap-block-past">
-        <PastShows name={artist.name} past={past} />
-      </div>
+      {/* The wrapper carries the top margin, so it has to disappear with its
+          contents — an empty `.ap-block-past` leaves a gap under the last row. */}
+      {past.length > 0 ? (
+        <div className="ap-block-past">
+          <PastShows name={artist.name} past={past} />
+        </div>
+      ) : null}
     </>
   )
 

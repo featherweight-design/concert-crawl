@@ -5,8 +5,13 @@ import { firstIso, type ShowItem } from '../definitions/types'
 
 const DAY = 86_400_000
 
-/** Midnight-local epoch for a `YYYY-MM-DD` date, so gaps are whole days. */
-const dayStart = (iso: string): number => new Date(`${iso}T00:00:00`).getTime()
+/**
+ * Epoch for a `YYYY-MM-DD` date, parsed as a pure calendar day. UTC, not local:
+ * this runs on the client, and a local parse would make residency clustering
+ * depend on the viewer's timezone and drift an hour across a DST boundary —
+ * enough to split or merge a cluster whose gap sits on RESIDENCY_WINDOW.
+ */
+const dayStart = (iso: string): number => Date.parse(`${iso}T00:00:00Z`)
 
 /**
  * Chronological is the default. A residency auto-groups: RESIDENCY_MIN+ shows
