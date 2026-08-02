@@ -153,8 +153,11 @@ export const VenueGuideBlock = ({
   const failed = (error: string | undefined) =>
     setStatus({ text: error ?? GUIDE_COPY.status.saveError, failed: true })
 
+  // Every action guards `pending` itself rather than relying on the buttons'
+  // disabled state — the ⌘↵ shortcut reaches publish() without passing through
+  // a button at all, and key repeat would otherwise queue duplicate writes.
   const saveDraft = () => {
-    if (loadFailed) return
+    if (loadFailed || pending) return
     setStatus(null)
     startTransition(async () => {
       const result = await saveVenueGuide(venueId, buildPayload())
@@ -164,7 +167,7 @@ export const VenueGuideBlock = ({
   }
 
   const publish = () => {
-    if (loadFailed) return
+    if (loadFailed || pending) return
     if (blocked) {
       setShowError(true)
       return
@@ -188,6 +191,7 @@ export const VenueGuideBlock = ({
   }
 
   const unpublish = () => {
+    if (pending) return
     setStatus(null)
     startTransition(async () => {
       const result = await unpublishVenueGuide(venueId)

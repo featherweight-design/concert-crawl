@@ -28,12 +28,18 @@ import type { AdminVariables } from './index.js'
 
 export const venueGuideAdminRouter = new Hono<AdminVariables>()
 
-/** Trim, and treat an empty/whitespace-only string as an explicit clear. */
+/**
+ * Trim, and treat an empty/whitespace-only string as an explicit clear.
+ *
+ * Required, not optional: this is a PUT that replaces the whole draft, so an
+ * omitted field would have silently wiped a stored tip. Making the caller state
+ * the value removes the ambiguity rather than papering over it with a
+ * preserve-on-omit rule that would make the endpoint half-PATCH.
+ */
 const nullableTrimmedText = z
   .string()
   .max(GUIDE_FIELD_MAX_LENGTH)
   .nullable()
-  .optional()
   .transform((val) => {
     if (val == null) return val
     const trimmed = val.trim()
@@ -204,7 +210,7 @@ venueGuideAdminRouter.put(
       }))
       .filter((chip) => chip.isPlaceholder || chip.body.length > 0)
 
-    const insiderTip = body.insiderTip ?? null
+    const insiderTip = body.insiderTip
 
     await db.transaction(async (tx) => {
       // Scoped to the keys this endpoint can author. `chip_type` is a plain

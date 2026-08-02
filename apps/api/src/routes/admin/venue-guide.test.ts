@@ -14,8 +14,15 @@ describe('saveGuideSchema (#764)', () => {
     expect(blank.success && blank.data.insiderTip).toBeNull()
   })
 
+  // Required, not optional: a PUT replaces the whole draft, so an omitted
+  // insiderTip would have silently wiped a stored tip.
+  it('rejects an omitted insider tip', () => {
+    expect(saveGuideSchema.safeParse({ chips: [] }).success).toBe(false)
+  })
+
   it('defaults isPlaceholder to false', () => {
     const parsed = saveGuideSchema.safeParse({
+      insiderTip: null,
       chips: [{ chipType: 'parking', body: '$15 cash.' }],
     })
     expect(parsed.success && parsed.data.chips[0]?.isPlaceholder).toBe(false)
@@ -26,13 +33,17 @@ describe('saveGuideSchema (#764)', () => {
     // mapping layer, so they must fail validation.
     for (const chipType of ['age', 'bag', 'coat', 'entry', 'food', 'weather']) {
       expect(
-        saveGuideSchema.safeParse({ chips: [{ chipType, body: 'x' }] }).success,
+        saveGuideSchema.safeParse({
+          insiderTip: null,
+          chips: [{ chipType, body: 'x' }],
+        }).success,
       ).toBe(false)
     }
   })
 
   it('rejects a duplicate chipType', () => {
     const parsed = saveGuideSchema.safeParse({
+      insiderTip: null,
       chips: [
         { chipType: 'parking', body: 'Lot A' },
         { chipType: 'parking', body: 'Lot B' },
@@ -43,6 +54,7 @@ describe('saveGuideSchema (#764)', () => {
 
   it('rejects isPlaceholder on a non-accessibility chip', () => {
     const parsed = saveGuideSchema.safeParse({
+      insiderTip: null,
       chips: [{ chipType: 'parking', body: '', isPlaceholder: true }],
     })
     expect(parsed.success).toBe(false)
@@ -50,6 +62,7 @@ describe('saveGuideSchema (#764)', () => {
 
   it('accepts isPlaceholder on accessibility', () => {
     const parsed = saveGuideSchema.safeParse({
+      insiderTip: null,
       chips: [{ chipType: 'accessibility', body: '', isPlaceholder: true }],
     })
     expect(parsed.success).toBe(true)
@@ -57,6 +70,7 @@ describe('saveGuideSchema (#764)', () => {
 
   it('rejects a body over 400 characters', () => {
     const parsed = saveGuideSchema.safeParse({
+      insiderTip: null,
       chips: [{ chipType: 'parking', body: 'x'.repeat(401) }],
     })
     expect(parsed.success).toBe(false)
@@ -64,6 +78,7 @@ describe('saveGuideSchema (#764)', () => {
 
   it('rejects more chips than the pool holds', () => {
     const parsed = saveGuideSchema.safeParse({
+      insiderTip: null,
       chips: Array.from({ length: 9 }, () => ({
         chipType: 'parking',
         body: 'x',

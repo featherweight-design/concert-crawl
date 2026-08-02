@@ -126,6 +126,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
       const venue = await seedVenue({ slug: 'guide-put-blank' })
 
       const res = await putGuide(venue.id, {
+        insiderTip: null,
         chips: [
           { chipType: 'accessibility', body: 'Step-free entry.' },
           { chipType: 'parking', body: '   ' },
@@ -143,6 +144,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
       const venue = await seedVenue({ slug: 'guide-put-badplaceholder' })
 
       const res = await putGuide(venue.id, {
+        insiderTip: null,
         chips: [{ chipType: 'parking', body: '', isPlaceholder: true }],
       })
       expect(res.status).toBe(400)
@@ -154,6 +156,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
       const venue = await seedVenue({ slug: 'guide-put-dupe' })
 
       const res = await putGuide(venue.id, {
+        insiderTip: null,
         chips: [
           { chipType: 'parking', body: 'Lot A' },
           { chipType: 'parking', body: 'Lot B' },
@@ -168,6 +171,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
       const venue = await seedVenue({ slug: 'guide-put-replace' })
 
       await putGuide(venue.id, {
+        insiderTip: null,
         chips: [
           { chipType: 'accessibility', body: 'Step-free entry.' },
           { chipType: 'parking', body: '$15 cash.' },
@@ -176,6 +180,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
       expect(await chipRows(venue.id)).toHaveLength(2)
 
       await putGuide(venue.id, {
+        insiderTip: null,
         chips: [{ chipType: 'parking', body: '$20 cash now.' }],
       })
       const rows = await chipRows(venue.id)
@@ -189,6 +194,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
       const venue = await seedVenue({ slug: 'guide-put-shortkey' })
 
       const res = await putGuide(venue.id, {
+        insiderTip: null,
         chips: [{ chipType: 'age', body: '18+ in, 21+ to drink.' }],
       })
       expect(res.status).toBe(400)
@@ -199,6 +205,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
       const venue = await seedVenue({ slug: 'guide-put-placeholder' })
 
       const res = await putGuide(venue.id, {
+        insiderTip: null,
         chips: [
           {
             chipType: 'accessibility',
@@ -238,6 +245,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
     it('404s for an unknown venue', async () => {
       setAuth('admin')
       const res = await putGuide('00000000-0000-0000-0000-000000000000', {
+        insiderTip: null,
         chips: [],
       })
       expect(res.status).toBe(404)
@@ -254,6 +262,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
         .values([{ venueId: venue.id, chipType: 'weather', body: 'Cold.' }])
 
       const res = await putGuide(venue.id, {
+        insiderTip: null,
         chips: [{ chipType: 'accessibility', body: 'Step-free entry.' }],
       })
       expect(res.status).toBe(200)
@@ -272,7 +281,9 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
 
     it('404s for a malformed venue id on every guide endpoint', async () => {
       setAuth('admin')
-      expect((await putGuide('not-a-uuid', { chips: [] })).status).toBe(404)
+      expect(
+        (await putGuide('not-a-uuid', { insiderTip: null, chips: [] })).status,
+      ).toBe(404)
       expect(
         (await app.request('/v1/admin/venues/not-a-uuid/guide')).status,
       ).toBe(404)
@@ -288,7 +299,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
     it('403s for a non-admin caller', async () => {
       setAuth('user')
       const venue = await seedVenue({ slug: 'guide-put-403' })
-      const res = await putGuide(venue.id, { chips: [] })
+      const res = await putGuide(venue.id, { insiderTip: null, chips: [] })
       expect(res.status).toBe(403)
     })
   })
@@ -298,6 +309,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
       setAuth('admin')
       const venue = await seedVenue({ slug: 'guide-publish-blocked' })
       await putGuide(venue.id, {
+        insiderTip: null,
         chips: [{ chipType: 'parking', body: '$15 cash.' }],
       })
 
@@ -319,6 +331,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
       setAuth('admin')
       const venue = await seedVenue({ slug: 'guide-publish-placeholder' })
       await putGuide(venue.id, {
+        insiderTip: null,
         chips: [{ chipType: 'accessibility', body: '', isPlaceholder: true }],
       })
 
@@ -341,6 +354,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
       setAuth('admin')
       const venue = await seedVenue({ slug: 'guide-publish-ready' })
       await putGuide(venue.id, {
+        insiderTip: null,
         chips: [{ chipType: 'accessibility', body: 'Step-free entry.' }],
       })
 
@@ -367,6 +381,7 @@ describe('/v1/admin/venues/:id/guide (#764)', () => {
     async function publishFixture(slug: string): Promise<string> {
       const venue = await seedVenue({ slug })
       await putGuide(venue.id, {
+        insiderTip: null,
         chips: [{ chipType: 'accessibility', body: 'Step-free entry.' }],
       })
       await app.request(`/v1/admin/venues/${venue.id}/guide/publish`, {
