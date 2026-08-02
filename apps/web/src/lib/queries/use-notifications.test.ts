@@ -84,7 +84,7 @@ describe('unreadCountOf', () => {
     expect(unreadCountOf(data)).toBe(41)
   })
 
-  it('is false before anything has loaded', () => {
+  it('reports zero before anything has loaded', () => {
     expect(unreadCountOf(undefined)).toBe(0)
   })
 })
