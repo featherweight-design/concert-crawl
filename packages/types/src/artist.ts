@@ -2,7 +2,7 @@
 // the web client so the route shell (PR-E) and the embed/follow surfaces
 // (PR-F) consume exactly what `GET /v1/artists/:slug` emits.
 
-import type { EventStatus } from './index.js'
+import type { EventStatus } from './event-status.js'
 
 /** An upcoming show for this artist, ascending by date. */
 export interface ArtistShow {

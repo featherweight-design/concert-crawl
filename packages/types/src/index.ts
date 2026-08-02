@@ -96,7 +96,8 @@ export type ExtractionStrategy = 'structured_data' | 'llm' | 'manual'
 export type CrawlStatus = 'success' | 'failed' | 'partial' | 'skipped'
 
 // Event status
-export type EventStatus = 'upcoming' | 'cancelled' | 'postponed'
+export * from './event-status.js'
+import type { EventStatus } from './event-status.js'
 
 /**
  * Why an event landed on the admin "missing from crawl" list.
