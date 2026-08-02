@@ -1007,7 +1007,7 @@ const SEED_VENUE_GUIDES: SeedGuide[] = [
   {
     venueSlug: 'ogden-theatre',
     insiderTip:
-      "Roxy runs loud — grab earplugs at the bar if you forgot. The line's rough after 8:30, so come early. Sound's best dead center, about ten feet back off the rail.",
+      "The Ogden runs loud — grab earplugs at the bar if you forgot. The line's rough after 8:30, so come early. Sound's best dead center, about ten feet back off the rail.",
     chips: [
       {
         chipType: 'accessibility',
@@ -1064,24 +1064,28 @@ async function seedVenueGuides(
 
     // Replace rather than merge — a chip removed from the fixture above must
     // disappear on the next seed run, exactly like the admin PUT replaces the
-    // venue's chip set.
-    await db
-      .delete(venueGuideChips)
-      .where(eq(venueGuideChips.venueId, venue.id))
+    // venue's chip set. All three statements run in one transaction so a
+    // constraint failure on insert cannot leave a venue published with its
+    // chips already deleted.
+    await db.transaction(async (tx) => {
+      await tx
+        .delete(venueGuideChips)
+        .where(eq(venueGuideChips.venueId, venue.id))
 
-    await db.insert(venueGuideChips).values(
-      guide.chips.map((chip) => ({
-        venueId: venue.id,
-        chipType: chip.chipType,
-        body: chip.body,
-        isPlaceholder: chip.isPlaceholder ?? false,
-      })),
-    )
+      await tx.insert(venueGuideChips).values(
+        guide.chips.map((chip) => ({
+          venueId: venue.id,
+          chipType: chip.chipType,
+          body: chip.body,
+          isPlaceholder: chip.isPlaceholder ?? false,
+        })),
+      )
 
-    await db
-      .update(venues)
-      .set({ insiderTip: guide.insiderTip, guidePublishedAt: new Date() })
-      .where(eq(venues.id, venue.id))
+      await tx
+        .update(venues)
+        .set({ insiderTip: guide.insiderTip, guidePublishedAt: new Date() })
+        .where(eq(venues.id, venue.id))
+    })
   }
 
   // On a fresh DB every other venue is left unpublished, so the no-guide

@@ -127,8 +127,8 @@ export interface VenueGuide {
    *
    * Nullable because the same shape serves the admin draft read, where an
    * unpublished guide is the normal case. The consumer endpoint never returns
-   * an unpublished guide at all — it omits `guide` entirely — so a non-null
-   * value there is an invariant of that route, not of this type.
+   * an unpublished guide at all — it serves `VenuePublic.guide: null` — so a
+   * non-null value there is an invariant of that route, not of this type.
    */
   publishedAt: string | null
 }
