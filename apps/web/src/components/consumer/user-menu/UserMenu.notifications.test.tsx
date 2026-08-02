@@ -331,9 +331,19 @@ describe('#737 pip — the seen watermark', () => {
 
     expect(fetchNotifications).toHaveBeenCalled()
     expect(pips()).toHaveLength(0)
-    // The row is still UNREAD — only the dot is down. Nothing about the
-    // account's read state changed, so the label keeps its plain name.
-    expect(desktopTrigger().getAttribute('aria-label')).toBe(LABELS.accountMenu)
+    // The row is still UNREAD — only the dot is down. A sighted user can see
+    // that row sitting in the panel; gating the LABEL on the dot would delete
+    // that fact for a screen-reader user at the moment they went looking for
+    // it. So the words survive the watermark even though the dot does not.
+    expect(desktopTrigger().getAttribute('aria-label')).toBe(
+      LABELS.accountMenuUnread(1),
+    )
+    expect(navTrigger().getAttribute('aria-label')).toBe(
+      LABELS.accountMenuUnread(1),
+    )
+    // The live region is the one thing that DOES follow the dot: it announces
+    // arrivals, and re-reading a standing count the user already heard is
+    // noise, not news.
     expect(screen.getByRole('status')).toHaveTextContent('')
   })
 
@@ -441,31 +451,33 @@ describe('#737 inbox strip', () => {
     expect(within(row).queryByText(NOTIFICATIONS_COPY.markedAll)).toBeNull()
   })
 
-  it('opens the panel from the collapsed row on Enter and on Space', async () => {
+  // Enter/Space activation is NOT asserted by driving synthetic key events:
+  // these rows are native `<button>`s now, and jsdom does not implement a
+  // button's activation behaviour, so such a test would only be measuring
+  // jsdom. What is worth locking is the thing that would silently take the
+  // keyboard away — the element regressing to a `div role="button"`.
+  it('draws the menu rows as native buttons, not faux ones', async () => {
     signIn()
     fetchNotifications.mockResolvedValue(page([], 0))
     await renderChrome(<UserMenu />)
+    await click(desktopTrigger())
 
-    for (const key of ['Enter', ' ']) {
-      await click(desktopTrigger())
-      const row = screen.getByRole('button', {
-        name: NOTIFICATIONS_COPY.bellLabel(0),
-      })
-      const event = new KeyboardEvent('keydown', { key, bubbles: true })
-      const prevented = vi.spyOn(event, 'preventDefault')
-      await act(async () => {
-        row.dispatchEvent(event)
-      })
-      // Space must be swallowed or the surface scrolls under the menu.
-      if (key === ' ') expect(prevented).toHaveBeenCalled()
-      expect(
-        screen.getByRole('button', { name: NOTIFICATIONS_COPY.menuBack }),
-      ).toBeInTheDocument()
-      // Reset for the next key.
-      await act(async () => {
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
-      })
-    }
+    const row = screen.getByRole('button', {
+      name: NOTIFICATIONS_COPY.bellLabel(0),
+    })
+    expect(row.tagName).toBe('BUTTON')
+    // Inside a menu, a button that defaults to type="submit" would post any
+    // ancestor form it ever ends up in.
+    expect(row.getAttribute('type')).toBe('button')
+    expect(row.getAttribute('role')).toBeNull()
+
+    await click(row)
+    const back = screen.getByRole('button', {
+      name: NOTIFICATIONS_COPY.menuBack,
+    })
+    expect(back.tagName).toBe('BUTTON')
+    expect(back.getAttribute('type')).toBe('button')
+    expect(back.getAttribute('role')).toBeNull()
   })
 })
 

@@ -39,7 +39,10 @@ export const NotifItem = ({
     onOpen?.(item)
   }
 
-  // Shared with every other `role="button"` row in this feature — see
+  // This row is the feature's ONE faux button, because its interactivity is
+  // conditional (see below) and a `<button>` that is sometimes inert is worse
+  // than a div that is sometimes a button. Every unconditional row — the menu
+  // row, the back row, "See all" — is a native `<button>`. See
   // lib/activate-keys.ts for why Space is preventDefault'd on repeat.
   const onKeyDown = activateOnKey(open)
 

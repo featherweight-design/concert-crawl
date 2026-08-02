@@ -3,13 +3,14 @@
 //
 // It is the inbox strip's zero-unread shape AND the option-A fallback shape:
 // one row, bell chip, label, optional mono meta. Both call sites render this
-// component rather than each drawing their own 44px row, so the target size,
-// the keyboard handler and the hairline can only be got right once.
+// component rather than each drawing their own 44px row, so the target size
+// and the hairline can only be got right once. It carries no nested
+// interactives, so it is a real `<button>` — keyboard activation and the
+// focus ring come from the platform rather than a hand-rolled key handler.
 
 import { NMono } from './NMono'
 import { NotifGlyph } from './glyphs'
 import { NOTIFICATIONS_COPY } from './definitions/copy'
-import { activateOnKey } from './lib/activate-keys'
 
 export const MenuNotifRow = ({
   count,
@@ -26,14 +27,19 @@ export const MenuNotifRow = ({
     meta ?? (hot ? NOTIFICATIONS_COPY.panelSub(count) : undefined)
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       aria-label={NOTIFICATIONS_COPY.bellLabel(count)}
       onClick={onActivate}
-      onKeyDown={activateOnKey(onActivate)}
       className="notif-row"
       style={{
+        all: 'unset',
+        // `all: unset` writes outline/display inline, outranking `.notif-row`
+        // — same pattern, and the same reason, as NotifBody's "See all".
+        outline: 'revert',
+        width: '100%',
+        textAlign: 'left',
+        fontFamily: 'var(--font-ui)',
         display: 'flex',
         alignItems: 'center',
         gap: 10,
@@ -80,6 +86,6 @@ export const MenuNotifRow = ({
           {metaText}
         </NMono>
       )}
-    </div>
+    </button>
   )
 }

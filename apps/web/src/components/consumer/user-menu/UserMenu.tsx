@@ -443,6 +443,11 @@ export function UserMenu() {
   // "something arrived since you last looked" — opening the panel clears it —
   // while the accessible name announces what is still waiting inside.
   const piped = isSignedIn && unseenCount > 0
+  // Deliberately NOT `piped`. Sighted users keep the unread rows in view after
+  // the dot clears; gating the label on the dot would delete that standing
+  // information for screen-reader users at the exact moment they opened the
+  // panel to find it.
+  const announcesUnread = isSignedIn && unreadCount > 0
 
   return (
     <div className="relative">
@@ -453,7 +458,7 @@ export function UserMenu() {
         aria-label={
           !isSignedIn
             ? CONSUMER_COPY.userMenu.ariaLabels.accountMenuSignedOut
-            : piped
+            : announcesUnread
               ? CONSUMER_COPY.userMenu.ariaLabels.accountMenuUnread(unreadCount)
               : CONSUMER_COPY.userMenu.ariaLabels.accountMenu
         }

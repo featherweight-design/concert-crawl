@@ -208,6 +208,9 @@ export function BottomNav() {
   // UNSEEN draws the dot (it clears on panel open); UNREAD is still what the
   // accessible name announces, since that is what is waiting inside.
   const piped = isSignedIn === true && unseenCount > 0
+  // Deliberately NOT `piped` — see the same split on the desktop trigger. The
+  // dot is "something arrived"; the label is "something is still waiting".
+  const announcesUnread = isSignedIn === true && unreadCount > 0
 
   return (
     <nav
@@ -252,7 +255,7 @@ export function BottomNav() {
         aria-label={
           !isSignedIn
             ? MENU_LABELS.accountMenuSignedOut
-            : piped
+            : announcesUnread
               ? MENU_LABELS.accountMenuUnread(unreadCount)
               : MENU_LABELS.accountMenu
         }

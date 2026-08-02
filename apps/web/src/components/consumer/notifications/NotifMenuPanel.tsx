@@ -29,7 +29,6 @@ import {
   NOTIFICATIONS_COPY,
   NOTIFICATIONS_EMPTY_ACTION_HREF,
 } from './definitions/copy'
-import { activateOnKey } from './lib/activate-keys'
 
 export const panelStateOf = (
   isPending: boolean,
@@ -87,14 +86,21 @@ export const NotifMenuPanel = ({
 
   return (
     <div ref={surfaceRef} tabIndex={-1} style={{ outline: 'none' }}>
-      <div
-        role="button"
-        tabIndex={0}
+      {/* A real `<button>`: nothing interactive is nested inside it, so the
+          platform's keyboard activation and focus ring beat a hand-rolled
+          pair. */}
+      <button
+        type="button"
         aria-label={NOTIFICATIONS_COPY.menuBack}
         onClick={onBack}
-        onKeyDown={activateOnKey(onBack)}
         className="notif-row"
         style={{
+          all: 'unset',
+          // `all: unset` writes outline/display inline, outranking
+          // `.notif-row` — same pattern as NotifBody's "See all".
+          outline: 'revert',
+          cursor: 'pointer',
+          width: '100%',
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -102,7 +108,6 @@ export const NotifMenuPanel = ({
           minHeight: 44,
           boxSizing: 'border-box',
           borderBottom: '1px solid var(--border)',
-          cursor: 'pointer',
         }}
       >
         <svg
@@ -121,7 +126,7 @@ export const NotifMenuPanel = ({
           />
         </svg>
         <NMono>{NOTIFICATIONS_COPY.menuBack}</NMono>
-      </div>
+      </button>
       <NotifBody
         items={flattenNotifications(query.data)}
         unreadCount={unreadCountOf(query.data)}

@@ -1,10 +1,11 @@
 // Keyboard activation for the panel's `role="button"` rows (#737).
 //
-// Extracted from NotifItem so every faux-button in this feature — the panel
-// row, the inbox strip's collapsed row, the menu notification row, the
-// `‹ Menu` back row — shares ONE handler rather than four near-copies that
-// drift. A `role="button"` that only answers Enter is a keyboard trap for
-// anyone who reaches for Space, which is what a native button answers.
+// Every row that CAN be a native `<button>` is one. This handler exists for the
+// one that cannot: NotifItem, whose interactivity is conditional on `onOpen`,
+// so it renders as a plain non-focusable row when no handler is supplied and a
+// button-like row when one is. A `role="button"` that only answers Enter is a
+// keyboard trap for anyone who reaches for Space, which is what a native
+// button answers — so the fallback has to cover both keys.
 //
 // preventDefault runs on EVERY repeat, or holding Space scrolls the page out
 // from under the panel. Activation deliberately does not: keydown auto-repeats,
