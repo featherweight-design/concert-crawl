@@ -9,7 +9,19 @@ import {
   userArtistFollows,
   venues,
 } from '@concert-crawl/db'
-import { and, asc, desc, eq, gte, isNull, lt, ne, or, sql } from 'drizzle-orm'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  lt,
+  ne,
+  or,
+  sql,
+} from 'drizzle-orm'
 import { ARTIST_SLUG_MAX_LENGTH } from '@concert-crawl/types'
 import type {
   ArtistDetailResponse,
@@ -111,6 +123,7 @@ artistsPublicRouter.get(
       iso: events.date,
       showTime: events.showTime,
       ticketPriceMin: events.ticketPriceMin,
+      status: events.status,
       venue: venues.name,
       venueSlug: venues.slug,
       city: venues.city,
@@ -124,7 +137,10 @@ artistsPublicRouter.get(
         and(
           appearsOnBill,
           consumerVisible,
-          eq(events.status, 'upcoming'),
+          // Cancelled and postponed rows stay, matching every other list
+          // surface (events.ts). A show the visitor is watching must not
+          // vanish from the artist page the moment it is cancelled.
+          inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
           gte(events.date, today),
         ),
       )
@@ -157,6 +173,7 @@ artistsPublicRouter.get(
       venueSlug: row.venueSlug,
       city: row.city,
       price: parsePrice(row.ticketPriceMin),
+      status: row.status,
     }))
 
     const past: ArtistPastShow[] = pastRows.map((row) => ({
@@ -178,10 +195,13 @@ artistsPublicRouter.get(
     const authInfo = getAuth(ctx)
     let following: boolean | null = null
     if (authInfo?.userId) {
-      // ANY follow row counts, regardless of source: a Spotify-synced follow
-      // is still a follow from the reader's point of view. DELETE only removes
-      // the `manual` row, so a synced user stays `following: true` after
-      // unfollowing — intentional, and asserted in the follow tests.
+      // `manual` and `spotify_followed` are both follows the user performed;
+      // `spotify_top` is listening history, and counting it would render the
+      // button pre-engaged for an artist they never followed — pressing it to
+      // unfollow would then do nothing visible, because DELETE is scoped to
+      // `source = 'manual'`. DELETE still only removes the `manual` row, so a
+      // Spotify-synced user stays `following: true` after unfollowing —
+      // intentional, and asserted in the follow tests.
       const [followRow] = await db
         .select({ id: userArtistFollows.id })
         .from(userArtistFollows)
@@ -189,6 +209,7 @@ artistsPublicRouter.get(
           and(
             eq(userArtistFollows.userId, authInfo.userId),
             eq(userArtistFollows.canonicalName, artist.canonicalName),
+            ne(userArtistFollows.source, 'spotify_top'),
           ),
         )
         .limit(1)

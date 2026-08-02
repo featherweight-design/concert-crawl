@@ -1,0 +1,79 @@
+import type { ArtistShow } from '@concert-crawl/types'
+import { describe, expect, it } from 'vitest'
+
+import { groupShows } from './group-shows'
+
+const show = (iso: string, venue: string, city = 'Denver'): ArtistShow => ({
+  eventId: `${venue}-${iso}`,
+  iso,
+  showTime: null,
+  venue,
+  venueSlug: venue.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+  city,
+  price: null,
+  status: 'upcoming',
+})
+
+describe('groupShows', () => {
+  it('leaves two nights at one venue as two rows', () => {
+    const items = groupShows([
+      show('2026-08-05', "Ophelia's"),
+      show('2026-08-06', "Ophelia's"),
+    ])
+    expect(items.map((item) => item.kind)).toEqual(['one', 'one'])
+  })
+
+  it('collapses three consecutive nights into one run', () => {
+    const items = groupShows([
+      show('2026-08-05', "Ophelia's"),
+      show('2026-08-06', "Ophelia's"),
+      show('2026-08-07', "Ophelia's"),
+    ])
+    expect(items).toHaveLength(1)
+    const [run] = items
+    expect(run.kind).toBe('run')
+    if (run.kind !== 'run') throw new Error('expected a run')
+    expect(run.shows).toHaveLength(3)
+    expect(run.venue).toBe("Ophelia's")
+  })
+
+  it('does not call three shows spanning 30 days a run', () => {
+    // Gaps of 15 days keep them in one cluster, but the 30-day SPAN fails the
+    // second test — that is a tour, not a residency.
+    const items = groupShows([
+      show('2026-08-01', 'Globe Hall'),
+      show('2026-08-16', 'Globe Hall'),
+      show('2026-08-31', 'Globe Hall'),
+    ])
+    expect(items.map((item) => item.kind)).toEqual(['one', 'one', 'one'])
+  })
+
+  it('groups per venue and orders items by first date', () => {
+    const items = groupShows([
+      show('2026-09-11', 'Mission Ballroom'),
+      show('2026-08-05', "Ophelia's"),
+      show('2026-08-06', "Ophelia's"),
+      show('2026-08-07', "Ophelia's"),
+      show('2026-08-22', 'Gothic Theatre'),
+    ])
+    expect(items).toHaveLength(3)
+    expect(items[0].kind).toBe('run')
+    expect(
+      items.map((item) => (item.kind === 'run' ? item.shows[0].iso : item.iso)),
+    ).toEqual(['2026-08-05', '2026-08-22', '2026-09-11'])
+  })
+
+  it('cuts a new cluster when the same venue is revisited months later', () => {
+    const items = groupShows([
+      show('2026-08-05', "Ophelia's"),
+      show('2026-08-06', "Ophelia's"),
+      show('2026-08-07', "Ophelia's"),
+      show('2026-11-14', "Ophelia's"),
+    ])
+    expect(items.map((item) => item.kind)).toEqual(['run', 'one'])
+  })
+
+  it('returns nothing for no shows', () => {
+    expect(groupShows([])).toEqual([])
+  })
+})

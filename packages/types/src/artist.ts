@@ -2,6 +2,8 @@
 // the web client so the route shell (PR-E) and the embed/follow surfaces
 // (PR-F) consume exactly what `GET /v1/artists/:slug` emits.
 
+import type { EventStatus } from './index.js'
+
 /** An upcoming show for this artist, ascending by date. */
 export interface ArtistShow {
   eventId: string
@@ -14,6 +16,13 @@ export interface ArtistShow {
   city: string | null
   /** Cheapest known ticket price, or null when unknown ("Price TBD"). */
   price: number | null
+  /**
+   * Cancelled and postponed shows stay in the upcoming list — a show the
+   * visitor is watching must not disappear at the moment it is cancelled,
+   * which is the moment they most need to see it. The row carries its status
+   * so the card renders the same treatment the events list does.
+   */
+  status: EventStatus
 }
 
 /** A past show for this artist, descending by date. Prices are not surfaced. */

@@ -265,6 +265,38 @@ describe('GET /v1/artists/:slug — integration', () => {
     expect(body.data.history.count).toBe(2)
   })
 
+  it('keeps cancelled and postponed shows in the upcoming list, with their status', async () => {
+    // A show the visitor is watching must not vanish from the artist page at
+    // the moment it is cancelled — every other list surface keeps it.
+    await seedArtist({ name: 'Still Listed', canonicalName: 'still listed' })
+    const venue = await seedVenue({ name: 'Gothic', slug: 'gothic' })
+
+    await seedEvent(venue.id, {
+      artist: 'Still Listed',
+      canonicalArtist: 'still listed',
+      date: '2099-03-01',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Still Listed',
+      canonicalArtist: 'still listed',
+      date: '2099-03-02',
+      status: 'cancelled',
+    })
+    await seedEvent(venue.id, {
+      artist: 'Still Listed',
+      canonicalArtist: 'still listed',
+      date: '2099-03-03',
+      status: 'postponed',
+    })
+
+    const body: SuccessBody = await (await getArtist('still-listed')).json()
+    expect(body.data.shows.map((show) => [show.iso, show.status])).toEqual([
+      ['2099-03-01', 'upcoming'],
+      ['2099-03-02', 'cancelled'],
+      ['2099-03-03', 'postponed'],
+    ])
+  })
+
   it('returns following: null when anonymous and a boolean when signed in', async () => {
     await seedArtist({
       name: 'Followed Act',
@@ -309,6 +341,24 @@ describe('GET /v1/artists/:slug — integration', () => {
 
     const body: SuccessBody = await (await getArtist('synced-act')).json()
     expect(body.data.following).toBe(true)
+  })
+
+  it('does not count a spotify_top row as following', async () => {
+    // `spotify_top` is listening history, not a follow the user performed.
+    // Counting it would render the button pre-engaged, and unfollowing would
+    // do nothing visible because DELETE is scoped to `source = 'manual'`.
+    await seedArtist({ name: 'Top Act', canonicalName: 'top act' })
+    authState.current = { userId: 'user_artist_top' }
+    await testDb.insert(userArtistFollows).values({
+      userId: 'user_artist_top',
+      artistName: 'Top Act',
+      canonicalName: 'top act',
+      spotifyArtistId: 'sp_top',
+      source: 'spotify_top',
+    })
+
+    const body: SuccessBody = await (await getArtist('top-act')).json()
+    expect(body.data.following).toBe(false)
   })
 
   it('keeps history.count equal to past.length when the past cap truncates', async () => {
