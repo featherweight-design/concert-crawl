@@ -320,9 +320,11 @@ export async function saveVenueGuide(
   venueId: string,
   payload: SaveVenueGuidePayload,
 ): Promise<VenueGuideActionResult> {
-  const token = await getToken()
-
   try {
+    // Inside the try: getToken() throws on an expired or missing session, and
+    // an unhandled throw from a Server Action replaces the whole admin page
+    // with Next's error screen — losing the draft the admin was typing.
+    const token = await getToken()
     const data = await apiClient.put<VenueGuide>(
       `/v1/admin/venues/${venueId}/guide`,
       token,
@@ -344,9 +346,9 @@ export async function saveVenueGuide(
 export async function publishVenueGuide(
   venueId: string,
 ): Promise<VenueGuideActionResult> {
-  const token = await getToken()
-
   try {
+    // Inside the try — see saveVenueGuide.
+    const token = await getToken()
     const data = await apiClient.post<VenueGuide>(
       `/v1/admin/venues/${venueId}/guide/publish`,
       token,
@@ -376,9 +378,9 @@ export async function publishVenueGuide(
 export async function unpublishVenueGuide(
   venueId: string,
 ): Promise<VenueGuideActionResult> {
-  const token = await getToken()
-
   try {
+    // Inside the try — see saveVenueGuide.
+    const token = await getToken()
     const data = await apiClient.post<VenueGuide>(
       `/v1/admin/venues/${venueId}/guide/unpublish`,
       token,

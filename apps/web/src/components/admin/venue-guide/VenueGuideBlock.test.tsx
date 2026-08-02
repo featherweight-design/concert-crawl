@@ -281,6 +281,29 @@ describe('VenueGuideBlock (#764)', () => {
     )
   })
 
+  // A failed save and a successful one both land in the same role="status"
+  // line. Rendered identically, "Could not save the guide" reads as
+  // reassurance — the admin walks away believing the draft is stored.
+  it('distinguishes a failed save from a successful one', async () => {
+    saveVenueGuide.mockResolvedValue({ success: false })
+    renderBlock(populatedGuide)
+
+    fireEvent.click(
+      screen.getByRole('button', { name: GUIDE_COPY.footer.saveDraft }),
+    )
+
+    const failure = await screen.findByText(GUIDE_COPY.status.saveError)
+    expect(failure.style.color).toBe('var(--danger)')
+
+    saveVenueGuide.mockResolvedValue({ success: true })
+    fireEvent.click(
+      screen.getByRole('button', { name: GUIDE_COPY.footer.saveDraft }),
+    )
+
+    const success = await screen.findByText(GUIDE_COPY.status.saved)
+    expect(success.style.color).not.toBe('var(--danger)')
+  })
+
   it('renders the legend with a text equivalent for every dot', () => {
     renderBlock()
     expect(screen.getByText(GUIDE_COPY.legend.heading)).toBeTruthy()

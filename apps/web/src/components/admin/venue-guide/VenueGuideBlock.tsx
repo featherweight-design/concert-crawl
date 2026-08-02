@@ -84,7 +84,10 @@ export const VenueGuideBlock = ({
   const [publishedAt, setPublishedAt] = useState(initialGuide.publishedAt)
   const [showError, setShowError] = useState(false)
   const [confirmingUnpublish, setConfirmingUnpublish] = useState(false)
-  const [status, setStatus] = useState<string | null>(null)
+  const [status, setStatus] = useState<{
+    text: string
+    failed: boolean
+  } | null>(null)
   const [pending, startTransition] = useTransition()
 
   const publishState = deriveGuidePublishState({
@@ -146,16 +149,17 @@ export const VenueGuideBlock = ({
     return { insiderTip: tip.length > 0 ? tip : null, chips }
   }
 
+  const succeeded = (text: string) => setStatus({ text, failed: false })
+  const failed = (error: string | undefined) =>
+    setStatus({ text: error ?? GUIDE_COPY.status.saveError, failed: true })
+
   const saveDraft = () => {
     if (loadFailed) return
     setStatus(null)
     startTransition(async () => {
       const result = await saveVenueGuide(venueId, buildPayload())
-      setStatus(
-        result.success
-          ? GUIDE_COPY.status.saved
-          : (result.error ?? GUIDE_COPY.status.saveError),
-      )
+      if (result.success) succeeded(GUIDE_COPY.status.saved)
+      else failed(result.error)
     })
   }
 
@@ -169,17 +173,17 @@ export const VenueGuideBlock = ({
     startTransition(async () => {
       const saved = await saveVenueGuide(venueId, buildPayload())
       if (!saved.success) {
-        setStatus(saved.error ?? GUIDE_COPY.status.saveError)
+        failed(saved.error)
         return
       }
       const result = await publishVenueGuide(venueId)
       if (!result.success) {
         if (result.field === 'accessibility') setShowError(true)
-        setStatus(result.error ?? GUIDE_COPY.status.saveError)
+        failed(result.error)
         return
       }
       setPublishedAt(result.data?.publishedAt ?? new Date().toISOString())
-      setStatus(GUIDE_COPY.status.published)
+      succeeded(GUIDE_COPY.status.published)
     })
   }
 
@@ -189,11 +193,11 @@ export const VenueGuideBlock = ({
       const result = await unpublishVenueGuide(venueId)
       setConfirmingUnpublish(false)
       if (!result.success) {
-        setStatus(result.error ?? GUIDE_COPY.status.saveError)
+        failed(result.error)
         return
       }
       setPublishedAt(null)
-      setStatus(GUIDE_COPY.status.unpublished)
+      succeeded(GUIDE_COPY.status.unpublished)
     })
   }
 
@@ -554,10 +558,11 @@ export const VenueGuideBlock = ({
                 margin: 0,
                 fontFamily: 'var(--font-sans)',
                 fontSize: 12,
-                color: 'var(--fg-muted)',
+                fontWeight: status.failed ? 600 : 400,
+                color: status.failed ? 'var(--danger)' : 'var(--fg-muted)',
               }}
             >
-              {status}
+              {status.text}
             </p>
           )}
 
