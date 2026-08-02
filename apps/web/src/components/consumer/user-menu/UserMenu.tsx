@@ -476,11 +476,13 @@ interface MenuBodyProps {
 }
 
 /**
- * The one place the mode switch happens. Both shells call it, so the popover
- * and the sheet cannot drift on which body they show or how the panel is
- * bounded. Signed-out never reaches notifications mode — there is nothing to
- * show and no account to show it for.
+ * Notifications mode is signed-in-only, and every reader of the mode must
+ * agree on that. Both the body picker and the dialog's accessible name go
+ * through here so a shell can never label itself one thing and render another.
  */
+const isNotifMode = (props: MenuBodyProps): boolean =>
+  props.mode === 'notifications' && props.isSignedIn
+
 /**
  * The dialog's accessible name has to follow the body it is showing. Both
  * shells swap NotifBody in place, so a shell that always announces "Account"
@@ -492,10 +494,12 @@ const shellLabelOf = (props: MenuBodyProps): string =>
     ? NOTIFICATIONS_COPY.panelTitle
     : CONSUMER_COPY.userMenu.ariaLabels.menuTitle
 
-/** Notifications mode is signed-in-only, and both readers must agree on that. */
-const isNotifMode = (props: MenuBodyProps): boolean =>
-  props.mode === 'notifications' && props.isSignedIn
-
+/**
+ * The one place the mode switch happens. Both shells call it, so the popover
+ * and the sheet cannot drift on which body they show or how the panel is
+ * bounded. Signed-out never reaches notifications mode — there is nothing to
+ * show and no account to show it for.
+ */
 function MenuShellContent({
   props,
   panelMaxHeight,

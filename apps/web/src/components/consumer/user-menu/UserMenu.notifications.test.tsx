@@ -433,7 +433,13 @@ describe('#737 notifications mode — one shell, one escape', () => {
       signIn()
       await renderChrome(<UserMenu />)
       await click(desktopTrigger())
-      expect(screen.getByRole('dialog')).toHaveAccessibleName(
+
+      // Assert WHICH shell rendered, or a viewport regression that served the
+      // popover on mobile would still satisfy "on both shells". Only the sheet
+      // is modal — it is the one with a scrim and a focus trap.
+      const dialog = screen.getByRole('dialog')
+      expect(dialog.getAttribute('aria-modal')).toBe(isMobile ? 'true' : null)
+      expect(dialog).toHaveAccessibleName(
         CONSUMER_COPY.userMenu.ariaLabels.menuTitle,
       )
 
