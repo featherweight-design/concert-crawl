@@ -1,10 +1,12 @@
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import {
   db,
   events,
   priceSubmissions,
+  userEvents,
   venueGuideChips,
   venues,
 } from '@concert-crawl/db'
@@ -35,6 +37,11 @@ import { venueSlug } from '../lib/venue-slug-schema.js'
 import { aggregateByTier } from '../lib/price-aggregation/index.js'
 
 export const venuesPublicRouter = new Hono()
+
+// Clerk is mounted so `getAuth(ctx)` can resolve a session when one is present.
+// It never rejects — these routes stay public, and an anonymous reader gets
+// `viewerHasAttended: null` rather than a 401. Same shape as artists-public.ts.
+venuesPublicRouter.use('*', clerkMiddleware())
 
 // GET /v1/venues — list active venues with upcoming event counts (public)
 venuesPublicRouter.get('/', async (ctx) => {
@@ -366,15 +373,36 @@ venuesPublicRouter.get(
       priceByTier: priceByTierByEventId.get(evt.id) ?? null,
     }))
 
+    // #764 — has this viewer ever been to this room? `null` means "we cannot
+    // know" and must never collapse to `false`, which would be a positive claim
+    // that they have never been. Anonymous readers add zero queries.
+    //
+    // Watching is not Attending (#70): only `attending_at IS NOT NULL` counts,
+    // so a watched-but-never-attended row leaves the viewer a first-timer.
+    const authInfo = getAuth(ctx)
+    let viewerHasAttended: boolean | null = null
+    if (authInfo?.userId) {
+      const [attendedRow] = await db
+        .select({ id: userEvents.id })
+        .from(userEvents)
+        .innerJoin(events, eq(events.id, userEvents.eventId))
+        .where(
+          and(
+            eq(userEvents.userId, authInfo.userId),
+            eq(events.venueId, venue.id),
+            isNotNull(userEvents.attendingAt),
+          ),
+        )
+        .limit(1)
+      viewerHasAttended = Boolean(attendedRow)
+    }
+
     return ctx.json({
       success: true,
       data: {
         venue: { ...venuePublic, upcomingCount, guide },
         upcomingEvents: enrichedEvents,
-        // #764 — always null until PR-4 reads user_events.attending_at (#70).
-        // `null` means "we cannot know"; it must never collapse to `false`,
-        // which would be a positive claim that the viewer has never been.
-        viewerHasAttended: null,
+        viewerHasAttended,
       },
     })
   },

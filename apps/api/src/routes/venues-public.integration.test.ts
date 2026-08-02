@@ -1,9 +1,14 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
+
+// Mutable so a single test can flip the caller from anonymous to signed-in.
+// Every test that does so restores it, and the default is anonymous — the state
+// the vast majority of these assertions describe.
+let mockUserId: string | null = null
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
     next(),
-  getAuth: () => null,
+  getAuth: () => (mockUserId === null ? null : { userId: mockUserId }),
 }))
 
 import { createApp } from '../app.js'
@@ -11,6 +16,7 @@ import {
   clearTables,
   seedEvent,
   seedVenue,
+  seedUserEvent,
   seedVenueGuideChips,
 } from '../test/helpers/seed.js'
 
@@ -324,6 +330,93 @@ describe('GET /v1/venues/:slug — first-timer guide (#764)', () => {
     const res = await app.request('/v1/venues/detection-venue')
     const body = (await res.json()) as GuideBody
     expect(body.data.viewerHasAttended).toBeNull()
+  })
+
+  describe('viewerHasAttended truth table (#764 PR-4)', () => {
+    const VIEWER = 'user_returner'
+
+    afterEach(() => {
+      mockUserId = null
+    })
+
+    const readAttended = async (slug: string): Promise<boolean | null> => {
+      const res = await app.request(`/v1/venues/${slug}`)
+      const body = (await res.json()) as GuideBody
+      return body.data.viewerHasAttended
+    }
+
+    it('is false for a signed-in viewer with no attendance anywhere', async () => {
+      await seedVenue({ name: 'Cold Venue', slug: 'cold-venue' })
+      mockUserId = VIEWER
+
+      expect(await readAttended('cold-venue')).toBe(false)
+    })
+
+    it('is true when the viewer has an attending_at row at this venue', async () => {
+      const venue = await seedVenue({ name: 'Been Here', slug: 'been-here' })
+      const event = await seedEvent(venue.id)
+      await seedUserEvent(VIEWER, event.id, {
+        status: null,
+        attendingAt: new Date('2026-05-01T02:00:00Z'),
+      })
+      mockUserId = VIEWER
+
+      expect(await readAttended('been-here')).toBe(true)
+    })
+
+    it('is false when the row at this venue is Watching only — Watching is not Attending', async () => {
+      const venue = await seedVenue({ name: 'Watch Only', slug: 'watch-only' })
+      const event = await seedEvent(venue.id)
+      await seedUserEvent(VIEWER, event.id, {
+        status: 'watching',
+        attendingAt: null,
+      })
+      mockUserId = VIEWER
+
+      expect(await readAttended('watch-only')).toBe(false)
+    })
+
+    it('is false when the attendance is at a different venue', async () => {
+      const elsewhere = await seedVenue({
+        name: 'Elsewhere',
+        slug: 'elsewhere',
+      })
+      await seedVenue({ name: 'Never Been', slug: 'never-been' })
+      const event = await seedEvent(elsewhere.id)
+      await seedUserEvent(VIEWER, event.id, {
+        status: null,
+        attendingAt: new Date('2026-05-01T02:00:00Z'),
+      })
+      mockUserId = VIEWER
+
+      expect(await readAttended('never-been')).toBe(false)
+    })
+
+    it("is false when another user attended — attendance is the viewer's own", async () => {
+      const venue = await seedVenue({
+        name: 'Someone Else',
+        slug: 'someone-else',
+      })
+      const event = await seedEvent(venue.id)
+      await seedUserEvent('user_stranger', event.id, {
+        status: null,
+        attendingAt: new Date('2026-05-01T02:00:00Z'),
+      })
+      mockUserId = VIEWER
+
+      expect(await readAttended('someone-else')).toBe(false)
+    })
+
+    it('stays null for an anonymous caller even when attendance rows exist at the venue', async () => {
+      const venue = await seedVenue({ name: 'Busy Room', slug: 'busy-room' })
+      const event = await seedEvent(venue.id)
+      await seedUserEvent(VIEWER, event.id, {
+        status: null,
+        attendingAt: new Date('2026-05-01T02:00:00Z'),
+      })
+
+      expect(await readAttended('busy-room')).toBeNull()
+    })
   })
 
   it('serves the identical guide payload to an unauthenticated caller (#794)', async () => {
