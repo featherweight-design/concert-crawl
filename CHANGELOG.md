@@ -1,3 +1,11 @@
+## [1.190.1](https://github.com/HartiganHM/concert-crawl/compare/v1.190.0...v1.190.1) (2026-08-02)
+
+
+### Bug Fixes
+
+* **db:** add CLI runner so deployed environments can backfill artists ([c330d74](https://github.com/HartiganHM/concert-crawl/commit/c330d74a19203d05f48fbbcecd4807f8e5c1eada)), closes [#1115](https://github.com/HartiganHM/concert-crawl/issues/1115)
+* **db:** run the artists backfill only as the process entrypoint ([52da297](https://github.com/HartiganHM/concert-crawl/commit/52da2974e185884f840a76d7c9cc9512c02640ea)), closes [#1115](https://github.com/HartiganHM/concert-crawl/issues/1115)
+
 # [1.190.0](https://github.com/HartiganHM/concert-crawl/compare/v1.189.1...v1.190.0) (2026-08-02)
 
 
