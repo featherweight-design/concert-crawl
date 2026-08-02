@@ -114,7 +114,19 @@ export async function fetchPage(
 
         // Reading content() can itself fail if the page died; a null html still
         // beats losing the whole error.
-        const captured = await page.content().catch(() => null)
+        const captured = await page.content().catch((contentErr: unknown) => {
+          console.log(
+            JSON.stringify({
+              event: 'fetch.selector_timeout_capture_failed',
+              url,
+              error:
+                contentErr instanceof Error
+                  ? contentErr.message
+                  : String(contentErr),
+            }),
+          )
+          return null
+        })
         console.log(
           JSON.stringify({
             event: 'fetch.selector_timeout',
