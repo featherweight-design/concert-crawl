@@ -111,15 +111,18 @@ export async function fetchPage(
             url,
             selector: waitForSelector,
             finalUrl: page.url(),
+            httpStatus: finalStatus,
             htmlChars: captured?.length ?? 0,
           }),
         )
+        // crawl_runs.errorMessage persists String(err), so the selector and
+        // final URL have to live in the message or triage means log-combing.
         throw new CrawlSelectorTimeoutError(
           waitForSelector,
           captured,
           page.url(),
           finalStatus,
-          err.message,
+          `${err.message} (selector "${waitForSelector}" at ${page.url()}, HTTP ${finalStatus})`,
         )
       }
     }

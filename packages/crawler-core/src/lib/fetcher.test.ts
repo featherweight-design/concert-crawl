@@ -150,6 +150,8 @@ describe('fetchPage — waitForSelector', () => {
     expect(err.httpStatus).toBe(200)
     expect(err.selector).toBe('.event-card')
     expect(err.message).toContain('Timeout 30000ms exceeded')
+    expect(err.message).toContain('.event-card')
+    expect(err.message).toContain('https://example.com/blocked')
   })
 
   it('still throws when the page content is unreadable after a selector timeout', async () => {
