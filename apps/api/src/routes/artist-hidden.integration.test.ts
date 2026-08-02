@@ -9,10 +9,12 @@
 // entry point gets added to.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-const { authState } = vi.hoisted(() => ({
-  authState: {
-    current: null as { userId: string } | null,
-  },
+interface AuthState {
+  current: { userId: string } | null
+}
+
+const { authState } = vi.hoisted((): { authState: AuthState } => ({
+  authState: { current: null },
 }))
 
 vi.mock('@hono/clerk-auth', () => ({
@@ -95,10 +97,13 @@ describe('#1342 hidden artists are absent from every public surface', () => {
     const hiddenHit = await app.request('/v1/search/artists?q=ghost')
     const visibleHit = await app.request('/v1/search/artists?q=mountain')
 
-    expect(((await hiddenHit.json()) as SearchBody).data).toEqual([])
+    const hiddenBody: SearchBody = await hiddenHit.json()
+    const visibleBody: SearchBody = await visibleHit.json()
+
+    expect(hiddenBody.data).toEqual([])
     // The control: search itself works, so the empty result above is the
     // hidden filter and not a broken query.
-    expect(((await visibleHit.json()) as SearchBody).data).toHaveLength(1)
+    expect(visibleBody.data).toHaveLength(1)
   })
 
   it('resolves the event-detail link to null so the name renders as plain text', async () => {
