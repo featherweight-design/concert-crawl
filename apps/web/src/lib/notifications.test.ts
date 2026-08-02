@@ -143,6 +143,32 @@ describe('safeParseNotificationList', () => {
     expect(result.data.items).toHaveLength(1)
   })
 
+  it('skips one malformed row rather than blanking the whole panel', () => {
+    const result = safeParseNotificationList({
+      ...payload,
+      items: [row, { ...row, id: undefined }, { ...row, id: 'keep-me' }],
+    })
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.data.items.map((each) => each.id)).toEqual([
+      row.id,
+      'keep-me',
+    ])
+  })
+
+  it('rejects a payload whose rows ALL fail, rather than showing "All quiet."', () => {
+    // Not one bad record — a broken contract. Rendering the empty state over
+    // it would tell the user they have no news when they may have plenty.
+    const result = safeParseNotificationList({
+      ...payload,
+      items: [
+        { ...row, id: undefined },
+        { ...row, title: 7 },
+      ],
+    })
+    expect(result.success).toBe(false)
+  })
+
   it('carries an opaque nextCursor through verbatim', () => {
     const cursor = 'MjAyNi0wOC0wMSAxMjowMDowMCswMHxhYmM'
     const result = safeParseNotificationList({

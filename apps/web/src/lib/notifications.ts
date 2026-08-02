@@ -186,13 +186,21 @@ export const safeParseNotificationList = (
     }
   }
 
+  // A single bad row is SKIPPED, not fatal. Rejecting the payload would blank
+  // the whole panel over one malformed record and hide every valid
+  // notification alongside it — the same degrade-rather-than-drop rule that
+  // turns a hostile `actionUrl` into null and renders an unknown category.
+  //
+  // The exception is a payload whose rows ALL fail: that is not one bad
+  // record, it is a broken contract, and silently rendering "All quiet." over
+  // it would tell the user they have no news when they may have plenty.
   const parsed: ConsumerNotification[] = []
   for (const raw of items) {
     const item = parseItem(raw)
-    if (item === null) {
-      return { success: false, error: 'Notification row failed validation' }
-    }
-    parsed.push(item)
+    if (item !== null) parsed.push(item)
+  }
+  if (items.length > 0 && parsed.length === 0) {
+    return { success: false, error: 'Every notification row failed validation' }
   }
 
   // `hasMore: true` with `nextCursor: null` is a contradiction the route should
