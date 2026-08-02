@@ -1,3 +1,15 @@
+# [1.198.0](https://github.com/HartiganHM/concert-crawl/compare/v1.197.0...v1.198.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **venues:** add release note for The Junkyard, clarify seed comment ([92932d5](https://github.com/HartiganHM/concert-crawl/commit/92932d5b29b5225a255ee3830c792022f68e2c92))
+
+
+### Features
+
+* **venues:** onboard The Junkyard ([4dc1702](https://github.com/HartiganHM/concert-crawl/commit/4dc1702b8fc527796a0d4b6a6dce37d1b1b208d1))
+
 # [1.197.0](https://github.com/HartiganHM/concert-crawl/compare/v1.196.0...v1.197.0) (2026-08-02)
 
 
