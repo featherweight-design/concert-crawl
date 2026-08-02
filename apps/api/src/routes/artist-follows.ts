@@ -55,12 +55,11 @@ artistFollowsRouter.post('/:slug/follow', slugValidator, async (ctx) => {
 
   if (!artist) return ctx.json(notFound, 404)
 
-  // Explicit read-before-insert. The unique index is
-  // (user_id, source, spotify_artist_id) and an unmatched artist's
-  // spotify_artist_id is NULL, which Postgres treats as distinct from every
-  // other NULL — so ON CONFLICT would not dedupe here. The schema comment on
-  // userArtistFollows says as much: manual duplicates are guarded at the API
-  // layer, and this is that layer.
+  // Read-before-insert so a repeat follow is a cheap no-op rather than a
+  // wasted write. It is not the correctness guarantee — two concurrent
+  // requests can both pass it. The partial unique index
+  // (user_id, canonical_name) WHERE source='manual' is what actually makes
+  // this idempotent; see migration 0070.
   const [existing] = await db
     .select({ id: userArtistFollows.id })
     .from(userArtistFollows)
@@ -85,10 +84,8 @@ artistFollowsRouter.post('/:slug/follow', slugValidator, async (ctx) => {
         spotifyArtistId: artist.spotifyArtistId,
         source: 'manual',
       })
-      // The SELECT above can't close the window between two concurrent
-      // follows — a double-tap would otherwise hit the
-      // (user_id, source, spotify_artist_id) unique index and 500. That index
-      // doesn't cover a null spotifyArtistId, which is why the SELECT stays.
+      // Untargeted on purpose: it covers whichever unique index the loser of
+      // a concurrent double-tap trips, so neither request 500s.
       .onConflictDoNothing()
   }
 

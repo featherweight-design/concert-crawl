@@ -233,6 +233,43 @@ describe('GET /v1/artists/:slug — integration', () => {
     expect(body.data.history.count).toBe(body.data.past.length)
   })
 
+  it('drops a cancelled past show from history but keeps a postponed one', async () => {
+    await seedArtist({
+      name: 'Called Off',
+      canonicalName: 'called off',
+      slug: 'called-off',
+    })
+    const venue = await seedVenue({ name: 'Bluebird', slug: 'bluebird' })
+
+    await seedEvent(venue.id, {
+      artist: 'Called Off',
+      canonicalArtist: 'called off',
+      date: '2020-02-01',
+    })
+    // Never happened, so it is not one of the times we caught them.
+    await seedEvent(venue.id, {
+      artist: 'Called Off',
+      canonicalArtist: 'called off',
+      date: '2020-02-02',
+      status: 'cancelled',
+    })
+    // The date moved, but the show still landed on our map.
+    await seedEvent(venue.id, {
+      artist: 'Called Off',
+      canonicalArtist: 'called off',
+      date: '2020-02-03',
+      status: 'postponed',
+    })
+
+    const res = await getArtist('called-off')
+    const body: SuccessBody = await res.json()
+    expect(body.data.past.map((show) => show.iso)).toEqual([
+      '2020-02-03',
+      '2020-02-01',
+    ])
+    expect(body.data.history.count).toBe(2)
+  })
+
   it('returns following: null when anonymous and a boolean when signed in', async () => {
     await seedArtist({
       name: 'Followed Act',

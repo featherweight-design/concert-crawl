@@ -101,12 +101,18 @@ export const userArtistFollows = pgTable(
       .defaultNow(),
   },
   (table) => ({
-    // Replace-set-per-source upsert target. NULL spotify_artist_id rows
-    // (manual follows) are all distinct under Postgres NULL semantics —
-    // intended: manual duplicates are guarded at the API layer, not here.
+    // Replace-set-per-source upsert target. NULL spotify_artist_id rows are
+    // all distinct under Postgres NULL semantics, so this index cannot dedupe
+    // manual follows of an unmatched artist — manualCanonicalIdx below does.
     userSourceArtistIdx: uniqueIndex(
       'user_artist_follows_user_source_artist_idx',
     ).on(table.userId, table.source, table.spotifyArtistId),
+    // A user can follow an artist by hand exactly once, matched or not. The
+    // API's read-before-insert can't close the window between two concurrent
+    // follows; this can.
+    manualCanonicalIdx: uniqueIndex('user_artist_follows_manual_canonical_idx')
+      .on(table.userId, table.canonicalName)
+      .where(sql`source = 'manual'`),
     canonicalNameIdx: index('user_artist_follows_canonical_name_idx').on(
       table.canonicalName,
     ),

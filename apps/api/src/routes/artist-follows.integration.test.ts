@@ -133,6 +133,27 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
     expect(await followRows()).toHaveLength(1)
   })
 
+  it('stays at one row when two follows race past the read-before-insert', async () => {
+    await seedArtist({
+      name: 'Wax Harbour',
+      canonicalName: 'wax harbour',
+      slug: 'wax-harbour',
+    })
+    authState.current = { userId: USER_ID }
+
+    // Both requests see an empty table, so both reach the INSERT. Only the
+    // partial unique index from migration 0070 stops the second one, and
+    // onConflictDoNothing is what keeps it a 200 rather than a 500.
+    const [first, second] = await Promise.all([
+      follow('wax-harbour'),
+      follow('wax-harbour'),
+    ])
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(200)
+    expect(await followRows()).toHaveLength(1)
+  })
+
   it('never touches Spotify on follow or unfollow', async () => {
     await seedArtist({
       name: 'Synced Act',
