@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import type { VenueGuideChip } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '../definitions/copy'
 
@@ -25,6 +25,7 @@ export const ReturnerGuideAccordion = ({
   children,
 }: ReturnerGuideAccordionProps) => {
   const [open, setOpen] = useState(false)
+  const summaryId = useId()
 
   const previewLabels = chips
     .slice(0, PREVIEW_CHIP_COUNT)
@@ -46,6 +47,11 @@ export const ReturnerGuideAccordion = ({
         onClick={() => setOpen((wasOpen) => !wasOpen)}
         aria-expanded={open}
         aria-label={copy.returner.toggleAriaLabel}
+        // The stable aria-label keeps the control's name from changing as the
+        // preview text does, but on its own it would hide the topic list and
+        // the "+N" from screen readers entirely. Describing the button with the
+        // already-visible summary gives that back without a duplicate node.
+        aria-describedby={summaryId}
         className="flex w-full cursor-pointer items-center gap-3 text-left"
         style={{ minHeight: 44, padding: '12px 14px', boxSizing: 'border-box' }}
       >
@@ -85,6 +91,7 @@ export const ReturnerGuideAccordion = ({
             {copy.sectionEyebrow}
           </span>
           <span
+            id={summaryId}
             className="block truncate"
             style={{
               marginTop: 2,

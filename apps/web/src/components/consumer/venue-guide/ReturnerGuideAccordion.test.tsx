@@ -85,6 +85,30 @@ describe('ReturnerGuideAccordion', () => {
     expect(toggle.style.minHeight).toBe('44px')
   })
 
+  it('describes the toggle with the preview text, which aria-label alone would hide', () => {
+    renderReturner()
+    const toggle = screen.getByRole('button', {
+      name: copy.returner.toggleAriaLabel,
+    })
+    const describedBy = toggle.getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    expect(document.getElementById(describedBy ?? '')?.textContent).toBe(
+      copy.returner.preview(
+        [
+          copy.chipLabels.accessibility,
+          copy.chipLabels.parking,
+          copy.chipLabels.food_drink,
+        ],
+        1,
+      ),
+    )
+
+    fireEvent.click(toggle)
+    expect(document.getElementById(describedBy ?? '')?.textContent).toBe(
+      copy.returner.expandedSummary,
+    )
+  })
+
   it('toggles open and shut from a native button, so Enter and Space work for free', () => {
     renderReturner()
     const toggle = screen.getByRole('button', {
