@@ -6,7 +6,10 @@
 //
 //   NOT rendered — WatchZone / WatchShowButton, the "I'm going!" commitment
 //   strip, DetailFollowStrip, price submission, community reports, the
-//   first-timer guide chip, related shows, and the report footer.
+//   first-timer guide chip, and the report footer.
+//
+// Related shows DO render: they go through the same EventCard the public browse
+// list uses, so nothing account-shaped rides along with them.
 //
 // In their place there is exactly one sign-in CTA. The Watching affordance on
 // the authed page is the lucide Eye; the mirror simply omits it rather than
