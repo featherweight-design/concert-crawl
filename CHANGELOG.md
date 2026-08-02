@@ -1,3 +1,32 @@
+# [1.190.0](https://github.com/HartiganHM/concert-crawl/compare/v1.189.1...v1.190.0) (2026-08-02)
+
+
+### Bug Fixes
+
+* **artist-page:** address Copilot round 1 on the artist route ([bb0dba9](https://github.com/HartiganHM/concert-crawl/commit/bb0dba999639d5dc80ba16f17b2f9831dae5f382))
+* **artist-page:** align the route skeleton with the page it stands in for ([8362e9b](https://github.com/HartiganHM/concert-crawl/commit/8362e9bd76c4d7d14dc2e72e7d550062b2313b5c))
+* **artist-page:** close 12 design-table gaps on the artist route ([73f14cb](https://github.com/HartiganHM/concert-crawl/commit/73f14cbd809a60298a7873b6c9c26f02369e7126))
+* **artist-page:** cluster residencies by venue slug, not venue name ([d9e90a7](https://github.com/HartiganHM/concert-crawl/commit/d9e90a761494fbe16f7d1f82d4ec3013a9a9a50e))
+* **artist-page:** derive test dir from import.meta.url, narrow map comment ([c716b0d](https://github.com/HartiganHM/concert-crawl/commit/c716b0ddad53bbb1ab37dac1fece84ea5982cfe3))
+* **artist-page:** route date and price display through shared formatters ([a066c57](https://github.com/HartiganHM/concert-crawl/commit/a066c573a30bdcb6ca28f2d15030d4d706b98360))
+* **artists:** make show grouping safe under noUncheckedIndexedAccess ([119b330](https://github.com/HartiganHM/concert-crawl/commit/119b33023a5b3c3be1264aab2b26ee1c5e8b6da5))
+* **seed:** anchor the canonical-artist guard instead of slicing to .returning ([f7f2e2e](https://github.com/HartiganHM/concert-crawl/commit/f7f2e2e3676f7583296c634b74bf1f158d2cac8a))
+* **seed:** populate canonical_artist so the artists projection is non-empty ([efa822e](https://github.com/HartiganHM/concert-crawl/commit/efa822eb19bdae641d4e41e280a9cd840e9e3f0c))
+* **web:** close the reduced-motion media block in globals.css ([ae04fa6](https://github.com/HartiganHM/concert-crawl/commit/ae04fa67b53a42dc7926bbebdcb0df8248519eb0))
+* **web:** make the error boundary "Try again" button actually retry ([3fe812f](https://github.com/HartiganHM/concert-crawl/commit/3fe812f9110083dde1bbce9a65ea9b6b36c1994d))
+
+
+### Features
+
+* **artist-page:** add ArtistPlate with a render-time photo fallback ([d93aadd](https://github.com/HartiganHM/concert-crawl/commit/d93aaddd2b1a81987b3ed1b299a64f3f62a48a6a))
+* **artist-page:** add section head, skeletons and the previously list ([9051854](https://github.com/HartiganHM/concert-crawl/commit/9051854d943a77c7e186973e0251d94c471a4fde))
+* **artist-page:** add the upcoming shows list with residency grouping ([a8cbd66](https://github.com/HartiganHM/concert-crawl/commit/a8cbd66c0a7c1b8d1547e30cd024a9b02fc75853))
+* **artist-page:** definitions — copy, constants and show item types ([56c3b6c](https://github.com/HartiganHM/concert-crawl/commit/56c3b6c98c974cce803a1467f6ed8617a1f10c95))
+* **artists:** add the artist page route, shell and styles ([5d016a6](https://github.com/HartiganHM/concert-crawl/commit/5d016a6b8da7e67b2a0ff584e45bd19b9ead852d)), closes [#794](https://github.com/HartiganHM/concert-crawl/issues/794)
+* **artists:** keep cancelled and postponed upcoming shows, scope the follow read ([c369c7e](https://github.com/HartiganHM/concert-crawl/commit/c369c7e654720294c437dc2bea43fc831a1d1dcb))
+* **artists:** open /artists once public browse launches ([802b0f0](https://github.com/HartiganHM/concert-crawl/commit/802b0f00facbab7cd63ebcfe2cf3cebd453217a0)), closes [#794](https://github.com/HartiganHM/concert-crawl/issues/794)
+* **web:** add a not-found boundary inside the app shell ([28a4272](https://github.com/HartiganHM/concert-crawl/commit/28a4272ead4432aac3cbab67e43deee298242ddf))
+
 ## [1.189.1](https://github.com/HartiganHM/concert-crawl/compare/v1.189.0...v1.189.1) (2026-08-02)
 
 
