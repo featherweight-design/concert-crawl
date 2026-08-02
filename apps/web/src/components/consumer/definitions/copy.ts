@@ -43,6 +43,41 @@ export const CONSUMER_COPY = {
   venueNoShows:
     "We haven't found any scheduled shows for this venue yet. Check back soon.",
 
+  // ── Venue first-timer guide (#764) ─────────────────────────────────
+  venueGuide: {
+    sectionTitle: 'Before you go',
+    sectionEyebrow: 'First-timer guide',
+    calloutEyebrow: 'New here',
+    callout: {
+      question: (venueShortName: string) => `First time at ${venueShortName}?`,
+      populatedSub: 'Two minutes of stuff worth knowing before you walk in.',
+      thinSub: "Here's what we've got so far.",
+    },
+    jumpAriaLabel: 'Jump to the first-timer guide',
+    jumpLabel: 'GUIDE',
+    eventChip: (venueShortName: string) =>
+      `First time at ${venueShortName}? Guide`,
+    eventChipArrow: '→',
+    insiderTipEyebrow: 'Insider tip',
+    accessibilityAlwaysHere: '★ ALWAYS HERE',
+    accessibilityNotDocumented: 'NOT DOCUMENTED',
+    accessibilityPlaceholder:
+      'Not documented yet. Best to call the venue and ask before you head out — details are on the main page.',
+    thinLabel: 'Still gathering',
+    thinFooter: (venueShortName: string) =>
+      `That's the lot for now — ${venueShortName}'s new to us.`,
+    chipLabels: {
+      accessibility: 'Accessibility',
+      parking: 'Parking',
+      age_policy: 'Age policy',
+      bag_check: 'Bag check',
+      coat_check: 'Coat check',
+      will_call: 'Will-call / entry',
+      food_drink: 'Food + drink',
+      transit: 'Getting there',
+    },
+  },
+
   // ── Watching ───────────────────────────────────────────────────────
   watchingEmptyEyebrow: 'Watching',
   watchingEmptyTitle: 'No shows, grandpa.',
