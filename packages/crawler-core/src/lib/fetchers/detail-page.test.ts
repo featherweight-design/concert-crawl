@@ -82,7 +82,13 @@ interface SiteOverrides {
   robots?: string
   sitemap?: string
   listing?: string
-  detail?: (url: string) => { ok: boolean; status: number; body: string }
+  detail?: (url: string) => {
+    ok: boolean
+    status: number
+    body: string
+    /** Final URL after redirects, as `Response.url` reports it. */
+    url?: string
+  }
 }
 
 /**
@@ -120,6 +126,7 @@ function mockSiteFetch(
       return {
         ok: detail.ok,
         status: detail.status,
+        url: detail.url,
         text: async () => detail.body,
       }
     }
@@ -429,7 +436,9 @@ describe('detailPageFetcher.fetch', () => {
     await expect(
       detailPageFetcher.fetch(makeVenue({ crawlDelayMs: 50 }), {
         crawlDelayMs: 50,
-        overallTimeoutMs: 1,
+        // 0, not 1: jitter() can return 0 for every wait, so a millisecond
+        // budget can survive the whole mocked run and make this flaky.
+        overallTimeoutMs: 0,
       }),
     ).rejects.toThrow(PlatformFetchDeadlineError)
   })
@@ -443,6 +452,27 @@ describe('detailPageFetcher.fetch', () => {
     await detailPageFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
     // listing + MAX_DETAIL_PAGES detail pages (the sitemap 404s here).
     expect(pageRequests(fetchMock)).toHaveLength(MAX_DETAIL_PAGES + 2)
+  })
+
+  it('refuses a detail page that redirected off-origin', async () => {
+    mockSiteFetch({
+      listing: Array.from(
+        { length: 5 },
+        (_, i) => `<a href="/e/show-${i}">${i}</a>`,
+      ).join(''),
+      sitemap: '',
+      detail: (url) => ({
+        ok: true,
+        status: 200,
+        body: DETAIL_HTML,
+        // A 3xx would otherwise hand us an off-origin body that never passed
+        // the same-origin filter or the robots gate.
+        url: `https://evil.example${new URL(url).pathname}`,
+      }),
+    })
+    await expect(
+      detailPageFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
+    ).rejects.toThrow(/redirected off-origin/)
   })
 
   it('stops checking robots.txt once the cap is reached', async () => {

@@ -107,6 +107,26 @@ async function fetchText(url: string, timeoutMs?: number): Promise<string> {
       `Detail-page fetch failed: HTTP ${response.status} for ${url}`,
     )
   }
+  // fetch() follows redirects by default, so the body we are about to parse
+  // may come from a URL that never passed the same-origin filter or the
+  // robots gate. Re-apply both to wherever we actually landed.
+  const landed = response.url || url
+  if (landed !== url) {
+    if (new URL(landed).origin !== new URL(url).origin) {
+      throw new DetailPageFetchError(
+        response.status,
+        url,
+        `Detail-page fetch for ${url} redirected off-origin to ${landed}`,
+      )
+    }
+    if (!(await isAllowed(landed, USER_AGENT))) {
+      throw new DetailPageFetchError(
+        response.status,
+        url,
+        `Detail-page fetch for ${url} redirected to ${landed}, which robots.txt disallows`,
+      )
+    }
+  }
   return response.text()
 }
 
@@ -241,6 +261,10 @@ async function detailPageFetch(
       // serve. A budget breach is not optional, though: it means the whole
       // fetch is out of time, so let it propagate.
       if (err instanceof Error && err.name === 'PlatformFetchDeadlineError') {
+        logger.warn(
+          { venueId: venue.id, sitemapUrl, err },
+          'detail-page: budget exhausted while reading the sitemap',
+        )
         throw err
       }
       logger.debug(
@@ -322,6 +346,10 @@ async function detailPageFetch(
       )
     } catch (err) {
       if (err instanceof Error && err.name === 'PlatformFetchDeadlineError') {
+        logger.warn(
+          { venueId: venue.id, detailUrl, eventCount: events.length, err },
+          'detail-page: budget exhausted partway through the detail pages',
+        )
         throw err
       }
       failedPageCount++
