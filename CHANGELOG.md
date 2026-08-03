@@ -1,3 +1,18 @@
+# [1.211.0](https://github.com/HartiganHM/concert-crawl/compare/v1.210.0...v1.211.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **crawler:** abort a detail-page run on 403/429 ([de1cc18](https://github.com/HartiganHM/concert-crawl/commit/de1cc1862b27f17918efd9ac6fdf6c11f177048e))
+* **crawler:** bound robots pre-flight to the detail-page cap ([70d892b](https://github.com/HartiganHM/concert-crawl/commit/70d892b21fe0f967f0901e4584fac2dc47f6fd19))
+* **crawler:** gate detail-page redirects and log deadline breaches ([5ea7ed5](https://github.com/HartiganHM/concert-crawl/commit/5ea7ed50e884013558fcbcf6a98064265bc00c0f))
+* **crawler:** log unparseable detail-page hrefs before skipping ([c3ef680](https://github.com/HartiganHM/concert-crawl/commit/c3ef680b3b9c1101612336ea63207495f5a7dd47))
+
+
+### Features
+
+* **crawler:** detail-page-following platform fetcher ([6e8dd42](https://github.com/HartiganHM/concert-crawl/commit/6e8dd4221ff0edd0c991513f433521b5f9b8ffab)), closes [#1295](https://github.com/HartiganHM/concert-crawl/issues/1295)
+
 # [1.210.0](https://github.com/HartiganHM/concert-crawl/compare/v1.209.0...v1.210.0) (2026-08-03)
 
 
