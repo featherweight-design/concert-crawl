@@ -1,3 +1,10 @@
+# [1.212.0](https://github.com/HartiganHM/concert-crawl/compare/v1.211.0...v1.212.0) (2026-08-03)
+
+
+### Features
+
+* **web:** replace EventCard with the measured EventRow ([#1436](https://github.com/HartiganHM/concert-crawl/issues/1436)) ([2d887e4](https://github.com/HartiganHM/concert-crawl/commit/2d887e4b7f1d73fe43fdf5417d0d830fb289e3bb)), closes [#794](https://github.com/HartiganHM/concert-crawl/issues/794)
+
 # [1.211.0](https://github.com/HartiganHM/concert-crawl/compare/v1.210.0...v1.211.0) (2026-08-03)
 
 
