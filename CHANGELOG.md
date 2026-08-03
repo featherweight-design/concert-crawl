@@ -1,3 +1,10 @@
+## [1.212.1](https://github.com/HartiganHM/concert-crawl/compare/v1.212.0...v1.212.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* **crawler:** give the debug capture three distinct length fields ([5ec6e23](https://github.com/HartiganHM/concert-crawl/commit/5ec6e233fdd269f46d40c7e4d781121f1a60c493))
+
 # [1.212.0](https://github.com/HartiganHM/concert-crawl/compare/v1.211.0...v1.212.0) (2026-08-03)
 
 
