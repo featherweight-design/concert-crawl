@@ -27,6 +27,8 @@ export const SCHEDULED_STATUSES = [
   'postponed',
 ] as const
 
+type EventStatus = (typeof SCHEDULED_STATUSES)[number]
+
 interface UpcomingEventsOptions {
   /**
    * Inclusive lower bound on `events.date`, as a `YYYY-MM-DD` string or a SQL
@@ -39,7 +41,7 @@ interface UpcomingEventsOptions {
    * `SCHEDULED_STATUSES` for surfaces that must keep showing cancelled and
    * postponed shows.
    */
-  statuses?: readonly ('upcoming' | 'cancelled' | 'postponed')[]
+  statuses?: readonly [EventStatus, ...EventStatus[]]
   /** Include events flagged non-concert. Defaults to false. */
   includeHiddenFromConsumer?: boolean
   /**
@@ -59,11 +61,13 @@ export const upcomingEventConditions = ({
   includeMissing = false,
 }: UpcomingEventsOptions): SQL[] => {
   // A single status uses `=` rather than `IN (…)` so the query can match the
-  // `status = 'upcoming'` partial index predicate.
+  // `status = 'upcoming'` partial index predicate. The non-empty tuple type on
+  // `statuses` is what makes `firstStatus` defined — an empty list would emit
+  // `IN ()`, which is not valid SQL.
   const [firstStatus, ...restStatuses] = statuses
 
   const conditions: SQL[] = [
-    firstStatus && restStatuses.length === 0
+    restStatuses.length === 0
       ? eq(events.status, firstStatus)
       : inArray(events.status, [...statuses]),
     gte(events.date, from),

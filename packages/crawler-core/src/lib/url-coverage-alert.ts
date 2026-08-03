@@ -22,7 +22,7 @@
 //
 // Never fails the crawl: advisory detection layered on a run that completed.
 
-import { and, eq, gte, isNull, lt, or, sql } from 'drizzle-orm'
+import { and, eq, isNull, lt, or, sql } from 'drizzle-orm'
 import { db, events, notifications, venues } from '@concert-crawl/db'
 import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events'
 import { reportFailure } from '@concert-crawl/logger'
