@@ -410,6 +410,25 @@ describe('runDailyCrawl', () => {
     expect(mockSentryCaptureException).not.toHaveBeenCalled()
   })
 
+  it('runs the stale event sweep once after the crawl (#675)', async () => {
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+
+    expect(mockSweepStaleEvents).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports a failing sweep without failing the crawl (#675)', async () => {
+    const sweepError = new Error('sweep exploded')
+    mockSweepStaleEvents.mockRejectedValueOnce(sweepError)
+
+    const { runDailyCrawl } = await import('./run.js')
+    // The sweep only tidies rows the crawl already wrote, so its failure must
+    // never take down an otherwise successful crawl.
+    await expect(runDailyCrawl()).resolves.not.toThrow()
+
+    expect(mockSentryCaptureException).toHaveBeenCalledWith(sweepError)
+  })
+
   it('calls Sentry.logger.info with crawl result attributes after a successful crawl', async () => {
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()

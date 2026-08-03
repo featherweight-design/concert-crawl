@@ -48,7 +48,7 @@ export async function sweepStaleEvents(
   const cancelled = await db.transaction(async (tx) => {
     const rows = await tx
       .update(events)
-      .set({ status: 'cancelled', updatedAt: new Date() })
+      .set({ status: 'cancelled', updatedAt: now })
       .where(
         and(
           eq(events.status, 'upcoming'),
