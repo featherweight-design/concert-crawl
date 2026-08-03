@@ -28,7 +28,7 @@ interface SearchState {
   /** Resolves to these candidates, unless `error` is set. */
   candidates: SpotifyCandidate[]
   error: Error | null
-  /** Null models unset SPOTIFY_CLIENT_ID/SECRET — the dormant path. */
+  /** False models unset SPOTIFY_CLIENT_ID/SECRET — the dormant path. */
   clientAvailable: boolean
   lastQuery: string | null
 }
