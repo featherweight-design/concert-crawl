@@ -1,3 +1,10 @@
+## [1.203.1](https://github.com/HartiganHM/concert-crawl/compare/v1.203.0...v1.203.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* **share:** stop the poster claiming attendance it never checked ([07dc6fc](https://github.com/HartiganHM/concert-crawl/commit/07dc6fceb974fee07e3ce3cae8f1a4601b6e543e))
+
 # [1.203.0](https://github.com/HartiganHM/concert-crawl/compare/v1.202.0...v1.203.0) (2026-08-03)
 
 
