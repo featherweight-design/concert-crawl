@@ -6,6 +6,12 @@
 // dropped it; the README is the authority.
 
 export const GOING_COPY = {
+  // Names the block so the `?` has something to sit beside, rather than the
+  // disc hanging alone under the button in dead space.
+  eyebrow: {
+    upcoming: 'Your move',
+    past: 'That night',
+  },
   button: {
     default: "I'm going!",
     going: 'Going',

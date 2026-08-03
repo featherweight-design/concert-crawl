@@ -165,6 +165,71 @@ export const EventDetailCtaBlock = ({
 
   return (
     <div>
+      {/* Eyebrow + tip share one row above the button. The `?` needs a line of
+          its own to belong to: on its own beneath the button it read as a
+          stray control floating in the gap between two blocks. Rendering it
+          here also means the explainer survives `locked` and `error`, where it
+          previously vanished — exactly when someone most wants to know what
+          Going even is. */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          marginBottom: 6,
+        }}
+      >
+        <span
+          style={{
+            flex: 1,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+            color: 'var(--fg-subtle)',
+          }}
+        >
+          {isPast ? GOING_COPY.eyebrow.past : GOING_COPY.eyebrow.upcoming}
+        </span>
+        <CCTip
+          tip={GOING_EXPLAINER_TIP}
+          placement="bottom"
+          align="end"
+          // The target is 44px for thumbs; the negative margin pulls the extra
+          // padding back out of the layout so the visible disc still sits
+          // exactly where a 22px control would.
+          triggerStyle={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: TAP_TARGET,
+            height: TAP_TARGET,
+            margin: -(TAP_TARGET - DISC_SIZE) / 2,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: DISC_SIZE,
+              height: DISC_SIZE,
+              borderRadius: '50%',
+              border: '1px solid var(--border-strong)',
+              color: 'var(--fg-subtle)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              fontWeight: 700,
+              lineHeight: 1,
+            }}
+          >
+            ?
+          </span>
+        </CCTip>
+      </div>
+
       {/* Full width down to 320px — the button ellipsizes its own label, so
           nothing here needs a fixed floor. */}
       <GoingButton
@@ -176,9 +241,9 @@ export const EventDetailCtaBlock = ({
         onChange={onChange}
       />
 
-      {/* The standing support line is gone — "we'll add this to your history"
-          restated what the button just did, and the going-vs-watch distinction
-          now lives behind the tooltip. Only a real failure earns a line here. */}
+      {/* Only a real failure or the gate earns a line here. The standing
+          support line is gone — "we'll add this to your history" restated what
+          the button just did — and the explainer moved up to the header. */}
       {state === 'error' ? (
         // The retry lives in the button; this line only names what survived, so
         // a failed commit never reads as having lost the watch too.
@@ -206,44 +271,7 @@ export const EventDetailCtaBlock = ({
         >
           {GOING_COPY.locked.line}
         </p>
-      ) : (
-        <div style={{ marginTop: 6 }}>
-          <CCTip
-            tip={GOING_EXPLAINER_TIP}
-            // The target is 44px for thumbs; the negative margin pulls the extra
-            // padding back out of the layout so the visible disc still sits
-            // exactly where a 22px control would.
-            triggerStyle={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: TAP_TARGET,
-              height: TAP_TARGET,
-              margin: -(TAP_TARGET - DISC_SIZE) / 2,
-            }}
-          >
-            <span
-              aria-hidden
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: DISC_SIZE,
-                height: DISC_SIZE,
-                borderRadius: '50%',
-                border: '1px solid var(--border-strong)',
-                color: 'var(--fg-subtle)',
-                fontFamily: 'var(--font-mono)',
-                fontSize: 11,
-                fontWeight: 700,
-                lineHeight: 1,
-              }}
-            >
-              ?
-            </span>
-          </CCTip>
-        </div>
-      )}
+      ) : null}
 
       <TierPickerSheet
         open={pickerOpen}

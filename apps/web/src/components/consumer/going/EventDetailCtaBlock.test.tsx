@@ -217,6 +217,38 @@ describe('EventDetailCtaBlock', () => {
     )
   })
 
+  // The explainer used to render only in the else-branch beneath the button, so
+  // the gate and a failure both silenced it — the two moments someone is most
+  // likely to ask what Going even is.
+  it.each(['locked', 'error'] as const)(
+    'keeps the explainer reachable in the %s treatment',
+    (treatment) => {
+      if (treatment === 'locked') {
+        entitlement = {
+          isLoading: false,
+          active: false,
+          surface: 'paywall-on-tap',
+        }
+        renderBlock()
+      } else {
+        mutate.mockImplementation((_input, options) => options.onError())
+        renderBlock()
+        fireEvent.click(goingButton())
+      }
+      expect(
+        screen.getByRole('button', { name: GOING_COPY.explainer.triggerLabel }),
+      ).toBeInTheDocument()
+    },
+  )
+
+  it('heads the block with an eyebrow so the tip has a line to sit on', () => {
+    renderBlock()
+    expect(screen.getByText(GOING_COPY.eyebrow.upcoming)).toBeInTheDocument()
+    cleanup()
+    renderBlock({ date: '2020-10-14' })
+    expect(screen.getByText(GOING_COPY.eyebrow.past)).toBeInTheDocument()
+  })
+
   // The going-vs-watch distinction now sits behind a tooltip rather than a
   // standing line, so the CTAs aren't buried under explanatory copy.
   it('keeps the difference explainer behind a tooltip trigger', () => {
