@@ -2315,6 +2315,8 @@ export const ADMIN_COPY = {
       actions: '',
     },
     idPlaceholder: 'Spotify artist id',
+    noSpotifyId: '—',
+    pasteIdLabel: 'Or paste an id',
     save: 'Save',
     clear: 'Clear',
     hide: 'Hide',
@@ -2328,7 +2330,7 @@ export const ADMIN_COPY = {
       'Spotify returned nothing for this search. Try a different spelling.',
     candidatesError: 'Could not search Spotify.',
     candidatesDormant:
-      'Spotify search is not configured on the API, so candidates cannot be fetched. Paste an artist id instead.',
+      'Spotify search is not configured on the API, so candidates cannot be fetched. Paste an artist id below instead.',
     candidatesRateLimited:
       'Spotify is rate limiting us. Wait a moment and search again.',
     candidatesCredentialsRejected:

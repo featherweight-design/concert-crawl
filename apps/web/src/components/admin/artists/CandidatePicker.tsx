@@ -45,6 +45,7 @@ export const CandidatePicker = ({
 }: CandidatePickerProps) => {
   const [candidates, setCandidates] = useState<SpotifyCandidate[]>([])
   const [term, setTerm] = useState(canonicalName)
+  const [pastedId, setPastedId] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -240,7 +241,14 @@ export const CandidatePicker = ({
                 {candidate.id}
               </p>
             </div>
-            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: 8,
+                flexShrink: 0,
+                alignItems: 'center',
+              }}
+            >
               {candidate.spotifyUrl !== null && (
                 <a
                   href={candidate.spotifyUrl}
@@ -264,6 +272,50 @@ export const CandidatePicker = ({
           </li>
         ))}
       </ul>
+
+      {/* The paste-an-id escape hatch. It used to be a column on every table
+          row, which the picker made redundant — but it is still the only way
+          to resolve a row when Spotify search is dormant or returns the wrong
+          artist, so it moves here rather than being deleted. */}
+      <form
+        style={{ display: 'flex', gap: 8, alignItems: 'center' }}
+        onSubmit={(ev) => {
+          ev.preventDefault()
+          if (pastedId.trim().length === 0) return
+          // No photo: an id typed by hand has no image in hand, so the plate
+          // fills in on the next match-job cycle.
+          onPick(pastedId.trim(), null)
+        }}
+      >
+        <label htmlFor={`paste-id-${artistId}`} style={{ fontSize: 12 }}>
+          {COPY.pasteIdLabel}
+        </label>
+        <input
+          id={`paste-id-${artistId}`}
+          value={pastedId}
+          placeholder={COPY.idPlaceholder}
+          onChange={(ev) => setPastedId(ev.target.value)}
+          style={{
+            minWidth: 220,
+            minHeight: 36,
+            padding: '6px 10px',
+            borderRadius: 6,
+            border: '1px solid var(--border-strong)',
+            background: 'var(--bg)',
+            color: 'var(--fg)',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: 12,
+          }}
+        />
+        <AdminButton
+          size="sm"
+          variant="outline"
+          type="submit"
+          disabled={pastedId.trim().length === 0}
+        >
+          {COPY.save}
+        </AdminButton>
+      </form>
     </div>
   )
 }

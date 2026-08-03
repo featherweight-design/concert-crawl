@@ -56,7 +56,6 @@ export default function AdminArtistsPage() {
   const { getToken } = useAuth()
   const [status, setStatus] = useState<MatchStatus>('ambiguous')
   const [rows, setRows] = useState<AdminArtist[]>([])
-  const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // One row at a time — every open picker spends a Spotify search.
@@ -98,6 +97,12 @@ export default function AdminArtistsPage() {
   // `photoUrl` is only passed when the id came from the candidate picker,
   // which already has the artist's image in hand. Sending it saves waiting a
   // full match-job cycle for the plate to fill in.
+  //
+  // Assigning an id moves the artist to `matched`, so the row leaves whichever
+  // queue the admin is looking at. Dropping it from local state is both
+  // cheaper and calmer than refetching the table, which read as the whole page
+  // refreshing under them. Clearing an id still reloads: the server decides
+  // what status a cleared row lands in, and guessing it here would be a lie.
   const save = async (
     id: string,
     spotifyArtistId: string | null,
@@ -125,12 +130,12 @@ export default function AdminArtistsPage() {
         setError(COPY.saveError)
         return
       }
-      // Drop the draft so the reloaded row wins. Without this, clearing a row
-      // leaves the typed id in the input, still overriding the saved null.
-      setDrafts((prev) =>
-        Object.fromEntries(Object.entries(prev).filter(([key]) => key !== id)),
-      )
-      await load()
+      setError(null)
+      if (spotifyArtistId === null) {
+        await load()
+        return
+      }
+      setRows((prev) => prev.filter((row) => row.id !== id))
     } catch (err) {
       console.error('[admin artists] save failed', err)
       setError(COPY.saveError)
@@ -242,7 +247,6 @@ export default function AdminArtistsPage() {
             </THead>
             <tbody>
               {rows.map((row) => {
-                const draft = drafts[row.id] ?? row.spotifyArtistId ?? ''
                 return (
                   <Fragment key={row.id}>
                     <TR>
@@ -269,43 +273,13 @@ export default function AdminArtistsPage() {
                           )}
                         </div>
                       </TD>
-                      <TD>
-                        <label
-                          htmlFor={`spotify-id-${row.id}`}
-                          style={{
-                            position: 'absolute',
-                            width: 1,
-                            height: 1,
-                            overflow: 'hidden',
-                            clip: 'rect(0 0 0 0)',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {COPY.idPlaceholder}
-                        </label>
-                        <input
-                          id={`spotify-id-${row.id}`}
-                          value={draft}
-                          placeholder={COPY.idPlaceholder}
-                          onChange={(ev) =>
-                            setDrafts((prev) => ({
-                              ...prev,
-                              [row.id]: ev.target.value,
-                            }))
-                          }
-                          style={{
-                            width: '100%',
-                            minWidth: 200,
-                            minHeight: 36,
-                            padding: '6px 10px',
-                            borderRadius: 6,
-                            border: '1px solid var(--border-strong)',
-                            background: 'var(--bg)',
-                            color: 'var(--fg)',
-                            fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: 12,
-                          }}
-                        />
+                      {/* Read-only since #1345 gave every row a picker: an
+                        editable id per row was a wide input the admin never
+                        typed into. Pasting one by hand still works, inside the
+                        picker, where it is the fallback rather than the
+                        default. */}
+                      <TD mono color="var(--fg-subtle)">
+                        {row.spotifyArtistId ?? COPY.noSpotifyId}
                       </TD>
                       <TD mono color="var(--fg-subtle)">
                         {row.matchCheckedAt === null
@@ -323,14 +297,6 @@ export default function AdminArtistsPage() {
                             justifyContent: 'flex-end',
                           }}
                         >
-                          <AdminButton
-                            size="sm"
-                            variant="primary"
-                            disabled={draft.trim().length === 0}
-                            onClick={() => void save(row.id, draft.trim())}
-                          >
-                            {COPY.save}
-                          </AdminButton>
                           <AdminButton
                             size="sm"
                             variant="ghost"

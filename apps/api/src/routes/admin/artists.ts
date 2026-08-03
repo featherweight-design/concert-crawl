@@ -272,17 +272,35 @@ artistsAdminRouter.get(
       // Spotify can echo one artist across a rescored result; the admin should
       // see each artist once.
       const seen = new Set<string>()
-      const data = candidates
-        .filter((candidate) => {
-          if (seen.has(candidate.id)) return false
-          seen.add(candidate.id)
-          return true
-        })
-        .map((candidate) => ({
-          ...candidate,
-          isExactMatch:
-            canonicalizeArtist(candidate.name) === artist.canonicalName,
-        }))
+      const deduped = candidates.filter((candidate) => {
+        if (seen.has(candidate.id)) return false
+        seen.add(candidate.id)
+        return true
+      })
+
+      // Search results always carry an empty `genres`, so the picker's
+      // disambiguation line read "No genres listed" on every candidate. Genres
+      // only exist on the full artist object, which is one extra call.
+      // Failing to get them is not a reason to fail the search: the picker is
+      // still usable on name, photo and popularity alone.
+      let genresById = new Map<string, string[]>()
+      try {
+        genresById = await client.fetchGenres(
+          deduped.map((candidate) => candidate.id),
+        )
+      } catch (err) {
+        logger.warn(
+          { err, artistId: id },
+          'candidate genre hydration failed — serving candidates without genres',
+        )
+      }
+
+      const data = deduped.map((candidate) => ({
+        ...candidate,
+        genres: genresById.get(candidate.id) ?? candidate.genres,
+        isExactMatch:
+          canonicalizeArtist(candidate.name) === artist.canonicalName,
+      }))
 
       return ctx.json({ success: true, data, query: searchTerm })
     } catch (err) {

@@ -251,3 +251,60 @@ describe('createSpotifyAppClient().searchArtists', () => {
     )
   })
 })
+
+describe('createSpotifyAppClient().fetchGenres', () => {
+  beforeEach(() => {
+    resetAppTokenCache()
+    withCredentials()
+  })
+
+  it('maps genres by id from one batched request', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          artists: [
+            { id: 'sp1', genres: ['psychedelic soul'] },
+            { id: 'sp2', genres: [] },
+          ],
+        }),
+      )
+
+    const client = await createSpotifyAppClient({ fetchFn })
+    const genres = await client?.fetchGenres(['sp1', 'sp2'])
+
+    expect(genres?.get('sp1')).toEqual(['psychedelic soul'])
+    expect(genres?.get('sp2')).toEqual([])
+    // One call for the token, one for the batch — not one per artist.
+    expect(fetchFn).toHaveBeenCalledTimes(2)
+    expect(fetchFn.mock.calls[1]?.[0]).toContain('/artists?ids=sp1%2Csp2')
+  })
+
+  it('skips the null slots Spotify returns for unresolvable ids', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(
+        jsonResponse({ artists: [null, { id: 'sp2', genres: ['jazz'] }] }),
+      )
+
+    const client = await createSpotifyAppClient({ fetchFn })
+    const genres = await client?.fetchGenres(['missing', 'sp2'])
+
+    expect(genres?.size).toBe(1)
+    expect(genres?.get('sp2')).toEqual(['jazz'])
+  })
+
+  it('makes no request for an empty id list', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+
+    const client = await createSpotifyAppClient({ fetchFn })
+    const genres = await client?.fetchGenres([])
+
+    expect(genres?.size).toBe(0)
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+  })
+})

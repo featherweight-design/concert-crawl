@@ -31,6 +31,12 @@ interface SearchState {
   /** False models unset SPOTIFY_CLIENT_ID/SECRET — the dormant path. */
   clientAvailable: boolean
   lastQuery: string | null
+  /** What `GET /artists?ids=` reports, keyed by artist id. */
+  genresById: Record<string, string[]>
+  /** Thrown by `fetchGenres` — the degrade-to-no-genres path. */
+  genresError: Error | null
+  /** The ids the route asked to hydrate, or null if it never asked. */
+  lastGenreIds: string[] | null
 }
 
 const { authState, searchState } = vi.hoisted(
@@ -44,6 +50,9 @@ const { authState, searchState } = vi.hoisted(
       error: null,
       clientAvailable: true,
       lastQuery: null,
+      genresById: {},
+      genresError: null,
+      lastGenreIds: null,
     },
   }),
 )
@@ -62,6 +71,15 @@ vi.mock('../../lib/spotify-app-client.js', () => ({
         searchState.lastQuery = query
         if (searchState.error !== null) throw searchState.error
         return searchState.candidates
+      },
+      fetchGenres: async (artistIds: string[]) => {
+        searchState.lastGenreIds = artistIds
+        if (searchState.genresError !== null) throw searchState.genresError
+        return new Map(
+          artistIds
+            .filter((id) => searchState.genresById[id] !== undefined)
+            .map((id) => [id, searchState.genresById[id] ?? []]),
+        )
       },
       getCallCount: () => 1,
     }
@@ -82,7 +100,12 @@ const CANONICAL = 'sublime'
 interface CandidateBody {
   success: boolean
   query?: string
-  data?: Array<{ id: string; name: string; isExactMatch: boolean }>
+  data?: Array<{
+    id: string
+    name: string
+    isExactMatch: boolean
+    genres: string[]
+  }>
   error?: string
 }
 
@@ -95,7 +118,10 @@ const candidate = (
   name,
   images: [{ url: `https://i.scdn.co/image/${id}` }],
   popularity: 50,
-  genres: ['ska punk'],
+  // Empty on purpose: Spotify's `/search` returns simplified artist objects
+  // with no genres. Anything the picker shows has to come from the hydration
+  // call, so a fixture that pre-filled them would hide a regression.
+  genres: [],
   spotifyUrl: `https://open.spotify.com/artist/${id}`,
   ...overrides,
 })
@@ -124,7 +150,52 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
     searchState.error = null
     searchState.clientAvailable = true
     searchState.lastQuery = null
+    searchState.genresById = {}
+    searchState.genresError = null
+    searchState.lastGenreIds = null
     await testDb.delete(artists).where(eq(artists.canonicalName, CANONICAL))
+  })
+
+  it('hydrates genres for the candidates it returns', async () => {
+    const id = await seedAmbiguous()
+    searchState.candidates = [
+      candidate('spotify_ska', 'Sublime'),
+      candidate('spotify_other', 'Subliminal'),
+    ]
+    searchState.genresById = {
+      spotify_ska: ['ska punk', 'reggae rock'],
+      spotify_other: ['hip hop'],
+    }
+
+    const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
+      headers: ADMIN_HEADERS,
+    })
+    const body: CandidateBody = await res.json()
+
+    expect(res.status).toBe(200)
+    // Hydration is asked only for the candidates actually being returned.
+    expect(searchState.lastGenreIds).toEqual(['spotify_ska', 'spotify_other'])
+    expect(body.data?.map((row) => row.genres)).toEqual([
+      ['ska punk', 'reggae rock'],
+      ['hip hop'],
+    ])
+  })
+
+  it('still serves candidates when genre hydration fails', async () => {
+    const id = await seedAmbiguous()
+    searchState.candidates = [candidate('spotify_ska', 'Sublime')]
+    searchState.genresError = new Error('spotify said no')
+
+    const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
+      headers: ADMIN_HEADERS,
+    })
+    const body: CandidateBody = await res.json()
+
+    // Genres are a nicety; losing them must not cost the admin the picker.
+    expect(res.status).toBe(200)
+    expect(body.data).toEqual([
+      expect.objectContaining({ id: 'spotify_ska', genres: [] }),
+    ])
   })
 
   it('searches the row’s canonical name and flags the exact collisions', async () => {

@@ -40,6 +40,9 @@ const TOKEN_EXPIRY_SKEW_MS = 60_000
  * deep page adds nothing — it just widens the ambiguity surface. */
 const SEARCH_LIMIT = 10
 
+/** `GET /artists?ids=` accepts at most 50 ids per request. */
+const SEVERAL_ARTISTS_LIMIT = 50
+
 const tokenResponseSchema = z.object({
   access_token: z.string().min(1),
   expires_in: z.number().positive(),
@@ -67,6 +70,20 @@ const searchResponseSchema = z.object({
   artists: z.object({ items: z.array(searchArtistSchema) }),
 })
 
+// `GET /artists?ids=` returns full artist objects. The only field read from
+// here is `genres`, which the search endpoint's simplified objects omit.
+const severalArtistsResponseSchema = z.object({
+  artists: z.array(
+    z
+      .object({
+        id: z.string().min(1),
+        genres: z.array(z.string()).nullish(),
+      })
+      // Spotify returns a null slot for an id it cannot resolve.
+      .nullable(),
+  ),
+})
+
 export interface SpotifyArtistCandidate {
   id: string
   name: string
@@ -88,6 +105,15 @@ export interface SpotifyAppClientOptions {
 
 export interface SpotifyAppClient {
   searchArtists: SpotifySearch
+  /**
+   * Genres by artist id, for ids already in hand. Search results carry none —
+   * `/search` returns simplified artist objects — so the admin candidate
+   * picker (#1345) hydrates them in one extra call rather than reading a field
+   * that is always empty. Deliberately NOT folded into `searchArtists`: the
+   * batch matcher calls that on every row and ignores genres, so doing so
+   * would double its app-token spend for a field it never reads.
+   */
+  fetchGenres(artistIds: string[]): Promise<Map<string, string[]>>
   /** Total HTTP calls issued, token mint included — for cost bookkeeping. */
   getCallCount(): number
 }
@@ -295,5 +321,32 @@ export const createSpotifyAppClient = async (
     }))
   }
 
-  return { searchArtists, getCallCount: () => callCount }
+  const fetchGenres = async (
+    artistIds: string[],
+  ): Promise<Map<string, string[]>> => {
+    const genresById = new Map<string, string[]>()
+    // SEARCH_LIMIT is 10, well under the endpoint's 50-id ceiling, so this
+    // stays a single request per picker search.
+    const ids = artistIds.slice(0, SEVERAL_ARTISTS_LIMIT)
+    if (ids.length === 0) return genresById
+
+    const body = await requestJson(
+      `/artists?ids=${encodeURIComponent(ids.join(','))}`,
+    )
+    const parsed = severalArtistsResponseSchema.safeParse(body)
+    if (!parsed.success) {
+      throw new SpotifyApiError(
+        'Spotify returned an unexpected artists response shape',
+        200,
+      )
+    }
+
+    for (const artist of parsed.data.artists) {
+      if (artist === null) continue
+      genresById.set(artist.id, artist.genres ?? [])
+    }
+    return genresById
+  }
+
+  return { searchArtists, fetchGenres, getCallCount: () => callCount }
 }
