@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import type {
   EventDetailResponse,
+  TierHeadline,
   TierPriceBlock,
   Tier,
 } from '@concert-crawl/types'
@@ -245,6 +246,120 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     // Cross-source vendor + price visible.
     expect(screen.getByText('SeatGeek')).toBeDefined()
     expect(screen.getByText('$110')).toBeDefined()
+  })
+
+  // Regression — issue #1364. Once an event has a corroborated price it
+  // routes to one of these headline branches, all of which mounted a
+  // SubmitPriceModal but rendered no control to open it. The practical
+  // symptom: the FIRST price submission works, and every later user who
+  // knows a cheaper price is stuck with no affordance at all.
+  describe('persistent submit-price CTA on headline branches (#1364)', () => {
+    const boxOfficeHeadline: TierHeadline = {
+      submissionId: 's1',
+      priceMin: '25',
+      priceMax: null,
+      vendor: 'VenueBoxOffice',
+      sourceCategory: 'boxoffice' as const,
+      submitterHandle: 'ada',
+      observedAt: '2026-06-20T00:00:00Z',
+      approvedAt: '2026-06-20T00:00:00Z',
+      approvalKind: 'fan' as const,
+      confirmsCount: 2,
+    }
+
+    const renderWithTiers = (blocks: TierPriceBlock[]) =>
+      render(
+        <EventDetailPriceBlock
+          event={buildBaseEvent({ priceByTier: blocks })}
+          reports={[]}
+          currentUserId={null}
+        />,
+      )
+
+    it('multi-tier-shipped renders it', () => {
+      renderWithTiers([
+        makeTierBlock({ tier: 'GA', headline: boxOfficeHeadline }),
+      ])
+      expect(screen.getByText('Submit another price')).toBeDefined()
+    })
+
+    it('multi-source-mixed renders it', () => {
+      renderWithTiers([
+        makeTierBlock({
+          tier: 'GA',
+          headline: boxOfficeHeadline,
+          alternates: [
+            {
+              submissionId: 'a1',
+              priceMin: '110',
+              priceMax: null,
+              vendor: 'SeatGeek',
+              sourceCategory: 'resale',
+            },
+          ],
+        }),
+      ])
+      expect(screen.getByText('Submit another price')).toBeDefined()
+    })
+
+    it('resale-headline renders it', () => {
+      renderWithTiers([
+        makeTierBlock({
+          tier: 'GA',
+          headline: {
+            ...boxOfficeHeadline,
+            vendor: 'SeatGeek',
+            sourceCategory: 'resale',
+          },
+        }),
+      ])
+      expect(screen.getByText('Submit another price')).toBeDefined()
+    })
+
+    it('mixed-tier renders it', () => {
+      renderWithTiers([
+        makeTierBlock({ tier: 'GA', headline: boxOfficeHeadline }),
+        makeTierBlock({
+          tier: 'Reserved',
+          headline: null,
+          pending: [
+            {
+              id: 'p-res',
+              priceMin: '60',
+              priceMax: null,
+              vendor: 'AXS',
+              howFound: 'saw_listing',
+              sourceCategory: 'standard',
+              note: null,
+              submitterHandle: 'me',
+              submittedAt: '2026-06-22T00:00:00Z',
+              confirmsCount: 0,
+              confirmsNeeded: 2,
+              isSubmitter: true,
+            },
+          ],
+        }),
+      ])
+      expect(screen.getByText('Submit another price')).toBeDefined()
+    })
+
+    // Fix 14 predates this change and must survive it: a cancelled show
+    // should never invite a price submission.
+    it('is withheld for a cancelled event', () => {
+      render(
+        <EventDetailPriceBlock
+          event={buildBaseEvent({
+            status: 'cancelled',
+            priceByTier: [
+              makeTierBlock({ tier: 'GA', headline: boxOfficeHeadline }),
+            ],
+          })}
+          reports={[]}
+          currentUserId={null}
+        />,
+      )
+      expect(screen.queryByText('Submit another price')).toBeNull()
+    })
   })
 
   it('priceByTier with single-tier boxoffice headline → MultiTierLiveCard kind=boxoffice', () => {

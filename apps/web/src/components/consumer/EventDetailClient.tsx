@@ -420,6 +420,15 @@ export function EventDetailPriceBlock({
   // seeds formState.tier on open.
   const [preselectedTier, setPreselectedTier] = useState<Tier | null>(null)
 
+  // Every dismissal clears the tier/edit state the opener set. Otherwise a
+  // modal opened from an add-tier CTA and closed without submitting leaks its
+  // preselected tier into the next open from a different CTA.
+  const closeSubmitPriceModal = useCallback(() => {
+    setSubmitPriceOpen(false)
+    setPreselectedTier(null)
+    setSubmitPriceEditMode(false)
+  }, [])
+
   const pendingSoldOutReport = findPendingReport(reports, 'sold-out')
   const pendingCancelledReport = findPendingReport(reports, 'cancelled')
 
@@ -547,10 +556,9 @@ export function EventDetailPriceBlock({
         sourceCategory,
         submissionsRemaining,
       })
-      setSubmitPriceOpen(false)
-      setPreselectedTier(null)
+      closeSubmitPriceModal()
     },
-    [],
+    [closeSubmitPriceModal],
   )
 
   // #895 symptom: the two legacy pending-card branches transition shape as
@@ -595,6 +603,25 @@ export function EventDetailPriceBlock({
             setSubmitPriceOpen(true)
           }}
           onDone={() => setSubmitSuccessPayload(null)}
+        />
+      </div>
+    ) : null
+
+  // Persistent "submit another price" affordance (#1364). Every branch that
+  // resolves to a live price still needs it: MTAddTierSuccess is session-only,
+  // and without this a second user has no way to report a cheaper price on an
+  // event that already has one. Routes into the branch's own SubmitPriceModal
+  // so the optimistic state stays in sync; the modal self-gates the
+  // rate-limit-exhausted case via the GET it runs on open.
+  const submitAnotherPriceCta =
+    event.status !== 'cancelled' ? (
+      <div className="mt-3">
+        <SubmitPriceCardButton
+          onClick={() => {
+            setPreselectedTier(null)
+            setSubmitPriceEditMode(false)
+            setSubmitPriceOpen(true)
+          }}
         />
       </div>
     ) : null
@@ -661,7 +688,7 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            setSubmitPriceOpen(false)
+            closeSubmitPriceModal()
             setSubmitSuccessPayload(null)
           }}
           openInEditMode={false}
@@ -689,7 +716,7 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            setSubmitPriceOpen(false)
+            closeSubmitPriceModal()
             setSubmitSuccessPayload(null)
           }}
           openInEditMode={false}
@@ -747,7 +774,7 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            setSubmitPriceOpen(false)
+            closeSubmitPriceModal()
             setSubmitSuccessPayload(null)
           }}
           openInEditMode={false}
@@ -870,10 +897,11 @@ export function EventDetailPriceBlock({
           </div>
         )}
         {submitSuccessSurface}
+        {submitAnotherPriceCta}
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            setSubmitPriceOpen(false)
+            closeSubmitPriceModal()
             setSubmitSuccessPayload(null)
           }}
           openInEditMode={false}
@@ -931,17 +959,35 @@ export function EventDetailPriceBlock({
       }
     })
     return (
-      <MultiSourceMultiTierCard
-        headlineTier={entryBlock.tier}
-        headlinePrice={headlineFloor}
-        headlineVendor={headlineRow?.vendor ?? event.venue.name}
-        crossSource={{
-          source: crossSourceAlt.vendor,
-          kind: crossKind,
-          price: Math.round(parseFloat(crossSourceAlt.priceMin)),
-        }}
-        otherTiers={otherTierRows}
-      />
+      <>
+        <MultiSourceMultiTierCard
+          headlineTier={entryBlock.tier}
+          headlinePrice={headlineFloor}
+          headlineVendor={headlineRow?.vendor ?? event.venue.name}
+          crossSource={{
+            source: crossSourceAlt.vendor,
+            kind: crossKind,
+            price: Math.round(parseFloat(crossSourceAlt.priceMin)),
+          }}
+          otherTiers={otherTierRows}
+        />
+        {submitSuccessSurface}
+        {submitAnotherPriceCta}
+        <SubmitPriceModal
+          open={submitPriceOpen}
+          onClose={() => {
+            closeSubmitPriceModal()
+            setSubmitSuccessPayload(null)
+          }}
+          openInEditMode={submitPriceEditMode}
+          preselectedTier={preselectedTier}
+          eventId={event.id}
+          artist={event.artist}
+          venueName={event.venue.name}
+          date={event.date}
+          onSuccess={handleSubmitSuccess}
+        />
+      </>
     )
   }
 
@@ -1025,13 +1071,14 @@ export function EventDetailPriceBlock({
             alternates={alternateRows}
           />
           {submitSuccessSurface}
+          {submitAnotherPriceCta}
           <SubmitPriceModal
             open={submitPriceOpen}
             onClose={() => {
-              setSubmitPriceOpen(false)
-              setPreselectedTier(null)
+              closeSubmitPriceModal()
+              setSubmitSuccessPayload(null)
             }}
-            openInEditMode={false}
+            openInEditMode={submitPriceEditMode}
             preselectedTier={preselectedTier}
             eventId={event.id}
             artist={event.artist}
@@ -1209,23 +1256,12 @@ export function EventDetailPriceBlock({
             SubmitPriceModal below so a new tier updates the pending list live
             (onSuccess) instead of only after a reload. The modal self-gates the
             rate-limit-exhausted case via the GET on open. */}
-        {event.status !== 'cancelled' && (
-          <div className="mt-3">
-            <SubmitPriceCardButton
-              onClick={() => {
-                setPreselectedTier(null)
-                setSubmitPriceEditMode(false)
-                setSubmitPriceOpen(true)
-              }}
-            />
-          </div>
-        )}
+        {submitAnotherPriceCta}
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            setSubmitPriceOpen(false)
-            setPreselectedTier(null)
-            setSubmitPriceEditMode(false)
+            closeSubmitPriceModal()
+            setSubmitSuccessPayload(null)
           }}
           openInEditMode={submitPriceEditMode}
           preselectedTier={preselectedTier}
@@ -1310,13 +1346,14 @@ export function EventDetailPriceBlock({
             </div>
           )}
           {submitSuccessSurface}
+          {submitAnotherPriceCta}
           <SubmitPriceModal
             open={submitPriceOpen}
             onClose={() => {
-              setSubmitPriceOpen(false)
-              setPreselectedTier(null)
+              closeSubmitPriceModal()
+              setSubmitSuccessPayload(null)
             }}
-            openInEditMode={false}
+            openInEditMode={submitPriceEditMode}
             preselectedTier={preselectedTier}
             eventId={event.id}
             artist={event.artist}
@@ -1746,10 +1783,8 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            setSubmitPriceOpen(false)
-            setSubmitPriceEditMode(false)
+            closeSubmitPriceModal()
             setSubmitSuccessPayload(null)
-            setPreselectedTier(null)
           }}
           openInEditMode={submitPriceEditMode}
           preselectedTier={preselectedTier}
@@ -1892,10 +1927,8 @@ export function EventDetailPriceBlock({
         <SubmitPriceModal
           open={submitPriceOpen}
           onClose={() => {
-            setSubmitPriceOpen(false)
-            setSubmitPriceEditMode(false)
+            closeSubmitPriceModal()
             setSubmitSuccessPayload(null)
-            setPreselectedTier(null)
           }}
           openInEditMode={submitPriceEditMode}
           preselectedTier={preselectedTier}
