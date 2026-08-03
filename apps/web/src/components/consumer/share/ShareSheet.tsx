@@ -66,10 +66,16 @@ export const ShareSheet = ({
     outcome: 'ready' | 'failed'
   } | null>(null)
 
-  // Stale "Link copied" hanging around on a reopened sheet reads as if the
-  // action fired again.
+  // The sheet stays mounted while `open` toggles (ShareButton renders it
+  // unconditionally), so every piece of state here outlives a close unless it
+  // is reset. Stale "Link copied" reads as if the action fired again; a stale
+  // `ratio` reopens the sheet on whatever shape was picked last; and a stale
+  // failure shows the error message before the retry it describes has started.
   useEffect(() => {
-    if (!open) setStatus(null)
+    if (open) return
+    setStatus(null)
+    setRatio(DEFAULT_SHARE_RATIO)
+    setSettled(null)
   }, [open])
 
   // Memoised because the destination callbacks depend on it: rebuilt every

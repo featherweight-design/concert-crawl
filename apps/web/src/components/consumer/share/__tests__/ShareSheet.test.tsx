@@ -95,6 +95,32 @@ describe('<ShareSheet />', () => {
     expect(screen.getByRole('status').textContent).toBe('Drawing your poster…')
   })
 
+  // ShareButton renders ShareSheet unconditionally and only toggles `open`, so
+  // nothing in here unmounts on close — every piece of state outlives it unless
+  // it is reset.
+  it('restarts on reopen rather than resuming the last session', () => {
+    const sheet = (open: boolean) => (
+      <ShareSheet
+        open={open}
+        onClose={() => {}}
+        event={poster}
+        handle={null}
+        capabilities={{}}
+      />
+    )
+    const { rerender } = render(sheet(true))
+    fireEvent.click(screen.getByRole('button', { name: 'Square' }))
+    fireEvent.error(screen.getByRole('img'))
+
+    rerender(sheet(false))
+    rerender(sheet(true))
+
+    expect(screen.getByRole('img').getAttribute('src')).toBe(
+      `/share/${EVENT_ID}/story?theme=jade`,
+    )
+    expect(screen.getByRole('status').textContent).toBe('Drawing your poster…')
+  })
+
   it('repoints the preview and the download when the shape changes', () => {
     mount()
     fireEvent.click(screen.getByRole('button', { name: 'Square' }))

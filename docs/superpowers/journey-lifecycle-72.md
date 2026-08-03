@@ -47,8 +47,17 @@ negative rather than padded with manufactured findings.
 
 do → undo → redo, twice through:
 
-- Open → share → close → reopen: sheet returns to `story` with a clean status
-  line. Correct.
+- Open → share → close → reopen: **this is where the walk was wrong.** The first
+  draft of this document asserted the sheet returns to `story` with a clean
+  status line. It did not. `ShareButton` renders `ShareSheet` unconditionally
+  and only toggles `open`, so the component never unmounts and every piece of
+  its state outlives a close. Only `status` was being reset; `ratio` and the
+  settled-preview record were not. A user who picked Square, closed, and
+  reopened got Square, and a preview that had failed showed its failure message
+  before the retry it was describing had started. Now all three reset together.
+  Recorded plainly because the claim was made from reading the close handler
+  rather than from actually reopening the sheet — which is the exact failure
+  mode this pass exists to catch.
 - Switch shape → share → switch back → share again: each render is re-fetched
   under its own URL.
 - **Keyed-state audit** (the #70 `eventId`-vs-`userEventId` class): there are no
@@ -79,7 +88,11 @@ open sheet at 320 px and clipped the last shape button. Root cause was
 `BottomSheet`'s container at `z-50` — **below** the tab. Fixed at the class
 level: the sheet now sits at `z-[90]`, the same band as `ModalShell`'s scrim
 (90) and beneath its panel (100). This was never share-specific; the tab drew
-over _every_ `BottomSheet` in the app.
+over all three `BottomSheet` consumers — `ShareSheet`, `PostWatchSheet` and
+`IosHowToSheet`.
+
+Swept the same three for the reopen bug above: `PostWatchSheet` and
+`IosHowToSheet` hold no state at all, so `ShareSheet` was the only instance.
 
 ## Not fixed here
 
