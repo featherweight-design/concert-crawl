@@ -454,6 +454,20 @@ describe('detailPageFetcher.fetch', () => {
     expect(pageRequests(fetchMock)).toHaveLength(MAX_DETAIL_PAGES + 2)
   })
 
+  it('aborts the whole run on the first 429 rather than tolerating it', async () => {
+    const fetchMock = mockSiteFetch({
+      listing: `<a href="/e/one">1</a><a href="/e/two">2</a>`,
+      sitemap: '',
+      detail: () => ({ ok: false, status: 429, body: '' }),
+    })
+    await expect(
+      detailPageFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
+    ).rejects.toThrow(DetailPageFetchError)
+    // Sitemap (404s) + listing + the one blocked page. The second candidate
+    // is never requested.
+    expect(pageRequests(fetchMock)).toHaveLength(3)
+  })
+
   it('refuses a detail page that redirected off-origin', async () => {
     mockSiteFetch({
       listing: Array.from(

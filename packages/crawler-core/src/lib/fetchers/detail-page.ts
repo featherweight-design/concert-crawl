@@ -352,6 +352,19 @@ async function detailPageFetch(
         )
         throw err
       }
+      // A block or a rate limit is never a per-page problem. Continuing would
+      // keep hitting a site that just told us to stop, so it ends the run
+      // immediately and surfaces as a blocked venue.
+      if (
+        err instanceof DetailPageFetchError &&
+        (err.httpStatus === 403 || err.httpStatus === 429)
+      ) {
+        logger.warn(
+          { venueId: venue.id, detailUrl, httpStatus: err.httpStatus, err },
+          'detail-page: venue blocked or rate-limited us — aborting the run',
+        )
+        throw err
+      }
       failedPageCount++
       if (failedPageCount > MAX_DETAIL_FAILURES) {
         throw new DetailPageFetchError(
