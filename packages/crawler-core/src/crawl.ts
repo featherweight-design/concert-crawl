@@ -266,10 +266,18 @@ export type BrowserSource = Browser | (() => Promise<Browser>)
 // resolve site more than once (crawlMode: null → HTTP succeeds → no structured
 // data → browser fallback), and a caller passing a bare
 // `() => chromium.launch()` would otherwise launch and leak a second browser.
+// A rejection is deliberately not cached — a transient launch failure would
+// otherwise poison the provider for the rest of the call.
 const memoizeBrowser = (source: BrowserSource): (() => Promise<Browser>) => {
   if (typeof source !== 'function') return async () => source
   let pending: Promise<Browser> | null = null
-  return () => (pending ??= source())
+  return () => {
+    pending ??= source().catch((launchErr: unknown) => {
+      pending = null
+      throw launchErr
+    })
+    return pending
+  }
 }
 
 export async function crawlVenue(

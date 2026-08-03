@@ -32,7 +32,17 @@ function createLazyBrowser(): {
 } {
   let pending: Promise<Browser> | null = null
   return {
-    get: () => (pending ??= chromium.launch({ headless: true })),
+    // A rejection is deliberately not cached — a transient launch failure would
+    // otherwise poison the provider for the rest of the run.
+    get: () => {
+      pending ??= chromium
+        .launch({ headless: true })
+        .catch((launchErr: unknown) => {
+          pending = null
+          throw launchErr
+        })
+      return pending
+    },
     close: async () => {
       if (pending === null) return
       try {

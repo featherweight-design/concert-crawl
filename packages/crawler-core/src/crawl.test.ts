@@ -1725,6 +1725,21 @@ describe('crawlVenue — crawlMode orchestration', () => {
 
       expect(getBrowser.mock.calls.length).toBeLessThanOrEqual(1)
     })
+
+    it('retries the provider after a failed launch', async () => {
+      const venue = seedVenue({ crawlMode: 'browser' })
+      mockFetchPage.mockResolvedValue(FETCH_RESULT)
+      const getBrowser = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('launch failed'))
+        .mockResolvedValue(mockBrowser)
+
+      await crawlVenue(venue.id, getBrowser)
+      await crawlVenue(venue.id, getBrowser)
+
+      expect(getBrowser).toHaveBeenCalledTimes(2)
+      expect(mockFetchPage).toHaveBeenCalled()
+    })
   })
 
   it('does not overwrite a stored crawlMode on subsequent crawls', async () => {
