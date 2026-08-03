@@ -1,3 +1,10 @@
+## [1.213.1](https://github.com/HartiganHM/concert-crawl/compare/v1.213.0...v1.213.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* **crawler:** start the AEG deadline before the robots gate ([1b4ab40](https://github.com/HartiganHM/concert-crawl/commit/1b4ab40c90dfdb6c37e8d9eab5dd90f003c859e4))
+
 # [1.213.0](https://github.com/HartiganHM/concert-crawl/compare/v1.212.1...v1.213.0) (2026-08-03)
 
 
