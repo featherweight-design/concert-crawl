@@ -404,3 +404,21 @@
 @media (prefers-reduced-motion: reduce) {
   .ap-page [style*='skeletonPulse'] { animation: none !important; }
 }
+
+/* Event row — the artist-name anchor is stretched over the whole row so the
+   row is one click target with one accessible name. Nested links (the venue,
+   the row action) sit above the overlay so they stay reachable. */
+.event-row-stretch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Everything genuinely interactive sits above the stretched anchor, which
+   otherwise swallows the venue link and the action gutter's button. */
+.event-row a:not(.event-row-stretch),
+.event-row button {
+  position: relative;
+  z-index: 2;
+}

@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef } from 'react'
 import type { EventWithVenue } from '@concert-crawl/types'
-import { EventCard } from '../event-card/EventCard'
+import { EventRow, fromEventWithVenue } from '../event-row'
 import { dateGroupLabel } from '../definitions/lib'
 
 interface VenueEventListProps {
@@ -97,9 +97,12 @@ export function VenueEventList({
                   <div
                     ref={event.id === highlightId ? highlightRef : undefined}
                   >
-                    <EventCard
-                      event={event}
-                      isWatching={watchedSet.has(event.id)}
+                    <EventRow
+                      show={fromEventWithVenue(event, {
+                        isWatching: watchedSet.has(event.id),
+                      })}
+                      surface="venue"
+                      className="py-2.5"
                     />
                   </div>
                 </Fragment>

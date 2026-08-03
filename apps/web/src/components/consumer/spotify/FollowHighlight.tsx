@@ -8,27 +8,6 @@ import { SPOTIFY_COPY } from './definitions/copy'
 
 const copy = SPOTIFY_COPY.followHighlight
 
-// Browse-card chip — renders first in the card's chip row, ahead of the
-// genre chips.
-export const FollowingChip = () => (
-  <span
-    className="inline-flex items-center whitespace-nowrap rounded-[5px] border border-border-strong bg-surface-3 text-fg"
-    style={{
-      gap: 5,
-      padding: '3px 8px 3px 5px',
-      fontFamily: 'var(--font-ui)',
-      fontWeight: 700,
-      fontSize: 10.5,
-      letterSpacing: '-0.005em',
-      lineHeight: 1.3,
-    }}
-  >
-    <SpotifyLogo size={13} />
-    <span aria-hidden>{copy.chip}</span>
-    <span className="sr-only">{copy.chipAria}</span>
-  </span>
-)
-
 // Hero-card eyebrow badge — replaces the accent "★ Tonight's pick" badge in
 // the hero's top-left slot when the headliner/support matches a followed
 // artist.

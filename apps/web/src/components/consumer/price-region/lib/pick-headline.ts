@@ -5,34 +5,31 @@
 // the consumer sees `priceByTier`, each block already has a single pre-picked
 // `headline` (or null) and the blocks are sorted by entry price ascending.
 //
-// This helper's job is to (a) translate the API's `sourceCategory` enum into
-// the chip's `kind` vocabulary, and (b) pick the FIRST block with a non-null
-// headline — which is the cheapest tier with any price data, per API sort
-// order. If the API guarantees change, this helper must change with them.
+// This helper's job is to pick the FIRST block with a non-null headline —
+// which is the cheapest tier with any price data, per API sort order. If the
+// API guarantees change, this helper must change with them.
+//
+// `sourceCategory` passes through untranslated. An earlier `kindFromCategory`
+// renamed `standard` to `community` here, which put a second provenance
+// vocabulary one function away from the first; the row owns the labels now.
 //
 // Cross-reference: apps/api/src/lib/price-aggregation/pick-tier-headline.ts.
 
 import type { TierPriceBlock, SourceCategory } from '@concert-crawl/types'
 
-export type BrowseHeadlineKind = 'boxoffice' | 'community' | 'resale' | null
-
 export interface BrowseHeadline {
   price: number
-  kind: BrowseHeadlineKind
-}
-
-function kindFromCategory(category: SourceCategory | null): BrowseHeadlineKind {
-  if (category === 'boxoffice') return 'boxoffice'
-  if (category === 'resale') return 'resale'
-  if (category === 'standard') return 'community'
-  return null
+  /** null is a crawled price with no corroborated submission. */
+  sourceCategory: SourceCategory | null
+  observedAt: string
 }
 
 function adaptBlock(block: TierPriceBlock): BrowseHeadline | null {
   if (block.headline === null) return null
   return {
     price: parseFloat(block.headline.priceMin),
-    kind: kindFromCategory(block.headline.sourceCategory),
+    sourceCategory: block.headline.sourceCategory,
+    observedAt: block.headline.observedAt,
   }
 }
 

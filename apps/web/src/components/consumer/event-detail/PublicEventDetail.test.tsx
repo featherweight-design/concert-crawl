@@ -14,10 +14,13 @@ vi.mock('@/components/consumer/EventDetailClient', () => ({
 vi.mock('@/components/consumer/event-image', () => ({
   EventImage: () => <div data-testid="event-image" />,
 }))
-vi.mock('@/components/consumer/event-card/EventCard', () => ({
-  EventCard: ({ event }: { event: { artist: string } }) => (
-    <div data-testid="related-card">{event.artist}</div>
+vi.mock('@/components/consumer/event-row', () => ({
+  EventRow: ({ show }: { show: { headliner: string } }) => (
+    <div data-testid="related-card">{show.headliner}</div>
   ),
+  fromEventWithVenue: (event: { artist: string }) => ({
+    headliner: event.artist,
+  }),
 }))
 
 // Pins "today" so the past-show case is deterministic.
@@ -210,7 +213,7 @@ describe('PublicEventDetail (#72)', () => {
     expect(screen.getByText(detailCopy.noTicketsAvailable)).toBeDefined()
   })
 
-  it('renders related shows through the same card the public browse list uses', () => {
+  it('renders related shows through the same row the public browse list uses', () => {
     const related = [{ ...buildEvent({ id: 'rel-1', artist: 'Other Band' }) }]
 
     render(<PublicEventDetail event={buildEvent()} related={related} />)

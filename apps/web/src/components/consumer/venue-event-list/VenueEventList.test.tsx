@@ -5,10 +5,11 @@ import { describe, it, expect, vi } from 'vitest'
 import React from 'react'
 import type { EventWithVenue } from '@concert-crawl/types'
 
-vi.mock('../event-card/EventCard', () => ({
-  EventCard: ({ event }: { event: EventWithVenue }) => (
-    <div data-testid="event-card" data-event-id={event.id} />
+vi.mock('../event-row', () => ({
+  EventRow: ({ show }: { show: { id: string } }) => (
+    <div data-testid="event-row" data-event-id={show.id} />
   ),
+  fromEventWithVenue: (event: EventWithVenue) => ({ id: event.id }),
 }))
 
 vi.mock('../definitions/lib', () => ({
@@ -96,7 +97,7 @@ describe('VenueEventList date grouping', () => {
       makeEvent({ id: 'c', date: '2099-07-15' }),
     ]
     const { getAllByTestId } = render(<VenueEventList events={events} />)
-    const cards = getAllByTestId('event-card')
+    const cards = getAllByTestId('event-row')
     expect(cards.map((node) => node.getAttribute('data-event-id'))).toEqual([
       'a',
       'c',

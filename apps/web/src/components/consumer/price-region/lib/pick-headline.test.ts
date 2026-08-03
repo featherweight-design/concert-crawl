@@ -41,7 +41,7 @@ describe('pickBrowseHeadline', () => {
     expect(pickBrowseHeadline([])).toBeNull()
   })
 
-  it('maps a single boxoffice tier → kind: boxoffice', () => {
+  it('maps a single boxoffice tier → sourceCategory: boxoffice', () => {
     const blocks: TierPriceBlock[] = [
       makeBlock({
         tier: 'GA',
@@ -53,11 +53,12 @@ describe('pickBrowseHeadline', () => {
     ]
     expect(pickBrowseHeadline(blocks)).toEqual({
       price: 25,
-      kind: 'boxoffice',
+      sourceCategory: 'boxoffice',
+      observedAt: '2026-06-24T00:00:00Z',
     })
   })
 
-  it('maps a single standard tier → kind: community', () => {
+  it('maps a single standard tier → sourceCategory: standard', () => {
     const blocks: TierPriceBlock[] = [
       makeBlock({
         tier: 'GA',
@@ -69,11 +70,12 @@ describe('pickBrowseHeadline', () => {
     ]
     expect(pickBrowseHeadline(blocks)).toEqual({
       price: 30,
-      kind: 'community',
+      sourceCategory: 'standard',
+      observedAt: '2026-06-24T00:00:00Z',
     })
   })
 
-  it('maps a single resale tier → kind: resale', () => {
+  it('maps a single resale tier → sourceCategory: resale', () => {
     const blocks: TierPriceBlock[] = [
       makeBlock({
         tier: 'GA',
@@ -85,11 +87,12 @@ describe('pickBrowseHeadline', () => {
     ]
     expect(pickBrowseHeadline(blocks)).toEqual({
       price: 85,
-      kind: 'resale',
+      sourceCategory: 'resale',
+      observedAt: '2026-06-24T00:00:00Z',
     })
   })
 
-  it('maps null sourceCategory → kind: null', () => {
+  it('passes a null sourceCategory through as null', () => {
     const blocks: TierPriceBlock[] = [
       makeBlock({
         tier: 'GA',
@@ -101,7 +104,8 @@ describe('pickBrowseHeadline', () => {
     ]
     expect(pickBrowseHeadline(blocks)).toEqual({
       price: 40,
-      kind: null,
+      sourceCategory: null,
+      observedAt: '2026-06-24T00:00:00Z',
     })
   })
 
@@ -124,7 +128,8 @@ describe('pickBrowseHeadline', () => {
     ]
     expect(pickBrowseHeadline(blocks)).toEqual({
       price: 25,
-      kind: 'boxoffice',
+      sourceCategory: 'boxoffice',
+      observedAt: '2026-06-24T00:00:00Z',
     })
   })
 
@@ -141,7 +146,8 @@ describe('pickBrowseHeadline', () => {
     ]
     expect(pickBrowseHeadline(blocks)).toEqual({
       price: 80,
-      kind: 'boxoffice',
+      sourceCategory: 'boxoffice',
+      observedAt: '2026-06-24T00:00:00Z',
     })
   })
 

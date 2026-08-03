@@ -3,33 +3,10 @@
 import React from 'react'
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import {
-  FollowingChip,
-  HeroFollowingBadge,
-  DetailFollowStrip,
-} from './FollowHighlight'
+import { HeroFollowingBadge, DetailFollowStrip } from './FollowHighlight'
 
 afterEach(() => {
   cleanup()
-})
-
-describe('FollowingChip', () => {
-  it('renders the Following label with a screen-reader Spotify clarification', () => {
-    render(<FollowingChip />)
-    expect(screen.getByText('Following')).toBeDefined()
-    expect(screen.getByText('You follow this artist on Spotify')).toBeDefined()
-  })
-
-  it('carries the Spotify glyph, not the accent treatment', () => {
-    const { container } = render(<FollowingChip />)
-    // The Spotify logo is the only glyph in the chip.
-    expect(container.querySelector('svg')).not.toBeNull()
-    // Design lock: --accent is reserved for Watching — the chip is neutral.
-    const chip = container.firstElementChild
-    if (!(chip instanceof HTMLElement)) throw new Error('chip did not render')
-    expect(chip.className).not.toContain('accent')
-    expect(chip.className).toContain('bg-surface-3')
-  })
 })
 
 describe('HeroFollowingBadge', () => {

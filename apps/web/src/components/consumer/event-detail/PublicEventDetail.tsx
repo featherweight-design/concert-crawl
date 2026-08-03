@@ -9,11 +9,11 @@
 //   path inside it, community reports, the first-timer guide chip, and the
 //   report footer. The price appears as a flat read-only row instead.
 //
-// Related shows DO render, through the same EventCard the public browse list
-// uses. Its watch control is therefore live for a signed-out visitor and opens
-// the tier picker with the `logged-out-watch` funnel entry — that is #794's
-// shipped conversion path, not a leak, and the mirror deliberately does not
-// diverge from browse here.
+// Related shows DO render, through the same EventRow the public browse list
+// uses. The row no longer carries a watch control on any surface, so the
+// `logged-out-watch` funnel entry #794 opened from here now starts from the
+// related show's own detail page instead. The mirror still does not diverge
+// from browse.
 //
 // In their place there is exactly one sign-in CTA. The Watching affordance on
 // the authed page is the lucide Eye; the mirror simply omits it rather than
@@ -22,7 +22,7 @@ import { Fragment } from 'react'
 import Link from 'next/link'
 import type { EventDetailResponse, EventWithVenue } from '@concert-crawl/types'
 
-import { EventCard } from '@/components/consumer/event-card/EventCard'
+import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row'
 import { SectionHeader } from '@/components/consumer/section-header'
 
 import { EventImage } from '@/components/consumer/event-image'
@@ -251,9 +251,7 @@ export const PublicEventDetail = ({
             </div>
           )}
 
-          {/* Same EventCard as the public browse list, watch control included.
-              A signed-out tap opens the tier picker (`logged-out-watch`), which
-              is the intended #794 conversion path. */}
+          {/* Same EventRow as the public browse list. */}
           {related.length > 0 && (
             <div className="mt-6">
               <SectionHeader
@@ -268,7 +266,11 @@ export const PublicEventDetail = ({
                       style={{ marginLeft: 60 }}
                     />
                   )}
-                  <EventCard event={rel} />
+                  <EventRow
+                    show={fromEventWithVenue(rel)}
+                    surface="related"
+                    className="py-2.5"
+                  />
                 </Fragment>
               ))}
             </div>

@@ -6,7 +6,7 @@ import type {
   EventsAvailabilityResponse,
   EventWithVenue,
 } from '@concert-crawl/types'
-import { EventCard } from '@/components/consumer/event-card'
+import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row'
 import { EmptyState } from '@/components/consumer/empty-state'
 import {
   WeekStrip,
@@ -191,9 +191,12 @@ export function CalendarView({
                           style={{ marginLeft: 58 }}
                         />
                       )}
-                      <EventCard
-                        event={event}
-                        isWatching={watchedSet.has(event.id)}
+                      <EventRow
+                        show={fromEventWithVenue(event, {
+                          isWatching: watchedSet.has(event.id),
+                        })}
+                        surface="browse"
+                        className="py-2.5"
                       />
                     </Fragment>
                   ))}

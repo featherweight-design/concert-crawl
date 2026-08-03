@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import type { EventWithVenue, EventsListResponse } from '@concert-crawl/types'
 import { useEvents } from '@/lib/queries/use-events'
 import { useWatching } from '@/lib/queries/use-watching'
-import { EventCard } from '@/components/consumer/event-card/EventCard'
+import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row'
 import { dateGroupLabel } from '@/components/consumer/definitions/lib'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
@@ -124,9 +124,12 @@ export const EventsList = ({
                           style={{ marginLeft: 58 }}
                         />
                       )}
-                      <EventCard
-                        event={event}
-                        isWatching={effectiveWatchedIds.has(event.id)}
+                      <EventRow
+                        show={fromEventWithVenue(event, {
+                          isWatching: effectiveWatchedIds.has(event.id),
+                        })}
+                        surface="browse"
+                        className="py-2.5"
                       />
                     </Fragment>
                   ))}

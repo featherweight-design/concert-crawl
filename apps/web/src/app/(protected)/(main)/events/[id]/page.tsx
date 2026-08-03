@@ -17,7 +17,7 @@ import { fetchEventReports } from '@/lib/events'
 import { EventImage } from '@/components/consumer/event-image'
 import { BackChip } from '@/components/consumer/back-chip/BackChip'
 import { ShareButton } from '@/components/consumer/event-detail/ShareButton'
-import { EventCard } from '@/components/consumer/event-card/EventCard'
+import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { WatchZone } from '@/components/consumer/watchers'
 import { EventDetailCtaBlock } from '@/components/consumer/going'
@@ -353,7 +353,11 @@ export default async function EventDetailPage({
                       style={{ marginLeft: 60 }}
                     />
                   )}
-                  <EventCard event={rel} />
+                  <EventRow
+                    show={fromEventWithVenue(rel)}
+                    surface="related"
+                    className="py-2.5"
+                  />
                 </Fragment>
               ))}
             </div>
