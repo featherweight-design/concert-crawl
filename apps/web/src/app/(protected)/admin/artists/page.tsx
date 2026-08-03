@@ -98,11 +98,12 @@ export default function AdminArtistsPage() {
   // which already has the artist's image in hand. Sending it saves waiting a
   // full match-job cycle for the plate to fill in.
   //
-  // Assigning an id moves the artist to `matched`, so the row leaves whichever
-  // queue the admin is looking at. Dropping it from local state is both
-  // cheaper and calmer than refetching the table, which read as the whole page
-  // refreshing under them. Clearing an id still reloads: the server decides
-  // what status a cleared row lands in, and guessing it here would be a lie.
+  // Assigning an id moves the artist to `matched`, so on every other tab the
+  // row leaves the queue the admin is looking at. Dropping it from local state
+  // is both cheaper and calmer than refetching the table, which read as the
+  // whole page refreshing under them. Clearing an id still reloads: the server
+  // decides what status a cleared row lands in, and guessing it here would be
+  // a lie.
   const save = async (
     id: string,
     spotifyArtistId: string | null,
@@ -133,6 +134,23 @@ export default function AdminArtistsPage() {
       setError(null)
       if (spotifyArtistId === null) {
         await load()
+        return
+      }
+      // On the `matched` tab the row was already matched and still is — the
+      // admin is correcting a wrong identity, not resolving a queue. Dropping
+      // it there would vanish the row they are working on.
+      if (status === 'matched') {
+        setRows((prev) =>
+          prev.map((row) =>
+            row.id === id
+              ? {
+                  ...row,
+                  spotifyArtistId,
+                  photoUrl: photoUrl ?? row.photoUrl,
+                }
+              : row,
+          ),
+        )
         return
       }
       setRows((prev) => prev.filter((row) => row.id !== id))

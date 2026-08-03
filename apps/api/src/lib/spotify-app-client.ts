@@ -325,25 +325,27 @@ export const createSpotifyAppClient = async (
     artistIds: string[],
   ): Promise<Map<string, string[]>> => {
     const genresById = new Map<string, string[]>()
-    // SEARCH_LIMIT is 10, well under the endpoint's 50-id ceiling, so this
-    // stays a single request per picker search.
-    const ids = artistIds.slice(0, SEVERAL_ARTISTS_LIMIT)
-    if (ids.length === 0) return genresById
 
-    const body = await requestJson(
-      `/artists?ids=${encodeURIComponent(ids.join(','))}`,
-    )
-    const parsed = severalArtistsResponseSchema.safeParse(body)
-    if (!parsed.success) {
-      throw new SpotifyApiError(
-        'Spotify returned an unexpected artists response shape',
-        200,
+    // Chunked rather than truncated: the picker only ever passes SEARCH_LIMIT
+    // ids, so this is one request today — but silently dropping the tail would
+    // make any future caller's missing genres look like Spotify's fault.
+    for (let i = 0; i < artistIds.length; i += SEVERAL_ARTISTS_LIMIT) {
+      const ids = artistIds.slice(i, i + SEVERAL_ARTISTS_LIMIT)
+      const body = await requestJson(
+        `/artists?ids=${encodeURIComponent(ids.join(','))}`,
       )
-    }
+      const parsed = severalArtistsResponseSchema.safeParse(body)
+      if (!parsed.success) {
+        throw new SpotifyApiError(
+          'Spotify returned an unexpected artists response shape',
+          200,
+        )
+      }
 
-    for (const artist of parsed.data.artists) {
-      if (artist === null) continue
-      genresById.set(artist.id, artist.genres ?? [])
+      for (const artist of parsed.data.artists) {
+        if (artist === null) continue
+        genresById.set(artist.id, artist.genres ?? [])
+      }
     }
     return genresById
   }

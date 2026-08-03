@@ -296,6 +296,32 @@ describe('createSpotifyAppClient().fetchGenres', () => {
     expect(genres?.get('sp2')).toEqual(['jazz'])
   })
 
+  it('chunks past the 50-id ceiling rather than dropping the tail', async () => {
+    const ids = Array.from({ length: 51 }, (_unused, i) => `sp${i}`)
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(
+        jsonResponse({
+          artists: ids.slice(0, 50).map((id) => ({ id, genres: ['ska'] })),
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          artists: ids.slice(50).map((id) => ({ id, genres: ['dub'] })),
+        }),
+      )
+
+    const client = await createSpotifyAppClient({ fetchFn })
+    const genres = await client?.fetchGenres(ids)
+
+    // Token + two batches. The 51st id is the one a truncating implementation
+    // would have silently lost.
+    expect(fetchFn).toHaveBeenCalledTimes(3)
+    expect(genres?.size).toBe(51)
+    expect(genres?.get('sp50')).toEqual(['dub'])
+  })
+
   it('makes no request for an empty id list', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
