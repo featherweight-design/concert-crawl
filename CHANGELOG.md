@@ -1,3 +1,18 @@
+# [1.202.0](https://github.com/HartiganHM/concert-crawl/compare/v1.201.3...v1.202.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **web:** derive passport date extremes in one pass and vary the card on cookie ([a7e1660](https://github.com/HartiganHM/concert-crawl/commit/a7e1660c751e1f34f3a9fc6f2328a92560cce60c))
+* **web:** keep the passport stamp on weights the PNG can actually render ([942634e](https://github.com/HartiganHM/concert-crawl/commit/942634e9bace31559c7ccb251035893275c35a7e))
+* **web:** pin the passport route runtime and stop sharing the empty stats object ([32dabfe](https://github.com/HartiganHM/concert-crawl/commit/32dabfe88770072b2794616710b54fcf33622b87))
+* **web:** stamp the passport with Denver's year, not the server's ([6db4ec5](https://github.com/HartiganHM/concert-crawl/commit/6db4ec5e7256431365798e0c355898a7bcd8cb13)), closes [#596](https://github.com/HartiganHM/concert-crawl/issues/596)
+
+
+### Features
+
+* **web:** add the Concert Passport card and its PNG route ([1f94e1b](https://github.com/HartiganHM/concert-crawl/commit/1f94e1b1b003cb2f20cc934059d6b28e92222a14)), closes [#596](https://github.com/HartiganHM/concert-crawl/issues/596)
+
 ## [1.201.3](https://github.com/HartiganHM/concert-crawl/compare/v1.201.2...v1.201.3) (2026-08-03)
 
 
