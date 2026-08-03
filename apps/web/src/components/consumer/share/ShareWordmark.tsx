@@ -1,5 +1,7 @@
 import React from 'react'
 
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
 /**
  * The `ConcertCrawl` footer signature.
  *
@@ -25,6 +27,6 @@ export const ShareWordmark = ({ size, color }: ShareWordmarkProps) => (
       color,
     }}
   >
-    ConcertCrawl
+    {CONSUMER_COPY.share.wordmark}
   </div>
 )

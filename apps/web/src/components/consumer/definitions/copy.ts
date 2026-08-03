@@ -1424,6 +1424,9 @@ export const CONSUMER_COPY = {
       soldout: 'Sold out',
       drop: 'Price drop',
     },
+    // The signature set into the foot of every poster. Not a logo glyph —
+    // the handoff's §1 is explicit that the poster carries no mark.
+    wordmark: 'ConcertCrawl',
     // Trigger + sheet chrome.
     triggerLabel: 'Share this show',
     sheetTitle: 'Share this show',
