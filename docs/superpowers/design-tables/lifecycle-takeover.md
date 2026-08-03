@@ -96,7 +96,7 @@ Full-bleed surface — owns its own chrome (README dev notes: picker renders inl
 | --------- | ------ | ------- |
 | max-width | 420    | 420     |
 
-Contains `<RailHeader tone="muted" eyebrow="Premium trial · done" code="14/14"/>` — see shared atoms below.
+Contains `<RailHeader tone="muted" eyebrow="Premium trial" code="14/14"/>` — see shared atoms below.
 
 ### Headline row
 
@@ -361,7 +361,7 @@ None defined for any element of the banner. `—`.
 
 Only the pieces `lifecycle-takeover.jsx` actually consumes. (It destructures `MMark` and `MonoEyebrow` from `window` but never renders them directly; `MonoEyebrow` is used indirectly via `RailHeader`.)
 
-### RailHeader — as used: `tone="muted"`, `eyebrow="Premium trial · done"`, `code="14/14"`
+### RailHeader — as used: `tone="muted"`, `eyebrow="Premium trial"`, `code="14/14"`
 
 With `tone="muted"`, accent color `c = var(--fg-subtle)`.
 
@@ -445,7 +445,7 @@ All strings verbatim from source (punctuation, em-dashes, arrows, middots exact)
 
 | Variant                 | Element             | Exact string                                                                                                                                                            |
 | ----------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Takeover (all variants) | RailHeader eyebrow  | `Premium trial · done`                                                                                                                                                  |
+| Takeover (all variants) | RailHeader eyebrow  | `Premium trial`                                                                                                                                                         |
 | Takeover (all variants) | RailHeader code     | `14/14`                                                                                                                                                                 |
 | Takeover (all variants) | Headline            | `Trial's done. Pick a lane.`                                                                                                                                            |
 | Takeover (all variants) | Subhead             | `Your 14 days of Premium just wrapped. You're on Free now. Browsing and your saved shows stay put; alerts, follows, and history are paused. Pick where you want to be.` |

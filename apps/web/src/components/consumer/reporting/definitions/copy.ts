@@ -4,7 +4,7 @@ export const REPORTING_COPY = {
     eyebrow: 'Spot something off?',
     title: 'Report a status change',
     titleHasStatus: 'Tickets still available?',
-    subtitle: 'Is the show sold out, cancelled, or postponed? Let fans know!',
+    subtitle: 'Sold out, cancelled, or postponed? Let fans know.',
     subtitleHasStatus: (statusLabel: string) =>
       `A fan reported this show as ${statusLabel}. If there's new information, let the people know!`,
     bottomNote:
@@ -77,7 +77,7 @@ export const REPORTING_COPY = {
         description: 'On their website or calendar',
       },
       wasThere: {
-        label: 'I was at / called the venue',
+        label: 'I was there or called the venue',
         description: 'First-hand knowledge',
       },
       somethingElse: {
@@ -95,7 +95,7 @@ export const REPORTING_COPY = {
     imminentWarning: (daysUntil: number) =>
       `This show is in ${daysUntil} days, so reports need 3 confirms instead of 2.`,
 
-    submitButton: 'File report, pending confirmation',
+    submitButton: 'File report',
   },
 
   // ── ReportTypeMark ───────────────────────────────────────────────
@@ -108,7 +108,7 @@ export const REPORTING_COPY = {
     eyebrow: 'Confirm report',
     cancelButton: 'Cancel',
     heading: 'Is this right?',
-    subtitle: 'Confirm what you know about this event.',
+    subtitle: 'Only what you know firsthand.',
     recapCard: {
       anonymousLabel: 'Anonymous',
     },
@@ -138,8 +138,6 @@ export const REPORTING_COPY = {
       cancelled: 'This show has been cancelled.',
       postponed: 'This show has been postponed.',
     },
-    confirmsAndTime: (confirmCount: number, timeAgo: string) =>
-      `${confirmCount} confirms · ${timeAgo}`,
     reportedBy: (handle: string, confirmCount: number, timeAgo: string) =>
       `Reported by @${handle} · ${confirmCount} confirms · ${timeAgo}`,
     reportedAnonymous: (confirmCount: number, timeAgo: string) =>
@@ -168,7 +166,6 @@ export const REPORTING_COPY = {
     postponedBadge: 'Postponed · pending',
     confirmsProgress: (confirms: number, needed: number) =>
       `${confirms}/${needed} confirms`,
-    confirmsToGo: 'to go',
     cancelledLead: 'A fan reports the show is cancelled.',
     postponedLead: 'A fan reports the show is being rescheduled.',
     footerQuestion: 'Saw something different?',

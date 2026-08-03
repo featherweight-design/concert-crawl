@@ -44,7 +44,7 @@ export const LANDING_COPY = {
       emailPlaceholder: 'you@email.com',
       submittingButton: 'Adding you…',
       submitButton: 'Add me to the list',
-      footerNote: "No spam. We'll only email when there's beta access.",
+      footerNote: 'No spam. Only beta access news.',
     },
   },
   betaPill: {

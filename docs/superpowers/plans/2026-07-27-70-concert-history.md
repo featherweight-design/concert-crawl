@@ -15,14 +15,14 @@
 
 ## Locked decisions inherited (do not re-litigate)
 
-| # | Decision | Source |
-| - | -------- | ------ |
-| 1 | Schema is `attending_at timestamptz` on `user_events` (TS/API `attendingAt`), **not** a new `user_event_attendance` table. `going` = `attending_at IS NOT NULL`. | READINESS addendum §1 |
-| 2 | `status = 'going'` is **not written going forward**. Existing values migrate into `attending_at`, then the contract PR nulls them out. | READINESS addendum §1 |
-| 3 | Supporter tier already exists in `subscription_tier` (`packages/db/src/schema/commerce.ts`) via PR [#878](https://github.com/HartiganHM/concert-crawl/pull/878). Gate through `packages/entitlements`, never a hand-rolled tier string comparison. | READINESS addendum §2 |
-| 4 | **Passport card is out of scope** — moved to `shareable_cards` ([#72](https://github.com/HartiganHM/concert-crawl/issues/72)). This build ships `<PassportTeaser>` as a link to [#85](https://github.com/HartiganHM/concert-crawl/issues/85) only. | READINESS addendum §3 |
-| 5 | The Watching affordance stays the **eye** (`lucide` `Eye`, shipped in `WatchShowButton.tsx:292`). Going is a separate, differently-shaped button. Browse rows stay eye-only — no Going on cards. | Handoff README "Browse stays eye-only" |
-| 6 | No post-show "did you go?" prompt. The 7-day pre-show nudge is the only ask. | Handoff README §Source-of-truth |
+| #   | Decision                                                                                                                                                                                                                                           | Source                                 |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| 1   | Schema is `attending_at timestamptz` on `user_events` (TS/API `attendingAt`), **not** a new `user_event_attendance` table. `going` = `attending_at IS NOT NULL`.                                                                                   | READINESS addendum §1                  |
+| 2   | `status = 'going'` is **not written going forward**. Existing values migrate into `attending_at`, then the contract PR nulls them out.                                                                                                             | READINESS addendum §1                  |
+| 3   | Supporter tier already exists in `subscription_tier` (`packages/db/src/schema/commerce.ts`) via PR [#878](https://github.com/HartiganHM/concert-crawl/pull/878). Gate through `packages/entitlements`, never a hand-rolled tier string comparison. | READINESS addendum §2                  |
+| 4   | **Passport card is out of scope** — moved to `shareable_cards` ([#72](https://github.com/HartiganHM/concert-crawl/issues/72)). This build ships `<PassportTeaser>` as a link to [#85](https://github.com/HartiganHM/concert-crawl/issues/85) only. | READINESS addendum §3                  |
+| 5   | The Watching affordance stays the **eye** (`lucide` `Eye`, shipped in `WatchShowButton.tsx:292`). Going is a separate, differently-shaped button. Browse rows stay eye-only — no Going on cards.                                                   | Handoff README "Browse stays eye-only" |
+| 6   | No post-show "did you go?" prompt. The 7-day pre-show nudge is the only ask.                                                                                                                                                                       | Handoff README §Source-of-truth        |
 
 ---
 
@@ -64,7 +64,7 @@ The handoff's `<HistoryLocked>` card and issue #70 both call Concert History the
 - **TypeScript strict; no `as` casts.** Zod `safeParse` at boundaries (API responses, `localStorage` reads), type guards for union narrowing, declaration merging for library types. `status` becoming nullable will surface narrowing sites — narrow them, don't cast them.
 - **Zod validation at every Hono endpoint**; all routes under `/v1/`.
 - **Drizzle only.** Expand/contract migrations only, never destructive in a single deploy. Manual `_journal.json` `when` values must exceed every prior entry (Drizzle sorts by timestamp) — last shipped is `0063_vendor_picker_values`, `when: 1785628800000`.
-- **Tokens only** — every color reads `var(--*)`. No hardcoded hex on in-app surfaces, no Tailwind `dark:` variants. Parity holds across all 9 themes. **One carve-out:** the 7-colour stamp brand set in `stamp.ts` (PR-3 Task 1) is *identity data*, not theming — the same exception `IA_PALETTES` (`IdentityArt.tsx:85`) already takes. It is deterministic per user and must not shift with the theme; see PR-3 for the full rationale. (The handoff's only other hex is the Passport share-card gradient, out of scope here.)
+- **Tokens only** — every color reads `var(--*)`. No hardcoded hex on in-app surfaces, no Tailwind `dark:` variants. Parity holds across all 9 themes. **One carve-out:** the 7-colour stamp brand set in `stamp.ts` (PR-3 Task 1) is _identity data_, not theming — the same exception `IA_PALETTES` (`IdentityArt.tsx:85`) already takes. It is deterministic per user and must not shift with the theme; see PR-3 for the full rationale. (The handoff's only other hex is the Passport share-card gradient, out of scope here.)
 - **Mobile/desktop parity in the same PR** — non-negotiable. The handoff draws `<HistoryRoute>` (mobile) and `<HistoryRouteDesktop>` (desktop 2-column) together; they ship together.
 - **a11y in the same PR** — 44px minimum tap targets, `aria-pressed` on toggles, `aria-live="polite"` on the nudge banner (READINESS ♿ flag), `role="status"` on the Going state change (READINESS Open observation 4), full keyboard paths. No native `title=` **tooltips** on interactive UI — this bans `title` used to convey hover-only information, not the `title` attribute where ARIA requires it for labelling (e.g. `<iframe title=...>`).
 - **Components**: arrow functions, no `handle*` names, logic in `lib/`, semantic HTML.
@@ -83,14 +83,14 @@ The handoff's `<HistoryLocked>` card and issue #70 both call Concert History the
 
 Data model first, API second, UI in dependency order, contract last. Each PR passes CI standalone.
 
-| PR   | Scope                                            | Depends on                                        | Ticket seam |
-| ---- | ------------------------------------------------ | ------------------------------------------------- | ----------- |
-| PR-1 | `attending_at` expand migration + backfill + write-path safety | — | — |
-| PR-2 | `/v1/attending` + `/v1/history` + `.ics` export + types | PR-1 (column exists) | #764 reads the contract this PR defines |
-| PR-3 | "I'm going!" CTA + stub stamp on Event Detail    | PR-2 (mutation endpoint)                          | #1096 displays counts later |
-| PR-4 | Watching nudge (7-day window)                    | PR-3 (`GoingButton` + toggle hook), PR-2 (`attendingAt` on `WatchingShow`) | — |
-| PR-5 | **My shows** rename + History route + teaser     | PR-2 (`GET /v1/history`), PR-3 (`StubStamp`)      | Teaser links to #85 |
-| PR-6 | Contract: retire `status = 'going'` from data    | PR-1 backfill verified in prod                    | — |
+| PR   | Scope                                                          | Depends on                                                                 | Ticket seam                             |
+| ---- | -------------------------------------------------------------- | -------------------------------------------------------------------------- | --------------------------------------- |
+| PR-1 | `attending_at` expand migration + backfill + write-path safety | —                                                                          | —                                       |
+| PR-2 | `/v1/attending` + `/v1/history` + `.ics` export + types        | PR-1 (column exists)                                                       | #764 reads the contract this PR defines |
+| PR-3 | "I'm going!" CTA + stub stamp on Event Detail                  | PR-2 (mutation endpoint)                                                   | #1096 displays counts later             |
+| PR-4 | Watching nudge (7-day window)                                  | PR-3 (`GoingButton` + toggle hook), PR-2 (`attendingAt` on `WatchingShow`) | —                                       |
+| PR-5 | **My shows** rename + History route + teaser                   | PR-2 (`GET /v1/history`), PR-3 (`StubStamp`)                               | Teaser links to #85                     |
+| PR-6 | Contract: retire `status = 'going'` from data                  | PR-1 backfill verified in prod                                             | —                                       |
 
 **PR-6 must not merge until a prod count query confirms the backfill is complete** (Task 6.1). It is the only irreversible step in the chain.
 
@@ -119,7 +119,7 @@ Three expand operations plus a backfill, all non-destructive and re-runnable:
 
 **Why `status` becomes nullable — read this before proposing an alternative.**
 
-`status` is `notNull` today (`packages/db/src/schema/social.ts:44`) and the unique index `user_events_user_event_idx` on `(user_id, event_id)` (`:51-54`) means a user gets exactly one row per event. A user who marks "I'm going!" on a show they are *not* watching needs that row to exist. The available encodings:
+`status` is `notNull` today (`packages/db/src/schema/social.ts:44`) and the unique index `user_events_user_event_idx` on `(user_id, event_id)` (`:51-54`) means a user gets exactly one row per event. A user who marks "I'm going!" on a show they are _not_ watching needs that row to exist. The available encodings:
 
 - Write `status = 'watching'` — **wrong**: silently adds them to the Watching list (`apps/api/src/routes/watching.ts:75`) and to the watch push fan-out (`packages/push/src/watch-fanout.ts:185`).
 - Write `status = 'going'` — forbidden by locked decision #2.
@@ -288,7 +288,7 @@ Everything the UI needs, with server-side entitlement enforcement. No UI in this
 // Attendance mutation — PUT/DELETE /v1/attending/:eventId
 export interface AttendingToggleResponse {
   going: boolean
-  attendingAt: string | null   // ISO, null when released
+  attendingAt: string | null // ISO, null when released
 }
 
 // One attended night — GET /v1/history
@@ -298,12 +298,12 @@ export interface HistoryShow {
   venueName: string
   venueSlug: string
   neighborhood: string | null
-  date: string              // YYYY-MM-DD, event local date
-  dateLabel: string         // pre-formatted "Mon, Oct 20" — Mountain Time
-  showTime: string | null   // pre-formatted "8:00 PM"
+  date: string // YYYY-MM-DD, event local date
+  dateLabel: string // pre-formatted "Mon, Oct 20" — Mountain Time
+  showTime: string | null // pre-formatted "8:00 PM"
   priceFinal: number | null // last observed face price
-  genre: string | null      // single word, drives "top genre"
-  attendingAt: string       // ISO — non-null by construction on this surface
+  genre: string | null // single word, drives "top genre"
+  attendingAt: string // ISO — non-null by construction on this surface
 }
 
 export interface HistoryStats {
@@ -312,7 +312,7 @@ export interface HistoryStats {
   artists: number
   topGenre: string | null
   topVenue: string | null
-  first: string | null      // YYYY-MM-DD
+  first: string | null // YYYY-MM-DD
   last: string | null
   totalSpent: number | null // null when no row has priceFinal
 }
@@ -345,7 +345,7 @@ Extend `EventDetail` (line ~680, alongside `isWatching`) with `attendingAt: stri
 - Both mount `clerkMiddleware()` then `requireFeature('concert-history')` (`apps/api/src/middleware/entitlement.ts:31`). Attendance is the paid write path; the 403 carries `code: 'entitlement_required'` which the client already routes to a paywall.
 - `eventId` validated with `z.string().uuid()` (`safeParse`, 400 on failure) — same shape as `watching.ts:10`.
 - Event must exist and satisfy `eq(events.hiddenFromConsumer, false)`, else 404 — matching `watching.ts:145`.
-- **Reject future-only commitment? No.** A user marks Going *before* the show; that's the whole point. The `date < today` filter lives on the read side.
+- **Reject future-only commitment? No.** A user marks Going _before_ the show; that's the whole point. The `date < today` filter lives on the read side.
 
 - [ ] **Step 1: Failing integration tests** — 401 unauthenticated; 403 for a plan the matrix denies (assert on `code`, not the message); 400 on a non-UUID; 404 on a hidden event; happy path creates the row with `status === null`; PUT over an existing watching row keeps `status === 'watching'`; second PUT is idempotent on the timestamp; DELETE on an attending-only row removes it; DELETE on watching+attending nulls only `attending_at`.
 - [ ] **Step 2: Implement the router; reuse `apps/api/src/lib/user-events.ts` from PR-1 Task 2.**
@@ -466,7 +466,7 @@ export const stampRotationFor = (eventId: string): number // deterministic ±4de
 
 The handoff uses FNV-1a for the accent and djb2 for the glyph (`history-data.jsx:191-208`) specifically so the two vary independently. The shipped `ia_hashName(name, namespace)` (`apps/web/src/components/consumer/identity-art/IdentityArt.tsx:48-56`) **is** FNV-1a with a namespace prefix — use it for both, with namespaces `'stamp-accent'` and `'stamp-glyph'`. Same independence, one hash implementation, no second algorithm to maintain. Note the substitution in a comment so a future reader diffing against the handoff isn't confused.
 
-The 7-colour brand set (`#7AE6FF / #FF7BD4 / #FFE36B / #A075FF / #C9F26E / #FFB838 / #5DD4D6`) is the one place hex is allowed on an in-app surface, because it is *identity data* — the same exception `IA_PALETTES` (`IdentityArt.tsx:85`) already takes. Keep the array in `stamp.ts`, not in a component.
+The 7-colour brand set (`#7AE6FF / #FF7BD4 / #FFE36B / #A075FF / #C9F26E / #FFB838 / #5DD4D6`) is the one place hex is allowed on an in-app surface, because it is _identity data_ — the same exception `IA_PALETTES` (`IdentityArt.tsx:85`) already takes. Keep the array in `stamp.ts`, not in a component.
 
 - [ ] **Step 1: Failing tests** — same artist → same accent and glyph across calls; different artists distribute across all 7 accents and all 4 glyphs over a fixed 200-name fixture; accent and glyph are not correlated (a name that maps to accent index 0 does not always map to glyph index 0); rotation is stable per `eventId` and within ±4.
 - [ ] **Step 2: Implement.**
@@ -500,7 +500,7 @@ export const GOING_COPY = {
     pastNo: "Didn't make it",
     ariaGoing: 'Going to this show',
     ariaNotGoing: 'Mark that you are going to this show',
-    stateChangeGoing: 'Marked as going',      // role="status" announcement
+    stateChangeGoing: 'Marked as going', // role="status" announcement
     stateChangeReleased: 'No longer going',
   },
   support: {
@@ -508,9 +508,9 @@ export const GOING_COPY = {
     going: "We'll add this to your history.",
   },
   error: {
-    failed: "Couldn't save that. Try again.",  // READINESS 🎭 flag — no error state was drawn
+    failed: "Couldn't save that. Try again.", // READINESS 🎭 flag — no error state was drawn
   },
-  nudge: { /* PR-4 */ },
+  nudge: {/* PR-4 */},
 } as const
 ```
 
@@ -539,7 +539,7 @@ The error string closes the READINESS "no error state drawn" gap at the mutation
 
 **Interfaces:** `<GoingButton show={{ eventId, artist, date }} state={'default'|'going'|'past-yes'|'past-no'} size={'sm'|'md'|'lg'} fullWidth?={boolean} onChange={(going: boolean) => void} />`, from `going-cta.jsx:77-182`.
 
-- Ticket-stub shape; on `going` the stub fills with the artist's accent and the glyph snaps into the centre so the button visually *is* the stamp it becomes in History.
+- Ticket-stub shape; on `going` the stub fills with the artist's accent and the glyph snaps into the centre so the button visually _is_ the stamp it becomes in History.
 - `past-yes` / `past-no` are **disabled, read-only displays** (`cursor: default`), not affordances. The retroactive "I went, actually" toggle is out of v1 (see Out of scope).
 - `aria-pressed` reflects `state === 'going'`. A visually-hidden `role="status"` region announces `stateChangeGoing` / `stateChangeReleased` on transition — READINESS Open observation 4.
 - Minimum 44px tap target at every size (the handoff's `sm` is 36px tall; pad the hit area, don't shrink the target).
@@ -565,7 +565,7 @@ The error string closes the READINESS "no error state drawn" gap at the mutation
 - State derivation, all from the `EventDetail` payload PR-2 Task 5 added:
   - `date >= today (MT)` and `attendingAt === null` → `default`
   - `date >= today (MT)` and `attendingAt !== null` → `going`
-  - `date < today (MT)` and `attendingAt !== null` → `past-yes` (label formats `attendingAt`… **no** — formats the *show* date; "You went · Oct 14, 2026" is the night, not the tap)
+  - `date < today (MT)` and `attendingAt !== null` → `past-yes` (label formats `attendingAt`… **no** — formats the _show_ date; "You went · Oct 14, 2026" is the night, not the tap)
   - `date < today (MT)` and `attendingAt === null` → `past-no`
   - `events.status === 'cancelled'` → render nothing (a cancelled show has no night to commit to). Matches the API's history filter.
 - Entitlement: `useEntitlement('concert-history')`. When `active === false`, the button still renders (it's the discovery surface for the perk) and a tap routes by `surface` — `'paywall-on-tap'` opens the paywall, `'tier-picker-on-tap'` opens the tier picker, via the shipped `TierPickerEntry` path. Hold rendering while `isLoading` rather than flashing a locked treatment (the documented contract at `use-entitlement.ts:17-19`).
@@ -656,7 +656,7 @@ The landing. Renames the top-level destination, adds the sub-tabs, ships all thr
 
 - Desktop label `Watching` → `My shows`; mobile label `watching` → `my shows`. Both hrefs stay `/watching` — **no route rename, no redirect** — because `/watching` remains the default landing tab and renaming the URL would break every existing link, bookmark, and the `usePathname().startsWith(tab.href)` active check.
 - `BottomNav` active state must light for both `/watching` and `/history`. Change the check for that tab from `pathname.startsWith(tab.href)` to a per-tab `matchPrefixes: readonly string[]` in the copy tab objects. Same for `AppHeader`.
-- **The vocabulary lock is untouched.** "Watching" is still the name of the Watching list and the sub-tab; "My shows" is the container the handoff introduces specifically to avoid a *Watching > Watching > History* redundancy (handoff README §3). Nothing here renames Watching, and nothing introduces "Saved."
+- **The vocabulary lock is untouched.** "Watching" is still the name of the Watching list and the sub-tab; "My shows" is the container the handoff introduces specifically to avoid a _Watching > Watching > History_ redundancy (handoff README §3). Nothing here renames Watching, and nothing introduces "Saved."
 
 - [ ] **Step 1: Failing tests** — nav renders "My shows"; the tab is active on `/watching` **and** `/history`.
 - [ ] **Step 2: Implement.**
@@ -686,7 +686,10 @@ The landing. Renames the top-level destination, adds the sub-tabs, ships all thr
 
 **Interfaces:**
 
-- `HISTORY_COPY` — verbatim strings: eyebrow `HISTORY`, empty headline `"Nothing's behind you yet."`, locked headline `"Keep the nights."`, locked footer `"Free tier keeps everything else. No paywalls in the way of seeing shows."`, stat tile labels (`nights` / `venues` / `artists` / `top genre` / `top venue` / `spent`), calendar row label, teaser label `"See your Passport →"`.
+- `HISTORY_COPY` — verbatim strings: eyebrow `HISTORY` (**superseded**: the
+  header eyebrow and the `passport.eyebrow` were cut in the 2026-08-03 editorial
+  copy pass, rule 3 — the `MyShowsTabs` "History" tab and the Passport headline
+  already name the surface. Do not reinstate them from this list.), empty headline `"Nothing's behind you yet."`, locked headline `"Keep the nights."`, locked footer `"Free tier keeps everything else. No paywalls in the way of seeing shows."`, stat tile labels (`nights` / `venues` / `artists` / `top genre` / `top venue` / `spent`), calendar row label, teaser label `"See your Passport →"`.
 - `<HistoryItem show={HistoryShow} density={'compact'|'cozy'|'roomy'} />` — from `history-screens.jsx:119-187`. Left `<StubStamp>` (PR-3 Task 2) sized by density (24/28/32), artist + venue + neighborhood, right-aligned date and price. **No remove affordance** — past attendance isn't editable in v1 (handoff §Deliberate exclusions).
 - `<HistoryHeader stats={HistoryStats} />` — the stat hero, `history-screens.jsx:216-259`. Tiles hide (not zero out) when their value is null.
 - Reverse-chrono month buckets: reuse the bucket-grouping shape from `WatchingContent.tsx:91-104` rather than porting `h_groupBuckets` — the shipped grouper already handles the month/year label case and is tested.
@@ -753,7 +756,7 @@ The landing. Renames the top-level destination, adds the sub-tabs, ships all thr
 
 **Interfaces:**
 
-- One `RELEASES[0]` entry, `kind: 'added'`, in Hugh's voice — casual, honest, one idea. It must say what History *is* (the nights you went) and what it *isn't* (not your Watching list). No spotlight asset exists for this feature, so no `spotlight` block.
+- One `RELEASES[0]` entry, `kind: 'added'`, in Hugh's voice — casual, honest, one idea. It must say what History _is_ (the nights you went) and what it _isn't_ (not your Watching list). No spotlight asset exists for this feature, so no `spotlight` block.
 - One ✅ Complete row in `progress.md` dated `2026-07-27` (or the actual merge date), covering the whole #70 feature — not one row per PR.
 
 - [ ] **Step 1: Write both. Read the two entries above the new one first and match their register.**
@@ -780,7 +783,7 @@ FROM user_events;
 
 **Expected: `unbackfilled = 0`.** Grounded expectation on `going_rows` itself: **zero, or near it.** No application code has ever written `'going'` or `'interested'` — the only writers in the tree are `packages/db/seed.ts` (local) and `scripts/seed-staging/` (staging). If prod returns a non-zero `going_rows`, **stop and investigate before proceeding**: it means a writer exists that this plan's grep did not find, and the whole locked-decision-#2 premise needs re-checking.
 
-- [ ] **Step 2: Repeat against staging.** Staging *will* have seeded `'going'` rows; confirm `unbackfilled = 0` there too, which is the real proof PR-1's backfill ran.
+- [ ] **Step 2: Repeat against staging.** Staging _will_ have seeded `'going'` rows; confirm `unbackfilled = 0` there too, which is the real proof PR-1's backfill ran.
 
 ### Task 2: Migration `0065_user_events_retire_going_status.sql`
 
@@ -928,7 +931,7 @@ The re-backfill on the first statement is deliberate belt-and-braces: it makes t
 - **Subscribable `.ics` feed URL** — v1 is a point-in-time download (PR-2 Task 4).
 - **Cross-device nudge-dismissal sync** — v1 is `localStorage`; re-asking once per device is accepted (handoff open question #1).
 - **Free-tier blurred stat preview** — v1 hides everything (handoff open question #4).
-- **A terminal `event_status` value** — [#1212](https://github.com/HartiganHM/concert-crawl/issues/1212) is answered for *this* feature by `date < today (MT) AND status <> 'cancelled'`; the broader schema question stays open and unblocked.
+- **A terminal `event_status` value** — [#1212](https://github.com/HartiganHM/concert-crawl/issues/1212) is answered for _this_ feature by `date < today (MT) AND status <> 'cancelled'`; the broader schema question stays open and unblocked.
 - **Removing `'going'` / `'interested'` from the `user_event_status` Postgres enum** — unreachable values are free; recreating the type is not.
 - **Threading, comments, watchparty invites, public history** — History is a solo keepsake.
 

@@ -34,18 +34,6 @@ const TeaserBody = ({
     <span className="flex min-w-0 flex-1 flex-col gap-1">
       <span
         style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 9.5,
-          fontWeight: 700,
-          letterSpacing: '0.16em',
-          textTransform: 'uppercase',
-          color: 'var(--accent)',
-        }}
-      >
-        {COPY.eyebrow}
-      </span>
-      <span
-        style={{
           fontFamily: 'var(--font-ui)',
           fontSize: 15.5,
           fontWeight: 800,

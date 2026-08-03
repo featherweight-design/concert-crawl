@@ -84,15 +84,11 @@ describe('NotifBody — panel states', () => {
     expect(onRetry).toHaveBeenCalledTimes(1)
   })
 
-  it('renders the empty state with a wired CTA and no hint line', async () => {
+  it('renders the empty state with a wired CTA', async () => {
     const onAction = vi.fn()
     render(<NotifBody state="ready" items={[]} onAction={onAction} now={NOW} />)
     expect(screen.getByText(NOTIFICATIONS_COPY.emptyTitle)).toBeInTheDocument()
     expect(screen.getByText(NOTIFICATIONS_COPY.emptyBody)).toBeInTheDocument()
-    // emptyHint has no render site in the handoff — it must stay unrendered.
-    expect(
-      screen.queryByText(NOTIFICATIONS_COPY.emptyHint),
-    ).not.toBeInTheDocument()
     fireEvent.click(
       screen.getByRole('button', { name: NOTIFICATIONS_COPY.emptyAction }),
     )

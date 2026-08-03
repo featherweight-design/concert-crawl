@@ -59,8 +59,8 @@ Ticket-locked constraints resolved by this shape: dismissible, respect prior dis
 
 **Header pill status + full-page fallback with cached-content shortcuts.**
 
-- **Banner** = small persistent status pill in the header — a dot + short label (e.g., *"Offline · cached OK"*). Sits next to the account menu, doesn't claim a row. Present while `useOnlineStatus` reports offline. Non-modal, non-blocking (per ticket).
-- **Fallback page** = full page rendered when the user navigates to something not in the cache while offline. Copy: *"You're offline — here's what you can still see."* Includes **cached shortcuts** (recent events, venues, whatever's actually in the SW cache). Retry CTA + a link back to a known-cached landing route.
+- **Banner** = small persistent status pill in the header — a dot + short label (e.g., _"Offline · cached OK"_). Sits next to the account menu, doesn't claim a row. Present while `useOnlineStatus` reports offline. Non-modal, non-blocking (per ticket).
+- **Fallback page** = full page rendered when the user navigates to something not in the cache while offline. Copy: _"You're offline — here's what you can still see."_ Includes **cached shortcuts** (recent events, venues, whatever's actually in the SW cache). Retry CTA + a link back to a known-cached landing route.
 - **The two together tell one story** — the pill is the ambient signal; the fallback turns "you hit a wall" into "here's what you can still do."
 
 Ticket-locked constraints: non-modal banner, full page fallback, public-only cached content.
@@ -70,7 +70,7 @@ Ticket-locked constraints: non-modal banner, full page fallback, public-only cac
 **Two-step contextual sheet on first watch, no auto re-asks.**
 
 - User taps "Watch this show." A small bottom sheet fires (delayed by a beat so it doesn't feel simultaneous with the watch action).
-- Sheet content: *"Want a heads-up if tickets go on sale or the show changes? [Turn on notifications] [Not now]."*
+- Sheet content: _"Want a heads-up if tickets go on sale or the show changes? [Turn on notifications] [Not now]."_
 - **Turn on** → fires the browser permission dialog. If granted, subscribes via `pushManager` + writes a row to `push_subscriptions`.
 - **Not now** → dismisses; the sheet never returns automatically. Settings → Notifications carries a manual enable toggle for later opt-in.
 - **The two-step is the whole point** — any "Not now" on our sheet means we never fire the browser permission dialog on an ambivalent user. Browser dismissals are often permanent; filtering with our own sheet means we only spend the browser-permission slot on users who've actively opted in.
@@ -101,7 +101,7 @@ Everything else the notifications table writes — **contest_resolved, contest_f
 
 **Master toggle + per-category sub-toggles at Settings → Notifications.**
 
-- **Master switch** — *"Push notifications: [On / Off]"*
+- **Master switch** — _"Push notifications: [On / Off]"_
   - Toggle on = trigger the browser permission dialog (if not already granted) + subscribe via `pushManager`.
   - Toggle off = unsubscribe on this device. Browser permission stays granted; we just stop sending. User can re-enable without a fresh permission prompt.
 - **Sub-toggles under master** (only visible when master is on):
@@ -129,23 +129,23 @@ Everything else the notifications table writes — **contest_resolved, contest_f
 
 - **Header pill component** — visible when offline
   - Dot color / shape (Design's call from the token palette; likely `--warning` or a neutral muted tone, not `--danger`)
-  - Copy: *"Offline · cached OK"* or Design's alternative
+  - Copy: _"Offline · cached OK"_ or Design's alternative
 - **Fallback page component** — full page
-  - Hero copy: *"You're offline — here's what you can still see"* (Design refines)
+  - Hero copy: _"You're offline — here's what you can still see"_ (Design refines)
   - Retry CTA (branded)
   - **Cached shortcuts list** — dynamic, populated from actual SW cache state
     - Recent events (whatever's cached)
     - Venues (whatever's cached)
-    - A "Back to cached content" link if list is empty
+    - A "Try the home page" link if list is empty
   - Empty state (nothing cached yet) — honest, not defeatist
 
 ### #971 Web push
 
 - **Post-watch permission sheet** (Q4 flow) — bottom sheet
-  - Copy: *"Want a heads-up if tickets go on sale or the show changes? [Turn on notifications] [Not now]"*
+  - Copy: _"Want a heads-up if tickets go on sale or the show changes? [Turn on notifications] [Not now]"_
   - Design refines final wording
   - Delay timing (how many ms after the watch tap fires): Design's call, suggested 400–800ms
-- **iOS-not-installed variant** — the same "post-watch" moment, but on non-installed iOS Safari where push can't work. Sheet becomes an **install-first flow**: *"To get notified on iPhone, add Concert Crawl to your Home Screen first. [Show me how] [Not now]."* Show me how opens the same iOS install "Here's how" sheet from **#969**.
+- **iOS-not-installed variant** — the same "post-watch" moment, but on non-installed iOS Safari where push can't work. Sheet becomes an **install-first flow**: _"To get notified on iPhone, add Concert Crawl to your Home Screen first. [Show me how] [Not now]."_ Show me how opens the same iOS install "Here's how" sheet from **#969**.
 - **Settings → Notifications page** — master + per-category toggles (Q6)
   - Master toggle
   - Watch updates sub-toggle
@@ -153,11 +153,11 @@ Everything else the notifications table writes — **contest_resolved, contest_f
   - Empty state (never asked yet, or master off) — Design shape
   - Denied state (browser permission was denied, we can't re-ask; user has to enable in browser settings) — honest explanation + link to browser settings docs
 - **Notification content per category** — Sour Patch voice, per-type shape:
-  - **Cancelled:** *"Amyl and the Sniffers at Roxy — cancelled. Details inside."*
-  - **Postponed:** *"Amyl at Roxy moved to [new date]. Same tickets, new night."*
-  - **Sold-out:** *"Amyl at Roxy is sold out. Waitlist may open up."*
-  - **Back on sale:** *"Tickets for Amyl at Roxy just went back on sale."*
-  - **Price drop:** *"$32 tickets for Amyl at Roxy just went on sale."*
+  - **Cancelled:** _"Amyl and the Sniffers at Roxy — cancelled. Details inside."_
+  - **Postponed:** _"Amyl at Roxy moved to [new date]. Same tickets, new night."_
+  - **Sold-out:** _"Amyl at Roxy is sold out. Waitlist may open up."_
+  - **Back on sale:** _"Tickets for Amyl at Roxy just went back on sale."_
+  - **Price drop:** _"$32 tickets for Amyl at Roxy just went on sale."_
   - (Design refines final wording — these are shape examples, not locked copy)
 
 ---
@@ -166,12 +166,12 @@ Everything else the notifications table writes — **contest_resolved, contest_f
 
 Every surface + every push message obeys:
 
-- **Specific > generic** — *"$32 tickets for Amyl at Roxy just went on sale"* beats *"Price drop on a show you're watching"*
-- **Honest > cheerful** — *"Sold out. Waitlist may open up"* beats *"Tickets going fast!"*
-- **Callouts are questions, not claims** — *"Want a heads-up if tickets go on sale?"* beats *"Turn on notifications!"*
+- **Specific > generic** — _"$32 tickets for Amyl at Roxy just went on sale"_ beats _"Price drop on a show you're watching"_
+- **Honest > cheerful** — _"Sold out. Waitlist may open up"_ beats _"Tickets going fast!"_
+- **Callouts are questions, not claims** — _"Want a heads-up if tickets go on sale?"_ beats _"Turn on notifications!"_
 - **Never brochure-y** — the install sheet reads like a friend showing you the trick, not marketing collateral
-- **No hype, no false urgency** — never *"last chance!"*, never *"we miss you!"*, never *"limited time!"*
-- **Errors are honest** — offline pill says *"cached OK"* not *"connection error"*; fallback says *"you're offline"* not *"something went wrong"*
+- **No hype, no false urgency** — never _"last chance!"_, never _"we miss you!"_, never _"limited time!"_
+- **Errors are honest** — offline pill says _"cached OK"_ not _"connection error"_; fallback says _"you're offline"_ not _"something went wrong"_
 
 ---
 

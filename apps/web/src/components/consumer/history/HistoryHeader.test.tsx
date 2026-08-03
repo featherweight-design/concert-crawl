@@ -69,12 +69,10 @@ describe('historyTilesFor', () => {
 describe('HistoryHeader', () => {
   // No tier chip: this header only renders for a plan that already unlocked
   // History, so naming the tier here sells a subscriber their own plan.
-  it('renders the eyebrow without naming a tier', () => {
+  it('renders the range without naming a tier', () => {
     render(<HistoryHeader stats={STATS} />)
 
-    expect(
-      screen.getByText(`${COPY.eyebrow} · ${COPY.range}`),
-    ).toBeInTheDocument()
+    expect(screen.getByText(COPY.range)).toBeInTheDocument()
     // Match the chip's shape ("+ <tier>"), not one tier's name — renaming the
     // tier shouldn't let the chip regress past this test.
     expect(screen.queryByText(/^\+\s*\S/)).toBeNull()

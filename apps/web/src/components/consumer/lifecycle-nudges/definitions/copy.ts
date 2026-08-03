@@ -4,7 +4,7 @@
 
 export const LIFECYCLE_NUDGES_COPY = {
   takeover: {
-    eyebrow: 'Premium trial · done',
+    eyebrow: 'Premium trial',
     code: '14/14',
     headline: "Trial's done. Pick a lane.",
     subhead:

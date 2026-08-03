@@ -81,7 +81,7 @@ export const OFFLINE_COPY = {
     empty: {
       title: 'Nothing cached yet.',
       sub: "First visit, or a fresh phone? There's nothing saved to show offline yet. Hit retry once you've got signal and we'll start keeping the shows you browse.",
-      link: 'Back to cached content',
+      link: 'Try the home page',
     },
   },
 } as const

@@ -141,7 +141,7 @@ export const HistoryHeader = ({ stats }: { stats: HistoryStats }) => {
             margin: 0,
           }}
         >
-          {COPY.eyebrow} · {COPY.range}
+          {COPY.range}
         </p>
       </div>
 

@@ -361,7 +361,7 @@ export const CONSUMER_COPY = {
       },
       success: {
         heading: 'Loud and clear.',
-        body: "Thanks for the feedback! We'll reach out if we need more information.",
+        body: "Thanks. We'll reach out if we need more.",
         primaryAction: 'Back to the show',
         secondaryAction: 'Send another',
       },
@@ -412,8 +412,7 @@ export const CONSUMER_COPY = {
     page: {
       eyebrow: 'Transmission log',
       heading: 'What we shipped.',
-      description:
-        "Everything we've shipped, in one place. Spotted a bug or got an idea?",
+      description: "Everything we've shipped. Spotted a bug or got an idea?",
       feedbackCta: 'Send us a note',
       endOfLog: '— end of log —',
     },
@@ -635,7 +634,7 @@ export const CONSUMER_COPY = {
   // Shown in the browse page filter bar — date, venue, price, and genre filters
   filterBar: {
     // Heading
-    locationLine: 'Denver · This week',
+    locationLine: 'Denver',
     headingTitle: "What's on?",
 
     // List/Cal view toggle
@@ -982,9 +981,9 @@ export const CONSUMER_COPY = {
     zeroCountLabel: '0 in Denver',
 
     // Empty state
-    emptyEyebrow: 'No venues',
-    emptyTitle: 'Nothing here yet',
-    emptyBody: "Venues will appear here once they're added.",
+    emptyEyebrow: 'Denver',
+    emptyTitle: 'No venues yet.',
+    emptyBody: 'They land here as we add them.',
   },
 
   // ── Error page ──────────────────────────────────────────────────
@@ -1113,7 +1112,6 @@ export const CONSUMER_COPY = {
     passwordRow: 'Password',
     clerkLinkLabel: 'Manage via Clerk →',
     watchlistRow: 'Watching',
-    watchlistComingSoon: 'Coming soon',
   },
 
   // ── Multi-tier price display ────────────────────────────────────

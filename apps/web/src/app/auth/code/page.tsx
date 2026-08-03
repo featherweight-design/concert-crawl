@@ -165,7 +165,9 @@ export default function InviteCodePage() {
                 {copy.errors[errorKind]}
               </div>
             )}
-            {!errorKind && (
+            {/* No hint on an empty field: the description, the mono format
+                line, and the input placeholder all show the format already. */}
+            {!errorKind && code.length > 0 && (
               <div
                 style={{
                   fontSize: 12,
@@ -176,11 +178,9 @@ export default function InviteCodePage() {
                   textTransform: 'uppercase',
                 }}
               >
-                {code.length === 0
-                  ? copy.hint.empty
-                  : isComplete
-                    ? copy.hint.valid
-                    : copy.hint.remaining(14 - code.length)}
+                {isComplete
+                  ? copy.hint.valid
+                  : copy.hint.remaining(14 - code.length)}
               </div>
             )}
           </div>

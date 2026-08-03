@@ -2531,13 +2531,13 @@ Eyebrow wrapper `<div>`: `margin-bottom: 10`
 
 Five `EvidenceOption` rows (in order):
 
-| selected value  | label                             | sub                                                            |
-| --------------- | --------------------------------- | -------------------------------------------------------------- |
-| `"email"`       | `"Got an email from the venue"`   | `"An order email, an announcement, a refund notice."`          |
-| `"social"`      | `"Saw it on the artist's social"` | `"Instagram, TikTok, Twitter / X. Share the post link below."` |
-| `"venue"`       | `"Venue posted an announcement"`  | `"Their site, social, or board outside the venue."`            |
-| `"venue-visit"` | `"I was at / called the venue"`   | `"Saw it on the door or heard it from staff."`                 |
-| `"other"`       | `"Something else"`                | `"Tell us in the notes below."`                                |
+| selected value  | label                               | sub                                                            |
+| --------------- | ----------------------------------- | -------------------------------------------------------------- |
+| `"email"`       | `"Got an email from the venue"`     | `"An order email, an announcement, a refund notice."`          |
+| `"social"`      | `"Saw it on the artist's social"`   | `"Instagram, TikTok, Twitter / X. Share the post link below."` |
+| `"venue"`       | `"Venue posted an announcement"`    | `"Their site, social, or board outside the venue."`            |
+| `"venue-visit"` | `"I was there or called the venue"` | `"Saw it on the door or heard it from staff."`                 |
+| `"other"`       | `"Something else"`                  | `"Tell us in the notes below."`                                |
 
 ### Link field
 
@@ -2617,7 +2617,7 @@ Placeholder text: `"What did the email / post say? Anything other fans should kn
 | Typography | font-size       | `14.5`                |
 | Typography | letter-spacing  | `-0.005em`            |
 
-Button label: `"File report, pending confirmation"`
+Button label: `"File report"`
 
 #### Footer caption
 

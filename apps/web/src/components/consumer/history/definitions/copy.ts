@@ -17,7 +17,6 @@ export const HISTORY_COPY = {
   },
 
   header: {
-    eyebrow: 'HISTORY',
     range: 'all time',
     since: (label: string) => `since ${label}`,
     stats: {
@@ -59,8 +58,7 @@ export const HISTORY_COPY = {
 
   calendar: {
     label: 'Export to calendar',
-    detail: (count: number) =>
-      `${count} ${count === 1 ? 'night' : 'nights'} · iCal · Google · Apple`,
+    detail: (count: number) => `${count} ${count === 1 ? 'night' : 'nights'}`,
     detailEmpty: 'Nothing to export yet',
     badge: '.ics',
     downloading: 'Preparing…',
@@ -69,7 +67,6 @@ export const HISTORY_COPY = {
   },
 
   passport: {
-    eyebrow: 'Passport',
     headline: 'Your stamp book.',
     summary: (nights: number, venues: number, topGenre: string | null) =>
       `${nights} ${nights === 1 ? 'night' : 'nights'} · ${venues} ${
