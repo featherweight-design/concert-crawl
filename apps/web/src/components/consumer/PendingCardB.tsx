@@ -2,7 +2,7 @@
 
 import { SP_POLICY } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { InfoTooltip } from '@/components/ui/info-tooltip'
+import { CCTip, type TipContent } from '@/components/ui/cc-tip'
 import {
   CheckGlyph,
   Eyebrow,
@@ -242,13 +242,18 @@ export const PendingCardB = ({
             {confirms} {copy.of} {needed} {copy.confirmed}
           </span>
           {isImminent && (
-            <InfoTooltip
-              triggerLabel={copy.imminentTag}
-              content={copy.imminentTooltip(
-                SP_POLICY.imminentThresholdDays,
-                SP_POLICY.confirmsRequiredImminent,
-                SP_POLICY.confirmsRequired,
-              )}
+            <CCTip
+              tip={
+                {
+                  label: copy.imminentTag,
+                  variant: 'text',
+                  body: copy.imminentTooltip(
+                    SP_POLICY.imminentThresholdDays,
+                    SP_POLICY.confirmsRequiredImminent,
+                    SP_POLICY.confirmsRequired,
+                  ),
+                } satisfies TipContent
+              }
               triggerStyle={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -267,7 +272,7 @@ export const PendingCardB = ({
               }}
             >
               {copy.imminentTag}
-            </InfoTooltip>
+            </CCTip>
           )}
         </div>
 

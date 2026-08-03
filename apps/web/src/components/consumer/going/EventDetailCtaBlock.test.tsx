@@ -4,6 +4,7 @@ import '@testing-library/jest-dom'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { ApiError } from '@/lib/api'
+import { stubMatchMedia } from '@/test-utils/match-media'
 import type { EntitlementResult } from '@/lib/queries/use-entitlement'
 import { GOING_COPY } from './definitions/copy'
 import type { GoingCtaEvent } from './EventDetailCtaBlock'
@@ -63,6 +64,8 @@ const goingButton = (): HTMLElement => {
 
 describe('EventDetailCtaBlock', () => {
   beforeEach(() => {
+    // The explainer trigger reads useIsMobileViewport; jsdom has no matchMedia.
+    stubMatchMedia(false)
     mutate.mockReset()
     refresh.mockReset()
     isPending = false

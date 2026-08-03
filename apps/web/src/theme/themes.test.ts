@@ -29,6 +29,8 @@ const REQUIRED_TOKENS = [
   'overlay-press',
   'scrim',
   'image-tint',
+  'shadow-soft',
+  'shadow-strong',
 ] as const
 
 const ALL_THEME_NAMES: ThemeName[] = [

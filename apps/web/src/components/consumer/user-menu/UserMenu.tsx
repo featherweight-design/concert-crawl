@@ -34,7 +34,7 @@ import {
 import { GetInCard } from './GetInCard'
 import { AccountMenuContext, useAccountMenu } from './account-menu-context'
 import type { AccountMenuState } from './account-menu-context'
-import { useFocusTrap } from './use-focus-trap'
+import { useFocusTrap } from '@/lib/hooks/useFocusTrap'
 
 const APP_VERSION = process.env['NEXT_PUBLIC_APP_VERSION'] ?? 'dev'
 

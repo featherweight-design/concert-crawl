@@ -14,11 +14,8 @@
 
 import { useEffect, useRef } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
-import {
-  MOBILE_VIEWPORT_QUERY,
-  PLAN_OPEN_PARAM,
-  PLAN_OPEN_VALUE,
-} from '../definitions/constants'
+import { MOBILE_VIEWPORT_QUERY } from '@/lib/definitions/breakpoints'
+import { PLAN_OPEN_PARAM, PLAN_OPEN_VALUE } from '../definitions/constants'
 
 export type PlanOpenVariant = 'mobile' | 'desktop'
 

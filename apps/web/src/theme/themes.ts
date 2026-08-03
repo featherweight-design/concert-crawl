@@ -55,6 +55,8 @@ const electric: Record<string, string> = {
   'overlay-press': 'rgba(122,230,255,0.16)',
   scrim: 'rgba(7,10,26,0.72)',
   'image-tint': 'rgba(7,10,26,0.20)',
+  'shadow-soft': 'rgba(7,10,26,0.45)',
+  'shadow-strong': 'rgba(7,10,26,0.62)',
 }
 
 const jade: Record<string, string> = {
@@ -85,6 +87,8 @@ const jade: Record<string, string> = {
   'overlay-press': 'rgba(31,255,194,0.16)',
   scrim: 'rgba(6,32,31,0.72)',
   'image-tint': 'rgba(6,32,31,0.20)',
+  'shadow-soft': 'rgba(6,32,31,0.45)',
+  'shadow-strong': 'rgba(6,32,31,0.62)',
 }
 
 const light: Record<string, string> = {
@@ -115,6 +119,8 @@ const light: Record<string, string> = {
   'overlay-press': 'rgba(7,10,26,0.08)',
   scrim: 'rgba(7,10,26,0.40)',
   'image-tint': 'transparent',
+  'shadow-soft': 'rgba(7,10,26,0.12)',
+  'shadow-strong': 'rgba(7,10,26,0.20)',
 }
 
 const pulse: Record<string, string> = {
@@ -143,6 +149,8 @@ const pulse: Record<string, string> = {
   'overlay-press': 'rgba(200,255,46,0.16)',
   scrim: 'rgba(5,0,8,0.72)',
   'image-tint': 'rgba(5,0,8,0.20)',
+  'shadow-soft': 'rgba(5,0,8,0.45)',
+  'shadow-strong': 'rgba(5,0,8,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
 }
@@ -173,6 +181,8 @@ const forge: Record<string, string> = {
   'overlay-press': 'rgba(200,33,26,0.16)',
   scrim: 'rgba(6,4,3,0.72)',
   'image-tint': 'rgba(6,4,3,0.20)',
+  'shadow-soft': 'rgba(6,4,3,0.45)',
+  'shadow-strong': 'rgba(6,4,3,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
 }
@@ -203,6 +213,8 @@ const bluenote: Record<string, string> = {
   'overlay-press': 'rgba(77,163,255,0.16)',
   scrim: 'rgba(14,10,31,0.72)',
   'image-tint': 'rgba(14,10,31,0.20)',
+  'shadow-soft': 'rgba(14,10,31,0.45)',
+  'shadow-strong': 'rgba(14,10,31,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
 }
@@ -233,6 +245,8 @@ const drip: Record<string, string> = {
   'overlay-press': 'rgba(46,255,107,0.16)',
   scrim: 'rgba(0,0,0,0.72)',
   'image-tint': 'rgba(0,0,0,0.20)',
+  'shadow-soft': 'rgba(0,0,0,0.45)',
+  'shadow-strong': 'rgba(0,0,0,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
 }
@@ -263,6 +277,8 @@ const cedar: Record<string, string> = {
   'overlay-press': 'rgba(216,154,138,0.16)',
   scrim: 'rgba(16,32,26,0.72)',
   'image-tint': 'rgba(16,32,26,0.20)',
+  'shadow-soft': 'rgba(16,32,26,0.45)',
+  'shadow-strong': 'rgba(16,32,26,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
 }
@@ -293,6 +309,8 @@ const gloss: Record<string, string> = {
   'overlay-press': 'rgba(255,91,161,0.16)',
   scrim: 'rgba(15,8,16,0.72)',
   'image-tint': 'rgba(15,8,16,0.20)',
+  'shadow-soft': 'rgba(15,8,16,0.45)',
+  'shadow-strong': 'rgba(15,8,16,0.62)',
   'trust-community': 'oklch(0.62 0.12 240)',
   'trust-resale': 'oklch(0.65 0.20 25)',
 }

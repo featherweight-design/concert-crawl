@@ -11,8 +11,12 @@ const FOCUSABLE =
 /**
  * Moves focus into `ref` when `active` turns true and keeps Tab cycling inside
  * it. Focus lands on the container itself (tabIndex -1), not the first row, so
- * the first Tab press reaches the menu's primary action — this is the one
+ * the first Tab press reaches the surface's primary action — this is the one
  * deliberate difference from BottomSheet, which focuses its first control.
+ *
+ * `ref` belongs on the dialog itself, never on a wrapper that also holds a
+ * scrim: the trap cycles Tab within the container's subtree, so a wrapper would
+ * hand the scrim a tab stop inside an aria-modal surface.
  */
 export function useFocusTrap(
   ref: React.RefObject<HTMLElement | null>,

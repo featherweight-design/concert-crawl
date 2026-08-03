@@ -14,10 +14,11 @@ import { useEntitlement } from '@/lib/queries/use-entitlement'
 import { usePlanState } from '@/lib/queries/use-plan-state'
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle'
 import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
-import { InfoTooltip } from '@/components/ui/info-tooltip'
+import { CCTip } from '@/components/ui/cc-tip'
 import { GoingButton } from './GoingButton'
 import { goingStateFor } from './lib/cta-state'
 import { GOING_COPY } from './definitions/copy'
+import type { TipContent } from '@/components/ui/cc-tip'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 
 // Structurally narrowed to the fields this row actually reads, so an
@@ -29,6 +30,14 @@ const OPTIMISTIC_STAMP = 'optimistic'
 
 const DISC_SIZE = 22
 const TAP_TARGET = 44
+
+// The going-vs-watch distinction as a CCTip record. It stays a one-line `text`
+// tip so the popover reads as a sentence rather than a titled panel.
+const GOING_EXPLAINER_TIP: TipContent = {
+  label: GOING_COPY.explainer.triggerLabel,
+  variant: 'text',
+  body: GOING_COPY.explainer.content,
+}
 
 export type GoingCtaEvent = Pick<
   EventDetailResponse,
@@ -164,9 +173,8 @@ export const EventDetailCtaBlock = ({
         </p>
       ) : (
         <div style={{ marginTop: 6 }}>
-          <InfoTooltip
-            content={GOING_COPY.explainer.content}
-            triggerLabel={GOING_COPY.explainer.triggerLabel}
+          <CCTip
+            tip={GOING_EXPLAINER_TIP}
             // The target is 44px for thumbs; the negative margin pulls the extra
             // padding back out of the layout so the visible disc still sits
             // exactly where a 22px control would.
@@ -198,7 +206,7 @@ export const EventDetailCtaBlock = ({
             >
               ?
             </span>
-          </InfoTooltip>
+          </CCTip>
         </div>
       )}
 

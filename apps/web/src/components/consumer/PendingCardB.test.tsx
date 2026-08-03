@@ -14,6 +14,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { SP_POLICY } from '@concert-crawl/types'
 import { PendingCardB, type PendingCardBProps } from './PendingCardB'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { stubMatchMedia } from '@/test-utils/match-media'
 
 const counterPointerLabel =
   CONSUMER_COPY.priceRegion.dispute.counterPointerLabel
@@ -23,6 +24,8 @@ const counterPointerLabel =
 const NOW = new Date('2026-06-17T12:00:00.000Z')
 
 beforeAll(() => {
+  // The imminent-tag tip reads useIsMobileViewport; jsdom has no matchMedia.
+  stubMatchMedia(false)
   vi.useFakeTimers()
   vi.setSystemTime(NOW)
 })
@@ -86,15 +89,16 @@ describe('PendingCardB', () => {
       expect(screen.getByText('Days away')).toBeTruthy()
 
       // The trigger is a real button so it is keyboard-focusable, with a
-      // concise accessible name; the explanation is exposed via the tooltip
+      // concise accessible name; the explanation is exposed via the panel
       // (aria-describedby) once opened, not baked into the name.
       const trigger = screen.getByRole('button', { name: /days away/i })
 
-      // Click-triggered (no native title hover delay): the tooltip appears only
+      // Click-triggered (no native title hover delay): the panel appears only
       // after activating the trigger, and describes the trigger while open.
-      expect(screen.queryByRole('tooltip')).toBeNull()
+      // CCTip's panel is a dialog, not a bare tooltip node.
+      expect(screen.queryByRole('dialog')).toBeNull()
       fireEvent.click(trigger)
-      const tooltip = screen.getByRole('tooltip')
+      const tooltip = screen.getByRole('dialog')
       expect(trigger.getAttribute('aria-describedby')).toBe(tooltip.id)
       expect(tooltip.textContent).toMatch(
         new RegExp(`${SP_POLICY.imminentThresholdDays} days?`, 'i'),

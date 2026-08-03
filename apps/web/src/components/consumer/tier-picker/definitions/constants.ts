@@ -84,10 +84,6 @@ export const PLAN_OPEN_PARAM = 'plan'
 export const PLAN_OPEN_VALUE = 'open'
 export const PLAN_SETTINGS_ROUTE = `/me?${PLAN_OPEN_PARAM}=${PLAN_OPEN_VALUE}`
 
-// Matches the Tailwind sm: breakpoint (640px) that splits the /me mobile
-// and desktop settings trees.
-export const MOBILE_VIEWPORT_QUERY = '(max-width: 639px)'
-
 // Full-bleed takeover surfaces sit above all app chrome: app bar/bottom
 // nav z-40, feature-drop pill z-80, ModalShell scrim/dialog 90/100.
 export const FULL_BLEED_TAKEOVER_Z_INDEX = 110

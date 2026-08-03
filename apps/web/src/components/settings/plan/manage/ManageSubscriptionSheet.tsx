@@ -27,7 +27,7 @@ import {
 import { SURFACE_DESKTOP_WIDTH } from './definitions/constants'
 import type { ManageSurface, PaidTier } from './definitions/types'
 import { formatDollarsFromCents } from './lib/format-amount'
-import { useIsMobileViewport } from './lib/use-is-mobile-viewport'
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport'
 import { useLifecycleActions } from './lib/use-lifecycle-actions'
 import { useProrationPreview } from './lib/use-proration-preview'
 import { usePortalNavigation } from '../lib/use-portal-navigation'

@@ -8,7 +8,7 @@
 // (scrim 90 / dialog 100) and the aria contract mirror ModalShell.
 
 import { useCallback, useEffect } from 'react'
-import { useIsMobileViewport } from './lib/use-is-mobile-viewport'
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport'
 import {
   SURFACE_DIALOG_Z_INDEX,
   SURFACE_SCRIM_Z_INDEX,

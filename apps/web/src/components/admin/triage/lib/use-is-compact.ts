@@ -1,7 +1,7 @@
 'use client'
 
 // The panel's compact/desktop split. Same matchMedia pattern as
-// `useIsMobileViewport` in the /me settings tree, keyed to the Tailwind `sm:`
+// `useIsMobileViewport` in @/lib/hooks, keyed to the Tailwind `sm:`
 // breakpoint. Starts `false` so the server render and the first client render
 // agree (desktop), then corrects on hydration.
 

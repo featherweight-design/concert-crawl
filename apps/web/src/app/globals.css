@@ -31,6 +31,8 @@
     --overlay-press: rgba(122, 230, 255, 0.16);
     --scrim: rgba(7, 10, 26, 0.72);
     --image-tint: rgba(7, 10, 26, 0.2);
+    --shadow-soft: rgba(7, 10, 26, 0.45);
+    --shadow-strong: rgba(7, 10, 26, 0.62);
 
     /* Spotify brand green — ONLY for the official Spotify logo asset.
        Never used for buttons, status, or any other UI (design handoff rule);
