@@ -68,6 +68,33 @@ describe('<ShareSheet />', () => {
     expect(preview.getAttribute('alt')).toContain('Bluebird Theater')
   })
 
+  // The poster is drawn on demand and measured at 2.7–6.8s on staging, so an
+  // unannounced preview is a blank box for long enough to read as broken.
+  it('says the poster is drawing until it lands, then shows it', () => {
+    mount()
+    expect(screen.getByRole('status').textContent).toBe('Drawing your poster…')
+    fireEvent.load(screen.getByRole('img'))
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('keeps the sheet usable when the poster route fails', () => {
+    mount()
+    fireEvent.error(screen.getByRole('img'))
+    expect(screen.getByRole('status').textContent).toContain(
+      "Couldn't draw the poster",
+    )
+    expect(screen.getByRole('button', { name: 'Copy link' })).toBeTruthy()
+  })
+
+  // A settled poster must not be shown under the next shape's label while that
+  // shape is still drawing.
+  it('re-enters the drawing state when the shape changes', () => {
+    mount()
+    fireEvent.load(screen.getByRole('img'))
+    fireEvent.click(screen.getByRole('button', { name: 'Square' }))
+    expect(screen.getByRole('status').textContent).toBe('Drawing your poster…')
+  })
+
   it('repoints the preview and the download when the shape changes', () => {
     mount()
     fireEvent.click(screen.getByRole('button', { name: 'Square' }))

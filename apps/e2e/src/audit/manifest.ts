@@ -43,6 +43,32 @@ const manifest: AuditManifest = validateManifest([
     path: '/events/7324584c-9104-4760-8e88-94cd232ba035',
     tags: ['consumer'],
     auth: 'user',
+    interactions: [
+      {
+        // The #72 share sheet is a component on this page, not a route, so it
+        // is unreachable by a path-only sweep. The poster preview inside it is
+        // a PNG from `/share/:id/:ratio`; waiting on `networkidle` is what lets
+        // that render land before the screenshot.
+        id: 'open-share-sheet',
+        description:
+          'Open the share sheet from the event hero to capture the poster preview and its destinations',
+        run: async (page: Page) => {
+          await page.getByRole('button', { name: /share this show/i }).click()
+          await page.waitForLoadState('networkidle')
+        },
+      },
+    ],
+  },
+  {
+    // The public read-only mirror (#72 PR-0) — the surface a pasted link
+    // actually lands on. Swept as `user` rather than `none`: it sits in
+    // `isPublicOnceLaunched`, so before launch an anonymous visitor is bounced
+    // to the invite gate and the sweep would screenshot that instead. The
+    // logged-out shape is walked separately with NEXT_PUBLIC_PUBLIC_BROWSE=true.
+    id: 'public-event-mirror',
+    path: '/e/7324584c-9104-4760-8e88-94cd232ba035',
+    tags: ['consumer'],
+    auth: 'user',
   },
   {
     id: 'venue-detail',

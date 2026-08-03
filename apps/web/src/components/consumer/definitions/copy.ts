@@ -1407,8 +1407,6 @@ export const CONSUMER_COPY = {
 
   // ── Shareable cards (#72) ───────────────────────────────────────
   share: {
-    // Sheet chrome.
-    eyebrow: 'Share',
     // Poster taglines. ⚠️ VERBATIM — these are the signed-off output of the
     // voice pass (#782) recorded in the handoff README's voice table. Do not
     // rewrite, re-punctuate, or sentence-case them. Read them through
@@ -1433,10 +1431,13 @@ export const CONSUMER_COPY = {
     // Poster shape. Only the Poster direction ships, so there is no direction
     // switcher — the shape picker is the whole of the sheet's configuration.
     ratioLabel: 'Shape',
+    // Labels, not keys — the handoff locks the `story`/`square`/`link` keys and
+    // their pixel dimensions, not what the buttons say. `link` reads as a
+    // destination under a "Shape" legend, so it is labelled by its shape.
     ratios: {
       story: 'Story',
       square: 'Square',
-      link: 'Link',
+      link: 'Wide',
     },
     // Share sheet destinations.
     //
@@ -1454,6 +1455,11 @@ export const CONSUMER_COPY = {
     // Transient states on the destination buttons.
     copyLinkDone: 'Link copied',
     shareFailed: "Couldn't share — try saving the image instead",
+    // Preview states. The poster is rendered on demand and measured at
+    // 2.7–6.8s on staging, so the preview is a blank box for long enough that
+    // it has to say what it is doing.
+    previewLoading: 'Drawing your poster…',
+    previewFailed: "Couldn't draw the poster. The link below still works.",
     // Alt text for the rendered poster. {artist}, {venue}, {date} and {state}
     // are substituted at render time.
     altTemplate:

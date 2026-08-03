@@ -56,6 +56,15 @@ export const ShareSheet = ({
 }: ShareSheetProps) => {
   const [ratio, setRatio] = useState<ShareRatio>(DEFAULT_SHARE_RATIO)
   const [status, setStatus] = useState<string | null>(null)
+  // The poster is rendered on demand and takes seconds, so the preview needs a
+  // real pending state. Tracked as *which URL* settled rather than a tri-state
+  // flag: switching shape then derives `loading` in the same render that
+  // changes the src, so the previous shape's poster is never shown as if it
+  // were the new one.
+  const [settled, setSettled] = useState<{
+    url: string
+    outcome: 'ready' | 'failed'
+  } | null>(null)
 
   // Stale "Link copied" hanging around on a reopened sheet reads as if the
   // action fired again.
@@ -95,6 +104,7 @@ export const ShareSheet = ({
     theme,
     by: handle,
   })
+  const preview = settled?.url === imageUrl ? settled.outcome : 'loading'
   const origin = typeof window === 'undefined' ? '' : window.location.origin
   const linkUrl = publicEventUrl(event.id, origin)
   const title = `${event.artist} · ${event.venue}`
@@ -134,21 +144,37 @@ export const ShareSheet = ({
           style={{ background: 'var(--border-strong)' }}
         />
 
-        <p className="text-[9px] font-medium uppercase tracking-[0.1em] text-fg-subtle">
-          {COPY.eyebrow}
-        </p>
-
         {/* Live preview — the same route the destinations hand out, so what is
             previewed is byte-for-byte what gets shared. */}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- next/image
               would optimise a PNG that is already the render target, and the
               route is not in the images allowlist. */}
           <img
+            key={imageUrl}
             src={imageUrl}
             alt={altText}
-            className="h-auto w-40 rounded-lg border border-border"
+            onLoad={() => setSettled({ url: imageUrl, outcome: 'ready' })}
+            onError={() => setSettled({ url: imageUrl, outcome: 'failed' })}
+            className={`h-auto w-40 rounded-lg border border-border ${
+              preview === 'ready' ? '' : 'hidden'
+            }`}
           />
+          {preview !== 'ready' && (
+            <div
+              role="status"
+              // Reserves the tallest shape's footprint so the destinations
+              // below don't jump when the poster lands.
+              className="flex h-56 w-40 items-center justify-center rounded-lg border border-border px-3 text-center text-xs text-fg-muted"
+              style={
+                preview === 'loading'
+                  ? { background: 'var(--surface-2)' }
+                  : undefined
+              }
+            >
+              {preview === 'loading' ? COPY.previewLoading : COPY.previewFailed}
+            </div>
+          )}
         </div>
 
         <fieldset className="flex flex-col gap-2">
