@@ -643,8 +643,10 @@ Stateless props; internal `open` state (default `false`). Rendered by DowngradeF
 
 Data (hard-coded per #781 §6 matrix + R6 amendment):
 
-- `stays` (2): "Watching — your saved shows (Free, never purged)", "Supporter badge on your profile"
-- `off` (6): "Concert history — every show you've logged", "Calendar export — Apple + Google", "Following artists", "New-show alerts", "Price-drop alerts", "Spotify sync"
+- `stays` (4): "Watching (Free, never purged)", "Concert history: every show you've logged", "Calendar export: Apple + Google", "Supporter badge on your profile"
+- `off` (4): "Following artists", "New-show alerts", "Price-drop alerts", "Spotify sync"
+
+> Amended 2026-07-29: concert history and calendar export became Supporter unlocks, so they moved from `off` to `stays`. The R6 amendment moved Watching to Free for signed-in users. This block reflects the shipped `CHANGES_DISCLOSURE_COPY`.
 
 ### Container
 
@@ -744,7 +746,7 @@ Data (hard-coded per #781 §6 matrix + R6 amendment):
 | item font                  | Inter, system-ui, weight 500, size 12.5                                                                                                                                         | same          |
 | item color                 | var(--fg)                                                                                                                                                                       | var(--fg)     |
 | check SVG                  | width 12, height 12, viewBox 0 0 12 12, flex-shrink 0, margin-top 3; path d "M2 6 L5 9 L10 3", fill none, stroke var(--accent), stroke-width 1.8, linecap round, linejoin round | same          |
-| items                      | "Watching — your saved shows (Free, never purged)"; "Supporter badge on your profile"                                                                                           | same          |
+| items                      | "Watching (Free, never purged)"; "Concert history: every show you've logged"; "Calendar export: Apple + Google"; "Supporter badge on your profile"                              | same          |
 
 #### "Switches off" group
 
@@ -759,7 +761,7 @@ Data (hard-coded per #781 §6 matrix + R6 amendment):
 | item font                  | Inter, system-ui, weight 500, size 12.5                                                                                                                                | same             |
 | item color                 | var(--fg-muted)                                                                                                                                                        | var(--fg-muted)  |
 | × SVG                      | width 12, height 12, viewBox 0 0 12 12, flex-shrink 0, margin-top 3; path d "M3 3 L9 9 M9 3 L3 9", fill none, stroke var(--fg-subtle), stroke-width 1.6, linecap round | same             |
-| items                      | "Concert history — every show you've logged"; "Calendar export — Apple + Google"; "Following artists"; "New-show alerts"; "Price-drop alerts"; "Spotify sync"          | same             |
+| items                      | "Following artists"; "New-show alerts"; "Price-drop alerts"; "Spotify sync"                                                                                            | same             |
 
 #### Restore note
 
@@ -824,7 +826,7 @@ UpgradeFlow:
 
 ChangesDisclosure:
 
-- "Your history, follows, and alerts stay safe for 90 days."
-- "Stays on" → "Watching — your saved shows (Free, never purged)" / "Supporter badge on your profile"
-- "Switches off · safe 90 days" → "Concert history — every show you've logged" / "Calendar export — Apple + Google" / "Following artists" / "New-show alerts" / "Price-drop alerts" / "Spotify sync"
+- "Your follows and alerts stay safe for 90 days."
+- "Stays on" → "Watching (Free, never purged)" / "Concert history: every show you've logged" / "Calendar export: Apple + Google" / "Supporter badge on your profile"
+- "Switches off · safe 90 days" → "Following artists" / "New-show alerts" / "Price-drop alerts" / "Spotify sync"
 - "Re-upgrade within 90 days and it all comes back exactly where you left it. After that it's cleared."

@@ -15,28 +15,28 @@ export const TIER_PICKER_COPY = {
         eyebrow: 'Watching · free with an account',
         title: "Keep an eye on the ones you can't miss.",
         sub:
-          'Watching is free — it just needs an account to save to. Start on Free; ' +
+          'Watching is free. It just needs an account to save to. Start on Free; ' +
           'pick a lane later if you ever want to chip in.',
       },
       'logged-out-going': {
         eyebrow: 'Concert History · free with an account',
         title: 'Keep a record of every show you go to.',
         sub:
-          "Saying you're going is free — it just needs an account to save to. " +
+          "Saying you're going is free. It just needs an account to save to. " +
           'Start on Free; pick a lane later if you ever want to chip in.',
       },
       'logged-out-follow': {
         eyebrow: 'Following · free with an account',
         title: 'Never miss the next one they book.',
         sub:
-          'Following is free — it just needs an account to save to. ' +
+          'Following is free. It just needs an account to save to. ' +
           'Start on Free; pick a lane later if you ever want to chip in.',
       },
       'logged-out-price': {
         eyebrow: 'Submitted prices · free with an account',
         title: 'Tell everyone what it actually cost.',
         sub:
-          'Submitting a price is free — it just needs an account to attach it to. ' +
+          'Submitting a price is free. It just needs an account to attach it to. ' +
           'Start on Free; pick a lane later if you ever want to chip in.',
       },
     },
@@ -61,7 +61,7 @@ export const TIER_PICKER_COPY = {
     // card. Founder keeps a line because its locked-$3 stamp says something the
     // generic promise does not.
     pricePromise: {
-      founder: '$3 is $3. New folks may pay double someday — never you.',
+      founder: '$3 is $3. New folks may pay double someday. Never you.',
     },
     founderPreLaunch: 'Opens at public launch',
   },
@@ -99,7 +99,7 @@ export const TIER_PICKER_COPY = {
       rationale: 'No backend cost to scale, no reason to charge.',
       features: [
         'Browse, search, filter every show',
-        'Watching — keep an eye on any show',
+        'Watching: keep an eye on any show',
         'See community-submitted prices',
         'Submit prices yourself',
       ],
@@ -109,8 +109,8 @@ export const TIER_PICKER_COPY = {
       rationale: "Existing infrastructure. You're just chipping in.",
       features: [
         'Everything in Free',
-        'Concert history — shows you attended',
-        'Calendar export — Apple + Google',
+        'Concert history: shows you attended',
+        'Calendar export: Apple + Google',
         'Supporter badge on your profile',
       ],
       monoNote: 'Plus the warm, smug glow of keeping us alive.',
@@ -122,9 +122,9 @@ export const TIER_PICKER_COPY = {
       features: [
         'Everything in Supporter',
         'Follow the artists you love',
-        'New-show alerts — email + push',
+        'New-show alerts: email + push',
         'Price-drop alerts',
-        'Spotify sync — your library, your shows',
+        'Spotify sync: your library, your shows',
       ],
       futureFeature: 'More coming',
     },
@@ -133,7 +133,7 @@ export const TIER_PICKER_COPY = {
       rationale: 'First 100 subscribers. Claimable at public launch.',
       features: [
         'Everything in Premium',
-        '$3/mo — never goes up, ever',
+        '$3/mo, never goes up, ever',
         'Founder badge (first 100 only)',
       ],
       futureFeature: 'More coming',
@@ -149,12 +149,12 @@ export const TIER_PICKER_COPY = {
     code: 'On us',
     beta: 'Beta',
     title: "You're already in.",
-    body: "Lifetime Premium — on us. No tier to pick, no card to add, nothing to manage. You showed up early; that's the whole price.",
-    signature: '—— Seriously. We owe you one.',
+    body: "Lifetime Premium, on us. No tier to pick, no card to add, nothing to manage. You showed up early; that's the whole price.",
+    signature: 'Seriously. We owe you one.',
     perksEyebrow: 'Everything Premium, switched on',
     perks: [
-      'Concert history — shows you attended',
-      'Calendar export — Apple + Google',
+      'Concert history: shows you attended',
+      'Calendar export: Apple + Google',
       'Follow artists + new-show alerts',
       'Price-drop alerts + Spotify sync',
     ],
@@ -178,7 +178,7 @@ export const TIER_PICKER_COPY = {
       privacyLink: 'Privacy',
       refundLink: 'Refund policy',
       autoRenew:
-        'Auto-renews monthly. Cancel anytime — keeps working till the period ends.',
+        'Auto-renews monthly. Cancel anytime; it keeps working till the period ends.',
       // Conditional on server-resolved SCA region (EEA + UK, spec §1.7).
       scaNotice: 'Your bank may ask to confirm this payment.',
     },
@@ -199,42 +199,42 @@ export const TIER_PICKER_COPY = {
   failure: {
     railEyebrow: 'Payment · declined',
     closeLabel: 'Close and return to plans',
-    cardKeptNote: "Card on file kept — we'll reuse it on retry",
+    cardKeptNote: "Card on file kept. We'll reuse it on retry",
     secondary: 'Use a different card',
     categories: {
       insufficient_funds: {
         eyebrow: 'CARD DECLINED',
         code: '01',
         headline: 'Your bank said no.',
-        body: 'It came back as insufficient funds — nothing was charged. Try again, or drop in a different card.',
+        body: 'It came back as insufficient funds. Nothing was charged. Try again, or drop in a different card.',
         primary: 'Try again',
       },
       expired_or_incorrect_card: {
         eyebrow: 'CARD DECLINED',
         code: '02',
         headline: "That card won't go through.",
-        body: "The number, expiry, or security code didn't check out — or the card's expired. Give it another look. Nothing was charged.",
+        body: "The number, expiry, or security code didn't check out, or the card's expired. Give it another look. Nothing was charged.",
         primary: 'Try again',
       },
       issuer_declined: {
         eyebrow: 'CARD DECLINED',
         code: '03',
         headline: 'Your bank declined it.',
-        body: "They don't tell us why — banks keep that to themselves. A different card usually does the trick. Nothing was charged.",
+        body: "They don't tell us why; banks keep that to themselves. A different card usually does the trick. Nothing was charged.",
         primary: 'Try a different card',
       },
       fraud_block: {
         eyebrow: 'CARD FLAGGED',
         code: '04',
         headline: 'Your card got flagged for review.',
-        body: 'Your bank put a hold on this one — it happens, often for no real reason. Nothing was charged.',
+        body: 'Your bank put a hold on this one. It happens, often for no real reason. Nothing was charged.',
         primary: 'Try a different card',
         note: "It's worth a quick call to your bank, too.",
       },
       network_timeout: {
         eyebrow: 'CONNECTION HICCUP',
         code: '05',
-        headline: "That didn't go through — but it's not your card.",
+        headline: "That didn't go through, but it's not your card.",
         body: "Something dropped between us and the payment network. Your card's fine and nothing was charged.",
         primary: 'Try again',
         note: 'If it keeps happening, give it a minute and try again.',
@@ -250,14 +250,14 @@ export const TIER_PICKER_COPY = {
     frameTopRight: "your bank's window",
     waiting: 'Waiting for your bank…',
     frameBottom: 'Stripe renders this · Concert Crawl never sees it',
-    footerNote: "Don't close this window — it'll finish on its own",
+    footerNote: "Don't close this window. It'll finish on its own.",
     cancel: 'Cancel payment',
     kinds: {
       '3ds': {
         eyebrow: 'SECURE CHECK · 3DS',
         code: '3DS',
         headline: 'One quick step from your bank.',
-        body: "Your bank wants to confirm it's really you. It happens in their secure window below — we never see any of it.",
+        body: "Your bank wants to confirm it's really you. It happens in their secure window below; we never see any of it.",
       },
       sca: {
         eyebrow: 'SECURE CHECK · SCA',
@@ -275,7 +275,7 @@ export const TIER_PICKER_COPY = {
     seatNumber: (seat: number) => `#${seat}`,
     seatTotal: (total: number) => `of ${total}`,
     headline: 'Founder. Locked in.',
-    body: "You got in before the rest. $3 a month for as long as you're here — even when everyone else is paying double.",
+    body: "You got in before the rest. $3 a month for as long as you're here, even when everyone else is paying double.",
     priceStamp: '$3',
     priceStampUnit: '/mo',
     priceStampEyebrow: 'Locked forever',

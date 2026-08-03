@@ -32,7 +32,7 @@ describe('historyLine', () => {
 
   it('names the single venue', () => {
     expect(historyLine({ count: 1, venues: ['Mission Ballroom'] })).toBe(
-      `We've caught them once — Mission Ballroom. That's everything since ${CRAWL_SINCE}, which is as far back as our map goes.`,
+      `We've caught them once: Mission Ballroom. That's everything since ${CRAWL_SINCE}, which is as far back as our map goes.`,
     )
   })
 
@@ -43,7 +43,7 @@ describe('historyLine', () => {
         venues: ['Larimer Lounge', 'Globe Hall', 'the Bluebird'],
       }),
     ).toBe(
-      `4 shows on our map — Larimer Lounge, Globe Hall & the Bluebird. That's since ${CRAWL_SINCE}; anything earlier they played, we missed.`,
+      `4 shows on our map: Larimer Lounge, Globe Hall & the Bluebird. That's since ${CRAWL_SINCE}; anything earlier they played, we missed.`,
     )
   })
 

@@ -27,7 +27,7 @@ export const SPOTIFY_COPY = {
   },
   oauthHandoff: {
     eyebrow: 'HANDING OFF TO SPOTIFY',
-    title: "You'll log in on Spotify's page — not ours.",
+    title: "You'll log in on Spotify's page, not ours.",
     body: "We ask Spotify one question: which artists do you love? Here's exactly what that does and doesn't mean.",
     continueCta: 'Continue to Spotify',
     cancelCta: 'Cancel',
@@ -62,7 +62,7 @@ export const SPOTIFY_COPY = {
     eyebrow: 'SPOTIFY · LINKED',
     title: 'Got it. We know your taste now.',
     // Rendered with bold counts injected around the numbers.
-    bodyBeforeArtists: "Here's what you told Spotify you love — ",
+    bodyBeforeArtists: "Here's what you told Spotify you love: ",
     bodyArtistsSuffix: ' artists',
     bodyBetween: ', and ',
     bodyAfterDenver: ' of them play Denver.',
@@ -119,19 +119,19 @@ export const SPOTIFY_COPY = {
     pushDenied:
       "Notifications are blocked for us in this browser. Allow them in your browser's site settings, then flip this on.",
     pushPromptDismissed:
-      'No worries — flip this on whenever you change your mind and allow notifications.',
+      'No worries. Flip this on whenever you change your mind and allow notifications.',
     pushUnsupported: "This browser can't do push notifications.",
     pushIosInstall:
-      'On iPhone, push needs the app on your Home Screen first — Share → Add to Home Screen, then flip this on.',
-    pushError: "Couldn't update push alerts — give it another try in a second.",
+      'On iPhone, push needs the app on your Home Screen first: Share → Add to Home Screen, then flip this on.',
+    pushError: "Couldn't update push alerts. Give it another try in a second.",
     refreshCta: 'Refresh my taste',
     refreshingCta: 'Syncing…',
     disconnectCta: 'Disconnect',
     footerIdle:
-      'Refresh pulls your latest top & followed artists — we also refresh quietly on our own about once a week.',
+      'Refresh pulls your latest top & followed artists; we also refresh quietly on our own about once a week.',
     footerRefreshing:
       'Checking Spotify for anything new since your last sync. Takes a few seconds.',
-    rateLimited: 'Taste was refreshed recently — try again in a few minutes.',
+    rateLimited: 'Taste was refreshed recently. Try again in a few minutes.',
     autoWatchAria: 'Auto-watch matching shows',
   },
   disconnectConfirm: {
@@ -140,7 +140,7 @@ export const SPOTIFY_COPY = {
     bullets: [
       {
         head: 'We drop the connection.',
-        sub: 'Your Spotify token is deleted — we forget how to reach it.',
+        sub: 'Your Spotify token is deleted, so we forget how to reach it.',
       },
       {
         head: 'Taste highlights switch off.',
@@ -157,7 +157,7 @@ export const SPOTIFY_COPY = {
   },
   emptyDenverMatch: {
     eyebrow: (count: number) => `${count} artists · 0 in Denver`,
-    title: "We got your taste. Denver didn't — yet.",
+    title: "We got your taste. Denver didn't yet.",
     body: (count: number) =>
       `None of your ${count} artists have a Denver date on the books right now. The second one does, it jumps to the top of your list.`,
     primaryCta: 'Watch for my artists',
@@ -167,7 +167,7 @@ export const SPOTIFY_COPY = {
   failConnectDown: {
     eyebrow: 'spotify · no answer',
     title: "Spotify's not picking up.",
-    body: "Nothing you did — their side just isn't answering right now. Nothing was linked, so there's nothing to undo.",
+    body: "Nothing you did. Their side just isn't answering right now. Nothing was linked, so there's nothing to undo.",
     primaryCta: 'Try again',
     secondaryCta: 'Maybe later',
     ariaLabel: 'Spotify connection failed',
@@ -190,13 +190,13 @@ export const SPOTIFY_COPY = {
   failExternalRevoke: {
     eyebrow: "link · cut on spotify's side",
     title: 'You unlinked us over on Spotify.',
-    body: "Totally fair — and it worked. We've cleared the connection here too. Want back in? It's one tap.",
+    body: "Totally fair, and it worked. We've cleared the connection here too. Want back in? It's one tap.",
     primaryCta: 'Reconnect Spotify',
     secondaryCta: 'Leave it unlinked',
   },
   revokeBanner: {
     token: {
-      head: 'Sync paused — link expired',
+      head: 'Sync paused: link expired',
       sub: 'Reconnect to spot new matches again.',
     },
     revoke: {
@@ -248,7 +248,7 @@ export const SPOTIFY_COPY = {
       bodyBeforeBold:
         'Filtering Denver down to just the artists you follow is a paid perk. Connecting Spotify and spotting the odd ',
       bodyBold: 'Following',
-      bodyAfterBold: ' tag stays free — this is the power tool.',
+      bodyAfterBold: ' tag stays free. This is the power tool.',
       bullets: [
         {
           head: 'Following',
@@ -289,7 +289,7 @@ export const SPOTIFY_COPY = {
     empty: {
       eyebrow: 'QUIET MONTH',
       title: 'Your artists are lying low.',
-      body: 'Nobody from your taste has a Denver date this month. We refresh picks weekly — or dig through everything yourself.',
+      body: 'Nobody from your taste has a Denver date this month. We refresh picks weekly, or dig through everything yourself.',
       cta: 'Browse all shows',
     },
     failure: {
@@ -316,7 +316,7 @@ export const SPOTIFY_COPY = {
   firstWatchNudge: {
     eyebrow: 'NICE — FIRST ONE SAVED',
     title: 'Want the rest picked for your taste?',
-    body: "Link Spotify and we'll surface shows from the artists you already play — no more scrolling past them.",
+    body: "Link Spotify and we'll surface shows from the artists you already play. No more scrolling past them.",
     primaryCta: 'Connect Spotify',
     secondaryCta: 'Not now',
     dismissAria: 'Dismiss',

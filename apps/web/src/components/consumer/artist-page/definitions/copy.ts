@@ -45,16 +45,16 @@ export const ARTIST_COPY = {
   // DELTA vs the handoff: new. The visible label stays "Follow" for a
   // signed-out visitor (above), so the accessible name is where we tell the
   // truth about what activation actually does.
-  followSignedOutAria: (name: string) => `Follow ${name} — sign in to follow`,
+  followSignedOutAria: (name: string) => `Follow ${name}: sign in to follow`,
 
   // History line — prose. `since` is DATA (crawl start), never hardcoded here,
   // so a licensed backfill changes the number without touching this string.
   historyNone: (since: string) =>
     `First time we've caught them. Our crawl only goes back to ${since}, so that's not saying much.`,
   historyOne: (venue: string, since: string) =>
-    `We've caught them once — ${venue}. That's everything since ${since}, which is as far back as our map goes.`,
+    `We've caught them once: ${venue}. That's everything since ${since}, which is as far back as our map goes.`,
   historyMany: (count: number, venues: string, since: string) =>
-    `${count} shows on our map — ${venues}. That's since ${since}; anything earlier they played, we missed.`,
+    `${count} shows on our map: ${venues}. That's since ${since}; anything earlier they played, we missed.`,
 
   // Past shows — crawl data only. #1170 blocks deep history and setlists; this
   // is the modest version, and it says out loud where it stops.
@@ -76,10 +76,10 @@ export const ARTIST_COPY = {
   playerNoneRail: 'No player',
   playerNone: "We don't have them on Spotify.",
   playerNoneSub:
-    "Doesn't mean much — plenty of good bands aren't. Their shows are below.",
+    "Doesn't mean much. Plenty of good bands aren't. Their shows are below.",
   // The same fact minus the pointer, for when the player is the last block on
   // the page and there is nothing below it to point at.
-  playerNoneSubLast: "Doesn't mean much — plenty of good bands aren't.",
+  playerNoneSubLast: "Doesn't mean much. Plenty of good bands aren't.",
   // DELTA vs the handoff: new. The player is a <section>; an unlabelled region
   // is a landmark a screen reader can only announce as "region".
   playerAria: (name: string) => `Player for ${name}`,
@@ -96,9 +96,9 @@ export const ARTIST_COPY = {
   // Empty upcoming — first-class, the conversion moment (rendered by PR-F).
   emptyTitle: 'Nothing on the calendar.',
   emptyBody:
-    'No dates booked that we can see. Follow them and check back — this page is where the next one turns up.',
+    'No dates booked that we can see. Follow them and check back. This page is where the next one turns up.',
   emptyBodyFollowing:
-    "No dates booked that we can see. You're following, so check back — this page is where the next one turns up.",
+    "No dates booked that we can see. You're following, so check back. This page is where the next one turns up.",
 
   // Loading
   loadingArtist: 'Finding them…',

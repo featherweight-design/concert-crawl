@@ -139,9 +139,9 @@ export const CHANGES_DISCLOSURE_COPY = {
   // Supporter unlocks; Watching stays because the R6 amendment moved it to Free
   // for signed-in users.
   stays: [
-    'Watching — your saved shows (Free, never purged)',
-    "Concert history — every show you've logged",
-    'Calendar export — Apple + Google',
+    'Watching (Free, never purged)',
+    "Concert history: every show you've logged",
+    'Calendar export: Apple + Google',
     'Supporter badge on your profile',
   ],
   offLabel: 'Switches off · safe 90 days',
