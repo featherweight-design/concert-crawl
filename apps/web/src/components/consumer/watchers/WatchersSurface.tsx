@@ -1,8 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useId } from 'react'
 import type { EventWatchersResponse } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { useIsMobileViewport } from '@/lib/hooks/useIsMobileViewport'
+import {
+  CCOverlay,
+  CCOverlayHost,
+  useOverlayTrigger,
+} from '@/components/ui/cc-overlay'
 import { NAMED_CAP, watchersToParts } from '@/lib/watchers'
 import { WatcherAvatarStack } from './WatcherAvatarStack'
 import { WatchersRoster } from './WatchersRoster'
@@ -30,7 +36,13 @@ export const WatchersSurface = ({
   loading = false,
   expandable = true,
 }: WatchersSurfaceProps) => {
-  const [expanded, setExpanded] = useState(false)
+  const isMobile = useIsMobileViewport()
+  // Only the click transitions are wired up. The hover-intent handlers exist
+  // for explainer tips, where a panel that opens under the pointer is a
+  // convenience; a roster is content you asked for, and one that appeared on
+  // mouse-through would be an accident every time.
+  const trigger = useOverlayTrigger({ isMobile })
+  const panelId = useId()
 
   if (loading) return <WatchersSkeleton />
   if (!data || data.total === 0) return null
@@ -70,25 +82,58 @@ export const WatchersSurface = ({
           )}
         </span>
         {canExpand && (
-          <button
-            type="button"
-            aria-expanded={expanded}
-            onClick={() => setExpanded((open) => !open)}
-            // 44px tap target on mobile, tightened to the 28px row on desktop.
-            className="inline-flex min-h-[44px] items-center rounded-[3px] text-xs font-bold tracking-[-0.005em] text-signal hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-[28px]"
-            style={{ outlineColor: 'var(--focus)' }}
-          >
-            {expanded ? copy.rosterHide : copy.rosterToggle(total)}
-          </button>
+          <span className="relative inline-flex">
+            <button
+              ref={trigger.triggerRef}
+              type="button"
+              aria-expanded={trigger.open}
+              aria-haspopup="dialog"
+              aria-controls={trigger.open ? panelId : undefined}
+              onClick={trigger.toggle}
+              // 44px tap target on mobile, tightened to the 28px row on desktop.
+              className="inline-flex min-h-[44px] items-center rounded-[3px] text-xs font-bold tracking-[-0.005em] text-signal hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:min-h-[28px]"
+              style={{ outlineColor: 'var(--focus)' }}
+            >
+              {trigger.open ? copy.rosterHide : copy.rosterToggle(total)}
+            </button>
+            {trigger.open &&
+              (isMobile ? (
+                <CCOverlayHost>
+                  <CCOverlay
+                    id={panelId}
+                    mode="sheet"
+                    title={copy.rosterTitle}
+                    onClose={trigger.close}
+                  >
+                    <WatchersRoster
+                      named={data.named}
+                      anonymousCount={anonymousCount}
+                    />
+                  </CCOverlay>
+                </CCOverlayHost>
+              ) : (
+                <CCOverlay
+                  id={panelId}
+                  mode="popover"
+                  title={copy.rosterTitle}
+                  placement="top"
+                  align="end"
+                  width={260}
+                  onClose={trigger.close}
+                >
+                  <WatchersRoster
+                    named={data.named}
+                    anonymousCount={anonymousCount}
+                  />
+                </CCOverlay>
+              ))}
+          </span>
         )}
       </div>
       {anonOnly && (
         <p className="mt-1 font-mono text-[9.5px] font-semibold tracking-[0.04em] text-fg-subtle">
           {copy.countOnlyHonest}
         </p>
-      )}
-      {expanded && (
-        <WatchersRoster named={data.named} anonymousCount={anonymousCount} />
       )}
     </div>
   )

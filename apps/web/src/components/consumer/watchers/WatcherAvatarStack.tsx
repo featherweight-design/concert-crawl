@@ -68,6 +68,7 @@ export const WatcherAvatarStack = ({
       {overflow > 0 && (
         <div
           aria-hidden
+          data-watcher-overflow
           style={{
             marginLeft: discCount === 0 ? 0 : -overlap,
             zIndex: 0,

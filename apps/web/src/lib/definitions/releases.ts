@@ -54,6 +54,10 @@ export const RELEASES: Release[] = [
         kind: 'changed',
         text: 'Watching a show from its page is now one wide control that tells you what watching gets you, and whoever else is watching sits right underneath it instead of off on its own.',
       },
+      {
+        kind: 'changed',
+        text: 'The full list of who else is watching now opens over the page instead of pushing everything below it down.',
+      },
     ],
   },
   {

@@ -11,6 +11,7 @@ import type {
   WatchingShow,
 } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { stubMatchMedia } from '@/test-utils/match-media'
 
 const authState = vi.fn(() => ({ isSignedIn: true }))
 vi.mock('@clerk/nextjs', () => ({
@@ -66,6 +67,8 @@ const watchedShow = (eventId: string): WatchingShow => ({
 const crawl = () => screen.queryByRole('group')
 
 beforeEach(() => {
+  // The roster expander reads the viewport to pick a sheet or a popover.
+  stubMatchMedia(false)
   authState.mockReturnValue({ isSignedIn: true })
   watchingData.mockReturnValue([])
   watchersQuery.mockReturnValue({ data: undefined, isPending: false })
