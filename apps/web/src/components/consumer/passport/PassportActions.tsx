@@ -54,7 +54,7 @@ export const PassportActions = ({
     setObjectUrl(null)
     setFailed(false)
 
-    const prepare = async () => {
+    void (async () => {
       try {
         const response = await fetch(imageUrl)
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
@@ -68,8 +68,7 @@ export const PassportActions = ({
         console.error('[passport] card fetch failed', { err })
         setFailed(true)
       }
-    }
-    void prepare()
+    })()
 
     return () => {
       cancelled = true
