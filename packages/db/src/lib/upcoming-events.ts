@@ -32,8 +32,9 @@ type EventStatus = (typeof SCHEDULED_STATUSES)[number]
 interface UpcomingEventsOptions {
   /**
    * Inclusive lower bound on `events.date`, as a `YYYY-MM-DD` string or a SQL
-   * expression. Callers own the timezone: consumer routes bound on UTC, the
-   * crawler on Denver local.
+   * expression. Callers own the timezone, and they do not agree: venue routes
+   * bound on the venue's own IANA zone, artist routes on Mountain Time (an
+   * artist's shows span venues), and the crawler on Denver local.
    */
   from: string | SQL
   /**
