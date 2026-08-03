@@ -5,6 +5,7 @@ import { BottomSheet } from '@/components/pwa/BottomSheet'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import {
   DEFAULT_SHARE_RATIO,
+  SC_RATIOS,
   SHARE_RATIOS,
   type ShareRatio,
 } from '@/components/consumer/share/definitions/ratios'
@@ -152,35 +153,48 @@ export const ShareSheet = ({
 
         {/* Live preview — the same route the destinations hand out, so what is
             previewed is byte-for-byte what gets shared. */}
-        <div className="flex flex-col items-center gap-2">
-          {/* eslint-disable-next-line @next/next/no-img-element -- next/image
-              would optimise a PNG that is already the render target, and the
-              route is not in the images allowlist. */}
-          <img
-            key={imageUrl}
-            src={imageUrl}
-            alt={altText}
-            onLoad={() => setSettled({ url: imageUrl, outcome: 'ready' })}
-            onError={() => setSettled({ url: imageUrl, outcome: 'failed' })}
-            className={`h-auto w-40 rounded-lg border border-border ${
-              preview === 'ready' ? '' : 'hidden'
-            }`}
-          />
-          {preview !== 'ready' && (
-            <div
-              role="status"
-              // Reserves the tallest shape's footprint so the destinations
-              // below don't jump when the poster lands.
-              className="flex h-56 w-40 items-center justify-center rounded-lg border border-border px-3 text-center text-xs text-fg-muted"
-              style={
-                preview === 'loading'
-                  ? { background: 'var(--surface-2)' }
-                  : undefined
-              }
-            >
-              {preview === 'loading' ? COPY.previewLoading : COPY.previewFailed}
-            </div>
-          )}
+        <div className="flex justify-center">
+          {/* The frame carries the selected shape's own aspect, so the
+              placeholder occupies exactly the footprint the poster will, and
+              the destinations below never jump when it lands. A single
+              tallest-shape box would leave `link` (1200×628) floating in dead
+              space; deriving it per ratio costs nothing and is honest about
+              what the shape picker is picking. */}
+          <div
+            className="relative w-40 overflow-hidden rounded-lg border border-border"
+            style={{
+              aspectRatio: `${SC_RATIOS[ratio].width} / ${SC_RATIOS[ratio].height}`,
+            }}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- next/image
+                would optimise a PNG that is already the render target, and the
+                route is not in the images allowlist. */}
+            <img
+              key={imageUrl}
+              src={imageUrl}
+              alt={altText}
+              onLoad={() => setSettled({ url: imageUrl, outcome: 'ready' })}
+              onError={() => setSettled({ url: imageUrl, outcome: 'failed' })}
+              className={`h-full w-full object-contain ${
+                preview === 'ready' ? '' : 'hidden'
+              }`}
+            />
+            {preview !== 'ready' && (
+              <div
+                role="status"
+                className="absolute inset-0 flex items-center justify-center px-3 text-center text-xs text-fg-muted"
+                style={
+                  preview === 'loading'
+                    ? { background: 'var(--surface-2)' }
+                    : undefined
+                }
+              >
+                {preview === 'loading'
+                  ? COPY.previewLoading
+                  : COPY.previewFailed}
+              </div>
+            )}
+          </div>
         </div>
 
         <fieldset className="flex flex-col gap-2">
