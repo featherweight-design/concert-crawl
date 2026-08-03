@@ -38,6 +38,7 @@ import {
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 import { ShareButton } from './ShareButton'
+import { PublicEventView } from './PublicEventView'
 
 import {
   InfoRow,
@@ -118,7 +119,8 @@ export const PublicEventDetail = ({
             exactly the person most likely to pass it on, and the poster is Free
             for everyone including the logged out. Anonymous, so it renders no
             signature line. */}
-        <ShareButton event={event} />
+        <ShareButton event={event} authed={false} />
+        <PublicEventView eventId={event.id} />
       </div>
 
       <div className="relative -mt-5 sm:-mt-[60px] sm:z-[1] flex-1">

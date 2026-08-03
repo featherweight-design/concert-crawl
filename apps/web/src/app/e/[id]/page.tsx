@@ -5,6 +5,7 @@
 // render for a visitor with no session. Middleware makes it reachable via
 // `isPublicOnceLaunched`, i.e. it is invite-gated until the public launch and
 // open after — the same terms as /events and /artists.
+import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import type {
@@ -15,6 +16,11 @@ import type {
 
 import { publicApiClient } from '@/lib/api'
 import { PublicEventDetail } from '@/components/consumer/event-detail'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { absoluteUrl } from '@/lib/share/site-origin'
+import { toPosterEvent } from '@/lib/share/poster-event'
+import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios'
+import { posterImageUrl } from '@/lib/share/destinations'
 
 interface PublicEventPageProps {
   params: Promise<{ id: string }>
@@ -54,6 +60,70 @@ const fetchRelated = async (id: string): Promise<EventWithVenue[]> => {
   } catch (err) {
     console.error('[public event] related fetch failed', { id, err })
     return []
+  }
+}
+
+const fill = (template: string, values: Record<string, string>): string =>
+  Object.entries(values).reduce(
+    (text, [key, value]) => text.replaceAll(`{${key}}`, value),
+    template,
+  )
+
+/**
+ * What a pasted poster link unfurls into.
+ *
+ * The card image is the same `link` render the share sheet hands out, so the
+ * unfurl and the saved image are the same artwork. Returning bare metadata for
+ * an id we can't resolve is deliberate: `generateMetadata` runs before the
+ * page, and 404-ing here would cost a second fetch to reach the same 404 the
+ * page already renders.
+ */
+export const generateMetadata = async ({
+  params,
+}: PublicEventPageProps): Promise<Metadata> => {
+  const { id } = await params
+  if (!isUuid(id)) return {}
+
+  const event = await fetchEvent(id)
+  if (event === null) return {}
+
+  const poster = toPosterEvent(event)
+  const values = {
+    artist: poster.artist,
+    venue: poster.venue,
+    city: poster.city,
+    date: poster.dateShort,
+  }
+  const { og } = CONSUMER_COPY.share
+  const title = fill(og.titleTemplate, values)
+  const description = fill(og.descriptionTemplate, values)
+  // Absolute, because a relative OG image is ignored by every crawler — they
+  // fetch it with no page context to resolve it against.
+  const image = absoluteUrl(posterImageUrl({ eventId: id, ratio: 'link' }))
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+      url: absoluteUrl(`/e/${id}`),
+      images: [
+        {
+          url: image,
+          width: SC_RATIOS.link.width,
+          height: SC_RATIOS.link.height,
+          alt: fill(og.imageAltTemplate, values),
+        },
+      ],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [image],
+    },
   }
 }
 

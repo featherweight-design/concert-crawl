@@ -74,6 +74,46 @@ export type MonetizationEvent = keyof MonetizationEventMap
 export type MonetizationEventProps<TEvent extends MonetizationEvent> =
   MonetizationEventMap[TEvent]
 
+/** Where a share sheet was opened from. One surface today; named so a second
+ * one is a new member rather than an untyped string. */
+export type ShareSurface = 'event-detail'
+
+/** The destinations the sheet actually offers (`lib/share/destinations.ts`). */
+export type ShareDestination = 'system' | 'save-image' | 'copy-link'
+
+// Poster sharing (#72). Kept in its own map rather than folded into
+// `MonetizationEventMap` because sharing is a Free-tier capability and does not
+// belong to the paid funnel — merging them would make "the monetization events"
+// a name that no longer describes its own contents.
+export interface ShareEventMap {
+  // `authed` distinguishes a share from a signed-in user from one taken on the
+  // public mirror; no userId is attached here — the emitter already identifies.
+  share_sheet_opened: {
+    eventId: string
+    surface: ShareSurface
+    authed: boolean
+  }
+  share_destination_selected: { eventId: string; destination: ShareDestination }
+  share_card_rendered: { ratio: string; theme: string; cacheHit: boolean }
+  // `referrer` is the referring host only, never the full URL — a full referrer
+  // can carry a query string belonging to somebody else's session.
+  public_event_viewed: { eventId: string; referrer: string | null }
+}
+
+export type ShareEvent = keyof ShareEventMap
+
+/**
+ * Every client-fireable event. The two maps stay separate above so each keeps a
+ * name that describes it; call-sites and the `track` signature want the union.
+ */
+export interface AnalyticsEventMap
+  extends MonetizationEventMap, ShareEventMap {}
+
+export type AnalyticsEvent = keyof AnalyticsEventMap
+
+export type AnalyticsEventProps<TEvent extends AnalyticsEvent> =
+  AnalyticsEventMap[TEvent]
+
 const CHECKOUT_TIERS: readonly CheckoutTier[] = [
   'supporter',
   'premium',

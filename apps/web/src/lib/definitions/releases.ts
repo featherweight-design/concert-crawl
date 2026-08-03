@@ -43,6 +43,10 @@ export const RELEASES: Release[] = [
         kind: 'added',
         text: "Hand it straight to Instagram or Messages through your phone's own share sheet, save the image to your camera roll, or just copy the link. Whoever you send it to lands on a page that works whether or not they have an account.",
       },
+      {
+        kind: 'added',
+        text: 'Paste that link anywhere — iMessage, Slack, a group chat, X — and it unfurls into the poster itself with the artist and the room named underneath. Nobody has to click a naked URL to find out what you sent them.',
+      },
     ],
   },
   {

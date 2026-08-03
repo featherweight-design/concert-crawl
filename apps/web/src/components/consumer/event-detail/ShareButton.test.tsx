@@ -32,7 +32,8 @@ const event: PosterSource = {
   priceStatus: 'live',
 }
 
-const mount = () => render(<ShareButton event={event} />)
+const mount = (authed = true) =>
+  render(<ShareButton event={event} authed={authed} />)
 
 describe('<ShareButton />', () => {
   it('is a labelled 44px trigger that advertises the dialog', () => {

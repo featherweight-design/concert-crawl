@@ -1,0 +1,49 @@
+'use client'
+
+import { useEffect, useRef } from 'react'
+import { track } from '@/lib/analytics'
+
+/**
+ * Records that a poster link actually landed somebody on the public mirror.
+ *
+ * Renders nothing — the mirror is a server component, and this is the one
+ * thing on it that has to happen in a browser. Without it the share funnel
+ * ends at "link copied" and never shows whether anyone opened it.
+ */
+export interface PublicEventViewProps {
+  eventId: string
+}
+
+/**
+ * The referring host, never the full referrer.
+ *
+ * A full referrer URL routinely carries a query string belonging to somebody
+ * else's session — a search, a signed link, a tracking token. The host alone
+ * answers the only question being asked (where do shares get opened) and
+ * carries none of that.
+ */
+const referrerHost = (): string | null => {
+  if (typeof document === 'undefined') return null
+  const raw = document.referrer
+  if (raw === '') return null
+  try {
+    return new URL(raw).host
+  } catch (err) {
+    console.error('analytics: unparseable referrer', err)
+    return null
+  }
+}
+
+export const PublicEventView = ({ eventId }: PublicEventViewProps) => {
+  // A view is one event per mount. Strict Mode runs effects twice in
+  // development, and without this guard every local page load would double-count.
+  const fired = useRef(false)
+
+  useEffect(() => {
+    if (fired.current) return
+    fired.current = true
+    track('public_event_viewed', { eventId, referrer: referrerHost() })
+  }, [eventId])
+
+  return null
+}

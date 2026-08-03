@@ -1464,6 +1464,17 @@ export const CONSUMER_COPY = {
     // are substituted at render time.
     altTemplate:
       'Concert Crawl poster for {artist} at {venue}, {date}. {state}.',
+    // What a link to the public mirror unfurls as in iMessage, Slack and on
+    // Twitter/X. {artist}, {venue}, {date} and {city} are substituted at
+    // request time. The image alt is deliberately terser than `altTemplate`:
+    // the unfurl already shows the title beside it, so repeating "Concert
+    // Crawl poster for" there says the same thing twice.
+    og: {
+      titleTemplate: '{artist} at {venue}',
+      descriptionTemplate:
+        '{date} in {city}. Details and prices on Concert Crawl.',
+      imageAltTemplate: '{artist} at {venue}, {date}',
+    },
   },
 } as const
 

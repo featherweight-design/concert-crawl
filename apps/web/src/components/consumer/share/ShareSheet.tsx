@@ -20,6 +20,8 @@ import {
 } from '@/lib/share/destinations'
 import type { PosterEvent } from '@/lib/share/poster-event'
 import { posterStateLabel } from '@/lib/share/taglines'
+import { track } from '@/lib/analytics'
+import { wasServedFromCache } from '@/lib/analytics/resource-cache'
 import { useTheme } from '@/theme/ThemeProvider'
 
 const COPY = CONSUMER_COPY.share
@@ -147,6 +149,10 @@ export const ShareSheet = ({
     .replace('{state}', posterStateLabel(event.state))
 
   const onSystemShare = useCallback(async () => {
+    track('share_destination_selected', {
+      eventId: event.id,
+      destination: 'system',
+    })
     const outcome = await systemShare(caps, {
       title,
       url: linkUrl,
@@ -161,9 +167,13 @@ export const ShareSheet = ({
   }, [caps, title, linkUrl, imageUrl, event])
 
   const onCopyLink = useCallback(async () => {
+    track('share_destination_selected', {
+      eventId: event.id,
+      destination: 'copy-link',
+    })
     const outcome = await copyLink(caps, linkUrl)
     setStatus(outcome === 'shared' ? COPY.copyLinkDone : COPY.shareFailed)
-  }, [caps, linkUrl])
+  }, [caps, linkUrl, event.id])
 
   return (
     <BottomSheet open={open} onClose={onClose} title={COPY.sheetTitle}>
@@ -198,7 +208,17 @@ export const ShareSheet = ({
               key={imageUrl}
               src={imageUrl}
               alt={altText}
-              onLoad={() => setPreview('ready')}
+              onLoad={() => {
+                setPreview('ready')
+                // Read the timing entry before React re-renders and the `key`
+                // has any chance to swap the img — the entry is keyed by url,
+                // so a later read could describe a different shape's fetch.
+                track('share_card_rendered', {
+                  ratio,
+                  theme,
+                  cacheHit: wasServedFromCache(imageUrl),
+                })
+              }}
               onError={() => setPreview('failed')}
               className={`h-full w-full object-contain ${
                 preview === 'ready' ? '' : 'hidden'
@@ -260,6 +280,12 @@ export const ShareSheet = ({
           <a
             href={imageUrl}
             download={posterFileName(event)}
+            onClick={() => {
+              track('share_destination_selected', {
+                eventId: event.id,
+                destination: 'save-image',
+              })
+            }}
             className="flex min-h-11 items-center justify-center rounded-full border border-border px-4 text-sm font-medium text-fg"
           >
             {COPY.destinations.saveImage}

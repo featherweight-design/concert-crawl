@@ -188,7 +188,7 @@ export default async function EventDetailPage({
         <BackChip top={56} fallbackHref="/events" />
         {/* Share sits opposite Back on the same optical line. Nothing else
             goes in the hero — Watching is the eye control below the title. */}
-        <ShareButton event={event} handle={shareHandle} />
+        <ShareButton event={event} handle={shareHandle} authed />
       </div>
 
       {/* Scrollable content — 880px max-width centered column, -60px hero overlap on desktop */}

@@ -10,10 +10,7 @@
 // gates every call, so track/identify are safe to call unconditionally.
 
 import posthog from 'posthog-js'
-import type {
-  MonetizationEvent,
-  MonetizationEventProps,
-} from '@concert-crawl/types'
+import type { AnalyticsEvent, AnalyticsEventProps } from '@concert-crawl/types'
 
 const DEFAULT_POSTHOG_HOST = 'https://us.i.posthog.com'
 
@@ -71,11 +68,12 @@ export const resetAnalyticsIdentity = (): void => {
 }
 
 // Typed client-side capture. `event` constrains `properties` to that event's
-// shape via the shared contract, so a wrong property name or type is a
-// compile error. No-ops (never throws) when analytics is disabled.
-export const track = <TEvent extends MonetizationEvent>(
+// shape via the shared contract — the monetization funnel plus share (#72) —
+// so a wrong property name or type is a compile error. No-ops (never throws)
+// when analytics is disabled.
+export const track = <TEvent extends AnalyticsEvent>(
   event: TEvent,
-  properties: MonetizationEventProps<TEvent>,
+  properties: AnalyticsEventProps<TEvent>,
 ): void => {
   if (!initialized) return
   try {

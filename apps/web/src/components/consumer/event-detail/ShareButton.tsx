@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { ShareSheet } from '@/components/consumer/share/ShareSheet'
 import { toPosterEvent, type PosterSource } from '@/lib/share/poster-event'
+import { track } from '@/lib/analytics'
 import { cn } from '@/lib/utils'
 
 /**
@@ -23,6 +24,13 @@ export interface ShareButtonProps {
   event: PosterSource
   /** The sharer's handle, or null for a logged-out or handle-less visitor. */
   handle?: string | null
+  /**
+   * Whether the visitor has a session. Required rather than defaulted: the
+   * public mirror and the protected page mount this component with the same
+   * props otherwise, and a default would silently record every public share as
+   * whichever value was guessed here.
+   */
+  authed: boolean
   /** Matches BackChip's `top` so the two chips align. */
   top?: number
   className?: string
@@ -31,6 +39,7 @@ export interface ShareButtonProps {
 export const ShareButton = ({
   event,
   handle = null,
+  authed,
   top = 56,
   className,
 }: ShareButtonProps) => {
@@ -41,7 +50,14 @@ export const ShareButton = ({
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setOpen(true)
+          track('share_sheet_opened', {
+            eventId: event.id,
+            surface: 'event-detail',
+            authed,
+          })
+        }}
         aria-label={CONSUMER_COPY.share.triggerLabel}
         aria-haspopup="dialog"
         aria-expanded={open}
