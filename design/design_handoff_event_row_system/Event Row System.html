@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Event row system</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  a { color: #4a3fd1; } a:hover { color: #2d24a8; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="spotify-shared.jsx"></script>
+<script type="text/babel" src="cc-tip.jsx"></script>
+<script type="text/babel" src="row-data.jsx"></script>
+<script type="text/babel" src="event-row.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEME_KEYS, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { EventRow, EventRowList, SURFACES, ROW_SPEC, RowMetaChip } = window;
+const { R_SHOWS, R_HERMANOS, R_HOLDFAST } = window;
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio, TweakToggle } = window;
+
+const NARROW = 320, PHONE = 390, DESK = 1000;
+
+function PhoneStage({ theme, width = PHONE, height = 700, hostId, pad = 14, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>
+        <div id={hostId} style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "var(--bg)", padding: `14px ${pad}px 0` }}>{children}</div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function BareStage({ theme, pad = 22, width, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad, display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
+        <div style={{ width: width || "100%" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+function Note({ children }) {
+  return <div style={{ fontFamily: "Inter, system-ui", fontSize: 12, color: "var(--fg-muted)", lineHeight: 1.5, textWrap: "pretty" }}>{children}</div>;
+}
+function Eyebrow({ children, tone = "var(--fg-subtle)" }) {
+  return <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: tone }}>{children}</div>;
+}
+
+// ── Today's two dialects, rebuilt for the comparison ────────────
+function TodayBrowseRow({ show }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 12, fontFamily: "Inter, system-ui", padding: "12px 0" }}>
+      <div style={{ width: 52, height: 52, borderRadius: 8, overflow: "hidden", flexShrink: 0 }}>
+        <IdentityArt name={show.artist} kind="artist" scale="tile" showInitials={false} grain={0.05}/>
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{show.artist}</div>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: "var(--fg-muted)" }}>{show.venue}</div>
+        <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, padding: "3px 7px", borderRadius: 5, background: "var(--surface-3)", border: "1px solid var(--border-strong)", color: "var(--fg)", fontWeight: 700 }}>Following</span>
+          {show.genres.map((g) => <span key={g} style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, padding: "3px 7px", borderRadius: 5, background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--fg-muted)" }}>{g}</span>)}
+        </div>
+      </div>
+      <span style={{ width: 36, height: 36, borderRadius: 9, border: "1px solid var(--accent)", color: "var(--accent)", display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M2.5 12C4.5 7.2 8 4.8 12 4.8s7.5 2.4 9.5 7.2c-2 4.8-5.5 7.2-9.5 7.2S4.5 16.8 2.5 12z" stroke="currentColor" strokeWidth="1.7"/><circle cx="12" cy="12" r="3.3" stroke="currentColor" strokeWidth="1.7"/></svg>
+      </span>
+      <span style={{ padding: "6px 11px", borderRadius: 8, background: "var(--surface-2)", border: "1px solid var(--border)", fontSize: 12.5, fontWeight: 700, color: "var(--fg)", whiteSpace: "nowrap" }}>from $68</span>
+    </div>
+  );
+}
+function TodayWatchingRow({ show }) {
+  return (
+    <div style={{ position: "relative", display: "grid", gridTemplateColumns: "56px 1fr auto", gap: 14, alignItems: "center", padding: "14px 44px 14px 14px", background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 12, fontFamily: "Inter, system-ui" }}>
+      <div style={{ width: 56, height: 56, borderRadius: 8, overflow: "hidden" }}>
+        <IdentityArt name={show.artist} kind="artist" scale="tile" showInitials={false} grain={0.05}/>
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 14.5, color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{show.artist}</div>
+        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11.5, color: "var(--fg-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{show.venue} · {show.dateLabel} · {show.showTime}</div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+        <span style={{ fontSize: 16, fontWeight: 800, color: "var(--success)" }}>$68</span>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--warning)", border: "1px solid color-mix(in oklch, var(--warning) 50%, transparent)", background: "color-mix(in oklch, var(--warning) 10%, transparent)", padding: "1px 5px", borderRadius: 2 }}>Stale · 9d ago</span>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--signal)", border: "1px solid var(--signal)", padding: "1px 6px", borderRadius: 2 }}>Community</span>
+      </div>
+      <span style={{ position: "absolute", top: 8, right: 8, width: 24, height: 24, color: "var(--fg-subtle)", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.55 }}>
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+      </span>
+    </div>
+  );
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "density": "cozy",
+  "surface": "browse"
+}/*EDITMODE-END*/;
+const THEME_OPTS = CC_THEME_KEYS.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+
+function Root() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  const th = t.theme, dn = t.density;
+  return (
+    <>
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Global">
+        <TweakSelect label="Theme" value={th} onChange={(x) => setT("theme", x)} options={THEME_OPTS}/>
+        <TweakRadio label="Density" value={dn} onChange={(x) => setT("density", x)}
+          options={[{ value: "compact", label: "compact" }, { value: "cozy", label: "cozy" }, { value: "roomy", label: "roomy" }]}/>
+      </TweakSection>
+      <TweakSection label="§2 surfaces">
+        <TweakRadio label="Surface" value={t.surface} onChange={(x) => setT("surface", x)}
+          options={[{ value: "browse", label: "browse" }, { value: "watching", label: "watching" }, { value: "venue", label: "venue" }]}/>
+      </TweakSection>
+    </TweaksPanel>
+
+    <DesignCanvas title="Event row system"
+      subtitle="One row, three surface configurations — replacing the Browse/Venue row and WatchingItem. Supersedes design_handoff_browse_row_right_column, which was solving the wrong layer (eye vs. chip, inside a row that was already overloaded).">
+
+      {/* ── 0 · The drift ─────────────────────────────────── */}
+      <DCSection id="drift" title="0 · The drift"
+        subtitle="Same show, same venue, two components. Neither knows the other exists — different price rendering, different truncation, different action, different chip vocabulary.">
+        <DCArtboard id="dr-today" label="today · Browse row vs Watching row" width={480} height={330}>
+          <BareStage theme={th} pad={20} width={420}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              <div><Eyebrow>Browse</Eyebrow><TodayBrowseRow show={R_HERMANOS}/></div>
+              <div><Eyebrow>Watching</Eyebrow><div style={{ marginTop: 8 }}><TodayWatchingRow show={R_HERMANOS}/></div></div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="dr-table" label="what diverged" width={480} height={330}>
+          <BareStage theme={th} pad={20} width={420}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {[["price", "from $68 pill, neutral", "$68 bare, success green"],
+                ["provenance", "—", "COMMUNITY outline pill"],
+                ["freshness", "—", "STALE · 9D AGO pill"],
+                ["action", "eye toggle", "remove ⨯"],
+                ["truncates", "artist first", "date first ⚠"],
+                ["supports", "own line", "—"]].map(([k, a, b], i) => (
+                <div key={k} style={{ display: "grid", gridTemplateColumns: "78px 1fr 1fr", gap: 10, padding: "9px 0", borderTop: i ? "1px solid var(--border)" : "none", alignItems: "start" }}>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)", paddingTop: 1 }}>{k}</span>
+                  <span style={{ fontSize: 11.5, color: "var(--fg-muted)", lineHeight: 1.4 }}>{a}</span>
+                  <span style={{ fontSize: 11.5, color: k === "truncates" ? "var(--warning)" : "var(--fg-muted)", lineHeight: 1.4 }}>{b}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: 12 }}>
+                <Note>Watching truncating the date away — “Mission Ballroom · Sat…” — is the sharpest symptom. The date is the most useful thing on the row.</Note>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 1 · The contract ──────────────────────────────── */}
+      <DCSection id="contract" title="1 · The contract"
+        subtitle="Not a visual redesign — a slot contract. Four lines max, two fixed right-hand slots, and a meta budget that features have to compete for.">
+        <DCArtboard id="ct-spec" label="slots" width={660} height={510}>
+          <BareStage theme={th} pad={24} width={600}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {ROW_SPEC.map(([k, v, note], i) => (
+                <div key={k} style={{ display: "grid", gridTemplateColumns: "62px 190px 1fr", gap: 12, padding: "10px 0", borderTop: i ? "1px solid var(--border)" : "none", alignItems: "start" }}>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)", paddingTop: 2 }}>{k}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--signal)", paddingTop: 1, lineHeight: 1.4 }}>{v}</span>
+                  <Note>{note}</Note>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="ct-rules" label="the two rules that do the work" width={440} height={470}>
+          <BareStage theme={th} pad={22} width={390}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <Eyebrow tone="var(--signal)">Rule 1 · context subtraction</Eyebrow>
+                <div style={{ marginTop: 6 }}><Note>The row never repeats what its surrounding context already says. Browse has date group headers, so the row drops the date. A Venue page is one venue, so the row drops the venue. Watching groups loosely, so it keeps both.</Note></div>
+                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 5 }}>
+                  {[["browse", "7:00 PM · Mission Ballroom"], ["watching", "Sat, Oct 3 · 7:00 PM · Mission Ballroom"], ["venue", "Sat, Oct 3 · 7:00 PM"]].map(([s2, v]) => (
+                    <div key={s2} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)", width: 62, flexShrink: 0 }}>{s2}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--fg-muted)" }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Eyebrow tone="var(--signal)">Rule 2 · the meta budget</Eyebrow>
+                <div style={{ marginTop: 6 }}><Note>Two chips, dropping to one when a support line is present — a row never exceeds four lines. Each surface declares a priority order. Nothing gets a slot by default; a new feature has to displace something or it doesn't ship to the row.</Note></div>
+                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {[["browse", "following → genre"], ["watching", "freshness → provenance"], ["venue", "following → genre"]].map(([s2, v]) => (
+                    <div key={s2} style={{ display: "flex", gap: 8, alignItems: "baseline" }}>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)", width: 62, flexShrink: 0 }}>{s2}</span>
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--fg-muted)" }}>{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="ct-chip" label="one chip grammar, four tones" width={440} height={230}>
+          <BareStage theme={th} pad={22} width={390}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <RowMetaChip tone="strong">Following</RowMetaChip>
+                <RowMetaChip tone="neutral">indie</RowMetaChip>
+                <RowMetaChip tone="warn">Stale · 9d ago</RowMetaChip>
+                <RowMetaChip tone="signal">Community</RowMetaChip>
+                <RowMetaChip tone="warn">Sold out</RowMetaChip>
+              </div>
+              <Note>Same size, same radius, same mono uppercase, same letter-spacing. Tone is the only variable. Today every feature invented its own pill shape — that's most of what reads as clutter.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 2 · Same show, three surfaces ─────────────────── */}
+      <DCSection id="same" title="2 · Same show, three surfaces"
+        subtitle="The drift check. One component, one price rendering, one truncation order — what changes is only what each surface declares it carries.">
+        <DCArtboard id="sm-three" label="Hermanos Gutiérrez · browse / watching / venue" width={480} height={460}>
+          <BareStage theme={th} pad={20} width={420}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {["browse", "watching", "venue"].map((s2) => (
+                <div key={s2}>
+                  <Eyebrow>{s2}</Eyebrow>
+                  <div style={{ marginTop: 6 }}><EventRow show={R_HERMANOS} surface={s2} density={dn}/></div>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="sm-supports" label="Holdfast. · with supports, tba price" width={480} height={480}>
+          <BareStage theme={th} pad={20} width={420}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {["browse", "watching", "venue"].map((s2) => (
+                <div key={s2}>
+                  <Eyebrow>{s2}</Eyebrow>
+                  <div style={{ marginTop: 6 }}><EventRow show={R_HOLDFAST} surface={s2} density={dn}/></div>
+                </div>
+              ))}
+              <Note>Watching drops the support billing — you saved the headliner and the price is the point. That frees its meta budget for freshness + provenance.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 3 · Lists in context ──────────────────────────── */}
+      <DCSection id="lists" title="3 · Lists, live"
+        subtitle="Surface switches with the Tweaks panel. Browse and Venue are divided rows; Watching is carded — that stays, it's a different reading mode, not a different component.">
+        <DCArtboard id="ls-320" label="mobile 320" width={NARROW + 40} height={1210}>
+          <PhoneStage theme={th} width={NARROW} height={1170} hostId="ers-320">
+            <EventRowList shows={R_SHOWS} surface={t.surface} density={dn} narrow
+              groupBy={t.surface === "browse" ? "date" : null} headerTip={t.surface === "browse"} sheetHost="#ers-320"/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="ls-390" label="mobile 390" width={PHONE + 40} height={1210}>
+          <PhoneStage theme={th} width={PHONE} height={1170} hostId="ers-390">
+            <EventRowList shows={R_SHOWS} surface={t.surface} density={dn}
+              groupBy={t.surface === "browse" ? "date" : null} headerTip={t.surface === "browse"} sheetHost="#ers-390"/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="ls-desk" label="desktop" width={DESK} height={1180}>
+          <BareStage theme={th} pad={28} width={920}>
+            <EventRowList shows={R_SHOWS} surface={t.surface} density={dn}
+              groupBy={t.surface === "browse" ? "date" : null} headerTip={t.surface === "browse"}/>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 4 · Stress ────────────────────────────────────── */}
+      <DCSection id="stress" title="4 · Stress"
+        subtitle="Truncation order, price states, sold-out, and the 320 floor — the cases that broke the old rows.">
+        <DCArtboard id="st-tight" label="tightest real geometry · watching + narrow + carded @320" width={NARROW + 40} height={640}>
+          <PhoneStage theme={th} width={NARROW} height={600} hostId="ers-tight">
+            <EventRowList shows={R_SHOWS.slice(0, 4)} surface="watching" density={dn} narrow/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="st-tight-note" label="why this artboard exists" width={420} height={640}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Eyebrow tone="var(--signal)">The case R1 never mounted</Eyebrow>
+              <Note>Watching is the only surface that carries the date <em>and</em> the venue <em>and</em> a 36px action gutter, and it's the only carded one — so at 320 the card inset plus the gutter leave the title column around 100px, against a fixed “Sat, Sep 19 · 8:00 PM” of roughly 120px.</Note>
+              <Note>The venue's ellipsis can only give back the venue's own width; it can't rescue the fixed date/time pair. Line 3 now sets <code>overflow: hidden</code> so that surplus <strong style={{ color: "var(--fg)" }}>clips at the column edge</strong> instead of painting over the price stack — which would be the inverse of the bug this whole handoff exists to fix.</Note>
+              <Note>R1's truncation artboard rendered a bare <code>EventRow</code> at ~328px, uncarded — which dodged both the card inset and the width floor. This one mounts the real combination.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="st-trunc" label="truncation · 320 floor" width={NARROW + 40} height={420}>
+          <BareStage theme={th} pad={16}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Eyebrow>artist truncates · date never</Eyebrow>
+              <EventRow show={R_SHOWS.find((s) => s.id === "longname")} surface="watching" density={dn} narrow/>
+              <EventRow show={R_SHOWS.find((s) => s.id === "longname")} surface="browse" density={dn} narrow/>
+              <EventRow show={R_SHOWS.find((s) => s.id === "geese")} surface="browse" density={dn} narrow/>
+              <Note>The venue is the only thing on the when·where line allowed to ellipsis. Date and time are flex-shrink 0.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="st-price" label="price states" width={480} height={790}>
+          <BareStage theme={th} pad={20} width={420}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[["drop", R_SHOWS.find((s) => s.id === "fourtet"), "watching"],
+                ["spike", R_SHOWS.find((s) => s.id === "longname"), "watching"],
+                ["flat", R_SHOWS.find((s) => s.id === "cassandra"), "watching"],
+                ["sold out", R_SHOWS.find((s) => s.id === "fkj"), "watching"],
+                ["floor / from", R_HERMANOS, "browse"],
+                ["tba", R_HOLDFAST, "browse"],
+                ["presale", R_SHOWS.find((s) => s.id === "geese"), "browse"]].map(([lbl, sh, sf]) => (
+                <div key={lbl}>
+                  <Eyebrow>{lbl}</Eyebrow>
+                  <EventRow show={sh} surface={sf} density="compact"/>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="st-tick" label="watching tick · costs no row width" width={480} height={330}>
+          <BareStage theme={th} pad={20} width={420}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <EventRow show={R_HERMANOS} surface="browse" density={dn}/>
+              <EventRow show={{ ...R_HERMANOS, watching: false }} surface="browse" density={dn}/>
+              <Note>Watched shows get an accent tick on the identity art — no slot, no width, no fifth pill. Suppressed on Watching, where every row is watched and the marker would be noise.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
+</script>
+</body>
+</html>
