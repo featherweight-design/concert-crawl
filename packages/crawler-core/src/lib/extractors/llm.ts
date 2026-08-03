@@ -156,7 +156,7 @@ Rules:
   - Emit more than one entry ONLY when the billing genuinely presents multiple acts as co-equal headliners: a co-headline tour ("X + Y Co-Headline Tour"), an "A & B" top-line billing where both names are the marquee act, or a multi-room night where each room has its own top act.
   - Support acts NEVER appear in headliners — they belong in supportingArtists only.
   - A single act whose OWN name contains "&", "and", or "+" is ONE headliner, never two. These stay whole as a single-element headliners array: "Iron & Wine", "Coheed and Cambria", "Sammy Rae & The Friends", "for KING + COUNTRY", "Of Monsters and Men", "Big Head Todd & the Monsters". Judge by whether each side is a real, separately-touring act — never by the punctuation alone. When unsure, emit ONE headliner.
-- supportingArtists: list the opening/supporting acts in the order printed, and do NOT include the headliner (already in artist). If the page shows no distinct openers, use an empty array.
+- supportingArtists: list the opening/supporting acts in the order printed, and do NOT include the headliner (already in artist). If the page shows no distinct openers, use an empty array. An act you placed in headliners must NEVER also appear in supportingArtists — the two lists are disjoint, and the run-on rule below yields to headliners whenever the billing genuinely reads as a co-headline.
 - When a billing joins several acts with commas, "with", "w/", "and", "featuring", "feat.", "ft.", "&", "+", or "/", the FIRST act is the headliner (artist) and every act after it goes into supportingArtists. This applies whether the run-on appears in the artist field or embedded in the title:
   - "Dylan Earl, The Gray Jays, Johno Leeroy" → artist "Dylan Earl", supportingArtists ["The Gray Jays", "Johno Leeroy"]
   - "Hilary Duff with La Roux and Jade LeMac" → artist "Hilary Duff", supportingArtists ["La Roux", "Jade LeMac"]
@@ -437,10 +437,6 @@ export async function extractWithLlm(
     // non-empty string for every downstream consumer (search, dedupe, the
     // Spotify matcher) rather than pushing null-handling into all of them.
     const artist = evt.artist?.trim() || title
-    const supportingArtists = normalizeSupportingArtists(
-      artist,
-      evt.supportingArtists ?? [],
-    )
     // headliners[0] must equal `artist` (#1203). Trim, drop blanks, and drop
     // case-insensitive repeats, then force the resolved artist into first
     // position — `artist` may itself be a fallback to the cleaned title when
@@ -455,6 +451,15 @@ export async function extractWithLlm(
       seenHeadliners.add(name.toLowerCase())
       headliners.push(name)
     }
+    // The two lists must stay disjoint. The prompt says so, but a model that
+    // reads a co-headline bill both ways would otherwise render the second
+    // headliner as their own opener on the artist page.
+    const supportingArtists = normalizeSupportingArtists(
+      artist,
+      (evt.supportingArtists ?? []).filter(
+        (name) => !seenHeadliners.has(name.trim().toLowerCase()),
+      ),
+    )
     // Both URLs are checked against the page's own anchor set. The model
     // is told to copy them verbatim out of the "[link: …]" markers, but a
     // guessed slug would otherwise reach the CTA and 404 on the fan.

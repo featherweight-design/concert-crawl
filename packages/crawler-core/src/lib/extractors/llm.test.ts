@@ -445,6 +445,30 @@ describe('extractWithLlm', () => {
     ])
   })
 
+  it('keeps headliners and supportingArtists disjoint (#1203)', async () => {
+    const mockEvents = [
+      {
+        title: 'Desert Dwellers + Great Dane',
+        rawTitle: 'Desert Dwellers + Great Dane',
+        artist: 'Desert Dwellers',
+        // The model read the bill both ways — co-headline AND opener.
+        headliners: ['Desert Dwellers', 'Great Dane'],
+        supportingArtists: ['Great Dane', 'Bluetech'],
+        date: '2026-08-01',
+        confidence: 0.9,
+        isConcert: true,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events[0]?.headliners).toEqual([
+      'Desert Dwellers',
+      'Great Dane',
+    ])
+    expect(result.events[0]?.supportingArtists).toEqual(['Bluetech'])
+  })
+
   it('SAVE_EVENTS_TOOL declares headliners with a no-punctuation-split rule (#1203)', async () => {
     mockCreate.mockResolvedValue(makeAnthropicResponse([]))
     await extractWithLlm('<html>test</html>', SOURCE_URL)
