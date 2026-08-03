@@ -42,7 +42,7 @@ describe('SkipRail — three weights, one position (#794)', () => {
         }}
       />,
     )
-    const skip = screen.getByRole('link', { name: /skip — back to geese/i })
+    const skip = screen.getByRole('link', { name: /skip: back to geese/i })
     expect(skip.getAttribute('href')).toBe('/events/e1')
     expect(skip.style.border).toContain('var(--border-strong)')
   })
@@ -58,7 +58,7 @@ describe('SkipRail — three weights, one position (#794)', () => {
       />,
     )
     expect(screen.getByRole('status').textContent).toBe(
-      "Watching Geese — we'll take you back",
+      "Watching Geese. We'll take you back",
     )
   })
 

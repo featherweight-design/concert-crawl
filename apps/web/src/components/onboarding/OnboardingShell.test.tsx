@@ -146,7 +146,7 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     })
     expect(
       screen.getAllByRole('link', {
-        name: /skip — back to geese/i,
+        name: /skip: back to geese/i,
         hidden: true,
       }),
     ).toHaveLength(2)
@@ -160,7 +160,7 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     })
     // Leaving early is a choice about the tour, not about the watch.
     for (const link of screen.getAllByRole('link', {
-      name: /skip — back to geese/i,
+      name: /skip: back to geese/i,
       hidden: true,
     })) {
       expect(link.getAttribute('href')).toBe(

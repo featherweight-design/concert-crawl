@@ -4,7 +4,7 @@ export const ONBOARDING_COPY = {
     heading: 'Thanks for signing up.',
     p1: "I'm Hugh. I go to a lot of shows. Concert Crawl is the thing I always wanted: one place to see what's playing, what it costs, and who to drag along.",
     p2: "It covers Denver for now. It tells you where every price came from, and it says so plainly when it doesn't know one.",
-    p3: 'This tour takes about two minutes. You can skip it — your account already works, and it lives in your account menu if you want it later.',
+    p3: 'This tour takes about two minutes. You can skip it. Your account already works, and it lives in your account menu if you want it later.',
   },
 
   howItWorks: {
@@ -25,7 +25,7 @@ export const ONBOARDING_COPY = {
       {
         kicker: '03',
         title: 'Verifications expire.',
-        body: "A community price gets more trustworthy once another fan confirms it — but even verified prices go stale after a week. We'll show you when one is old.",
+        body: "A community price gets more trustworthy once another fan confirms it, but even verified prices go stale after a week. We'll show you when one is old.",
       },
     ],
     priceSources: [
@@ -57,7 +57,7 @@ export const ONBOARDING_COPY = {
     items: [
       'Browse every upcoming show in the Denver area',
       'Compare real prices side by side, with their sources',
-      "Watch shows you're tracking — we follow the price",
+      "Watch shows you're tracking, and we follow the price",
       'Submit a price you saw, or confirm one someone else did',
     ],
   },
@@ -107,7 +107,7 @@ export const ONBOARDING_COPY = {
     headingAccent: 'Go find something.',
     personalAskLabel: "One favor, if you're up for it",
     personalAskBody:
-      "Most shows don't have a price yet. If you see one — at the box office, on a listing, on your receipt — drop it in. Every price you add makes the calendar more useful for the next person.",
+      "Most shows don't have a price yet. If you see one (at the box office, on a listing, on your receipt), drop it in. Every price you add makes the calendar more useful for the next person.",
   },
 
   nav: {
@@ -128,9 +128,9 @@ export const ONBOARDING_COPY = {
     skip: {
       default: 'Skip',
       menu: 'Close',
-      midIntent: (destination: string) => `Skip — back to ${destination}`,
+      midIntent: (destination: string) => `Skip: back to ${destination}`,
       pending: (destination: string) =>
-        `Watching ${destination} — we'll take you back`,
+        `Watching ${destination}. We'll take you back`,
       menuRailLabel: 'How it works',
     },
     stepLabels: {

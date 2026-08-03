@@ -6,7 +6,7 @@ export const REPORTING_COPY = {
     titleHasStatus: 'Tickets still available?',
     subtitle: 'Is the show sold out, cancelled, or postponed? Let fans know!',
     subtitleHasStatus: (statusLabel: string) =>
-      `A fan reported this show as ${statusLabel} — if there's new information, let the people know!`,
+      `A fan reported this show as ${statusLabel}. If there's new information, let the people know!`,
     bottomNote:
       'Reports are reviewed by the community. Good-faith reports help everyone.',
   },
@@ -19,14 +19,14 @@ export const REPORTING_COPY = {
     heading: 'What happened?',
     headingContext: 'What changed?',
     subtitle:
-      'We surface this to other fans so they can confirm. Pick the closest match — you can add detail on the next step.',
+      'We surface this to other fans so they can confirm. Pick the closest match. You can add detail on the next step.',
     subtitleByStatus: {
       'sold-out':
-        "This show is currently marked as sold out. Tell us what you saw — we'll route it to other fans to confirm.",
+        "This show is currently marked as sold out. Tell us what you saw. We'll route it to other fans to confirm.",
       cancelled:
-        "This show is currently marked as cancelled. Tell us what you saw — we'll route it to other fans to confirm.",
+        "This show is currently marked as cancelled. Tell us what you saw. We'll route it to other fans to confirm.",
       postponed:
-        "This show is currently marked as postponed. Tell us what you saw — we'll route it to other fans to confirm.",
+        "This show is currently marked as postponed. Tell us what you saw. We'll route it to other fans to confirm.",
     } as Record<string, string>,
     currentlyLive: 'Currently live',
 
@@ -46,12 +46,12 @@ export const REPORTING_COPY = {
       },
       available: {
         title: 'Tickets available',
-        subtitle: 'Tickets are back — the sold-out flag is wrong or stale.',
+        subtitle: 'Tickets are back. The sold-out flag is wrong or stale.',
       },
     },
 
     footnote:
-      "We'll ask how you know on the next step. An email from the venue, an artist's social post, or a venue announcement all count — anything we can point other fans at.",
+      "We'll ask how you know on the next step. An email from the venue, an artist's social post, or a venue announcement all count: anything we can point other fans at.",
 
     continueButton: 'Continue →',
     continueHint: 'Pick what changed to continue',
@@ -93,9 +93,9 @@ export const REPORTING_COPY = {
     charCountSuffix: (current: number, max: number) => `${current} / ${max}`,
 
     imminentWarning: (daysUntil: number) =>
-      `This show is in ${daysUntil} days — reports need 3 confirms instead of 2.`,
+      `This show is in ${daysUntil} days, so reports need 3 confirms instead of 2.`,
 
-    submitButton: 'File report — pending confirmation',
+    submitButton: 'File report, pending confirmation',
   },
 
   // ── ReportTypeMark ───────────────────────────────────────────────
@@ -128,7 +128,7 @@ export const REPORTING_COPY = {
     },
     cautionNote: 'False confirms affect your community standing.',
     confirmButton: 'Confirm',
-    counterReportLink: "This isn't right — file a counter-report.",
+    counterReportLink: "This isn't right. File a counter-report.",
   },
 
   // ── LiveReportBanner ─────────────────────────────────────────────

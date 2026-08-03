@@ -79,7 +79,7 @@ Semantics: `role="region"`, `aria-label="Payment notice"`, `aria-live="polite"`.
 | letter-spacing | -0.01em     | -0.01em     |
 | color          | `var(--fg)` | `var(--fg)` |
 
-### Sub span ("— give it a refresh?")
+### Sub span ("Give it a refresh?")
 
 | Property       | Mobile            | Desktop           |
 | -------------- | ----------------- | ----------------- |
@@ -447,7 +447,7 @@ font-family `'JetBrains Mono', monospace`, text-transform uppercase; defaults si
 **PastDueBanner:**
 
 - Headline: `Your card got declined`
-- Sub: `— give it a refresh?`
+- Sub: `Give it a refresh?`
 - CTA label: `Update card`
 - Dismiss aria-label: `Dismiss payment notice`
 - Region aria-label: `Payment notice`

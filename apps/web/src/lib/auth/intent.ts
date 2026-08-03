@@ -80,7 +80,7 @@ export const sanitizeReturnPath = (raw: string | null | undefined): string => {
 const MAX_LABEL_LENGTH = 60
 
 /**
- * The artist name shown in "Skip — back to {label}" and "Now watching {label}."
+ * The artist name shown in "Skip: back to {label}" and "Now watching {label}."
  *
  * React escapes it on render, so the risk here is not injection but chrome: a
  * 400-character label would break both strips. Control characters are stripped
