@@ -44,6 +44,9 @@ export const resolveThemeTokens = (
 export const SHARE_CARD_TOKENS = [
   'bg',
   'fg',
+  // The Passport's stat labels and footer tag. Added with the Passport card —
+  // it is the first share surface to draw secondary text.
+  'fg-muted',
   'surface-1',
   'border-strong',
   'scrim',
