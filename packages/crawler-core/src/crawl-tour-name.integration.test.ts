@@ -51,7 +51,12 @@ vi.mock('./lib/email.js', () => ({
 import { fetchPage, fetchPageHttp } from './lib/fetcher.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 
-const mockBrowser = {} as Browser
+// The seeded venue is HTTP-mode, so crawlVenue never resolves the browser
+// source. Throwing here turns any future change that does reach for a browser
+// into a loud failure rather than a silent `{}` masquerading as a Browser.
+const mockBrowser = (): Promise<Browser> => {
+  throw new Error('browser must not be launched in an HTTP-mode crawl')
+}
 const mockFetchPage = vi.mocked(fetchPage)
 const mockFetchPageHttp = vi.mocked(fetchPageHttp)
 const mockExtractWithLlm = vi.mocked(extractWithLlm)
@@ -76,7 +81,7 @@ async function seedTestVenue(): Promise<{ id: string }> {
       timezone: 'America/Denver',
       active: true,
       verified: true,
-      crawlMode: 'browser',
+      crawlMode: 'http',
     })
     .returning()
   if (!venue) throw new Error('venue insert returned no row')
