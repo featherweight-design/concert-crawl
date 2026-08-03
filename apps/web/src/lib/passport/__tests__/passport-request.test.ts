@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   isPassportRatio,
   passportYear,
@@ -20,6 +20,13 @@ describe('isPassportRatio', () => {
 })
 
 describe('passportYear', () => {
+  // `setSystemTime` is only defined once the timers are mocked; without this it
+  // is a version-dependent throw rather than a stable date freeze, which is how
+  // every other suite in the repo sets a clock.
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
   afterEach(() => {
     vi.useRealTimers()
   })
