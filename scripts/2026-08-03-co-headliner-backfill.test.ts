@@ -177,6 +177,21 @@ describe('co-headliner-backfill — formatCsvRow', () => {
     expect(row).toContain('"Show ""with"" quotes"')
     expect(row).toContain(',true\n')
   })
+
+  it('records the proposed supporting list so the CSV is a complete decision record', () => {
+    const row = formatCsvRow({
+      eventId: 'abc-123',
+      title: 'Split bill',
+      artist: 'Desert Dwellers',
+      date: '2026-08-01',
+      venueName: 'Cervantes',
+      currentSupporting: ['Great Dane', 'Real Opener'],
+      proposedHeadliners: ['Desert Dwellers', 'Great Dane'],
+      proposedSupporting: ['Real Opener'],
+      wouldChange: true,
+    })
+    expect(row).toContain('Desert Dwellers | Great Dane,Real Opener,true\n')
+  })
 })
 
 // identifyHeadlinersBatch tests — mock the Anthropic SDK so we exercise the

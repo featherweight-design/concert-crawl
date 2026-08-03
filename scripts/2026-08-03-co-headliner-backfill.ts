@@ -47,10 +47,9 @@ import { and, eq, sql } from 'drizzle-orm'
 // `@concert-crawl/types`, whose only export condition points at `dist/`, so
 // going through it would reintroduce the build requirement.
 import { canonicalizeSupporting } from '../packages/types/src/canonical-artist.js'
-import { db, events, venues } from '@concert-crawl/db'
-// Same reason as canonicalizeSupporting above: the
-// `@concert-crawl/db/upcoming-events` subpath resolves to dist, which a clean
-// checkout has not built yet.
+// Same reason: every `@concert-crawl/db` export condition — the barrel and the
+// `./upcoming-events` subpath alike — points at `dist/`.
+import { db, events, venues } from '../packages/db/src/index.js'
 import {
   SCHEDULED_STATUSES,
   upcomingEventConditions,
@@ -198,7 +197,7 @@ export async function runBackfill(opts: {
   })
 
   const header =
-    'event_id,date,venue_name,title,current_artist,current_supporting_artists,proposed_headliners,would_change\n'
+    'event_id,date,venue_name,title,current_artist,current_supporting_artists,proposed_headliners,proposed_supporting_artists,would_change\n'
   const csv = header + results.map(formatCsvRow).join('')
 
   // Written in both modes: a commit run is the one whose decisions an operator

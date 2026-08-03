@@ -155,6 +155,7 @@ export function formatCsvRow(result: HeadlinerResult): string {
       escapeCsv(result.artist),
       escapeCsv((result.currentSupporting ?? []).join(' | ')),
       escapeCsv(result.proposedHeadliners.join(' | ')),
+      escapeCsv(result.proposedSupporting.join(' | ')),
       String(result.wouldChange),
     ].join(',') + '\n'
   )
