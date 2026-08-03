@@ -850,11 +850,10 @@ describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
     })
 
     expect(res.status).toBe(200)
-    const body = (await res.json()) as {
-      success: boolean
-      data: { tourName: string | null }
-    }
-    expect(body.data.tourName).toBe('The Rising Tide Tour')
+    expect(await res.json()).toMatchObject({
+      success: true,
+      data: { tourName: 'The Rising Tide Tour' },
+    })
   })
 
   it('trims surrounding whitespace before storing', async () => {
@@ -868,8 +867,9 @@ describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
     })
 
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { data: { tourName: string | null } }
-    expect(body.data.tourName).toBe('Midnight Run')
+    expect(await res.json()).toMatchObject({
+      data: { tourName: 'Midnight Run' },
+    })
   })
 
   it('clears to NULL (not an empty string) when given a blank value', async () => {
@@ -999,8 +999,9 @@ describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
     })
 
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { data: { tourName: string | null } }
-    expect(body.data.tourName).toBe('Hydrate Tour')
+    expect(await res.json()).toMatchObject({
+      data: { tourName: 'Hydrate Tour' },
+    })
   })
 })
 

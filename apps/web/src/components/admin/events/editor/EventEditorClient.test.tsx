@@ -133,8 +133,10 @@ describe('EventEditorClient', () => {
       <EventEditorClient event={{ ...SAMPLE, tourName: 'Vide Noir Tour' }} />,
     )
     const input = screen.getByLabelText('Tour name')
-    expect(input).toBeTruthy()
-    expect((input as HTMLInputElement).value).toBe('Vide Noir Tour')
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error('Tour name must render as an input')
+    }
+    expect(input.value).toBe('Vide Noir Tour')
   })
 
   it('PATCHes a trimmed tour name when the admin types one', async () => {
