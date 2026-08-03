@@ -1,3 +1,15 @@
+# [1.214.0](https://github.com/HartiganHM/concert-crawl/compare/v1.213.1...v1.214.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **web:** give the Going explainer a header row to sit in ([#1447](https://github.com/HartiganHM/concert-crawl/issues/1447)) ([d17bd14](https://github.com/HartiganHM/concert-crawl/commit/d17bd14b7ca9e35fefc083c8aaef20365d6c3a19))
+
+
+### Features
+
+* **web:** migrate Watching onto the shared Event Row ([#1445](https://github.com/HartiganHM/concert-crawl/issues/1445)) ([52db41c](https://github.com/HartiganHM/concert-crawl/commit/52db41c5be80f984a005b0b725535751d57b51ef))
+
 ## [1.213.1](https://github.com/HartiganHM/concert-crawl/compare/v1.213.0...v1.213.1) (2026-08-03)
 
 
