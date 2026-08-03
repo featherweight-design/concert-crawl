@@ -2018,12 +2018,20 @@ describe('crawlVenue — debug HTML capture', () => {
       await crawlVenue(venue.id, mockBrowser)
 
       const { header, chunks } = parseCaptureLogs(consoleSpy)
+      const chunkIdxOf = (entry: Record<string, unknown>): number => {
+        const value = entry['chunkIdx']
+        expect(typeof value).toBe('number')
+        return typeof value === 'number' ? value : -1
+      }
+      const chunkTextOf = (entry: Record<string, unknown>): string => {
+        const value = entry['chunk']
+        expect(typeof value).toBe('string')
+        return typeof value === 'string' ? value : ''
+      }
       const reassembled = chunks
         .slice()
-        .sort(
-          (aa, bb) => (aa['chunkIdx'] as number) - (bb['chunkIdx'] as number),
-        )
-        .map((entry) => entry['chunk'] as string)
+        .sort((aa, bb) => chunkIdxOf(aa) - chunkIdxOf(bb))
+        .map(chunkTextOf)
         .join('')
 
       expect(reassembled).not.toContain('<style')
@@ -2031,11 +2039,11 @@ describe('crawlVenue — debug HTML capture', () => {
       expect(reassembled).toContain(scriptBlock)
       expect(reassembled).toContain('<h1>Metallica</h1>')
 
-      // Original page size is still reported truthfully; strippedLength
-      // describes the smaller payload actually emitted.
+      // Original page size is still reported truthfully; strippedLength and
+      // capturedLength describe the smaller payload actually emitted.
       expect(header!['totalLength']).toBe(styledHtml.length)
-      expect(header!['capturedLength']).toBe(styledHtml.length)
       expect(header!['strippedLength']).toBe(reassembled.length)
+      expect(header!['capturedLength']).toBe(reassembled.length)
       expect(header!['strippedLength']).toBeLessThan(styledHtml.length)
       expect(header!['truncated']).toBe(false)
     } finally {
@@ -2069,6 +2077,11 @@ describe('crawlVenue — debug HTML capture', () => {
       expect(header!['truncated']).toBe(false)
       expect(header!['totalLength']).toBe(bigStyledHtml.length)
       expect(header!['strippedLength']).toBe(
+        stripStyleBlocks(bigStyledHtml).length,
+      )
+      // The whole stripped payload fits, so nothing was capped away even
+      // though the original page was over the limit.
+      expect(header!['capturedLength']).toBe(
         stripStyleBlocks(bigStyledHtml).length,
       )
       expect(chunks.length).toBe(1)

@@ -164,7 +164,7 @@ interface DebugCaptureContext {
 // blind exactly the diagnostic we most need.
 export function stripStyleBlocks(html: string): string {
   return html.replace(
-    /<style[^>]*>[\s\S]*?<\/style\s*>/gi,
+    /<style\b[^>]*>[\s\S]*?<\/style\s*>/gi,
     '<!-- style stripped -->',
   )
 }
@@ -176,9 +176,10 @@ export function stripStyleBlocks(html: string): string {
 // (debug.html_capture.chunk) so the metadata is preserved even if a chunk
 // is dropped.
 //
-// Length fields: totalLength and capturedLength describe the ORIGINAL page
-// so the header still tells the truth about page size; strippedLength is
-// the size of the payload actually emitted in the chunks.
+// Three distinct length fields: totalLength is the original page, so the
+// header still tells the truth about page size; strippedLength is that page
+// with its <style> blocks removed; capturedLength is what the chunks actually
+// carry, which is strippedLength capped at DEBUG_CAPTURE_MAX_CHARS.
 function logDebugHtmlCapture(html: string, ctx: DebugCaptureContext): void {
   const stripped = stripStyleBlocks(html)
   const captured = stripped.slice(0, DEBUG_CAPTURE_MAX_CHARS)
@@ -197,8 +198,8 @@ function logDebugHtmlCapture(html: string, ctx: DebugCaptureContext): void {
       finalUrl: ctx.finalUrl,
       httpStatus: ctx.httpStatus,
       totalLength: html.length,
-      capturedLength: truncated ? DEBUG_CAPTURE_MAX_CHARS : html.length,
-      strippedLength: captured.length,
+      strippedLength: stripped.length,
+      capturedLength: captured.length,
       totalChunks,
       truncated,
     }),
