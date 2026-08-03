@@ -3,7 +3,7 @@ import { chromium } from 'playwright'
 import type { Browser } from 'playwright'
 import { createLogger } from '@concert-crawl/logger'
 import { db, venues, crawlTriggers, events } from '@concert-crawl/db'
-import { eq, and, inArray, isNull } from 'drizzle-orm'
+import { eq, and, isNull, lt, sql } from 'drizzle-orm'
 import {
   crawlVenue,
   runSpotifyFanoutSafely,
@@ -14,6 +14,69 @@ import { runPricePipeline } from '@concert-crawl/price-pipeline'
 
 const logger = createLogger('crawler')
 const MAX_CONCURRENT = 1
+
+// A trigger still 'processing' after this long cannot be alive: the longest
+// legitimate crawl observed in prod is ~3.5 min, and the trigger cron fires
+// every 10 min. Anything past this was killed mid-flight — almost always an
+// OOM, which sends SIGKILL and so can neither be caught in-process nor write a
+// crawl_runs row. Reaping on the next run is the only place that death becomes
+// visible (#1352, #1353).
+const STALE_PROCESSING_MS = 30 * 60 * 1000
+
+// Chromium costs ~150Mi of the cron's 512Mi, and a run of only
+// `crawlMode: 'http'` venues never needs one. Launch is deferred to the first
+// fetchPage that actually requires a browser (#1352).
+function createLazyBrowser(): {
+  get: () => Promise<Browser>
+  close: () => Promise<void>
+} {
+  let pending: Promise<Browser> | null = null
+  return {
+    get: () => (pending ??= chromium.launch({ headless: true })),
+    close: async () => {
+      if (pending === null) return
+      try {
+        const browser = await pending
+        await browser.close()
+      } catch (closeErr: unknown) {
+        logger.warn({ closeErr }, 'Browser close failed')
+      }
+    },
+  }
+}
+
+// Fail triggers stranded in 'processing' by a process death, and report each
+// one so the kill is not silent. Runs before the claim so a crash is surfaced
+// within one cron tick.
+async function reapStaleProcessingTriggers(): Promise<void> {
+  const reaped = await db
+    .update(crawlTriggers)
+    .set({ status: 'failed', updatedAt: new Date() })
+    .where(
+      and(
+        eq(crawlTriggers.status, 'processing'),
+        lt(crawlTriggers.updatedAt, new Date(Date.now() - STALE_PROCESSING_MS)),
+      ),
+    )
+    .returning({ id: crawlTriggers.id, venueId: crawlTriggers.venueId })
+
+  for (const trigger of reaped) {
+    const err = new Error(
+      `Crawl trigger ${trigger.id} was stranded in 'processing' — the crawler process died mid-crawl (no crawl_runs row was written)`,
+    )
+    Sentry.captureException(err, {
+      extra: { triggerId: trigger.id, venueId: trigger.venueId },
+    })
+    Sentry.logger.error('crawl.trigger_stranded', {
+      trigger_id: trigger.id,
+      venue_id: trigger.venueId,
+    })
+    logger.error(
+      { triggerId: trigger.id, venueId: trigger.venueId },
+      'Reaped stale processing trigger — crawler process died mid-crawl',
+    )
+  }
+}
 
 // Load the list of venues (id + slug + name) that the cross-venue presale
 // filter checks extracted event titles against. We use the verified set so
@@ -71,10 +134,24 @@ async function runPricesForVenue(venueId: string): Promise<void> {
 }
 
 export async function runTriggeredCrawls(): Promise<{ processed: number }> {
+  await reapStaleProcessingTriggers()
+
+  // Claim at most MAX_CONCURRENT triggers per tick. Claiming every pending row
+  // meant one tick could crawl unboundedly many venues in a single 512Mi
+  // process; the remainder simply wait for the next 10-minute tick. Drizzle's
+  // update() has no limit(), so the bound goes in an id subquery.
   const claimed = await db
     .update(crawlTriggers)
     .set({ status: 'processing', updatedAt: new Date() })
-    .where(eq(crawlTriggers.status, 'pending'))
+    .where(
+      sql`${crawlTriggers.id} in (
+        select ${crawlTriggers.id} from ${crawlTriggers}
+        where ${crawlTriggers.status} = 'pending'
+        order by ${crawlTriggers.createdAt}
+        limit ${MAX_CONCURRENT}
+        for update skip locked
+      )`,
+    )
     .returning({
       id: crawlTriggers.id,
       venueId: crawlTriggers.venueId,
@@ -90,32 +167,17 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
 
   const crossVenueCandidates = await loadCrossVenueCandidates()
 
-  let browser: Browser
-  try {
-    browser = await chromium.launch({ headless: true })
-  } catch (launchErr: unknown) {
-    logger.error(
-      { launchErr },
-      'Browser launch failed — marking triggers as failed',
-    )
-    await db
-      .update(crawlTriggers)
-      .set({ status: 'failed', updatedAt: new Date() })
-      .where(
-        inArray(
-          crawlTriggers.id,
-          claimed.map((trigger) => trigger.id),
-        ),
-      )
-    return { processed: 0 }
-  }
+  // Launch is deferred: a tick of only http-mode venues never starts Chromium.
+  // A launch failure now surfaces per-trigger through the catch below rather
+  // than failing the whole batch up front.
+  const browser = createLazyBrowser()
 
   try {
     for (const trigger of claimed) {
       try {
         const crawlRun = await crawlVenue(
           trigger.venueId,
-          browser,
+          browser.get,
           undefined,
           crossVenueCandidates,
           trigger.force,
@@ -191,9 +253,7 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
       }
     }
   } finally {
-    await browser.close().catch((closeErr: unknown) => {
-      logger.warn({ closeErr }, 'Browser close failed')
-    })
+    await browser.close()
   }
 
   return { processed: claimed.length }
@@ -228,7 +288,7 @@ export async function runDailyCrawl(): Promise<{
   let succeeded = 0
   let failed = 0
 
-  const browser = await chromium.launch({ headless: true })
+  const browser = createLazyBrowser()
   try {
     for (
       let batchStart = 0;
@@ -238,7 +298,7 @@ export async function runDailyCrawl(): Promise<{
       const batch = activeVenues.slice(batchStart, batchStart + MAX_CONCURRENT)
       const results = await Promise.allSettled(
         batch.map((venue) =>
-          crawlVenue(venue.id, browser, undefined, crossVenueCandidates),
+          crawlVenue(venue.id, browser.get, undefined, crossVenueCandidates),
         ),
       )
 
@@ -318,9 +378,7 @@ export async function runDailyCrawl(): Promise<{
       }
     }
   } finally {
-    await browser.close().catch((closeErr: unknown) => {
-      logger.warn({ closeErr }, 'Browser close failed')
-    })
+    await browser.close()
   }
 
   logger.info(

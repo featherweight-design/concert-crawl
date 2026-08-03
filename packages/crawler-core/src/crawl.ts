@@ -253,9 +253,20 @@ async function markEventsSeenForVenue(
 // failed paths, where by definition nothing was inserted.
 export type CrawlVenueResult = CrawlRun & { insertedEventIds: string[] }
 
+// A Browser, or a thunk that launches one on first use. Callers that may crawl
+// only `crawlMode: 'http'` venues pass the thunk so Chromium is never launched
+// — a browser costs ~150Mi of a 512Mi cron and was OOM-killing whole runs
+// (#1352). Resolved at the fetchPage call sites, which is the only place a
+// browser is genuinely required, so the auto-detect HTTP→browser fallback still
+// gets one.
+export type BrowserSource = Browser | (() => Promise<Browser>)
+
+const resolveBrowser = async (source: BrowserSource): Promise<Browser> =>
+  typeof source === 'function' ? source() : source
+
 export async function crawlVenue(
   venueId: string,
-  browser: Browser,
+  browser: BrowserSource,
   crawlRunId?: string,
   crossVenueCandidates: CrossVenueCandidate[] = [],
   // When true, both hash-skip short-circuits are bypassed: the venue-level
@@ -405,7 +416,7 @@ export async function crawlVenue(
       if (venue.crawlMode === 'browser') {
         fetchResult = await fetchPage(
           venue.websiteUrl,
-          browser,
+          await resolveBrowser(browser),
           venue.crawlDelayMs,
           venue.crawlWaitUntil,
           venue.crawlWaitForSelector ?? undefined,
@@ -430,7 +441,7 @@ export async function crawlVenue(
           // auto-detect: HTTP threw — fall back to browser
           fetchResult = await fetchPage(
             venue.websiteUrl,
-            browser,
+            await resolveBrowser(browser),
             venue.crawlDelayMs,
             venue.crawlWaitUntil,
             venue.crawlWaitForSelector ?? undefined,
@@ -537,7 +548,7 @@ export async function crawlVenue(
           // which is intentional: each request to the venue's origin deserves its own delay.
           const browserResult = await fetchPage(
             venue.websiteUrl,
-            browser,
+            await resolveBrowser(browser),
             venue.crawlDelayMs,
             venue.crawlWaitUntil,
             venue.crawlWaitForSelector ?? undefined,

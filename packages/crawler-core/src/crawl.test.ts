@@ -1670,6 +1670,47 @@ describe('crawlVenue — crawlMode orchestration', () => {
     expect(mockFetchPage).not.toHaveBeenCalled()
   })
 
+  describe('lazy browser provider (#1352)', () => {
+    it('never resolves the provider for a forced-http venue', async () => {
+      const venue = seedVenue({ crawlMode: 'http' })
+      mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+      const getBrowser = vi.fn().mockResolvedValue(mockBrowser)
+
+      await crawlVenue(venue.id, getBrowser)
+
+      expect(getBrowser).not.toHaveBeenCalled()
+      expect(mockFetchPage).not.toHaveBeenCalled()
+    })
+
+    it('resolves the provider for a browser-mode venue', async () => {
+      const venue = seedVenue({ crawlMode: 'browser' })
+      mockFetchPage.mockResolvedValue(FETCH_RESULT)
+      const getBrowser = vi.fn().mockResolvedValue(mockBrowser)
+
+      await crawlVenue(venue.id, getBrowser)
+
+      expect(getBrowser).toHaveBeenCalled()
+      expect(mockFetchPage).toHaveBeenCalledWith(
+        venue.websiteUrl,
+        mockBrowser,
+        expect.anything(),
+        expect.anything(),
+        undefined,
+      )
+    })
+
+    it('resolves the provider when auto-detect falls back from HTTP to browser', async () => {
+      const venue = seedVenue({ crawlMode: null })
+      mockFetchPageHttp.mockRejectedValue(new Error('network error'))
+      mockFetchPage.mockResolvedValue(FETCH_RESULT)
+      const getBrowser = vi.fn().mockResolvedValue(mockBrowser)
+
+      await crawlVenue(venue.id, getBrowser)
+
+      expect(getBrowser).toHaveBeenCalled()
+    })
+  })
+
   it('does not overwrite a stored crawlMode on subsequent crawls', async () => {
     const venue = seedVenue({ crawlMode: 'http' })
     mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)

@@ -44,7 +44,13 @@ vi.mock('@concert-crawl/db', () => ({
     verified: 'verified',
     priceUrl: 'priceUrl',
   },
-  crawlTriggers: { id: 'id', venueId: 'venueId', status: 'status' },
+  crawlTriggers: {
+    id: 'id',
+    venueId: 'venueId',
+    status: 'status',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt',
+  },
   events: {
     id: 'id',
     venueId: 'venueId',
@@ -63,6 +69,8 @@ vi.mock('drizzle-orm', () => ({
   and: vi.fn(),
   inArray: vi.fn(),
   isNull: vi.fn(),
+  lt: vi.fn(),
+  sql: vi.fn(),
 }))
 
 // Mock price pipeline
@@ -80,13 +88,11 @@ vi.mock('playwright', () => ({
 }))
 
 // Mock crawlVenue and tagEventsWithGenres
-const mockCrawlVenue = vi
-  .fn()
-  .mockResolvedValue({
-    id: 'run-uuid-1',
-    status: 'success',
-    insertedEventIds: [],
-  })
+const mockCrawlVenue = vi.fn().mockResolvedValue({
+  id: 'run-uuid-1',
+  status: 'success',
+  insertedEventIds: [],
+})
 const mockTagEventsWithGenres = vi.fn().mockResolvedValue(undefined)
 // Contract: runSpotifyFanoutSafely never throws (it swallows internally), so
 // the resolved-null default is its worst-case observable behavior.
@@ -138,46 +144,47 @@ describe('runDailyCrawl', () => {
     mockSentryLoggerError.mockReset()
   })
 
-  it('calls crawlVenue for each active venue, passing the shared browser', async () => {
+  it('calls crawlVenue for each active venue, passing a shared lazy browser provider', async () => {
+    const { runDailyCrawl } = await import('./run.js')
+    await runDailyCrawl()
+    expect(mockCrawlVenue).toHaveBeenCalledTimes(4)
+    for (const venueId of ['venue-1', 'venue-2', 'venue-3', 'venue-4']) {
+      expect(mockCrawlVenue).toHaveBeenCalledWith(
+        venueId,
+        expect.any(Function),
+        undefined,
+        expect.any(Array),
+      )
+    }
+    const providers = new Set(mockCrawlVenue.mock.calls.map((call) => call[1]))
+    expect(providers.size).toBe(1)
+  })
+
+  it('never launches Chromium when every venue crawls over HTTP', async () => {
     const { chromium } = await import('playwright')
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
-    const browser = await vi.mocked(chromium.launch).mock.results[0]?.value
-    expect(mockCrawlVenue).toHaveBeenCalledTimes(4)
-    expect(mockCrawlVenue).toHaveBeenCalledWith(
-      'venue-1',
-      browser,
-      undefined,
-      expect.any(Array),
-    )
-    expect(mockCrawlVenue).toHaveBeenCalledWith(
-      'venue-2',
-      browser,
-      undefined,
-      expect.any(Array),
-    )
-    expect(mockCrawlVenue).toHaveBeenCalledWith(
-      'venue-3',
-      browser,
-      undefined,
-      expect.any(Array),
-    )
-    expect(mockCrawlVenue).toHaveBeenCalledWith(
-      'venue-4',
-      browser,
-      undefined,
-      expect.any(Array),
-    )
+    expect(vi.mocked(chromium.launch)).not.toHaveBeenCalled()
+    expect(mockBrowser.close).not.toHaveBeenCalled()
   })
 
-  it('closes the browser after all crawls complete', async () => {
+  it('launches Chromium at most once across all venues and closes it', async () => {
+    const { chromium } = await import('playwright')
+    mockCrawlVenue.mockImplementation(async (_venueId, getBrowser) => {
+      await getBrowser()
+      return SUCCESSFUL_CRAWL_RUN
+    })
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
+    expect(vi.mocked(chromium.launch)).toHaveBeenCalledTimes(1)
     expect(mockBrowser.close).toHaveBeenCalledTimes(1)
   })
 
-  it('closes the browser even when a crawl throws', async () => {
-    mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'))
+  it('closes the browser even when a crawl throws after launching one', async () => {
+    mockCrawlVenue.mockImplementation(async (_venueId, getBrowser) => {
+      await getBrowser()
+      throw new Error('blocked')
+    })
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
     expect(mockBrowser.close).toHaveBeenCalledTimes(1)
@@ -466,8 +473,10 @@ describe('runTriggeredCrawls', () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
-    // First returning() claims triggers; subsequent calls handle per-trigger status updates
+    // returning() call order: (1) the stale-'processing' reap, (2) the claim,
+    // (3+) per-trigger status updates.
     mockDbUpdate.returning
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce(mockTriggers)
       .mockResolvedValue([])
     mockDbChain.update.mockReturnValue(mockDbUpdate)
@@ -496,49 +505,120 @@ describe('runTriggeredCrawls', () => {
     expect(vi.mocked(chromium.launch)).not.toHaveBeenCalled()
   })
 
-  it('calls crawlVenue for each claimed trigger, passing the shared browser', async () => {
-    const { chromium } = await import('playwright')
+  describe('stale processing reaper (#1353)', () => {
+    it('reports every trigger stranded in processing by a killed run', async () => {
+      const stranded = [
+        { id: 'trigger-dead-1', venueId: 'venue-x' },
+        { id: 'trigger-dead-2', venueId: 'venue-y' },
+      ]
+      mockDbUpdate.returning.mockReset()
+      mockDbUpdate.returning
+        .mockResolvedValueOnce(stranded)
+        .mockResolvedValueOnce([])
+        .mockResolvedValue([])
+
+      const { runTriggeredCrawls } = await import('./run.js')
+      await runTriggeredCrawls()
+
+      // An OOM SIGKILL writes no crawl_runs row and cannot be caught
+      // in-process, so this reap is the only place the death is reported.
+      expect(mockSentryCaptureException).toHaveBeenCalledTimes(2)
+      expect(mockSentryLoggerError).toHaveBeenCalledWith(
+        'crawl.trigger_stranded',
+        { trigger_id: 'trigger-dead-1', venue_id: 'venue-x' },
+      )
+      expect(mockSentryLoggerError).toHaveBeenCalledWith(
+        'crawl.trigger_stranded',
+        { trigger_id: 'trigger-dead-2', venue_id: 'venue-y' },
+      )
+    })
+
+    it('reports nothing when no trigger is stale', async () => {
+      const { runTriggeredCrawls } = await import('./run.js')
+      await runTriggeredCrawls()
+      expect(mockSentryLoggerError).not.toHaveBeenCalledWith(
+        'crawl.trigger_stranded',
+        expect.anything(),
+      )
+    })
+
+    it('reaps before claiming so a crash surfaces within one cron tick', async () => {
+      const { runTriggeredCrawls } = await import('./run.js')
+      await runTriggeredCrawls()
+      const statuses = mockDbUpdate.set.mock.calls.map(
+        (call) => call[0]?.status,
+      )
+      expect(statuses[0]).toBe('failed')
+      expect(statuses[1]).toBe('processing')
+    })
+  })
+
+  it('calls crawlVenue for each claimed trigger, passing a shared lazy browser provider', async () => {
     const { runTriggeredCrawls } = await import('./run.js')
     await runTriggeredCrawls()
-    const browser = await vi.mocked(chromium.launch).mock.results[0]?.value
     expect(mockCrawlVenue).toHaveBeenCalledTimes(2)
     expect(mockCrawlVenue).toHaveBeenCalledWith(
       'venue-a',
-      browser,
+      expect.any(Function),
       undefined,
       expect.any(Array),
       false,
     )
     expect(mockCrawlVenue).toHaveBeenCalledWith(
       'venue-b',
-      browser,
+      expect.any(Function),
       undefined,
       expect.any(Array),
       false,
     )
+    // Every trigger shares one provider, so at most one Chromium per run.
+    const providers = new Set(mockCrawlVenue.mock.calls.map((call) => call[1]))
+    expect(providers.size).toBe(1)
   })
 
-  it('closes the browser after all triggers are processed', async () => {
-    const { runTriggeredCrawls } = await import('./run.js')
-    await runTriggeredCrawls()
-    expect(mockBrowser.close).toHaveBeenCalledTimes(1)
-  })
-
-  it('closes the browser even when a crawl throws', async () => {
-    mockCrawlVenue.mockRejectedValueOnce(new Error('blocked'))
-    const { runTriggeredCrawls } = await import('./run.js')
-    await runTriggeredCrawls()
-    expect(mockBrowser.close).toHaveBeenCalledTimes(1)
-  })
-
-  it('marks all triggers failed and returns processed: 0 when browser launch fails', async () => {
+  it('never launches Chromium when no crawl asks for a browser', async () => {
     const { chromium } = await import('playwright')
-    vi.mocked(chromium.launch).mockRejectedValueOnce(new Error('no browser'))
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+    expect(vi.mocked(chromium.launch)).not.toHaveBeenCalled()
+    expect(mockBrowser.close).not.toHaveBeenCalled()
+  })
+
+  it('launches Chromium at most once and closes it when a crawl requests one', async () => {
+    const { chromium } = await import('playwright')
+    mockCrawlVenue.mockImplementation(async (_venueId, getBrowser) => {
+      await getBrowser()
+      return SUCCESSFUL_CRAWL_RUN
+    })
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+    expect(vi.mocked(chromium.launch)).toHaveBeenCalledTimes(1)
+    expect(mockBrowser.close).toHaveBeenCalledTimes(1)
+  })
+
+  it('closes the browser even when a crawl throws after launching one', async () => {
+    mockCrawlVenue.mockImplementation(async (_venueId, getBrowser) => {
+      await getBrowser()
+      throw new Error('blocked')
+    })
+    const { runTriggeredCrawls } = await import('./run.js')
+    await runTriggeredCrawls()
+    expect(mockBrowser.close).toHaveBeenCalledTimes(1)
+  })
+
+  it('fails only the trigger whose crawl needed a browser when launch fails', async () => {
+    const { chromium } = await import('playwright')
+    vi.mocked(chromium.launch).mockRejectedValue(new Error('no browser'))
+    mockCrawlVenue.mockImplementation(async (_venueId, getBrowser) => {
+      await getBrowser()
+      return SUCCESSFUL_CRAWL_RUN
+    })
     const { runTriggeredCrawls } = await import('./run.js')
     const result = await runTriggeredCrawls()
-    expect(result.processed).toBe(0)
-    expect(mockCrawlVenue).not.toHaveBeenCalled()
-    expect(mockBrowser.close).not.toHaveBeenCalled()
+    // The batch is still claimed and reported; the launch error surfaces
+    // per-trigger rather than aborting every pending trigger up front.
+    expect(result.processed).toBe(2)
+    expect(mockSentryCaptureException).toHaveBeenCalled()
   })
 
   it('returns processed count equal to number of claimed triggers', async () => {

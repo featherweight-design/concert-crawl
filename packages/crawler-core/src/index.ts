@@ -18,7 +18,11 @@ export {
   resolveSlug,
   ARTIST_SLUG_FALLBACK_PREFIX,
 } from '@concert-crawl/types'
-export { crawlVenue, type CrawlVenueResult } from './crawl.js'
+export {
+  crawlVenue,
+  type CrawlVenueResult,
+  type BrowserSource,
+} from './crawl.js'
 export { tagEventsWithGenres } from './lib/genre-tagger.js'
 export type { GenreTagInput } from './lib/genre-tagger.js'
 export {
