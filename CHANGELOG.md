@@ -1,3 +1,10 @@
+## [1.203.6](https://github.com/HartiganHM/concert-crawl/compare/v1.203.5...v1.203.6) (2026-08-03)
+
+
+### Bug Fixes
+
+* **copy:** mechanical em-dash pass on tier picker, Spotify, artist page ([#1402](https://github.com/HartiganHM/concert-crawl/issues/1402)) ([9b6598e](https://github.com/HartiganHM/concert-crawl/commit/9b6598e4b538d8d076273667f56def8b527432ac))
+
 ## [1.203.5](https://github.com/HartiganHM/concert-crawl/compare/v1.203.4...v1.203.5) (2026-08-03)
 
 
