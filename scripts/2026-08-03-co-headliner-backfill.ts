@@ -68,6 +68,8 @@ const MODEL = 'claude-haiku-4-5-20251001'
 const BATCH_SIZE = 25
 
 export interface BackfillSummary {
+  // Every row the SQL net matched, including any later rejected — so it
+  // reconciles with the "Loaded N candidate events" line.
   totalCandidates: number
   wouldChange: number
   committed: boolean
@@ -199,15 +201,20 @@ export async function runBackfill(opts: {
     'event_id,date,venue_name,title,current_artist,current_supporting_artists,proposed_headliners,would_change\n'
   const csv = header + results.map(formatCsvRow).join('')
 
+  // Written in both modes: a commit run is the one whose decisions an operator
+  // most needs a record of afterwards.
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const outPath =
+    opts.outputPath ??
+    path.resolve(
+      `./co-headliner-backfill-${opts.commit ? 'commit' : 'dry-run'}-${timestamp}.csv`,
+    )
+  writeFileSync(outPath, csv, 'utf-8')
+  console.log(`Decision CSV written to ${outPath}`)
+
   if (!opts.commit) {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-    const outPath =
-      opts.outputPath ??
-      path.resolve(`./co-headliner-backfill-dry-run-${timestamp}.csv`)
-    writeFileSync(outPath, csv, 'utf-8')
-    console.log(`Dry-run CSV written to ${outPath}`)
     return {
-      totalCandidates: results.length,
+      totalCandidates: inputs.length,
       wouldChange: wouldChangeCount,
       committed: false,
       raceSkipped: [],
@@ -262,7 +269,7 @@ export async function runBackfill(opts: {
     }
   }
   return {
-    totalCandidates: results.length,
+    totalCandidates: inputs.length,
     wouldChange: wouldChangeCount,
     committed: true,
     raceSkipped,

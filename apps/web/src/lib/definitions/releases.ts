@@ -41,7 +41,7 @@ export const RELEASES: Release[] = [
       },
       {
         kind: 'fixed',
-        text: 'Every upcoming show already on the calendar has been re-checked for this, so it applies to the shows you are looking at today and not only to the ones we crawl next.',
+        text: 'We are going back over the shows already on the calendar as well, so this is not only for the ones we crawl from here on.',
       },
     ],
   },
