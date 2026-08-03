@@ -147,6 +147,7 @@ Claude Code sessions are finite. To preserve continuity across sessions:
 - **Drizzle for DB access** — no hand-built raw SQL strings; Drizzle's parameterized `sql` template tag is fine and used in non-migration code (seeds, crawler queries)
 - **Descriptive identifiers** — ESLint `id-length` enforces a 2-char minimum (`err` not `e`, `ctx` not `c`) but permits `i`, `j`, `k`, `x`, `y`, `z`, and `_`. Applies to variables, parameters, and destructured bindings.
 - **Release notes on user-facing PRs** — any PR shipping a meaningful user-facing feature MUST add an entry to `apps/web/src/lib/definitions/releases.ts` on the same branch. Mirror the `progress.md` substantive-only rule: skip chores, dep bumps, doc tweaks, refactors, and customer-invisible bug fixes. For features with spotlight assets in `design/design_handoff_spotlight_heroes/`, wire up the spotlight as part of the entry. See `docs/superpowers/design-pipeline.md`.
+- **Copy edits go through the `copy-review` skill** — any change to a `definitions/copy.ts`, an email template, push copy, `releases.ts`, or a design handoff containing copy. The skill (`~/.claude/skills/copy-review/SKILL.md`, user scope) carries the weight-class model, the length caps, the no-em-dash rule, and the locked vocabulary. A full-codebase audit of ~1,728 strings lives in `docs/superpowers/copy-audit/` — start at `00-README.md`.
 
 ### Design pipeline
 
