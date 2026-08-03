@@ -7,6 +7,7 @@ import { loadShareFonts, type LoadedShareFont } from '@/lib/share/fonts'
 import { mintMeta, posterFingerprint, shareCacheKey } from '@/lib/share/mint'
 import { toPosterEvent } from '@/lib/share/poster-event'
 import {
+  etagMatches,
   parseShareRequest,
   SHARE_CACHE_CONTROL,
 } from '@/lib/share/share-request'
@@ -114,7 +115,7 @@ export const GET = async (
   ])
   const etag = `"${shareCacheKey(poster.id, parsed.handle ?? 'anon', mint.contentHash)}:${parsed.ratio}:${parsed.theme}:${drawn}"`
 
-  if (request.headers.get('if-none-match') === etag) {
+  if (etagMatches(request.headers.get('if-none-match'), etag)) {
     return new Response(null, {
       status: 304,
       headers: { ETag: etag, 'Cache-Control': SHARE_CACHE_CONTROL },

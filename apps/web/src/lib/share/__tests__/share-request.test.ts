@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   SHARE_CACHE_CONTROL,
+  etagMatches,
   parseShareRequest,
   resolveShareHandle,
 } from '@/lib/share/share-request'
@@ -81,5 +82,31 @@ describe('SHARE_CACHE_CONTROL', () => {
     expect(SHARE_CACHE_CONTROL).toBe(
       'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800',
     )
+  })
+})
+
+describe('etagMatches', () => {
+  const TAG = '"share:ev:anon:AABBCCDD:story:electric:11223344"'
+
+  it('matches an exact tag', () => {
+    expect(etagMatches(TAG, TAG)).toBe(true)
+  })
+
+  it('matches a tag inside a comma-separated list', () => {
+    expect(etagMatches(`"other", ${TAG}, "another"`, TAG)).toBe(true)
+  })
+
+  // A cache in front of us may weaken the tag on the way back.
+  it('matches a weak validator', () => {
+    expect(etagMatches(`W/${TAG}`, TAG)).toBe(true)
+  })
+
+  it('matches the wildcard', () => {
+    expect(etagMatches('*', TAG)).toBe(true)
+  })
+
+  it('does not match a different tag or a missing header', () => {
+    expect(etagMatches('"nope"', TAG)).toBe(false)
+    expect(etagMatches(null, TAG)).toBe(false)
   })
 })

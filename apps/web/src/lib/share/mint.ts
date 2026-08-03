@@ -59,9 +59,13 @@ export const mintMeta = (
  * without moving the state, so the ETag would keep serving the old PNG for the
  * full `s-maxage` day. Every field the poster renders belongs here — adding one
  * to the card and forgetting it here is the bug this guards against.
+ *
+ * JSON-encoded rather than delimiter-joined: any separator can also occur
+ * inside a venue or artist name, so `['A B', 'C']` and `['A', 'B C']` would
+ * collide and two visibly different cards would share a cache entry.
  */
 export const posterFingerprint = (fields: Array<string | null>): string =>
-  hashStr(fields.map((field) => field ?? '~').join(' '))
+  hashStr(JSON.stringify(fields))
 
 /**
  * Cache key for a rendered share image. Deliberately excludes `serial` and

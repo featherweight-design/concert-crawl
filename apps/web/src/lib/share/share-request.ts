@@ -48,6 +48,21 @@ export const resolveShareHandle = (raw: string | undefined): string | null => {
 export const SHARE_CACHE_CONTROL =
   'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800'
 
+/**
+ * `If-None-Match` is a comma-separated list, and a cache in front of us is
+ * entitled to weaken our tag to `W/"…"` on the way back. Strict equality
+ * misses both, and a missed 304 means re-rendering a PNG we already have.
+ * Safe to split on commas: the tag this route mints is a uuid plus hex plus
+ * two closed-set words, none of which can contain one.
+ */
+export const etagMatches = (header: string | null, etag: string): boolean => {
+  if (header === null) return false
+  if (header.trim() === '*') return true
+  const strip = (tag: string) => tag.trim().replace(/^W\//, '')
+  const wanted = strip(etag)
+  return header.split(',').some((candidate) => strip(candidate) === wanted)
+}
+
 export interface ShareRequestParams {
   eventId: string
   ratio: string

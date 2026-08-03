@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { hashStr, mintMeta, shareCacheKey } from '../mint'
+import { hashStr, mintMeta, posterFingerprint, shareCacheKey } from '../mint'
 
 const EVENT = { id: 'evt-1', state: 'going' }
 const USER = { id: 'usr-1', handle: 'huey' }
@@ -74,5 +74,25 @@ describe('shareCacheKey', () => {
     expect(shareCacheKey('ev', 'us', 'AABBCCDD')).not.toBe(
       shareCacheKey('ev', 'us', 'AABBCCDE'),
     )
+  })
+})
+
+describe('posterFingerprint', () => {
+  it('is stable for identical field lists', () => {
+    expect(posterFingerprint(['A', null, 'B'])).toBe(
+      posterFingerprint(['A', null, 'B']),
+    )
+  })
+
+  // A delimiter-joined encoding collides here, and the collision is not
+  // theoretical: venue names contain spaces.
+  it('does not collide when a field boundary shifts', () => {
+    expect(posterFingerprint(['A B', 'C'])).not.toBe(
+      posterFingerprint(['A', 'B C']),
+    )
+  })
+
+  it('distinguishes an absent field from an empty one', () => {
+    expect(posterFingerprint([null])).not.toBe(posterFingerprint(['']))
   })
 })

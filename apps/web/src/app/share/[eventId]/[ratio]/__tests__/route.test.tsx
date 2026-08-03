@@ -162,6 +162,18 @@ describe('GET /share/[eventId]/[ratio]', () => {
     expect(second.status).toBe(304)
   }, 30_000)
 
+  // A CDN in front of us may weaken the tag and send it among others; missing
+  // the match re-renders a PNG we already have.
+  it('304s a weak validator arriving in a list', async () => {
+    const url = `http://localhost/share/${EVENT_ID}/link`
+    const params = { eventId: EVENT_ID, ratio: 'link' }
+    const etag = (await call(url, params)).headers.get('ETag') ?? ''
+    const second = await call(url, params, {
+      headers: { 'if-none-match': `"stale", W/${etag}` },
+    })
+    expect(second.status).toBe(304)
+  }, 30_000)
+
   it('varies the ETag by ratio and theme', async () => {
     const story = await call(`http://localhost/share/${EVENT_ID}/story`, {
       eventId: EVENT_ID,
