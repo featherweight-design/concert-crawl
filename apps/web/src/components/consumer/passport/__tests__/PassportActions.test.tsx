@@ -140,6 +140,29 @@ describe('PassportActions', () => {
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
+  // `navigator.share` can throw rather than reject. Uncaught, that escapes the
+  // click handler and leaves the button dead with nothing on screen.
+  it('falls back when the share sheet throws instead of rejecting', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(
+      <PassportActions
+        imageUrl="/passport/square"
+        capabilities={{
+          share: () => {
+            throw new Error('sync boom')
+          },
+          canShare: () => true,
+        }}
+      />,
+    )
+
+    fireEvent.click(await readyShareButton())
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      COPY.shareFailed,
+    )
+  })
+
   it('points at saving the image when the PNG fetch fails', async () => {
     vi.stubGlobal(
       'fetch',

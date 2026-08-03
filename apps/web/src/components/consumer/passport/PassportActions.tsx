@@ -89,21 +89,31 @@ export const PassportActions = ({
       setFailed(true)
       return
     }
-    caps
-      .share({ title: COPY.pageTitle, files: [file] })
-      .then(() => track('passport_shared', { destination: 'system' }))
-      .catch((err: unknown) => {
-        // A dismissed OS sheet rejects with AbortError, which is a cancel
-        // rather than a failure — telling the user to save instead would be
-        // wrong. The name is logged because NotAllowedError and a genuine
-        // failure are indistinguishable from the message alone.
-        if (err instanceof Error && err.name === 'AbortError') return
-        console.error('[passport] share failed', {
-          name: err instanceof Error ? err.name : 'unknown',
-          err,
-        })
-        setFailed(true)
+    // A dismissed OS sheet rejects with AbortError, which is a cancel rather
+    // than a failure — telling the user to save instead would be wrong. The
+    // name is logged because NotAllowedError and a genuine failure are
+    // indistinguishable from the message alone.
+    const onShareError = (err: unknown) => {
+      if (err instanceof Error && err.name === 'AbortError') return
+      console.error('[passport] share failed', {
+        name: err instanceof Error ? err.name : 'unknown',
+        err,
       })
+      setFailed(true)
+    }
+
+    // `navigator.share` can throw synchronously as well as reject, and a throw
+    // escaping the click handler would leave the button dead with no fallback
+    // shown. `systemShare` in lib/share/destinations wraps it for the same
+    // reason.
+    try {
+      caps
+        .share({ title: COPY.pageTitle, files: [file] })
+        .then(() => track('passport_shared', { destination: 'system' }))
+        .catch(onShareError)
+    } catch (err) {
+      onShareError(err)
+    }
   }, [caps, file])
 
   const preparing = file === null && !failed
