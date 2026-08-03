@@ -481,6 +481,52 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(screen.getByTestId('corroboration-sheet-open')).toBeDefined()
   })
 
+  it('separates the pending stack from the headline card above it', () => {
+    const ga = makeTierBlock({
+      tier: 'GA',
+      headline: {
+        submissionId: 's1',
+        priceMin: '240',
+        priceMax: null,
+        vendor: 'AXS',
+        sourceCategory: 'standard',
+        submitterHandle: 'ada',
+        observedAt: '2026-06-20T00:00:00Z',
+        approvedAt: '2026-06-20T00:00:00Z',
+        approvalKind: 'fan',
+        confirmsCount: 2,
+      },
+      pending: [
+        {
+          id: 'p-ga',
+          priceMin: '220',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    render(
+      <EventDetailPriceBlock
+        event={buildBaseEvent({ priceByTier: [ga] })}
+        reports={[]}
+        currentUserId={null}
+      />,
+    )
+    // The stack sits in its own spaced wrapper rather than butting up against
+    // the headline card. first:mt-0 keeps all-tiers-pending flush.
+    const stack = screen.getByText(/220/).closest('.mt-3')
+    expect(stack).not.toBeNull()
+    expect(stack?.className).toContain('first:mt-0')
+  })
+
   // Same class as #1377, caught by Copilot: in mixed-tier a pending-only tier
   // renders through TierAlternateRow, whose "pending · N/M" strip has no
   // button. Without a pending card alongside it the submission is just as

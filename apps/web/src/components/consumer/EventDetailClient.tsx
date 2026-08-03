@@ -731,7 +731,12 @@ export function EventDetailPriceBlock({
         : null
     return (
       <>
-        <PendingStack cards={cardPropsList} />
+        {/* Matches the mt-3 every sibling block in these branches sets for
+            itself. `first:mt-0` keeps all-tiers-pending flush, where the stack
+            is the price region's first element rather than following a card. */}
+        <div className="mt-3 first:mt-0">
+          <PendingStack cards={cardPropsList} />
+        </div>
         {activeAtt !== null && (
           <CorroborationSheet
             submission={{
