@@ -474,7 +474,7 @@ describe('WatchShowButton — signed-out gating beat (#794)', () => {
     signedIn = false
     renderWith('Geese')
     expect(theButton().getAttribute('aria-label')).toBe(
-      'Watch Geese — sign up to start watching',
+      'Watch Geese: sign up to start watching',
     )
   })
 
@@ -486,7 +486,7 @@ describe('WatchShowButton — signed-out gating beat (#794)', () => {
     renderWith(artist)
     // Guards against the doubled space a default parameter would leave.
     expect(theButton().getAttribute('aria-label')).toBe(
-      'Watch this show — sign up to start watching',
+      'Watch this show: sign up to start watching',
     )
   })
 
@@ -551,7 +551,7 @@ describe('WatchShowButton — signed-out gating beat (#794)', () => {
     expect(theButton().textContent).toBe('')
     expect(theButton().hasAttribute('aria-pressed')).toBe(false)
     expect(theButton().getAttribute('aria-label')).toBe(
-      'Watch Geese — sign up to start watching',
+      'Watch Geese: sign up to start watching',
     )
   })
 

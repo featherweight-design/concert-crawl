@@ -6,7 +6,7 @@ import { isPriceStale, relTimeAgo } from '@/components/consumer/lib/staleness'
 const copy = CONSUMER_COPY.priceStaleness
 
 /**
- * The "as of … — could be stale" caption under a price. Shared so every price
+ * The "as of …, could be stale" caption under a price. Shared so every price
  * surface marks staleness identically; Event Detail's multi-tier card had no
  * staleness concept at all, which is why the marker showed on Watching but not
  * on the event page (#1366).

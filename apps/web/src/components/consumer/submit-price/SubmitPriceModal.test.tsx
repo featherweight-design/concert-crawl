@@ -741,7 +741,7 @@ describe('SubmitPriceModal — batch submit (#832)', () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          'You already submitted a GA price — edit it from the event page.',
+          'You already submitted a GA price. Edit it from the event page.',
         ),
       ).toBeTruthy(),
     )

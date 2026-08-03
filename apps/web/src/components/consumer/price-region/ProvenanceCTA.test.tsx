@@ -64,7 +64,7 @@ describe('ProvenanceCTA', () => {
       )
 
       const anchor = screen.getByRole('link', {
-        name: /get tickets via ticketmaster — official vendor/i,
+        name: /get tickets via ticketmaster: official vendor/i,
       })
       expect(anchor).toBeDefined()
       expect(anchor.textContent).toContain('Get Tickets')
@@ -105,7 +105,7 @@ describe('ProvenanceCTA', () => {
       )
 
       const anchor = screen.getByRole('link', {
-        name: 'Buy resale on Ticketmaster — usually above face value',
+        name: 'Buy resale on Ticketmaster: usually above face value',
       })
       expect(anchor).toBeDefined()
       expect(anchor.textContent).toContain('See resale tickets')

@@ -50,9 +50,9 @@ describe('SoldOutPriceCard', () => {
       expect(
         screen.getByText('Reported sold out by @ada · 3 fans confirmed'),
       ).toBeDefined()
-      // "as of 15m ago — could be stale · @ada"
+      // "as of 15m ago, could be stale · @ada"
       expect(
-        screen.getByText(/as of 15m ago — could be stale · @ada/),
+        screen.getByText(/as of 15m ago, could be stale · @ada/),
       ).toBeDefined()
     })
 
@@ -69,7 +69,7 @@ describe('SoldOutPriceCard', () => {
       expect(
         screen.getByText('Reported sold out · 1 fan confirmed'),
       ).toBeDefined()
-      expect(screen.getByText(/as of 1h ago — could be stale/)).toBeDefined()
+      expect(screen.getByText(/as of 1h ago, could be stale/)).toBeDefined()
     })
   })
 

@@ -59,13 +59,13 @@ export const CONSUMER_COPY = {
     insiderTipEyebrow: 'Insider tip',
     accessibilityNotDocumented: 'NOT DOCUMENTED',
     accessibilityPlaceholder:
-      'Not documented yet — worth calling the venue before you head out.',
+      'Not documented yet. Worth calling the venue before you head out.',
     // Lowercased here rather than at the call site — the labels are sentence
     // openers elsewhere, and none of them is a proper noun.
     stillGathering: (chipLabels: string[]) =>
       `Still gathering: ${chipLabels.map((label) => label.toLowerCase()).join(', ')}.`,
     thinFooter: (venueShortName: string) =>
-      `That's the lot for now — ${venueShortName}'s new to us.`,
+      `That's the lot for now. ${venueShortName}'s new to us.`,
     // Returner — collapsed by default for someone who has already been to the
     // room, so the guide stays one tap away without taking the page over.
     returner: {
@@ -299,17 +299,17 @@ export const CONSUMER_COPY = {
     },
     success: {
       heading: 'Got it.',
-      body: 'Your price is pending — two more fans confirming it moves it to confirmed and you get some cred.',
+      body: 'Your price is pending. Two more fans confirming it moves it to confirmed and you get some cred.',
       backButton: 'Back to show',
     },
     error: {
       heading: 'Didn’t go through.',
       networkWithdrawError:
-        "Couldn't reach the server — check your connection and try again.",
+        "Couldn't reach the server. Check your connection and try again.",
       apiWithdrawError:
         'Something went wrong withdrawing your submission. Try again or come back later.',
       defaultError:
-        "Couldn't reach the server — your inputs are still here. Try again or come back later.",
+        "Couldn't reach the server. Your inputs are still here. Try again or come back later.",
       tryAgainButton: 'Try again',
       closeButton: 'Close',
     },
@@ -401,7 +401,7 @@ export const CONSUMER_COPY = {
         discardLabel: 'Discard draft',
         discardAriaLabel: 'Discard saved draft',
         saveFailed:
-          "Couldn't save your draft — your text is still here. Try sending now, or save again.",
+          "Couldn't save your draft. Your text is still here. Try sending now, or save again.",
       },
     },
   },
@@ -546,7 +546,7 @@ export const CONSUMER_COPY = {
   userMenu: {
     ariaLabels: {
       accountMenu: 'Account menu',
-      accountMenuSignedOut: 'Account menu — sign up or sign in',
+      accountMenuSignedOut: 'Account menu: sign up or sign in',
       menuTitle: 'Account',
       // #737: the pip is a DOT, never a count — the number is announced here
       // instead. Used by the desktop avatar trigger AND bottom-nav slot 4, so
@@ -755,7 +755,7 @@ export const CONSUMER_COPY = {
       savedPrefix: 'saved',
       savedPricePrefix: 'at $',
       staleTooltip: (relTime: string) =>
-        `Last checked ${relTime} — could be stale`,
+        `Last checked ${relTime}, could be stale`,
       stalePrefix: 'Stale · ',
     },
     // The signed-out teaching state. Distinct from `watchingEmpty*` above,
@@ -764,7 +764,7 @@ export const CONSUMER_COPY = {
       eyebrow: 'WATCHING',
       title: 'Keep an eye on it.',
       lede:
-        "Watching is your shortlist of shows you don't want to miss — and a " +
+        "Watching is your shortlist of shows you don't want to miss, and a " +
         'price tracker on each one. Nothing to set up. It just needs an ' +
         'account to save to.',
       exampleAlt:
@@ -797,7 +797,7 @@ export const CONSUMER_COPY = {
         {
           key: '01',
           title: 'The eye is the whole gesture.',
-          body: 'Tap it on any show — card or detail page — and the show lands here.',
+          body: 'Tap it on any show, from a card or the detail page, and it lands here.',
         },
         {
           key: '02',
@@ -881,7 +881,7 @@ export const CONSUMER_COPY = {
       // outcome. No visible word is added — the pixels are identical to
       // signed-in-at-rest, and only the accessible name differs.
       ariaWatchSignedOut: (artist: string) =>
-        `Watch ${artist} — sign up to start watching`,
+        `Watch ${artist}: sign up to start watching`,
       // Used when the calling surface has no artist name in scope (WatchZone).
       thisShowFallback: 'this show',
     },
@@ -908,7 +908,7 @@ export const CONSUMER_COPY = {
     plusOthers: (count: number) => `+ ${count} more in the crawl, watching.`,
     countOnly: (count: number) =>
       `${count} in the crawl are watching this one.`,
-    countOnlyHonest: "No handles to drop yet — beta's early.",
+    countOnlyHonest: "No handles to drop yet. Beta's early.",
     rosterToggle: (count: number) => `see all ${count}`,
     rosterHide: 'show fewer',
     rosterTitle: 'The crawl on this show',
@@ -1123,7 +1123,8 @@ export const CONSUMER_COPY = {
   // timestamp, so every surface words staleness identically.
   priceStaleness: {
     asOf: (relTime: string) => `as of ${relTime}`,
-    asOfStale: (relTime: string) => `as of ${relTime} — could be stale`,
+    asOfStale: (relTime: string) => `as of ${relTime}, could be stale`,
+    couldBeStaleSuffix: ', could be stale',
     justNow: 'just now',
     daysSuffix: 'd ago',
     hoursSuffix: 'h ago',
@@ -1151,7 +1152,7 @@ export const CONSUMER_COPY = {
         ? `Did you also see $${floor}–$${ceiling}?`
         : `Did you also see $${floor}?`,
     subtitle:
-      "Two fan confirms moves a price from pending to live. Pick how you checked — we're trying to keep this honest, not fast.",
+      "Two fan confirms moves a price from pending to live. Pick how you checked. We're trying to keep this honest, not fast.",
 
     // VerifyOption labels and descriptions
     options: {
@@ -1180,7 +1181,7 @@ export const CONSUMER_COPY = {
     },
 
     // Confirm CTA
-    confirmButton: 'Confirm — same number',
+    confirmButton: 'Confirm: same number',
 
     // Escape link
     escapeLink:
@@ -1188,12 +1189,12 @@ export const CONSUMER_COPY = {
 
     // Honesty disclaimer shown at bottom of verify options
     honestyDisclaimer:
-      'Confirming is a community action — only confirm if you actually checked the price.',
+      'Confirming is a community action. Only confirm if you actually checked the price.',
 
     // Self-locked state
     selfLocked: {
       waitingNotice:
-        "Your submission is pending. You can't confirm your own price — but 2 other fans can.",
+        "Your submission is pending. You can't confirm your own price, but 2 other fans can.",
       editButton: 'Edit submission',
       withdrawButton: 'Withdraw',
     },
@@ -1249,11 +1250,11 @@ export const CONSUMER_COPY = {
     cancelButton: 'Cancel',
     successHeading: 'Update submitted.',
     successBody:
-      'Your update is pending — one more fan confirming it moves it forward.',
+      'Your update is pending. One more fan confirming it moves it forward.',
     successBackButton: 'Back to show',
     errorHeading: "Didn't go through.",
     errorBody:
-      "Couldn't reach the server — your inputs are still here. Try again or come back later.",
+      "Couldn't reach the server. Your inputs are still here. Try again or come back later.",
     errorTryAgainButton: 'Try again',
     errorCloseButton: 'Close',
   },
@@ -1305,11 +1306,11 @@ export const CONSUMER_COPY = {
       captionResale: (vendor: string) =>
         `${vendor} resale · usually above face value`,
       ariaLabelBoxoffice: (vendor: string) =>
-        `Get tickets at the box office via ${vendor} — face value, no fees`,
+        `Get tickets at the box office via ${vendor}: face value, no fees`,
       ariaLabelPrimary: (vendor: string) =>
-        `Get tickets via ${vendor} — official vendor, face value plus fees`,
+        `Get tickets via ${vendor}: official vendor, face value plus fees`,
       ariaLabelResale: (vendor: string) =>
-        `Buy resale on ${vendor} — usually above face value`,
+        `Buy resale on ${vendor}: usually above face value`,
     },
     mtListChip: {
       fromPrefix: 'from',
@@ -1344,7 +1345,7 @@ export const CONSUMER_COPY = {
       addAnotherEyebrow: 'This show has more than one tier?',
       addPillTemplate: (tier: string) => `+ Add ${tier.toLowerCase()}`,
       helperLine:
-        'Each tier is its own quick submission — only add the ones you actually saw.',
+        'Each tier is its own quick submission. Only add the ones you actually saw.',
       doneButton: 'Done',
       // Shown instead of the add-tier pills when the caller has used all
       // contribution acts for this event today (#876). Deliberately vague —
@@ -1359,7 +1360,7 @@ export const CONSUMER_COPY = {
       },
     },
     disputeRace409Toast:
-      'Another update was just submitted — refresh to see it.',
+      'Another update was just submitted. Refresh to see it.',
     adminDeferPillLabel: 'Admin requested more info',
   },
 
@@ -1373,7 +1374,7 @@ export const CONSUMER_COPY = {
   submitPriceV2: {
     sourceLabel: "Where's this price from?",
     sourceHelper:
-      'Box office is face value — the most useful number for other fans.',
+      'Box office is face value, the most useful number for other fans.',
     sourceOptionBoxoffice: 'Box office',
     sourceOptionStandard: 'Standard ticket',
     sourceOptionResale: 'Resale',
@@ -1403,7 +1404,7 @@ export const CONSUMER_COPY = {
       submitButtonMulti: 'Submit {count} tiers',
       submitButtonEdit: 'Save changes',
       errorAlreadySubmitted:
-        'You already submitted a {tier} price — edit it from the event page.',
+        'You already submitted a {tier} price. Edit it from the event page.',
     },
   },
 
@@ -1471,7 +1472,7 @@ export const CONSUMER_COPY = {
     },
     // Transient states on the destination buttons.
     copyLinkDone: 'Link copied',
-    shareFailed: "Couldn't share — try saving the image instead",
+    shareFailed: "Couldn't share. Try saving the image instead.",
     // Preview states. The poster is rendered on demand and measured at
     // 2.7–6.8s on staging, so the preview is a blank box for long enough that
     // it has to say what it is doing.
@@ -1506,7 +1507,7 @@ export const CONSUMER_COPY = {
     // one would imply the card is shareable by URL when it is deliberately not.
     shareLabel: 'Share…',
     saveLabel: 'Save image',
-    shareFailed: "Couldn't share — try saving the image instead",
+    shareFailed: "Couldn't share. Try saving the image instead.",
     downloadName: 'concert-passport.png',
     // The state before a single show has been marked attended. Not a locked
     // state: the plan is fine, the stamp book is simply empty.

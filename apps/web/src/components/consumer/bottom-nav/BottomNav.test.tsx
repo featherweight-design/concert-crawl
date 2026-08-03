@@ -57,7 +57,7 @@ describe('BottomNav slot 4 (#794)', () => {
   it('renders slot 4 as a menu trigger when signed out', () => {
     render(<BottomNav />)
     const trigger = screen.getByRole('button', {
-      name: /account menu — sign up or sign in/i,
+      name: /account menu: sign up or sign in/i,
     })
     expect(trigger.getAttribute('aria-haspopup')).toBe('dialog')
     expect(trigger.getAttribute('aria-expanded')).toBe('false')
@@ -66,7 +66,7 @@ describe('BottomNav slot 4 (#794)', () => {
   it('holds a 56x44 target on the 26px disc', () => {
     render(<BottomNav />)
     const trigger = screen.getByRole('button', {
-      name: /account menu — sign up or sign in/i,
+      name: /account menu: sign up or sign in/i,
     })
     expect(trigger.style.width).toBe('56px')
     expect(trigger.style.minHeight).toBe('44px')

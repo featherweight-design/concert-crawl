@@ -365,7 +365,9 @@ function VerifiedStamp({
   const color = stale ? 'var(--warning)' : 'var(--success)'
   const headWord = subject ? `${subject} verified` : 'Verified'
   const { by } = verification
-  const whenText = stale ? `${rel} — could be stale` : rel
+  const whenText = stale
+    ? `${rel}${copy.priceStaleness.couldBeStaleSuffix}`
+    : rel
 
   let head: React.ReactNode
   if (by.kind === 'user' && by.handle) {

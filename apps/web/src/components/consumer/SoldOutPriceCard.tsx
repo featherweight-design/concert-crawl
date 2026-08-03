@@ -55,8 +55,7 @@ interface SoldOutPriceCardNoListingProps extends SoldOutPriceCardSharedProps {
 }
 
 export type SoldOutPriceCardProps =
-  | SoldOutPriceCardHasListingProps
-  | SoldOutPriceCardNoListingProps
+  SoldOutPriceCardHasListingProps | SoldOutPriceCardNoListingProps
 
 export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
   const variant: SoldOutPriceCardVariant = props.variant ?? 'has-listing'
@@ -177,7 +176,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
               letterSpacing: '0.04em',
             }}
           >
-            {`as of ${timeAgo} — could be stale`}
+            {CONSUMER_COPY.priceStaleness.asOfStale(timeAgo)}
             {reporterHandle && ` · @${reporterHandle}`}
           </span>
         </div>

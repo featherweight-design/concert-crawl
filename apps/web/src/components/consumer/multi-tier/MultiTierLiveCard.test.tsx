@@ -164,7 +164,7 @@ describe('MultiTierLiveCard staleness marker', () => {
       Date.now() - 8 * 24 * 60 * 60 * 1000,
     ).toISOString()
     renderAt(eightDaysAgo)
-    expect(screen.getByText('as of 8d ago — could be stale')).toBeDefined()
+    expect(screen.getByText('as of 8d ago, could be stale')).toBeDefined()
   })
 
   it('states the age without the warning when the price is fresh', () => {
