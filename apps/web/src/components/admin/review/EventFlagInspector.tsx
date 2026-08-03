@@ -8,6 +8,7 @@ import {
 } from '@/components/admin/primitives'
 import { SquarePen } from 'lucide-react'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
 
 interface EventFlag {
   id: string
@@ -294,10 +295,8 @@ export const EventFlagInspector = ({
                 fontSize: 11,
               }}
             >
-              <a
+              <SafeExternalLink
                 href={event.sourceUrl}
-                target="_blank"
-                rel="noreferrer"
                 style={{
                   color: 'var(--fg-muted)',
                   textDecoration: 'none',
@@ -305,7 +304,7 @@ export const EventFlagInspector = ({
                 }}
               >
                 {event.sourceUrl}
-              </a>
+              </SafeExternalLink>
             </div>
           </div>
         )}

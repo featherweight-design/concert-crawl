@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AdminButton, StatusBadge } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
 
 const COPY = ADMIN_COPY.artists
 
@@ -250,14 +251,12 @@ export const CandidatePicker = ({
               }}
             >
               {candidate.spotifyUrl !== null && (
-                <a
+                <SafeExternalLink
                   href={candidate.spotifyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   style={{ fontSize: 12, color: 'var(--accent)' }}
                 >
                   {COPY.openInSpotify}
-                </a>
+                </SafeExternalLink>
               )}
               <AdminButton
                 size="sm"

@@ -18,6 +18,7 @@ import { ContestsTabContent } from './_tabs/ContestsTabContent'
 import { EMPTY_FILTERS, type AllEventsFilters } from './all/filters'
 import { type AllEvent } from './all/types'
 import { type MissingRowEvent } from './missing/MissingRow'
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
 
 interface EventFlag {
   id: string
@@ -385,10 +386,8 @@ function NeedsPriceRow({
             })}
           </div>
           {event.ticketUrl && (
-            <a
+            <SafeExternalLink
               href={event.ticketUrl}
-              target="_blank"
-              rel="noopener noreferrer"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -403,7 +402,7 @@ function NeedsPriceRow({
             >
               <span style={{ fontSize: 14 }}>↗</span>
               {ADMIN_COPY.review.adminReviewMobile.buyTickets}
-            </a>
+            </SafeExternalLink>
           )}
         </div>
         {event.priceMin !== null ? (

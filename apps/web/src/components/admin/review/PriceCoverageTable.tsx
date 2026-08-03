@@ -13,6 +13,7 @@ import {
   TD,
 } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
 
 interface PriceEvent {
   eventId: string
@@ -29,12 +30,7 @@ interface PriceEvent {
 }
 
 type SubmissionVendor =
-  | 'AXS'
-  | 'Ticketmaster'
-  | 'SeatGeek'
-  | 'DICE'
-  | 'Eventbrite'
-  | 'VenueBoxOffice'
+  'AXS' | 'Ticketmaster' | 'SeatGeek' | 'DICE' | 'Eventbrite' | 'VenueBoxOffice'
 type SubmissionHowFound = 'bought_myself' | 'saw_listing' | 'at_the_venue'
 
 interface PriceCoverageTableProps {
@@ -454,10 +450,8 @@ export const PriceCoverageTable = ({
                                           .join(' · ')}
                                       </div>
                                       {ev.ticketUrl && (
-                                        <a
+                                        <SafeExternalLink
                                           href={ev.ticketUrl}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
                                           style={{
                                             display: 'inline-flex',
                                             alignItems: 'center',
@@ -477,7 +471,7 @@ export const PriceCoverageTable = ({
                                             ADMIN_COPY.review.priceCoverage
                                               .buyTickets
                                           }
-                                        </a>
+                                        </SafeExternalLink>
                                       )}
                                     </div>
 

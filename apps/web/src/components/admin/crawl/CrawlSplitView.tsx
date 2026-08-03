@@ -21,6 +21,7 @@ import { DiagnosticsPanel } from '@/components/admin/crawl/DiagnosticsPanel'
 import { StagedApplyConfirm } from '@/components/admin/crawl/StagedApplyConfirm'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { resolveCrawlAlertBadge } from '@/components/admin/definitions/constants'
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
 
 const MT_TIMEZONE = 'America/Denver'
 
@@ -773,10 +774,8 @@ export const CrawlSplitView = ({
                   </h2>
                   <div style={{ display: 'flex', gap: 8 }}>
                     {selected.websiteUrl && (
-                      <a
+                      <SafeExternalLink
                         href={selected.websiteUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -793,7 +792,7 @@ export const CrawlSplitView = ({
                       >
                         <ExternalLink size={15} />
                         {ADMIN_COPY.crawl.splitView.sourceUrlButton}
-                      </a>
+                      </SafeExternalLink>
                     )}
                     <button
                       onClick={() => handleTrigger(selected.venueId)}

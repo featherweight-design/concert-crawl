@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Panel, AdminButton, RelTime } from '@/components/admin/primitives'
 import { Check, ChevronRight, ExternalLink, X } from 'lucide-react'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
 
 interface PriceSubmission {
   id: string
@@ -149,10 +150,8 @@ export const PendingSubmissionsPanel = ({
                       {eventLine}
                     </span>
                     {sub.ticketUrl && (
-                      <a
+                      <SafeExternalLink
                         href={sub.ticketUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         title="Open ticket page"
                         style={{
                           flexShrink: 0,
@@ -162,7 +161,7 @@ export const PendingSubmissionsPanel = ({
                         }}
                       >
                         <ExternalLink size={12} />
-                      </a>
+                      </SafeExternalLink>
                     )}
                   </div>
                   <div

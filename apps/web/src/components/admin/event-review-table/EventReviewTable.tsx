@@ -6,6 +6,7 @@ import { useAuth } from '@clerk/nextjs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { apiClient, ApiError } from '@/lib/api'
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
 
 type Event = {
   id: string
@@ -146,14 +147,12 @@ export const EventReviewTable = ({ initialEvents }: Props) => {
                   </td>
                   <td className="px-4 py-3">
                     {ev.sourceUrl ? (
-                      <a
+                      <SafeExternalLink
                         href={ev.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
                         className="truncate text-xs text-fg-muted underline-offset-2 hover:text-fg hover:underline"
                       >
                         {ADMIN_COPY.eventReviewTable.source.viewSource}
-                      </a>
+                      </SafeExternalLink>
                     ) : (
                       <span className="text-xs text-fg-muted">—</span>
                     )}

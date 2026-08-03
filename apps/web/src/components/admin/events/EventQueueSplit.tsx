@@ -15,6 +15,7 @@ import {
   MonoLabel,
 } from '@/components/admin/primitives'
 import { Check, X, Edit2, Filter, ChevronRight, Tag } from 'lucide-react'
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
 import type { AdminEvent } from '@/components/admin/events/types'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
@@ -1252,17 +1253,15 @@ export const EventQueueSplit = ({ initialEvents }: Props) => {
                         <span style={{ color: 'var(--fg-subtle)' }}>
                           {'// source url\n'}
                         </span>
-                        <a
+                        <SafeExternalLink
                           href={selected.sourceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
                           style={{
                             color: 'var(--signal)',
                             wordBreak: 'break-all',
                           }}
                         >
                           {selected.sourceUrl}
-                        </a>
+                        </SafeExternalLink>
                         {'\n\n'}
                         <span style={{ color: 'var(--fg-subtle)' }}>
                           {'// raw html capture not stored in this build\n'}

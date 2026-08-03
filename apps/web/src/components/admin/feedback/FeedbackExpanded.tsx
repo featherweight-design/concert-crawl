@@ -15,6 +15,7 @@ import {
 import { MonoLabel } from '@/components/admin/primitives'
 import type { FeedbackItem } from './FeedbackRow'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
 
 const REPO = 'HartiganHM/concert-crawl'
 const MT_TIMEZONE = 'America/Denver'
@@ -227,10 +228,8 @@ export function FeedbackExpanded({
                       objectPosition: 'top',
                     }}
                   />
-                  <a
+                  <SafeExternalLink
                     href={screenshot}
-                    target="_blank"
-                    rel="noreferrer"
                     style={{
                       position: 'absolute',
                       bottom: 8,
@@ -251,7 +250,7 @@ export function FeedbackExpanded({
                   >
                     <ExternalLink size={10} />
                     {ADMIN_COPY.feedback.expanded.openFullSize}
-                  </a>
+                  </SafeExternalLink>
                 </>
               ) : (
                 <div
