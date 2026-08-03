@@ -512,6 +512,13 @@
       "when": 1786406400000,
       "tag": "0072_artists_hidden",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1786492800000,
+      "tag": "0073_events_upcoming_partial_index",
+      "breakpoints": true
     }
   ]
 }

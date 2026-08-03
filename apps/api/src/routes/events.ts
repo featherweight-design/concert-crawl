@@ -14,6 +14,10 @@ import {
   eventReportConfirms,
 } from '@concert-crawl/db'
 import {
+  upcomingEventConditions,
+  SCHEDULED_STATUSES,
+} from '@concert-crawl/db/upcoming-events'
+import {
   type SQL,
   and,
   asc,
@@ -143,20 +147,13 @@ eventsRouter.get(
     // followedArtists overlay after the queries reuses the same value.
     const listAuth = getAuth(ctx)
 
-    const conditions: SQL[] = [
-      inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
-      gte(events.date, from ?? todayInTimezone('UTC')),
-      // PR 6 — hide events flagged "non-concert" from every consumer query.
-      eq(events.hiddenFromConsumer, false),
-      // Hide rows the crawler flagged as no longer visible on the venue page
-      // (#607). The crawler clears firstMissingAt on the next successful
-      // re-extraction (packages/crawler-core/src/crawl.ts:673-700), so any row
-      // that genuinely re-appears becomes visible again automatically — no
-      // manual intervention needed. Without this filter, every LLM artist-string
-      // drift produces a visible dupe (BASS BINGO – Wooli Edition showed 3 rows
-      // for one show on 2026-06-18).
-      isNull(events.firstMissingAt),
-    ]
+    // Without the firstMissingAt filter, every LLM artist-string drift produces
+    // a visible dupe (BASS BINGO – Wooli Edition showed 3 rows for one show on
+    // 2026-06-18).
+    const conditions: SQL[] = upcomingEventConditions({
+      from: from ?? todayInTimezone('UTC'),
+      statuses: SCHEDULED_STATUSES,
+    })
 
     if (to) {
       conditions.push(lte(events.date, to))
@@ -455,11 +452,8 @@ eventsRouter.get('/availability', async (ctx) => {
     .from(events)
     .where(
       and(
-        inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
-        gte(events.date, from),
+        ...upcomingEventConditions({ from, statuses: SCHEDULED_STATUSES }),
         lte(events.date, to),
-        eq(events.hiddenFromConsumer, false),
-        isNull(events.firstMissingAt),
       ),
     )
     .groupBy(events.date)
@@ -1098,10 +1092,10 @@ eventsRouter.get('/:id/related', async (ctx) => {
   // the panel is decorative, not the primary price surface.
   const relatedConditions: SQL[] = [
     eq(events.venueId, sourceEvent.venueId),
-    inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
-    gte(events.date, todayInTimezone('UTC')),
-    eq(events.hiddenFromConsumer, false),
-    isNull(events.firstMissingAt),
+    ...upcomingEventConditions({
+      from: todayInTimezone('UTC'),
+      statuses: SCHEDULED_STATUSES,
+    }),
     sql`${events.id} != ${eventId}`,
   ]
 

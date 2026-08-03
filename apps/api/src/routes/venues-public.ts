@@ -10,6 +10,7 @@ import {
   venueGuideChips,
   venues,
 } from '@concert-crawl/db'
+import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events'
 import {
   type SQL,
   and,
@@ -17,10 +18,8 @@ import {
   count,
   desc,
   eq,
-  gte,
   inArray,
   isNotNull,
-  isNull,
   ne,
   sql,
 } from 'drizzle-orm'
@@ -80,15 +79,8 @@ venuesPublicRouter.get('/', async (ctx) => {
     .from(events)
     .where(
       and(
-        eq(events.status, 'upcoming'),
-        gte(events.date, today),
+        ...upcomingEventConditions({ from: today }),
         isNotNull(events.venueId),
-        // PR 6 — exclude non-concert events from venue counts.
-        eq(events.hiddenFromConsumer, false),
-        // Hide crawler-flagged stale rows from the venue-index upcoming-count
-        // chip so duplicate/missing extractions don't inflate the count
-        // beyond what the venue-detail list actually renders (#607).
-        isNull(events.firstMissingAt),
       ),
     )
     .groupBy(events.venueId)
@@ -214,17 +206,12 @@ venuesPublicRouter.get(
 
     const today = todayInTimezone(venue.timezone)
 
+    // Shared between the count query and the list query below, so the
+    // upcomingCount the detail page renders stays consistent with the rows in
+    // upcomingEvents.
     const conditions: SQL[] = [
       eq(events.venueId, venue.id),
-      eq(events.status, 'upcoming'),
-      gte(events.date, today),
-      // PR 6 — exclude non-concert events from the venue detail listing.
-      eq(events.hiddenFromConsumer, false),
-      // Hide crawler-flagged stale rows from the venue-detail upcoming list
-      // (#607). Shared between the count query and the list query below
-      // because both use this conditions array — so the upcomingCount the
-      // detail page renders stays consistent with the rows in upcomingEvents.
-      isNull(events.firstMissingAt),
+      ...upcomingEventConditions({ from: today }),
     ]
 
     const [countRow] = await db

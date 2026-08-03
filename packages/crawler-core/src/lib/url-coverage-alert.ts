@@ -24,6 +24,7 @@
 
 import { and, eq, gte, isNull, lt, or, sql } from 'drizzle-orm'
 import { db, events, notifications, venues } from '@concert-crawl/db'
+import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events'
 import { reportFailure } from '@concert-crawl/logger'
 import { evaluateCoverageCondition } from './triage-conditions.js'
 
@@ -133,10 +134,9 @@ async function runCheck(
     .where(
       and(
         eq(events.venueId, input.venueId),
-        eq(events.status, 'upcoming'),
-        gte(events.date, sql`(NOW() AT TIME ZONE 'America/Denver')::date`),
-        isNull(events.firstMissingAt),
-        eq(events.hiddenFromConsumer, false),
+        ...upcomingEventConditions({
+          from: sql`(NOW() AT TIME ZONE 'America/Denver')::date`,
+        }),
       ),
     )
 

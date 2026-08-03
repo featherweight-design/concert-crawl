@@ -1,12 +1,12 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { db, artists, events, userEvents, venues } from '@concert-crawl/db'
+import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events'
 import {
   and,
   asc,
   desc,
   eq,
-  gte,
   ilike,
   inArray,
   isNull,
@@ -44,15 +44,9 @@ searchRouter.get('/popular', async (ctx) => {
     )
     .where(
       and(
-        eq(events.status, 'upcoming'),
-        gte(events.date, today),
-        // PR 6 — exclude non-concert events from search.
-        eq(events.hiddenFromConsumer, false),
-        // Hide crawler-flagged stale rows from the popular surface (#607).
-        // Same intent as the events router list filter: a row the crawler
-        // stopped seeing should not be presented as "popular" even if it
-        // accumulated watchers before it disappeared.
-        isNull(events.firstMissingAt),
+        // A row the crawler stopped seeing should not be presented as
+        // "popular" even if it accumulated watchers before it disappeared.
+        ...upcomingEventConditions({ from: today }),
       ),
     )
     .groupBy(events.id, venues.name, venues.slug)

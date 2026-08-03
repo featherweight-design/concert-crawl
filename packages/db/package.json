@@ -10,6 +10,10 @@
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     },
+    "./upcoming-events": {
+      "import": "./dist/lib/upcoming-events.js",
+      "types": "./dist/lib/upcoming-events.d.ts"
+    },
     "./scripts/backfill-artists": {
       "import": "./dist/scripts/backfill-artists.js",
       "types": "./dist/scripts/backfill-artists.d.ts"
