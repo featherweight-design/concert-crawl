@@ -14,6 +14,7 @@ import { markNudge, readNudgeState } from '@/lib/going/nudge-dismissal'
 import type { NudgeOutcome } from '@/lib/going/nudge-dismissal'
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle'
 import { isOptimisticWatchRow } from '@/lib/queries/optimistic-watch-row'
+import { isPriceStale, relTimeAgo } from '@/components/consumer/lib/staleness'
 
 const COPY = CONSUMER_COPY.watching
 
@@ -88,21 +89,6 @@ function formatShowTime(timeStr: string | null): string | null {
   }).format(date)
 }
 
-function formatRelTime(isoStr: string): string {
-  const diff = Date.now() - new Date(isoStr).getTime()
-  const days = Math.floor(diff / 86400000)
-  const hours = Math.floor(diff / 3600000)
-  const minutes = Math.floor(diff / 60000)
-  if (days > 0) return `${days}d ago`
-  if (hours > 0) return `${hours}h ago`
-  if (minutes > 0) return `${minutes}m ago`
-  return 'just now'
-}
-
-function isStale(updatedAt: string): boolean {
-  return Date.now() - new Date(updatedAt).getTime() > 24 * 3600 * 1000
-}
-
 interface WatchingItemProps {
   show: WatchingShow
   density: Density
@@ -113,7 +99,13 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
   const cfg = DENSITY_CONFIG[density]
   const router = useRouter()
   const isSoldOut = show.watchStatus === 'soldout'
-  const stale = isStale(show.updatedAt)
+  // When the *price* was last seen, not when the event row was last touched.
+  // Reading updatedAt made Watching call a fresh price stale — and disagree
+  // with the event page, which reads the price timestamp (#1366). Crawler
+  // prices carry no submission timestamp; for those the last crawl (updatedAt)
+  // is what last confirmed the number.
+  const priceObservedAt = show.priceObservedAt ?? show.updatedAt
+  const stale = isPriceStale(priceObservedAt)
   const showTime = formatShowTime(show.showTime)
   const dateLabel = formatDateLabel(show.date)
 
@@ -247,7 +239,7 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
               letterSpacing: '0.02em',
             }}
           >
-            {COPY.watchingItem.savedPrefix} {formatRelTime(show.savedAt)}
+            {COPY.watchingItem.savedPrefix} {relTimeAgo(show.savedAt)}
             {show.savedPrice !== null && (
               <>
                 {' '}
@@ -319,7 +311,7 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
             {stale && (
               <span
                 title={COPY.watchingItem.staleTooltip(
-                  formatRelTime(show.updatedAt),
+                  relTimeAgo(priceObservedAt),
                 )}
                 style={{
                   fontFamily: 'var(--font-mono)',
@@ -339,7 +331,7 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
                 }}
               >
                 {COPY.watchingItem.stalePrefix}
-                {formatRelTime(show.updatedAt)}
+                {relTimeAgo(priceObservedAt)}
               </span>
             )}
           </>

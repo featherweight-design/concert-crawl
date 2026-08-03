@@ -60,6 +60,7 @@ export function useWatchToggle() {
         eventStatus: 'upcoming',
         watchStatus: 'live',
         updatedAt: new Date().toISOString(),
+        priceObservedAt: null,
         imageUrl: null,
         attendingAt: null,
       }

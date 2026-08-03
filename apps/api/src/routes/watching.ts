@@ -8,6 +8,7 @@ import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
 import {
   loadPriceByTierByEventId,
+  lowestHeadlineObservedAt,
   lowestHeadlinePrice,
 } from '../lib/price-aggregation/index.js'
 import { releaseWatch } from '../lib/user-events.js'
@@ -114,6 +115,9 @@ watchingRouter.get('/', async (ctx) => {
     eventStatus: row.eventStatus,
     watchStatus: resolveWatchStatus(row.eventStatus),
     updatedAt: row.updatedAt.toISOString(),
+    priceObservedAt: lowestHeadlineObservedAt(
+      priceByTierByEventId.get(row.eventId) ?? [],
+    ),
     imageUrl: row.imageUrl ?? null,
     attendingAt: row.attendingAt?.toISOString() ?? null,
   }))

@@ -1118,6 +1118,19 @@ export const CONSUMER_COPY = {
 
   // ── Multi-tier price display ────────────────────────────────────
   // Shared copy for TierAlternateRow, MultiTierLiveCard, MixedTierCard, PendingStack
+  // ── Price staleness ─────────────────────────────────────────────
+  // StaleStamp + relTimeAgo — shown wherever a price carries an observation
+  // timestamp, so every surface words staleness identically.
+  priceStaleness: {
+    asOf: (relTime: string) => `as of ${relTime}`,
+    asOfStale: (relTime: string) => `as of ${relTime} — could be stale`,
+    justNow: 'just now',
+    daysSuffix: 'd ago',
+    hoursSuffix: 'h ago',
+    minutesSuffix: 'm ago',
+    unknown: 'unknown',
+  },
+
   multiTier: {
     // TierAlternateRow — pending middle column: "pending · {confirms}/{needed}"
     pendingTemplate: (confirms: number, needed: number) =>

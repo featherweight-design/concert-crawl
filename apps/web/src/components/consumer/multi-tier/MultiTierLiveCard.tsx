@@ -6,6 +6,7 @@ import {
   TierAlternateRow,
   type TierAlternateRowProps,
 } from '@/components/consumer/multi-tier/TierAlternateRow'
+import { StaleStamp } from '@/components/consumer/StaleStamp'
 import { displayVendor } from '@/components/consumer/vendor-display'
 
 const copy = CONSUMER_COPY.multiTier
@@ -41,6 +42,10 @@ export interface MultiTierLiveCardProps {
   // Anything ≤ 1 hides the caption — a single report isn't a corroboration
   // signal, just the source row itself.
   reports?: number
+  // ISO when the headline tier's price was observed. Without it this card was
+  // the one price surface with no staleness tell, so an 8-day-old price read as
+  // current on the event page while Watching flagged it (#1366).
+  observedAt?: string | null
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -54,6 +59,7 @@ export const MultiTierLiveCard = ({
   headline,
   alternates,
   reports,
+  observedAt,
 }: MultiTierLiveCardProps) => {
   const hasAlternates = alternates.length > 0
 
@@ -131,6 +137,12 @@ export const MultiTierLiveCard = ({
       >
         {'seen on ' + displayVendor(headline.vendor)}
         {reports !== undefined && reports > 1 && ` · ${reports} reports`}
+        {observedAt && (
+          <>
+            {' · '}
+            <StaleStamp observedAt={observedAt} />
+          </>
+        )}
       </div>
 
       {/* Other tiers section */}

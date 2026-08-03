@@ -146,3 +146,35 @@ describe('MultiTierLiveCard', () => {
     expect(coral).toBeDefined()
   })
 })
+
+// #1366 — this card was the only price surface with no staleness tell, so an
+// old price read as current on the event page while Watching flagged it.
+describe('MultiTierLiveCard staleness marker', () => {
+  const renderAt = (observedAt: string | null) =>
+    render(
+      <MultiTierLiveCard
+        headline={{ floor: 68, tier: 'GA', vendor: 'AXS', kind: 'community' }}
+        alternates={[]}
+        observedAt={observedAt}
+      />,
+    )
+
+  it('warns when the headline price is older than a day', () => {
+    const eightDaysAgo = new Date(
+      Date.now() - 8 * 24 * 60 * 60 * 1000,
+    ).toISOString()
+    renderAt(eightDaysAgo)
+    expect(screen.getByText('as of 8d ago — could be stale')).toBeDefined()
+  })
+
+  it('states the age without the warning when the price is fresh', () => {
+    const anHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    renderAt(anHourAgo)
+    expect(screen.getByText('as of 1h ago')).toBeDefined()
+  })
+
+  it('renders no stamp when the observation time is unknown', () => {
+    renderAt(null)
+    expect(screen.queryByText(/as of/)).toBeNull()
+  })
+})

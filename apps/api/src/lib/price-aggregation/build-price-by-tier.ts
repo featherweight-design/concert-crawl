@@ -4,6 +4,7 @@ import {
   type HowFound,
   type SourceCategory,
   type Tier,
+  type TierHeadline,
   type TierPriceBlock,
   type Vendor,
 } from '@concert-crawl/types'
@@ -104,10 +105,28 @@ export function resolveDisplayPrice(
  * ascending, so the answer is the first block carrying a headline.
  */
 export function lowestHeadlinePrice(blocks: TierPriceBlock[]): number | null {
+  const headline = lowestHeadline(blocks)
+  return headline === null ? null : parseFloat(headline.priceMin)
+}
+
+/**
+ * When the price a list surface shows was last observed, for the staleness
+ * marker (#1366). Null for crawler-sourced prices, which have no submission to
+ * read a timestamp from.
+ */
+export function lowestHeadlineObservedAt(
+  blocks: TierPriceBlock[],
+): string | null {
+  return lowestHeadline(blocks)?.observedAt ?? null
+}
+
+function lowestHeadline(blocks: TierPriceBlock[]): TierHeadline | null {
   for (const block of blocks) {
-    if (block.headline != null) {
-      const parsed = parseFloat(block.headline.priceMin)
-      if (Number.isFinite(parsed)) return parsed
+    if (
+      block.headline != null &&
+      Number.isFinite(parseFloat(block.headline.priceMin))
+    ) {
+      return block.headline
     }
   }
   return null

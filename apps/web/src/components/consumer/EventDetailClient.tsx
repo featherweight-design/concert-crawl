@@ -878,6 +878,7 @@ export function EventDetailPriceBlock({
           {...(headlineBlock?.reports !== undefined
             ? { reports: headlineBlock.reports }
             : {})}
+          observedAt={headlineBlock?.headline?.observedAt ?? null}
         />
         <div className="mt-3">
           <FaceValueCard
@@ -1334,6 +1335,7 @@ export function EventDetailPriceBlock({
             }}
             alternates={alternateRows}
             reports={headlineBlock.reports}
+            observedAt={headlineBlock.headline?.observedAt ?? null}
           />
           {outboundLink !== null && outboundKind !== null && (
             <div className="mt-3">

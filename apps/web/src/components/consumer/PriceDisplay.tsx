@@ -9,6 +9,8 @@ import {
   resolveAlternateKind,
   resolveSourceKind,
 } from '@/components/consumer/lib/price-source-kind'
+import { relTimeAgo } from '@/components/consumer/lib/staleness'
+import { StaleStamp } from '@/components/consumer/StaleStamp'
 
 const copy = CONSUMER_COPY
 
@@ -130,20 +132,6 @@ function resolveSourceName(
 function formatUSD(val: number, opts?: { whole?: boolean }): string {
   if (opts?.whole || Number.isInteger(val)) return `$${Math.round(val)}`
   return `$${val.toFixed(2)}`
-}
-
-function isStale(observedAt: string | null | undefined): boolean {
-  if (!observedAt) return false
-  return Date.now() - new Date(observedAt).getTime() > 24 * 60 * 60 * 1000
-}
-
-function relTime(observedAt: string): string {
-  const diff = Date.now() - new Date(observedAt).getTime()
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  if (hours < 1) return 'just now'
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  return `${days}d ago`
 }
 
 // ── SVG icons ────────────────────────────────────────────────────
@@ -363,37 +351,6 @@ function Sparkline({
   )
 }
 
-// ── StaleStamp ──────────────────────────────────────────────────
-function StaleStamp({ observedAt }: { observedAt: string | null | undefined }) {
-  if (!observedAt) return null
-  const stale = isStale(observedAt)
-  const rel = relTime(observedAt)
-  const text = stale ? `as of ${rel} — could be stale` : `as of ${rel}`
-
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 5,
-        flexShrink: 0,
-        whiteSpace: 'nowrap',
-        fontFamily: 'var(--font-mono)',
-        fontSize: 9,
-        color: stale ? 'var(--warning)' : 'var(--fg-subtle)',
-        letterSpacing: '0.04em',
-      }}
-    >
-      {stale && (
-        <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden>
-          <circle cx="4" cy="4" r="3" fill="var(--warning)" opacity="0.7" />
-        </svg>
-      )}
-      {text}
-    </span>
-  )
-}
-
 // ── VerifiedStamp ───────────────────────────────────────────────
 function VerifiedStamp({
   verification,
@@ -404,7 +361,7 @@ function VerifiedStamp({
 }) {
   const stale =
     Date.now() - new Date(verification.at).getTime() > 7 * 24 * 60 * 60 * 1000
-  const rel = relTime(verification.at)
+  const rel = relTimeAgo(verification.at)
   const color = stale ? 'var(--warning)' : 'var(--success)'
   const headWord = subject ? `${subject} verified` : 'Verified'
   const { by } = verification

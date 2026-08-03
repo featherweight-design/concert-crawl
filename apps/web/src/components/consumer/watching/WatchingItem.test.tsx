@@ -66,6 +66,7 @@ const baseShow: WatchingShow = {
   eventStatus: 'upcoming',
   watchStatus: 'live',
   updatedAt: new Date().toISOString(),
+  priceObservedAt: null,
   imageUrl: 'https://venue.com/shows/radiohead.jpg',
   attendingAt: null,
 }
@@ -195,5 +196,59 @@ describe('WatchingItem "Still going?" nudge', () => {
       expect(nudge()).toBeNull()
       cleanup()
     }
+  })
+})
+
+// #1366 — staleness used to be computed from the event row's updatedAt, so a
+// price that Event Detail (which reads the price timestamp) called fresh could
+// be flagged stale here, and vice versa.
+describe('WatchingItem staleness', () => {
+  const daysAgo = (days: number) =>
+    new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+
+  it('ages the price off its own observation time, not the event row', () => {
+    const { getByText } = render(
+      <WatchingItem
+        show={{
+          ...baseShow,
+          updatedAt: new Date().toISOString(),
+          priceObservedAt: daysAgo(8),
+        }}
+        density="cozy"
+        onRemove={() => {}}
+      />,
+    )
+
+    expect(getByText(/Stale · 8d ago/)).toBeTruthy()
+  })
+
+  it('leaves a freshly observed price unflagged even on an old event row', () => {
+    const { queryByText } = render(
+      <WatchingItem
+        show={{
+          ...baseShow,
+          updatedAt: daysAgo(30),
+          priceObservedAt: new Date().toISOString(),
+        }}
+        density="cozy"
+        onRemove={() => {}}
+      />,
+    )
+
+    expect(queryByText(/Stale/)).toBeNull()
+  })
+
+  // Crawler prices carry no submission timestamp; the last crawl is what last
+  // confirmed the number, so updatedAt stays the fallback.
+  it('falls back to the event row when the price has no observation time', () => {
+    const { getByText } = render(
+      <WatchingItem
+        show={{ ...baseShow, updatedAt: daysAgo(3), priceObservedAt: null }}
+        density="cozy"
+        onRemove={() => {}}
+      />,
+    )
+
+    expect(getByText(/Stale · 3d ago/)).toBeTruthy()
   })
 })

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   buildPriceByTierMap,
+  lowestHeadlineObservedAt,
   lowestHeadlinePrice,
   resolveDisplayPrice,
   type CorroboratedSubmissionRow,
@@ -128,5 +129,38 @@ describe('resolveDisplayPrice', () => {
       row({ id: 'a', eventId: 'evt-1', tier: 'GA', priceMin: '68.5' }),
     ])
     expect(resolveDisplayPrice(map.get('evt-1') ?? [], null)).toBe('68.50')
+  })
+})
+
+describe('lowestHeadlineObservedAt', () => {
+  it('is null when nothing is corroborated', () => {
+    expect(lowestHeadlineObservedAt([])).toBeNull()
+  })
+
+  // The staleness marker has to age the price a surface actually shows, so the
+  // timestamp must come from the same block the headline price does (#1366).
+  it('reads the timestamp off the cheapest tier, not an arbitrary one', () => {
+    const blocks =
+      buildPriceByTierMap([
+        row({
+          id: 'a',
+          eventId: 'evt-1',
+          tier: 'Reserved',
+          priceMin: '125',
+          createdAt: new Date('2026-07-01T00:00:00Z'),
+          updatedAt: new Date('2026-07-01T00:00:00Z'),
+        }),
+        row({
+          id: 'b',
+          eventId: 'evt-1',
+          tier: 'GA',
+          priceMin: '68',
+          createdAt: new Date('2026-06-01T00:00:00Z'),
+          updatedAt: new Date('2026-06-01T00:00:00Z'),
+        }),
+      ]).get('evt-1') ?? []
+
+    expect(lowestHeadlinePrice(blocks)).toBe(68)
+    expect(lowestHeadlineObservedAt(blocks)).toBe('2026-06-01T00:00:00.000Z')
   })
 })

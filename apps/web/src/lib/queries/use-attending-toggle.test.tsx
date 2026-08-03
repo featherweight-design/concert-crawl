@@ -50,6 +50,7 @@ const show = (over: Partial<WatchingShow> = {}): WatchingShow => ({
   eventStatus: 'upcoming',
   watchStatus: 'live',
   updatedAt: '2026-05-01T00:00:00.000Z',
+  priceObservedAt: null,
   imageUrl: null,
   attendingAt: null,
   ...over,

@@ -1072,11 +1072,17 @@ export interface WatchingShow {
   ticketLinks: TicketLink[] | null
   savedAt: string // ISO — when the user saved the show
   savedPrice: number | null // dollars (from ticket_price_min at save time)
-  currentPrice: number | null // dollars, from events.ticketPriceMin at query time
+  // Dollars — the cheapest corroborated tier, falling back to
+  // events.ticketPriceMin for events with no corroborated submissions.
+  currentPrice: number | null
   sourceKind: 'primary' | 'resale' | 'community' | null
   eventStatus: 'upcoming' | 'cancelled' | 'postponed'
   watchStatus: 'live' | 'soldout'
-  updatedAt: string // ISO — last time event row was updated (for stale check)
+  updatedAt: string // ISO — last time event row was updated
+  // ISO when `currentPrice` was observed, for the staleness marker (#1366).
+  // Null for crawler-sourced prices, where `updatedAt` is the best available
+  // proxy — a re-crawl is what last confirmed the number.
+  priceObservedAt: string | null
   imageUrl: string | null
   // ISO when the user said "I'm going!", independent of watching (#70). The
   // 7-day nudge reads it to decide whether it has already been answered.
