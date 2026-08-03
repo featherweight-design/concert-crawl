@@ -250,6 +250,33 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     ])
   })
 
+  it('collapses back to a single headliner when a co-headline bill is downgraded', async () => {
+    const venue = await seedTestVenue()
+    const date = futureDate(25)
+    mockExtraction([
+      makeEvent('Fontaines D.C.', date, {
+        title: 'Fontaines D.C. & Just Mustard',
+        rawTitle: 'Fontaines D.C. & Just Mustard',
+        headliners: ['Fontaines D.C.', 'Just Mustard'],
+      }),
+    ])
+    await crawlVenue(venue.id, mockBrowser)
+
+    // The upsert rebuilds the array as array_prepend(artist, excluded[2:]).
+    // Postgres yields an empty array — never NULL — for a slice past the end,
+    // so a one-element extraction leaves headliners as [artist] rather than
+    // nulling the column out.
+    mockExtraction(
+      [makeEvent('Fontaines D.C.', date, { headliners: ['Fontaines D.C.'] })],
+      '<html><body><p>Solo billing</p></body></html>',
+    )
+    await crawlVenue(venue.id, mockBrowser)
+
+    const row = await loadEvent('Fontaines D.C.')
+    expect(row.headliners).toEqual(['Fontaines D.C.'])
+    expect(row.canonicalHeadliners).toEqual(['fontaines d.c.'])
+  })
+
   it('keeps headliners[0] equal to the stored artist when the extracted string drifts', async () => {
     const venue = await seedTestVenue()
     const date = futureDate(24)
