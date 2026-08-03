@@ -1,3 +1,10 @@
+## [1.204.1](https://github.com/HartiganHM/concert-crawl/compare/v1.204.0...v1.204.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* **api:** hide deactivated venues' events from forward-looking surfaces ([346ee23](https://github.com/HartiganHM/concert-crawl/commit/346ee2334c661de4853d5a9ce56529b4cf72ec26)), closes [#1299](https://github.com/HartiganHM/concert-crawl/issues/1299)
+
 # [1.204.0](https://github.com/HartiganHM/concert-crawl/compare/v1.203.6...v1.204.0) (2026-08-03)
 
 
