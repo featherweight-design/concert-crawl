@@ -41,7 +41,7 @@ export default function TermsPage() {
           {copy.heading}
         </h1>
         <p className="mb-2 text-sm text-fg-muted">
-          Last updated: [date — fill before launch]
+          {LEGAL_COPY.shared.lastUpdated}
         </p>
         <p className="mb-10 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
           {copy.stubNotice}

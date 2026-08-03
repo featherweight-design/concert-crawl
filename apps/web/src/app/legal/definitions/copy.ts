@@ -1,7 +1,8 @@
-// Single source of truth for all customer-facing copy on the legal pages
-// (/legal/terms, /legal/privacy, /legal/beta). The three pages share the
-// back-link, the contact email, and the cross-links, so they live together
-// in one file with per-page sub-objects.
+// In-page copy for the legal pages (/legal/terms, /legal/privacy,
+// /legal/beta). The three pages share the back-link, the contact email, and
+// the cross-links, so they live together in one file with per-page
+// sub-objects. Page `metadata.title` exports are deliberately not here: they
+// are browser-tab titles following one repo-wide pattern, not page copy.
 
 export const LEGAL_COPY = {
   shared: {
@@ -10,6 +11,9 @@ export const LEGAL_COPY = {
     privacyLink: 'Privacy Policy →',
     termsLink: 'Terms of Service →',
     bulletGlyph: '—',
+    // Placeholder. Both dated pages ship this verbatim until a real
+    // effective date is set; changing it is a one-line edit here.
+    lastUpdated: 'Last updated: [date — fill before launch]',
   },
 
   terms: {
