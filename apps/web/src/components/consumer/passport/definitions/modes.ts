@@ -36,6 +36,8 @@ export interface PassportModeConfig {
   stampDate: number
   panelPadX: number
   panelPadB: number
+  /** The 1px-class strokes: tile rings, pill borders, the footer rule. */
+  hairline: number
   grain: number
 }
 
@@ -67,6 +69,7 @@ export const PP_MODES: Record<PassportMode, PassportModeConfig> = {
     stampDate: 8,
     panelPadX: 16,
     panelPadB: 15,
+    hairline: 1,
     grain: 0.12,
   },
   share: {
@@ -96,9 +99,36 @@ export const PP_MODES: Record<PassportMode, PassportModeConfig> = {
     stampDate: 17,
     panelPadX: 48,
     panelPadB: 44,
+    hairline: 1,
     grain: 0.1,
   },
 }
 
 /** The mode the PNG route renders. The compact mode is preview-only. */
 export const PASSPORT_PRINT_MODE: PassportMode = 'share'
+
+/**
+ * Device-pixel multiplier for the PNG route.
+ *
+ * This is NOT a second design. The share mode's 1080 numbers stay the design;
+ * the file is drawn at 2× and displayed at 1×, because a phone that paints a
+ * 1080 card into a 3× viewport upscales it and the stamp labels go soft. Every
+ * length in the config is multiplied, so proportions are identical.
+ */
+export const PASSPORT_PRINT_SCALE = 2
+
+/** Counts and opacities — the only config values that are not lengths. */
+const UNSCALED_KEYS = ['cols', 'rows', 'grain'] as const
+
+export const scalePassportMode = (
+  cfg: PassportModeConfig,
+  scale: number,
+): PassportModeConfig => {
+  const scaled: Record<string, number> = {}
+  for (const [key, value] of Object.entries(cfg)) {
+    scaled[key] = UNSCALED_KEYS.some((unscaled) => unscaled === key)
+      ? value
+      : value * scale
+  }
+  return { ...cfg, ...scaled }
+}

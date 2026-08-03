@@ -1515,6 +1515,10 @@ export const CONSUMER_COPY = {
     // No "Copy link" — a passport has no public page to link to, and offering
     // one would imply the card is shareable by URL when it is deliberately not.
     shareLabel: 'Share…',
+    // The card is drawn on demand and takes a moment. Held on the share button
+    // until the image is in hand, because a button that looks ready and then
+    // does nothing for several seconds reads as broken.
+    preparingLabel: 'Preparing…',
     saveLabel: 'Save image',
     shareFailed: "Couldn't share. Try saving the image instead.",
     downloadName: 'concert-passport.png',

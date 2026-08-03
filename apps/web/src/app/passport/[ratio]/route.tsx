@@ -1,6 +1,9 @@
 import { ImageResponse } from 'next/og'
 import { PassportCard } from '@/components/consumer/passport/PassportCard'
-import { PASSPORT_PRINT_MODE } from '@/components/consumer/passport/definitions/modes'
+import {
+  PASSPORT_PRINT_MODE,
+  PASSPORT_PRINT_SCALE,
+} from '@/components/consumer/passport/definitions/modes'
 import type { UserProfileResponse } from '@concert-crawl/types'
 import { auth } from '@/lib/auth'
 import { fetchHistory, type HistoryFetchResult } from '@/lib/history'
@@ -110,6 +113,7 @@ export const GET = async (
   return new ImageResponse(
     <PassportCard
       mode={PASSPORT_PRINT_MODE}
+      scale={PASSPORT_PRINT_SCALE}
       shows={toAttendedShows(history.data?.shows ?? [])}
       tokens={tokens}
       handle={profile.handle}

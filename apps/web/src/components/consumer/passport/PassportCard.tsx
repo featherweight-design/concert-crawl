@@ -1,6 +1,7 @@
 import React from 'react'
 import {
   PP_MODES,
+  scalePassportMode,
   type PassportMode,
 } from '@/components/consumer/passport/definitions/modes'
 import { PassportMoreTile } from '@/components/consumer/passport/PassportMoreTile'
@@ -29,6 +30,8 @@ export interface PassportCardProps {
   /** The account's handle. Nullable — `user_profiles.handle` is. */
   handle: string | null
   year: number
+  /** Device-pixel multiplier. See `PASSPORT_PRINT_SCALE`. */
+  scale?: number
 }
 
 const SINCE_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -57,8 +60,10 @@ export const PassportCard = ({
   tokens,
   handle,
   year,
+  scale = 1,
 }: PassportCardProps) => {
-  const cfg = PP_MODES[mode]
+  const cfg =
+    scale === 1 ? PP_MODES[mode] : scalePassportMode(PP_MODES[mode], scale)
   const print = mode === 'share'
   const stats = passportStats(shows)
   const who = passportHandle(handle)
@@ -267,7 +272,7 @@ export const PassportCard = ({
             justifyContent: 'space-between',
             gap: cfg.pad,
             paddingTop: cfg.panelGap * 0.7,
-            borderTop: `1px solid ${borderStrong}`,
+            borderTop: `${cfg.hairline}px solid ${borderStrong}`,
           }}
         >
           <ShareWordmark size={cfg.wordmark} color={fg} />

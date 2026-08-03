@@ -40,7 +40,7 @@ export const PassportPill = ({
       ...(print
         ? {}
         : { backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }),
-      border: '1px solid rgba(255,255,255,0.16)',
+      border: `${cfg.hairline}px solid rgba(255,255,255,0.16)`,
       fontFamily: 'JetBrains Mono',
       fontWeight: 700,
       fontSize: fontSize ?? cfg.headEyebrow,

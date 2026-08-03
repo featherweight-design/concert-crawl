@@ -28,8 +28,9 @@ export default async function PassportPage() {
   const requestHeaders = await headers()
   const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'))
 
-  // No `?theme=` override here: the picker belongs to the PNG route, and the
-  // page is meant to match the app the reader is already looking at.
+  // The first-paint theme only. `PassportContent` swaps to the theme the
+  // browser is actually in once it mounts — the stored profile theme can be a
+  // switch behind, and the card has to match the app around it.
   const { tokens } = resolvePassportTheme({ profileTheme: profile.theme })
 
   return (

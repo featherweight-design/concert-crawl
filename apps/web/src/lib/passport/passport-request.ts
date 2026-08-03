@@ -1,3 +1,7 @@
+import {
+  PP_MODES,
+  PASSPORT_PRINT_SCALE,
+} from '@/components/consumer/passport/definitions/modes'
 import { isThemeName, resolveThemeTokens } from '@/lib/share/theme-tokens'
 import { DENVER_TIME_ZONE, localDateString } from '@/lib/time'
 import type { ThemeName } from '@/theme/themes'
@@ -23,11 +27,19 @@ export const isPassportRatio = (
 ): candidate is PassportRatio =>
   PASSPORT_RATIOS.some((ratio) => ratio === candidate)
 
+/**
+ * The output size of the PNG — the design size times the device-pixel
+ * multiplier. Derived rather than written out, so bumping the multiplier can
+ * never leave the artboard and the card disagreeing about how big the card is.
+ */
 export const PASSPORT_DIMENSIONS: Record<
   PassportRatio,
   { width: number; height: number }
 > = {
-  square: { width: 1080, height: 1080 },
+  square: {
+    width: PP_MODES.share.width * PASSPORT_PRINT_SCALE,
+    height: PP_MODES.share.height * PASSPORT_PRINT_SCALE,
+  },
 }
 
 /**

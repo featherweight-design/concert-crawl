@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { PassportContent } from '../PassportContent'
+import { PP_MODES } from '../definitions/modes'
+import { ThemeProvider } from '@/theme'
 import type { AttendedShow } from '@/lib/passport/stats'
 
 const entitlement = vi.hoisted(() => ({
@@ -30,12 +32,33 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
     open ? <div data-testid="tier-picker" /> : null,
 }))
 
+beforeEach(() => {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() =>
+      Promise.resolve({ ok: true, blob: () => Promise.resolve(new Blob()) }),
+    ),
+  )
+  URL.createObjectURL = vi.fn(() => 'blob:passport')
+  URL.revokeObjectURL = vi.fn()
+})
+
 afterEach(() => {
   cleanup()
+  vi.unstubAllGlobals()
   entitlement.value = { isLoading: false, active: true }
 })
 
 const COPY = CONSUMER_COPY.passport
+
+const show = (index: number): AttendedShow => ({
+  id: `show-${index}`,
+  artist: `Artist ${index}`,
+  venue: 'Larimer Lounge',
+  genre: 'indie',
+  date: '2026-05-14',
+  priceFinal: 22,
+})
 
 const SHOWS: AttendedShow[] = [
   {
@@ -52,15 +75,17 @@ const TOKENS = { '--bg': '#000', '--fg': '#fff', '--accent': '#0ff' }
 
 const renderContent = (props: Partial<Parameters<typeof PassportContent>[0]>) =>
   render(
-    <PassportContent
-      shows={SHOWS}
-      tokens={TOKENS}
-      handle="hugh"
-      year={2026}
-      locked={false}
-      scaRegion={false}
-      {...props}
-    />,
+    <ThemeProvider>
+      <PassportContent
+        shows={SHOWS}
+        tokens={TOKENS}
+        handle="hugh"
+        year={2026}
+        locked={false}
+        scaRegion={false}
+        {...props}
+      />
+    </ThemeProvider>,
   )
 
 describe('PassportContent', () => {
@@ -69,6 +94,27 @@ describe('PassportContent', () => {
 
     expect(screen.getByText(COPY.pageTitle)).toBeInTheDocument()
     expect(screen.getByText('Wednesday')).toBeInTheDocument()
+  })
+
+  // The preview used to be the compact 3×3 card while the download was the
+  // 4×4 print card, so the reader was shown one wall and handed another.
+  it('previews the same card the download contains, not the compact one', () => {
+    const wall = PP_MODES.share.cols * PP_MODES.share.rows
+    renderContent({
+      shows: Array.from({ length: wall }, (_, i) => show(i)),
+    })
+
+    expect(screen.getByText(`Artist ${wall - 1}`)).toBeInTheDocument()
+  })
+
+  // The card follows the theme the browser is in, not the one last written to
+  // the profile — otherwise switching themes leaves the passport behind.
+  it('renders the PNG in the theme the reader is currently looking at', async () => {
+    renderContent({})
+
+    await waitFor(() =>
+      expect(fetch).toHaveBeenCalledWith('/passport/square?theme=electric'),
+    )
   })
 
   // The server's 403 is the authoritative verdict — a client hook that still

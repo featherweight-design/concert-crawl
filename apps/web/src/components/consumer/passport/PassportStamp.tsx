@@ -39,8 +39,7 @@ export const PassportStamp = ({
         transform: `rotate(${passportRotation(show.id)}deg)`,
         // A frame on an image, not screen chrome — a neutral translucent ink
         // reads on every riso paper, where a themed border would not.
-        boxShadow:
-          '0 0 0 1.5px rgba(255,255,255,0.14), 0 6px 16px -6px rgba(0,0,0,0.6)',
+        boxShadow: `0 0 0 ${cfg.hairline * 1.5}px rgba(255,255,255,0.14), 0 ${cfg.hairline * 6}px ${cfg.hairline * 16}px ${cfg.hairline * -6}px rgba(0,0,0,0.6)`,
       }}
     >
       <IdentityArtPrint

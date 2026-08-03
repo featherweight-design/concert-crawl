@@ -41,7 +41,7 @@ export const PassportMoreTile = ({
       width,
       height,
       borderRadius: cfg.stampRadius,
-      border: `1.5px dashed ${border}`,
+      border: `${cfg.hairline * 1.5}px dashed ${border}`,
       background: surface,
       transform: `rotate(${passportRotation('more-tile')}deg)`,
     }}

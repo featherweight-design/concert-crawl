@@ -26,6 +26,10 @@ beforeEach(() => {
     'fetch',
     vi.fn(() => pngResponse()),
   )
+  // jsdom implements neither half of the object-URL API, and the prefetch
+  // hands the save link one.
+  URL.createObjectURL = vi.fn(() => 'blob:passport')
+  URL.revokeObjectURL = vi.fn()
 })
 
 afterEach(() => {
@@ -36,6 +40,13 @@ afterEach(() => {
   // swallow warnings in every later case — the config sets no restoreMocks.
   vi.restoreAllMocks()
 })
+
+/** Resolves once the prefetch has landed and the share button is live. */
+const readyShareButton = async () => {
+  const button = await screen.findByRole('button', { name: COPY.shareLabel })
+  await waitFor(() => expect(button).toBeEnabled())
+  return button
+}
 
 describe('PassportActions', () => {
   it('shares the PNG itself rather than a URL the reader could not open', async () => {
@@ -51,7 +62,7 @@ describe('PassportActions', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: COPY.shareLabel }))
+    fireEvent.click(await readyShareButton())
 
     await waitFor(() => expect(shared).toHaveLength(1))
     expect(shared[0]?.files).toHaveLength(1)
@@ -61,6 +72,43 @@ describe('PassportActions', () => {
     expect(track).toHaveBeenCalledWith('passport_shared', {
       destination: 'system',
     })
+  })
+
+  // The regression behind "sharing worked once, then wouldn't again": awaiting
+  // the multi-second card render inside the click handler spends the gesture's
+  // transient user activation, so the second `share()` raises NotAllowedError.
+  // The image has to already be in hand when the button is pressed.
+  it('fetches the card before the click, not during it', async () => {
+    render(
+      <PassportActions
+        imageUrl="/passport/square"
+        capabilities={{ share: () => Promise.resolve(), canShare: () => true }}
+      />,
+    )
+
+    await readyShareButton()
+
+    expect(fetch).toHaveBeenCalledTimes(1)
+    expect(fetch).toHaveBeenCalledWith('/passport/square')
+  })
+
+  // Until the bytes land the button cannot do anything, and one that looks
+  // ready and then sits silent is exactly what reads as broken.
+  it('holds the share button in a preparing state until the card is ready', async () => {
+    render(
+      <PassportActions
+        imageUrl="/passport/square"
+        capabilities={{ share: () => Promise.resolve(), canShare: () => true }}
+      />,
+    )
+
+    const preparing = screen.getByRole('button', {
+      name: COPY.preparingLabel,
+    })
+    expect(preparing).toBeDisabled()
+    expect(preparing).toHaveAttribute('aria-busy', 'true')
+
+    await readyShareButton()
   })
 
   // Dismissing the OS sheet rejects with AbortError. That is a cancel, and
@@ -78,7 +126,7 @@ describe('PassportActions', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: COPY.shareLabel }))
+    fireEvent.click(await readyShareButton())
 
     await waitFor(() => expect(track).not.toHaveBeenCalled())
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
@@ -100,24 +148,30 @@ describe('PassportActions', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: COPY.shareLabel }))
-
     expect(await screen.findByRole('status')).toHaveTextContent(
       COPY.shareFailed,
+    )
+    // The save link still resolves to the route, so the page is slow rather
+    // than dead.
+    expect(screen.getByRole('link', { name: COPY.saveLabel })).toHaveAttribute(
+      'href',
+      '/passport/square',
     )
   })
 
   // Every desktop browser lands here, so the save link cannot depend on the
   // OS sheet existing — without it those users have no way to keep the card.
-  it('still offers the download on a browser with no share sheet', () => {
+  it('still offers the download on a browser with no share sheet', async () => {
     render(<PassportActions imageUrl="/passport/square" capabilities={{}} />)
 
     expect(
       screen.queryByRole('button', { name: COPY.shareLabel }),
     ).not.toBeInTheDocument()
     const save = screen.getByRole('link', { name: COPY.saveLabel })
-    expect(save).toHaveAttribute('href', '/passport/square')
     expect(save).toHaveAttribute('download', COPY.downloadName)
+    // Once the prefetch lands the download is local bytes, not a second render
+    // of a card the browser already has.
+    await waitFor(() => expect(save).toHaveAttribute('href', 'blob:passport'))
   })
 
   // Desktop Safari has `navigator.share` but rejects files. Offering the
@@ -140,7 +194,7 @@ describe('PassportActions', () => {
     expect(screen.getByRole('link', { name: COPY.saveLabel })).toBeVisible()
   })
 
-  it('records a save as its own destination', async () => {
+  it('records a save as its own destination', () => {
     render(<PassportActions imageUrl="/passport/square" capabilities={{}} />)
 
     fireEvent.click(screen.getByRole('link', { name: COPY.saveLabel }))
