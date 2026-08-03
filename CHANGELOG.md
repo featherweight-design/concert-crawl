@@ -1,3 +1,11 @@
+## [1.207.1](https://github.com/HartiganHM/concert-crawl/compare/v1.207.0...v1.207.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* **copy:** disclose the artist-page crawl window once, not twice ([#1425](https://github.com/HartiganHM/concert-crawl/issues/1425)) ([3f8ef78](https://github.com/HartiganHM/concert-crawl/commit/3f8ef783c13e5b531aa7eec7c442c85ce46a67ec))
+* **copy:** editorial cuts and tightens (queue groups C and D) ([#1427](https://github.com/HartiganHM/concert-crawl/issues/1427)) ([deb19db](https://github.com/HartiganHM/concert-crawl/commit/deb19dbffab05a2d4217cc5206d49ba9a00127de))
+
 # [1.207.0](https://github.com/HartiganHM/concert-crawl/compare/v1.206.0...v1.207.0) (2026-08-03)
 
 
