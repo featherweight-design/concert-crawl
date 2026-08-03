@@ -37,11 +37,11 @@ export const RELEASES: Release[] = [
     items: [
       {
         kind: 'fixed',
-        text: 'When two acts share a bill, we used to file the show under whichever name came first and quietly treat the other one as an opener. Co-headliners now count as headliners, so the show turns up on both artists’ pages and both of them trip your Following badge.',
+        text: 'When two acts share a bill, we used to file the show under whichever name came first and quietly treat the other one as an opener. Every co-headliner now counts as a headliner, so a shared bill turns up on both artists’ pages and both of them trip your Following badge.',
       },
       {
         kind: 'fixed',
-        text: 'The shows already on the calendar will get the same treatment, so this will not be limited to the ones we crawl from here on.',
+        text: 'We are going back over the shows already on the calendar and re-reading their bills the same way, so older listings catch up too.',
       },
     ],
   },

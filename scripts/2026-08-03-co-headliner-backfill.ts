@@ -41,11 +41,12 @@ import { pathToFileURL } from 'node:url'
 import Anthropic from '@anthropic-ai/sdk'
 import { and, eq, sql } from 'drizzle-orm'
 // Relative source import (not the package barrel) so this one-shot script runs
-// against a clean checkout without requiring a prior
-// `pnpm build --filter=@concert-crawl/crawler-core`. tsx resolves the `.js`
-// suffix back to the `.ts` source. Mirrors how the non-concert backfill
-// imports IS_CONCERT_RULES.
-import { canonicalizeSupporting } from '../packages/crawler-core/src/lib/canonical-artist.js'
+// against a clean checkout without requiring a prior build; tsx resolves the
+// `.js` suffix back to the `.ts` source. It reaches past the crawler-core
+// `canonical-artist` shim on purpose: that shim re-exports from
+// `@concert-crawl/types`, whose only export condition points at `dist/`, so
+// going through it would reintroduce the build requirement.
+import { canonicalizeSupporting } from '../packages/types/src/canonical-artist.js'
 import { db, events, venues } from '@concert-crawl/db'
 // Same reason as canonicalizeSupporting above: the
 // `@concert-crawl/db/upcoming-events` subpath resolves to dist, which a clean
