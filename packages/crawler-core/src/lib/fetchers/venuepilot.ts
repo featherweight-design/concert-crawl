@@ -18,6 +18,7 @@ import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
 import { CrawlFetchError } from '../fetcher.js'
 import { createDeadline } from './deadline.js'
+import { jitter } from './jitter.js'
 import type {
   PlatformFetcher,
   PlatformFetchOptions,
@@ -29,16 +30,6 @@ const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 const ENDPOINT = 'https://www.venuepilot.co/graphql'
 // Guard against a runaway metadata.totalPages pinning the crawl.
 const MAX_PAGES = 50
-
-// Jitter the crawl delay (±500ms) so paged requests don't hit VenuePilot on a
-// bot-like fixed interval — mirrors the cascade fetcher (lib/fetcher.ts). AEG
-// still uses a flat delay; #985 backfills jitter there too.
-function jitter(ms: number): number {
-  // A venue that asks for no delay gets none — without this, jittering zero
-  // would sometimes return up to 499ms and pace the admin probe.
-  if (ms <= 0) return 0
-  return Math.max(0, ms + Math.floor(Math.random() * 1000) - 500)
-}
 
 const EVENTS_QUERY = `query($args: EventsApiArguments!) {
   paginatedEvents(arguments: $args) {

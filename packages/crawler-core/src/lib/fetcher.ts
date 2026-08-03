@@ -1,5 +1,7 @@
 import type { Browser } from 'playwright'
 
+import { jitter } from './fetchers/jitter.js'
+
 const HONEST_USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
 export class CrawlFetchError extends Error {
@@ -34,10 +36,6 @@ export interface FetchResult {
   finalUrl: string
 }
 
-function jitter(ms: number): number {
-  return ms + Math.floor(Math.random() * 1000) - 500
-}
-
 export async function fetchPage(
   url: string,
   browser: Browser,
@@ -45,7 +43,7 @@ export async function fetchPage(
   waitUntil: 'networkidle' | 'load' | 'domcontentloaded' = 'networkidle',
   waitForSelector?: string,
 ): Promise<FetchResult> {
-  const delay = Math.max(0, jitter(crawlDelayMs))
+  const delay = jitter(crawlDelayMs)
   if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
 
   const context = await browser.newContext({
@@ -170,7 +168,7 @@ export async function fetchPageHttp(
   url: string,
   crawlDelayMs = 3000,
 ): Promise<FetchResult> {
-  const delay = Math.max(0, jitter(crawlDelayMs))
+  const delay = jitter(crawlDelayMs)
   if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
 
   console.log(JSON.stringify({ event: 'fetch.start', url, mode: 'http' }))

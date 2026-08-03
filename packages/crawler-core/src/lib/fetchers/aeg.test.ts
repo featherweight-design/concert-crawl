@@ -9,6 +9,7 @@ import {
   type AegEvent,
 } from './aeg.js'
 import type { Venue } from '@concert-crawl/db'
+import * as robots from '../robots.js'
 
 const FIXTURES_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -75,13 +76,18 @@ describe('aegFetcher.canHandle', () => {
 
 describe('aegFetcher.fetch', () => {
   let fetchSpy: ReturnType<typeof vi.spyOn>
+  let isAllowedSpy: ReturnType<typeof vi.spyOn>
 
   beforeEach(() => {
     fetchSpy = vi.spyOn(globalThis, 'fetch')
+    // Stub the robots gate so the rest of the suite keeps asserting on the
+    // blob request alone. isAllowed() would otherwise issue its own fetch.
+    isAllowedSpy = vi.spyOn(robots, 'isAllowed').mockResolvedValue(true)
   })
 
   afterEach(() => {
     fetchSpy.mockRestore()
+    isAllowedSpy.mockRestore()
   })
 
   function mockFetchOk(body: string): void {
@@ -105,6 +111,28 @@ describe('aegFetcher.fetch', () => {
       'https://aegwebprod.blob.core.windows.net/json/events/2/events.json',
     )
     expect(result.sourceUrl).toBe(calledUrl)
+  })
+
+  it('throws and issues no blob request when robots.txt disallows the blob', async () => {
+    isAllowedSpy.mockResolvedValue(false)
+    mockFetchOk(BLUEBIRD_FIXTURE)
+
+    await expect(
+      aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 }),
+    ).rejects.toBeInstanceOf(AegFetchError)
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('checks robots.txt for the blob URL and proceeds when allowed', async () => {
+    mockFetchOk(BLUEBIRD_FIXTURE)
+
+    const result = await aegFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+
+    expect(isAllowedSpy).toHaveBeenCalledWith(
+      'https://aegwebprod.blob.core.windows.net/json/events/2/events.json',
+      'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
+    )
+    expect(result.events.length).toBeGreaterThan(0)
   })
 
   it('passes an abort signal when perRequestTimeoutMs is set, none otherwise', async () => {
@@ -385,16 +413,31 @@ describe('aegFetcher.fetch', () => {
     expect(result.events.length).toBe(1)
   })
 
-  it('sets crawlDelayMs as a leading delay before the fetch', async () => {
+  it('sets a jittered crawlDelayMs as a leading delay before the fetch', async () => {
     mockFetchOk(BLUEBIRD_FIXTURE)
+    // Pin the jitter to its floor (-500ms) so the assertion is deterministic
+    // and the test doesn't pay for a random extra half second.
+    const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0)
     const start = Date.now()
-    await aegFetcher.fetch(makeVenue({ crawlDelayMs: 50 }), {
-      crawlDelayMs: 50,
+    await aegFetcher.fetch(makeVenue({ crawlDelayMs: 600 }), {
+      crawlDelayMs: 600,
     })
     const elapsed = Date.now() - start
-    // 50ms delay + the fetch itself (mocked synchronous). Allow some scheduler
-    // slack on either side; the important check is that we slept >= 40ms.
-    expect(elapsed).toBeGreaterThanOrEqual(40)
+    randomSpy.mockRestore()
+    // 600ms - 500ms of jitter = 100ms, plus the fetch itself (mocked
+    // synchronous). Allow scheduler slack below; the important check is that
+    // we slept, and that the jitter subtracted rather than being ignored.
+    expect(elapsed).toBeGreaterThanOrEqual(90)
+    expect(elapsed).toBeLessThan(600)
+  })
+
+  it('does not delay at all when crawlDelayMs is 0', async () => {
+    mockFetchOk(BLUEBIRD_FIXTURE)
+    const start = Date.now()
+    await aegFetcher.fetch(makeVenue({ crawlDelayMs: 0 }), { crawlDelayMs: 0 })
+    // Jittering zero must stay zero — an admin probe should not be paced by a
+    // delay the venue explicitly turned off.
+    expect(Date.now() - start).toBeLessThan(90)
   })
 
   it('derives the Origin header from the venue website per-venue', async () => {

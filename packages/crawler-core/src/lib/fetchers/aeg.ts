@@ -25,7 +25,9 @@ import type { Venue } from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
+import { isAllowed } from '../robots.js'
 import { createDeadline } from './deadline.js'
+import { jitter } from './jitter.js'
 import type {
   PlatformFetcher,
   PlatformFetchOptions,
@@ -333,13 +335,25 @@ async function aegFetch(
     )
   }
   const url = endpointUrl(venue.platformVenueId)
+
+  // crawl.ts gates on venue.websiteUrl only, and the blob lives on a
+  // different domain, so the URL we actually fetch has to clear robots.txt
+  // on its own (#985) — the same gate Live Nation and detail-page apply.
+  // isAllowed() caches per domain and fails open, so today (the blob host
+  // has no robots.txt) this is one extra request for the whole run and
+  // changes nothing. It future-proofs us against AEG serving a policy.
+  if (!(await isAllowed(url, USER_AGENT))) {
+    throw new AegFetchError(0, url, `robots.txt disallows ${url}`)
+  }
+
   const fetchedAt = Date.now()
   const deadline = createDeadline(opts)
   // Respect the venue's per-domain crawl delay. The platform blob is on
   // a different domain from the venue's website, but rate-limiting our
   // requests to AEG's CDN with the same conservative pacing is the
-  // crawl-ethics-conservative call.
-  await deadline.wait(opts.crawlDelayMs)
+  // crawl-ethics-conservative call. Jittered (±500ms) so repeat runs don't
+  // land on a bot-like fixed interval.
+  await deadline.wait(jitter(opts.crawlDelayMs))
   const raw = await deadline.run('events-blob', (timeoutMs) =>
     fetchAegBlob(url, originFromVenueUrl(venue.websiteUrl), timeoutMs),
   )
