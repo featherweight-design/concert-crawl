@@ -135,7 +135,11 @@ export function normalizeCandidateUrl(
   let resolved: URL
   try {
     resolved = new URL(href, listingUrl)
-  } catch {
+  } catch (err) {
+    logger.debug(
+      { href, listingUrl, err },
+      'detail-page: skipping an unparseable href',
+    )
     return null
   }
   const listingOrigin = new URL(listingUrl).origin
