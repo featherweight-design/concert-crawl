@@ -148,6 +148,18 @@ describe('extractTicketure', () => {
     expect(extractTicketure(html, SOURCE_URL, DENVER)).toEqual([])
   })
 
+  it('skips a row whose start time carries a timezone but is not a real instant', () => {
+    // Matches HAS_EXPLICIT_TZ yet yields an Invalid Date — formatToParts would
+    // throw and abort every remaining row for the venue.
+    const html = pageWith([
+      { ...DUTCH_MELROSE, startDateTime: '2026-13-45T99:00:00Z' },
+      { ...DUTCH_MELROSE, title: 'Survivor' },
+    ])
+    const events = extractTicketure(html, SOURCE_URL, DENVER)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.title).toBe('Survivor')
+  })
+
   it('skips rows missing a title or a start time', () => {
     const html = pageWith([
       { ...DUTCH_MELROSE, title: undefined },

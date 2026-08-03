@@ -91,7 +91,14 @@ function mapToNormalizedEvent(
   // that splits on `T` instead of converting through the venue zone moves
   // every evening show forward a day, so refuse a value we can't convert
   // rather than storing a date that is silently off by one.
-  if (!HAS_EXPLICIT_TZ.test(startDateTime)) {
+  // The pattern only proves a timezone designator is present, not that the
+  // instant is real — `2026-13-45T99:00:00Z` matches and yields an Invalid
+  // Date, which makes `formatToParts` throw and would abort the whole venue's
+  // extraction over one bad row.
+  if (
+    !HAS_EXPLICIT_TZ.test(startDateTime) ||
+    Number.isNaN(new Date(startDateTime).getTime())
+  ) {
     reportFailure({
       event: 'ticketure.ambiguous_start',
       severity: 'warn',
