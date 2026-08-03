@@ -98,6 +98,25 @@ describe('sweepStaleEvents (#675)', () => {
     expect(await statusOf(stale)).toBe('cancelled')
   })
 
+  it('bumps updatedAt so the cancellation surfaces in recently-changed views', async () => {
+    const venueId = await seedVenue()
+    const stale = await seedEvent(venueId, {
+      missingDaysAgo: STALE_EVENT_CANCEL_DAYS + 1,
+    })
+    // Compared against the process clock, not the row's seeded `updatedAt`,
+    // because the seed value comes from the database's clock and any skew
+    // between the two would make a row-to-row comparison flaky.
+    const beforeSweep = Date.now()
+
+    await sweepStaleEvents()
+
+    const [after] = await db
+      .select({ updatedAt: events.updatedAt })
+      .from(events)
+      .where(eq(events.id, stale))
+    expect(after?.updatedAt.getTime()).toBeGreaterThanOrEqual(beforeSweep)
+  })
+
   it('leaves rows still inside the threshold alone', async () => {
     const venueId = await seedVenue()
     // A crawl gap of a few days is common — a venue page that briefly drops a

@@ -97,10 +97,12 @@ const mockTagEventsWithGenres = vi.fn().mockResolvedValue(undefined)
 // Contract: runSpotifyFanoutSafely never throws (it swallows internally), so
 // the resolved-null default is its worst-case observable behavior.
 const mockRunSpotifyFanoutSafely = vi.fn().mockResolvedValue(null)
+const mockSweepStaleEvents = vi.fn().mockResolvedValue({ cancelled: 0 })
 vi.mock('@concert-crawl/crawler-core', () => ({
   crawlVenue: mockCrawlVenue,
   tagEventsWithGenres: mockTagEventsWithGenres,
   runSpotifyFanoutSafely: mockRunSpotifyFanoutSafely,
+  sweepStaleEvents: mockSweepStaleEvents,
 }))
 
 // Mock logger
