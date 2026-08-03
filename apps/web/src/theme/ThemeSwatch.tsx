@@ -2,6 +2,7 @@
 
 import { THEMES, THEME_META, type ThemeName } from './themes'
 import { MiniMark } from './MiniMark'
+import { THEME_COPY } from './definitions/copy'
 
 export function ThemeSwatch({
   name,
@@ -90,7 +91,7 @@ export function ThemeSwatch({
               textTransform: 'uppercase',
             }}
           >
-            active
+            {THEME_COPY.swatch.activeLabel}
           </span>
         )}
       </div>
@@ -119,7 +120,7 @@ export function ThemeSwatch({
             textOverflow: 'ellipsis',
           }}
         >
-          Habstrakt
+          {THEME_COPY.swatch.sampleGig.artist}
         </div>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
           <span
@@ -131,7 +132,7 @@ export function ThemeSwatch({
               letterSpacing: '-0.02em',
             }}
           >
-            $35
+            {THEME_COPY.swatch.sampleGig.price}
           </span>
           <span
             style={{
@@ -143,7 +144,7 @@ export function ThemeSwatch({
               textTransform: 'uppercase',
             }}
           >
-            GA
+            {THEME_COPY.swatch.sampleGig.tier}
           </span>
         </div>
       </div>

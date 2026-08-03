@@ -184,7 +184,7 @@ export default async function VenueProfilePage({
                   strokeLinecap="round"
                 />
               </svg>
-              Directions
+              {copy.venueProfile.directionsLink}
             </a>
           </div>
 
@@ -217,7 +217,7 @@ export default async function VenueProfilePage({
                   textTransform: 'uppercase',
                 }}
               >
-                About
+                {copy.venueProfile.aboutEyebrow}
               </p>
               <p
                 className="text-fg-muted"

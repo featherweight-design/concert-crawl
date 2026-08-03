@@ -46,7 +46,7 @@ export function WhatItDoesntYet() {
                 alignSelf: 'start',
               }}
             >
-              soon
+              {copy.soonBadge}
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <div

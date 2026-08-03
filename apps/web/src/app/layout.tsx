@@ -53,7 +53,7 @@ const themeScript = `
 
 export const metadata: Metadata = {
   title: 'Concert Crawl',
-  description: 'Denver concert calendar — find shows at your favorite venues.',
+  description: 'Denver concert calendar. Find shows at your favorite venues.',
   manifest: '/manifest.webmanifest',
   applicationName: 'Concert Crawl',
   appleWebApp: {

@@ -3,6 +3,7 @@
 import { cn } from '@/lib/utils'
 import { THEME_NAMES, type ThemeName } from '@/theme/themes'
 import { useTheme } from '@/theme'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const THEME_ICONS: Record<ThemeName, string> = {
   electric: '⚡',
@@ -34,7 +35,7 @@ export function ThemeToggle() {
   return (
     <div
       role="radiogroup"
-      aria-label="Theme"
+      aria-label={CONSUMER_COPY.themeToggle.groupAriaLabel}
       className="flex items-center gap-0.5 rounded-lg border border-border bg-surface-1 p-0.5"
     >
       {THEME_NAMES.map((name) => {

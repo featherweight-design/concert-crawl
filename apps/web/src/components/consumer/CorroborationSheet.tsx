@@ -49,10 +49,7 @@ const pendingTokens = (kind: 'community' | 'boxoffice'): PendingTokens => {
 
 // ── Verify option type ────────────────────────────────────────────
 type VerifyMethod =
-  | 'same_vendor'
-  | 'other_vendor'
-  | 'saw_listing'
-  | 'bought_myself'
+  'same_vendor' | 'other_vendor' | 'saw_listing' | 'bought_myself'
 
 type ApiConfirmMethod = 'same-vendor' | 'other-vendor' | 'box-office'
 
@@ -236,7 +233,7 @@ const SubmissionDetailCard = ({
               color: accentColor,
             }}
           >
-            face value · no fees
+            {copy.boxOfficeFaceValueNote}
           </span>
         )}
 
@@ -652,7 +649,7 @@ export const CorroborationSheet = ({
             {/* Verify options (fresh state) */}
             <div
               role="radiogroup"
-              aria-label="Verification method"
+              aria-label={copy.verifyOptionsAriaLabel}
               style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
             >
               {verifyOptions.map((opt) => (

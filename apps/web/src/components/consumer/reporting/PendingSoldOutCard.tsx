@@ -4,6 +4,7 @@ import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
 import { CheckGlyph, Eyebrow, PendingDot } from '@/components/consumer/glyphs'
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = REPORTING_COPY.pendingSoldOutCard
 const tokens = REPORT_TOKENS['sold-out']
@@ -183,7 +184,7 @@ export const PendingSoldOutCard = ({
       {/* Card body */}
       <div style={{ padding: '14px 14px 12px' }}>
         {/* Tickets eyebrow */}
-        <Eyebrow>Tickets</Eyebrow>
+        <Eyebrow>{CONSUMER_COPY.ticketsEyebrow}</Eyebrow>
 
         {/* Price row */}
         <div

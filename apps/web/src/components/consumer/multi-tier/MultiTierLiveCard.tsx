@@ -73,7 +73,7 @@ export const MultiTierLiveCard = ({
       }}
     >
       {/* Eyebrow */}
-      <Eyebrow>Tickets</Eyebrow>
+      <Eyebrow>{CONSUMER_COPY.ticketsEyebrow}</Eyebrow>
 
       {/* Headline flex row */}
       <div

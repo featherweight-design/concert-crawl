@@ -80,7 +80,7 @@ export function YoureIn() {
               lineHeight: 1,
             }}
           >
-            — Hugh
+            {ONBOARDING_COPY.signature}
           </div>
         </div>
       </div>

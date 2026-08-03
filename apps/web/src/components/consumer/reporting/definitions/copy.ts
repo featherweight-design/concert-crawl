@@ -13,6 +13,8 @@ export const REPORTING_COPY = {
 
   // ── ReportSheet ──────────────────────────────────────────────────
   reportSheet: {
+    // Radiogroup wrapping the status options
+    typeGroupAriaLabel: 'Report type',
     eyebrow: 'Status report',
     eyebrowContext: 'Status report',
     cancelButton: 'Cancel',
@@ -59,6 +61,10 @@ export const REPORTING_COPY = {
 
   // ── EvidenceForm ─────────────────────────────────────────────────
   evidenceForm: {
+    // Radiogroup wrapping the evidence options
+    methodGroupAriaLabel: 'Evidence method',
+    // Footnote explaining what happens after the report is filed
+    promotionNote: 'Live after 2 fan confirms · or admin promotion',
     eyebrow: 'Evidence',
     cancelButton: 'Cancel',
     heading: 'How do you know?',
@@ -105,6 +111,8 @@ export const REPORTING_COPY = {
 
   // ── ConfirmReportSheet ───────────────────────────────────────────
   confirmReportSheet: {
+    // Radiogroup wrapping the verify options
+    methodGroupAriaLabel: 'Confirmation method',
     eyebrow: 'Confirm report',
     cancelButton: 'Cancel',
     heading: 'Is this right?',
@@ -174,6 +182,10 @@ export const REPORTING_COPY = {
     addEvidenceButton: 'Add evidence',
     withdrawButton: 'Withdraw',
     waitingForConfirms: 'Waiting for confirms',
+    // Link out to the evidence URL attached to a report
+    viewEvidenceLink: 'VIEW',
+    attributionPrefix: 'Reported by',
+    attributionSelf: 'you',
     reportedBy: (handle: string) => `@${handle}`,
     reportedAnonymously: 'Anonymous',
   },

@@ -14,17 +14,10 @@ const NOTES_MAX_CHARS = 280
 
 // ── Evidence method type ──────────────────────────────────────────
 type EvidenceMethod =
-  | 'got_email'
-  | 'saw_social'
-  | 'venue_posted'
-  | 'was_there'
-  | 'something_else'
+  'got_email' | 'saw_social' | 'venue_posted' | 'was_there' | 'something_else'
 
 type ApiEvidenceMethod =
-  | 'bought_myself'
-  | 'saw_listing'
-  | 'venue_site'
-  | 'other'
+  'bought_myself' | 'saw_listing' | 'venue_site' | 'other'
 
 const EVIDENCE_METHOD_TO_API: Record<EvidenceMethod, ApiEvidenceMethod> = {
   got_email: 'saw_listing',
@@ -349,7 +342,7 @@ export const EvidenceForm = ({
               margin: 0,
             }}
           >
-            Live after 2 fan confirms · or admin promotion
+            {copy.promotionNote}
           </p>
         </div>
       }
@@ -430,7 +423,7 @@ export const EvidenceForm = ({
 
         <div
           role="radiogroup"
-          aria-label="Evidence method"
+          aria-label={copy.methodGroupAriaLabel}
           style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
         >
           {EVIDENCE_OPTIONS.map((opt) => (

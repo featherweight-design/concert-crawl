@@ -87,7 +87,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
               textTransform: 'uppercase',
             }}
           >
-            Tickets
+            {CONSUMER_COPY.ticketsEyebrow}
           </span>
           <div
             style={{
@@ -131,7 +131,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
                 alignSelf: 'flex-end',
               }}
             >
-              Sold out
+              {CONSUMER_COPY.priceRegion.soldOutBadge}
             </span>
           </div>
           <div
@@ -206,7 +206,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
           textTransform: 'uppercase',
         }}
       >
-        Tickets
+        {CONSUMER_COPY.ticketsEyebrow}
       </span>
       <div
         style={{
@@ -243,7 +243,7 @@ export function SoldOutPriceCard(props: SoldOutPriceCardProps) {
             alignSelf: 'flex-end',
           }}
         >
-          Sold out
+          {CONSUMER_COPY.priceRegion.soldOutBadge}
         </span>
       </div>
       <div

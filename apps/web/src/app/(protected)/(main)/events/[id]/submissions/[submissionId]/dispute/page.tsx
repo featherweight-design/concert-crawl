@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server'
 import { notFound, redirect } from 'next/navigation'
 import { DisputeForm } from '@/components/consumer/DisputeForm'
 import { apiClient } from '@/lib/api'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import type { Event, PriceSubmission } from '@concert-crawl/types'
 
 interface DisputePageProps {
@@ -45,9 +46,11 @@ export default async function DisputePage({ params }: DisputePageProps) {
     <main className="min-h-screen bg-bg">
       <header className="flex items-center justify-between px-5 py-4">
         <a href={`/events/${id}`} className="text-sm text-fg-muted">
-          ← Cancel
+          {CONSUMER_COPY.disputePage.cancelLink}
         </a>
-        <p className="text-sm font-semibold text-fg">Dispute price</p>
+        <p className="text-sm font-semibold text-fg">
+          {CONSUMER_COPY.disputePage.heading}
+        </p>
         <div className="w-16" />
       </header>
 

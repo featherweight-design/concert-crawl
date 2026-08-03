@@ -479,7 +479,7 @@ export const ConfirmReportSheet = ({
         {/* Verify options */}
         <div
           role="radiogroup"
-          aria-label="Confirmation method"
+          aria-label={copy.methodGroupAriaLabel}
           style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
         >
           {verifyOptions.map((opt) => (

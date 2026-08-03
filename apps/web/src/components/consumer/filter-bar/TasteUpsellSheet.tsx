@@ -79,7 +79,7 @@ export const TasteUpsellSheet = ({
               <span className="text-[13.5px] font-bold text-fg">
                 {bullet.head}{' '}
               </span>
-              <span className="text-[13px] text-fg-muted">— {bullet.sub}</span>
+              <span className="text-[13px] text-fg-muted">{bullet.sub}</span>
             </span>
           </li>
         ))}

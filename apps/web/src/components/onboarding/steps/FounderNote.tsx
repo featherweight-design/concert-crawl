@@ -58,7 +58,7 @@ export function FounderNote() {
             lineHeight: 1,
           }}
         >
-          — Hugh
+          {ONBOARDING_COPY.signature}
         </div>
       </div>
     </div>

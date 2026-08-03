@@ -397,9 +397,7 @@ export function CounterSubmitSheet({
               textTransform: 'uppercase' as const,
             }}
           >
-            By submitting you confirm this is accurate to the best of your
-            knowledge. Intentionally false reports may result in account
-            suspension.
+            {copy.honestyFootnote}
           </div>
         </div>
       )}

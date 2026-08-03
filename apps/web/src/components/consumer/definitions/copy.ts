@@ -1,4 +1,10 @@
 export const CONSUMER_COPY = {
+  // ── Shared price-card eyebrow ──────────────────────────────────────
+  // The uppercase label above the price on every price-card variant
+  // (SoldOutPriceCard, MixedTierCard, MultiTierLiveCard, PendingSoldOutCard).
+  // One constant so the four cards can't drift apart.
+  ticketsEyebrow: 'Tickets',
+
   // ── Browse — no-data (tonight / no filter active) ──────────────────
   emptyTonightEyebrow: 'Tonight',
   emptyTonightTitle: 'No shows tonight, grandpa.',
@@ -38,6 +44,11 @@ export const CONSUMER_COPY = {
   weekStripDayShows: 'shows on sale',
 
   // ── Venue ──────────────────────────────────────────────────────────
+  // Venue profile header — map link and the about-section eyebrow.
+  venueProfile: {
+    directionsLink: 'Directions',
+    aboutEyebrow: 'About',
+  },
   venueEmptyEyebrow: 'Upcoming',
   venueEmptyTitle: 'Nothing booked yet.',
   venueNoShows:
@@ -757,6 +768,8 @@ export const CONSUMER_COPY = {
         `Last checked ${relTime}, could be stale`,
       stalePrefix: 'Stale · ',
     },
+    // DeltaTag — the "no meaningful change since you saved" reading. The
+    // drop/spike readings are formatted numbers, not copy.
     sourcePill: {
       boxofficeLabel: 'Box office',
       boxofficeTooltip: 'Box office price straight from the venue',
@@ -1208,6 +1221,12 @@ export const CONSUMER_COPY = {
       withdrawButton: 'Withdraw',
     },
 
+    // Radiogroup wrapping the VerifyOption list
+    verifyOptionsAriaLabel: 'Verification method',
+
+    // Shown on a box-office submission inside SubmissionDetailCard
+    boxOfficeFaceValueNote: 'face value · no fees',
+
     // SubmissionDetailCard labels
     vendorLabel: 'VENDOR',
     byLabel: 'BY',
@@ -1253,6 +1272,9 @@ export const CONSUMER_COPY = {
     howFoundLabel: 'How you found out *',
     ceilingHint: 'Optional. Helps fans know the full price range.',
     honestyDisclaimer: 'By submitting, you confirm this is accurate.',
+    // Fine print at the foot of the success view
+    honestyFootnote:
+      'By submitting you confirm this is accurate to the best of your knowledge. Intentionally false reports may result in account suspension.',
     footerDisclaimer: 'Your update goes pending until another fan confirms.',
     submitButton: 'Submit update',
     submittingButton: 'Submitting…',
@@ -1303,6 +1325,9 @@ export const CONSUMER_COPY = {
       ctaLabel: 'Add the box-office price',
       caption: 'Goes live once one more fan confirms',
     },
+    // SoldOutPriceCard status badge — one constant for the mobile and desktop
+    // call sites so the two layouts stay in parity.
+    soldOutBadge: 'Sold out',
     // LOCKED §9 Q1 — SoldOutPriceCard variant='no-listing' caption (Appendix A.2).
     soldOutNoListingCaption:
       'No tickets listed anywhere we can see — not even resale.',
@@ -1381,6 +1406,15 @@ export const CONSUMER_COPY = {
   // `var(--accent)`-colored asterisk separately. Required fields: source +
   // vendor — pass `req` to FormLabel at the call site.
   submitPriceV2: {
+    // Rendered as one sentence with `$2,000` bolded and `pending` italicised,
+    // so it has to be stored as the individual text nodes around that markup.
+    capNote: {
+      beforeCap: 'Prices are capped at ',
+      cap: '$2,000',
+      betweenCapAndPending: '. Submissions stay ',
+      pending: 'pending',
+      afterPending: ' until 2 fans confirm.',
+    },
     sourceLabel: "Where's this price from?",
     sourceHelper:
       'Box office is face value, the most useful number for other fans.',
@@ -1529,6 +1563,19 @@ export const CONSUMER_COPY = {
     emptyBody:
       'Mark yourself going to a show and it lands here once the night has passed.',
     emptyCta: 'Find a show',
+  },
+
+  // ── ThemeToggle ─────────────────────────────────────────────────
+  // The per-theme button labels come from THEME_META in @/theme/themes;
+  // only the radiogroup's own accessible name lives here.
+  themeToggle: {
+    groupAriaLabel: 'Theme',
+  },
+
+  // ── Dispute price page ──────────────────────────────────────────
+  disputePage: {
+    cancelLink: '← Cancel',
+    heading: 'Dispute price',
   },
 } as const
 

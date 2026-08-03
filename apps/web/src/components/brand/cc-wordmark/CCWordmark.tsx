@@ -1,3 +1,5 @@
+import { BRAND_COPY } from '@/components/brand/definitions/copy'
+
 interface CCWordmarkProps {
   size?: number
   className?: string
@@ -16,7 +18,10 @@ export function CCWordmark({ size = 28, className }: CCWordmarkProps) {
         lineHeight: 1,
       }}
     >
-      concert<span style={{ color: 'var(--accent)' }}>crawl.</span>
+      {BRAND_COPY.wordmark.lead}
+      <span style={{ color: 'var(--accent)' }}>
+        {BRAND_COPY.wordmark.accent}
+      </span>
     </span>
   )
 }

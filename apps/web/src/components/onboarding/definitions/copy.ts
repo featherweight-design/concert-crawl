@@ -1,4 +1,9 @@
 export const ONBOARDING_COPY = {
+  // Handwritten sign-off shared by FounderNote and YoureIn. The em-dash is a
+  // deliberate attribution dash and stays — it is the one exception to the
+  // no-em-dash copy rule.
+  signature: '— Hugh',
+
   founderNote: {
     eyebrow: 'A note from the developer',
     heading: 'Thanks for signing up.',
@@ -63,6 +68,8 @@ export const ONBOARDING_COPY = {
   },
 
   whatItDoesntYet: {
+    // Pill on each missing-feature row
+    soonBadge: 'soon',
     eyebrow: 'Not yet',
     heading: 'What’s missing.',
     lede: "These are coming, not abandoned. We'd rather say so than fake it.",

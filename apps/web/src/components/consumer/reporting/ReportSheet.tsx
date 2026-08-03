@@ -421,7 +421,7 @@ export const ReportSheet = ({
         )}
         <div
           role="radiogroup"
-          aria-label="Report type"
+          aria-label={copy.typeGroupAriaLabel}
           style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
         >
           {visibleOptions.map((optionType) => (

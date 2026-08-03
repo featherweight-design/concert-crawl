@@ -276,7 +276,7 @@ export const PendingReportBanner = ({
                   flexShrink: 0,
                 }}
               >
-                VIEW
+                {copy.viewEvidenceLink}
               </a>
             ) : (
               <span
@@ -290,7 +290,7 @@ export const PendingReportBanner = ({
                   flexShrink: 0,
                 }}
               >
-                VIEW
+                {copy.viewEvidenceLink}
               </span>
             )}
           </div>
@@ -309,9 +309,11 @@ export const PendingReportBanner = ({
             letterSpacing: '0.04em',
           }}
         >
-          <span>Reported by</span>
+          <span>{copy.attributionPrefix}</span>
           {isReporter ? (
-            <span style={{ color: tokens.color, fontWeight: 700 }}>you</span>
+            <span style={{ color: tokens.color, fontWeight: 700 }}>
+              {copy.attributionSelf}
+            </span>
           ) : reporter !== null ? (
             <a
               href={reporter.url ?? '#'}

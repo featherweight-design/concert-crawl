@@ -883,8 +883,11 @@ export function SubmitPriceModal({
                 lineHeight: 1.5,
               }}
             >
-              Prices are capped at <strong>$2,000</strong>. Submissions stay{' '}
-              <em>pending</em> until 2 fans confirm.
+              {CONSUMER_COPY.submitPriceV2.capNote.beforeCap}
+              <strong>{CONSUMER_COPY.submitPriceV2.capNote.cap}</strong>
+              {CONSUMER_COPY.submitPriceV2.capNote.betweenCapAndPending}
+              <em>{CONSUMER_COPY.submitPriceV2.capNote.pending}</em>
+              {CONSUMER_COPY.submitPriceV2.capNote.afterPending}
             </p>
           </div>
 

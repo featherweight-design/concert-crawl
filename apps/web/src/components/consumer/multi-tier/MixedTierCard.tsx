@@ -55,7 +55,7 @@ export const MixedTierCard = ({ headline, alternates }: MixedTierCardProps) => {
       }}
     >
       {/* Eyebrow */}
-      <Eyebrow>Tickets</Eyebrow>
+      <Eyebrow>{CONSUMER_COPY.ticketsEyebrow}</Eyebrow>
 
       {/* Headline flex row */}
       <div
