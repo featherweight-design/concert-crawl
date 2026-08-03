@@ -152,7 +152,12 @@ export const PendingSubmissionsPanel = ({
                     {sub.ticketUrl && (
                       <SafeExternalLink
                         href={sub.ticketUrl}
-                        title="Open ticket page"
+                        title={
+                          ADMIN_COPY.review.pendingSubmissions.ticketLinkLabel
+                        }
+                        label={
+                          ADMIN_COPY.review.pendingSubmissions.ticketLinkLabel
+                        }
                         style={{
                           flexShrink: 0,
                           color: 'var(--fg-muted)',

@@ -1795,6 +1795,7 @@ export const ADMIN_COPY = {
       deny: 'Deny',
       approve: 'Approve · award cred',
       allSubmissionsLink: 'All submissions',
+      ticketLinkLabel: 'Open ticket page',
     },
 
     reviewPageClient: {

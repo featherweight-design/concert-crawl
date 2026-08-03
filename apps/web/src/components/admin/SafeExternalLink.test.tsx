@@ -36,6 +36,27 @@ describe('SafeExternalLink', () => {
     expect(screen.getByText('open').tagName).toBe('SPAN')
   })
 
+  it('names an icon-only link with visually hidden text', () => {
+    render(
+      <SafeExternalLink href="https://example.com" label="Open ticket page">
+        <svg />
+      </SafeExternalLink>,
+    )
+
+    expect(screen.getByRole('link', { name: 'Open ticket page' })).toBeTruthy()
+  })
+
+  it('keeps the hidden label when the link degrades to a span', () => {
+    render(
+      <SafeExternalLink href="javascript:alert(1)" label="Open ticket page">
+        <svg />
+      </SafeExternalLink>,
+    )
+
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(screen.getByText('Open ticket page').className).toBe('sr-only')
+  })
+
   it('keeps styling hooks on the degraded span so layout does not shift', () => {
     render(
       <SafeExternalLink href="javascript:alert(1)" className="truncate">
