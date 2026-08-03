@@ -493,6 +493,19 @@ describe('extractWithLlm', () => {
     expect(systemPrompt).toContain('for KING + COUNTRY')
   })
 
+  it('system prompt pins series-branded artists to the brand (#676)', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+
+    const systemPrompt = mockCreate.mock.calls[0]?.[0].system[0].text
+    expect(systemPrompt).toContain('Recurring series brands')
+    expect(systemPrompt).toContain('artist is the SERIES BRAND alone')
+    expect(systemPrompt).toContain('BASS BINGO – Wooli Edition')
+    // The rule must not leak into classification: a DJ-driven brand stays a
+    // non-concert even though it now yields a stable artist string.
+    expect(systemPrompt).toContain('applies to the artist field only')
+  })
+
   it('SAVE_EVENTS_TOOL declares reviewNeeded as a required boolean property', async () => {
     mockCreate.mockResolvedValue(makeAnthropicResponse([]))
     await extractWithLlm('<html>test</html>', SOURCE_URL)
