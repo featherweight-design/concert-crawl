@@ -24,6 +24,28 @@ vi.mock('@clerk/nextjs', () => ({
   }),
 }))
 
+const watchedShow = (eventId: string): WatchingShow => ({
+  userEventId: 'ue_1',
+  eventId,
+  artist: 'A',
+  venueName: 'V',
+  venueSlug: 'v',
+  date: '2026-08-14',
+  showTime: null,
+  ticketUrl: null,
+  ticketLinks: null,
+  savedAt: '2026-07-19T00:00:00Z',
+  savedPrice: null,
+  currentPrice: null,
+  sourceKind: null,
+  eventStatus: 'upcoming',
+  watchStatus: 'live',
+  attendingAt: null,
+  updatedAt: '2026-07-19T00:00:00Z',
+  priceObservedAt: null,
+  imageUrl: null,
+})
+
 const watchingData = vi.fn<() => WatchingShow[]>(() => [])
 vi.mock('@/lib/queries/use-watching', () => ({
   useWatching: () => ({ data: watchingData() }),
@@ -570,5 +592,66 @@ describe('WatchShowButton — signed-out gating beat (#794)', () => {
     signedIn = true
     renderWith('Geese')
     expect(out).toBe(stripAria(theButton().outerHTML))
+  })
+})
+
+describe('WatchShowButton strip variant', () => {
+  const renderStrip = () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    })
+    return render(
+      <QueryClientProvider client={client}>
+        <WatchShowButton eventId="evt_1" variant="strip" />
+      </QueryClientProvider>,
+    )
+  }
+
+  it('carries a status line in both toggle states', () => {
+    // Copy in both states is what keeps the strip from changing height when
+    // you tap it. A watching state with no line is the height jump returning.
+    renderStrip()
+    expect(screen.getByText(CONSUMER_COPY.watchers.watchHint)).not.toBeNull()
+
+    cleanup()
+    watchingData.mockReturnValue([watchedShow('evt_1')])
+    renderStrip()
+    expect(
+      screen.getByText(CONSUMER_COPY.watchers.watchStatusOn),
+    ).not.toBeNull()
+  })
+
+  it('describes the control with its status line', () => {
+    // The aria-label wins the accessible name, so without a description the
+    // hint would be sighted-only copy.
+    renderStrip()
+    const described = screen
+      .getByRole('button')
+      .getAttribute('aria-describedby')
+    expect(described).not.toBeNull()
+    expect(document.getElementById(described ?? '')?.textContent).toBe(
+      CONSUMER_COPY.watchers.watchHint,
+    )
+  })
+
+  it('keeps the toggle a single control, so the row has one hit area', () => {
+    renderStrip()
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+  })
+
+  it('still routes a signed-out tap to the tier picker', async () => {
+    signedIn = false
+    renderStrip()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button'))
+      await Promise.resolve()
+    })
+    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
+      'logged-out-watch',
+    )
+    expect(toggleMutate).not.toHaveBeenCalled()
   })
 })

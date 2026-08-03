@@ -2,9 +2,9 @@
 
 import { useAuth } from '@clerk/nextjs'
 import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { useEventWatchers } from '@/lib/queries/use-event-watchers'
 import { useWatching } from '@/lib/queries/use-watching'
+import { showWatcherCrawl } from '@/lib/watchers'
 import { WatchersSurface } from './WatchersSurface'
 
 interface WatchZoneProps {
@@ -15,12 +15,19 @@ interface WatchZoneProps {
 }
 
 /**
- * The event-detail Watch strip: the Watch button, the alerts hint, and the
- * social-proof surface.
+ * The event-detail Watch strip: one bordered object holding two sibling rows.
  *
- * The hint lives here rather than inside WatchShowButton because the button
- * also renders on every EventCard and HeroEventCard — putting it in the button
- * would drop a line of copy under every card in the browse grid.
+ * Row 1 is the toggle — the eye and a status line that carries copy in both
+ * states, so tapping never changes the strip's height. Row 2 is the crawl, and
+ * it only appears once two people can be named (see `showWatcherCrawl`).
+ *
+ * The rows are siblings and never nested: the crawl holds its own controls, and
+ * a button inside the toggle's hit area would be unreachable by pointer.
+ *
+ * The status line is rendered by the button's `strip` variant rather than by
+ * every WatchShowButton, because the button also sits on each EventCard and
+ * HeroEventCard, where a line of copy under every card in the browse grid would
+ * be noise.
  */
 export const WatchZone = ({
   eventId,
@@ -31,27 +38,54 @@ export const WatchZone = ({
   const { data: watchedShows } = useWatching()
   const { data: watchers, isPending } = useEventWatchers(eventId)
 
-  // Mirrors WatchShowButton's derivation so the hint flips with the button
-  // rather than lagging a render behind — same hook, same cache entry, no
-  // extra request and no lifted state.
+  // Mirrors WatchShowButton's derivation so the strip's chrome flips with the
+  // button rather than lagging a render behind — same hook, same cache entry,
+  // no extra request and no lifted state.
   const cacheIsReady = watchedShows !== undefined
   const isWatching = cacheIsReady
     ? watchedShows.some((show) => show.eventId === eventId)
     : initialWatching
+  // Signed out nothing is watched, however stale the cache is.
+  const renderedWatching = !!isSignedIn && isWatching
+
+  const loading = isPending && !!isSignedIn
+  const showCrawl = !loading && showWatcherCrawl(watchers, renderedWatching)
 
   return (
-    <div className="flex flex-col items-start gap-3">
+    <div
+      data-testid="watch-strip"
+      // The row-1 button fills this box edge to edge, so its own focus ring
+      // would land under the rounded `overflow-hidden` clip. The ring is drawn
+      // on the container instead, where nothing crops it.
+      className="flex flex-col overflow-hidden rounded-[10px] border-[1.5px] transition-colors focus-within:ring-2 focus-within:ring-[var(--signal)] focus-within:ring-offset-1"
+      style={{
+        borderColor: renderedWatching
+          ? 'color-mix(in oklab, var(--accent) 50%, transparent)'
+          : 'var(--border)',
+        background: renderedWatching
+          ? 'color-mix(in oklab, var(--accent) 10%, transparent)'
+          : 'var(--surface-2)',
+      }}
+    >
       <WatchShowButton
         eventId={eventId}
         initialWatching={initialWatching}
         artist={artist}
+        variant="strip"
       />
-      {!isWatching && (
-        <p className="-mt-1 text-[11.5px] tracking-[-0.005em] text-fg-subtle">
-          {CONSUMER_COPY.watchers.watchHint}
-        </p>
+      {showCrawl && (
+        <div
+          className="border-t px-3 py-[9px]"
+          style={{
+            borderColor: renderedWatching
+              ? 'color-mix(in oklab, var(--accent) 28%, transparent)'
+              : 'var(--border)',
+            background: 'color-mix(in oklab, var(--bg) 34%, transparent)',
+          }}
+        >
+          <WatchersSurface data={watchers} />
+        </div>
       )}
-      <WatchersSurface data={watchers} loading={isPending && !!isSignedIn} />
     </div>
   )
 }

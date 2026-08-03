@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.32.0-beta',
+    date: 'Aug 3, 2026',
+    headline: 'The Watch button says what it does.',
+    items: [
+      {
+        kind: 'changed',
+        text: 'Watching a show from its page is now one wide control that tells you what watching gets you, and whoever else is watching sits right underneath it instead of off on its own.',
+      },
+    ],
+  },
+  {
     version: 'v0.31.1-beta',
     date: 'Aug 3, 2026',
     headline: 'Prices you send in stop vanishing.',

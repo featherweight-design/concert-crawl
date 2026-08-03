@@ -916,6 +916,9 @@ export const CONSUMER_COPY = {
     // The alerts affordance the retired "N watching · alerts on price + sold
     // out" count tail used to carry now rides under the inactive Watch button.
     watchHint: 'Watch to get pinged on price drops + sold-out.',
+    // The watching half of the same line. Both states carry copy so the strip
+    // holds its height across a toggle.
+    watchStatusOn: "You're watching this one.",
   },
 
   // ── Small event row ─────────────────────────────────────────────

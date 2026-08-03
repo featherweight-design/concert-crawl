@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
@@ -44,12 +44,21 @@ interface WatchShowButtonProps {
   initialWatching?: boolean
   /** Headliner name, used only to build the signed-out accessible name. */
   artist?: string | undefined
+  /**
+   * `icon` is the 28px square every card renders. `strip` is row 1 of the
+   * event-detail watch strip: the same control widened so the status line sits
+   * inside the hit area instead of orphaned beside it. Both share this
+   * component so the signed-out picker routing and the post-watch ask can't
+   * diverge between the two shapes.
+   */
+  variant?: 'icon' | 'strip'
 }
 
 export function WatchShowButton({
   eventId,
   initialWatching = false,
   artist,
+  variant = 'icon',
 }: WatchShowButtonProps) {
   const { isSignedIn, getToken } = useAuth()
   const pathname = usePathname()
@@ -313,50 +322,100 @@ export function WatchShowButton({
     border: '1px solid var(--border-strong)',
   }
 
+  const glyph = isPending ? (
+    <Loader2
+      size={variant === 'strip' ? 16 : 10}
+      aria-hidden
+      style={{ animation: 'fbSpin 0.7s linear infinite' }}
+    />
+  ) : (
+    // One affordance at every breakpoint. A desktop-only "+ Watch this
+    // show" label made the eye a mobile shorthand rather than the
+    // gesture itself; state is carried by the fill, and the accessible
+    // name carries it for screen readers.
+    <Eye
+      size={variant === 'strip' ? 20 : 14}
+      aria-hidden
+      style={{ flexShrink: 0 }}
+    />
+  )
+
+  const statusLineId = useId()
+
+  const controlProps = {
+    type: 'button' as const,
+    onClick: handleToggle,
+    disabled: isPending,
+    // Signed out the eye is a dialog trigger, not a toggle, so it must
+    // NOT claim a pressed state — `aria-pressed` is omitted entirely
+    // rather than set to false, which would announce an off switch.
+    'aria-pressed': isSignedIn ? renderedWatching : undefined,
+    'aria-haspopup': isSignedIn ? undefined : ('dialog' as const),
+    'aria-expanded': isSignedIn ? undefined : pickerOpen,
+    'aria-label': !isSignedIn
+      ? CONSUMER_COPY.watchShowButton.button.ariaWatchSignedOut(who)
+      : renderedWatching
+        ? CONSUMER_COPY.watchShowButton.button.ariaWatching
+        : CONSUMER_COPY.watchShowButton.button.ariaWatch,
+  }
+
   return (
     <>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          flexWrap: 'wrap',
-        }}
-      >
+      {variant === 'strip' ? (
         <button
-          type="button"
-          onClick={handleToggle}
-          disabled={isPending}
-          // Signed out the eye is a dialog trigger, not a toggle, so it must
-          // NOT claim a pressed state — `aria-pressed` is omitted entirely
-          // rather than set to false, which would announce an off switch.
-          aria-pressed={isSignedIn ? renderedWatching : undefined}
-          aria-haspopup={isSignedIn ? undefined : 'dialog'}
-          aria-expanded={isSignedIn ? undefined : pickerOpen}
-          aria-label={
-            !isSignedIn
-              ? CONSUMER_COPY.watchShowButton.button.ariaWatchSignedOut(who)
-              : renderedWatching
-                ? CONSUMER_COPY.watchShowButton.button.ariaWatching
-                : CONSUMER_COPY.watchShowButton.button.ariaWatch
-          }
-          style={renderedWatching ? watchingStyle : unwatchedStyle}
+          {...controlProps}
+          // `aria-label` above wins the accessible name, so without this the
+          // status line would be sighted-only copy.
+          aria-describedby={statusLineId}
+          // The status line is inside the button, so the whole row is the
+          // target rather than a bare 28px square with text beside it.
+          // No ring of its own: the strip container draws one on
+          // `focus-within`, outside the clip that would crop this one.
+          className="flex w-full min-h-[50px] cursor-pointer items-center gap-3 border-0 bg-transparent px-[10px] py-2 text-left focus-visible:outline-none disabled:cursor-default disabled:opacity-60 sm:min-h-[52px]"
         >
-          {isPending ? (
-            <Loader2
-              size={10}
-              aria-hidden
-              style={{ animation: 'fbSpin 0.7s linear infinite' }}
-            />
-          ) : (
-            // One affordance at every breakpoint. A desktop-only "+ Watch this
-            // show" label made the eye a mobile shorthand rather than the
-            // gesture itself; state is carried by the fill, and the accessible
-            // name carries it for screen readers.
-            <Eye size={14} aria-hidden style={{ flexShrink: 0 }} />
-          )}
+          <span
+            aria-hidden
+            className="inline-flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-lg"
+            style={{
+              color: renderedWatching ? 'var(--accent)' : 'var(--fg-muted)',
+              background: renderedWatching
+                ? 'color-mix(in oklab, var(--accent) 16%, transparent)'
+                : 'transparent',
+            }}
+          >
+            {glyph}
+          </span>
+          <span
+            id={statusLineId}
+            className="min-w-0 text-[11px] font-semibold leading-[1.45] tracking-[0.03em]"
+            style={{
+              fontFamily: 'var(--font-mono)',
+              color: renderedWatching ? 'var(--accent)' : 'var(--fg-subtle)',
+              textWrap: 'pretty',
+            }}
+          >
+            {renderedWatching
+              ? CONSUMER_COPY.watchers.watchStatusOn
+              : CONSUMER_COPY.watchers.watchHint}
+          </span>
         </button>
-      </div>
+      ) : (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            flexWrap: 'wrap',
+          }}
+        >
+          <button
+            {...controlProps}
+            style={renderedWatching ? watchingStyle : unwatchedStyle}
+          >
+            {glyph}
+          </button>
+        </div>
+      )}
       <PostWatchSheet
         open={promptVariant !== null}
         onClose={closeSheet}

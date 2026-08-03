@@ -61,6 +61,32 @@ export function buildWatchers(response: EventWatchersResponse): BuiltWatchers {
   }
 }
 
+/**
+ * Whether the crawl row earns its place: at least two people the sentence can
+ * *name*, counting the viewer when they're watching.
+ *
+ * The threshold is a count of nameable people rather than of watchers, so a
+ * lone stranger stays hidden (one name reads thin) while that same stranger
+ * shows once you're watching too, and five handle-less watchers stay hidden (a
+ * roster of dashes is not social proof).
+ *
+ * The viewer only ever counts toward the threshold. The sentence itself is
+ * composed from `response.named`, which excludes them, so a crawl unlocked by
+ * your own watch still reads as being about everyone else.
+ *
+ * `response.total` is deliberately unread. This takes the whole response anyway,
+ * like its siblings above, so the omission reads as the ruling rather than an
+ * oversight — a bare `namedCount` parameter would invite someone to add the
+ * anonymous tail back into the test.
+ */
+export function showWatcherCrawl(
+  response: EventWatchersResponse | undefined,
+  isWatching: boolean,
+): boolean {
+  if (!response) return false
+  return response.named.length + (isWatching ? 1 : 0) >= 2
+}
+
 // "a", "a & b", "a, b & c"
 function joinNames(names: string[]): SentencePart[] {
   const parts: SentencePart[] = []

@@ -1,12 +1,20 @@
 // @vitest-environment jsdom
 
+// The strip's own job: whether row 2 renders. Row 1's status line lives inside
+// WatchShowButton (which this suite stubs) and is covered there.
+
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import type { EventWatchersResponse, WatchingShow } from '@concert-crawl/types'
+import type {
+  EventWatcher,
+  EventWatchersResponse,
+  WatchingShow,
+} from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
+const authState = vi.fn(() => ({ isSignedIn: true }))
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ isSignedIn: true, getToken: async () => 'test-token' }),
+  useAuth: () => ({ ...authState(), getToken: async () => 'test-token' }),
 }))
 
 const watchingData = vi.fn<() => WatchingShow[] | undefined>(() => [])
@@ -30,6 +38,9 @@ vi.mock('@/components/consumer/watch-show-button/WatchShowButton', () => ({
 
 import { WatchZone } from './WatchZone'
 
+const named = (...handles: string[]): EventWatcher[] =>
+  handles.map((handle) => ({ handle, avatarColor: null }))
+
 const watchedShow = (eventId: string): WatchingShow => ({
   userEventId: 'ue_1',
   eventId,
@@ -52,39 +63,82 @@ const watchedShow = (eventId: string): WatchingShow => ({
   imageUrl: null,
 })
 
+const crawl = () => screen.queryByRole('group')
+
 beforeEach(() => {
+  authState.mockReturnValue({ isSignedIn: true })
   watchingData.mockReturnValue([])
   watchersQuery.mockReturnValue({ data: undefined, isPending: false })
 })
 
 afterEach(cleanup)
 
-describe('WatchZone', () => {
-  it('shows the alerts hint while the viewer is not watching', () => {
-    render(<WatchZone eventId="evt_1" />)
-    expect(screen.getByText(CONSUMER_COPY.watchers.watchHint)).not.toBeNull()
-  })
-
-  it('drops the hint once the viewer is watching', () => {
+describe('WatchZone crawl visibility', () => {
+  it('hides the crawl when the viewer is the only watcher', () => {
     watchingData.mockReturnValue([watchedShow('evt_1')])
-    render(<WatchZone eventId="evt_1" />)
-    expect(screen.queryByText(CONSUMER_COPY.watchers.watchHint)).toBeNull()
-  })
-
-  it('falls back to the server-rendered watch state before the cache loads', () => {
-    watchingData.mockReturnValue(undefined)
-    render(<WatchZone eventId="evt_1" initialWatching />)
-    expect(screen.queryByText(CONSUMER_COPY.watchers.watchHint)).toBeNull()
-  })
-
-  it('renders the social-proof surface from the watchers query', () => {
     watchersQuery.mockReturnValue({
-      data: { total: 1, named: [{ handle: 'marisol', avatarColor: null }] },
+      data: { total: 0, named: [] },
       isPending: false,
     })
     render(<WatchZone eventId="evt_1" />)
-    expect(screen.getByRole('group').getAttribute('aria-label')).toBe(
+    // "All 1" beside your own avatar isn't social proof.
+    expect(crawl()).toBeNull()
+  })
+
+  it('hides the crawl for a lone stranger', () => {
+    watchersQuery.mockReturnValue({
+      data: { total: 1, named: named('marisol') },
+      isPending: false,
+    })
+    render(<WatchZone eventId="evt_1" />)
+    expect(crawl()).toBeNull()
+  })
+
+  it('shows the crawl when the viewer joins that one stranger', () => {
+    watchingData.mockReturnValue([watchedShow('evt_1')])
+    watchersQuery.mockReturnValue({
+      data: { total: 1, named: named('marisol') },
+      isPending: false,
+    })
+    render(<WatchZone eventId="evt_1" />)
+    expect(crawl()?.getAttribute('aria-label')).toBe(
       `marisol ${CONSUMER_COPY.watchers.one}`,
     )
+  })
+
+  it('shows the crawl for two named strangers', () => {
+    watchersQuery.mockReturnValue({
+      data: { total: 2, named: named('marisol', 'dev_ftw') },
+      isPending: false,
+    })
+    render(<WatchZone eventId="evt_1" />)
+    expect(crawl()).not.toBeNull()
+  })
+
+  it('hides the crawl when every watcher is anonymous', () => {
+    watchersQuery.mockReturnValue({
+      data: { total: 5, named: [] },
+      isPending: false,
+    })
+    render(<WatchZone eventId="evt_1" />)
+    // A roster of dashes is a number, not a crawl.
+    expect(crawl()).toBeNull()
+  })
+
+  it('hides the crawl while the watchers query is still in flight', () => {
+    watchersQuery.mockReturnValue({ data: undefined, isPending: true })
+    render(<WatchZone eventId="evt_1" />)
+    expect(crawl()).toBeNull()
+  })
+
+  it('does not count a stale cached watch for a signed-out visitor', () => {
+    authState.mockReturnValue({ isSignedIn: false })
+    watchingData.mockReturnValue([watchedShow('evt_1')])
+    watchersQuery.mockReturnValue({
+      data: { total: 1, named: named('marisol') },
+      isPending: false,
+    })
+    render(<WatchZone eventId="evt_1" />)
+    expect(crawl()).toBeNull()
   })
 })
