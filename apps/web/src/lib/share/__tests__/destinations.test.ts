@@ -104,6 +104,19 @@ describe('systemShare', () => {
     expect(payload?.files).toHaveLength(1)
   })
 
+  // A poster with no way back to the show is a dead end, and the link is the
+  // whole reason the card exists. `text` carries it too, because several
+  // targets discard `url` once `files` is present.
+  it('keeps the link on the payload when the image is shared too', async () => {
+    const share = vi.fn(async (_data: ShareData): Promise<void> => undefined)
+    const caps: ShareCapabilities = { share, canShare: () => true }
+    const fetchImpl = vi.fn(async () => pngResponse())
+    await systemShare(caps, { ...args, fetchImpl })
+    const payload = share.mock.calls[0]?.[0]
+    expect(payload?.url).toBe(args.url)
+    expect(payload?.text).toContain(args.url)
+  })
+
   it('falls back to a URL-only share when files are refused', async () => {
     const share = vi.fn(async (_data: ShareData): Promise<void> => undefined)
     const caps: ShareCapabilities = { share, canShare: () => false }

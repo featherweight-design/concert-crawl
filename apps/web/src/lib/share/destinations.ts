@@ -111,10 +111,20 @@ export const systemShare = async (
   }
 
   try {
+    // The link rides along even when the image does. A poster with no way back
+    // to the show is a dead end, and that link is the entire reason the card
+    // exists. It goes in `text` as well as `url` because several targets drop
+    // `url` outright once `files` is present, and a pasted link in the caption
+    // still works where a discarded one does not.
     await share(
       files === undefined
         ? { title: args.title, url: args.url }
-        : { title: args.title, text: args.title, files },
+        : {
+            title: args.title,
+            text: `${args.title}\n${args.url}`,
+            url: args.url,
+            files,
+          },
     )
     return 'shared'
   } catch (err) {
