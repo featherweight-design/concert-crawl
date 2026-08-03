@@ -120,6 +120,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
         router.push('/me')
       }
     } catch (err) {
+      console.error('Failed to save profile', err)
       setSaveError(
         err instanceof Error
           ? err.message
