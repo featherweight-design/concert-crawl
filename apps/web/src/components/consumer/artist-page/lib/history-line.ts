@@ -26,6 +26,6 @@ export const historyLine = (
   // emitting "We've caught them once — once."
   const only = venues[0]
   if (count === 1 && !only) return ARTIST_COPY.historyNone(since)
-  if (count === 1 && only) return ARTIST_COPY.historyOne(only, since)
-  return ARTIST_COPY.historyMany(count, joinList(venues), since)
+  if (count === 1 && only) return ARTIST_COPY.historyOne(only)
+  return ARTIST_COPY.historyMany(count, joinList(venues))
 }

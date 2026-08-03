@@ -50,17 +50,16 @@ export const ARTIST_COPY = {
   // History line — prose. `since` is DATA (crawl start), never hardcoded here,
   // so a licensed backfill changes the number without touching this string.
   historyNone: (since: string) =>
-    `First time we've caught them. Our crawl only goes back to ${since}, so that's not saying much.`,
-  historyOne: (venue: string, since: string) =>
-    `We've caught them once: ${venue}. That's everything since ${since}, which is as far back as our map goes.`,
-  historyMany: (count: number, venues: string, since: string) =>
-    `${count} shows on our map: ${venues}. That's since ${since}; anything earlier they played, we missed.`,
+    `First time we've caught them. We only started looking in ${since}.`,
+  historyOne: (venue: string) => `We've caught them once: ${venue}.`,
+  historyMany: (count: number, venues: string) =>
+    `${count} shows on our map: ${venues}.`,
 
   // Past shows — crawl data only. #1170 blocks deep history and setlists; this
   // is the modest version, and it says out loud where it stops.
   pastTitle: 'Previously',
   pastNote: (since: string) =>
-    `Our record starts when the crawl did, ${since}. Older gigs exist; we just weren't there.`,
+    `Concert Crawl started crawling in ${since}. Shows before that aren't tracked.`,
 
   // Player / embed (rendered by PR-F; the strings land here with the rest).
   playerRail: 'Player · Spotify',

@@ -32,7 +32,7 @@ describe('historyLine', () => {
 
   it('names the single venue', () => {
     expect(historyLine({ count: 1, venues: ['Mission Ballroom'] })).toBe(
-      `We've caught them once: Mission Ballroom. That's everything since ${CRAWL_SINCE}, which is as far back as our map goes.`,
+      "We've caught them once: Mission Ballroom.",
     )
   })
 
@@ -42,8 +42,19 @@ describe('historyLine', () => {
         count: 4,
         venues: ['Larimer Lounge', 'Globe Hall', 'the Bluebird'],
       }),
-    ).toBe(
-      `4 shows on our map: Larimer Lounge, Globe Hall & the Bluebird. That's since ${CRAWL_SINCE}; anything earlier they played, we missed.`,
+    ).toBe('4 shows on our map: Larimer Lounge, Globe Hall & the Bluebird.')
+  })
+
+  it('discloses the crawl window only in the zero phrasing', () => {
+    // On a page with past shows the window is disclosed once, by `pastNote`
+    // under the list. These two carry a count, so repeating it here said the
+    // same thing twice on one screen. The zero case is separate: `PastShows`
+    // does not render, so `historyNone` has to carry the disclosure itself.
+    expect(
+      historyLine({ count: 1, venues: ['Mission Ballroom'] }),
+    ).not.toContain(CRAWL_SINCE)
+    expect(historyLine({ count: 4, venues: ['a', 'b'] })).not.toContain(
+      CRAWL_SINCE,
     )
   })
 
