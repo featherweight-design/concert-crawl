@@ -1,3 +1,16 @@
+# [1.205.0](https://github.com/HartiganHM/concert-crawl/compare/v1.204.2...v1.205.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **crawler:** bump updatedAt on auto-cancel and mock the sweep in run.test ([7ca98ed](https://github.com/HartiganHM/concert-crawl/commit/7ca98edca73bc04afca83adf13e2127fd7a7dedd))
+* **crawler:** make the stale sweep atomic and log at zero ([a683cae](https://github.com/HartiganHM/concert-crawl/commit/a683cae4724238ef1f66a9a1d5ea163b310ded9e))
+
+
+### Features
+
+* **crawler:** cancel events unseen for two weeks ([69f8419](https://github.com/HartiganHM/concert-crawl/commit/69f841931c72dd855a4ed86f372825c761bdd1d0)), closes [#675](https://github.com/HartiganHM/concert-crawl/issues/675)
+
 ## [1.204.2](https://github.com/HartiganHM/concert-crawl/compare/v1.204.1...v1.204.2) (2026-08-03)
 
 
