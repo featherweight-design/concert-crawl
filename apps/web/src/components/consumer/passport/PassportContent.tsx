@@ -76,6 +76,12 @@ export const PassportContent = ({
     observerRef.current?.disconnect()
     observerRef.current = null
     if (node === null) return
+    const measured = node.getBoundingClientRect().width
+    if (measured > 0) setPreviewWidth(measured)
+    // The first measurement is what the preview actually needs; tracking later
+    // resizes is an enhancement, so a runtime without ResizeObserver renders
+    // rather than throws.
+    if (typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width
       if (width !== undefined && width > 0) setPreviewWidth(width)

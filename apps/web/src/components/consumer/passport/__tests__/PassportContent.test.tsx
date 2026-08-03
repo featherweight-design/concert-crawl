@@ -32,6 +32,14 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
     open ? <div data-testid="tier-picker" /> : null,
 }))
 
+// jsdom implements neither half of the object-URL API. Captured so the stubs
+// can be put back — Vitest shares a worker across files, so an unrestored
+// global outlives this suite.
+const objectUrlApi = {
+  create: URL.createObjectURL,
+  revoke: URL.revokeObjectURL,
+}
+
 beforeEach(() => {
   vi.stubGlobal(
     'fetch',
@@ -46,6 +54,8 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  URL.createObjectURL = objectUrlApi.create
+  URL.revokeObjectURL = objectUrlApi.revoke
   entitlement.value = { isLoading: false, active: true }
 })
 

@@ -21,13 +21,19 @@ const COPY = CONSUMER_COPY.passport
 const pngResponse = () =>
   Promise.resolve({ ok: true, blob: () => Promise.resolve(new Blob()) })
 
+// jsdom implements neither half of the object-URL API, and the prefetch hands
+// the save link one. Captured so the stubs can be put back — Vitest shares a
+// worker across files, so an unrestored global outlives this suite.
+const objectUrlApi = {
+  create: URL.createObjectURL,
+  revoke: URL.revokeObjectURL,
+}
+
 beforeEach(() => {
   vi.stubGlobal(
     'fetch',
     vi.fn(() => pngResponse()),
   )
-  // jsdom implements neither half of the object-URL API, and the prefetch
-  // hands the save link one.
   URL.createObjectURL = vi.fn(() => 'blob:passport')
   URL.revokeObjectURL = vi.fn()
 })
@@ -35,6 +41,8 @@ beforeEach(() => {
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
+  URL.createObjectURL = objectUrlApi.create
+  URL.revokeObjectURL = objectUrlApi.revoke
   track.mockClear()
   // The console spies below would otherwise outlive their own test and
   // swallow warnings in every later case — the config sets no restoreMocks.
