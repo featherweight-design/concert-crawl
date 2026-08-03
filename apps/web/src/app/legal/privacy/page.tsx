@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { LEGAL_COPY } from '../definitions/copy'
+
 export const metadata: Metadata = {
   title: 'Privacy Policy — Concert Crawl',
   robots: { index: false },
@@ -22,6 +24,8 @@ function Section({
 }
 
 export default function PrivacyPage() {
+  const copy = LEGAL_COPY.privacy
+
   return (
     <div className="min-h-screen bg-bg text-fg">
       <div className="mx-auto max-w-2xl px-6 py-16">
@@ -30,139 +34,98 @@ export default function PrivacyPage() {
           className="mb-10 inline-flex items-center gap-1.5 text-sm text-fg-muted transition-colors hover:text-fg"
         >
           <span aria-hidden>←</span>
-          <span>Concert Crawl</span>
+          <span>{LEGAL_COPY.shared.backLink}</span>
         </Link>
 
         <h1 className="mb-2 text-2xl font-extrabold tracking-tight text-fg">
-          Privacy Policy
+          {copy.heading}
         </h1>
         <p className="mb-2 text-sm text-fg-muted">
           Last updated: [date — fill before launch]
         </p>
         <p className="mb-10 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          This policy is a pre-launch stub and has not been reviewed by legal
-          counsel. Do not rely on it as a final document.
+          {copy.stubNotice}
         </p>
 
         <div className="space-y-8 text-[15px] leading-relaxed">
-          <Section title="What we collect">
-            <p>We collect only what&apos;s necessary to run the Service:</p>
+          <Section title={copy.collect.title}>
+            <p>{copy.collect.intro}</p>
             <ul className="space-y-1.5 pl-4">
-              {[
-                'Email address — for account creation and transactional emails (via Clerk)',
-                'Shows you watch — to power your Watching list',
-                'Price information you submit — used to improve data quality for everyone',
-                'Feedback you send — stored to help us prioritize improvements',
-                'Your username and avatar — shown on your profile',
-                'Theme preference — stored in localStorage on your device',
-              ].map((item) => (
+              {copy.collect.items.map((item) => (
                 <li key={item} className="flex gap-2">
-                  <span className="mt-px shrink-0 text-accent">—</span>
+                  <span aria-hidden className="mt-px shrink-0 text-accent">
+                    {LEGAL_COPY.shared.bulletGlyph}
+                  </span>
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
           </Section>
 
-          <Section title="What we don't do">
-            <p>We do not sell your data. We do not use it for advertising.</p>
-            <p>
-              We do not build behavioral profiles. We do not share your personal
-              information with third parties except the service providers listed
-              below, who are necessary to operate the product.
-            </p>
+          <Section title={copy.dontDo.title}>
+            <p>{copy.dontDo.body1}</p>
+            <p>{copy.dontDo.body2}</p>
           </Section>
 
-          <Section title="Service providers">
-            <p>
-              We use the following third-party services to operate Concert
-              Crawl:
-            </p>
+          <Section title={copy.providers.title}>
+            <p>{copy.providers.intro}</p>
             <ul className="space-y-1.5 pl-4">
-              {[
-                'Clerk — authentication and account management',
-                'Render — cloud hosting and compute',
-                'Sentry — error tracking (diagnostic data such as stack traces; not explicitly configured for PII minimization)',
-                'Resend — transactional email delivery',
-                'Stripe — payment processing (when subscriptions go live)',
-              ].map((item) => (
+              {copy.providers.items.map((item) => (
                 <li key={item} className="flex gap-2">
-                  <span className="mt-px shrink-0 text-accent">—</span>
+                  <span aria-hidden className="mt-px shrink-0 text-accent">
+                    {LEGAL_COPY.shared.bulletGlyph}
+                  </span>
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
-            <p>
-              Each provider handles your data under their own privacy policies.
-              We select providers that meet reasonable data protection
-              standards.
-            </p>
+            <p>{copy.providers.outro}</p>
           </Section>
 
-          <Section title="Cookies and local storage">
+          <Section title={copy.cookies.title}>
             <p>
-              We store your theme preference in your browser&apos;s
-              localStorage. We use session cookies set by Clerk for
-              authentication. During the private beta, we also set a short-lived
-              cookie (
+              {copy.cookies.bodyPrefix}
               <code className="rounded bg-surface-2 px-1 font-mono text-xs">
-                invite_verified
+                {copy.cookies.cookieName}
               </code>
-              ) after a valid invite code is entered — it expires after 1 hour
-              and is used only to allow access to the sign-up flow. We
-              don&apos;t use tracking cookies or third-party analytics scripts.
+              {copy.cookies.bodySuffix}
             </p>
           </Section>
 
-          <Section title="Data retention">
-            <p>
-              Your account data is kept for as long as your account is active.
-              When you delete your account, your profile and the shows
-              you&apos;re watching are deleted immediately. Price submissions
-              you&apos;ve made are anonymized (your user ID is removed) rather
-              than deleted, to preserve corroboration data for other users.
-            </p>
+          <Section title={copy.retention.title}>
+            <p>{copy.retention.body}</p>
           </Section>
 
-          <Section title="Your rights">
-            <p>You can:</p>
+          <Section title={copy.rights.title}>
+            <p>{copy.rights.intro}</p>
             <ul className="space-y-1.5 pl-4">
-              {[
-                'Edit your profile at any time from Settings',
-                'Delete your account from the Settings page',
-                'Request a copy of your data by emailing us',
-                'We currently only send transactional emails (e.g., account-related notices). No marketing emails.',
-              ].map((item) => (
+              {copy.rights.items.map((item) => (
                 <li key={item} className="flex gap-2">
-                  <span className="mt-px shrink-0 text-accent">—</span>
+                  <span aria-hidden className="mt-px shrink-0 text-accent">
+                    {LEGAL_COPY.shared.bulletGlyph}
+                  </span>
                   <span>{item}</span>
                 </li>
               ))}
             </ul>
           </Section>
 
-          <Section title="Children">
-            <p>
-              Concert Crawl is not directed at children under 13. We do not
-              knowingly collect information from anyone under 13.
-            </p>
+          <Section title={copy.children.title}>
+            <p>{copy.children.body}</p>
           </Section>
 
-          <Section title="Changes to this policy">
-            <p>
-              When we make material changes to this policy, we&apos;ll notify
-              you by email and update the &ldquo;Last updated&rdquo; date above.
-            </p>
+          <Section title={copy.changes.title}>
+            <p>{copy.changes.body}</p>
           </Section>
 
-          <Section title="Contact">
+          <Section title={copy.contact.title}>
             <p>
-              Privacy questions:{' '}
+              {copy.contact.intro}{' '}
               <a
-                href="mailto:hugh@featherweight.design"
+                href={`mailto:${LEGAL_COPY.shared.supportEmail}`}
                 className="text-fg-muted underline underline-offset-4 transition-colors hover:text-fg"
               >
-                hugh@featherweight.design
+                {LEGAL_COPY.shared.supportEmail}
               </a>
             </p>
           </Section>
@@ -172,7 +135,7 @@ export default function PrivacyPage() {
               href="/legal/terms"
               className="text-sm text-fg-muted underline underline-offset-4 transition-colors hover:text-fg"
             >
-              Terms of Service →
+              {LEGAL_COPY.shared.termsLink}
             </Link>
           </div>
         </div>
