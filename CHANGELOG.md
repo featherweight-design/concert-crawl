@@ -1,3 +1,10 @@
+# [1.207.0](https://github.com/HartiganHM/concert-crawl/compare/v1.206.0...v1.207.0) (2026-08-03)
+
+
+### Features
+
+* **web:** CCOverlay shell + CCTip, retiring InfoTooltip ([#1420](https://github.com/HartiganHM/concert-crawl/issues/1420)) ([3cce3f6](https://github.com/HartiganHM/concert-crawl/commit/3cce3f6ed98d1219c3775edc56ddab2a4ff3e48d))
+
 # [1.206.0](https://github.com/HartiganHM/concert-crawl/compare/v1.205.0...v1.206.0) (2026-08-03)
 
 
