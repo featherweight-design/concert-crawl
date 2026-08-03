@@ -1,3 +1,15 @@
+## [1.215.1](https://github.com/HartiganHM/concert-crawl/compare/v1.215.0...v1.215.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* **passport:** catch a share sheet that throws instead of rejecting ([da3fea9](https://github.com/HartiganHM/concert-crawl/commit/da3fea9cc0cf23718d8eb49b5cd2192dc3967e04))
+* **passport:** guard ResizeObserver and restore stubbed URL globals ([4e28cf7](https://github.com/HartiganHM/concert-crawl/commit/4e28cf7d36a63be6dce53b1558903b55a2cafcdd))
+* **passport:** key the artboard off the print mode, not the share mode ([d5e63e0](https://github.com/HartiganHM/concert-crawl/commit/d5e63e04de9a594a909208e742fa591e9a3ec97d))
+* **passport:** make the card share fast, sharp, and in the reader's theme ([08a8efb](https://github.com/HartiganHM/concert-crawl/commit/08a8efbe6e9f1be5a4885fbce4131059d77c32df)), closes [#85](https://github.com/HartiganHM/concert-crawl/issues/85)
+* **passport:** prefetch the card once, after the live theme resolves ([63ecab8](https://github.com/HartiganHM/concert-crawl/commit/63ecab82d58d22de43e53410d4d72b8fc2514eb0))
+* **passport:** set the shareable file before creating the object URL ([423141b](https://github.com/HartiganHM/concert-crawl/commit/423141b58253d8b1b240b0f6fc70442afe5cbba0))
+
 # [1.215.0](https://github.com/HartiganHM/concert-crawl/compare/v1.214.0...v1.215.0) (2026-08-03)
 
 
