@@ -1,0 +1,1182 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"><title>The Black Box</title><meta name="description" content="Discover events and more from The Black Box" /><meta property="og:description" content="Discover events and more from The Black Box" /><link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" /><link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap"/><link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/icon?family=Material+Icons"/><link rel="stylesheet" type="text/css" href="/fancybox/source/jquery.fancybox.css?v=2.1.5"/><link href="https://434ec82800f5e60cd301-ac10c3e9cebe57d4a7980bcda84f97d9.ssl.cf5.rackcdn.com/partner_blackboxdenve_favicon.ico" type="image/x-icon" rel="icon"/><link href="https://434ec82800f5e60cd301-ac10c3e9cebe57d4a7980bcda84f97d9.ssl.cf5.rackcdn.com/partner_blackboxdenve_favicon.ico" type="image/x-icon" rel="shortcut icon"/></head><body class="partner-homepage__body dark-theme min-h-[100vh] bg-black overflow-x-hidden flex flex-col"><noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-PK8RCH"
+ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript><noscript><iframe src="//www.googletagmanager.com/ns.html?id=GTM-PK8RCH"
+ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript><header class="partner-homepage__header"><nav id="header-fade" class="header fixed top-0 h-16 w-full z-10 bg-transparent transition-colors duration-300 [will-change:background-color] data-[scrolled=true]:bg-black partner-nav-dark"><div class="header__main-container mx-auto w-full max-w-[95%] sm:max-w-7xl flex items-center justify-between h-full px-4"><a href="/" class="navbar-brand max-h-8 flex items-center"><img src="https://res.cloudinary.com/eventservice/image/upload/saas/partner-logos/blackboxdenver_onDark.png" alt="The Black Box" class="max-w-42 max-h-8"/></a><div class="header__help-container mr-0 sm:mr-4 shrink-0"><a href="#help_content" class="header__help-link btn_help faq flex items-center gap-2 text-white hover:text-[#DDD] font-semibold whitespace-nowrap">
+ Need Help?
+ </a></div></div></nav></header><main role="main" class="partner-homepage__main flex-grow pb-32 pt-16 w-full mx-auto"><div class="event-listing__logo text-center mx-auto w-full flex justify-center items-center pt-16 pb-16"><img src="https://res.cloudinary.com/eventservice/image/upload/saas/partner-logos/blackboxdenver_onDark.png" class="logo h-auto max-h-[200px] w-auto max-w-[40%]" alt="The Black Box"/></div><div class="filters filters--mobile fixed bottom-5 left-1/2 -translate-x-1/2 z-20 w-[min(95vw,680px)] flex flex-row items-center justify-center md:hidden"><div id="mobile-filter-small" class="filters__group filters__group--search filters__group--mobile-compact h-11 w-6/10 gap-2 flex flex-row items-center justify-center"><div class="filters__container filters__container--search filters__container--mobile-compact w-75/100 h-11 relative border bg-[#1C1E21] text-white border-[#272A2F] rounded shadow-lg"><form id="filter-search-mobile-small" class="filters__form filters__form--search filters__form--mobile-compact w-full h-full"><input id="search-input-mobile-small" name="q" class="filters__input filters__input--search filters__input--mobile-compact w-full h-full px-3 pr-9 focus:outline-none focus:ring-0 text-sm bg-[#151619] text-white border-[#1C1E21]" type="text" placeholder="Search" aria-label="Search Event Name or Zip" value=""></form><button class="filters__button filters__button--search filters__button--mobile-compact absolute top-3.5 right-2.5 cursor-pointer" onclick="document.getElementById('filter-search-mobile-small').submit();"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="#4A4F59" d="M11.1291 9.87956H10.4707L10.2374 9.65456C11.0541 8.70456 11.5457 7.47122 11.5457 6.12956C11.5457 3.13789 9.12074 0.712891 6.12907 0.712891C3.1374 0.712891 0.712402 3.13789 0.712402 6.12956C0.712402 9.12122 3.1374 11.5462 6.12907 11.5462C7.47074 11.5462 8.70407 11.0546 9.65407 10.2379L9.87907 10.4712V11.1296L14.0457 15.2879L15.2874 14.0462L11.1291 9.87956ZM6.12907 9.87956C4.05407 9.87956 2.37907 8.20456 2.37907 6.12956C2.37907 4.05456 4.05407 2.37956 6.12907 2.37956C8.20407 2.37956 9.87907 4.05456 9.87907 6.12956C9.87907 8.20456 8.20407 9.87956 6.12907 9.87956Z" /></svg></button></div><button onclick="toggleFilterState()" class="filters__button filters__button--toggle filters__button--mobile-compact w-11 h-11 bg-[#2563EA] rounded flex items-center justify-center cursor-pointer hover:bg-[#1d4ed8] shadow-lg"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.545721 1.67467C2.22905 3.83301 5.33739 7.83301 5.33739 7.83301V12.833C5.33739 13.2913 5.71239 13.6663 6.17072 13.6663H7.83739C8.29572 13.6663 8.67072 13.2913 8.67072 12.833V7.83301C8.67072 7.83301 11.7707 3.83301 13.4541 1.67467C13.8791 1.12467 13.4874 0.333008 12.7957 0.333008H1.20405C0.512388 0.333008 0.120721 1.12467 0.545721 1.67467Z" fill="white"/></svg></button></div><div id="mobile-filter-expanded" class="filters__group filters__group--expanded filters__group--mobile-expanded w-95/100 gap-2 flex flex-col items-center justify-center hidden"><div class="filters__group filters__group--search filters__group--mobile-expanded h-11 w-full gap-2 flex flex-row items-center justify-center"><div class="filters__container filters__container--search filters__container--mobile-expanded w-75/100 h-11 relative border bg-[#1C1E21] text-white border-[#272A2F] rounded shadow-lg"><form id="filter-search-mobile-expanded" class="filters__form filters__form--search filters__form--mobile-expanded w-full h-full"><input id="search-input-mobile-expanded" name="q" class="filters__input filters__input--search filters__input--mobile-expanded w-full h-full px-3 pr-9 focus:outline-none focus:ring-0 text-sm bg-[#151619] text-white border-[#1C1E21]" type="text" placeholder="Search Event Name or Zip" aria-label="Search" value=""></form><button class="filters__button filters__button--search filters__button--mobile-expanded absolute top-3.5 right-2.5 cursor-pointer" onclick="document.getElementById('filter-search-mobile-expanded').submit();"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="#4A4F59" d="M11.1291 9.87956H10.4707L10.2374 9.65456C11.0541 8.70456 11.5457 7.47122 11.5457 6.12956C11.5457 3.13789 9.12074 0.712891 6.12907 0.712891C3.1374 0.712891 0.712402 3.13789 0.712402 6.12956C0.712402 9.12122 3.1374 11.5462 6.12907 11.5462C7.47074 11.5462 8.70407 11.0546 9.65407 10.2379L9.87907 10.4712V11.1296L14.0457 15.2879L15.2874 14.0462L11.1291 9.87956ZM6.12907 9.87956C4.05407 9.87956 2.37907 8.20456 2.37907 6.12956C2.37907 4.05456 4.05407 2.37956 6.12907 2.37956C8.20407 2.37956 9.87907 4.05456 9.87907 6.12956C9.87907 8.20456 8.20407 9.87956 6.12907 9.87956Z" /></svg></button></div><button onclick="toggleFilterState()" class="filters__button filters__button--toggle filters__button--mobile-expanded w-11 h-11 bg-[#2563EA] rounded flex items-center justify-center cursor-pointer hover:bg-[#1d4ed8] shadow-lg"><svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17.3333 1.84199L12.925 6.25033L15.6666 9.00033H8.99996V2.33366L11.7416 5.07533L16.1583 0.666992L17.3333 1.84199ZM1.84163 17.3337L6.24996 12.9253L8.99996 15.667V9.00033H2.33329L5.07496 11.742L0.666626 16.1587L1.84163 17.3337Z" fill="white"/></svg></button></div><div class="filters__group filters__group--category-organization filters__group--mobile-expanded flex flex-row items-center justify-between w-full gap-2 px-5"><div id="categories-container" class="filters__container filters__container--category filters__container--mobile-expanded relative w-48/100"><div class="input select"><select name="data[type]" id="typeTopicSelectNavMobile" class="filters__input filters__input--category filters__input--mobile-expanded w-full h-11 shadow-lg rounded-md flex-1 text-xs border-transparent border outline py-2 text-center [text-align-last:center] [-webkit-text-align-last:center] [-webkit-appearance:none] appearance-none cursor-pointer bg-[#1C1E21] text-white outline-[#1C1E21]" onchange="filterByTopic(this);" aria-label="Select Category"><option value="">Categories</option><option value="topic:business">Business</option><option value="topic:charity">Charity &amp; Causes</option><option value="topic:comedy">Comedy</option><option value="topic:concert">Concert</option><option value="topic:convention">Convention</option><option value="topic:fair">Fair</option><option value="topic:festival">Festival</option><option value="topic:film">Film</option><option value="topic:fine-arts">Fine Arts</option><option value="topic:food-drink">Food &amp; Drink</option><option value="topic:holiday">Holiday</option><option value="topic:music">Live Music</option><option value="topic:nightlife">Nightlife</option><option value="topic:nonprofit">Non Profit</option><option value="topic:other">Other</option><option value="topic:private">Private Event</option><option value="topic:rodeo">Rodeo</option><option value="topic:sport">Sports</option><option value="topic:theater">Theater</option><option value="topic:virtual-events">Virtual Events</option><option value="topic:wellness">Wellness</option></select></div></div><div id="organization-container" class="filters__container filters__container--organization filters__container--mobile-expanded"><div class="input select"><select name="data[org]" id="organizationListMobile" class="filters__input filters__input--organization filters__input--mobile-expanded h-11 shadow-lg text-center w-full rounded-md text-xs border-r-8 border-transparent border outline py-2 px-3 bg-[#1C1E21] text-white outline-[#1C1E21]" onchange="event.preventDefault(); filterByOrganization(this);" aria-label="Select Organization"><option value="">Organization</option><option value="616f467d-a18c-4ef0-9842-56850ad120f3">The Black Box</option><option value="61cba902-afd0-484f-9d9e-6d940ad1213e">The Lounge</option></select></div></div></div><div id="date-range-container" class="filters__container filters__container--date filters__container--mobile-expanded relative w-9/10 bg-[#1C1E21] text-white rounded-md"><div class="filters__icon filters__icon--date filters__icon--mobile-expanded absolute pl-3 left-[30%] top-1/2 -translate-y-1/2 -translate-x-1/2"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 4H14.5V3.25C14.5 3.05109 14.421 2.86032 14.2803 2.71967C14.1397 2.57902 13.9489 2.5 13.75 2.5C13.5511 2.5 13.3603 2.57902 13.2197 2.71967C13.079 2.86032 13 3.05109 13 3.25V4H10.75V3.25C10.75 3.05109 10.671 2.86032 10.5303 2.71967C10.3897 2.57902 10.1989 2.5 10 2.5C9.80109 2.5 9.61032 2.57902 9.46967 2.71967C9.32902 2.86032 9.25 3.05109 9.25 3.25V4H7V3.25C7 3.05109 6.92098 2.86032 6.78033 2.71967C6.63968 2.57902 6.44891 2.5 6.25 2.5C6.05109 2.5 5.86032 2.57902 5.71967 2.71967C5.57902 2.86032 5.5 3.05109 5.5 3.25V4H4C3.60218 4 3.22064 4.15804 2.93934 4.43934C2.65804 4.72064 2.5 5.10218 2.5 5.5V16C2.5 16.3978 2.65804 16.7794 2.93934 17.0607C3.22064 17.342 3.60218 17.5 4 17.5H16C16.3978 17.5 16.7794 17.342 17.0607 17.0607C17.342 16.7794 17.5 16.3978 17.5 16V5.5C17.5 5.10218 17.342 4.72064 17.0607 4.43934C16.7794 4.15804 16.3978 4 16 4ZM5.5 5.5C5.5 5.69891 5.57902 5.88968 5.71967 6.03033C5.86032 6.17098 6.05109 6.25 6.25 6.25C6.44891 6.25 6.63968 6.17098 6.78033 6.03033C6.92098 5.88968 7 5.69891 7 5.5H9.25C9.25 5.69891 9.32902 5.88968 9.46967 6.03033C9.61032 6.17098 9.80109 6.25 10 6.25C10.1989 6.25 10.3897 6.17098 10.5303 6.03033C10.671 5.88968 10.75 5.69891 10.75 5.5H13C13 5.69891 13.079 5.88968 13.2197 6.03033C13.3603 6.17098 13.5511 6.25 13.75 6.25C13.9489 6.25 14.1397 6.17098 14.2803 6.03033C14.421 5.88968 14.5 5.69891 14.5 5.5H16V7H4V5.5H5.5ZM4 16V8.5H16V16H4Z" fill="currentColor" /><path d="M13.75 10H6.25C6.05109 10 5.86032 10.079 5.71967 10.2197C5.57902 10.3603 5.5 10.5511 5.5 10.75C5.5 10.9489 5.57902 11.1397 5.71967 11.2803C5.86032 11.421 6.05109 11.5 6.25 11.5H13.75C13.9489 11.5 14.1397 11.421 14.2803 11.2803C14.421 11.1397 14.5 10.9489 14.5 10.75C14.5 10.5511 14.421 10.3603 14.2803 10.2197C14.1397 10.079 13.9489 10 13.75 10Z" fill="currentColor" /></svg></div><input type="text" id="daterangeMobile" name="daterange" class="filters__input filters__input--date filters__input--mobile-expanded text-center shadow-lg h-11 w-full rounded-md text-xs border py-2 px-3 bg-[#1C1E21] text-white border-[#1C1E21]" value="View all dates" aria-label="Date Range"></div></div></div><div class="filters filters--desktop md:flex flex-col items-center justify-between w-full md:max-w-95/100 xl:max-w-7xl mx-auto pt-8 hidden"><div id="filter-nav" class="filters__container filters__container--desktop md:flex-wrap flex flex-row pb-3 items-center justify-between gap-2 w-full"><div class="filters__group filters__group--category-search filters__group--desktop flex flex-row items-center justify-start gap-1.5 flex-1 min-w-0"><div class="filters__category-search-container filters__category-search-container--desktop flex items-center w-auto"><div class="filters__category filters__category--desktop group relative inline-block w-auto shrink-0"><select name="data[type]" id="typeTopicSelectNav" class="filters__input filters__input--category filters__input--desktop appearance-none w-auto max-[992px]:max-w-[120px] rounded-l-md text-xs border-transparent border py-2 px-3 pr-8 outline truncate bg-black text-white outline-[#1C1E21]" onchange="filterByTopic(this);" aria-label="Select Category"><option value="">Categories</option><option value="topic:business">Business</option><option value="topic:charity">Charity &amp; Causes</option><option value="topic:comedy">Comedy</option><option value="topic:concert">Concert</option><option value="topic:convention">Convention</option><option value="topic:fair">Fair</option><option value="topic:festival">Festival</option><option value="topic:film">Film</option><option value="topic:fine-arts">Fine Arts</option><option value="topic:food-drink">Food &amp; Drink</option><option value="topic:holiday">Holiday</option><option value="topic:music">Live Music</option><option value="topic:nightlife">Nightlife</option><option value="topic:nonprofit">Non Profit</option><option value="topic:other">Other</option><option value="topic:private">Private Event</option><option value="topic:rodeo">Rodeo</option><option value="topic:sport">Sports</option><option value="topic:theater">Theater</option><option value="topic:virtual-events">Virtual Events</option><option value="topic:wellness">Wellness</option></select><svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2
+ text-white"
+ viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M6 8l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></div><form id="filter-search" class="filters__search filters__search--desktop flex-none min-w-[165px] min-[1200px]:min-w-[230px]"><input
+ id="search-input"
+ name="q"
+ class="filters__input filters__input--search filters__input--desktop border border-transparent w-full rounded-r-md text-xs outline py-2 px-3 bg-[#151619] text-white outline-[#1C1E21]"
+ type="text"
+ placeholder="Search Event Name or Zip"
+ aria-label="Search Event Name or Zip"
+ value=""></form></div><button class="filters__search-btn filters__search-btn--desktop flex items-center justify-center bg-[#999999] hover:bg-[#999999]/70 cursor-pointer rounded-md px-2 size-9" onclick="document.getElementById('filter-search').submit();"><div class="filters__icon filters__icon--search filters__icon--desktop text-xs text-white"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill="white" d="M11.1291 9.87956H10.4707L10.2374 9.65456C11.0541 8.70456 11.5457 7.47122 11.5457 6.12956C11.5457 3.13789 9.12074 0.712891 6.12907 0.712891C3.1374 0.712891 0.712402 3.13789 0.712402 6.12956C0.712402 9.12122 3.1374 11.5462 6.12907 11.5462C7.47074 11.5462 8.70407 11.0546 9.65407 10.2379L9.87907 10.4712V11.1296L14.0457 15.2879L15.2874 14.0462L11.1291 9.87956ZM6.12907 9.87956C4.05407 9.87956 2.37907 8.20456 2.37907 6.12956C2.37907 4.05456 4.05407 2.37956 6.12907 2.37956C8.20407 2.37956 9.87907 4.05456 9.87907 6.12956C9.87907 8.20456 8.20407 9.87956 6.12907 9.87956Z" /></svg></div></button><button id="view-toggle-btn" class="filters__view-toggle filters__view-toggle--desktop flex items-center justify-start rounded-md px-1 py-2 cursor-pointer text-xs bg-black text-white" onclick="toggleView()"><span id="grid-icon" class="filters__icon filters__icon--grid filters__icon--desktop mr-1"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 3H10V10H3V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M14 3H21V10H14V3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M3 14H10V21H3V14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /><path d="M14 14H21V21H14V14Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></span><span id="grid-text" class="filters__view-toggle-text filters__view-toggle-text--desktop">Grid View</span><span id="list-icon" class="filters__icon filters__icon--list filters__icon--desktop mr-1 hidden"><svg width="16" height="10" viewBox="0 0 16 10" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M0.5 5.83301H2.16667V4.16634H0.5V5.83301ZM0.5 9.16634H2.16667V7.49967H0.5V9.16634ZM0.5 2.49967H2.16667V0.833008H0.5V2.49967ZM3.83333 5.83301H15.5V4.16634H3.83333V5.83301ZM3.83333 9.16634H15.5V7.49967H3.83333V9.16634ZM3.83333 0.833008V2.49967H15.5V0.833008H3.83333ZM0.5 5.83301H2.16667V4.16634H0.5V5.83301ZM0.5 9.16634H2.16667V7.49967H0.5V9.16634ZM0.5 2.49967H2.16667V0.833008H0.5V2.49967ZM3.83333 5.83301H15.5V4.16634H3.83333V5.83301ZM3.83333 9.16634H15.5V7.49967H3.83333V9.16634ZM3.83333 0.833008V2.49967H15.5V0.833008H3.83333Z" fill="#4A4F59"/></svg></span><span id="list-text" class="filters__view-toggle-text filters__view-toggle-text--desktop hidden">List View</span></button></div><div class="filters__group filters__group--date-org filters__group--desktop flex flex-row gap-2"><div id="date-range-container" class="filters__date-container filters__date-container--desktop relative bg-[#1C1E21] text-white flex-none items-center rounded-md"><div class="filters__icon filters__icon--date absolute pl-3 left-3 top-1/2 -translate-y-1/2 -translate-x-1/2"><svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M16 4H14.5V3.25C14.5 3.05109 14.421 2.86032 14.2803 2.71967C14.1397 2.57902 13.9489 2.5 13.75 2.5C13.5511 2.5 13.3603 2.57902 13.2197 2.71967C13.079 2.86032 13 3.05109 13 3.25V4H10.75V3.25C10.75 3.05109 10.671 2.86032 10.5303 2.71967C10.3897 2.57902 10.1989 2.5 10 2.5C9.80109 2.5 9.61032 2.57902 9.46967 2.71967C9.32902 2.86032 9.25 3.05109 9.25 3.25V4H7V3.25C7 3.05109 6.92098 2.86032 6.78033 2.71967C6.63968 2.57902 6.44891 2.5 6.25 2.5C6.05109 2.5 5.86032 2.57902 5.71967 2.71967C5.57902 2.86032 5.5 3.05109 5.5 3.25V4H4C3.60218 4 3.22064 4.15804 2.93934 4.43934C2.65804 4.72064 2.5 5.10218 2.5 5.5V16C2.5 16.3978 2.65804 16.7794 2.93934 17.0607C3.22064 17.342 3.60218 17.5 4 17.5H16C16.3978 17.5 16.7794 17.342 17.0607 17.0607C17.342 16.7794 17.5 16.3978 17.5 16V5.5C17.5 5.10218 17.342 4.72064 17.0607 4.43934C16.7794 4.15804 16.3978 4 16 4ZM5.5 5.5C5.5 5.69891 5.57902 5.88968 5.71967 6.03033C5.86032 6.17098 6.05109 6.25 6.25 6.25C6.44891 6.25 6.63968 6.17098 6.78033 6.03033C6.92098 5.88968 7 5.69891 7 5.5H9.25C9.25 5.69891 9.32902 5.88968 9.46967 6.03033C9.61032 6.17098 9.80109 6.25 10 6.25C10.1989 6.25 10.3897 6.17098 10.5303 6.03033C10.671 5.88968 10.75 5.69891 10.75 5.5H13C13 5.69891 13.079 5.88968 13.2197 6.03033C13.3603 6.17098 13.5511 6.25 13.75 6.25C13.9489 6.25 14.1397 6.17098 14.2803 6.03033C14.421 5.88968 14.5 5.69891 14.5 5.5H16V7H4V5.5H5.5ZM4 16V8.5H16V16H4Z" fill="currentColor" /><path d="M13.75 10H6.25C6.05109 10 5.86032 10.079 5.71967 10.2197C5.57902 10.3603 5.5 10.5511 5.5 10.75C5.5 10.9489 5.57902 11.1397 5.71967 11.2803C5.86032 11.421 6.05109 11.5 6.25 11.5H13.75C13.9489 11.5 14.1397 11.421 14.2803 11.2803C14.421 11.1397 14.5 10.9489 14.5 10.75C14.5 10.5511 14.421 10.3603 14.2803 10.2197C14.1397 10.079 13.9489 10 13.75 10Z" fill="currentColor" /></svg></div><input type="text" id="daterange" name="daterange" class="filters__input filters__input--date filters__input--desktop w-auto rounded-md text-xs border-transparent border outline py-2 px-3 max-[992px]:max-w-[120px] bg-[#1C1E21] text-white outline-[#1C1E21] cursor-pointer pl-8" value="Date Range" aria-label="Date Range"></div><div class="filters__organization-container filters__organization-container--desktop group relative inline-block"><select name="data[org]" id="organizationList" class="filters__input filters__input--organization filters__input--desktop appearance-none w-auto rounded-md text-xs border-transparent border outline py-2 px-3 pr-8 truncate max-[992px]:max-w-[120px] bg-[#1C1E21] text-white outline-[#1C1E21]" onchange="event.preventDefault(); filterByOrganization(this);" aria-label="Select Organization"><option value="">Organization</option><option value="616f467d-a18c-4ef0-9842-56850ad120f3">The Black Box</option><option value="61cba902-afd0-484f-9d9e-6d940ad1213e">The Lounge</option></select><svg class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2
+ text-white"
+ viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M6 8l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg></div></div></div></div><div id="event-list-container" class="group view-list event-listing__container flex flex-col items-start justify-start mt-4 md:mt-0 w-full md:max-w-[95%] xl:max-w-7xl mx-auto border rounded-lg bg-[#151619] text-white border-[#272A2F]"><div class="event-listing__header font-semibold text-xl w-full rounded-t-lg py-4 px-6 shadow-sm bg-[#1C1E21] text-white border-[#272A2F]">
+ Upcoming Events
+ </div><div id="events-container" aria-live="polite" class="event-listing__events-container w-full justify-evenly items-start
+ grid grid-cols-1 gap-y-6 p-4
+ md:group-[.view-grid]:grid-cols-[repeat(auto-fill,minmax(360px,0fr))]
+ md:group-[.view-grid]:gap-4
+ md:group-[.view-grid]:px-0 md:group-[.view-grid]:py-6
+ md:group-[.view-list]:flex
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:divide-y"><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1785361988/saas/logos/image_1785361983139_3oz6cu4kc.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Sub.mission Electronic Tuesdays: July Battle Winners&#039; Showcase - DJ Rascal, Professor Finessor, Eywade Dey. Open Decks in The Lounge. </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Tuesday, Aug 4, 2026 from 8:00 PM to 12:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/etuesdays-aug4/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Sub.mission Electronic Tuesdays: July Battle Winners' Showcase - DJ Rascal, Professor Finessor, Eywade Dey. Open Decks in The Lounge.">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1778695372/saas/logos/image_1778695367147_7z0ef5cg7.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Beard-o-Bees &amp; Luke The Knife w/ The Bordas Brothers </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Thursday, Aug 6, 2026 at 9:00 PM to Friday, Aug 7, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/beard-o-bees-aug6/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Beard-o-Bees & Luke The Knife w/ The Bordas Brothers">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782331776/saas/logos/image_1782331765234_m3mmrbyna.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Yert w/ Philo, Slyce, ??? </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Thursday, Aug 6, 2026 at 9:01 PM to Friday, Aug 7, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/yert-aug6/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Yert w/ Philo, Slyce, ???">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784148484/saas/logos/image_1784148478431_sdr9fgnb8.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Dimethyldreamz Bday Bash: Crow, D3xtr, Drop Junkies, Thai Jesus B2B Dimethyldreamz B2B The 3lder </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Friday, Aug 7, 2026 at 9:00 PM to Saturday, Aug 8, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/dimethyldreamz-aug7/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Dimethyldreamz Bday Bash: Crow, D3xtr, Drop Junkies, Thai Jesus B2B Dimethyldreamz B2B The 3lder">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782331453/saas/logos/image_1782331446395_kom3m4b66.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ UKG Proper - Colours - Two Year Anniversary: Ghost, Broken Electronics, Froztwr3ck, Catch N Feels </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Friday, Aug 7, 2026 at 9:01 PM to Saturday, Aug 8, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/ukg-proper-aug7/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - UKG Proper - Colours - Two Year Anniversary: Ghost, Broken Electronics, Froztwr3ck, Catch N Feels">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782928292/saas/logos/image_1782928286599_xcw9e9hwu.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ The Black Box &amp; Recon present: Amit (Amar, Exit, 31, Metalheadz, Function - UK) w/ Grym, Jen Tops, Recon Residents </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Aug 8, 2026 at 9:00 PM to Sunday, Aug 9, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/recon-aug8/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - The Black Box & Recon present: Amit (Amar, Exit, 31, Metalheadz, Function - UK) w/ Grym, Jen Tops, Recon Residents">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782936268/saas/logos/image_1782936261997_am1m807nn.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Raychill (Protocol EP Release Party) w/ DJ Gov Name, Corporate Thugz </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Aug 8, 2026 at 9:01 PM to Sunday, Aug 9, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/raychill-aug8/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Raychill (Protocol EP Release Party) w/ DJ Gov Name, Corporate Thugz">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784071782/saas/logos/image_1784071769771_1n14g8bvc.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Sub.mission Electronic Tuesdays: Quarterly Finals Battle Showcase. Open Decks in The Lounge. </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Tuesday, Aug 11, 2026 from 8:00 PM to 12:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/etuesdays-aug11/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Sub.mission Electronic Tuesdays: Quarterly Finals Battle Showcase. Open Decks in The Lounge.">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782936938/saas/logos/image_1782936932324_rm0clmelg.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Up NXT &amp; The Black Box present: BLAOW w/ Slick Portal, Boop Dog + The Beat Bucket Producer Battle, Production Workshop </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Thursday, Aug 13, 2026 at 8:00 PM to Friday, Aug 14, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/up-nxt-aug13/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Up NXT & The Black Box present: BLAOW w/ Slick Portal, Boop Dog + The Beat Bucket Producer Battle, Production Workshop">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1783543121/saas/logos/image_1783543115037_u8ey29fy8.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ OPEN DECKS </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Thursday, Aug 13, 2026 at 9:01 PM to Friday, Aug 14, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/open-decks-aug13/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="RSVP - OPEN DECKS">RSVP</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782930410/saas/logos/image_1782930405670_7ax24dssm.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Kursa &amp; Alicia Kiah Pull An All Nighter - Low Key Technique EP Release Party </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Friday, Aug 14, 2026 at 9:00 PM to Saturday, Aug 15, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/lowkey-technique-aug14/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Kursa & Alicia Kiah Pull An All Nighter - Low Key Technique EP Release Party">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782931910/saas/logos/image_1782931902247_c3vjvcuv1.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Ferdadubz x Team Amazing x DJ Housepants </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Friday, Aug 14, 2026 at 9:01 PM to Saturday, Aug 15, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/ferdadubz-aug14/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Ferdadubz x Team Amazing x DJ Housepants">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1785350271/saas/logos/image_1785350252620_4jzw5dwws.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Sub.mission presents: Joker w/ Para Nada, Zog </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Aug 15, 2026 at 9:00 PM to Sunday, Aug 16, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/joker-aug15/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Sub.mission presents: Joker w/ Para Nada, Zog">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1785351883/saas/logos/image_1785351873734_pe5k9ymi9.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Dystopia Radio: Keyrsen, BASSTROYD, Trial &amp; 3rror, Harmless </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Aug 15, 2026 at 9:01 PM to Sunday, Aug 16, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/dystopia-radio-aug15/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Dystopia Radio: Keyrsen, BASSTROYD, Trial & 3rror, Harmless">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784071508/saas/logos/image_1784071502043_9fxtovjey.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Sub.mission Electronic Tuesdays: Lusciousxdub. Weekly DJ Battle - FndOut, ETHR, Tautomer. Open Decks in The Lounge. </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Tuesday, Aug 18, 2026 from 8:00 PM to 12:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/etuesdays-aug18/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Sub.mission Electronic Tuesdays: Lusciousxdub. Weekly DJ Battle - FndOut, ETHR, Tautomer. Open Decks in The Lounge.">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782323640/saas/logos/image_1782323634556_2t33vmadt.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Alex Unger w/ Sundog, Regular Ass Dude, all:Lo B2B </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Thursday, Aug 20, 2026 at 9:00 PM to Friday, Aug 21, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/alex-unger-aug20/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Alex Unger w/ Sundog, Regular Ass Dude, all:Lo B2B">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784144874/saas/logos/image_1784144868411_jrd4v1381.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Purple Mammoth Sound Takeover 005: MR.MO, Neon Black, Esket, DripDrop </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Thursday, Aug 20, 2026 at 9:01 PM to Friday, Aug 21, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/purple-mammoth-aug20/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Purple Mammoth Sound Takeover 005: MR.MO, Neon Black, Esket, DripDrop">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1782326326/saas/logos/image_1782326319391_xiy4n7ppl.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Kuhlin w/ FunkBox, Budge (Fresh Press Set). Visual Curation by qrm3D </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Friday, Aug 21, 2026 at 9:00 PM to Saturday, Aug 22, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/kuhlin-aug21/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Kuhlin w/ FunkBox, Budge (Fresh Press Set). Visual Curation by qrm3D">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1783544509/saas/logos/image_1783544500178_uwccmhz0q.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Peter Vaughan &amp; Company: Peter Vaughan, 5HeadedCobra, Swaan </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Friday, Aug 21, 2026 at 9:01 PM to Saturday, Aug 22, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/peter-vaughan-aug21/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Peter Vaughan & Company: Peter Vaughan, 5HeadedCobra, Swaan">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784143324/saas/logos/image_1784143317825_249grqvug.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Dub Den Records Dual Room Takeover: Packet Loss, Instant Party!, Chairless, and Collective Unity 005 </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Aug 22, 2026 at 9:00 PM to Sunday, Aug 23, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/dubden-aug22/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Dub Den Records Dual Room Takeover: Packet Loss, Instant Party!, Chairless, and Collective Unity 005">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784071037/saas/logos/image_1784071025488_uwr4h3qc6.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Sub.mission Electronic Tuesdays: Shoebox. Weekly DJ Battle - 4th Kind, Sublevel Soundwaves, Murland. Open Decks in The Lounge. </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Tuesday, Aug 25, 2026 from 8:00 PM to 12:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/etuesdays-aug25/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Sub.mission Electronic Tuesdays: Shoebox. Weekly DJ Battle - 4th Kind, Sublevel Soundwaves, Murland. Open Decks in The Lounge.">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784743024/saas/logos/image_1784743018294_23zo9wili.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Garrett Fields w/ Franki*, Indecisive </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Thursday, Aug 27, 2026 at 9:01 PM to Friday, Aug 28, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/garrett-fields-aug27/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Garrett Fields w/ Franki*, Indecisive">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784142424/saas/logos/image_1784142418955_9wdfubad9.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Goosebumpz (Two Hour Set) w/ Habrin, Cellenight </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Aug 29, 2026 at 9:00 PM to Sunday, Aug 30, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/goosebumpz-aug29/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Goosebumpz (Two Hour Set) w/ Habrin, Cellenight">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784742059/saas/logos/image_1784742046176_b2k9ae1o7.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ DoVeE w/ Bezlebub, Picky Knows, Zilch </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Aug 29, 2026 at 9:01 PM to Sunday, Aug 30, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/dovee-aug29/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - DoVeE w/ Bezlebub, Picky Knows, Zilch">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1785351354/saas/logos/image_1785351349237_9atqklfle.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Bwompster &amp; Basura (Sinewave Symbiotes Tour) w/ Rainbow Boy </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Thursday, Sep 3, 2026 at 9:00 PM to Friday, Sep 4, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/sinewave-symbiotes-sep3/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Bwompster & Basura (Sinewave Symbiotes Tour) w/ Rainbow Boy">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1785348834/saas/logos/image_1785348828317_g1pbtouhy.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Dr. Ozi &amp; Dubscribe - BLACK OUT - Return To the US </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Friday, Sep 4, 2026 at 9:00 PM to Saturday, Sep 5, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/black-out-sep4/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Dr. Ozi & Dubscribe - BLACK OUT - Return To the US">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784770727/saas/logos/image_1784770711744_lwyrefk29.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ UKG Proper - Colours: Pretti Ugli, Ninja Papes, CB₁, M4tias </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Friday, Sep 4, 2026 at 9:01 PM to Saturday, Sep 5, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/ukg-proper-sep4/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - UKG Proper - Colours: Pretti Ugli, Ninja Papes, CB₁, M4tias">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1780084425/saas/logos/image_1780084416327_dvhpr5ows.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Hip-Hop Summit Denver </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Sep 5, 2026 from 12:00 PM to 6:00 PM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="https://www.eventbrite.com/e/1990660336654" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="RSVP - Hip-Hop Summit Denver">RSVP</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784749166/saas/logos/image_1784749150341_m90ks6nkx.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Speedtek &amp; Combine (140, Breaks, Deconstructed, Neuro, Techstep, Skullstep) </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Sep 5, 2026 at 9:00 PM to Sunday, Sep 6, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/speedtek-combine-sep5/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Speedtek & Combine (140, Breaks, Deconstructed, Neuro, Techstep, Skullstep)">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1785348283/saas/logos/image_1785348274768_ga24u3ucg.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ AnjunaFamily Colorado: The Road To 700 w/ isøDope, De Aragon, Sol Wyld </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Sep 5, 2026 at 9:01 PM to Sunday, Sep 6, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/anjunafamily-sep5/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - AnjunaFamily Colorado: The Road To 700 w/ isøDope, De Aragon, Sol Wyld">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1785347150/saas/logos/image_1785347144099_zti9f78wh.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Brotha Nature presents: Lukewarm, Prana, The 3lder, FL.ØZ </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Thursday, Sep 10, 2026 at 9:01 PM to Friday, Sep 11, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/brotha-nature-sep10/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Brotha Nature presents: Lukewarm, Prana, The 3lder, FL.ØZ">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1784736706/saas/logos/image_1784736698229_ov14gquzz.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ 5AM w/ Tygris, Muzik (Marty of 3420) </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Friday, Sep 11, 2026 at 9:00 PM to Saturday, Sep 12, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/5am-sep11/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - 5AM w/ Tygris, Muzik (Marty of 3420)">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1785346198/saas/logos/image_1785346190015_nnabeovpf.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Lichlight presents: VALKYRIE </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Sep 12, 2026 at 9:01 PM to Sunday, Sep 13, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Lounge, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/lichlight-sep12/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Lichlight presents: VALKYRIE">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1785345242/saas/logos/image_1785345235097_ts78xdr81.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ @adsfradio presents: Daedelus (360 set) w/ Mux Mool, Despise, Sinistarr b2b J Bolivar </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Friday, Sep 25, 2026 at 9:00 PM to Saturday, Sep 26, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/adsf-sep25/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - @adsfradio presents: Daedelus (360 set) w/ Mux Mool, Despise, Sinistarr b2b J Bolivar">Tickets</a></div></div><div class="event-card lazy-load-item hidden w-full flex flex-col mb-10 mx-auto
+ md:group-[.view-list]:flex-row
+ md:group-[.view-list]:items-center
+ md:group-[.view-list]:border-b group-[.view-list]:border-[#272A2F] md:group-[.view-list]:p-2
+ md:group-[.view-list]:mb-0
+ md:group-[.view-list]:pb-6
+ md:group-[.view-grid]:w-75
+ md:group-[.view-grid]:min-h-90.5
+ md:group-[.view-grid]:mb-5"><a href="https://blackboxdenver.co/" class="appearance-none"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/v1785350889/saas/logos/image_1785350883720_8i6goznpg.webp"
+ class="event-card__image bg-cover bg-center rounded-xl w-full mb-5 aspect-square object-cover bg-white
+ md:group-[.view-list]:aspect-auto
+ md:group-[.view-list]:min-h-[125px]
+ md:group-[.view-list]:w-[125px]
+ md:group-[.view-list]:h-auto
+ md:group-[.view-list]:max-h-[167px]
+ md:group-[.view-list]:mr-6
+ md:group-[.view-list]:mb-0"></a><div class="flex flex-col gap-2 flex-1 px-5 pb-5
+ md:group-[.view-list]:px-0
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/" class="text-base font-bold
+ md:group-[.view-grid]:text-clip
+ md:group-[.view-grid]:max-w-120">
+ Sub.mission presents: Monty x Apparition w/ MOJO x Will Holler </a><div class="text-sm md:group-[.view-grid]:text-base">
+ Saturday, Oct 31, 2026 at 9:00 PM to Sunday, Nov 1, 2026 at 1:00 AM </div><div class="text-xs"><span class="data-location-address">The Black Box, </span><span class="data-location-city">Denver, </span><span class="data-location-state">CO</span></div><a href="https://blackboxdenver.co/" class="text-[#999999] text-sm max-md:hidden md:group-[.view-grid]:hidden">
+ More details
+ </a></div><div class="event-card__actions flex justify-between items-center px-5
+ md:group-[.view-grid]:mt-2
+ md:group-[.view-grid]:flex-row
+ md:group-[.view-list]:flex-col
+ md:group-[.view-list]:gap-2
+ md:group-[.view-list]:items-end
+ md:group-[.view-list]:justify-center"><a href="https://blackboxdenver.co/"
+ class="text-[#999999] md:group-[.view-grid]:inline md:group-[.view-list]:hidden">
+ More details
+ </a><a href="/e/monty-apparition-oct31/tickets" class="event-card__tickets-btn bg-[#999999] !text-white text-base rounded-lg px-4 py-2 hover:bg-[#999999]/70 cursor-pointer " aria-label="Tickets - Sub.mission presents: Monty x Apparition w/ MOJO x Will Holler">Tickets</a></div></div></div></div><div id="lazy-load-sentinel" class="text-center my-4"><button id="show-more-events" class="btn" style="display:none">Show more</button><div id="lazy-loader" style="display:none"><i class="material-icons spin">autorenew</i></div></div><script type="application/ld+json">{"@context":"https:\/\/schema.org","@type":"WebSite","name":"The Black Box","url":"https:\/\/events.blackboxdenver.co"}</script></main><footer class="partner-homepage__footer min-h-20 bg-black w-full"><div class="footer-clear" style="clear:both;"></div><div id="footer" class="footer h-full partner-nav-dark"><div class="footer__container mx-auto w-full max-w-[95%] sm:max-w-7xl px-4 py-8 max-sm:mb-12"><div class="footer__top grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr] items-center gap-6 py-5 border-b border-[#272A2F]"><div class="footer__logo justify-self-center self-center sm:self-start sm:justify-self-start"><a href="//events.blackboxdenver.co" class="footer__logo-link flex items-center justify-center w-30"><img src="https://res.cloudinary.com/eventservice/image/upload/saas/partner-logos/blackboxdenver_onDark.png" class="footer__logo-image logo w-30" alt="The Black Box"/></a></div><div class="footer__custom-text text-white justify-self-center text-center items-center gap-3"></div><div class="footer__social justify-self-center sm:justify-self-end self-center sm:self-start flex flex-row items-center gap-2"><div class="flex items-center gap-x-7 text-neutral-700 sm:row-start-1 sm:col-start-2"><a href="www.twitter.com/theblackbox5280" target="_blank" rel="noopener" class="w-5 h-5 hover:text-brand-primary text-white"><svg class=\"w-full h-full\" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z"/></svg></a><a href="www.facebook.com/theblackbox5280" target="_blank" rel="noopener" class="w-5 h-5 hover:text-brand-primary text-white"><svg class=\"w-full h-full\" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.141.195v3.325a8.623 8.623 0 0 0-.653-.036 26.805 26.805 0 0 0-.733-.009c-.707 0-1.259.096-1.675.309a1.686 1.686 0 0 0-.679.622c-.258.42-.374.995-.374 1.752v1.297h3.919l-.386 2.103-.287 1.564h-3.246v8.245C19.396 23.238 24 18.179 24 12.044c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.628 3.874 10.35 9.101 11.647Z"/></svg></a><a href="https://instagram.com/@theblackbox5280" target="_blank" rel="noopener" class="w-5 h-5 hover:text-brand-primary text-white"><svg class=\"w-full h-full\" fill="currentColor" role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7.0301.084c-1.2768.0602-2.1487.264-2.911.5634-.7888.3075-1.4575.72-2.1228 1.3877-.6652.6677-1.075 1.3368-1.3802 2.127-.2954.7638-.4956 1.6365-.552 2.914-.0564 1.2775-.0689 1.6882-.0626 4.947.0062 3.2586.0206 3.6671.0825 4.9473.061 1.2765.264 2.1482.5635 2.9107.308.7889.72 1.4573 1.388 2.1228.6679.6655 1.3365 1.0743 2.1285 1.38.7632.295 1.6361.4961 2.9134.552 1.2773.056 1.6884.069 4.9462.0627 3.2578-.0062 3.668-.0207 4.9478-.0814 1.28-.0607 2.147-.2652 2.9098-.5633.7889-.3086 1.4578-.72 2.1228-1.3881.665-.6682 1.0745-1.3378 1.3795-2.1284.2957-.7632.4966-1.636.552-2.9124.056-1.2809.0692-1.6898.063-4.948-.0063-3.2583-.021-3.6668-.0817-4.9465-.0607-1.2797-.264-2.1487-.5633-2.9117-.3084-.7889-.72-1.4568-1.3876-2.1228C21.2982 1.33 20.628.9208 19.8378.6165 19.074.321 18.2017.1197 16.9244.0645 15.6471.0093 15.236-.005 11.977.0014 8.718.0076 8.31.0215 7.0301.0839m.1402 21.6932c-1.17-.0509-1.8053-.2453-2.2287-.408-.5606-.216-.96-.4771-1.3819-.895-.422-.4178-.6811-.8186-.9-1.378-.1644-.4234-.3624-1.058-.4171-2.228-.0595-1.2645-.072-1.6442-.079-4.848-.007-3.2037.0053-3.583.0607-4.848.05-1.169.2456-1.805.408-2.2282.216-.5613.4762-.96.895-1.3816.4188-.4217.8184-.6814 1.3783-.9003.423-.1651 1.0575-.3614 2.227-.4171 1.2655-.06 1.6447-.072 4.848-.079 3.2033-.007 3.5835.005 4.8495.0608 1.169.0508 1.8053.2445 2.228.408.5608.216.96.4754 1.3816.895.4217.4194.6816.8176.9005 1.3787.1653.4217.3617 1.056.4169 2.2263.0602 1.2655.0739 1.645.0796 4.848.0058 3.203-.0055 3.5834-.061 4.848-.051 1.17-.245 1.8055-.408 2.2294-.216.5604-.4763.96-.8954 1.3814-.419.4215-.8181.6811-1.3783.9-.4224.1649-1.0577.3617-2.2262.4174-1.2656.0595-1.6448.072-4.8493.079-3.2045.007-3.5825-.006-4.848-.0608M16.953 5.5864A1.44 1.44 0 1 0 18.39 4.144a1.44 1.44 0 0 0-1.437 1.4424M5.8385 12.012c.0067 3.4032 2.7706 6.1557 6.173 6.1493 3.4026-.0065 6.157-2.7701 6.1506-6.1733-.0065-3.4032-2.771-6.1565-6.174-6.1498-3.403.0067-6.156 2.771-6.1496 6.1738M8 12.0077a4 4 0 1 1 4.008 3.9921A3.9996 3.9996 0 0 1 8 12.0077"/></svg></a></div></div></div><div class="footer__bottom pt-4"><div class="footer__help"><div id="helpArea" class="footer__help-container flex flex-row items-center justify-center gap-6 shrink-0"><a href="#help_content" class="footer__help-link btn_help faq text-white" target="_blank"><span>Need Help?</span></a></div></div><div class="footer__legal flex flex-col sm:flex-row justify-center items-center w-full h-full text-white gap-6 mt-4"><div class="footer__branding">
+ 2026 All right reserved.
+ </div></div></div></div></div></footer><div id="help_content" style="display:none; text-align:center;"><div id="step_1"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/saas/base/help-questionmark.png" height="115" width="115" alt="need help?"/><br><p style="border:none;">Need assistance?<br><strong>We're happy to help!</strong><br><br><a href="/pages/frequently-asked-questions" class="faq" id="faq-link">Frequently Asked Questions</a></p></div><div id="step_2" style="display:none;"><div id="topper"><img src="https://res.cloudinary.com/eventservice/image/upload/q_auto,f_auto/saas/base/help-questionmark.png" height="115" width="115" alt="need help?"/><p>Need assistance?<br><strong>We're happy to help!</strong></p></div><div class="help-service" style="border-bottom:1px solid #ccc; margin:18px 0px;"><strong>Contact Customer Service</strong></div><div class="help-support" style="margin:18px 0px;"><strong>Contact Technical Support</strong></div><div id="errormessage"></div><div class='row'><form action="/" id="supportform" onsubmit="return checkSubmit(); return false;" method="post" accept-charset="utf-8"><div style="display:none;"><input type="hidden" name="_method" value="POST"/><input type="hidden" name="data[_Token][key]" value="5e3c5dee30041f3a083a08c67fd234a6051fa55f6a294d1eb417832fdc320fbb1f57bf45674c1b3b9abfcedf21e7f7bd081438efa7001a906c37cf1655254208" id="Token1954609867" autocomplete="off"/></div><input type="hidden" name="data[Support][supporttype]" id="supporttype" class="form-control"/><input type="hidden" name="data[Support][mailto]" id="mailto" value=""/><input type="hidden" name="data[Support][eventname]" value="na" id="SupportEventname"/><input type="hidden" name="data[Support][partnername]" value="The Black Box" id="SupportPartnername"/><input type="hidden" name="data[Support][currentpage]" value="https://events.blackboxdenver.co/" id="SupportCurrentpage"/><div class="form-group col-md-12"><input name="data[Support][name]" id="help-form-name" class="form-control clearable" placeholder="Your Name" aria-label="Your Name" type="text"/></div><div class="form-group col-md-12"><input name="data[Support][email]" id="help-form-email" class="form-control clearable" placeholder="Your Email" aria-label="Your Email Address" type="text"/></div><div class="form-group col-md-12"><textarea name="data[Support][comment]" id="help-form-comment" class="form-control clearable" placeholder="Your Message Here" aria-label="Customer Support Email Message" cols="30" rows="6"></textarea></div><div class="form-group col-md-12"><div class="g-recaptcha" data-sitekey="6LfOeyAUAAAAAIwKVHGpZhqPIEnB8aNnnw9z4zmI" aria-label="reCAPTCHA verification"></div><br></div><div class="form-group col-md-12" style="display:flex;justify-content:space-between;"><a href="javascript:cancelmessage();" class="cancel btn btn-default">Cancel</a><div class="submit"><input id="submitbutton" class="btn btn-default pull-right" style="color:#428bca;" type="submit" value="Submit"/></div></div><div style="display:none;"><input type="hidden" name="data[_Token][fields]" value="03693d29d7bf1a3f636cd97130768429c6942a92%3ASupport.currentpage%7CSupport.eventname%7CSupport.mailto%7CSupport.partnername%7CSupport.supporttype" id="TokenFields288664342" autocomplete="off"/><input type="hidden" name="data[_Token][unlocked]" value="" id="TokenUnlocked958339237" autocomplete="off"/></div></form></div></div></div></body></html>

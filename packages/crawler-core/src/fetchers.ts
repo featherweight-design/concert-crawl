@@ -12,6 +12,10 @@ export {
   AegFetchError,
   AegSchemaError,
 } from './lib/fetchers/aeg.js'
+export {
+  detailPageFetcher,
+  DetailPageFetchError,
+} from './lib/fetchers/detail-page.js'
 export { PlatformFetchDeadlineError } from './lib/fetchers/deadline.js'
 export type {
   PlatformFetcher,

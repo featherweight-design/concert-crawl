@@ -19,7 +19,7 @@ export type { VenuePlatform } from '@concert-crawl/types'
  * strategy type both derive from this, so adding a fetcher is a compile
  * error until every consumer is updated.
  */
-export type PlatformSource = 'aeg' | 'venuepilot' | 'livenation'
+export type PlatformSource = 'aeg' | 'venuepilot' | 'livenation' | 'detail-page'
 
 export interface PlatformFetchResult {
   events: NormalizedEvent[]
@@ -85,6 +85,7 @@ export interface PlatformFetcher {
 
 export { PlatformFetchDeadlineError, createDeadline } from './deadline.js'
 export { aegFetcher } from './aeg.js'
+export { detailPageFetcher } from './detail-page.js'
 export { liveNationFetcher } from './livenation.js'
 export { venuePilotFetcher } from './venuepilot.js'
 export { dispatch } from './dispatch.js'

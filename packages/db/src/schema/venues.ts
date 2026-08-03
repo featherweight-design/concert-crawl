@@ -86,7 +86,9 @@ export const venues = pgTable('venues', {
   // validated by Zod at the application layer (intentionally not a
   // Postgres enum, to avoid the ALTER TYPE pain when we add more
   // platforms in follow-up PRs).
-  platform: text('platform').$type<'aeg' | 'livenation' | null>(),
+  platform: text('platform').$type<
+    'aeg' | 'livenation' | 'detail-page' | null
+  >(),
   platformVenueId: text('platform_venue_id'),
   extractionStrategy: extractionStrategyEnum('extraction_strategy'),
   crawlWaitUntil: crawlWaitUntilEnum('crawl_wait_until')
