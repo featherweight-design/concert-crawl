@@ -235,7 +235,7 @@ Contains: `TierBadge` (size `sm` mobile / `md` desktop — see shared primitives
 | letter-spacing | 0.14em                      | 0.14em             |
 | color          | `var(--fg-subtle)`          | `var(--fg-subtle)` |
 
-### Headline ("Heads up — your card got declined.")
+### Headline ("Heads up. Your card got declined.")
 
 | Property       | Mobile   | Desktop |
 | -------------- | -------- | ------- |
@@ -456,9 +456,9 @@ font-family `'JetBrains Mono', monospace`, text-transform uppercase; defaults si
 
 - Chip: `PAYMENT FAILED`
 - Eyebrow rest: `${price} / MONTH · RETRYING`
-- Headline: `Heads up — your card got declined.`
-- Body: `${tierName}'s still on. We'll keep retrying for about a week — pop in a fresh card and nothing changes. If it can't go through by ${periodEnd}, ${tierName} pauses.`
-- Punchline: `—— No drama. It just needs a working card.`
+- Headline: `Heads up. Your card got declined.`
+- Body: `${tierName}'s still on. We'll keep retrying for about a week. Pop in a fresh card and nothing changes. If it can't go through by ${periodEnd}, ${tierName} pauses.`
+- Punchline: `No drama. It just needs a working card.`
 - Status rail label: `${tierName} pauses ${periodEnd} if the card isn't fixed`
 - Status rail sub: `STRIPE IS RETRYING THE CHARGE`
 - CTA primary: `Update card`

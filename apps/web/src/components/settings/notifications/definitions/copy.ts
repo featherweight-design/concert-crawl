@@ -6,14 +6,14 @@
 export const NOTIFICATIONS_COPY = {
   heading: 'Notifications',
   master: 'Push notifications',
-  masterOnDetail: 'On — this device',
+  masterOnDetail: 'On for this device',
   masterOffDetail: 'Off',
   subs: [
     {
       key: 'watch',
       label: 'Watch updates',
       detail:
-        "Price drops, sell-outs, date changes, cancellations — for shows you're watching.",
+        "Price drops, sell-outs, date changes, cancellations. For shows you're watching.",
     },
     {
       key: 'price',
@@ -28,13 +28,13 @@ export const NOTIFICATIONS_COPY = {
   },
   denied: {
     title: 'Notifications are blocked in your browser.',
-    sub: "You (or your phone) told the browser no, and we can't override that — only you can. Flip it back on in your browser's site settings, then come back here.",
+    sub: "You (or your phone) told the browser no, and we can't override that. Only you can. Flip it back on in your browser's site settings, then come back here.",
     link: 'How to unblock notifications',
     linkHref: 'https://support.mozilla.org/en-US/kb/push-notifications-firefox',
     badge: 'Blocked',
   },
   iosHint:
-    "On iPhone, notifications only work from the home-screen app — which you've got. Nice.",
+    "On iPhone, notifications only work from the home-screen app, which you've got. Nice.",
   iosNeedsInstallHint:
     'On iPhone, notifications only work when Concert Crawl is added to your Home Screen. Tap Install (top right) to add it.',
   loadError:
@@ -58,12 +58,12 @@ export const NOTIFICATIONS_COPY = {
     // service worker registered, browser subscribe rejection. Keep the
     // copy neutral so it reads honestly regardless of which end failed.
     subscribe:
-      "Couldn't turn on push right now — something went wrong wiring up notifications. Try again in a minute; if it keeps failing, something's off on our end.",
+      "Couldn't turn on push right now. Something went wrong wiring up notifications. Try again in a minute; if it keeps failing, something's off on our end.",
     // Rollback via unsubscribeFromPush is best-effort and can itself
     // fail (caught + logged). The wording reflects that we attempted
     // to roll back rather than that we definitely did.
     patch:
-      "Saved the subscription but couldn't record your preference. We tried to undo it — please try again.",
+      "Saved the subscription but couldn't record your preference. We tried to undo it. Please try again.",
     generic:
       'Something went sideways turning that on. Try again; if it keeps happening let us know.',
   },
