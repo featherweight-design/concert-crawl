@@ -1,3 +1,16 @@
+# [1.206.0](https://github.com/HartiganHM/concert-crawl/compare/v1.205.0...v1.206.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **crawler:** keep headliners and supporting acts disjoint ([b66ab35](https://github.com/HartiganHM/concert-crawl/commit/b66ab351c4ba00bce2080de69626ee86bc2a20f5))
+* **crawler:** preserve headliners[0] on upsert; index-friendly array arms ([bf94889](https://github.com/HartiganHM/concert-crawl/commit/bf948890683a709c0401fe837427b3489cd9f583))
+
+
+### Features
+
+* **events:** model co-headliners as a first-class set ([9f28017](https://github.com/HartiganHM/concert-crawl/commit/9f28017019ea80bfba596c81e716ec3b694c5e34)), closes [#1203](https://github.com/HartiganHM/concert-crawl/issues/1203)
+
 # [1.205.0](https://github.com/HartiganHM/concert-crawl/compare/v1.204.2...v1.205.0) (2026-08-03)
 
 
