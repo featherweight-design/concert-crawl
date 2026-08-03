@@ -13,7 +13,7 @@
  * misses + duplicate-key failures against the
  * `events_venue_date_canonical_artist_showtime_idx` unique index. See the
  * memory note `feedback_migration_js_parity` for the 2026-06-17 Ø/ø incident
- * this rule encodes. `packages/db/src/latin-extended-sql.test.ts` enforces
+ * this rule encodes. `packages/types/src/latin-extended-sql.test.ts` enforces
  * the contract statically against the migration files, and
  * `packages/crawler-core/src/lib/canonical-artist.parity.integration.test.ts`
  * enforces it against a real Postgres.

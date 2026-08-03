@@ -14,7 +14,7 @@
 --
 -- The expression below is generated verbatim by latinExtendedSql() in
 -- packages/types/src/latin-extended-map.ts and is pinned character-for-
--- character by packages/db/src/latin-extended-sql.test.ts, so the JS map and
+-- character by packages/types/src/latin-extended-sql.test.ts, so the JS map and
 -- the SQL can never drift.
 --
 -- WHY THIS OPERATES ON canonical_artist / canonical_title, NOT artist / title
