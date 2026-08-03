@@ -123,6 +123,15 @@ export const ShareSheet = ({
   // this would re-adopt the current url on the very next render and undo the
   // close reset above, leaving that reset dead and writing state for an img
   // that isn't rendered.
+  //
+  // Deliberately a render-phase adjustment (React's documented "reset state
+  // when a prop changes"), not an effect and not a `settledUrl === imageUrl`
+  // derivation. That derivation is what this replaced: it keeps one settled
+  // record, so returning to a shape whose result is still stored — while a
+  // slower shape never settled — replays that stored outcome over an img that
+  // is refetching. An effect would instead let one frame paint the previous
+  // outcome first. The condition below is idempotent and self-clearing, so it
+  // is safe under Strict Mode and concurrent rendering.
   if (open && previewUrl !== imageUrl) {
     setPreviewUrl(imageUrl)
     setPreview('loading')
