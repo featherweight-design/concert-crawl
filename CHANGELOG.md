@@ -1,3 +1,15 @@
+## [1.200.1](https://github.com/HartiganHM/concert-crawl/compare/v1.200.0...v1.200.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* **e2e:** drop the /e/:id sweep entry that could never reach the mirror ([88b33b9](https://github.com/HartiganHM/concert-crawl/commit/88b33b9fbe300036891c2906f21a2814b906b2f6)), closes [#1359](https://github.com/HartiganHM/concert-crawl/issues/1359)
+* **share:** give the poster preview a loading and error state ([ebed56b](https://github.com/HartiganHM/concert-crawl/commit/ebed56b7387f665b0dfa8eefb98243c6a5cb36d0)), closes [#72](https://github.com/HartiganHM/concert-crawl/issues/72)
+* **share:** restart the share sheet on reopen instead of resuming ([45349dc](https://github.com/HartiganHM/concert-crawl/commit/45349dc14deea5824b867818ae22031c05db7c8c))
+* **share:** size the preview frame to the selected shape ([8f6286c](https://github.com/HartiganHM/concert-crawl/commit/8f6286cfc3b073a678d9f1215add290776180674))
+* **web:** don't re-adopt the poster url while the share sheet is closed ([a27954c](https://github.com/HartiganHM/concert-crawl/commit/a27954c0898c29add5b4d32a9d75baee72d24ed2))
+* **web:** redraw the poster preview instead of replaying a stale outcome ([d60cb8d](https://github.com/HartiganHM/concert-crawl/commit/d60cb8d3a36717f2f8a885b435f7be432a20d9e5))
+
 # [1.200.0](https://github.com/HartiganHM/concert-crawl/compare/v1.199.1...v1.200.0) (2026-08-03)
 
 
