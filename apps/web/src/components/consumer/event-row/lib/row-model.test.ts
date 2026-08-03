@@ -3,8 +3,9 @@ import type {
   EventWithVenue,
   TierPriceBlock,
   TierHeadline,
+  WatchingShow,
 } from '@concert-crawl/types'
-import { fromEventWithVenue } from './row-model'
+import { fromEventWithVenue, fromWatchingShow } from './row-model'
 
 function makeHeadline(
   partial: Partial<TierHeadline> & Pick<TierHeadline, 'priceMin'>,
@@ -167,5 +168,55 @@ describe('fromEventWithVenue', () => {
       fromEventWithVenue({ ...baseEvent, followedArtists: ['Test Artist'] })
         .isFollowed,
     ).toBe(true)
+  })
+})
+
+const baseWatchingShow: WatchingShow = {
+  userEventId: 'ue-1',
+  eventId: 'ev-1',
+  artist: 'Test Artist',
+  venueName: 'Test Venue',
+  venueSlug: 'test-venue',
+  date: '2099-08-15',
+  showTime: '20:00',
+  ticketUrl: null,
+  ticketLinks: null,
+  savedAt: '2026-06-01T00:00:00Z',
+  savedPrice: 45,
+  currentPrice: 45,
+  priceSourceCategory: null,
+  eventStatus: 'upcoming',
+  watchStatus: 'live',
+  updatedAt: '2026-06-24T00:00:00Z',
+  priceObservedAt: null,
+  imageUrl: null,
+  attendingAt: null,
+}
+
+describe('fromWatchingShow', () => {
+  // The row subtracts the saved price from the current one, and only hides the
+  // delta when it is exactly 0. A fractional saved price against a rounded
+  // current price leaves a delta that formats to "$0" but still renders an
+  // arrow, so both sides have to round on the same terms.
+  it('rounds the saved price on the same terms as the current one', () => {
+    const row = fromWatchingShow({
+      ...baseWatchingShow,
+      currentPrice: 45,
+      savedPrice: 45.4,
+    })
+
+    expect(row.saved?.price).toBe(45)
+    expect((row.price?.amount ?? 0) - (row.saved?.price ?? 0)).toBe(0)
+  })
+
+  it('carries no price at all when the show has none', () => {
+    expect(
+      fromWatchingShow({ ...baseWatchingShow, currentPrice: null }).price,
+    ).toBeNull()
+  })
+
+  // Every row on this list is watched, so the tick would say nothing.
+  it('never reports watching state on a list that is entirely watched', () => {
+    expect(fromWatchingShow(baseWatchingShow).isWatching).toBe(false)
   })
 })

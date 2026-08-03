@@ -1,21 +1,22 @@
 function WatchingCardSkeleton({ delay }: { delay: number }) {
   return (
-    // Matches WatchingItem cozy density: artSize 56, padY 14, padL 14, padR 44, gap 14
+    // Matches EventRow's watching surface: 56px art, 14px gap, p-3, and the
+    // 36px action gutter the remove control sits in.
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '56px 1fr auto',
+        gridTemplateColumns: '56px 1fr auto 36px',
         gap: 14,
-        alignItems: 'center',
-        padding: '14px 44px 14px 14px',
+        alignItems: 'flex-start',
+        padding: 12,
         background: 'var(--surface-1)',
         border: '1px solid var(--border)',
-        borderRadius: 12,
+        borderRadius: 8,
         position: 'relative',
         animation: `skeletonPulse 1.4s ease-in-out ${delay}s infinite`,
       }}
     >
-      {/* Art — 56×56 to match cozy artSize */}
+      {/* Art */}
       <div
         style={{
           width: 56,
@@ -61,6 +62,8 @@ function WatchingCardSkeleton({ delay }: { delay: number }) {
           flexShrink: 0,
         }}
       />
+      {/* Action gutter */}
+      <div />
     </div>
   )
 }
@@ -126,7 +129,7 @@ export default function WatchingLoading() {
           />
         </div>
 
-        {/* WatchingItem card skeletons */}
+        {/* Row card skeletons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {Array.from({ length: 4 }).map((_, idx) => (
             <WatchingCardSkeleton key={idx} delay={0.12 + idx * 0.08} />

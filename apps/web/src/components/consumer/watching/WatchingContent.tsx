@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react'
 import type { WatchingShow } from '@concert-crawl/types'
 import { useWatching } from '@/lib/queries/use-watching'
 import { useWatchToggle } from '@/lib/queries/use-watch-toggle'
-import { WatchingItem } from './WatchingItem'
+import { WatchingRow } from './WatchingRow'
 import { WatchingEmpty } from './WatchingEmpty'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { MyShowsTabs } from '@/components/consumer/history/MyShowsTabs'
@@ -229,10 +229,9 @@ export function WatchingContent({ initialShows }: WatchingContentProps) {
               </div>
               <div className="flex flex-col gap-2.5">
                 {group.shows.map((show) => (
-                  <WatchingItem
+                  <WatchingRow
                     key={show.userEventId}
                     show={show}
-                    density="cozy"
                     onRemove={handleRemove}
                   />
                 ))}

@@ -1,6 +1,4 @@
-export { DeltaTag } from './DeltaTag'
-export { SourcePill } from './SourcePill'
-export { WatchingItem } from './WatchingItem'
+export { WatchingRow } from './WatchingRow'
 export { WatchingEmpty } from './WatchingEmpty'
 export { WatchingContent } from './WatchingContent'
 export { WatchingSignedOut } from './WatchingSignedOut'

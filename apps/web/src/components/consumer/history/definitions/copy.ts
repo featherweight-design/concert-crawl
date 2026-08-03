@@ -34,7 +34,7 @@ export const HISTORY_COPY = {
 
   item: {
     // Whole dollars, matching every other consumer price surface
-    // (WatchingItem, SmallEventRow) — submitted prices carry cents.
+    // (the Watching row, SmallEventRow) — submitted prices carry cents.
     paid: (amount: number) => `paid $${Math.round(amount)}`,
   },
 

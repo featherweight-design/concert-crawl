@@ -34,7 +34,7 @@ vi.mock('../event-image/EventImage', () => ({
 }))
 
 // The nudge's "Yes, going" fires a real mutation. Stubbing the hook keeps the
-// item renderable without a QueryClientProvider and lets the call be asserted.
+// row renderable without a QueryClientProvider and lets the call be asserted.
 // The default stub resolves, so tests opt in to the failure path.
 type MutateOptions = { onSuccess?: () => void; onError?: () => void }
 const succeeds = (_input: unknown, options?: MutateOptions) =>
@@ -45,9 +45,12 @@ vi.mock('@/lib/queries/use-attending-toggle', () => ({
   useAttendingToggle: () => ({ mutate: attendingMutate }),
 }))
 
-import { WatchingItem } from './WatchingItem'
+import { WatchingRow } from './WatchingRow'
 import { EventImage } from '../event-image/EventImage'
 import { GOING_COPY } from '@/components/consumer/going/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const WATCHING_COPY = CONSUMER_COPY.watching
 
 const baseShow: WatchingShow = {
   userEventId: 'ue-1',
@@ -71,12 +74,27 @@ const baseShow: WatchingShow = {
   attendingAt: null,
 }
 
-describe('WatchingItem thumbnail', () => {
+describe('WatchingRow remove control', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('reports the watch row id, not the event id', () => {
+    const onRemove = vi.fn()
+    render(<WatchingRow show={baseShow} onRemove={onRemove} />)
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: WATCHING_COPY.watchingItem.removeAriaLabel(baseShow.artist),
+      }),
+    )
+    expect(onRemove).toHaveBeenCalledWith(baseShow.userEventId)
+  })
+})
+
+describe('WatchingRow thumbnail', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('renders EventImage in the thumbnail slot', () => {
     const { getByTestId } = render(
-      <WatchingItem show={baseShow} density="cozy" onRemove={() => {}} />,
+      <WatchingRow show={baseShow} onRemove={() => {}} />,
     )
 
     expect(getByTestId('event-image')).toBeTruthy()
@@ -85,14 +103,14 @@ describe('WatchingItem thumbnail', () => {
   it('renders correctly even when imageUrl is null', () => {
     const show = { ...baseShow, imageUrl: null }
     const { getByTestId } = render(
-      <WatchingItem show={show} density="cozy" onRemove={() => {}} />,
+      <WatchingRow show={show} onRemove={() => {}} />,
     )
 
     expect(getByTestId('event-image')).toBeTruthy()
   })
 
   it('passes artist name and imageUrl to EventImage', () => {
-    render(<WatchingItem show={baseShow} density="cozy" onRemove={() => {}} />)
+    render(<WatchingRow show={baseShow} onRemove={() => {}} />)
 
     expect(vi.mocked(EventImage)).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -113,7 +131,7 @@ const soonShow: WatchingShow = {
 
 const nudge = () => screen.queryByText(GOING_COPY.nudge.heading)
 
-describe('WatchingItem "Still going?" nudge', () => {
+describe('WatchingRow "Still going?" nudge', () => {
   beforeEach(() => {
     localStorage.clear()
     attendingMutate.mockReset()
@@ -125,7 +143,7 @@ describe('WatchingItem "Still going?" nudge', () => {
   })
 
   it('asks about a show inside the window', () => {
-    render(<WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />)
+    render(<WatchingRow show={soonShow} onRemove={() => {}} />)
     expect(nudge()).not.toBeNull()
   })
 
@@ -133,9 +151,8 @@ describe('WatchingItem "Still going?" nudge', () => {
   // dropped the instant the server's real id arrived.
   it('stays quiet while the watch row is still optimistic', () => {
     render(
-      <WatchingItem
+      <WatchingRow
         show={{ ...soonShow, userEventId: 'optimistic-ev-1' }}
-        density="cozy"
         onRemove={() => {}}
       />,
     )
@@ -143,15 +160,14 @@ describe('WatchingItem "Still going?" nudge', () => {
   })
 
   it('stays quiet for a show months out', () => {
-    render(<WatchingItem show={baseShow} density="cozy" onRemove={() => {}} />)
+    render(<WatchingRow show={baseShow} onRemove={() => {}} />)
     expect(nudge()).toBeNull()
   })
 
   it('stays quiet once the user has already committed', () => {
     render(
-      <WatchingItem
+      <WatchingRow
         show={{ ...soonShow, attendingAt: new Date().toISOString() }}
-        density="cozy"
         onRemove={() => {}}
       />,
     )
@@ -159,7 +175,7 @@ describe('WatchingItem "Still going?" nudge', () => {
   })
 
   it('marks attendance and closes when the user says yes', () => {
-    render(<WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />)
+    render(<WatchingRow show={soonShow} onRemove={() => {}} />)
     fireEvent.click(screen.getByText(GOING_COPY.nudge.yes))
 
     expect(attendingMutate).toHaveBeenCalledWith(
@@ -171,7 +187,7 @@ describe('WatchingItem "Still going?" nudge', () => {
 
   it('re-asks when the commitment fails, rather than sticking answered', () => {
     attendingMutate.mockImplementation(fails)
-    render(<WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />)
+    render(<WatchingRow show={soonShow} onRemove={() => {}} />)
     fireEvent.click(screen.getByText(GOING_COPY.nudge.yes))
 
     // The optimistic cache update rolls back, so a silently-dismissed banner
@@ -183,16 +199,12 @@ describe('WatchingItem "Still going?" nudge', () => {
   it('does not ask again after any answer', () => {
     for (const label of [GOING_COPY.nudge.yes, GOING_COPY.nudge.dismiss]) {
       localStorage.clear()
-      render(
-        <WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />,
-      )
+      render(<WatchingRow show={soonShow} onRemove={() => {}} />)
       fireEvent.click(screen.getByRole('button', { name: label }))
       cleanup()
 
       // A remount re-reads the per-device record, so the banner must not return.
-      render(
-        <WatchingItem show={soonShow} density="cozy" onRemove={() => {}} />,
-      )
+      render(<WatchingRow show={soonShow} onRemove={() => {}} />)
       expect(nudge()).toBeNull()
       cleanup()
     }
@@ -202,53 +214,50 @@ describe('WatchingItem "Still going?" nudge', () => {
 // #1366 — staleness used to be computed from the event row's updatedAt, so a
 // price that Event Detail (which reads the price timestamp) called fresh could
 // be flagged stale here, and vice versa.
-describe('WatchingItem staleness', () => {
+describe('WatchingRow staleness', () => {
   const daysAgo = (days: number) =>
     new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
 
   it('ages the price off its own observation time, not the event row', () => {
-    const { getByText } = render(
-      <WatchingItem
+    const { getByTestId } = render(
+      <WatchingRow
         show={{
           ...baseShow,
           updatedAt: new Date().toISOString(),
           priceObservedAt: daysAgo(8),
         }}
-        density="cozy"
         onRemove={() => {}}
       />,
     )
 
-    expect(getByText(/Stale · 8d ago/)).toBeTruthy()
+    expect(getByTestId('row-meta').textContent).toContain('Stale · 8d ago')
   })
 
   it('leaves a freshly observed price unflagged even on an old event row', () => {
-    const { queryByText } = render(
-      <WatchingItem
+    const { queryByTestId } = render(
+      <WatchingRow
         show={{
           ...baseShow,
           updatedAt: daysAgo(30),
           priceObservedAt: new Date().toISOString(),
         }}
-        density="cozy"
         onRemove={() => {}}
       />,
     )
 
-    expect(queryByText(/Stale/)).toBeNull()
+    expect(queryByTestId('row-meta')?.textContent ?? '').not.toContain('Stale')
   })
 
   // Crawler prices carry no submission timestamp; the last crawl is what last
   // confirmed the number, so updatedAt stays the fallback.
   it('falls back to the event row when the price has no observation time', () => {
-    const { getByText } = render(
-      <WatchingItem
+    const { getByTestId } = render(
+      <WatchingRow
         show={{ ...baseShow, updatedAt: daysAgo(3), priceObservedAt: null }}
-        density="cozy"
         onRemove={() => {}}
       />,
     )
 
-    expect(getByText(/Stale · 3d ago/)).toBeTruthy()
+    expect(getByTestId('row-meta').textContent).toContain('Stale · 3d ago')
   })
 })

@@ -31,6 +31,25 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.34.0-beta',
+    date: 'Aug 3, 2026',
+    headline: 'The date stops disappearing.',
+    items: [
+      {
+        kind: 'fixed',
+        text: 'On a narrow phone, a show in Watching could lose its date and read “Mission Ballroom · Sat…”. The date is now the last thing a row gives up, so the venue shortens instead.',
+      },
+      {
+        kind: 'changed',
+        text: 'Every show sits in the same row now, whether you found it browsing, on the calendar, or in Watching.',
+      },
+      {
+        kind: 'changed',
+        text: 'The eye on a browse row tells you a show is already on your list rather than acting as a button. Watching is turned on and off on the show’s own page.',
+      },
+    ],
+  },
+  {
     version: 'v0.33.0-beta',
     date: 'Aug 3, 2026',
     headline: 'Both names on the bill.',

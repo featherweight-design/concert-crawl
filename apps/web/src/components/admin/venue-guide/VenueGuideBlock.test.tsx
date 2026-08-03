@@ -326,9 +326,15 @@ describe('VenueGuideBlock (#764)', () => {
     expect(failure.style.color).toBe('var(--danger)')
 
     saveVenueGuide.mockResolvedValue({ success: true })
-    fireEvent.click(
-      screen.getByRole('button', { name: GUIDE_COPY.footer.saveDraft }),
-    )
+    // The status text is set inside the transition, so `pending` can still be
+    // true when the failure assertion above passes. `saveDraft` guards on
+    // `pending` and drops the click outright, which is what made the second
+    // save intermittently never happen.
+    const saveAgain = await screen.findByRole('button', {
+      name: GUIDE_COPY.footer.saveDraft,
+    })
+    await waitFor(() => expect(saveAgain.hasAttribute('disabled')).toBe(false))
+    fireEvent.click(saveAgain)
 
     const success = await screen.findByText(GUIDE_COPY.status.saved)
     expect(success.style.color).not.toBe('var(--danger)')

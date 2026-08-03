@@ -3,7 +3,7 @@
 // One attended night (#70), ported from
 // design_handoff_concert_history/history-screens.jsx:119-187.
 //
-// Deliberately mirrors WatchingItem's grid so the two lists read as siblings,
+// Deliberately mirrors the Watching row's grid so the two lists read as siblings,
 // but the right column is a StubStamp where Watching puts the price delta.
 // There is no remove affordance — past attendance isn't editable in v1
 // (handoff §Deliberate exclusions).

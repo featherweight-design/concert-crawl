@@ -2,6 +2,7 @@ import type {
   EventWithVenue,
   EventStatus,
   SourceCategory,
+  WatchingShow,
 } from '@concert-crawl/types'
 import { pickBrowseHeadline } from '@/components/consumer/price-region/lib/pick-headline'
 import {
@@ -58,6 +59,53 @@ export interface EventRowShow {
    */
   status: 'live' | 'soldout' | 'presale'
   lifecycle: EventStatus
+}
+
+export function fromWatchingShow(show: WatchingShow): EventRowShow {
+  return {
+    id: show.eventId,
+    headliner: show.artist,
+    fallbackTitle: show.artist,
+    // The watching payload carries no billing, tour or genre, so the row's
+    // support line and genre chip simply never appear on this surface.
+    supports: [],
+    tourName: null,
+    imageUrl: show.imageUrl,
+    venueName: venueShort(show.venueName),
+    venueSlug: show.venueSlug,
+    dateLabel: formatEventDate(show.date, undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    }),
+    timeLabel: formatShowTime(show.showTime),
+    price:
+      show.currentPrice !== null
+        ? {
+            amount: Math.round(show.currentPrice),
+            isFloor: true,
+            source: show.priceSourceCategory,
+            // A crawled price carries no submission timestamp; the last crawl
+            // is what last confirmed the number (#1366).
+            observedAt: show.priceObservedAt ?? show.updatedAt,
+          }
+        : null,
+    // Rounded on the same terms as `amount`, because the row subtracts one
+    // from the other. A fractional saved price leaves a delta that is non-zero
+    // but formats to "$0", so the row would show a movement arrow next to no
+    // movement at all.
+    saved:
+      show.savedPrice !== null
+        ? { at: show.savedAt, price: Math.round(show.savedPrice) }
+        : null,
+    genres: [],
+    isFollowed: false,
+    // Every row on this list is watched by definition, so the tick would be on
+    // all of them and tell the reader nothing.
+    isWatching: false,
+    status: show.watchStatus,
+    lifecycle: show.eventStatus,
+  }
 }
 
 export function fromEventWithVenue(
