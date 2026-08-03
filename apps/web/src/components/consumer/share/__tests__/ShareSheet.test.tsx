@@ -9,6 +9,10 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react'
+vi.mock('@/theme/ThemeProvider', () => ({
+  useTheme: () => ({ theme: 'jade' }),
+}))
+
 import { ShareSheet } from '../ShareSheet'
 import type { ShareCapabilities } from '@/lib/share/destinations'
 import type { PosterEvent } from '@/lib/share/poster-event'
@@ -57,7 +61,9 @@ describe('<ShareSheet />', () => {
   it('previews the poster with descriptive alt text', () => {
     mount()
     const preview = screen.getByRole('img')
-    expect(preview.getAttribute('src')).toBe(`/share/${EVENT_ID}/story`)
+    expect(preview.getAttribute('src')).toBe(
+      `/share/${EVENT_ID}/story?theme=jade`,
+    )
     expect(preview.getAttribute('alt')).toContain('Snakebite Revival')
     expect(preview.getAttribute('alt')).toContain('Bluebird Theater')
   })
@@ -66,11 +72,19 @@ describe('<ShareSheet />', () => {
     mount()
     fireEvent.click(screen.getByRole('button', { name: 'Square' }))
     expect(screen.getByRole('img').getAttribute('src')).toBe(
-      `/share/${EVENT_ID}/square`,
+      `/share/${EVENT_ID}/square?theme=jade`,
     )
     expect(
       screen.getByRole('link', { name: 'Save image' }).getAttribute('href'),
-    ).toBe(`/share/${EVENT_ID}/square`)
+    ).toBe(`/share/${EVENT_ID}/square?theme=jade`)
+  })
+
+  // The route defaults the theme when the query omits it, so a sheet that
+  // forgets to send it renders every user's card in the same tint while every
+  // other assertion here still passes.
+  it('renders the poster in the theme the app is currently wearing', () => {
+    mount()
+    expect(screen.getByRole('img').getAttribute('src')).toContain('theme=jade')
   })
 
   it('signs the poster when the sharer has a handle', () => {

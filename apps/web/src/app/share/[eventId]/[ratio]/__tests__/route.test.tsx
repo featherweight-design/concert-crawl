@@ -3,8 +3,17 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type * as ApiModule from '@/lib/api'
+
 const getMock = vi.fn()
-vi.mock('@/lib/api', () => ({ publicApiClient: { get: getMock } }))
+// The real `ApiError` comes through: the route's 404-vs-502 split turns on
+// `instanceof`, so a stand-in class would make that branch untestable.
+vi.mock('@/lib/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof ApiModule>()),
+  publicApiClient: { get: getMock },
+}))
+
+const { ApiError } = await import('@/lib/api')
 
 const { GET } = await import('@/app/share/[eventId]/[ratio]/route')
 
@@ -109,12 +118,28 @@ describe('GET /share/[eventId]/[ratio]', () => {
   })
 
   it('404s when the event does not exist', async () => {
-    getMock.mockRejectedValue(new Error('404'))
+    getMock.mockRejectedValue(new ApiError(404, 'not found'))
     const response = await call(`http://localhost/share/${EVENT_ID}/story`, {
       eventId: EVENT_ID,
       ratio: 'story',
     })
     expect(response.status).toBe(404)
+  })
+
+  // A 404 here is cached for a day by `s-maxage`, so answering an outage with
+  // one outlives the outage that caused it.
+  it('502s rather than caching an outage as a missing event', async () => {
+    for (const failure of [
+      new ApiError(503, 'upstream down'),
+      new Error('ECONNRESET'),
+    ]) {
+      getMock.mockRejectedValue(failure)
+      const response = await call(`http://localhost/share/${EVENT_ID}/story`, {
+        eventId: EVENT_ID,
+        ratio: 'story',
+      })
+      expect(response.status).toBe(502)
+    }
   })
 
   it('502s rather than rendering in a substitute font', async () => {

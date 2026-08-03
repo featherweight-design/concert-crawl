@@ -25,6 +25,10 @@ vi.mock('@/lib/time', () => ({
   localDateString: () => '2026-08-02',
 }))
 
+vi.mock('@/theme/ThemeProvider', () => ({
+  useTheme: () => ({ theme: 'electric' }),
+}))
+
 import { PublicEventDetail } from './PublicEventDetail'
 
 const copy = CONSUMER_COPY.publicEvent

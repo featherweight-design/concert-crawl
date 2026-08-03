@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 import type { EventDetailResponse } from '@concert-crawl/types'
 import { PosterCard } from '@/components/consumer/share/PosterCard'
 import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios'
-import { publicApiClient } from '@/lib/api'
+import { ApiError, publicApiClient } from '@/lib/api'
 import { loadShareFonts, type LoadedShareFont } from '@/lib/share/fonts'
 import { mintMeta, shareCacheKey } from '@/lib/share/mint'
 import { toPosterEvent } from '@/lib/share/poster-event'
@@ -71,13 +71,17 @@ export const GET = async (
       `/v1/events/${parsed.eventId}`,
     )
   } catch (err) {
-    // Anything the API refuses is a 404 from here: an unknown id and a
-    // withdrawn event are the same thing to a link that has already been sent.
     console.error('[share card] event fetch failed', {
       eventId: parsed.eventId,
       err,
     })
-    return problem(404, 'event not found')
+    // Only a real 404 is a 404. An API outage answered with one would be
+    // cached as "this show does not exist" for a day by the s-maxage above,
+    // long outliving the outage that produced it.
+    const missing = err instanceof ApiError && err.status === 404
+    return missing
+      ? problem(404, 'event not found')
+      : problem(502, 'event lookup failed')
   }
 
   let fonts: LoadedShareFont[]

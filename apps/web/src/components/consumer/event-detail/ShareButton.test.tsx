@@ -1,8 +1,13 @@
 // @vitest-environment jsdom
 
 import React from 'react'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+
+vi.mock('@/theme/ThemeProvider', () => ({
+  useTheme: () => ({ theme: 'electric' }),
+}))
+
 import { ShareButton } from './ShareButton'
 import type { PosterSource } from '@/lib/share/poster-event'
 

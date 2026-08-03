@@ -19,6 +19,7 @@ import {
 } from '@/lib/share/destinations'
 import type { PosterEvent } from '@/lib/share/poster-event'
 import { posterStateLabel } from '@/lib/share/taglines'
+import { useTheme } from '@/theme/ThemeProvider'
 
 const COPY = CONSUMER_COPY.share
 
@@ -84,7 +85,16 @@ export const ShareSheet = ({
     [capabilities],
   )
 
-  const imageUrl = posterImageUrl({ eventId: event.id, ratio, by: handle })
+  // The poster is tinted by whatever theme the app is currently wearing.
+  // Without this the route silently falls back to its default and the card a
+  // Jade user shares comes back Electric.
+  const { theme } = useTheme()
+  const imageUrl = posterImageUrl({
+    eventId: event.id,
+    ratio,
+    theme,
+    by: handle,
+  })
   const origin = typeof window === 'undefined' ? '' : window.location.origin
   const linkUrl = publicEventUrl(event.id, origin)
   const title = `${event.artist} · ${event.venue}`
