@@ -152,7 +152,7 @@ describe('GET /v1/artists/:slug — integration', () => {
 
   // The gate asks "does anything consumer-visible bill them", not "did the two
   // rendered lists come back empty". A past cancelled show is dropped from both
-  // lists and still proves a real performer.
+  // lists and was still billed to a real performer.
   it('serves an artist whose only show is a past cancelled one', async () => {
     await seedArtist({ name: 'Called Off', canonicalName: 'called off' })
     const venue = await seedVenue({

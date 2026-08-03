@@ -195,8 +195,8 @@ artistsPublicRouter.get(
     // the data rather than never having had an artist.
     //
     // Asked of `events` directly rather than of `shows`/`past`, which are
-    // narrower: a past cancelled show is dropped from both lists but still
-    // means a real performer played here, and the two lists are additionally
+    // narrower: a past cancelled show is dropped from both lists but was
+    // still billed to a real performer, and the two lists are additionally
     // capped by LIMIT. Only "nothing consumer-visible bills them at all" is a
     // 404 — the same question search.ts asks.
     if (shows.length === 0 && past.length === 0) {
