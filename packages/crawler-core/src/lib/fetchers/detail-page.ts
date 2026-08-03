@@ -271,20 +271,29 @@ async function detailPageFetch(
     )
   }
 
-  const allowedFlags = await Promise.all(
-    allowlisted.map((url) => isAllowed(url, USER_AGENT)),
-  )
-  const permitted = allowlisted.filter((_, i) => allowedFlags[i])
-  const robotsSkippedCount = allowlisted.length - permitted.length
+  // Checked one at a time and stopped at the cap: a link-heavy listing can
+  // yield hundreds of candidates, and only MAX_DETAIL_PAGES of them will ever
+  // be fetched. Resolving robots.txt for the rest is wasted work and noise.
+  const detailUrls: string[] = []
+  let examinedCount = 0
+  let robotsSkippedCount = 0
+  for (const url of allowlisted) {
+    if (detailUrls.length >= MAX_DETAIL_PAGES) break
+    examinedCount++
+    if (await isAllowed(url, USER_AGENT)) {
+      detailUrls.push(url)
+    } else {
+      robotsSkippedCount++
+    }
+  }
   if (robotsSkippedCount > 0) {
     logger.warn(
-      { venueId: venue.id, robotsSkippedCount, origin },
+      { venueId: venue.id, robotsSkippedCount, examinedCount, origin },
       'detail-page: robots.txt disallowed some detail pages — skipping them',
     )
   }
 
-  const detailUrls = permitted.slice(0, MAX_DETAIL_PAGES)
-  const truncatedCount = permitted.length - detailUrls.length
+  const truncatedCount = allowlisted.length - examinedCount
   if (truncatedCount > 0) {
     // Worth an alert rather than a debug line: past the cap we are certainly
     // missing events, and the cap is the thing to revisit.

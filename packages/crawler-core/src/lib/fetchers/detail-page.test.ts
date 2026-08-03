@@ -444,4 +444,18 @@ describe('detailPageFetcher.fetch', () => {
     // listing + MAX_DETAIL_PAGES detail pages (the sitemap 404s here).
     expect(pageRequests(fetchMock)).toHaveLength(MAX_DETAIL_PAGES + 2)
   })
+
+  it('stops checking robots.txt once the cap is reached', async () => {
+    const robots = await import('../robots.js')
+    const spy = vi.spyOn(robots, 'isAllowed')
+    const links = Array.from(
+      { length: MAX_DETAIL_PAGES + 40 },
+      (_, i) => `<a href="/e/show-${i}">${i}</a>`,
+    ).join('')
+    mockSiteFetch({ listing: links, sitemap: '' })
+    await detailPageFetcher.fetch(makeVenue(), { crawlDelayMs: 0 })
+    // Listing + sitemap + exactly the capped detail pages — never the 40
+    // candidates past the cap, which are pre-flight work we would throw away.
+    expect(spy).toHaveBeenCalledTimes(MAX_DETAIL_PAGES + 2)
+  })
 })
