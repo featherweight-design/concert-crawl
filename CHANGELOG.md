@@ -1,3 +1,11 @@
+## [1.201.3](https://github.com/HartiganHM/concert-crawl/compare/v1.201.2...v1.201.3) (2026-08-03)
+
+
+### Bug Fixes
+
+* **web:** mark price staleness the same way on every surface ([#1372](https://github.com/HartiganHM/concert-crawl/issues/1372)) ([41c9f1b](https://github.com/HartiganHM/concert-crawl/commit/41c9f1b7543fe03e7a34bf38b44a435ebb3e77c3)), closes [#1366](https://github.com/HartiganHM/concert-crawl/issues/1366)
+* **web:** offer a submit-price CTA once an event already has a price ([#1369](https://github.com/HartiganHM/concert-crawl/issues/1369)) ([ef88373](https://github.com/HartiganHM/concert-crawl/commit/ef8837375532a5b98ef7df7f18111d040f5d9819)), closes [#1364](https://github.com/HartiganHM/concert-crawl/issues/1364)
+
 ## [1.201.2](https://github.com/HartiganHM/concert-crawl/compare/v1.201.1...v1.201.2) (2026-08-03)
 
 
