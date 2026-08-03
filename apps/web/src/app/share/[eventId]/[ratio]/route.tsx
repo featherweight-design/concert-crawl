@@ -4,7 +4,7 @@ import { PosterCard } from '@/components/consumer/share/PosterCard'
 import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios'
 import { ApiError, publicApiClient } from '@/lib/api'
 import { loadShareFonts, type LoadedShareFont } from '@/lib/share/fonts'
-import { mintMeta, shareCacheKey } from '@/lib/share/mint'
+import { mintMeta, posterFingerprint, shareCacheKey } from '@/lib/share/mint'
 import { toPosterEvent } from '@/lib/share/poster-event'
 import {
   parseShareRequest,
@@ -102,7 +102,17 @@ export const GET = async (
       ? { id: parsed.handle, handle: parsed.handle }
       : { id: 'anon' },
   )
-  const etag = `"${shareCacheKey(poster.id, parsed.handle ?? 'anon', mint.contentHash)}:${parsed.ratio}:${parsed.theme}"`
+  // The mint alone is too coarse to cache on — see `posterFingerprint`.
+  const drawn = posterFingerprint([
+    poster.artist,
+    poster.venue,
+    poster.city,
+    poster.dateShort,
+    poster.showTime,
+    poster.state,
+    poster.dropLabel,
+  ])
+  const etag = `"${shareCacheKey(poster.id, parsed.handle ?? 'anon', mint.contentHash)}:${parsed.ratio}:${parsed.theme}:${drawn}"`
 
   if (request.headers.get('if-none-match') === etag) {
     return new Response(null, {

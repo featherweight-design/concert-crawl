@@ -179,6 +179,28 @@ describe('GET /share/[eventId]/[ratio]', () => {
     expect(new Set(tags).size).toBe(3)
   }, 30_000)
 
+  // The mint's contentHash only moves with `state`, so a corrected artist or a
+  // changed drop amount would otherwise keep serving yesterday's PNG for the
+  // full s-maxage day.
+  it('varies the ETag with every field drawn on the card', async () => {
+    const tagFor = async (overrides: Record<string, unknown>) => {
+      getMock.mockResolvedValue({ ...event, ...overrides })
+      const response = await call(`http://localhost/share/${EVENT_ID}/link`, {
+        eventId: EVENT_ID,
+        ratio: 'link',
+      })
+      return response.headers.get('ETag')
+    }
+    const tags = [
+      await tagFor({}),
+      await tagFor({ artist: 'Snakebite Reviva' }),
+      await tagFor({ showTime: '21:00' }),
+      await tagFor({ date: '2026-03-15' }),
+      await tagFor({ ticketPriceMin: '16.00' }),
+    ]
+    expect(new Set(tags).size).toBe(tags.length)
+  }, 30_000)
+
   it('renders a different card for a signed share than an anonymous one', async () => {
     const anon = await digest(
       await call(`http://localhost/share/${EVENT_ID}/square`, {

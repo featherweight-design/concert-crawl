@@ -51,6 +51,19 @@ export const mintMeta = (
 })
 
 /**
+ * Fingerprint of everything actually drawn on the card.
+ *
+ * Deliberately separate from `contentHash`, which is the mint identity and is
+ * locked by the handoff to `(event, user, state)`. That is too narrow to cache
+ * on: a corrected artist name or a changed drop amount moves the pixels
+ * without moving the state, so the ETag would keep serving the old PNG for the
+ * full `s-maxage` day. Every field the poster renders belongs here — adding one
+ * to the card and forgetting it here is the bug this guards against.
+ */
+export const posterFingerprint = (fields: Array<string | null>): string =>
+  hashStr(fields.map((field) => field ?? '~').join(' '))
+
+/**
  * Cache key for a rendered share image. Deliberately excludes `serial` and
  * `mintedAt` — they are metadata, not content, and folding either in would
  * make every render a cache miss.

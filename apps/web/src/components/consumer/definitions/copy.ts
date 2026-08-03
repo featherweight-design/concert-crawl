@@ -1430,7 +1430,6 @@ export const CONSUMER_COPY = {
     // Trigger + sheet chrome.
     triggerLabel: 'Share this show',
     sheetTitle: 'Share this show',
-    previewAlt: 'Preview of the poster being shared',
     // Poster shape. Only the Poster direction ships, so there is no direction
     // switcher — the shape picker is the whole of the sheet's configuration.
     ratioLabel: 'Shape',
