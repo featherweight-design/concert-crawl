@@ -1,3 +1,19 @@
+# [1.199.0](https://github.com/HartiganHM/concert-crawl/compare/v1.198.0...v1.199.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **admin:** clear stale candidates on a new search and stop empty submits ([4563496](https://github.com/HartiganHM/concert-crawl/commit/4563496e171b165de8da9cbb06b5376878e6ab3f))
+* **admin:** close the candidate picker when the status tab changes ([223f18d](https://github.com/HartiganHM/concert-crawl/commit/223f18df6fdeea2b9ba5b69a9d7f71238850423b))
+* **admin:** log Spotify candidate failures, drop empty img src, correct param name in docstring ([1839e5a](https://github.com/HartiganHM/concert-crawl/commit/1839e5a18cd7e8d8a0de94865feda78047f75add))
+* **admin:** tell an admin when Spotify rejected our credentials ([94cd856](https://github.com/HartiganHM/concert-crawl/commit/94cd856d616bd77b8fb30cbe0c5f6249ae2640a4))
+* **api:** guard Spotify candidate URLs with the http(s) scheme check ([b8e7f47](https://github.com/HartiganHM/concert-crawl/commit/b8e7f471208ccc2da5b62c9fef02a4c17a3f44c2))
+
+
+### Features
+
+* **admin:** show Spotify candidates so ambiguous artists can be resolved without pasting ids ([e73d877](https://github.com/HartiganHM/concert-crawl/commit/e73d87767b39dff9b82ab2f964a47917799443ce)), closes [#1345](https://github.com/HartiganHM/concert-crawl/issues/1345)
+
 # [1.198.0](https://github.com/HartiganHM/concert-crawl/compare/v1.197.0...v1.198.0) (2026-08-02)
 
 
