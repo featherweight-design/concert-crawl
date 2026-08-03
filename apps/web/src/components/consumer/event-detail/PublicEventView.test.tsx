@@ -49,6 +49,19 @@ describe('<PublicEventView /> (#72)', () => {
     })
   })
 
+  // `about:` and `file:` parse fine but carry no host, and an empty string
+  // would sit in the analytics column looking like a value.
+  it('treats a hostless referrer as absent', () => {
+    setReferrer('about:blank')
+
+    render(<PublicEventView eventId={EVENT_ID} />)
+
+    expect(mockTrack).toHaveBeenCalledWith('public_event_viewed', {
+      eventId: EVENT_ID,
+      referrer: null,
+    })
+  })
+
   it('treats an unparseable referrer as absent rather than throwing', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     setReferrer('not a url')

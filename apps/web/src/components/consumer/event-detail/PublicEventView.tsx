@@ -27,7 +27,10 @@ const referrerHost = (): string | null => {
   const raw = document.referrer
   if (raw === '') return null
   try {
-    return new URL(raw).host
+    // `about:`, `file:` and other opaque schemes parse fine but carry no host.
+    // An empty string would sit in the analytics column looking like a value.
+    const { host } = new URL(raw)
+    return host === '' ? null : host
   } catch (err) {
     console.error('analytics: unparseable referrer', err)
     return null

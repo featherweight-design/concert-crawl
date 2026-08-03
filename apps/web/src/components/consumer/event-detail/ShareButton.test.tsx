@@ -8,10 +8,18 @@ vi.mock('@/theme/ThemeProvider', () => ({
   useTheme: () => ({ theme: 'electric' }),
 }))
 
+const mockTrack = vi.fn()
+vi.mock('@/lib/analytics', () => ({
+  track: (...args: unknown[]) => mockTrack(...args),
+}))
+
 import { ShareButton } from './ShareButton'
 import type { PosterSource } from '@/lib/share/poster-event'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+})
 
 const EVENT_ID = '11111111-2222-4333-8444-555555555555'
 
@@ -59,6 +67,38 @@ describe('<ShareButton />', () => {
     fireEvent.click(trigger)
     expect(screen.getByRole('dialog')).toBeTruthy()
     expect(trigger.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('records the opened sheet as the head of the share funnel', () => {
+    mount()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Share this show' }))
+
+    expect(mockTrack).toHaveBeenCalledWith('share_sheet_opened', {
+      eventId: EVENT_ID,
+      surface: 'event-detail',
+      authed: true,
+    })
+  })
+
+  // `authed` is a required prop precisely because the public mirror and the
+  // protected page mount this with otherwise identical props — a share taken
+  // from the mirror has to be distinguishable from a signed-in one.
+  it('carries the session state through to the event', () => {
+    mount(false)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Share this show' }))
+
+    expect(mockTrack).toHaveBeenCalledWith(
+      'share_sheet_opened',
+      expect.objectContaining({ authed: false }),
+    )
+  })
+
+  it('does not record an open until the trigger is actually pressed', () => {
+    mount()
+
+    expect(mockTrack).not.toHaveBeenCalled()
   })
 
   it('carries no watch affordance — the hero is Back and Share only', () => {
