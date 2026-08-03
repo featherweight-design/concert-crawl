@@ -1,6 +1,9 @@
 import Link from 'next/link'
 import { StatusPill } from './StatusPill'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import type { UserSubmissionItem } from '@concert-crawl/types'
+
+const SETTINGS_COPY = CONSUMER_COPY.settings
 
 interface SubmissionItemProps {
   submission: UserSubmissionItem
@@ -90,7 +93,7 @@ export function SubmissionItem({
       {/* Row 4: confirms count */}
       {confirms > 0 && (
         <span className="text-[11px] text-fg-subtle">
-          {confirms} other {confirms === 1 ? 'fan' : 'fans'} confirmed.
+          {SETTINGS_COPY.submissionConfirms(confirms)}
         </span>
       )}
 
@@ -100,12 +103,12 @@ export function SubmissionItem({
           className="text-[10px] font-bold uppercase tracking-[0.12em]"
           style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}
         >
-          +1 cred
+          {SETTINGS_COPY.submissionCredEarned}
         </span>
       )}
       {submission.status === 'disputed' && (
         <span className="text-[12px]" style={{ color: 'var(--danger)' }}>
-          Someone disputed this. Tap to see what they saw.
+          {SETTINGS_COPY.submissionDisputed}
         </span>
       )}
     </Link>

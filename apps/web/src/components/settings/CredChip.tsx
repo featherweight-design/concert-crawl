@@ -1,3 +1,7 @@
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const SETTINGS_COPY = CONSUMER_COPY.settings
+
 interface CredChipProps {
   cred: number
   size?: 'sm' | 'md'
@@ -39,7 +43,7 @@ export function CredChip({
         className={`${labelSize} font-bold uppercase leading-none tracking-[0.14em]`}
         style={{ fontFamily: 'var(--font-mono)' }}
       >
-        cred
+        {SETTINGS_COPY.credChipLabel}
       </span>
     </span>
   )

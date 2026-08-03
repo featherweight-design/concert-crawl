@@ -121,7 +121,9 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
       }
     } catch (err) {
       setSaveError(
-        err instanceof Error ? err.message : 'Something went wrong. Try again.',
+        err instanceof Error
+          ? err.message
+          : SETTINGS_COPY.editSaveErrorFallback,
       )
     } finally {
       setSaving(false)
@@ -145,7 +147,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
               padding: 0,
             }}
           >
-            ← Cancel
+            {SETTINGS_COPY.editCancelButton}
           </button>
         ) : (
           <Link
@@ -156,10 +158,12 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
               textDecoration: 'none',
             }}
           >
-            ← Cancel
+            {SETTINGS_COPY.editCancelButton}
           </Link>
         )}
-        <span className="text-[15px] font-bold text-fg">Edit profile</span>
+        <span className="text-[15px] font-bold text-fg">
+          {SETTINGS_COPY.editProfileTitle}
+        </span>
         <button
           type="submit"
           form={EDIT_PROFILE_FORM_ID}
@@ -174,7 +178,11 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
             opacity: isSaveDisabled ? 0.5 : 1,
           }}
         >
-          {saving ? 'Saving…' : checkingAvailability ? 'Checking…' : 'Save'}
+          {saving
+            ? SETTINGS_COPY.editSavingButton
+            : checkingAvailability
+              ? SETTINGS_COPY.editCheckingButton
+              : SETTINGS_COPY.editSaveButton}
         </button>
       </div>
 
@@ -201,7 +209,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
           </div>
           <div className="flex flex-1 flex-col gap-2 pt-1">
             <span className="text-[13px] font-semibold text-fg">
-              Avatar color
+              {SETTINGS_COPY.avatarColorLabel}
             </span>
             <div className="flex flex-wrap gap-3">
               {AVATAR_COLORS.map((color) => {
@@ -211,7 +219,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
                     key={color}
                     type="button"
                     onClick={() => setAvatarColor(color)}
-                    aria-label={`Avatar color: ${color}`}
+                    aria-label={SETTINGS_COPY.avatarColorSwatchAriaLabel(color)}
                     aria-pressed={isSelected}
                     className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
                     style={{
@@ -237,7 +245,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
             className="text-[13px] font-semibold text-fg"
             htmlFor="handle-input"
           >
-            Handle
+            {SETTINGS_COPY.handleLabel}
           </label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[14px] text-fg-muted">
@@ -283,7 +291,7 @@ export function EditProfileForm({ profile, onClose }: EditProfileFormProps) {
             className="text-[13px] font-semibold text-fg"
             htmlFor="city-input"
           >
-            City
+            {SETTINGS_COPY.cityLabel}
           </label>
           <input
             id="city-input"

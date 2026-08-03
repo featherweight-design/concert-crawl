@@ -1122,6 +1122,28 @@ export const CONSUMER_COPY = {
       deleteConfirmPlaceholder: 'Type DELETE to enable',
       deleteButtonArmed: 'Delete my account permanently',
       deleteButtonDisabled: 'Type DELETE to enable',
+
+      // ── DeleteAccountSheet — shared by the mobile sheet and the
+      // desktop dialog, which render the same words in two branches.
+      confirmHeading: 'Delete your account?',
+      confirmCantUndo: "This can't be undone.",
+      confirmBodyLead: 'Your handle',
+      confirmBodyRest: (submissionCount: number) =>
+        `email, and plan are deleted. ${submissionCount} submitted ${
+          submissionCount === 1 ? 'price stays' : 'prices stay'
+        } on the public record. Your name is removed from them.`,
+      // "Type DELETE to confirm." — split because DELETE is bolded.
+      confirmLabelLead: 'Type',
+      confirmLabelToken: 'DELETE',
+      confirmLabelTail: 'to confirm.',
+      // The desktop dialog's input placeholder is just the token, where
+      // the mobile sheet uses `deleteConfirmPlaceholder` above.
+      confirmPlaceholderDesktop: 'DELETE',
+      keepAccountButton: 'Keep my account',
+      deletingButton: 'Deleting…',
+      // Desktop-only confirm label; mobile swaps between
+      // `deleteButtonArmed` / `deleteButtonDisabled`.
+      deleteForeverButton: 'Delete forever',
     },
     planSection: 'Your plan',
     appearanceSection: 'Appearance',
@@ -1136,6 +1158,95 @@ export const CONSUMER_COPY = {
     passwordRow: 'Password',
     clerkLinkLabel: 'Manage via Clerk →',
     watchlistRow: 'Watching',
+
+    // ── Settings shell chrome ─────────────────────────────────────
+    // Shared by SettingsRoute (mobile) and SettingsRouteDesktop, except
+    // where a key is suffixed `Desktop` — those are cases where the two
+    // shells deliberately word the same section differently.
+    mobileHeaderBack: '← Done',
+    mobileHeaderTitle: 'Settings',
+    desktopBackToBrowse: '← Back to browse',
+    operationsSection: 'Operations',
+    adminRow: 'Admin',
+    profileSection: 'Profile',
+    profileSectionSub: 'What other fans see when you submit a price.',
+    // Desktop labels this section "Plan"; mobile uses `planSection`
+    // ("Your plan"). Kept separate so neither shell silently changes.
+    planSectionDesktop: 'Plan',
+    planSectionSubDesktop: "What you're paying us. (Spoiler: nothing.)",
+    appearanceSectionSub:
+      'Three flavors. Pick the one that hurts your eyes least.',
+    accountSectionSub:
+      'Your account credentials are managed securely. Click any row to update.',
+    dangerSectionSub: 'The exits.',
+    editProfileDialogAriaLabel: 'Edit profile',
+    // Shown when a profile has no city set.
+    cityFallback: '—',
+    submissionsTotal: (total: number) => `${total} total`,
+    submissionsConfirmedSuffix: (confirmedCount: number) =>
+      ` · ${confirmedCount} confirmed`,
+    submissionsConfirmedSuffixDesktop: (confirmedCount: number) =>
+      ` · ${confirmedCount} confirmed by other fans.`,
+
+    // ── Desktop profile panel ─────────────────────────────────────
+    // `handleExplainer*` wraps the highlighted @handle; the lead and tail
+    // are one sentence split only because the middle is styled.
+    handleExplainerLead: 'Other fans see',
+    handleExplainerTail:
+      "on every price you've submitted, and can tag you on confirmations. Drop the handle any time to go anonymous. Your existing submissions get reattributed.",
+    // `anonymousCardLead` + `anonymousCardLabel` are also one sentence,
+    // split because the label renders in italics.
+    anonymousCardLead: 'Submitting as',
+    anonymousCardLabel: 'anonymous fan.',
+    anonymousCardBody:
+      "That's fine. Most fans stay anonymous. If you want credit on your prices (and the option to be tagged when someone confirms one), pick a handle.",
+    pickHandleCta: 'Pick a handle',
+
+    // ── Clerk attribution (AccountManagementRow + desktop Account panel) ──
+    clerkAttribution:
+      'Sign-in credentials and connected accounts are managed by Clerk.',
+    clerkPrivacyLink: 'Privacy Policy →',
+
+    // ── ThemePickerInline ─────────────────────────────────────────
+    themeLabel: 'Theme',
+    themeTapHint: 'tap to switch',
+
+    // ── CredChip ──────────────────────────────────────────────────
+    credChipLabel: 'cred',
+
+    // ── ProfileEntryAvatar ────────────────────────────────────────
+    profileEntryAriaLabel: (handle: string) => `@${handle}, settings`,
+    profileEntryAriaLabelAnon: 'Settings',
+
+    // ── MySubmissionsList — empty state ───────────────────────────
+    emptySubmissionsTitle: "You haven't submitted any prices yet.",
+    emptySubmissionsBody:
+      'The next show you go to, drop the price you saw. Two fans confirm and it goes live.',
+
+    // ── SubmissionItem ────────────────────────────────────────────
+    submissionConfirms: (confirms: number) =>
+      `${confirms} other ${confirms === 1 ? 'fan' : 'fans'} confirmed.`,
+    submissionCredEarned: '+1 cred',
+    submissionDisputed: 'Someone disputed this. Tap to see what they saw.',
+
+    // ── WatchingTeaser ────────────────────────────────────────────
+    watchingTeaser: {
+      title: 'Watching',
+      badge: 'Coming soon',
+      body: "Star a show. We'll ping you when prices drop or new tickets surface.",
+    },
+
+    // ── EditProfileForm ───────────────────────────────────────────
+    editCancelButton: '← Cancel',
+    editProfileTitle: 'Edit profile',
+    editSavingButton: 'Saving…',
+    editCheckingButton: 'Checking…',
+    editSaveButton: 'Save',
+    editSaveErrorFallback: 'Something went wrong. Try again.',
+    avatarColorLabel: 'Avatar color',
+    avatarColorSwatchAriaLabel: (color: string) => `Avatar color: ${color}`,
+    handleLabel: 'Handle',
+    cityLabel: 'City',
   },
 
   // ── Multi-tier price display ────────────────────────────────────

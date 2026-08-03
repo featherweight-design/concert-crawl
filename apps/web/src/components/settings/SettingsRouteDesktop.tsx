@@ -36,14 +36,14 @@ type NavSection =
   | 'danger'
 
 const NAV_ITEMS: { key: NavSection; label: string }[] = [
-  { key: 'profile', label: 'Profile' },
-  { key: 'plan', label: 'Plan' },
-  { key: 'submissions', label: 'My submissions' },
-  { key: 'appearance', label: 'Appearance' },
+  { key: 'profile', label: SETTINGS_COPY.profileSection },
+  { key: 'plan', label: SETTINGS_COPY.planSectionDesktop },
+  { key: 'submissions', label: SETTINGS_COPY.submissionsSection },
+  { key: 'appearance', label: SETTINGS_COPY.appearanceSection },
   { key: 'notifications', label: NOTIFICATIONS_COPY.heading },
   { key: 'connections', label: SPOTIFY_COPY.connectEntry.sectionTitle },
-  { key: 'account', label: 'Account' },
-  { key: 'danger', label: 'Danger zone' },
+  { key: 'account', label: SETTINGS_COPY.accountSection },
+  { key: 'danger', label: SETTINGS_COPY.dangerSection },
 ]
 
 const NAV_ICONS: Record<NavSection, React.ReactNode> = {
@@ -191,9 +191,11 @@ export function SettingsRouteDesktop({
   const profilePanel = (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-[22px] font-extrabold text-fg">Profile</h2>
+        <h2 className="text-[22px] font-extrabold text-fg">
+          {SETTINGS_COPY.profileSection}
+        </h2>
         <p className="text-[13px] text-fg-muted">
-          What other fans see when you submit a price.
+          {SETTINGS_COPY.profileSectionSub}
         </p>
       </div>
       {/* Identity card */}
@@ -211,7 +213,7 @@ export function SettingsRouteDesktop({
                 {profile.handle}
               </>
             ) : (
-              'anonymous fan'
+              SETTINGS_COPY.anonymousLabel
             )}
           </span>
           <span
@@ -221,15 +223,17 @@ export function SettingsRouteDesktop({
               letterSpacing: '0.04em',
             }}
           >
-            {profile.city || '—'} · joined {profile.joined}
+            {profile.city || SETTINGS_COPY.cityFallback} ·{' '}
+            {SETTINGS_COPY.heroJoinedLabel} {profile.joined}
           </span>
           <div className="mt-0.5">
             <CredChip cred={profile.cred} size="sm" showTooltip />
           </div>
           {isAnon && (
             <span className="mt-0.5 text-[11px] italic text-fg-subtle">
-              Submissions show as <em>anonymous fan</em>. Pick a handle if you
-              want credit.
+              {SETTINGS_COPY.heroAnonLead}{' '}
+              <em>{SETTINGS_COPY.anonymousLabel}</em>.{' '}
+              {SETTINGS_COPY.heroAnonTail}
             </span>
           )}
         </div>
@@ -242,27 +246,24 @@ export function SettingsRouteDesktop({
             borderColor: 'var(--border-strong)',
           }}
         >
-          Edit
+          {SETTINGS_COPY.heroEditButton}
         </button>
       </div>
       {/* Context info card */}
       {!isAnon ? (
         <div className="rounded-xl border border-border bg-surface-1 px-4 py-3.5 text-[13px] leading-relaxed text-fg-muted">
-          Other fans see{' '}
+          {SETTINGS_COPY.handleExplainerLead}{' '}
           <strong style={{ color: 'var(--signal)' }}>@{profile.handle}</strong>{' '}
-          on every price you&apos;ve submitted, and can tag you on
-          confirmations. Drop the handle any time to go anonymous — your
-          existing submissions get reattributed.
+          {SETTINGS_COPY.handleExplainerTail}
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-surface-1 px-4 py-4">
           <p className="text-[14px] font-semibold text-fg">
-            Submitting as <em>anonymous fan.</em>
+            {SETTINGS_COPY.anonymousCardLead}{' '}
+            <em>{SETTINGS_COPY.anonymousCardLabel}</em>
           </p>
           <p className="mt-1 text-[13px] leading-relaxed text-fg-muted">
-            That&apos;s fine — most fans stay anonymous. If you want credit on
-            your prices (and the option to be tagged when someone confirms one),
-            pick a handle.
+            {SETTINGS_COPY.anonymousCardBody}
           </p>
           <button
             type="button"
@@ -274,7 +275,7 @@ export function SettingsRouteDesktop({
               border: 'none',
             }}
           >
-            Pick a handle
+            {SETTINGS_COPY.pickHandleCta}
           </button>
         </div>
       )}
@@ -284,11 +285,13 @@ export function SettingsRouteDesktop({
   const submissionsPanel = (
     <div className="flex flex-col gap-5">
       <div>
-        <h2 className="text-[22px] font-extrabold text-fg">My submissions</h2>
+        <h2 className="text-[22px] font-extrabold text-fg">
+          {SETTINGS_COPY.submissionsSection}
+        </h2>
         <p className="text-[13px] text-fg-muted">
-          {profile.submissionCount} total
+          {SETTINGS_COPY.submissionsTotal(profile.submissionCount)}
           {confirmedCount > 0 &&
-            ` · ${confirmedCount} confirmed by other fans.`}
+            SETTINGS_COPY.submissionsConfirmedSuffixDesktop(confirmedCount)}
         </p>
       </div>
       <MySubmissionsList
@@ -312,7 +315,7 @@ export function SettingsRouteDesktop({
           className="flex items-center gap-1.5 text-[12px] font-semibold uppercase tracking-[0.08em] text-fg-muted transition-colors hover:text-fg"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
-          ← Back to browse
+          {SETTINGS_COPY.desktopBackToBrowse}
         </Link>
       </header>
 
@@ -333,13 +336,16 @@ export function SettingsRouteDesktop({
               />
               <div className="flex min-w-0 flex-col gap-0.5">
                 <span className="truncate text-[13px] font-bold text-fg">
-                  {profile.handle ? `@${profile.handle}` : 'anonymous fan'}
+                  {profile.handle
+                    ? `@${profile.handle}`
+                    : SETTINGS_COPY.anonymousLabel}
                 </span>
                 <span
                   className="text-[10px] text-fg-muted"
                   style={{ fontFamily: 'var(--font-mono)' }}
                 >
-                  {profile.city || '—'} · joined {profile.joined}
+                  {profile.city || SETTINGS_COPY.cityFallback} ·{' '}
+                  {SETTINGS_COPY.heroJoinedLabel} {profile.joined}
                 </span>
                 <CredChip cred={profile.cred} size="sm" />
               </div>
@@ -383,9 +389,11 @@ export function SettingsRouteDesktop({
             {activeSection === 'plan' && (
               <div className="flex flex-col gap-5">
                 <div>
-                  <h2 className="text-[22px] font-extrabold text-fg">Plan</h2>
+                  <h2 className="text-[22px] font-extrabold text-fg">
+                    {SETTINGS_COPY.planSectionDesktop}
+                  </h2>
                   <p className="text-[13px] text-fg-muted">
-                    What you&apos;re paying us. (Spoiler: nothing.)
+                    {SETTINGS_COPY.planSectionSubDesktop}
                   </p>
                 </div>
                 <PlanPanel
@@ -400,10 +408,10 @@ export function SettingsRouteDesktop({
               <div className="flex flex-col gap-5">
                 <div>
                   <h2 className="text-[22px] font-extrabold text-fg">
-                    Appearance
+                    {SETTINGS_COPY.appearanceSection}
                   </h2>
                   <p className="text-[13px] text-fg-muted">
-                    Three flavors. Pick the one that hurts your eyes least.
+                    {SETTINGS_COPY.appearanceSectionSub}
                   </p>
                 </div>
                 <ThemePickerInline />
@@ -434,11 +442,10 @@ export function SettingsRouteDesktop({
               <div className="flex flex-col gap-5">
                 <div>
                   <h2 className="text-[22px] font-extrabold text-fg">
-                    Account
+                    {SETTINGS_COPY.accountSection}
                   </h2>
                   <p className="text-[13px] text-fg-muted">
-                    Your account credentials are managed securely. Click any row
-                    to update.
+                    {SETTINGS_COPY.accountSectionSub}
                   </p>
                 </div>
                 <div className="flex flex-col gap-1.5">
@@ -603,15 +610,14 @@ export function SettingsRouteDesktop({
                       letterSpacing: '0.04em',
                     }}
                   >
-                    Sign-in credentials and connected accounts are managed by
-                    Clerk.{' '}
+                    {SETTINGS_COPY.clerkAttribution}{' '}
                     <a
                       href="https://clerk.com/legal/privacy"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-signal hover:underline"
                     >
-                      Privacy Policy →
+                      {SETTINGS_COPY.clerkPrivacyLink}
                     </a>
                   </p>
                 </div>
@@ -622,9 +628,11 @@ export function SettingsRouteDesktop({
               <div className="flex flex-col gap-5">
                 <div>
                   <h2 className="text-[22px] font-extrabold text-fg">
-                    Danger zone
+                    {SETTINGS_COPY.dangerSection}
                   </h2>
-                  <p className="text-[13px] text-fg-muted">The exits.</p>
+                  <p className="text-[13px] text-fg-muted">
+                    {SETTINGS_COPY.dangerSectionSub}
+                  </p>
                 </div>
                 <DangerZone
                   handle={profile.handle}
@@ -653,7 +661,7 @@ export function SettingsRouteDesktop({
           <div
             role="dialog"
             aria-modal="true"
-            aria-label="Edit profile"
+            aria-label={SETTINGS_COPY.editProfileDialogAriaLabel}
             className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl"
             style={{
               background: 'var(--bg-elevated, var(--bg))',

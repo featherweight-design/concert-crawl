@@ -6,6 +6,9 @@ import { useTheme } from '@/theme/ThemeProvider'
 import { THEMES, THEME_META, type ThemeName } from '@/theme/themes'
 import { ThemeSwatch } from '@/theme/ThemeSwatch'
 import { patchMe } from '@/lib/users'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const SETTINGS_COPY = CONSUMER_COPY.settings
 
 export function ThemePickerInline() {
   const { theme, setTheme } = useTheme()
@@ -54,7 +57,7 @@ export function ThemePickerInline() {
             letterSpacing: '-0.005em',
           }}
         >
-          Theme
+          {SETTINGS_COPY.themeLabel}
         </span>
         <span
           style={{
@@ -77,7 +80,7 @@ export function ThemePickerInline() {
             letterSpacing: '0.06em',
           }}
         >
-          tap to switch
+          {SETTINGS_COPY.themeTapHint}
         </span>
       </div>
 

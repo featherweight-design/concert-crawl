@@ -7,6 +7,7 @@ import { deleteAccount } from '@/lib/users'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const SETTINGS_COPY = CONSUMER_COPY.settings
+const DANGER_COPY = SETTINGS_COPY.dangerZone
 
 interface DeleteAccountSheetProps {
   open: boolean
@@ -87,13 +88,13 @@ export function DeleteAccountSheet({
             className="mb-2 text-fg"
             style={{ fontSize: 20, fontWeight: 900 }}
           >
-            Delete your account?
+            {DANGER_COPY.confirmHeading}
           </h2>
           <p className="mb-4 text-[13px] leading-relaxed text-fg-muted">
             <strong style={{ color: 'var(--danger)' }}>
-              This can&apos;t be undone.
+              {DANGER_COPY.confirmCantUndo}
             </strong>{' '}
-            Your handle
+            {DANGER_COPY.confirmBodyLead}
             {handle ? (
               <>
                 {' '}
@@ -102,15 +103,15 @@ export function DeleteAccountSheet({
             ) : (
               ','
             )}{' '}
-            email, and plan are deleted. {submissionCount ?? 0} submitted{' '}
-            {submissionCount === 1 ? 'price stays' : 'prices stay'} on the
-            public record — your name is removed from them.
+            {DANGER_COPY.confirmBodyRest(submissionCount ?? 0)}
           </p>
           <label
             className="mb-1.5 block text-[13px] font-medium text-fg-muted"
             htmlFor="delete-confirm-desktop"
           >
-            Type <strong>DELETE</strong> to confirm.
+            {DANGER_COPY.confirmLabelLead}{' '}
+            <strong>{DANGER_COPY.confirmLabelToken}</strong>{' '}
+            {DANGER_COPY.confirmLabelTail}
           </label>
           <input
             ref={inputRef}
@@ -118,7 +119,7 @@ export function DeleteAccountSheet({
             type="text"
             value={inputValue}
             onChange={(evt) => setInputValue(evt.target.value)}
-            placeholder="DELETE"
+            placeholder={DANGER_COPY.confirmPlaceholderDesktop}
             className="mb-4 w-full rounded-lg border border-border bg-surface-1 px-4 py-3 text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border-focus"
             style={{
               fontFamily: 'var(--font-mono)',
@@ -138,7 +139,7 @@ export function DeleteAccountSheet({
               className="flex-1 rounded-xl border border-border py-3 text-[14px] font-bold text-fg transition-colors hover:bg-surface-1"
               style={{ background: 'var(--surface-1)' }}
             >
-              Keep my account
+              {DANGER_COPY.keepAccountButton}
             </button>
             <button
               type="button"
@@ -150,7 +151,9 @@ export function DeleteAccountSheet({
                 color: isArmed ? 'white' : 'var(--fg-muted)',
               }}
             >
-              {loading ? 'Deleting…' : 'Delete forever'}
+              {loading
+                ? DANGER_COPY.deletingButton
+                : DANGER_COPY.deleteForeverButton}
             </button>
           </div>
         </div>
@@ -190,14 +193,14 @@ export function DeleteAccountSheet({
           className="text-fg"
           style={{ fontSize: 20, fontWeight: 900 }}
         >
-          Delete your account?
+          {DANGER_COPY.confirmHeading}
         </h2>
 
         <p className="text-[14px] leading-relaxed text-fg-muted">
           <strong style={{ color: 'var(--danger)' }}>
-            This can&apos;t be undone.
+            {DANGER_COPY.confirmCantUndo}
           </strong>{' '}
-          Your handle
+          {DANGER_COPY.confirmBodyLead}
           {handle ? (
             <>
               {' '}
@@ -206,9 +209,7 @@ export function DeleteAccountSheet({
           ) : (
             ','
           )}{' '}
-          email, and plan are deleted. {submissionCount ?? 0} submitted{' '}
-          {submissionCount === 1 ? 'price stays' : 'prices stay'} on the public
-          record — your name is removed from them.
+          {DANGER_COPY.confirmBodyRest(submissionCount ?? 0)}
         </p>
 
         <div className="flex flex-col gap-1.5">
@@ -216,7 +217,9 @@ export function DeleteAccountSheet({
             className="text-[13px] font-medium text-fg-muted"
             htmlFor="delete-confirm-sheet"
           >
-            Type <strong>DELETE</strong> to confirm.
+            {DANGER_COPY.confirmLabelLead}{' '}
+            <strong>{DANGER_COPY.confirmLabelToken}</strong>{' '}
+            {DANGER_COPY.confirmLabelTail}
           </label>
           <input
             ref={inputRef}
@@ -224,7 +227,7 @@ export function DeleteAccountSheet({
             type="text"
             value={inputValue}
             onChange={(evt) => setInputValue(evt.target.value)}
-            placeholder={SETTINGS_COPY.dangerZone.deleteConfirmPlaceholder}
+            placeholder={DANGER_COPY.deleteConfirmPlaceholder}
             className="rounded-lg border border-border bg-surface-1 px-4 py-3 text-fg placeholder:text-fg-subtle focus:outline-none"
             style={{
               fontFamily: 'var(--font-mono)',
@@ -246,7 +249,7 @@ export function DeleteAccountSheet({
             className="flex-1 rounded-xl border border-border py-3 text-[14px] font-bold text-fg"
             style={{ background: 'var(--surface-1)' }}
           >
-            Keep my account
+            {DANGER_COPY.keepAccountButton}
           </button>
           <button
             type="button"
@@ -259,10 +262,10 @@ export function DeleteAccountSheet({
             }}
           >
             {loading
-              ? 'Deleting…'
+              ? DANGER_COPY.deletingButton
               : isArmed
-                ? SETTINGS_COPY.dangerZone.deleteButtonArmed
-                : SETTINGS_COPY.dangerZone.deleteButtonDisabled}
+                ? DANGER_COPY.deleteButtonArmed
+                : DANGER_COPY.deleteButtonDisabled}
           </button>
         </div>
       </div>

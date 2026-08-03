@@ -161,14 +161,14 @@ export function AccountManagementRow({ email }: AccountManagementRowProps) {
           letterSpacing: '0.04em',
         }}
       >
-        Sign-in credentials and connected accounts are managed by Clerk.{' '}
+        {SETTINGS_COPY.clerkAttribution}{' '}
         <a
           href="https://clerk.com/legal/privacy"
           target="_blank"
           rel="noopener noreferrer"
           className="text-signal hover:underline"
         >
-          Privacy Policy →
+          {SETTINGS_COPY.clerkPrivacyLink}
         </a>
       </p>
     </div>

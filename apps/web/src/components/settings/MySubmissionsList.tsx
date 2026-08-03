@@ -32,11 +32,10 @@ export function MySubmissionsList({
       >
         <div className="flex flex-col gap-2">
           <p className="text-[15px] font-extrabold leading-snug tracking-[-0.01em] text-fg">
-            You haven&apos;t submitted any prices yet.
+            {SETTINGS_COPY.emptySubmissionsTitle}
           </p>
           <p className="text-[12.5px] leading-relaxed text-fg-muted">
-            The next show you go to, drop the price you saw. Two fans confirm
-            and it goes live.
+            {SETTINGS_COPY.emptySubmissionsBody}
           </p>
         </div>
       </div>

@@ -1,3 +1,7 @@
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+
+const TEASER_COPY = CONSUMER_COPY.settings.watchingTeaser
+
 export function WatchingTeaser() {
   return (
     <div
@@ -43,7 +47,7 @@ export function WatchingTeaser() {
       <div className="relative flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center gap-2">
           <span className="text-[14px] font-extrabold tracking-[-0.005em] text-fg">
-            Watching
+            {TEASER_COPY.title}
           </span>
           <span
             style={{
@@ -70,12 +74,11 @@ export function WatchingTeaser() {
                 flexShrink: 0,
               }}
             />
-            Coming soon
+            {TEASER_COPY.badge}
           </span>
         </div>
         <span className="text-[12px] leading-snug text-fg-muted">
-          Star a show — we&apos;ll ping you when prices drop or new tickets
-          surface.
+          {TEASER_COPY.body}
         </span>
       </div>
     </div>

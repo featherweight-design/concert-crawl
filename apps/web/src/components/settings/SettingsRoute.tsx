@@ -55,9 +55,11 @@ export function SettingsRoute({
           className="text-[13px] font-semibold uppercase tracking-[0.06em] text-fg-muted"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
-          ← Done
+          {SETTINGS_COPY.mobileHeaderBack}
         </Link>
-        <span className="text-[16px] font-extrabold text-fg">Settings</span>
+        <span className="text-[16px] font-extrabold text-fg">
+          {SETTINGS_COPY.mobileHeaderTitle}
+        </span>
         <div style={{ width: 52 }} />
       </div>
 
@@ -95,7 +97,7 @@ export function SettingsRoute({
               className="mb-2 text-[10px] font-semibold uppercase tracking-[0.06em] text-fg-subtle"
               style={{ fontFamily: 'var(--font-mono)' }}
             >
-              tap to switch
+              {SETTINGS_COPY.themeTapHint}
             </span>
           </div>
           <ThemePickerInline />
@@ -130,8 +132,9 @@ export function SettingsRoute({
                 className="mb-2 text-[10px] text-fg-subtle"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
-                {profile.submissionCount} total
-                {confirmedCount > 0 && ` · ${confirmedCount} confirmed`}
+                {SETTINGS_COPY.submissionsTotal(profile.submissionCount)}
+                {confirmedCount > 0 &&
+                  SETTINGS_COPY.submissionsConfirmedSuffix(confirmedCount)}
               </span>
             )}
           </div>
@@ -156,7 +159,7 @@ export function SettingsRoute({
           <>
             <div className="mx-4 h-px bg-border" />
             <div className="px-4">
-              <SectionLabel>Operations</SectionLabel>
+              <SectionLabel>{SETTINGS_COPY.operationsSection}</SectionLabel>
               <Link
                 href="/admin"
                 className="flex items-center gap-3 rounded-[10px] border border-border bg-surface-1 px-4 py-3 transition-colors"
@@ -184,7 +187,7 @@ export function SettingsRoute({
                     letterSpacing: '-0.005em',
                   }}
                 >
-                  Admin
+                  {SETTINGS_COPY.adminRow}
                 </span>
               </Link>
             </div>
