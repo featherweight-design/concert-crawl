@@ -1048,7 +1048,14 @@ export async function crawlVenue(
               canonicalHeadliners: sql`excluded.canonical_headliners`,
               supportingArtists: sql`excluded.supporting_artists`,
               canonicalSupporting: sql`excluded.canonical_supporting`,
-              tourName: sql`excluded.tour_name`,
+              // tour_name is admin-editable (#992) and only ever populated by
+              // the LLM extractor — schema.org JSON-LD has no tour-name field,
+              // so a JSON-LD re-crawl always arrives with NULL. Taking
+              // excluded.tour_name wholesale would wipe an admin's manual entry
+              // on the very next nightly crawl. COALESCE lets a freshly
+              // extracted name win when the crawler actually has one, and
+              // preserves the stored value when it does not.
+              tourName: sql`COALESCE(excluded.tour_name, ${events.tourName})`,
               doorsTime: sql`excluded.doors_time`,
               showTime: sql`excluded.show_time`,
               ticketUrl: sql`excluded.ticket_url`,

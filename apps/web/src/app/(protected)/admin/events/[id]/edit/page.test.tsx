@@ -70,6 +70,7 @@ const buildEvent = (overrides: Partial<EditorEvent> = {}): EditorEvent => ({
   date: '2026-12-31',
   doorsTime: null,
   showTime: null,
+  tourName: null,
   ticketPriceMin: null,
   ticketPriceMax: null,
   confidenceScore: 0.9,

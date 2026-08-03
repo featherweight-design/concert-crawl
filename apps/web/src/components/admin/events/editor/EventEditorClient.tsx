@@ -26,6 +26,7 @@ export interface EditorEvent {
   date: string
   doorsTime: string | null
   showTime: string | null
+  tourName: string | null
   ticketPriceMin: string | null
   ticketPriceMax: string | null
   confidenceScore: number | null
@@ -47,6 +48,7 @@ interface DraftState {
   date: string
   isSoldOut: boolean
   provenance: SoldOutProvenance
+  tourName: string
 }
 
 const emptyProvenance = (): SoldOutProvenance => ({
@@ -61,12 +63,14 @@ const toDraft = (event: EditorEvent): DraftState => ({
   date: event.date,
   isSoldOut: event.isSoldOut,
   provenance: emptyProvenance(),
+  tourName: event.tourName ?? '',
 })
 
 interface PatchBody {
   status?: LifecycleStatus
   verified?: boolean
   date?: string
+  tourName?: string | null
 }
 
 const computePatchDiff = (
@@ -77,6 +81,11 @@ const computePatchDiff = (
   if (draft.status !== original.status) body.status = draft.status
   if (draft.verified !== original.verified) body.verified = draft.verified
   if (draft.date !== original.date) body.date = draft.date
+  // Blank (or whitespace-only) input clears the tour name to NULL rather than
+  // persisting '' — the consumer kicker keys off `tourName !== null` (#992).
+  const trimmedTourName = draft.tourName.trim()
+  const nextTourName = trimmedTourName === '' ? null : trimmedTourName
+  if (nextTourName !== (original.tourName ?? null)) body.tourName = nextTourName
   return body
 }
 
@@ -266,7 +275,13 @@ export const EventEditorClient = ({ event }: EventEditorClientProps) => {
       ) : (
         <EditorHeader event={headerEvent} />
       )}
-      <IdentitySection event={event} />
+      <IdentitySection
+        event={event}
+        editedTourName={draft.tourName}
+        onTourNameChange={(next) =>
+          setDraft((prev) => ({ ...prev, tourName: next }))
+        }
+      />
       <PricingSection event={event} />
       <ClassificationSection
         genre={event.genre}

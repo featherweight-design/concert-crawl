@@ -833,6 +833,177 @@ describe('GET /v1/admin/events?missing=true — integration (#607)', () => {
   })
 })
 
+describe('PATCH /v1/admin/events/:id — tourName (#992)', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  it('sets a tour name on an event that has none', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2026-09-01' })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ tourName: 'The Rising Tide Tour' }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { tourName: string | null }
+    }
+    expect(body.data.tourName).toBe('The Rising Tide Tour')
+  })
+
+  it('trims surrounding whitespace before storing', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2026-09-02' })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ tourName: '  Midnight Run  ' }),
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { data: { tourName: string | null } }
+    expect(body.data.tourName).toBe('Midnight Run')
+  })
+
+  it('clears to NULL (not an empty string) when given a blank value', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-09-03',
+      tourName: 'Old Tour',
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ tourName: '   ' }),
+    })
+
+    expect(res.status).toBe(200)
+    const [row] = await testDb
+      .select({ tourName: events.tourName })
+      .from(events)
+      .where(eq(events.id, event.id))
+    expect(row?.tourName).toBeNull()
+  })
+
+  it('clears to NULL when given an explicit null', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-09-04',
+      tourName: 'Old Tour',
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ tourName: null }),
+    })
+
+    expect(res.status).toBe(200)
+    const [row] = await testDb
+      .select({ tourName: events.tourName })
+      .from(events)
+      .where(eq(events.id, event.id))
+    expect(row?.tourName).toBeNull()
+  })
+
+  it('leaves tourName untouched when the PATCH omits the field', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-09-05',
+      tourName: 'Keep Me Tour',
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ status: 'postponed' }),
+    })
+
+    expect(res.status).toBe(200)
+    const [row] = await testDb
+      .select({ tourName: events.tourName })
+      .from(events)
+      .where(eq(events.id, event.id))
+    expect(row?.tourName).toBe('Keep Me Tour')
+  })
+
+  it('rejects a tour name longer than 200 characters', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2026-09-06' })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ tourName: 'x'.repeat(201) }),
+    })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('rejects a non-string tourName', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2026-09-07' })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ tourName: 42 }),
+    })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('writes an event.update audit row for a tour-name edit', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, { date: '2026-09-08' })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      method: 'PATCH',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ tourName: 'Audited Tour' }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select({
+        action: auditLog.action,
+        actorId: auditLog.actorId,
+        targetId: auditLog.targetId,
+      })
+      .from(auditLog)
+      .where(eq(auditLog.targetId, event.id))
+    expect(rows).toContainEqual({
+      action: 'event.update',
+      actorId: ADMIN_USER_ID,
+      targetId: event.id,
+    })
+  })
+
+  it('returns tourName from GET /v1/admin/events/:id so the editor can hydrate it', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-09-09',
+      tourName: 'Hydrate Tour',
+    })
+
+    const res = await app.request(`/v1/admin/events/${event.id}`, {
+      headers: ADMIN_HEADERS,
+    })
+
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as { data: { tourName: string | null } }
+    expect(body.data.tourName).toBe('Hydrate Tour')
+  })
+})
+
 describe('PATCH /v1/admin/events/:id — Missing-tab actions', () => {
   beforeEach(() => {
     setAdminAuth()

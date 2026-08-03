@@ -2,6 +2,7 @@
 
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { EditField } from '../EditField'
+import { EditLabel } from '../EditLabel'
 import { EditSection } from '../EditSection'
 
 export interface IdentitySectionEvent {
@@ -11,10 +12,14 @@ export interface IdentitySectionEvent {
   date: string
   doorsTime: string | null
   showTime: string | null
+  tourName: string | null
 }
 
 export interface IdentitySectionProps {
   event: IdentitySectionEvent
+  /** Draft value for the tour-name input. Omit to render read-only. */
+  editedTourName?: string
+  onTourNameChange?: (next: string) => void
 }
 
 const formatDate = (yyyyMmDd: string): string => {
@@ -36,8 +41,14 @@ const formatTime = (time: string | null): string => {
   return `${display}:${minutes} ${meridiem}`
 }
 
-export const IdentitySection = ({ event }: IdentitySectionProps) => {
+export const IdentitySection = ({
+  event,
+  editedTourName,
+  onTourNameChange,
+}: IdentitySectionProps) => {
   const { sections, fields } = ADMIN_COPY.editor
+  const tourNameValue = editedTourName ?? event.tourName ?? ''
+  const tourNameChanged = tourNameValue.trim() !== (event.tourName ?? '')
   return (
     <EditSection
       number={sections.identityNumber}
@@ -61,6 +72,49 @@ export const IdentitySection = ({ event }: IdentitySectionProps) => {
           value={event.artist ?? ''}
           placeholder={fields.artistPlaceholder}
         />
+        {onTourNameChange ? (
+          <div style={{ gridColumn: '1 / -1', minWidth: 0 }}>
+            <EditLabel changed={tourNameChanged}>{fields.tourName}</EditLabel>
+            <input
+              type="text"
+              value={tourNameValue}
+              maxLength={200}
+              onChange={(evt) => onTourNameChange(evt.target.value)}
+              placeholder={fields.tourNamePlaceholder}
+              aria-label={fields.tourName}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                background: 'var(--bg-elevated)',
+                border: '1.5px solid var(--border-strong)',
+                borderRadius: 9,
+                padding: '10px 12px',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 13.5,
+                fontWeight: 500,
+                color: 'var(--fg)',
+              }}
+            />
+            <div
+              style={{
+                marginTop: 6,
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 11.5,
+                color: 'var(--fg-subtle)',
+                lineHeight: 1.5,
+              }}
+            >
+              {fields.tourNameHelp}
+            </div>
+          </div>
+        ) : (
+          <EditField
+            label={fields.tourName}
+            value={event.tourName ?? ''}
+            placeholder={fields.tourNamePlaceholder}
+            full
+          />
+        )}
         <EditField
           label={fields.venue}
           type="select"

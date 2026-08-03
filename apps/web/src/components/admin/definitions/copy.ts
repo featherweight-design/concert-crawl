@@ -1374,6 +1374,10 @@ export const ADMIN_COPY = {
       titlePlaceholder: 'Event title',
       artist: 'Artist / lineup',
       artistPlaceholder: 'Headliner + support',
+      tourName: 'Tour name',
+      tourNamePlaceholder: 'e.g. The Rising Tide Tour',
+      tourNameHelp:
+        'Shows as the kicker above the title. Crawls rarely pick this up, so set it by hand. Leave blank to clear it.',
       venue: 'Venue',
       date: 'Date',
       doors: 'Doors',

@@ -675,6 +675,9 @@ eventsAdminRouter.get(
         firstMissingAt: events.firstMissingAt,
         venueId: events.venueId,
         venueName: venues.name,
+        // Admin-editable (#992): the tour kicker can only ever be populated
+        // by the LLM extractor, so JSON-LD venues need a manual entry path.
+        tourName: events.tourName,
         isSoldOut: isSoldOutExpr(),
       })
       .from(events)
@@ -710,6 +713,20 @@ eventsAdminRouter.patch(
       ticketPriceMin: z.string().nullable().optional(),
       ticketPriceMax: z.string().nullable().optional(),
       genre: z.array(z.string()).nullable().optional(),
+      // #992 — the tour kicker is only ever populated on the LLM extraction
+      // path, so any JSON-LD venue needs an admin to set it by hand. A blank
+      // (or whitespace-only) string clears the value to NULL rather than
+      // persisting '' — the consumer UI keys the kicker off `tourName !== null`.
+      tourName: z
+        .string()
+        .max(200)
+        .nullable()
+        .optional()
+        .transform((value) => {
+          if (value === null || value === undefined) return value
+          const trimmed = value.trim()
+          return trimmed === '' ? null : trimmed
+        }),
       // Admin "Dismiss" on the Missing tab — clears the stale-event flag
       // so the row falls out of the ?missing=true filter. The crawler
       // re-stamps it if the event genuinely re-disappears on a future sweep.

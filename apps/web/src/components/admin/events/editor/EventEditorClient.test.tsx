@@ -48,6 +48,7 @@ const SAMPLE: EditorEvent = {
   date: '2026-06-19',
   doorsTime: '19:00',
   showTime: '20:00',
+  tourName: null,
   ticketPriceMin: '35',
   ticketPriceMax: '60',
   confidenceScore: 0.82,
@@ -125,6 +126,47 @@ describe('EventEditorClient', () => {
   it('renders Sold out when isSoldOut=true', () => {
     render(<EventEditorClient event={{ ...SAMPLE, isSoldOut: true }} />)
     expect(screen.getByText('Sold out')).toBeTruthy()
+  })
+
+  it('hydrates the tour-name input from the event', () => {
+    render(
+      <EventEditorClient event={{ ...SAMPLE, tourName: 'Vide Noir Tour' }} />,
+    )
+    const input = screen.getByLabelText('Tour name')
+    expect(input).toBeTruthy()
+    expect((input as HTMLInputElement).value).toBe('Vide Noir Tour')
+  })
+
+  it('PATCHes a trimmed tour name when the admin types one', async () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.change(screen.getByLabelText('Tour name'), {
+      target: { value: '  Vide Noir Tour  ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(mockApiPatch).toHaveBeenCalled())
+    expect(mockApiPatch.mock.calls[0]?.[2]).toEqual({
+      tourName: 'Vide Noir Tour',
+    })
+  })
+
+  it('PATCHes null (not an empty string) when the admin blanks the tour name', async () => {
+    render(<EventEditorClient event={{ ...SAMPLE, tourName: 'Old Tour' }} />)
+    fireEvent.change(screen.getByLabelText('Tour name'), {
+      target: { value: '   ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(mockApiPatch).toHaveBeenCalled())
+    expect(mockApiPatch.mock.calls[0]?.[2]).toEqual({ tourName: null })
+  })
+
+  it('treats a whitespace-only edit of an empty tour name as clean', () => {
+    render(<EventEditorClient event={SAMPLE} />)
+    fireEvent.change(screen.getByLabelText('Tour name'), {
+      target: { value: '  ' },
+    })
+    expect(screen.queryByRole('button', { name: 'Save' })).toBeNull()
   })
 
   it('does not surface SaveBar when the form is clean', () => {
