@@ -7,6 +7,7 @@ import { eq, and, isNull, lt, sql } from 'drizzle-orm'
 import {
   crawlVenue,
   runSpotifyFanoutSafely,
+  sweepStaleEvents,
   tagEventsWithGenres,
   type CrossVenueCandidate,
 } from '@concert-crawl/crawler-core'
@@ -390,6 +391,18 @@ export async function runDailyCrawl(): Promise<{
     }
   } finally {
     await browser.close()
+  }
+
+  // #675 — runs after every venue has been crawled, so a row seen on today's
+  // page has already had `firstMissingAt` cleared and cannot be swept.
+  try {
+    await sweepStaleEvents()
+  } catch (sweepErr: unknown) {
+    Sentry.captureException(sweepErr)
+    logger.error(
+      { sweepErr },
+      'Stale event sweep failed — crawl data unaffected',
+    )
   }
 
   logger.info(

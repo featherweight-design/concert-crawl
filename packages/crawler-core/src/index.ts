@@ -46,3 +46,7 @@ export type {
   SpotifyFanoutDeps,
   SpotifyFanoutSummary,
 } from './lib/spotify-fanout/index.js'
+export {
+  sweepStaleEvents,
+  STALE_EVENT_CANCEL_DAYS,
+} from './lib/stale-event-sweep.js'
