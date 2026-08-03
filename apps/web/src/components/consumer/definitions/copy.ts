@@ -1272,7 +1272,7 @@ export const CONSUMER_COPY = {
     howFoundLabel: 'How you found out *',
     ceilingHint: 'Optional. Helps fans know the full price range.',
     honestyDisclaimer: 'By submitting, you confirm this is accurate.',
-    // Fine print at the foot of the success view
+    // Fine print under the submit form's honesty disclaimer
     honestyFootnote:
       'By submitting you confirm this is accurate to the best of your knowledge. Intentionally false reports may result in account suspension.',
     footerDisclaimer: 'Your update goes pending until another fan confirms.',
