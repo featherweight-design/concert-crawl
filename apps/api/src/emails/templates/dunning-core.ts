@@ -24,7 +24,7 @@ import {
 import type { RenderedEmail } from '../types.js'
 
 const FOOTER_NOTE =
-  'Already fixed it? Ignore this — the next retry will pick it up automatically.'
+  'Already fixed it? Ignore this. The next retry will pick it up automatically.'
 
 const TRACKER_LABELS = ['Notice', 'Retrying', 'Last try']
 

@@ -34,7 +34,7 @@ export const renderWinback: TemplateRenderer<
 > = () => {
   const title = "Denver's been busy."
   const sub =
-    "Since you switched back to Free, Premium's quietly picked up a few things. Whenever you want them back, they're one tap away — no countdown, no discount gimmick. Just here when you are."
+    "Since you switched back to Free, Premium's quietly picked up a few things. Whenever you want them back, they're one tap away. No countdown, no discount gimmick. Just here when you are."
 
   const calloutInner =
     monoEyebrow({

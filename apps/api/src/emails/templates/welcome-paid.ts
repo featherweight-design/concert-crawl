@@ -55,12 +55,12 @@ export const renderWelcomePaid: TemplateRenderer<
   EmailTemplateVars['welcome_paid']
 > = ({ tier, founderSeatNumber }) => {
   if (tier === 'supporter') {
-    const subject = "You're in — and you're keeping the lights on."
+    const subject = "You're in, and you're keeping the lights on."
     const preheader = 'Your history, your exports, your badge. All live.'
     const microcopy = 'Both run on servers we already pay for.'
     const title = "You didn't have to. Thanks for backing us."
     const sub =
-      "Your history and your calendar exports are switched on, and the badge is live on your profile. You're chipping in so the app stays free for everyone — the glow is real."
+      "Your history and your calendar exports are switched on, and the badge is live on your profile. You're chipping in so the app stays free for everyone. The glow is real."
 
     const bodyRows = [
       headerRow('Welcome · supporter'),
@@ -122,7 +122,7 @@ export const renderWelcomePaid: TemplateRenderer<
     const preheader = 'First 100 only. $3/mo never goes up. Here’s your seat.'
     const title = `You're ${seatLabel}.`
     const sub =
-      'One of the first hundred people to back Concert Crawl. Your price is locked at $3 a month, and it never moves — no matter what anyone pays later.'
+      'One of the first hundred people to back Concert Crawl. Your price is locked at $3 a month, and it never moves, no matter what anyone pays later.'
 
     const bodyRows = [
       headerRow('Welcome · founder'),
@@ -133,7 +133,7 @@ export const renderWelcomePaid: TemplateRenderer<
         : [row(CONTENT_PAD, seatStamp(founderSeatNumber))]),
       row(
         CONTENT_PAD,
-        monoEyebrow({ text: 'Everything Premium — yours', marginBottom: 12 }) +
+        monoEyebrow({ text: 'Everything Premium, yours', marginBottom: 12 }) +
           featureList({ items: FOUNDER_FEATURES, accent: ME.signal }),
       ),
       row(CONTENT_PAD, pricePromise({ tier: 'founder' })),
@@ -152,12 +152,12 @@ export const renderWelcomePaid: TemplateRenderer<
       ...(founderSeatNumber === undefined
         ? []
         : [
-            `Founder #${founderSeatNumber} of 100 — $3/mo, never goes up, ever.`,
+            `Founder #${founderSeatNumber} of 100: $3/mo, never goes up, ever.`,
             '',
           ]),
       ...featureTextLines(FOUNDER_FEATURES),
       '',
-      '$3 is $3. New folks may pay double someday — never you.',
+      '$3 is $3. New folks may pay double someday. Never you.',
       '',
       `Open Concert Crawl: ${appUrl()}`,
     ].join('\n')
@@ -175,7 +175,7 @@ export const renderWelcomePaid: TemplateRenderer<
   }
 
   // premium
-  const subject = "You're in — Premium is live on your account."
+  const subject = "You're in. Premium is live on your account."
   const preheader =
     "Everything Premium, switched on. Here's what you just unlocked."
   const title = "You're in. Premium's switched on."

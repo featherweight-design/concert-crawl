@@ -61,5 +61,5 @@ export const TIER_META: Record<EmailTier, TierMeta> = {
 export const PRICE_PROMISE: Partial<Record<EmailTier, string>> = {
   premium: 'Whatever you pay, you pay. We never raise it.',
   supporter: 'Whatever you pay, you pay. We never raise it.',
-  founder: '$3 is $3. New folks may pay double someday — never you.',
+  founder: '$3 is $3. New folks may pay double someday. Never you.',
 }

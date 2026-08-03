@@ -219,7 +219,7 @@ describe('welcome_gifted', () => {
       giftEndsAt: null,
     })
     expect(rendered.html).toContain('Lifetime Premium')
-    expect(rendered.text).toContain('Lifetime Premium — on us')
+    expect(rendered.text).toContain('Lifetime Premium, on us')
     expect(rendered.subject).toContain("Premium's on us")
   })
 
@@ -320,14 +320,14 @@ describe('renewal_receipt_monthly', () => {
       tierName: 'Founder',
       tier: 'founder',
     })
-    expect(founder.subject).toBe("Founder's paid up — $3, same as always.")
+    expect(founder.subject).toBe("Founder's paid up. $3, same as always.")
     // The title's apostrophe is HTML-escaped in the body, so assert on the
     // unescaped tail; the plain-text title is checked verbatim below.
     expect(founder.html).toContain('paid up. Same $3.')
     expect(founder.text).toContain("Founder's paid up. Same $3.")
     expect(founder.html).toContain('New folks may pay double someday')
     expect(founder.text).toContain(
-      '$3 is $3. New folks may pay double someday — never you.',
+      '$3 is $3. New folks may pay double someday. Never you.',
     )
   })
 
@@ -344,13 +344,13 @@ describe('renewal_receipt_annual', () => {
     expect(rendered.html).toContain('Another year of Premium. Locked in.')
     expect(rendered.html).toContain('$50.00')
     expect(rendered.html).toContain('Premium · annual')
-    expect(rendered.html).toContain('two months on the house')
-    expect(rendered.text).toContain('two months on the house')
+    expect(rendered.html).toContain('Two months on the house')
+    expect(rendered.text).toContain('Two months on the house')
   })
 
   it('uses the annual subject', () => {
     const rendered = renderRenewalReceiptAnnual(ANNUAL_BASE)
-    expect(rendered.subject).toBe('Another year of Premium — receipt inside.')
+    expect(rendered.subject).toBe('Another year of Premium. Receipt inside.')
   })
 })
 

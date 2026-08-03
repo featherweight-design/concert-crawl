@@ -36,7 +36,7 @@ import { formatEmailDate, formatMonthName, formatShortDate } from './format.js'
 type ReceiptPeriod = 'monthly' | 'annual'
 
 const FOOTER_NOTE =
-  'Questions about a charge? Reply to this email — a human reads it.'
+  'Questions about a charge? Reply to this email. A human reads it.'
 const AMOUNT_FALLBACK = 'See receipt'
 
 const CONTENT_PAD = '18px 26px 0'
@@ -77,14 +77,14 @@ export const renderReceipt = (
 
   const sub =
     period === 'annual'
-      ? "Your annual plan renewed. Keep this for your records — it's your receipt for the next twelve months."
+      ? "Your annual plan renewed. Keep this for your records: it's your receipt for the next twelve months."
       : 'Your subscription renewed on schedule. Keep this one for your records.'
 
   const subject =
     period === 'annual'
-      ? 'Another year of Premium — receipt inside.'
+      ? 'Another year of Premium. Receipt inside.'
       : isFounder
-        ? "Founder's paid up — $3, same as always."
+        ? "Founder's paid up. $3, same as always."
         : `${planLabel}'s paid up for ${formatMonthName(chargeDate) ?? 'this month'}.`
 
   const preheader =
@@ -118,7 +118,7 @@ export const renderReceipt = (
   const annualNote =
     amount === null
       ? 'Two months on the house versus paying monthly.'
-      : `Annual runs ${amount} — two months on the house versus paying monthly.`
+      : `Annual runs ${amount}. Two months on the house versus paying monthly.`
 
   const annualNoteRow =
     period === 'annual'
@@ -182,7 +182,7 @@ export const renderReceipt = (
       : [`Full receipt on Stripe: ${stripeReceiptUrl}`]),
     ...(period === 'annual' ? ['', annualNote] : []),
     ...(isFounder && period === 'monthly'
-      ? ['', '$3 is $3. New folks may pay double someday — never you.']
+      ? ['', '$3 is $3. New folks may pay double someday. Never you.']
       : []),
   ]
 

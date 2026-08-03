@@ -28,11 +28,11 @@ import { GIFT_KEEP_FEATURES } from './unlocks.js'
 
 const SUBJECT = 'Your gifted Premium is wrapping up.'
 const PREHEADER =
-  "About a week left. Nothing gets deleted — here's what happens next."
+  "About a week left. Nothing gets deleted. Here's what happens next."
 const GIFTER_FALLBACK = 'A friend of the crawl'
 const CONTENT_PAD = '18px 26px 0'
 const CHANGES_BODY_TEXT =
-  "History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free — same as always. Everything you've saved stays saved."
+  "History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. Everything you've saved stays saved."
 
 export const renderGiftingEndingNotice: TemplateRenderer<
   EmailTemplateVars['gifting_ending_notice']
@@ -44,12 +44,12 @@ export const renderGiftingEndingNotice: TemplateRenderer<
   const endsPhrase =
     giftEndDate === null ? 'in about a week' : `on ${giftEndDate}`
 
-  const sub = `${gifterLabel} put you on Premium — and the gift wraps up ${endsPhrase}. After that your account slides back to Free. No charge, no surprise.`
+  const sub = `${gifterLabel} put you on Premium, and the gift wraps up ${endsPhrase}. After that your account slides back to Free. No charge, no surprise.`
 
-  const italicLine = `<div style="font-family: ${EMAIL_MONO}; font-style: italic; font-size: 12.5px; color: ${ME.accent}; letter-spacing: 0.02em;">—— Hope it showed you a few good nights.</div>`
+  const italicLine = `<div style="font-family: ${EMAIL_MONO}; font-style: italic; font-size: 12.5px; color: ${ME.accent}; letter-spacing: 0.02em;">Hope it showed you a few good nights.</div>`
 
   const changesBody = `${monoEyebrow({ text: 'When it ends', color: ME.subtle, marginBottom: 10 })}
-<div style="font-family: ${EMAIL_FONT}; font-size: 13.5px; color: ${ME.muted}; line-height: 1.55;">History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free — same as always. <span style="color: ${ME.fg}; font-weight: 700;">Everything you've saved stays saved.</span></div>`
+<div style="font-family: ${EMAIL_FONT}; font-size: 13.5px; color: ${ME.muted}; line-height: 1.55;">History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. <span style="color: ${ME.fg}; font-weight: 700;">Everything you've saved stays saved.</span></div>`
 
   const calloutInner =
     monoEyebrow({
@@ -77,7 +77,7 @@ export const renderGiftingEndingNotice: TemplateRenderer<
     row(
       '20px 26px 6px',
       button({
-        label: 'Keep Premium — $5/mo',
+        label: 'Keep Premium for $5/mo',
         tone: 'signal',
         href: planUrl(),
       }),
@@ -91,7 +91,7 @@ export const renderGiftingEndingNotice: TemplateRenderer<
     '',
     sub,
     '',
-    '—— Hope it showed you a few good nights.',
+    'Hope it showed you a few good nights.',
     '',
     'When it ends',
     CHANGES_BODY_TEXT,
@@ -103,7 +103,7 @@ export const renderGiftingEndingNotice: TemplateRenderer<
     '',
     'No card on file · nothing gets deleted · only if you want to',
     '',
-    `Keep Premium — $5/mo: ${planUrl()}`,
+    `Keep Premium for $5/mo: ${planUrl()}`,
   ].join('\n')
 
   return {

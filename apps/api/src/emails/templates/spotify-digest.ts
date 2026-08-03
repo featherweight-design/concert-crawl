@@ -32,7 +32,7 @@ const MAX_TASTE_PICKS = 2
 const FOOTER_NOTE =
   'You get this because you follow artists on Spotify and turned on the weekly digest.'
 const WEEK_SUB =
-  'The ones you told Spotify you love — all playing Denver in the next 7 days.'
+  'The ones you told Spotify you love: all playing Denver in the next 7 days.'
 const ZERO_TITLE = 'A quiet one for your artists.'
 const ZERO_SUB =
   "Nobody you follow is playing Denver this week. Here's a couple we think you'd click with anyway."
@@ -81,7 +81,7 @@ const showTextLines = (show: DigestEmailShow): string[] => {
     .filter((part): part is string => part !== null && part !== '')
     .join(' · ')
   return [
-    `- ${artist}${tour === '' ? '' : ` — ${tour}`}`,
+    `- ${artist}${tour === '' ? '' : `: ${tour}`}`,
     `  ${meta}`,
     `  ${show.url}`,
     '',
@@ -98,7 +98,7 @@ export const renderSpotifyDigest: TemplateRenderer<
   const countLabel = `${shows.length} ${shows.length === 1 ? 'show' : 'shows'}`
 
   const subject = zero
-    ? 'A quiet week for your artists — two picks anyway'
+    ? 'A quiet week for your artists: two picks anyway'
     : `${countLabel} this week by artists you follow`
   const preheader = zero ? ZERO_SUB : WEEK_SUB
 
@@ -138,7 +138,7 @@ ${
   const textIntro = zero
     ? [ZERO_TITLE, '', ZERO_SUB, '', 'Based on your taste', '']
     : [
-        'CONCERT CRAWL — This week in Denver',
+        'CONCERT CRAWL: This week in Denver',
         '',
         `${countLabel} by artists you follow on Spotify,`,
         'all playing Denver in the next 7 days.',

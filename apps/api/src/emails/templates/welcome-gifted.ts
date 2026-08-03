@@ -29,7 +29,7 @@ import {
 import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
 import { PREMIUM_FEATURES_CORE } from './unlocks.js'
 
-const SUBJECT = "You're in — Premium's on us."
+const SUBJECT = "You're in. Premium's on us."
 const PREHEADER = 'Lifetime Premium, no card, nothing to manage. Just enjoy it.'
 
 const CONTENT_PAD = '18px 26px 0'
@@ -39,9 +39,9 @@ export const renderWelcomeGifted: TemplateRenderer<
 > = () => {
   const title = "You're already in."
   const sub =
-    "Lifetime Premium — on us. No tier to pick, no card to add, nothing to manage. You showed up early; that's the whole price."
+    "Lifetime Premium, on us. No tier to pick, no card to add, nothing to manage. You showed up early; that's the whole price."
 
-  const italicLine = `<div style="font-family: ${EMAIL_MONO}; font-style: italic; font-size: 12.5px; color: ${ME.accent}; letter-spacing: 0.02em;">—— Seriously. We owe you one.</div>`
+  const italicLine = `<div style="font-family: ${EMAIL_MONO}; font-style: italic; font-size: 12.5px; color: ${ME.accent}; letter-spacing: 0.02em;">Seriously. We owe you one.</div>`
 
   const microcopy = `<div style="font-family: ${EMAIL_MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">No card on file · nothing to cancel · just enjoy it</div>`
 
@@ -75,7 +75,7 @@ export const renderWelcomeGifted: TemplateRenderer<
     '',
     sub,
     '',
-    '—— Seriously. We owe you one.',
+    'Seriously. We owe you one.',
     '',
     'Everything Premium, switched on:',
     ...PREMIUM_FEATURES_CORE.map(

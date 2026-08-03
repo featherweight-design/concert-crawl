@@ -461,7 +461,7 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 2)', () => {
     expect(resendState.sends).toHaveLength(1)
     const send = resendState.sends[0]
     expect(send?.subject).toBe(
-      'A quiet week for your artists — two picks anyway',
+      'A quiet week for your artists: two picks anyway',
     )
     // Two picks max, ordered by date.
     expect(send?.html).toContain('Pick One')

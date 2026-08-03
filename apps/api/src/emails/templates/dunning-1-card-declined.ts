@@ -11,12 +11,12 @@ export const renderDunning1CardDeclined: TemplateRenderer<
   renderDunning(
     {
       step: 1,
-      subject: 'Your card bounced — mind giving it a refresh?',
+      subject: 'Your card bounced. Mind giving it a refresh?',
       preheader: "No drama. Takes about 30 seconds. We'll retry automatically.",
       headerEyebrow: 'Billing',
       statusText: 'Billing · heads up',
       title: "Your card didn't go through.",
-      sub: "Happens all the time — expired card, bank playing it safe, whatever it is. Give it a refresh and you're set. We'll keep trying in the background either way.",
+      sub: "Happens all the time: expired card, bank playing it safe, whatever it is. Give it a refresh and you're set. We'll keep trying in the background either way.",
       reassure: "Nothing's changed yet · Premium's still on",
       isFinal: false,
     },

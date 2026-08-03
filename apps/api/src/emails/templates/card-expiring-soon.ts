@@ -26,10 +26,10 @@ import {
 import { TIER_ACCENT, TIER_META } from '../palette.js'
 import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
 
-const SUBJECT = "Heads up — your card's about to expire."
+const SUBJECT = "Heads up. Your card's about to expire."
 const PREHEADER =
   'Update it before your next renewal. Takes about 30 seconds, no interruption.'
-const FOOTER_NOTE = "Already updated it? You're set — ignore this one."
+const FOOTER_NOTE = "Already updated it? You're set. Ignore this one."
 
 const CONTENT_PAD = '18px 26px 0'
 
@@ -55,7 +55,7 @@ export const renderCardExpiringSoon: TemplateRenderer<
     tierName ?? (tier === undefined ? 'your plan' : TIER_META[tier].label)
 
   const title = `Your card expires ${daysPhrase(daysRemaining)}.`
-  const sub = `The card on file runs out before your next ${planPhrase} renewal. Drop in a fresh one and nothing skips a beat — no interruption, no dropped features.`
+  const sub = `The card on file runs out before your next ${planPhrase} renewal. Drop in a fresh one and nothing skips a beat: no interruption, no dropped features.`
 
   const microcopy = `<div style="font-family: ${EMAIL_MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">Nothing's wrong yet · this is just a nudge</div>`
 
