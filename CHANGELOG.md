@@ -1,3 +1,15 @@
+# [1.213.0](https://github.com/HartiganHM/concert-crawl/compare/v1.212.1...v1.213.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **scripts:** scope classification absorb to the events each request sent ([da4d18a](https://github.com/HartiganHM/concert-crawl/commit/da4d18a9785925e20d2cf467ee399861b74648a3))
+
+
+### Features
+
+* **web:** proactive ISR revalidation after a crawl inserts events ([9406b84](https://github.com/HartiganHM/concert-crawl/commit/9406b8499c798603aa1f1bf2efecc5446eea02ad)), closes [#847](https://github.com/HartiganHM/concert-crawl/issues/847)
+
 ## [1.212.1](https://github.com/HartiganHM/concert-crawl/compare/v1.212.0...v1.212.1) (2026-08-03)
 
 
