@@ -1,3 +1,16 @@
+# [1.210.0](https://github.com/HartiganHM/concert-crawl/compare/v1.209.0...v1.210.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **scripts:** bind co-headliner lock array as one param ([a62829f](https://github.com/HartiganHM/concert-crawl/commit/a62829f7464c4387a90b18ce917e3e73db52bb5b))
+* **watching:** source the provenance chip from the price it describes ([#1430](https://github.com/HartiganHM/concert-crawl/issues/1430)) ([719c339](https://github.com/HartiganHM/concert-crawl/commit/719c339b7382358e700a594b7b8ddb6c36405ed9)), closes [1365/#1366](https://github.com/HartiganHM/concert-crawl/issues/1366)
+
+
+### Features
+
+* **web:** model locked and error as Going CTA button treatments ([#1432](https://github.com/HartiganHM/concert-crawl/issues/1432)) ([40247a8](https://github.com/HartiganHM/concert-crawl/commit/40247a8111e48c55caa1bf81a2c278cb996cf037))
+
 # [1.209.0](https://github.com/HartiganHM/concert-crawl/compare/v1.208.0...v1.209.0) (2026-08-03)
 
 
