@@ -64,9 +64,16 @@ describe('resolvePosterState', () => {
 
 describe('state labels', () => {
   it('uses the locked labels', () => {
-    expect(posterStateLabel('going')).toBe("I'm going")
+    expect(posterStateLabel('going')).toBe('Going')
     expect(posterStateLabel('soldout')).toBe('Sold out')
     expect(posterStateLabel('drop')).toBe('Price drop')
+  })
+
+  // `going` is the fallback for every event that is neither sold out nor
+  // discounted, and the route renders it with no session at all, so a
+  // first-person label asserts an attendance nothing ever checked.
+  it('keeps the going label out of the first person', () => {
+    expect(posterStateLabel('going').toLowerCase()).not.toContain("i'm")
   })
 })
 

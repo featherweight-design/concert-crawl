@@ -1429,9 +1429,13 @@ export const CONSUMER_COPY = {
       soldout: "sold out. now we're all refreshing stubhub at 2am together.",
       drop: "price dropped. so did my dignity, but that's unrelated.",
     },
-    // The badge drawn on the poster for each state.
+    // The badge drawn on the poster for each state. `going` is third-person
+    // on purpose: it is the fallback for every event that is neither sold out
+    // nor discounted, and the route renders it with no session at all for OG
+    // crawlers — so a first-person "I'm going" asserts an attendance the card
+    // never checked. Handoff §1 locks this pill as `GOING`.
     stateLabels: {
-      going: "I'm going",
+      going: 'Going',
       soldout: 'Sold out',
       drop: 'Price drop',
     },
