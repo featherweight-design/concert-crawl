@@ -10,7 +10,9 @@
  * and staging both need to advertise themselves rather than the canonical
  * domain. `VERCEL_URL` covers deploys where nobody set the explicit var — it
  * is host-only, so the scheme is added here. Local dev falls through to the
- * dev server.
+ * dev server. Each source is normalised to a bare origin before it is
+ * accepted, and a source that cannot be normalised is skipped rather than
+ * emitted.
  *
  * `VERCEL_URL` rather than a `NEXT_PUBLIC_` twin because this resolves only in
  * `generateMetadata`, which runs on the server. Vercel sets the unprefixed var
@@ -21,18 +23,47 @@
 
 const LOCAL_ORIGIN = 'http://localhost:3000'
 
-const trimTrailingSlash = (value: string): string =>
-  value.endsWith('/') ? value.slice(0, -1) : value
+const present = (value: string | undefined): string | null => {
+  if (value === undefined) return null
+  const trimmed = value.trim()
+  return trimmed.length === 0 ? null : trimmed
+}
 
-const present = (value: string | undefined): string | null =>
-  value === undefined || value.length === 0 ? null : value
+/**
+ * Reduce a configured value to a bare `scheme://host`, or reject it.
+ *
+ * Dashboard-entered variables arrive malformed in predictable ways — a stray
+ * space, a trailing path, a missing scheme — and each of those produces a URL
+ * no crawler can fetch. The failure is silent and only ever visible inside
+ * somebody else's chat client, so an unusable value falls through to the next
+ * source instead of being shipped.
+ */
+const toOrigin = (value: string): string | null => {
+  try {
+    const url = new URL(value)
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return null
+    return `${url.protocol}//${url.host}`
+  } catch (err) {
+    console.error('share: unusable site origin', { value, err })
+    return null
+  }
+}
 
 export const siteOrigin = (): string => {
   const configured = present(process.env['NEXT_PUBLIC_SITE_URL'])
-  if (configured !== null) return trimTrailingSlash(configured)
+  const fromConfig = configured === null ? null : toOrigin(configured)
+  if (fromConfig !== null) return fromConfig
 
+  // Host-only by contract, so a scheme is prepended before parsing; a value
+  // that already carries one still resolves rather than becoming `https://https`.
   const vercelHost = present(process.env['VERCEL_URL'])
-  if (vercelHost !== null) return `https://${trimTrailingSlash(vercelHost)}`
+  const fromVercel =
+    vercelHost === null
+      ? null
+      : toOrigin(
+          vercelHost.includes('://') ? vercelHost : `https://${vercelHost}`,
+        )
+  if (fromVercel !== null) return fromVercel
 
   return LOCAL_ORIGIN
 }

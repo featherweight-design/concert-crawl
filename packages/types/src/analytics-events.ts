@@ -78,7 +78,11 @@ export type MonetizationEventProps<TEvent extends MonetizationEvent> =
  * one is a new member rather than an untyped string. */
 export type ShareSurface = 'event-detail'
 
-/** The destinations the sheet actually offers (`lib/share/destinations.ts`). */
+/**
+ * The destinations the sheet actually offers. The keys are minted at the
+ * `track` call-sites in `apps/web/.../share/ShareSheet.tsx` — `destinations.ts`
+ * holds the capability helpers each one drives, not these identifiers.
+ */
 export type ShareDestination = 'system' | 'save-image' | 'copy-link'
 
 /**

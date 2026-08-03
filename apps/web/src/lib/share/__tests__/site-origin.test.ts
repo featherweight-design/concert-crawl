@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { absoluteUrl, siteOrigin } from '../site-origin'
 
 // Read through `process.env` rather than vi.stubEnv so the "absent" case is a
@@ -47,6 +47,52 @@ describe('siteOrigin', () => {
 
   it('treats an empty configured value as unset', () => {
     setEnv({ NEXT_PUBLIC_SITE_URL: '', VERCEL_URL: 'preview-abc.vercel.app' })
+
+    expect(siteOrigin()).toBe('https://preview-abc.vercel.app')
+  })
+
+  // A dashboard-entered variable picks up a stray space far more often than
+  // anyone admits, and the resulting URL is unfetchable by every crawler.
+  it('tolerates surrounding whitespace on a configured value', () => {
+    setEnv({ NEXT_PUBLIC_SITE_URL: '  https://concertcrawl.app  ' })
+
+    expect(siteOrigin()).toBe('https://concertcrawl.app')
+  })
+
+  it('reduces a configured value carrying a path to its origin', () => {
+    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app/events/' })
+
+    expect(siteOrigin()).toBe('https://concertcrawl.app')
+  })
+
+  // Skipping to the next source beats emitting a URL nothing can fetch.
+  it('skips a configured value that is not a usable origin', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    setEnv({
+      NEXT_PUBLIC_SITE_URL: 'concertcrawl.app',
+      VERCEL_URL: 'preview-abc.vercel.app',
+    })
+
+    expect(siteOrigin()).toBe('https://preview-abc.vercel.app')
+  })
+
+  it('refuses a configured value on a non-http scheme', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    setEnv({
+      NEXT_PUBLIC_SITE_URL: 'javascript:alert(1)',
+      VERCEL_URL: undefined,
+    })
+
+    expect(siteOrigin()).toBe('http://localhost:3000')
+  })
+
+  // Vercel documents this one as host-only, but a scheme sneaking in must not
+  // become `https://https`.
+  it('accepts a deployment host that already carries a scheme', () => {
+    setEnv({
+      NEXT_PUBLIC_SITE_URL: undefined,
+      VERCEL_URL: 'https://preview-abc.vercel.app',
+    })
 
     expect(siteOrigin()).toBe('https://preview-abc.vercel.app')
   })
