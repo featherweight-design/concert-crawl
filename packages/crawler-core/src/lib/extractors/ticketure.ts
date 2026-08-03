@@ -94,9 +94,8 @@ function mapToNormalizedEvent(
   // `extractDateOnly` returns undefined for a designator-bearing string that
   // still isn't a real instant, so this one check covers both the ambiguous
   // and the unparseable case.
-  const date = HAS_EXPLICIT_TZ.test(startDateTime)
-    ? extractDateOnly(startDateTime, timeZone)
-    : undefined
+  const hasZone = HAS_EXPLICIT_TZ.test(startDateTime)
+  const date = hasZone ? extractDateOnly(startDateTime, timeZone) : undefined
   if (date === undefined) {
     reportFailure({
       event: 'ticketure.ambiguous_start',
@@ -104,6 +103,10 @@ function mapToNormalizedEvent(
       sourceUrl,
       title,
       startDateTime,
+      // The two causes want different responses — a missing designator means
+      // Ticketure changed its serialization, an unparseable instant means one
+      // bad row — so they have to be distinguishable in Sentry.
+      reason: hasZone ? 'unparseable_instant' : 'missing_timezone',
     })
     return null
   }
