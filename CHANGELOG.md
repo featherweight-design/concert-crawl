@@ -1,3 +1,10 @@
+## [1.201.2](https://github.com/HartiganHM/concert-crawl/compare/v1.201.1...v1.201.2) (2026-08-03)
+
+
+### Bug Fixes
+
+* **api:** quote the cheapest tier on every price surface ([#1367](https://github.com/HartiganHM/concert-crawl/issues/1367)) ([c1dc572](https://github.com/HartiganHM/concert-crawl/commit/c1dc572b31f9836e1f563956b02abc033e49a7d1)), closes [#1365](https://github.com/HartiganHM/concert-crawl/issues/1365)
+
 ## [1.201.1](https://github.com/HartiganHM/concert-crawl/compare/v1.201.0...v1.201.1) (2026-08-03)
 
 
