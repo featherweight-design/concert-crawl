@@ -18,7 +18,8 @@ ALTER TABLE events
 
 -- Backfill existing rows. Mirrors the JS canonicalizeArtist function:
 --   1. Expand the Latin Extended letters whose replacement is longer than one
---      character (Æ→AE, Œ→OE, ß→ss, Þ→TH) via replace(). These CANNOT go
+--      character (Æ/æ, Œ/œ, ß, ẞ, Þ/þ — eight entries in all) via
+--      replace(). These CANNOT go
 --      through translate(): translate() is strictly 1→1 and silently drops a
 --      source char whose position has no counterpart in the target string.
 --   2. Strip a curated set of Latin diacritics plus the 1→1 Latin Extended

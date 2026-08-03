@@ -25,7 +25,8 @@ ALTER TABLE events
 --   2. Map the remaining precomposed Latin Extended characters (the #648
 --      set) — must stay in sync with LATIN_EXTENDED_MAP in
 --      packages/types/src/latin-extended-map.ts. The 1→N entries
---      (Æ→AE, Œ→OE, ß→ss, Þ→TH) go through replace(); translate() is
+--      (Æ/æ, Œ/œ, ß, ẞ, Þ/þ — eight entries) go through replace();
+--      translate() is
 --      strictly 1→1 and would silently drop them, so only the 1→1
 --      entries (Ø, Ł, Ð, Đ) are appended to its char set.
 --   3. Lowercase.

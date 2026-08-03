@@ -7,9 +7,9 @@
 -- WHY translate() ALONE IS NOT ENOUGH
 -- Postgres translate() is strictly positional 1→1: it maps the Nth char of
 -- `from` to the Nth char of `to`, and DELETES any `from` char with no
--- counterpart. Æ→ae, ß→ss, Œ→oe and Þ→th are 1→2 mappings, so putting them
+-- counterpart. Æ/æ, Œ/œ, ß, ẞ and Þ/þ are all 1→2 mappings, so putting them
 -- in a translate() char set would silently drop them (or, worse, misalign
--- every following pair). Those four pairs are therefore expressed as nested
+-- every following pair). All eight are therefore expressed as nested
 -- replace() calls, and translate() carries only the true 1→1 entries.
 --
 -- The expression below is generated verbatim by latinExtendedSql() in
