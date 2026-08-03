@@ -12,6 +12,7 @@ import {
   type CrossVenueCandidate,
 } from '@concert-crawl/crawler-core'
 import { runPricePipeline } from '@concert-crawl/price-pipeline'
+import { requestLandingRevalidationSafely } from './revalidate.js'
 
 const logger = createLogger('crawler')
 const MAX_CONCURRENT = 1
@@ -177,6 +178,10 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
 
   logger.info({ count: claimed.length }, 'Processing pending crawl triggers')
 
+  // #847 — total new events across this tick, used to decide whether the
+  // landing page's ISR cache is worth busting proactively.
+  let eventsInserted = 0
+
   const crossVenueCandidates = await loadCrossVenueCandidates()
 
   // Launch is deferred: a tick of only http-mode venues never starts Chromium.
@@ -229,6 +234,7 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
           )
         }
         if (crawlRun.status !== 'failed') {
+          eventsInserted += crawlRun.eventsInserted ?? 0
           await runPricesForVenue(trigger.venueId)
           // #763 §10.1: Spotify new-show fan-out for this crawl's inserted
           // events. Awaited (not detached) because this process hard-exits
@@ -268,6 +274,8 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
     await browser.close()
   }
 
+  await requestLandingRevalidationSafely(eventsInserted)
+
   return { processed: claimed.length }
 }
 
@@ -299,6 +307,8 @@ export async function runDailyCrawl(): Promise<{
 
   let succeeded = 0
   let failed = 0
+  // #847 — see the triggered path.
+  let eventsInserted = 0
 
   const browser = createLazyBrowser()
   try {
@@ -362,6 +372,7 @@ export async function runDailyCrawl(): Promise<{
               )
             }
             if (result.value.status !== 'failed') {
+              eventsInserted += result.value.eventsInserted ?? 0
               await runPricesForVenue(batch[idx].id)
               // #763 §10.1 — same awaited-never-throwing fan-out as the
               // triggered path (see comment there).
@@ -404,6 +415,8 @@ export async function runDailyCrawl(): Promise<{
       'Stale event sweep failed — crawl data unaffected',
     )
   }
+
+  await requestLandingRevalidationSafely(eventsInserted)
 
   logger.info(
     { succeeded, failed, total: activeVenues.length },

@@ -161,6 +161,8 @@ services:
         sync: false # Your email address for failure notifications
       - key: ADMIN_URL
         value: https://concertcrawl.app
+      - key: REVALIDATE_SECRET
+        sync: false # #847 — must match REVALIDATE_SECRET on the Vercel web project; unset = feature dormant
       - key: SENTRY_DSN
         sync: false # Enter manually in Render dashboard
       - key: SENTRY_ENVIRONMENT
@@ -190,6 +192,8 @@ services:
         sync: false # Your email address for failure notifications
       - key: ADMIN_URL
         value: https://concertcrawl.app
+      - key: REVALIDATE_SECRET
+        sync: false # #847 — must match REVALIDATE_SECRET on the Vercel web project; unset = feature dormant
       - key: SENTRY_DSN
         sync: false # Enter manually in Render dashboard
       - key: SENTRY_ENVIRONMENT
@@ -334,7 +338,9 @@ services:
       - key: ADMIN_EMAIL
         sync: false # Your email address for failure notifications
       - key: ADMIN_URL
-        sync: false # Set to staging API URL, e.g. https://concert-crawl-api-staging.onrender.com
+        sync: false # Set to the staging WEB URL (ADMIN_URL builds /admin/* links and, per #847, the /api/revalidate target)
+      - key: REVALIDATE_SECRET
+        sync: false # #847 — must match REVALIDATE_SECRET on the Vercel web project; unset = feature dormant
       - key: SENTRY_DSN
         sync: false # Enter manually in Render dashboard
       - key: SENTRY_ENVIRONMENT
@@ -363,7 +369,9 @@ services:
       - key: ADMIN_EMAIL
         sync: false # Your email address for failure notifications
       - key: ADMIN_URL
-        sync: false # Set to staging API URL, e.g. https://concert-crawl-api-staging.onrender.com
+        sync: false # Set to the staging WEB URL (ADMIN_URL builds /admin/* links and, per #847, the /api/revalidate target)
+      - key: REVALIDATE_SECRET
+        sync: false # #847 — must match REVALIDATE_SECRET on the Vercel web project; unset = feature dormant
       - key: SENTRY_DSN
         sync: false # Enter manually in Render dashboard
       - key: SENTRY_ENVIRONMENT

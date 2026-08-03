@@ -170,25 +170,26 @@ The staging Vercel project would normally invert this (Production + Preview so p
 
 **All `NEXT_PUBLIC_*` keys must have Sensitive OFF** — Sensitive blocks `NEXT_PUBLIC_` inlining at build time, which breaks Clerk + Sentry at runtime.
 
-| Key                                   | Value                                                                                                                                                | Sensitive |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| `NEXT_PUBLIC_API_URL`                 | `https://concert-crawl-api.onrender.com`                                                                                                             | OFF       |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`   | prod `pk_live_*` from Step 1 (encodes `clerk.concertcrawl.app`)                                                                                      | OFF       |
-| `CLERK_SECRET_KEY`                    | prod `sk_live_*` from Step 1                                                                                                                         | ON        |
-| `NEXT_PUBLIC_CLERK_DOMAIN`            | `concertcrawl.app` — **required** to disable Vercel's auto-proxy logic in `@clerk/nextjs` that would otherwise inject a broken `/__clerk` script src | OFF       |
-| `NEXT_PUBLIC_CLERK_SIGN_IN_URL`       | `/sign-in`                                                                                                                                           | OFF       |
-| `NEXT_PUBLIC_CLERK_SIGN_UP_URL`       | `/sign-up`                                                                                                                                           | OFF       |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | `/events`                                                                                                                                            | OFF       |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | `/auth/complete`                                                                                                                                     | OFF       |
-| `NEXT_PUBLIC_SENTRY_DSN`              | Web project DSN from Step 5                                                                                                                          | OFF       |
-| `SENTRY_DSN`                          | Same                                                                                                                                                 | ON        |
-| `NEXT_PUBLIC_SENTRY_ENVIRONMENT`      | `production`                                                                                                                                         | OFF       |
-| `SENTRY_ENVIRONMENT`                  | `production`                                                                                                                                         | OFF       |
-| `SENTRY_AUTH_TOKEN`                   | From Step 5                                                                                                                                          | ON        |
-| `INVITE_COOKIE_SECRET`                | Generate fresh: `openssl rand -hex 32`                                                                                                               | ON        |
-| `INTERNAL_API_SECRET`                 | Generate fresh: `openssl rand -hex 32` — **must match** the same key in the Render API's env vars (Step 8)                                           | ON        |
-| `NEXT_PUBLIC_POSTHOG_KEY`             | PostHog project API key (`phc_*`) — client-side monetization funnel analytics. Absent → analytics no-ops                                             | OFF       |
-| `NEXT_PUBLIC_POSTHOG_HOST`            | `https://us.i.posthog.com` (US cloud region)                                                                                                         | OFF       |
+| Key                                   | Value                                                                                                                                                                                                                     | Sensitive |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
+| `NEXT_PUBLIC_API_URL`                 | `https://concert-crawl-api.onrender.com`                                                                                                                                                                                  | OFF       |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`   | prod `pk_live_*` from Step 1 (encodes `clerk.concertcrawl.app`)                                                                                                                                                           | OFF       |
+| `CLERK_SECRET_KEY`                    | prod `sk_live_*` from Step 1                                                                                                                                                                                              | ON        |
+| `NEXT_PUBLIC_CLERK_DOMAIN`            | `concertcrawl.app` — **required** to disable Vercel's auto-proxy logic in `@clerk/nextjs` that would otherwise inject a broken `/__clerk` script src                                                                      | OFF       |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL`       | `/sign-in`                                                                                                                                                                                                                | OFF       |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL`       | `/sign-up`                                                                                                                                                                                                                | OFF       |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | `/events`                                                                                                                                                                                                                 | OFF       |
+| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | `/auth/complete`                                                                                                                                                                                                          | OFF       |
+| `NEXT_PUBLIC_SENTRY_DSN`              | Web project DSN from Step 5                                                                                                                                                                                               | OFF       |
+| `SENTRY_DSN`                          | Same                                                                                                                                                                                                                      | ON        |
+| `NEXT_PUBLIC_SENTRY_ENVIRONMENT`      | `production`                                                                                                                                                                                                              | OFF       |
+| `SENTRY_ENVIRONMENT`                  | `production`                                                                                                                                                                                                              | OFF       |
+| `SENTRY_AUTH_TOKEN`                   | From Step 5                                                                                                                                                                                                               | ON        |
+| `INVITE_COOKIE_SECRET`                | Generate fresh: `openssl rand -hex 32`                                                                                                                                                                                    | ON        |
+| `INTERNAL_API_SECRET`                 | Generate fresh: `openssl rand -hex 32` — **must match** the same key in the Render API's env vars (Step 8)                                                                                                                | ON        |
+| `REVALIDATE_SECRET`                   | Generate fresh: `openssl rand -hex 32` — **must match** the same key on both crawler cron jobs (Step 8). Unset → `/api/revalidate` fails closed (401) and the landing page relies on its 5-minute ISR window alone (#847) | ON        |
+| `NEXT_PUBLIC_POSTHOG_KEY`             | PostHog project API key (`phc_*`) — client-side monetization funnel analytics. Absent → analytics no-ops                                                                                                                  | OFF       |
+| `NEXT_PUBLIC_POSTHOG_HOST`            | `https://us.i.posthog.com` (US cloud region)                                                                                                                                                                              | OFF       |
 
 `NEXT_PUBLIC_APP_VERSION` is hard-set at build time by `apps/web/next.config.ts` from `package.json#version` plus the deploy's commit SHA. **Current limitation:** the SHA fallback chain only reads `RENDER_GIT_COMMIT`, so on Vercel deploys the version banner reads `vX.Y.Z · dev` instead of `vX.Y.Z · abc1234`. Tracked in #595 (one-line fix to add `VERCEL_GIT_COMMIT_SHA` to the fallback chain).
 
@@ -270,7 +271,8 @@ Both crawler cron jobs need the same env var set. The Dockerfile (`apps/crawler/
 | `ANTHROPIC_API_KEY`  | From Anthropic console                            |
 | `RESEND_API_KEY`     | From Step 5                                       |
 | `ADMIN_EMAIL`        | Your email for crawl failure notifications        |
-| `ADMIN_URL`          | `https://concertcrawl.app`                        |
+| `ADMIN_URL`          | `https://concertcrawl.app` (the WEB app origin)   |
+| `REVALIDATE_SECRET`  | Same value as the Vercel web project (Step 6)     |
 | `SENTRY_DSN`         | Crawler project DSN from Step 5                   |
 | `SENTRY_ENVIRONMENT` | `production`                                      |
 | `LOG_LEVEL`          | `info`                                            |
