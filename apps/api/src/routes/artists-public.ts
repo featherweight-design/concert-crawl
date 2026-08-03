@@ -135,7 +135,10 @@ artistsPublicRouter.get(
     const upcomingRows = await db
       .select(showColumns)
       .from(events)
-      .innerJoin(venues, eq(events.venueId, venues.id))
+      .innerJoin(
+        venues,
+        and(eq(events.venueId, venues.id), eq(venues.active, true)),
+      )
       .where(
         and(
           appearsOnBill,
@@ -153,6 +156,9 @@ artistsPublicRouter.get(
     const pastRows = await db
       .select(showColumns)
       .from(events)
+      // Deliberately not filtered on venues.active (#1299), unlike the
+      // upcoming query above. Deactivation removes a venue from everything
+      // forward-looking; it does not un-happen the shows it already hosted.
       .innerJoin(venues, eq(events.venueId, venues.id))
       .where(
         and(

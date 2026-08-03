@@ -37,7 +37,10 @@ searchRouter.get('/popular', async (ctx) => {
       venueSlug: venues.slug,
     })
     .from(events)
-    .innerJoin(venues, eq(events.venueId, venues.id))
+    .innerJoin(
+      venues,
+      and(eq(events.venueId, venues.id), eq(venues.active, true)),
+    )
     .leftJoin(
       userEvents,
       and(eq(userEvents.eventId, events.id), eq(userEvents.status, 'watching')),

@@ -261,7 +261,10 @@ eventsRouter.get(
     const countResult = await db
       .select({ total: count() })
       .from(events)
-      .innerJoin(venues, eq(events.venueId, venues.id))
+      .innerJoin(
+        venues,
+        and(eq(events.venueId, venues.id), eq(venues.active, true)),
+      )
       .where(where)
 
     const total = countResult[0]?.total ?? 0
@@ -307,7 +310,10 @@ eventsRouter.get(
         },
       })
       .from(events)
-      .innerJoin(venues, eq(events.venueId, venues.id))
+      .innerJoin(
+        venues,
+        and(eq(events.venueId, venues.id), eq(venues.active, true)),
+      )
       .where(where)
       .orderBy(asc(events.date), asc(events.showTime))
       .limit(limit)
@@ -524,7 +530,10 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       },
     })
     .from(events)
-    .innerJoin(venues, eq(events.venueId, venues.id))
+    .innerJoin(
+      venues,
+      and(eq(events.venueId, venues.id), eq(venues.active, true)),
+    )
     // isNull(firstMissingAt) mirrors the list-filter intent: if the crawler
     // stopped seeing this event, direct-link traffic from old emails / search
     // results should 404 rather than render a stale detail page. The crawler
@@ -1134,7 +1143,10 @@ eventsRouter.get('/:id/related', async (ctx) => {
       },
     })
     .from(events)
-    .innerJoin(venues, eq(events.venueId, venues.id))
+    .innerJoin(
+      venues,
+      and(eq(events.venueId, venues.id), eq(venues.active, true)),
+    )
     .where(and(...relatedConditions))
     .orderBy(asc(events.date), asc(events.showTime))
     .limit(3)
