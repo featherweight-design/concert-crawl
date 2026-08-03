@@ -1,3 +1,21 @@
+# [1.209.0](https://github.com/HartiganHM/concert-crawl/compare/v1.208.0...v1.209.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **copy:** state each promise once and enforce the Watching vocabulary ([#1428](https://github.com/HartiganHM/concert-crawl/issues/1428)) ([78c9860](https://github.com/HartiganHM/concert-crawl/commit/78c98607fe9e1385de7b1a812c752d4657ae1225)), closes [#1389](https://github.com/HartiganHM/concert-crawl/issues/1389)
+* **scripts:** bump updated_at when the co-headliner backfill rewrites a row ([13accbd](https://github.com/HartiganHM/concert-crawl/commit/13accbd78b327127c66d1903d7c082b5ef6dea64))
+* **scripts:** denver-local date bound and provenance guard on backfill ([04a3b85](https://github.com/HartiganHM/concert-crawl/commit/04a3b8579646be9ebab252b94278a8e7ab3da578))
+* **scripts:** import canonicalizeSupporting from types source ([6a09a93](https://github.com/HartiganHM/concert-crawl/commit/6a09a930d8a209854b8811702bc0bd112028f3b8))
+* **scripts:** import db from source and log proposed supporting in CSV ([7b3d506](https://github.com/HartiganHM/concert-crawl/commit/7b3d50620f39b3b5a48591319b2a6a3f16c4940a))
+* **scripts:** write the decision CSV in commit mode too ([cd06ad9](https://github.com/HartiganHM/concert-crawl/commit/cd06ad935405afac7523f51d1652a3b450825503))
+
+
+### Features
+
+* **scripts:** one-shot co-headliner backfill for historical flattened bills ([#1203](https://github.com/HartiganHM/concert-crawl/issues/1203)) ([12e4b70](https://github.com/HartiganHM/concert-crawl/commit/12e4b7088d78ace91b0670319bd5f9d8f50d880d))
+* **web:** open the watchers roster in an overlay ([#1431](https://github.com/HartiganHM/concert-crawl/issues/1431)) ([046a064](https://github.com/HartiganHM/concert-crawl/commit/046a064cfbcea92576aedd024553c84edef8f19a))
+
 # [1.208.0](https://github.com/HartiganHM/concert-crawl/compare/v1.207.1...v1.208.0) (2026-08-03)
 
 
