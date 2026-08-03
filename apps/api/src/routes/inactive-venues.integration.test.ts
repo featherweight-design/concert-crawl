@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { z } from 'zod'
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
@@ -19,6 +20,31 @@ const app = createApp()
 
 const FUTURE = '2027-09-12'
 const PAST = '2020-09-12'
+
+// Parsed rather than cast: an `as` asserts a shape without checking it, so a
+// response-shape regression would surface as a confusing assertion failure
+// instead of a schema error naming the field that moved.
+const artistListSchema = z.object({
+  data: z.object({ data: z.array(z.object({ artist: z.string() })) }),
+})
+
+const browseSchema = z.object({
+  data: z.object({
+    data: z.array(z.object({ artist: z.string() })),
+    total: z.number(),
+  }),
+})
+
+const popularSchema = z.object({
+  data: z.array(z.object({ artist: z.string() })),
+})
+
+const artistDetailSchema = z.object({
+  data: z.object({
+    shows: z.array(z.unknown()),
+    past: z.array(z.unknown()),
+  }),
+})
 
 /**
  * #1299 — deactivating a venue removes it from every forward-looking surface.
@@ -51,9 +77,7 @@ describe('inactive venues (#1299)', () => {
 
     const res = await app.request('/v1/events')
     expect(res.status).toBe(200)
-    const body = (await res.json()) as {
-      data: { data: { artist: string }[]; total: number }
-    }
+    const body = browseSchema.parse(await res.json())
 
     expect(body.data.data.map((row) => row.artist)).toEqual(['Live Act'])
     // The count query is a separate statement from the rows query — a filter
@@ -79,9 +103,7 @@ describe('inactive venues (#1299)', () => {
 
     const res = await app.request(`/v1/events/${source.id}/related`)
     expect(res.status).toBe(200)
-    const body = (await res.json()) as {
-      data: { data: { artist: string }[] }
-    }
+    const body = artistListSchema.parse(await res.json())
 
     expect(body.data.data.map((row) => row.artist)).not.toContain('Closed Act')
   })
@@ -105,7 +127,7 @@ describe('inactive venues (#1299)', () => {
 
     const res = await app.request('/v1/search/popular')
     expect(res.status).toBe(200)
-    const body = (await res.json()) as { data: { artist: string }[] }
+    const body = popularSchema.parse(await res.json())
 
     expect(body.data.map((row) => row.artist)).toEqual(['Live Act'])
   })
@@ -118,9 +140,7 @@ describe('inactive venues (#1299)', () => {
 
     const res = await app.request('/v1/artists/closed-act')
     expect(res.status).toBe(200)
-    const body = (await res.json()) as {
-      data: { shows: unknown[]; past: unknown[] }
-    }
+    const body = artistDetailSchema.parse(await res.json())
 
     expect(body.data.shows).toHaveLength(0)
     // Deactivation is forward-looking only — it does not un-happen the shows
