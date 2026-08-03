@@ -42,32 +42,40 @@ export async function sweepStaleEvents(
 ): Promise<SweepResult> {
   const cutoff = new Date(now.getTime() - STALE_EVENT_CANCEL_DAYS * DAY_MS)
 
-  const cancelled = await db
-    .update(events)
-    .set({ status: 'cancelled' })
-    .where(
-      and(
-        eq(events.status, 'upcoming'),
-        isNotNull(events.firstMissingAt),
-        lt(events.firstMissingAt, cutoff),
-      ),
-    )
-    .returning({ id: events.id, firstMissingAt: events.firstMissingAt })
+  // One transaction so a cancellation can never commit without the audit row
+  // that explains it — an unexplained `cancelled` row is indistinguishable from
+  // a human's triage decision.
+  const cancelled = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(events)
+      .set({ status: 'cancelled' })
+      .where(
+        and(
+          eq(events.status, 'upcoming'),
+          isNotNull(events.firstMissingAt),
+          lt(events.firstMissingAt, cutoff),
+        ),
+      )
+      .returning({ id: events.id, firstMissingAt: events.firstMissingAt })
 
-  if (cancelled.length === 0) return { cancelled: 0 }
+    if (rows.length > 0) {
+      await tx.insert(auditLog).values(
+        rows.map((row) => ({
+          actorId: STALE_SWEEP_ACTOR_ID,
+          action: STALE_SWEEP_AUDIT_ACTION,
+          targetId: row.id,
+          metadata: {
+            firstMissingAt: row.firstMissingAt?.toISOString() ?? null,
+            thresholdDays: STALE_EVENT_CANCEL_DAYS,
+          },
+        })),
+      )
+    }
 
-  await db.insert(auditLog).values(
-    cancelled.map((row) => ({
-      actorId: STALE_SWEEP_ACTOR_ID,
-      action: STALE_SWEEP_AUDIT_ACTION,
-      targetId: row.id,
-      metadata: {
-        firstMissingAt: row.firstMissingAt?.toISOString() ?? null,
-        thresholdDays: STALE_EVENT_CANCEL_DAYS,
-      },
-    })),
-  )
+    return rows
+  })
 
+  // Logged even at zero so the nightly run leaves proof it happened.
   logger.info(
     { cancelled: cancelled.length, cutoff: cutoff.toISOString() },
     'Stale event sweep complete',
