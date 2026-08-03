@@ -34,7 +34,12 @@ export interface PassportStats {
   totalSpent: number
 }
 
-const EMPTY: PassportStats = {
+/**
+ * Built per call rather than shared: `PassportStats` is a plain mutable object,
+ * so one caller adjusting a field on a returned zero-passport would change what
+ * every later empty history reports.
+ */
+const emptyStats = (): PassportStats => ({
   nights: 0,
   venues: 0,
   artists: 0,
@@ -43,7 +48,7 @@ const EMPTY: PassportStats = {
   first: null,
   last: null,
   totalSpent: 0,
-}
+})
 
 /**
  * Highest count wins; an exact tie resolves to whichever name was seen first.
@@ -59,7 +64,7 @@ const topOf = (counts: Map<string, number>): PassportTally | null => {
 }
 
 export const passportStats = (shows: AttendedShow[]): PassportStats => {
-  if (shows.length === 0) return EMPTY
+  if (shows.length === 0) return emptyStats()
 
   const venues = new Set<string>()
   const artists = new Set<string>()

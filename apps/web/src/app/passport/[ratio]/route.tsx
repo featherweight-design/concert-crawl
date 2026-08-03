@@ -28,6 +28,10 @@ import { fetchMe } from '@/lib/users'
 // the requesting browser, so the edge buys nothing here and Clerk session
 // resolution stays on the better-trodden path.
 
+// Pinned, not inferred: the sibling poster route pins `edge`, and a default
+// that drifted would move Clerk session resolution without anything failing.
+export const runtime = 'nodejs'
+
 interface PassportRouteContext {
   params: Promise<{ ratio: string }>
 }
