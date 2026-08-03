@@ -24,6 +24,10 @@ import type {
   SpotifyTastePick,
   SpotifyTastePickReason,
 } from '@concert-crawl/types'
+import {
+  loadPriceByTierByEventId,
+  resolveDisplayPrice,
+} from './price-aggregation/index.js'
 import { SPOTIFY_FOLLOW_SOURCES } from './spotify-sync.js'
 import { todayInTimezone } from './time.js'
 
@@ -319,7 +323,7 @@ export async function getTastePicks(
     .orderBy(asc(events.date), asc(events.showTime), asc(events.id))
 
   const scored: Array<{
-    pick: SpotifyTastePick
+    row: (typeof rows)[number]
     reason: SpotifyTastePickReason
     soonestIndex: number
   }> = []
@@ -338,22 +342,7 @@ export async function getTastePicks(
       }
     }
     if (reason === null) continue // defensive — the WHERE guarantees a match
-    scored.push({
-      reason,
-      soonestIndex: index,
-      pick: {
-        eventId: row.id,
-        artist: row.artist,
-        title: row.title,
-        imageUrl: row.imageUrl,
-        date: row.date,
-        showTime: row.showTime,
-        ticketPriceMin: row.ticketPriceMin,
-        venueName: row.venueName,
-        venueSlug: row.venueSlug,
-        reason,
-      },
-    })
+    scored.push({ row, reason, soonestIndex: index })
   }
 
   scored.sort((left, right) => {
@@ -368,5 +357,28 @@ export async function getTastePicks(
     return left.soonestIndex - right.soonestIndex
   })
 
-  return scored.slice(0, limit).map((entry) => entry.pick)
+  const top = scored.slice(0, limit)
+
+  // The cheapest tier, not events.ticketPriceMin — that scalar holds whatever
+  // price was written last and made taste picks disagree with the event page
+  // (#1365). Resolved after the slice so we only aggregate the picks we return.
+  const priceByTierByEventId = await loadPriceByTierByEventId(
+    top.map((entry) => entry.row.id),
+  )
+
+  return top.map(({ row, reason }) => ({
+    eventId: row.id,
+    artist: row.artist,
+    title: row.title,
+    imageUrl: row.imageUrl,
+    date: row.date,
+    showTime: row.showTime,
+    ticketPriceMin: resolveDisplayPrice(
+      priceByTierByEventId.get(row.id) ?? [],
+      row.ticketPriceMin,
+    ),
+    venueName: row.venueName,
+    venueSlug: row.venueSlug,
+    reason,
+  }))
 }

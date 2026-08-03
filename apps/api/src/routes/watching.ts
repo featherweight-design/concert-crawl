@@ -6,6 +6,10 @@ import { z } from 'zod'
 import { db, userEvents, events, venues } from '@concert-crawl/db'
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
+import {
+  loadPriceByTierByEventId,
+  lowestHeadlinePrice,
+} from '../lib/price-aggregation/index.js'
 import { releaseWatch } from '../lib/user-events.js'
 
 const uuidSchema = z.string().uuid()
@@ -82,6 +86,13 @@ watchingRouter.get('/', async (ctx) => {
     )
     .orderBy(asc(events.date), asc(events.showTime))
 
+  // The cheapest tier, not events.ticketPriceMin — that scalar holds whatever
+  // price was written last and made Watching disagree with the event page
+  // (#1365).
+  const priceByTierByEventId = await loadPriceByTierByEventId(
+    rows.map((row) => row.eventId),
+  )
+
   const data: WatchingShow[] = rows.map((row) => ({
     userEventId: row.userEventId,
     eventId: row.eventId,
@@ -94,7 +105,11 @@ watchingRouter.get('/', async (ctx) => {
     ticketLinks: row.ticketLinks ?? null,
     savedAt: row.savedAt.toISOString(),
     savedPrice: parsePrice(row.savedPrice ?? null),
-    currentPrice: parsePrice(row.ticketPriceMin ?? null),
+    // Falls back to the scalar for crawler-sourced prices, which have no
+    // corroborated submissions to aggregate — same order Browse uses.
+    currentPrice:
+      lowestHeadlinePrice(priceByTierByEventId.get(row.eventId) ?? []) ??
+      parsePrice(row.ticketPriceMin ?? null),
     sourceKind: mapSourceKind(row.priceSource ?? null),
     eventStatus: row.eventStatus,
     watchStatus: resolveWatchStatus(row.eventStatus),

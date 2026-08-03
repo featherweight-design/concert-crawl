@@ -48,6 +48,10 @@ import { sendTransactionalEmail } from '../lib/email.js'
 import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js'
 import { apiLogger } from '../lib/logger.js'
 import { loadPlanState } from '../lib/plan.js'
+import {
+  loadPriceByTierByEventId,
+  resolveDisplayPrice,
+} from '../lib/price-aggregation/index.js'
 import { syncSpotifyConnection } from '../lib/spotify-sync.js'
 import type { SpotifySyncOutcome } from '../lib/spotify-sync.js'
 
@@ -156,6 +160,24 @@ const windowFilter = (windowStart: string, windowEnd: string) =>
     eq(events.hiddenFromConsumer, false),
   )
 
+// Rewrites each row's price to the cheapest tier. events.ticketPriceMin holds
+// whatever price was written last, which is not necessarily the floor, so a
+// digest could quote a higher price than the event page (#1365).
+const withDisplayPrices = async (
+  rows: MatchedEventRow[],
+): Promise<MatchedEventRow[]> => {
+  const priceByTierByEventId = await loadPriceByTierByEventId(
+    rows.map((row) => row.id),
+  )
+  return rows.map((row) => ({
+    ...row,
+    ticketPriceMin: resolveDisplayPrice(
+      priceByTierByEventId.get(row.id) ?? [],
+      row.ticketPriceMin,
+    ),
+  }))
+}
+
 // §9.1 match: headliner equality OR supporting-array overlap against the
 // user's canonical follow set, one parameterized text[] both ways.
 const matchedShows = async (
@@ -168,7 +190,7 @@ const matchedShows = async (
     canonicalNames.map((name) => sql`${name}`),
     sql`, `,
   )}]::text[]`
-  return db
+  const rows = await db
     .select(eventSelection)
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
@@ -179,6 +201,7 @@ const matchedShows = async (
       ),
     )
     .orderBy(events.date, events.artist)
+  return withDisplayPrices(rows)
 }
 
 // Zero-week fallback (design lock): the 2 soonest visible shows in the same
@@ -194,6 +217,7 @@ const tastePicks = async (
     .where(windowFilter(windowStart, windowEnd))
     .orderBy(events.date, events.artist)
     .limit(TASTE_PICK_COUNT)
+    .then(withDisplayPrices)
 
 // The picks are identical for every zero-match user in a run, so the query
 // executes at most once per run instead of once per user.

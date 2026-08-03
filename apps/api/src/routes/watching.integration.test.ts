@@ -24,6 +24,7 @@ import {
   seedVenue,
   seedEvent,
   seedUserEvent,
+  seedPriceSubmission,
 } from '../test/helpers/seed.js'
 
 const app = createApp()
@@ -117,6 +118,66 @@ describe('GET /v1/watching', () => {
     expect(body.success).toBe(true)
     expect(body.data[0]?.watchStatus).toBe('live')
     expect(body.data[0]?.currentPrice).toBeNull()
+  })
+
+  // #1365 — Watching read events.ticketPriceMin, which holds whatever price
+  // was written last rather than the cheapest tier, so it quoted the Reserved
+  // price while the event page quoted the GA floor.
+  it('quotes the cheapest tier, not the denormalized ticketPriceMin scalar', async () => {
+    setAuth('user_lowest')
+    const venue = await seedVenue({ name: 'Mission', slug: 'mission' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Hermanos Gutiérrez',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-10-03',
+      status: 'upcoming',
+      ticketPriceMin: '125.00',
+      priceSource: 'community',
+    })
+    await seedPriceSubmission(event.id, 'user_a', {
+      tier: 'Reserved',
+      priceMin: '125',
+      vendor: 'AXS',
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, 'user_b', {
+      tier: 'GA',
+      priceMin: '68',
+      vendor: 'AXS',
+      status: 'corroborated',
+    })
+    await seedUserEvent('user_lowest', event.id, { status: 'watching' })
+
+    const res = await app.request('/v1/watching')
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { currentPrice: number | null }[]
+    }
+    expect(body.data[0]?.currentPrice).toBe(68)
+  })
+
+  it('falls back to ticketPriceMin when no corroborated submissions exist', async () => {
+    setAuth('user_fallback')
+    const venue = await seedVenue({ name: 'Ogden', slug: 'ogden' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Khruangbin',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-11-02',
+      status: 'upcoming',
+      ticketPriceMin: '45.00',
+      priceSource: 'structured_data',
+    })
+    await seedUserEvent('user_fallback', event.id, { status: 'watching' })
+
+    const res = await app.request('/v1/watching')
+    const body = (await res.json()) as {
+      success: boolean
+      data: { currentPrice: number | null }[]
+    }
+    expect(body.data[0]?.currentPrice).toBe(45)
   })
 
   it('returns shows sorted ascending by date then showTime', async () => {

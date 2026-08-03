@@ -32,7 +32,6 @@ import {
 } from 'drizzle-orm'
 import {
   SP_POLICY,
-  deriveSourceCategory,
   RESALE_VENDOR_VALUES,
   vendorTrustRank,
   type AvailabilityDay,
@@ -46,6 +45,7 @@ import { isImminentEvent, todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import {
   aggregateByTier,
+  loadPriceByTierByEventId,
   pickHeadlinesByTier,
 } from '../lib/price-aggregation/index.js'
 import { narrowLastAdminAction } from '../lib/last-admin-action.js'
@@ -356,102 +356,17 @@ eventsRouter.get(
         }
       }
     }
-
     // priceByTier on the browse list endpoint — closes issue #787 (browse chip
-    // parity). The consumer EventCard now reads `event.priceByTier` directly
-    // via `pickBrowseHeadline()`, which mirrors `pickTierHeadline` /
-    // `compareTierRows` on the API side. This was the locked Browse table #7
-    // sub-task — the legacy `resolveListChipKind(priceSource, priceVendor)`
-    // fallback stays on EventCard for events the API doesn't surface
-    // priceByTier for (defensive only — the list endpoint always populates it
-    // now for events with at least one corroborated submission).
-    //
-    // Cost control: only `headline` is consumed by the browse chip, so we skip
-    // the per-event side-table fetches (pending, counters, handles, reports)
-    // that the /v1/events/:id endpoint runs. Each event row gets the same
-    // TierPriceBlock shape with empty pending / counterSubmission arrays. The
-    // SELECT below pulls priceSubmissions.corroborationCount so confirmsCount
-    // can be derived per-row (submitter counts as observation #1 → the count
-    // we surface is `max(0, corroborationCount - 1)`). Without that derivation
-    // buildHeadline mislabels every fan-corroborated browse row as
-    // approvalKind='admin'.
-    const visibleEventIds = rows.map((row) => row.id)
-    const priceByTierByEventId = new Map<
-      string,
-      Awaited<ReturnType<typeof aggregateByTier>>
-    >()
-    if (visibleEventIds.length > 0) {
-      const corroboratedListRows = await db
-        .select({
-          id: priceSubmissions.id,
-          eventId: priceSubmissions.eventId,
-          tier: priceSubmissions.tier,
-          priceMin: priceSubmissions.priceMin,
-          priceMax: priceSubmissions.priceMax,
-          vendor: priceSubmissions.vendor,
-          sourceCategory: priceSubmissions.sourceCategory,
-          howFound: priceSubmissions.howFound,
-          userId: priceSubmissions.userId,
-          createdAt: priceSubmissions.createdAt,
-          updatedAt: priceSubmissions.updatedAt,
-          corroborationCount: priceSubmissions.corroborationCount,
-        })
-        .from(priceSubmissions)
-        .where(
-          and(
-            inArray(priceSubmissions.eventId, visibleEventIds),
-            eq(priceSubmissions.status, 'corroborated'),
-          ),
-        )
-
-      // Group by eventId so aggregateByTier sees only this event's corroborated
-      // rows; pending + counters are intentionally empty to keep the browse
-      // endpoint cheap (per the comment block above).
-      const corroboratedByEvent = new Map<string, typeof corroboratedListRows>()
-      for (const sub of corroboratedListRows) {
-        const existing = corroboratedByEvent.get(sub.eventId)
-        if (existing) existing.push(sub)
-        else corroboratedByEvent.set(sub.eventId, [sub])
-      }
-
-      for (const [eventId, subs] of corroboratedByEvent) {
-        const blocks = aggregateByTier({
-          corroborated: subs.map((sub) => ({
-            id: sub.id,
-            tier: sub.tier,
-            priceMin: sub.priceMin,
-            priceMax: sub.priceMax,
-            vendor: sub.vendor,
-            // Legacy corroborated rows may have sourceCategory === null
-            // (PR 3 backfill predated the column). Infer using the shared
-            // deriveSourceCategory helper so a box-office row (vendor =
-            // VenueBoxOffice or howFound = at_the_venue) doesn't get
-            // mislabeled as 'standard' on the browse chip — same drift
-            // we caught on the consumer edit-flow side (Copilot R9).
-            sourceCategory:
-              sub.sourceCategory ??
-              deriveSourceCategory(sub.vendor, sub.howFound),
-            userId: sub.userId,
-            createdAt: sub.createdAt,
-            updatedAt: sub.updatedAt,
-            // confirmsCount excludes the submitter (who counts as observation #1
-            // per the price_submissions.corroboration_count schema comment).
-            // Without this derivation buildHeadline would compute approvalKind
-            // as 'admin' for every list row, which is wrong for fan-corroborated
-            // submissions and leaks into any consumer that starts reading the
-            // richer priceByTier payload.
-            confirmsCount: Math.max(0, sub.corroborationCount - 1),
-          })),
-          pending: [],
-          counters: [],
-          handles: new Map(),
-          reportsByTier: new Map(),
-          confirmsNeeded: SP_POLICY.confirmsRequired,
-          viewerUserId: null,
-        })
-        priceByTierByEventId.set(eventId, blocks)
-      }
-    }
+    // parity). The consumer EventCard reads `event.priceByTier` directly via
+    // `pickBrowseHeadline()`, which mirrors `pickTierHeadline` /
+    // `compareTierRows` on the API side. The legacy
+    // `resolveListChipKind(priceSource, priceVendor)` fallback stays on
+    // EventCard for events the API doesn't surface priceByTier for (defensive
+    // only — the list endpoint always populates it for events with at least
+    // one corroborated submission).
+    const priceByTierByEventId = await loadPriceByTierByEventId(
+      rows.map((row) => row.id),
+    )
 
     const enrichedRows = rows.map((row) => {
       const { canonicalArtist, canonicalSupporting, ...publicRow } = row
