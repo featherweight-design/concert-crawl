@@ -4,8 +4,8 @@
 // the 320×500 compact, the 1080×1080 share render, the rasterization — is owned
 // by #85 and deliberately not built here.
 //
-// #85 has no route yet, so PASSPORT_ROUTE is null and the strip renders as a
-// plain block. Never a dead href: a link that goes nowhere is worse than no link.
+// #85 has shipped /passport, so the strip is a link. The null branch stays:
+// never a dead href — a link that goes nowhere is worse than no link.
 
 import Link from 'next/link'
 import type { HistoryShow, HistoryStats } from '@concert-crawl/types'

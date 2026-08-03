@@ -66,17 +66,12 @@ describe('PassportTeaser', () => {
     expect(screen.getByText('1 night · 1 venue · indie')).toBeInTheDocument()
   })
 
-  it('renders no anchor while the Passport route is unset (#85 owns it)', () => {
-    // Guards the "never a dead href" rule. When #85 lands and PASSPORT_ROUTE is
-    // set, this flips to the link assertion below.
+  it('links to the Passport page now that #85 has shipped one', () => {
     render(<PassportTeaser stats={STATS} shows={SHOWS} />)
 
-    if (PASSPORT_ROUTE === null) {
-      expect(screen.queryByRole('link')).not.toBeInTheDocument()
-      expect(screen.queryByText(COPY.link)).not.toBeInTheDocument()
-    } else {
-      expect(screen.getByRole('link')).toHaveAttribute('href', PASSPORT_ROUTE)
-    }
+    expect(PASSPORT_ROUTE).toBe('/passport')
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/passport')
+    expect(screen.getByText(COPY.link)).toBeInTheDocument()
   })
 
   it('keeps the decorative stamp strip out of the accessibility tree', () => {

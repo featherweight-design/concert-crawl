@@ -133,6 +133,11 @@ export interface ShareEventMap {
   // `referrer` is the referring host only, never the full URL — a full referrer
   // can carry a query string belonging to somebody else's session.
   public_event_viewed: { eventId: string; referrer: string | null }
+  // The Passport (#85). No `eventId` — the card is about the person, not a
+  // show — and no `copy-link` destination, because it has no public URL.
+  passport_shared: {
+    destination: Extract<ShareDestination, 'system' | 'save-image'>
+  }
 }
 
 export type ShareEvent = keyof ShareEventMap

@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.31.0-beta',
+    date: 'Aug 3, 2026',
+    headline: 'Your year, stamped.',
+    items: [
+      {
+        kind: 'added',
+        text: "Every show you marked yourself going to now adds up to something. Open your Passport from the top of your History and you get a card — a wall of stamps, one per night, plus the count of rooms you've been in, the artists you've seen, and the genre you keep coming back to whether you meant to or not.",
+      },
+      {
+        kind: 'added',
+        text: 'Share it through your phone or save the image. It picks up whichever theme you have the app set to, so it looks like the thing you actually use.',
+      },
+    ],
+  },
+  {
     version: 'v0.30.0-beta',
     date: 'Aug 3, 2026',
     headline: 'Meow Wolf is on the calendar.',

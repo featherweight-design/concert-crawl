@@ -1489,6 +1489,29 @@ export const CONSUMER_COPY = {
       imageAltTemplate: '{artist} at {venue}, {date}',
     },
   },
+
+  // ── Concert Passport (#85) ──────────────────────────────────────
+  // The keepsake card built from Concert History. Unlike the poster this is
+  // about the person, not a show, so nothing here names an artist or a venue.
+  passport: {
+    pageTitle: 'Your Passport',
+    // The card is the page. This line only says what it is made of, because a
+    // subtitle that re-describes the card the reader is looking at is noise.
+    pageSubtitle: 'Every night you marked yourself going to, stamped.',
+    // No "Copy link" — a passport has no public page to link to, and offering
+    // one would imply the card is shareable by URL when it is deliberately not.
+    shareLabel: 'Share…',
+    saveLabel: 'Save image',
+    shareFailed: "Couldn't share — try saving the image instead",
+    downloadName: 'concert-passport.png',
+    // The state before a single show has been marked attended. Not a locked
+    // state: the plan is fine, the stamp book is simply empty.
+    emptyEyebrow: 'Passport',
+    emptyTitle: 'No stamps yet',
+    emptyBody:
+      'Mark yourself going to a show and it lands here once the night has passed.',
+    emptyCta: 'Find a show',
+  },
 } as const
 
 // ── Vendor picker (#1193) ─────────────────────────────────────────
