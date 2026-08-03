@@ -205,7 +205,7 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
             artist: {
               type: ['string', 'null'],
               description:
-                "Headliner only — a single act. Never a run-on list of multiple acts. If the billing joins several acts (commas, 'with', 'w/', 'and', 'feat.', '&', '+', '/'), put the first act here and the rest in supportingArtists. Do NOT fragment a single act's own name that contains a comma or ampersand (e.g. 'Goodnight, Texas', 'Earth, Wind & Fire'). Use null when the listing names no performer at all (bingo, trivia, movie nights, themed parties) — do not invent one and do not copy the title here; the extractor derives a fallback.",
+                "Headliner only — a single act. Never a run-on list of multiple acts. If the billing joins several acts (commas, 'with', 'w/', 'and', 'feat.', '&', '+', '/'), put the first act here and the rest in supportingArtists. Do NOT fragment a single act's own name that contains a comma or ampersand (e.g. 'Goodnight, Texas', 'Earth, Wind & Fire'). Use null when the listing names no performer at all (bingo, trivia, movie nights, themed parties) — do not invent one and do not copy the title here; the extractor derives a fallback. EXCEPTION: when such a title carries a recurring series brand ('BASS BINGO – Wooli Edition', 'Film on the Rocks: Sinners'), put the brand alone here ('BASS BINGO', 'Film on the Rocks') rather than null — the brand is stable between crawls, the guest is not.",
             },
             headliners: {
               type: 'array',

@@ -508,6 +508,16 @@ describe('extractWithLlm', () => {
     // nights, so the prompt has to say which one wins in each direction.
     expect(systemPrompt).toContain('takes precedence here')
     expect(systemPrompt).toContain('overrides the null-artist rule above')
+
+    // The tool schema restates the null rule, so it has to carry the same
+    // exception or the two halves of the request contradict each other.
+    const itemSchema =
+      mockCreate.mock.calls[0]?.[0].tools[0].input_schema.properties.events
+        .items
+    expect(itemSchema.properties.artist.description).toContain('EXCEPTION')
+    expect(itemSchema.properties.artist.description).toContain(
+      'recurring series brand',
+    )
   })
 
   it('SAVE_EVENTS_TOOL declares reviewNeeded as a required boolean property', async () => {
