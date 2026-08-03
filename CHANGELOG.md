@@ -1,3 +1,16 @@
+# [1.203.0](https://github.com/HartiganHM/concert-crawl/compare/v1.202.0...v1.203.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **web:** gate the Passport share button on file support, not on the sheet existing ([41d098d](https://github.com/HartiganHM/concert-crawl/commit/41d098d2d0e0c7655b7c1127150c9f4077feb3b0))
+* **web:** never record a Passport share the platform did not perform ([3ab0176](https://github.com/HartiganHM/concert-crawl/commit/3ab017688b687996db0fac1764e555ecc1a6e736))
+
+
+### Features
+
+* **web:** the Concert Passport page ([#85](https://github.com/HartiganHM/concert-crawl/issues/85), PR-5) ([eec7997](https://github.com/HartiganHM/concert-crawl/commit/eec79974cf7a73bc619c46c45a98693b4921d506))
+
 # [1.202.0](https://github.com/HartiganHM/concert-crawl/compare/v1.201.3...v1.202.0) (2026-08-03)
 
 
