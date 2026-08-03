@@ -1,3 +1,20 @@
+# [1.201.0](https://github.com/HartiganHM/concert-crawl/compare/v1.200.1...v1.201.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **admin:** hydrate candidate genres, calm the picker's save path ([9807156](https://github.com/HartiganHM/concert-crawl/commit/9807156938aba3f842ba8ff8ca96c2384c0fe5cc)), closes [#1345](https://github.com/HartiganHM/concert-crawl/issues/1345)
+* **admin:** keep the corrected row on the matched tab, chunk genre hydration ([ce906f9](https://github.com/HartiganHM/concert-crawl/commit/ce906f991a00178e1b05b8fc7ad88169d77c004d))
+* **share:** drop a hostless referrer and cover the funnel head ([cd12d98](https://github.com/HartiganHM/concert-crawl/commit/cd12d988e2d9419ca5dbb0bee9920d2756c8529d))
+* **share:** normalise every site-origin source to a bare origin ([fdb0b11](https://github.com/HartiganHM/concert-crawl/commit/fdb0b119aa0279c0e0ca914ee7532b25c03eca53))
+* **web:** key the public-view beacon by event, not by a once-only flag ([111c934](https://github.com/HartiganHM/concert-crawl/commit/111c93437bc4a2e4f42bbe21da9ff1ecae5df0c3))
+* **web:** read the deployment host Vercel actually sets ([c48f777](https://github.com/HartiganHM/concert-crawl/commit/c48f7770b29b863519ecd418cb6e2fcc6dbcd13e))
+
+
+### Features
+
+* **web:** unfurl shared poster links and measure the share funnel ([b6c90ac](https://github.com/HartiganHM/concert-crawl/commit/b6c90ac7929737d6382e40b01f5bde308f478d11)), closes [#72](https://github.com/HartiganHM/concert-crawl/issues/72)
+
 ## [1.200.1](https://github.com/HartiganHM/concert-crawl/compare/v1.200.0...v1.200.1) (2026-08-03)
 
 
