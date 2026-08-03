@@ -105,6 +105,9 @@ describe('aegFetcher.fetch', () => {
   afterEach(() => {
     fetchSpy.mockRestore()
     isAllowedSpy.mockRestore()
+    // recordSleepDelays() replaces the global timer, so an unrestored spy
+    // would leak a zeroed setTimeout into every later test.
+    vi.restoreAllMocks()
   })
 
   function mockFetchOk(body: string): void {
