@@ -78,8 +78,14 @@ do → undo → redo, twice through:
 - Link pasted into a fresh session: covered in Pass 1 (signed-in redirect). The
   **signed-out** shape of `/e/:id` is not yet verified — it needs
   `NEXT_PUBLIC_PUBLIC_BROWSE=true`, and pre-launch an anonymous visitor is
-  bounced to the invite gate. Tracked as a follow-up issue and owed before the
-  epic closes.
+  bounced to the invite gate. Tracked in #1359 and owed before the epic closes.
+
+  This was nearly papered over. A sweep entry for `/e/:id` was added at
+  `auth: 'user'`, which reads as coverage but isn't: the route redirects a
+  signed-in visitor to `/events/:id`, so the capture was the protected page
+  under the mirror's name. `auth: 'none'` fails differently — the invite gate.
+  The entry was removed rather than relabelled; a green sweep that audits
+  nothing is worse than an admitted gap. Reasoning is left in the manifest.
 
 ## Cross-cutting defect found by the cold-eyes pass
 

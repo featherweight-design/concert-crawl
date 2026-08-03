@@ -59,17 +59,21 @@ const manifest: AuditManifest = validateManifest([
       },
     ],
   },
-  {
-    // The public read-only mirror (#72 PR-0) — the surface a pasted link
-    // actually lands on. Swept as `user` rather than `none`: it sits in
-    // `isPublicOnceLaunched`, so before launch an anonymous visitor is bounced
-    // to the invite gate and the sweep would screenshot that instead. The
-    // logged-out shape is walked separately with NEXT_PUBLIC_PUBLIC_BROWSE=true.
-    id: 'public-event-mirror',
-    path: '/e/7324584c-9104-4760-8e88-94cd232ba035',
-    tags: ['consumer'],
-    auth: 'user',
-  },
+  // The public mirror `/e/:id` (#72 PR-0) has NO entry here, deliberately, and
+  // the reason is worth writing down because an entry looks obviously correct
+  // until you trace both auth modes:
+  //
+  //   auth: 'user' → `app/e/[id]/page.tsx` redirects a signed-in visitor to
+  //     `/events/:id`, so the sweep captures the protected page a second time
+  //     under a name that claims to be the mirror.
+  //   auth: 'none' → the route sits in `isPublicOnceLaunched`, so before launch
+  //     an anonymous visitor is bounced to the invite gate and the sweep
+  //     screenshots that instead.
+  //
+  // Neither mode reaches the mirror, so an entry here would be coverage that
+  // reports green while auditing nothing. It becomes sweepable as `none` once
+  // the public-launch flag flips; until then the surface is walked by hand with
+  // NEXT_PUBLIC_PUBLIC_BROWSE=true, tracked in #1359.
   {
     id: 'venue-detail',
     path: '/venues/cervantes-masterpiece-ballroom',
