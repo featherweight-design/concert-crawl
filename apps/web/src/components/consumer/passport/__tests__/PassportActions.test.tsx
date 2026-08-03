@@ -32,6 +32,9 @@ afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
   track.mockClear()
+  // The console spies below would otherwise outlive their own test and
+  // swallow warnings in every later case — the config sets no restoreMocks.
+  vi.restoreAllMocks()
 })
 
 describe('PassportActions', () => {

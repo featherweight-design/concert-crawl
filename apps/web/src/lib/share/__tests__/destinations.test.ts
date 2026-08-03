@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   canShareFiles,
   canSystemShare,
@@ -23,6 +23,12 @@ const poster: PosterEvent = {
   state: 'going',
   dropLabel: null,
 }
+
+// The console spies in here would otherwise outlive their own test and
+// swallow warnings in every later case — the config sets no restoreMocks.
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 const pngResponse = (): Response =>
   new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47]), { status: 200 })

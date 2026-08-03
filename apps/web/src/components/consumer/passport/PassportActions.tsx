@@ -45,10 +45,15 @@ export const PassportActions = ({
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const blob = await response.blob()
       const file = new File([blob], COPY.downloadName, { type: 'image/png' })
-      if (caps.canShare?.({ files: [file] }) !== true) {
+      // Not optional-chained: a missing `share` would make the call a silent
+      // no-op and still record a share that never happened.
+      if (
+        typeof caps.share !== 'function' ||
+        caps.canShare?.({ files: [file] }) !== true
+      ) {
         throw new Error('files unsupported')
       }
-      await caps.share?.({ title: COPY.pageTitle, files: [file] })
+      await caps.share({ title: COPY.pageTitle, files: [file] })
       track('passport_shared', { destination: 'system' })
     } catch (err) {
       // A dismissed OS sheet rejects with AbortError, which is a cancel rather
