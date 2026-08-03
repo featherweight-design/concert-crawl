@@ -112,6 +112,32 @@ export function buildHeadlinerUpdate(
   return { headliners, supportingArtists, wouldChange: headliners.length > 1 }
 }
 
+/**
+ * Names the LLM returned that are not traceable to anything already stored on
+ * the row. A genuine co-headliner is always a fragment of the flattened
+ * `artist` string ("Sleep Token & Sleep Theory") or an act already sitting in
+ * `supporting_artists` — the model's job is to decide where the bill splits,
+ * never to supply a name from its own knowledge. Anything else is a
+ * hallucination or a re-spelling, and this backfill writes text straight to a
+ * consumer-visible column, so those rows are skipped rather than trusted.
+ */
+export function untraceableHeadliners(
+  storedArtist: string,
+  supportingArtists: string[] | null,
+  proposedHeadliners: string[],
+): string[] {
+  const artistHaystack = foldForCompare(storedArtist)
+  const supportingFolded = new Set(
+    (supportingArtists ?? []).map(foldForCompare),
+  )
+  // Position 0 is the stored artist by construction, so only the promoted acts
+  // need checking.
+  return proposedHeadliners.slice(1).filter((name) => {
+    const folded = foldForCompare(name)
+    return !artistHaystack.includes(folded) && !supportingFolded.has(folded)
+  })
+}
+
 const escapeCsv = (val: string): string => {
   if (val.includes(',') || val.includes('"') || val.includes('\n')) {
     return `"${val.replace(/"/g, '""')}"`

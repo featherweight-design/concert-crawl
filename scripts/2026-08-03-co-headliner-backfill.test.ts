@@ -1,11 +1,57 @@
 import { describe, it, expect, vi } from 'vitest'
+import type Anthropic from '@anthropic-ai/sdk'
 import {
   buildBatches,
   buildHeadlinerUpdate,
   formatCsvRow,
   isCoHeadlinerCandidate,
+  untraceableHeadliners,
   type EventForHeadlinerCheck,
 } from './2026-08-03-co-headliner-backfill-helpers.js'
+
+describe('co-headliner-backfill — untraceableHeadliners', () => {
+  it('accepts a promoted act that is a fragment of the stored artist string', () => {
+    expect(
+      untraceableHeadliners(
+        'Desert Dwellers & Great Dane',
+        [],
+        ['Desert Dwellers & Great Dane', 'Great Dane'],
+      ),
+    ).toEqual([])
+  })
+
+  it('accepts a promoted act lifted out of supporting_artists', () => {
+    expect(
+      untraceableHeadliners(
+        'Sleep Token',
+        ['Sleep Theory'],
+        ['Sleep Token', 'Sleep Theory'],
+      ),
+    ).toEqual([])
+  })
+
+  it('folds case and diacritics before comparing', () => {
+    expect(
+      untraceableHeadliners('Sigur Rós & Múm', [], ['Sigur Rós & Múm', 'mum']),
+    ).toEqual([])
+  })
+
+  it('flags a name the model supplied from nowhere', () => {
+    expect(
+      untraceableHeadliners(
+        'Desert Dwellers & Great Dane',
+        ['Opener'],
+        ['Desert Dwellers & Great Dane', 'Radiohead'],
+      ),
+    ).toEqual(['Radiohead'])
+  })
+
+  it('never flags position 0, which is the stored artist by construction', () => {
+    expect(untraceableHeadliners('Iron & Wine', [], ['Iron & Wine'])).toEqual(
+      [],
+    )
+  })
+})
 
 describe('co-headliner-backfill — isCoHeadlinerCandidate', () => {
   it('matches ampersand, plus, and standalone "and" bills', () => {
@@ -178,11 +224,9 @@ function makeToolResponse(input: unknown, toolName = 'identify_headliners') {
   }
 }
 
-async function makeClient() {
+async function makeClient(): Promise<Anthropic> {
   const AnthropicMock = (await import('@anthropic-ai/sdk')).default
-  // The constructor is mocked; the mock class accepts no args.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return new AnthropicMock() as any
+  return new AnthropicMock({ apiKey: 'test-key' })
 }
 
 describe('co-headliner-backfill — identifyHeadlinersBatch', () => {

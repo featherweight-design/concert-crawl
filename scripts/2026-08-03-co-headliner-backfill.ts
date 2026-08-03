@@ -39,7 +39,7 @@ import { writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import Anthropic from '@anthropic-ai/sdk'
-import { and, eq, gte, inArray, sql } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 // Relative source import (not the package barrel) so this one-shot script runs
 // against a clean checkout without requiring a prior
 // `pnpm build --filter=@concert-crawl/crawler-core`. tsx resolves the `.js`
@@ -47,10 +47,18 @@ import { and, eq, gte, inArray, sql } from 'drizzle-orm'
 // imports IS_CONCERT_RULES.
 import { canonicalizeSupporting } from '../packages/crawler-core/src/lib/canonical-artist.js'
 import { db, events, venues } from '@concert-crawl/db'
+// Same reason as canonicalizeSupporting above: the
+// `@concert-crawl/db/upcoming-events` subpath resolves to dist, which a clean
+// checkout has not built yet.
+import {
+  SCHEDULED_STATUSES,
+  upcomingEventConditions,
+} from '../packages/db/src/lib/upcoming-events.js'
 import {
   buildBatches,
   buildHeadlinerUpdate,
   formatCsvRow,
+  untraceableHeadliners,
   type BatchHeadliners,
   type EventForHeadlinerCheck,
   type HeadlinerResult,
@@ -68,6 +76,9 @@ export interface BackfillSummary {
   // mode. The script does NOT overwrite these — they're surfaced for
   // operator review.
   raceSkipped: string[]
+  // Rows where the LLM proposed a headliner traceable to neither the stored
+  // artist string nor supporting_artists. Never written, in either mode.
+  untraceableRejected: string[]
 }
 
 // Main function exported for testability; CLI invocation is at the bottom.
@@ -75,7 +86,6 @@ export async function runBackfill(opts: {
   commit: boolean
   outputPath?: string
 }): Promise<BackfillSummary> {
-  const today = new Date().toISOString().slice(0, 10)
   const rows = await db
     .select({
       id: events.id,
@@ -89,9 +99,14 @@ export async function runBackfill(opts: {
     .leftJoin(venues, eq(events.venueId, venues.id))
     .where(
       and(
-        inArray(events.status, ['upcoming', 'cancelled', 'postponed']),
-        gte(events.date, today),
-        eq(events.hiddenFromConsumer, false),
+        // The #1212 helper, so this one-shot sees exactly the slice the
+        // consumer surfaces see. The date bound is Denver local rather than
+        // the process's UTC date: run in the evening, `new Date()` has already
+        // rolled over and would skip tonight's shows.
+        ...upcomingEventConditions({
+          from: sql`(NOW() AT TIME ZONE 'America/Denver')::date`,
+          statuses: SCHEDULED_STATUSES,
+        }),
         // SQL mirror of isCoHeadlinerCandidate. `\y` is Postgres' word
         // boundary, so "Portland" and "Sandy" are not candidates.
         sql`${events.artist} ~* '(&|\\+|\\yand\\y)'`,
@@ -112,6 +127,7 @@ export async function runBackfill(opts: {
   console.log(`Split into ${batches.length} batches of up to ${BATCH_SIZE}`)
 
   const results: HeadlinerResult[] = []
+  const untraceableRejected: string[] = []
   const client = new Anthropic()
 
   for (let batchIdx = 0; batchIdx < batches.length; batchIdx++) {
@@ -134,6 +150,18 @@ export async function runBackfill(opts: {
         match.headliners,
         evt.supportingArtists,
       )
+      const untraceable = untraceableHeadliners(
+        evt.artist,
+        evt.supportingArtists,
+        update.headliners,
+      )
+      if (untraceable.length > 0) {
+        console.error(
+          `REJECTED event ${evt.id} (${evt.title}): headliner(s) ${untraceable.join(', ')} appear in neither the stored artist nor supporting_artists`,
+        )
+        untraceableRejected.push(evt.id)
+        continue
+      }
       results.push({
         eventId: evt.id,
         title: evt.title,
@@ -152,6 +180,11 @@ export async function runBackfill(opts: {
   console.log(
     `Identification done. ${wouldChangeCount}/${results.length} candidate events are genuine co-headline bills.`,
   )
+  if (untraceableRejected.length > 0) {
+    console.warn(
+      `Rejected ${untraceableRejected.length} rows whose proposed headliners were not traceable to stored text (see REJECTED lines above).`,
+    )
+  }
 
   // Sort: wouldChange first, then by date so an operator reviews the
   // actionable rows at the top of the file.
@@ -178,6 +211,7 @@ export async function runBackfill(opts: {
       wouldChange: wouldChangeCount,
       committed: false,
       raceSkipped: [],
+      untraceableRejected,
     }
   }
 
@@ -232,6 +266,7 @@ export async function runBackfill(opts: {
     wouldChange: wouldChangeCount,
     committed: true,
     raceSkipped,
+    untraceableRejected,
   }
 }
 
