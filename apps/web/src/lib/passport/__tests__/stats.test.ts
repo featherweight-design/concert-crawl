@@ -95,6 +95,18 @@ describe('passportStats', () => {
     expect(stats.last).toBe(late)
   })
 
+  // A double-header shares a date, so the extremes are decided by input order.
+  // Locked because the min/max pass replaced a stable sort, and an inverted
+  // comparison would silently swap which of the two the footer dates from.
+  it('resolves a shared date toward the outermost row of the input', () => {
+    const opener = show({ id: '1', date: '2026-03-14' })
+    const headliner = show({ id: '2', date: '2026-03-14' })
+    const stats = passportStats([opener, headliner])
+
+    expect(stats.first).toBe(opener)
+    expect(stats.last).toBe(headliner)
+  })
+
   it('sums only the nights whose price is known', () => {
     const stats = passportStats([
       show({ id: '1', priceFinal: 28 }),

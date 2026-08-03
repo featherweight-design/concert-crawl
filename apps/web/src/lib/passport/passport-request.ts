@@ -38,6 +38,15 @@ export const PASSPORT_DIMENSIONS: Record<
 export const PASSPORT_CACHE_CONTROL = 'private, max-age=300'
 
 /**
+ * `private` keeps the card out of shared caches but says nothing about the
+ * browser's own, whose key is the URL alone — so on a shared device the next
+ * person to sign in would be served the previous account's passport until the
+ * five minutes were up. Varying on the session cookie keeps the cache without
+ * that reuse.
+ */
+export const PASSPORT_VARY = 'Cookie'
+
+/**
  * The year printed on the card header, in Mountain Time.
  *
  * The route renders on a server whose clock is UTC, so `new Date().getFullYear()`

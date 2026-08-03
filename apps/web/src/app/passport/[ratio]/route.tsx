@@ -9,6 +9,7 @@ import {
   isPassportRatio,
   PASSPORT_CACHE_CONTROL,
   PASSPORT_DIMENSIONS,
+  PASSPORT_VARY,
   passportYear,
   resolvePassportTheme,
 } from '@/lib/passport/passport-request'
@@ -113,7 +114,7 @@ export const GET = async (
     {
       ...PASSPORT_DIMENSIONS[ratio],
       fonts,
-      headers: { 'Cache-Control': PASSPORT_CACHE_CONTROL },
+      headers: { 'Cache-Control': PASSPORT_CACHE_CONTROL, Vary: PASSPORT_VARY },
     },
   )
 }

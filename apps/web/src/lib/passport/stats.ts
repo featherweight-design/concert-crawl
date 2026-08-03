@@ -66,6 +66,11 @@ export const passportStats = (shows: AttendedShow[]): PassportStats => {
   const genreCounts = new Map<string, number>()
   const venueCounts = new Map<string, number>()
   let totalSpent = 0
+  // `YYYY-MM-DD` compares lexicographically, so the extremes need no `Date` at
+  // all and no host-timezone drift can reach them (#596). Tracked in the same
+  // pass as the tallies rather than by sorting a copy of the whole history.
+  let first: AttendedShow | null = null
+  let last: AttendedShow | null = null
 
   for (const show of shows) {
     venues.add(show.venue)
@@ -77,11 +82,12 @@ export const passportStats = (shows: AttendedShow[]): PassportStats => {
       genreCounts.set(show.genre, (genreCounts.get(show.genre) ?? 0) + 1)
     }
     if (show.priceFinal !== null) totalSpent += show.priceFinal
+    // Strict on `first` and loose on `last` keeps the ties resolving the way a
+    // stable sort did: the earliest-listed row of a shared date wins `first`,
+    // the latest-listed wins `last`.
+    if (first === null || show.date < first.date) first = show
+    if (last === null || show.date >= last.date) last = show
   }
-
-  // `YYYY-MM-DD` sorts lexicographically, so ordering needs no `Date` at all
-  // and no host-timezone drift can reach it (#596).
-  const byDate = [...shows].sort((lhs, rhs) => lhs.date.localeCompare(rhs.date))
 
   return {
     nights: shows.length,
@@ -89,8 +95,8 @@ export const passportStats = (shows: AttendedShow[]): PassportStats => {
     artists: artists.size,
     topGenre: topOf(genreCounts),
     topVenue: topOf(venueCounts),
-    first: byDate[0] ?? null,
-    last: byDate[byDate.length - 1] ?? null,
+    first,
+    last,
     totalSpent,
   }
 }

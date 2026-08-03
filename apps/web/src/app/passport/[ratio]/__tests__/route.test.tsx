@@ -95,6 +95,10 @@ describe('GET /passport/[ratio]', () => {
       expect(cacheControl).toBe('private, max-age=300')
       expect(cacheControl).not.toContain('public')
       expect(cacheControl).not.toContain('s-maxage')
+      // `private` says nothing about the browser's own cache, whose key is the
+      // URL alone — on a shared device the next account would be handed the
+      // previous one's card until the five minutes expired.
+      expect(response.headers.get('Vary')).toBe('Cookie')
     },
     RENDER_TIMEOUT_MS,
   )
