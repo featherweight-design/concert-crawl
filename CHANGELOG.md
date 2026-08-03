@@ -1,3 +1,11 @@
+## [1.199.1](https://github.com/HartiganHM/concert-crawl/compare/v1.199.0...v1.199.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* **artists:** ask events, not the rendered lists, whether an artist is real ([aacc859](https://github.com/HartiganHM/concert-crawl/commit/aacc859a209bc535844441d50b963a202ad80aee))
+* **artists:** stop projecting artist pages for admin-hidden events ([25f3004](https://github.com/HartiganHM/concert-crawl/commit/25f3004073a5b0cc2028d924ee8abb852c8d2297)), closes [#1343](https://github.com/HartiganHM/concert-crawl/issues/1343)
+
 # [1.199.0](https://github.com/HartiganHM/concert-crawl/compare/v1.198.0...v1.199.0) (2026-08-03)
 
 
