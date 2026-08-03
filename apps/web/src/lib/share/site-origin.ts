@@ -11,6 +11,12 @@
  * domain. `VERCEL_URL` covers deploys where nobody set the explicit var — it
  * is host-only, so the scheme is added here. Local dev falls through to the
  * dev server.
+ *
+ * `VERCEL_URL` rather than a `NEXT_PUBLIC_` twin because this resolves only in
+ * `generateMetadata`, which runs on the server. Vercel sets the unprefixed var
+ * on every deploy; the prefixed one exists only if someone opts into exposing
+ * system variables, so reading it would silently fall through to localhost and
+ * put dev URLs into shared links.
  */
 
 const LOCAL_ORIGIN = 'http://localhost:3000'
@@ -25,7 +31,7 @@ export const siteOrigin = (): string => {
   const configured = present(process.env['NEXT_PUBLIC_SITE_URL'])
   if (configured !== null) return trimTrailingSlash(configured)
 
-  const vercelHost = present(process.env['NEXT_PUBLIC_VERCEL_URL'])
+  const vercelHost = present(process.env['VERCEL_URL'])
   if (vercelHost !== null) return `https://${trimTrailingSlash(vercelHost)}`
 
   return LOCAL_ORIGIN

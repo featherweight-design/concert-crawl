@@ -12,14 +12,17 @@
  * guarantees for a same-origin entry.
  *
  * Returns false whenever it cannot tell: no Performance API (jsdom, older
- * browsers), no matching entry, or a cross-origin entry that reports zeroes
- * for everything. A conservative false understates the hit rate rather than
- * inventing one.
+ * browsers), no document to resolve a relative src against, no matching entry,
+ * or a cross-origin entry that reports zeroes for everything. A conservative
+ * false understates the hit rate rather than inventing one.
  */
 export const wasServedFromCache = (url: string): boolean => {
   try {
     if (typeof performance === 'undefined') return false
     if (typeof performance.getEntriesByName !== 'function') return false
+    // "Cannot tell" is an expected outcome off the browser, not a failure, so
+    // it returns before the catch below turns it into a logged error.
+    if (typeof window === 'undefined') return false
 
     // Relative srcs are resolved against the document before they are recorded.
     const resolved = new URL(url, window.location.href).href
