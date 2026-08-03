@@ -61,6 +61,26 @@ function wr_crowd(people, watching) {
 function wr_total(people, anon, watching) {
   return wr_crowd(people, watching).length + (anon || 0);
 }
+// RULING (Aug 3, eng question 2) — the crawl needs TWO NAMED HUMANS.
+// The threshold is not a watcher count, it's a count of people the sentence can
+// name. Consequences, all of them intended:
+//   0 others, you watching        → hidden. "All 1" beside your own avatar
+//                                   isn't social proof.
+//   1 other, you not watching     → hidden. A lone stranger reads as thin.
+//   1 other, you watching         → shown. "you & sc_x" is a fact about you.
+//   2 others, you not watching    → shown. Two named people read as a room.
+//   0 named, 5 anonymous          → hidden. If nobody has a handle there is no
+//                                   crawl to show — that's a number, not a
+//                                   social object, and the roster would be a
+//                                   column of dashes.
+// Anonymous watchers still count toward the total once the row qualifies, which
+// is why `anon` is accepted and deliberately ignored: the signature matches
+// wr_total/wr_crowd so call sites pass the same three arguments to all three,
+// and the omission is the ruling rather than an oversight. Keep it that way in
+// the build — a two-arg version invites someone to add anon back into the test.
+function wr_showCrawl(people, anon, watching) {
+  return wr_crowd(people, watching).length >= 2;
+}
 
 function Avatar({ handle, size = 26, ring = true }) {
   return <UMAvatar initial={handle[0].toUpperCase()} size={size} tone={wr_hue(handle)}
@@ -165,7 +185,7 @@ function WatcherWord({ people, anon, watching, nameLimit = 3, size = 12 }) {
 function WatcherCrawlLine({ people = WATCHERS, anon = WATCHERS_ANON, watching, nameLimit = 3, onOpen, compact = false }) {
   const list = wr_crowd(people, watching);
   const total = wr_total(people, anon, watching);
-  if (total === 0) return null;
+  if (!wr_showCrawl(people, anon, watching)) return null;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: compact ? 8 : 9, minWidth: 0 }}>
       {!compact && <AvatarStack people={list} extra={Math.max(0, total - Math.min(list.length, 3))} size={26} max={3}/>}
@@ -233,5 +253,5 @@ function WatcherRoster({ people = WATCHERS, anon = WATCHERS_ANON, watching }) {
 
 Object.assign(window, {
   AvatarStack, Avatar, WatcherWord, CrawlRow, WatcherRoster, WatcherCrawlLine,
-  rosterSummary, wr_crowd, wr_total, WATCHERS, WATCHERS_ANON, VIEWER,
+  rosterSummary, wr_crowd, wr_total, wr_showCrawl, WATCHERS, WATCHERS_ANON, VIEWER,
 });

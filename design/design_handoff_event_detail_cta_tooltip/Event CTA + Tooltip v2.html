@@ -143,7 +143,7 @@ function Root() {
                 <WatcherCrawlLine people={WATCHERS} anon={WATCHERS_ANON} watching nameLimit={2} onOpen={() => {}}/>
               </div>
               <Note>So the strip grows a second row. Row 1 is the toggle — eye + hint, one hit target. Row 2 is the crawl — avatars, names, and an “All 13” that opens the roster. Two sibling buttons in one bordered object; never nested.</Note>
-              <Note><strong style={{ color: "var(--fg)" }}>Row 2 is absent when nobody else is watching</strong> — which, with the hint hiding once you're watching, is the whole reason R1 never saw either element. The count is the crowd <em>including you when you're in it</em>: 12 others, 13 once you watch.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>Row 2 is absent unless two nameable people are in the crawl</strong>, which, with the hint hiding once you're watching, is the whole reason R1 never saw either element. The count is the crowd <em>including you when you're in it</em>: 12 others, 13 once you watch.</Note>
             </div>
           </BareStage>
         </DCArtboard>
@@ -398,16 +398,17 @@ function Root() {
             </div>
           </BareStage>
         </DCArtboard>
-        <DCArtboard id="cr-counts" label="0 · 1 · few · many" width={400} height={1220}>
+        <DCArtboard id="cr-counts" label="the watcher floor · two named humans" width={400} height={1510}>
           <BareStage theme={th} pad={18} width={340}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {[["nobody yet", 0, false], ["just you", 0, true], ["you + 1", 1, true], ["a few", 2, false], ["the crawl", 12, false]].map(([lbl, n, w]) => (
+              {[["nobody yet", 0, false], ["just you", 0, true], ["1 other · you're not", 1, false], ["you + 1", 1, true], ["2 others", 2, false], ["the crawl", 12, false]].map(([lbl, n, w]) => (
                 <div key={lbl} style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                   <Eyebrow>{lbl}</Eyebrow>
                   <CommitBlockV2 show={SHOW} direction="D" surface="mobile" going="default"
                     watching={w} {...crowdOf(n)}/>
                 </div>
               ))}
+              <Note><strong style={{ color: "var(--fg)" }}>The crawl needs two named humans.</strong> Not a watcher count, but a count of people the sentence can name. A lone stranger reads thin; you alone isn't social proof; and a purely anonymous crowd has no crawl to show, only a number.</Note>
             </div>
           </BareStage>
         </DCArtboard>

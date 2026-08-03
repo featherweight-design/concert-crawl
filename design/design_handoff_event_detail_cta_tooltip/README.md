@@ -38,14 +38,14 @@ So Direction D's strip is **two rows in one bordered object**:
 | **row 1** | the toggle — eye + hint. Whole row is the button |
 | **row 2** | the crawl — avatars, names, and an "All 13" that opens the roster |
 
-Two **sibling** buttons, never nested. Row 2 is absent when nobody is watching — which, together with the hint hiding once you're watching, is the entire reason R1 saw neither element.
+Two **sibling** buttons, never nested. Row 2 is absent unless the crawl has two nameable people in it (§10b), which, together with the hint hiding once you're watching, is the entire reason R1 saw neither element.
 
 - **Name budget is measured, not guessed.** `WatcherWord` observes its own box and degrades in this order: **3 names → 2 → 1 → drop the "in the crawl" suffix → 0 names → hide the sentence.** Names outrank the suffix deliberately: an earlier ladder exhausted names first and spent 72px of decoration to bin a 111px handle, which is how 320 ended up showing a bare count. The "All N" chip carries the count at every rung, so **the count is never what gets cut**. Same ResizeObserver approach as the event row's `MetaRow`.
 - **At ≤360 the faces give way to the names.** Measured at 320: the row is 237px, and an avatar stack (52) plus a numeric chip (58) left 113px — less than one handle (111) plus any tail — so *no name could ever render*, and the sentence always bottomed out to a count that merely restated the chip. Compact drops the stack and shrinks the trigger to a chevron, freeing 203px. The roster still shows every face; the names are the payload, and on the smallest screen they win.
 
   Result at 320: **"sc_setlist_bassbin6 + 11 more"** — the reference screenshot's sentence, not a number.
 - **The viewer is never seed data.** `WATCHERS` is the *other* people (12 with anons); `wr_crowd()` injects `VIEWER` when — and only when — you're watching, and `wr_total()` derives the count from that same list. One definition of membership, so names, avatars and the total can't disagree. The count therefore reads **12 others, 13 once you watch** — that difference is real, not a bug.
-- **Row 2 hides when you're the only watcher.** "All 1" beside your own avatar isn't social proof, and row 1 already says you're watching it.
+- **The crawl needs two named humans** (`wr_showCrawl`). See §10 for the ruling and its cases.
 - **Anonymous watchers stay counted, never faked.** The roster's last row is "5 more watching, no handle yet" with a dashed avatar.
 - **The disc is `UMAvatar`** from `user-menu.jsx`, not a new primitive. The crawl needs per-handle colour so a stack reads as distinct people; the disc's halo was *already* its colour knob, so this pass added an optional `tone` prop there (plus `muted` for the "+9" overflow disc) rather than authoring a fourth avatar treatment. Omit both props and the render is byte-identical to what ships. Tones are deterministic from the handle across four existing tokens — `--signal`, `--accent`, `--warning`, `--success`. No raw hex.
 
@@ -139,10 +139,58 @@ design_handoff_event_detail_cta_tooltip/
 └── admin-tip-surfaces.jsx
 ```
 
-## 10 · Open for you
+## 10 · Rulings (Aug 3 — answering engineering)
 
-- `GoingCTA` locked/pending/error/past use the accent family, matching the shipped `GoingButton`. Note that CLAUDE.md reserves `--signal` for primary CTAs and `--accent` for brand/Watching — Going and Watching both sitting in accent predates this pass, but if you want Going moved to `--signal` it collides with Get Tickets directly below. Worth a ruling.
-- Watcher floor: the crawl row renders from **two** watchers up — `WatchStrip` hides row 2 when `total <= 1`, because "All 1" beside your own avatar isn't social proof. If a show with 2–3 watchers reads as discouraging rather than social, tell me the threshold and I'll gate row 2 on it.
+### 10a · Going stays on the per-show accent
+
+The question assumed two colours. There are **three**, and Going already uses the third:
+
+| | Token | Scope |
+|---|---|---|
+| Get Tickets | `--signal` | system, transactional, constant app-wide |
+| Watching | `--accent` | theme brand-presence, constant app-wide |
+| **Going** | `h_accentFor(show.artist)` | **per-show**, derived from the artist's identity-art palette |
+
+So "Going has always sat in accent alongside Watching" isn't quite right — Watching uses the `--accent` *token* (same hue on every show); Going uses the *show's own* colour (different per artist). CLAUDE.md's rule — "don't switch to `--accent` for CTAs" — governs the system token. Going doesn't use it. The rule isn't being violated; it has no category for per-show colour.
+
+**Ruling: leave Going on `h_accentFor()`. Do not move it to `--signal`.**
+
+1. Moving it creates two same-hue filled buttons ~16px apart. That's a worse collision than the one being avoided.
+2. The per-show colour is load-bearing, not decorative: it's the same colour as the identity art in the hero above, and the same colour the stub carries into Concert History. `--signal` would sever that thread.
+
+**But hue was never the real separator — weight is.** The rule to hold:
+
+> Get Tickets is always filled `--signal`. Going is **outlined** until you commit.
+
+Pre-commit — the state where hierarchy actually matters — there is exactly one filled button on screen. Once you've tapped Going it fills with the show accent, and by then you've acted; Get Tickets inherits primacy naturally. `locked` is outlined too, so the Free path never shows two fills either.
+
+*Residual risk:* a show whose identity palette lands near `--signal` (cyan-ish on electric). The stub's shape — perforation and notch — differs from Get Tickets' plain rect, and the two are never both filled pre-commit, so I'd ship it and watch. If it bites, `h_accentFor` can exclude a hue band around `--signal` per theme; that's a one-function change, not a design revision.
+
+**Suggested CLAUDE.md amendment** so this isn't re-litigated — add to §2:
+
+> Three accent scopes, don't conflate them: `--signal` = system CTAs · `--accent` = brand presence and Watching · `h_accentFor(artist)` = per-show identity colour, used by the Going stub and Concert History. A per-show colour is not "using accent for a CTA".
+
+Say the word and I'll apply it.
+
+### 10b · Watcher floor: two named humans
+
+**Ruling: the crawl renders when at least two people it can *name* are in it.** The threshold is not a watcher count — it's a count of nameable people, because this row's payload is names, not a number.
+
+| others | you watching | crawl | why |
+|---|---|---|---|
+| 0 | yes | hidden | "All 1" beside your own avatar isn't social proof |
+| 1 | no | **hidden** | a lone stranger reads thin |
+| 1 | yes | shown | "you & sc_x" is a fact about you, not a popularity claim |
+| 2 | no | shown | two named people read as a room |
+| 0 (+5 anon) | no | **hidden** | no handles means no crawl to show — that's a number, and the roster would be a column of dashes |
+
+Anonymous watchers still count toward the total once the row qualifies. Implemented as `wr_showCrawl()`; canvas §5 "the watcher floor" renders all six cases.
+
+Two-to-three watchers does **not** read as discouraging in this design, and that's deliberate: the line leads with handles rather than a count, so it says *who's going to be there* rather than *how many bothered*. A count-led line ("3 watching") would have needed a much higher floor.
+
+## 11 · Open for you
+
+- The colour question and the watcher floor are both **closed** — see §10. Nothing in this section supersedes those rulings.
 - `cc-tip.jsx` still carries its own `CCTipPopover`/`CCTipSheet`, which are now duplicates of `CCOverlay`. I left them so the R1 canvas keeps rendering; **delete them and point `CCTip` at `CCOverlay` in the implementation PR** — the API is identical.
 - Handles are long (`sc_lastcall_bassbin7`). If real users get display names, the name budget goes further and 320 could carry two.
 

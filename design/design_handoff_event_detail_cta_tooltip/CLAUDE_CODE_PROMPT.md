@@ -30,7 +30,8 @@ THE COMPOSITION (Direction D — ship this one)
     row 1            the toggle — eye + hint. WHOLE ROW is the button.
     row 2            the crawl — avatars, names, roster trigger.
                      A SIBLING button. Never nest it inside the toggle.
-Row 2 is absent when nobody else is watching. Row 1's hint hides once you're
+Row 2 is absent unless two nameable people are in the crawl (see the ruling
+below). Row 1's hint hides once you're
 watching. Both facts are why the original screenshots looked like Going + a
 stray eye — do not "simplify" by deleting either element.
 
@@ -57,8 +58,9 @@ THE CRAWL (watcher-roster.jsx)
   injects VIEWER only when watching, and wr_total() derives from that same
   list. One definition of membership — names, avatars and the count cannot
   disagree. Count reads 12 others / 13 once you watch; that difference is real.
-- Row 2 hides when you're the only watcher. "All 1" beside your own avatar
-  isn't social proof.
+- Row 2 hides unless the crawl has two nameable people, per wr_showCrawl(). That
+  covers you being the only watcher ("All 1" beside your own avatar isn't social
+  proof), a lone stranger, and an all-anonymous crowd.
 - The name sentence is MEASURED, not guessed. Ladder, in order:
   3 names → 2 → 1 → drop the "in the crawl" suffix → 0 names → hide.
   Names outrank the suffix on purpose. The "All N" chip carries the count at
@@ -114,14 +116,29 @@ HARD constraints (house rules)
 - Mobile 320 baseline → desktop. Behavioural asymmetry is not acceptable;
   visual difference is (see the ≤360 crawl rule above).
 
-TWO THINGS NEEDING A PRODUCT CALL BEFORE YOU START
-1. GoingCTA's locked/pending/error use the accent family, matching the shipped
-   GoingButton. CLAUDE.md reserves --signal for primary CTAs and --accent for
-   brand/Watching. Going and Watching both sitting in accent predates this
-   pass, but moving Going to --signal collides with Get Tickets directly below
-   it. Ask before changing either.
-2. Watcher floor: the crawl row renders from two watchers up. If a show with
-   2–3 watchers reads as discouraging rather than social, we need a threshold.
+BOTH EARLIER OPEN QUESTIONS ARE NOW RULED ON (README §10) — implement as stated
+1. COLOUR. There are three accent scopes, don't conflate them:
+     --signal            system CTAs. Get Tickets. Constant app-wide.
+     --accent            brand presence + Watching. Constant app-wide.
+     h_accentFor(artist) PER-SHOW identity colour. The Going stub, and the
+                         stamp it becomes in Concert History.
+   Going uses the third. It is NOT "using --accent for a CTA", so CLAUDE.md's
+   rule isn't in play. Leave it. Do not move Going to --signal — that would put
+   two same-hue filled buttons ~16px apart, and would sever the stub from the
+   identity art in the hero above it.
+   THE RULE THAT DOES THE WORK IS WEIGHT, NOT HUE:
+     Get Tickets is always filled --signal. Going is OUTLINED until you commit.
+   Pre-commit there is exactly one filled button on screen. locked is outlined
+   too, so the Free path never shows two fills either.
+2. WATCHER FLOOR: the crawl renders when at least TWO NAMEABLE people are in it
+   — wr_showCrawl(). Not a watcher count; a count of people the sentence can
+   name, because names are this row's payload.
+     0 others + you watching        → hidden
+     1 other,  you not watching     → hidden (a lone stranger reads thin)
+     1 other,  you watching         → shown  ("you & sc_x")
+     2 others, you not watching     → shown
+     0 named + N anonymous          → hidden (no handles, no crawl)
+   Anonymous watchers still count toward the total once the row qualifies.
 
 Start by reading design_handoff_event_detail_cta_tooltip/README.md, then ask me
 anything ambiguous before writing code.

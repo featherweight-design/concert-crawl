@@ -180,13 +180,13 @@ function WatchStatusLine({ watching, count, size = 11 }) {
 //   row 1  the toggle — eye + hint. Whole row is the button.
 //   row 2  the crawl — avatars, names, and an "All N" that opens the roster
 //          in an overlay. A SIBLING button, never nested inside the toggle.
-// Row 2 is absent when nobody is watching, which is why R1 never saw it.
+// Row 2 is absent unless the crawl has two nameable people in it, which is why
+// R1 never saw it. Watchers can be present and the row still hidden.
 function WatchStrip({ watching, count, people, anon = 0, onChange, onOpenRoster, h = 52, nameLimit = 2, compact = false }) {
   const st = watchStatus(watching);
   const total = wr_total(people, anon, watching);
-  // Row 2 is hidden when you're the only watcher: "All 1" next to your own
-  // avatar isn't social proof, and row 1 already says you're watching it.
-  const showCrawl = total > 1;
+  // Threshold lives in wr_showCrawl — two named humans. See watcher-roster.jsx.
+  const showCrawl = wr_showCrawl(people, anon, watching);
   return (
     <div style={{
       display: "flex", flexDirection: "column",
@@ -279,7 +279,7 @@ function CommitBlockV2({
   React.useEffect(() => setRoster(rosterOpen), [rosterOpen]);
   const crowd = people || [];
   const total = wr_total(crowd, anon, watching);
-  const showCrawl = total > 1;
+  const showCrawl = wr_showCrawl(crowd, anon, watching);
   const limit = nameLimit != null ? nameLimit : (desktop ? 3 : 2);
 
   const goingEl = (

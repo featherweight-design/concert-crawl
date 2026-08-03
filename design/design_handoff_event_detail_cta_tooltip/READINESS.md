@@ -1,6 +1,11 @@
 # Design Readiness Review — Event Detail CTA + Tooltip
 
-**Round reviewed:** R2 · **Date:** 2026-08-03 · **Verdict: 🟢 Green — build it, with the carry-ins below**
+**Round reviewed:** R3 · **Date:** 2026-08-03 · **Verdict: 🟢 Green — build it, with the carry-ins below**
+
+> **R3:** the two open product calls went back to Design rather than being settled
+> in engineering. Both are now ruled on in README §10, and this review no longer
+> carries an open-calls section. R3's drop branched from before the R2 merge, so
+> six fixes were re-applied on top of it — see "R3 re-applied" below.
 
 Method: the prototype's logic was executed against adversarial inputs and diffed
 against the shipped components on `origin/main`, not read from the README prose.
@@ -18,7 +23,8 @@ against the shipped components on `origin/main`, not read from the README prose.
 | Raw hex shadows | Closed. `shadow-soft` / `shadow-strong` tokenised. |
 
 The staging watcher-distribution constraint was absorbed: row 2 hides at zero and
-at self-only (`total > 1`), and row 1 carries a line in **both** toggle states, so
+at self-only (R3 widened this to `wr_showCrawl`, which also hides a lone stranger
+and an all-anonymous crowd), and row 1 carries a line in **both** toggle states, so
 the strip doesn't change height on toggle.
 
 ## Fixed in this review (one-liners, already applied)
@@ -82,19 +88,37 @@ a user. Admin tips in `cc-tip.jsx` are out of scope per the skill.
    (`watchStatus`, the locked line, the error line, overlay titles) is
    customer-facing.
 
-## Open product calls — Hugh decides before the build
+## Rulings — both closed by Design (README §10)
 
-1. **`--accent` vs `--signal` for Going.** `GoingCTA`'s locked/pending/error use
-   the accent family to match the shipped `GoingButton`, but CLAUDE.md reserves
-   `--signal` for primary CTAs and `--accent` for brand/Watching. Going and
-   Watching both sitting in accent predates this pass. Moving Going to `--signal`
-   collides with Get Tickets directly beneath it. Design asked for a ruling.
-2. **Watcher floor.** Row 2 currently renders from two watchers up. If a show
-   with 2–3 watchers reads as discouraging rather than social, name a threshold.
-   (README §10 says "one watcher up" — the code says `total > 1`. The code is
-   right; the prose is stale.)
-3. **Handle length.** Handles like `sc_lastcall_bassbin7` eat the name budget.
-   If real users get display names, 320 could carry two names instead of one.
+1. **Colour: Going stays on `h_accentFor(artist)`.** The question assumed two
+   token scopes; there are three, and Going uses the per-show one. CLAUDE.md's
+   "`--accent` is not for CTAs" rule governs the *system* token and has no
+   category for a per-show colour, so it isn't in play. The separator that does
+   the work is weight, not hue: Get Tickets is always filled `--signal`, Going is
+   outlined until you commit, so exactly one filled button is on screen
+   pre-commit. Design offered a CLAUDE.md amendment naming the three scopes —
+   worth taking, since this is the second pass to trip over it.
+2. **Watcher floor: two nameable people** (`wr_showCrawl`). Not a watcher count.
+   A lone stranger and a purely anonymous crowd both hide; "you & sc_x" shows.
+   Anonymous watchers still count toward the total once the row qualifies.
+
+Remaining, and genuinely not blocking: handles like `sc_lastcall_bassbin7` eat
+the name budget. If real users get display names, 320 could carry two.
+
+## R3 re-applied
+
+R3's drop was authored from a pre-R2-merge base, so it arrived reverting fixes
+that are already on `main`. Design's intentional changes were kept; these six
+were restored on top:
+
+| File | Restored |
+| --- | --- |
+| `cc-overlay.jsx` | Focus trap back on the dialog, scrim out of the tab order and the a11y tree |
+| `cc-overlay.jsx` | `clearTimeout` in `close`/`toggle` — without it a hover-out then click self-closes ~140ms later |
+| `cc-tip.jsx` · `event-cta-v2.jsx` | Seven em-dashes in rendered copy, plus `price drops and sold-outs` |
+| `event-cta-v2.jsx` | `GOING_LABEL = "I'm going!"` — the exclamation is load-bearing per shipped `GOING_COPY.button.default` |
+| `watcher-roster.jsx` | `AvatarStack` `extra` off-by-one when the named list is short and anons exist |
+| `theme-context.jsx` | Dead `collapsed` state removed again |
 
 ## Nits
 
