@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.33.0-beta',
+    date: 'Aug 3, 2026',
+    headline: 'Both names on the bill.',
+    items: [
+      {
+        kind: 'fixed',
+        text: 'When two acts share a bill, we used to file the show under whichever name came first and quietly treat the other one as an opener. Co-headliners now count as headliners, so the show turns up on both artists’ pages and both of them trip your Following badge.',
+      },
+      {
+        kind: 'fixed',
+        text: 'Every upcoming show already on the calendar has been re-checked for this, so it applies to the shows you are looking at today and not only to the ones we crawl next.',
+      },
+    ],
+  },
+  {
     version: 'v0.32.0-beta',
     date: 'Aug 3, 2026',
     headline: 'The Watch button says what it does.',
