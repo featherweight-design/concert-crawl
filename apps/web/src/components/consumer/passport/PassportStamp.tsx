@@ -76,7 +76,12 @@ export const PassportStamp = ({
             display: 'flex',
             flexDirection: 'column',
             fontFamily: 'JetBrains Mono',
-            fontWeight: 800,
+            // Only the weights in `loadShareFonts` exist inside satori. Ask for
+            // one it does not carry and the PNG silently falls back to another
+            // while the browser preview honours the request — the exact
+            // preview/print divergence this kit exists to make impossible.
+            // JetBrains Mono ships 700 alone.
+            fontWeight: 700,
             fontSize: cfg.stampDate,
             lineHeight: 1.05,
             letterSpacing: '0.08em',
@@ -96,7 +101,9 @@ export const PassportStamp = ({
           bottom: cfg.stampRadius * 0.55,
           display: 'flex',
           fontFamily: 'Inter',
-          fontWeight: 800,
+          // 900 rather than the prototype's 800 for the same reason as above;
+          // it is also the weight the poster gives an artist name.
+          fontWeight: 900,
           fontSize: cfg.stampArtist,
           lineHeight: 0.98,
           letterSpacing: '-0.02em',
