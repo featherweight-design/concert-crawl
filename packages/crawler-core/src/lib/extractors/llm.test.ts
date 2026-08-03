@@ -504,6 +504,10 @@ describe('extractWithLlm', () => {
     // The rule must not leak into classification: a DJ-driven brand stays a
     // non-concert even though it now yields a stable artist string.
     expect(systemPrompt).toContain('applies to the artist field only')
+    // The brand rule and the null-artist rule both claim bingo and screening
+    // nights, so the prompt has to say which one wins in each direction.
+    expect(systemPrompt).toContain('takes precedence here')
+    expect(systemPrompt).toContain('overrides the null-artist rule above')
   })
 
   it('SAVE_EVENTS_TOOL declares reviewNeeded as a required boolean property', async () => {
