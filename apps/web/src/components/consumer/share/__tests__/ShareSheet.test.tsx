@@ -121,6 +121,23 @@ describe('<ShareSheet />', () => {
     expect(screen.getByRole('status').textContent).toBe('Drawing your poster…')
   })
 
+  // Leaving a shape before it settles must not bring the previous shape's
+  // outcome back when the user returns to it: the img remounts and refetches,
+  // so the earlier result describes an attempt that is no longer on screen.
+  it('redraws rather than replaying the last outcome when a shape is revisited', () => {
+    mount()
+    fireEvent.error(screen.getByRole('img'))
+    expect(screen.getByRole('status').textContent).toContain(
+      "Couldn't draw the poster",
+    )
+
+    // Square never settles — the user switches away while it is still drawing.
+    fireEvent.click(screen.getByRole('button', { name: 'Square' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Story' }))
+
+    expect(screen.getByRole('status').textContent).toBe('Drawing your poster…')
+  })
+
   it('repoints the preview and the download when the shape changes', () => {
     mount()
     fireEvent.click(screen.getByRole('button', { name: 'Square' }))

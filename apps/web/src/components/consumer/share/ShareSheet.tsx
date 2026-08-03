@@ -58,14 +58,16 @@ export const ShareSheet = ({
   const [ratio, setRatio] = useState<ShareRatio>(DEFAULT_SHARE_RATIO)
   const [status, setStatus] = useState<string | null>(null)
   // The poster is rendered on demand and takes seconds, so the preview needs a
-  // real pending state. Tracked as *which URL* settled rather than a tri-state
-  // flag: switching shape then derives `loading` in the same render that
-  // changes the src, so the previous shape's poster is never shown as if it
-  // were the new one.
-  const [settled, setSettled] = useState<{
-    url: string
-    outcome: 'ready' | 'failed'
-  } | null>(null)
+  // real pending state.
+  const [preview, setPreview] = useState<'loading' | 'ready' | 'failed'>(
+    'loading',
+  )
+  // Which URL the current `preview` describes. Reset during render rather than
+  // in an effect so the new shape is `loading` in the *same* render that
+  // changes the src — an effect would let one frame paint the previous
+  // outcome first, and a cached image can fire `onLoad` before the effect
+  // runs, wiping a result that was correct.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
 
   // The sheet stays mounted while `open` toggles (ShareButton renders it
   // unconditionally), so every piece of state here outlives a close unless it
@@ -76,7 +78,8 @@ export const ShareSheet = ({
     if (open) return
     setStatus(null)
     setRatio(DEFAULT_SHARE_RATIO)
-    setSettled(null)
+    setPreview('loading')
+    setPreviewUrl(null)
   }, [open])
 
   // Memoised because the destination callbacks depend on it: rebuilt every
@@ -111,7 +114,16 @@ export const ShareSheet = ({
     theme,
     by: handle,
   })
-  const preview = settled?.url === imageUrl ? settled.outcome : 'loading'
+  // Every change of `imageUrl` starts a fresh attempt: the `key` below remounts
+  // the img and the browser refetches. Returning to a shape that previously
+  // settled must therefore show `loading` again, not the outcome of the earlier
+  // attempt — otherwise leaving a slow shape before it lands brings the old
+  // shape's failure message back while its retry is still in flight.
+  if (previewUrl !== imageUrl) {
+    setPreviewUrl(imageUrl)
+    setPreview('loading')
+  }
+
   const origin = typeof window === 'undefined' ? '' : window.location.origin
   const linkUrl = publicEventUrl(event.id, origin)
   const title = `${event.artist} · ${event.venue}`
@@ -173,8 +185,8 @@ export const ShareSheet = ({
               key={imageUrl}
               src={imageUrl}
               alt={altText}
-              onLoad={() => setSettled({ url: imageUrl, outcome: 'ready' })}
-              onError={() => setSettled({ url: imageUrl, outcome: 'failed' })}
+              onLoad={() => setPreview('ready')}
+              onError={() => setPreview('failed')}
               className={`h-full w-full object-contain ${
                 preview === 'ready' ? '' : 'hidden'
               }`}

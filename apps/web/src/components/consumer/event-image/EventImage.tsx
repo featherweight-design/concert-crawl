@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { cn } from '@/lib/utils'
 import { IdentityArt } from '../identity-art/IdentityArt'
@@ -27,6 +27,13 @@ export function EventImage({
   sizes,
 }: EventImageProps) {
   const [errored, setErrored] = useState(false)
+
+  // A new URL is a new chance. Without this, an instance React reuses across
+  // events — a filtered or paginated list re-rendering the same position —
+  // keeps showing IdentityArt for a src that was never tried.
+  useEffect(() => {
+    setErrored(false)
+  }, [src])
 
   if (!src || errored) {
     return (
