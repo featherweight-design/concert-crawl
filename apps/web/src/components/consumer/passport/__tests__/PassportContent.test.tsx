@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { PassportContent } from '../PassportContent'
-import { PP_MODES } from '../definitions/modes'
+import { PP_MODES, PASSPORT_PRINT_MODE } from '../definitions/modes'
 import { ThemeProvider } from '@/theme'
 import type { AttendedShow } from '@/lib/passport/stats'
 
@@ -109,7 +109,8 @@ describe('PassportContent', () => {
   // The preview used to be the compact 3×3 card while the download was the
   // 4×4 print card, so the reader was shown one wall and handed another.
   it('previews the same card the download contains, not the compact one', () => {
-    const wall = PP_MODES.share.cols * PP_MODES.share.rows
+    const card = PP_MODES[PASSPORT_PRINT_MODE]
+    const wall = card.cols * card.rows
     renderContent({
       shows: Array.from({ length: wall }, (_, i) => show(i)),
     })

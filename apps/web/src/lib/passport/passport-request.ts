@@ -1,5 +1,6 @@
 import {
   PP_MODES,
+  PASSPORT_PRINT_MODE,
   PASSPORT_PRINT_SCALE,
 } from '@/components/consumer/passport/definitions/modes'
 import { isThemeName, resolveThemeTokens } from '@/lib/share/theme-tokens'
@@ -37,8 +38,8 @@ export const PASSPORT_DIMENSIONS: Record<
   { width: number; height: number }
 > = {
   square: {
-    width: PP_MODES.share.width * PASSPORT_PRINT_SCALE,
-    height: PP_MODES.share.height * PASSPORT_PRINT_SCALE,
+    width: PP_MODES[PASSPORT_PRINT_MODE].width * PASSPORT_PRINT_SCALE,
+    height: PP_MODES[PASSPORT_PRINT_MODE].height * PASSPORT_PRINT_SCALE,
   },
 }
 
