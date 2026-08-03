@@ -526,6 +526,13 @@
       "when": 1786579200000,
       "tag": "0074_events_headliners",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1786665600000,
+      "tag": "0075_latin_extended_canonical",
+      "breakpoints": true
     }
   ]
 }

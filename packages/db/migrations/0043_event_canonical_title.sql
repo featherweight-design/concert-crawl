@@ -22,9 +22,12 @@ ALTER TABLE events
 --      `String.prototype.normalize('NFD').replace(/\p{M}/gu, '')` step
 --      so a decomposed input like "Beyonce" + combining acute
 --      canonicalizes to "beyonce" on both sides.
---   2. translate() the remaining precomposed Latin Extended characters
---      (Ø/ø today, the #648 set when that lands) — must stay in sync
---      with LATIN_EXTENDED_MAP in canonical-title.ts.
+--   2. Map the remaining precomposed Latin Extended characters (the #648
+--      set) — must stay in sync with LATIN_EXTENDED_MAP in
+--      packages/types/src/latin-extended-map.ts. The 1→N entries
+--      (Æ→AE, Œ→OE, ß→ss, Þ→TH) go through replace(); translate() is
+--      strictly 1→1 and would silently drop them, so only the 1→1
+--      entries (Ø, Ł, Ð, Đ) are appended to its char set.
 --   3. Lowercase.
 --   4. Collapse whitespace runs to a single space.
 --   5. Trim.
@@ -47,9 +50,12 @@ SET canonical_title = trim(
   regexp_replace(
     lower(
       translate(
-        regexp_replace(normalize(title, NFD), '[̀-ͯ]', '', 'g'),
-        'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖØòóôõöøÙÚÛÜùúûüÝýÿÑñÇçŸŠšŽž',
-        'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOOooooooUUUUuuuuYyyNnCcYSsZz'
+        replace(replace(replace(replace(replace(replace(replace(replace(
+          regexp_replace(normalize(title, NFD), '[̀-ͯ]', '', 'g'),
+          'Æ', 'AE'), 'æ', 'ae'), 'Œ', 'OE'), 'œ', 'oe'),
+          'ß', 'ss'), 'ẞ', 'SS'), 'Þ', 'TH'), 'þ', 'th'),
+        'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖØòóôõöøÙÚÛÜùúûüÝýÿÑñÇçŸŠšŽžŁłÐðĐđ',
+        'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOOooooooUUUUuuuuYyyNnCcYSsZzLlDdDd'
       )
     ),
     '\s+', ' ', 'g'

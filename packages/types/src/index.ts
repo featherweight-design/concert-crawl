@@ -26,8 +26,8 @@ export * from './canonical-artist.js'
 
 // Shared by canonicalizeArtist here and canonicalizeTitle in crawler-core —
 // the precomposed Latin Extended letters that NFD will not split into base +
-// combining mark. Deliberately only the ones we have actually seen in venue
-// data (Ø/ø today); see latin-extended-map.ts on why it is not exhaustive.
+// combining mark (#648: Ø/ø, Ł/ł, Æ/æ, ß/ẞ, Þ/þ, Ð/ð, Œ/œ, Đ/đ). See
+// latin-extended-map.ts for the SQL parity contract the map carries.
 export * from './latin-extended-map.js'
 
 // #1115 artist page — GET /v1/artists/:slug response contract, shared by the

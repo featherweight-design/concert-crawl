@@ -65,6 +65,44 @@ describe('canonicalizeArtist', () => {
       expect(canonicalizeArtist('Ørken Bør')).toBe('orken bor')
       expect(canonicalizeArtist('Bjørn & His Band')).toBe('bjorn')
     })
+
+    // #648 — the wider non-decomposable set. Each pair is asserted in both
+    // cases because the map runs BEFORE the lowercasing pass, so an uppercase
+    // key missing from the map is a distinct bug from a missing lowercase one.
+    it.each([
+      ['Ł', 'ł', 'l'],
+      ['Ð', 'ð', 'd'],
+      ['Đ', 'đ', 'd'],
+    ])('maps the 1→1 pair %s / %s', (upper, lower, mapped) => {
+      expect(canonicalizeArtist(upper)).toBe(mapped)
+      expect(canonicalizeArtist(lower)).toBe(mapped)
+    })
+
+    it.each([
+      ['Æ', 'æ', 'ae'],
+      ['Œ', 'œ', 'oe'],
+      ['ẞ', 'ß', 'ss'],
+      ['Þ', 'þ', 'th'],
+    ])(
+      'expands the 1→N pair %s / %s — the translate() trap',
+      (upper, lower, mapped) => {
+        expect(canonicalizeArtist(upper)).toBe(mapped)
+        expect(canonicalizeArtist(lower)).toBe(mapped)
+      },
+    )
+
+    it('maps the new chars inside real-shaped artist names', () => {
+      expect(canonicalizeArtist('Łódź Kaliska')).toBe('lodz kaliska')
+      expect(canonicalizeArtist('ŁÓDŹ KALISKA')).toBe('lodz kaliska')
+      expect(canonicalizeArtist('Großstadtgeflüster')).toBe(
+        'grossstadtgefluster',
+      )
+      expect(canonicalizeArtist('Þeyr')).toBe('theyr')
+      expect(canonicalizeArtist('Ærøskøbing')).toBe('aeroskobing')
+      expect(canonicalizeArtist('Cœur de Pirate')).toBe('coeur de pirate')
+      expect(canonicalizeArtist('Ðjango')).toBe('django')
+      expect(canonicalizeArtist('Đorđe & Friends')).toBe('dorde')
+    })
   })
 
   describe('separator splitting', () => {

@@ -64,6 +64,29 @@ describe('canonicalizeTitle', () => {
       expect(canonicalizeTitle('Eivør Live')).toBe('eivor live')
       expect(canonicalizeTitle('Mötorhead Ø')).toBe('motorhead o')
     })
+
+    // #648 — canonicalizeTitle shares LATIN_EXTENDED_MAP with
+    // canonicalizeArtist, so the widened set has to land here too. Both cases
+    // per char: the map runs before the lowercasing pass.
+    it.each([
+      ['Ł', 'ł', 'l'],
+      ['Ð', 'ð', 'd'],
+      ['Đ', 'đ', 'd'],
+      ['Æ', 'æ', 'ae'],
+      ['Œ', 'œ', 'oe'],
+      ['ẞ', 'ß', 'ss'],
+      ['Þ', 'þ', 'th'],
+    ])('handles the #648 pair %s / %s', (upper, lower, mapped) => {
+      expect(canonicalizeTitle(`Live ${upper}`)).toBe(`live ${mapped}`)
+      expect(canonicalizeTitle(`Live ${lower}`)).toBe(`live ${mapped}`)
+    })
+
+    it('handles the #648 chars inside real-shaped titles', () => {
+      expect(canonicalizeTitle('Großstadtgeflüster: Tour')).toBe(
+        'grossstadtgefluster: tour',
+      )
+      expect(canonicalizeTitle('Þeyr & Æther Live')).toBe('theyr & aether live')
+    })
   })
 
   describe('punctuation preservation', () => {
