@@ -36,7 +36,11 @@ afterEach(() => {
 
 describe('PassportActions', () => {
   it('shares the PNG itself rather than a URL the reader could not open', async () => {
-    const share = vi.fn(() => Promise.resolve())
+    const shared: ShareData[] = []
+    const share = (data: ShareData) => {
+      shared.push(data)
+      return Promise.resolve()
+    }
     render(
       <PassportActions
         imageUrl="/passport/square"
@@ -46,10 +50,11 @@ describe('PassportActions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: COPY.shareLabel }))
 
-    await waitFor(() => expect(share).toHaveBeenCalled())
-    const payload = share.mock.calls[0]?.[0]
-    expect(payload.files).toHaveLength(1)
-    expect(payload).not.toHaveProperty('url')
+    await waitFor(() => expect(shared).toHaveLength(1))
+    expect(shared[0]?.files).toHaveLength(1)
+    // The bytes go out, not a link: the only URL this card has sits behind the
+    // owner's session, so a recipient could not open it.
+    expect(shared[0]).not.toHaveProperty('url')
     expect(track).toHaveBeenCalledWith('passport_shared', {
       destination: 'system',
     })
