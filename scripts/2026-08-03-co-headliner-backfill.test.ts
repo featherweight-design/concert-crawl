@@ -192,10 +192,11 @@ vi.mock('@anthropic-ai/sdk', () => ({
   ),
 }))
 
-// Dynamic import after vi.mock hoist so the mocked SDK is in scope when the
-// script module's top-level imports run.
+// Dynamic import after the vi.mock hoist so the mocked SDK is in scope. This
+// pulls in the LLM module rather than the script, which opens a DB connection
+// at import time.
 const { identifyHeadlinersBatch } =
-  await import('./2026-08-03-co-headliner-backfill.js')
+  await import('./2026-08-03-co-headliner-backfill-llm.js')
 
 function makeBatch(): EventForHeadlinerCheck[] {
   return [
