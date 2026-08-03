@@ -1,3 +1,12 @@
+## [1.204.2](https://github.com/HartiganHM/concert-crawl/compare/v1.204.1...v1.204.2) (2026-08-03)
+
+
+### Bug Fixes
+
+* **copy:** mechanical em-dash pass on notifications, reporting, onboarding, and PWA ([#1413](https://github.com/HartiganHM/concert-crawl/issues/1413)) ([2daac9a](https://github.com/HartiganHM/concert-crawl/commit/2daac9a978300b601d16155afdafcdc026102814))
+* **copy:** mechanical em-dash pass on push, Spotify fan-out, and history copy ([#1414](https://github.com/HartiganHM/concert-crawl/issues/1414)) ([7fdbc2e](https://github.com/HartiganHM/concert-crawl/commit/7fdbc2e25f5cf9bd9e4acc559fb720ebec6bddee))
+* **copy:** mechanical em-dash pass on settings and lifecycle plan copy ([#1412](https://github.com/HartiganHM/concert-crawl/issues/1412)) ([9668657](https://github.com/HartiganHM/concert-crawl/commit/96686578ffc4a0831a3cc9dd1b13b2d200e65ba4))
+
 ## [1.204.1](https://github.com/HartiganHM/concert-crawl/compare/v1.204.0...v1.204.1) (2026-08-03)
 
 
