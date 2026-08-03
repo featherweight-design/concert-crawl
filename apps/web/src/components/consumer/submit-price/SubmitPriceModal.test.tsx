@@ -373,6 +373,44 @@ describe('SubmitPriceModal — error state (#398)', () => {
   })
 })
 
+describe('SubmitPriceModal — already-submitted tier is not selectable (#1378)', () => {
+  it('disables the tier the viewer already has a live submission on', async () => {
+    // #876: a pending submission no longer blocks follow-ups, so the viewer
+    // reaches the form with contribution acts left AND a live GA submission.
+    // GA must be disabled here — the API would reject it with
+    // `already_submitted`, whose copy tells the user to edit from the event
+    // page, stranding anyone who arrived from a surface with no edit path.
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          alreadySubmitted: true,
+          submissionsRemaining: 2,
+          userSubmission: {
+            id: 'sub-1',
+            priceMin: 220,
+            priceMax: null,
+            tier: 'GA',
+            vendor: 'AXS',
+          },
+        },
+      }),
+    })
+
+    render(<SubmitPriceModal {...defaultProps} />)
+    await waitFor(() => expect(screen.getByText('Box office')).toBeTruthy())
+
+    expect(
+      screen.getByRole('button', { name: 'GA' }).hasAttribute('disabled'),
+    ).toBe(true)
+    // Tiers with no live submission stay open.
+    expect(
+      screen.getByRole('button', { name: 'VIP' }).hasAttribute('disabled'),
+    ).toBe(false)
+  })
+})
+
 describe('SubmitPriceModal — alreadySubmitted state', () => {
   it('starts in alreadySubmitted when existing submission is found', async () => {
     global.fetch = vi.fn().mockResolvedValue({

@@ -413,12 +413,21 @@ export function SubmitPriceModal({
 
   // Tiers already selected in OTHER panels are disabled — the same tier can
   // never appear twice in a bundle (mirrors the API's uniqueness refine).
+  //
+  // The tier the viewer already has a live submission on is disabled too
+  // (#1378). The API rejects it with `already_submitted`, so leaving it
+  // selectable only trades a disabled chip for a post-submit error — and that
+  // error tells the user to edit from the event page, which strands them if
+  // they got here from a surface with no edit entry point. Edit mode is the
+  // exception: there the existing tier IS the row being edited.
   const tierOptionsForPanel = (panelIndex: number) =>
     TIER_OPTIONS.map((option) => ({
       ...option,
-      disabled: panels.some(
-        (panel, idx) => idx !== panelIndex && panel.tier === option.value,
-      ),
+      disabled:
+        panels.some(
+          (panel, idx) => idx !== panelIndex && panel.tier === option.value,
+        ) ||
+        (!isEditMode && existingSubmission?.tier === option.value),
     }))
 
   const handleSubmit = useCallback(async () => {

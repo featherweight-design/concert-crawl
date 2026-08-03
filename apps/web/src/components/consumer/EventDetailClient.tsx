@@ -18,6 +18,7 @@ import type {
   EventReport,
   EventDetailResponse,
   Tier,
+  TierPriceBlock,
   SourceCategory,
 } from '@concert-crawl/types'
 import { SP_POLICY } from '@concert-crawl/types'
@@ -626,6 +627,179 @@ export function EventDetailPriceBlock({
       </div>
     ) : null
 
+  // Pending submissions surface (#1377). Renders one PendingCardB per block
+  // that has a pending row, plus the CorroborationSheet the cards' Confirm
+  // opens. Every price-region branch calls this — previously the confirm
+  // affordance existed only on the all-tiers-pending path, so a price
+  // submitted against a tier that ALREADY had a headline rendered nowhere and
+  // no third user could corroborate it.
+  //
+  // Pass EVERY block, including headline-less ones. Some cards do draw a
+  // pending tell for a headline-less tier, but those tells are display-only
+  // (TierAlternateRow renders no button), so filtering those tiers out here
+  // leaves the same uncorroboratable submission this fix exists to prevent.
+  // The tell summarises; this surface is where the price can be acted on.
+  const renderPendingSurface = (blocks: TierPriceBlock[]) => {
+    const cardPropsList: Array<React.ComponentProps<typeof PendingCardB>> = []
+    // Flattened so the sheet can resolve `activeCorroborationId` against a
+    // single list instead of re-walking the nested blocks.
+    const pendingByIdAtt: Array<{
+      id: string
+      tier: Tier
+      pending: TierPriceBlock['pending'][number]
+    }> = []
+    for (const block of blocks) {
+      const firstPending = block.pending[0]
+      if (firstPending == null) continue
+      pendingByIdAtt.push({
+        id: firstPending.id,
+        tier: block.tier,
+        pending: firstPending,
+      })
+      const isBoxOffice = firstPending.vendor === 'VenueBoxOffice'
+      cardPropsList.push({
+        floor: parseFloat(firstPending.priceMin),
+        ...(firstPending.priceMax != null
+          ? { ceiling: parseFloat(firstPending.priceMax) }
+          : {}),
+        tier: block.tier,
+        vendor: firstPending.vendor,
+        kind: isBoxOffice ? 'boxoffice' : 'community',
+        submitter: firstPending.submitterHandle
+          ? { handle: firstPending.submitterHandle, url: '' }
+          : null,
+        submittedAt: firstPending.submittedAt,
+        // Submitter counts as observation #1 (#831). Helper folds the
+        // submitter into the API's non-submitter `confirmsCount`.
+        confirms: displayConfirms(firstPending.confirmsCount),
+        needed: firstPending.confirmsNeeded,
+        view: firstPending.isSubmitter ? 'submitter' : 'other',
+        note: firstPending.note,
+        ...(block.counterSubmission != null
+          ? {
+              counterPointer: {
+                href: `#counter-${block.counterSubmission.id}`,
+              },
+            }
+          : {}),
+        lastAdminActionKind:
+          block.counterSubmission?.lastAdminActionKind ?? null,
+        onConfirm: () => setActiveCorroborationId(firstPending.id),
+        // Withdraw → DELETE /v1/submissions/:id, then router.refresh() to
+        // re-fetch the server-rendered event detail. The legacy path uses
+        // setLocalSubmissions because it owns React state; this surface is
+        // driven by `event.priceByTier` (server prop), so we invalidate via
+        // a router refresh instead.
+        onWithdraw: () => {
+          void (async () => {
+            const token = await getToken()
+            if (!token) return
+            try {
+              const res = await fetch(
+                `${process.env['NEXT_PUBLIC_API_URL']}/v1/submissions/${firstPending.id}`,
+                {
+                  method: 'DELETE',
+                  headers: { Authorization: `Bearer ${token}` },
+                },
+              )
+              if (res.ok) {
+                router.refresh()
+              } else {
+                console.error('Withdraw failed', res.status)
+              }
+            } catch (err) {
+              console.error('Withdraw failed', err)
+            }
+          })()
+        },
+        // The only entry point into the modal's edit mode (#1378). The
+        // submit-price modal's already_submitted error tells the user to
+        // "edit it from the event page" — this is that path, and it has to
+        // exist on every branch or that instruction is a dead end.
+        onEdit: () => {
+          setPreselectedTier(block.tier)
+          setSubmitPriceEditMode(true)
+          setSubmitPriceOpen(true)
+        },
+      })
+    }
+    if (cardPropsList.length === 0) return null
+    const activeAtt =
+      activeCorroborationId !== null
+        ? (pendingByIdAtt.find((row) => row.id === activeCorroborationId) ??
+          null)
+        : null
+    return (
+      <>
+        <PendingStack cards={cardPropsList} />
+        {activeAtt !== null && (
+          <CorroborationSheet
+            submission={{
+              floor: parseFloat(activeAtt.pending.priceMin),
+              ...(activeAtt.pending.priceMax !== null
+                ? { ceiling: parseFloat(activeAtt.pending.priceMax) }
+                : {}),
+              tier: activeAtt.tier,
+              vendor: activeAtt.pending.vendor,
+              kind:
+                activeAtt.pending.vendor === 'VenueBoxOffice'
+                  ? 'boxoffice'
+                  : 'community',
+              submitter: activeAtt.pending.submitterHandle
+                ? { handle: activeAtt.pending.submitterHandle, url: '' }
+                : null,
+              submittedAt: activeAtt.pending.submittedAt,
+              // Submitter counts as observation #1 (#831). Same helper as
+              // the strip on the PendingCardB this sheet was opened from —
+              // keeping the count in sync between card and sheet.
+              confirms: displayConfirms(activeAtt.pending.confirmsCount),
+              needed: activeAtt.pending.confirmsNeeded,
+              note: activeAtt.pending.note,
+              submissionId: activeAtt.pending.id,
+            }}
+            open={activeCorroborationId !== null}
+            onClose={() => setActiveCorroborationId(null)}
+            onConfirm={(method) => {
+              const confirmedId = activeAtt.pending.id
+              setActiveCorroborationId(null)
+              void (async () => {
+                const token = await getToken()
+                if (!token) return
+                try {
+                  const res = await fetch(
+                    `${process.env['NEXT_PUBLIC_API_URL']}/v1/events/${event.id}/price-submissions/${confirmedId}/confirm`,
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                      },
+                      body: JSON.stringify({ method }),
+                    },
+                  )
+                  if (res.ok) {
+                    router.refresh()
+                  } else {
+                    console.error('Confirm failed', res.status)
+                  }
+                } catch (err) {
+                  console.error(
+                    'EventDetailPriceBlock: price confirm failed',
+                    err,
+                  )
+                }
+              })()
+            }}
+            onSubmitUpdate={() => {
+              setActiveCorroborationId(null)
+              setSubmitPriceOpen(true)
+            }}
+          />
+        )}
+      </>
+    )
+  }
+
   // ── Fix 15: postponed confirmed → hide price section ───────────
   if (isPostponedConfirmed) {
     return null
@@ -897,6 +1071,7 @@ export function EventDetailPriceBlock({
             />
           </div>
         )}
+        {renderPendingSurface(priceDecision.priceByTier)}
         {submitSuccessSurface}
         {submitAnotherPriceCta}
         <SubmitPriceModal
@@ -972,6 +1147,10 @@ export function EventDetailPriceBlock({
           }}
           otherTiers={otherTierRows}
         />
+        {renderPendingSurface([
+          priceDecision.entryBlock,
+          ...priceDecision.otherTiers,
+        ])}
         {submitSuccessSurface}
         {submitAnotherPriceCta}
         <SubmitPriceModal
@@ -1071,6 +1250,7 @@ export function EventDetailPriceBlock({
             }}
             alternates={alternateRows}
           />
+          {renderPendingSurface(priceDecision.priceByTier)}
           {submitSuccessSurface}
           {submitAnotherPriceCta}
           <SubmitPriceModal
@@ -1096,160 +1276,9 @@ export function EventDetailPriceBlock({
     // STATE #7 — every tier is pending-only. Stack the per-tier first-pending
     // rows in PendingStack, which renders one card per tier regardless of count
     // (the >2 cap that dropped the third tier on reload was the #895 bug).
-    const blocks = priceDecision.priceByTier
-    const cardPropsList: Array<React.ComponentProps<typeof PendingCardB>> = []
-    // Flat lookup of (tier, pending entry) keyed by pending id so the
-    // CorroborationSheet at the bottom of this branch can resolve from
-    // `activeCorroborationId` without re-walking blocks each render.
-    const pendingByIdAtt: Array<{
-      id: string
-      tier: Tier
-      pending: (typeof blocks)[number]['pending'][number]
-    }> = []
-    for (const block of blocks) {
-      const firstPending = block.pending[0]
-      if (firstPending == null) continue
-      pendingByIdAtt.push({
-        id: firstPending.id,
-        tier: block.tier,
-        pending: firstPending,
-      })
-      const isBoxOffice = firstPending.vendor === 'VenueBoxOffice'
-      cardPropsList.push({
-        floor: parseFloat(firstPending.priceMin),
-        ...(firstPending.priceMax != null
-          ? { ceiling: parseFloat(firstPending.priceMax) }
-          : {}),
-        tier: block.tier,
-        vendor: firstPending.vendor,
-        kind: isBoxOffice ? 'boxoffice' : 'community',
-        submitter: firstPending.submitterHandle
-          ? { handle: firstPending.submitterHandle, url: '' }
-          : null,
-        submittedAt: firstPending.submittedAt,
-        // Submitter counts as observation #1 (#831). Helper folds the
-        // submitter into the API's non-submitter `confirmsCount`.
-        confirms: displayConfirms(firstPending.confirmsCount),
-        needed: firstPending.confirmsNeeded,
-        view: firstPending.isSubmitter ? 'submitter' : 'other',
-        note: firstPending.note,
-        ...(block.counterSubmission != null
-          ? {
-              counterPointer: {
-                href: `#counter-${block.counterSubmission.id}`,
-              },
-            }
-          : {}),
-        lastAdminActionKind:
-          block.counterSubmission?.lastAdminActionKind ?? null,
-        // Confirm opens the CorroborationSheet (same flow as the legacy
-        // pendingSubmissions path — see line ~1326).
-        onConfirm: () => setActiveCorroborationId(firstPending.id),
-        // Withdraw → DELETE /v1/submissions/:id, then router.refresh() to
-        // re-fetch the server-rendered event detail. The legacy path uses
-        // setLocalSubmissions because it owns React state; this branch is
-        // driven by `event.priceByTier` (server prop), so we invalidate via
-        // a router refresh instead.
-        onWithdraw: () => {
-          void (async () => {
-            const token = await getToken()
-            if (!token) return
-            try {
-              const res = await fetch(
-                `${process.env['NEXT_PUBLIC_API_URL']}/v1/submissions/${firstPending.id}`,
-                {
-                  method: 'DELETE',
-                  headers: { Authorization: `Bearer ${token}` },
-                },
-              )
-              if (res.ok) {
-                router.refresh()
-              } else {
-                console.error('Withdraw failed', res.status)
-              }
-            } catch (err) {
-              console.error('Withdraw failed', err)
-            }
-          })()
-        },
-        onEdit: () => {
-          setSubmitPriceEditMode(true)
-          setSubmitPriceOpen(true)
-        },
-      })
-    }
-    const activeAtt =
-      activeCorroborationId !== null
-        ? (pendingByIdAtt.find((row) => row.id === activeCorroborationId) ??
-          null)
-        : null
     return (
       <>
-        <PendingStack cards={cardPropsList} />
-        {activeAtt !== null && (
-          <CorroborationSheet
-            submission={{
-              floor: parseFloat(activeAtt.pending.priceMin),
-              ...(activeAtt.pending.priceMax !== null
-                ? { ceiling: parseFloat(activeAtt.pending.priceMax) }
-                : {}),
-              tier: activeAtt.tier,
-              vendor: activeAtt.pending.vendor,
-              kind:
-                activeAtt.pending.vendor === 'VenueBoxOffice'
-                  ? 'boxoffice'
-                  : 'community',
-              submitter: activeAtt.pending.submitterHandle
-                ? { handle: activeAtt.pending.submitterHandle, url: '' }
-                : null,
-              submittedAt: activeAtt.pending.submittedAt,
-              // Submitter counts as observation #1 (#831). Same helper as
-              // the strip on the PendingCardB this sheet was opened from —
-              // keeping the count in sync between card and sheet.
-              confirms: displayConfirms(activeAtt.pending.confirmsCount),
-              needed: activeAtt.pending.confirmsNeeded,
-              note: activeAtt.pending.note,
-              submissionId: activeAtt.pending.id,
-            }}
-            open={activeCorroborationId !== null}
-            onClose={() => setActiveCorroborationId(null)}
-            onConfirm={(method) => {
-              const confirmedId = activeAtt.pending.id
-              setActiveCorroborationId(null)
-              void (async () => {
-                const token = await getToken()
-                if (!token) return
-                try {
-                  const res = await fetch(
-                    `${process.env['NEXT_PUBLIC_API_URL']}/v1/events/${event.id}/price-submissions/${confirmedId}/confirm`,
-                    {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                      },
-                      body: JSON.stringify({ method }),
-                    },
-                  )
-                  if (res.ok) {
-                    router.refresh()
-                  } else {
-                    console.error('Confirm failed', res.status)
-                  }
-                } catch (err) {
-                  console.error(
-                    'EventDetailPriceBlock: price confirm failed',
-                    err,
-                  )
-                }
-              })()
-            }}
-            onSubmitUpdate={() => {
-              setActiveCorroborationId(null)
-              setSubmitPriceOpen(true)
-            }}
-          />
-        )}
+        {renderPendingSurface(priceDecision.priceByTier)}
         {submitSuccessSurface}
         {/* #895 symptom 1: the MTAddTierSuccess surface above is session-only
             (cleared on reload). This persistent CTA is the reload-surviving
@@ -1347,6 +1376,7 @@ export function EventDetailPriceBlock({
               />
             </div>
           )}
+          {renderPendingSurface(priceDecision.priceByTier)}
           {submitSuccessSurface}
           {submitAnotherPriceCta}
           <SubmitPriceModal

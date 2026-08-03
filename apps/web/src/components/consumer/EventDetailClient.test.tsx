@@ -426,6 +426,115 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(pill).toBeDefined()
   })
 
+  // #1377 — the exact staging repro: a second user submits a cheaper GA price
+  // on an event whose GA tier is ALREADY corroborated. No tier is pending-only,
+  // so decidePriceRegion routes to multi-tier-shipped — the branch that used to
+  // render only headlines, leaving the submission invisible and unconfirmable.
+  it('pending on a tier that already has a headline renders the pending card + Confirm affordance (#1377)', () => {
+    const ga = makeTierBlock({
+      tier: 'GA',
+      headline: {
+        submissionId: 's1',
+        priceMin: '240',
+        priceMax: null,
+        vendor: 'AXS',
+        sourceCategory: 'standard',
+        submitterHandle: 'ada',
+        observedAt: '2026-06-20T00:00:00Z',
+        approvedAt: '2026-06-20T00:00:00Z',
+        approvalKind: 'fan',
+        confirmsCount: 2,
+      },
+      pending: [
+        {
+          id: 'p-ga',
+          priceMin: '220',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    render(
+      <EventDetailPriceBlock
+        event={buildBaseEvent({ priceByTier: [ga] })}
+        reports={[]}
+        currentUserId={null}
+      />,
+    )
+    // The headline still leads.
+    expect(screen.getByText(/240/)).toBeDefined()
+    // The pending submission is visible rather than silently dropped.
+    expect(screen.getByText(/220/)).toBeDefined()
+    // And a third user can corroborate it.
+    expect(screen.queryByTestId('corroboration-sheet-open')).toBeNull()
+    act(() => {
+      fireEvent.click(screen.getByText('Confirm price'))
+    })
+    expect(screen.getByTestId('corroboration-sheet-open')).toBeDefined()
+  })
+
+  // Same class as #1377, caught by Copilot: in mixed-tier a pending-only tier
+  // renders through TierAlternateRow, whose "pending · N/M" strip has no
+  // button. Without a pending card alongside it the submission is just as
+  // uncorroboratable as the headline-tier case above.
+  it('pending-only tier in mixed-tier is confirmable, not just a display-only strip (#1377)', () => {
+    const ga = makeTierBlock({
+      tier: 'GA',
+      headline: {
+        submissionId: 's1',
+        priceMin: '25',
+        priceMax: null,
+        vendor: 'VenueBoxOffice',
+        sourceCategory: 'boxoffice',
+        submitterHandle: 'ada',
+        observedAt: '2026-06-20T00:00:00Z',
+        approvedAt: '2026-06-20T00:00:00Z',
+        approvalKind: 'fan',
+        confirmsCount: 2,
+      },
+    })
+    const vip = makeTierBlock({
+      tier: 'VIP',
+      headline: null,
+      pending: [
+        {
+          id: 'p-vip',
+          priceMin: '80',
+          priceMax: null,
+          vendor: 'AXS',
+          howFound: 'saw_listing',
+          sourceCategory: 'standard',
+          note: null,
+          submitterHandle: 'jordan',
+          submittedAt: '2026-06-22T00:00:00Z',
+          confirmsCount: 0,
+          confirmsNeeded: 2,
+          isSubmitter: false,
+        },
+      ],
+    })
+    render(
+      <EventDetailPriceBlock
+        event={buildBaseEvent({ priceByTier: [ga, vip] })}
+        reports={[]}
+        currentUserId={null}
+      />,
+    )
+    expect(screen.queryByTestId('corroboration-sheet-open')).toBeNull()
+    act(() => {
+      fireEvent.click(screen.getByText('Confirm price'))
+    })
+    expect(screen.getByTestId('corroboration-sheet-open')).toBeDefined()
+  })
+
   it('STATE #6 mixed-tier — headline tier + pending-only tier routes through MixedTierCard', () => {
     const headlineBlock = makeTierBlock({
       tier: 'GA',
@@ -470,11 +579,11 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     )
     // Headline tier renders.
     expect(screen.getByText('$25')).toBeDefined()
-    // Pending-only tier renders its price + the shipped per-tier pending tell
-    // via TierAlternateRow ("pending · 1/2").
-    expect(screen.getByText('$80')).toBeDefined()
-    // VIP shows up as alternate tier label.
-    expect(screen.getByText('VIP')).toBeDefined()
+    // Pending-only tier renders its price twice: the display-only TierAlternateRow
+    // tell ("pending · 1/2") and the actionable pending card below it.
+    expect(screen.getAllByText('$80')).toHaveLength(2)
+    // VIP shows up as alternate tier label, once per surface.
+    expect(screen.getAllByText('VIP')).toHaveLength(2)
   })
 
   it('STATE #7 all-tiers-pending — every tier is pending-only routes through PendingStack', () => {

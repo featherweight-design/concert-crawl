@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.31.1-beta',
+    date: 'Aug 3, 2026',
+    headline: 'Prices you send in stop vanishing.',
+    items: [
+      {
+        kind: 'fixed',
+        text: "A price you sent in for a show that already had one used to vanish; it now sits under the headline price on the show page, where anyone who's seen the same number can confirm it.",
+      },
+      {
+        kind: 'fixed',
+        text: 'The submit form no longer offers you a tier you already sent a price for, and the show page finally lets you edit that price instead of erroring.',
+      },
+    ],
+  },
+  {
     version: 'v0.31.0-beta',
     date: 'Aug 3, 2026',
     headline: 'Your year, stamped.',
