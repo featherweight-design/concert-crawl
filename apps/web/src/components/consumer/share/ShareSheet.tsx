@@ -214,6 +214,7 @@ export const ShareSheet = ({
                 // has any chance to swap the img — the entry is keyed by url,
                 // so a later read could describe a different shape's fetch.
                 track('share_card_rendered', {
+                  eventId: event.id,
                   ratio,
                   theme,
                   cacheHit: wasServedFromCache(imageUrl),

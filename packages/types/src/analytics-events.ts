@@ -81,6 +81,29 @@ export type ShareSurface = 'event-detail'
 /** The destinations the sheet actually offers (`lib/share/destinations.ts`). */
 export type ShareDestination = 'system' | 'save-image' | 'copy-link'
 
+/**
+ * The poster shapes and themes a card can be drawn in.
+ *
+ * Mirrored rather than imported: the sources are `ShareRatio` in
+ * `apps/web/.../share/definitions/ratios.ts` and `ThemeName` in
+ * `apps/web/src/theme/themes.ts`, and this package cannot depend on the web app.
+ * `analytics-events.contract.test.ts` in `apps/web` asserts both directions of
+ * assignability, so adding a shape or a theme there without updating these
+ * fails typecheck rather than silently emitting an unmodelled value.
+ */
+export type ShareCardRatio = 'story' | 'square' | 'link'
+
+export type ShareCardTheme =
+  | 'electric'
+  | 'jade'
+  | 'light'
+  | 'pulse'
+  | 'forge'
+  | 'bluenote'
+  | 'drip'
+  | 'cedar'
+  | 'gloss'
+
 // Poster sharing (#72). Kept in its own map rather than folded into
 // `MonetizationEventMap` because sharing is a Free-tier capability and does not
 // belong to the paid funnel — merging them would make "the monetization events"
@@ -94,7 +117,15 @@ export interface ShareEventMap {
     authed: boolean
   }
   share_destination_selected: { eventId: string; destination: ShareDestination }
-  share_card_rendered: { ratio: string; theme: string; cacheHit: boolean }
+  // `eventId` so a render joins back to the `share_sheet_opened` and
+  // `share_destination_selected` rows for the same show — without it the render
+  // count is a standalone total and the funnel cannot be walked end to end.
+  share_card_rendered: {
+    eventId: string
+    ratio: ShareCardRatio
+    theme: ShareCardTheme
+    cacheHit: boolean
+  }
   // `referrer` is the referring host only, never the full URL — a full referrer
   // can carry a query string belonging to somebody else's session.
   public_event_viewed: { eventId: string; referrer: string | null }

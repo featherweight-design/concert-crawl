@@ -96,6 +96,7 @@ describe('<ShareSheet /> — share analytics (#72)', () => {
     fireEvent.load(preview())
 
     expect(mockTrack).toHaveBeenCalledWith('share_card_rendered', {
+      eventId: EVENT_ID,
       ratio: 'story',
       theme: 'jade',
       cacheHit: false,
