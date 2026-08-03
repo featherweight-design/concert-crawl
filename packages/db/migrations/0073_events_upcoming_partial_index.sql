@@ -1,5 +1,7 @@
--- #1212 — every "shows still to come" query filters on status = 'upcoming'
--- together with a date bound and groups or filters by venue. Without a partial
+-- #1212 — the catalogue queries this index targets filter on the strict
+-- status = 'upcoming' predicate together with a date bound, and group or filter
+-- by venue. (Surfaces that also keep cancelled/postponed rows use the wider
+-- SCHEDULED_STATUSES set and are not served by this index.) Without a partial
 -- index those queries scan the full events table, and the past-dated share of
 -- that table only grows (Larimer Lounge is already 82% history).
 --
