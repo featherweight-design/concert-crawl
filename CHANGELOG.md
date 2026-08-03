@@ -1,3 +1,16 @@
+## [1.203.4](https://github.com/HartiganHM/concert-crawl/compare/v1.203.3...v1.203.4) (2026-08-03)
+
+
+### Bug Fixes
+
+* **crawler:** do not cache a failed browser launch ([e99d52c](https://github.com/HartiganHM/concert-crawl/commit/e99d52c171e0c8349fe33a51f6acc3386fcc5c81))
+* **crawler:** log a failed Chromium launch and clarify two test names ([69c964c](https://github.com/HartiganHM/concert-crawl/commit/69c964c7ebffcc87f745e7737fdde88eb2fe0c00))
+* **crawler:** memoize the browser thunk inside crawlVenue ([7c903e9](https://github.com/HartiganHM/concert-crawl/commit/7c903e91382495c56a9a2513da719504a04bc036))
+* **crawler:** survive and report a killed crawl run ([6682f76](https://github.com/HartiganHM/concert-crawl/commit/6682f761ac2968e68bd0d2aa9b07b97c906ace29)), closes [#1352](https://github.com/HartiganHM/concert-crawl/issues/1352) [#1353](https://github.com/HartiganHM/concert-crawl/issues/1353)
+* **web:** guard crawler-derived URLs on admin surfaces ([122fffc](https://github.com/HartiganHM/concert-crawl/commit/122fffcad04777a4fc04467d68271368666a15bc)), closes [#1264](https://github.com/HartiganHM/concert-crawl/issues/1264)
+* **web:** name icon-only guarded links with visually hidden text ([1532366](https://github.com/HartiganHM/concert-crawl/commit/1532366db9a0918d683cb98843fcfb0bc8e36db3))
+* **web:** space the pending stack off the headline card ([#1383](https://github.com/HartiganHM/concert-crawl/issues/1383)) ([3e6dd0f](https://github.com/HartiganHM/concert-crawl/commit/3e6dd0f14f52a2e59987bcb4f8e17dccc312fe7f))
+
 ## [1.203.3](https://github.com/HartiganHM/concert-crawl/compare/v1.203.2...v1.203.3) (2026-08-03)
 
 
