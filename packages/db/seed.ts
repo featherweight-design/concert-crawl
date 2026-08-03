@@ -430,8 +430,11 @@ export const SEED_VENUES: NewVenue[] = [
     crawlDelayMs: 3000,
     // Next.js, but the full event list is server-rendered into __NEXT_DATA__,
     // so a plain fetch sees everything and there is nothing to wait on past
-    // the document. Roughly a third of the calendar is burlesque and comedy;
-    // the LLM's isConcert=false verdict hides those via hiddenFromConsumer.
+    // the document. The body is empty until hydration, so there is no JSON-LD
+    // and no markup for the LLM to read — the Ticketure extractor reads the
+    // hydration payload instead (#1340). Roughly a third of the calendar is
+    // burlesque and comedy; Ticketure's own non-Music category sets
+    // isConcert=false, which hides those via hiddenFromConsumer.
     crawlMode: 'http',
     crawlWaitUntil: 'domcontentloaded' as const,
     address: '1338 1st St, Denver, CO 80204',

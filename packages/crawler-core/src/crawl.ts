@@ -24,6 +24,7 @@ import {
   type FetchResult,
 } from './lib/fetcher.js'
 import { extractJsonLd } from './lib/extractors/json-ld.js'
+import { extractTicketure } from './lib/extractors/ticketure.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
 import { calculateCost } from './lib/cost.js'
 import { dispatch } from './lib/fetchers/index.js'
@@ -200,6 +201,13 @@ async function runExtraction(
   )
   let strategy: 'structured_data' | 'llm' = 'structured_data'
   let tokenUsage: TokenUsage | undefined
+  // Ticketure venues serve an empty body and hydrate from `__NEXT_DATA__`, so
+  // they carry no JSON-LD and the LLM sees a page with no listings — it
+  // honestly reports zero (#1340). Read the hydration payload before paying
+  // for an LLM call that cannot succeed. A no-op on every other venue.
+  if (normalizedEvents.length === 0) {
+    normalizedEvents = extractTicketure(html, finalUrl, timeZone)
+  }
   if (normalizedEvents.length === 0) {
     strategy = 'llm'
     const llmResult = await extractWithLlm(html, finalUrl)
@@ -508,10 +516,18 @@ export async function crawlVenue(
       // before deciding to fall back — avoids paying an LLM call on HTTP markup
       // that a JS-rendered venue won't populate anyway.
       if (venue.crawlMode === null && resolvedMode === 'http') {
+        // Same pre-browser structured check as runExtraction: JSON-LD first,
+        // then the Ticketure hydration payload. Finding either means the HTTP
+        // markup already carries the listings, so the browser fetch below is
+        // pure cost.
         const httpJsonLdEvents = extractJsonLd(html, finalUrl, venue.timezone)
-        if (httpJsonLdEvents.length > 0) {
+        const httpStructuredEvents =
+          httpJsonLdEvents.length > 0
+            ? httpJsonLdEvents
+            : extractTicketure(html, finalUrl, venue.timezone)
+        if (httpStructuredEvents.length > 0) {
           extraction = {
-            normalizedEvents: httpJsonLdEvents,
+            normalizedEvents: httpStructuredEvents,
             strategy: 'structured_data' as const,
             tokenUsage: undefined,
           }

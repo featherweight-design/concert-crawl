@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.30.0-beta',
+    date: 'Aug 3, 2026',
+    headline: 'Meow Wolf is on the calendar.',
+    items: [
+      {
+        kind: 'fixed',
+        text: 'Meow Wolf Denver has been listed for a while and showing nothing, which is a strange way to run a venue page. Their site builds its calendar in the browser after the page loads, and we were reading the empty version. We read the real list now — 26 shows through November, doors times and opening acts included. The burlesque and comedy nights they also run are in there but stay off the calendar, because you came here for concerts.',
+      },
+    ],
+  },
+  {
     version: 'v0.29.0-beta',
     date: 'Aug 2, 2026',
     headline: 'Shows you can actually post.',
