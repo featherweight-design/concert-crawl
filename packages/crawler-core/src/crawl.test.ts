@@ -1709,6 +1709,22 @@ describe('crawlVenue — crawlMode orchestration', () => {
 
       expect(getBrowser).toHaveBeenCalled()
     })
+
+    // The type documents a thunk that launches "on first use", so crawlVenue
+    // memoizes it rather than trusting every caller to. A provider written as
+    // a bare `() => chromium.launch()` must not be able to launch — and leak —
+    // a second browser if a future edit adds another resolve site to the same
+    // call.
+    it('resolves the provider at most once per crawl', async () => {
+      const venue = seedVenue({ crawlMode: null })
+      mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+      mockFetchPage.mockResolvedValue(FETCH_RESULT)
+      const getBrowser = vi.fn().mockResolvedValue(mockBrowser)
+
+      await crawlVenue(venue.id, getBrowser)
+
+      expect(getBrowser.mock.calls.length).toBeLessThanOrEqual(1)
+    })
   })
 
   it('does not overwrite a stored crawlMode on subsequent crawls', async () => {

@@ -261,8 +261,16 @@ export type CrawlVenueResult = CrawlRun & { insertedEventIds: string[] }
 // gets one.
 export type BrowserSource = Browser | (() => Promise<Browser>)
 
-const resolveBrowser = async (source: BrowserSource): Promise<Browser> =>
-  typeof source === 'function' ? source() : source
+// Memoized per crawlVenue call so the "first use" in the type's contract is
+// enforced here rather than assumed of the caller. A single call can reach a
+// resolve site more than once (crawlMode: null → HTTP succeeds → no structured
+// data → browser fallback), and a caller passing a bare
+// `() => chromium.launch()` would otherwise launch and leak a second browser.
+const memoizeBrowser = (source: BrowserSource): (() => Promise<Browser>) => {
+  if (typeof source !== 'function') return async () => source
+  let pending: Promise<Browser> | null = null
+  return () => (pending ??= source())
+}
 
 export async function crawlVenue(
   venueId: string,
@@ -277,6 +285,7 @@ export async function crawlVenue(
   // normal + scheduled crawls.
   force = false,
 ): Promise<CrawlVenueResult> {
+  const getBrowser = memoizeBrowser(browser)
   const id = crawlRunId ?? crypto.randomUUID()
   const startedAt = Date.now()
   // Date snapshot captured up-front so the stale-event detection update can
@@ -416,7 +425,7 @@ export async function crawlVenue(
       if (venue.crawlMode === 'browser') {
         fetchResult = await fetchPage(
           venue.websiteUrl,
-          await resolveBrowser(browser),
+          await getBrowser(),
           venue.crawlDelayMs,
           venue.crawlWaitUntil,
           venue.crawlWaitForSelector ?? undefined,
@@ -441,7 +450,7 @@ export async function crawlVenue(
           // auto-detect: HTTP threw — fall back to browser
           fetchResult = await fetchPage(
             venue.websiteUrl,
-            await resolveBrowser(browser),
+            await getBrowser(),
             venue.crawlDelayMs,
             venue.crawlWaitUntil,
             venue.crawlWaitForSelector ?? undefined,
@@ -548,7 +557,7 @@ export async function crawlVenue(
           // which is intentional: each request to the venue's origin deserves its own delay.
           const browserResult = await fetchPage(
             venue.websiteUrl,
-            await resolveBrowser(browser),
+            await getBrowser(),
             venue.crawlDelayMs,
             venue.crawlWaitUntil,
             venue.crawlWaitForSelector ?? undefined,
