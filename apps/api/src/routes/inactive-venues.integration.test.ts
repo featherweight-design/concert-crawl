@@ -18,8 +18,13 @@ import {
 
 const app = createApp()
 
-const FUTURE = '2027-09-12'
-const PAST = '2020-09-12'
+// Derived from the clock rather than hard-coded so a fixture can never drift
+// onto the wrong side of "today" as the calendar advances.
+const isoDaysFromNow = (days: number): string =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+const FUTURE = isoDaysFromNow(365)
+const PAST = isoDaysFromNow(-365)
 
 // Parsed rather than cast: an `as` asserts a shape without checking it, so a
 // response-shape regression would surface as a confusing assertion failure
