@@ -77,4 +77,28 @@ describe('<PublicEventView /> (#72)', () => {
 
     expect(mockTrack).toHaveBeenCalledTimes(1)
   })
+
+  // The guard is keyed by eventId, not a bare boolean. React can keep this
+  // instance alive across a client-side navigation between two mirrors, and a
+  // once-only flag would then swallow the view of every show after the first.
+  it('records a second show when the id changes under the same instance', () => {
+    const OTHER_ID = '99999999-8888-4777-8666-555555555555'
+    const { rerender } = render(<PublicEventView eventId={EVENT_ID} />)
+
+    rerender(<PublicEventView eventId={OTHER_ID} />)
+
+    expect(mockTrack).toHaveBeenCalledTimes(2)
+    expect(mockTrack).toHaveBeenLastCalledWith('public_event_viewed', {
+      eventId: OTHER_ID,
+      referrer: null,
+    })
+  })
+
+  it('does not re-record the same show on an unrelated re-render', () => {
+    const { rerender } = render(<PublicEventView eventId={EVENT_ID} />)
+
+    rerender(<PublicEventView eventId={EVENT_ID} />)
+
+    expect(mockTrack).toHaveBeenCalledTimes(1)
+  })
 })

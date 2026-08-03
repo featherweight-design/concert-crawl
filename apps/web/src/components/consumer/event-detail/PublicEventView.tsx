@@ -35,13 +35,17 @@ const referrerHost = (): string | null => {
 }
 
 export const PublicEventView = ({ eventId }: PublicEventViewProps) => {
-  // A view is one event per mount. Strict Mode runs effects twice in
-  // development, and without this guard every local page load would double-count.
-  const fired = useRef(false)
+  // A view is one event per show. Strict Mode runs effects twice in development,
+  // and without a guard every local page load would double-count.
+  //
+  // Keyed by `eventId` rather than a bare boolean: React can reuse this instance
+  // across a client-side navigation between two mirrors, and a boolean that only
+  // ever flips once would swallow the view of every show after the first.
+  const firedFor = useRef<string | null>(null)
 
   useEffect(() => {
-    if (fired.current) return
-    fired.current = true
+    if (firedFor.current === eventId) return
+    firedFor.current = eventId
     track('public_event_viewed', { eventId, referrer: referrerHost() })
   }, [eventId])
 
