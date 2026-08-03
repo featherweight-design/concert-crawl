@@ -128,10 +128,12 @@ export const events = pgTable(
     // Written by the crawler wherever supporting_artists is written;
     // backfilled by scripts/2026-07-18-events-canonical-supporting-backfill.ts.
     canonicalSupporting: text('canonical_supporting').array(),
-    // canonicalizeArtist() applied element-wise to headliners — the
-    // equality-match surface for artist-page attribution (#1203), so a
+    // The set-like match surface for artist-page attribution (#1203), so a
     // co-headliner resolves to their own artist page instead of appearing as
-    // an opener. Written by the crawler wherever headliners is written.
+    // an opener. Written by the crawler wherever headliners is written, via
+    // canonicalizeSupporting() — which dedupes, sorts and drops empties, so
+    // this array is NOT positionally aligned with headliners. Match it with
+    // the overlap operator; never index into it by position.
     canonicalHeadliners: text('canonical_headliners').array(),
     // Stale-event detection (issue #607). lastSeenAt is bumped to NOW() on
     // every successful crawl run that returns this event row. firstMissingAt

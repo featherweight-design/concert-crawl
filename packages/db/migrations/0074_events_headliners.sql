@@ -9,10 +9,13 @@
 -- 1. `events.headliners`: every act headlining the bill, in billing order,
 --    INCLUDING the primary act already stored in `artist`. Invariant:
 --    headliners[0] = artist.
--- 2. `events.canonical_headliners`: canonicalize_artist applied element-wise
---    to headliners — the equality-match surface for artist attribution.
+-- 2. `events.canonical_headliners`: the canonicalized match surface for
+--    artist attribution. The writer dedupes and sorts, so it is set-like and
+--    not positionally aligned with headliners.
 -- 3. A GIN index on canonical_headliners, mirroring the existing one on
---    canonical_supporting, so `= ANY(canonical_headliners)` stays indexable.
+--    canonical_supporting. Match with the overlap operator
+--    (`canonical_headliners && ARRAY[...]`), which GIN can serve —
+--    `= ANY(canonical_headliners)` cannot use this index.
 --
 -- Both columns are nullable with no default: this is the expand phase, and a
 -- separate PR backfills historical multi-headliner bills with an LLM pass.

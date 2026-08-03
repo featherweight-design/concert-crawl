@@ -718,9 +718,10 @@ export async function crawlVenue(
             event.supportingArtists ?? [],
           ),
           // Lock-step pair with headliners (#1203), through the same
-          // element-wise canonicalizer that backs canonical_supporting. Any
-          // code path that writes headliners MUST also write
-          // canonical_headliners.
+          // canonicalizer that backs canonical_supporting. That canonicalizer
+          // dedupes and sorts, so this is a set-like match surface, not a
+          // positional mirror of headliners. Any code path that writes
+          // headliners MUST also write canonical_headliners.
           canonicalHeadliners: canonicalizeSupporting(resolveHeadliners(event)),
           canonicalTitle: canonicalizeTitle(event.title),
           sourceHash: hashEvent({
