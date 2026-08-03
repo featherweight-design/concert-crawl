@@ -1,3 +1,16 @@
+# [1.204.0](https://github.com/HartiganHM/concert-crawl/compare/v1.203.6...v1.204.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **crawler-core:** alias db subpath in the integration vitest config ([eacdb23](https://github.com/HartiganHM/concert-crawl/commit/eacdb239e240320461b56e829118161e32897c28))
+* **db:** make an empty statuses list unrepresentable in upcomingEventConditions ([3f0740b](https://github.com/HartiganHM/concert-crawl/commit/3f0740b2c3406270f2e0834abd1338729dc5fa8d))
+
+
+### Features
+
+* **db:** shared upcoming-events condition helper + partial index ([ac447b5](https://github.com/HartiganHM/concert-crawl/commit/ac447b57f70d8669a716aec2a7cb6ee46809f09f)), closes [#1201](https://github.com/HartiganHM/concert-crawl/issues/1201) [#1212](https://github.com/HartiganHM/concert-crawl/issues/1212)
+
 ## [1.203.6](https://github.com/HartiganHM/concert-crawl/compare/v1.203.5...v1.203.6) (2026-08-03)
 
 
