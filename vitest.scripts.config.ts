@@ -27,6 +27,12 @@ export default defineConfig({
         __dirname,
         'packages/crawler-core/src/index.ts',
       ),
+      // crawler-core's canonical-artist shim re-exports from
+      // @concert-crawl/types, which has no built entry on a clean checkout.
+      '@concert-crawl/types': path.resolve(
+        __dirname,
+        'packages/types/src/index.ts',
+      ),
     },
   },
   test: {
