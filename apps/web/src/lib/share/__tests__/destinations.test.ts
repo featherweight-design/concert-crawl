@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
+  canShareFiles,
   canSystemShare,
   copyLink,
   posterFileName,
@@ -80,6 +81,42 @@ describe('canSystemShare', () => {
   it('is false where navigator.share does not exist', () => {
     expect(canSystemShare({})).toBe(false)
     expect(canSystemShare({ share: async () => undefined })).toBe(true)
+  })
+})
+
+describe('canShareFiles', () => {
+  const share = async () => undefined
+
+  // Desktop Safari's exact shape: a share sheet that takes text and refuses
+  // files. `canSystemShare` says yes to it, which is why the two are separate.
+  it('is false for a share sheet that refuses files', () => {
+    expect(canShareFiles({ share, canShare: () => false })).toBe(false)
+    expect(canSystemShare({ share, canShare: () => false })).toBe(true)
+  })
+
+  it('is false where canShare is absent entirely', () => {
+    expect(canShareFiles({ share })).toBe(false)
+  })
+
+  it('is true only when the sheet accepts a PNG', () => {
+    expect(
+      canShareFiles({
+        share,
+        canShare: (data) => data.files?.[0]?.type === 'image/png',
+      }),
+    ).toBe(true)
+  })
+
+  it('reports no support rather than throwing when the probe throws', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    expect(
+      canShareFiles({
+        share,
+        canShare: () => {
+          throw new Error('nope')
+        },
+      }),
+    ).toBe(false)
   })
 })
 

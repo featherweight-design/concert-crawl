@@ -2,10 +2,7 @@
 
 import { useCallback, useMemo, useState } from 'react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import {
-  canSystemShare,
-  type ShareCapabilities,
-} from '@/lib/share/destinations'
+import { canShareFiles, type ShareCapabilities } from '@/lib/share/destinations'
 import { track } from '@/lib/analytics'
 
 const COPY = CONSUMER_COPY.passport
@@ -65,7 +62,10 @@ export const PassportActions = ({
   return (
     <div className="flex flex-col items-center gap-2">
       <div className="flex flex-wrap items-center justify-center gap-2">
-        {canSystemShare(caps) && (
+        {/* Gated on file support, not on the sheet merely existing: this card
+            has no URL to fall back to, so a button that cannot carry the image
+            has nothing left to do but apologise. */}
+        {canShareFiles(caps) && (
           <button
             type="button"
             onClick={() => void share()}

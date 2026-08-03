@@ -117,6 +117,26 @@ describe('PassportActions', () => {
     expect(save).toHaveAttribute('download', COPY.downloadName)
   })
 
+  // Desktop Safari has `navigator.share` but rejects files. Offering the
+  // button there promises something this card cannot do — it has no URL to
+  // fall back to — so the only honest outcome would be an apology.
+  it('hides the share button on a sheet that takes text but not files', () => {
+    render(
+      <PassportActions
+        imageUrl="/passport/square"
+        capabilities={{
+          share: () => Promise.resolve(),
+          canShare: () => false,
+        }}
+      />,
+    )
+
+    expect(
+      screen.queryByRole('button', { name: COPY.shareLabel }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: COPY.saveLabel })).toBeVisible()
+  })
+
   it('records a save as its own destination', async () => {
     render(<PassportActions imageUrl="/passport/square" capabilities={{}} />)
 

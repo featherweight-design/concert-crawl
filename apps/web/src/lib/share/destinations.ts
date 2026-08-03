@@ -66,8 +66,41 @@ export const posterFileName = (event: PosterEvent): string => {
   return `${slug === '' ? 'concert-crawl' : slug}.png`
 }
 
+/**
+ * Enough to open the OS sheet at all. Correct for any share that can degrade
+ * to a URL — see `systemShare`, which does exactly that.
+ */
 export const canSystemShare = (caps: ShareCapabilities): boolean =>
   typeof caps.share === 'function'
+
+/**
+ * Enough to hand the OS sheet a *file*.
+ *
+ * `navigator.share` existing says nothing about file support: desktop Safari
+ * and several Android versions ship text/URL sharing and reject `files`
+ * outright. A surface with a URL fallback can discover that at share time and
+ * degrade, but one whose only payload is the image — the Passport, whose sole
+ * URL sits behind the owner's session — would fail in the user's face instead.
+ * Those surfaces gate the button on this.
+ *
+ * The probe is an empty PNG: `canShare` judges the type and count of files,
+ * never their contents, so a truthful answer is available before the real
+ * bytes have been fetched.
+ */
+export const canShareFiles = (caps: ShareCapabilities): boolean => {
+  if (typeof caps.share !== 'function') return false
+  if (typeof caps.canShare !== 'function') return false
+  if (typeof File !== 'function') return false
+  try {
+    return caps.canShare({
+      files: [new File([], 'probe.png', { type: 'image/png' })],
+    })
+  } catch (err) {
+    // Feature detection must never be the thing that breaks the page.
+    console.warn('[share] file-share probe threw', { err })
+    return false
+  }
+}
 
 /**
  * Hand the poster to the OS share sheet.
