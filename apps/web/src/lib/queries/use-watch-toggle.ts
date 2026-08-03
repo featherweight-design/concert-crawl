@@ -56,7 +56,7 @@ export function useWatchToggle() {
         savedAt: new Date().toISOString(),
         savedPrice: null,
         currentPrice: null,
-        sourceKind: null,
+        priceSourceCategory: null,
         eventStatus: 'upcoming',
         watchStatus: 'live',
         updatedAt: new Date().toISOString(),

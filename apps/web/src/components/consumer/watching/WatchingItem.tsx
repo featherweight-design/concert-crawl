@@ -347,7 +347,7 @@ export function WatchingItem({ show, density, onRemove }: WatchingItemProps) {
 
         {/* Source pill — only meaningful when a live price is shown */}
         {!isSoldOut && show.currentPrice !== null && (
-          <SourcePill sourceKind={show.sourceKind} />
+          <SourcePill priceSourceCategory={show.priceSourceCategory} />
         )}
       </div>
 

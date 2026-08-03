@@ -1075,7 +1075,9 @@ export interface WatchingShow {
   // Dollars — the cheapest corroborated tier, falling back to
   // events.ticketPriceMin for events with no corroborated submissions.
   currentPrice: number | null
-  sourceKind: 'primary' | 'resale' | 'community' | null
+  // Where `currentPrice` came from, read off the same headline. Null means a
+  // crawled price with no corroborated submission, which renders no chip.
+  priceSourceCategory: SourceCategory | null
   eventStatus: 'upcoming' | 'cancelled' | 'postponed'
   watchStatus: 'live' | 'soldout'
   updatedAt: string // ISO — last time event row was updated

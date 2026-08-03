@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { z } from 'zod'
 
 const { authState } = vi.hoisted(() => ({
   authState: {
@@ -38,6 +39,28 @@ function setAuth(userId = 'user_watch_test'): void {
 
 function clearAuth(): void {
   authState.current = null
+}
+
+// Used by the provenance tests below. The rest of this file still casts, which
+// is why these parse instead: a cast turns a 500 or a renamed field into
+// `undefined`, which quietly satisfies an assertion expecting null.
+const provenanceResponse = z.object({
+  success: z.boolean(),
+  data: z.array(
+    z.object({
+      currentPrice: z.number().nullable(),
+      priceSourceCategory: z
+        .enum(['boxoffice', 'standard', 'resale'])
+        .nullable(),
+    }),
+  ),
+})
+
+async function readProvenance(
+  res: Response,
+): Promise<z.infer<typeof provenanceResponse>> {
+  expect(res.status).toBe(200)
+  return provenanceResponse.parse(await res.json())
 }
 
 describe('GET /v1/watching', () => {
@@ -156,6 +179,65 @@ describe('GET /v1/watching', () => {
       data: { currentPrice: number | null }[]
     }
     expect(body.data[0]?.currentPrice).toBe(68)
+  })
+
+  // The provenance chip has to describe the price rendered beside it. This
+  // route used to read the price off the corroborated headline but the
+  // provenance off events.priceSource — the crawler's origin for a different
+  // price — so a box-office headline could render as "community", or as
+  // nothing at all. Same class as #1364/#1365/#1366, which fixed the price and
+  // the staleness timestamp and left provenance behind.
+  it('reports the headline price category, not the event scalar price source', async () => {
+    setAuth('user_provenance')
+    const venue = await seedVenue({ name: 'Bluebird', slug: 'bluebird' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Jeff Rosenstock',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-10-04',
+      status: 'upcoming',
+      ticketPriceMin: '125.00',
+      // The scalar disagrees with the corroborated headline on purpose.
+      priceSource: 'seatgeek',
+    })
+    await seedPriceSubmission(event.id, 'user_a', {
+      tier: 'Reserved',
+      priceMin: '125',
+      sourceCategory: 'resale',
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, 'user_b', {
+      tier: 'GA',
+      priceMin: '68',
+      sourceCategory: 'boxoffice',
+      status: 'corroborated',
+    })
+    await seedUserEvent('user_provenance', event.id, { status: 'watching' })
+
+    const body = await readProvenance(await app.request('/v1/watching'))
+    // boxoffice was unrepresentable before this: mapSourceKind had no branch
+    // for it, so the venue's own price claimed to be a fan submission.
+    expect(body.data[0]?.currentPrice).toBe(68)
+    expect(body.data[0]?.priceSourceCategory).toBe('boxoffice')
+  })
+
+  it('reports a null category for a crawled price with no submissions', async () => {
+    setAuth('user_crawled')
+    const venue = await seedVenue({ name: 'Marquis', slug: 'marquis' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Militarie Gun',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-11-05',
+      status: 'upcoming',
+      ticketPriceMin: '22.00',
+      priceSource: 'structured_data',
+    })
+    await seedUserEvent('user_crawled', event.id, { status: 'watching' })
+
+    const body = await readProvenance(await app.request('/v1/watching'))
+    // Null is the handoff's `primary`: a crawled price renders no chip.
+    expect(body.data[0]?.priceSourceCategory).toBeNull()
   })
 
   it('falls back to ticketPriceMin when no corroborated submissions exist', async () => {

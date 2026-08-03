@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildPriceByTierMap,
   lowestHeadlineObservedAt,
+  lowestHeadlineSourceCategory,
   lowestHeadlinePrice,
   resolveDisplayPrice,
   type CorroboratedSubmissionRow,
@@ -162,5 +163,76 @@ describe('lowestHeadlineObservedAt', () => {
 
     expect(lowestHeadlinePrice(blocks)).toBe(68)
     expect(lowestHeadlineObservedAt(blocks)).toBe('2026-06-01T00:00:00.000Z')
+  })
+})
+
+describe('lowestHeadlineSourceCategory', () => {
+  it('is null when nothing is corroborated', () => {
+    expect(lowestHeadlineSourceCategory([])).toBeNull()
+  })
+
+  // Null means "no corroborated submission" — a crawled price, the handoff's
+  // `primary`, which renders no chip. It never means "a submission that forgot
+  // its category": a legacy null is backfilled by `deriveSourceCategory`, so
+  // any headline that exists at all carries one.
+  it('still resolves a category when the submission predates the column', () => {
+    const blocks =
+      buildPriceByTierMap([
+        row({
+          id: 'a',
+          eventId: 'evt-1',
+          tier: 'GA',
+          priceMin: '68',
+          sourceCategory: null,
+        }),
+      ]).get('evt-1') ?? []
+
+    expect(lowestHeadlineSourceCategory(blocks)).not.toBeNull()
+  })
+
+  it('reads boxoffice off the cheapest tier', () => {
+    const blocks =
+      buildPriceByTierMap([
+        row({
+          id: 'a',
+          eventId: 'evt-1',
+          tier: 'GA',
+          priceMin: '68',
+          sourceCategory: 'boxoffice',
+        }),
+      ]).get('evt-1') ?? []
+
+    expect(lowestHeadlineSourceCategory(blocks)).toBe('boxoffice')
+  })
+
+  // The chip must describe the price beside it. All three helpers read the same
+  // headline, so they can never disagree about which price they are describing
+  // — the bug this replaces sourced the price and its provenance separately.
+  it('describes the same block lowestHeadlinePrice picked', () => {
+    const blocks =
+      buildPriceByTierMap([
+        row({
+          id: 'a',
+          eventId: 'evt-1',
+          tier: 'Reserved',
+          priceMin: '125',
+          sourceCategory: 'resale',
+          createdAt: new Date('2026-07-01T00:00:00Z'),
+          updatedAt: new Date('2026-07-01T00:00:00Z'),
+        }),
+        row({
+          id: 'b',
+          eventId: 'evt-1',
+          tier: 'GA',
+          priceMin: '68',
+          sourceCategory: 'boxoffice',
+          createdAt: new Date('2026-06-01T00:00:00Z'),
+          updatedAt: new Date('2026-06-01T00:00:00Z'),
+        }),
+      ]).get('evt-1') ?? []
+
+    expect(lowestHeadlinePrice(blocks)).toBe(68)
+    expect(lowestHeadlineObservedAt(blocks)).toBe('2026-06-01T00:00:00.000Z')
+    expect(lowestHeadlineSourceCategory(blocks)).toBe('boxoffice')
   })
 })

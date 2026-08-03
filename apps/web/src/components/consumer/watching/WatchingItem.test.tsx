@@ -62,7 +62,7 @@ const baseShow: WatchingShow = {
   savedAt: new Date().toISOString(),
   savedPrice: 45,
   currentPrice: 45,
-  sourceKind: 'primary',
+  priceSourceCategory: null,
   eventStatus: 'upcoming',
   watchStatus: 'live',
   updatedAt: new Date().toISOString(),

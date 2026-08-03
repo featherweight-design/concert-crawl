@@ -55,7 +55,7 @@ const watchedShow = (eventId: string): WatchingShow => ({
   savedAt: '2026-07-19T00:00:00Z',
   savedPrice: null,
   currentPrice: null,
-  sourceKind: null,
+  priceSourceCategory: null,
   eventStatus: 'upcoming',
   watchStatus: 'live',
   attendingAt: null,

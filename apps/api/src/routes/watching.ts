@@ -9,6 +9,7 @@ import { apiLogger } from '../lib/logger.js'
 import {
   loadPriceByTierByEventId,
   lowestHeadlineObservedAt,
+  lowestHeadlineSourceCategory,
   lowestHeadlinePrice,
 } from '../lib/price-aggregation/index.js'
 import { releaseWatch } from '../lib/user-events.js'
@@ -21,15 +22,6 @@ const uuidSchema = z.string().uuid()
 export const watchingRouter = new Hono()
 
 watchingRouter.use('*', clerkMiddleware())
-
-function mapSourceKind(
-  priceSource: string | null,
-): 'primary' | 'resale' | 'community' | null {
-  if (!priceSource) return null
-  if (priceSource === 'seatgeek') return 'resale'
-  if (priceSource === 'community') return 'community'
-  return 'primary'
-}
 
 function resolveWatchStatus(
   eventStatus: 'upcoming' | 'cancelled' | 'postponed',
@@ -66,7 +58,6 @@ watchingRouter.get('/', async (ctx) => {
       ticketUrl: events.ticketUrl,
       ticketLinks: events.ticketLinks,
       ticketPriceMin: events.ticketPriceMin,
-      priceSource: events.priceSource,
       eventStatus: events.status,
       imageUrl: events.imageUrl,
       updatedAt: events.updatedAt,
@@ -111,7 +102,12 @@ watchingRouter.get('/', async (ctx) => {
     currentPrice:
       lowestHeadlinePrice(priceByTierByEventId.get(row.eventId) ?? []) ??
       parsePrice(row.ticketPriceMin ?? null),
-    sourceKind: mapSourceKind(row.priceSource ?? null),
+    // Reads the same headline as currentPrice above, so the provenance chip
+    // always describes the price rendered beside it. Sourcing it from the
+    // event scalar instead let the two disagree (#1364/#1365/#1366 class).
+    priceSourceCategory: lowestHeadlineSourceCategory(
+      priceByTierByEventId.get(row.eventId) ?? [],
+    ),
     eventStatus: row.eventStatus,
     watchStatus: resolveWatchStatus(row.eventStatus),
     updatedAt: row.updatedAt.toISOString(),

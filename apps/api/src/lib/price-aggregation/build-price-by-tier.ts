@@ -120,6 +120,20 @@ export function lowestHeadlineObservedAt(
   return lowestHeadline(blocks)?.observedAt ?? null
 }
 
+/**
+ * Where the price a list surface shows came from, for the provenance chip.
+ * Null for crawler-sourced prices, which have no submission to read a category
+ * from — that null is the row's "no chip" case, not a fourth category.
+ *
+ * Reads the same headline as `lowestHeadlinePrice`, so the chip can never
+ * describe a different price than the one rendered beside it.
+ */
+export function lowestHeadlineSourceCategory(
+  blocks: TierPriceBlock[],
+): SourceCategory | null {
+  return lowestHeadline(blocks)?.sourceCategory ?? null
+}
+
 function lowestHeadline(blocks: TierPriceBlock[]): TierHeadline | null {
   for (const block of blocks) {
     if (

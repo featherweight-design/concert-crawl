@@ -10,6 +10,7 @@ export { pickTierHeadline, type TierRow } from './pick-tier-headline.js'
 export {
   buildPriceByTierMap,
   lowestHeadlineObservedAt,
+  lowestHeadlineSourceCategory,
   lowestHeadlinePrice,
   resolveDisplayPrice,
   type CorroboratedSubmissionRow,

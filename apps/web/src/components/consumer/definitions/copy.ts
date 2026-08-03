@@ -757,6 +757,14 @@ export const CONSUMER_COPY = {
         `Last checked ${relTime}, could be stale`,
       stalePrefix: 'Stale · ',
     },
+    sourcePill: {
+      boxofficeLabel: 'Box office',
+      boxofficeTooltip: 'Box office price straight from the venue',
+      standardLabel: 'Community',
+      standardTooltip: 'Community price, submitted by a fan',
+      resaleLabel: 'Resale',
+      resaleTooltip: 'Resale price from the secondary market, not face value',
+    },
     // The signed-out teaching state. Distinct from `watchingEmpty*` above,
     // which is the signed-in "no shows yet" state for a different person.
     signedOut: {
