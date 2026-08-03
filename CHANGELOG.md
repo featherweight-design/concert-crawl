@@ -1,3 +1,10 @@
+## [1.203.2](https://github.com/HartiganHM/concert-crawl/compare/v1.203.1...v1.203.2) (2026-08-03)
+
+
+### Bug Fixes
+
+* **web:** surface pending prices on tiers that already have a headline ([#1379](https://github.com/HartiganHM/concert-crawl/issues/1379)) ([f78b425](https://github.com/HartiganHM/concert-crawl/commit/f78b4258fa42c93b6c860eace8f8a6660278169a)), closes [#1377](https://github.com/HartiganHM/concert-crawl/issues/1377) [#1378](https://github.com/HartiganHM/concert-crawl/issues/1378)
+
 ## [1.203.1](https://github.com/HartiganHM/concert-crawl/compare/v1.203.0...v1.203.1) (2026-08-03)
 
 
