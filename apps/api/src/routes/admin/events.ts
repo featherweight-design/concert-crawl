@@ -675,7 +675,7 @@ eventsAdminRouter.get(
         firstMissingAt: events.firstMissingAt,
         venueId: events.venueId,
         venueName: venues.name,
-        // Admin-editable (#992): the tour kicker can only ever be populated
+        // Admin-editable (#992): the tour kicker is only ever auto-populated
         // by the LLM extractor, so JSON-LD venues need a manual entry path.
         tourName: events.tourName,
         isSoldOut: isSoldOutExpr(),
@@ -713,8 +713,8 @@ eventsAdminRouter.patch(
       ticketPriceMin: z.string().nullable().optional(),
       ticketPriceMax: z.string().nullable().optional(),
       genre: z.array(z.string()).nullable().optional(),
-      // #992 — the tour kicker is only ever populated on the LLM extraction
-      // path, so any JSON-LD venue needs an admin to set it by hand. A blank
+      // #992 — the tour kicker is only ever auto-populated on the LLM
+      // extraction path, so a JSON-LD venue needs an admin to set it. A blank
       // (or whitespace-only) string clears the value to NULL rather than
       // persisting '' — the consumer UI keys the kicker off `tourName !== null`.
       tourName: z

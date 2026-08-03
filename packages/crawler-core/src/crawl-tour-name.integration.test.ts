@@ -4,8 +4,8 @@ import type { Browser } from 'playwright'
 import { db, events, venues } from '@concert-crawl/db'
 import { crawlVenue } from './crawl.js'
 
-// #992 — `tour_name` is admin-editable. It is only ever populated by the LLM
-// extractor (schema.org JSON-LD has no tour-name field), so a JSON-LD re-crawl
+// #992 — `tour_name` is admin-editable. It is only ever auto-populated by the
+// LLM extractor (JSON-LD has no tour-name field), so a JSON-LD re-crawl
 // always arrives with NULL. The upsert must therefore COALESCE rather than take
 // excluded.tour_name wholesale, or the nightly crawl would wipe an admin's
 // manual entry.
