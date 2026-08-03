@@ -1,0 +1,319 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Event CTA + CCTip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  a { color: #4a3fd1; } a:hover { color: #2d24a8; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="admin-primitives.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="history-data.jsx"></script>
+<script type="text/babel" src="guide-data.jsx"></script>
+<script type="text/babel" src="cc-tip.jsx"></script>
+<script type="text/babel" src="going-cta.jsx"></script>
+<script type="text/babel" src="event-cta.jsx"></script>
+<script type="text/babel" src="guide-admin.jsx"></script>
+<script type="text/babel" src="admin-tip-surfaces.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEME_KEYS, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard, DCPostIt } = window;
+const { IOSDevice } = window;
+const { CommitBlock, EventDetailTop, EventTitleBlock, CTA_DIRECTIONS } = window;
+const { CCTip, CCTipPopover, CCTipSheet, TIP_CONTENT, TipInfoIcon } = window;
+const { GoingButton, WatchingEye, EyeIcon } = window;
+const { TipSpecimen } = window;
+const { GuideAdminBlock, ChipStateLegend } = window;
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio, TweakToggle } = window;
+
+const SHOW = { id: "e01", artist: "All Under Heaven", support: "Strainer", venue: "The Junkyard", dateLabel: "Sat, Aug 15", showTime: "8:00 PM", dateISO: "2026-08-16T02:00:00Z", tags: ["world", "folk"] };
+const NARROW = 320, PHONE = 390, DESK = 900;
+
+// ── Stages ───────────────────────────────────────────────────
+function PhoneStage({ theme = "electric", width = PHONE, height = 720, hostId, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>
+        <div id={hostId} style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "var(--bg)" }}>{children}</div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function DeskStage({ theme = "electric", width = DESK, height, pad = 0, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", minHeight: height, background: "var(--bg)", padding: pad, overflow: "hidden" }}>{children}</div>
+    </ThemeProvider>
+  );
+}
+function BareStage({ theme = "electric", pad = 24, width, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad, display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
+        <div style={{ width: width || "100%" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ── "As shipped" reproduction — the thing we're fixing ───────
+function ShippedBlock({ going = "default", watching = false, surface = "mobile" }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
+      <div style={{ width: "100%" }}>
+        <GoingButton show={SHOW} state={going} size="lg" fullWidth/>
+      </div>
+      <span style={{
+        width: 26, height: 26, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center",
+        border: "1px solid var(--border-strong)", color: "var(--fg-subtle)",
+        fontFamily: "Inter, system-ui", fontSize: 12, fontWeight: 700,
+      }}>?</span>
+      <WatchingEye watching={watching} size="lg"/>
+      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--fg-subtle)" }}>
+        Watch to get pinged on price drops + sold-out.
+      </span>
+    </div>
+  );
+}
+
+// ── Tweaks ───────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "direction": "C",
+  "going": "default",
+  "watching": false,
+  "tipOpen": false
+}/*EDITMODE-END*/;
+const THEME_OPTS = CC_THEME_KEYS.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+
+function Root() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  const th = t.theme;
+  const dir = t.direction;
+  return (
+    <>
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Global">
+        <TweakSelect label="Theme" value={th} onChange={(v) => setT("theme", v)} options={THEME_OPTS}/>
+      </TweakSection>
+      <TweakSection label="Live artboards (§3)">
+        <TweakRadio label="Direction" value={dir} onChange={(v) => setT("direction", v)}
+          options={CTA_DIRECTIONS.map((d) => ({ value: d.key, label: d.key }))}/>
+        <TweakRadio label="Going" value={t.going} onChange={(v) => setT("going", v)}
+          options={[{ value: "default", label: "not yet" }, { value: "going", label: "going" }]}/>
+        <TweakToggle label="Watching" value={t.watching} onChange={(v) => setT("watching", v)}/>
+        <TweakToggle label="Tip open" value={t.tipOpen} onChange={(v) => setT("tipOpen", v)}/>
+      </TweakSection>
+    </TweaksPanel>
+
+    <DesignCanvas title="Event Detail CTA + CCTip"
+      subtitle="Fixing the Going / Watching / “?” stack on Event Detail, and shipping one reusable explainer tooltip for the whole app. Recommendation: Direction C + CCTip.">
+
+      {/* ── 0 · The problem ───────────────────────────────── */}
+      <DCSection id="problem" title="0 · As shipped"
+        subtitle="Three loose objects stacked in decreasing emphasis: Going, then the “?”, then the eye. The tooltip trigger sits between the two CTAs and reads like a third action; Watching reads like an afterthought.">
+        <DCArtboard id="p-320" label="mobile 320 · today" width={NARROW + 40} height={330}>
+          <BareStage theme={th} pad={16}><ShippedBlock/></BareStage>
+        </DCArtboard>
+        <DCArtboard id="p-320-on" label="mobile 320 · today, committed" width={NARROW + 40} height={330}>
+          <BareStage theme={th} pad={16}><ShippedBlock going="going" watching/></BareStage>
+        </DCArtboard>
+        <DCArtboard id="p-desk" label="desktop · today" width={720} height={330}>
+          <BareStage theme={th} pad={26} width={640}><ShippedBlock going="going" watching surface="desktop"/></BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 1 · Directions ────────────────────────────────── */}
+      <DCSection id="directions" title="1 · Three directions"
+        subtitle="All three put Going and Watching in ONE bordered block and move the ⓘ out of the CTA stack. They differ in how much weight Watching gets. Mobile 320 — the tightest case.">
+        {CTA_DIRECTIONS.map((d) => (
+          <DCArtboard key={d.key} id={`d-${d.key}`} label={`${d.key} · ${d.label}${d.key === "C" ? "  ★ recommended" : ""}`} width={NARROW + 40} height={420}>
+            <BareStage theme={th} pad={16}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <CommitBlock show={SHOW} direction={d.key} surface="mobile" going="default"/>
+                <CommitBlock show={SHOW} direction={d.key} surface="mobile" going="going" watching/>
+              </div>
+            </BareStage>
+          </DCArtboard>
+        ))}
+        <DCArtboard id="d-notes" label="the trade" width={420} height={420}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {CTA_DIRECTIONS.map((d) => (
+                <div key={d.key} style={{ display: "flex", gap: 10 }}>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: "var(--signal)", width: 14 }}>{d.key}</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)" }}>{d.label}</div>
+                    <div style={{ fontSize: 12, color: "var(--fg-muted)", lineHeight: 1.5, marginTop: 2 }}>{d.note}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="d-desk" label="same three · desktop width" width={760} height={520}>
+          <BareStage theme={th} pad={26} width={680}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {CTA_DIRECTIONS.map((d) => (
+                <div key={d.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em", color: "var(--fg-subtle)" }}>{d.key} · {d.label}</span>
+                  <CommitBlock show={SHOW} direction={d.key} surface="desktop" going="default" showEyebrow={false}/>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 2 · In context ────────────────────────────────── */}
+      <DCSection id="context" title="2 · Recommendation in context"
+        subtitle="Direction C, wired live — the Tweaks panel drives direction, Going state, Watching and the tip. Get Tickets stays the page's primary action; the commit block is the secondary strip under the title.">
+        <DCArtboard id="c-320" label="mobile 320 · live" width={NARROW + 40} height={700}>
+          <PhoneStage theme={th} width={NARROW} height={660} hostId="host-320">
+            <EventDetailTop show={SHOW} direction={dir} surface="mobile" going={t.going} watching={t.watching} tipOpen={t.tipOpen} sheetHost="#host-320"/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="c-390" label="mobile 390 · live" width={PHONE + 40} height={700}>
+          <PhoneStage theme={th} width={PHONE} height={660} hostId="host-390">
+            <EventDetailTop show={SHOW} direction={dir} surface="mobile" going={t.going} watching={t.watching} tipOpen={t.tipOpen} sheetHost="#host-390"/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="c-desk" label="desktop · no right rail, full content column" width={DESK} height={620}>
+          <DeskStage theme={th} height={620}>
+            <EventDetailTop show={SHOW} direction={dir} surface="desktop" going={t.going} watching={t.watching} tipOpen={t.tipOpen}/>
+          </DeskStage>
+        </DCArtboard>
+        <DCArtboard id="c-states" label="C · all four states" width={NARROW + 40} height={560}>
+          <BareStage theme={th} pad={16}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <CommitBlock show={SHOW} direction="C" surface="mobile" going="default" watching={false}/>
+              <CommitBlock show={SHOW} direction="C" surface="mobile" going="default" watching/>
+              <CommitBlock show={SHOW} direction="C" surface="mobile" going="going" watching={false}/>
+              <CommitBlock show={SHOW} direction="C" surface="mobile" going="going" watching/>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 3 · CCTip variants ────────────────────────────── */}
+      <DCSection id="tip-variants" title="3 · CCTip · content variants"
+        subtitle="One component, six content shapes, all declared as data in TIP_CONTENT. text + titled cover consumer surfaces; defs / steps / example / dos cover admin instruction.">
+        {[["text", "going-vs-watch"], ["titled", "who-set-this-price"], ["defs", "chip-states"], ["steps", "publish-gate"], ["example", "guide-voice"], ["dos", "chip-dos"]].map(([v, k]) => (
+          <DCArtboard key={k} id={`tv-${v}`} label={`${v} · ${k}`} width={490} height={v === "example" ? 520 : v === "defs" ? 440 : v === "dos" ? 430 : v === "steps" ? 410 : 350}>
+            <BareStage theme={th} pad={22} width={400}><TipSpecimen tipKey={k}/></BareStage>
+          </DCArtboard>
+        ))}
+      </DCSection>
+
+      {/* ── 4 · CCTip shells ─────────────────────────────── */}
+      <DCSection id="tip-shells" title="4 · CCTip · shells and behaviour"
+        subtitle="Desktop: anchored popover, hover-intent (110ms in / 140ms out) + focus + click-to-pin, Escape closes. Mobile: tap opens a bottom sheet — rich content can't fit a 320-wide popover, and a sheet is thumb-reachable.">
+        <DCArtboard id="sh-pop" label="desktop · popover placements" width={720} height={520}>
+          <BareStage theme={th} pad={30} width={620}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "center", paddingTop: 150, paddingBottom: 120 }}>
+              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 13, color: "var(--fg-muted)", fontWeight: 600 }}>above · align start</span>
+                <span style={{ position: "relative", display: "inline-flex" }}>
+                  <span style={{ width: 26, height: 26, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--signal)", background: "color-mix(in oklab, var(--signal) 12%, transparent)" }}><TipInfoIcon size={15}/></span>
+                  <CCTipPopover id="sh1" tip={TIP_CONTENT["going-vs-watch"]} placement="top" align="start" width={272} onClose={() => {}}/>
+                </span>
+              </div>
+              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, justifyContent: "flex-end" }}>
+                <span style={{ fontSize: 13, color: "var(--fg-muted)", fontWeight: 600 }}>below · align end</span>
+                <span style={{ position: "relative", display: "inline-flex" }}>
+                  <span style={{ width: 26, height: 26, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--signal)", background: "color-mix(in oklab, var(--signal) 12%, transparent)" }}><TipInfoIcon size={15}/></span>
+                  <CCTipPopover id="sh2" tip={TIP_CONTENT["who-set-this-price"]} placement="bottom" align="end" width={272} onClose={() => {}}/>
+                </span>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="sh-sheet" label="mobile 320 · sheet, plain text" width={NARROW + 40} height={700}>
+          <PhoneStage theme={th} width={NARROW} height={660} hostId="host-sheet-a">
+            <EventDetailTop show={SHOW} direction="C" surface="mobile" going="default" tipOpen sheetHost="#host-sheet-a"/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="sh-sheet-rich" label="mobile 320 · sheet, rich content" width={NARROW + 40} height={700}>
+          <PhoneStage theme={th} width={NARROW} height={660} hostId="host-sheet-b">
+            <div style={{ position: "relative", width: "100%", height: "100%" }}>
+              <EventDetailTop show={SHOW} direction="C" surface="mobile" going="going" watching/>
+              <CCTipSheet id="sheet-rich" tip={TIP_CONTENT["chip-states"]} onClose={() => {}}/>
+            </div>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="sh-trigger" label="trigger states" width={420} height={220}>
+          <BareStage theme={th} pad={22} width={340}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {[["rest", "var(--fg-subtle)", "transparent"], ["hover / open", "var(--signal)", "color-mix(in oklab, var(--signal) 12%, transparent)"], ["focus", "var(--signal)", "transparent"]].map(([lbl, c, bg]) => (
+                <div key={lbl} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{
+                    width: 26, height: 26, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    color: c, background: bg, outline: lbl === "focus" ? "2px solid var(--focus)" : "none", outlineOffset: 2,
+                  }}><TipInfoIcon size={15}/></span>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, color: "var(--fg-muted)", letterSpacing: "0.04em" }}>{lbl}</span>
+                </div>
+              ))}
+              <div style={{ fontSize: 12, color: "var(--fg-subtle)", lineHeight: 1.5 }}>
+                Visual box is 26px; the touch target is padded to 44px on mobile.
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 5 · Admin ────────────────────────────────────── */}
+      <DCSection id="admin" title="5 · Admin · First-timer guide"
+        subtitle="The permanent “Chip state indicators” card below the form is retired — its content becomes the ⓘ on the form's card header. Two more tips ride the same form: voice rules on “Add more chips”, publishing on the footer. Real GuideAdminBlock + ChipStateLegend from the First-Timer Guide handoff.">
+        <DCArtboard id="a-before" label="before · legend card below the form" width={800} height={1320}>
+          <BareStage theme={th} pad={24} width={720}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <GuideAdminBlock variant="validation" venueName="The Junkyard"/>
+              <ChipStateLegend/>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="a-after" label="after · header ⓘ, legend card gone" width={800} height={1120}>
+          <BareStage theme={th} pad={24} width={720}>
+            <GuideAdminBlock variant="validation" venueName="The Junkyard" tip="chip-states"/>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="a-voice" label="voice rules · example variant in situ" width={800} height={1180}>
+          <BareStage theme={th} pad={24} width={720}>
+            <GuideAdminBlock variant="populated" venueName="The Junkyard" tip="guide-voice"/>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="a-publish" label="publish gate · steps variant in situ" width={800} height={1180}>
+          <BareStage theme={th} pad={24} width={720}>
+            <GuideAdminBlock variant="populated" venueName="The Junkyard" tip="publish-gate"/>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
+</script>
+</body>
+</html>

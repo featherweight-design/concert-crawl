@@ -1,0 +1,433 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Event CTA + CCTip R2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  a { color: #4a3fd1; } a:hover { color: #2d24a8; }
+  @keyframes e2spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="history-data.jsx"></script>
+<script type="text/babel" src="cc-overlay.jsx"></script>
+<script type="text/babel" src="cc-tip.jsx"></script>
+<script type="text/babel" src="user-menu.jsx"></script>
+<script type="text/babel" src="watcher-roster.jsx"></script>
+<script type="text/babel" src="going-cta.jsx"></script>
+<script type="text/babel" src="event-cta.jsx"></script>
+<script type="text/babel" src="event-cta-v2.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEME_KEYS, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { CommitBlockV2, GoingCTA, WatchStrip, WatchEyeSquare, WatchStatusLine, watchStatus,
+        EventDetailTopV2, CTA_DIRECTIONS_V2, GOING_STATES } = window;
+const { CommitBlock } = window;
+const { CCTip, CCTipPopover, TIP_CONTENT, TipInfoIcon } = window;
+const { CCOverlay, CCOverlayHost } = window;
+const { WatcherCrawlLine, WatcherRoster, AvatarStack, WATCHERS, WATCHERS_ANON, rosterSummary } = window;
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio, TweakToggle, TweakSlider } = window;
+
+const SHOW = { id: "e01", artist: "Kingfishr", support: "Strainer", venue: "The Junkyard", dateLabel: "Sat, Aug 15", showTime: "8:00 PM", dateISO: "2026-08-16T02:00:00Z", tags: ["indie"] };
+const NARROW = 320, PHONE = 390, DESK = 900;
+const CROWD = { people: WATCHERS, anon: WATCHERS_ANON };
+
+function PhoneStage({ theme, width = PHONE, height = 720, hostId, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>
+        <div id={hostId} style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "var(--bg)" }}>{children}</div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function BareStage({ theme, pad = 20, width, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad, display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
+        <div style={{ width: width || "100%" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+function Note({ children }) {
+  return <div style={{ fontFamily: "Inter, system-ui", fontSize: 12, color: "var(--fg-muted)", lineHeight: 1.5, textWrap: "pretty" }}>{children}</div>;
+}
+function Eyebrow({ children, tone = "var(--fg-subtle)" }) {
+  return <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: tone }}>{children}</div>;
+}
+
+// R1's block, for the "what it would have deleted" comparison.
+function R1Block() {
+  return <CommitBlock show={SHOW} direction="C" surface="mobile" going="default" showEyebrow={false}/>;
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "direction": "D",
+  "going": "default",
+  "watching": false,
+  "watchers": 12,
+  "tipOpen": false,
+  "rosterOpen": false
+}/*EDITMODE-END*/;
+const THEME_OPTS = CC_THEME_KEYS.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+
+// The Tweaks “Watchers” slider trims the real roster so 0 / 1 / many all read.
+function crowdOf(n) {
+  const named = WATCHERS.slice(0, Math.min(n, WATCHERS.length));
+  return { people: named, anon: Math.max(0, n - named.length) };
+}
+
+function Root() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  const th = t.theme, dir = t.direction, wc = t.watchers;
+  const crowd = crowdOf(wc);
+  return (
+    <>
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Global">
+        <TweakSelect label="Theme" value={th} onChange={(x) => setT("theme", x)} options={THEME_OPTS}/>
+      </TweakSection>
+      <TweakSection label="Live artboards (§3)">
+        <TweakRadio label="Direction" value={dir} onChange={(x) => setT("direction", x)}
+          options={CTA_DIRECTIONS_V2.map((d) => ({ value: d.key, label: d.key }))}/>
+        <TweakSelect label="Going state" value={t.going} onChange={(x) => setT("going", x)}
+          options={GOING_STATES.map((s) => ({ value: s.key, label: s.label }))}/>
+        <TweakToggle label="Watching" value={t.watching} onChange={(x) => setT("watching", x)}/>
+        <TweakSlider label="Other watchers" value={wc} onChange={(x) => setT("watchers", x)} min={0} max={12} step={1}/>
+        <TweakToggle label="Tip open" value={t.tipOpen} onChange={(x) => setT("tipOpen", x)}/>
+        <TweakToggle label="Roster open" value={t.rosterOpen} onChange={(x) => setT("rosterOpen", x)}/>
+      </TweakSection>
+    </TweaksPanel>
+
+    <DesignCanvas title="Event Detail CTA + CCTip · R2"
+      subtitle="Re-solved with the whole composition in frame: Going, the eye, the alerts hint, and the watcher count — plus the locked/pending/error/past states and the InfoTooltip migration. Recommendation moves from C to D.">
+
+      {/* ── 0 · What R1 missed ────────────────────────────── */}
+      <DCSection id="missed" title="0 · What R1 was missing"
+        subtitle="The hint hides once you're watching and the count is empty at zero watchers, so neither appeared in the screenshots R1 was drawn from. R1's block has a slot for the eye and nothing else — adopting it would have silently deleted two shipping elements.">
+        <DCArtboard id="ms-r1" label="R1 · Direction C, as drawn" width={400} height={300}>
+          <BareStage theme={th} pad={18} width={340}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <Eyebrow>going + eye. that's all.</Eyebrow>
+              <R1Block/>
+              <Note>No alerts hint. No watcher count. Both ship today in WatchZone.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="ms-collapse" label="…and the count is a social object" width={470} height={410}>
+          <BareStage theme={th} pad={20} width={410}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+              <Note><strong style={{ color: "var(--fg)" }}>“Watcher count” is not a number.</strong> It's an avatar stack, named handles, and a roster behind “see all N”. R2's first pass folded it into one status line as a bare count — that under-modelled it by a lot.</Note>
+              <div style={{ padding: "10px 12px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                <WatcherCrawlLine people={WATCHERS} anon={WATCHERS_ANON} watching nameLimit={2} onOpen={() => {}}/>
+              </div>
+              <Note>So the strip grows a second row. Row 1 is the toggle — eye + hint, one hit target. Row 2 is the crawl — avatars, names, and an “All 13” that opens the roster. Two sibling buttons in one bordered object; never nested.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>Row 2 is absent when nobody else is watching</strong> — which, with the hint hiding once you're watching, is the whole reason R1 never saw either element. The count is the crowd <em>including you when you're in it</em>: 12 others, 13 once you watch.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 1 · Directions ────────────────────────────────── */}
+      <DCSection id="directions" title="1 · Three directions, re-judged"
+        subtitle="All three carry Going, the eye, the hint and the count. They differ in what the eye is attached to. Mobile 320.">
+        {CTA_DIRECTIONS_V2.map((d) => (
+          <DCArtboard key={d.key} id={`d2-${d.key}`} label={`${d.key} · ${d.label}${d.key === "D" ? "  ★ recommended" : ""}`} width={NARROW + 40} height={700}>
+            <BareStage theme={th} pad={16}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <CommitBlockV2 show={SHOW} direction={d.key} surface="mobile" going="default" {...CROWD}/>
+                <CommitBlockV2 show={SHOW} direction={d.key} surface="mobile" going="going" watching {...CROWD}/>
+                <CommitBlockV2 show={SHOW} direction={d.key} surface="mobile" going="default"/>
+              </div>
+            </BareStage>
+          </DCArtboard>
+        ))}
+        <DCArtboard id="d2-notes" label="the trade" width={430} height={700}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+              {CTA_DIRECTIONS_V2.map((d) => (
+                <div key={d.key} style={{ display: "flex", gap: 10 }}>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, color: d.key === "D" ? "var(--signal)" : "var(--fg-subtle)", width: 14, flexShrink: 0 }}>{d.key}</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)", fontFamily: "Inter, system-ui" }}>{d.label}</div>
+                    <div style={{ marginTop: 2 }}><Note>{d.note}</Note></div>
+                  </div>
+                </div>
+              ))}
+              <div style={{ marginTop: 4, padding: 12, borderRadius: 10, background: "color-mix(in oklch, var(--signal) 8%, transparent)", border: "1px solid color-mix(in oklch, var(--signal) 32%, transparent)" }}>
+                <Eyebrow tone="var(--signal)">Why D wins now</Eyebrow>
+                <div style={{ marginTop: 5 }}><Note>R1 judged the eye as a peer control needing peer weight. With a status line in play, the eye is instead the leading element of its own object — and a ~300×52 strip whose copy says what tapping does is a better target and a clearer promise than a 52px square beside a line it doesn't own.</Note></div>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="d2-desk" label="same three · desktop" width={760} height={700}>
+          <BareStage theme={th} pad={24} width={680}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {CTA_DIRECTIONS_V2.map((d) => (
+                <div key={d.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <Eyebrow>{d.key} · {d.label}</Eyebrow>
+                  <CommitBlockV2 show={SHOW} direction={d.key} surface="desktop" going="default" {...CROWD}/>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 2 · States ────────────────────────────────────── */}
+      <DCSection id="states" title="2 · The full state set"
+        subtitle="Entitlement + lifecycle. Watching is free in every one of them, so the watch strip is never touched by the gate — that's the honest read of the split.">
+        <DCArtboard id="st-all" label="Going · all seven states" width={400} height={880}>
+          <BareStage theme={th} pad={18} width={340}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {GOING_STATES.map((s) => (
+                <div key={s.key} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <Eyebrow>{s.label}</Eyebrow>
+                  <GoingCTA show={SHOW} state={s.key}/>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="st-locked" label="locked · invitation, not wall" width={400} height={430}>
+          <BareStage theme={th} pad={18} width={340}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <CommitBlockV2 show={SHOW} direction="D" surface="mobile" going="locked" {...CROWD}/>
+              <Note>Same size, same position, and the <em>same label string</em> as the unlocked button — <code>GOING_LABEL</code> is read from <code>going-cta.jsx</code>, not retyped — outlined instead of filled, with a lock mark and one honest line beneath. The watch strip is untouched: a Free user still gets the whole free feature without meeting a wall first.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="st-block" label="in-block · pending / error / past" width={400} height={960}>
+          <BareStage theme={th} pad={18} width={340}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <CommitBlockV2 show={SHOW} direction="D" surface="mobile" going="pending" {...CROWD}/>
+              <CommitBlockV2 show={SHOW} direction="D" surface="mobile" going="error" watching {...CROWD}/>
+              <CommitBlockV2 show={SHOW} direction="D" surface="mobile" going="past-yes" {...CROWD}/>
+              <CommitBlockV2 show={SHOW} direction="D" surface="mobile" going="past-no"/>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="st-notes" label="state notes" width={430} height={430}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[["locked", "Tap opens the upgrade sheet. Never disabled — a disabled control can't sell anything."],
+                ["pending", "Not a button. role=status, aria-live=polite; the watch strip stays live underneath."],
+                ["error", "Failure names what survived — “Your watch is safe.” Retry is the button itself, not a separate link."],
+                ["past-yes", "Delegates to GoingButton — its own dated copy, unchanged. Eyebrow flips to “That night”."],
+                ["past-no", "Also GoingButton's. No guilt, no CTA added on top."]].map(([k, v]) => (
+                <div key={k} style={{ display: "flex", gap: 10 }}>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)", width: 76, flexShrink: 0, paddingTop: 2 }}>{k}</span>
+                  <Note>{v}</Note>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 3 · In context ────────────────────────────────── */}
+      <DCSection id="context" title="3 · In context, live"
+        subtitle="Tweaks drive direction, Going state, watching, and the watcher count — drag Watchers to 0 to see the social proof drop out and the hint take the line.">
+        <DCArtboard id="cx-320" label="mobile 320" width={NARROW + 40} height={820}>
+          <PhoneStage theme={th} width={NARROW} height={780} hostId="v2-320">
+            <EventDetailTopV2 show={SHOW} direction={dir} surface="mobile" going={t.going}
+              watching={t.watching} people={crowd.people} anon={crowd.anon}
+              tipOpen={t.tipOpen} rosterOpen={t.rosterOpen} sheetHost="#v2-320"/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="cx-390" label="mobile 390" width={PHONE + 40} height={820}>
+          <PhoneStage theme={th} width={PHONE} height={780} hostId="v2-390">
+            <EventDetailTopV2 show={SHOW} direction={dir} surface="mobile" going={t.going}
+              watching={t.watching} people={crowd.people} anon={crowd.anon}
+              tipOpen={t.tipOpen} rosterOpen={t.rosterOpen} sheetHost="#v2-390"/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="cx-desk" label="desktop" width={DESK} height={700}>
+          <ThemeProvider theme={th} style={{ width: "100%", height: "100%" }}>
+            <div style={{ width: "100%", height: "100%", minHeight: 700, background: "var(--bg)", overflow: "hidden" }}>
+              <EventDetailTopV2 show={SHOW} direction={dir} surface="desktop" going={t.going}
+                watching={t.watching} people={crowd.people} anon={crowd.anon}
+                tipOpen={t.tipOpen} rosterOpen={t.rosterOpen}/>
+            </div>
+          </ThemeProvider>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 4 · Tooltip R2 ────────────────────────────────── */}
+      <DCSection id="tip" title="4 · CCTip · R2 corrections"
+        subtitle="Copy is honest about the paid split, shadows are tokenised, and the open model now matches what the README claimed.">
+        <DCArtboard id="tp-copy" label="going-vs-watch · rewritten" width={480} height={420}>
+          <BareStage theme={th} pad={22} width={410}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, paddingBottom: 220 }}>
+                <span style={{ fontFamily: "Inter, system-ui", fontSize: 13, fontWeight: 600, color: "var(--fg-muted)" }}>Your move</span>
+                <span style={{ position: "relative", display: "inline-flex" }}>
+                  <span style={{ width: 26, height: 26, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--signal)", background: "color-mix(in oklab, var(--signal) 12%, transparent)" }}><TipInfoIcon size={15}/></span>
+                  <CCTipPopover id="tp1" tip={TIP_CONTENT["going-vs-watch"]} placement="bottom" align="start" width={320} onClose={() => {}}/>
+                </span>
+              </div>
+              <Note>R1 said Going “lands in your concert history after the show” with no mention that it's paid — the last thing a Free user reads before finding out. Now it's a two-row definition: what's free, what isn't, stated once and without apology.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="tp-history" label="concert-history · the locked pitch" width={480} height={420}>
+          <BareStage theme={th} pad={22} width={410}>
+            <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, paddingBottom: 190 }}>
+              <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, color: "var(--fg-subtle)" }}>Going is part of Concert History.</span>
+              <span style={{ position: "relative", display: "inline-flex" }}>
+                <span style={{ width: 26, height: 26, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--signal)", background: "color-mix(in oklab, var(--signal) 12%, transparent)" }}><TipInfoIcon size={15}/></span>
+                <CCTipPopover id="tp2" tip={TIP_CONTENT["concert-history"]} placement="bottom" align="start" width={272} onClose={() => {}}/>
+              </span>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="tp-behaviour" label="open model · corrected" width={430} height={420}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[["hover in", "opens, unpinned"],
+                ["hover out", "closes ONLY if unpinned"],
+                ["click", "toggles pinned — survives mouse-out"],
+                ["focus", "opens, unpinned"],
+                ["blur past it", "closes if unpinned"],
+                ["Escape", "closes, unpins, returns focus"],
+                ["sheet", "real focus trap behind aria-modal"]].map(([k, v]) => (
+                <div key={k} style={{ display: "grid", gridTemplateColumns: "92px 1fr", gap: 10, alignItems: "baseline" }}>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>{k}</span>
+                  <span style={{ fontFamily: "Inter, system-ui", fontSize: 12, color: "var(--fg-muted)" }}>{v}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: 6 }}>
+                <Note>Try it: hover the ⓘ below and move away — it closes. Click it, then move away — it stays.</Note>
+                <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontFamily: "Inter, system-ui", fontSize: 13, fontWeight: 600, color: "var(--fg-muted)" }}>Going vs. Watching</span>
+                  <CCTip tip="going-vs-watch" surface="desktop" placement="top" align="start"/>
+                </div>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="tp-shadow" label="tokenised shadow · light" width={430} height={420}>
+          <BareStage theme="light" pad={22}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, paddingBottom: 200 }}>
+                <span style={{ fontFamily: "Inter, system-ui", fontSize: 13, fontWeight: 600, color: "var(--fg-muted)" }}>On Light</span>
+                <span style={{ position: "relative", display: "inline-flex" }}>
+                  <span style={{ width: 26, height: 26, borderRadius: 999, display: "inline-flex", alignItems: "center", justifyContent: "center", color: "var(--signal)", background: "color-mix(in oklab, var(--signal) 12%, transparent)" }}><TipInfoIcon size={15}/></span>
+                  <CCTipPopover id="tp3" tip={TIP_CONTENT["concert-history"]} placement="bottom" align="start" width={272} onClose={() => {}}/>
+                </span>
+              </div>
+              <Note>Both shells read <code>--shadow-soft</code> / <code>--shadow-strong</code>. R1's hardcoded <code>rgba(0,0,0,0.6)</code> sat like a bruise on Light; the Light values are 0.12 / 0.20 of a cool near-black.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 5 · The crawl ───────────────────────────────── */}
+      <DCSection id="crawl" title="5 · Who else is watching"
+        subtitle="The roster stops pushing the page. It moves into CCOverlay — the same shell CCTip already uses — as a sheet on mobile and an anchored popover on desktop.">
+        <DCArtboard id="cr-before" label="today · inline expand pushes ~700px" width={470} height={520}>
+          <BareStage theme={th} pad={20} width={410}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+              <Note><strong style={{ color: "var(--fg)" }}>The problem you flagged.</strong> “See all 13” expands the roster in place, so everything below — Get Tickets, the price block, the setlist — drops off-screen. The user opened a name list and lost the page.</Note>
+              <div style={{ padding: 12, borderRadius: 10, border: "1px dashed var(--border-strong)", display: "flex", flexDirection: "column", gap: 8 }}>
+                <WatcherCrawlLine people={WATCHERS} anon={WATCHERS_ANON} watching nameLimit={2} onOpen={() => {}}/>
+                <div style={{ height: 132, borderRadius: 8, background: "var(--surface-2)", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'JetBrains Mono', monospace", fontSize: 10.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>13 rows of list</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, opacity: 0.4 }}>
+                  <span style={{ flex: 1, height: 40, borderRadius: 8, background: "var(--surface-2)" }}/>
+                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 9.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>pushed down</span>
+                </div>
+              </div>
+              <Note>An inline expand is right when the revealed content is short and the thing below it is unimportant. Neither is true here.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="cr-sheet" label="after · mobile sheet, nothing moves" width={NARROW + 40} height={820}>
+          <PhoneStage theme={th} width={NARROW} height={780} hostId="v2-roster">
+            <EventDetailTopV2 show={SHOW} direction="D" surface="mobile" going="default" watching
+              people={WATCHERS} anon={WATCHERS_ANON} rosterOpen sheetHost="#v2-roster"/>          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="cr-pop" label="after · desktop popover" width={470} height={560}>
+          <BareStage theme={th} pad={20} width={410}>
+            <div style={{ paddingTop: 300, position: "relative" }}>
+              <div style={{ position: "relative" }}>
+                <CCOverlay id="cr-demo" mode="popover" title="The crawl on this show" placement="top" align="start" width={320} onClose={() => {}}>
+                  <WatcherRoster people={WATCHERS} anon={WATCHERS_ANON} watching/>
+                </CCOverlay>
+              </div>
+              <div style={{ padding: "10px 12px", borderRadius: 10, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                <WatcherCrawlLine people={WATCHERS} anon={WATCHERS_ANON} watching onOpen={() => {}}/>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="cr-names" label="name budget · measured at real strip widths" width={560} height={430}>
+          <BareStage theme={th} pad={20} width={510}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[["320 · strip is 237 wide", 237, true], ["390 · 307", 307, true], ["desktop · 466", 466, false]].map(([w, px, comp]) => (
+                <div key={w} style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  <Eyebrow>{w}</Eyebrow>
+                  <div style={{ width: px, padding: "9px 11px", borderRadius: 9, background: "var(--surface-2)", border: "1px solid var(--border)" }}>
+                    <WatcherCrawlLine people={WATCHERS} anon={WATCHERS_ANON} watching onOpen={() => {}} compact={comp}/>
+                  </div>
+                </div>
+              ))}
+              <Note>The name count is <strong style={{ color: "var(--fg)" }}>measured, not guessed</strong> — same ResizeObserver approach as the event row's meta budget. Names drop whole, then the “in the crawl” suffix, then the sentence; the count is never what gets cut.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>At ≤360 the faces give way to the names.</strong> The stack (52px) plus a numeric chip (58px) left 113px of a 237px row — less than one handle — so no name could ever render. Compact drops the stack and shrinks the trigger to a chevron, which also stops the sentence restating the chip's number. The roster still shows every face.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="cr-counts" label="0 · 1 · few · many" width={400} height={1220}>
+          <BareStage theme={th} pad={18} width={340}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {[["nobody yet", 0, false], ["just you", 0, true], ["you + 1", 1, true], ["a few", 2, false], ["the crawl", 12, false]].map(([lbl, n, w]) => (
+                <div key={lbl} style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  <Eyebrow>{lbl}</Eyebrow>
+                  <CommitBlockV2 show={SHOW} direction="D" surface="mobile" going="default"
+                    watching={w} {...crowdOf(n)}/>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="cr-shell" label="the shell is now shared" width={430} height={400}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Eyebrow tone="var(--signal)">Ruling</Eyebrow>
+              <Note>The roster needs exactly the shells CCTip already had. Rather than write a second popover/sheet pair beside the first, the chrome moved to <code>cc-overlay.jsx</code> — positioning, arrow, header, close, scrim, grabber, focus trap, Escape — and both features consume it. <code>CCTip</code> is now “CCOverlay + TIP_CONTENT”; the roster is “CCOverlay + a list”.</Note>
+              <Note>Same reasoning as retiring <code>InfoTooltip</code>, and the same reasoning as one <code>EventRow</code> for three surfaces. Third time this pass — worth making it a house rule: <strong style={{ color: "var(--fg)" }}>a second component that renders the same chrome is a refactor, not a feature.</strong></Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
+</script>
+</body>
+</html>
