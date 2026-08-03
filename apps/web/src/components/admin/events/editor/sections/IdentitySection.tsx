@@ -15,12 +15,15 @@ export interface IdentitySectionEvent {
   tourName: string | null
 }
 
-export interface IdentitySectionProps {
+// Both-or-neither: an editable tour name needs the draft value AND the
+// change handler. Supplying only the handler would render a controlled input
+// whose value could never update.
+export type IdentitySectionProps = {
   event: IdentitySectionEvent
-  /** Draft value for the tour-name input. Omit to render read-only. */
-  editedTourName?: string
-  onTourNameChange?: (next: string) => void
-}
+} & (
+  | { editedTourName: string; onTourNameChange: (next: string) => void }
+  | { editedTourName?: undefined; onTourNameChange?: undefined }
+)
 
 const formatDate = (yyyyMmDd: string): string => {
   const parsed = new Date(yyyyMmDd + 'T12:00:00Z')
