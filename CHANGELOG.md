@@ -1,3 +1,10 @@
+## [1.203.3](https://github.com/HartiganHM/concert-crawl/compare/v1.203.2...v1.203.3) (2026-08-03)
+
+
+### Bug Fixes
+
+* **scripts:** make venue sync create-only, add --only scope ([c7b1330](https://github.com/HartiganHM/concert-crawl/commit/c7b1330dbd26b9f94e304e7bc97aee3a1a8ba8d9)), closes [#1337](https://github.com/HartiganHM/concert-crawl/issues/1337)
+
 ## [1.203.2](https://github.com/HartiganHM/concert-crawl/compare/v1.203.1...v1.203.2) (2026-08-03)
 
 
