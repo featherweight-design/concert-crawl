@@ -9,6 +9,7 @@ import {
   isPassportRatio,
   PASSPORT_CACHE_CONTROL,
   PASSPORT_DIMENSIONS,
+  passportYear,
   resolvePassportTheme,
 } from '@/lib/passport/passport-request'
 import { toAttendedShows } from '@/lib/passport/select-shows'
@@ -107,7 +108,7 @@ export const GET = async (
       shows={toAttendedShows(history.data?.shows ?? [])}
       tokens={tokens}
       handle={profile.handle}
-      year={new Date().getFullYear()}
+      year={passportYear()}
     />,
     {
       ...PASSPORT_DIMENSIONS[ratio],

@@ -1,4 +1,5 @@
 import { isThemeName, resolveThemeTokens } from '@/lib/share/theme-tokens'
+import { DENVER_TIME_ZONE, localDateString } from '@/lib/time'
 import type { ThemeName } from '@/theme/themes'
 
 /**
@@ -35,6 +36,17 @@ export const PASSPORT_DIMENSIONS: Record<
  * browser that just rendered a preview and is about to download the same PNG.
  */
 export const PASSPORT_CACHE_CONTROL = 'private, max-age=300'
+
+/**
+ * The year printed on the card header, in Mountain Time.
+ *
+ * The route renders on a server whose clock is UTC, so `new Date().getFullYear()`
+ * rolls over at 5pm MT on New Year's Eve — for those seven hours every passport
+ * would be stamped with a year Denver has not reached yet. Derived from the same
+ * `localDateString` helper the rest of the app uses rather than a second idiom.
+ */
+export const passportYear = (): number =>
+  Number(localDateString(DENVER_TIME_ZONE).slice(0, 4))
 
 /**
  * The theme is a soft fallback where the ratio is a hard reject — the ratio
