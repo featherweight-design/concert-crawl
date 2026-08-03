@@ -32,8 +32,15 @@ export const GOING_COPY = {
     yes: 'Yes, going',
     dismiss: 'Dismiss',
   },
+  locked: {
+    // Same label as `default` on purpose: the locked control is an invitation,
+    // so it has to read as the thing you would get, not as a different thing.
+    aria: "I'm going! Requires Concert History.",
+    line: 'Going is part of Concert History.',
+  },
   error: {
-    // Closes the READINESS 🎭 gap — the handoff drew no error state.
-    failed: "Couldn't save that. Try again.",
+    retry: "Didn't save. Tap to retry",
+    // Names what survived, so a failed commit doesn't read as losing the watch.
+    survived: "We couldn't reach the server. Your watch is safe.",
   },
 } as const

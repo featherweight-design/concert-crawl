@@ -15,7 +15,15 @@ import type { CSSProperties } from 'react'
 import { GOING_COPY } from './definitions/copy'
 import { stampAccentFor, stampGlyphFor } from './lib/stamp'
 
-export type GoingButtonState = 'default' | 'going' | 'past-yes' | 'past-no'
+export type GoingButtonState =
+  | 'default'
+  | 'going'
+  | 'past-yes'
+  | 'past-no'
+  // Free or logged-out. Deliberately never disabled: a disabled control cannot
+  // sell anything, and this one is the discovery surface for the perk.
+  | 'locked'
+  | 'error'
 export type GoingButtonSize = 'sm' | 'md' | 'lg'
 
 type GoingButtonProps = {
@@ -55,6 +63,53 @@ const formatWentDate = (date: string): string =>
     year: 'numeric',
     timeZone: 'America/Denver',
   }).format(new Date(`${date}T12:00:00Z`))
+
+const LockIcon = ({ size }: { size: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <rect
+      x="4.5"
+      y="10.5"
+      width="15"
+      height="10"
+      rx="2"
+      stroke="currentColor"
+      strokeWidth="2"
+    />
+    <path
+      d="M8 10.5V7.5a4 4 0 118 0v3"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+
+const AlertIcon = ({ size }: { size: number }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2" />
+    <path
+      d="M12 7.5v5.5"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <circle cx="12" cy="16.5" r="1.2" fill="currentColor" />
+  </svg>
+)
 
 const CheckIcon = ({ size }: { size: number }) => (
   <svg
@@ -106,6 +161,59 @@ export const GoingButton = ({
       setAnnouncement(GOING_COPY.button.stateChangeReleased)
     }
   }, [state])
+
+  // `locked` and `error` drop the ticket-stub interior and render as one
+  // centred control. The stub is the shape of a night you committed to; neither
+  // of these is that, and both keep the outer geometry so the row never jumps.
+  if (state === 'locked' || state === 'error') {
+    const isLocked = state === 'locked'
+    const tone = isLocked ? 'var(--accent)' : 'var(--danger)'
+    return (
+      <button
+        type="button"
+        className="going-cta"
+        // Never disabled: locked is the pitch, and error is the retry.
+        aria-label={isLocked ? GOING_COPY.locked.aria : undefined}
+        onClick={() => onChange?.(!isOn)}
+        style={{
+          all: 'unset',
+          boxSizing: 'border-box',
+          cursor: 'pointer',
+          display: fullWidth ? 'flex' : 'inline-flex',
+          width: fullWidth ? '100%' : 'auto',
+          maxWidth: '100%',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: sizes.gap,
+          height: sizes.height,
+          borderRadius: sizes.radius,
+          padding: `0 ${sizes.padX}px`,
+          border: `1.5px solid color-mix(in oklch, ${tone} 58%, transparent)`,
+          background: `color-mix(in oklch, ${tone} 9%, transparent)`,
+          color: tone,
+          fontFamily: 'var(--font-ui)',
+          fontWeight: 700,
+          fontSize: sizes.font,
+          letterSpacing: '-0.01em',
+        }}
+      >
+        {isLocked ? (
+          <LockIcon size={Math.round(sizes.font * 1.05)} />
+        ) : (
+          <AlertIcon size={Math.round(sizes.font * 1.05)} />
+        )}
+        <span
+          style={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {isLocked ? GOING_COPY.button.default : GOING_COPY.error.retry}
+        </span>
+      </button>
+    )
+  }
 
   const label =
     state === 'default'

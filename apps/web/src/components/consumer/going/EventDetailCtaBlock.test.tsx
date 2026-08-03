@@ -133,6 +133,74 @@ describe('EventDetailCtaBlock', () => {
     )
   })
 
+  it('shows the locked treatment to a user without the entitlement', () => {
+    entitlement = { isLoading: false, active: false, surface: 'paywall-on-tap' }
+    renderBlock()
+    // Same label as unlocked, so the control reads as the thing you'd get.
+    expect(goingButton()).toHaveTextContent(GOING_COPY.button.default)
+    expect(goingButton()).toHaveAttribute('aria-label', GOING_COPY.locked.aria)
+    // A disabled control can't sell anything.
+    expect(goingButton()).toBeEnabled()
+    expect(screen.getByText(GOING_COPY.locked.line)).toBeInTheDocument()
+  })
+
+  it('leaves a past show alone even when the entitlement is gone', () => {
+    entitlement = { isLoading: false, active: false, surface: 'paywall-on-tap' }
+    renderBlock({ date: '2020-10-14' })
+    expect(goingButton()).toHaveTextContent(GOING_COPY.button.pastNo)
+    expect(screen.queryByText(GOING_COPY.locked.line)).toBeNull()
+  })
+
+  it('puts the retry in the button and names what survived beneath it', () => {
+    mutate.mockImplementation((_input, options) => options.onError())
+    renderBlock()
+    fireEvent.click(goingButton())
+    expect(goingButton()).toHaveTextContent(GOING_COPY.error.retry)
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      GOING_COPY.error.survived,
+    )
+  })
+
+  it('retries the same intent when the failed button is tapped again', () => {
+    mutate.mockImplementation((_input, options) => options.onError())
+    renderBlock()
+    fireEvent.click(goingButton())
+    mutate.mockImplementation(() => {})
+    fireEvent.click(goingButton())
+    expect(mutate).toHaveBeenLastCalledWith(
+      { eventId: 'ev1', going: true },
+      expect.anything(),
+    )
+  })
+
+  // The error treatment reports as not-going, so a naive retry would
+  // replay `going: true` and quietly no-op instead of releasing.
+  it('retries a failed release as a release, not as a fresh commitment', () => {
+    mutate.mockImplementation((_input, options) => options.onError())
+    renderBlock({ attendingAt: '2026-01-01T00:00:00.000Z' })
+    fireEvent.click(goingButton())
+    mutate.mockImplementation(() => {})
+    fireEvent.click(goingButton())
+    expect(mutate).toHaveBeenLastCalledWith(
+      { eventId: 'ev1', going: false },
+      expect.anything(),
+    )
+  })
+
+  it('keeps the locked treatment when a failure and a lost entitlement collide', () => {
+    mutate.mockImplementation((_input, options) => options.onError())
+    const { rerender } = render(
+      <EventDetailCtaBlock event={event()} scaRegion={false} />,
+    )
+    fireEvent.click(goingButton())
+    expect(goingButton()).toHaveTextContent(GOING_COPY.error.retry)
+
+    // The entitlement lapses while the failure is still on screen.
+    entitlement = { isLoading: false, active: false, surface: 'paywall-on-tap' }
+    rerender(<EventDetailCtaBlock event={event()} scaRegion={false} />)
+    expect(goingButton()).toHaveAttribute('aria-label', GOING_COPY.locked.aria)
+  })
+
   it('sends a logged-out tap straight to the picker', () => {
     entitlement = {
       isLoading: false,
@@ -205,7 +273,7 @@ describe('EventDetailCtaBlock', () => {
     mutate.mockImplementation((_input, options) => options.onError())
     renderBlock()
     fireEvent.click(goingButton())
-    expect(screen.getByText(GOING_COPY.error.failed)).toBeInTheDocument()
+    expect(screen.getByText(GOING_COPY.error.survived)).toBeInTheDocument()
   })
 
   it('routes a server-side entitlement 403 to the upgrade path, not the error line', () => {
@@ -217,7 +285,7 @@ describe('EventDetailCtaBlock', () => {
     renderBlock()
     fireEvent.click(goingButton())
     expect(screen.getByTestId('tier-picker')).toBeInTheDocument()
-    expect(screen.queryByText(GOING_COPY.error.failed)).toBeNull()
+    expect(screen.queryByText(GOING_COPY.error.survived)).toBeNull()
   })
 
   it('refreshes the page after a successful commitment', () => {

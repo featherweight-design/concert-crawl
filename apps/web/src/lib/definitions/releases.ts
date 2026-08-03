@@ -58,6 +58,10 @@ export const RELEASES: Release[] = [
         kind: 'changed',
         text: 'The full list of who else is watching now opens over the page instead of pushing everything below it down.',
       },
+      {
+        kind: 'changed',
+        text: 'If marking yourself as going fails, the button itself is the retry, and it tells you your watch came through anyway.',
+      },
     ],
   },
   {

@@ -57,7 +57,10 @@ export const EventDetailCtaBlock = ({
   const toggle = useAttendingToggle()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pickerEntry, setPickerEntry] = useState<PickerEntry>('paywall')
-  const [failed, setFailed] = useState(false)
+  // Holds the *intent* that failed, not just that something did. The error
+  // button can't re-derive it: the `error` treatment reports as off, so a
+  // failed release would retry as a mark-going no-op. `null` means no failure.
+  const [failedIntent, setFailedIntent] = useState<boolean | null>(null)
   // Event Detail is server-rendered, so the committed state only arrives on the
   // router.refresh() round-trip. Holding the tapped value locally lets the
   // button answer the tap immediately instead of sitting inert for a network
@@ -98,11 +101,24 @@ export const EventDetailCtaBlock = ({
         ? (event.attendingAt ?? OPTIMISTIC_STAMP)
         : null
 
-  const state = goingStateFor({
+  const serverState = goingStateFor({
     date: event.date,
     attendingAt,
     timezone: event.venue.timezone,
   })
+
+  // Past rows are read-only displays of something that already happened and have
+  // nothing left to sell, so neither gate touches them. Among the rest `locked`
+  // outranks `error`: a locked tap routes to the upgrade path and never retries
+  // anything, so offering a retry the button can't honour would lie.
+  const isPast = serverState === 'past-yes' || serverState === 'past-no'
+  const state = isPast
+    ? serverState
+    : !active
+      ? 'locked'
+      : failedIntent !== null
+        ? 'error'
+        : serverState
 
   const openUpgrade = () => {
     // Signed out this is a reach for Concert History, not the taste paywall —
@@ -113,14 +129,18 @@ export const EventDetailCtaBlock = ({
     setPickerOpen(true)
   }
 
-  const onChange = (going: boolean) => {
+  const onChange = (tapped: boolean) => {
+    // A retry replays the intent that failed rather than whatever the error
+    // treatment itself reports.
+    const going =
+      state === 'error' && failedIntent !== null ? failedIntent : tapped
     if (!active) {
       // Locked: the button is the discovery surface for the perk, so a tap
       // routes to the upgrade path instead of mutating anything.
       openUpgrade()
       return
     }
-    setFailed(false)
+    setFailedIntent(null)
     setOptimisticGoing(going)
     toggle.mutate(
       { eventId: event.id, going },
@@ -137,7 +157,7 @@ export const EventDetailCtaBlock = ({
             openUpgrade()
             return
           }
-          setFailed(true)
+          setFailedIntent(going)
         },
       },
     )
@@ -159,8 +179,11 @@ export const EventDetailCtaBlock = ({
       {/* The standing support line is gone — "we'll add this to your history"
           restated what the button just did, and the going-vs-watch distinction
           now lives behind the tooltip. Only a real failure earns a line here. */}
-      {failed ? (
+      {state === 'error' ? (
+        // The retry lives in the button; this line only names what survived, so
+        // a failed commit never reads as having lost the watch too.
         <p
+          role="alert"
           style={{
             marginTop: 8,
             fontFamily: 'var(--font-mono)',
@@ -169,7 +192,19 @@ export const EventDetailCtaBlock = ({
             color: 'var(--danger)',
           }}
         >
-          {GOING_COPY.error.failed}
+          {GOING_COPY.error.survived}
+        </p>
+      ) : state === 'locked' ? (
+        <p
+          style={{
+            marginTop: 8,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            letterSpacing: '0.02em',
+            color: 'var(--fg-subtle)',
+          }}
+        >
+          {GOING_COPY.locked.line}
         </p>
       ) : (
         <div style={{ marginTop: 6 }}>
