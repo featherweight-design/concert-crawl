@@ -119,7 +119,11 @@ export const ShareSheet = ({
   // settled must therefore show `loading` again, not the outcome of the earlier
   // attempt — otherwise leaving a slow shape before it lands brings the old
   // shape's failure message back while its retry is still in flight.
-  if (previewUrl !== imageUrl) {
+  // Guarded on `open` because the sheet stays mounted while closed: unguarded,
+  // this would re-adopt the current url on the very next render and undo the
+  // close reset above, leaving that reset dead and writing state for an img
+  // that isn't rendered.
+  if (open && previewUrl !== imageUrl) {
     setPreviewUrl(imageUrl)
     setPreview('loading')
   }
