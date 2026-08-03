@@ -1,3 +1,15 @@
+# [1.215.0](https://github.com/HartiganHM/concert-crawl/compare/v1.214.0...v1.215.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **admin:** trim both sides of the tour-name comparison ([80f4539](https://github.com/HartiganHM/concert-crawl/commit/80f4539494dc4b92e50de6821fa68c7c33b13b5a))
+
+
+### Features
+
+* **admin:** editable tour name on the event editor ([6459d78](https://github.com/HartiganHM/concert-crawl/commit/6459d78cf9faaf1c280f418d3140291926bab280)), closes [#992](https://github.com/HartiganHM/concert-crawl/issues/992)
+
 # [1.214.0](https://github.com/HartiganHM/concert-crawl/compare/v1.213.1...v1.214.0) (2026-08-03)
 
 
