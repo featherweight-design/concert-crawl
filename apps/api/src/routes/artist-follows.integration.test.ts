@@ -38,7 +38,12 @@ import { userArtistFollows } from '@concert-crawl/db'
 import type { ArtistDetailResponse } from '@concert-crawl/types'
 import { createApp } from '../app.js'
 import { testDb } from '../test/helpers/db.js'
-import { clearTables, seedArtist } from '../test/helpers/seed.js'
+import {
+  clearTables,
+  seedArtist,
+  seedEvent,
+  seedVenue,
+} from '../test/helpers/seed.js'
 
 const app = createApp()
 const USER_ID = 'user_follow_test'
@@ -218,6 +223,14 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
       name: 'Synced Act',
       canonicalName: 'synced act',
       spotifyArtistId: 'sp_synced',
+    })
+    // The detail read at the end 404s an artist that no consumer-visible event
+    // bills (#1343), so the follow state can only be asserted on a real one.
+    const venue = await seedVenue({ slug: 'marquis-synced' })
+    await seedEvent(venue.id, {
+      artist: 'Synced Act',
+      canonicalArtist: 'synced act',
+      date: '2099-09-04',
     })
     authState.current = { userId: USER_ID }
     await testDb.insert(userArtistFollows).values({
