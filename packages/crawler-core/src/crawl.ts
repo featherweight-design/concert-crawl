@@ -98,6 +98,17 @@ function showTimeKey(raw: string | null | undefined): string {
   return `${hours.padStart(2, '0')}:${minutes}:${seconds}`
 }
 
+// Resolves the headliner set for an extracted event (#1203). The LLM
+// extractor is the ONLY source of a multi-headliner list; JSON-LD, Ticketure
+// and the platform fetchers emit no `headliners`, so they collapse to the
+// single-headliner form. This never splits `artist` on '&', 'and', '+' or any
+// other separator: "Iron & Wine" and "for KING + COUNTRY" are one act each,
+// and a punctuation heuristic would shred them.
+function resolveHeadliners(event: NormalizedEvent): string[] {
+  const fromExtractor = event.headliners ?? []
+  return fromExtractor.length > 0 ? fromExtractor : [event.artist]
+}
+
 function dedupKey(
   canonicalArtist: string,
   date: string,
@@ -697,9 +708,20 @@ export async function crawlVenue(
         .map((event) => ({
           ...event,
           canonicalArtist: canonicalizeArtist(event.artist),
+          // headliners[0] === artist is the invariant (#1203). Extractors
+          // other than the LLM never emit `headliners`, so fall back to the
+          // single-headliner form. NOTHING here splits `artist` on
+          // punctuation — "Iron & Wine" is one act, and only the LLM is ever
+          // allowed to decide that a bill has more than one headliner.
+          headliners: resolveHeadliners(event),
           canonicalSupporting: canonicalizeSupporting(
             event.supportingArtists ?? [],
           ),
+          // Lock-step pair with headliners (#1203), through the same
+          // element-wise canonicalizer that backs canonical_supporting. Any
+          // code path that writes headliners MUST also write
+          // canonical_headliners.
+          canonicalHeadliners: canonicalizeSupporting(resolveHeadliners(event)),
           canonicalTitle: canonicalizeTitle(event.title),
           sourceHash: hashEvent({
             title: event.title,
@@ -876,6 +898,10 @@ export async function crawlVenue(
             venueId,
             title: event.title,
             artist: event.artist,
+            // Lock-step pair with canonicalHeadliners (#1203), both computed
+            // in the enrichment map above. headliners[0] === artist.
+            headliners: event.headliners,
+            canonicalHeadliners: event.canonicalHeadliners,
             supportingArtists: event.supportingArtists ?? [],
             // Lock-step pair with supportingArtists (#763): computed via
             // canonicalizeSupporting in the enrichment map above. Any code
@@ -976,6 +1002,12 @@ export async function crawlVenue(
               // artist intentionally NOT updated — once the winner row is
               // established, its artist string stays. Otherwise the field
               // could flip between extractions on compound-title shows.
+              // headliners tracks the latest billing from the crawler, so a
+              // bill that turns into a co-headline (or drops back to one act)
+              // is picked up on re-crawl. Any path writing headliners MUST
+              // write canonical_headliners in the same statement (#1203).
+              headliners: sql`excluded.headliners`,
+              canonicalHeadliners: sql`excluded.canonical_headliners`,
               supportingArtists: sql`excluded.supporting_artists`,
               canonicalSupporting: sql`excluded.canonical_supporting`,
               tourName: sql`excluded.tour_name`,

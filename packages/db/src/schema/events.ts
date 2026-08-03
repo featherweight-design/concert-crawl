@@ -52,6 +52,14 @@ export const events = pgTable(
     }),
     title: text('title').notNull(),
     artist: text('artist').notNull(),
+    // Every act headlining the bill, in billing order, INCLUDING the primary
+    // one already stored in `artist` (#1203). Invariant: headliners[0] ===
+    // artist. Written only from the LLM extractor's own `headliners` output,
+    // falling back to [artist] when it emits none — nothing in this codebase
+    // ever splits an artist string on punctuation to derive it, because band
+    // names legitimately contain '&', 'and' and '+' ("Iron & Wine",
+    // "Coheed and Cambria", "for KING + COUNTRY").
+    headliners: text('headliners').array(),
     supportingArtists: text('supporting_artists').array(),
     tourName: text('tour_name'),
     date: date('date').notNull(),
@@ -120,6 +128,11 @@ export const events = pgTable(
     // Written by the crawler wherever supporting_artists is written;
     // backfilled by scripts/2026-07-18-events-canonical-supporting-backfill.ts.
     canonicalSupporting: text('canonical_supporting').array(),
+    // canonicalizeArtist() applied element-wise to headliners — the
+    // equality-match surface for artist-page attribution (#1203), so a
+    // co-headliner resolves to their own artist page instead of appearing as
+    // an opener. Written by the crawler wherever headliners is written.
+    canonicalHeadliners: text('canonical_headliners').array(),
     // Stale-event detection (issue #607). lastSeenAt is bumped to NOW() on
     // every successful crawl run that returns this event row. firstMissingAt
     // is set to NOW() on the first successful crawl that *should* have
@@ -157,6 +170,10 @@ export const events = pgTable(
     canonicalSupportingIdx: index('events_canonical_supporting_idx').using(
       'gin',
       table.canonicalSupporting,
+    ),
+    canonicalHeadlinersIdx: index('events_canonical_headliners_idx').using(
+      'gin',
+      table.canonicalHeadliners,
     ),
     // Partial UNIQUE on (venue_id, date, canonical_artist, show_time) WHERE
     // status='upcoming' — backs the crawler's ON CONFLICT target (#1053).

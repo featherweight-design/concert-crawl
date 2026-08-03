@@ -381,6 +381,94 @@ describe('extractWithLlm', () => {
     ])
   })
 
+  it('defaults headliners to [artist] when the LLM omits it (#1203)', async () => {
+    const mockEvents = [
+      {
+        title: 'Iron & Wine',
+        rawTitle: 'Iron & Wine',
+        artist: 'Iron & Wine',
+        date: '2026-08-01',
+        confidence: 0.9,
+        isConcert: true,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    // One act, ampersand and all — nothing splits on punctuation.
+    expect(result.events[0]?.headliners).toEqual(['Iron & Wine'])
+  })
+
+  it('threads a co-headline set through with artist first (#1203)', async () => {
+    const mockEvents = [
+      {
+        title: 'Desert Dwellers & Great Dane',
+        rawTitle: 'Desert Dwellers & Great Dane',
+        artist: 'Desert Dwellers',
+        headliners: ['Desert Dwellers', 'Great Dane'],
+        supportingArtists: ['Numatik'],
+        date: '2026-08-01',
+        confidence: 0.9,
+        isConcert: true,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events[0]?.headliners).toEqual([
+      'Desert Dwellers',
+      'Great Dane',
+    ])
+    expect(result.events[0]?.supportingArtists).toEqual(['Numatik'])
+  })
+
+  it('forces artist into headliners[0] and drops blanks / repeats (#1203)', async () => {
+    const mockEvents = [
+      {
+        title: 'Great Dane & Desert Dwellers',
+        rawTitle: 'Great Dane & Desert Dwellers',
+        artist: 'Desert Dwellers',
+        // Model led with the wrong act, repeated the artist in another case,
+        // and padded the list with blanks.
+        headliners: ['Great Dane', '  ', 'desert dwellers', 'Great Dane'],
+        date: '2026-08-01',
+        confidence: 0.9,
+        isConcert: true,
+        reviewNeeded: false,
+      },
+    ]
+    mockCreate.mockResolvedValue(makeAnthropicResponse(mockEvents))
+    const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+    expect(result.events[0]?.headliners).toEqual([
+      'Desert Dwellers',
+      'Great Dane',
+    ])
+  })
+
+  it('SAVE_EVENTS_TOOL declares headliners with a no-punctuation-split rule (#1203)', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+
+    const call = mockCreate.mock.calls[0]?.[0]
+    const itemSchema = call.tools[0].input_schema.properties.events.items
+    expect(itemSchema.properties.headliners.type).toBe('array')
+    expect(itemSchema.properties.headliners.description).toContain(
+      'Iron & Wine',
+    )
+    // Optional by design: an omitted list falls back to [artist].
+    expect(itemSchema.required).not.toContain('headliners')
+  })
+
+  it('system prompt keeps ampersand-containing band names as one headliner (#1203)', async () => {
+    mockCreate.mockResolvedValue(makeAnthropicResponse([]))
+    await extractWithLlm('<html>test</html>', SOURCE_URL)
+
+    const systemPrompt = mockCreate.mock.calls[0]?.[0].system[0].text
+    expect(systemPrompt).toContain('headliners[0] MUST be exactly the same')
+    expect(systemPrompt).toContain('Coheed and Cambria')
+    expect(systemPrompt).toContain('for KING + COUNTRY')
+  })
+
   it('SAVE_EVENTS_TOOL declares reviewNeeded as a required boolean property', async () => {
     mockCreate.mockResolvedValue(makeAnthropicResponse([]))
     await extractWithLlm('<html>test</html>', SOURCE_URL)

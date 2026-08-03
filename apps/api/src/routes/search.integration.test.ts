@@ -237,6 +237,28 @@ describe('GET /v1/search/artists — integration (#1115 PR-G)', () => {
     expect(body.data[0]?.upcomingShowCount).toBe(1)
   })
 
+  // #1203 — only headliners[0] reaches canonical_artist, so the second act on
+  // a co-headline bill is invisible to search unless canonical_headliners is
+  // in the condition. Kept in lock-step with routes/artists-public.ts.
+  it('counts a co-headline slot toward an artist being returned', async () => {
+    const venue = await seedVenue({ slug: 'coheadline-search-venue' })
+    await seedArtist({ name: 'Great Dane' })
+    await seedEvent(venue.id, {
+      artist: 'Desert Dwellers',
+      headliners: ['Desert Dwellers', 'Great Dane'],
+      canonicalHeadliners: ['desert dwellers', 'great dane'],
+      date: '2027-09-04',
+    })
+
+    const res = await app.request('/v1/search/artists?q=great dane')
+    const body = (await res.json()) as {
+      data: Array<{ slug: string; upcomingShowCount: number }>
+    }
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.slug).toBe('great-dane')
+    expect(body.data[0]?.upcomingShowCount).toBe(1)
+  })
+
   it('omits an artist whose only events are hidden from consumers', async () => {
     const venue = await seedVenue({ slug: 'hidden-search-venue' })
     await seedArtist({ name: 'Hidden Only' })

@@ -12,6 +12,15 @@ export interface NormalizedEvent {
    */
   rawTitle: string
   artist: string
+  /**
+   * Every act headlining the bill, in billing order, INCLUDING the primary
+   * act in `artist` — the invariant is `headliners[0] === artist` (#1203).
+   * Only the LLM extractor decides what constitutes a headliner; the crawler
+   * falls back to `[artist]` when this is absent or empty and NEVER derives
+   * multiple headliners by splitting a string on punctuation (band names
+   * legitimately contain '&', 'and' and '+').
+   */
+  headliners?: string[]
   supportingArtists?: string[]
   tourName?: string | null
   date: string

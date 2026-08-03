@@ -27,6 +27,11 @@ export const NormalizedEventSchema = z.object({
   // the cleaned title in the mapping below, so `NormalizedEvent.artist`
   // stays a plain string downstream.
   artist: z.string().nullable(),
+  // Every act headlining the bill, in billing order, including the primary
+  // one in `artist` (#1203). Optional: a model response that omits it falls
+  // back to [artist] downstream, so the headliners[0] === artist invariant
+  // holds either way.
+  headliners: z.array(z.string()).optional(),
   supportingArtists: z.array(z.string()).optional(),
   tourName: z.string().nullable().optional(),
   date: isoDateSchema,
@@ -146,6 +151,11 @@ Rules:
 - When a date has no year, infer it using today's date (provided in the user message): if the month/day is today or in the future within the current year, use the current year; if the month/day has already passed this year, use next year
 - rawTitle must be the EXACT verbatim copy of the event card's headline string from the page, byte-for-byte. Do NOT combine with subheads (e.g. "AEG Presents"), do NOT strip venue suffixes (e.g. "AT MISSION BALLROOM"), do NOT normalize or clean. The "title" field may be cleaned/combined, but rawTitle must be the unmodified source string. Downstream cross-venue routing depends on this
 - artist must be the HEADLINER ONLY — a single act. NEVER store a run-on list of several acts (e.g. "Dylan Earl, The Gray Jays, Johno Leeroy") in artist.
+- headliners: the full ordered list of acts that HEADLINE the bill, including the one you put in artist. headliners[0] MUST be exactly the same string as artist.
+  - Most bills have exactly ONE headliner. In that (normal) case headliners is a single-element array: artist "Dylan Earl" → headliners ["Dylan Earl"].
+  - Emit more than one entry ONLY when the billing genuinely presents multiple acts as co-equal headliners: a co-headline tour ("X + Y Co-Headline Tour"), an "A & B" top-line billing where both names are the marquee act, or a multi-room night where each room has its own top act.
+  - Support acts NEVER appear in headliners — they belong in supportingArtists only.
+  - A single act whose OWN name contains "&", "and", or "+" is ONE headliner, never two. These stay whole as a single-element headliners array: "Iron & Wine", "Coheed and Cambria", "Sammy Rae & The Friends", "for KING + COUNTRY", "Of Monsters and Men", "Big Head Todd & the Monsters". Judge by whether each side is a real, separately-touring act — never by the punctuation alone. When unsure, emit ONE headliner.
 - supportingArtists: list the opening/supporting acts in the order printed, and do NOT include the headliner (already in artist). If the page shows no distinct openers, use an empty array.
 - When a billing joins several acts with commas, "with", "w/", "and", "featuring", "feat.", "ft.", "&", "+", or "/", the FIRST act is the headliner (artist) and every act after it goes into supportingArtists. This applies whether the run-on appears in the artist field or embedded in the title:
   - "Dylan Earl, The Gray Jays, Johno Leeroy" → artist "Dylan Earl", supportingArtists ["The Gray Jays", "Johno Leeroy"]
@@ -194,6 +204,12 @@ const SAVE_EVENTS_TOOL: Anthropic.Tool = {
               type: ['string', 'null'],
               description:
                 "Headliner only — a single act. Never a run-on list of multiple acts. If the billing joins several acts (commas, 'with', 'w/', 'and', 'feat.', '&', '+', '/'), put the first act here and the rest in supportingArtists. Do NOT fragment a single act's own name that contains a comma or ampersand (e.g. 'Goodnight, Texas', 'Earth, Wind & Fire'). Use null when the listing names no performer at all (bingo, trivia, movie nights, themed parties) — do not invent one and do not copy the title here; the extractor derives a fallback.",
+            },
+            headliners: {
+              type: 'array',
+              items: { type: 'string' },
+              description:
+                'Every act HEADLINING this bill, in billing order, INCLUDING the one in the artist field — headliners[0] must equal artist exactly. Almost always a single-element array; emit more than one only when the billing genuinely presents multiple acts as co-equal headliners (a co-headline tour, an "A & B" marquee billing, or a multi-room night with a top act per room). Support acts never appear here. A single act whose own name contains "&", "and" or "+" is ONE headliner (e.g. "Iron & Wine", "Coheed and Cambria", "for KING + COUNTRY") — judge by whether each side is a real separately-touring act, never by the punctuation. When unsure, emit one.',
             },
             supportingArtists: {
               type: 'array',
@@ -425,6 +441,20 @@ export async function extractWithLlm(
       artist,
       evt.supportingArtists ?? [],
     )
+    // headliners[0] must equal `artist` (#1203). Trim, drop blanks, and drop
+    // case-insensitive repeats, then force the resolved artist into first
+    // position — `artist` may itself be a fallback to the cleaned title when
+    // the model returned null, in which case the model's own list can't be
+    // trusted to lead with it. An omitted or emptied list falls back to
+    // [artist]: a single headliner is never inferred by splitting a string.
+    const seenHeadliners = new Set<string>([artist.toLowerCase()])
+    const headliners = [artist]
+    for (const rawName of evt.headliners ?? []) {
+      const name = rawName.trim()
+      if (name === '' || seenHeadliners.has(name.toLowerCase())) continue
+      seenHeadliners.add(name.toLowerCase())
+      headliners.push(name)
+    }
     // Both URLs are checked against the page's own anchor set. The model
     // is told to copy them verbatim out of the "[link: …]" markers, but a
     // guessed slug would otherwise reach the CTA and 404 on the fan.
@@ -434,6 +464,7 @@ export async function extractWithLlm(
       title,
       rawTitle: evt.rawTitle,
       artist,
+      headliners,
       date: evt.date,
       confidence: evt.confidence,
       sourceUrl,

@@ -519,6 +519,13 @@
       "when": 1786492800000,
       "tag": "0073_events_upcoming_partial_index",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1786579200000,
+      "tag": "0074_events_headliners",
+      "breakpoints": true
     }
   ]
 }

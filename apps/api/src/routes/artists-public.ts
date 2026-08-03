@@ -107,9 +107,18 @@ artistsPublicRouter.get(
 
     // The headliner-OR-support condition, mirroring spotifyTasteCondition()
     // in lib/spotify-matches.ts. `= ANY(NULL)` is NULL (falsy), so events with
-    // no supporting acts are safe.
+    // no supporting acts — and any row predating the canonical_headliners
+    // backfill — are safe.
+    //
+    // canonical_headliners is the co-headliner arm (#1203): only headliners[0]
+    // reaches canonical_artist, so without this arm the second act on a
+    // co-headline bill is missing from their own page. It supplements
+    // canonical_artist rather than replacing it — the equality arm is the
+    // indexed fast path and still covers rows the crawler has not rewritten.
+    // The mirror of this condition in routes/search.ts must not diverge.
     const appearsOnBill = or(
       eq(events.canonicalArtist, artist.canonicalName),
+      sql`${artist.canonicalName} = ANY(${events.canonicalHeadliners})`,
       sql`${artist.canonicalName} = ANY(${events.canonicalSupporting})`,
     )
 

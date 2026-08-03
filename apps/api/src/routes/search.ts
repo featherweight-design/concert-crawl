@@ -149,12 +149,17 @@ searchRouter.get('/artists', async (ctx) => {
   // array overlap. The literal is built with sql.join rather than binding the
   // JS array as one parameter: postgres.js flattens an array parameter into one
   // placeholder per element, which turns `$1::text[]` into a malformed cast.
+  const canonicalNamesArray = sql`ARRAY[${sql.join(
+    canonicalNames.map((canonical) => sql`${canonical}`),
+    sql`, `,
+  )}]::text[]`
   const appearsOnBill = or(
     inArray(events.canonicalArtist, canonicalNames),
-    sql`${events.canonicalSupporting} && ARRAY[${sql.join(
-      canonicalNames.map((canonical) => sql`${canonical}`),
-      sql`, `,
-    )}]::text[]`,
+    // Co-headliner arm (#1203) — only headliners[0] reaches canonical_artist,
+    // so without it a second co-headliner reads as having no shows. Must not
+    // diverge from the same condition in routes/artists-public.ts.
+    sql`${events.canonicalHeadliners} && ${canonicalNamesArray}`,
+    sql`${events.canonicalSupporting} && ${canonicalNamesArray}`,
   )
 
   // The consumer filter pair every public query applies: non-concert rows are
@@ -165,6 +170,7 @@ searchRouter.get('/artists', async (ctx) => {
   const billRows = await db
     .select({
       canonicalArtist: events.canonicalArtist,
+      canonicalHeadliners: events.canonicalHeadliners,
       canonicalSupporting: events.canonicalSupporting,
       date: events.date,
       status: events.status,
@@ -185,6 +191,7 @@ searchRouter.get('/artists', async (ctx) => {
   for (const row of billRows) {
     const onBill = new Set<string>([
       ...(row.canonicalArtist === null ? [] : [row.canonicalArtist]),
+      ...(row.canonicalHeadliners ?? []),
       ...(row.canonicalSupporting ?? []),
     ])
     // Same status triple the artist page's own upcoming section uses
