@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { PgDialect } from 'drizzle-orm/pg-core'
-import { supportingArtistsUnchanged } from './2026-08-03-co-headliner-backfill.js'
+import { supportingArtistsUnchanged } from './2026-08-03-co-headliner-backfill-sql.js'
 
 // The --commit path's optimistic lock is the one piece of this backfill with no
 // pure-function surface, and it shipped broken: a bare array interpolation
