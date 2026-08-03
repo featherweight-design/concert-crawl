@@ -8,9 +8,6 @@ interface CredChipProps {
   showTooltip?: boolean
 }
 
-const TOOLTIP_TEXT =
-  "Cred is what you earn for every verified price. We're working on what you can spend it on."
-
 export function CredChip({
   cred,
   size = 'md',
@@ -24,7 +21,7 @@ export function CredChip({
 
   return (
     <span
-      title={showTooltip ? TOOLTIP_TEXT : undefined}
+      title={showTooltip ? SETTINGS_COPY.credChipTooltip : undefined}
       className={`inline-flex shrink-0 items-baseline rounded-full border ${padding} ${gap}`}
       style={{
         background: isZero

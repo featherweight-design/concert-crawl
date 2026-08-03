@@ -1213,6 +1213,8 @@ export const CONSUMER_COPY = {
 
     // ── CredChip ──────────────────────────────────────────────────
     credChipLabel: 'cred',
+    credChipTooltip:
+      "Cred is what you earn for every verified price. We're working on what you can spend it on.",
 
     // ── ProfileEntryAvatar ────────────────────────────────────────
     profileEntryAriaLabel: (handle: string) => `@${handle}, settings`,
