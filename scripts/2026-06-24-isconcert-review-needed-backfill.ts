@@ -272,18 +272,23 @@ export async function classifyWithRetry(
   maxRetries = 1,
 ): Promise<BatchClassification[]> {
   const byEventId = new Map<string, BatchClassification>()
-  const batchIds = new Set(batch.map((evt) => evt.id))
 
-  const absorb = (classifications: BatchClassification[]): void => {
+  // Scoped to the events in THIS request, not the whole batch: a retry sends
+  // only the omitted events, so an id from an earlier request coming back
+  // here is a hallucination that would overwrite a good classification.
+  const absorb = (
+    sent: EventForClassification[],
+    classifications: BatchClassification[],
+  ): void => {
+    const sentIds = new Set(sent.map((evt) => evt.id))
     for (const cls of classifications) {
-      // Ignore hallucinated ids that weren't in the batch we sent.
-      if (batchIds.has(cls.eventId)) byEventId.set(cls.eventId, cls)
+      if (sentIds.has(cls.eventId)) byEventId.set(cls.eventId, cls)
     }
   }
   const missingEvents = (): EventForClassification[] =>
     batch.filter((evt) => !byEventId.has(evt.id))
 
-  absorb(await classifyBatch(client, batch))
+  absorb(batch, await classifyBatch(client, batch))
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
     const missing = missingEvents()
@@ -291,7 +296,7 @@ export async function classifyWithRetry(
     console.warn(
       `Batch response omitted ${missing.length} event(s); retrying just those (attempt ${attempt + 1}/${maxRetries})`,
     )
-    absorb(await classifyBatch(client, missing))
+    absorb(missing, await classifyBatch(client, missing))
   }
 
   const stillMissing = missingEvents()
@@ -301,7 +306,7 @@ export async function classifyWithRetry(
     )
     for (const evt of stillMissing) {
       console.warn(`Classifying event ${evt.id} (${evt.title}) individually`)
-      absorb(await classifyBatch(client, [evt]))
+      absorb([evt], await classifyBatch(client, [evt]))
     }
   }
 
