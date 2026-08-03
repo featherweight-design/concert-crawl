@@ -97,9 +97,9 @@ export const LATIN_EXTENDED_TRANSLATE_TO = Object.values(
 
 /**
  * Builds the SQL expression that applies the whole map to `expr`. The 1→N
- * entries become nested `replace()` calls (applied first, outermost-last so
- * the reading order matches declaration order); the 1→1 entries become a
- * single `translate()` wrapped around the result.
+ * entries become nested `replace()` calls — the chain wraps as it is built, so
+ * the first declared entry ends up innermost and runs first; the 1→1 entries
+ * become a single `translate()` wrapped around the whole chain.
  *
  * Every replacement value is ASCII and no key appears in any value, so the
  * order of the replace() chain relative to translate() cannot matter — no
