@@ -13,16 +13,16 @@ export const renderDunning3FinalWarning: TemplateRenderer<
     {
       step: 3,
       subject: 'Heads up: Premium pauses tomorrow.',
-      preheader: 'One more try left. A fresh card keeps everything on.',
+      preheader: 'One more try left. A fresh card sorts it.',
       headerEyebrow: 'Billing · last try',
       statusText: 'Billing · last try',
       title: 'Premium pauses tomorrow.',
       sub: "We couldn't get that card through after a week of trying. There's one more attempt tomorrow. If it doesn't land, Premium pauses and you drop back to Free.",
-      reassure: 'Nothing gets deleted · a fresh card brings it all back',
+      reassure: 'One more retry tomorrow · update the card any time',
       isFinal: true,
       calloutEyebrow: 'If it pauses',
       calloutBody:
-        'Your account and saved shows stay put. History, alerts, and calendar export just go quiet until a payment goes through. Nothing gets deleted. A fresh card switches all of it back on.',
+        'Your account and the shows you watch stay put. History, alerts, and calendar export go quiet until a payment goes through. Nothing gets deleted. A fresh card switches all of it back on.',
     },
     portalUrl,
   )

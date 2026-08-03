@@ -43,7 +43,7 @@ export const renderWelcomeGifted: TemplateRenderer<
 
   const italicLine = `<div style="font-family: ${EMAIL_MONO}; font-style: italic; font-size: 12.5px; color: ${ME.accent}; letter-spacing: 0.02em;">Seriously. We owe you one.</div>`
 
-  const microcopy = `<div style="font-family: ${EMAIL_MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">No card on file · nothing to cancel · just enjoy it</div>`
+  const microcopy = `<div style="font-family: ${EMAIL_MONO}; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">No card on file · nothing to cancel</div>`
 
   const calloutInner =
     monoEyebrow({
@@ -82,7 +82,7 @@ export const renderWelcomeGifted: TemplateRenderer<
       (item) => `  - ${typeof item === 'string' ? item : item.text}`,
     ),
     '',
-    'No card on file · nothing to cancel · just enjoy it',
+    'No card on file · nothing to cancel',
     '',
     `See everything you've got: ${appUrl()}`,
   ].join('\n')

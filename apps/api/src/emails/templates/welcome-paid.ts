@@ -151,10 +151,7 @@ export const renderWelcomePaid: TemplateRenderer<
       '',
       ...(founderSeatNumber === undefined
         ? []
-        : [
-            `Founder #${founderSeatNumber} of 100: $3/mo, never goes up, ever.`,
-            '',
-          ]),
+        : [`Founder #${founderSeatNumber} of 100: $3/mo.`, '']),
       ...featureTextLines(FOUNDER_FEATURES),
       '',
       '$3 is $3. New folks may pay double someday. Never you.',

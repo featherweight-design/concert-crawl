@@ -75,7 +75,7 @@ export default function TermsPage() {
 
           <Section title="3. Accounts">
             <p>
-              You must create an account to save shows, submit prices, or use
+              You must create an account to watch shows, submit prices, or use
               social features. You are responsible for maintaining the security
               of your account and all activity that occurs under it.
             </p>

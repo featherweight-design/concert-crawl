@@ -169,7 +169,7 @@ _Source: `design/design_handoff_monetization_emails/` (email-primitives.jsx, ema
 | Big number | `#{seat}` — `fontWeight: 900`, `fontSize: 40`, `color: ME.fg`, `letterSpacing: "-0.04em"`                                                                   |
 | "of 100"   | MONO, `fontSize: 9`, `letterSpacing: "0.16em"`, uppercase, `color: ME.subtle`, `marginTop: 5`                                                               |
 | Line 1     | "Founder. Locked in." — `fontWeight: 800`, `fontSize: 15`, `color: ME.fg`                                                                                   |
-| Line 2     | "$3 / mo — never goes up, ever" — MONO, `fontSize: 10.5`, `color: ME.signal`, `marginTop: 4`                                                                |
+| Line 2     | "$3 / mo" — MONO, `fontSize: 10.5`, `color: ME.signal`, `marginTop: 4`                                                                                      |
 
 ## Atom: EmFooter
 
@@ -265,7 +265,7 @@ unchanged.
 | lede eyebrow            | `Welcome · Founder`                                                                                                                                 |
 | title                   | `You're Founder #{seat}.` (e.g. `You're Founder #37.`)                                                                                              |
 | sub                     | `One of the first hundred people to back Concert Crawl. Your price is locked at $3 a month, and it never moves — no matter what anyone pays later.` |
-| seat stamp              | `#{seat}` / `of 100` · `Founder. Locked in.` · `$3 / mo — never goes up, ever`                                                                      |
+| seat stamp              | `#{seat}` / `of 100` · `Founder. Locked in.` · `$3 / mo`                                                                                            |
 | feature-section eyebrow | `Everything Premium — yours`                                                                                                                        |
 | features                | first 4 PREMIUM_FEATURES + "Founder badge — first 100 only"                                                                                         |
 | price promise           | `$3 is $3. New folks may pay double someday — never you.` (full variant)                                                                            |
@@ -297,7 +297,7 @@ unchanged.
 | callout eyebrow        | `Everything Premium, switched on` (color ME.signal)                                                                          |
 | features (in callout)  | first 4 PREMIUM_FEATURES                                                                                                     |
 | button                 | `See everything you've got →` — tone **ghost**                                                                               |
-| microcopy under button | `No card on file · nothing to cancel · just enjoy it` (MONO, size 9, ME.subtle)                                              |
+| microcopy under button | `No card on file · nothing to cancel` (MONO, size 9, ME.subtle)                                                              |
 | footer                 | family **product**, showManage **false** (comped — no manage link)                                                           |
 
 ### Visual / composition
@@ -443,15 +443,15 @@ unchanged.
 | Field           | Value                                                                                                                                                                                                                                                                            |
 | --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | subject         | `Heads up: Premium pauses tomorrow.`                                                                                                                                                                                                                                             |
-| preheader       | `One more try left. A fresh card keeps everything on.`                                                                                                                                                                                                                           |
+| preheader       | `One more try left. A fresh card sorts it.`                                                                                                                                                                                                                                      |
 | header eyebrow  | `Billing · last try`                                                                                                                                                                                                                                                             |
 | status eyebrow  | `Billing · last try` (color **ME.amber**)                                                                                                                                                                                                                                        |
 | title           | `Premium pauses tomorrow.`                                                                                                                                                                                                                                                       |
 | sub             | `We couldn't get that card through after a week of trying. There's one more attempt tomorrow — if it doesn't land, Premium pauses and you drop back to Free.` _(RECONCILED: design said "two weeks"; corrected to "a week" to match the ~7-day dunning window — see gap report)_ |
 | callout eyebrow | `If it pauses` (amber)                                                                                                                                                                                                                                                           |
-| callout body    | `Your account and saved shows stay put. History, alerts, and calendar export just go quiet until a payment goes through. Nothing gets deleted — a fresh card switches all of it back on.`                                                                                        |
+| callout body    | `Your account and the shows you watch stay put. History, alerts, and calendar export go quiet until a payment goes through. Nothing gets deleted. A fresh card switches all of it back on.`                                                                                      |
 | button          | `Update payment method` — tone **signal** (stays branded even on final)                                                                                                                                                                                                          |
-| reassure        | `Nothing gets deleted · a fresh card brings it all back`                                                                                                                                                                                                                         |
+| reassure        | `One more retry tomorrow · update the card any time`                                                                                                                                                                                                                             |
 | footer          | billing, showManage true, same note                                                                                                                                                                                                                                              |
 
 ### Visual / composition
@@ -470,20 +470,20 @@ unchanged.
 
 ### Copy
 
-| Field                | Value                                                                                                                                                                                                                  |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| subject              | `Your Premium's set to wind down.`                                                                                                                                                                                     |
-| preheader            | `You're good through Aug 15. No hooks, no hard feelings.`                                                                                                                                                              |
-| header eyebrow       | `Subscription`                                                                                                                                                                                                         |
-| status eyebrow       | `Cancelled` (dot + eyebrow, color ME.muted)                                                                                                                                                                            |
-| title                | `Cancelled. No more charges.`                                                                                                                                                                                          |
-| sub                  | `Done — we won't bill you again. Premium keeps working right up until {periodEnd}, then your account drops back to Free.` (default `Aug 15, 2026`)                                                                     |
-| access panel eyebrow | `Premium works until`                                                                                                                                                                                                  |
-| access value         | `{periodEnd}` (fontWeight 900, size 24)                                                                                                                                                                                |
-| changes eyebrow      | `What changes after that`                                                                                                                                                                                              |
-| changes body         | `History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free — same as always. Everything you've saved stays saved.` (last sentence fg/bold) |
-| button               | `Manage subscription` — tone **ghost** (neutral affordance, NOT a pitch)                                                                                                                                               |
-| footer               | family **billing**, showManage **false**, note `If this cancel was a surprise, reply to this email and we'll sort it out.`                                                                                             |
+| Field                | Value                                                                                                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| subject              | `Your Premium's set to wind down.`                                                                                                                                                                                      |
+| preheader            | `You're good through Aug 15. No hooks, no hard feelings.`                                                                                                                                                               |
+| header eyebrow       | `Subscription`                                                                                                                                                                                                          |
+| status eyebrow       | `Cancelled` (dot + eyebrow, color ME.muted)                                                                                                                                                                             |
+| title                | `Cancelled. No more charges.`                                                                                                                                                                                           |
+| sub                  | `Done — we won't bill you again. Premium keeps working right up until {periodEnd}, then your account drops back to Free.` (default `Aug 15, 2026`)                                                                      |
+| access panel eyebrow | `Premium works until`                                                                                                                                                                                                   |
+| access value         | `{periodEnd}` (fontWeight 900, size 24)                                                                                                                                                                                 |
+| changes eyebrow      | `What changes after that`                                                                                                                                                                                               |
+| changes body         | `History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free — same as always. Everything you're watching stays put.` (last sentence fg/bold) |
+| button               | `Manage subscription` — tone **ghost** (neutral affordance, NOT a pitch)                                                                                                                                                |
+| footer               | family **billing**, showManage **false**, note `If this cancel was a surprise, reply to this email and we'll sort it out.`                                                                                              |
 
 ### Visual / composition
 
@@ -500,7 +500,7 @@ unchanged.
 | Field                 | Value                                                                                                                                                                                       |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | subject               | `Denver's been busy since you left.`                                                                                                                                                        |
-| preheader             | `Here's what Premium would hand back. No pressure, no countdown.`                                                                                                                           |
+| preheader             | `Here's what Premium would hand back, whenever you want it.`                                                                                                                                |
 | header eyebrow        | `Concert Crawl`                                                                                                                                                                             |
 | lede eyebrow          | `Whenever you want`                                                                                                                                                                         |
 | title                 | `Denver's been busy.`                                                                                                                                                                       |
@@ -525,18 +525,18 @@ unchanged.
 
 ### Copy
 
-| Field          | Value                                                                                                                                                                                                             |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| subject        | `Heads up — your card's about to expire.`                                                                                                                                                                         |
-| preheader      | `Update it before your next renewal. Takes about 30 seconds, no interruption.`                                                                                                                                    |
-| header eyebrow | `Billing`                                                                                                                                                                                                         |
-| status eyebrow | `Billing · heads up` (dot + eyebrow, colored by tier accent)                                                                                                                                                      |
-| title          | `Your card expires {daysPhrase}.` — `in 1 day` (singular at days=1) or `in {n} days` (30/14/7)                                                                                                                    |
-| sub            | `The card on file runs out before your next {planPhrase} renewal. Drop in a fresh one and nothing skips a beat — no interruption, no dropped features.` (planPhrase = tierName or TIER_META label or "your plan") |
-| card chip      | `Visa ·· 4242` · `exp 08/26`                                                                                                                                                                                      |
-| button         | `Update your card` — tone **signal**                                                                                                                                                                              |
-| microcopy      | `Nothing's wrong yet · this is just a nudge` (size 9, ME.subtle)                                                                                                                                                  |
-| footer         | family **billing**, showManage **true**, note `Already updated it? You're set — ignore this one.`                                                                                                                 |
+| Field          | Value                                                                                                                                                                      |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| subject        | `Heads up. Your card's about to expire.`                                                                                                                                   |
+| preheader      | `Update it before your next renewal. Takes about 30 seconds.`                                                                                                              |
+| header eyebrow | `Billing`                                                                                                                                                                  |
+| status eyebrow | `Billing · heads up` (dot + eyebrow, colored by tier accent)                                                                                                               |
+| title          | `Your card expires {daysPhrase}.` — `in 1 day` (singular at days=1) or `in {n} days` (30/14/7)                                                                             |
+| sub            | `The card on file runs out before your next {planPhrase} renewal. Drop in a fresh one and nothing skips a beat.` (planPhrase = tierName or TIER_META label or "your plan") |
+| card chip      | `Visa ·· 4242` · `exp 08/26`                                                                                                                                               |
+| button         | `Update your card` — tone **signal**                                                                                                                                       |
+| microcopy      | `Nothing's wrong yet · this is just a nudge` (size 9, ME.subtle)                                                                                                           |
+| footer         | family **billing**, showManage **true**, note `Already updated it? You're set — ignore this one.`                                                                          |
 
 ### Visual / composition
 
@@ -556,12 +556,12 @@ unchanged.
 | subject          | `Your gifted Premium is wrapping up.`                                                                                                                                                                                                          |
 | preheader        | `About a week left. Nothing gets deleted — here's what happens next.`                                                                                                                                                                          |
 | header eyebrow   | `Gifted Premium · ending`                                                                                                                                                                                                                      |
-| lede eyebrow     | `Your gift's almost up`                                                                                                                                                                                                                        |
+| lede eyebrow     | (none — cut; the header row already reads `Gifted Premium · ending`)                                                                                                                                                                           |
 | title            | `It's been a good run.`                                                                                                                                                                                                                        |
 | sub              | `{gifter} put you on Premium — and the gift wraps up {endsPhrase}. After that your account slides back to Free. No charge, no surprise.` (gifter = gifterName or `A friend of the crawl`; endsPhrase = `on {giftEndsAt}` or `in about a week`) |
 | italic line      | `—— Hope it showed you a few good nights.` (MONO italic, ME.accent)                                                                                                                                                                            |
 | changes eyebrow  | `When it ends`                                                                                                                                                                                                                                 |
-| changes body     | `History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free — same as always. Everything you've saved stays saved.`                                                 |
+| changes body     | `History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free — same as always. Everything you're watching stays put.`                                                |
 | callout eyebrow  | `Want to keep it going?` (accent)                                                                                                                                                                                                              |
 | callout features | "Concert history — every show you attend, logged" · "Calendar export + Spotify sync" · "Follow artists + price-drop alerts"                                                                                                                    |
 | button           | `Keep Premium — $5/mo` — tone **signal**                                                                                                                                                                                                       |

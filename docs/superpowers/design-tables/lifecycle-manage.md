@@ -179,9 +179,9 @@ Copy: `Manage subscription`
 
 Copy (per tier, `periodEnd` default `Jul 15`):
 
-- premium: `Premium · renews Jul 15. Change it, pause it, or just grab a receipt.`
-- supporter: `Supporter · renews Jul 15. Change it, pause it, or just grab a receipt.`
-- founder: `Founder · renews Jul 15. Change it, pause it, or just grab a receipt.`
+- premium: `Premium · renews Jul 15. Change it, cancel it, or grab a receipt.`
+- supporter: `Supporter · renews Jul 15. Change it, cancel it, or grab a receipt.`
+- founder: `Founder · renews Jul 15. Change it, cancel it, or grab a receipt.`
 
 ### TierBadge (`size="lg"`) — DESKTOP ONLY (rendered only when `wide`)
 
@@ -564,14 +564,14 @@ Row structure is identical across all tiers — only tierName/priceText copy var
 
 ## State Coverage
 
-| State               | Triggering condition (props)         | What renders                                                                                                              | Key copy                                                                                                                                                                               |
-| ------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mobile · Premium    | `variant="mobile" tier="premium"`    | Bottom sheet (SheetChrome auto height) + DragHandle; rail; header (fs 23, no badge); 2 in-app rows; 4 Stripe rows; footer | Eyebrow `Manage · Premium` · code `$5/MO`; subtitle `Premium · renews Jul 15. Change it, pause it, or just grab a receipt.`; cancel sub `Keep Premium until Jul 15, then roll to Free` |
-| Mobile · Supporter  | `variant="mobile" tier="supporter"`  | Same sheet layout                                                                                                         | `Manage · Supporter` · `$2/MO`; `Supporter · renews Jul 15. …`; `Keep Supporter until Jul 15, then roll to Free`                                                                       |
-| Mobile · Founder    | `variant="mobile" tier="founder"`    | Same sheet layout                                                                                                         | `Manage · Founder` · `$3/MO`; `Founder · renews Jul 15. …`; `Keep Founder until Jul 15, then roll to Free`                                                                             |
-| Desktop · Premium   | `variant="desktop" tier="premium"`   | Modal (460w) — no DragHandle; header fs 26 + TierBadge lg (signal star, `Premium`)                                        | Same copy as Mobile · Premium                                                                                                                                                          |
-| Desktop · Supporter | `variant="desktop" tier="supporter"` | Modal + TierBadge lg (accent `+`, `Supporter`)                                                                            | Same copy as Mobile · Supporter                                                                                                                                                        |
-| Desktop · Founder   | `variant="desktop" tier="founder"`   | Modal + TierBadge lg (gradient crown, `Founder`)                                                                          | Same copy as Mobile · Founder                                                                                                                                                          |
+| State               | Triggering condition (props)         | What renders                                                                                                              | Key copy                                                                                                                                                                           |
+| ------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mobile · Premium    | `variant="mobile" tier="premium"`    | Bottom sheet (SheetChrome auto height) + DragHandle; rail; header (fs 23, no badge); 2 in-app rows; 4 Stripe rows; footer | Eyebrow `Manage · Premium` · code `$5/MO`; subtitle `Premium · renews Jul 15. Change it, cancel it, or grab a receipt.`; cancel sub `Keep Premium until Jul 15, then roll to Free` |
+| Mobile · Supporter  | `variant="mobile" tier="supporter"`  | Same sheet layout                                                                                                         | `Manage · Supporter` · `$2/MO`; `Supporter · renews Jul 15. …`; `Keep Supporter until Jul 15, then roll to Free`                                                                   |
+| Mobile · Founder    | `variant="mobile" tier="founder"`    | Same sheet layout                                                                                                         | `Manage · Founder` · `$3/MO`; `Founder · renews Jul 15. …`; `Keep Founder until Jul 15, then roll to Free`                                                                         |
+| Desktop · Premium   | `variant="desktop" tier="premium"`   | Modal (460w) — no DragHandle; header fs 26 + TierBadge lg (signal star, `Premium`)                                        | Same copy as Mobile · Premium                                                                                                                                                      |
+| Desktop · Supporter | `variant="desktop" tier="supporter"` | Modal + TierBadge lg (accent `+`, `Supporter`)                                                                            | Same copy as Mobile · Supporter                                                                                                                                                    |
+| Desktop · Founder   | `variant="desktop" tier="founder"`   | Modal + TierBadge lg (gradient crown, `Founder`)                                                                          | Same copy as Mobile · Founder                                                                                                                                                      |
 
 Shared verbatim copy across all 6 states:
 

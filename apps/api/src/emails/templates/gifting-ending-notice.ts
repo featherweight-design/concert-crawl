@@ -32,7 +32,7 @@ const PREHEADER =
 const GIFTER_FALLBACK = 'A friend of the crawl'
 const CONTENT_PAD = '18px 26px 0'
 const CHANGES_BODY_TEXT =
-  "History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. Everything you've saved stays saved."
+  "History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. Everything you're watching stays put."
 
 export const renderGiftingEndingNotice: TemplateRenderer<
   EmailTemplateVars['gifting_ending_notice']
@@ -44,12 +44,12 @@ export const renderGiftingEndingNotice: TemplateRenderer<
   const endsPhrase =
     giftEndDate === null ? 'in about a week' : `on ${giftEndDate}`
 
-  const sub = `${gifterLabel} put you on Premium, and the gift wraps up ${endsPhrase}. After that your account slides back to Free. No charge, no surprise.`
+  const sub = `${gifterLabel} put you on Premium. Your account slides back to Free ${endsPhrase}. No charge, no surprise.`
 
   const italicLine = `<div style="font-family: ${EMAIL_MONO}; font-style: italic; font-size: 12.5px; color: ${ME.accent}; letter-spacing: 0.02em;">Hope it showed you a few good nights.</div>`
 
   const changesBody = `${monoEyebrow({ text: 'When it ends', color: ME.subtle, marginBottom: 10 })}
-<div style="font-family: ${EMAIL_FONT}; font-size: 13.5px; color: ${ME.muted}; line-height: 1.55;">History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. <span style="color: ${ME.fg}; font-weight: 700;">Everything you've saved stays saved.</span></div>`
+<div style="font-family: ${EMAIL_FONT}; font-size: 13.5px; color: ${ME.muted}; line-height: 1.55;">History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. <span style="color: ${ME.fg}; font-weight: 700;">Everything you're watching stays put.</span></div>`
 
   const calloutInner =
     monoEyebrow({
@@ -63,7 +63,6 @@ export const renderGiftingEndingNotice: TemplateRenderer<
   const bodyRows = [
     headerRow('Gifted Premium · ending'),
     ledeRow({
-      eyebrow: "Your gift's almost up",
       title: "It's been a good run.",
       sub,
       titleSize: 27,

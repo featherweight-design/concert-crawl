@@ -373,12 +373,12 @@ describe('cancellation_ack', () => {
     expect(rendered.html).not.toContain('null')
   })
 
-  it('reassures that saved data stays', () => {
+  it('reassures that watched shows stay', () => {
     const rendered = renderCancellationAck({
       tierName: 'Premium',
       accessEndsAt: '2026-09-10T12:00:00Z',
     })
-    expect(rendered.text).toContain("Everything you've saved stays saved.")
+    expect(rendered.text).toContain("Everything you're watching stays put.")
   })
 
   it('contains no win-back or discount language', () => {

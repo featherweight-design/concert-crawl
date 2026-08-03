@@ -11,10 +11,10 @@ longer hold). Everything else in this table is unchanged from R6.
 
 | Tier      | priceText | priceUnit             | tagline                             | rationale                                                          | features                                                                                                                                            |
 | --------- | --------- | --------------------- | ----------------------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Free      | $0        | forever               | The whole point. Always free.       | No backend cost to scale, no reason to charge.                     | Browse/search/filter · Save shows you're watching · See community-submitted prices · Submit prices yourself                                         |
+| Free      | $0        | forever               | The whole point. Always free.       | No backend cost to scale, no reason to charge.                     | Browse, search, filter every show · Watching: keep an eye on any show · See community-submitted prices · Submit prices yourself                     |
 | Supporter | $2        | / month               | Stuff we can run without scaling.   | Existing infrastructure. You're just chipping in.                  | Everything in Free · Concert history · Calendar export · Supporter badge on your profile + monoNote "Plus the warm, smug glow of keeping us alive." |
 | Premium   | $5        | / month               | Stuff that actually costs us money. | Notification workers, email at volume, price polling, Spotify API. | Everything in Supporter · Follow artists · New-show alerts · Price-drop alerts · Spotify sync · ★ More coming (future)                              |
-| Founder   | $3        | / mo · locked forever | Full Premium. Permanent discount.   | First 100 subscribers. Claimable at public launch.                 | Everything in Premium · $3/mo — never goes up, ever · Founder badge (first 100 only) · ★ More coming (future)                                       |
+| Founder   | $3        | / mo · locked forever | Full Premium. Permanent discount.   | First 100 subscribers. Claimable at public launch.                 | Everything in Premium · $3/mo, never goes up, ever · Founder badge (first 100 only) · ★ More coming (future)                                        |
 
 ## Component: tierShell (tone shells)
 
@@ -179,10 +179,10 @@ Shared: inline-flex, mono 800, 0.12em, uppercase, nowrap, lh 1, 1px solid border
 
 ### Footer mono rail
 
-| Property | Mobile                                                         | Desktop                                                 |
-| -------- | -------------------------------------------------------------- | ------------------------------------------------------- |
-| text     | Tap a tier to compare · cancel any time · Stripe handles cards | Cancel any time · billed monthly · Stripe handles cards |
-| font     | mono 9.5 / 0.12em / uppercase / var(--fg-subtle) / centered    | mono 10 / 0.14em / uppercase / same                     |
+| Property | Mobile                                                      | Desktop                             |
+| -------- | ----------------------------------------------------------- | ----------------------------------- |
+| text     | Tap a tier to compare · cancel any time                     | Cancel any time · billed monthly    |
+| font     | mono 9.5 / 0.12em / uppercase / var(--fg-subtle) / centered | mono 10 / 0.14em / uppercase / same |
 
 ## Component: GiftedThankYou
 

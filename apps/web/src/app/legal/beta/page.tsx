@@ -36,38 +36,37 @@ export default function BetaAgreementPage() {
               you to keep it that way.
             </p>
             <p className="mt-3">
-              Please don&apos;t share your invite code, post screenshots publicly,
-              or write about the product in a way that could spread access beyond
-              the people we&apos;ve invited. We want to get things right before
-              opening up.
+              Please don&apos;t share your invite code, post screenshots
+              publicly, or write about the product in a way that could spread
+              access beyond the people we&apos;ve invited. We want to get things
+              right before opening up.
             </p>
           </section>
 
           <section>
-            <h2 className="mb-3 text-base font-bold text-fg">
-              What to expect
-            </h2>
+            <h2 className="mb-3 text-base font-bold text-fg">What to expect</h2>
             <ul className="space-y-2">
               <li className="flex gap-2">
                 <span className="mt-px shrink-0 text-accent">—</span>
                 <span>
                   Things will break. Data may disappear. Features will change.
-                  That&apos;s normal for a beta — your feedback is what fixes it.
+                  That&apos;s normal for a beta — your feedback is what fixes
+                  it.
                 </span>
               </li>
               <li className="flex gap-2">
                 <span className="mt-px shrink-0 text-accent">—</span>
                 <span>
-                  Concert data is sourced by automated crawlers. It&apos;s pretty
-                  good, but always verify show details directly with the venue
-                  before buying tickets.
+                  Concert data is sourced by automated crawlers. It&apos;s
+                  pretty good, but always verify show details directly with the
+                  venue before buying tickets.
                 </span>
               </li>
               <li className="flex gap-2">
                 <span className="mt-px shrink-0 text-accent">—</span>
                 <span>
-                  We don&apos;t sell tickets. Every &ldquo;get tickets&rdquo; link goes to
-                  the venue or an official ticketing partner.
+                  We don&apos;t sell tickets. Every &ldquo;get tickets&rdquo;
+                  link goes to the venue or an official ticketing partner.
                 </span>
               </li>
             </ul>
@@ -77,14 +76,14 @@ export default function BetaAgreementPage() {
             <h2 className="mb-3 text-base font-bold text-fg">Your data</h2>
             <p>
               We collect only what we need to run the product: your email
-              address, the shows you save, and the price information you
+              address, the shows you watch, and the price information you
               optionally contribute. We don&apos;t sell your data or use it for
               advertising.
             </p>
             <p className="mt-3">
-              During the beta period, your saved shows and profile may be reset
-              as we migrate the database schema. We&apos;ll give advance notice
-              if that&apos;s coming.
+              During the beta period, the shows you watch and your profile may
+              be reset as we migrate the database schema. We&apos;ll give
+              advance notice if that&apos;s coming.
             </p>
           </section>
 
@@ -113,9 +112,10 @@ export default function BetaAgreementPage() {
               Beta ends, full terms begin
             </h2>
             <p>
-              When Concert Crawl opens to the public, a full Terms of Service and
-              Privacy Policy will replace this document. We&apos;ll notify you before
-              that happens and give you a chance to review before anything changes.
+              When Concert Crawl opens to the public, a full Terms of Service
+              and Privacy Policy will replace this document. We&apos;ll notify
+              you before that happens and give you a chance to review before
+              anything changes.
             </p>
           </section>
 

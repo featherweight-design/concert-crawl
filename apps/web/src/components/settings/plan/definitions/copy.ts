@@ -49,7 +49,7 @@ export const PLAN_CARD_COPY = {
       cta: 'Lock in Premium',
     },
     endsTomorrow: {
-      eyebrow: 'Trial ends tomorrow · lock it in',
+      eyebrow: 'Trial ends tomorrow',
       headline: 'One day left on Premium.',
       body: 'Tomorrow the trial wraps and you drop to Free: alerts, follows, and price drops switch off. Keep them on for $5/mo.',
       punchline: 'No card yet. Add one and nothing changes.',
@@ -60,7 +60,7 @@ export const PLAN_CARD_COPY = {
       cta: 'Go Premium · $5/mo',
     },
     endsToday: {
-      eyebrow: 'Trial ends today · lock it in',
+      eyebrow: 'Trial ends today',
       headline: 'Last day on Premium.',
       body: "Your trial ends today. After that you're on Free and the alerts, follows, and price drops go quiet. Lock it in and they don't.",
       punchline: "It's $5/mo. Cancel any time, lose nothing.",
@@ -126,7 +126,7 @@ export const PLAN_CARD_COPY = {
   free: {
     eyebrow: 'On the house',
     headline: 'Free. The whole point.',
-    body: "Browse, search, save shows, submit prices. All included. Premium's here whenever you want the alerts and history back.",
+    body: "Browse, search, watch shows, submit prices. All included. Premium's here whenever you want the alerts and history back.",
     punchline: 'No card, no commitment, no FOMO emails.',
     cta: 'See the tiers',
   },
@@ -136,7 +136,7 @@ export const PLAN_CARD_COPY = {
       endedAt ? `Trial ended · ${endedAt}` : 'Trial ended',
     eyebrow: 'Back on Free',
     headline: 'Your trial ended.',
-    body: "The 14 days are up and you're on Free. Save shows, browse, submit prices. All still here. Want the alerts, follows, and history back?",
+    body: "The 14 days are up and you're on Free. Watch shows, browse, submit prices. All still here. Want the alerts, follows, and history back?",
     punchline: 'No charge happened. Upgrade whenever you like.',
     cta: 'Upgrade to Premium',
   },
@@ -150,7 +150,7 @@ export const PLAN_CARD_COPY = {
     headline: "You're on Free now.",
     body: (endedAt: string | null) =>
       (endedAt ? `Your plan wrapped on ${endedAt}. ` : 'Your plan wrapped. ') +
-      'Browsing, saved shows, and submitting prices are still yours, always. The alerts, follows, and history are napping.',
+      'Browsing, watching shows, and submitting prices are still yours, always. The alerts, follows, and history are napping.',
     punchline: "Door's open. Your follows are safe for 90 days.",
     cta: 'Rejoin a plan',
   },

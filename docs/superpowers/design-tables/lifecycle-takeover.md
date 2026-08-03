@@ -443,16 +443,16 @@ Returns `{ open, seatsClaimed, seatsTotal, daysLeft, hoursLeft, hot }`:
 
 All strings verbatim from source (punctuation, em-dashes, arrows, middots exact). Per README dev notes, all externalize to `copy.ts` at integration.
 
-| Variant                 | Element             | Exact string                                                                                                                                                            |
-| ----------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Takeover (all variants) | RailHeader eyebrow  | `Premium trial`                                                                                                                                                         |
-| Takeover (all variants) | RailHeader code     | `14/14`                                                                                                                                                                 |
-| Takeover (all variants) | Headline            | `Trial's done. Pick a lane.`                                                                                                                                            |
-| Takeover (all variants) | Subhead             | `Your 14 days of Premium just wrapped. You're on Free now. Browsing and your saved shows stay put; alerts, follows, and history are paused. Pick where you want to be.` |
-| Takeover (all variants) | Bottom dismiss link | `Keep browsing on Free →`                                                                                                                                               |
-| Banner (all variants)   | Title span          | `Trial ends tomorrow`                                                                                                                                                   |
-| Banner (all variants)   | Sub span            | `Lock it in?`                                                                                                                                                           |
-| Banner (all variants)   | CTA button          | `Go Premium`                                                                                                                                                            |
+| Variant                 | Element             | Exact string                                                                                                                                                                     |
+| ----------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Takeover (all variants) | RailHeader eyebrow  | `Premium trial`                                                                                                                                                                  |
+| Takeover (all variants) | RailHeader code     | `14/14`                                                                                                                                                                          |
+| Takeover (all variants) | Headline            | `Trial's done. Pick a lane.`                                                                                                                                                     |
+| Takeover (all variants) | Subhead             | `Your 14 days of Premium just wrapped. You're on Free now. Browsing and the shows you're watching stay put; alerts, follows, and history are paused. Pick where you want to be.` |
+| Takeover (all variants) | Bottom dismiss link | `Keep browsing on Free →`                                                                                                                                                        |
+| Banner (all variants)   | Title span          | `Trial ends tomorrow`                                                                                                                                                            |
+| Banner (all variants)   | Sub span            | `Lock it in?`                                                                                                                                                                    |
+| Banner (all variants)   | CTA button          | `Go Premium`                                                                                                                                                                     |
 
 Notes: apostrophes in "Trial's" / "You're" are straight quotes (`'`) in source. The subhead is two sentences, with no em-dash. The sub span is a standalone question: `Lock it in?`. Dismiss link ends with ` →`. Eyebrow middot is `·`. No template slots (no `{'#N'}`, no dates) appear in PR 4.2 components.
 

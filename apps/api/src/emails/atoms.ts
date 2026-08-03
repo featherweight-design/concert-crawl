@@ -227,7 +227,7 @@ export const seatStamp = (seat: number): string =>
 <div style="font-family: ${FONT}; font-weight: 900; font-size: 40px; color: ${ME.fg}; letter-spacing: -0.04em; line-height: 1;">#${seat}</div>
 <div style="font-family: ${MONO}; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: ${ME.subtle}; margin-top: 5px;">of 100</div>
 <div style="font-family: ${FONT}; font-weight: 800; font-size: 15px; color: ${ME.fg}; margin-top: 12px;">Founder. Locked in.</div>
-<div style="font-family: ${MONO}; font-size: 10.5px; color: ${ME.signal}; margin-top: 4px;">$3 / mo — never goes up, ever</div>
+<div style="font-family: ${MONO}; font-size: 10.5px; color: ${ME.signal}; margin-top: 4px;">$3 / mo</div>
 </div>`
 
 // ── status eyebrow (dot + mono eyebrow) ──────────────────────

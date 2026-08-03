@@ -14,8 +14,8 @@ export const MANAGE_SHEET_COPY = {
   title: 'Manage subscription',
   subtitle: (tierName: string, periodEnd: string | null) =>
     periodEnd
-      ? `${tierName} · renews ${periodEnd}. Change it, pause it, or just grab a receipt.`
-      : `${tierName}. Change it, pause it, or just grab a receipt.`,
+      ? `${tierName} · renews ${periodEnd}. Change it, cancel it, or grab a receipt.`
+      : `${tierName}. Change it, cancel it, or grab a receipt.`,
 
   inApp: {
     groupLabel: 'On Concert Crawl',
@@ -65,7 +65,7 @@ export const CANCEL_FLOW_COPY = {
     eyebrow: 'Before you go',
     headline: (priceText: string) =>
       `If it's the ${priceText} — Supporter's $2.`,
-    body: "Supporter keeps you chipping in for less. You'd switch off alerts, follows, and price drops — and your history, follows, and alerts stay safe for 90 days either way.",
+    body: "Supporter keeps you chipping in for less. You'd switch off alerts, follows, and price drops. Either way, your Premium data (history, follows, and alerts) stays safe for 90 days, and the shows you're watching are never purged.",
     switchCta: 'Switch to Supporter instead',
   },
 
@@ -103,8 +103,7 @@ export const UPGRADE_FLOW_COPY = {
   eyebrow: 'Upgrade · Supporter → Premium',
   code: '$5/MO',
   headline: 'Going Premium',
-  subhead:
-    'The stuff that costs us money to run — switched on the second you confirm.',
+  subhead: 'The stuff that costs us money to run.',
 
   math: {
     eyebrow: 'The math',
@@ -117,7 +116,7 @@ export const UPGRADE_FLOW_COPY = {
     thenMonthlyValue: '$5.00/mo',
   },
 
-  unlocksLabel: 'Unlocks right away',
+  unlocksLabel: 'Unlocks',
   unlocks: [
     'Follow artists',
     'New-show alerts',
@@ -139,7 +138,7 @@ export const CHANGES_DISCLOSURE_COPY = {
   // Supporter unlocks; Watching stays because the R6 amendment moved it to Free
   // for signed-in users.
   stays: [
-    'Watching (Free, never purged)',
+    'Watching: free on every tier, never purged',
     "Concert history: every show you've logged",
     'Calendar export: Apple + Google',
     'Supporter badge on your profile',

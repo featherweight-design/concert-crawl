@@ -57,7 +57,7 @@ export const ONBOARDING_COPY = {
     items: [
       'Browse every upcoming show in the Denver area',
       'Compare real prices side by side, with their sources',
-      "Watch shows you're tracking, and we follow the price",
+      'Watch shows you care about, and we track the price',
       'Submit a price you saw, or confirm one someone else did',
     ],
   },

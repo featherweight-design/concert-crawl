@@ -46,13 +46,11 @@ export default function PrivacyPage() {
 
         <div className="space-y-8 text-[15px] leading-relaxed">
           <Section title="What we collect">
-            <p>
-              We collect only what&apos;s necessary to run the Service:
-            </p>
+            <p>We collect only what&apos;s necessary to run the Service:</p>
             <ul className="space-y-1.5 pl-4">
               {[
                 'Email address — for account creation and transactional emails (via Clerk)',
-                'Shows you save — to power your Watching list',
+                'Shows you watch — to power your Watching list',
                 'Price information you submit — used to improve data quality for everyone',
                 'Feedback you send — stored to help us prioritize improvements',
                 'Your username and avatar — shown on your profile',
@@ -96,31 +94,33 @@ export default function PrivacyPage() {
             </ul>
             <p>
               Each provider handles your data under their own privacy policies.
-              We select providers that meet reasonable data protection standards.
+              We select providers that meet reasonable data protection
+              standards.
             </p>
           </Section>
 
           <Section title="Cookies and local storage">
             <p>
-              We store your theme preference in your browser&apos;s localStorage. We
-              use session cookies set by Clerk for authentication. During the
-              private beta, we also set a short-lived cookie (
+              We store your theme preference in your browser&apos;s
+              localStorage. We use session cookies set by Clerk for
+              authentication. During the private beta, we also set a short-lived
+              cookie (
               <code className="rounded bg-surface-2 px-1 font-mono text-xs">
                 invite_verified
               </code>
               ) after a valid invite code is entered — it expires after 1 hour
-              and is used only to allow access to the sign-up flow. We don&apos;t
-              use tracking cookies or third-party analytics scripts.
+              and is used only to allow access to the sign-up flow. We
+              don&apos;t use tracking cookies or third-party analytics scripts.
             </p>
           </Section>
 
           <Section title="Data retention">
             <p>
               Your account data is kept for as long as your account is active.
-              When you delete your account, your profile and saved shows are
-              deleted immediately. Price submissions you&apos;ve made are anonymized
-              (your user ID is removed) rather than deleted, to preserve
-              corroboration data for other users.
+              When you delete your account, your profile and the shows
+              you&apos;re watching are deleted immediately. Price submissions
+              you&apos;ve made are anonymized (your user ID is removed) rather
+              than deleted, to preserve corroboration data for other users.
             </p>
           </Section>
 
@@ -150,8 +150,8 @@ export default function PrivacyPage() {
 
           <Section title="Changes to this policy">
             <p>
-              When we make material changes to this policy, we&apos;ll notify you by
-              email and update the &ldquo;Last updated&rdquo; date above.
+              When we make material changes to this policy, we&apos;ll notify
+              you by email and update the &ldquo;Last updated&rdquo; date above.
             </p>
           </Section>
 

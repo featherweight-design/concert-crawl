@@ -24,8 +24,7 @@ import type { EmailTemplateVars, TemplateRenderer } from '../types.js'
 import { WINBACK_FEATURES } from './unlocks.js'
 
 const SUBJECT = "Denver's been busy since you left."
-const PREHEADER =
-  "Here's what Premium would hand back. No pressure, no countdown."
+const PREHEADER = "Here's what Premium would hand back, whenever you want it."
 
 const CONTENT_PAD = '18px 26px 0'
 

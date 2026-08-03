@@ -28,7 +28,7 @@ const SUBJECT = "Your Premium's set to wind down."
 const FOOTER_NOTE =
   "If this cancel was a surprise, reply to this email and we'll sort it out."
 const CHANGES_BODY_TEXT =
-  "History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. Everything you've saved stays saved."
+  "History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. Everything you're watching stays put."
 
 const CONTENT_PAD = '18px 26px 0'
 
@@ -46,7 +46,7 @@ ${monoEyebrow({ text: 'Premium works until', color: ME.subtle, marginBottom: 8 }
 </div>`
 
   const changesBody = `${monoEyebrow({ text: 'What changes after that', color: ME.subtle, marginBottom: 10 })}
-<div style="font-family: ${EMAIL_FONT}; font-size: 13.5px; color: ${ME.muted}; line-height: 1.55;">History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. <span style="color: ${ME.fg}; font-weight: 700;">Everything you've saved stays saved.</span></div>`
+<div style="font-family: ${EMAIL_FONT}; font-size: 13.5px; color: ${ME.muted}; line-height: 1.55;">History, alerts, calendar export, and Spotify sync go quiet. Browse, search, filters, watching a show, and community prices stay free, same as always. <span style="color: ${ME.fg}; font-weight: 700;">Everything you're watching stays put.</span></div>`
 
   const bodyRows = [
     headerRow('Subscription'),

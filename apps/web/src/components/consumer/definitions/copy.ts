@@ -100,7 +100,7 @@ export const CONSUMER_COPY = {
   watchingEmptyEyebrow: 'Watching',
   watchingEmptyTitle: 'No shows, grandpa.',
   watchingEmptyBody:
-    "Add a show to follow it. Soon, we'll watch the price for you and notify you of drops, spikes, or sell-outs.",
+    "Watch a show and it lands here. Soon, we'll track the price for you and notify you of drops, spikes, or sell-outs.",
   watchingEmptyCta: "Browse tonight's shows",
 
   // ── Search ─────────────────────────────────────────────────────────

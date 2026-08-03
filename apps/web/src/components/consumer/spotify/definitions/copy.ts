@@ -89,7 +89,7 @@ export const SPOTIFY_COPY = {
     },
     optionHighlight: {
       head: 'Just highlight them',
-      sub: "We'll mark matching shows with a 'You follow' badge as you browse. You decide what to watch.",
+      sub: "We'll mark shows by artists you follow as you browse. You decide what to watch.",
       defaultPill: 'DEFAULT',
     },
     ctaAuto: (count: number) => `Auto-watch ${count} shows`,
@@ -144,11 +144,11 @@ export const SPOTIFY_COPY = {
       },
       {
         head: 'Taste highlights switch off.',
-        sub: "No more 'You follow' flags. Your browsing goes back to plain.",
+        sub: 'No more Following chips. Your browsing goes back to plain.',
       },
       {
         head: "Shows you're watching stay.",
-        sub: 'Anything you already saved is yours — unlinking never touches it.',
+        sub: 'Anything you already watch is yours, and unlinking never touches it.',
       },
     ],
     confirmCta: 'Unlink Spotify',
@@ -183,7 +183,7 @@ export const SPOTIFY_COPY = {
   failTokenRefresh: {
     eyebrow: 'sync · lost the thread',
     title: 'We lost the Spotify thread.',
-    body: "Your link expired and Spotify wants a fresh hello. Your saved shows are safe — we just can't spot new matches until you reconnect.",
+    body: "Your link expired and Spotify wants a fresh hello. The shows you're watching are safe, but we can't spot new matches until you reconnect.",
     primaryCta: 'Reconnect Spotify',
     secondaryCta: 'Not now',
   },
@@ -295,7 +295,7 @@ export const SPOTIFY_COPY = {
     failure: {
       eyebrow: 'TASTE ON PAUSE',
       title: "Can't read your taste right now.",
-      body: 'Your Spotify link needs a refresh, so picks are paused. Your saved shows are untouched — reconnect to bring taste back.',
+      body: "Your Spotify link needs a refresh, so picks are paused. The shows you're watching are untouched. Reconnect to bring taste back.",
       primaryCta: 'Reconnect Spotify',
       secondaryCta: 'Browse all shows',
     },
@@ -314,7 +314,7 @@ export const SPOTIFY_COPY = {
     },
   },
   firstWatchNudge: {
-    eyebrow: 'NICE — FIRST ONE SAVED',
+    eyebrow: 'NICE · FIRST ONE WATCHING',
     title: 'Want the rest picked for your taste?',
     body: "Link Spotify and we'll surface shows from the artists you already play. No more scrolling past them.",
     primaryCta: 'Connect Spotify',

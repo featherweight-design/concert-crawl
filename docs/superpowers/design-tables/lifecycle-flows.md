@@ -281,20 +281,20 @@ Props: `variant = "mobile"`, `tier = "premium"`, `periodEnd = "Jul 15"`. `isPrem
 
 ### Date-breakdown InfoCard (tone="neutral")
 
-| Property                    | Mobile                                                                                                                                                                                        | Desktop          |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| card                        | InfoCard neutral (see primitives: padding 13px 14px, radius 12, bg var(--surface-1), border 1px solid var(--border), flex column gap 10)                                                      | same             |
-| MathRow (strong) label      | `You keep {tierName} until`                                                                                                                                                                   | same             |
-| MathRow (strong) value      | `{periodEnd}` (e.g. "Jul 15")                                                                                                                                                                 | same             |
-| divider height              | 1                                                                                                                                                                                             | 1                |
-| divider background          | var(--border)                                                                                                                                                                                 | var(--border)    |
-| body font-family            | Inter, system-ui                                                                                                                                                                              | Inter, system-ui |
-| body font-weight            | 500                                                                                                                                                                                           | 500              |
-| body font-size              | 12.5                                                                                                                                                                                          | 12.5             |
-| body color                  | var(--fg-muted)                                                                                                                                                                               | var(--fg-muted)  |
-| body line-height            | 1.5                                                                                                                                                                                           | 1.5              |
-| body copy (Premium/Founder) | "You won't be charged again. On {periodEnd} you roll to Free — and your history, follows, and alerts stay safe for 90 days in case you come back."                                            | same             |
-| body copy (Supporter)       | "You won't be charged again. On {periodEnd} you roll to Free and the Supporter badge comes off. Everything you actually use — saved shows, browsing, prices — was always free and stays put." | same             |
+| Property                    | Mobile                                                                                                                                                         | Desktop          |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| card                        | InfoCard neutral (see primitives: padding 13px 14px, radius 12, bg var(--surface-1), border 1px solid var(--border), flex column gap 10)                       | same             |
+| MathRow (strong) label      | `You keep {tierName} until`                                                                                                                                    | same             |
+| MathRow (strong) value      | `{periodEnd}` (e.g. "Jul 15")                                                                                                                                  | same             |
+| divider height              | 1                                                                                                                                                              | 1                |
+| divider background          | var(--border)                                                                                                                                                  | var(--border)    |
+| body font-family            | Inter, system-ui                                                                                                                                               | Inter, system-ui |
+| body font-weight            | 500                                                                                                                                                            | 500              |
+| body font-size              | 12.5                                                                                                                                                           | 12.5             |
+| body color                  | var(--fg-muted)                                                                                                                                                | var(--fg-muted)  |
+| body line-height            | 1.5                                                                                                                                                            | 1.5              |
+| body copy (Premium/Founder) | "You won't be charged again. On {periodEnd} you roll to Free — and your history, follows, and alerts stay safe for 90 days in case you come back."             | same             |
+| body copy (Supporter)       | "You won't be charged again. On {periodEnd} you roll to Free and the Supporter badge comes off. Watching, browsing, and prices were always free and stay put." | same             |
 
 ### Retention nudge card (rendered ONLY when tier is premium or founder — README decision #6)
 
@@ -334,14 +334,14 @@ Props: `variant = "mobile"`, `tier = "premium"`, `periodEnd = "Jul 15"`. `isPrem
 
 #### Retention nudge body
 
-| Property       | Mobile                                                                                                                                                                  | Desktop         |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
-| copy           | "Supporter keeps you chipping in for less. You'd switch off alerts, follows, and price drops — and your history, follows, and alerts stay safe for 90 days either way." | same            |
-| font-weight    | 500                                                                                                                                                                     | 500             |
-| font-size      | 12.5                                                                                                                                                                    | 12.5            |
-| color          | var(--fg-muted)                                                                                                                                                         | var(--fg-muted) |
-| letter-spacing | -0.005em                                                                                                                                                                | -0.005em        |
-| line-height    | 1.5                                                                                                                                                                     | 1.5             |
+| Property       | Mobile                                                                                                                                                                                                                              | Desktop         |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| copy           | "Supporter keeps you chipping in for less. You'd switch off alerts, follows, and price drops. Either way, your Premium data (history, follows, and alerts) stays safe for 90 days, and the shows you're watching are never purged." | same            |
+| font-weight    | 500                                                                                                                                                                                                                                 | 500             |
+| font-size      | 12.5                                                                                                                                                                                                                                | 12.5            |
+| color          | var(--fg-muted)                                                                                                                                                                                                                     | var(--fg-muted) |
+| letter-spacing | -0.005em                                                                                                                                                                                                                            | -0.005em        |
+| line-height    | 1.5                                                                                                                                                                                                                                 | 1.5             |
 
 #### "Switch to Supporter instead" button (one-tap route into DowngradeFlow)
 
@@ -406,14 +406,14 @@ Props: `variant = "mobile"`, `tier = "premium"`, `periodEnd = "Jul 15"`. `isPrem
 
 ### State Coverage — CancelFlow
 
-| State                            | Triggering condition (props)         | What renders                                                                                                                                                                     | Key copy                                                                                                                                                                              |
-| -------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Premium cancel, mobile           | `variant="mobile" tier="premium"`    | Sheet: DragHandle → RailHeader(muted) → headline 24px → neutral date card (Premium body, 90-day note) → retention nudge ($5 math) → Cancel primary (danger) + ghost → fine print | "Cancel · Premium" / "Stepping back?" / "If it's the $5 — Supporter's $2." / "Cancel subscription" / "Never mind — keep Premium"                                                      |
-| Premium cancel, desktop          | `variant="desktop" tier="premium"`   | Modal width 460, headline 28px, subhead 14.5, nudge headline 16.5; otherwise identical                                                                                           | same                                                                                                                                                                                  |
-| Founder cancel, mobile           | `variant="mobile" tier="founder"`    | Full flow with retention nudge; nudge headline uses $3                                                                                                                           | "Cancel · Founder" / "If it's the $3 — Supporter's $2." / "You keep Founder until" / "Never mind — keep Founder"                                                                      |
-| Founder cancel, desktop          | `variant="desktop" tier="founder"`   | Same, desktop metrics                                                                                                                                                            | same                                                                                                                                                                                  |
-| Supporter cancel (thin), mobile  | `variant="mobile" tier="supporter"`  | NO retention nudge; date card uses Supporter body (no 90-day note, badge-comes-off framing); confirm + ghost + fine print                                                        | "Cancel · Supporter" / "…the Supporter badge comes off. Everything you actually use — saved shows, browsing, prices — was always free and stays put." / "Never mind — keep Supporter" |
-| Supporter cancel (thin), desktop | `variant="desktop" tier="supporter"` | Same, desktop metrics                                                                                                                                                            | same                                                                                                                                                                                  |
+| State                            | Triggering condition (props)         | What renders                                                                                                                                                                     | Key copy                                                                                                                                               |
+| -------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Premium cancel, mobile           | `variant="mobile" tier="premium"`    | Sheet: DragHandle → RailHeader(muted) → headline 24px → neutral date card (Premium body, 90-day note) → retention nudge ($5 math) → Cancel primary (danger) + ghost → fine print | "Cancel · Premium" / "Stepping back?" / "If it's the $5 — Supporter's $2." / "Cancel subscription" / "Never mind — keep Premium"                       |
+| Premium cancel, desktop          | `variant="desktop" tier="premium"`   | Modal width 460, headline 28px, subhead 14.5, nudge headline 16.5; otherwise identical                                                                                           | same                                                                                                                                                   |
+| Founder cancel, mobile           | `variant="mobile" tier="founder"`    | Full flow with retention nudge; nudge headline uses $3                                                                                                                           | "Cancel · Founder" / "If it's the $3 — Supporter's $2." / "You keep Founder until" / "Never mind — keep Founder"                                       |
+| Founder cancel, desktop          | `variant="desktop" tier="founder"`   | Same, desktop metrics                                                                                                                                                            | same                                                                                                                                                   |
+| Supporter cancel (thin), mobile  | `variant="mobile" tier="supporter"`  | NO retention nudge; date card uses Supporter body (no 90-day note, badge-comes-off framing); confirm + ghost + fine print                                                        | "Cancel · Supporter" / "…the Supporter badge comes off. Watching, browsing, and prices were always free and stay put." / "Never mind — keep Supporter" |
+| Supporter cancel (thin), desktop | `variant="desktop" tier="supporter"` | Same, desktop metrics                                                                                                                                                            | same                                                                                                                                                   |
 
 ---
 
@@ -540,14 +540,14 @@ Props: `variant = "mobile"`, `prorated = "3.25"`. Desktop FlowSurface width = **
 
 ### Subhead
 
-| Property       | Mobile                                                                       | Desktop         |
-| -------------- | ---------------------------------------------------------------------------- | --------------- |
-| copy           | "The stuff that costs us money to run — switched on the second you confirm." | same            |
-| font-weight    | 500                                                                          | 500             |
-| font-size      | 13.5                                                                         | 14.5            |
-| color          | var(--fg-muted)                                                              | var(--fg-muted) |
-| letter-spacing | -0.005em                                                                     | -0.005em        |
-| line-height    | 1.5                                                                          | 1.5             |
+| Property       | Mobile                                  | Desktop         |
+| -------------- | --------------------------------------- | --------------- |
+| copy           | "The stuff that costs us money to run." | same            |
+| font-weight    | 500                                     | 500             |
+| font-size      | 13.5                                    | 14.5            |
+| color          | var(--fg-muted)                         | var(--fg-muted) |
+| letter-spacing | -0.005em                                | -0.005em        |
+| line-height    | 1.5                                     | 1.5             |
 
 ### Proration InfoCard (tone="signal")
 
@@ -570,7 +570,7 @@ Props: `variant = "mobile"`, `prorated = "3.25"`. Desktop FlowSurface width = **
 | MathRow 1                      | label "Charged today (prorated)", value `$${prorated}` (e.g. "$3.25"), strong                                                                | same          |
 | MathRow 2                      | label "Then monthly", value "$5.00/mo" (not strong)                                                                                          | same          |
 
-### "Unlocks right away" section
+### "Unlocks" section
 
 | Property                   | Mobile                                                                   | Desktop |
 | -------------------------- | ------------------------------------------------------------------------ | ------- |
@@ -578,7 +578,7 @@ Props: `variant = "mobile"`, `prorated = "3.25"`. Desktop FlowSurface width = **
 | wrapper flex-direction     | column                                                                   | column  |
 | wrapper gap                | 8                                                                        | 8       |
 | wrapper padding            | 0 2px                                                                    | 0 2px   |
-| MonoEyebrow copy           | "Unlocks right away"                                                     | same    |
+| MonoEyebrow copy           | "Unlocks"                                                                | same    |
 | MonoEyebrow size           | 9.5                                                                      | 9.5     |
 | MonoEyebrow letter-spacing | 0.16em                                                                   | 0.16em  |
 | MonoEyebrow color          | var(--fg-subtle) (default — no color prop)                               | same    |
@@ -643,7 +643,7 @@ Stateless props; internal `open` state (default `false`). Rendered by DowngradeF
 
 Data (hard-coded per #781 §6 matrix + R6 amendment):
 
-- `stays` (4): "Watching (Free, never purged)", "Concert history: every show you've logged", "Calendar export: Apple + Google", "Supporter badge on your profile"
+- `stays` (4): "Watching: free on every tier, never purged", "Concert history: every show you've logged", "Calendar export: Apple + Google", "Supporter badge on your profile"
 - `off` (4): "Following artists", "New-show alerts", "Price-drop alerts", "Spotify sync"
 
 > Amended 2026-07-29: concert history and calendar export became Supporter unlocks, so they moved from `off` to `stays`. The R6 amendment moved Watching to Free for signed-in users. This block reflects the shipped `CHANGES_DISCLOSURE_COPY`.
@@ -746,7 +746,7 @@ Data (hard-coded per #781 §6 matrix + R6 amendment):
 | item font                  | Inter, system-ui, weight 500, size 12.5                                                                                                                                         | same          |
 | item color                 | var(--fg)                                                                                                                                                                       | var(--fg)     |
 | check SVG                  | width 12, height 12, viewBox 0 0 12 12, flex-shrink 0, margin-top 3; path d "M2 6 L5 9 L10 3", fill none, stroke var(--accent), stroke-width 1.8, linecap round, linejoin round | same          |
-| items                      | "Watching (Free, never purged)"; "Concert history: every show you've logged"; "Calendar export: Apple + Google"; "Supporter badge on your profile"                              | same          |
+| items                      | "Watching: free on every tier, never purged"; "Concert history: every show you've logged"; "Calendar export: Apple + Google"; "Supporter badge on your profile"                 | same          |
 
 #### "Switches off" group
 
@@ -793,10 +793,10 @@ CancelFlow:
 - "No guilt trip. Here's exactly what happens if you cancel."
 - "You keep {tierName} until" → `{periodEnd}`
 - Premium/Founder body: "You won't be charged again. On {periodEnd} you roll to Free — and your history, follows, and alerts stay safe for 90 days in case you come back."
-- Supporter body: "You won't be charged again. On {periodEnd} you roll to Free and the Supporter badge comes off. Everything you actually use — saved shows, browsing, prices — was always free and stays put."
+- Supporter body: "You won't be charged again. On {periodEnd} you roll to Free and the Supporter badge comes off. Watching, browsing, and prices were always free and stay put."
 - "Before you go"
 - "If it's the $5 — Supporter's $2." (premium) / "If it's the $3 — Supporter's $2." (founder)
-- "Supporter keeps you chipping in for less. You'd switch off alerts, follows, and price drops — and your history, follows, and alerts stay safe for 90 days either way."
+- "Supporter keeps you chipping in for less. You'd switch off alerts, follows, and price drops. Either way, your Premium data (history, follows, and alerts) stays safe for 90 days, and the shows you're watching are never purged."
 - "Switch to Supporter instead"
 - "Cancel subscription" / "Never mind — keep {tierName}"
 - "No refunds · access continues to {periodEnd} · cancel anytime"
@@ -816,17 +816,17 @@ UpgradeFlow:
 
 - Eyebrow: "Upgrade · Supporter → Premium" · code: "$5/MO"
 - "Going Premium"
-- "The stuff that costs us money to run — switched on the second you confirm."
+- "The stuff that costs us money to run."
 - "The math"
 - "Premium unlocks now. ${prorated} covers the rest of this billing cycle; after that it's the usual $5/mo."
 - "Charged today (prorated)" → "${prorated}" · "Then monthly" → "$5.00/mo"
-- "Unlocks right away" → "Follow artists" / "New-show alerts" / "Price-drop alerts" / "Spotify sync"
+- "Unlocks" → "Follow artists" / "New-show alerts" / "Price-drop alerts" / "Spotify sync"
 - "Unlock Premium" (sub: "${prorated} today, then $5/mo") / "Not yet"
 - "Effective immediately · prorated via Stripe · cancel anytime"
 
 ChangesDisclosure:
 
 - "Your follows and alerts stay safe for 90 days."
-- "Stays on" → "Watching (Free, never purged)" / "Concert history: every show you've logged" / "Calendar export: Apple + Google" / "Supporter badge on your profile"
+- "Stays on" → "Watching: free on every tier, never purged" / "Concert history: every show you've logged" / "Calendar export: Apple + Google" / "Supporter badge on your profile"
 - "Switches off · safe 90 days" → "Following artists" / "New-show alerts" / "Price-drop alerts" / "Spotify sync"
 - "Re-upgrade within 90 days and it all comes back exactly where you left it. After that it's cleared."

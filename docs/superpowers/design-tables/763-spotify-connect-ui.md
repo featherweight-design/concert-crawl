@@ -188,7 +188,7 @@ Source handoff: `design/design_handoff_spotify_sync/` (connect-flow.jsx, connect
 | gap           | 8px    | 8px     |
 | margin-bottom | 10px   | 10px    |
 
-### Eyebrow "NICE — FIRST ONE SAVED"
+### Eyebrow "NICE · FIRST ONE WATCHING"
 
 | Property       | Mobile        | Desktop       |
 | -------------- | ------------- | ------------- |
@@ -642,7 +642,7 @@ Source handoff: `design/design_handoff_spotify_sync/` (connect-flow.jsx, connect
 
 ### FirstWatchNudge
 
-- Eyebrow: "NICE — FIRST ONE SAVED"
+- Eyebrow: "NICE · FIRST ONE WATCHING"
 - Heading: "Want the rest picked for your taste?"
 - Body: "Link Spotify and we'll surface shows from the artists you already play — no more scrolling past them."
 - Buttons: "Connect Spotify" / "Not now"
@@ -668,7 +668,7 @@ Source handoff: `design/design_handoff_spotify_sync/` (connect-flow.jsx, connect
 - Heading: "Want us to watch these for you?"
 - Body: "\"Watching\" a show means you get a heads-up on new dates and price drops. Your call how eager we are."
 - Option auto: "Auto-watch matching shows" / "We'll add all {M} to your Watching list now, and any new match automatically. Undo any single one anytime."
-- Option highlight (DEFAULT badge): "Just highlight them" / "We'll mark matching shows with a 'You follow' badge as you browse. You decide what to watch."
+- Option highlight (DEFAULT badge): "Just highlight them" / "We'll mark shows by artists you follow as you browse. You decide what to watch."
 - Button (auto): "Auto-watch {M} shows" · Button (highlight): "Highlight as I browse"
 - Footer: "CHANGE THIS ANYTIME IN SETTINGS ▸ CONNECTIONS"
 
@@ -997,8 +997,8 @@ Source handoff: `design/design_handoff_spotify_sync/` (connect-flow.jsx, connect
 ### Consequence copy
 
 1. "We drop the connection." / "Your Spotify token is deleted — we forget how to reach it."
-2. "Taste highlights switch off." / "No more 'You follow' flags. Your browsing goes back to plain."
-3. "Shows you're watching stay." / "Anything you already saved is yours — unlinking never touches it."
+2. "Taste highlights switch off." / "No more Following chips. Your browsing goes back to plain."
+3. "Shows you're watching stay." / "Anything you already watch is yours, and unlinking never touches it."
 
 ### Unlink Button
 
@@ -1116,7 +1116,7 @@ Source handoff: `design/design_handoff_spotify_sync/` (connect-flow.jsx, connect
 ## Component: FailTokenRefresh
 
 - Eyebrow (danger): "sync · lost the thread" · Title: "We lost the Spotify thread."
-- Body: "Your link expired and Spotify wants a fresh hello. Your saved shows are safe — we just can't spot new matches until you reconnect."
+- Body: "Your link expired and Spotify wants a fresh hello. The shows you're watching are safe, but we can't spot new matches until you reconnect."
 - Primary: "Reconnect Spotify" · Secondary: "Not now"
 - Glyph: GreenDisc(danger); SVG 32×32; path1 var(--danger) 2.6 round d="M16 3v10M16 22v.5"; path2 var(--danger) 2.2 round opacity 0.5 d="M27 27a15 15 0 00-22 0"
 

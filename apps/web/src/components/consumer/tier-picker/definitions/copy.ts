@@ -47,9 +47,8 @@ export const TIER_PICKER_COPY = {
     link: 'Sign in →',
   },
   footer: {
-    desktop: 'Cancel any time · billed monthly · your price never goes up',
-    mobile:
-      'Tap a tier to compare · cancel any time · your price never goes up',
+    desktop: 'Cancel any time · billed monthly',
+    mobile: 'Tap a tier to compare · cancel any time',
   },
   card: {
     yourPlan: 'Your plan',
