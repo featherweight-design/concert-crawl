@@ -53,7 +53,7 @@ const CONTEST_RESOLVED = {
 }
 const SPOTIFY_NEW_SHOW = {
   category: 'spotify.new_show',
-  title: 'Big Head Todd — new Denver date',
+  title: 'Big Head Todd: new Denver date',
   body: 'Fillmore · Oct 12. Added to your Watching.',
 }
 

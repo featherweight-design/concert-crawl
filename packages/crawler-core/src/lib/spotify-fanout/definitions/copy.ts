@@ -2,9 +2,9 @@
 // eng spec §10.1). Strings are lifted verbatim from the locked design mock
 // (design/design_handoff_spotify_sync/push-alert.jsx):
 //
-//   autoOn:    "Big Head Todd — new Denver date"
+//   autoOn:    "Big Head Todd: new Denver date"
 //              "Fillmore · Oct 12. Added to your Watching."
-//   highlight: "Big Head Todd — new Denver date"
+//   highlight: "Big Head Todd: new Denver date"
 //              "Fillmore · Oct 12. Want in? Tap to watch."
 //
 // The body variant is keyed off the user's per-connection autoWatch state
@@ -12,7 +12,7 @@
 // Watching list; highlight-only users get the tap-to-watch invite.
 
 export const spotifyNewShowCopy = {
-  title: (artist: string): string => `${artist} — new Denver date`,
+  title: (artist: string): string => `${artist}: new Denver date`,
   autoWatchBody: (venueName: string, dateLabel: string): string =>
     `${venueName} · ${dateLabel}. Added to your Watching.`,
   highlightBody: (venueName: string, dateLabel: string): string =>

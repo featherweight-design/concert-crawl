@@ -28,8 +28,8 @@ function CCAppIcon({ size = 40 }) {
 }
 
 const PUSH_COPY = {
-  autoOn:    { title: "Big Head Todd — new Denver date", body: "Fillmore · Oct 12. Added to your Watching." },
-  highlight: { title: "Big Head Todd — new Denver date", body: "Fillmore · Oct 12. Want in? Tap to watch." },
+  autoOn:    { title: "Big Head Todd: new Denver date", body: "Fillmore · Oct 12. Added to your Watching." },
+  highlight: { title: "Big Head Todd: new Denver date", body: "Fillmore · Oct 12. Want in? Tap to watch." },
   presale:   { title: "Presale: Turnstile at Mission", body: "Opens tomorrow, 10:00 AM. You're watching this one." },
 };
 
@@ -103,7 +103,7 @@ function LockScreen({ platform = "ios", variant = "autoOn" }) {
 function InAppReceipt() {
   const { SpotifyLogo, MonoEyebrow } = window;
   const items = [
-    { title: "Big Head Todd — new Denver date", meta: "Fillmore · Oct 12 · added to Watching", time: "2m", src: true, unread: true },
+    { title: "Big Head Todd: new Denver date", meta: "Fillmore · Oct 12 · added to Watching", time: "2m", src: true, unread: true },
     { title: "Presale: Turnstile at Mission", meta: "Opens tomorrow 10:00 AM", time: "3h", src: true, unread: true },
     { title: "Price drop — Sleep Token", meta: "$42 → $34 at Fillmore", time: "1d", src: false, unread: false },
   ];

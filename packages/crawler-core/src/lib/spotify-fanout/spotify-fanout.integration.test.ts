@@ -171,7 +171,7 @@ describe('runSpotifyFanout — channel gating (#763 §10.1)', () => {
     expect(sendPush).toHaveBeenCalledWith({
       userId: PREMIUM_USER,
       category: 'spotify.new_show',
-      title: 'Big Head Todd — new Denver date',
+      title: 'Big Head Todd: new Denver date',
       body: 'Fillmore · Oct 12. Want in? Tap to watch.',
       actionUrl: `/events/${eventId}`,
       tag: `spotify-new-show-${eventId}`,

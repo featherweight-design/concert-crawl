@@ -6,7 +6,7 @@
 
 export const watchNotificationCopy = {
   cancelled: (artistAtVenue: string) => ({
-    title: `${artistAtVenue} — cancelled.`,
+    title: `${artistAtVenue}: cancelled.`,
     body: "The show's off. Tap for refund details.",
   }),
   postponed: (artistAtVenue: string, dateLabel: string) => ({
@@ -15,11 +15,11 @@ export const watchNotificationCopy = {
   }),
   soldout: (artistAtVenue: string) => ({
     title: `${artistAtVenue} is sold out.`,
-    body: "Official waitlist may open closer to the date — we'll watch it.",
+    body: "Official waitlist may open closer to the date. We'll watch it.",
   }),
   backonsale: (artistAtVenue: string) => ({
     title: `Tickets for ${artistAtVenue} just went back on sale.`,
-    body: 'A batch reopened. They tend to go fast — no pressure though.',
+    body: 'A batch reopened. They tend to go fast, no pressure though.',
   }),
   // Price-drop template. When the caller passes concrete prices, the copy
   // matches the design handoff mock — title carries the new floor, body

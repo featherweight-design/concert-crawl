@@ -19,7 +19,7 @@ describe('pruneNotifications', () => {
       userId: 'user_owner',
       type: 'user_notification',
       category: 'watch.cancelled',
-      title: 'Geese at Bluebird Theater — cancelled.',
+      title: 'Geese at Bluebird Theater: cancelled.',
       body: "The show's off. Tap for refund details.",
       createdAt: ancient(),
     })
@@ -34,7 +34,7 @@ describe('pruneNotifications', () => {
       userId: 'user_owner',
       type: 'user_notification',
       category: 'spotify.new_show',
-      title: 'Big Head Todd — new Denver date',
+      title: 'Big Head Todd: new Denver date',
       body: 'Fillmore · Oct 12. Added to your Watching.',
       createdAt: new Date(Date.now() - DAY_MS),
     })
@@ -59,7 +59,7 @@ describe('pruneNotifications', () => {
         type: 'user_notification',
         category: 'watch.soldout',
         title: 'Geese at Bluebird Theater is sold out.',
-        body: "Official waitlist may open closer to the date — we'll watch it.",
+        body: "Official waitlist may open closer to the date. We'll watch it.",
         createdAt: ancient(),
       })
     }

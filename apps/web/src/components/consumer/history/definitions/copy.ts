@@ -48,7 +48,7 @@ export const HISTORY_COPY = {
 
   locked: {
     headline: 'Keep the nights.',
-    body: "Every show you tap I'm going! lands here after the date — same artist art, same dates, no work on your end. You also get a calendar feed you can subscribe to.",
+    body: "Every show you tap I'm going! lands here after the date: same artist art, same dates, no work on your end. You also get a calendar feed you can subscribe to.",
     cta: (tierName: string) => `Pick ${tierName}`,
     // Used only if the matrix somehow exposes no purchasable lane for the
     // feature — the picker still opens, it just can't promise which plan.

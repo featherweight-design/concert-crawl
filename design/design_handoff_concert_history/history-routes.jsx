@@ -178,7 +178,7 @@ function HistoryLocked({ onUpgrade }) {
           margin: 0, fontSize: 13, lineHeight: 1.5,
           color: "var(--fg-muted)", letterSpacing: "-0.005em",
         }}>
-          Every show you tap <strong style={{ color: "var(--fg)", fontWeight: 700 }}>I'm going!</strong> lands here after the date — same artist art, same dates, no work on your end. Supporters also get a calendar feed they can subscribe to.
+          Every show you tap <strong style={{ color: "var(--fg)", fontWeight: 700 }}>I'm going!</strong> lands here after the date: same artist art, same dates, no work on your end. Supporters also get a calendar feed they can subscribe to.
         </p>
 
         <div style={{
