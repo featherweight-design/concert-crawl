@@ -60,8 +60,10 @@ export const PassportActions = ({
         if (!response.ok) throw new Error(`HTTP ${response.status}`)
         const blob = await response.blob()
         if (cancelled) return
-        created = URL.createObjectURL(blob)
+        // The file first: it is what Share needs, and the object URL is only
+        // the Save link's shortcut past a second render.
         setFile(new File([blob], COPY.downloadName, { type: 'image/png' }))
+        created = URL.createObjectURL(blob)
         setObjectUrl(created)
       } catch (err) {
         if (cancelled) return
