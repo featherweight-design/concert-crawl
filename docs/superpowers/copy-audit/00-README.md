@@ -96,21 +96,37 @@ The pattern: one true thing, stated four or five times on one screen.
 
 ### 4. Engineering defects wearing a copy costume
 
-These are **not copy edits**. Each is a code change and should become a GH issue.
+These are **not copy edits**. Each is a code change. All are now filed.
 
-| Finding | Where | Nature |
-|---|---|---|
-| `watchingEmptyBody` calls price alerts "Soon" while `WatchZone.tsx:51` renders them as a live promise | consumer | One of the two is lying. The hint is shipped behaviour. |
-| `MANAGE_SHEET_COPY.subtitle` advertises "pause it"; `ManageSheet.tsx` offers no pause | settings | Advertises an action that does not exist |
-| `EvidenceForm` says "3 confirms", a hardcoded footer ~400px below says "Live after 2 fan confirms" | reporting | Two numbers, one rule |
-| Onboarding's "Not yet" list still advertises Notifications and Artist following as missing | onboarding | Both shipped (#737/#1062, #1115/#763) |
-| `welcome-paid.ts` renders `Welcome · supporter` and `Welcome · Supporter` two rows apart | emails | Casing |
-| `renderTextShell` takes no `note` param, so four `footerRow` notes never reach plain-text readers | emails | Plumbing |
-| `history.locked.body` promises "a calendar feed you can subscribe to"; the API ships a point-in-time `.ics` download | history | Paywall promises a thing #70 explicitly decided against |
-| `detailEmpty` is unreachable (rail never mounts at count 0) | history | Dead branch |
-| `PassportTeaser` renders the `—` genre placeholder that `HistoryHeader` deliberately hides | history | Same screen, two treatments |
-| `feedback.modal.statusRail.success*` unreachable (call site hardcoded to `tone="error"`) | consumer | Dead branch |
-| **11 HTML / plain-text disagreements** across email templates | emails | Two readers, two messages |
+Every row was re-verified against `origin/main` before filing, which changed two of them: the
+`welcome-paid` casing row turned out to be a **non-defect**, and `renderTextShell` affects five
+templates rather than four. The audit slices still carry the original, pre-verification wording.
+
+| Finding | Where | Issue | Severity |
+|---|---|---|---|
+| `renderTextShell` takes no `note` param. It is used by five templates; four of them lose a `footerRow` note in plain text (`spotify-digest` compensates by passing the note through its own body) | emails | [#1386](https://github.com/HartiganHM/concert-crawl/issues/1386) | high |
+| `history.locked.body` promises "a calendar feed you can subscribe to"; the API ships a point-in-time `.ics` download | history | [#1388](https://github.com/HartiganHM/concert-crawl/issues/1388) | high |
+| `MANAGE_SHEET_COPY.subtitle` advertises "pause it"; `ManageSheet.tsx` offers no pause | settings | [#1389](https://github.com/HartiganHM/concert-crawl/issues/1389) | high, **needs a design-table call** |
+| `EvidenceForm` says "3 confirms", a hardcoded footer ~400px below says "Live after 2 fan confirms" | reporting | [#1390](https://github.com/HartiganHM/concert-crawl/issues/1390) | medium |
+| `watchingEmptyBody` calls price alerts "Soon" while `WatchZone.tsx:51` renders them as a live promise | consumer | [#1391](https://github.com/HartiganHM/concert-crawl/issues/1391) | medium |
+| Onboarding's "Not yet" list still advertises Notifications and Artist following as missing | onboarding | [#1393](https://github.com/HartiganHM/concert-crawl/issues/1393) | medium |
+| HTML / plain-text drift: paraphrased digest, reordered receipt rows, duplicated price promise | emails | [#1394](https://github.com/HartiganHM/concert-crawl/issues/1394) | medium |
+| `PassportTeaser` renders the `—` genre placeholder that `HistoryHeader` deliberately hides | history | [#1395](https://github.com/HartiganHM/concert-crawl/issues/1395) | low-medium |
+| `feedback.modal.statusRail.success*` unreachable, plus a fabricated `ERR · 503` on every failure | consumer | [#1396](https://github.com/HartiganHM/concert-crawl/issues/1396) | low |
+| `detailEmpty` is unreachable (rail never mounts at count 0) | history | [#1397](https://github.com/HartiganHM/concert-crawl/issues/1397) | low |
+
+#### Withdrawn: `welcome-paid.ts` eyebrow casing
+
+Slice 05 flagged `Welcome · supporter` and `Welcome · Supporter` rendering two rows apart. Not a defect:
+
+- Both atoms apply `text-transform: uppercase` (`atoms.ts:54` for `monoEyebrow`, `:61` for `headerRow`), so both render `WELCOME · SUPPORTER`. The difference is invisible in any client honouring inline CSS.
+- The split is **deliberately specified** as two separate locked fields for all three tiers, in `docs/superpowers/design-tables/monetization-email-brand-pass.md:204-205`, `:236-237`, `:264-265`.
+
+No issue filed. Recorded here so the next audit does not re-raise it.
+
+#### Correct by design, do not re-raise
+
+The email slice flagged 11 HTML/plain-text disagreements. Only four are real, tracked in [#1386](https://github.com/HartiganHM/concert-crawl/issues/1386) and [#1394](https://github.com/HartiganHM/concert-crawl/issues/1394). The rest are intentional: eyebrows do not cross into plain text, and the founder seat line is text-exclusive on purpose.
 
 ### 5. Convention violations — hardcoded JSX
 
@@ -141,7 +157,7 @@ truncation convention for the variable. Worth an issue.
 ## Suggested order of work
 
 1. **`app/legal/*` placeholders** — the only finding with a launch deadline. Fill the dates, decide whether legal copy moves to a copy file.
-2. **File the eng defects** (§4) as issues. Eleven of them, none are copy edits, several are user-visible lies.
+2. ~~**File the eng defects** (§4) as issues.~~ **Done** — 10 filed, linked in §4. Three are high severity, and [#1389](https://github.com/HartiganHM/concert-crawl/issues/1389) is blocked on a design-table decision.
 3. **Mechanical em-dash + punctuation pass, per surface**, excluding `releases.ts` and locked strings. Low risk, roughly half the finding count.
 4. **Vocabulary RENAMEs** — but fix the design tables first, or they regenerate.
 5. **Rule 7 de-duplication** (Founder promise, cancel flow, trial eyebrow, Watching triple). Editorial; wants Hugh's eye.
