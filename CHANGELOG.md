@@ -1,3 +1,10 @@
+# [1.208.0](https://github.com/HartiganHM/concert-crawl/compare/v1.207.1...v1.208.0) (2026-08-03)
+
+
+### Features
+
+* **web:** rebuild the event-detail watch strip as two rows ([#1429](https://github.com/HartiganHM/concert-crawl/issues/1429)) ([4a703ef](https://github.com/HartiganHM/concert-crawl/commit/4a703eff70dfc4bdf1f249362ca52d6a06c3a2b6))
+
 ## [1.207.1](https://github.com/HartiganHM/concert-crawl/compare/v1.207.0...v1.207.1) (2026-08-03)
 
 
