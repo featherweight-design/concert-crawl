@@ -1,3 +1,11 @@
+## [1.215.2](https://github.com/HartiganHM/concert-crawl/compare/v1.215.1...v1.215.2) (2026-08-03)
+
+
+### Bug Fixes
+
+* **crawler:** carry the series-brand exception into the tool schema ([370d571](https://github.com/HartiganHM/concert-crawl/commit/370d571e3fbfafe5e56efcca79638b1c105daad3))
+* **crawler:** state which rule wins for branded bingo and screening nights ([05b3af8](https://github.com/HartiganHM/concert-crawl/commit/05b3af8f15f296b748aa4143e83b98c058804d95))
+
 ## [1.215.1](https://github.com/HartiganHM/concert-crawl/compare/v1.215.0...v1.215.1) (2026-08-03)
 
 
