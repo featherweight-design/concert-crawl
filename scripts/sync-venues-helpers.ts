@@ -73,6 +73,28 @@ const addressDiffers = (
   current: ComparableVenue,
 ): boolean => isNullish(current.address) && !isNullish(seedVenue.address)
 
+// `--only a,b` / `--only=a,b`. Returns undefined when the flag is absent,
+// which is what selects the create-only default path.
+export const parseOnly = (argv: readonly string[]): string[] | undefined => {
+  const index = argv.findIndex(
+    (arg) => arg === '--only' || arg.startsWith('--only='),
+  )
+  if (index === -1) return undefined
+
+  const next = argv[index + 1]
+  const raw = argv[index].startsWith('--only=')
+    ? argv[index].slice('--only='.length)
+    : // A following flag is the next argument, not this one's value —
+      // `--only --commit` must read as an empty scope and fail, not scope to
+      // a venue named "--commit".
+      ((next?.startsWith('--') ? '' : next) ?? '')
+
+  return raw
+    .split(',')
+    .map((slug) => slug.trim())
+    .filter((slug) => slug.length > 0)
+}
+
 export const diffVenues = (
   seedVenues: readonly ComparableVenue[],
   existingVenues: readonly ComparableVenue[],

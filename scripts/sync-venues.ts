@@ -15,13 +15,27 @@
  *   CI or the Render deploy runs a seed. The venues were "shipped" and
  *   invisible.
  *
- *   This script runs ONLY the venue upsert, with the same values and the
- *   same onConflictDoUpdate column set as seed(), so the seed file stays
- *   authoritative for venues without dragging the synthetic data along.
+ *   This script runs ONLY the venue upsert, with the same values as seed(),
+ *   so the seed file stays authoritative for venues without dragging the
+ *   synthetic data along.
+ *
+ * This script is CREATE-ONLY by default (#1337). Onboarding a new venue is
+ * the seed's job; ongoing edits belong to the admin UI, which is where the
+ * crawl tuning (`crawlMode`, `crawlWaitForSelector`, `crawlDelayMs`,
+ * `crawlWaitUntil`) and `about` copy are actually maintained. A prod dry-run
+ * on 2026-08-02 showed a blanket update would have nulled the AXS wait
+ * selectors on six working venues and reverted two hand-set crawl modes.
+ * Drift is still reported so an operator can see it — it just is not written.
+ *
+ * `--only <slug,...>` is the deliberate escape hatch: it narrows the run to
+ * the named venues AND enables the update path for exactly those rows, so
+ * pushing a seed edit to prod is an explicit, scoped act.
  *
  * Run:
- *   pnpm tsx scripts/sync-venues.ts            # dry-run: diff only
- *   pnpm tsx scripts/sync-venues.ts --commit   # upsert
+ *   pnpm tsx scripts/sync-venues.ts                          # dry-run: diff only
+ *   pnpm tsx scripts/sync-venues.ts --commit                 # create missing venues
+ *   pnpm tsx scripts/sync-venues.ts --only globe-hall        # dry-run, scoped
+ *   pnpm tsx scripts/sync-venues.ts --only globe-hall --commit  # scoped upsert
  *
  * Against staging/prod set DATABASE_URL accordingly.
  *
@@ -35,9 +49,13 @@ import { SEED_VENUES } from '../packages/db/seed.js'
 import {
   COMPARED_FIELDS,
   diffVenues,
+  parseOnly,
   type ColumnDefaults,
 } from './sync-venues-helpers.js'
 
+// The `set` block used ONLY on the `--only` path. On the default path
+// nothing is updated at all, so this never runs unscoped.
+//
 // Follows seed()'s venue upsert, with one deliberate divergence: the three
 // operationally-managed flags are create-only here.
 //
@@ -82,6 +100,7 @@ const columnDefaults: ColumnDefaults = Object.fromEntries(
 
 export interface SyncSummary {
   committed: boolean
+  only: string[] | null
   seedVenueCount: number
   existingVenueCount: number
   toCreate: string[]
@@ -91,30 +110,62 @@ export interface SyncSummary {
 
 export const runSync = async ({
   commit,
+  only,
 }: {
   commit: boolean
+  only?: string[]
 }): Promise<SyncSummary> => {
+  const scoped = only !== undefined
+  if (scoped && only.length === 0) {
+    throw new Error('--only was given no slugs')
+  }
+
+  const seedVenues = scoped
+    ? SEED_VENUES.filter((venue) => only.includes(venue.slug))
+    : SEED_VENUES
+
+  if (scoped) {
+    const unknown = only.filter(
+      (slug) => !SEED_VENUES.some((venue) => venue.slug === slug),
+    )
+    if (unknown.length > 0) {
+      throw new Error(
+        `--only names slugs absent from SEED_VENUES: ${unknown.join(', ')}`,
+      )
+    }
+  }
+
   const existing = await db.select().from(venues)
   const { toCreate, toUpdate, unchanged } = diffVenues(
-    SEED_VENUES,
+    seedVenues,
     existing,
     columnDefaults,
   )
 
   console.warn(`SEED_VENUES entries: ${SEED_VENUES.length}`)
   console.warn(`Venues currently in the target DB: ${existing.length}`)
+  if (scoped) {
+    console.warn(`Scoped by --only to: ${only.join(', ')}`)
+  }
   console.warn(
     `\nWill CREATE (${toCreate.length}): ${toCreate.join(', ') || '—'}`,
   )
   console.warn(
-    `Will UPDATE (${toUpdate.length}): ${toUpdate.join(', ') || '—'}`,
+    `${scoped ? 'Will UPDATE' : 'Drift, NOT written'} (${toUpdate.length}): ${toUpdate.join(', ') || '—'}`,
   )
   console.warn(
     `Unchanged  (${unchanged.length}): ${unchanged.join(', ') || '—'}`,
   )
+  if (!scoped && toUpdate.length > 0) {
+    console.warn(
+      '\nThis script is create-only. To push a seed edit to an existing venue,\n' +
+        `re-run scoped: --only ${toUpdate.join(',')} --commit`,
+    )
+  }
 
   const summary: SyncSummary = {
     committed: commit,
+    only: scoped ? only : null,
     seedVenueCount: SEED_VENUES.length,
     existingVenueCount: existing.length,
     toCreate,
@@ -127,20 +178,25 @@ export const runSync = async ({
     return summary
   }
 
-  // Every conflicting row is re-updated, including the ones the summary
-  // reported as unchanged — Postgres runs the UPDATE regardless without a
-  // WHERE. That is deliberate. The rewrite is unobservable here: `venues`
-  // carries no triggers and UPSERT_SET does not touch `updatedAt`, so the
-  // only cost is a handful of dead tuples across ~17 rows. Gating it would
-  // mean restating the whole comparison as a SQL predicate — a second
-  // source of truth to keep in sync with UPSERT_SET, which is the exact
-  // drift this script exists to prevent.
-  await db
-    .insert(venues)
-    .values(SEED_VENUES)
-    .onConflictDoUpdate({ target: venues.slug, set: UPSERT_SET })
+  // Scoped: every conflicting row in the scope is re-updated, including the
+  // ones the summary reported as unchanged — Postgres runs the UPDATE
+  // regardless without a WHERE. That is deliberate. The rewrite is
+  // unobservable: `venues` carries no triggers and UPSERT_SET does not touch
+  // `updatedAt`. Gating it would mean restating the whole comparison as a SQL
+  // predicate — a second source of truth to keep in sync with UPSERT_SET,
+  // which is the exact drift this script exists to prevent.
+  //
+  // Unscoped: DO NOTHING, so an existing row keeps its admin-owned values.
+  const insert = db.insert(venues).values(seedVenues)
+  await (scoped
+    ? insert.onConflictDoUpdate({ target: venues.slug, set: UPSERT_SET })
+    : insert.onConflictDoNothing({ target: venues.slug }))
 
-  console.warn(`\nUpserted ${SEED_VENUES.length} venues.`)
+  console.warn(
+    scoped
+      ? `\nUpserted ${seedVenues.length} venue(s): ${only.join(', ')}.`
+      : `\nCreated ${toCreate.length} venue(s); ${existing.length} existing rows left untouched.`,
+  )
 
   return summary
 }
@@ -150,7 +206,8 @@ const invokedUrl = process.argv[1]
   : undefined
 if (invokedUrl && import.meta.url === invokedUrl) {
   const commit = process.argv.includes('--commit')
-  runSync({ commit })
+  const only = parseOnly(process.argv)
+  runSync({ commit, only })
     .then((summary) => {
       console.warn('---')
       console.warn(JSON.stringify(summary, null, 2))

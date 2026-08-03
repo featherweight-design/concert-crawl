@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { diffVenues } from './sync-venues-helpers.js'
+import { diffVenues, parseOnly } from './sync-venues-helpers.js'
 
 const venue = (slug: string, overrides = {}) => ({
   slug,
@@ -20,6 +20,41 @@ const venue = (slug: string, overrides = {}) => ({
   active: true,
   verified: true,
   ...overrides,
+})
+
+// The absence of --only is what selects the create-only path, so
+// distinguishing "flag missing" from "flag empty" is load-bearing: an empty
+// scope must fail loudly rather than silently widen to every venue.
+describe('parseOnly', () => {
+  it('returns undefined when the flag is absent', () => {
+    expect(parseOnly(['node', 'sync-venues.ts', '--commit'])).toBeUndefined()
+  })
+
+  it('reads a space-separated value', () => {
+    expect(parseOnly(['--only', 'globe-hall,hi-dive'])).toEqual([
+      'globe-hall',
+      'hi-dive',
+    ])
+  })
+
+  it('reads an equals-separated value', () => {
+    expect(parseOnly(['--only=globe-hall'])).toEqual(['globe-hall'])
+  })
+
+  it('trims whitespace and drops empty entries', () => {
+    expect(parseOnly(['--only', ' globe-hall , , hi-dive '])).toEqual([
+      'globe-hall',
+      'hi-dive',
+    ])
+  })
+
+  it('returns an empty list when the flag is given no value', () => {
+    expect(parseOnly(['--only'])).toEqual([])
+  })
+
+  it('does not swallow a following flag as the value', () => {
+    expect(parseOnly(['--only', '--commit'])).toEqual([])
+  })
 })
 
 describe('diffVenues', () => {
