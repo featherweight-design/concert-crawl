@@ -135,7 +135,14 @@ function mapToNormalizedEvent(
   const slug = readString(raw, 'url')
   if (slug !== undefined) {
     try {
-      const eventUrl = new URL(`${slug}/`, sourceUrl).toString()
+      const parsed = new URL(`${slug}/`, sourceUrl)
+      // A slug carrying its own scheme wins over the base, so a hostile or
+      // mangled `javascript:`/`mailto:` value would resolve to itself and end
+      // up behind "Get tickets". Only web-navigable links get persisted.
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        throw new Error(`unsupported URL scheme: ${parsed.protocol}`)
+      }
+      const eventUrl = parsed.toString()
       event.ticketUrl = eventUrl
       event.eventUrl = eventUrl
     } catch (err) {

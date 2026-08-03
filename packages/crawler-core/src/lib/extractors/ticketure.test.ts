@@ -100,6 +100,18 @@ describe('extractTicketure', () => {
     expect(event?.eventUrl).toBe(event?.ticketUrl)
   })
 
+  it('keeps the event but drops the link when the slug carries a non-web scheme', () => {
+    const html = pageWith([
+      { ...DUTCH_MELROSE, url: 'javascript:alert(1)' },
+      { ...DUTCH_MELROSE, title: 'Mailto Show', url: 'mailto:box@office.com' },
+    ])
+    const events = extractTicketure(html, SOURCE_URL, DENVER)
+    expect(events).toHaveLength(2)
+    expect(events[0]?.ticketUrl).toBeUndefined()
+    expect(events[0]?.eventUrl).toBeUndefined()
+    expect(events[1]?.ticketUrl).toBeUndefined()
+  })
+
   it('splits pipe-delimited supporting acts', () => {
     const html = pageWith([
       {
