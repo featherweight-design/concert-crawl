@@ -53,6 +53,14 @@ describe('extractTicketure', () => {
     expect(extractTicketure(html, SOURCE_URL)).toEqual([])
   })
 
+  it('matches the script tag regardless of attribute order or an injected nonce', () => {
+    const payload = JSON.stringify({
+      props: { pageProps: { events: { events: [DUTCH_MELROSE] } } },
+    })
+    const html = `<script type="application/json" nonce="abc123" id="__NEXT_DATA__">${payload}</script>`
+    expect(extractTicketure(html, SOURCE_URL, DENVER)).toHaveLength(1)
+  })
+
   it('returns an empty list when the payload is malformed JSON', () => {
     const html = `<script id="__NEXT_DATA__" type="application/json">{not json</script>`
     expect(extractTicketure(html, SOURCE_URL)).toEqual([])

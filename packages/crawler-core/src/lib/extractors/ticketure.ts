@@ -19,8 +19,11 @@ import {
 // This replaced a browser fetch with a `waitForSelector` on the hydrated DOM.
 // That selector was correct but raced ~10 third-party trackers for the main
 // thread and timed out, taking the crawl to `failed` (#1340).
+// Matched on the `id` alone, which is unique per document. Pinning the
+// attribute order (or requiring `type` to follow `id`) would miss a tag that
+// carries a CSP nonce or renders its attributes in a different order.
 const NEXT_DATA_REGEX =
-  /<script id="__NEXT_DATA__" type="application\/json"[^>]*>([\s\S]*?)<\/script>/
+  /<script[^>]*\bid=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/
 
 // Ticketure tags each listing with a programming category. Only `Music` rows
 // are concerts; `Community` covers exhibits, burlesque, film nights and the
@@ -128,8 +131,18 @@ function mapToNormalizedEvent(
       const eventUrl = new URL(`${slug}/`, sourceUrl).toString()
       event.ticketUrl = eventUrl
       event.eventUrl = eventUrl
-    } catch {
-      // A slug that can't form a URL costs the link, not the event.
+    } catch (err) {
+      // A slug that can't form a URL costs the link, not the event — but it
+      // still means every ticket link for this venue may be silently absent,
+      // so it has to be diagnosable without re-fetching the page.
+      reportFailure({
+        event: 'ticketure.invalid_event_url',
+        severity: 'warn',
+        sourceUrl,
+        title,
+        slug,
+        error: err instanceof Error ? err.message : String(err),
+      })
     }
   }
 
