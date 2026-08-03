@@ -200,6 +200,9 @@ export async function runBackfill(opts: {
           canonicalHeadliners: canonicalizeSupporting(row.proposedHeadliners),
           supportingArtists: row.proposedSupporting,
           canonicalSupporting: canonicalizeSupporting(row.proposedSupporting),
+          // Bumped so the rewrite surfaces in recently-changed admin views
+          // rather than looking like a row nobody has touched since its crawl.
+          updatedAt: new Date(),
         })
         .where(
           and(
