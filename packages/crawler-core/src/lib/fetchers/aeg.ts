@@ -336,6 +336,11 @@ async function aegFetch(
   }
   const url = endpointUrl(venue.platformVenueId)
 
+  // Started before the robots gate so a slow robots.txt fetch counts against
+  // the overall budget rather than extending it, matching Live Nation and
+  // detail-page.
+  const deadline = createDeadline(opts)
+
   // crawl.ts gates on venue.websiteUrl only, and the blob lives on a
   // different domain, so the URL we actually fetch has to clear robots.txt
   // on its own (#985) — the same gate Live Nation and detail-page apply.
@@ -347,7 +352,6 @@ async function aegFetch(
   }
 
   const fetchedAt = Date.now()
-  const deadline = createDeadline(opts)
   // Respect the venue's per-domain crawl delay. The platform blob is on
   // a different domain from the venue's website, but rate-limiting our
   // requests to AEG's CDN with the same conservative pacing is the

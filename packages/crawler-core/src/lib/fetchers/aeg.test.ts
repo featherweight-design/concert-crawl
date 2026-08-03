@@ -36,6 +36,23 @@ const GOTHIC_EVENTS_COUNT = JSON.parse(GOTHIC_FIXTURE).events.length
 const OGDEN_FIXTURE = loadFixture('aeg-ogden.json')
 const OGDEN_EVENTS_COUNT = JSON.parse(OGDEN_FIXTURE).events.length
 
+// Records the delays the fetcher actually asks setTimeout for. Asserting the
+// requested delay beats asserting elapsed wall-clock: a busy runner can stall
+// the event loop past any Date.now() bound and make the test flaky.
+function recordSleepDelays(): number[] {
+  const delays: number[] = []
+  const realSetTimeout = globalThis.setTimeout
+  vi.spyOn(globalThis, 'setTimeout').mockImplementation(
+    (callback: Parameters<typeof setTimeout>[0], delayMs?: number) => {
+      delays.push(delayMs ?? 0)
+      // Fire immediately: the test cares about the requested delay, not
+      // about actually sleeping for it.
+      return realSetTimeout(callback, 0)
+    },
+  )
+  return delays
+}
+
 function makeVenue(overrides: Partial<Venue> = {}): Venue {
   return {
     id: crypto.randomUUID(),
@@ -418,26 +435,23 @@ describe('aegFetcher.fetch', () => {
     // Pin the jitter to its floor (-500ms) so the assertion is deterministic
     // and the test doesn't pay for a random extra half second.
     const randomSpy = vi.spyOn(Math, 'random').mockReturnValue(0)
-    const start = Date.now()
+    const delays = recordSleepDelays()
     await aegFetcher.fetch(makeVenue({ crawlDelayMs: 600 }), {
       crawlDelayMs: 600,
     })
-    const elapsed = Date.now() - start
     randomSpy.mockRestore()
-    // 600ms - 500ms of jitter = 100ms, plus the fetch itself (mocked
-    // synchronous). Allow scheduler slack below; the important check is that
-    // we slept, and that the jitter subtracted rather than being ignored.
-    expect(elapsed).toBeGreaterThanOrEqual(90)
-    expect(elapsed).toBeLessThan(600)
+    // 600ms - 500ms of jitter = 100ms: the jitter subtracted rather than
+    // being ignored.
+    expect(delays).toEqual([100])
   })
 
   it('does not delay at all when crawlDelayMs is 0', async () => {
     mockFetchOk(BLUEBIRD_FIXTURE)
-    const start = Date.now()
+    const delays = recordSleepDelays()
     await aegFetcher.fetch(makeVenue({ crawlDelayMs: 0 }), { crawlDelayMs: 0 })
     // Jittering zero must stay zero — an admin probe should not be paced by a
     // delay the venue explicitly turned off.
-    expect(Date.now() - start).toBeLessThan(90)
+    expect(delays).toEqual([])
   })
 
   it('derives the Origin header from the venue website per-venue', async () => {
