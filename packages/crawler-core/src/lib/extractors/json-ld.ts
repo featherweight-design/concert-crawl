@@ -98,6 +98,16 @@ function mapToNormalizedEvent(
     performerNames.slice(1),
   )
   const date = extractDateOnly(startDate, timeZone)
+  if (date === undefined) {
+    reportFailure({
+      event: 'json-ld.invalid_start_date',
+      severity: 'warn',
+      sourceUrl,
+      name,
+      startDate,
+    })
+    return null
+  }
   const showTime = extractTimeOnly(startDate, timeZone)
   const doorsTime =
     typeof obj['doorTime'] === 'string'

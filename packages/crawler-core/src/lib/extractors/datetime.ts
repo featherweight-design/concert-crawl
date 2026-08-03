@@ -37,9 +37,18 @@ export function partsInTimezone(
   }
 }
 
-export function extractDateOnly(dateStr: string, timeZone: string): string {
+// Returns undefined when the string carries a timezone designator but is not a
+// real instant (`2026-13-45T99:00:00Z` matches the pattern yet yields an
+// Invalid Date). formatToParts throws on those, which would abort a whole
+// venue's extraction over one bad row, so callers skip just that event.
+export function extractDateOnly(
+  dateStr: string,
+  timeZone: string,
+): string | undefined {
   if (HAS_EXPLICIT_TZ.test(dateStr)) {
-    return partsInTimezone(new Date(dateStr), timeZone).date
+    const instant = new Date(dateStr)
+    if (Number.isNaN(instant.getTime())) return undefined
+    return partsInTimezone(instant, timeZone).date
   }
   // Naive datetimes and date-only strings → take the date portion as-is.
   return dateStr.trim().split(NAIVE_DATETIME_SEPARATOR)[0] ?? dateStr
@@ -50,7 +59,9 @@ export function extractTimeOnly(
   timeZone: string,
 ): string | undefined {
   if (HAS_EXPLICIT_TZ.test(dateStr)) {
-    return partsInTimezone(new Date(dateStr), timeZone).time
+    const instant = new Date(dateStr)
+    if (Number.isNaN(instant.getTime())) return undefined
+    return partsInTimezone(instant, timeZone).time
   }
   const parts = dateStr.trim().split(NAIVE_DATETIME_SEPARATOR)
   if (parts.length < 2) return undefined

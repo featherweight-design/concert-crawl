@@ -263,6 +263,20 @@ describe('extractJsonLd', () => {
       expect(events[0]?.showTime).toBe('22:00:00')
     })
 
+    it('skips an event whose startDate has a timezone but is not a real instant', () => {
+      // Matches HAS_EXPLICIT_TZ yet yields an Invalid Date. Before the shared
+      // helper guarded this, formatToParts threw and took every remaining
+      // event on the page with it.
+      const html = makeHtml({
+        '@context': 'https://schema.org',
+        '@type': 'Event',
+        name: 'Impossible Date',
+        startDate: '2026-13-45T99:00:00Z',
+        performer: { name: 'Nobody' },
+      })
+      expect(extractJsonLd(html, SOURCE_URL, 'America/Denver')).toEqual([])
+    })
+
     it('preserves an explicit local-offset startDate as-is', () => {
       // Same instant, expressed with venue-local offset — no shift needed.
       const html = makeHtml({
