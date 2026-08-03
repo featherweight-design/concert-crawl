@@ -31,6 +31,6 @@ ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "canonical_headliners" text[];
 UPDATE "events"
 SET "headliners" = ARRAY["artist"],
     "canonical_headliners" = ARRAY["canonical_artist"]
-WHERE "headliners" IS NULL;
+WHERE "headliners" IS NULL OR "canonical_headliners" IS NULL;
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "events_canonical_headliners_idx" ON "events" USING gin ("canonical_headliners");

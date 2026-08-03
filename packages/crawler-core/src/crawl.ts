@@ -1006,7 +1006,20 @@ export async function crawlVenue(
               // bill that turns into a co-headline (or drops back to one act)
               // is picked up on re-crawl. Any path writing headliners MUST
               // write canonical_headliners in the same statement (#1203).
-              headliners: sql`excluded.headliners`,
+              //
+              // Only the co-headliners (positions 2+) come from the new
+              // extraction; position 1 is re-seeded from the STORED artist.
+              // Taking excluded.headliners wholesale would break the
+              // headliners[0] === artist invariant, because `artist` above is
+              // deliberately never updated and a freshly extracted string can
+              // drift (diacritics, punctuation cleanup) while canonical_artist
+              // — the dedup key that got us to this conflict — stays put.
+              headliners: sql`array_prepend(${events.artist}, excluded.headliners[2:])`,
+              // No such slicing for the canonical array: it is sorted and
+              // deduped, so position 1 is not the artist and a positional
+              // splice would corrupt it. It needs no repair anyway —
+              // excluded.canonical_artist equals the stored one by definition
+              // of the conflict key.
               canonicalHeadliners: sql`excluded.canonical_headliners`,
               supportingArtists: sql`excluded.supporting_artists`,
               canonicalSupporting: sql`excluded.canonical_supporting`,

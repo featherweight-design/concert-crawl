@@ -25,6 +25,20 @@ vi.mock('./lib/fetcher.js', () => ({
       super(message)
     }
   },
+  // crawl.ts narrows on this with `instanceof`, so an absent constructor makes
+  // the catch path throw rather than classify (#1404).
+  CrawlSelectorTimeoutError: class CrawlSelectorTimeoutError extends Error {
+    constructor(
+      public selector: string,
+      public html: string | null,
+      public finalUrl: string,
+      public httpStatus: number,
+      message: string,
+    ) {
+      super(message)
+      this.name = 'CrawlSelectorTimeoutError'
+    }
+  },
 }))
 vi.mock('./lib/robots.js', () => ({
   isAllowed: vi.fn().mockResolvedValue(true),
@@ -127,6 +141,7 @@ async function loadEvent(artist: string): Promise<{
   headliners: string[] | null
   canonicalHeadliners: string[] | null
   canonicalArtist: string
+  artist: string
   supportingArtists: string[] | null
 }> {
   const [row] = await db
@@ -134,6 +149,7 @@ async function loadEvent(artist: string): Promise<{
       headliners: events.headliners,
       canonicalHeadliners: events.canonicalHeadliners,
       canonicalArtist: events.canonicalArtist,
+      artist: events.artist,
       supportingArtists: events.supportingArtists,
     })
     .from(events)
@@ -232,5 +248,31 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
       'snail mail',
       'turnstile',
     ])
+  })
+
+  it('keeps headliners[0] equal to the stored artist when the extracted string drifts', async () => {
+    const venue = await seedTestVenue()
+    const date = futureDate(24)
+    mockExtraction([makeEvent('Bjork', date)])
+    await crawlVenue(venue.id, mockBrowser)
+
+    // Re-crawl produces the diacritic form. `artist` is deliberately never
+    // updated on conflict, and canonical_artist is unchanged, so headliners[0]
+    // must stay the STORED string or the invariant breaks.
+    mockExtraction(
+      [
+        makeEvent('Björk', date, {
+          title: 'Björk & Arca',
+          rawTitle: 'Björk & Arca',
+          headliners: ['Björk', 'Arca'],
+        }),
+      ],
+      '<html><body><p>Updated listing</p></body></html>',
+    )
+    await crawlVenue(venue.id, mockBrowser)
+
+    const row = await loadEvent('Bjork')
+    expect(row.headliners?.[0]).toBe(row.artist)
+    expect(row.headliners).toEqual(['Bjork', 'Arca'])
   })
 })

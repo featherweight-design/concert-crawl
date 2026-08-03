@@ -116,10 +116,15 @@ artistsPublicRouter.get(
     // canonical_artist rather than replacing it — the equality arm is the
     // indexed fast path and still covers rows the crawler has not rewritten.
     // The mirror of this condition in routes/search.ts must not diverge.
+    //
+    // Both array arms use the overlap operator against a one-element array
+    // rather than `= ANY(...)`: the semantics are identical, but only `&&` can
+    // use the GIN indexes on these columns.
+    const oneElement = sql`ARRAY[${artist.canonicalName}]::text[]`
     const appearsOnBill = or(
       eq(events.canonicalArtist, artist.canonicalName),
-      sql`${artist.canonicalName} = ANY(${events.canonicalHeadliners})`,
-      sql`${artist.canonicalName} = ANY(${events.canonicalSupporting})`,
+      sql`${events.canonicalHeadliners} && ${oneElement}`,
+      sql`${events.canonicalSupporting} && ${oneElement}`,
     )
 
     // The consumer filter pair every public query applies: non-concert rows
