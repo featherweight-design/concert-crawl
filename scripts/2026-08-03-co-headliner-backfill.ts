@@ -39,7 +39,7 @@ import { writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import Anthropic from '@anthropic-ai/sdk'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, sql, type SQL } from 'drizzle-orm'
 // Relative source import (not the package barrel) so this one-shot script runs
 // against a clean checkout without requiring a prior build; tsx resolves the
 // `.js` suffix back to the `.ts` source. It reaches past the crawler-core
@@ -65,6 +65,21 @@ import {
 } from './2026-08-03-co-headliner-backfill-helpers.js'
 
 const BATCH_SIZE = 25
+
+/**
+ * Optimistic-lock clause asserting `supporting_artists` still holds exactly
+ * what our SELECT saw.
+ *
+ * The array MUST go through `sql.param`. Interpolating a bare JS array into a
+ * `sql` template makes Drizzle expand it as a comma-separated value list, so an
+ * empty array renders as `()` — a Postgres syntax error that took the whole
+ * `--commit` transaction down on its first row. `sql.param` binds it as one
+ * `text[]` parameter instead, which round-trips `null`, `{}` and populated
+ * arrays alike.
+ */
+export function supportingArtistsUnchanged(observed: string[] | null): SQL {
+  return sql`${events.supportingArtists} IS NOT DISTINCT FROM ${sql.param(observed)}::text[]`
+}
 
 export interface BackfillSummary {
   // Every row the SQL net matched, including any later rejected — so it
@@ -248,7 +263,7 @@ export async function runBackfill(opts: {
           and(
             eq(events.id, row.eventId),
             eq(events.artist, row.artist),
-            sql`${events.supportingArtists} IS NOT DISTINCT FROM ${row.currentSupporting}::text[]`,
+            supportingArtistsUnchanged(row.currentSupporting),
           ),
         )
         .returning({ id: events.id })
