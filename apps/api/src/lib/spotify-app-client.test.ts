@@ -322,7 +322,7 @@ describe('createSpotifyAppClient().fetchGenres', () => {
     expect(genres?.get('sp50')).toEqual(['dub'])
   })
 
-  it('makes no request for an empty id list', async () => {
+  it('issues no /artists request for an empty id list', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(tokenResponse('t1'))
