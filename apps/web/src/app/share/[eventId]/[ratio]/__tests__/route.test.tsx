@@ -117,6 +117,25 @@ describe('GET /share/[eventId]/[ratio]', () => {
     expect(getMock).not.toHaveBeenCalled()
   })
 
+  // Successes cache for a day. A failure inheriting an intermediary's default
+  // would pin a broken image into a post long after the cause was fixed.
+  it('never lets a failure be cached', async () => {
+    getMock.mockRejectedValue(new ApiError(503, 'down'))
+    const responses = [
+      await call('http://localhost/share/nope/story', {
+        eventId: 'nope',
+        ratio: 'story',
+      }),
+      await call(`http://localhost/share/${EVENT_ID}/story`, {
+        eventId: EVENT_ID,
+        ratio: 'story',
+      }),
+    ]
+    for (const response of responses) {
+      expect(response.headers.get('Cache-Control')).toBe('no-store')
+    }
+  })
+
   it('404s when the event does not exist', async () => {
     getMock.mockRejectedValue(new ApiError(404, 'not found'))
     const response = await call(`http://localhost/share/${EVENT_ID}/story`, {

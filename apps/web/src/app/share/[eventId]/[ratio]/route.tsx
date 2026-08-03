@@ -27,10 +27,16 @@ interface ShareRouteContext {
   params: Promise<{ eventId: string; ratio: string }>
 }
 
+// `no-store` is the point: a success here is cached for a day, and an
+// intermediary applying its own default to a failure would pin a broken image
+// into somebody's post long after the cause was fixed.
 const problem = (status: number, message: string): Response =>
   new Response(message, {
     status,
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    headers: {
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store',
+    },
   })
 
 /**
