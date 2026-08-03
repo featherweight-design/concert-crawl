@@ -185,7 +185,7 @@ vi.mock('@anthropic-ai/sdk', () => ({
   ),
 }))
 
-const { classifyBatch } =
+const { classifyBatch, classifyWithRetry } =
   await import('./2026-06-24-isconcert-review-needed-backfill.js')
 
 const Anthropic = (await import('@anthropic-ai/sdk')).default
@@ -288,5 +288,125 @@ describe('isconcert-review-needed-backfill — classifyBatch', () => {
         },
       ]),
     ).rejects.toThrow(/wrong types|Malformed/)
+  })
+})
+
+// classifyWithRetry tests — #807. Haiku sometimes omits an event from a
+// batch response; the run used to abort. Cover both recovery stages.
+
+const makeEvent = (id: string): EventForClassification => ({
+  id,
+  title: `Show ${id}`,
+  artist: `Artist ${id}`,
+  description: null,
+  date: '2026-08-01',
+  venueName: 'V',
+  currentHidden: true,
+  currentReviewNeeded: false,
+})
+
+const toolUseResponse = (ids: string[]) => ({
+  content: [
+    {
+      type: 'tool_use',
+      id: 'tool_1',
+      name: 'classify_events',
+      input: {
+        classifications: ids.map((eventId) => ({
+          eventId,
+          isConcert: true,
+          reviewNeeded: false,
+        })),
+      },
+    },
+  ],
+  usage: { input_tokens: 10, output_tokens: 5 },
+})
+
+/** Event ids present in the prompt of the Nth mockCreate call. */
+const promptedIds = (callIndex: number): string[] => {
+  const call = mockCreate.mock.calls[callIndex]
+  const content: unknown = call?.[0]?.messages?.[0]?.content
+  if (typeof content !== 'string') return []
+  return [...content.matchAll(/^- id: (\S+)$/gm)].map((match) => match[1] ?? '')
+}
+
+describe('isconcert-review-needed-backfill — classifyWithRetry', () => {
+  it('returns first-pass results without retrying when nothing is dropped', async () => {
+    mockCreate.mockReset()
+    mockCreate.mockResolvedValueOnce(toolUseResponse(['evt-1', 'evt-2']))
+    const client = new Anthropic()
+    const out = await classifyWithRetry(client, [
+      makeEvent('evt-1'),
+      makeEvent('evt-2'),
+    ])
+    expect(mockCreate).toHaveBeenCalledTimes(1)
+    expect(out.map((cls) => cls.eventId)).toEqual(['evt-1', 'evt-2'])
+  })
+
+  it('retries the batch with only the missing ids when one is dropped', async () => {
+    mockCreate.mockReset()
+    mockCreate
+      .mockResolvedValueOnce(toolUseResponse(['evt-1', 'evt-3']))
+      .mockResolvedValueOnce(toolUseResponse(['evt-2']))
+    const client = new Anthropic()
+    const out = await classifyWithRetry(client, [
+      makeEvent('evt-1'),
+      makeEvent('evt-2'),
+      makeEvent('evt-3'),
+    ])
+    expect(mockCreate).toHaveBeenCalledTimes(2)
+    expect(promptedIds(1)).toEqual(['evt-2'])
+    // Results come back in original batch order, not response order.
+    expect(out.map((cls) => cls.eventId)).toEqual(['evt-1', 'evt-2', 'evt-3'])
+  })
+
+  it('falls back to per-event calls when the retry drops the same ids', async () => {
+    mockCreate.mockReset()
+    mockCreate
+      .mockResolvedValueOnce(toolUseResponse(['evt-1']))
+      .mockResolvedValueOnce(toolUseResponse([])) // retry drops both again
+      .mockResolvedValueOnce(toolUseResponse(['evt-2']))
+      .mockResolvedValueOnce(toolUseResponse(['evt-3']))
+    const client = new Anthropic()
+    const out = await classifyWithRetry(client, [
+      makeEvent('evt-1'),
+      makeEvent('evt-2'),
+      makeEvent('evt-3'),
+    ])
+    expect(mockCreate).toHaveBeenCalledTimes(4)
+    expect(promptedIds(1)).toEqual(['evt-2', 'evt-3'])
+    expect(promptedIds(2)).toEqual(['evt-2'])
+    expect(promptedIds(3)).toEqual(['evt-3'])
+    expect(out.map((cls) => cls.eventId)).toEqual(['evt-1', 'evt-2', 'evt-3'])
+  })
+
+  it('omits an event that even per-event classification fails to return', async () => {
+    mockCreate.mockReset()
+    mockCreate
+      .mockResolvedValueOnce(toolUseResponse(['evt-1']))
+      .mockResolvedValueOnce(toolUseResponse([]))
+      .mockResolvedValueOnce(toolUseResponse([]))
+    const client = new Anthropic()
+    const out = await classifyWithRetry(client, [
+      makeEvent('evt-1'),
+      makeEvent('evt-2'),
+    ])
+    // Caller (runBackfill) still throws `Classification missing` for evt-2.
+    expect(out.map((cls) => cls.eventId)).toEqual(['evt-1'])
+  })
+
+  it('ignores ids the model returns that were not in the batch', async () => {
+    mockCreate.mockReset()
+    mockCreate
+      .mockResolvedValueOnce(toolUseResponse(['evt-1', 'evt-hallucinated']))
+      .mockResolvedValueOnce(toolUseResponse(['evt-2']))
+    const client = new Anthropic()
+    const out = await classifyWithRetry(client, [
+      makeEvent('evt-1'),
+      makeEvent('evt-2'),
+    ])
+    expect(promptedIds(1)).toEqual(['evt-2'])
+    expect(out.map((cls) => cls.eventId)).toEqual(['evt-1', 'evt-2'])
   })
 })

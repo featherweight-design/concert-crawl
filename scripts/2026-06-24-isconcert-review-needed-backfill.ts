@@ -123,7 +123,7 @@ export async function runBackfill(opts: {
     const batch = batches[batchIdx]
     if (!batch) continue
     console.log(`Classifying batch ${batchIdx + 1}/${batches.length}...`)
-    const classifications = await classifyBatch(client, batch)
+    const classifications = await classifyWithRetry(client, batch)
     for (const evt of batch) {
       const result = classifications.find((cls) => cls.eventId === evt.id)
       if (!result) {
@@ -250,6 +250,64 @@ export async function runBackfill(opts: {
     committed: true,
     raceSkipped,
   }
+}
+
+/**
+ * Wraps classifyBatch with drop recovery. Haiku occasionally omits an
+ * event from its tool_use response (observed 1/128 on the first staging
+ * run); the run used to abort entirely before any DB write. Recovery:
+ *
+ *   1. Re-send ONLY the missing events, up to `maxRetries` times.
+ *   2. If anything is still missing, classify each leftover in its own
+ *      single-event call — one extra Haiku call per drop, accepted as
+ *      tail-risk mitigation since a batch drop is rare.
+ *
+ * Anything still unaccounted for after both stages is left out of the
+ * returned array, and runBackfill's existing `Classification missing`
+ * throw fires as before. Deliberately no backoff or timeouts (#807).
+ */
+export async function classifyWithRetry(
+  client: Anthropic,
+  batch: EventForClassification[],
+  maxRetries = 1,
+): Promise<BatchClassification[]> {
+  const byEventId = new Map<string, BatchClassification>()
+  const batchIds = new Set(batch.map((evt) => evt.id))
+
+  const absorb = (classifications: BatchClassification[]): void => {
+    for (const cls of classifications) {
+      // Ignore hallucinated ids that weren't in the batch we sent.
+      if (batchIds.has(cls.eventId)) byEventId.set(cls.eventId, cls)
+    }
+  }
+  const missingEvents = (): EventForClassification[] =>
+    batch.filter((evt) => !byEventId.has(evt.id))
+
+  absorb(await classifyBatch(client, batch))
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const missing = missingEvents()
+    if (missing.length === 0) break
+    console.warn(
+      `Batch response omitted ${missing.length} event(s); retrying just those (attempt ${attempt + 1}/${maxRetries})`,
+    )
+    absorb(await classifyBatch(client, missing))
+  }
+
+  const stillMissing = missingEvents()
+  if (stillMissing.length > 0) {
+    console.warn(
+      `${stillMissing.length} event(s) still missing after ${maxRetries} retry attempt(s); falling back to per-event classification`,
+    )
+    for (const evt of stillMissing) {
+      console.warn(`Classifying event ${evt.id} (${evt.title}) individually`)
+      absorb(await classifyBatch(client, [evt]))
+    }
+  }
+
+  return batch
+    .map((evt) => byEventId.get(evt.id))
+    .filter((cls): cls is BatchClassification => cls !== undefined)
 }
 
 export async function classifyBatch(
