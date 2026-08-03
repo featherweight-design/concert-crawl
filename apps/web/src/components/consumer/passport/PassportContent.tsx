@@ -63,9 +63,7 @@ export const PassportContent = ({
     setMounted(true)
   }, [])
   const liveTokens = mounted ? resolveThemeTokens(theme).tokens : tokens
-  const imageUrl = mounted
-    ? `/passport/square?theme=${encodeURIComponent(theme)}`
-    : '/passport/square'
+  const imageUrl = `/passport/square?theme=${encodeURIComponent(theme)}`
 
   // The preview is the print card itself, scaled down — not the compact mode.
   // A preview that is a different card is how the reader is shown a 3×3 wall
@@ -159,7 +157,11 @@ export const PassportContent = ({
             </div>
           </div>
         </div>
-        <PassportActions imageUrl={imageUrl} />
+        {/* Held until mount so the prefetch runs once, against the theme the
+            reader is actually in. Rendering it earlier would fetch the card,
+            then fetch it again the moment the live theme resolved — and drop
+            the button back to "Preparing…" in between. */}
+        {mounted && <PassportActions imageUrl={imageUrl} />}
       </div>
     </Shell>
   )

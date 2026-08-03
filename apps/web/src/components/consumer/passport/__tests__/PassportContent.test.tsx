@@ -125,6 +125,10 @@ describe('PassportContent', () => {
     await waitFor(() =>
       expect(fetch).toHaveBeenCalledWith('/passport/square?theme=electric'),
     )
+    // Once, not twice: an un-themed first pass would render the card, throw it
+    // away when the live theme resolved, and bounce the button back to
+    // "Preparing…" in between.
+    expect(fetch).toHaveBeenCalledTimes(1)
   })
 
   // The server's 403 is the authoritative verdict — a client hook that still
