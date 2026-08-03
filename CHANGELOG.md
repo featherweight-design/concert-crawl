@@ -1,3 +1,11 @@
+## [1.203.5](https://github.com/HartiganHM/concert-crawl/compare/v1.203.4...v1.203.5) (2026-08-03)
+
+
+### Bug Fixes
+
+* **copy:** mechanical em-dash pass on consumer core ([#1400](https://github.com/HartiganHM/concert-crawl/issues/1400)) ([402a839](https://github.com/HartiganHM/concert-crawl/commit/402a8397a642abc341832c8da7874d70c6c10cd7))
+* **copy:** mechanical em-dash pass on the transactional emails ([#1401](https://github.com/HartiganHM/concert-crawl/issues/1401)) ([a02a34a](https://github.com/HartiganHM/concert-crawl/commit/a02a34a9602e03111209bdb55be9b677f17a0728))
+
 ## [1.203.4](https://github.com/HartiganHM/concert-crawl/compare/v1.203.3...v1.203.4) (2026-08-03)
 
 
