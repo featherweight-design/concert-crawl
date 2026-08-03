@@ -39,6 +39,7 @@ import { createLogger } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../../types.js'
 import { isAllowed } from '../robots.js'
 import { createDeadline } from './deadline.js'
+import { jitter } from './jitter.js'
 import type {
   PlatformFetcher,
   PlatformFetchOptions,
@@ -47,16 +48,6 @@ import type {
 
 const logger = createLogger('livenation-fetcher')
 const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
-
-// Jitter the crawl delay (±500ms) so the 12 sequential month requests don't
-// hit the venue on a bot-like fixed interval — mirrors VenuePilot and the
-// cascade fetcher (lib/fetcher.ts).
-function jitter(ms: number): number {
-  // A venue that asks for no delay gets none — without this, jittering zero
-  // would sometimes return up to 499ms and pace the admin probe.
-  if (ms <= 0) return 0
-  return Math.max(0, ms + Math.floor(Math.random() * 1000) - 500)
-}
 
 // Only the fields we map are required. The records carry ~35 keys and
 // Live Nation adds to them freely, so everything else passes through.

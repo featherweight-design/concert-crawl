@@ -2,8 +2,8 @@
 //
 // Every fetcher that paces its own requests jitters the configured crawl
 // delay by ±500ms so a run doesn't hit a host on a bot-like fixed interval.
-// This lived as three byte-identical copies (the HTML cascade in
-// lib/fetcher.ts, VenuePilot, and detail-page) before being pulled here.
+// It was duplicated across the HTML cascade (lib/fetcher.ts), VenuePilot,
+// detail-page and Live Nation before being centralized here.
 
 /**
  * Jitter a crawl delay by ±500ms, clamped to >= 0.
