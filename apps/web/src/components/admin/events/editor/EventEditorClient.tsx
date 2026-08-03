@@ -83,9 +83,12 @@ const computePatchDiff = (
   if (draft.date !== original.date) body.date = draft.date
   // Blank (or whitespace-only) input clears the tour name to NULL rather than
   // persisting '' — the consumer kicker keys off `tourName !== null` (#992).
+  // Both sides are trimmed before comparing, so a stored value with stray
+  // whitespace doesn't read as a pending edit the moment the editor opens.
   const trimmedTourName = draft.tourName.trim()
   const nextTourName = trimmedTourName === '' ? null : trimmedTourName
-  if (nextTourName !== (original.tourName ?? null)) body.tourName = nextTourName
+  const storedTourName = original.tourName?.trim() || null
+  if (nextTourName !== storedTourName) body.tourName = nextTourName
   return body
 }
 

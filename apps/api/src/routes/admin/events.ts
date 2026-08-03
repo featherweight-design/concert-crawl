@@ -719,13 +719,13 @@ eventsAdminRouter.patch(
       // persisting '' — the consumer UI keys the kicker off `tourName !== null`.
       tourName: z
         .string()
+        .trim()
         .max(200)
         .nullable()
         .optional()
         .transform((value) => {
           if (value === null || value === undefined) return value
-          const trimmed = value.trim()
-          return trimmed === '' ? null : trimmed
+          return value === '' ? null : value
         }),
       // Admin "Dismiss" on the Missing tab — clears the stale-event flag
       // so the row falls out of the ?missing=true filter. The crawler

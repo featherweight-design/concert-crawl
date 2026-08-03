@@ -48,7 +48,10 @@ export const IdentitySection = ({
 }: IdentitySectionProps) => {
   const { sections, fields } = ADMIN_COPY.editor
   const tourNameValue = editedTourName ?? event.tourName ?? ''
-  const tourNameChanged = tourNameValue.trim() !== (event.tourName ?? '')
+  // Trims both sides so the changed dot matches the PATCH diff's own
+  // normalization rather than firing on stray stored whitespace.
+  const tourNameChanged =
+    tourNameValue.trim() !== (event.tourName?.trim() ?? '')
   return (
     <EditSection
       number={sections.identityNumber}
