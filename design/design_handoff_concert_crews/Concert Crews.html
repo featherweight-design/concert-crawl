@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Concert Crews (#1226)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+html,body{margin:0;padding:0;background:#f0eee9;font-family:Inter,system-ui,sans-serif}
+*{box-sizing:border-box}
+a{color:#1f5f7a}a:hover{color:#123c4e}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="empty-state.jsx"></script>
+<script type="text/babel" src="filter-system.jsx"></script>
+<script type="text/babel" src="user-menu.jsx"></script>
+<script type="text/babel" src="cc-overlay.jsx"></script>
+<script type="text/babel" src="cc-tip.jsx"></script>
+<script type="text/babel" src="history-data.jsx"></script>
+<script type="text/babel" src="going-cta.jsx"></script>
+<script type="text/babel" src="watcher-roster.jsx"></script>
+<script type="text/babel" src="event-cta-v2.jsx"></script>
+<script type="text/babel" src="spotify-shared.jsx"></script>
+<script type="text/babel" src="row-data.jsx"></script>
+<script type="text/babel" src="event-row.jsx"></script>
+<script type="text/babel" src="crew-art.jsx"></script>
+<script type="text/babel" src="crew-copy.jsx"></script>
+<script type="text/babel" src="crew-shared.jsx"></script>
+<script type="text/babel" src="crews-destination.jsx"></script>
+<script type="text/babel" src="crew-browse-lens.jsx"></script>
+<script type="text/babel" src="crew-invite.jsx"></script>
+<script type="text/babel" src="crew-social-rail.jsx"></script>
+<script type="text/babel" src="crew-art-boards.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { CMark, Wordmark, MonoEyebrow, RailHeader, SectionRail, Btn, Scrim, MemberDot, MemberCluster, CrewBottomNav } = window;
+const { CrewPatch, crewIdentityFor, CREW_CHORDS, CREW_WEAVES, CREW_SIGILS, CREW_GROUNDS } = window;
+const { CREW_COPY, CREWS, CREW_MEMBERS: CM, crewById } = window;
+const { CrewsList, CrewHome, CrewsScreen, CrewsDesktop, CrewEmpty, StubRow, RosterList } = window;
+const { BrowseLensMobile, BrowseLensDesktop, CrewPickerSheet, CrewPickerPopover, CrewLensTitle } = window;
+const { CreateSheet, PremiumGate, InviteSheet, InviteLanding, DeadLink, LeaveConfirm } = window;
+const { CrewGoingLine, EventDetailMock, NotifList, MuteRows } = window;
+const { IdentityArt } = window;
+const { Board, Note, SpecTable } = window;
+
+const P_W = 390, P_H = 844, P_TALL = 1020;
+const N_W = 320, N_H = 700;
+const D_W = 1240, D_H = 880;
+
+// ── stages ─────────────────────────────────────────────────────
+function Phone({ theme = "electric", w = P_W, h = P_H, bare, sheet, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={w} height={h} dark={theme !== "light"}>
+        {sheet ? (
+          <div style={{ position: "relative", width: "100%", height: "100%" }}>
+            {sheet}
+            <Scrim/>
+            {children}
+          </div>
+        ) : children}
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function Desk({ theme = "electric", h = D_H, url = "concertcrawl.app/crews", children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <div style={{ width: D_W, height: h, position: "relative", background: "var(--bg)", overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 36, background: "var(--surface-1)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", padding: "0 14px", gap: 8, zIndex: 5 }}>
+          {[0,1,2].map(i => <span key={i} style={{ width: 11, height: 11, borderRadius: 6, background: ["#FF7A8A","#FFD27A","#7BFFB0"][i], opacity: 0.7 }}/>)}
+          <div style={{ flex: 1 }}/>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 10, color: "var(--fg-subtle)", letterSpacing: "0.06em" }}>{url}</div>
+          <div style={{ flex: 1 }}/>
+        </div>
+        <div style={{ position: "absolute", inset: "36px 0 0 0" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+function DeskModal({ theme = "electric", url, behind, children }) {
+  return (
+    <Desk theme={theme} url={url}>
+      <div style={{ position: "absolute", inset: 0, opacity: 0.45 }}>{behind}</div>
+      <Scrim/>
+      <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", padding: 28 }}>{children}</div>
+    </Desk>
+  );
+}
+// ── Tweaks ─────────────────────────────────────────────────────
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "crew": "cr_7f3a91",
+  "surface": "home",
+  "lead": "auto",
+  "manage": false
+}/*EDITMODE-END*/;
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakToggle, TweakRadio } = window;
+const BASE_THEMES = [
+  { value: "electric", label: "Electric" }, { value: "jade", label: "Jade" }, { value: "light", label: "Light" },
+];
+function CrewTweaks() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  return (
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Preview">
+        <TweakSelect label="Surface" value={t.surface} onChange={(v)=>setT("surface",v)} options={[
+          { value: "home", label: "Crew home" },
+          { value: "list", label: "Crews list" },
+          { value: "lens", label: "Browse · crew lens" },
+          { value: "detail", label: "Event detail rail" },
+          { value: "landing", label: "Signed-out invite" },
+        ]}/>
+        <TweakSelect label="Crew" value={t.crew} onChange={(v)=>setT("crew",v)} options={CREWS.map(c => ({ value: c.id, label: `${c.name} (${c.members.length})` }))}/>
+        <TweakRadio label="Crew home tab" value={t.lead} onChange={(v)=>setT("lead",v)} options={[
+          { value: "auto", label: "Auto" }, { value: "upcoming", label: "Coming up" }, { value: "past", label: "Been there" },
+        ]}/>
+        <TweakToggle label="Roster manage actions" value={t.manage} onChange={(v)=>setT("manage",v)}/>
+      </TweakSection>
+      <TweakSection label="Theme">
+        <TweakRadio label="Base theme" value={t.theme} onChange={(v)=>setT("theme",v)} options={BASE_THEMES}/>
+      </TweakSection>
+    </TweaksPanel>
+  );
+}
+function LivePhone() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  const lead = t.lead === "auto" ? null : t.lead;
+  // P_TALL, not P_H: the artboard has to show a whole tab panel. IOSDevice's
+  // content box resolves to ~661px at 844, and the upcoming tab measures ~817.
+  if (t.surface === "lens") return <Phone theme={t.theme} h={P_TALL}><BrowseLensMobile crewId={t.crew}/></Phone>;
+  if (t.surface === "detail") return <Phone theme={t.theme} h={P_TALL}><EventDetailMock going={(window.CREW_GOING[t.crew]||{}).hermanos || []}/></Phone>;
+  if (t.surface === "landing") return <Phone theme={t.theme} h={P_TALL}><InviteLanding crewId={t.crew}/></Phone>;
+  return (
+    <Phone theme={t.theme} h={P_TALL}>
+      <CrewsScreen>
+        {t.surface === "list"
+          ? <CrewsList/>
+          : <CrewHome crewId={t.crew} lead={lead} manage={t.manage}/>}
+      </CrewsScreen>
+    </Phone>
+  );
+}
+function LiveDesk() {
+  const [t] = useTweaks(TWEAK_DEFAULTS);
+  const lead = t.lead === "auto" ? null : t.lead;
+  if (t.surface === "lens") return <Desk theme={t.theme} url="concertcrawl.app/browse"><BrowseLensDesktop crewId={t.crew}/></Desk>;
+  return (
+    <Desk theme={t.theme}>
+      <CrewsDesktop>
+        {t.surface === "list" ? <CrewsList wide/> : <CrewHome crewId={t.crew} wide lead={lead} manage={t.manage}/>}
+      </CrewsDesktop>
+    </Desk>
+  );
+}
+
+// ── §5 rail ladder ─────────────────────────────────────────────
+function RailLadder({ wide, theme = "electric" }) {
+  const g = window.CREW_GOING.cr_7f3a91.hermanos;
+  const anon = [CM.ghost, CM.ghost2, { id: "u_g3", handle: null }];
+  return (
+    <Board theme={theme}>
+      <RailHeader tone="signal" eyebrow="CREW LINE · DEGRADATION LADDER" code="§3.8"/>
+      <Note><strong style={{ color: "var(--fg)" }}>Reconciled with the CTA pass (Aug 3).</strong> The watcher crawl now belongs to the eye, so crew attendance belongs to <em>Going</em> — one social statement per control, crew first, and no count stated twice.</Note>
+      {[
+        ["1 · named crew going", <CrewGoingLine going={g} wide={wide}/>, "Handles are named, the rest fold into a count. No watcher count here — the shipped strip states it once, below."],
+        ["2 · crew, no handles", <CrewGoingLine going={anon} wide={wide}/>, "Nobody is invented. The count is the honest maximum we can say (#762)."],
+        ["3 · no crew going", <CrewGoingLine going={[]} wide={wide}/>, "The line is absent entirely and Going stands alone — exactly the shipped page. Crews adds nothing when it has nothing."],
+      ].map(([label, node, note]) => (
+        <div key={label} style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+          <MonoEyebrow size={9} color="var(--signal)">{label}</MonoEyebrow>
+          <div style={{ maxWidth: 420, borderRadius: 14, background: "var(--surface-1)", border: "1px solid var(--border)", padding: 12, display: "flex", flexDirection: "column" }}>
+            <div style={{ minHeight: 46, borderRadius: 10, border: "1.5px solid color-mix(in oklch, var(--accent) 50%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, system-ui", fontWeight: 700, fontSize: 14, color: "var(--fg-muted)" }}>I'm going</div>
+            {node}
+          </div>
+          <Note>{note}</Note>
+        </div>
+      ))}
+    </Board>
+  );
+}
+
+// ── §8 edge grid ───────────────────────────────────────────────
+// Each empty state is the SHIPPED <EmptyState variant="hybrid"/>; the bordered
+// cell around it is a gallery device for this board only, not a restyle.
+function EdgeSpecimen({ k, children }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <MonoEyebrow size={8.5} color="var(--fg-subtle)" letterSpacing="0.1em">{k}</MonoEyebrow>
+      <div style={{ flex: 1, borderRadius: 12, border: "1px solid var(--border)", background: "var(--surface-1)", display: "flex", alignItems: "center" }}>{children}</div>
+    </div>
+  );
+}
+function EdgeBoard() {
+  const E = CREW_COPY.empty;
+  return (
+    <Board gap={14}>
+      <RailHeader tone="warning" eyebrow="EMPTY + EDGE STATES" code="9"/>
+      <Note>All nine on the shipped <code style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--signal)" }}>&lt;EmptyState variant="hybrid"/&gt;</code> — dense inside a band, full where it owns the surface. The rail's right-hand code comes from <code style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--signal)" }}>state</code>: an empty crew lens is a filtered result, so it reads <strong style={{ color: "var(--fg)" }}>0 hits</strong>; a dead link is <strong style={{ color: "var(--fg)" }}>err</strong>.</Note>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 14 }}>
+        <EdgeSpecimen k="empty.noCrews"><CrewEmpty eyebrow={CREW_COPY.list.eyebrow} title={E.noCrewsTitle} body={E.noCrewsBody} cta={CREW_COPY.list.create}/></EdgeSpecimen>
+        <EdgeSpecimen k="empty.crewOfOne"><CrewEmpty eyebrow="CREW OF ONE" title={E.crewOfOneTitle} body={E.crewOfOneBody} cta={CREW_COPY.detail.invite}/></EdgeSpecimen>
+        <EdgeSpecimen k="empty.noUpcoming"><CrewEmpty eyebrow={CREW_COPY.detail.upcomingTitle} title={E.noUpcomingTitle} body={E.noUpcomingBody}/></EdgeSpecimen>
+        <EdgeSpecimen k="empty.noPast"><CrewEmpty eyebrow={CREW_COPY.detail.pastTitle} title={E.noPastTitle} body={E.noPastBody}/></EdgeSpecimen>
+        <EdgeSpecimen k="empty.lensEmpty · filtered"><CrewEmpty eyebrow={CREW_COPY.lens.railEyebrow} state="filtered" title={E.lensEmptyTitle} body={E.lensEmptyBody("Basement Show Union")} cta={CREW_COPY.detail.invite}/></EdgeSpecimen>
+        <EdgeSpecimen k="empty.atCap"><CrewEmpty eyebrow="ROSTER FULL" title={E.atCapTitle} body={E.atCapBody} cta={CREW_COPY.list.create}/></EdgeSpecimen>
+        <EdgeSpecimen k="linkDead.expired · error"><CrewEmpty eyebrow="INVITE LINK" state="error" title={CREW_COPY.linkDead.expiredTitle} body={CREW_COPY.linkDead.expiredBody}/></EdgeSpecimen>
+        <EdgeSpecimen k="linkDead.revoked · error"><CrewEmpty eyebrow="INVITE LINK" state="error" title={CREW_COPY.linkDead.revokedTitle} body={CREW_COPY.linkDead.revokedBody}/></EdgeSpecimen>
+      </div>
+      <div style={{ display: "flex", gap: 14, alignItems: "center", padding: 14, borderRadius: 12, background: "var(--surface-1)", border: "1px solid var(--border)" }}>
+        <MemberDot member={{ id: "x", handle: null }} size={38}/>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3 }}>
+          <span style={{ fontFamily: "Inter, system-ui", fontWeight: 700, fontSize: 13.5, color: "var(--fg-subtle)" }}>{CREW_COPY.roster.noHandle}</span>
+          <Note>Member with no handle: a dashed, letterless dot. No initial from an email, no initial from a row id, never named in prose — counted instead (#762).</Note>
+        </div>
+      </div>
+    </Board>
+  );
+}
+
+// ── §10 parity band ────────────────────────────────────────────
+// Token parity doesn't need a duplicate 1900px crew home per theme — it needs
+// the same *surface elements* under three token sets, side by side, where you
+// can actually compare them.
+function ParityBand() {
+  const T = crewById("cr_7f3a91");
+  return (
+    <div style={{ display: "flex", width: "100%", height: "100%" }}>
+      {["electric", "jade", "light"].map(th => (
+        <ThemeProvider key={th} theme={th} style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", padding: 18, display: "flex", flexDirection: "column", gap: 14, overflow: "hidden", borderRight: "1px solid var(--border)" }}>
+            <MonoEyebrow size={9} color="var(--signal)">{th.toUpperCase()}</MonoEyebrow>
+            <window.CrewHero crew={T}/>
+            <window.EventRow show={window.crewUpcoming("cr_7f3a91")[0]} surface="crew" carded narrow/>
+            <StubRow night={window.CREW_NIGHTS.cr_7f3a91[0]}/>
+            <CrewGoingLine going={window.CREW_GOING.cr_7f3a91.hermanos}/>
+          </div>
+        </ThemeProvider>
+      ))}
+    </div>
+  );
+}
+
+// ── §11 a11y ───────────────────────────────────────────────────
+function A11yBoard() {
+  return (
+    <Board>
+      <RailHeader tone="signal" eyebrow="ACCESSIBILITY" code="WCAG AA"/>
+      <SpecTable cols={["surface", "keyboard + AT", "notes"]} rows={[
+        ["crew home tabs", "role=tablist / tab / tabpanel · 44×44", "Full ARIA tabs pattern, implemented: roving tabIndex (active tab 0, others −1), ←/→ wrap between tabs, Home/End jump to first/last, and each tab paired to the panel by id + aria-controls / aria-labelledby. Each tab's count is a text child of the button, so it's part of the accessible name (“Coming up 4”) — the crew's shape is available without sighted scanning."],
+        ["CrewPatch", "aria-hidden, decorative", "The patch never carries text, so there is no contrast-over-art case. The crew NAME is always the accessible label — it sits outside the art, never inside it."],
+        ["crew lens pill", "button · aria-pressed · 32×32 paint / 44×44 target", "Announces \"Crew lens on: Thursdays. Showing shows a member is going to.\" Clearing announces the off string. Both live in copy.a11y."],
+        ["crew picker", "sheet: focus trap, Esc closes; rows are radios in one group", "Selection applies immediately and dismisses — no Apply button. Built to FilterSheet's anatomy, not its API (README §2)."],
+        ["going count chip", "text + SR-only member list", "\"3 going\" is visible; the screen reader gets the named list plus \"+N more\", never invented names."],
+        ["member dot", "aria-hidden inside a labelled cluster", "The cluster carries one label (\"6 members\"); 12 dots do not each announce themselves."],
+        ["crew going line", "one region per control · SR-only full list", "Attached to Going and a SIBLING of the shipped WatchStrip — one social statement per control, never a shared region (README §3a). The visible text is the measured ladder's current rung; an SR-only span always carries the FULL named list plus '+N more', so the names the ladder drops for width are never lost to AT. Same contract as the row's crewGoingSr."],
+        ["stub row", "date, artist, venue, then attendance", "The perforation is decorative; the count is text."],
+        ["invite link", "input + Copy button, live region on copy", "\"Copied.\" is announced. Retire is a confirmed destructive action, never a bare icon."],
+        ["contrast", "fg 4.5:1+, mono meta 4.5:1+, signal on surface 3:1+", "Verified in Electric / Jade / Light. Patch colour is decorative and exempt, but the sigil still clears 3:1 against its ground in all three."],
+        ["touch", "44×44 minimum", "Pill, picker rows, roster actions, toggle, copy, revoke."],
+        ["motion", "none required", "No animation carries meaning. The patch is static SVG."],
+      ]}/>
+    </Board>
+  );
+}
+function CopyBoard() {
+  return (
+    <Board>
+      <RailHeader tone="accent" eyebrow="COPY" code="definitions/copy.ts"/>
+      <Note>Every customer-facing string in this handoff reads from <code style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--signal)" }}>CREW_COPY</code> in <code style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--signal)" }}>crew-copy.jsx</code> — the design mirror of <code style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--signal)" }}>copy.crews.*</code>. Nothing is hardcoded in a screen. Sour Patch on the social and empty states; sober on money, permissions and loss.</Note>
+      <SpecTable cols={["key", "string", "why this one"]} rows={[
+        ["empty.crewOfOneTitle", "Party of one.", "The first thing every creator sees. Cheeky, not scolding — the fix is one tap away."],
+        ["empty.noUpcomingBody", "Not one of you has said yes to anything yet. Bold.", "Names the behaviour without nagging. There is no decline in v1, so nobody is being accused of anything."],
+        ["empty.noPastBody", "Two of you, minimum — otherwise it's just your night.", "Teaches the ≥2 rule at the exact moment it's confusing."],
+        ["landing.privacy", "We're not showing you what they're going to until you're in.", "Turns the privacy constraint into the pitch. §3.7 in one line."],
+        ["gate.body", "Joining one is free, forever — nobody hits a paywall on your invite link.", "States the growth-loop guarantee to the buyer, so it reads as fairness rather than a limit."],
+        ["gate.lapsed", "Your crews all still work. Starting another one needs Premium again.", "§3.12, non-punitive. Never blames, never mentions a card."],
+        ["invite.expiryHelp", "Links go stale after 7 days so a forwarded one can't follow you around.", "The reason, not just the rule."],
+        ["roster.noHandleHelp", "They haven't picked a handle. We won't make one up.", "#762's principle said out loud where a user would otherwise assume a bug."],
+        ["confirm.leaveBody", "You'll lose the lens and the shared history. They keep going without you.", "Sober. One factual consequence per clause, no cheek in a destructive flow."],
+      ]}/>
+    </Board>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+function App() {
+  const T = crewById("cr_7f3a91"), N = crewById("cr_41a7b2"), B = crewById("cr_9e15cc"), S = crewById("cr_c0de55");
+  return (
+    <>
+      <DesignCanvas
+        title="Concert Crews"
+        subtitle="#1226 · Round 1 · The Crews destination · the Browse lens · the crew patch system (its own visual language, seeded from crew.id) · the signed-out invite landing · one crew going line on event detail · create + invite with the Premium gate · every empty and edge state · copy + a11y. Token-only across Electric / Jade / Light, 320 + 390 + desktop, behavioural parity."
+      >
+        <DCSection id="live" title="0 · Live preview" subtitle="Toggle Tweaks in the toolbar to drive the surface, the crew, the opening tab and the base theme. The crew-home tabs are live — tap them. Five crews are wired: Thursdays (6, healthy), The Vinyl Retirement Plan (11), Basement Show Union (3, nothing upcoming), Night Shift (12 — at cap), Sunset Crew (1 — crew of one).">
+          <DCArtboard id="live-m" label="Mobile · responds to Tweaks" width={P_W} height={P_TALL}><LivePhone/></DCArtboard>
+          <DCArtboard id="live-d" label="Desktop · responds to Tweaks" width={D_W} height={D_H}><LiveDesk/></DCArtboard>
+        </DCSection>
+
+        <DCSection id="dest-m" title="2 · The Crews destination · mobile"
+          subtitle="List → detail. The hero is pinned and the three sections are TABS — stacked, they pushed the roster and the shared past far below the fold. Each tab carries its count, so the crew's shape (4 shows, 6 nights, 6 people) reads without scrolling. The two tenses stay different objects: upcoming is the shipped event row (a show you could still buy a ticket to), the shared past is a ticket stub (a thing that happened). The §8 lead-order call now decides which tab OPENS — upcoming unless it's empty and there's a past to open on.">
+          <DCArtboard id="dm-list" label="Crews list · 390" width={P_W} height={P_H}><Phone><CrewsScreen><CrewsList/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-list-320" label="Crews list · 320" width={N_W} height={730}><Phone w={N_W} h={730}><CrewsScreen narrow><CrewsList/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-home" label="Crew home · Coming up (the tab that opens)" width={P_W} height={P_TALL}><Phone h={P_TALL}><CrewsScreen><CrewHome crewId="cr_7f3a91" tab="upcoming"/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-home-past" label="Crew home · Been there" width={P_W} height={P_TALL}><Phone h={P_TALL}><CrewsScreen><CrewHome crewId="cr_7f3a91" tab="past"/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-home-roster" label="Crew home · Who's in" width={P_W} height={P_TALL}><Phone h={P_TALL}><CrewsScreen><CrewHome crewId="cr_7f3a91" tab="roster"/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-home-320" label="Crew home · 320 (tab row at the tight width)" width={N_W} height={1060}><Phone w={N_W} h={1060}><CrewsScreen narrow><CrewHome crewId="cr_7f3a91" narrow tab="upcoming"/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-past" label="Crew home · nothing upcoming → opens on Been there" width={P_W} height={920}><Phone h={920}><CrewsScreen><CrewHome crewId="cr_9e15cc"/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-solo" label="Crew home · crew of one (the first thing every creator sees)" width={P_W} height={880}><Phone h={880}><CrewsScreen><CrewHome crewId="cr_c0de55"/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-cap" label="Crew home · Who's in · at cap (12) + manage" width={P_W} height={1280}><Phone h={1280}><CrewsScreen><CrewHome crewId="cr_41a7b2" tab="roster" manage/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-stubs" label="Shared past · the stub, up close" width={P_W} height={470}>
+            <Board pad={18}><SectionRail title={CREW_COPY.detail.pastTitle} meta={CREW_COPY.detail.pastStat(6)}/>
+              {window.CREW_NIGHTS.cr_7f3a91.slice(0, 4).map(n => <StubRow key={n.id} night={n}/>)}
+              <Note>Grouped by year in situ. The perforated end carries the date, so the row needs no mono date line and no artwork — which is what keeps it from looking like a show you can still go to.</Note>
+            </Board>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="dest-d" title="3 · The Crews destination · desktop"
+          subtitle="Parity is behavioural, not visual: same tabs, same capabilities, two-column panels, roster in two columns, stubs paired. The tab row is the shipped ProfileSegments pill grammar from #737. Crews is a top-level nav item beside Watching.">
+          <DCArtboard id="dd-list" label="Crews list · desktop" width={D_W} height={720}><Desk h={720}><CrewsDesktop><CrewsList wide/></CrewsDesktop></Desk></DCArtboard>
+          <DCArtboard id="dd-home" label="Crew home · desktop · Coming up" width={D_W} height={760}><Desk h={760}><CrewsDesktop><CrewHome crewId="cr_7f3a91" wide tab="upcoming"/></CrewsDesktop></Desk></DCArtboard>
+          <DCArtboard id="dd-past" label="Crew home · desktop · Been there" width={D_W} height={820}><Desk h={820}><CrewsDesktop><CrewHome crewId="cr_7f3a91" wide tab="past"/></CrewsDesktop></Desk></DCArtboard>
+          <DCArtboard id="dd-roster" label="Crew home · desktop · Who's in + manage" width={D_W} height={760}><Desk h={760}><CrewsDesktop><CrewHome crewId="cr_7f3a91" wide tab="roster" manage/></CrewsDesktop></Desk></DCArtboard>
+        </DCSection>
+
+        <DCSection id="lens" title="4 · The Browse lens"
+          subtitle="Design's call on the open question: a crew is not a filter, so it does not become a fifth chip. The lens uses the row that already holds the page title and the list/cal toggle, and it RETITLES THE PAGE — title becomes the crew name, and one thin dismissible rail appears where the location eyebrow was. Resting costs nothing; the filter bar is what ships today. Filters compose on top. The calendar itself is the shipped event row, unforked — crew presence is a count chip that displaces `following` in the meta budget. The picker is built to FilterSheet's anatomy but not its API; see README §2.">
+          <DCArtboard id="lens-off" label="Browse · resting (lens off) · 390" width={P_W} height={P_H}><Phone><BrowseLensMobile/></Phone></DCArtboard>
+          <DCArtboard id="lens-on" label="Browse · crew lens on · Thursdays · 390" width={P_W} height={P_H}><Phone><BrowseLensMobile crewId="cr_7f3a91"/></Phone></DCArtboard>
+          <DCArtboard id="lens-320" label="Browse · crew lens on · 320 (the tight case)" width={N_W} height={N_H}><Phone w={N_W} h={N_H}><BrowseLensMobile crewId="cr_7f3a91" narrow/></Phone></DCArtboard>
+          <DCArtboard id="lens-title" label="Detail · the title block, both states" width={520} height={300}>
+            <Board pad={20} gap={22}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}><MonoEyebrow size={9}>RESTING</MonoEyebrow><CrewLensTitle count={0}/></div>
+              <div style={{ height: 1, background: "var(--border)" }}/>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}><MonoEyebrow size={9} color="var(--signal)">LENS ON</MonoEyebrow><CrewLensTitle crew={T} count={4}/></div>
+            </Board>
+          </DCArtboard>
+          <DCArtboard id="lens-picker" label="Crew picker · mobile sheet" width={P_W} height={P_H}>
+            <Phone sheet={<BrowseLensMobile crewId="cr_7f3a91"/>}><CrewPickerSheet selectedId="cr_7f3a91"/></Phone>
+          </DCArtboard>
+          <DCArtboard id="lens-empty" label="Browse · crew lens with nothing in it" width={P_W} height={P_H}><Phone><BrowseLensMobile crewId="cr_9e15cc"/></Phone></DCArtboard>
+          <DCArtboard id="lens-d" label="Browse · crew lens · desktop" width={D_W} height={820}><Desk h={820} url="concertcrawl.app/browse"><BrowseLensDesktop crewId="cr_7f3a91"/></Desk></DCArtboard>
+          <DCArtboard id="lens-dp" label="Browse · crew picker popover · desktop" width={D_W} height={820}><Desk h={820} url="concertcrawl.app/browse"><BrowseLensDesktop crewId="cr_7f3a91" picker/></Desk></DCArtboard>
+        </DCSection>
+
+        <DCSection id="rail" title="5 · Crew presence on event detail"
+          subtitle="Reconciled with design_handoff_event_detail_cta_tooltip R2. §3.8 was written when watching was a bare count; the shipped page now gives watchers a two-row WatchStrip (toggle + avatar/name crawl + roster overlay). A crew rail carrying its own watching count would state it twice, so crew attendance instead attaches to GOING — the CTA pass's own rule that a status line belongs to the control it describes. One social statement per control, crew first, nothing duplicated, and the shipped strip renders here untouched.">
+          <DCArtboard id="rail-ladder" label="The ladder · three states" width={620} height={660}><RailLadder/></DCArtboard>
+          <DCArtboard id="rail-situ" label="In situ · mobile · the shipped block + crew line" width={P_W} height={P_TALL}>
+            <Phone h={P_TALL}><EventDetailMock going={window.CREW_GOING.cr_7f3a91.hermanos} showCrewPatch/></Phone>
+          </DCArtboard>
+          <DCArtboard id="rail-320" label="In situ · 320 — the tightest rung (faces give way to the names)" width={N_W} height={940}>
+            <Phone w={N_W} h={940}><EventDetailMock going={window.CREW_GOING.cr_7f3a91.hermanos}/></Phone>
+          </DCArtboard>
+          <DCArtboard id="rail-watching" label="In situ · already watching (strip fills, crawl names you)" width={P_W} height={P_TALL}>
+            <Phone h={P_TALL}><EventDetailMock going={window.CREW_GOING.cr_7f3a91.hermanos} watching/></Phone>
+          </DCArtboard>
+          <DCArtboard id="rail-locked" label="In situ · Going locked (Free) — watching stays free" width={P_W} height={P_TALL}>
+            <Phone h={P_TALL}><EventDetailMock going={window.CREW_GOING.cr_7f3a91.hermanos} goingState="locked"/></Phone>
+          </DCArtboard>
+          <DCArtboard id="rail-d" label="In situ · desktop" width={D_W} height={760}>
+            <Desk h={760} url="concertcrawl.app/show/hermanos-gutierrez"><EventDetailMock going={window.CREW_GOING.cr_7f3a91.hermanos} wide/></Desk>
+          </DCArtboard>
+          <DCArtboard id="rail-card" label="Browse card presence vs. the crew line (§8)" width={620} height={490}>
+            <Board pad={20}>
+              <RailHeader tone="signal" eyebrow="CARD VS LINE" code="§8"/>
+              <MonoEyebrow size={9}>BROWSE CARD · CREW LENS ON — CREW DISPLACES FOLLOWING</MonoEyebrow>
+              <window.EventRow show={window.crewUpcoming("cr_7f3a91")[0]} surface="crewLens"/>
+              <MonoEyebrow size={9}>SAME SURFACE, NO CREW PRESENCE — FOLLOWING RETURNS</MonoEyebrow>
+              <window.EventRow show={window.R_SHOWS.find(s => s.following) || window.R_SHOWS[0]} surface="crewLens"/>
+              <MonoEyebrow size={9} color="var(--signal)">EVENT DETAIL · UNDER GOING</MonoEyebrow>
+              <CrewGoingLine going={window.CREW_GOING.cr_7f3a91.holdfast}/>
+              <Note><strong style={{ color: "var(--fg)" }}>Following is displaced, never removed.</strong> Meta on the crew surfaces is <code style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--signal)" }}>["crew", "following", "genre"]</code> against a budget of 2 — a show with crew presence spends the slot on crew; a show without it falls back to following exactly as Browse does. The card gets a <em>count</em>; names are event detail's job, because that's where you decide and where they fit.</Note>
+            </Board>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="create" title="6 · Create + invite"
+          subtitle="Create is Premium, joining is free and never sees a paywall (§3.9). Creators can also pull a NEW PATCH — the seed becomes crew.id + patchSalt, moved only by an explicit confirmed action, so §3.5 still holds (never membership, never the name) while a crew that dislikes its first pull has an answer. The invite link expires in 7 days and any member can retire it; the cap of 12 is the real backstop. Roster: any member invites, any member leaves, only the creator removes/renames/rerolls/deletes, and a creator on their way out passes the crew on first.">
+          <DCArtboard id="cr-gate" label="Premium gate · create (mobile)" width={P_W} height={P_H}>
+            <Phone sheet={<CrewsScreen><CrewsList gated/></CrewsScreen>}><PremiumGate/></Phone>
+          </DCArtboard>
+          <DCArtboard id="cr-gate-lapsed" label="Premium gate · lapsed subscription (§3.12 — the crew keeps working)" width={P_W} height={P_H}>
+            <Phone sheet={<CrewsScreen><CrewsList gated/></CrewsScreen>}><PremiumGate lapsed/></Phone>
+          </DCArtboard>
+          <DCArtboard id="cr-create" label="Create sheet · live patch preview + New patch" width={P_W} height={P_H}>
+            <Phone sheet={<CrewsScreen><CrewsList/></CrewsScreen>}><CreateSheet/></Phone>
+          </DCArtboard>
+          <DCArtboard id="cr-reroll" label="New patch · now → new, confirmed" width={P_W} height={P_H}>
+            <Phone sheet={<CrewsScreen><CrewHome crewId="cr_7f3a91"/></CrewsScreen>}><window.RerollSheet/></Phone>
+          </DCArtboard>
+          <DCArtboard id="cr-invite" label="Invite sheet · link + expiry + retire" width={P_W} height={P_H}>
+            <Phone sheet={<CrewsScreen><CrewHome crewId="cr_7f3a91"/></CrewsScreen>}><InviteSheet/></Phone>
+          </DCArtboard>
+          <DCArtboard id="cr-copied" label="Invite sheet · copied" width={P_W} height={P_H}>
+            <Phone sheet={<CrewsScreen><CrewHome crewId="cr_7f3a91"/></CrewsScreen>}><InviteSheet copied/></Phone>
+          </DCArtboard>
+          <DCArtboard id="cr-revoked" label="Invite sheet · link retired" width={P_W} height={P_H}>
+            <Phone sheet={<CrewsScreen><CrewHome crewId="cr_7f3a91"/></CrewsScreen>}><InviteSheet revoked/></Phone>
+          </DCArtboard>
+          <DCArtboard id="cr-full" label="Invite sheet · crew at cap" width={P_W} height={P_H}>
+            <Phone sheet={<CrewsScreen><CrewHome crewId="cr_41a7b2"/></CrewsScreen>}><InviteSheet crewId="cr_41a7b2" full/></Phone>
+          </DCArtboard>
+          <DCArtboard id="cr-leave" label="Leave crew · sober, no cheek" width={P_W} height={P_H}>
+            <Phone sheet={<CrewsScreen><CrewHome crewId="cr_7f3a91"/></CrewsScreen>}><LeaveConfirm kind="leave"/></Phone>
+          </DCArtboard>
+          <DCArtboard id="cr-handoff" label="Creator leaving · pass the crew on first" width={P_W} height={P_H}>
+            <Phone sheet={<CrewsScreen><CrewHome crewId="cr_7f3a91"/></CrewsScreen>}><LeaveConfirm kind="handoff"/></Phone>
+          </DCArtboard>
+          <DCArtboard id="cr-last" label="Creator leaving · nobody to pass it to (crew of one)" width={P_W} height={P_H}>
+            <Phone sheet={<CrewsScreen><CrewHome crewId="cr_c0de55"/></CrewsScreen>}><LeaveConfirm kind="last" crewId="cr_c0de55"/></Phone>
+          </DCArtboard>
+          <DCArtboard id="cr-gate-d" label="Premium gate · desktop modal" width={D_W} height={D_H}>
+            <DeskModal behind={<CrewsDesktop><CrewsList wide gated/></CrewsDesktop>}><PremiumGate variant="desktop"/></DeskModal>
+          </DCArtboard>
+          <DCArtboard id="cr-create-d" label="Create · desktop modal" width={D_W} height={D_H}>
+            <DeskModal behind={<CrewsDesktop><CrewsList wide/></CrewsDesktop>}><CreateSheet variant="desktop"/></DeskModal>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="landing" title="7 · The signed-out invite landing"
+          subtitle="An acquisition surface (§3.7): crew name, patch, who invited you, headcount — then one CTA that lands you inside the crew. It shows identity and NEVER attendance; a forwarded link must not publish anyone's plans, and the lock line says so out loud. Expired and revoked links go one step further and show no crew identity at all — a dead link has no standing to tell you anything.">
+          <DCArtboard id="ld-m" label="Invite landing · mobile" width={P_W} height={P_H}><Phone><InviteLanding/></Phone></DCArtboard>
+          <DCArtboard id="ld-d" label="Invite landing · desktop" width={D_W} height={760}><Desk h={760} url="concertcrawl.app/crew/join/8fq2-mkzt"><InviteLanding wide/></Desk></DCArtboard>
+          <DCArtboard id="ld-nohandle" label="Invite landing · inviter has no handle (don't fake identity)" width={P_W} height={P_H}><Phone><InviteLanding inviter={null}/></Phone></DCArtboard>
+          <DCArtboard id="ld-full" label="Invite landing · crew is full" width={P_W} height={P_H}><Phone><InviteLanding crewId="cr_41a7b2" full/></Phone></DCArtboard>
+          <DCArtboard id="ld-exp" label="Expired link · no crew identity" width={P_W} height={P_H}><Phone><DeadLink kind="expired"/></Phone></DCArtboard>
+          <DCArtboard id="ld-rev" label="Retired link · no crew identity" width={P_W} height={P_H}><Phone><DeadLink kind="revoked"/></Phone></DCArtboard>
+          <DCArtboard id="ld-exp-d" label="Expired link · desktop" width={D_W} height={620}><Desk h={620} url="concertcrawl.app/crew/join/8fq2-mkzt"><DeadLink kind="expired" wide/></Desk></DCArtboard>
+        </DCSection>
+
+        <DCSection id="edge" title="8 · Empty + edge states"
+          subtitle="All nine from the brief, on the shipped <EmptyState variant=&quot;hybrid&quot;/> from design_handoff_empty_state — dense inside a band, full where it owns the surface. Cheeky where the fix is one tap away; plain where something is genuinely gone.">
+          <DCArtboard id="edge-grid" label="The set" width={900} height={1120}><EdgeBoard/></DCArtboard>
+          <DCArtboard id="edge-nocrews" label="No crews yet · in situ" width={P_W} height={P_H}><Phone><CrewsScreen><CrewsList empty/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="edge-roster" label="Roster with a handle-less member" width={P_W} height={620}>
+            <Board pad={18}><RosterList crew={T} manage/></Board>
+          </DCArtboard>        </DCSection>
+
+        <DCSection id="notif" title="9 · Notifications + per-crew mute"
+          subtitle="A crew.* category in the bell, excluded from push exactly as contest.* is (§3.11). Nothing here can buzz a pocket, which is what buys the right to ship without a batching layer. Rows carry the crew's micro patch so the source is identifiable at 38px; per-crew mute lives on the row and in Settings.">
+          <DCArtboard id="nt-m" label="Bell · mobile" width={P_W} height={P_H}><Phone><CrewsScreen active="me"><NotifList/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="nt-mute" label="Settings › Notifications · per-crew mute" width={P_W} height={520}><Board pad={18}><MuteRows/></Board></DCArtboard>
+          <DCArtboard id="nt-d" label="Bell + mute · desktop" width={D_W} height={760}>
+            <Desk h={760} url="concertcrawl.app/settings/notifications">
+              <CrewsDesktop active="me"><div style={{ display: "flex", flexDirection: "column", gap: 30 }}><NotifList wide/><MuteRows wide/></div></CrewsDesktop>
+            </Desk>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="parity" title="10 · Theme parity"
+          subtitle="Token-only proof. Every colour on every crew surface — including the generative art — reads from var(--*), so the nine production themes come off one token set. The band shows every crew-specific element (hero + patch, upcoming row, ticket stub, crew going line) under all three base token sets at once; the phone boards below carry the composed surfaces.">
+          <DCArtboard id="pt-band" label="Every crew surface element · Electric / Jade / Light" width={1320} height={620}><ParityBand/></DCArtboard>
+          <DCArtboard id="pt-light-lens" label="Browse lens · Light" width={P_W} height={P_H}><Phone theme="light"><BrowseLensMobile crewId="cr_7f3a91"/></Phone></DCArtboard>
+          <DCArtboard id="pt-jade-lens" label="Browse lens · Jade" width={P_W} height={P_H}><Phone theme="jade"><BrowseLensMobile crewId="cr_7f3a91"/></Phone></DCArtboard>
+          <DCArtboard id="pt-light-landing" label="Invite landing · Light" width={P_W} height={P_H}><Phone theme="light"><InviteLanding/></Phone></DCArtboard>
+          <DCArtboard id="pt-jade-landing" label="Invite landing · Jade" width={P_W} height={P_H}><Phone theme="jade"><InviteLanding/></Phone></DCArtboard>
+          <DCArtboard id="pt-light-rail" label="Crew line · Light" width={620} height={660}><RailLadder theme="light"/></DCArtboard>
+        </DCSection>
+
+        <DCSection id="spec" title="11 · Copy + accessibility"
+          subtitle="Strings and a11y annotation. Copy lives in crew-copy.jsx, the design mirror of definitions/copy.ts — no customer-facing string is hardcoded in a screen.">
+          <DCArtboard id="sp-copy" label="Copy · the ones that carry a decision" width={860} height={780}><CopyBoard/></DCArtboard>
+          <DCArtboard id="sp-a11y" label="Accessibility · WCAG AA" width={860} height={790}><A11yBoard/></DCArtboard>
+        </DCSection>
+
+      </DesignCanvas>
+      <CrewTweaks/>
+    </>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
