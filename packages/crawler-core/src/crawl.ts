@@ -152,15 +152,37 @@ interface DebugCaptureContext {
   httpStatus: number
 }
 
+// Removes inline <style> blocks before capture. Style-heavy templates
+// (Squarespace, AEG's template12) inline tens of KB of CSS in <head>, which
+// on one real Bluebird capture pushed body markup past byte ~30,833 and ate
+// all but ~2.4KB of the 80K budget. CSS bytes are noise for a diagnostic
+// that exists to inspect content semantics.
+//
+// <script> is deliberately NOT stripped: inline scripts carry payloads we
+// actively depend on (window.__NEXT_DATA__ is how the Ticketure extractor
+// gets its data, and AEG inlines hydration JSON), so stripping them would
+// blind exactly the diagnostic we most need.
+export function stripStyleBlocks(html: string): string {
+  return html.replace(
+    /<style[^>]*>[\s\S]*?<\/style\s*>/gi,
+    '<!-- style stripped -->',
+  )
+}
+
 // Logs the fetched HTML to stdout, split into multiple lines so each line
 // stays under the host log-aggregator's per-line limit (Render drops lines
 // >~16KB). Caller reassembles by filtering on captureId and sorting by
 // chunkIdx. A header line (debug.html_capture) precedes the chunk lines
 // (debug.html_capture.chunk) so the metadata is preserved even if a chunk
 // is dropped.
+//
+// Length fields: totalLength and capturedLength describe the ORIGINAL page
+// so the header still tells the truth about page size; strippedLength is
+// the size of the payload actually emitted in the chunks.
 function logDebugHtmlCapture(html: string, ctx: DebugCaptureContext): void {
-  const captured = html.slice(0, DEBUG_CAPTURE_MAX_CHARS)
-  const truncated = html.length > DEBUG_CAPTURE_MAX_CHARS
+  const stripped = stripStyleBlocks(html)
+  const captured = stripped.slice(0, DEBUG_CAPTURE_MAX_CHARS)
+  const truncated = stripped.length > DEBUG_CAPTURE_MAX_CHARS
   const totalChunks = Math.ceil(captured.length / DEBUG_CAPTURE_CHUNK_CHARS)
   const captureId = crypto.randomUUID()
 
@@ -175,7 +197,8 @@ function logDebugHtmlCapture(html: string, ctx: DebugCaptureContext): void {
       finalUrl: ctx.finalUrl,
       httpStatus: ctx.httpStatus,
       totalLength: html.length,
-      capturedLength: captured.length,
+      capturedLength: truncated ? DEBUG_CAPTURE_MAX_CHARS : html.length,
+      strippedLength: captured.length,
       totalChunks,
       truncated,
     }),

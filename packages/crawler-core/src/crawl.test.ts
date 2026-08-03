@@ -24,6 +24,7 @@ import {
   crawlVenue,
   DEBUG_CAPTURE_CHUNK_CHARS,
   DEBUG_CAPTURE_MAX_CHARS,
+  stripStyleBlocks,
 } from './crawl.js'
 import { hashEvent } from './lib/hash.js'
 import { canonicalizeTitle } from './lib/canonical-title.js'
@@ -1989,5 +1990,99 @@ describe('crawlVenue — debug HTML capture', () => {
     } finally {
       consoleSpy.mockRestore()
     }
+  })
+
+  it('strips inline <style> blocks but keeps <script> payloads', async () => {
+    const venue = seedVenue({ debugCaptureHtml: true })
+    const styleBlock = `<style type="text/css">${'.aa{color:red}'.repeat(200)}</style>`
+    const scriptBlock =
+      '<script id="__NEXT_DATA__" type="application/json">{"props":{"events":[1]}}</script>'
+    const styledHtml =
+      '<html><head>' +
+      styleBlock +
+      scriptBlock +
+      '</head><body><h1>Metallica</h1></body></html>'
+    mockFetchPage.mockResolvedValue({
+      html: styledHtml,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    try {
+      await crawlVenue(venue.id, mockBrowser)
+
+      const { header, chunks } = parseCaptureLogs(consoleSpy)
+      const reassembled = chunks
+        .slice()
+        .sort(
+          (aa, bb) => (aa['chunkIdx'] as number) - (bb['chunkIdx'] as number),
+        )
+        .map((entry) => entry['chunk'] as string)
+        .join('')
+
+      expect(reassembled).not.toContain('<style')
+      expect(reassembled).toContain('<!-- style stripped -->')
+      expect(reassembled).toContain(scriptBlock)
+      expect(reassembled).toContain('<h1>Metallica</h1>')
+
+      // Original page size is still reported truthfully; strippedLength
+      // describes the smaller payload actually emitted.
+      expect(header!['totalLength']).toBe(styledHtml.length)
+      expect(header!['capturedLength']).toBe(styledHtml.length)
+      expect(header!['strippedLength']).toBe(reassembled.length)
+      expect(header!['strippedLength']).toBeLessThan(styledHtml.length)
+      expect(header!['truncated']).toBe(false)
+    } finally {
+      consoleSpy.mockRestore()
+    }
+  })
+
+  it('avoids truncation when stripping brings a style-heavy page under the cap', async () => {
+    const venue = seedVenue({ debugCaptureHtml: true })
+    const bigStyledHtml =
+      '<html><head><style>' +
+      'a{color:red}'.repeat(DEBUG_CAPTURE_MAX_CHARS / 6) +
+      '</style></head><body><h1>Metallica</h1></body></html>'
+    expect(bigStyledHtml.length).toBeGreaterThan(DEBUG_CAPTURE_MAX_CHARS)
+    mockFetchPage.mockResolvedValue({
+      html: bigStyledHtml,
+      httpStatus: 200,
+      finalUrl: venue.websiteUrl,
+    })
+    mockExtractWithLlm.mockResolvedValue({
+      events: [METALLICA_EVENT],
+      usage: { inputTokens: 100, outputTokens: 50 },
+    })
+
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    try {
+      await crawlVenue(venue.id, mockBrowser)
+
+      const { header, chunks } = parseCaptureLogs(consoleSpy)
+      expect(header!['truncated']).toBe(false)
+      expect(header!['totalLength']).toBe(bigStyledHtml.length)
+      expect(header!['strippedLength']).toBe(
+        stripStyleBlocks(bigStyledHtml).length,
+      )
+      expect(chunks.length).toBe(1)
+      expect(chunks[0]!['chunk']).toContain('<h1>Metallica</h1>')
+    } finally {
+      consoleSpy.mockRestore()
+    }
+  })
+
+  it('stripStyleBlocks handles multiple blocks and leaves markup intact', () => {
+    const html =
+      '<head><style>a{}</style><style media="print">b{}</style></head><body><p>hi</p></body>'
+    expect(stripStyleBlocks(html)).toBe(
+      '<head><!-- style stripped --><!-- style stripped --></head><body><p>hi</p></body>',
+    )
   })
 })
