@@ -1,3 +1,19 @@
+# [1.200.0](https://github.com/HartiganHM/concert-crawl/compare/v1.199.1...v1.200.0) (2026-08-03)
+
+
+### Bug Fixes
+
+* **share:** keep failed poster renders out of every cache ([a82c65b](https://github.com/HartiganHM/concert-crawl/commit/a82c65b035a96cf0d2d93bef63f415647830b708))
+* **share:** keep the event link on the payload when the poster image is shared ([15b204e](https://github.com/HartiganHM/concert-crawl/commit/15b204edd5c7b10b4b64a4ed8d2e960d41af5c8b))
+* **share:** key the poster ETag on every drawn field, drop unused previewAlt ([d6e83b4](https://github.com/HartiganHM/concert-crawl/commit/d6e83b456eee95c9c6b0534d55d05f43535a3e5a))
+* **share:** make the poster fingerprint unambiguous and parse If-None-Match properly ([7419b97](https://github.com/HartiganHM/concert-crawl/commit/7419b97630f06ea9450380a20827af996acb87ff))
+* **share:** split 404 from 502 on the poster route and honour the active theme ([abd03d2](https://github.com/HartiganHM/concert-crawl/commit/abd03d2a98f7768caa6d8dd9c8aed716b56921b1))
+
+
+### Features
+
+* **web:** shareable poster cards — PNG route, poster renderer, share sheet ([#72](https://github.com/HartiganHM/concert-crawl/issues/72)) ([78f1e06](https://github.com/HartiganHM/concert-crawl/commit/78f1e06685199b63cf6e1c1d7e6af35ad7271467))
+
 ## [1.199.1](https://github.com/HartiganHM/concert-crawl/compare/v1.199.0...v1.199.1) (2026-08-03)
 
 
