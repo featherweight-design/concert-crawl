@@ -38,6 +38,7 @@ function createLazyBrowser(): {
       pending ??= chromium
         .launch({ headless: true })
         .catch((launchErr: unknown) => {
+          logger.error({ launchErr }, 'Chromium launch failed')
           pending = null
           throw launchErr
         })

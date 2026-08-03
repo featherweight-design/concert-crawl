@@ -160,7 +160,7 @@ describe('runDailyCrawl', () => {
     expect(providers.size).toBe(1)
   })
 
-  it('never launches Chromium when every venue crawls over HTTP', async () => {
+  it('never launches Chromium unless a crawl asks for the browser provider', async () => {
     const { chromium } = await import('playwright')
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
@@ -606,7 +606,7 @@ describe('runTriggeredCrawls', () => {
     expect(mockBrowser.close).toHaveBeenCalledTimes(1)
   })
 
-  it('fails only the trigger whose crawl needed a browser when launch fails', async () => {
+  it('surfaces a launch failure per trigger instead of aborting the batch', async () => {
     const { chromium } = await import('playwright')
     vi.mocked(chromium.launch).mockRejectedValue(new Error('no browser'))
     mockCrawlVenue.mockImplementation(async (_venueId, getBrowser) => {

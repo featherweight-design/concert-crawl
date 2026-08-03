@@ -272,7 +272,10 @@ const memoizeBrowser = (source: BrowserSource): (() => Promise<Browser>) => {
   if (typeof source !== 'function') return async () => source
   let pending: Promise<Browser> | null = null
   return () => {
-    pending ??= source().catch((launchErr: unknown) => {
+    // Cache invalidation, not error handling — the rejection is rethrown
+    // untouched for the caller to log, so this is a `then` rejection handler
+    // rather than a `catch` that swallows context.
+    pending ??= source().then(undefined, (launchErr: unknown) => {
       pending = null
       throw launchErr
     })
