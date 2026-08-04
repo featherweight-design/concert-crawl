@@ -11,17 +11,14 @@ import { crawlVenue } from './crawl.js'
 // of WHERE clause, which masks the per-row filtering behavior the
 // stale-detection passes depend on.
 
-vi.mock('./lib/fetcher.js', () => ({
+// Partial mock: only the two network calls are stubbed. The error classes
+// come from the real module, so `err instanceof CrawlSelectorTimeoutError` in
+// crawl.ts resolves instead of throwing "No export is defined on the mock"
+// (#1404) — and a new export can't silently go missing again.
+vi.mock('./lib/fetcher.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./lib/fetcher.js')>()),
   fetchPage: vi.fn(),
   fetchPageHttp: vi.fn(),
-  CrawlFetchError: class CrawlFetchError extends Error {
-    constructor(
-      public httpStatus: number,
-      message: string,
-    ) {
-      super(message)
-    }
-  },
 }))
 vi.mock('./lib/robots.js', () => ({
   isAllowed: vi.fn().mockResolvedValue(true),
