@@ -1,3 +1,10 @@
+## [1.216.4](https://github.com/HartiganHM/concert-crawl/compare/v1.216.3...v1.216.4) (2026-08-04)
+
+
+### Bug Fixes
+
+* **web:** animate the Going CTA placeholder while the plan resolves ([#1469](https://github.com/HartiganHM/concert-crawl/issues/1469)) ([4b6cb78](https://github.com/HartiganHM/concert-crawl/commit/4b6cb7889ef4a1e0ae65975e30e8b70544c04802))
+
 ## [1.216.3](https://github.com/HartiganHM/concert-crawl/compare/v1.216.2...v1.216.3) (2026-08-04)
 
 
