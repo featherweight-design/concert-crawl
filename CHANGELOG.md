@@ -1,3 +1,15 @@
+# [1.216.0](https://github.com/HartiganHM/concert-crawl/compare/v1.215.4...v1.216.0) (2026-08-04)
+
+
+### Bug Fixes
+
+* **api:** match Spotify follows against co-headliners ([633d05c](https://github.com/HartiganHM/concert-crawl/commit/633d05c6a026e166ae259e8a4dfbb36274298f4d)), closes [#1416](https://github.com/HartiganHM/concert-crawl/issues/1416) [#1419](https://github.com/HartiganHM/concert-crawl/issues/1419)
+
+
+### Features
+
+* **admin:** allow selecting the detail-page platform ([497f4e6](https://github.com/HartiganHM/concert-crawl/commit/497f4e6cd37d99626b9cf07b462ccd65b41b3d23)), closes [#1295](https://github.com/HartiganHM/concert-crawl/issues/1295) [#1435](https://github.com/HartiganHM/concert-crawl/issues/1435)
+
 ## [1.215.4](https://github.com/HartiganHM/concert-crawl/compare/v1.215.3...v1.215.4) (2026-08-04)
 
 
