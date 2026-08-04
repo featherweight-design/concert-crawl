@@ -1,3 +1,10 @@
+## [1.215.3](https://github.com/HartiganHM/concert-crawl/compare/v1.215.2...v1.215.3) (2026-08-04)
+
+
+### Bug Fixes
+
+* **web:** log the profile save failure before surfacing it ([980fc7a](https://github.com/HartiganHM/concert-crawl/commit/980fc7aa0a072f2b81060c127568531b556b38bd))
+
 ## [1.215.2](https://github.com/HartiganHM/concert-crawl/compare/v1.215.1...v1.215.2) (2026-08-03)
 
 
