@@ -111,8 +111,7 @@ export const EventsList = ({
                       letterSpacing: '0.06em',
                     }}
                   >
-                    {dateEvents.length} show
-                    {dateEvents.length !== 1 ? 's' : ''}
+                    {copy.showCount(dateEvents.length)}
                   </span>
                 </div>
                 <div>

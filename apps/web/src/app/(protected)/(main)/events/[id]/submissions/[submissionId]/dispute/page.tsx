@@ -67,7 +67,9 @@ export default async function DisputePage({ params }: DisputePageProps) {
 
         {/* Disputed submission card */}
         <div className="rounded-xl border border-border p-4 bg-surface-1">
-          <p className="text-xs text-fg-muted mb-1">You&apos;re disputing</p>
+          <p className="text-xs text-fg-muted mb-1">
+            {CONSUMER_COPY.disputePage.disputingLabel}
+          </p>
           <p className="text-lg font-black text-fg">
             ${submission.priceMin}
             {submission.priceMax ? ` – $${submission.priceMax}` : ''}{' '}
@@ -79,8 +81,7 @@ export default async function DisputePage({ params }: DisputePageProps) {
         </div>
 
         <p className="text-xs text-fg-muted">
-          A dispute needs an alternate price + vendor. If you saw something
-          different, log it — that&apos;s how we find the truth.
+          {CONSUMER_COPY.disputePage.requirement}
         </p>
 
         <DisputeForm submission={submission} eventId={id} />

@@ -68,8 +68,9 @@ export function YoureIn() {
               fontSize: 10,
               letterSpacing: '-0.01em',
             }}
+            aria-hidden
           >
-            H
+            {ONBOARDING_COPY.founderMonogram}
           </div>
           <div
             style={{

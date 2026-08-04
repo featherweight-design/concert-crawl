@@ -4,11 +4,7 @@ import { Loader2, Sparkles, Check, AlertCircle } from 'lucide-react'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 export type GenerateFieldState =
-  | 'idle'
-  | 'loading'
-  | 'review'
-  | 'accepted'
-  | 'error'
+  'idle' | 'loading' | 'review' | 'accepted' | 'error'
 
 export interface GenerateFieldResult {
   content: string

@@ -18,10 +18,7 @@ export interface StatusSectionEvent {
 }
 
 export type SoldOutMethod =
-  | 'saw_listing'
-  | 'venue_site'
-  | 'bought_myself'
-  | 'other'
+  'saw_listing' | 'venue_site' | 'bought_myself' | 'other'
 
 export interface SoldOutProvenance {
   method: SoldOutMethod

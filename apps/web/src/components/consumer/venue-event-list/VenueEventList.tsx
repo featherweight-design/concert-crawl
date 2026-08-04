@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef } from 'react'
 import type { EventWithVenue } from '@concert-crawl/types'
 import { EventRow, fromEventWithVenue } from '../event-row'
+import { CONSUMER_COPY } from '../definitions/copy'
 import { dateGroupLabel } from '../definitions/lib'
 
 interface VenueEventListProps {
@@ -81,8 +82,7 @@ export function VenueEventList({
                   letterSpacing: '0.06em',
                 }}
               >
-                {dateEvents.length} show
-                {dateEvents.length !== 1 ? 's' : ''}
+                {CONSUMER_COPY.showCount(dateEvents.length)}
               </span>
             </div>
             <div>

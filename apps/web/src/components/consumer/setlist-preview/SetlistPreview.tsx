@@ -191,7 +191,7 @@ export function SetlistPreview({
                         textAlign: 'right',
                       }}
                     >
-                      E{idx + 1}
+                      {copy.encoreNumber(idx + 1)}
                     </span>
                     <span style={{ flex: 1, minWidth: 0 }}>{song}</span>
                   </li>

@@ -2,6 +2,9 @@ export const ONBOARDING_COPY = {
   // Handwritten sign-off shared by FounderNote and YoureIn. The em-dash is a
   // deliberate attribution dash and stays — it is the one exception to the
   // no-em-dash copy rule.
+  // Decorative avatar monogram beside the founder signature. aria-hidden at
+  // the call sites: a screen reader announcing a bare "H" is noise.
+  founderMonogram: 'H',
   signature: '— Hugh',
 
   founderNote: {

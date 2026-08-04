@@ -208,7 +208,7 @@ export const PendingReportBanner = ({
             />
           ))}
           <span style={{ marginLeft: 4 }}>
-            {confirms} of {needed}
+            {copy.confirmProgress(confirms, needed)}
           </span>
         </span>
       </div>

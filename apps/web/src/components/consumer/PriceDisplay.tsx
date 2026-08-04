@@ -373,7 +373,7 @@ function VerifiedStamp({
   if (by.kind === 'user' && by.handle) {
     head = (
       <>
-        {headWord} by{' '}
+        {headWord} {copy.priceDisplay.attribution}{' '}
         <a
           href={by.url}
           style={{
@@ -390,7 +390,7 @@ function VerifiedStamp({
   } else if (by.label) {
     head = (
       <>
-        {headWord} by {by.label}
+        {headWord} {copy.priceDisplay.attribution} {by.label}
       </>
     )
   } else {
@@ -444,7 +444,7 @@ function FeeBreakdown({ price }: { price: PriceBlockPrice }) {
           letterSpacing: '0.02em',
         }}
       >
-        <span>+{formatUSD(price.fees)} fees</span>
+        <span>{copy.priceDisplay.feesToggle(formatUSD(price.fees))}</span>
         <CaretIcon dir={open ? 'up' : 'down'} />
       </button>
       {open && (
@@ -773,7 +773,7 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
   ) : (
     <>
       {' '}
-      by <em>{copy.priceDisplay.anonymousFan}</em>
+      {copy.priceDisplay.attribution} <em>{copy.priceDisplay.anonymousFan}</em>
     </>
   )
 
@@ -792,7 +792,7 @@ function BoxOfficeAttribution({ price }: { price: PriceBlockPrice }) {
       >
         {/* Verb ("Bought"/"Saw") is gold-weighted — it's the trust signal */}
         <span style={{ color: GOLD, fontWeight: 700 }}>{actionWord}</span>
-        {prep} {venueName} box office
+        {copy.priceDisplay.boxOfficeSource(prep, venueName)}
         {byLine}
         {methodSuffix}
       </span>

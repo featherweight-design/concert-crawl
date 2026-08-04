@@ -46,8 +46,9 @@ export function FounderNote() {
             fontWeight: 900,
             fontSize: 13,
           }}
+          aria-hidden
         >
-          H
+          {ONBOARDING_COPY.founderMonogram}
         </div>
         <div
           style={{

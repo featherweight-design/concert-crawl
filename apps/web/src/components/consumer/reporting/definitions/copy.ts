@@ -106,6 +106,7 @@ export const REPORTING_COPY = {
 
   // ── ReportTypeMark ───────────────────────────────────────────────
   reportTypeMark: {
+    pendingLabel: 'pending',
     pendingDot: '·',
   },
 
@@ -170,10 +171,10 @@ export const REPORTING_COPY = {
 
   // ── PendingReportBanner ──────────────────────────────────────────
   pendingReportBanner: {
+    confirmProgress: (confirms: number, needed: number) =>
+      `${confirms} of ${needed}`,
     cancelledBadge: 'Cancelled · pending',
     postponedBadge: 'Postponed · pending',
-    confirmsProgress: (confirms: number, needed: number) =>
-      `${confirms}/${needed} confirms`,
     cancelledLead: 'A fan reports the show is cancelled.',
     postponedLead: 'A fan reports the show is being rescheduled.',
     footerQuestion: 'Saw something different?',

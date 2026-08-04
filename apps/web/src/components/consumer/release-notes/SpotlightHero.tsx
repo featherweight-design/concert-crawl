@@ -45,9 +45,13 @@ const FULL_HEROES: Record<string, React.ComponentType> = {
   'venue-passport': VenuePassportShowtime,
 }
 
-export function SpotlightHero({ hero = 'price', compact = false }: SpotlightHeroProps) {
+export function SpotlightHero({
+  hero = 'price',
+  compact = false,
+}: SpotlightHeroProps) {
   if (compact) {
-    const CompactCmp = SPOTLIGHT_COMPACT_HEROES[hero] ?? SPOTLIGHT_COMPACT_HEROES['passport']
+    const CompactCmp =
+      SPOTLIGHT_COMPACT_HEROES[hero] ?? SPOTLIGHT_COMPACT_HEROES['passport']
     if (!CompactCmp) return null
     return <CompactCmp />
   }

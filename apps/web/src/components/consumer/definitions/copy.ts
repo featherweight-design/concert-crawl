@@ -1,4 +1,8 @@
 export const CONSUMER_COPY = {
+  // Shared date-group heading used by the calendar, events list and venue
+  // event list. All three render the same count, so it lives in one place.
+  showCount: (count: number) => `${count} show${count !== 1 ? 's' : ''}`,
+
   // ── Shared price-card eyebrow ──────────────────────────────────────
   // The uppercase label above the price on every price-card variant
   // (SoldOutPriceCard, MixedTierCard, MultiTierLiveCard, PendingSoldOutCard).
@@ -180,6 +184,14 @@ export const CONSUMER_COPY = {
   // ── PriceDisplay ────────────────────────────────────────────────
   // Shown on the event detail page — price card and community handoff card
   priceDisplay: {
+    // Sentence fragments that wrap an interpolated value (handle, venue,
+    // amount). They read as partial sentences on their own; that is why they
+    // are functions rather than bare strings.
+    attribution: 'by',
+    feesToggle: (fees: string) => `+${fees} fees`,
+    boxOfficeSource: (prep: string, venueName: string) =>
+      `${prep} ${venueName} box office`,
+
     // Community handoff card (no price)
     communityBadge: 'community',
     ticketsLabel: 'Tickets',
@@ -845,6 +857,8 @@ export const CONSUMER_COPY = {
   // ── Setlist preview ─────────────────────────────────────────────
   // Shown on the event detail page — setlist preview section
   setlistPreview: {
+    // Encore rows are numbered E1, E2… against the main-set numbering
+    encoreNumber: (position: number) => `E${position}`,
     sectionLabel: 'Likely setlist',
     songCountSuffix: 'songs',
     encoreLabel: 'Encore',
@@ -1087,6 +1101,7 @@ export const CONSUMER_COPY = {
 
   // ── Settings ────────────────────────────────────────────────────
   settings: {
+    submissionAge: (ago: string) => `${ago} ago`,
     anonymousLabel: 'anonymous fan',
     anonymousExplainer:
       "You're browsing as an anonymous fan. Pick a handle to get credit for your price submissions (it applies retroactively).",
@@ -1689,6 +1704,9 @@ export const CONSUMER_COPY = {
   disputePage: {
     cancelLink: '← Cancel',
     heading: 'Dispute price',
+    disputingLabel: "You're disputing",
+    requirement:
+      "A dispute needs an alternate price + vendor. If you saw something different, log it. That's how we find the truth.",
   },
 } as const
 

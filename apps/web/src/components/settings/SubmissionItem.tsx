@@ -55,7 +55,7 @@ export function SubmissionItem({
           className="text-[10px] text-fg-subtle"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
-          {ago} ago
+          {SETTINGS_COPY.submissionAge(ago)}
         </span>
       </div>
 

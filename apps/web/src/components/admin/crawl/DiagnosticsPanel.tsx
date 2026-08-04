@@ -31,11 +31,7 @@ export interface StrategyHistoryEntry {
 }
 
 type ErrorClass =
-  | 'bot_detection'
-  | 'rate_limit'
-  | 'parse_failure'
-  | 'timeout'
-  | 'unknown'
+  'bot_detection' | 'rate_limit' | 'parse_failure' | 'timeout' | 'unknown'
 
 const ERROR_REASONS = ADMIN_COPY.crawl.diagnostics.errorReasons
 
