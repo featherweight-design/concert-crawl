@@ -19,11 +19,14 @@
 #   124 — timeout, and a newer deploy plausibly superseded this one
 #         (matches GNU timeout(1) convention; new caller behavior:
 #         prod-smoke-after-deploy.yml treats this as benign-skip)
+#         Only returned when the supersede reading is positively
+#         established: autoDeploy=yes and a live deploy under an hour old.
 #   125 — timeout that is NOT benign: deploys are disabled, the live
 #         deploy is over an hour old, or the timeout could not be
-#         classified. The pushed SHA will never go live on its own, so
-#         smoke and rollback would be skipped forever. Callers must
-#         fail on this.
+#         classified (service metadata unreadable, autoDeploy absent or
+#         unrecognized, live deploy timestamp missing or unparseable).
+#         The pushed SHA will never go live on its own, so smoke and
+#         rollback would be skipped forever. Callers must fail on this.
 #   1   — hard failure (jq missing, missing env, malformed timeout
 #         arg, curl/auth/network failure, no live deploy found)
 #
@@ -139,6 +142,14 @@ live_created=$(echo "${deploys_json}" | jq -r '
 
 if [ "${auto_deploy}" = "no" ]; then
   echo "::error title=Deploys are disabled::${SERVICE_ID} has autoDeploy=no, so the pushed SHA can never go live and smoke can never run. Re-enable auto-deploy on the service."
+  exit 125
+fi
+
+# Anything other than a definite "yes" leaves the disabled-deploys case
+# unruled-out, and that case is indistinguishable from a supersede at this
+# point. Fail closed rather than reading an absent field as healthy.
+if [ "${auto_deploy}" != "yes" ]; then
+  echo "::error title=Cannot classify timeout::${SERVICE_ID} reported autoDeploy='${auto_deploy}', so this timeout cannot be shown to be a benign supersede. Check whether the Render API changed the field's name or shape."
   exit 125
 fi
 

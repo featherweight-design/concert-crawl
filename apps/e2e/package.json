@@ -6,7 +6,7 @@
     "audit:sweep": "tsx src/audit/sweep.ts",
     "test:e2e": "playwright test --config playwright.config.ts",
     "test:smoke": "playwright test --config playwright.smoke.config.ts",
-    "test:audit": "vitest run",
+    "test": "vitest run",
     "install-browsers": "playwright install --with-deps chromium",
     "typecheck": "tsc --noEmit"
   },
