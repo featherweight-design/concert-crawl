@@ -876,6 +876,7 @@ export const ADMIN_COPY = {
           auto: 'Auto (no platform)',
           aeg: 'AEG',
           livenation: 'Live Nation',
+          detailPage: 'Detail pages (follow calendar links)',
         },
         platformVenueId: {
           label: 'Platform venue ID',

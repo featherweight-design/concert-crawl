@@ -1,3 +1,4 @@
+import { isVenuePlatform, platformRequiresVenueId } from '@concert-crawl/types'
 import type { VenuePlatform } from '@concert-crawl/types'
 
 // Narrow a raw string to one of a fixed set of literals without an `as` cast.
@@ -116,19 +117,22 @@ export function buildUpdateVenueBody(
   // When platform is null the API force-clears platformVenueId anyway, but
   // send null explicitly so the payload states the full intent.
   const platformRaw = formData.get('platform')
-  const platform: VenuePlatform | null | undefined =
-    platformRaw === 'aeg' || platformRaw === 'livenation'
-      ? platformRaw
-      : platformRaw === null
-        ? undefined
-        : null
+  const platform: VenuePlatform | null | undefined = isVenuePlatform(
+    platformRaw,
+  )
+    ? platformRaw
+    : platformRaw === null
+      ? undefined
+      : null
   const platformVenueIdRaw = formData.get('platformVenueId')
   const platformVenueIdTrimmed =
     platformVenueIdRaw !== null ? String(platformVenueIdRaw).trim() : ''
+  // A platform that takes no venue ID (detail-page, #1295) sends null: the
+  // API rejects an ID paired with such a platform rather than dropping it.
   const platformVenueId =
     platform === undefined
       ? undefined
-      : platform === null || platformVenueIdTrimmed === ''
+      : !platformRequiresVenueId(platform) || platformVenueIdTrimmed === ''
         ? null
         : platformVenueIdTrimmed
 

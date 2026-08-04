@@ -205,6 +205,33 @@ describe('VenueDetailsClient — platform routing (#721 #665)', () => {
     expect(platformVenueIdInput()?.value).toBe('')
   })
 
+  it('offers detail-page and collects no venue ID for it (#1435)', () => {
+    render(<VenueDetailsClient venue={buildVenue()} />)
+
+    fireEvent.change(platformSelect(), { target: { value: 'detail-page' } })
+
+    expect(platformSelect().value).toBe('detail-page')
+    // The fetcher keys off websiteUrl, so there is nothing to enter — and the
+    // probe must still be reachable without an ID.
+    expect(platformVenueIdInput()).toBeNull()
+    expect(probeButton().disabled).toBe(false)
+  })
+
+  it('drops a stale venue ID when switching from AEG to detail-page', () => {
+    render(
+      <VenueDetailsClient
+        venue={buildVenue({ platform: 'aeg', platformVenueId: '89' })}
+      />,
+    )
+    expect(platformVenueIdInput()?.value).toBe('89')
+
+    fireEvent.change(platformSelect(), { target: { value: 'detail-page' } })
+    expect(platformVenueIdInput()).toBeNull()
+
+    fireEvent.change(platformSelect(), { target: { value: 'aeg' } })
+    expect(platformVenueIdInput()?.value).toBe('')
+  })
+
   it('runs the probe: pending → done renders eventsFound and sourceUrl', async () => {
     const okResult: PlatformProbeResult = {
       ok: true,

@@ -209,6 +209,69 @@ describe('PATCH /v1/admin/venues/:id — platform routing (#721)', () => {
     expect(persisted?.platformVenueId).toBeNull()
   })
 
+  it('accepts detail-page with no platformVenueId (#1295/#1435)', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'The Black Box', slug: 'black-box' })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: 'detail-page' }),
+    })
+    expect(res.status).toBe(200)
+
+    const [persisted] = await testDb
+      .select({
+        platform: venues.platform,
+        platformVenueId: venues.platformVenueId,
+      })
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(persisted?.platform).toBe('detail-page')
+    expect(persisted?.platformVenueId).toBeNull()
+  })
+
+  it('rejects a platformVenueId paired with detail-page', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'The Black Box', slug: 'black-box' })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: 'detail-page', platformVenueId: '89' }),
+    })
+    expect(res.status).toBe(400)
+  })
+
+  // A stale AEG shard id surviving the switch would silently re-activate if
+  // the venue were ever moved back to AEG.
+  it('drops a stale platformVenueId when switching to detail-page', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({
+      name: 'Switched Venue',
+      slug: 'switched-venue',
+      platform: 'aeg',
+      platformVenueId: '89',
+    })
+
+    const res = await app.request(`/v1/admin/venues/${venue.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: 'detail-page' }),
+    })
+    expect(res.status).toBe(200)
+
+    const [persisted] = await testDb
+      .select({
+        platform: venues.platform,
+        platformVenueId: venues.platformVenueId,
+      })
+      .from(venues)
+      .where(eq(venues.id, venue.id))
+    expect(persisted?.platform).toBe('detail-page')
+    expect(persisted?.platformVenueId).toBeNull()
+  })
+
   it('writes a venue.platform_changed audit row with before/after meta', async () => {
     setAuth('admin')
     const venue = await seedVenue({ name: 'AEG Venue', slug: 'aeg-venue' })

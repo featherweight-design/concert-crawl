@@ -11,6 +11,7 @@ import {
   AegSchemaError,
   PlatformFetchDeadlineError,
 } from '@concert-crawl/crawler-core/fetchers'
+import { VENUE_PLATFORMS, platformRequiresVenueId } from '@concert-crawl/types'
 import type {
   PlatformProbeResult,
   VenueRobotsStatus,
@@ -110,7 +111,7 @@ const updateVenueSchema = createVenueSchema
     // Per-platform fetcher dispatch (#623 / #721 / #665). platform values
     // are validated here (not a Postgres enum) so new adapters only touch
     // application code.
-    platform: z.enum(['aeg', 'livenation']).nullable().optional(),
+    platform: z.enum(VENUE_PLATFORMS).nullable().optional(),
     // Empty/whitespace strings normalize to null (clear intent), matching
     // the other nullable string fields in this schema.
     platformVenueId: z
@@ -136,12 +137,15 @@ const updateVenueSchema = createVenueSchema
       }),
   })
   .refine(
-    // When the payload sets platform non-null, platformVenueId must ride
+    // When the payload sets an id-bearing platform, platformVenueId must ride
     // along in the SAME payload as a non-empty string. Requiring it in the
     // payload (rather than accepting a previously-saved value) keeps the
     // rule simple and the admin UI always sends both together.
+    //
+    // `detail-page` (#1295) is exempt: its fetcher keys off websiteUrl and
+    // has no platform-side id, so demanding one would make it unselectable.
     (body) =>
-      body.platform == null ||
+      !platformRequiresVenueId(body.platform) ||
       (typeof body.platformVenueId === 'string' &&
         body.platformVenueId.length > 0),
     {
@@ -488,7 +492,9 @@ venuesAdminRouter.patch(
     // same update even if the payload didn't mention it. A stale shard id
     // with no platform would silently re-activate if platform is re-set.
     const platformClearFields =
-      body.platform === null ? { platformVenueId: null } : {}
+      body.platform !== undefined && !platformRequiresVenueId(body.platform)
+        ? { platformVenueId: null }
+        : {}
 
     // Same orphan-prevention as platform (#506): clearing apiProvider forces
     // apiAccountId to null in the same update, so a stale account id can't
@@ -498,12 +504,14 @@ venuesAdminRouter.patch(
 
     const nextPlatform =
       body.platform !== undefined ? body.platform : existing.platform
-    const nextPlatformVenueId =
-      body.platform === null
-        ? null
-        : body.platformVenueId !== undefined
-          ? body.platformVenueId
-          : existing.platformVenueId
+    // An id-less platform is treated like a cleared one for this field: a
+    // venue switched from AEG to `detail-page` must not keep its old AEG
+    // shard id, which would silently re-activate if AEG were re-selected.
+    const nextPlatformVenueId = !platformRequiresVenueId(nextPlatform)
+      ? null
+      : body.platformVenueId !== undefined
+        ? body.platformVenueId
+        : existing.platformVenueId
 
     // The schema refine only sees the payload; this guards the merged
     // result against orphaned state (id without platform, or platform
@@ -513,17 +521,29 @@ venuesAdminRouter.patch(
     const touchesPlatformFields =
       body.platform !== undefined || body.platformVenueId !== undefined
     if (touchesPlatformFields) {
-      if (nextPlatform === null && nextPlatformVenueId !== null) {
+      // Sending an id alongside a platform that has none is a mistake worth
+      // reporting rather than silently dropping — the admin believes they
+      // configured something that would never be read.
+      if (
+        !platformRequiresVenueId(nextPlatform) &&
+        body.platformVenueId != null
+      ) {
         return ctx.json(
           {
             success: false,
-            error: 'platformVenueId requires platform to be set',
+            error:
+              nextPlatform === null
+                ? 'platformVenueId requires platform to be set'
+                : `platformVenueId is not used by the ${nextPlatform} platform`,
             field: 'platformVenueId',
           },
           400,
         )
       }
-      if (nextPlatform !== null && nextPlatformVenueId === null) {
+      if (
+        platformRequiresVenueId(nextPlatform) &&
+        nextPlatformVenueId === null
+      ) {
         return ctx.json(
           {
             success: false,
@@ -684,7 +704,7 @@ venuesAdminRouter.patch(
 const PROBE_TIMEOUT_MS = 15_000
 
 const probePlatformSchema = z.object({
-  platform: z.enum(['aeg', 'livenation']).nullable().optional(),
+  platform: z.enum(VENUE_PLATFORMS).nullable().optional(),
   // Whitespace-only would pass the fetcher's truthy canHandle() check and
   // turn a missing_config diagnosis into a doomed fetch — normalize to null.
   platformVenueId: z
@@ -716,15 +736,14 @@ venuesAdminRouter.post(
     // "proposed as cleared".
     const probedPlatform =
       body.platform !== undefined ? body.platform : venue.platform
-    // Mirror the PATCH route's clear-on-null semantics: a null platform
-    // clears the venue ID too, so the probe (and its audit metadata) never
-    // describes an orphaned { platform: null, platformVenueId } state.
-    const probedPlatformVenueId =
-      probedPlatform === null
-        ? null
-        : body.platformVenueId !== undefined
-          ? body.platformVenueId
-          : venue.platformVenueId
+    // Mirror the PATCH route's clear semantics: a platform that takes no
+    // venue ID clears it too, so the probe (and its audit metadata) never
+    // describes an orphaned { platform, platformVenueId } state.
+    const probedPlatformVenueId = !platformRequiresVenueId(probedPlatform)
+      ? null
+      : body.platformVenueId !== undefined
+        ? body.platformVenueId
+        : venue.platformVenueId
     const candidate = {
       ...venue,
       platform: probedPlatform,

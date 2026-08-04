@@ -277,9 +277,32 @@ export type FeedbackCategory = 'bug' | 'idea' | 'praise' | 'other'
 // Subscription tiers
 export type SubscriptionTier = 'free' | 'premium'
 
-// VenuePlatform — per-platform fetcher dispatch (#623). Widen the union
-// as new platform adapters land in packages/crawler-core.
-export type VenuePlatform = 'aeg' | 'livenation' | 'detail-page'
+// VenuePlatform — per-platform fetcher dispatch (#623). Widen the list
+// as new platform adapters land in packages/crawler-core. Exported as a
+// runtime array so the admin Zod schema and the web platform picker read
+// the same source rather than each restating the union as a literal.
+export const VENUE_PLATFORMS = ['aeg', 'livenation', 'detail-page'] as const
+
+export type VenuePlatform = (typeof VENUE_PLATFORMS)[number]
+
+// Platforms whose fetcher addresses a venue by an opaque id on the
+// platform's own side. `detail-page` (#1295) is not one of them: it follows
+// links from the venue's own websiteUrl, so there is no third-party id to
+// enter and requiring one would make the platform unselectable.
+const PLATFORMS_REQUIRING_VENUE_ID: readonly VenuePlatform[] = [
+  'aeg',
+  'livenation',
+]
+
+// Narrows an untrusted value (a form field, a query param) to a platform
+// the dispatcher actually knows about.
+export const isVenuePlatform = (value: unknown): value is VenuePlatform =>
+  VENUE_PLATFORMS.some((platform) => platform === value)
+
+export const platformRequiresVenueId = (
+  platform: VenuePlatform | null | undefined,
+): boolean =>
+  platform != null && PLATFORMS_REQUIRING_VENUE_ID.includes(platform)
 
 // PlatformProbeResult — dry-run outcome of POST /v1/admin/venues/:id/probe-platform.
 // Returned inside the standard { success: true, data } envelope with HTTP 200

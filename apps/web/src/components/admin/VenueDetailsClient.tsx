@@ -11,6 +11,7 @@ import type {
   VenuePlatform,
   VenueWithCrawlHealth,
 } from '@concert-crawl/types'
+import { isVenuePlatform, platformRequiresVenueId } from '@concert-crawl/types'
 import {
   updateVenue,
   pauseVenue,
@@ -648,9 +649,12 @@ export function VenueDetailsClient({
   const [probeStatus, setProbeStatus] = useState<ProbeStatus>({ kind: 'idle' })
 
   const runPlatformProbe = async () => {
-    // A platform without a venue ID can only ever come back missing_config —
-    // short-circuit locally instead of burning a round-trip.
-    if (platformVal !== null && platformVenueIdVal.trim() === '') {
+    // An id-bearing platform without a venue ID can only ever come back
+    // missing_config — short-circuit instead of burning a round-trip.
+    if (
+      platformRequiresVenueId(platformVal) &&
+      platformVenueIdVal.trim() === ''
+    ) {
       setProbeStatus({
         kind: 'done',
         result: {
@@ -769,9 +773,12 @@ export function VenueDetailsClient({
     setSaveError(null)
     setFieldErrors({})
 
-    // Client-side guard mirroring the API's Zod refine: a platform without
-    // a venue ID is an unroutable config, so block the save inline.
-    if (platformVal !== null && platformVenueIdVal.trim() === '') {
+    // Client-side guard mirroring the API's Zod refine: an id-bearing
+    // platform without a venue ID is unroutable, so block the save inline.
+    if (
+      platformRequiresVenueId(platformVal) &&
+      platformVenueIdVal.trim() === ''
+    ) {
       setFieldErrors({
         platformVenueId:
           ADMIN_COPY.venueDetailsClient.fields.platformRouting.platformVenueId
@@ -1527,13 +1534,15 @@ export function VenueDetailsClient({
                   value={platformVal ?? ''}
                   disabled={isDisabled}
                   onChange={(evt) => {
-                    const nextPlatform =
-                      evt.target.value === 'aeg' ||
-                      evt.target.value === 'livenation'
-                        ? evt.target.value
-                        : null
+                    const nextPlatform = isVenuePlatform(evt.target.value)
+                      ? evt.target.value
+                      : null
                     setPlatformVal(nextPlatform)
-                    if (nextPlatform === null) setPlatformVenueIdVal('')
+                    // Switching to a platform that takes no venue ID drops a
+                    // stale one rather than leaving it in a hidden field.
+                    if (!platformRequiresVenueId(nextPlatform)) {
+                      setPlatformVenueIdVal('')
+                    }
                     setProbeStatus({ kind: 'idle' })
                     setFieldErrors((prev) => ({
                       ...prev,
@@ -1559,10 +1568,18 @@ export function VenueDetailsClient({
                         .platform.livenation
                     }
                   </option>
+                  <option value="detail-page">
+                    {
+                      ADMIN_COPY.venueDetailsClient.fields.platformRouting
+                        .platform.detailPage
+                    }
+                  </option>
                 </VDSelect>
               </VDField>
 
-              {platformVal !== null && (
+              {/* detail-page (#1295) addresses the venue by its own
+                  websiteUrl, so it has no ID to collect */}
+              {platformRequiresVenueId(platformVal) && (
                 <VDField
                   label={
                     ADMIN_COPY.venueDetailsClient.fields.platformRouting
