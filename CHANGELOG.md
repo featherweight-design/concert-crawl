@@ -1,3 +1,10 @@
+## [1.215.4](https://github.com/HartiganHM/concert-crawl/compare/v1.215.3...v1.215.4) (2026-08-04)
+
+
+### Bug Fixes
+
+* **web:** restore the designed commit block on Event Detail ([#1458](https://github.com/HartiganHM/concert-crawl/issues/1458)) ([abcf42a](https://github.com/HartiganHM/concert-crawl/commit/abcf42ac1b1aacb1382d4aa23886c13591bd04c9))
+
 ## [1.215.3](https://github.com/HartiganHM/concert-crawl/compare/v1.215.2...v1.215.3) (2026-08-04)
 
 
