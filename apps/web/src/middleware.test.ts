@@ -18,8 +18,11 @@ vi.mock('@clerk/nextjs/server', () => ({
   clerkMiddleware: <Handler>(handler: Handler): Handler => handler,
   createRouteMatcher: (patterns: string[]) => (req: NextRequest) =>
     patterns.some((pattern) => {
-      // Strip trailing (.*) glob for simple path matching
-      const base = pattern.replace(/\(.*\)$/, '')
+      // A pattern without a trailing (.*) glob is an exact path in
+      // path-to-regexp, and treating it as a prefix here would let a genuine
+      // over-broad match pass the suite. `/api/revalidate` relies on this.
+      if (!pattern.endsWith('(.*)')) return req.nextUrl.pathname === pattern
+      const base = pattern.slice(0, -'(.*)'.length)
       // Exact-only for '/' — startsWith('/') would match every path
       if (base === '/') return req.nextUrl.pathname === '/'
       return (
@@ -199,6 +202,19 @@ describe('middleware — edge auth gate (#841)', () => {
     const result = await middlewareHandler(makeAuth(null), req)
 
     expect(result).toBeUndefined()
+  })
+
+  it('does not make paths under /api/revalidate public', async () => {
+    const { middlewareHandler } = await import('./middleware')
+
+    // The allowlist entry is an exact path. If it ever gains a `(.*)` glob,
+    // a future /api/revalidate/* handler would be public by default.
+    const req = new NextRequest('http://localhost/api/revalidate/all', {
+      method: 'POST',
+    })
+    const auth = makeAuth(null)
+    await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized')
+    expect(auth.protect).toHaveBeenCalled()
   })
 })
 
