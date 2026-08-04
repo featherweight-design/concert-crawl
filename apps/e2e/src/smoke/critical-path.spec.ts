@@ -20,9 +20,9 @@ test.describe('smoke: event data', () => {
     await page.goto('/events')
     await page.waitForLoadState('networkidle')
 
-    const eventCards = page.locator('[data-testid="event-card"]')
-    await expect(eventCards.first()).toBeVisible({ timeout: 10_000 })
-    const count = await eventCards.count()
+    const eventRows = page.locator('[data-testid="event-row"]')
+    await expect(eventRows.first()).toBeVisible({ timeout: 10_000 })
+    const count = await eventRows.count()
     expect(count).toBeGreaterThan(0)
   })
 
@@ -51,13 +51,13 @@ test.describe('smoke: event data', () => {
     await page.goto('/events')
     await page.waitForLoadState('networkidle')
 
-    const firstCard = page.locator('[data-testid="event-card"]').first()
-    await expect(firstCard).toBeVisible({ timeout: 10_000 })
+    const firstRow = page.locator('[data-testid="event-row"]').first()
+    await expect(firstRow).toBeVisible({ timeout: 10_000 })
 
-    const detailLink = firstCard.locator('a[href*="/events/"]').first()
+    const detailLink = firstRow.locator('a[href*="/events/"]').first()
     const href = await detailLink.getAttribute('href')
     if (!href) {
-      throw new Error('First event card has no detail link href')
+      throw new Error('First event row has no detail link href')
     }
 
     await page.goto(href)
@@ -95,13 +95,13 @@ test.describe('smoke: search', () => {
     )
 
     // The search rendered SOMETHING meaningful: either at least one
-    // event card matched, or the filtered empty-state title ("Crickets.")
+    // event row matched, or the filtered empty-state title ("Crickets.")
     // is shown. Both confirm the search actually executed and the page
     // reached its data-rendering path — a "page didn't crash" check
     // alone would pass even if the search filter silently broke.
-    const eventCard = page.locator('[data-testid="event-card"]').first()
+    const eventRow = page.locator('[data-testid="event-row"]').first()
     const emptyState = page.getByText(/crickets\./i).first()
-    await expect(eventCard.or(emptyState)).toBeVisible({ timeout: 10_000 })
+    await expect(eventRow.or(emptyState)).toBeVisible({ timeout: 10_000 })
   })
 })
 

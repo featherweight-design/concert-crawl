@@ -108,9 +108,46 @@ while [ "${elapsed}" -lt "${timeout}" ]; do
 done
 
 echo "✗ Service ${SERVICE_ID} did not reach live on ${EXPECTED_SHA} within ${timeout}s"
+
+# A timeout is only benign when a *newer* deploy superseded this one — the
+# fast-follow case the caller skips smoke for. Two states produce the same
+# timeout while meaning the opposite, and both silently retire the gate:
+# deploys have stopped entirely (autoDeploy off), or the live deploy is old
+# enough that no supersede can explain it. Prod sat 51 commits behind for
+# ~17h in exactly this shape, reporting green the whole time, because every
+# run read its own timeout as the benign case.
+service_json=$(curl --fail --silent --show-error \
+  --connect-timeout 5 --max-time 15 \
+  -H "${AUTH}" -H "Accept: application/json" \
+  "${API}/services/${SERVICE_ID}") || service_json=""
+
+auto_deploy=$(echo "${service_json}" | jq -r '.autoDeploy // "unknown"')
+live_created=$(echo "${deploys_json}" | jq -r '
+  (([.[] | (.deploy // .) | select(.status == "live")][0]) // {}).createdAt // ""
+')
+
+if [ "${auto_deploy}" = "no" ]; then
+  echo "::error title=Deploys are disabled::${SERVICE_ID} has autoDeploy=no, so the pushed SHA can never go live and smoke can never run. Re-enable auto-deploy on the service."
+  exit 125
+fi
+
+# 3600s: generous next to the ~2min prod deploy, so a genuine fast-follow
+# streak stays benign, while a service that has stopped deploying trips it.
+if [ -n "${live_created}" ]; then
+  live_epoch=$(date -u -d "${live_created}" +%s 2>/dev/null \
+    || date -u -jf "%Y-%m-%dT%H:%M:%S" "${live_created%%.*}" +%s 2>/dev/null \
+    || echo "")
+  now_epoch=$(date -u +%s)
+  if [ -n "${live_epoch}" ] && [ "$((now_epoch - live_epoch))" -gt 3600 ]; then
+    echo "::error title=Deploys appear stalled::${SERVICE_ID} is live on a deploy from ${live_created} (>1h old). A fast-follow supersede would leave a recent deploy, so this is not a benign skip."
+    exit 125
+  fi
+fi
+
 # Exit 124 = timeout (matches GNU timeout(1) convention). Distinct from
 # the script's other non-zero exits (jq missing, missing env, curl
-# failure, no live deploy found), all of which use exit 1. Callers
+# failure, no live deploy found), all of which use exit 1, and from 125
+# above, which means the timeout is real rather than a supersede. Callers
 # that treat timeout as a benign-skip should key off this code
 # explicitly — anything other than 0 or 124 indicates a real failure.
 exit 124

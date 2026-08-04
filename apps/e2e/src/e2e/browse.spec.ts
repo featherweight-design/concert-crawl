@@ -7,8 +7,8 @@ test.describe('browse events page', () => {
 
     await expect(page).toHaveTitle(/concert crawl/i)
 
-    const firstCard = page.locator('[data-testid="event-card"]').first()
-    await expect(firstCard).toBeVisible()
+    const firstRow = page.locator('[data-testid="event-row"]').first()
+    await expect(firstRow).toBeVisible()
   })
 
   test('venue filter chip narrows the event list', async ({ page }) => {
@@ -31,11 +31,11 @@ test.describe('browse events page', () => {
     await expect(firstChip).toHaveAttribute('aria-expanded', 'true')
 
     const filteredCount = await page
-      .locator('[data-testid="event-card"]')
+      .locator('[data-testid="event-row"]')
       .count()
     if (filteredCount > 0) {
       await expect(
-        page.locator('[data-testid="event-card"]').first(),
+        page.locator('[data-testid="event-row"]').first(),
       ).toBeVisible()
     }
 
@@ -57,12 +57,10 @@ test.describe('browse events page', () => {
       return
     }
 
-    const initialCount = await page
-      .locator('[data-testid="event-card"]')
-      .count()
+    const initialCount = await page.locator('[data-testid="event-row"]').count()
     await loadMoreButton.click()
     await page.waitForLoadState('networkidle')
-    const newCount = await page.locator('[data-testid="event-card"]').count()
+    const newCount = await page.locator('[data-testid="event-row"]').count()
 
     expect(newCount).toBeGreaterThan(initialCount)
   })

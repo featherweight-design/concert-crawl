@@ -21,7 +21,7 @@ test.describe('logged-out browse (#794)', () => {
     await page.goto('/events')
     await page.waitForLoadState('networkidle')
     await expect(
-      page.locator('[data-testid="event-card"]').first(),
+      page.locator('[data-testid="event-row"]').first(),
     ).toBeVisible()
 
     await page.goto('/watching')
