@@ -316,6 +316,30 @@ describe('GET /v1/spotify/taste-picks (#763 PR 8)', () => {
     })
   })
 
+  // The co-headliner arm has to reach the in-memory reason derivation too, or
+  // a row matched only by it finds no reason and gets dropped (#1419).
+  it('matches via canonical_headliners and reasons with the co-headliner', async () => {
+    signIn()
+    await seedPremium()
+    await seedConnection()
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      artist: 'Desert Dwellers',
+      title: 'Desert Dwellers & Great Dane',
+      canonicalHeadliners: ['desert dwellers', 'great dane'],
+      date: JUNE,
+    })
+    await seedFollow('Great Dane', 'spotify_top', 3)
+
+    const { body } = await fetchPicks()
+    const picks: PicksBody = body
+    expect(picks.data.picks).toHaveLength(1)
+    expect(picks.data.picks[0]).toMatchObject({
+      eventId: event.id,
+      reason: { kind: 'top', rank: 3, artistName: 'Great Dane' },
+    })
+  })
+
   it('uses the strongest reason when an event matches both a top and a followed artist', async () => {
     signIn()
     await seedPremium()

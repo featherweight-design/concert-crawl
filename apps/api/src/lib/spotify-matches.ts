@@ -3,7 +3,9 @@
 // Denver-match summary for a user's Spotify-sourced artist set (#763 PR 5,
 // eng spec §9.1). Matching is canonical-name based — exactly the rule the
 // taste surfaces use:
-//   events.canonical_artist = ANY($names) OR events.canonical_supporting && $names
+//   events.canonical_artist = ANY($names)
+//     OR events.canonical_headliners && $names
+//     OR events.canonical_supporting && $names
 // scoped to consumer-visible upcoming events (same visibility filter as the
 // events list: upcoming status, date >= today MT, not hidden, not missing).
 import {
@@ -82,11 +84,20 @@ const loadSpotifyFollowNames = async (
 interface MatchedEventRow {
   id: string
   canonicalArtist: string
+  canonicalHeadliners: string[] | null
   canonicalSupporting: string[] | null
 }
 
 // Shared §9.1 condition: consumer-visible upcoming events matching the
-// canonical set (headliner equality OR supporting-array overlap).
+// canonical set (headliner equality OR co-headliner/supporting overlap).
+//
+// canonical_headliners is the co-headliner arm (#1203/#1419): only
+// headliners[0] reaches canonical_artist, so without it a user who follows
+// the SECOND act on a co-headline bill gets no match — no recommendation and
+// no fan-out. It supplements the equality arm rather than replacing it, since
+// that arm is the indexed fast path and still covers rows the crawler has not
+// rewritten. The mirror of this rule in routes/artists-public.ts and
+// routes/search.ts must not diverge.
 const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
   // Total: inArray/arrayOverlaps with [] would generate invalid SQL.
   if (canonicalNames.length === 0) return sql`false`
@@ -98,7 +109,8 @@ const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
       isNull(events.firstMissingAt),
       or(
         inArray(events.canonicalArtist, canonicalNames),
-        // Array-overlap (&&) half of the §9.1 match rule.
+        // Array-overlap (&&) halves of the §9.1 match rule.
+        arrayOverlaps(events.canonicalHeadliners, canonicalNames),
         arrayOverlaps(events.canonicalSupporting, canonicalNames),
       ),
     ) ?? sql`false`
@@ -113,6 +125,7 @@ const loadMatchedUpcomingEvents = async (
     .select({
       id: events.id,
       canonicalArtist: events.canonicalArtist,
+      canonicalHeadliners: events.canonicalHeadliners,
       canonicalSupporting: events.canonicalSupporting,
     })
     .from(events)
@@ -145,8 +158,11 @@ export async function getSpotifyMatchSummary(
     if (followSet.has(event.canonicalArtist)) {
       matchedCanonicals.add(event.canonicalArtist)
     }
-    for (const supporting of event.canonicalSupporting ?? []) {
-      if (followSet.has(supporting)) matchedCanonicals.add(supporting)
+    for (const billed of [
+      ...(event.canonicalHeadliners ?? []),
+      ...(event.canonicalSupporting ?? []),
+    ]) {
+      if (followSet.has(billed)) matchedCanonicals.add(billed)
     }
   }
 
@@ -175,6 +191,7 @@ export async function getSpotifyMatchSummary(
 export interface FollowedArtistMatcher {
   matchEvent: (event: {
     canonicalArtist: string | null
+    canonicalHeadliners: string[] | null
     canonicalSupporting: string[] | null
   }) => string[]
 }
@@ -201,8 +218,11 @@ export async function getFollowedArtistMatcher(
       ) {
         matched.add(event.canonicalArtist)
       }
-      for (const supporting of event.canonicalSupporting ?? []) {
-        if (displayByCanonical.has(supporting)) matched.add(supporting)
+      for (const billed of [
+        ...(event.canonicalHeadliners ?? []),
+        ...(event.canonicalSupporting ?? []),
+      ]) {
+        if (displayByCanonical.has(billed)) matched.add(billed)
       }
       // localeCompare sort mirrors getSpotifyMatchSummary — deterministic
       // regardless of row/Set iteration order.
@@ -218,7 +238,8 @@ export async function getFollowedArtistMatcher(
 // list endpoint's other conditions and applies identically to the count and
 // row queries. Matches the §9.1 rule: the viewer has a Spotify-sourced follow
 // row whose canonical name equals the event's canonical headliner OR appears
-// in its canonical supporting set. NULL canonical columns simply never match.
+// in its canonical co-headliner or supporting set. NULL canonical columns
+// simply never match.
 export function spotifyTasteCondition(userId: string): SQL {
   return exists(
     db
@@ -230,8 +251,10 @@ export function spotifyTasteCondition(userId: string): SQL {
           inArray(userArtistFollows.source, [...SPOTIFY_FOLLOW_SOURCES]),
           or(
             eq(userArtistFollows.canonicalName, events.canonicalArtist),
-            // Correlated half of the §9.1 overlap rule — `= ANY(NULL)` is
-            // NULL (falsy), so events without supporting acts are safe.
+            // Correlated halves of the §9.1 overlap rule — `= ANY(NULL)` is
+            // NULL (falsy), so events without co-headliners or supporting
+            // acts, and rows predating the backfill, are safe.
+            sql`${userArtistFollows.canonicalName} = ANY(${events.canonicalHeadliners})`,
             sql`${userArtistFollows.canonicalName} = ANY(${events.canonicalSupporting})`,
           ),
         ),
@@ -313,6 +336,7 @@ export async function getTastePicks(
       showTime: events.showTime,
       ticketPriceMin: events.ticketPriceMin,
       canonicalArtist: events.canonicalArtist,
+      canonicalHeadliners: events.canonicalHeadliners,
       canonicalSupporting: events.canonicalSupporting,
       venueName: venues.name,
       venueSlug: venues.slug,
@@ -328,11 +352,14 @@ export async function getTastePicks(
     soonestIndex: number
   }> = []
   for (const [index, row] of rows.entries()) {
-    // Headliner first, then supporting in stored order — with first-wins
-    // ties in isStrongerReason this is deterministic per event.
+    // Headliner first, then co-headliners, then supporting in stored order —
+    // with first-wins ties in isStrongerReason this is deterministic per
+    // event. Co-headliners must be here or a row matched solely by that arm
+    // would find no reason and be dropped by the `continue` below.
     let reason: SpotifyTastePickReason | null = null
     const eventCanonicals = [
       ...(row.canonicalArtist !== null ? [row.canonicalArtist] : []),
+      ...(row.canonicalHeadliners ?? []),
       ...(row.canonicalSupporting ?? []),
     ]
     for (const canonical of eventCanonicals) {

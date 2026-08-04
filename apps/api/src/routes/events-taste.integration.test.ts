@@ -155,6 +155,27 @@ describe('taste filter on GET /v1/events (#763 PR 7)', () => {
     expect(list.data.data.map((row) => row.id)).toEqual([match.id])
   })
 
+  // Only headliners[0] reaches canonical_artist, so without the
+  // canonical_headliners arm the second act on a co-headline bill matched
+  // nothing (#1419).
+  it('matches via canonical_headliners overlap', async () => {
+    const venue = await seedVenue()
+    const match = await seedEvent(venue.id, {
+      artist: 'Desert Dwellers',
+      title: 'Desert Dwellers & Great Dane',
+      canonicalHeadliners: ['desert dwellers', 'great dane'],
+      date: FUTURE_DATE,
+    })
+    await seedEvent(venue.id, { artist: 'Unrelated', date: FUTURE_DATE })
+    await seedPremium()
+    await seedFollow('Great Dane')
+    signIn()
+
+    const { body } = await fetchTaste()
+    const list: ListBody = body
+    expect(list.data.data.map((row) => row.id)).toEqual([match.id])
+  })
+
   it('AND-composes with other filters (venueSlug)', async () => {
     const venueA = await seedVenue({ name: 'Venue A', slug: 'venue-a' })
     const venueB = await seedVenue({ name: 'Venue B', slug: 'venue-b' })

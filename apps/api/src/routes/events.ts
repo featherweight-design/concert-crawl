@@ -299,6 +299,7 @@ eventsRouter.get(
         // are stripped from the response payload — matching happens on the
         // canonical form (§9.1), display happens with the follow row's name.
         canonicalArtist: events.canonicalArtist,
+        canonicalHeadliners: events.canonicalHeadliners,
         canonicalSupporting: events.canonicalSupporting,
         venue: {
           id: venues.id,
@@ -372,7 +373,12 @@ eventsRouter.get(
     )
 
     const enrichedRows = rows.map((row) => {
-      const { canonicalArtist, canonicalSupporting, ...publicRow } = row
+      const {
+        canonicalArtist,
+        canonicalHeadliners,
+        canonicalSupporting,
+        ...publicRow
+      } = row
       return {
         ...publicRow,
         priceVendor:
@@ -384,6 +390,7 @@ eventsRouter.get(
           ? {
               followedArtists: followMatcher.matchEvent({
                 canonicalArtist,
+                canonicalHeadliners,
                 canonicalSupporting,
               }),
             }
@@ -514,6 +521,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       updatedAt: events.updatedAt,
       // Feed the followedArtists overlay; stripped from the response below.
       canonicalArtist: events.canonicalArtist,
+      canonicalHeadliners: events.canonicalHeadliners,
       canonicalSupporting: events.canonicalSupporting,
       // #764 — only whether the venue's first-timer guide is published. The
       // guide body itself lives on GET /v1/venues/:slug; the event page just
@@ -1010,6 +1018,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
 
   const {
     canonicalArtist,
+    canonicalHeadliners,
     canonicalSupporting,
     venueGuidePublishedAt,
     ...publicRow
@@ -1026,6 +1035,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
         ? {
             followedArtists: followMatcher.matchEvent({
               canonicalArtist,
+              canonicalHeadliners,
               canonicalSupporting,
             }),
           }
