@@ -486,11 +486,12 @@ venuesAdminRouter.patch(
         .where(and(eq(venues.featured, true), not(eq(venues.id, id))))
     }
 
-    // Clear-on-null (#721 wins over #665 here — the two issues diverged on
-    // whether clearing platform should orphan platformVenueId): when the
-    // payload sets platform to null, force platformVenueId to null in the
-    // same update even if the payload didn't mention it. A stale shard id
-    // with no platform would silently re-activate if platform is re-set.
+    // Clear-on-id-less-platform (#721 wins over #665 here — the two issues
+    // diverged on whether clearing platform should orphan platformVenueId):
+    // when the payload sets platform to null OR to a platform that takes no
+    // id (detail-page), force platformVenueId to null in the same update even
+    // if the payload didn't mention it. A stale shard id would otherwise
+    // silently re-activate if an id-taking platform is re-set later.
     const platformClearFields =
       body.platform !== undefined && !platformRequiresVenueId(body.platform)
         ? { platformVenueId: null }
