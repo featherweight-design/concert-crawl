@@ -18,14 +18,25 @@ const WEB_SRC = 'apps/web/src'
 
 const TESTID_SELECTOR = /\[data-testid="([^"]+)"\]/g
 
-// Three forms reach the DOM, and only the first is a plain attribute:
+// Only literal forms are resolvable by static analysis:
 //   data-testid="event-row"
 //   data-testid={cond ? 'venue-chip' : undefined}
 //   data-testid={`tier-card-${tier.key}`}
 // The template form yields a prefix rather than a full id, so it is matched
 // by prefix below — otherwise every dynamic testid reads as an orphan.
+//
+// Ids passed through an identifier (`data-testid={copy.testId}`) cannot be
+// resolved without evaluating the module, so they contribute nothing. That
+// makes the check under-strict, never over-strict for the rendered side —
+// but a spec selecting on such an id would report a FALSE orphan. If that
+// happens, give the component a literal testid rather than loosening this.
 const TESTID_ATTRIBUTE = /data-testid="([^"]+)"/g
 const TESTID_IN_EXPRESSION = /data-testid=\{([^}]*(?:\{[^}]*\}[^}]*)*)\}/g
+// Strings on the right of a comparison are operands, not ids —
+// `key === 'where' ? 'venue-chip' : undefined` renders `venue-chip`, never
+// `where`. Admitting operands would let a spec select on any string that
+// happens to appear in a testid expression.
+const COMPARISON_OPERAND = /[=!]==?\s*(['"])[^'"]*\1/g
 const QUOTED_STRING = /'([^']+)'|"([^"]+)"/g
 const TEMPLATE_PREFIX = /`([^`$]+)\$\{/g
 
@@ -66,11 +77,12 @@ const collectRendered = (
     }
     for (const [, expression] of source.matchAll(TESTID_IN_EXPRESSION)) {
       if (!expression) continue
-      for (const [, single, double] of expression.matchAll(QUOTED_STRING)) {
+      const values = expression.replace(COMPARISON_OPERAND, '')
+      for (const [, single, double] of values.matchAll(QUOTED_STRING)) {
         const literal = single ?? double
         if (literal) exact.add(literal)
       }
-      for (const [, prefix] of expression.matchAll(TEMPLATE_PREFIX)) {
+      for (const [, prefix] of values.matchAll(TEMPLATE_PREFIX)) {
         if (prefix) prefixes.push(prefix)
       }
     }

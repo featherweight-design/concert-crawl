@@ -5,9 +5,6 @@ test.describe('event detail page', () => {
     await page.goto('/events')
     await page.waitForLoadState('networkidle')
 
-    const firstRow = page.locator('[data-testid="event-row"]').first()
-    await expect(firstRow).toBeVisible()
-
     const rowCount = await page.locator('[data-testid="event-row"]').count()
     if (rowCount === 0) {
       test.skip(
@@ -16,6 +13,9 @@ test.describe('event detail page', () => {
       )
       return
     }
+
+    const firstRow = page.locator('[data-testid="event-row"]').first()
+    await expect(firstRow).toBeVisible()
 
     await firstRow.click()
     await page.waitForLoadState('networkidle')

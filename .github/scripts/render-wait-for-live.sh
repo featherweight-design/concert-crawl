@@ -119,7 +119,7 @@ echo "✗ Service ${SERVICE_ID} did not reach live on ${EXPECTED_SHA} within ${t
 service_json=$(curl --fail --silent --show-error \
   --connect-timeout 5 --max-time 15 \
   -H "${AUTH}" -H "Accept: application/json" \
-  "${API}/services/${SERVICE_ID}") || service_json=""
+  "${API}/services/${SERVICE_ID}") || service_json="{}"
 
 auto_deploy=$(echo "${service_json}" | jq -r '.autoDeploy // "unknown"')
 live_created=$(echo "${deploys_json}" | jq -r '
