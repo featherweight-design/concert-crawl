@@ -142,22 +142,33 @@ if [ "${auto_deploy}" = "no" ]; then
   exit 125
 fi
 
+# Without a usable timestamp the supersede reading cannot be established, and
+# that reading is the one that hides an outage — so treat it as unclassifiable.
+if [ -z "${live_created}" ]; then
+  echo "::error title=Cannot classify timeout::${SERVICE_ID} returned no createdAt for its live deploy, so this timeout cannot be shown to be a benign supersede."
+  exit 125
+fi
+
 # 3600s: generous next to the ~2min prod deploy, so a genuine fast-follow
 # streak stays benign, while a service that has stopped deploying trips it.
-if [ -n "${live_created}" ]; then
-  # Render returns both `...:32Z` and `...:32.188265Z`. Strip the fraction
-  # if present, then the trailing Z, so the BSD form matches either shape —
-  # otherwise the stalled-deploy check silently no-ops on macOS.
-  live_naive="${live_created%%.*}"
-  live_naive="${live_naive%Z}"
-  live_epoch=$(date -u -d "${live_created}" +%s 2>/dev/null \
-    || date -u -jf "%Y-%m-%dT%H:%M:%S" "${live_naive}" +%s 2>/dev/null \
-    || echo "")
-  now_epoch=$(date -u +%s)
-  if [ -n "${live_epoch}" ] && [ "$((now_epoch - live_epoch))" -gt 3600 ]; then
-    echo "::error title=Deploys appear stalled::${SERVICE_ID} is live on a deploy from ${live_created} (>1h old). A fast-follow supersede would leave a recent deploy, so this is not a benign skip."
-    exit 125
-  fi
+# Render returns both `...:32Z` and `...:32.188265Z`. Strip the fraction
+# if present, then the trailing Z, so the BSD form matches either shape —
+# otherwise the stalled-deploy check silently no-ops on macOS.
+live_naive="${live_created%%.*}"
+live_naive="${live_naive%Z}"
+live_epoch=$(date -u -d "${live_created}" +%s 2>/dev/null \
+  || date -u -jf "%Y-%m-%dT%H:%M:%S" "${live_naive}" +%s 2>/dev/null \
+  || echo "")
+
+if [ -z "${live_epoch}" ]; then
+  echo "::error title=Cannot classify timeout::${SERVICE_ID} returned an unparseable createdAt ('${live_created}') for its live deploy, so the stalled-deploy check could not run. Check whether Render changed its timestamp format."
+  exit 125
+fi
+
+now_epoch=$(date -u +%s)
+if [ "$((now_epoch - live_epoch))" -gt 3600 ]; then
+  echo "::error title=Deploys appear stalled::${SERVICE_ID} is live on a deploy from ${live_created} (>1h old). A fast-follow supersede would leave a recent deploy, so this is not a benign skip."
+  exit 125
 fi
 
 # Exit 124 = timeout (matches GNU timeout(1) convention). Distinct from
