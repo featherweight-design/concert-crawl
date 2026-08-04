@@ -103,7 +103,9 @@ describe('EventDetailCtaBlock', () => {
   it('reserves the card while the plan resolves rather than flashing a lock', () => {
     entitlement = { isLoading: true, active: false, surface: null }
     renderBlock()
-    expect(screen.getByTestId('going-button-placeholder')).toBeInTheDocument()
+    const placeholder = screen.getByTestId('going-button-placeholder')
+    // Without the sweep the reserved slot reads as an empty box, not as loading.
+    expect(placeholder.querySelector('.dl-sweep')).not.toBeNull()
     expect(
       screen.getByRole('button', { name: EXPLAINER_LABEL }),
     ).toBeInTheDocument()

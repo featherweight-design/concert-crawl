@@ -23,6 +23,7 @@ import { usePlanState } from '@/lib/queries/use-plan-state'
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle'
 import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
 import { CCTip } from '@/components/ui/cc-tip'
+import { SweepOverlay } from '@/components/ui/skeleton/SweepOverlay'
 import { GoingButton, GOING_BUTTON_SIZES } from './GoingButton'
 import { goingStateFor } from './lib/cta-state'
 import { GOING_COPY } from './definitions/copy'
@@ -219,16 +220,20 @@ export const EventDetailCtaBlock = ({
       {isLoading ? (
         // Holds the button's exact geometry until the entitlement resolves.
         // Rendering the button early would flash `locked` at a paying user,
-        // and rendering nothing would reflow the whole page underneath.
+        // and rendering nothing would reflow the whole page underneath. The
+        // sweep is what tells the difference between "loading" and "broken".
         <div
           aria-hidden
           data-testid="going-button-placeholder"
+          className="relative overflow-hidden"
           style={{
             height: GOING_BUTTON_SIZES.lg.height,
             borderRadius: GOING_BUTTON_SIZES.lg.radius,
             background: 'var(--surface-2)',
           }}
-        />
+        >
+          <SweepOverlay />
+        </div>
       ) : (
         <GoingButton
           show={{ eventId: event.id, artist: event.artist, date: event.date }}

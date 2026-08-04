@@ -9,28 +9,14 @@
 // image 116 · body pad 10/11/12 · gap 7) so real picks land with zero shift.
 
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
+import { SweepOverlay } from '@/components/ui/skeleton/SweepOverlay'
 import { SPOTIFY_COPY } from './definitions/copy'
 
 const COPY = SPOTIFY_COPY.discovery
 const LOADING = COPY.loading
 
 // Design handoff DL_MOTION (sole source of truth for motion timings).
-const SWEEP_ANIM = 'dlSweep 1500ms cubic-bezier(0.4,0,0.2,1) infinite'
 const DOT_ANIM = 'dlDot 1400ms ease-in-out infinite'
-
-// Sweeping light band tied to --fg so it lightens on dark, darkens on Light
-// — no raw color, --accent untouched (spec §7).
-const SweepOverlay = () => (
-  <div
-    aria-hidden
-    className="dl-sweep pointer-events-none absolute inset-0"
-    style={{
-      background:
-        'linear-gradient(100deg, transparent 32%, color-mix(in oklch, var(--fg) 11%, transparent) 50%, transparent 68%)',
-      animation: SWEEP_ANIM,
-    }}
-  />
-)
 
 // Placeholder bar. `tint="price"` paints a faint --signal wash so the price
 // row still reads as "price" through the skeleton.
