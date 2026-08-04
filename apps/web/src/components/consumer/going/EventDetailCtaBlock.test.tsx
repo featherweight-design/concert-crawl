@@ -98,10 +98,17 @@ describe('EventDetailCtaBlock', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('holds rendering while the plan resolves rather than flashing a lock', () => {
+  // Returning nothing while the plan resolved let the watch strip render alone
+  // and uncarded, then reparent into the card once it landed — a visible pop-in.
+  it('reserves the card while the plan resolves rather than flashing a lock', () => {
     entitlement = { isLoading: true, active: false, surface: null }
-    const { container } = renderBlock()
-    expect(container).toBeEmptyDOMElement()
+    renderBlock()
+    expect(screen.getByTestId('going-button-placeholder')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: EXPLAINER_LABEL }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(GOING_COPY.button.default)).toBeNull()
+    expect(screen.queryByText(GOING_COPY.locked.line)).toBeNull()
   })
 
   it('commits and refreshes the server-rendered page on tap', () => {

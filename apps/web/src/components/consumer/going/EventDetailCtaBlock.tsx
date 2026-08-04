@@ -23,7 +23,7 @@ import { usePlanState } from '@/lib/queries/use-plan-state'
 import { useAttendingToggle } from '@/lib/queries/use-attending-toggle'
 import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
 import { CCTip } from '@/components/ui/cc-tip'
-import { GoingButton } from './GoingButton'
+import { GoingButton, GOING_BUTTON_SIZES } from './GoingButton'
 import { goingStateFor } from './lib/cta-state'
 import { GOING_COPY } from './definitions/copy'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
@@ -84,12 +84,11 @@ export const EventDetailCtaBlock = ({
     }
   }, [serverGoing, optimisticGoing])
 
-  // A cancelled show has no night to commit to (matching the API's history
-  // filter, which excludes cancelled events outright), and the entitlement is
-  // held until it resolves rather than flashing a locked treatment at a paying
-  // user. Either way the strip still renders: watching is free and ungated, so
-  // suppressing the commitment must never take the eye down with it.
-  if (event.status === 'cancelled' || isLoading || surface === null) {
+  // A cancelled show has no night to commit to, matching the API's history
+  // filter, which excludes cancelled events outright. The strip still renders:
+  // watching is free and ungated, so suppressing the commitment must never take
+  // the eye down with it.
+  if (event.status === 'cancelled') {
     return <>{children}</>
   }
 
@@ -217,21 +216,36 @@ export const EventDetailCtaBlock = ({
 
       {/* Full width down to 320px — the button ellipsizes its own label, so
           nothing here needs a fixed floor. */}
-      <GoingButton
-        show={{ eventId: event.id, artist: event.artist, date: event.date }}
-        state={state}
-        size="lg"
-        fullWidth
-        pending={toggle.isPending}
-        onChange={onChange}
-      />
+      {isLoading ? (
+        // Holds the button's exact geometry until the entitlement resolves.
+        // Rendering the button early would flash `locked` at a paying user,
+        // and rendering nothing would reflow the whole page underneath.
+        <div
+          aria-hidden
+          data-testid="going-button-placeholder"
+          style={{
+            height: GOING_BUTTON_SIZES.lg.height,
+            borderRadius: GOING_BUTTON_SIZES.lg.radius,
+            background: 'var(--surface-2)',
+          }}
+        />
+      ) : (
+        <GoingButton
+          show={{ eventId: event.id, artist: event.artist, date: event.date }}
+          state={state}
+          size="lg"
+          fullWidth
+          pending={toggle.isPending}
+          onChange={onChange}
+        />
+      )}
 
       {children}
 
       {/* Only a real failure or the gate earns a line here. The standing
           support line is gone — "we'll add this to your history" restated what
           the button just did. */}
-      {state === 'error' ? (
+      {isLoading ? null : state === 'error' ? (
         // The retry lives in the button; this line only names what survived, so
         // a failed commit never reads as having lost the watch too.
         <p role="alert" style={{ ...supportLine, color: 'var(--danger)' }}>

@@ -35,7 +35,7 @@ type GoingButtonProps = {
   onChange?: (going: boolean) => void
 }
 
-const SIZES: Record<
+export const GOING_BUTTON_SIZES: Record<
   GoingButtonSize,
   {
     height: number
@@ -138,7 +138,7 @@ export const GoingButton = ({
   pending = false,
   onChange,
 }: GoingButtonProps) => {
-  const sizes = SIZES[size]
+  const sizes = GOING_BUTTON_SIZES[size]
   const accent = stampAccentFor(show.artist)
   const glyph = stampGlyphFor(show.artist)
 
