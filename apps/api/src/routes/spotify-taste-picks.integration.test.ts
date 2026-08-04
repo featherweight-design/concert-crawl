@@ -396,6 +396,19 @@ describe('GET /v1/spotify/taste-picks (#763 PR 8)', () => {
     expect(picks.data.picks).toEqual([])
   })
 
+  it('excludes shows at a deactivated venue', async () => {
+    signIn()
+    await seedPremium()
+    await seedConnection()
+    const venue = await seedVenue({ active: false })
+    await seedEvent(venue.id, { artist: 'Turnstile', date: JUNE })
+    await seedFollow('Turnstile', 'spotify_top', 1)
+
+    const { body } = await fetchPicks()
+    const picks: PicksBody = body
+    expect(picks.data.picks).toEqual([])
+  })
+
   it('respects the limit parameter', async () => {
     signIn()
     await seedPremium()

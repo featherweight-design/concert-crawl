@@ -107,6 +107,16 @@ const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
       gte(events.date, todayInTimezone(MT_TIME_ZONE)),
       eq(events.hiddenFromConsumer, false),
       isNull(events.firstMissingAt),
+      // A deactivated venue's shows must not drive fan-out or recommendations
+      // (#1406). Correlated EXISTS rather than a join so the two consumers of
+      // this condition keep their existing query shapes — getTastePicks
+      // already joins venues, loadMatchedUpcomingEvents does not.
+      exists(
+        db
+          .select({ one: sql`1` })
+          .from(venues)
+          .where(and(eq(venues.id, events.venueId), eq(venues.active, true))),
+      ),
       or(
         inArray(events.canonicalArtist, canonicalNames),
         // Array-overlap (&&) halves of the §9.1 match rule.
