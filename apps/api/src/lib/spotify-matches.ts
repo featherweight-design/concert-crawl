@@ -359,7 +359,11 @@ export async function getTastePicks(
     let reason: SpotifyTastePickReason | null = null
     const eventCanonicals = [
       ...(row.canonicalArtist !== null ? [row.canonicalArtist] : []),
-      ...(row.canonicalHeadliners ?? []),
+      // canonical_headliners repeats the primary headliner, so drop it here
+      // rather than look the same reason up twice.
+      ...(row.canonicalHeadliners ?? []).filter(
+        (name) => name !== row.canonicalArtist,
+      ),
       ...(row.canonicalSupporting ?? []),
     ]
     for (const canonical of eventCanonicals) {
