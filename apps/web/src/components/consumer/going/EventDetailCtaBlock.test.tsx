@@ -6,6 +6,7 @@ import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { ApiError } from '@/lib/api'
 import { stubMatchMedia } from '@/test-utils/match-media'
 import type { EntitlementResult } from '@/lib/queries/use-entitlement'
+import { TIP_CONTENT } from '@/components/ui/cc-tip/definitions/copy'
 import { GOING_COPY } from './definitions/copy'
 import type { GoingCtaEvent } from './EventDetailCtaBlock'
 
@@ -49,15 +50,14 @@ const event = (over: Partial<GoingCtaEvent> = {}): GoingCtaEvent => ({
 const renderBlock = (over: Partial<GoingCtaEvent> = {}) =>
   render(<EventDetailCtaBlock event={event(over)} scaRegion={false} />)
 
-// The block renders two buttons — the commitment CTA and the explainer tooltip
-// trigger — so every query has to say which one it means.
+const EXPLAINER_LABEL = TIP_CONTENT['going-vs-watch'].label
+
+// The block renders more than one button — the commitment CTA plus one or two
+// tooltip triggers — so every query has to say which one it means.
 const goingButton = (): HTMLElement => {
   const found = screen
     .getAllByRole('button')
-    .find(
-      (btn) =>
-        btn.getAttribute('aria-label') !== GOING_COPY.explainer.triggerLabel,
-    )
+    .find((btn) => !btn.hasAttribute('aria-expanded'))
   if (found === undefined) throw new Error('no commitment CTA rendered')
   return found
 }
@@ -236,7 +236,7 @@ describe('EventDetailCtaBlock', () => {
         fireEvent.click(goingButton())
       }
       expect(
-        screen.getByRole('button', { name: GOING_COPY.explainer.triggerLabel }),
+        screen.getByRole('button', { name: EXPLAINER_LABEL }),
       ).toBeInTheDocument()
     },
   )
@@ -249,18 +249,51 @@ describe('EventDetailCtaBlock', () => {
     expect(screen.getByText(GOING_COPY.eyebrow.past)).toBeInTheDocument()
   })
 
-  // The going-vs-watch distinction now sits behind a tooltip rather than a
-  // standing line, so the CTAs aren't buried under explanatory copy.
+  // The going-vs-watch distinction sits behind a tooltip rather than a standing
+  // line, so the CTAs aren't buried under explanatory copy. It reads from the
+  // shared registry: the same pair is explained the same way everywhere.
   it('keeps the difference explainer behind a tooltip trigger', () => {
+    const tip = TIP_CONTENT['going-vs-watch']
+    if (tip.variant !== 'defs') throw new Error('expected the defs panel')
+    renderBlock()
+    expect(screen.queryByText(tip.intro)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: EXPLAINER_LABEL }))
+    expect(screen.getByText(tip.intro)).toBeInTheDocument()
+    expect(screen.getByText(tip.rows[0].title)).toBeInTheDocument()
+  })
+
+  // A hand-rolled glyph passed as CCTip's children silently replaces the
+  // designed info disc, taking its open state and touch target with it.
+  it('uses CCTip’s own trigger rather than a bespoke glyph', () => {
+    renderBlock()
+    const trigger = screen.getByRole('button', { name: EXPLAINER_LABEL })
+    expect(trigger).toHaveTextContent('')
+    expect(trigger.querySelector('svg')).not.toBeNull()
+  })
+
+  // The gate line sells Concert History, so it carries its own tip; the header
+  // tip explains the going/watching distinction, which is a different question.
+  it('pairs the locked line with a Concert History tip', () => {
+    entitlement = { isLoading: false, active: false, surface: 'paywall-on-tap' }
     renderBlock()
     expect(
-      screen.queryByText(GOING_COPY.explainer.content),
-    ).not.toBeInTheDocument()
+      screen.getByRole('button', {
+        name: TIP_CONTENT['concert-history'].label,
+      }),
+    ).toBeInTheDocument()
+  })
 
-    fireEvent.click(
-      screen.getByRole('button', { name: GOING_COPY.explainer.triggerLabel }),
+  // Watching is free and ungated, so a suppressed commitment must never take
+  // the strip down with it.
+  it('still renders the watch strip when the commitment is suppressed', () => {
+    render(
+      <EventDetailCtaBlock event={event({ status: 'cancelled' })} scaRegion>
+        <div data-testid="watch-strip" />
+      </EventDetailCtaBlock>,
     )
-    expect(screen.getByText(GOING_COPY.explainer.content)).toBeInTheDocument()
+    expect(screen.getByTestId('watch-strip')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: EXPLAINER_LABEL })).toBeNull()
   })
 
   // The mutation only lands in the tree via router.refresh(), so without a

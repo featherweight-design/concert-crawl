@@ -22,13 +22,9 @@ export const GOING_COPY = {
     stateChangeGoing: 'Marked as going',
     stateChangeReleased: 'No longer going',
   },
-  // The going-vs-watch distinction is real but secondary — it sits behind a
-  // tooltip rather than a standing line, so the two CTAs aren't buried under
-  // explanatory text.
-  explainer: {
-    triggerLabel: "What's the difference between going and watching?",
-    content: 'Going saves the night · Watch tracks the price.',
-  },
+  // The going-vs-watch distinction lives in the shared CCTip registry under
+  // `going-vs-watch`, not here: it is the same explanation on every surface
+  // that draws the pair, and the handoff authors it as a two-row `defs` panel.
   nudge: {
     heading: 'Going to this show?',
     whenTonight: 'Tonight.',

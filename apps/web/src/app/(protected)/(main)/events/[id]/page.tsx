@@ -211,20 +211,18 @@ export default async function EventDetailPage({
             linkArtists
           />
 
-          {/* Commitment strip — directly under title (#70). "I'm going!" is
-              the forward action; the Watch zone below it keeps its own eye,
-              alerts hint, and social proof exactly as #1238 shipped them. */}
+          {/* Commit block — directly under title (#70). One card, per the
+              handoff's CommitBlockV2: the commitment and the watch strip are
+              two halves of the same decision, so they share a border rather
+              than reading as two unrelated blocks. */}
           <div className="mt-3">
-            <EventDetailCtaBlock event={event} scaRegion={scaRegion} />
-          </div>
-
-          {/* Watch strip */}
-          <div className="mt-3">
-            <WatchZone
-              eventId={event.id}
-              initialWatching={event.isWatching}
-              artist={event.artist}
-            />
+            <EventDetailCtaBlock event={event} scaRegion={scaRegion}>
+              <WatchZone
+                eventId={event.id}
+                initialWatching={event.isWatching}
+                artist={event.artist}
+              />
+            </EventDetailCtaBlock>
           </div>
 
           {/* Spotify attribution strip — directly under the Watching pill

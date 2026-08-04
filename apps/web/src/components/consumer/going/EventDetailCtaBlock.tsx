@@ -1,12 +1,20 @@
 'use client'
 
-// The Event Detail commitment row (#70): "I'm going!" filling the width with one
-// mono support line beneath.
+// The Event Detail commit block, from design_handoff_event_detail_cta_tooltip
+// /event-cta-v2.jsx:328-379 (CommitBlockV2, Direction D).
 //
-// The Watch zone (eye + alerts hint + social proof) is a sibling block owned by
-// #1238 and is deliberately untouched — this row only adds the forward action.
+// One card holds three things in order: an eyebrow paired with the explainer
+// tip, "I'm going!" full-width, and the Watch strip. The strip arrives as
+// `children` rather than being rendered here, because it belongs to #1238 and
+// carries its own data — this component only owns the card and the commitment.
 
-import { useEffect, useRef, useState } from 'react'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from 'react'
 import { useRouter } from 'next/navigation'
 import type { EventDetailResponse, PickerEntry } from '@concert-crawl/types'
 import { ApiError } from '@/lib/api'
@@ -18,7 +26,6 @@ import { CCTip } from '@/components/ui/cc-tip'
 import { GoingButton } from './GoingButton'
 import { goingStateFor } from './lib/cta-state'
 import { GOING_COPY } from './definitions/copy'
-import type { TipContent } from '@/components/ui/cc-tip'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 
 // Structurally narrowed to the fields this row actually reads, so an
@@ -28,17 +35,6 @@ import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definit
 // flight. Never displayed — goingStateFor reads presence, not value.
 const OPTIMISTIC_STAMP = 'optimistic'
 
-const DISC_SIZE = 22
-const TAP_TARGET = 44
-
-// The going-vs-watch distinction as a CCTip record. It stays a one-line `text`
-// tip so the popover reads as a sentence rather than a titled panel.
-const GOING_EXPLAINER_TIP: TipContent = {
-  label: GOING_COPY.explainer.triggerLabel,
-  variant: 'text',
-  body: GOING_COPY.explainer.content,
-}
-
 export type GoingCtaEvent = Pick<
   EventDetailResponse,
   'id' | 'artist' | 'date' | 'status' | 'attendingAt'
@@ -47,9 +43,13 @@ export type GoingCtaEvent = Pick<
 export const EventDetailCtaBlock = ({
   event,
   scaRegion,
+  children,
 }: {
   event: GoingCtaEvent
   scaRegion: boolean
+  /** The Watch strip. Rendered inside the card, and on its own whenever the
+   *  commitment half is suppressed — watching a show never depends on Going. */
+  children?: ReactNode
 }) => {
   const router = useRouter()
   const { isLoading, active, surface } = useEntitlement('concert-history')
@@ -84,13 +84,14 @@ export const EventDetailCtaBlock = ({
     }
   }, [serverGoing, optimisticGoing])
 
-  // A cancelled show has no night to commit to — matches the API's history
-  // filter, which excludes cancelled events outright.
-  if (event.status === 'cancelled') return null
-
-  // Hold while the plan resolves rather than flashing a locked treatment at a
-  // paying user (the documented contract on useEntitlement).
-  if (isLoading || surface === null) return null
+  // A cancelled show has no night to commit to (matching the API's history
+  // filter, which excludes cancelled events outright), and the entitlement is
+  // held until it resolves rather than flashing a locked treatment at a paying
+  // user. Either way the strip still renders: watching is free and ungated, so
+  // suppressing the commitment must never take the eye down with it.
+  if (event.status === 'cancelled' || isLoading || surface === null) {
+    return <>{children}</>
+  }
 
   // goingStateFor only reads attendingAt for presence, but the past-yes label
   // renders the show date rather than this stamp, so a placeholder is safe.
@@ -163,27 +164,43 @@ export const EventDetailCtaBlock = ({
     )
   }
 
+  const supportLine: CSSProperties = {
+    fontFamily: 'var(--font-mono)',
+    fontSize: 10.5,
+    fontWeight: 600,
+    letterSpacing: '0.03em',
+  }
+
   return (
-    <div>
-      {/* Eyebrow + tip share one row above the button. The `?` needs a line of
-          its own to belong to: on its own beneath the button it read as a
-          stray control floating in the gap between two blocks. Rendering it
-          here also means the explainer survives `locked` and `error`, where it
-          previously vanished — exactly when someone most wants to know what
-          Going even is. */}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 11,
+        padding: 14,
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        borderRadius: 14,
+      }}
+    >
+      {/* Eyebrow + tip share one row above the button, so the trigger has a
+          line to belong to instead of floating in the gap. Living here also
+          means the explainer survives `locked` and `error` — exactly when
+          someone most wants to know what Going even is. */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: 6,
-          marginBottom: 6,
+          marginTop: -2,
+          marginBottom: -3,
         }}
       >
         <span
           style={{
             flex: 1,
             fontFamily: 'var(--font-mono)',
-            fontSize: 10,
+            fontSize: 9.5,
             fontWeight: 700,
             letterSpacing: '0.16em',
             textTransform: 'uppercase',
@@ -192,42 +209,10 @@ export const EventDetailCtaBlock = ({
         >
           {isPast ? GOING_COPY.eyebrow.past : GOING_COPY.eyebrow.upcoming}
         </span>
-        <CCTip
-          tip={GOING_EXPLAINER_TIP}
-          placement="bottom"
-          align="end"
-          // The target is 44px for thumbs; the negative margin pulls the extra
-          // padding back out of the layout so the visible disc still sits
-          // exactly where a 22px control would.
-          triggerStyle={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: TAP_TARGET,
-            height: TAP_TARGET,
-            margin: -(TAP_TARGET - DISC_SIZE) / 2,
-          }}
-        >
-          <span
-            aria-hidden
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: DISC_SIZE,
-              height: DISC_SIZE,
-              borderRadius: '50%',
-              border: '1px solid var(--border-strong)',
-              color: 'var(--fg-subtle)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: 11,
-              fontWeight: 700,
-              lineHeight: 1,
-            }}
-          >
-            ?
-          </span>
-        </CCTip>
+        {/* No children: CCTip's own info disc is the designed trigger, and it
+            carries the open state and the 44px touch target that a hand-rolled
+            glyph here would silently replace. */}
+        <CCTip tip="going-vs-watch" placement="bottom" align="end" />
       </div>
 
       {/* Full width down to 320px — the button ellipsizes its own label, so
@@ -241,36 +226,26 @@ export const EventDetailCtaBlock = ({
         onChange={onChange}
       />
 
+      {children}
+
       {/* Only a real failure or the gate earns a line here. The standing
           support line is gone — "we'll add this to your history" restated what
-          the button just did — and the explainer moved up to the header. */}
+          the button just did. */}
       {state === 'error' ? (
         // The retry lives in the button; this line only names what survived, so
         // a failed commit never reads as having lost the watch too.
-        <p
-          role="alert"
-          style={{
-            marginTop: 8,
-            fontFamily: 'var(--font-mono)',
-            fontSize: 11,
-            letterSpacing: '0.02em',
-            color: 'var(--danger)',
-          }}
-        >
+        <p role="alert" style={{ ...supportLine, color: 'var(--danger)' }}>
           {GOING_COPY.error.survived}
         </p>
       ) : state === 'locked' ? (
-        <p
-          style={{
-            marginTop: 8,
-            fontFamily: 'var(--font-mono)',
-            fontSize: 11,
-            letterSpacing: '0.02em',
-            color: 'var(--fg-subtle)',
-          }}
-        >
-          {GOING_COPY.locked.line}
-        </p>
+        // The gate line gets its own tip: "Concert History" is the thing being
+        // sold, and the header tip explains the distinction, not the product.
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ ...supportLine, color: 'var(--fg-subtle)' }}>
+            {GOING_COPY.locked.line}
+          </span>
+          <CCTip tip="concert-history" placement="top" align="start" />
+        </div>
       ) : null}
 
       <TierPickerSheet
