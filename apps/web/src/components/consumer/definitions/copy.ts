@@ -1424,6 +1424,7 @@ export const CONSUMER_COPY = {
   priceRegion: {
     faceValue: {
       eyebrow: 'Face value ≠ resale',
+      // eslint-disable-next-line no-restricted-syntax -- design-locked string; the audit recorded the em-dash fix but Design owns the change
       headlineDefault: "That's resale — not face value.",
       headlineNoPrice: 'All we can see is resale.',
       // Single subline — property table state #12 (no-price) only overrides the
@@ -1445,6 +1446,7 @@ export const CONSUMER_COPY = {
     // pitches contribution directly. New component, new copy block.
     contributeFaceValue: {
       eyebrow: 'Face value',
+      // eslint-disable-next-line no-restricted-syntax -- design-locked string; the audit recorded the em-dash fix but Design owns the change
       headline: 'No price to show — yet.',
       subline: 'Sold out, nothing listed. Know the box-office number? Add it.',
       ladderBoxofficeLabel: 'Box office',
@@ -1458,6 +1460,7 @@ export const CONSUMER_COPY = {
     soldOutBadge: 'Sold out',
     // LOCKED §9 Q1 — SoldOutPriceCard variant='no-listing' caption (Appendix A.2).
     soldOutNoListingCaption:
+      // eslint-disable-next-line no-restricted-syntax -- design-locked string; the audit recorded the em-dash fix but Design owns the change
       'No tickets listed anywhere we can see — not even resale.',
     provenance: {
       getTickets: 'Get Tickets',
@@ -1482,6 +1485,7 @@ export const CONSUMER_COPY = {
     },
     // LOCKED §9 Q3 — DisputedPriceCard / PendingCardB footer pointer (Appendix A.4).
     dispute: {
+      // eslint-disable-next-line no-restricted-syntax -- design-locked string; the audit recorded the em-dash fix but Design owns the change
       counterPointerLabel: 'Someone posted a different price — see it',
     },
     multiSource: {

@@ -149,6 +149,22 @@ Claude Code sessions are finite. To preserve continuity across sessions:
 - **Release notes on user-facing PRs** — any PR shipping a meaningful user-facing feature MUST add an entry to `apps/web/src/lib/definitions/releases.ts` on the same branch. Mirror the `progress.md` substantive-only rule: skip chores, dep bumps, doc tweaks, refactors, and customer-invisible bug fixes. For features with spotlight assets in `design/design_handoff_spotlight_heroes/`, wire up the spotlight as part of the entry. See `docs/superpowers/design-pipeline.md`.
 - **Copy edits go through the `copy-review` skill** — any change to a `definitions/copy.ts`, an email template, push copy, `releases.ts`, or a design handoff containing copy. The skill (`~/.claude/skills/copy-review/SKILL.md`, user scope) carries the weight-class model, the length caps, the no-em-dash rule, and the locked vocabulary. A full-codebase audit of ~1,728 strings lives in `docs/superpowers/copy-audit/` — start at `00-README.md`.
 
+#### How copy quality is enforced
+
+Three layers, mechanical first. The 2026-08 audit found 191 issues in ~1,728 strings; roughly 290 of the ~340 strings it eventually touched fell into two classes a machine can detect, which is why the first layer exists at all.
+
+| Layer                                    | What it catches                                                                                                    | Where                                                                                      |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| **1. Lint (build-blocking)**             | Strings living in a `.tsx` instead of a `definitions/copy.ts`; em-dashes in copy files; banned vocabulary synonyms | `apps/web/eslint.config.mjs` — `react/jsx-no-literals` + two `no-restricted-syntax` blocks |
+| **2. `copy-review` skill (pre-PR gate)** | Voice, length, redundancy, weight class, adjacency — everything that needs judgment                                | Run before `gh pr create`; wired in as `complete-and-ship` Step 5b and `epic-run` Gate 7   |
+| **3. Periodic audit**                    | Cross-surface drift that only shows up in aggregate                                                                | `docs/superpowers/copy-audit/` — no fixed cadence now that 1 and 2 exist                   |
+
+The lint decides _where_ a string lives; the skill decides _what it says_. Neither substitutes for the other.
+
+**Scope and exemptions.** Admin copy is excluded from all three (CLAUDE.md already allows ad-hoc admin UI, and it has no copy-review bar). Release-note hero illustrations are artwork, not copy. Punctuation and icon glyphs are allowlisted. An em-dash is legal when it is the whole string (the empty-data placeholder) or leads it (the `— Hugh` sign-off, the `— end of log —` divider).
+
+**Suppressing a rule requires a reason.** The eight surviving em-dashes carry an `eslint-disable-next-line` naming why: each is design-locked, and the audit recorded the fix without applying it because Design owns the change. Never add a bare disable — a suppression with no reason is indistinguishable from a mistake later. Already-merged `releases.ts` entries are a frozen historical record and are never rewritten for style.
+
 ### Design pipeline
 
 All design work — both new design tickets and the build of existing handoffs — follows the structured two-track pipeline documented at `docs/superpowers/design-pipeline.md`. Key gates:

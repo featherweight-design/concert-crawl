@@ -103,4 +103,51 @@ export default [
       ],
     },
   },
+
+  // The copy voice rules, enforced where the copy lives. `jsx-no-literals`
+  // above decides *where* a string goes; these decide what it may say once it
+  // gets there. Admin copy is out of scope for the same reason it is out of
+  // scope above — it has no copy-review bar.
+  {
+    files: ['src/**/definitions/copy.ts'],
+    ignores: ['src/components/admin/**', 'src/app/(protected)/admin/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          // An em-dash in prose is almost always a comma, a colon or a full
+          // stop wearing a costume; the 2026-08 audit rewrote ~95 of them.
+          // Strings that *start* with one are exempt: those are the sign-off
+          // (`— Hugh`) and divider (`— end of log —`) conventions, where the
+          // glyph is typography rather than punctuation. So is a string that
+          // is nothing but the glyph, which is the empty-data placeholder.
+          selector:
+            'Literal[value=/—/]:not([value=/^(\\$?—|—[  ].*)$/])',
+          message:
+            'No em-dash in customer-facing copy — use a comma, colon or full stop. Exempt: a bare “—” or “$—” placeholder, or a leading “— ” sign-off. See the copy-review skill.',
+        },
+        {
+          selector:
+            'TemplateElement[value.cooked=/—/]:not([value.cooked=/^(\\$?—|—[  ].*)$/])',
+          message:
+            'No em-dash in customer-facing copy — use a comma, colon or full stop. Exempt: a bare “—” or “$—” placeholder, or a leading “— ” sign-off. See the copy-review skill.',
+        },
+        {
+          // The locked vocabulary (CLAUDE.md). Drift here has already cost a
+          // wrong design round, and it reads as a different product to anyone
+          // who hits both words.
+          selector:
+            'Literal[value=/\\b(saved shows?|favou?rites?|my prices)\\b/i]',
+          message:
+            'Banned synonym. The tracking concept is “Watching” and the price list is “Submitted prices” — see the locked vocabulary table in CLAUDE.md.',
+        },
+        {
+          selector:
+            'TemplateElement[value.cooked=/\\b(saved shows?|favou?rites?|my prices)\\b/i]',
+          message:
+            'Banned synonym. The tracking concept is “Watching” and the price list is “Submitted prices” — see the locked vocabulary table in CLAUDE.md.',
+        },
+      ],
+    },
+  },
 ]
