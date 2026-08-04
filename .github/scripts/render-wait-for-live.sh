@@ -16,9 +16,14 @@
 #
 # Polls every 10s up to <timeout-seconds>. Exit codes:
 #   0   — service is live on expected SHA
-#   124 — timeout reached without seeing the expected SHA go live
+#   124 — timeout, and a newer deploy plausibly superseded this one
 #         (matches GNU timeout(1) convention; new caller behavior:
 #         prod-smoke-after-deploy.yml treats this as benign-skip)
+#   125 — timeout that is NOT benign: deploys are disabled, the live
+#         deploy is over an hour old, or the timeout could not be
+#         classified. The pushed SHA will never go live on its own, so
+#         smoke and rollback would be skipped forever. Callers must
+#         fail on this.
 #   1   — hard failure (jq missing, missing env, malformed timeout
 #         arg, curl/auth/network failure, no live deploy found)
 #
@@ -116,10 +121,16 @@ echo "✗ Service ${SERVICE_ID} did not reach live on ${EXPECTED_SHA} within ${t
 # enough that no supersede can explain it. Prod sat 51 commits behind for
 # ~17h in exactly this shape, reporting green the whole time, because every
 # run read its own timeout as the benign case.
-service_json=$(curl --fail --silent --show-error \
+# If this lookup fails we cannot tell a supersede from a stall, and the
+# benign reading is the one that hides an outage. Fail closed: an
+# unclassifiable timeout is reported as non-benign, not waved through.
+if ! service_json=$(curl --fail --silent --show-error \
   --connect-timeout 5 --max-time 15 \
   -H "${AUTH}" -H "Accept: application/json" \
-  "${API}/services/${SERVICE_ID}") || service_json="{}"
+  "${API}/services/${SERVICE_ID}"); then
+  echo "::error title=Cannot classify timeout::Failed to fetch ${SERVICE_ID} metadata, so this timeout cannot be shown to be a benign supersede. Check RENDER_API_TOKEN scope and Render API status."
+  exit 125
+fi
 
 auto_deploy=$(echo "${service_json}" | jq -r '.autoDeploy // "unknown"')
 live_created=$(echo "${deploys_json}" | jq -r '
@@ -134,8 +145,13 @@ fi
 # 3600s: generous next to the ~2min prod deploy, so a genuine fast-follow
 # streak stays benign, while a service that has stopped deploying trips it.
 if [ -n "${live_created}" ]; then
+  # Render returns both `...:32Z` and `...:32.188265Z`. Strip the fraction
+  # if present, then the trailing Z, so the BSD form matches either shape —
+  # otherwise the stalled-deploy check silently no-ops on macOS.
+  live_naive="${live_created%%.*}"
+  live_naive="${live_naive%Z}"
   live_epoch=$(date -u -d "${live_created}" +%s 2>/dev/null \
-    || date -u -jf "%Y-%m-%dT%H:%M:%S" "${live_created%%.*}" +%s 2>/dev/null \
+    || date -u -jf "%Y-%m-%dT%H:%M:%S" "${live_naive}" +%s 2>/dev/null \
     || echo "")
   now_epoch=$(date -u +%s)
   if [ -n "${live_epoch}" ] && [ "$((now_epoch - live_epoch))" -gt 3600 ]; then

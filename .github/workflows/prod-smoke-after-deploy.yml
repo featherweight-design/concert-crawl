@@ -156,9 +156,10 @@ jobs:
       #
       # The script exits 0 on live, 124 on a benign timeout (a fast-follow
       # merge superseded this deploy), 125 when the timeout is NOT benign
-      # (auto-deploy is off, or the live deploy is over an hour old — either
-      # way the pushed SHA can never go live, so skipping smoke would report
-      # green having asserted nothing), and 1 on hard error (jq missing,
+      # (auto-deploy is off, the live deploy is over an hour old, or the
+      # timeout could not be classified at all — in each case the pushed SHA
+      # will not go live on its own, so skipping smoke would report green
+      # having asserted nothing), and 1 on hard error (jq missing,
       # auth/network failure, no live deploy found, malformed service ID).
       # 125 exists because prod sat 51 commits behind for ~17h with
       # autoDeploy off while every run read its timeout as the benign
