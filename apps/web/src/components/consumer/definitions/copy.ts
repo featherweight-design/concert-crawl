@@ -776,8 +776,6 @@ export const CONSUMER_COPY = {
       priceTba: 'tba',
       savedPrefix: 'saved',
       savedPricePrefix: 'at $',
-      staleTooltip: (relTime: string) =>
-        `Last checked ${relTime}, could be stale`,
       stalePrefix: 'Stale · ',
     },
     // DeltaTag — the "no meaningful change since you saved" reading. The

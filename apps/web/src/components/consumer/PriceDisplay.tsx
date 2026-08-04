@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { PriceSource, SourceCategory } from '@concert-crawl/types'
 import { SubmitPriceModal } from '@/components/consumer/submit-price'
+import { CCTip } from '@/components/ui/cc-tip'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { VENUE_BOX_OFFICE_LABEL } from '@/components/consumer/vendor-display'
 import {
@@ -1198,18 +1199,25 @@ export function PriceDisplay({
           justifyContent: 'space-between',
         }}
       >
-        <div
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            color: isBoxOffice ? GOLD : 'var(--fg-subtle)',
-            letterSpacing: '0.06em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {isBoxOffice
-            ? copy.priceDisplay.boxOfficeLabel
-            : copy.priceDisplay.ticketsLabel}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              color: isBoxOffice ? GOLD : 'var(--fg-subtle)',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+            }}
+          >
+            {isBoxOffice
+              ? copy.priceDisplay.boxOfficeLabel
+              : copy.priceDisplay.ticketsLabel}
+          </div>
+          {/* The label says where the number came from; this answers the
+              question that raises, which is who put it there. It sits with
+              the label rather than the sparkline so the disc reads as
+              belonging to the words next to it. */}
+          <CCTip tip="who-set-this-price" placement="bottom" align="start" />
         </div>
         {hasSpark && range14d && (
           <Sparkline values={range14d} flag={sparkFlag} dim={soldOut} />
