@@ -241,6 +241,14 @@ describe('PATCH /v1/admin/venues/:id — platform routing (#721)', () => {
       body: JSON.stringify({ platform: 'detail-page', platformVenueId: '89' }),
     })
     expect(res.status).toBe(400)
+    // The platform-specific message is the point: a generic error would leave
+    // the admin guessing which of the two fields was wrong.
+    const body = await res.json()
+    expect(body).toMatchObject({
+      success: false,
+      error: 'platformVenueId is not used by the detail-page platform',
+      field: 'platformVenueId',
+    })
   })
 
   // A stale AEG shard id surviving the switch would silently re-activate if
