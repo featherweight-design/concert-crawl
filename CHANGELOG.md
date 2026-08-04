@@ -1,3 +1,15 @@
+## [1.216.3](https://github.com/HartiganHM/concert-crawl/compare/v1.216.2...v1.216.3) (2026-08-04)
+
+
+### Bug Fixes
+
+* **ci:** fail closed when a live deploy timestamp is missing or unparseable ([c93b90d](https://github.com/HartiganHM/concert-crawl/commit/c93b90db2d257ce6e9d0d4b394b27ac1eb03ca22))
+* **ci:** fail closed when a wait-for-live timeout cannot be classified ([a7e9e31](https://github.com/HartiganHM/concert-crawl/commit/a7e9e3158d59fc8fe821501cc99b293ba29cbb91))
+* **ci:** run the testid guard in CI and fail closed on an unknown autoDeploy ([9fd55ab](https://github.com/HartiganHM/concert-crawl/commit/9fd55abc9c5013daea8636e040d5aecaa7388aba))
+* **e2e:** address Copilot round 1 on the testid contract and wait script ([bcfd0b8](https://github.com/HartiganHM/concert-crawl/commit/bcfd0b8b065199c87985d2e2f21a21851f50a0b8))
+* **e2e:** guard back-navigation on event rows existing ([b0e6411](https://github.com/HartiganHM/concert-crawl/commit/b0e6411c1ef4d4f7aef372e4202f00a3da3ca238))
+* **e2e:** point specs at event-row and stop the deploy gate self-retiring ([586dd17](https://github.com/HartiganHM/concert-crawl/commit/586dd170720a23f31d85d79f2ded6912bc8f73b5)), closes [#1436](https://github.com/HartiganHM/concert-crawl/issues/1436)
+
 ## [1.216.2](https://github.com/HartiganHM/concert-crawl/compare/v1.216.1...v1.216.2) (2026-08-04)
 
 
