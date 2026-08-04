@@ -19,6 +19,13 @@ const isAlwaysPublic = createRouteMatcher([
   // them redirects the fetch to the HTML landing page and the icon renders
   // blank. Scoped to /icon* so future /api/pwa handlers aren't public by default.
   '/api/pwa/icon(.*)',
+  // The crawler cron POSTs here machine-to-machine with an `x-revalidate-token`
+  // header and no Clerk session, so gating it 307'd every call to /sign-in and
+  // #1442's proactive revalidation never once fired in prod. The route
+  // authenticates itself against REVALIDATE_SECRET and fails closed with 401
+  // when that is unset — Clerk was simply the wrong gate for a non-browser
+  // caller. Exact path, not a prefix.
+  '/api/revalidate',
   '/legal(.*)',
   // "What's new" is reachable from the signed-out account menu and renders a
   // static release list with no user data — gating it sent that menu row to

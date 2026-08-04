@@ -186,6 +186,20 @@ describe('middleware — edge auth gate (#841)', () => {
 
     expect(result).toBeUndefined()
   })
+
+  it('lets the unauthenticated revalidate POST through without protect', async () => {
+    const { middlewareHandler } = await import('./middleware')
+
+    // The crawler cron carries a token header, never a Clerk session. Gating
+    // this 307'd it to /sign-in, so #1442 silently no-opped in prod; the route
+    // itself checks REVALIDATE_SECRET and fails closed.
+    const req = new NextRequest('http://localhost/api/revalidate', {
+      method: 'POST',
+    })
+    const result = await middlewareHandler(makeAuth(null), req)
+
+    expect(result).toBeUndefined()
+  })
 })
 
 // ⚠️ The createRouteMatcher mock above uses `startsWith`, which is looser than
