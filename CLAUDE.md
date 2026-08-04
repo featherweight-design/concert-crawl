@@ -197,11 +197,31 @@ Issues live in GitHub Issues (repo: `HartiganHM/concert-crawl`). The board is a 
 | `phase:`    | `pre-beta`, `beta`, `launch`        | When it ships      |
 | `priority:` | `blocker`, `high`, `normal`         | Relative urgency   |
 
+**⛔ Standing intake rule — no new issue is opened without Hugh's explicit sign-off.**
+
+The backlog reached 148 open issues, 131 with zero comments and 45 older than 60 days. An issue
+filed is not a problem solved. Four layers gate intake; an item must survive all four:
+
+1. **Fix it now** — a diagnosable, fixable defect gets fixed this session with a regression test. Prod-affecting and gate-retiring defects are never follow-ups.
+2. **Decide it now** — if reading the code settles the question, make the call and record it in the artifact.
+3. **Don't file the hypothetical** — an observed failure or user-visible bug is fileable; a speculative state combination is a one-line question in chat.
+4. **Ask before filing** — anything surviving 1–3 is a _proposal_, not an issue. Ask as a one-line question; batch them, never a bulk-approve doc.
+
+The only exception is Hugh saying "open an issue for X." During autonomous runs, collect
+proposals under **Proposed intake** in the morning report and file only what comes back approved.
+
+**Ceilings.** P2 caps at 40 open issues, P3 at 20. At cap the backlog is zero-sum — a new issue
+must name the one it displaces. P3 items untouched for 90 days are proposed for closure at the
+next audit. The `backlog-audit` skill (user scope) carries the full Scrum Leader persona and runs
+monthly, or whenever open issues exceed the sum of the ceilings. Ledgers land in
+`docs/superpowers/backlog/`.
+
 **Workflows:**
 
-- **Opening an issue:** `gh issue create --title "..." --label "type: feature,phase: pre-beta,priority: blocker,source: internal"` (always include one label from each prefix)
+- **Opening an issue:** only after sign-off — `gh issue create --title "..." --label "type: feature,phase: pre-beta,priority: blocker,source: internal"` (always include one label from each prefix)
 - **Linking a PR to an issue:** include `Closes #N` in the PR body — GitHub auto-closes the issue when the PR merges to `main`
 - **When user says "open an issue for X":** create it with `gh issue create` using the correct labels; do not skip the label step
+- **Closing or commenting on an issue:** `gh issue close` / `gh issue comment` fail here (Projects-classic error). Use `gh api -X PATCH repos/HartiganHM/concert-crawl/issues/N -f state=closed -f state_reason=not_planned` and `gh api -X POST .../issues/N/comments -f body=...`. Post the reasoning _before_ closing — a silent close is indistinguishable from a mistake later.
 
 ---
 
