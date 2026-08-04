@@ -1,3 +1,11 @@
+## [1.216.1](https://github.com/HartiganHM/concert-crawl/compare/v1.216.0...v1.216.1) (2026-08-04)
+
+
+### Bug Fixes
+
+* **api:** keep deactivated venues out of Spotify fan-out and picks ([1cb15ca](https://github.com/HartiganHM/concert-crawl/commit/1cb15cabac34d7644c0f2e4d7ce6e2f09084175a)), closes [#1406](https://github.com/HartiganHM/concert-crawl/issues/1406)
+* **web:** let the crawler's revalidate POST past Clerk middleware ([059d34d](https://github.com/HartiganHM/concert-crawl/commit/059d34d1e3273905a74f9804e46c518bb032c926)), closes [#1442](https://github.com/HartiganHM/concert-crawl/issues/1442)
+
 # [1.216.0](https://github.com/HartiganHM/concert-crawl/compare/v1.215.4...v1.216.0) (2026-08-04)
 
 
