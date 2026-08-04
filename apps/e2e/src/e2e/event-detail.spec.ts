@@ -33,6 +33,12 @@ test.describe('event detail page', () => {
     await page.goto('/events')
     await page.waitForLoadState('networkidle')
 
+    const rowCount = await page.locator('[data-testid="event-row"]').count()
+    if (rowCount === 0) {
+      test.skip(true, 'No events on staging — cannot test back navigation')
+      return
+    }
+
     const firstRow = page.locator('[data-testid="event-row"]').first()
     await firstRow.click()
     await page.waitForLoadState('networkidle')
