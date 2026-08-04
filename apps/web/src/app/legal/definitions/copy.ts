@@ -11,22 +11,20 @@ export const LEGAL_COPY = {
     privacyLink: 'Privacy Policy →',
     termsLink: 'Terms of Service →',
     bulletGlyph: '—',
-    // Placeholder. Both dated pages ship this verbatim until a real
-    // effective date is set; changing it is a one-line edit here.
-    lastUpdated: 'Last updated: [date — fill before launch]',
+    // All three legal pages date from the day private beta opened, which is
+    // when these documents first applied to anyone.
+    effectiveDate: 'Effective date: May 25, 2026',
   },
 
   terms: {
     heading: 'Terms of Service',
-    stubNotice:
-      'These terms are a pre-launch stub and have not been reviewed by legal counsel. Do not rely on them as a final document.',
 
     acceptance: {
       title: '1. Acceptance',
       body1:
         "By creating an account or using Concert Crawl (“the Service”), you agree to these Terms of Service. If you don't agree, don't use the Service.",
       body2:
-        "We may update these terms. When we do, we'll notify you by email and update the “Last updated” date above. Continued use after notice constitutes acceptance.",
+        "We may update these terms. When we do, we'll notify you by email and update the “Effective date” above. Continued use after notice constitutes acceptance.",
     },
 
     service: {
@@ -113,9 +111,6 @@ export const LEGAL_COPY = {
 
   privacy: {
     heading: 'Privacy Policy',
-    stubNotice:
-      'This policy is a pre-launch stub and has not been reviewed by legal counsel. Do not rely on it as a final document.',
-
     collect: {
       title: 'What we collect',
       intro: "We collect only what's necessary to run the Service:",
@@ -183,7 +178,7 @@ export const LEGAL_COPY = {
 
     changes: {
       title: 'Changes to this policy',
-      body: "When we make material changes to this policy, we'll notify you by email and update the “Last updated” date above.",
+      body: "When we make material changes to this policy, we'll notify you by email and update the “Effective date” above.",
     },
 
     contact: {
@@ -194,7 +189,6 @@ export const LEGAL_COPY = {
 
   beta: {
     heading: 'Private Beta Agreement',
-    effectiveDate: 'Effective date: May 25, 2026',
 
     innerCircle: {
       title: "You're in the inner circle",

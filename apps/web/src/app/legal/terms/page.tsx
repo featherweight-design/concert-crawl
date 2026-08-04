@@ -40,11 +40,8 @@ export default function TermsPage() {
         <h1 className="mb-2 text-2xl font-extrabold tracking-tight text-fg">
           {copy.heading}
         </h1>
-        <p className="mb-2 text-sm text-fg-muted">
-          {LEGAL_COPY.shared.lastUpdated}
-        </p>
-        <p className="mb-10 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning">
-          {copy.stubNotice}
+        <p className="mb-10 text-sm text-fg-muted">
+          {LEGAL_COPY.shared.effectiveDate}
         </p>
 
         <div className="space-y-8 text-[15px] leading-relaxed">
