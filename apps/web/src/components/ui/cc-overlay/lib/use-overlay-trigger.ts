@@ -25,7 +25,12 @@ const HOVER_OUT_MS = 140
 interface OverlayTrigger {
   open: boolean
   pinned: boolean
-  triggerRef: React.RefObject<HTMLButtonElement | null>
+  // A callback ref rather than a RefObject: the popover is portalled and has to
+  // measure this element, and a ref assignment alone would not re-render the
+  // panel that needs it. Matters for defaultOpen, where the panel's first
+  // render is also the trigger's.
+  triggerRef: (node: HTMLButtonElement | null) => void
+  triggerNode: HTMLButtonElement | null
   close: () => void
   toggle: () => void
   hoverIn: () => void
@@ -50,7 +55,12 @@ export const useOverlayTrigger = ({
     pinnedRef.current = next
     setPinnedState(next)
   }, [])
-  const triggerRef = useRef<HTMLButtonElement>(null)
+  const [triggerNode, setTriggerNode] = useState<HTMLButtonElement | null>(null)
+  const triggerEl = useRef<HTMLButtonElement | null>(null)
+  const triggerRef = useCallback((node: HTMLButtonElement | null) => {
+    triggerEl.current = node
+    setTriggerNode(node)
+  }, [])
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Escape returns focus to the trigger, and on desktop focus opens the panel.
   // Without this latch the dismissal immediately re-opens what it just closed.
@@ -76,7 +86,7 @@ export const useOverlayTrigger = ({
       setOpen(false)
       setPinned(false)
       suppressFocusOpen.current = true
-      triggerRef.current?.focus()
+      triggerEl.current?.focus()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -91,7 +101,7 @@ export const useOverlayTrigger = ({
     setOpen(false)
     setPinned(false)
     suppressFocusOpen.current = true
-    triggerRef.current?.focus()
+    triggerEl.current?.focus()
   }, [clearPending, setPinned])
 
   // Tap and click land on the same transition: a tapped sheet is pinned by
@@ -143,6 +153,7 @@ export const useOverlayTrigger = ({
     open,
     pinned,
     triggerRef,
+    triggerNode,
     close,
     toggle,
     hoverIn,

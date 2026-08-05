@@ -148,6 +148,24 @@ describe('CCTip on desktop', () => {
     expect(screen.getByText('Watching: free')).toBeInTheDocument()
     expect(screen.getByText('Going')).toBeInTheDocument()
   })
+
+  // The admin Panel clips its rounded corners with overflow:hidden, which cut
+  // the bottom off any tip opened inside one. jsdom has no layout, so the
+  // testable invariant is the one that fixes it: the popover must not render
+  // inside the clipping container at all.
+  it('renders the popover outside a clipping ancestor', () => {
+    const { container } = render(
+      <div style={{ overflow: 'hidden' }}>
+        <CCTip tip={DEFS_TIP} />
+      </div>,
+    )
+
+    fireEvent.click(triggerFor('Going vs. Watching'))
+
+    const popover = screen.getByRole('dialog')
+    expect(popover).toBeInTheDocument()
+    expect(container.contains(popover)).toBe(false)
+  })
 })
 
 describe('CCTip on mobile', () => {

@@ -148,6 +148,7 @@ export const CCTip = ({
             id={panelId}
             mode="popover"
             title={content.label}
+            anchor={trigger.triggerNode}
             placement={placement}
             align={align}
             width={popoverWidth}

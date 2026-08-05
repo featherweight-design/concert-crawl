@@ -116,6 +116,7 @@ export const WatchersSurface = ({
                   id={panelId}
                   mode="popover"
                   title={copy.rosterTitle}
+                  anchor={trigger.triggerNode}
                   placement="top"
                   align="end"
                   width={260}
