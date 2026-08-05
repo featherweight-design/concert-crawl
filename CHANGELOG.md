@@ -1,3 +1,10 @@
+## [1.216.5](https://github.com/HartiganHM/concert-crawl/compare/v1.216.4...v1.216.5) (2026-08-05)
+
+
+### Bug Fixes
+
+* **web:** host overlays inside the admin theme scope ([#1480](https://github.com/HartiganHM/concert-crawl/issues/1480)) ([b13e409](https://github.com/HartiganHM/concert-crawl/commit/b13e409e5fd4785fe75f5e04cee91cc9221d0448))
+
 ## [1.216.4](https://github.com/HartiganHM/concert-crawl/compare/v1.216.3...v1.216.4) (2026-08-04)
 
 
