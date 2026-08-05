@@ -112,6 +112,11 @@ LEFT JOIN it would re-filter the null rows back out; inside the join, a revoked
 connection simply yields nulls and the user degrades to manual-only notifications rather
 than losing them.
 
+The selected `userId` must come from `user_artist_follows`, the preserved side of the
+join — not from `user_spotify_connections`, where it is null for every manual-only user
+and would drop them downstream. Today's inner join makes the two interchangeable, so
+this is easy to carry over unchanged and get silently wrong.
+
 **Preference defaults for users with no connection row** (both null after the LEFT JOIN):
 
 | Preference | Default | Why |
@@ -142,15 +147,19 @@ push tag stays stable per event.
 `spotify.new_show` → `artist.new_show`. The category is no longer Spotify-specific and a
 manual follower receiving a notification labelled "Spotify" is plainly wrong.
 
-The string appears in 11 files, including a **web allowlist** at
-`apps/web/src/lib/notifications.ts` and the category definitions at
-`apps/web/src/components/consumer/notifications/definitions/categories.ts`. Because the
-allowlist rejects unknown categories, existing `spotify.new_show` rows in
-`notifications` would silently stop rendering after the rename.
+The string appears in 11 files, including the category list at
+`apps/web/src/lib/notifications.ts` and the definitions at
+`apps/web/src/components/consumer/notifications/definitions/categories.ts`.
 
-**A backfill migration is required**, not optional: update existing rows to the new
-category in the same deploy as the code change. Expand/contract still applies — the
-reader must tolerate both values across the deploy window.
+Existing `spotify.new_show` rows would **not** disappear after the rename — the API
+passes unknown categories through deliberately and `categoryFor()` renders them via
+`CATEGORY_FALLBACK`. What they lose is their label and glyph: real news demoted to a
+neutral, unrecognised presentation.
+
+**A backfill migration is still required**, for that fidelity rather than to prevent
+data loss: update existing rows to the new category in the same deploy as the code
+change. Expand/contract applies — the reader tolerates both values across the deploy
+window, which the fallback already gives us for free.
 
 `packages/push/src/notification-categories.ts` deliberately places this category in
 *neither* sub-toggle set. Preserve that; it is load-bearing, and the rename must not
@@ -185,7 +194,8 @@ a real flag system and lands in Project 2.
 - Defaults: no connection row → `pushEnabled` true, `autoWatch` false.
 - Route: free and supporter plans receive the `paywall-on-tap` response from POST;
   premium succeeds; DELETE succeeds on every signed-in plan.
-- Migration: rows written as `spotify.new_show` render after the backfill.
+- Migration: rows written as `spotify.new_show` carry the `artist.new_show` label and
+  glyph after the backfill, rather than the neutral fallback presentation.
 - The existing regression test asserting the follow route makes zero Spotify API calls
   must survive unchanged. Fan-out generalization must not introduce a Spotify call on
   the manual path.
