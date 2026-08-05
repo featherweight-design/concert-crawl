@@ -11,6 +11,8 @@ import {
 import { GUIDE_FIELD_MAX_LENGTH, type VenueGuide } from '@concert-crawl/types'
 import { ADMIN_COPY } from '../definitions/copy'
 import { VenueGuideBlock } from './VenueGuideBlock'
+import { stubMatchMedia } from '@/test-utils/match-media'
+import { TIP_CONTENT } from '@/components/ui/cc-tip'
 
 const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide
 
@@ -58,6 +60,8 @@ const pickerRemoveLabelFor = (label: string) =>
   `${GUIDE_COPY.picker.removeLabel} ${label}`
 
 beforeEach(() => {
+  // The guide now carries CCTips, which read the viewport through matchMedia.
+  stubMatchMedia(false)
   saveVenueGuide.mockReset().mockResolvedValue({ success: true })
   publishVenueGuide.mockReset().mockResolvedValue({ success: true })
   unpublishVenueGuide.mockReset().mockResolvedValue({ success: true })
@@ -66,6 +70,23 @@ beforeEach(() => {
 afterEach(() => cleanup())
 
 describe('VenueGuideBlock (#764)', () => {
+  // These four tips were deleted once on the reasoning that the guide already
+  // explained itself inline. Assert them by accessible name so a silent removal
+  // fails here rather than on someone's screen.
+  it('offers the four guide tooltips', () => {
+    renderBlock(populatedGuide)
+    for (const key of [
+      'guide-voice',
+      'chip-states',
+      'chip-dos',
+      'publish-gate',
+    ] as const) {
+      expect(
+        screen.queryByRole('button', { name: TIP_CONTENT[key].label }),
+      ).not.toBeNull()
+    }
+  })
+
   it('renders the empty state blocked, with no chip fields', () => {
     renderBlock()
     expect(screen.getByText(GUIDE_COPY.badge.blocked)).toBeTruthy()

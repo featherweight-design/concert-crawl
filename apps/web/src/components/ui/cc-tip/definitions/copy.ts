@@ -47,6 +47,76 @@ export const TIP_CONTENT = {
     title: 'Keep an eye on a show.',
     body: "Tap the eye and we'll track the price for you: pings on drops and sold-outs. It doesn't say you're going; that lives on the show's page.",
   },
+  // Admin: first-timer guide chip states.
+  'chip-states': {
+    label: 'Chip state indicators',
+    variant: 'defs',
+    intro: 'Every chip on a guide is in one of three states.',
+    rows: [
+      {
+        tone: 'neutral',
+        title: 'Blank',
+        body: 'No content yet. Optional chips stay hidden on the venue page, never shown empty.',
+      },
+      {
+        tone: 'good',
+        title: 'Authored',
+        body: 'A concert-goer-voice line the admin wrote and voice-passed. This is what ships to display.',
+      },
+      {
+        tone: 'warn',
+        title: 'Honest placeholder',
+        body: 'Accessibility only. Satisfies the publish gate without faking content: shows “not documented yet, call the venue.”',
+      },
+    ],
+  },
+  // Admin: how to publish.
+  'publish-gate': {
+    label: 'How publishing works',
+    variant: 'steps',
+    steps: [
+      "Write the insider tip, the thing you'd text a friend who's never been.",
+      "Fill Accessibility, or flip “Can't document yet” for the honest placeholder.",
+      'Add any chips you actually know. Leave the rest blank.',
+      'Publish. Blank chips stay hidden on the venue page.',
+    ],
+    footer:
+      'Publish stays blocked until Accessibility is answered one way or the other.',
+  },
+  // Admin: voice rules.
+  'guide-voice': {
+    label: 'Writing in concert-goer voice',
+    variant: 'example',
+    rows: [
+      {
+        title: 'Be specific',
+        body: 'Numbers, street names, times. A regular would know them.',
+        say: '$15 cash, Blake St. lot',
+        not: 'Paid parking available',
+      },
+      {
+        title: 'Be honest',
+        body: "If you can't say it like a regular, leave it blank.",
+        say: "Line's brutal after 8:30, come early",
+        not: 'Arrive early for best experience',
+      },
+    ],
+  },
+  // Admin: chip content rules.
+  'chip-dos': {
+    label: 'Chip content rules',
+    variant: 'dos',
+    dos: [
+      'One thought per chip, texted-to-a-friend length.',
+      'Name the thing: bar, balcony, north door.',
+      'Say when it’s true (“after 8:30”, “weeknights”).',
+    ],
+    donts: [
+      'Marketing voice, hype, or exclamation points.',
+      'Filling a chip just to fill it.',
+      "Promising anything we can't verify.",
+    ],
+  },
 } as const satisfies Record<string, TipContent>
 
 export type TipKey = keyof typeof TIP_CONTENT

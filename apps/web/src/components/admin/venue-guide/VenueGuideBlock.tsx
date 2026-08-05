@@ -22,6 +22,7 @@ import {
   unpublishVenueGuide,
 } from '@/lib/actions/venues'
 import { AdminButton, Kbd, MonoLabel, Panel, StatusBadge } from '../primitives'
+import { CCTip } from '@/components/ui/cc-tip'
 import { ADMIN_COPY } from '../definitions/copy'
 import { AccessibilityField } from './AccessibilityField'
 import { ChipPicker } from './ChipPicker'
@@ -240,6 +241,7 @@ export const VenueGuideBlock = ({
           >
             {GUIDE_COPY.blockTitle}
             <MonoLabel color="var(--fg-subtle)">{venueName}</MonoLabel>
+            <CCTip tip="guide-voice" placement="bottom" align="start" />
           </span>
         }
         action={
@@ -412,6 +414,8 @@ export const VenueGuideBlock = ({
               }}
             >
               <MonoLabel>{GUIDE_COPY.picker.heading}</MonoLabel>
+              <CCTip tip="chip-states" placement="bottom" align="start" />
+              <CCTip tip="chip-dos" placement="bottom" align="start" />
               <span
                 style={{ flex: 1, height: 1, background: 'var(--border)' }}
                 aria-hidden="true"
@@ -671,6 +675,7 @@ export const VenueGuideBlock = ({
               <Kbd>⌘</Kbd>
               <Kbd>↵</Kbd>
               {GUIDE_COPY.footer.publishHint}
+              <CCTip tip="publish-gate" placement="top" align="start" />
             </span>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <AdminButton
