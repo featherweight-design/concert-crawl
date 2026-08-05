@@ -1,3 +1,10 @@
+## [1.216.6](https://github.com/HartiganHM/concert-crawl/compare/v1.216.5...v1.216.6) (2026-08-05)
+
+
+### Bug Fixes
+
+* **crawler:** project artists for every advertised event, not just upserted ones ([#1485](https://github.com/HartiganHM/concert-crawl/issues/1485)) ([10575f0](https://github.com/HartiganHM/concert-crawl/commit/10575f0605159c25ec19fd14224253fbf0ae5000))
+
 ## [1.216.5](https://github.com/HartiganHM/concert-crawl/compare/v1.216.4...v1.216.5) (2026-08-05)
 
 
