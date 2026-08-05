@@ -12,13 +12,20 @@ import { reportFailure } from '@concert-crawl/logger'
  *
  * The nightly backfill is not enough on its own: a venue that announces a
  * brand-new headliner today should have an artist page today, not after the
- * next backfill run. Every crawl therefore projects the artists it just wrote
- * into `artists`, insert-only.
+ * next backfill run. Every crawl that reaches extraction therefore projects
+ * every artist the venue still advertises into `artists`, insert-only — not
+ * merely the ones whose events were written this run, or a venue with a
+ * stable listing would never repair a gap.
  *
- * Deliberately NOT run inside the event upsert's transaction. Crawl data is
- * the product's core value — an artist-projection hiccup must never cost an
- * event row — so this runs after the events are durable and swallows its own
- * failures (logged, never rethrown). The backfill script is the repair path.
+ * "Reaches extraction" is the real bound: the page-hash skip returns before
+ * any of this, so a listing page that never changes its bytes cannot repair
+ * its own historical gaps. That is what the backfill script is for.
+ *
+ * Deliberately sequenced after the event writes rather than alongside them.
+ * Crawl data is the product's core value — an artist-projection hiccup must
+ * never cost an event row — so this runs once the events are durable and
+ * swallows its own failures (logged, never rethrown). The backfill script is
+ * the repair path for rows predating the write-through.
  */
 
 export interface ArtistProjectionInput {

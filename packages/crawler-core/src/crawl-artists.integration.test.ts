@@ -204,6 +204,35 @@ describe('crawlVenue — artists projection write-through (#1115)', () => {
     expect(rows[0]?.slug).toBe(first.slug)
   })
 
+  it('projects an artist whose events are all unchanged since the last crawl', async () => {
+    // Regression: the projection used to be fed from the *upsert* set, which
+    // excludes events whose source hash is unchanged. A venue crawled daily
+    // whose listings never change therefore never re-projected, so an artist
+    // missing from the table (crawled before #1115 shipped, or dropped by
+    // hand) stayed missing forever and its shows could never resolve a photo.
+    const venue = await seedTestVenue()
+    mockExtraction([makeEvent('Stable Act', futureDate(26), ['Stable Opener'])])
+    await crawlVenue(venue.id, mockBrowser)
+    await db.delete(artists)
+
+    // Same events, different page bytes: the page-hash skip must not fire, so
+    // the crawl reaches extraction but upserts nothing.
+    mockExtraction(
+      [makeEvent('Stable Act', futureDate(26), ['Stable Opener'])],
+      '<html><body><p>Same shows, repainted page</p></body></html>',
+    )
+    const run = await crawlVenue(venue.id, mockBrowser)
+
+    expect(run.status).toBe('success')
+    expect(run.eventsInserted).toBe(0)
+
+    const rows = await db.select().from(artists)
+    expect(rows.map((row) => row.canonicalName).sort()).toEqual([
+      'stable act',
+      'stable opener',
+    ])
+  })
+
   it('still writes the events when the artists projection fails', async () => {
     const venue = await seedTestVenue()
     // Force every artists INSERT to fail. Crawl data is the product's core

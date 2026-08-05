@@ -1096,30 +1096,39 @@ export async function crawlVenue(
             insertedEventIds.push(row.id)
           }
         }
-
-        // Keep the `artists` projection fresh so a show announced today has
-        // an artist page today rather than after the next backfill (#1115).
-        // Runs AFTER the event upsert and outside its transaction, and
-        // swallows its own failures: crawl data is the product's core value,
-        // and an artist-projection hiccup must never cost an event row.
-        // Headliners and supporting acts both get a row — an artist who only
-        // ever opens still has a page.
-        await projectArtists(
-          eventValues.flatMap((evt) => [
-            { name: evt.artist, canonicalName: evt.canonicalArtist },
-            ...evt.canonicalSupporting.map((canonicalName) => ({
-              // No raw spelling is recoverable per supporting artist:
-              // canonical_supporting is deduped and sorted, so it is not
-              // positionally aligned with supporting_artists. The canonical
-              // string seeds the display name; the backfill's
-              // most-frequent-spelling pass corrects it when the artist later
-              // headlines.
-              name: canonicalName,
-              canonicalName,
-            })),
-          ]),
-        )
       }
+
+      // Keep the `artists` projection fresh so a show announced today has
+      // an artist page today rather than after the next backfill (#1115).
+      // Sequenced after the event upsert and swallows its own failures:
+      // crawl data is the product's core value, and an artist-projection
+      // hiccup must never cost an event row. Headliners and supporting acts
+      // both get a row — an artist who only ever opens still has a page.
+      //
+      // Fed from every event the venue still advertises, NOT from the upsert
+      // set, and deliberately outside the `eventsToUpsert` guard above, so it
+      // runs even on a crawl that upserts nothing. The upsert set excludes
+      // events whose source hash is unchanged, so a venue whose listings are
+      // stable re-projected nothing on every subsequent crawl, leaving any
+      // artist missing from the table (crawled before #1115 shipped, or
+      // removed by hand) missing permanently. Re-offering unchanged acts
+      // costs one narrowed SELECT per crawl and inserts only when a row is
+      // genuinely absent, which is the repair this exists to perform.
+      await projectArtists(
+        eventsWithHashes.flatMap((evt) => [
+          { name: evt.artist, canonicalName: evt.canonicalArtist },
+          ...evt.canonicalSupporting.map((canonicalName) => ({
+            // No raw spelling is recoverable per supporting artist:
+            // canonical_supporting is deduped and sorted, so it is not
+            // positionally aligned with supporting_artists. The canonical
+            // string seeds the display name; the backfill's
+            // most-frequent-spelling pass corrects it when the artist later
+            // headlines.
+            name: canonicalName,
+            canonicalName,
+          })),
+        ]),
+      )
     }
 
     // Stale-event detection (#607) — two-pass update on a successful crawl.
