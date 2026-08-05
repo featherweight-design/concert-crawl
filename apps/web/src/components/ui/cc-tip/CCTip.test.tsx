@@ -166,6 +166,33 @@ describe('CCTip on desktop', () => {
     expect(popover).toBeInTheDocument()
     expect(container.contains(popover)).toBe(false)
   })
+
+  // The admin theme is a scoped `[data-admin-theme]` wrapper rather than tokens
+  // on <html>, so a popover portalled all the way to the body inherits the
+  // consumer theme and renders in the wrong colours.
+  it('portals into the admin theme scope when one is present', () => {
+    const scope = document.createElement('div')
+    scope.setAttribute('data-admin-theme', 'gloss')
+    document.body.appendChild(scope)
+
+    // Removed even when an assertion throws: a leaked scope would become the
+    // default portal host and cascade into every later test.
+    try {
+      render(<CCTip tip={DEFS_TIP} />)
+      fireEvent.click(triggerFor('Going vs. Watching'))
+
+      expect(scope.contains(screen.getByRole('dialog'))).toBe(true)
+    } finally {
+      scope.remove()
+    }
+  })
+
+  it('falls back to the body when there is no theme scope', () => {
+    render(<CCTip tip={DEFS_TIP} />)
+    fireEvent.click(triggerFor('Going vs. Watching'))
+
+    expect(screen.getByRole('dialog').parentElement).toBe(document.body)
+  })
 })
 
 describe('CCTip on mobile', () => {
