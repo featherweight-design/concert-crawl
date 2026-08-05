@@ -73,7 +73,11 @@ function wr_total(people, anon, watching) {
 //                                   crawl to show — that's a number, not a
 //                                   social object, and the roster would be a
 //                                   column of dashes.
-// Anonymous watchers still count toward the total once the row qualifies.
+// Anonymous watchers still count toward the total once the row qualifies, which
+// is why `anon` is accepted and deliberately ignored: the signature matches
+// wr_total/wr_crowd so call sites pass the same three arguments to all three,
+// and the omission is the ruling rather than an oversight. Keep it that way in
+// the build — a two-arg version invites someone to add anon back into the test.
 function wr_showCrawl(people, anon, watching) {
   return wr_crowd(people, watching).length >= 2;
 }
@@ -184,7 +188,7 @@ function WatcherCrawlLine({ people = WATCHERS, anon = WATCHERS_ANON, watching, n
   if (!wr_showCrawl(people, anon, watching)) return null;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: compact ? 8 : 9, minWidth: 0 }}>
-      {!compact && <AvatarStack people={list} extra={Math.max(0, total - 3)} size={26} max={3}/>}
+      {!compact && <AvatarStack people={list} extra={Math.max(0, total - Math.min(list.length, 3))} size={26} max={3}/>}
       <span style={{ flex: 1, minWidth: 0, display: "flex" }}>
         <WatcherWord people={people} anon={anon} watching={watching} nameLimit={nameLimit} size={compact ? 11.5 : 12}/>
       </span>

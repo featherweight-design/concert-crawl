@@ -60,7 +60,7 @@ const CC_THEMES = {
       "signal-muted":  "#15B58A",
       "accent":        "#9B5CFF",
       "accent-muted":  "#6F44B5",
-      "success":       "#1FFFC2",
+      "success":       "#5FD97F",
       "warning":       "#FFD27A",
       "danger":        "#FF7A8A",
       "focus":         "#1FFFC2",
@@ -143,7 +143,6 @@ function useThemeState(initial = "electric", storageKey = "cc-theme") {
 // ThemeSwitcher: floating segmented control, top-right by default.
 // Renders OUTSIDE the theme-themed surface so it's always visible.
 function ThemeSwitcher({ value, onChange, position = "top-right" }) {
-  const [collapsed, setCollapsed] = React.useState(false);
   const positions = {
     "top-right":    { top: 16, right: 16 },
     "top-left":     { top: 16, left: 16 },

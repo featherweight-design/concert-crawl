@@ -11,6 +11,8 @@
 //   following                                      — artist-level (Spotify)
 //   watching                                       — show-level
 //   price { amount, isFloor, source, observedAt }  — null when unpriced
+//     source: "primary" (crawled from the venue page — no chip) or one of
+//     production's source_category values, "boxoffice" | "standard" | "resale"
 //   saved { at, price }                            — Watching only
 //   status: "live" | "soldout" | "presale"
 //
@@ -50,7 +52,7 @@ const R_HERMANOS = {
   following: true,
   watching: true,
   status: "live",
-  price: { amount: 68, isFloor: true, source: "community", observedAt: "2026-07-25T14:00:00Z" },
+  price: { amount: 68, isFloor: true, source: "standard", observedAt: "2026-07-25T14:00:00Z" },
   saved: { at: "2026-07-10T14:00:00Z", price: 74 },
 };
 
@@ -89,7 +91,7 @@ const R_SHOWS = [
   { id: "cassandra", artist: "Cassandra Jenkins", venue: "Globe Hall", dateISO: "2026-09-05T19:00:00Z",
     dateLabel: "Sat, Sep 5", showTime: "8:00 PM", genres: ["indie", "folk"], supports: [],
     following: false, watching: true, status: "live",
-    price: { amount: 29, isFloor: false, source: "primary", observedAt: "2026-08-03T09:00:00Z" },
+    price: { amount: 29, isFloor: false, source: "boxoffice", observedAt: "2026-08-03T09:00:00Z" },
     saved: { at: "2026-07-14T14:00:00Z", price: 29 } },
   { id: "geese", artist: "Geese", venue: "Larimer Lounge", dateISO: "2026-09-12T19:00:00Z",
     dateLabel: "Sat, Sep 12", showTime: "9:00 PM", genres: ["rock"], supports: ["Wombo", "Been Stellar"],

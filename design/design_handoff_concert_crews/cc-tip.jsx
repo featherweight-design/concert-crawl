@@ -44,8 +44,8 @@ const TIP_CONTENT = {
     variant: "defs",
     intro: "Two different promises.",
     rows: [
-      { tone: "good", title: "Watching — free", body: "Keeps an eye on the price. We ping you on drops and sold-outs. Nothing else." },
-      { tone: "neutral", title: "Going — part of Concert History", body: "Saves the night to your history after the show. It's a paid feature — you can watch this show either way." },
+      { tone: "good", title: "Watching: free", body: "Keeps an eye on the price. We ping you on drops and sold-outs. Nothing else." },
+      { tone: "neutral", title: "Going: part of Concert History", body: "Saves the night to your history after the show. It's a paid feature. You can watch this show either way." },
     ],
   },
   // Event Detail · what Concert History is (the locked-Going pitch)
@@ -53,7 +53,7 @@ const TIP_CONTENT = {
     label: "Concert History",
     variant: "titled",
     title: "Your gig log, kept for you.",
-    body: "Mark the shows you're going to and they stack into a history — what you saw, where, who opened, what you paid. Part of the paid tier. Watching a price is free and always will be.",
+    body: "Mark the shows you're going to and they stack into a history: what you saw, where, who opened, what you paid. Part of the paid tier. Watching a price is free and always will be.",
   },
   // Event Detail · price provenance (second text example, same surface)
   "who-set-this-price": {
@@ -67,7 +67,7 @@ const TIP_CONTENT = {
     label: "Watching",
     variant: "titled",
     title: "Keep an eye on a show.",
-    body: "Tap the eye and we'll track the price for you — pings on drops and sold-outs. It doesn't say you're going; that lives on the show's page.",
+    body: "Tap the eye and we'll track the price for you: pings on drops and sold-outs. It doesn't say you're going; that lives on the show's page.",
   },
   // Admin · First-timer guide (screenshots 5 + 6 — definition rows)
   "chip-states": {

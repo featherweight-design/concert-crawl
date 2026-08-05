@@ -213,39 +213,26 @@ function CrewPickerBody({ selectedId, compact }) {
     </div>
   );
 }
-function CrewPickerSheet({ selectedId }) {
+function CrewPickerSheet({ selectedId, onClose = () => {} }) {
   return (
-    <SheetChrome height="72%">
-      <DragHandle/>
-      <div style={{
-        padding: "10px 20px 12px", display: "flex", alignItems: "flex-start",
-        justifyContent: "space-between", gap: 12, borderBottom: "1px solid var(--border)",
-      }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
-          <MonoEyebrow size={10} color="var(--signal)" letterSpacing="0.14em">{CL.lens.railEyebrow}</MonoEyebrow>
-          <span style={{ fontFamily: CS_UI, fontWeight: 700, fontSize: 18, color: "var(--fg)", letterSpacing: "-0.02em" }}>{CL.lens.pickerTitle}</span>
-          <span style={{ fontFamily: CS_UI, fontSize: 12.5, color: "var(--fg-muted)", textWrap: "pretty" }}>{CL.lens.pickerSub}</span>
-        </div>
-        <PickerClose/>
+    <SheetChrome title={CL.lens.railEyebrow} onClose={onClose}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 3, paddingBottom: 10 }}>
+        <span style={{ fontFamily: CS_UI, fontWeight: 700, fontSize: 18, color: "var(--fg)", letterSpacing: "-0.02em" }}>{CL.lens.pickerTitle}</span>
+        <span style={{ fontFamily: CS_UI, fontSize: 12.5, color: "var(--fg-muted)", textWrap: "pretty" }}>{CL.lens.pickerSub}</span>
       </div>
-      <div style={{ flex: 1, overflow: "hidden" }}><CrewPickerBody selectedId={selectedId}/></div>
+      <CrewPickerBody selectedId={selectedId}/>
     </SheetChrome>
   );
 }
-function CrewPickerPopover({ selectedId }) {
+function CrewPickerPopover({ selectedId, onClose = () => {} }) {
+  // The shipped popover shell — role="dialog", arrow, header, close — rather
+  // than a hand-rolled bordered div (B3).
   return (
-    <div style={{
-      width: 320, borderRadius: 12, background: "var(--bg-elevated)",
-      border: "1px solid var(--border-strong)",
-      boxShadow: "0 20px 48px -12px rgba(0,0,0,0.55), 0 4px 12px -4px rgba(0,0,0,0.35)",
-      padding: "6px 0", color: "var(--fg)", fontFamily: CS_UI,
-    }}>
-      <div style={{ padding: "8px 14px 6px", display: "flex", flexDirection: "column", gap: 2 }}>
-        <MonoEyebrow size={9.5} color="var(--signal)" letterSpacing="0.14em">{CL.lens.railEyebrow}</MonoEyebrow>
-        <span style={{ fontFamily: CS_UI, fontSize: 11.5, color: "var(--fg-muted)" }}>{CL.lens.pickerSub}</span>
-      </div>
+    <window.CCOverlay mode="popover" placement="bottom" align="end" width={320}
+      title={CL.lens.railEyebrow} onClose={onClose}>
+      <div style={{ fontFamily: CS_UI, fontSize: 11.5, color: "var(--fg-muted)", paddingBottom: 6 }}>{CL.lens.pickerSub}</div>
       <CrewPickerBody selectedId={selectedId} compact/>
-    </div>
+    </window.CCOverlay>
   );
 }
 
@@ -283,12 +270,7 @@ function BrowseLensMobile({ crewId, narrow }) {
   const count = crewId ? lensShows(crewId).length : 0;
   return (
     <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: CS_UI, display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "58px 16px 10px", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}><CMark size={26}/><Wordmark size={16}/></div>
-        <div style={{ width: 36, height: 36, borderRadius: 18, border: "1.5px solid var(--border-strong)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.5" stroke="var(--fg-muted)" strokeWidth="1.5"/><path d="M11 11l3.5 3.5" stroke="var(--fg-muted)" strokeWidth="1.5" strokeLinecap="round"/></svg>
-        </div>
-      </div>
+      <CrewAppBar/>
       <div style={{ padding: `0 ${narrow ? 13 : 16}px 12px`, display: "flex", flexDirection: "column", gap: 10, flexShrink: 0 }}>
         <CrewLensTitle crew={crew} count={count}/>
         <FilterChips narrow={narrow}/>

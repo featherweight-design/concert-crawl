@@ -371,10 +371,88 @@ function DCSection({ id, title, subtitle, children, gap = 48 }) {
 // DCArtboard — marker; rendered by DCArtboardFrame via DCSection.
 function DCArtboard() { return null; }
 
+// ────────────────────────────────────────────────────────
+// Lazy mount. An artboard keeps its exact box at all times (width/height are
+// declared, so layout and scroll position never depend on the contents), but its
+// SUBTREE only mounts once the card comes near the viewport — and stays mounted
+// after that.
+//
+// Why: a canvas of ~50 artboards otherwise mounts every React subtree, every SVG
+// and every ResizeObserver at load. On this project that reached ~20k nodes and
+// made the page unverifiable — screenshots timed out and any layout-reading probe
+// wedged the main thread. Deferring costs nothing visually (an unmounted card is
+// off-screen by definition) and is the difference between a page that can be
+// reviewed and one that can't.
+//
+// Sticky-once-true on purpose: unmounting on exit would re-run every measuring
+// ladder in the design (event rows, watcher crawls, crew lines) each time a card
+// scrolled past — wasteful, and a source of flicker.
+//
+// Rect-based rather than IntersectionObserver: this canvas pans via a CSS
+// transform on an ancestor, and IO never fired here (it also needs the frame to
+// be genuinely composited, which a preview pane can't be relied on to be). A
+// shared rAF-throttled sweep on the events that can change what's visible —
+// scroll, wheel, resize, and the pointerup that ends a pan — is both simpler and
+// actually correct under transforms.
+const dcLazy = { items: new Set(), queued: false };
+function dcSweep() {
+  dcLazy.queued = false;
+  const M = 600, vw = window.innerWidth, vh = window.innerHeight;
+  for (const it of Array.from(dcLazy.items)) {
+    const el = it.el;
+    if (!el || !el.isConnected) { dcLazy.items.delete(it); continue; }
+    const r = el.getBoundingClientRect();
+    if (r.bottom > -M && r.top < vh + M && r.right > -M && r.left < vw + M) {
+      dcLazy.items.delete(it);
+      it.show();
+    }
+  }
+}
+function dcKick() {
+  if (dcLazy.queued) return;
+  dcLazy.queued = true;
+  // Schedule BOTH. rAF never fires in a hidden/throttled document, and since
+  // dcSweep is the only thing that clears `queued`, an rAF-only kick latches the
+  // flag on and switches lazy-mount off permanently — precisely in the automated
+  // contexts (screenshots, headless review) this exists to serve. dcSweep is
+  // idempotent, so whichever lands first wins and the second is a no-op.
+  if (typeof requestAnimationFrame === 'function') requestAnimationFrame(dcSweep);
+  setTimeout(dcSweep, 0);
+}
+if (typeof document !== 'undefined' && !window.__dcLazyVis) {
+  window.__dcLazyVis = true;
+  document.addEventListener('visibilitychange', () => { dcLazy.queued = false; dcKick(); });
+}
+if (typeof window !== 'undefined' && !window.__dcLazyWired) {
+  window.__dcLazyWired = true;
+  for (const ev of ['scroll', 'wheel', 'resize', 'pointerup', 'pointermove', 'keyup'])
+    window.addEventListener(ev, dcKick, { passive: true, capture: true });
+}
+function useNearViewport(ref, { eager = false } = {}) {
+  const [near, setNear] = React.useState(eager);
+  React.useEffect(() => {
+    if (eager || near) return;
+    const el = ref.current;
+    if (!el) return;
+    const item = { el, show: () => setNear(true) };
+    dcLazy.items.add(item);
+    dcKick();
+    // The canvas gates its first paint on a sidecar read, so the initial sweep
+    // can land before anything has been laid out. A couple of follow-ups cost
+    // nothing and remove the ordering dependency.
+    const t1 = setTimeout(dcKick, 60);
+    const t2 = setTimeout(dcKick, 400);
+    return () => { dcLazy.items.delete(item); clearTimeout(t1); clearTimeout(t2); };
+  }, [eager, near]);
+  return near;
+}
+
 function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorder, onFocus }) {
   const { id: rawId, label: rawLabel, width = 260, height = 480, children, style = {} } = artboard.props;
   const id = rawId ?? rawLabel;
   const ref = React.useRef(null);
+  const cardRef = React.useRef(null);
+  const mounted = useNearViewport(cardRef);
 
   // Live drag-reorder: dragged card sticks to cursor; siblings slide into
   // their would-be slots in real time via transforms. DOM order only
@@ -452,9 +530,11 @@ function DCArtboardFrame({ sectionId, artboard, label, order, onRename, onReorde
       <button className="dc-expand" onClick={onFocus} onPointerDown={(e) => e.stopPropagation()} title="Focus">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M7 1h4v4M5 11H1V7M11 1L7.5 4.5M1 11l3.5-3.5"/></svg>
       </button>
-      <div className="dc-card"
+      <div className="dc-card" ref={cardRef} data-dc-mounted={mounted ? '1' : '0'}
         style={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06)', overflow: 'hidden', width, height, background: '#fff', ...style }}>
-        {children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 13, fontFamily: DC.font }}>{id}</div>}
+        {mounted
+          ? (children || <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#bbb', fontSize: 13, fontFamily: DC.font }}>{id}</div>)
+          : <div aria-hidden="true" style={{ height: '100%' }}/>}
       </div>
     </div>
   );

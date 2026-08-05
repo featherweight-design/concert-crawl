@@ -318,7 +318,13 @@ function MuteRows({ wide }) {
               <CrewPatch crewId={c.id} size={34} scale="micro"/>
               <span style={{ flex: 1, minWidth: 0, fontFamily: CS_UI, fontWeight: 700, fontSize: 14, color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.name}</span>
               {!on && <MonoEyebrow size={9} color="var(--warning)">{CR.roster.muted.toUpperCase()}</MonoEyebrow>}
-              <button type="button" role="switch" aria-checked={on} aria-label={CR.a11y.crewActivity(c.name)} style={{
+              {/* A real <button>, not a <span role="switch">. R4 announced a
+                  switch that had no tabIndex, no key handler and no click
+                  handler — advertising an affordance that wasn't there, which is
+                  worse than shipping it unlabelled. A button gets focus and
+                  Space/Enter for free. Same class as B3. */}
+              <button type="button" role="switch" aria-checked={on}
+                aria-label={CR.a11y.crewActivity(c.name)} style={{
                 all: "unset", cursor: "pointer", boxSizing: "border-box",
                 width: 44, height: 26, borderRadius: 26, flexShrink: 0, position: "relative",
                 background: on ? "var(--signal)" : "var(--surface-3)",

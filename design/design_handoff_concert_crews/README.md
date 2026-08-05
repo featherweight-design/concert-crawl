@@ -1,4 +1,412 @@
-# Concert Crews (#1226 · Round 1)
+# Concert Crews (#1226 · Round 5)
+
+> **R5 status.** Two mechanical a11y fixes closed. No open design decisions.
+>
+> Source of truth: `uploads/2026-08-02-1226-concert-crews-design.md`. Every §3
+> decision is treated as locked. Pattern mirrored:
+> `design_handoff_monetization_lifecycle/`.
+
+## R5 · two mechanical fixes
+
+**1. Two a11y keys restored, four call sites rewired.** The R4 em-dash sweep took
+`a11y.crewActivity` and `a11y.close` with it, which pushed three call sites back
+onto inline strings. Both keys are back in `crew-copy.jsx`, and `a11y.search` is
+added in the same pass — the app-bar disc had been inline since it was written.
+Rewired: `ModalChrome` and `CrewAppBar` (`crew-shared.jsx`), `PickerClose`
+(`crew-browse-lens.jsx`), and the mute switch (`crew-social-rail.jsx`).
+
+**Deliberately NOT rewired:** the `aria-label="Close"` occurrences in
+`cc-overlay.jsx` and `cc-tip.jsx`. Those files are byte-identical to upstream and
+keeping them that way is worth more than the consistency — divergence in exactly
+those files is what cost R2 and R3.
+
+**2. The mute switch is a real control.** It was a `<span role="switch"
+aria-checked>` with no `tabIndex`, no key handler and no click handler —
+advertising an affordance that wasn't there, which is worse than shipping it
+unlabelled. Now `<button type="button" role="switch" aria-checked={on}>`, which
+brings focus and Space/Enter for free. Same class as B3.
+
+**Corrected from R5's first pass: `identity-art.jsx` halftone density had
+drifted.** I reported this as "deliberate; no change" and that was wrong — the
+disproof was in this README the whole time (see Dev notes: the local coarsening
+to `16 / 40 / 64` was made precisely because 43 thumbnails at `22 / 32` cost
+15,658 nodes). The R3 re-copy from
+`design_handoff_event_detail_cta_tooltip/` silently reverted it to the upstream
+`16 / 22 / 32`. My divisor reasoning was right and my conclusion was not: larger
+cells *are* cheaper, which is exactly why tile/micro must be 40/64 and not 22/32.
+
+Restored, measured: hero `16` → 625 circles, tile `40` → **100** (was 361), micro
+`64` → **49** (was 169).
+
+**This is the third instance of one failure mode**, and it is now the most
+important thing on this page for whoever picks the work up:
+
+| file | local fix | reverted by |
+|---|---|---|
+| `event-row.jsx` | measure-loop guard (`WhenWhere` + `MetaRow`) | upstream sync ×2 |
+| `identity-art.jsx` | halftone cells `40 / 64` at tile/micro | R3 re-copy ×1 |
+| `design-canvas.jsx` | rect-based lazy artboard mount | not yet — but it will be |
+
+All three live in this folder only, so every sync in either direction erases
+them. **Any sync of `event-row.jsx` has three things to re-apply;
+`identity-art.jsx` and `design-canvas.jsx` have one each.** All three belong
+upstream — `event-row.jsx`'s in `design_handoff_event_row_system/`, the halftone
+in `design_handoff_phase7_5_identity_imagery/`, and the lazy mount wherever
+`design-canvas.jsx` is canonical — and until they land there this table is the
+only thing preventing a fourth instance.
+
+---
+
+## R4 · what changed (all transcription)
+
+Parsed from `uploads/ALL-IN-ONE.md` programmatically rather than retyped, so the
+seven bundled files are byte-faithful to what was sent.
+
+**1. `event-row.jsx` + `row-data.jsx` — fresh, with the crew deltas re-applied.**
+`PROVENANCE` is present (3 occurrences), so the Box office / Community / Resale
+chip renders again. The two deltas went back on top exactly as §4 documents: two
+`SURFACES` entries (`crewLens`, `crew`) with meta
+`["crew", "following", "genre"]`, and one `buildMeta` branch for
+`kind === "crew"`.
+
+**⚠ And a third thing had to go back on top, which I missed on the first pass.**
+Taking the bundled file wholesale silently reverted the R2 measure-loop guard in
+`WhenWhere` / `MetaRow` — the second time an upstream sync has removed it. It is
+re-applied (see "Dev / handoff notes"), but re-applying it here is not a fix: it
+will be reverted again by the next sync until the corrected version lands in
+`design_handoff_event_row_system/`. **Any future `event-row.jsx` sync has three
+things to re-apply, not two.**
+
+**2. `cc-overlay.jsx`, `cc-tip.jsx`, `watcher-roster.jsx` — re-copied.** The
+overlay was the one with teeth: the trap now sits on the dialog and the scrim is
+`tabIndex={-1} aria-hidden`, so crew sheets land initial focus on the first real
+control instead of an invisible full-screen scrim. `SheetChrome`'s delegation was
+right the whole time; it was pointing at the stale primitive.
+`watcher-roster.jsx` brings the overflow fix
+(`total - Math.min(list.length, 3)`).
+
+**3. The three reverted fixes, re-landed from the manifest.**
+
+- **`crew-social-rail.jsx` — rules of hooks.** `if (!going.length) return null;`
+  moved below all eleven hooks. This is the one that actually threw: the hook
+  count changed between renders the moment a crew line lost its last member.
+- **`crew-art.jsx` — SSR-safe ids.** Module-scope counter and `useMemo` replaced
+  with `React.useId()`, so server and client don't diverge and hydrate the
+  clipPath refs onto ids that don't exist.
+- **`crew-copy.jsx` — em-dashes: 17 → 0.** Seven were customer-facing strings and
+  were rewritten rather than repunctuated where the dash carried a beat
+  ("Now the hard part: telling people."). Ten were comments. I also swept the
+  other eight crew-authored files and found five more inside rendered board
+  prose in `crew-art-boards.jsx`; those are fixed too, so the count doesn't creep
+  back next round.
+
+**4. Jade `--success` = `#5FD97F`**, applied to the bundled `theme-context.jsx`.
+Chords `c2` (signal·success) and `c4` (success·accent) no longer collapse to a
+single hue in Jade. The dead `const [collapsed, setCollapsed]` line was already
+gone from the bundled copy — nothing to drop.
+
+**R3-2. `notifications-data.jsx` — taken wholesale.** Ships the production string
+("More info requested on your price submission.") and the corrected header note
+that `contest.*` titles are shipped strings verbatim with no writer change owed.
+
+### Bundle caveats — flagged, not fixed (owed upstream)
+
+1. **`row-data.jsx` ships `source: "primary"`** on two fixtures (`fourtet`,
+   `fkj`). Not a valid `source_category` — the enum is exactly
+   `boxoffice | standard | resale` — so `PROVENANCE` has no key for it and those
+   rows render no provenance chip. Transcribed as sent. Owed back to
+   `design_handoff_event_row_system/`.
+2. **`cc-tip.jsx` still carries em-dashes** in the newer copy. It is newer
+   structurally, not a clean copy reference. Owed upstream; not corrected here,
+   because diverging a just-synced file is how this handoff got out of step in
+   the first place.
+
+### Still Hugh's call, not Design's
+
+`/crew/join/<token>` is in neither middleware public-route list, and the entire
+signed-out invite landing (canvas §7) assumes it resolves. Launch-gate decision.
+
+---
+
+## R3 · what changed
+
+### Nav — RULED: Option A, Crews ships as a fifth tab
+
+Hugh's call, Aug 4. Design had recommended B (a segment inside "my shows") on the
+argument that Crews is the only bar destination you'd open to see *people*, so it
+reads as a sibling of Watching and Concerts. The ruling went the other way:
+nesting it two levels down isn't an intuitive home, and the measurement says it
+fits — **280px of slots in a 320px bar, 40px slack, zero clipping**, on the
+shipped `CCTabBar` geometry.
+
+`NAV_PRODUCT` is now the single source every product artboard renders
+(`browse · venues · my shows · crews · me`). `NAV_SHIPPED` stays as the
+"shipped today" four-slot reference for the §1 comparison board only. The A/B/C
+boards are kept as the decision record rather than deleted — the reasoning
+outlives the decision, and #1460 may revisit the bar.
+
+**Noted for #1460** (consolidating Browse + Venues into one discovery
+destination): Crews does not wait on it, and if it lands the fifth tab simply
+becomes a fourth with no change to this design. Recorded so it isn't lost — a
+consolidated tab named "shows" would sit directly beside the locked "my shows",
+so whatever name is chosen has to survive being read next to it.
+
+### Desktop nav — two defects fixed (`crews-destination.jsx`)
+
+1. **"me" appeared twice.** `NAV_PRODUCT`'s last entry is the account *trigger*,
+   whose desktop expression is the avatar on the right. Mapping every label into
+   the nav row rendered it as a nav item as well. `trigger: true` slots are now
+   filtered out of the row.
+2. **Items were `<span>`s** — no `<a>`, no `aria-current`, no keyboard reach, in
+   the same round mobile gained real buttons. That's exactly the behavioural
+   asymmetry brief §3 forbids: layouts may differ, capabilities may not. They're
+   now real `<a>`s with `aria-current="page"` and 44px targets inside
+   `<nav aria-label="Primary">`.
+
+**And the header underneath them was an ungrounded recreation.** Fixing the
+semantics left the *visual* hand-drawn while a shipped `DesktopHeader` existed at
+`notifications-chrome.jsx:390` — the same file I read this round to lift
+`CCTabBar` from lines 83–116. I stopped at line 118. Third instance of one
+pattern: R1 hardcoded the mobile bar, R2 hand-drew it twice, R3 grounded the bar
+and missed the header above it.
+
+Now lifted: **64px bar · `--bg-elevated` · `0 32px` · `CCMark` 32 + gap 10 ·
+pill nav** (`8px/14px`, radius 8, `--surface-2` active, 13px at 700/500 — *not*
+the 2px signal underline this README previously asserted) **· 280px ⌘K search
+field · conditional install slot / offline pill · 36px `NotifAvatarButton`**.
+
+The ⌘K field's absence was substantive, not cosmetic: I justified the bar's shape
+partly on "no search tab ships," and on desktop search ships *as that field, in
+this header*. Same for the install slot and offline pill, which #737 documents as
+this bar's real crowding.
+
+**Fourth instance of the same pattern, fixed structurally.** `CrewsScreen` and
+`BrowseLensMobile` each hand-drew the mobile app bar, disagreed with each other
+about the trailing glyph, and one drew a **bell** — precisely the placement #737
+Q1 rejected ("no new persistent nav slots"; the pip rides the `me` tab). Both now
+render one lifted `CrewAppBar` (`crew-shared.jsx`), grounded on `CCAppBar`
+(`notifications-chrome.jsx:61`): padding `62px 16px 10px`, `CCMark` 28, wordmark
+17, 36px trailing disc carrying the **search** magnifier. Same departure as the
+other lifts — the disc is a real `<button aria-label="Search">` where the shipped
+component uses a non-focusable `<div>`; owed upstream.
+
+Two departures, same shape as the `CCTabBar` lift: labels and routes come from
+`NAV_PRODUCT` (`DesktopHeader`'s own `browse · search · watching` are stale, and
+Option A carries five slots), and the nav items are real `<a>`s where the shipped
+component uses `<span>`s — keeping that would re-break the parity rule this item
+exists to fix. The `<span>` semantics are owed upstream.
+
+**Third departure, on the trailing disc.** `DesktopHeader` puts
+`NotifAvatarButton` there, whose `aria-label` is "Notifications" — correct for
+#737, because #737 *is* the notification feature and that disc is where the pip
+lives. On the crews header the slot is the **account menu** and there is no pip,
+so adopting the component would have inherited the wrong accessible name.
+Geometry is lifted (36px disc, `--surface-2`, `border-strong`); the element is a
+`<button aria-label="Account" aria-haspopup="menu">`.
+
+**Adopting the header also meant adopting its data dependency.**
+`notifications-chrome.jsx` reads `window.NOTIF_COPY`, which lives in
+`notifications-data.jsx` — copying the chrome file alone crashed the entire
+canvas (`NotifAvatarButton` threw, React unwound all 77 artboards to a blank
+page). Both files are now in the folder and loaded in order, data first. Same
+class of miss as the header itself: a shipped component adopted without reading
+what it depends on. `InstallSlotCC` and `OfflinePillCC` were checked and read no
+fixtures.
+
+### Jade `--success` — named: `#5FD97F`
+
+The diagnosis held: Jade sets `--signal` and `--success` to the same `#1FFFC2`
+(`theme-context.jsx:59,63`), so crew chords `c2` (signal·success) and `c4`
+(success·accent) collapse to single-hue in Jade only. The art is innocent — it
+asks for two token roles and the theme returns one colour.
+
+I proposed `#6BE58C` and it **failed the test that actually matters**. Contrast
+against surfaces was never the risk; the risk is distinguishability from
+`--signal`, because chord `c2` puts both colours *in the same patch*. `#6BE58C`
+sits at **1.22:1** against `--signal` — nearly identical luminance, with a 28°
+hue delta doing all the work. At sigil scale, under a weave at 15–26% opacity,
+that is not reliably two colours.
+
+**Committing `#5FD97F`** — same 136° hue family, deeper, so it separates from
+`--signal` by *brightness as well as hue*:
+
+| against | ratio |
+|---|---|
+| `--signal` `#1FFFC2` | **1.38:1** (adjacency, not a WCAG gate — higher is better here) |
+| `--bg` `#06201F` | 9.50:1 |
+| `--bg-elevated` `#0A2A28` | 8.52:1 |
+| `--surface-1` `#0E3331` | 7.63:1 |
+| `--surface-2` `#143E3B` | 6.58:1 |
+| `--surface-3` `#1A4A47` | 5.54:1 |
+
+Clears AA text (4.5:1) and non-text (3:1) on every Jade surface with margin.
+
+**Not applied to `theme-context.jsx` yet** — that file is in the sync bundle, and
+editing it now guarantees a conflict. Apply as a one-line change to Jade's
+`"success"` after the bundled copy lands. The dead
+`const [collapsed, setCollapsed]` line waits on the same sequencing.
+
+### Blocked on the bundle — CLOSED IN R4
+
+The three items below were blocked for two rounds because the sync bundle never
+reached the project. All are now transcribed; see the R4 section at the top.
+Kept as the record of what was owed and why guessing was refused.
+
+The sync bundle described in the R3 prompt is **not in the project**. `uploads/`
+contains only the original #1226 brief plus two unrelated briefs (#1215, #737)
+and screenshots. No `MANIFEST.md`, no `READINESS.md`, and no new
+`event-row.jsx` / `row-data.jsx` / `cc-overlay.jsx` / `cc-tip.jsx` /
+`watcher-roster.jsx` / `theme-context.jsx`. `PROVENANCE` and `source_category`
+still appear nowhere in the project.
+
+Still owed, and each needs the bundle:
+
+1. **Re-apply the two crew deltas** to the current `event-row.jsx` /
+   `row-data.jsx` — two `SURFACES` entries and one `buildMeta` branch, documented
+   in §4 below. Also owed back upstream: `row-data.jsx`'s `source: "primary"`
+   isn't in the `boxoffice | standard | resale` enum, so that fixture renders no
+   provenance chip.
+2. **Re-copy `cc-overlay.jsx`, `cc-tip.jsx`, `watcher-roster.jsx`,
+   `theme-context.jsx`.** This is the one with teeth — `SheetChrome`'s delegation
+   is correct but points at a stale `CCOverlay`, so every crew sheet lands initial
+   focus on an invisible full-screen scrim. I'm not patching it blind; a guessed
+   fix on top of a stale primitive is how a third divergence starts.
+3. **Re-land the three reverted fixes** — the rules-of-hooks guard in
+   `crew-social-rail.jsx` (this one throws), `React.useId()` in `crew-art.jsx`,
+   and the em-dashes. These live in *my* files, so they couldn't be bundled as
+   files; the manifest carries the exact code and I don't have it. I can't
+   reconstruct them from memory of a review I never saw.
+
+Repo-side edits are genuinely invisible from here — I only ever see what's in
+this project — so the bundle is the only path for all three.
+
+### Still Hugh's call, not Design's
+
+`/crew/join/<token>` is in neither middleware public-route list, and the entire
+signed-out invite landing (canvas §7) assumes it resolves. Launch-gate decision.
+
+---
+
+## R2 · what changed
+
+### B1 · Nav — **needs your ruling** (canvas §1)
+
+R1 drew a four-slot bar as `browse · search · watching · me` and proposed a fifth
+tab. That picture was wrong in three ways: **no search tab ships**, **venues
+exists and R1 dropped it**, and slot 3 is **"my shows"** — locked #70 vocabulary,
+chosen to avoid a Watching > Watching > History nesting, not renameable. Slot 4
+is a menu *trigger*, not a destination.
+
+So Hugh's "fifth tab is fine" was given against a bar that doesn't exist, and
+doesn't transfer. Redrawn against the real one at 320:
+
+| option | verdict | why |
+|---|---|---|
+| **A** · fifth tab | viable, not recommended | Fits at 320 on the **shipped** CCTabBar geometry — 280px of slots in a 320px bar, 40px slack, zero clipping ("my shows" is widest at 46px in its 56px slot). But it seats a *social* destination beside two catalogue destinations, and spends the bar's last slot. |
+| **B** · inside "my shows" | **RECOMMENDED** | Bar untouched. Crews joins Watching + Concerts as a third segment on the shipped `ProfileSegments` grammar the crew home already uses. "My shows" already scopes to shows you have a stake in; a crew is that with names attached. |
+| **C** · replace venues | rejected | Trades a shipped destination with its own crawl and SEO surface for a launch feature. A product bet, not a nav tidy. |
+
+**B's cost, stated plainly:** a segment two levels down is a long walk from
+Browse. It's affordable because neither path that matters routes through the nav
+— the lens pill deep-links to the crew it names, and an invite opens
+`/crews/<id>` directly. And A remains a one-line promotion later if crew usage
+turns out daily rather than weekly; the reverse isn't true once a tab ships.
+
+**The chrome is now single-sourced and lifted, not drawn.** `CrewBottomNav` and
+`CrewsDesktop` render `NavBar` from `crew-nav-options.jsx`, which is
+**`CCTabBar`** from `design_handoff_in_app_notifications/` (#737) — 52px bar,
+18px icons at `strokeWidth 1.5`, 9px mono labels at 700/500, real `<button>`s at
+56×44 with `aria-label` + `aria-current`. R2's first pass fixed the *labels* but
+hand-drew the bar twice, which cost keyboard reachability and accessible names
+and meant the "fits at 320" measurement was taken against invented geometry.
+Both are corrected; the A-vs-B numbers above are re-measured on the real bar.
+
+Only the labels depart from `CCTabBar`, because its own are stale (it still says
+`search` / `watching`, and `browse-home.jsx`'s `TabBarCC` says `saved`, which is
+forbidden vocabulary). **One upstream flag:** `CCTabBar`'s slot-3 glyph is a
+heart, and brief §7 locks Watching to an eye — the eye is used here and the heart
+should be corrected upstream.
+
+### B3 · Overlays are dialogs now (fixed)
+
+All seven — `CreateSheet`, `PremiumGate`, `InviteSheet`, `RerollSheet`,
+`LeaveConfirm`, `CrewPickerSheet`, `CrewPickerPopover` — route through the
+shipped `cc-overlay.jsx`. Fixed at the chrome rather than seven times over:
+`SheetChrome` now delegates to `CCOverlay mode="sheet"` and `ModalChrome` uses
+the same `useFocusTrap` + Escape contract, so every crew overlay inherits
+`role="dialog"`, `aria-modal`, focus trap, scrim, grabber and focus return from
+one place. `DragHandle` is a no-op (the overlay owns the grabber) and callers no
+longer paint their own scrim.
+
+### B4 · Loading + error states (fixed, canvas §2 and §7)
+
+Crews list, crew home, and the invite landing each gained both. Rules:
+
+- **Skeletons mirror the real geometry** — same patch box, same two text lines,
+  same cluster — so nothing reflows when data lands. A spinner would be less work
+  and would move everything.
+- **Loading never shows a crew name or patch.** Both would be guesses, and a
+  patch flashing the wrong identity is worse than showing nothing.
+- **Errors reuse the shipped `EmptyState` in its `error` state**, so a failed
+  fetch and an empty result read as the same family rather than two invented
+  layouts.
+- **The invite landing's error is our failure, stated as ours** — and is *not*
+  the expired/retired dead end. Those are `DeadLink`, and they're normal
+  outcomes, not faults. Keeping them separate is the point.
+- Loading copy is near-silent ("Rounding up your people…"); a skeleton already
+  says "loading", and a cheeky line you read for 400ms is noise. Errors get the
+  Sour Patch voice, because you're stuck there.
+
+### B2 · Stale snapshots — **partially blocked**
+
+Re-copied from the newest in-project source
+(`design_handoff_event_detail_cta_tooltip/`, Aug 3): `identity-art.jsx`,
+`ios-frame.jsx`, `tweaks-panel.jsx`. `theme-context.jsx`, `cc-overlay.jsx`,
+`cc-tip.jsx`, `user-menu.jsx`, `going-cta.jsx`, `history-data.jsx`,
+`watcher-roster.jsx`, `event-cta-v2.jsx` were already re-copied from there last
+round. `design-canvas.jsx` diffed identical to that folder's copy, so only the
+lazy-mount addition sits on top.
+
+**Blocked:** `event-row.jsx` and `row-data.jsx`. The review says the corrected
+versions delete-then-restore a `PROVENANCE` constant and use real
+`source_category` values — **neither string exists anywhere in this project**, and
+`READINESS.md` isn't here either. The only in-project copies are
+`design_handoff_event_row_system/`, which is what I already have. I can't re-copy
+from an upstream I don't have. **Please drop the current `event-row.jsx` /
+`row-data.jsx` into the project (or point me at the repo) and I'll re-apply the
+two crew deltas** — they're small and documented in §4: two `SURFACES` entries
+and one `buildMeta` branch.
+
+### Canvas lazy-mount (done, unblocks review)
+
+`design-canvas.jsx` artboards keep their exact box at all times but only mount
+their subtree once near the viewport, sticky thereafter. **20,018 → ~2,240 nodes
+on load**; screenshots and layout probes work again. Rect-based rather than
+`IntersectionObserver` — this canvas pans via a transform on an ancestor and IO
+never fired here. Sticky-once-true because unmounting would re-run every
+measuring ladder in the design each time a card scrolled past.
+
+### Owed upstream (not fixed here — shared files)
+
+1. **`theme-context.jsx` Jade collapses a chord.** `--signal` and `--success`
+   are both `#1FFFC2` (lines 59, 63). Crew chords `c2` (signal·success) and `c4`
+   (success·accent) therefore render as single-hue patches in Jade only. The art
+   is correct — it asks for two token roles and the theme hands back one colour.
+   Needs a Jade `--success` that isn't `--signal`.
+2. **`event-row.jsx` measure loop** — `WhenWhere`/`MetaRow` re-run on every render
+   while a `ResizeObserver` resets them, locking the main thread when rows sit in
+   content-sized grid tracks. Re-applied in this folder's copy for the third
+   time (upstream syncs have now reverted it twice). Belongs in
+   `design_handoff_event_row_system/`.
+3. `design_handoff_phase7_5_identity_imagery/` — correction noted in the review.
+
+### Open, not mine to rule on
+
+`/crew/join/<token>` is in neither middleware public-route list. Whether the
+invite link resolves for signed-out visitors is a launch-gate call — and the
+entire signed-out landing design (canvas §7) assumes it does.
+
+---
 
 > Source of truth: `uploads/2026-08-02-1226-concert-crews-design.md`. Every §3
 > decision is treated as locked and none is reopened — the calls made here are
@@ -285,11 +693,13 @@ All easy to flip. Flag any you want changed.
 
 ### Two calls the brief didn't list but that fell out of the work
 
-10. **Crews is a fifth bottom-nav tab** — `browse · search · watching · crews ·
-    me` — and a top-level desktop nav item beside Watching. **Approved Aug 3.**
-    The alternative was a row inside the `me` menu, rejected because the
-    destination is half the feature and burying it contradicts shipping a Browse
-    lens that points at it. Five tabs fit at 320 (64px each, mono labels at 8px).
+10. **Where Crews lives in the nav — RULED Aug 4: Option A, a fifth tab.**
+    See the R3 section at the top for the ruling and reasoning. R1 had recorded
+    this as approved against a bar this handoff drew wrong (invented `search`,
+    dropped `venues`, used the pre-#70 `watching` label for slot 3); R2 redrew it
+    against the real bar and offered A/B/C; Hugh ruled A. Product artboards
+    render `NAV_PRODUCT` (`browse · venues · my shows · crews · me`) from one
+    source, so a product screen can't drift from the spec boards again.
 11. **The upcoming half of crew home is date-grouped**, exactly like Browse. It
     *is* a small calendar, so it carries the date in a group header and the row
     drops it (event-row Rule 1, context subtraction) — which is also what keeps
@@ -305,7 +715,7 @@ Per CLAUDE.md §4:
 |---|---|
 | **Event detail CTA block** | **`GoingCTA` + `WatchStrip`** from `design_handoff_event_detail_cta_tooltip/event-cta-v2.jsx` (R2, Direction D), rendered as-is. `EventDetailMock` no longer draws its own Going/Watch pair — see §3a. |
 | **Watchers** | `WatcherCrawlLine` / `WatcherRoster` / `AvatarStack` / `UMAvatar` (+ `wr_showCrawl`'s two-named-humans floor), all untouched. |
-| Empty states | **`<EmptyState variant="hybrid"/>`** from `design_handoff_empty_state/`. `CrewEmpty` is a thin forwarder that pins the variant and supplies the eyebrow. `density="dense"` inline, default where it owns the surface. `state` drives the rail code: `no-data` → `0 / 0`, `filtered` → `0 hits` (an empty crew lens *is* a filtered result), `error` → `err`. |
+| Empty states | **`<EmptyState variant="hybrid"/>`** from `design_handoff_empty_state/`. `CrewEmpty` is a thin forwarder that pins the variant and supplies the eyebrow. `density="dense"` inline, default where it owns the surface. `state` drives the rail code: `no-data` → `0 / 0`, `filtered` → `0 hits` (an empty crew lens *is* a filtered result), `error` → `err`. **At-cap is deliberately NOT an EmptyState** — a roster at 12/12 is full, not empty, and the rail would have to invent a count about a list with twelve people in it. That case uses `CrewNotice`: same voice and geometry, no rail. |
 | Filter chips | `FilterBar`'s chip grammar from `browse-home.jsx`, unchanged. |
 | In-page section tabs | **`ProfileSegments`** from `design_handoff_in_app_notifications/notifications-chrome.jsx` (#737) — pill grammar lifted for `CrewTabs`; three forced deviations recorded in §2 item 3. |
 | Filter sheet / popover | **Anatomy only** — see §2 item 2 for why the API isn't consumed. |
@@ -463,16 +873,25 @@ a crew-scale share artifact (adjacent to #85).
   real `<EmptyState/>` and should stay a forwarder. The picker needs
   `FilterSheet` / `FilterPopover` to grow an optional leading-media + meta slot;
   until then, don't copy the picker into a third place.
-- **Two bug fixes went into this folder's `event-row.jsx` copy and should go
-  upstream to `design_handoff_event_row_system/`.** `WhenWhere`'s measuring
-  effect had no dependency array, so it re-ran on every render while a
-  `ResizeObserver` reset the ladder to level 0 — a loop that stays dormant when
-  rows sit in a plain block column (the shipped canvas) and locks the main
-  thread the moment they sit in a grid whose track width answers to its content
-  (this canvas, ~100 rows). Fixed by bounding the effect with
-  `[level, show.id, showsDate, showsVenue, size]` and by only restarting the
-  ladder when the observed width *actually* changes. `MetaRow` got the same
-  width guard. All grid tracks holding rows are now `minmax(0,1fr)`.
+- **The `event-row.jsx` measure-loop fix has now been reverted TWICE by
+  upstream syncs, and must land in `design_handoff_event_row_system/` to stop
+  recurring.** It is re-applied in this folder's copy for the third time.
+  `WhenWhere`'s measuring effect has no dependency array upstream, so it re-runs
+  on every render while a `ResizeObserver` resets the ladder to level 0 — a loop
+  that stays dormant when rows sit in a plain block column (the shipped canvas)
+  and locks the main thread the moment they sit in a grid whose track width
+  answers to its content (this canvas, ~100 rows). Fixed by bounding the effect
+  with `[level, show.id, showsDate, showsVenue, size]` and by only restarting the
+  ladder when the observed width *actually* changes (>1px). `MetaRow` gets the
+  same `lastW` guard around `setFit`. All grid tracks holding rows are
+  `minmax(0,1fr)`.
+
+  **Re-applying it here does not fix it.** Every sync of `event-row.jsx`
+  overwrites it again, because the corrected version exists in no shared
+  location — which is exactly what happened in R4: the bundled file was taken
+  wholesale, the two crew deltas were re-applied on top, and this guard was not.
+  Until it lands upstream, treat "re-apply the loop guard" as a required step of
+  any future `event-row.jsx` sync, alongside the two crew deltas.
 - Verified at 320 / 390 / desktop across Electric / Jade / Light. Contrast
   checked on the mono meta lines and the signal-on-surface chips; patch colour
   is decorative and exempt, but the sigil still clears 3:1 against its ground in
@@ -490,9 +909,21 @@ a crew-scale share artifact (adjacent to #85).
   belongs upstream in `design_handoff_phase7_5_identity_imagery/` — every
   handoff that renders event rows is paying for it.**
   **(c)** the patch-system section moved to its own canvas.
-  Net: 38,092 → 20,061 nodes, and a page that timed out on every probe now
-  answers in ~6s.
-- **Standing infrastructure note:** `design-canvas.jsx` mounts every artboard
-  eagerly, so cost scales with total artboard count rather than what's in view.
-  Worth its own ticket — it affects every handoff in this project, and it's the
-  reason a thorough canvas has to budget nodes at all.
+  Net at the time: 38,092 → 20,061 nodes, and a page that timed out on every
+  probe answered in ~6s. *(Both figures are historical — they predate the
+  lazy-mount and the halftone restore. Measured now: **2,474 nodes at load**,
+  77 cards with 2 mounted and 75 deferred.)*
+- **Lazy artboard mount — implemented in this folder's `design-canvas.jsx`.**
+  Artboards keep their declared box at all times, so layout and scroll position
+  never depend on contents, but a subtree only mounts once its card comes near
+  the viewport — sticky-once-true, because unmounting on exit would re-run every
+  measuring ladder in the design each time a card scrolled past. Rect-based on a
+  shared rAF-throttled sweep rather than `IntersectionObserver`: this canvas pans
+  via a transform on an ancestor, and IO never fired here. `dcKick` schedules
+  both an rAF and a `setTimeout(0)` so the queue flag can't latch in a hidden
+  document — which is what automated review runs in.
+
+  This is what made the canvas reviewable, and it is a **local fix**, so it's in
+  the sync-reapply table at the top of this README. It should land upstream: it
+  affects every handoff in this project, and it's the reason a thorough canvas
+  had to budget nodes at all.

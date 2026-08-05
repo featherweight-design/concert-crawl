@@ -72,35 +72,57 @@ function SectionRail({ title, meta, action }) {
     </div>
   );
 }
-function DragHandle() {
-  return (
-    <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px" }}>
-      <div style={{ width: 36, height: 4, borderRadius: 4, background: "var(--border-strong)", opacity: 0.6 }}/>
-    </div>
-  );
-}
+// The grabber belongs to CCOverlay now — no-op so callers can't draw a second.
+function DragHandle() { return null; }
 function Scrim() {
   return <div style={{ position: "absolute", inset: 0, zIndex: 10, background: "var(--scrim)", backdropFilter: "blur(4px) saturate(120%)", WebkitBackdropFilter: "blur(4px) saturate(120%)" }}/>;
 }
-function SheetChrome({ children, height = "88%" }) {
+// ── Overlay chrome — delegated to the shipped cc-overlay.jsx ────────────
+// R1 drew these as bare <div>s: no role, no aria-modal, no focus trap, no
+// Escape, no focus return. `cc-overlay.jsx` was sitting in the same folder
+// exporting exactly that contract (it's the shell CCTip and WatcherRoster
+// already share), so both chromes now delegate to it and every crew overlay
+// inherits dialog semantics from one place.
+//
+// SheetChrome → CCOverlay mode="sheet"  (scrim, grabber, trap, aria-modal)
+// ModalChrome → centred dialog on the same useFocusTrap + Escape contract
+//
+// The scrim belongs to the overlay now, so callers must NOT paint their own.
+function SheetChrome({ children, height, title = "", onClose = () => {} }) {
   return (
-    <div style={{
-      position: "absolute", left: 0, right: 0, bottom: 0, height, zIndex: 20,
-      background: "var(--bg)", borderTopLeftRadius: 24, borderTopRightRadius: 24,
-      border: "1px solid var(--border)", borderBottom: "none",
-      boxShadow: "0 -20px 50px rgba(0,0,0,0.4)",
-      display: "flex", flexDirection: "column", overflow: "hidden", color: "var(--fg)",
-    }}>{children}</div>
+    <window.CCOverlay mode="sheet" title={title} onClose={onClose} showHeader={!!title}>
+      {children}
+    </window.CCOverlay>
   );
 }
-function ModalChrome({ children, width = 640, height }) {
+function ModalChrome({ children, width = 640, height, title = "", onClose = () => {} }) {
+  const trapRef = window.useFocusTrap(true);
+  React.useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
   return (
-    <div style={{
+    <div ref={trapRef} role="dialog" aria-modal="true" aria-label={title || undefined} style={{
       width, maxHeight: height || "min(86vh, 820px)", borderRadius: 18,
       background: "var(--bg-elevated)", border: "1px solid var(--border-strong)",
-      boxShadow: "0 30px 80px rgba(0,0,0,0.5)",
+      boxShadow: "0 30px 80px -20px var(--shadow-strong), 0 2px 8px -2px var(--shadow-soft)",
       display: "flex", flexDirection: "column", overflow: "hidden", color: "var(--fg)",
-    }}>{children}</div>
+    }}>
+      {title && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "14px 18px 0" }}>
+          <span style={{ flex: 1, fontFamily: CS_MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>{title}</span>
+          <button type="button" onClick={onClose} aria-label={window.CREW_COPY.a11y.close} style={{
+            all: "unset", cursor: "pointer", width: 30, height: 30, borderRadius: 8,
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            border: "1px solid var(--border)", color: "var(--fg-muted)", flexShrink: 0,
+          }}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M2.5 2.5l7 7M9.5 2.5l-7 7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+      )}
+      {children}
+    </div>
   );
 }
 
@@ -190,51 +212,55 @@ function nameMembers(members, max = 2) {
   return { named, extra };
 }
 
-// ── Bottom nav — crews is the 5th tab (see README §"Nav change") ──────
-// ⚠️ READINESS.md B1: this fixture does NOT match the shipped bar. Production
-// ships three link tabs (browse · venues · "my shows") plus an account trigger
-// — there is no `search` tab, `venues` is missing here, and tab 3's container
-// is "my shows", not "watching". Do not build from this list; it is blocked
-// pending the R2 nav re-decision.
-function CrewBottomNav({ active = "crews", narrow = false }) {
-  const tabs = [
-    { key: "browse", label: "browse" }, { key: "search", label: "search" },
-    { key: "watching", label: "watching" }, { key: "crews", label: "crews" },
-    { key: "me", label: "me" },
-  ];
-  const icon = (k, on) => {
-    const c = on ? "var(--signal)" : "var(--fg-subtle)";
-    const sw = 1.7;
-    if (k === "browse") return <><rect x="3" y="4.5" width="14" height="12.5" rx="2.5" stroke={c} strokeWidth={sw} fill="none"/><path d="M3 8.5h14M7 4.5V2.5M13 4.5V2.5" stroke={c} strokeWidth={sw} strokeLinecap="round"/></>;
-    if (k === "search") return <><circle cx="9" cy="9" r="5.5" stroke={c} strokeWidth={sw} fill="none"/><path d="M13 13l4 4" stroke={c} strokeWidth={sw} strokeLinecap="round"/></>;
-    if (k === "watching") return <><path d="M10 5c4 0 7 3.2 8 5-1 1.8-4 5-8 5S3 11.8 2 10c1-1.8 4-5 8-5z" stroke={c} strokeWidth={sw} fill="none"/><circle cx="10" cy="10" r="2.2" fill={c}/></>;
-    if (k === "crews") return <><rect x="3" y="3" width="14" height="14" rx="4.6" stroke={c} strokeWidth={sw} fill="none"/><circle cx="10" cy="10" r="4.4" stroke={c} strokeWidth={sw} fill="none"/><circle cx="10" cy="10" r="1.5" fill={c}/></>;
-    return <><circle cx="10" cy="7" r="3.2" stroke={c} strokeWidth={sw} fill="none"/><path d="M4 17c0-3.3 2.7-5 6-5s6 1.7 6 5" stroke={c} strokeWidth={sw} fill="none" strokeLinecap="round"/></>;
-  };
+// ── Mobile app bar — LIFTED from CCAppBar ─────────────────────────────
+// notifications-chrome.jsx:61 (#737), which is itself browse-home.jsx's AppBar
+// unchanged. Shipped spec: padding 62px 16px 10px · CCMark 28 · wordmark 17 ·
+// 36px trailing disc carrying the SEARCH magnifier.
+//
+// Fourth instance of one pattern, so this is the structural fix rather than a
+// third patch: CrewsScreen and BrowseLensMobile each hand-drew this bar, they
+// disagreed with each other about the trailing glyph, and one drew a BELL. A bell
+// in the mobile header is precisely the placement #737 Q1 rejected ("no new
+// persistent nav slots" — the pip rides the `me` tab). Both callers now render
+// this one component.
+//
+// One departure, same shape as the CCTabBar / DesktopHeader lifts: the trailing
+// disc is a real <button aria-label="Search">. The shipped component uses a
+// non-interactive <div> with no accessible name, which would re-break brief §3's
+// parity rule in the round desktop gained real <a>s. Owed upstream.
+function CrewAppBar({ pad = "62px 16px 10px" }) {
   return (
-    <div style={{
-      display: "flex", borderTop: "1px solid var(--border)", background: "var(--bg-elevated)",
-      padding: "8px 0 26px", flexShrink: 0,
-    }}>
-      {tabs.map(t => {
-        const on = t.key === active;
-        return (
-          <button key={t.key} type="button" style={{
-            all: "unset", cursor: "pointer", boxSizing: "border-box",
-            flex: 1, minHeight: 44, display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center", gap: 3,
-          }} aria-current={on ? "page" : undefined}>
-            <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">{icon(t.key, on)}</svg>
-            <span style={{
-              fontFamily: CS_MONO, fontSize: narrow ? 8 : 8.5, fontWeight: 700,
-              letterSpacing: "0.08em", textTransform: "uppercase",
-              color: on ? "var(--signal)" : "var(--fg-subtle)",
-            }}>{t.label}</span>
-          </button>
-        );
-      })}
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: pad, background: "var(--bg)", flexShrink: 0 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <CMark size={28}/>
+        <span style={{ fontFamily: CS_UI, fontWeight: 800, fontSize: 17, color: "var(--fg)", letterSpacing: "-0.02em" }}>
+          concert<span style={{ color: "var(--accent)" }}>crawl.</span>
+        </span>
+      </div>
+      <button type="button" aria-label={window.CREW_COPY.a11y.search} style={{
+        all: "unset", cursor: "pointer", width: 36, height: 36, borderRadius: 18,
+        boxSizing: "border-box", flexShrink: 0, border: "1.5px solid var(--border-strong)",
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="7" cy="7" r="5.5" stroke="var(--fg-muted)" strokeWidth="1.5"/>
+          <path d="M11 11L14.5 14.5" stroke="var(--fg-muted)" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </button>
     </div>
   );
+}
+
+// ── Bottom nav ─────────────────────────────────────────────
+// Delegates to NavBar in crew-nav-options.jsx, which is the shipped CCTabBar
+// (#737) with corrected labels. R1 hardcoded `browse · search · watching · crews
+// · me`; R2's first pass fixed the labels but hand-drew the bar a second time.
+// One bar, one source, real <button>s with aria — all from CCTabBar.
+//
+// Product artboards render NAV_PRODUCT — Option A per the Aug 4 ruling, so Crews
+// is a fifth tab and a crew screen highlights `crews`.
+function CrewBottomNav({ active = "crews", narrow = false, tabs }) {
+  return <window.NavBar tabs={tabs || window.NAV_PRODUCT} active={active}/>;
 }
 
 // ── Fixtures ──────────────────────────────────────────────────────────
@@ -339,7 +365,9 @@ const CREW_GOING = {
 
 Object.assign(window, {
   CS_UI, CS_MONO, CS_SR,
-  CMark, Wordmark, MonoEyebrow, RailHeader, SectionRail, DragHandle, Scrim,
+  // CCMark alias: notifications-chrome.jsx's shipped components read
+  // window.CCMark, and CMark here is that component verbatim (CLAUDE.md §1).
+  CMark, CCMark: CMark, Wordmark, CrewAppBar, MonoEyebrow, RailHeader, SectionRail, DragHandle, Scrim,
   SheetChrome, ModalChrome, Btn, MemberDot, MemberCluster, nameMembers, CrewBottomNav,
   CREW_MEMBERS, CREWS, CREW_NIGHTS, CREW_GOING, crewById,
   crewUpcomingCount, crewNightCount,

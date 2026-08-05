@@ -192,6 +192,73 @@ function CrewTabs({ tabs, active, onSelect, wide, narrow, idBase = "crewtab" }) 
   );
 }
 
+// ── Network states (B4) ────────────────────────────────────────
+// Skeletons mirror the real row's geometry exactly — same patch box, same two
+// text lines, same cluster — so the page doesn't reflow when data lands. That's
+// the whole job: a spinner would be less work and would move everything.
+// A full roster is NOT an empty state. R1 used CrewEmpty for the at-cap case,
+// which forced the status rail to claim "0 / 0" about a list with twelve people
+// in it (and "0 hits" under `filtered` is no better). CrewNotice is the same
+// voice and geometry minus the rail — for saying something true about a list
+// that HAS contents.
+function CrewNotice({ eyebrow, title, body, cta, onCta, tone = "warning" }) {
+  const c = tone === "warning" ? "var(--warning)" : "var(--signal)";
+  return (
+    <div style={{
+      display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 7,
+      padding: "16px 16px 15px", borderRadius: 12,
+      background: "var(--surface-1)", border: `1px solid color-mix(in oklch, ${c} 28%, var(--border))`,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ width: 6, height: 6, borderRadius: 6, background: c, boxShadow: `0 0 8px ${c}` }}/>
+        <MonoEyebrow size={9.5} color={c} letterSpacing="0.14em">{eyebrow}</MonoEyebrow>
+      </div>
+      <div style={{ fontFamily: CS_UI, fontWeight: 800, fontSize: 17, letterSpacing: "-0.02em", color: "var(--fg)" }}>{title}</div>
+      <div style={{ fontFamily: CS_UI, fontSize: 13, color: "var(--fg-muted)", lineHeight: 1.45, textWrap: "pretty", maxWidth: 380 }}>{body}</div>
+      {cta && <div style={{ marginTop: 4 }}><Btn tone="ghost" size="sm" onClick={onCta}>{cta}</Btn></div>}
+    </div>
+  );
+}
+
+function Shimmer({ w, h, r = 6, style }) {
+  return (
+    <span aria-hidden="true" style={{
+      display: "block", width: w, height: h, borderRadius: r, flexShrink: 0,
+      background: "linear-gradient(90deg, var(--surface-1) 0%, var(--surface-2) 50%, var(--surface-1) 100%)",
+      backgroundSize: "200% 100%", animation: "ccShimmer 1.3s ease-in-out infinite",
+      ...style,
+    }}/>
+  );
+}
+function ShimmerKeyframes() {
+  return <style>{"@keyframes ccShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}@media (prefers-reduced-motion:reduce){[style*='ccShimmer']{animation:none!important}}"}</style>;
+}
+function CrewRowSkeleton({ wide }) {
+  return (
+    <div style={{
+      display: "flex", alignItems: "center", gap: wide ? 15 : 13,
+      padding: wide ? "13px 15px" : "11px 12px", borderRadius: 12,
+      background: "var(--surface-1)", border: "1px solid var(--border)", minHeight: 64,
+    }}>
+      <Shimmer w={wide ? 54 : 48} h={wide ? 54 : 48} r={14}/>
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 7 }}>
+        <Shimmer w="52%" h={13}/>
+        <Shimmer w="31%" h={9}/>
+      </div>
+      <Shimmer w={64} h={24} r={99}/>
+    </div>
+  );
+}
+// One error object for all three surfaces — the shipped EmptyState in its
+// `error` state, so a failed fetch and an empty result are visibly the same
+// family rather than two invented layouts.
+function CrewError({ title, body, onRetry, dense = true, eyebrow = "CONNECTION" }) {
+  return (
+    <CrewEmpty state="error" dense={dense} eyebrow={eyebrow} title={title} body={body}
+      cta={CC.net.retry} onCta={onRetry}/>
+  );
+}
+
 // ── Crew hero — identity. The patch is the face; the name sits beside it ──
 function CrewHero({ crew, wide, onLens, onInvite, muted }) {
   const isCreator = crew.createdBy === "u_you";
@@ -316,7 +383,7 @@ function RosterList({ crew, manage, wide, inTab }) {
         <SectionRail title={CC.detail.rosterTitle} meta={`${crew.members.length}/${CC.cap}`}
           action={!full && <Btn tone="ghost" size="sm">{CC.detail.invite}</Btn>}/>
       )}
-      {full && <CrewEmpty eyebrow="ROSTER FULL" title={CC.empty.atCapTitle} body={CC.empty.atCapBody} cta={CC.list.create}/>}
+      {full && <CrewNotice eyebrow="ROSTER FULL" title={CC.empty.atCapTitle} body={CC.empty.atCapBody} cta={CC.list.create}/>}
       <div style={{ display: wide ? "grid" : "flex", gridTemplateColumns: wide ? "minmax(0,1fr) minmax(0,1fr)" : undefined, flexDirection: wide ? undefined : "column", gap: 2 }}>
         {crew.members.map((m, i) => (
           <div key={m.id} style={{
@@ -372,18 +439,28 @@ function CrewRow({ crew, wide, onOpen }) {
 }
 
 // ── The list ──────────────────────────────────────────────────────────
-function CrewsList({ crews, wide, empty, gated }) {
+function CrewsList({ crews, wide, empty, gated, state = "ready", onRetry }) {
   const list = crews || window.CREWS;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: wide ? 18 : 15 }}>
+      <ShimmerKeyframes/>
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 14 }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           <MonoEyebrow size={9.5}>{CC.list.eyebrow}</MonoEyebrow>
           <h1 style={{ margin: 0, fontFamily: CS_UI, fontWeight: 900, fontSize: wide ? 38 : 28, letterSpacing: "-0.035em", color: "var(--fg)", lineHeight: 1 }}>{CC.list.title}</h1>
         </div>
-        {!empty && <Btn tone={gated ? "ghost" : "primary"} size="sm">{CC.list.create}{gated && <span style={{ fontFamily: CS_MONO, fontSize: 9, letterSpacing: "0.1em", color: "var(--signal)" }}>★</span>}</Btn>}
+        {!empty && state === "ready" && <Btn tone={gated ? "ghost" : "primary"} size="sm">{CC.list.create}{gated && <span style={{ fontFamily: CS_MONO, fontSize: 9, letterSpacing: "0.1em", color: "var(--signal)" }}>★</span>}</Btn>}
       </div>
-      {empty ? (
+      {state === "loading" ? (
+        <>
+          <MonoEyebrow size={9.5} color="var(--fg-subtle)" style={{ marginTop: -6 }} aria-live="polite">{CC.net.loadingCrews}</MonoEyebrow>
+          <div style={{ display: wide ? "grid" : "flex", gridTemplateColumns: wide ? "minmax(0,1fr) minmax(0,1fr)" : undefined, flexDirection: wide ? undefined : "column", gap: 8 }}>
+            {[0, 1, 2, 3].map(i => <CrewRowSkeleton key={i} wide={wide}/>)}
+          </div>
+        </>
+      ) : state === "error" ? (
+        <CrewError dense={false} title={CC.net.errListTitle} body={CC.net.errListBody} onRetry={onRetry}/>
+      ) : empty ? (
         <CrewEmpty dense={false} eyebrow={CC.list.eyebrow} title={CC.empty.noCrewsTitle} body={CC.empty.noCrewsBody} cta={CC.list.create}/>
       ) : (
         <>
@@ -398,7 +475,7 @@ function CrewsList({ crews, wide, empty, gated }) {
 }
 
 // ── Crew home ─────────────────────────────────────────────────────────
-function CrewHome({ crewId, wide, narrow, manage, muted, tab, lead }) {
+function CrewHome({ crewId, wide, narrow, manage, muted, tab, lead, state = "ready", onRetry }) {
   const crew = window.crewById(crewId);
   const shows = crewUpcoming(crewId);
   const nights = window.CREW_NIGHTS[crewId] || [];
@@ -408,6 +485,36 @@ function CrewHome({ crewId, wide, narrow, manage, muted, tab, lead }) {
   const initial = tab || (pastOpens ? "past" : "upcoming");
   const [active, setActive] = React.useState(initial);
   React.useEffect(() => { setActive(initial); }, [initial, crewId]);
+
+  // Loading shows the hero SHAPE but never a name or a patch — both would be
+  // guesses, and the patch especially must not flash a wrong identity.
+  if (state === "loading") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: wide ? 22 : 18 }}>
+        <ShimmerKeyframes/>
+        <div style={{ display: "flex", alignItems: "center", gap: wide ? 18 : 14 }}>
+          <Shimmer w={wide ? 92 : 72} h={wide ? 92 : 72} r={22}/>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 9 }}>
+            <Shimmer w="62%" h={wide ? 30 : 23}/>
+            <Shimmer w="38%" h={10}/>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>{[132, 104, 44].map(w => <Shimmer key={w} w={w} h={36} r={10}/>)}</div>
+        <MonoEyebrow size={9.5} color="var(--fg-subtle)" aria-live="polite">{CC.net.loadingCrew}</MonoEyebrow>
+        <div style={{ display: "flex", gap: 6 }}>{[104, 104, 92].map(w => <Shimmer key={w} w={w} h={34} r={8}/>)}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {[0, 1, 2].map(i => <Shimmer key={i} w="100%" h={70} r={12}/>)}
+        </div>
+      </div>
+    );
+  }
+  if (state === "error") {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: wide ? 22 : 18 }}>
+        <CrewError dense={false} title={CC.net.errCrewTitle} body={CC.net.errCrewBody} onRetry={onRetry}/>
+      </div>
+    );
+  }
   const tabs = [
     { key: "upcoming", label: CC.detail.upcomingTitle, count: shows.length },
     { key: "past",     label: CC.detail.pastTitle,     count: nights.length },
@@ -429,40 +536,107 @@ function CrewHome({ crewId, wide, narrow, manage, muted, tab, lead }) {
 }
 
 // ── Screens ───────────────────────────────────────────────────────────
-function CrewsScreen({ children, narrow, active = "crews", scroll = 0 }) {
+function CrewsScreen({ children, narrow, active = "crews", scroll = 0, segments = false }) {
   return (
     <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: CS_UI, display: "flex", flexDirection: "column" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "58px 16px 10px", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}><CMark size={26}/><Wordmark size={16}/></div>
-        <div style={{ width: 36, height: 36, borderRadius: 18, border: "1.5px solid var(--border-strong)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2.5a3.2 3.2 0 0 0-3.2 3.2v2.6L3.5 10.4h9L11.2 8.3V5.7A3.2 3.2 0 0 0 8 2.5z" stroke="var(--fg-muted)" strokeWidth="1.4" strokeLinejoin="round"/><path d="M6.6 12.2a1.5 1.5 0 0 0 2.8 0" stroke="var(--fg-muted)" strokeWidth="1.4" strokeLinecap="round"/></svg>
+      <CrewAppBar/>
+      {segments && (
+        <div style={{ padding: `0 ${narrow ? 13 : 16}px 10px`, flexShrink: 0 }}>
+          <window.MyShowsSegments narrow={narrow}/>
         </div>
-      </div>
+      )}
       <div style={{ flex: 1, overflow: "hidden", padding: `${scroll ? 0 : 4}px ${narrow ? 13 : 16}px 16px`, marginTop: scroll ? -scroll : 0 }}>{children}</div>
       <CrewBottomNav active={active} narrow={narrow}/>
     </div>
   );
 }
 
-function CrewsDesktop({ children, active = "crews", maxWidth = 900 }) {
-  const nav = ["Browse", "Search", "Watching", "Crews", "Me"];
+// ── Desktop header — LIFTED from DesktopHeader ────────────────────────
+// design_handoff_in_app_notifications/notifications-chrome.jsx:390 (#737).
+// Third time this pattern bit: R1 hardcoded the mobile bar, R2 hand-drew it
+// twice, and R3 fixed the mobile bar's semantics while leaving the desktop
+// header an ungrounded recreation — from the same file, read the same round,
+// 270 lines further down than where I stopped.
+//
+// Shipped spec, now matched: 64px bar · --bg-elevated · 0 32px · CCMark 32 +
+// gap 10 · PILL nav (8px/14px, radius 8, --surface-2 active, 13px 700/500) ·
+// trailing group = 280px ⌘K field, conditional install slot / offline pill,
+// 36px account disc.
+//
+// Two departures, same shape as the CCTabBar lift:
+//  1. LABELS + ROUTES come from NAV_PRODUCT. DesktopHeader's own tabs are
+//     `browse · search · watching` — stale the same way CCTabBar's were, and
+//     under Option A the bar carries five slots.
+//  2. Items are real <a>s with aria-current and 44px targets; the shipped
+//     component uses <span>s. Keeping that would re-break the parity rule R3
+//     item 4 exists to fix, so the pill VISUAL is lifted and the SEMANTICS are
+//     upgraded. Owed upstream.
+// The ⌘K field and install slot are the shipped ones, rendered not re-drawn —
+// and their absence was substantive, since desktop search lives in this header.
+function CrewsDesktop({ children, active = "crews", maxWidth = 900, install = true, offline = false }) {
+  const nav = (window.NAV_PRODUCT || []).filter(t => !t.trigger);
   return (
     <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: CS_UI, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 26, padding: "16px 30px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 9 }}><CMark size={26}/><Wordmark size={16}/></div>
-        <div style={{ display: "flex", gap: 20 }}>
-          {nav.map(n => (
-            <span key={n} style={{
-              fontFamily: CS_UI, fontSize: 13.5, fontWeight: n.toLowerCase() === active ? 800 : 600,
-              color: n.toLowerCase() === active ? "var(--fg)" : "var(--fg-muted)",
-              borderBottom: n.toLowerCase() === active ? "2px solid var(--signal)" : "2px solid transparent",
-              paddingBottom: 3,
-            }}>{n}</span>
-          ))}
+      <header style={{
+        height: 64, flexShrink: 0, display: "flex", alignItems: "center",
+        justifyContent: "space-between", padding: "0 32px",
+        borderBottom: "1px solid var(--border)", background: "var(--bg-elevated)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <CMark size={32}/>
+            <span style={{ fontFamily: CS_UI, fontWeight: 800, fontSize: 17, color: "var(--fg)", letterSpacing: "-0.02em" }}>
+              concert<span style={{ color: "var(--accent)" }}>crawl.</span>
+            </span>
+          </div>
+          <nav style={{ display: "flex", gap: 4 }} aria-label="Primary">
+            {nav.map(t => {
+              const on = t.key === active;
+              return (
+                <a key={t.key} href={t.href || "#"} aria-current={on ? "page" : undefined}
+                  style={{
+                    display: "inline-flex", alignItems: "center", minHeight: 44,
+                    padding: "8px 14px", borderRadius: 8, textDecoration: "none",
+                    fontFamily: CS_UI, fontSize: 13, letterSpacing: "-0.01em",
+                    fontWeight: on ? 700 : 500,
+                    color: on ? "var(--fg)" : "var(--fg-muted)",
+                    background: on ? "var(--surface-2)" : "transparent",
+                  }}>{t.label}</a>
+              );
+            })}
+          </nav>
         </div>
-        <div style={{ flex: 1 }}/>
-        <div style={{ width: 32, height: 32, borderRadius: 32, background: "var(--surface-3)", border: "1.5px solid var(--border-strong)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: CS_UI, fontWeight: 800, fontSize: 13, color: "var(--fg-muted)" }}>H</div>
-      </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{
+            display: "flex", alignItems: "center", gap: 8, height: 36, padding: "0 12px",
+            borderRadius: 8, background: "var(--surface-1)", border: "1px solid var(--border)",
+            width: 280, boxSizing: "border-box", color: "var(--fg-subtle)", flexShrink: 0,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M10.8 10.8L14 14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+            <span style={{ fontFamily: CS_UI, fontSize: 13 }}>Search artists, venues, genres…</span>
+            <span style={{ marginLeft: "auto", fontFamily: CS_MONO, fontSize: 10, padding: "2px 5px", borderRadius: 3, border: "1px solid var(--border-strong)" }}>⌘K</span>
+          </span>
+          {offline && window.OfflinePillCC && <window.OfflinePillCC/>}
+          {install && !offline && window.InstallSlotCC && <window.InstallSlotCC/>}
+          {/* NOT NotifAvatarButton. Shipped geometry (36px disc), but that
+              component's aria-label is "Notifications" because in #737 this disc
+              is where the notification pip lives — #737 IS that feature. On the
+              crews header the slot is the ACCOUNT menu and there's no pip to
+              show, so adopting the component would inherit the wrong accessible
+              name. Geometry lifted, semantics correct for this surface. */}
+          <button type="button" aria-label="Account" aria-haspopup="menu" style={{
+            all: "unset", cursor: "pointer", width: 36, height: 36, borderRadius: 36,
+            boxSizing: "border-box", flexShrink: 0, background: "var(--surface-2)",
+            border: "1px solid var(--border-strong)",
+            display: "inline-flex", alignItems: "center", justifyContent: "center",
+            fontFamily: CS_UI, fontWeight: 700, fontSize: 12.5, letterSpacing: "-0.01em",
+            color: "var(--fg-muted)",
+          }}>H</button>
+        </div>
+      </header>
       <div style={{ flex: 1, overflow: "hidden", padding: "28px 30px" }}>
         <div style={{ maxWidth, margin: "0 auto" }}>{children}</div>
       </div>
@@ -471,6 +645,7 @@ function CrewsDesktop({ children, active = "crews", maxWidth = 900 }) {
 }
 
 Object.assign(window, {
-  crewUpcoming, CrewEmpty, StubRow, CrewHero, CrewTabs, UpcomingBand, PastBand,
+  crewUpcoming, CrewEmpty, CrewNotice, CrewError, Shimmer, ShimmerKeyframes, CrewRowSkeleton,
+  StubRow, CrewHero, CrewTabs, UpcomingBand, PastBand,
   RosterList, CrewRow, CrewsList, CrewHome, CrewsScreen, CrewsDesktop,
 });

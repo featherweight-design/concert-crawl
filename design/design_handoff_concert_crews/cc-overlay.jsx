@@ -24,6 +24,10 @@ function CCOverlayX({ size = 12 }) {
 
 // Focus trap + initial focus. Sheets are aria-modal, so this is required, not
 // optional — R1 shipped the attribute without the behaviour.
+//
+// The returned ref belongs on the DIALOG, never on a wrapper that also holds
+// the scrim: initial focus is the first match of `sel` inside the root, so a
+// focusable scrim rendered above the dialog would take it every time.
 function useFocusTrap(active) {
   const ref = React.useRef(null);
   React.useEffect(() => {
@@ -55,12 +59,15 @@ function CCOverlay({
 
   if (mode === "sheet") {
     return (
-      <div ref={trapRef} style={{ position: "absolute", inset: 0, zIndex: 60, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
-        <button type="button" aria-label="Close" onClick={onClose} style={{
+      <div style={{ position: "absolute", inset: 0, zIndex: 60, display: "flex", flexDirection: "column", justifyContent: "flex-end" }}>
+        {/* Click-to-dismiss only. It is deliberately out of the tab order and
+            hidden from AT: the header's ⨯ is the accessible close, and a
+            focusable scrim would otherwise swallow the trap's initial focus. */}
+        <button type="button" tabIndex={-1} aria-hidden="true" onClick={onClose} style={{
           all: "unset", position: "absolute", inset: 0, cursor: "pointer",
           background: "var(--scrim)", backdropFilter: "blur(1.5px)",
         }}/>
-        <div id={id} role="dialog" aria-modal="true" aria-label={title} style={{
+        <div ref={trapRef} id={id} role="dialog" aria-modal="true" aria-label={title} style={{
           position: "relative", background: "var(--bg-elevated)",
           borderTop: "1px solid var(--border-strong)",
           borderRadius: "18px 18px 0 0",
@@ -162,7 +169,10 @@ function useOverlayTrigger({ isMobile, defaultOpen = false }) {
 
   return {
     open, pinned, btnRef,
-    close: () => { setOpen(false); setPinned(false); },
+    // Every transition below clears the pending hover timer first. Without it a
+    // hover-out immediately followed by a click fires the stale close ~140ms
+    // later and shuts the panel the click just pinned.
+    close: () => { clearTimeout(timer.current); setOpen(false); setPinned(false); },
     hoverIn: () => { if (isMobile) return; clearTimeout(timer.current); timer.current = setTimeout(() => setOpen(true), 110); },
     hoverOut: () => {
       if (isMobile) return;
@@ -176,6 +186,7 @@ function useOverlayTrigger({ isMobile, defaultOpen = false }) {
     },
     onFocus: () => { if (!isMobile) setOpen(true); },
     toggle: () => {
+      clearTimeout(timer.current);
       if (isMobile) { setOpen((o) => !o); setPinned((o) => !o); return; }
       if (pinned) { setPinned(false); setOpen(false); }
       else { setPinned(true); setOpen(true); }

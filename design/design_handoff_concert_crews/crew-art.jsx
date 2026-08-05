@@ -227,7 +227,7 @@ function sigil_beacon({ pri, sec }) {
   );
 }
 function sigil_keystone({ pri, sec }) {
-  const hex = (r) => Array.from({ length: 6 }, (_, i) => {
+  const hex = (r) => radial(1, () => null) && Array.from({ length: 6 }, (_, i) => {
     const a = (i * 60 - 90) * Math.PI / 180;
     return `${(50 + Math.cos(a) * r).toFixed(2)} ${(50 + Math.sin(a) * r).toFixed(2)}`;
   }).join(" L ");

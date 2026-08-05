@@ -215,12 +215,13 @@ function tpl_halftone({ rng, palette, scale }) {
   ];
   const c = corners[cornerIdx];
   const massR = 320 + rng() * 80;
-  // Cell size is per-SCALE because the dot count is (400/cell)² — 16 gives a
-  // hero 625 dots, which is right for a full-bleed image and absurd for a 44px
-  // row thumbnail. R1's tile/micro values (22/32) still emitted 331/156 circles
-  // per thumbnail; at ~100 rows on a page that was the single largest source of
-  // SVG nodes in the Crews canvas. Coarser cells are visually identical at
-  // those sizes.
+  // Per-scale cells. tile/micro were tuned for a hero image upstream; at
+  // thumbnail size (400/cell)² circles is the single largest node cost on any
+  // page that renders event rows — 43 thumbnails at 22/32 produced 15,658 nodes.
+  // 40/64 is visually identical at 44–56px.
+  // ⚠ REVERTED TWICE by re-copies from upstream (R3, and again in R5's audit).
+  // Re-apply after ANY identity-art.jsx sync. Belongs in
+  // design_handoff_phase7_5_identity_imagery/ so it stops recurring.
   const cellSize = scale === "hero" ? 16 : scale === "tile" ? 40 : 64;
   const cells = Math.ceil(400 / cellSize);
   const dots = [];

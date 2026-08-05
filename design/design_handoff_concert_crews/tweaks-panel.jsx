@@ -134,39 +134,17 @@ const __TWEAKS_STYLE = `
 `;
 
 // ── useTweaks ───────────────────────────────────────────────────────────────
-// Single source of truth for tweak values, SHARED across every hook caller via
-// a module-level store + subscriber set. This is what lets the Tweaks panel
-// (one useTweaks call) drive separate live-preview components (other useTweaks
-// calls) — without the singleton each caller kept its own useState and the
-// panel couldn't move the preview. setTweak persists via the host
+// Single source of truth for tweak values. setTweak persists via the host
 // (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
-const __twkStore = { values: null, subs: new Set() };
-
-function __twkEnsure(defaults) {
-  if (__twkStore.values === null) __twkStore.values = { ...defaults };
-}
-function __twkApply(edits) {
-  __twkStore.values = { ...__twkStore.values, ...edits };
-  __twkStore.subs.forEach((fn) => fn(__twkStore.values));
-}
-
 function useTweaks(defaults) {
-  __twkEnsure(defaults);
-  const [values, setValues] = React.useState(__twkStore.values);
-  React.useEffect(() => {
-    const sub = (v) => setValues(v);
-    __twkStore.subs.add(sub);
-    // sync in case the store changed between first render and subscribe
-    if (values !== __twkStore.values) setValues(__twkStore.values);
-    return () => { __twkStore.subs.delete(sub); };
-  }, []);
+  const [values, setValues] = React.useState(defaults);
   // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
   // useState-style call doesn't write a "[object Object]" key into the persisted
   // JSON block.
   const setTweak = React.useCallback((keyOrEdits, val) => {
     const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
       ? keyOrEdits : { [keyOrEdits]: val };
-    __twkApply(edits);
+    setValues((prev) => ({ ...prev, ...edits }));
     window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
   }, []);
   return [values, setTweak];
@@ -213,9 +191,6 @@ function TweaksPanel({ title = 'Tweaks', children }) {
 
   React.useEffect(() => {
     const onMsg = (e) => {
-      // Origin gate: only honor protocol messages from our embedding host, so an
-      // unrelated frame can't toggle edit mode in an embedded prototype.
-      if (e.source !== window.parent) return;
       const t = e?.data?.type;
       if (t === '__activate_edit_mode') setOpen(true);
       else if (t === '__deactivate_edit_mode') setOpen(false);

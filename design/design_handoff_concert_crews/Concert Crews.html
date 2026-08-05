@@ -40,6 +40,9 @@ a{color:#1f5f7a}a:hover{color:#123c4e}
 <script type="text/babel" src="crew-art.jsx"></script>
 <script type="text/babel" src="crew-copy.jsx"></script>
 <script type="text/babel" src="crew-shared.jsx"></script>
+<script type="text/babel" src="notifications-data.jsx"></script>
+<script type="text/babel" src="notifications-chrome.jsx"></script>
+<script type="text/babel" src="crew-nav-options.jsx"></script>
 <script type="text/babel" src="crews-destination.jsx"></script>
 <script type="text/babel" src="crew-browse-lens.jsx"></script>
 <script type="text/babel" src="crew-invite.jsx"></script>
@@ -59,6 +62,22 @@ const { CreateSheet, PremiumGate, InviteSheet, InviteLanding, DeadLink, LeaveCon
 const { CrewGoingLine, EventDetailMock, NotifList, MuteRows } = window;
 const { IdentityArt } = window;
 const { Board, Note, SpecTable } = window;
+const { NavOptionA, NavOptionB, NavOptionC, MyShowsWithCrews, NavBar, NAV_SHIPPED } = window;
+
+function NavRecBoard() {
+  return (
+    <Board>
+      <RailHeader tone="signal" eyebrow="NAV · RULED AUG 4" code="A — FIFTH TAB"/>
+      <Note><strong style={{ color: "var(--fg)" }}>Option A ships.</strong> A fifth tab fits at 320 — measured on the <em>shipped</em> CCTabBar geometry (18px icons, 9px mono labels, 56px minimum slots): five slots need 280px of a 320px bar, leaving 40px of slack, and no label clips (“my shows” is widest at 46px inside its 56px slot). Design recommended B on the argument that Crews is the only bar destination you'd open to see <em>people</em>, so it reads as a sibling of Watching and Concerts. Hugh's call went the other way: nesting it two levels down isn't an intuitive home, and since it fits, it gets a slot. Recorded here because the reasoning outlives the decision — and because <code style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--signal)" }}>#1460</code> may revisit the bar's shape.</Note>
+      <SpecTable cols={["option", "verdict", "why"]} rows={[
+        ["A · fifth tab", "RULED — SHIPS", "Fits at 320 on shipped geometry — 280px of slots in a 320px bar, 40px slack, zero clipping. Costs the bar's last slot, which #1460 may give back by consolidating Browse + Venues."],
+        ["B · inside my shows", "rejected Aug 4", "Design's recommendation. Bar untouched, Crews as a third segment beside Watching + Concerts. Rejected as an unintuitive home for a destination that fits on its own."],
+        ["C · replace venues", "rejected", "Trades a shipped destination with its own crawl and SEO surface for a launch feature. A product bet, not a nav tidy — and not one this handoff should make."],
+      ]}/>
+      <Note><strong style={{ color: "var(--fg)" }}>What B costs, and why it's affordable.</strong> A segment two levels down is a long walk from Browse — but neither path that matters routes through the nav. The lens pill deep-links to the crew it names, and an invite opens <code style={{ fontFamily: "'JetBrains Mono', monospace", color: "var(--signal)" }}>/crews/&lt;id&gt;</code> directly. If crew usage turns out daily rather than weekly, A is a one-line promotion later; the reverse isn't true once a tab has shipped.</Note>
+    </Board>
+  );
+}
 
 const P_W = 390, P_H = 844, P_TALL = 1020;
 const N_W = 320, N_H = 700;
@@ -72,7 +91,6 @@ function Phone({ theme = "electric", w = P_W, h = P_H, bare, sheet, children }) 
         {sheet ? (
           <div style={{ position: "relative", width: "100%", height: "100%" }}>
             {sheet}
-            <Scrim/>
             {children}
           </div>
         ) : children}
@@ -220,7 +238,7 @@ function EdgeBoard() {
         <EdgeSpecimen k="empty.noUpcoming"><CrewEmpty eyebrow={CREW_COPY.detail.upcomingTitle} title={E.noUpcomingTitle} body={E.noUpcomingBody}/></EdgeSpecimen>
         <EdgeSpecimen k="empty.noPast"><CrewEmpty eyebrow={CREW_COPY.detail.pastTitle} title={E.noPastTitle} body={E.noPastBody}/></EdgeSpecimen>
         <EdgeSpecimen k="empty.lensEmpty · filtered"><CrewEmpty eyebrow={CREW_COPY.lens.railEyebrow} state="filtered" title={E.lensEmptyTitle} body={E.lensEmptyBody("Basement Show Union")} cta={CREW_COPY.detail.invite}/></EdgeSpecimen>
-        <EdgeSpecimen k="empty.atCap"><CrewEmpty eyebrow="ROSTER FULL" title={E.atCapTitle} body={E.atCapBody} cta={CREW_COPY.list.create}/></EdgeSpecimen>
+        <EdgeSpecimen k="atCap · NOTICE, not empty"><window.CrewNotice eyebrow="ROSTER FULL" title={E.atCapTitle} body={E.atCapBody} cta={CREW_COPY.list.create}/></EdgeSpecimen>
         <EdgeSpecimen k="linkDead.expired · error"><CrewEmpty eyebrow="INVITE LINK" state="error" title={CREW_COPY.linkDead.expiredTitle} body={CREW_COPY.linkDead.expiredBody}/></EdgeSpecimen>
         <EdgeSpecimen k="linkDead.revoked · error"><CrewEmpty eyebrow="INVITE LINK" state="error" title={CREW_COPY.linkDead.revokedTitle} body={CREW_COPY.linkDead.revokedBody}/></EdgeSpecimen>
       </div>
@@ -264,6 +282,8 @@ function A11yBoard() {
     <Board>
       <RailHeader tone="signal" eyebrow="ACCESSIBILITY" code="WCAG AA"/>
       <SpecTable cols={["surface", "keyboard + AT", "notes"]} rows={[
+        ["desktop nav", "real <a> · aria-current · 44px · account is a <button>", "Under Option A, Crews is its own desktop item. `trigger: true` slots are filtered out of the nav row — the account slot's desktop expression is the avatar button on the right, and mapping it into the row rendered 'me' twice. Items were <span>s in R2, which broke brief §3's behavioural-parity rule in the same round mobile gained real buttons."],
+        ["bottom nav", "CCTabBar lift · real buttons · 56×44", "Every slot is a <button> with aria-label and aria-current — keyboard reachable and named, which the hand-drawn first pass was not. Geometry and icon spec are the shipped #737 component's."],
         ["crew home tabs", "role=tablist / tab / tabpanel · 44×44", "Full ARIA tabs pattern, implemented: roving tabIndex (active tab 0, others −1), ←/→ wrap between tabs, Home/End jump to first/last, and each tab paired to the panel by id + aria-controls / aria-labelledby. Each tab's count is a text child of the button, so it's part of the accessible name (“Coming up 4”) — the crew's shape is available without sighted scanning."],
         ["CrewPatch", "aria-hidden, decorative", "The patch never carries text, so there is no contrast-over-art case. The crew NAME is always the accessible label — it sits outside the art, never inside it."],
         ["crew lens pill", "button · aria-pressed · 32×32 paint / 44×44 target", "Announces \"Crew lens on: Thursdays. Showing shows a member is going to.\" Clearing announces the off string. Both live in copy.a11y."],
@@ -314,9 +334,32 @@ function App() {
           <DCArtboard id="live-d" label="Desktop · responds to Tweaks" width={D_W} height={D_H}><LiveDesk/></DCArtboard>
         </DCSection>
 
+        <DCSection id="nav" title="1 · Where Crews lives in the nav"
+          subtitle="RULED Aug 4: Option A — Crews ships as a fifth tab. It fits at 320 on shipped CCTabBar geometry (280px of slots in a 320px bar, 40px slack, zero clipping), and since it fits it gets its own slot rather than sitting two levels down. Design had recommended B; Hugh's call is that 'my shows' isn't an intuitive home for it. #1460 (consolidate Browse + Venues into one discovery destination) would free a slot later — Crews doesn't wait on it, and if it lands the fifth tab becomes a fourth with no change to this design. Boards below are kept as the decision record.">
+          <DCArtboard id="nav-shipped" label="Shipped today · 320" width={340} height={112}>
+            <Board pad={10} center><ThemeProvider theme="electric"><NavBar tabs={NAV_SHIPPED} active="browse" width={320}/></ThemeProvider></Board>
+          </DCArtboard>
+          <DCArtboard id="nav-a" label="A · fifth tab — 280px of slots in 320" width={340} height={112}>
+            <Board pad={10} center><ThemeProvider theme="electric"><NavOptionA width={320}/></ThemeProvider></Board>
+          </DCArtboard>
+          <DCArtboard id="nav-a390" label="A · fifth tab at 390 (78px slots)" width={410} height={112}>
+            <Board pad={10} center><ThemeProvider theme="electric"><NavOptionA width={390}/></ThemeProvider></Board>
+          </DCArtboard>
+          <DCArtboard id="nav-b" label="B · inside 'my shows' (rejected — Aug 4)" width={340} height={230}>
+            <Board pad={10} center gap={10}>
+              <ThemeProvider theme="electric"><MyShowsWithCrews width={320}/></ThemeProvider>
+              <ThemeProvider theme="electric"><NavOptionB width={320}/></ThemeProvider>
+            </Board>
+          </DCArtboard>
+          <DCArtboard id="nav-c" label="C · Crews replaces venues (not recommended)" width={340} height={112}>
+            <Board pad={10} center><ThemeProvider theme="electric"><NavOptionC width={320}/></ThemeProvider></Board>
+          </DCArtboard>
+          <DCArtboard id="nav-rec" label="The recommendation" width={880} height={560}><NavRecBoard/></DCArtboard>
+        </DCSection>
+
         <DCSection id="dest-m" title="2 · The Crews destination · mobile"
           subtitle="List → detail. The hero is pinned and the three sections are TABS — stacked, they pushed the roster and the shared past far below the fold. Each tab carries its count, so the crew's shape (4 shows, 6 nights, 6 people) reads without scrolling. The two tenses stay different objects: upcoming is the shipped event row (a show you could still buy a ticket to), the shared past is a ticket stub (a thing that happened). The §8 lead-order call now decides which tab OPENS — upcoming unless it's empty and there's a past to open on.">
-          <DCArtboard id="dm-list" label="Crews list · 390" width={P_W} height={P_H}><Phone><CrewsScreen><CrewsList/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-list" label="Crews list · 390 (Option A — own tab)" width={P_W} height={P_H}><Phone><CrewsScreen><CrewsList/></CrewsScreen></Phone></DCArtboard>
           <DCArtboard id="dm-list-320" label="Crews list · 320" width={N_W} height={730}><Phone w={N_W} h={730}><CrewsScreen narrow><CrewsList/></CrewsScreen></Phone></DCArtboard>
           <DCArtboard id="dm-home" label="Crew home · Coming up (the tab that opens)" width={P_W} height={P_TALL}><Phone h={P_TALL}><CrewsScreen><CrewHome crewId="cr_7f3a91" tab="upcoming"/></CrewsScreen></Phone></DCArtboard>
           <DCArtboard id="dm-home-past" label="Crew home · Been there" width={P_W} height={P_TALL}><Phone h={P_TALL}><CrewsScreen><CrewHome crewId="cr_7f3a91" tab="past"/></CrewsScreen></Phone></DCArtboard>
@@ -325,6 +368,10 @@ function App() {
           <DCArtboard id="dm-past" label="Crew home · nothing upcoming → opens on Been there" width={P_W} height={920}><Phone h={920}><CrewsScreen><CrewHome crewId="cr_9e15cc"/></CrewsScreen></Phone></DCArtboard>
           <DCArtboard id="dm-solo" label="Crew home · crew of one (the first thing every creator sees)" width={P_W} height={880}><Phone h={880}><CrewsScreen><CrewHome crewId="cr_c0de55"/></CrewsScreen></Phone></DCArtboard>
           <DCArtboard id="dm-cap" label="Crew home · Who's in · at cap (12) + manage" width={P_W} height={1280}><Phone h={1280}><CrewsScreen><CrewHome crewId="cr_41a7b2" tab="roster" manage/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-net-load" label="Crews list · loading (skeleton mirrors the real row)" width={P_W} height={P_H}><Phone><CrewsScreen><CrewsList state="loading"/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-net-err" label="Crews list · error" width={P_W} height={P_H}><Phone><CrewsScreen><CrewsList state="error"/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-home-load" label="Crew home · loading (no name, no patch — both would be guesses)" width={P_W} height={P_TALL}><Phone h={P_TALL}><CrewsScreen><CrewHome crewId="cr_7f3a91" state="loading"/></CrewsScreen></Phone></DCArtboard>
+          <DCArtboard id="dm-home-err" label="Crew home · error" width={P_W} height={P_H}><Phone><CrewsScreen><CrewHome crewId="cr_7f3a91" state="error"/></CrewsScreen></Phone></DCArtboard>
           <DCArtboard id="dm-stubs" label="Shared past · the stub, up close" width={P_W} height={470}>
             <Board pad={18}><SectionRail title={CREW_COPY.detail.pastTitle} meta={CREW_COPY.detail.pastStat(6)}/>
               {window.CREW_NIGHTS.cr_7f3a91.slice(0, 4).map(n => <StubRow key={n.id} night={n}/>)}
@@ -440,6 +487,8 @@ function App() {
           subtitle="An acquisition surface (§3.7): crew name, patch, who invited you, headcount — then one CTA that lands you inside the crew. It shows identity and NEVER attendance; a forwarded link must not publish anyone's plans, and the lock line says so out loud. Expired and revoked links go one step further and show no crew identity at all — a dead link has no standing to tell you anything.">
           <DCArtboard id="ld-m" label="Invite landing · mobile" width={P_W} height={P_H}><Phone><InviteLanding/></Phone></DCArtboard>
           <DCArtboard id="ld-d" label="Invite landing · desktop" width={D_W} height={760}><Desk h={760} url="concertcrawl.app/crew/join/8fq2-mkzt"><InviteLanding wide/></Desk></DCArtboard>
+          <DCArtboard id="ld-load" label="Invite landing · loading (token being checked)" width={P_W} height={P_H}><Phone><InviteLanding state="loading"/></Phone></DCArtboard>
+          <DCArtboard id="ld-err" label="Invite landing · error — our failure, not a dead link" width={P_W} height={P_H}><Phone><InviteLanding state="error"/></Phone></DCArtboard>
           <DCArtboard id="ld-nohandle" label="Invite landing · inviter has no handle (don't fake identity)" width={P_W} height={P_H}><Phone><InviteLanding inviter={null}/></Phone></DCArtboard>
           <DCArtboard id="ld-full" label="Invite landing · crew is full" width={P_W} height={P_H}><Phone><InviteLanding crewId="cr_41a7b2" full/></Phone></DCArtboard>
           <DCArtboard id="ld-exp" label="Expired link · no crew identity" width={P_W} height={P_H}><Phone><DeadLink kind="expired"/></Phone></DCArtboard>
@@ -449,7 +498,7 @@ function App() {
 
         <DCSection id="edge" title="8 · Empty + edge states"
           subtitle="All nine from the brief, on the shipped <EmptyState variant=&quot;hybrid&quot;/> from design_handoff_empty_state — dense inside a band, full where it owns the surface. Cheeky where the fix is one tap away; plain where something is genuinely gone.">
-          <DCArtboard id="edge-grid" label="The set" width={900} height={1120}><EdgeBoard/></DCArtboard>
+        <DCArtboard id="edge-grid" label="The set" width={900} height={1170}><EdgeBoard/></DCArtboard>
           <DCArtboard id="edge-nocrews" label="No crews yet · in situ" width={P_W} height={P_H}><Phone><CrewsScreen><CrewsList empty/></CrewsScreen></Phone></DCArtboard>
           <DCArtboard id="edge-roster" label="Roster with a handle-less member" width={P_W} height={620}>
             <Board pad={18}><RosterList crew={T} manage/></Board>

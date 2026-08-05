@@ -44,7 +44,7 @@
 //                    edges align WITHIN a surface, which is what actually reads.
 //
 //  NARROW (≤360) shrinks art 56→44, gap 14→10, title 15.5→14.5, meta 11.5→11,
-//  price min 78→62. Without it the fixed columns eat 212 of 292px and every
+//  price min 78→56. Without it the fixed columns eat 212 of 292px and every
 //  line truncates at once.
 //
 //  LINE 3 CLIPS AT THE COLUMN EDGE. Everything on it except the venue is
@@ -74,12 +74,12 @@ const SURFACES = {
   watching: { key: "watching", label: "Watching", carries: [],        supports: false, meta: ["freshness", "provenance"], action: "remove" },
   venue:    { key: "venue",    label: "Venue",    carries: ["venue"], supports: true,  meta: ["following", "genre"],      action: null },
   // ── Concert Crews (#1226) — TWO CONFIG ENTRIES, NO COMPONENT CHANGE ──
-  // "Adding a fourth surface is a config entry, not a component" (§6). Crew
-  // presence does not get a fifth pill: it takes PRIORITY over `following` —
-  // inside a crew, a friend going outranks an artist you follow — but
-  // `following` stays in the list behind it. With a budget of 2, a show with
-  // crew presence renders crew + genre; a show without it falls back to
-  // following + genre exactly as Browse does. Displaced, never removed.
+  // "Adding a fourth surface is a config entry, not a component." Crew presence
+  // does not get a fifth pill: it takes PRIORITY over `following` — inside a
+  // crew, a friend going outranks an artist you follow — but `following` stays
+  // in the list behind it. With a budget of 2, a show with crew presence renders
+  // crew + genre; a show without it falls back to following + genre exactly as
+  // Browse does. Displaced, never removed.
   crewLens: { key: "crewLens", label: "Browse · crew lens", carries: ["date"], supports: true, meta: ["crew", "following", "genre"], action: null },
   crew:     { key: "crew",     label: "Crew home",          carries: ["date"], supports: true, meta: ["crew", "following", "genre"], action: null },
 };
@@ -116,6 +116,27 @@ function RowMetaChip({ tone = "neutral", icon, children, srText }) {
   );
 }
 
+// Provenance vocabulary. Keyed to production's `source_category` pgEnum
+// (migration 0040) so the row can't invent a fourth dialect for the thing this
+// whole pass exists to de-drift. Labels are the ones admin already renders
+// (AdminEntry.tsx / adminEntry.trustPill) — a price reads the same in review
+// and on the row.
+//
+//   primary    crawled from the venue's own page. NOT a submission, so it has
+//              no source_category and no chip — the absence IS the signal.
+//   boxoffice  face value, from the venue. The most authoritative submission.
+//   standard   general community submission. Admin calls this "Community".
+//   resale     secondary market. Not face value.
+//
+// Widest label is BOX OFFICE at ~81px (9.5px mono, 0.08em tracking, 16px of
+// padding + border) against a 106px meta column on the tightest geometry —
+// it fits with headroom, and the chip is nowrap so the space never breaks.
+const PROVENANCE = {
+  boxoffice: { label: "Box office", tone: "strong", sr: " price — face value from the venue" },
+  standard:  { label: "Community",  tone: "signal", sr: " price — submitted by a fan" },
+  resale:    { label: "Resale",     tone: "warn",   sr: " price — secondary market, not face value" },
+};
+
 // Builds the meta line from the surface's priority order, then hard-slices to
 // the budget (2, or 1 when a support line is eating a row line).
 function buildMeta(show, surface, budget = 2) {
@@ -132,10 +153,9 @@ function buildMeta(show, surface, budget = 2) {
       out.push(<RowMetaChip key="g" tone="neutral">{show.genres[0]}</RowMetaChip>);
     } else if (kind === "freshness" && show.price && r_isStale(show.price.observedAt)) {
       out.push(<RowMetaChip key="s" tone="warn">Stale · {r_relTime(show.price.observedAt)}</RowMetaChip>);
-    } else if (kind === "provenance" && show.price && show.price.source !== "primary") {
-      const resale = show.price.source === "resale";
-      out.push(<RowMetaChip key="p" tone={resale ? "warn" : "signal"}
-        srText={resale ? " price — secondary market, not face value" : " price — submitted by a fan"}>{resale ? "Resale" : "Community"}</RowMetaChip>);
+    } else if (kind === "provenance" && show.price && PROVENANCE[show.price.source]) {
+      const pv = PROVENANCE[show.price.source];
+      out.push(<RowMetaChip key="p" tone={pv.tone} srText={pv.sr}>{pv.label}</RowMetaChip>);
     }
     if (out.length === budget) break;
   }
@@ -197,6 +217,11 @@ function PriceStack({ show, showDelta, size = 16 }) {
 // Overflow-hidden alone sliced chips mid-glyph, which reads as a bug rather
 // than a rule. Chips past the fit are kept mounted but taken out of flow so
 // the measure pass stays stable.
+// LOOP GUARD (re-applied — see README R4). This effect had no dependency array
+// upstream, so it re-ran on every render while the ResizeObserver below reset
+// the ladder to 0. Dormant when rows sit in a plain block column; a main-thread
+// lock the moment they sit in a grid track whose width answers to its content.
+// Bounded here so escalation runs at most three times per (row, geometry).
 function MetaRow({ children, gap = 5 }) {
   const ref = React.useRef(null);
   const lastW = React.useRef(-1);
@@ -207,8 +232,8 @@ function MetaRow({ children, gap = 5 }) {
     const measure = () => {
       const avail = el.clientWidth;
       if (!avail) return;
-      // Only a REAL width change re-measures; without this the observer fires on
-      // the reflow the measure pass itself caused.
+      // Only a REAL width change re-measures; without this the observer fires
+      // on the reflow the measure pass itself caused.
       if (Math.abs(avail - lastW.current) <= 1 && lastW.current >= 0) return;
       lastW.current = avail;
       let used = 0, n = 0;
@@ -266,10 +291,10 @@ function WhenWhere({ show, showsDate, showsVenue, size }) {
   const [level, setLevel] = React.useState(0);
 
   React.useLayoutEffect(() => { setLevel(0); }, [show.id, showsDate, showsVenue, size]);
-  // BOUNDED dep array. Unbounded, this re-ran every render while the observer
-  // below reset the ladder to 0 — dormant when rows sit in a plain block column,
-  // a main-thread lock when they sit in a grid track whose width answers to its
-  // content (~100 rows on the crews canvas). Send upstream.
+  // LOOP GUARD (re-applied — see README R4). Same defect as MetaRow: unbounded,
+  // this re-ran every render while the observer below reset the ladder, and the
+  // two traded renders forever. The dep array is the whole fix — escalation now
+  // runs at most three times per (row, geometry).
   React.useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -281,6 +306,8 @@ function WhenWhere({ show, showsDate, showsVenue, size }) {
     lastW.current = el.clientWidth;
     const ro = new ResizeObserver(() => {
       const w = el.clientWidth;
+      // Only a REAL width change restarts the ladder. Without this guard the
+      // observer fires on the reflow the ladder itself caused.
       if (Math.abs(w - lastW.current) > 1) { lastW.current = w; setLevel(0); }
     });
     ro.observe(el);

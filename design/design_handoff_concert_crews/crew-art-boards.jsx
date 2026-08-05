@@ -73,7 +73,7 @@ function PatchGallery({ theme = "electric", ids = GALLERY_IDS, cols = 4, size = 
 }
 function PatchAnatomy() {
   const layers = [
-    ["1 · patch body", "squircle + border-strong edge + dashed stitch inset", "The silhouette. A badge, not a poster — recognizable at 24px before any colour reads."],
+    ["1 · patch body", "squircle + border-strong edge + dashed stitch inset", "The silhouette. A badge, not a poster: recognizable at 24px before any colour reads."],
     ["2 · ground", "halo / wedges / bands, --secondary at 7–16%", "The woven field. Flat token fills, no gradients, no paper."],
     ["3 · weave", "twill / warp / braid / knot, --primary at 15–26%", "The fabric. Rotates in 60° steps; dropped entirely at micro."],
     ["4 · sigil", "triad / bloom / beacon / keystone / tangle", "The crest. 6-fold symmetric, always upright, full-strength token colour."],
@@ -134,7 +134,7 @@ function NotThisBoard() {
   const rows = [
     ["silhouette", "full-bleed rectangle", "squircle with a stitched edge"],
     ["colour", "8 fixed riso palettes (hex)", "theme tokens only"],
-    ["theme", "ignores it — paper is paper", "reskins with the theme"],
+    ["theme", "ignores it; paper is paper", "reskins with the theme"],
     ["surface", "printed: grain, overprint, halftone", "textile: flat fields, woven lattice"],
     ["structure", "loose, organic, off-centre", "strict 6-fold radial symmetry"],
     ["seed", "artist / venue NAME", "crew ID (immutable)"],
@@ -225,7 +225,7 @@ function SeedBoard() {
         ))}
       </div>
       <SpecTable cols={["candidate seed", "verdict", "why"]} rows={[
-        ["crew.id + patchSalt", "SHIPPED", "crew.id is minted once and survives renames, joins, leaves, removals and handoff. patchSalt starts at 0 and moves ONLY on an explicit creator reroll — the one sanctioned way a face changes, and a decision rather than a side effect."],
+        ["crew.id + patchSalt", "SHIPPED", "crew.id is minted once and survives renames, joins, leaves, removals and handoff. patchSalt starts at 0 and moves ONLY on an explicit creator reroll: the one sanctioned way a face changes, and a decision rather than a side effect."],
         ["membership hash", "rejected", "Brief §3.5. The face reshuffles every time someone joins, so the picker stops being a picker."],
         ["crew.name", "rejected", "Renaming a crew is normal and cheap. Handing it a new face for a typo fix is not."],
         ["creator user id", "rejected", "Two crews by the same person collide, and it silently encodes who owns it."],
@@ -258,7 +258,7 @@ function RerollBoard() {
         ["distance", "Different weave + ≤ 1 shared layer", "Guarantees a pull reads as a new patch rather than a tweak of the last one. Measured over 50 consecutive pulls across 10 crews: worst case 1 shared layer, 0 shared weaves. The first qualifying salt is the next integer about half the time. Enforced by nextPatchSalt()."],
         ["when", "Any time, no cooldown", "A crew of twelve self-polices; a cooldown would only punish the one crew that genuinely hates its first pull."],
         ["preview", "Now → New, side by side", "A comparison, not a gamble. Shuffle again is free until they commit."],
-        ["notify", "No notification", "Cosmetic and visible on next open. A bell for a colour change is noise — §3.11's bar is activity, not decoration."],
+        ["notify", "No notification", "Cosmetic and visible on next open. A bell for a colour change is noise. §3.11's bar is activity, not decoration."],
         ["history", "Salt only moves forward", "No undo stack. If they want the old one back they keep rolling; storing patch history for a decoration isn't worth a column."],
       ]}/>
     </Board>
@@ -319,7 +319,7 @@ function VariantMathBoard() {
     <Board>
       <RailHeader tone="signal" eyebrow="THE SPACE, COUNTED" code="300"/>
       <SpecTable cols={["layer", "options", "what it contributes"]} rows={[
-        ["sigil", "5 · triad bloom beacon keystone tangle", "The crest. The single strongest cue — it is what survives at 22px when the weave is dropped."],
+        ["sigil", "5 · triad bloom beacon keystone tangle", "The crest. The single strongest cue: it is what survives at 22px when the weave is dropped."],
         ["weave", "4 · twill warp braid knot", "The fabric, plus a 6-step rotation, so the same weave reads differently across crews."],
         ["ground", "3 · halo wedges bands", "The field the crest sits on. Changes the patch's weight more than its identity."],
         ["chord", "5 · token role PAIRS, never colours", "Which two token roles the patch is drawn in. Reskins with every theme; ship a tenth and no crew changes."],

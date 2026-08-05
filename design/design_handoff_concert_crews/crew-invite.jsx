@@ -83,9 +83,9 @@ function CreateSheet({ variant = "mobile", crewId = "cr_c0de55", name = "Sunset 
     </div>
   );
   if (variant === "desktop") {
-    return <ModalChrome width={520}><div style={{ paddingTop: 18 }}><SheetHead title={CI.create.title} sub={CI.create.sub}/>{Body}</div></ModalChrome>;
+    return <ModalChrome width={520} title="START A CREW"><div style={{ paddingTop: 8 }}><SheetHead title={CI.create.title} sub={CI.create.sub}/>{Body}</div></ModalChrome>;
   }
-  return <SheetChrome height="66%"><DragHandle/><SheetHead title={CI.create.title} sub={CI.create.sub}/>{Body}</SheetChrome>;
+  return <SheetChrome title="START A CREW"><SheetHead title={CI.create.title} sub={CI.create.sub}/>{Body}</SheetChrome>;
 }
 
 // ── Premium gate — create only. Joining never hits this. ──────────────
@@ -112,9 +112,11 @@ function PremiumGate({ variant = "mobile", lapsed }) {
       </div>
     </div>
   );
-  const head = <SheetHead eyebrow={CI.gate.eyebrow} title={CI.gate.title} sub={CI.gate.body}/>;
-  if (variant === "desktop") return <ModalChrome width={520}><div style={{ paddingTop: 18 }}>{head}{Body}</div></ModalChrome>;
-  return <SheetChrome height="60%"><DragHandle/>{head}{Body}</SheetChrome>;
+  const head = <SheetHead title={CI.gate.title} sub={CI.gate.body}/>;
+  // No `eyebrow` here — SheetChrome/ModalChrome now supply the mono title row,
+  // and R1's SheetHead eyebrow duplicated it. Same reason the other six drop it.
+  if (variant === "desktop") return <ModalChrome width={520} title={CI.gate.eyebrow}><div style={{ paddingTop: 8 }}>{head}{Body}</div></ModalChrome>;
+  return <SheetChrome title={CI.gate.eyebrow}>{head}{Body}</SheetChrome>;
 }
 
 // ── Invite link ───────────────────────────────────────────────────────
@@ -145,12 +147,17 @@ function InviteSheet({ variant = "mobile", crewId = "cr_7f3a91", copied, revoked
         <div style={{ display: "flex", flexDirection: "column", gap: 3, minWidth: 0 }}>
           <span style={{ fontFamily: CS_UI, fontWeight: 800, fontSize: 15, letterSpacing: "-0.02em", color: "var(--fg)" }}>{crew.name}</span>
           <MonoEyebrow size={9.5} color={left <= 2 ? "var(--warning)" : "var(--fg-subtle)"}>
-            {full ? CI.empty.atCapTitle.toUpperCase() : `${left} OF ${CI.cap} SPOTS LEFT`}
+            {/* Always the count, never the sentence — the CrewEmpty below states
+                "This crew's full." at title weight, and R1 said it twice, 84px
+                apart. Same fix RosterList already carries. */}
+            {full ? `${CI.cap} OF ${CI.cap} SPOTS` : `${left} OF ${CI.cap} SPOTS LEFT`}
           </MonoEyebrow>
         </div>
       </div>
       {full ? (
-        <window.CrewEmpty eyebrow="ROSTER FULL" title={CI.empty.atCapTitle} body={CI.empty.atCapBody} cta={CI.list.create}/>
+        // Not CrewEmpty — a roster at 12/12 is full, not empty, and the
+        // EmptyState rail would have to invent a count about it.
+        <window.CrewNotice eyebrow="ROSTER FULL" title={CI.empty.atCapTitle} body={CI.empty.atCapBody} cta={CI.list.create}/>
       ) : (
         <>
           <LinkBox url="concertcrawl.app/crew/join/8fq2-mkzt" copied={copied} dead={revoked}/>
@@ -173,8 +180,8 @@ function InviteSheet({ variant = "mobile", crewId = "cr_7f3a91", copied, revoked
     </div>
   );
   const head = <SheetHead title={CI.invite.title} sub={CI.invite.sub(crew.name)}/>;
-  if (variant === "desktop") return <ModalChrome width={540}><div style={{ paddingTop: 18 }}>{head}{Body}</div></ModalChrome>;
-  return <SheetChrome height="62%"><DragHandle/>{head}{Body}</SheetChrome>;
+  if (variant === "desktop") return <ModalChrome width={540} title="INVITE PEOPLE"><div style={{ paddingTop: 8 }}>{head}{Body}</div></ModalChrome>;
+  return <SheetChrome title="INVITE PEOPLE">{head}{Body}</SheetChrome>;
 }
 
 // ── New patch — creator-only, confirmed ────────────────────────────
@@ -215,15 +222,23 @@ function RerollSheet({ variant = "mobile", crewId = "cr_7f3a91", salt = 0 }) {
     </div>
   );
   const head = <SheetHead title={CI.roster.newPatch} sub={CI.roster.newPatchBody}/>;
-  if (variant === "desktop") return <ModalChrome width={480}><div style={{ paddingTop: 18 }}>{head}{Body}</div></ModalChrome>;
-  return <SheetChrome height="52%"><DragHandle/>{head}{Body}</SheetChrome>;
+  if (variant === "desktop") return <ModalChrome width={480} title="NEW PATCH"><div style={{ paddingTop: 8 }}>{head}{Body}</div></ModalChrome>;
+  return <SheetChrome title="NEW PATCH">{head}{Body}</SheetChrome>;
 }
 
 // ── Signed-out invite landing — identity only, never attendance ────────
-function InviteLanding({ crewId = "cr_7f3a91", inviter = "mvp_ross", wide, full }) {
+// state: "ready" | "loading" | "error"
+// This is the one surface a stranger hits cold, so its network states are not
+// an edge case — a token gets validated before anything can render, and that
+// call can be slow or fail. Two rules carry over from the ready state:
+//   · loading NEVER shows a crew name or patch — both would be guesses, and the
+//     patch flashing a wrong identity is worse than showing nothing;
+//   · the error is OUR failure, stated as ours. It is not the expired/retired
+//     dead end — those are DeadLink, and they're normal outcomes, not faults.
+function InviteLanding({ crewId = "cr_7f3a91", inviter = "mvp_ross", wide, full, state = "ready", onRetry }) {
   const crew = window.crewById(crewId);
   const n = crew.members.length;
-  return (
+  const Shell = ({ children }) => (
     <div style={{
       width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: CS_UI,
       display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
@@ -233,6 +248,45 @@ function InviteLanding({ crewId = "cr_7f3a91", inviter = "mvp_ross", wide, full 
       <div style={{ position: "absolute", top: wide ? 22 : 54, left: 0, right: 0, display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
         <CMark size={22}/><Wordmark size={14}/>
       </div>
+      {children}
+    </div>
+  );
+
+  if (state === "loading") {
+    return (
+      <Shell>
+        <window.ShimmerKeyframes/>
+        <window.Shimmer w={wide ? 132 : 108} h={wide ? 132 : 108} r={30}/>
+        <div style={{ display: "flex", flexDirection: "column", gap: 11, alignItems: "center", width: "100%", maxWidth: wide ? 520 : 320 }}>
+          <window.Shimmer w={110} h={10}/>
+          <window.Shimmer w="88%" h={wide ? 30 : 24}/>
+          <window.Shimmer w="62%" h={wide ? 30 : 24}/>
+          <window.Shimmer w={150} h={26} r={99} style={{ marginTop: 4 }}/>
+        </div>
+        <window.Shimmer w={wide ? 340 : 280} h={46} r={10}/>
+        <MonoEyebrow size={9.5} color="var(--fg-subtle)" aria-live="polite">{CI.net.loadingInvite}</MonoEyebrow>
+      </Shell>
+    );
+  }
+  if (state === "error") {
+    return (
+      <Shell>
+        <div style={{ opacity: 0.5 }}><CMark size={76}/></div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 9, alignItems: "center", maxWidth: 340 }}>
+          <MonoEyebrow size={9.5} color="var(--warning)" letterSpacing="0.18em">CONNECTION</MonoEyebrow>
+          <h1 style={{ margin: 0, fontFamily: CS_UI, fontWeight: 900, fontSize: wide ? 32 : 25, letterSpacing: "-0.035em", lineHeight: 1.1, textWrap: "balance" }}>{CI.net.errInviteTitle}</h1>
+          <p style={{ margin: 0, fontFamily: CS_UI, fontSize: 13.5, color: "var(--fg-muted)", lineHeight: 1.5, textWrap: "pretty" }}>{CI.net.errInviteBody}</p>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Btn tone="primary" onClick={onRetry}>{CI.net.retry}</Btn>
+          <Btn tone="ghost">{CI.linkDead.browse}</Btn>
+        </div>
+      </Shell>
+    );
+  }
+
+  return (
+    <Shell>
       <CrewPatch crewId={crew.id} size={wide ? 132 : 108} scale="hero"/>
       <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center", maxWidth: wide ? 520 : 320 }}>
         <MonoEyebrow size={9.5} color="var(--signal)" letterSpacing="0.18em">{CI.landing.eyebrow}</MonoEyebrow>
@@ -266,7 +320,7 @@ function InviteLanding({ crewId = "cr_7f3a91", inviter = "mvp_ross", wide, full 
           <span style={{ fontFamily: CS_UI, fontSize: 11.5, color: "var(--fg-subtle)", lineHeight: 1.45, textWrap: "pretty" }}>{CI.landing.privacy}</span>
         </div>
       )}
-    </div>
+    </Shell>
   );
 }
 
@@ -335,9 +389,9 @@ function LeaveConfirm({ variant = "mobile", kind = "leave", crewId = "cr_7f3a91"
       </div>
     </div>
   );
-  const head = <SheetHead title={map.t} sub={map.b} eyebrow={kind === "handoff" ? undefined : "HEADS UP"} tone="warning"/>;
-  if (variant === "desktop") return <ModalChrome width={480}><div style={{ paddingTop: 18 }}>{head}{Body}</div></ModalChrome>;
-  return <SheetChrome height={kind === "handoff" ? "58%" : kind === "last" ? "52%" : "44%"}><DragHandle/>{head}{Body}</SheetChrome>;
+  const head = <SheetHead title={map.t} sub={map.b}/>;
+  if (variant === "desktop") return <ModalChrome width={480} title={kind === "handoff" ? "PASS IT ON" : "HEADS UP"}><div style={{ paddingTop: 8 }}>{head}{Body}</div></ModalChrome>;
+  return <SheetChrome title={kind === "handoff" ? "PASS IT ON" : "HEADS UP"}>{head}{Body}</SheetChrome>;
 }
 
 Object.assign(window, { SheetHead, CreateSheet, PremiumGate, InviteSheet, LinkBox, InviteLanding, DeadLink, LeaveConfirm, RerollSheet });

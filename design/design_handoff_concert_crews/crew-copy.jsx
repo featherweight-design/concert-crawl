@@ -1,11 +1,11 @@
-// crew-copy.jsx — every customer-facing string for Concert Crews (#1226).
+// crew-copy.jsx: every customer-facing string for Concert Crews (#1226).
 //
 // This file is the DESIGN MIRROR of what ships as `definitions/copy.ts`
 // (`copy.crews.*`). Nothing in this handoff hardcodes a customer-facing string
-// in JSX — every surface reads from CREW_COPY, so the keys below are the ones
+// in JSX. Every surface reads from CREW_COPY, so the keys below are the ones
 // eng lifts verbatim.
 //
-// Voice: Sour Patch — brand presence + clear status. Cheeky on the empty and
+// Voice: Sour Patch. Brand presence + clear status. Cheeky on the empty and
 // social states, dead sober on money, permissions, revocation and loss.
 // Never "No results found". Never "Oopsie!".
 //
@@ -17,7 +17,7 @@ function crewPlural(n, one, many) { return n === 1 ? one : many; }
 const CREW_COPY = {
   // ── Vocabulary ──────────────────────────────────────────────────────
   // "Crew" is the noun. Never "group", "squad", "circle", "friends list".
-  // Never a synonym for Watching — a crew is people, Watching is shows.
+  // Never a synonym for Watching: a crew is people, Watching is shows.
   nav:            { crews: "Crews" },
   cap:            12,
 
@@ -91,7 +91,7 @@ const CREW_COPY = {
     submit:       "Make the crew",
     artNote:      "Every crew gets its own patch. This one's yours.",
     reroll:       "New patch",
-    rerollHelp:   "Don't like it? Pull another. Renaming won't change it. Only this will.",
+    rerollHelp:   "Don't like it? Pull another. Renaming won't change it; only this will.",
   },
   gate: {
     eyebrow:      "PREMIUM",
@@ -116,7 +116,7 @@ const CREW_COPY = {
   },
 
   // ── Signed-out invite landing ───────────────────────────────────────
-  // Shows crew IDENTITY only. Never a show, never a date, never who's going —
+  // Shows crew IDENTITY only. Never a show, never a date, never who's going:
   // a forwarded link must not publish anyone's plans.
   landing: {
     eyebrow:      "YOU'RE INVITED",
@@ -137,7 +137,7 @@ const CREW_COPY = {
     browse:       "Browse shows instead",
   },
 
-  // ── Empty states — Sour Patch, per the Hybrid empty-state voice ─────
+  // ── Empty states · Sour Patch, per the Hybrid empty-state voice ────
   empty: {
     noCrewsTitle:   "No crews yet.",
     noCrewsBody:    "A crew is four friends and a group chat. We handle the calendar part.",
@@ -146,7 +146,7 @@ const CREW_COPY = {
     noUpcomingTitle:"Nobody's committed.",
     noUpcomingBody: "Not one of you has said yes to anything yet. Bold.",
     noPastTitle:    "No history yet.",
-    noPastBody:     "Go to a show together and it lands here. Two of you, minimum, otherwise it's just your night.",
+    noPastBody:     "Go to a show together and it lands here. Two of you, minimum. Otherwise it's just your night.",
     lensEmptyTitle: "Your people are homebodies.",
     lensEmptyBody:  (crew) => `Nobody in ${crew} is going to anything yet. Nudge them.`,
     atCapTitle:     "This crew's full.",
@@ -163,7 +163,7 @@ const CREW_COPY = {
     nobody:       "Nobody you know yet.",
   },
 
-  // ── Notifications — bell only, never push (brief §3.11) ─────────────
+  // ── Notifications · bell only, never push (brief §3.11) ────────────
   notif: {
     going:        (handle, artist) => `${handle} is going to ${artist}.`,
     goingNoName:  (artist) => `Someone in your crew is going to ${artist}.`,
@@ -176,7 +176,7 @@ const CREW_COPY = {
     unmute:       "Unmute",
   },
 
-  // ── Destructive + confirmations — sober, no cheek ───────────────────
+  // ── Destructive + confirmations · sober, no cheek ──────────────────
   confirm: {
     leaveTitle:   (crew) => `Leave ${crew}?`,
     leaveBody:    "You'll lose the lens and the shared history. They keep going without you.",
@@ -189,7 +189,7 @@ const CREW_COPY = {
     deleteCta:    "Delete crew",
     handoffTitle: "Pass the crew on first",
     handoffBody:  "You started it, so it needs a new keeper before you go. Pick someone.",
-    // Creator is the last member — there is nobody to hand it to. Don't offer a
+    // Creator is the last member: there is nobody to hand it to. Don't offer a
     // handoff that can't happen; say what the only real option is.
     lastOneTitle: (crew) => `You're the last one in ${crew}.`,
     lastOneBody:  "There's nobody to hand it to, so leaving means deleting it. The nights you went stay in your Concerts.",
@@ -206,8 +206,32 @@ const CREW_COPY = {
     lensOff:      "Crew lens off. Showing all shows.",
     memberNoHandle:"Crew member without a handle",
     goingList:    (names) => `Going: ${names.join(", ")}`,
-    crewActivity: (crew) => `${crew} crew activity`,
+    // Chrome labels. These live here for the same reason every other string
+    // does: eng lifts one file. The R4 em-dash sweep dropped `crewActivity` and
+    // `close`, which quietly pushed three call sites back onto inline strings.
+    // `search` is added in the same pass: it was inline from the start.
     close:        "Close",
+    search:       "Search",
+    crewActivity: (crew) => `${crew} crew activity`,
+  },
+
+  // ── Network states (B4) ────────────────────────────────────
+  // Loading copy is deliberately near-silent. A skeleton already says
+  // "loading", and a cheeky line you read for 400ms and then never again is
+  // noise. Errors get the Sour Patch voice, because you're stuck there.
+  net: {
+    loadingCrews:   "Rounding up your people…",
+    loadingCrew:    "Opening the crew…",
+    loadingInvite:  "Checking the invite…",
+    errListTitle:   "Couldn't load your crews.",
+    errListBody:    "That's on us, not you. Your crews are fine. We just can't reach them this second.",
+    errCrewTitle:   "Couldn't open this crew.",
+    errCrewBody:    "The roster and the shows are still there. We just couldn't fetch them.",
+    errInviteTitle: "Couldn't check this invite.",
+    errInviteBody:  "Something on our end went sideways. The link is probably fine. Try again in a second.",
+    retry:          "Try again",
+    offlineTitle:   "You're offline.",
+    offlineBody:    "Crews needs a connection to know who's going. We'll pick this up when you're back.",
   },
 
   plural: crewPlural,
