@@ -360,12 +360,4 @@ describe('VenueGuideBlock (#764)', () => {
     const success = await screen.findByText(GUIDE_COPY.status.saved)
     expect(success.style.color).not.toBe('var(--danger)')
   })
-
-  it('renders the legend with a text equivalent for every dot', () => {
-    renderBlock()
-    expect(screen.getByText(GUIDE_COPY.legend.heading)).toBeTruthy()
-    expect(screen.getByText(GUIDE_COPY.legend.blankBody)).toBeTruthy()
-    expect(screen.getByText(GUIDE_COPY.legend.authoredBody)).toBeTruthy()
-    expect(screen.getByText(GUIDE_COPY.legend.placeholderBody)).toBeTruthy()
-  })
 })

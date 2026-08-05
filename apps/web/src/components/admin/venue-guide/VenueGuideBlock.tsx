@@ -27,7 +27,6 @@ import { ADMIN_COPY } from '../definitions/copy'
 import { AccessibilityField } from './AccessibilityField'
 import { ChipPicker } from './ChipPicker'
 import { ChipStateDot } from './ChipStateDot'
-import { ChipStateLegend } from './ChipStateLegend'
 import { GuideIcon } from './GuideIcon'
 
 const GUIDE_COPY = ADMIN_COPY.venueDetailsClient.guide
@@ -546,35 +545,6 @@ export const VenueGuideBlock = ({
             </div>
           )}
 
-          <div
-            style={{
-              display: 'flex',
-              gap: 9,
-              padding: '10px 12px',
-              borderRadius: 9,
-              background: 'color-mix(in oklab, var(--accent) 9%, transparent)',
-              border:
-                '1px solid color-mix(in oklab, var(--accent) 26%, transparent)',
-            }}
-          >
-            <AlertTriangle
-              size={14}
-              aria-hidden="true"
-              style={{ color: 'var(--accent)', flexShrink: 0, marginTop: 2 }}
-            />
-            <p
-              style={{
-                margin: 0,
-                fontFamily: 'var(--font-sans)',
-                fontSize: 11.5,
-                color: 'var(--fg-muted)',
-                lineHeight: 1.5,
-              }}
-            >
-              {GUIDE_COPY.voiceReminder}
-            </p>
-          </div>
-
           {status !== null && (
             <p
               role="status"
@@ -703,8 +673,6 @@ export const VenueGuideBlock = ({
           </div>
         </div>
       </Panel>
-
-      <ChipStateLegend />
     </div>
   )
 }

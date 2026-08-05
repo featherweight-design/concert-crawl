@@ -653,8 +653,6 @@ export const ADMIN_COPY = {
       blockTitle: 'First-timer guide',
       blockSub:
         "Concert-goer voice only. Write it like you're texting a friend who's never been — specific beats generic, honest beats hype.",
-      voiceReminder:
-        "“$15 cash, Blake St.” beats “paid parking available.” If you can't say it like a regular would, leave it blank.",
       badge: {
         ready: 'Ready to publish',
         readyWithPlaceholder: 'Publishable · access marked undocumented',
@@ -746,15 +744,6 @@ export const ADMIN_COPY = {
         blank: 'Blank',
         authored: 'Authored',
         honest_placeholder: 'Honest placeholder',
-      },
-      legend: {
-        heading: 'Chip state indicators',
-        blankBody:
-          'No content yet. Optional chips stay hidden on the venue page — never shown empty.',
-        authoredBody:
-          'A concert-goer-voice line the admin wrote and voice-passed. This is what ships to display.',
-        placeholderBody:
-          'Accessibility only. Satisfies the publish gate without faking content — shows “not documented yet, call the venue.”',
       },
       footer: {
         publishHint: ' publish',
