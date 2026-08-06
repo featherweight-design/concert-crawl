@@ -266,7 +266,6 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
               setConfirm('remove')
             }}
             onLeave={() => setConfirm('leave')}
-            onInvite={() => setInvite(true)}
           />
         )}
       </div>

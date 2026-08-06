@@ -15,7 +15,6 @@ interface CrewRosterProps {
   isKeeper: boolean
   onRemove: (member: CrewMember) => void
   onLeave: () => void
-  onInvite: () => void
 }
 
 const rowAction: React.CSSProperties = {
@@ -40,7 +39,6 @@ export const CrewRoster = ({
   isKeeper,
   onRemove,
   onLeave,
-  onInvite,
 }: CrewRosterProps) => {
   const full = memberCount >= CREW_MEMBER_CAP
 
@@ -56,29 +54,9 @@ export const CrewRoster = ({
           body={COPY.empty.atCapBody}
         />
       )}
-      <div className="flex items-center justify-between gap-3">
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9.5,
-            fontWeight: 700,
-            letterSpacing: '0.14em',
-            color: full ? 'var(--warning)' : 'var(--fg-subtle)',
-          }}
-        >
-          {COPY.detail.spots(memberCount)}
-        </span>
-        {/* Stays reachable at cap: the sheet is where the at-cap notice
-            lives, so hiding the way in would hide the explanation with it. */}
-        <button
-          type="button"
-          onClick={onInvite}
-          className="cursor-pointer"
-          style={rowAction}
-        >
-          {COPY.detail.invite}
-        </button>
-      </div>
+      {/* No spots line and no Invite button here: the hero renders both
+          unconditionally about 150px above, so on this tab they were the same
+          count and the same control said twice. */}
       <ul className="m-0 flex list-none flex-col p-0">
         {members.map((member, index) => {
           const named = member.handle !== null && member.handle !== ''
