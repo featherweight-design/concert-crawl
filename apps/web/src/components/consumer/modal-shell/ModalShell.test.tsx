@@ -189,6 +189,15 @@ describe('ModalShell focus containment', () => {
     )
   })
 
+  it('wraps Shift+Tab from the first control to the last', () => {
+    render(<TwoControls />)
+    screen.getByRole('button', { name: 'First' }).focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Last' }),
+    )
+  })
+
   it('wraps Shift+Tab off the dialog itself to the last control', () => {
     render(<TwoControls />)
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })

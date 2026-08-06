@@ -72,7 +72,7 @@ export const CREWS_COPY = {
   },
 
   net: {
-    loading: 'Rounding up your people…',
+    loading: 'ROUNDING UP YOUR PEOPLE…',
     errEyebrow: 'NO SIGNAL',
     errTitle: "Couldn't load your crews.",
     errBody:
