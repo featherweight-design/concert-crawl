@@ -1,3 +1,10 @@
+## [1.216.7](https://github.com/HartiganHM/concert-crawl/compare/v1.216.6...v1.216.7) (2026-08-06)
+
+
+### Bug Fixes
+
+* **deps:** remove duplicated lockfile blocks that broke every install ([#1489](https://github.com/HartiganHM/concert-crawl/issues/1489)) ([5489ab0](https://github.com/HartiganHM/concert-crawl/commit/5489ab08706c92088a08016f86d126fe9e481862)), closes [#1409](https://github.com/HartiganHM/concert-crawl/issues/1409) [#1409](https://github.com/HartiganHM/concert-crawl/issues/1409) [#1190](https://github.com/HartiganHM/concert-crawl/issues/1190) [#1189](https://github.com/HartiganHM/concert-crawl/issues/1189) [#1488](https://github.com/HartiganHM/concert-crawl/issues/1488)
+
 ## [1.216.6](https://github.com/HartiganHM/concert-crawl/compare/v1.216.5...v1.216.6) (2026-08-05)
 
 
