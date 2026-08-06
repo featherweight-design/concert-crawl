@@ -717,6 +717,7 @@ export const CONSUMER_COPY = {
           href: '/watching',
           matchPrefixes: ['/history'],
         },
+        { label: 'Crews', href: '/crews' },
       ] as const,
     },
     search: {
@@ -749,8 +750,9 @@ export const CONSUMER_COPY = {
           href: '/watching',
           matchPrefixes: ['/history'],
         },
+        { key: 'crews', label: 'crews', href: '/crews' },
       ] as const,
-      // Slot 4's accessible name comes from userMenu.ariaLabels — it opens the
+      // Slot 5's accessible name comes from userMenu.ariaLabels — it opens the
       // same menu as every other account trigger, so it names the same thing.
     },
   },

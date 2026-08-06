@@ -17,7 +17,7 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
 
 import { HistoryLocked } from './HistoryLocked'
 import { HISTORY_COPY } from './definitions/copy'
-import { unlockTierFor } from './lib/unlock-tier'
+import { unlockTierFor } from '@/lib/unlock-tier'
 
 afterEach(cleanup)
 

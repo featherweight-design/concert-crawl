@@ -126,3 +126,33 @@ describe('AppHeader — signed-out auth affordances (#794)', () => {
     }
   })
 })
+
+describe('AppHeader crews tab (#1226)', () => {
+  it('carries the same crews destination as the mobile bar', () => {
+    render(<AppHeader />)
+    expect(
+      screen.getByRole('link', { name: 'Crews' }).getAttribute('href'),
+    ).toBe('/crews')
+  })
+
+  it('marks the active tab as the current page', () => {
+    pathname.current = '/crews'
+    render(<AppHeader />)
+    expect(
+      screen.getByRole('link', { name: 'Crews' }).getAttribute('aria-current'),
+    ).toBe('page')
+    expect(
+      screen.getByRole('link', { name: 'Browse' }).getAttribute('aria-current'),
+    ).toBeNull()
+  })
+
+  it('marks My shows current on a /history sub-route', () => {
+    pathname.current = '/history'
+    render(<AppHeader />)
+    expect(
+      screen
+        .getByRole('link', { name: 'My shows' })
+        .getAttribute('aria-current'),
+    ).toBe('page')
+  })
+})

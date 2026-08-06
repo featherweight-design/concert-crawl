@@ -86,6 +86,38 @@ const STATIC_TABS = [
       </svg>
     ),
   },
+  {
+    key: COPY.nav.tabs[3].key,
+    label: COPY.nav.tabs[3].label,
+    href: COPY.nav.tabs[3].href,
+    // Three overlapping rings: a small group. Deliberately not the Watching
+    // eye and deliberately not a heart — a crew is a set of people.
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+        <circle
+          cx="6"
+          cy="6.75"
+          r="3.75"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+        <circle
+          cx="12"
+          cy="6.75"
+          r="3.75"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+        <circle
+          cx="9"
+          cy="11.25"
+          r="3.75"
+          stroke="currentColor"
+          strokeWidth="1.5"
+        />
+      </svg>
+    ),
+  },
 ] as const
 
 interface MeAvatarProps {
@@ -227,12 +259,19 @@ export function BottomNav() {
           <Link
             key={tab.key}
             href={tab.href}
-            className="flex flex-col items-center gap-[3px]"
-            style={{ color: isActive ? 'var(--signal)' : 'var(--fg-subtle)' }}
+            aria-current={isActive ? 'page' : undefined}
+            className="flex flex-col items-center justify-center gap-[3px]"
+            // No fixed per-slot width: five slots share the bar by flex, so the
+            // labels stay whole at 320px instead of being clipped to a budget.
+            style={{
+              minWidth: 44,
+              minHeight: 44,
+              color: isActive ? 'var(--signal)' : 'var(--fg-subtle)',
+            }}
           >
             {tab.icon}
             <span
-              className="text-[9px] tracking-[0.04em]"
+              className="whitespace-nowrap text-[9px] tracking-[0.04em]"
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontWeight: isActive ? 700 : 500,

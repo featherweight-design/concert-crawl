@@ -227,6 +227,13 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+
+/* Concert Crews (#1226) — same reason: the crew-name field paints its own
+   border inline, so it needs an explicit ring rather than the UA default. */
+.crew-name-input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
 /* ── In-app notifications (#737) ──────────────────────────────────────────
    The panel is a port of design_handoff_in_app_notifications, whose components
    style themselves inline. These four rules are the ones inline styles cannot

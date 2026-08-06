@@ -99,6 +99,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
                 <Link
                   key={tab.href}
                   href={tab.href}
+                  aria-current={isActive ? 'page' : undefined}
                   className={cn(
                     'shrink-0 rounded-lg px-[14px] py-[8px] text-[13px] tracking-[-0.01em]',
                     isActive

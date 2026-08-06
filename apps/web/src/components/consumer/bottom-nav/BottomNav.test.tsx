@@ -115,3 +115,61 @@ describe('BottomNav slot 4 (#794)', () => {
     expect(nav.style.height).toContain('safe-area-inset-bottom')
   })
 })
+
+describe('BottomNav crews slot (#1226)', () => {
+  it('renders five destination tabs in the locked order', () => {
+    render(<BottomNav />)
+    for (const [label, href] of [
+      ['browse', '/events'],
+      ['venues', '/venues'],
+      ['my shows', '/watching'],
+      ['crews', '/crews'],
+    ] as const) {
+      expect(
+        screen.getByRole('link', { name: label }).getAttribute('href'),
+      ).toBe(href)
+    }
+  })
+
+  it('fits five slots at a 320px baseline without truncating a label', () => {
+    render(<BottomNav />)
+    const links = screen.getAllByRole('link')
+    // Four links plus the account button. Nothing claims a fixed width, so the
+    // bar distributes by flex; each slot only reserves the 44px tap target.
+    expect(links).toHaveLength(4)
+    const reserved = links.length * 44 + 56
+    expect(reserved).toBeLessThanOrEqual(320)
+    for (const link of links) {
+      expect(link.style.width).toBe('')
+      expect(link.style.minWidth).toBe('44px')
+      expect(link.style.minHeight).toBe('44px')
+      // A clipped label is what "5 slots at 320" actually risks, so assert the
+      // label is neither ellipsised nor wrapped.
+      const label = link.querySelector('span')
+      expect(label?.className).toContain('whitespace-nowrap')
+      expect(label?.className).not.toContain('truncate')
+    }
+  })
+
+  it('marks the crews tab as the current page on /crews', () => {
+    pathname.current = '/crews'
+    render(<BottomNav />)
+    expect(
+      screen.getByRole('link', { name: 'crews' }).getAttribute('aria-current'),
+    ).toBe('page')
+    expect(
+      screen.getByRole('link', { name: 'browse' }).getAttribute('aria-current'),
+    ).toBeNull()
+  })
+
+  it('does not reuse the Watching eye for crews', () => {
+    pathname.current = '/crews'
+    render(<BottomNav />)
+    const crews = screen.getByRole('link', { name: 'crews' })
+    const watching = screen.getByRole('link', { name: 'my shows' })
+    expect(crews.querySelector('svg')?.innerHTML).not.toBe(
+      watching.querySelector('svg')?.innerHTML,
+    )
+    expect(crews.querySelectorAll('circle')).toHaveLength(3)
+  })
+})
