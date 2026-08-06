@@ -81,6 +81,11 @@ const selectAttendanceRows = async (
     .orderBy(
       tense === 'upcoming' ? asc(events.date) : desc(events.date),
       tense === 'upcoming' ? asc(events.showTime) : desc(events.showTime),
+      // Two members attending the same show produce two rows that tie on both
+      // date keys, and the `going` array grouped out of them would otherwise
+      // reorder between requests.
+      asc(events.id),
+      asc(userEvents.userId),
     )
 
 /**

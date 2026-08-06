@@ -319,6 +319,24 @@ describe('/v1/crews', () => {
       expect(body.data.nights[0]?.going).toHaveLength(2)
     })
 
+    it('orders the going list deterministically across requests', async () => {
+      // Both attendees tie on every date key, so without a tie-break the
+      // avatars on a night could swap places between two identical requests.
+      await seedShow(dayOffset(-5), [KEEPER, MATE], 'duo-stable')
+      const crewId = await seedCrew([KEEPER, MATE])
+      setAuth()
+      const first = (await (
+        await app.request(`/v1/crews/${crewId}`)
+      ).json()) as DetailBody
+      const second = (await (
+        await app.request(`/v1/crews/${crewId}`)
+      ).json()) as DetailBody
+      expect(first.data.nights[0]?.going.map((who) => who.userId)).toEqual(
+        [KEEPER, MATE].sort(),
+      )
+      expect(second.data.nights[0]?.going).toEqual(first.data.nights[0]?.going)
+    })
+
     it('ignores attendance by someone outside the crew', async () => {
       await seedShow(dayOffset(4), [STRANGER], 'outsider')
       const crewId = await seedCrew([KEEPER, MATE])
