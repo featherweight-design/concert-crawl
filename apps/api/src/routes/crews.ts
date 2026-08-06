@@ -605,26 +605,42 @@ crewsRouter.post('/:crewId/handoff', async (ctx) => {
   if (!gate.ok) return ctx.json(keeperDenied(gate.status), gate.status)
 
   const { newKeeperId } = bodyParsed.data
-  if (!(await isMember(db, idParsed.data, newKeeperId)))
+
+  // The whole thing runs under the crew row lock, which is the same lock
+  // POST /leave takes. Without it the incoming keeper can leave between the
+  // membership check and the UPDATE, stranding the crew with a keeper who is
+  // not a member and so can never pass requireKeeper again.
+  const result = await db.transaction(async (tx) => {
+    const locked = await lockCrew(tx, idParsed.data)
+    if (!locked || locked.keeperId !== authInfo.userId)
+      return { kind: 'race' } as const
+    if (!(await isMember(tx, idParsed.data, newKeeperId)))
+      return { kind: 'not-a-member' } as const
+
+    const [updated] = await tx
+      .update(crews)
+      .set({ keeperId: newKeeperId, updatedAt: new Date() })
+      .where(keeperOwns(idParsed.data, authInfo.userId))
+      .returning({
+        id: crews.id,
+        name: crews.name,
+        patchSalt: crews.patchSalt,
+        keeperId: crews.keeperId,
+      })
+
+    return updated
+      ? ({ kind: 'done', updated } as const)
+      : ({ kind: 'race' } as const)
+  })
+
+  if (result.kind === 'race') return ctx.json(keeperRaceLost, 404)
+  if (result.kind === 'not-a-member')
     return ctx.json(
       { success: false, error: 'That person is not in this crew' },
       400,
     )
 
-  const [updated] = await db
-    .update(crews)
-    .set({ keeperId: newKeeperId, updatedAt: new Date() })
-    .where(keeperOwns(idParsed.data, authInfo.userId))
-    .returning({
-      id: crews.id,
-      name: crews.name,
-      patchSalt: crews.patchSalt,
-      keeperId: crews.keeperId,
-    })
-
-  if (!updated) return ctx.json(keeperRaceLost, 404)
-
-  return ctx.json({ success: true, data: { crew: updated } })
+  return ctx.json({ success: true, data: { crew: result.updated } })
 })
 
 // PUT/DELETE /v1/crews/:crewId/mute — member-only, not keeper-only. Mute
