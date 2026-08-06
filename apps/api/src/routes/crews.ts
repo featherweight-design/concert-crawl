@@ -215,8 +215,8 @@ crewsRouter.post('/', requireFeature('crews'), async (ctx) => {
 
 /**
  * Membership is the authorization boundary for every read. Resolves the crew
- * only when the caller belongs to it; a non-member gets the same 404 a
- * non-existent crew gets, so crew ids are not probeable.
+ * only when the caller belongs to it. Callers answer 403 for both a missing
+ * crew and a non-member, so crew ids are not probeable.
  */
 const resolveMembership = async (
   crewId: string,
@@ -391,6 +391,11 @@ crewsRouter.patch('/:crewId', async (ctx) => {
       patchSalt: crews.patchSalt,
     })
 
+  // The gate above and this UPDATE are separate statements, so a concurrent
+  // delete can land between them. Without this the response would omit `crew`.
+  if (!updated)
+    return ctx.json({ success: false, error: 'Crew not found' }, 404)
+
   return ctx.json({ success: true, data: { crew: updated } })
 })
 
@@ -417,6 +422,9 @@ crewsRouter.post('/:crewId/patch/reroll', async (ctx) => {
       name: crews.name,
       patchSalt: crews.patchSalt,
     })
+
+  if (!updated)
+    return ctx.json({ success: false, error: 'Crew not found' }, 404)
 
   return ctx.json({ success: true, data: { crew: updated } })
 })
@@ -578,6 +586,9 @@ crewsRouter.post('/:crewId/handoff', async (ctx) => {
       patchSalt: crews.patchSalt,
       keeperId: crews.keeperId,
     })
+
+  if (!updated)
+    return ctx.json({ success: false, error: 'Crew not found' }, 404)
 
   return ctx.json({ success: true, data: { crew: updated } })
 })
