@@ -220,8 +220,8 @@ first.
 - **Any production database migration.** `0076_crews.sql` is additive and ships through the
   normal deploy, which needs no sign-off — but a hand-run `psql` against prod does.
 - **Any proposal to make a crews route public.** Adding a `/crews(.*)` or `/crew/join(.*)`
-  matcher pattern to either
-  matcher reverses a resolved decision and re-opens #794's failure. Escalate; never decide it
+  matcher pattern to either public list reverses a resolved decision and re-opens #794's
+  failure. Escalate; never decide it
   in-run.
 - **Any proposal to move the `crews` entitlement cell.** Supporter was settled 2026-08-05 with
   reasoning attached. Ask before touching it.
