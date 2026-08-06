@@ -12,8 +12,9 @@
 // the one thing that has to change with it.
 
 import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import {
   crewInvites,
   crewMembers,
@@ -45,8 +46,28 @@ import { crewInviteTokenSchema } from '../lib/crew-invite-token.js'
  * (`.split(',')[0]?.trim() ?? 'unknown'`) — do not invent a second convention
  * at that point.
  */
-const RESOLVE_LIMIT = 30
-const RESOLVE_WINDOW_MS = 10 * 60 * 1000
+const TOKEN_LIMIT = 30
+const TOKEN_WINDOW_MS = 10 * 60 * 1000
+
+/**
+ * One budget across BOTH routes, deliberately. Join answers 404/409/200
+ * distinctly, so it enumerates just as well as resolve does; a per-route
+ * budget would let an attacker spend one and then the other for twice the
+ * attempts. Returns the 429 response, or null when the caller may proceed.
+ */
+const spendTokenBudget = (ctx: Context, userId: string, event: string) => {
+  const limit = checkRateLimit(
+    `crew-invite:${userId}`,
+    TOKEN_LIMIT,
+    TOKEN_WINDOW_MS,
+  )
+  if (limit.allowed) return null
+  // Every other 429 in this API carries Retry-After (feedback.ts, spotify.ts),
+  // and a client that cannot see the window backs off by guessing.
+  ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)))
+  apiLogger.info({ userId }, event)
+  return ctx.json({ success: false, error: 'Too many requests' }, 429)
+}
 
 type DeadReason = 'expired' | 'revoked' | 'unknown'
 
@@ -54,11 +75,19 @@ export const crewInvitesRouter = new Hono()
 
 crewInvitesRouter.use('*', clerkMiddleware())
 
+/**
+ * Expiry is decided by the database clock, never the API instance's, matching
+ * `liveInvite()` in routes/crews.ts. Two instances with a few seconds of skew
+ * would otherwise disagree about who may join in the seconds either side of
+ * the TTL boundary, and the minting side already answers to `now()`.
+ */
+const isExpired = sql<boolean>`${crewInvites.expiresAt} <= now()`
+
 interface LoadedInvite {
   inviteId: string
   crewId: string
   createdBy: string
-  expiresAt: Date
+  expired: boolean
   revokedAt: Date | null
   name: string
   patchSalt: number
@@ -70,7 +99,7 @@ const loadInvite = async (token: string): Promise<LoadedInvite | null> => {
       inviteId: crewInvites.id,
       crewId: crewInvites.crewId,
       createdBy: crewInvites.createdBy,
-      expiresAt: crewInvites.expiresAt,
+      expired: isExpired,
       revokedAt: crewInvites.revokedAt,
       name: crews.name,
       patchSalt: crews.patchSalt,
@@ -87,7 +116,7 @@ const loadInvite = async (token: string): Promise<LoadedInvite | null> => {
 const deadReason = (invite: LoadedInvite | null): DeadReason | null => {
   if (!invite) return 'unknown'
   if (invite.revokedAt) return 'revoked'
-  if (invite.expiresAt.getTime() <= Date.now()) return 'expired'
+  if (invite.expired) return 'expired'
   return null
 }
 
@@ -98,19 +127,12 @@ crewInvitesRouter.get('/:token', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
   const userId = authInfo.userId
 
-  const limit = checkRateLimit(
-    `crew-invite:${userId}`,
-    RESOLVE_LIMIT,
-    RESOLVE_WINDOW_MS,
+  const limited = spendTokenBudget(
+    ctx,
+    userId,
+    'crew invite resolution rate limited',
   )
-  if (!limit.allowed) {
-    // Every other 429 in this API carries Retry-After (feedback.ts,
-    // spotify.ts), and a client that cannot see the window backs off by
-    // guessing.
-    ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)))
-    apiLogger.info({ userId }, 'crew invite resolution rate limited')
-    return ctx.json({ success: false, error: 'Too many requests' }, 429)
-  }
+  if (limited) return limited
 
   // A malformed token can only ever be unknown, so it never reaches the DB.
   // The token itself is the capability and is deliberately absent from the
@@ -166,6 +188,9 @@ crewInvitesRouter.post('/:token/join', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
   const userId = authInfo.userId
 
+  const limited = spendTokenBudget(ctx, userId, 'crew join rate limited')
+  if (limited) return limited
+
   const parsed = crewInviteTokenSchema.safeParse(ctx.req.param('token'))
   if (!parsed.success) {
     apiLogger.info({ userId }, 'crew join rejected on token shape')
@@ -193,7 +218,7 @@ crewInvitesRouter.post('/:token/join', async (ctx) => {
 
     const [live] = await tx
       .select({
-        expiresAt: crewInvites.expiresAt,
+        expired: isExpired,
         revokedAt: crewInvites.revokedAt,
       })
       .from(crewInvites)
@@ -203,8 +228,7 @@ crewInvitesRouter.post('/:token/join', async (ctx) => {
       .limit(1)
     if (!live) return { kind: 'dead', reason: 'unknown' } as const
     if (live.revokedAt) return { kind: 'dead', reason: 'revoked' } as const
-    if (live.expiresAt.getTime() <= Date.now())
-      return { kind: 'dead', reason: 'expired' } as const
+    if (live.expired) return { kind: 'dead', reason: 'expired' } as const
 
     // A forwarded link tapped twice is not a failure.
     if (await isMember(tx, found.crewId, userId))

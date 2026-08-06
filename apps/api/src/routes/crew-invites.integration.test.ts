@@ -386,6 +386,28 @@ describe('crew invites', () => {
       // A client that cannot see the window backs off by guessing.
       expect(Number(limited?.headers.get('Retry-After'))).toBeGreaterThan(0)
     })
+
+    it('spends one budget across resolve and join, not two', async () => {
+      // Join answers 404/409/200 distinctly, so it enumerates as well as
+      // resolve does. Separate budgets would hand an attacker twice the
+      // attempts for the same 72 bits.
+      const grinder = `user_grinder_${randomUUID()}`
+      setAuth(grinder)
+
+      for (let i = 0; i < 40; i++) {
+        const res = await app.request(
+          `/v1/crew-invites/${generateCrewInviteToken()}`,
+        )
+        if (res.status === 429) break
+      }
+
+      const join = await app.request(
+        `/v1/crew-invites/${generateCrewInviteToken()}/join`,
+        { method: 'POST' },
+      )
+      expect(join.status).toBe(429)
+      expect(Number(join.headers.get('Retry-After'))).toBeGreaterThan(0)
+    })
   })
 
   describe('the leak test (locked decision 4)', () => {
