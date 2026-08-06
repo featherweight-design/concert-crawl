@@ -81,6 +81,26 @@ export interface PublicCrewInvite {
   isFull: boolean
 }
 
+// The no-attendance guarantee above is only as good as something that fails
+// when the interface widens. This lives in the source file, not the test file:
+// `tsconfig.json` excludes `**/*.test.ts` from typecheck and vitest transpiles
+// without checking types, so a type-level assertion in a test is inert here.
+// Emits no runtime code — the constraint is checked when the alias is declared.
+type AssertTrue<T extends true> = T
+
+type PublicCrewInviteKeys =
+  'crewId' | 'name' | 'patchSalt' | 'memberCount' | 'invitedByHandle' | 'isFull'
+
+// Bidirectional, so an added key and a removed key both fail. Catches optional
+// additions, which a runtime `Object.keys()` pass cannot see.
+export type PublicCrewInviteKeysAreExact = AssertTrue<
+  [Exclude<keyof PublicCrewInvite, PublicCrewInviteKeys>] extends [never]
+    ? [Exclude<PublicCrewInviteKeys, keyof PublicCrewInvite>] extends [never]
+      ? true
+      : false
+    : false
+>
+
 /**
  * A show on a crew surface. Upcoming needs ≥1 member going; past needs ≥2 —
  * the tense rule that stops a crew home degrading into a merged feed of solo

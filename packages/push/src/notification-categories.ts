@@ -5,8 +5,9 @@ import { z } from 'zod'
 // column so the shipped admin categories (`crawl.*`) continue to work; this
 // Zod union enforces the closed set at every write site.
 //
-// Bell-only categories (contest.*, crew.*) are covered too so their fan-out
-// modules get compile-time safety on the same values they already write.
+// Bell-only categories are covered too. contest.* is written today by
+// contest-notifications; crew.* is declared here ahead of the module that will
+// write it (#1226 PR-7), so that module lands against an already-closed set.
 //
 // Push-eligible categories drive the send pipeline: PUSH_ELIGIBLE_CATEGORIES
 // is the exact set that fires web push when the user has opted in.

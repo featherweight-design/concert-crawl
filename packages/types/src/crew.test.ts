@@ -4,8 +4,9 @@ import type { PublicCrewInvite } from './crew.js'
 // Decision 4 / PR-3 Task 4: the invite landing shows crew identity and never
 // attendance. The type is the first line of that guarantee — there is no event
 // field to populate, so leaking one is a compile error rather than a review
-// catch. This test pins the runtime shape so a later widening of the interface
-// fails here too.
+// catch. The type-level half of that pin lives in crew.ts itself, because this
+// file is excluded from typecheck; what this test adds is the concrete object
+// an API handler actually builds.
 describe('PublicCrewInvite', () => {
   it('carries crew identity and nothing about what the crew is going to', () => {
     const invite: PublicCrewInvite = {
