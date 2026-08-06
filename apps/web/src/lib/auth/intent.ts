@@ -148,6 +148,13 @@ const warnOnServer = (
 export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
   if (!raw) return false
 
+  if (raw.length > MAX_RETURN_PATH_LENGTH) {
+    warnOnServer('[auth] return path rejected: too long', {
+      length: raw.length,
+    })
+    return false
+  }
+
   // The control-character rule covers the whole value, since all of it reaches
   // the header. Everything below concerns only where the value points, which
   // is settled entirely before the first `?` or `#` — a query and a fragment
@@ -157,12 +164,6 @@ export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
   // rejects `/me?q=50%25`: the first pass turns `%25` into a bare `%` and the
   // next throws on it. That is a legitimate return path, and answering it with
   // /events loses the visitor's place.
-  if (raw.length > MAX_RETURN_PATH_LENGTH) {
-    warnOnServer('[auth] return path rejected: too long', {
-      length: raw.length,
-    })
-    return false
-  }
   if (hasControlCharacters(raw)) return false
   if (ENCODED_CONTROL_CHARACTER.test(raw)) return false
   const suffixAt = raw.search(/[?#]/)
