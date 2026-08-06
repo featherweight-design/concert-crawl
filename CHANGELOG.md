@@ -1,3 +1,29 @@
+# [1.219.0](https://github.com/HartiganHM/concert-crawl/compare/v1.218.0...v1.219.0) (2026-08-06)
+
+
+### Bug Fixes
+
+* **auth:** bound a return path to what its cookie can carry ([2004dbb](https://github.com/HartiganHM/concert-crawl/commit/2004dbbc678998e219f6619f3be15ccb0480b020))
+* **auth:** clear the return-path cookie on presence, not on a truthy value ([5a4327a](https://github.com/HartiganHM/concert-crawl/commit/5a4327abc1f8c269ccc216b81ade7c8b762f8d6b))
+* **auth:** decide where a return path points from its path alone ([e8684a1](https://github.com/HartiganHM/concert-crawl/commit/e8684a15cb65e93b9394e0375666901e73fac0b6))
+* **auth:** hold the re-attached query to the control-character rule ([cf1bdb4](https://github.com/HartiganHM/concert-crawl/commit/cf1bdb4c04f721301ac88db2a158ae82b506bd30))
+* **auth:** keep return-path warnings off the browser console ([96d4509](https://github.com/HartiganHM/concert-crawl/commit/96d450910fb4c0e077459549b5ffdeb387846938))
+* **auth:** log why a return path was rejected ([e3e5ac0](https://github.com/HartiganHM/concert-crawl/commit/e3e5ac0a60e2f27399d75513c0a6772fa23b09bc))
+* **auth:** read encoded newlines in a query the loop never decodes ([1cfbf3f](https://github.com/HartiganHM/concert-crawl/commit/1cfbf3f4b141c407f853a14ef981f01e6b52522d))
+* **auth:** reject control characters in return paths ([3b4339c](https://github.com/HartiganHM/concert-crawl/commit/3b4339c152fb4fa164bba2fd2267d8970cef3c6a))
+* **crews:** build the expiry predicate on call, not at import ([cddf24f](https://github.com/HartiganHM/concert-crawl/commit/cddf24fff08dc5c976fb6160c9abc775171fd07e))
+* **crews:** carry Retry-After on the invite 429; drop test-only casts ([9d6d988](https://github.com/HartiganHM/concert-crawl/commit/9d6d988501bf80b56d4a94f9a5a5e513b9b49444))
+* **crews:** honest join flag, Zod at the token boundary, no stale return path ([c840fc4](https://github.com/HartiganHM/concert-crawl/commit/c840fc4ab8d0ac760c0571392a46309c21b262fe))
+* **crews:** let the DB clock decide invite expiry; rate limit the join ([a5d1d57](https://github.com/HartiganHM/concert-crawl/commit/a5d1d5750164d3210f4f09a235f10993f34cf340))
+* **crews:** one open-redirect validator, DB-clock TTL, idempotent revoke ([95614cb](https://github.com/HartiganHM/concert-crawl/commit/95614cb3ac4e02d290d78e4864d2b912dd2b74d9))
+* **crews:** revoke an invite under the same crew row lock as mint and join ([3335374](https://github.com/HartiganHM/concert-crawl/commit/3335374fa2631eedf991b9134b27bbc270c4e56c))
+
+
+### Features
+
+* **crews:** mint, resolve, and join crew invite links ([01a8ffd](https://github.com/HartiganHM/concert-crawl/commit/01a8ffd554ff767f66a2ebca50a2534719c2310d)), closes [#1226](https://github.com/HartiganHM/concert-crawl/issues/1226)
+* **web:** carry a crew link across the beta funnel ([9d562c4](https://github.com/HartiganHM/concert-crawl/commit/9d562c4eaa103f573ddbb95c9c478534fc1c1ace))
+
 # [1.218.0](https://github.com/HartiganHM/concert-crawl/compare/v1.217.0...v1.218.0) (2026-08-06)
 
 
