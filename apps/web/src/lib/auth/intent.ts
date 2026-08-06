@@ -68,8 +68,18 @@ export const stripIntentParams = (
 /** A path still unstable after this many passes is an attack, not a route. */
 const MAX_DECODE_PASSES = 5
 
-/** Rejects `//evil.example` and `/\evil.example`, both resolvable as hosts. */
-const isPlainInAppPath = (value: string): boolean => /^\/[^/\\]/.test(value)
+/**
+ * Rejects `//evil.example` and `/\evil.example`, both resolvable as hosts, and
+ * any control character.
+ *
+ * Control characters matter because every accepted value ends up in a `Location`
+ * header — middleware's redirect and `redirect()` both. A decoded CR or LF there
+ * is response splitting, and `/%0Aevil` is same-origin by every other measure in
+ * this validator. Checked on each decode pass, so an encoded newline is caught
+ * at whichever pass reveals it.
+ */
+const isPlainInAppPath = (value: string): boolean =>
+  /^\/[^/\\]/.test(value) && !/[\x00-\x1f\x7f]/.test(value)
 
 /**
  * This module runs in three places — edge middleware, server actions, and

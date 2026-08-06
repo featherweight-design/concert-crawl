@@ -106,13 +106,20 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     expect(landing).toBe('/events')
   })
 
-  it.each(['//evil.com', '/\\evil.com', 'https://evil.com', '/events'])(
-    'writes no return-path cookie for %s',
-    async (hostile) => {
-      await runToRedirect(() => validateAndSetInviteCode(CODE, hostile))
-      expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
-    },
-  )
+  it.each([
+    '//evil.com',
+    '/\\evil.com',
+    'https://evil.com',
+    // Same-origin by every other measure, but the value ends up in a `Location`
+    // header, where a decoded newline is response splitting. `/%0Aevil` only
+    // reveals itself on the second decode pass.
+    '/\nevil',
+    '/%0Aevil',
+    '/events',
+  ])('writes no return-path cookie for %s', async (hostile) => {
+    await runToRedirect(() => validateAndSetInviteCode(CODE, hostile))
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
+  })
 
   it('clears a cookie left behind by an abandoned earlier attempt', async () => {
     // A first trip started at a crew link and was never finished, so its
@@ -129,7 +136,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     expect(landing).toBe('/events')
   })
 
-  it.each(['//evil.com', '/\\evil.com', 'https://evil.com'])(
+  it.each(['//evil.com', '/\\evil.com', 'https://evil.com', '/%0Aevil'])(
     're-sanitises a hostile cookie value %s on read',
     async (hostile) => {
       // Signed with the real secret: the signature proves we wrote it, which is
