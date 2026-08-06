@@ -30,6 +30,10 @@ export * from './canonical-artist.js'
 // latin-extended-map.ts for the SQL parity contract the map carries.
 export * from './latin-extended-map.js'
 
+// Concert Crews (#1226) — /v1/crews and invite-resolution response contracts,
+// shared by the API handlers and every web crew surface.
+export * from './crew.js'
+
 // #1115 artist page — GET /v1/artists/:slug response contract, shared by the
 // API handler and the web route shell.
 export * from './artist.js'

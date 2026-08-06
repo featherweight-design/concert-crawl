@@ -15,6 +15,7 @@ export type PremiumFeature =
   | 'alerts'
   | 'spotify-sync'
   | 'price-drop-alerts'
+  | 'crews'
 
 export type EntitlementCell =
   'visible-active' | 'paywall-on-tap' | 'tier-picker-on-tap' | 'hidden'
@@ -27,6 +28,7 @@ export const PREMIUM_FEATURES: readonly PremiumFeature[] = [
   'alerts',
   'spotify-sync',
   'price-drop-alerts',
+  'crews',
 ]
 
 export const USER_PLANS: readonly UserPlan[] = [
@@ -47,6 +49,8 @@ export const USER_PLANS: readonly UserPlan[] = [
 //     active-vs-passive split from the beta-to-launch spec. Both features run
 //     on existing infrastructure; Premium keeps the four features with real
 //     ongoing cost (following, alerts, price-drop-alerts, spotify-sync).
+//   - 2026-08-05 crews decision (#1226): supporter is visible-active on the
+//     same test — a crew carries no per-crew marginal cost.
 // Single point of truth for both the boolean entitlement and the locked-tap
 // UX routing — edits here must update the test table in lockstep.
 export const ENTITLEMENTS_MATRIX: Record<
@@ -105,6 +109,18 @@ export const ENTITLEMENTS_MATRIX: Record<
     'logged-out': 'hidden',
     free: 'hidden',
     supporter: 'hidden',
+    premium: 'visible-active',
+    founder: 'visible-active',
+    gifted: 'visible-active',
+  },
+  // Gates the act of CREATING a crew and nothing else (#1226 D6). Joining,
+  // reading, leaving, and muting are un-gated on every plan, and a lapsed
+  // creator keeps every crew they already made — so the apparent gap here is
+  // the design, not an oversight. Do not "fix" it by gating reads.
+  crews: {
+    'logged-out': 'tier-picker-on-tap',
+    free: 'paywall-on-tap',
+    supporter: 'visible-active',
     premium: 'visible-active',
     founder: 'visible-active',
     gifted: 'visible-active',

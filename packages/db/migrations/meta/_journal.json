@@ -533,6 +533,13 @@
       "when": 1786665600000,
       "tag": "0075_latin_extended_canonical",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1786752000000,
+      "tag": "0076_crews",
+      "breakpoints": true
     }
   ]
 }

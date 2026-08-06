@@ -104,7 +104,8 @@ const shortDate = (raw: string): string => {
 // Compose the notification title + body for a given category. Copy templates
 // live in ./definitions/copy.ts (centralized per convention — see
 // packages/crawler-core/src/lib/spotify-fanout/definitions/copy.ts). Categories
-// that don't fan out through this helper (contest.*, spotify.new_show) return
+// that don't fan out through this helper (contest.*, spotify.new_show, crew.*)
+// return
 // empty strings so the caller can skip the write.
 const composeMessage = (
   input: FanoutInput,
@@ -125,8 +126,12 @@ const composeMessage = (
     case 'contest.resolved':
     case 'contest.needs_info':
     case 'spotify.new_show':
+    case 'crew.going':
+    case 'crew.joined':
+    case 'crew.left':
       // Not fanned out here — contest.* handled by contest-notifications;
-      // spotify.new_show handled by the crawler Spotify fan-out helper.
+      // spotify.new_show handled by the crawler Spotify fan-out helper;
+      // crew.* handled by crew-notifications (#1226 PR-7), bell-only.
       return { title: '', body: '' }
     default: {
       // Exhaustiveness assertion — a new category added to the union forces

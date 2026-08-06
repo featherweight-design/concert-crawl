@@ -5,8 +5,8 @@ import { z } from 'zod'
 // column so the shipped admin categories (`crawl.*`) continue to work; this
 // Zod union enforces the closed set at every write site.
 //
-// Bell-only categories (contest.*) are covered too so contest-notifications
-// gets compile-time safety on the same values it already writes.
+// Bell-only categories (contest.*, crew.*) are covered too so their fan-out
+// modules get compile-time safety on the same values they already write.
 //
 // Push-eligible categories drive the send pipeline: PUSH_ELIGIBLE_CATEGORIES
 // is the exact set that fires web push when the user has opted in.
@@ -22,6 +22,11 @@ export const UserNotificationCategorySchema = z.enum([
   'watch.backonsale',
   'watch.pricedrop',
   'spotify.new_show',
+  // Crew activity (#1226) is bell-only, on the contest.* precedent — these
+  // three are deliberately absent from PUSH_ELIGIBLE_CATEGORIES below.
+  'crew.going',
+  'crew.joined',
+  'crew.left',
 ])
 
 export type UserNotificationCategory = z.infer<

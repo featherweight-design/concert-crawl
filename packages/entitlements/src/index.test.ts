@@ -12,7 +12,8 @@ import {
 
 // Independent literal copy of #781 §6, including the R6 Watching-is-Free
 // amendment, the #763 §7 (E8) spotify-sync override, and the 2026-07-29
-// Supporter-unlocks amendment (concert-history + calendar-export) — so several
+// Supporter-unlocks amendment (concert-history + calendar-export), and the
+// 2026-08-05 crews decision (Supporter unlocks crews) — so several
 // rows are no longer verbatim #781. A matrix edit fails these tests until this
 // table is updated in lockstep — that friction is intentional (eng infra spec
 // Part 1).
@@ -76,6 +77,14 @@ const EXPECTED_CELLS: Record<
     founder: 'visible-active',
     gifted: 'visible-active',
   },
+  crews: {
+    'logged-out': 'tier-picker-on-tap',
+    free: 'paywall-on-tap',
+    supporter: 'visible-active',
+    premium: 'visible-active',
+    founder: 'visible-active',
+    gifted: 'visible-active',
+  },
 }
 
 const allCombos: Array<[PremiumFeature, UserPlan]> = PREMIUM_FEATURES.flatMap(
@@ -93,10 +102,10 @@ describe('ENTITLEMENTS_MATRIX', () => {
     },
   )
 
-  it('covers exactly 7 features × 6 plans', () => {
-    expect(PREMIUM_FEATURES).toHaveLength(7)
+  it('covers exactly 8 features × 6 plans', () => {
+    expect(PREMIUM_FEATURES).toHaveLength(8)
     expect(USER_PLANS).toHaveLength(6)
-    expect(Object.keys(ENTITLEMENTS_MATRIX)).toHaveLength(7)
+    expect(Object.keys(ENTITLEMENTS_MATRIX)).toHaveLength(8)
     for (const feature of PREMIUM_FEATURES) {
       expect(Object.keys(ENTITLEMENTS_MATRIX[feature])).toHaveLength(6)
     }
