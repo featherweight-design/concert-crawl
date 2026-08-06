@@ -69,17 +69,27 @@ export const stripIntentParams = (
 const MAX_DECODE_PASSES = 5
 
 /**
- * Rejects `//evil.example` and `/\evil.example`, both resolvable as hosts, and
- * any control character.
+ * Every value this module accepts ends up in a `Location` header — middleware's
+ * redirect and `redirect()` both — so a CR or LF in one is response splitting.
+ * `/%0Aevil` is same-origin by every other measure here, which is why this is a
+ * separate question from where the path points.
  *
- * Control characters matter because every accepted value ends up in a `Location`
- * header — middleware's redirect and `redirect()` both. A decoded CR or LF there
- * is response splitting, and `/%0Aevil` is same-origin by every other measure in
- * this validator. Checked on each decode pass, so an encoded newline is caught
- * at whichever pass reveals it.
+ * Exported because the query string is subject to the same header, and callers
+ * that re-attach one after validating a path (middleware's `toSafeReturnPath`)
+ * need this check without the rest of the path validator: a query legitimately
+ * carries escapes that a decode-to-fixed-point pass would reject, `?q=50%25`
+ * being the obvious one.
+ */
+export const hasControlCharacters = (value: string): boolean =>
+  /[\x00-\x1f\x7f]/.test(value)
+
+/**
+ * Rejects `//evil.example` and `/\evil.example`, both resolvable as hosts, and
+ * any control character. The control-character test runs on each decode pass,
+ * so an encoded newline is caught at whichever pass reveals it.
  */
 const isPlainInAppPath = (value: string): boolean =>
-  /^\/[^/\\]/.test(value) && !/[\x00-\x1f\x7f]/.test(value)
+  /^\/[^/\\]/.test(value) && !hasControlCharacters(value)
 
 /**
  * This module runs in three places — edge middleware, server actions, and

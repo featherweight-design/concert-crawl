@@ -278,6 +278,21 @@ describe('middleware — public browse routes (#794)', () => {
     expect(url.searchParams.get('redirect_url')).toBe('/me?section=watching')
   })
 
+  it('keeps a query string whose escapes the path validator could not resolve', async () => {
+    const { middlewareHandler } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    // `%25` decodes to a bare `%`, which the next decode pass throws on. The
+    // query is never put through that pass precisely so a legitimate one like
+    // this is not answered with /events.
+    await expect(
+      middlewareHandler(auth, makeReq('/me?q=50%25')),
+    ).rejects.toThrow()
+
+    const url = new URL(auth.protect.mock.calls[0]![0].unauthenticatedUrl)
+    expect(url.searchParams.get('redirect_url')).toBe('/me?q=50%25')
+  })
+
   it('never puts an absolute origin in redirect_url', async () => {
     const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
