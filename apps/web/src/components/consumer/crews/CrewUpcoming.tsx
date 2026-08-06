@@ -73,35 +73,17 @@ export const CrewUpcoming = ({ shows, wide }: CrewUpcomingProps) => {
                 key={show.eventId}
                 show={fromCrewShow(show)}
                 surface="crew"
+                // Faces only. The count used to be spelled out beside them;
+                // the row's own crew chip now states it, and saying it twice
+                // on one row reads as two different facts.
                 footer={
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 8,
-                    }}
-                  >
-                    <MemberCluster
-                      members={show.going}
-                      memberCount={show.goingCount}
-                      size={wide ? 24 : 22}
-                      max={wide ? 5 : 3}
-                      label={COPY.detail.going}
-                    />
-                    <span
-                      aria-hidden="true"
-                      style={{
-                        fontFamily: 'var(--font-mono)',
-                        fontSize: 9.5,
-                        fontWeight: 700,
-                        letterSpacing: '0.12em',
-                        textTransform: 'uppercase',
-                        color: 'var(--signal)',
-                      }}
-                    >
-                      {COPY.detail.going(show.goingCount)}
-                    </span>
-                  </span>
+                  <MemberCluster
+                    members={show.going}
+                    memberCount={show.goingCount}
+                    size={wide ? 24 : 22}
+                    max={wide ? 5 : 3}
+                    label={COPY.detail.going}
+                  />
                 }
               />
             ))}

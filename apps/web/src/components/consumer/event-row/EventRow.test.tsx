@@ -47,6 +47,7 @@ function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
     saved: null,
     genres: [],
     isFollowed: false,
+    crewGoing: null,
     isWatching: false,
     status: 'live',
     lifecycle: 'upcoming',

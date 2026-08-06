@@ -34,6 +34,16 @@ export interface RowSavedPrice {
   price: number
 }
 
+/**
+ * Crew presence on a row. The chip states the count; the names ride along for
+ * assistive tech only, because naming people on a list row is event detail's
+ * job (locked decision 5). Handle-less members are counted and never named.
+ */
+export interface RowCrewGoing {
+  count: number
+  names: string[]
+}
+
 export interface EventRowShow {
   id: string
   headliner: string
@@ -53,6 +63,8 @@ export interface EventRowShow {
   genres: string[]
   isFollowed: boolean
   isWatching: boolean
+  /** null on every surface that has no crew context to state. */
+  crewGoing: RowCrewGoing | null
   /**
    * The price's own state. Separate from `lifecycle` because they are
    * different axes: a cancelled show can also be sold out, and only the
@@ -101,6 +113,7 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
         : null,
     genres: [],
     isFollowed: false,
+    crewGoing: null,
     // Every row on this list is watched by definition, so the tick would be on
     // all of them and tell the reader nothing.
     isWatching: false,
@@ -111,7 +124,7 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
 
 export function fromEventWithVenue(
   event: EventWithVenue,
-  options: { isWatching?: boolean } = {},
+  options: { isWatching?: boolean; crewGoing?: RowCrewGoing | null } = {},
 ): EventRowShow {
   const headline = pickBrowseHeadline(event.priceByTier)
   // The legacy scalar is the fallback for rows whose payload omits priceByTier.
@@ -158,6 +171,7 @@ export function fromEventWithVenue(
     // viewers with no match; both mean "not theirs".
     isFollowed: (event.followedArtists?.length ?? 0) > 0,
     isWatching: options.isWatching ?? false,
+    crewGoing: options.crewGoing ?? null,
     // The browse payload carries no sold-out signal, so every row is live
     // until a surface that knows better says otherwise.
     status: 'live',
@@ -191,6 +205,12 @@ export function fromCrewShow(show: CrewShow): EventRowShow {
     saved: null,
     genres: [],
     isFollowed: false,
+    crewGoing: {
+      count: show.goingCount,
+      names: show.going.flatMap((member) =>
+        member.handle === null || member.handle === '' ? [] : [member.handle],
+      ),
+    },
     // Whether *you* watch it is not what this list is about; the going count
     // beneath the row is.
     isWatching: false,

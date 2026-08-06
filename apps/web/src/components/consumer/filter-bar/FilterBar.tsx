@@ -2,7 +2,8 @@
 
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
-import type { VenuePublic } from '@concert-crawl/types'
+import type { CrewSummary, VenuePublic } from '@concert-crawl/types'
+import { CrewLensPill, CrewLensRail } from '@/components/consumer/crews'
 import { cn } from '@/lib/utils'
 import { FilterPopover } from './FilterPopover'
 import { FilterSheet } from './FilterSheet'
@@ -27,6 +28,14 @@ interface FilterBarProps {
   // handoff (#763 PR 7). Defaults true (fail-safe): isScaRegion treats an
   // unknown country as SCA, so unresolved mounts must show the notice too.
   scaRegion?: boolean
+  /**
+   * The viewer's crews, for the Browse lens (#1226). Empty or absent hides the
+   * lens pill entirely: a control that can only ever open an empty picker is
+   * worse than no control.
+   */
+  crews?: CrewSummary[]
+  /** Shows in the active lens, for the rail's count. */
+  lensCount?: number
 }
 
 function IconList({ size = 13 }: { size?: number }) {
@@ -92,6 +101,8 @@ export function FilterBar({
   genres = [],
   className,
   scaRegion = true,
+  crews = [],
+  lensCount = 0,
 }: FilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -177,6 +188,19 @@ export function FilterBar({
     [updateParams],
   )
 
+  // The lens rides a search param like every other Browse state, so it
+  // survives a refresh and a shared URL. An id with no matching crew (a stale
+  // link, a crew since left) resolves to null and the page reads as resting.
+  const lensCrewId = searchParams.get('crew')
+  const lensCrew = crews.find((crew) => crew.id === lensCrewId) ?? null
+
+  const setLensCrew = useCallback(
+    (crewId: string | null) => {
+      updateParams({ crew: crewId ?? '' })
+    },
+    [updateParams],
+  )
+
   const clearAllFilters = useCallback(() => {
     updateParams({
       [FILTER_DEFS.when.queryKey]: '',
@@ -197,22 +221,38 @@ export function FilterBar({
         className,
       )}
     >
-      {/* Heading row: title left, List/Cal toggle right */}
-      <div className="flex items-end justify-between">
-        <div className="flex flex-col gap-0.5">
-          <span
-            className="text-[10px] uppercase tracking-widest text-fg-muted"
-            style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}
-          >
-            {copy.locationLine}
-          </span>
+      {/* Heading row: title left, lens pill + List/Cal toggle right */}
+      <div className="flex items-end justify-between gap-2.5">
+        <div className="flex min-w-0 flex-col gap-0.5">
+          {/* The lens takes the eyebrow's slot rather than sitting beside it:
+              "DENVER, CO" and "CREW LENS · 4 SHOWS" are both answers to what
+              you're looking at, and two of them read as neither. */}
+          {lensCrew === null && (
+            <span
+              className="text-[10px] uppercase tracking-widest text-fg-muted"
+              style={{ fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}
+            >
+              {copy.locationLine}
+            </span>
+          )}
           <h1
-            className="text-[28px] font-black leading-none tracking-tight text-fg"
+            className="truncate text-[28px] font-black leading-none tracking-tight text-fg"
             style={{ letterSpacing: '-0.03em' }}
           >
-            {copy.headingTitle}
+            {lensCrew === null ? copy.headingTitle : lensCrew.name}
           </h1>
         </div>
+
+        {crews.length > 0 && (
+          <div className="flex shrink-0 items-center">
+            <CrewLensPill
+              crews={crews}
+              activeCrew={lensCrew}
+              onSelect={setLensCrew}
+              wide={isDesktop}
+            />
+          </div>
+        )}
 
         {/* List / Cal toggle — Inter font, SVG icons (icons hidden on mobile) */}
         <div
@@ -275,6 +315,15 @@ export function FilterBar({
           })}
         </div>
       </div>
+
+      {lensCrew !== null && (
+        <CrewLensRail
+          count={lensCount}
+          onClear={() => {
+            setLensCrew(null)
+          }}
+        />
+      )}
 
       {/* Filter chips — Inter font, surface-1 inactive bg, placeholder as default label */}
       <div

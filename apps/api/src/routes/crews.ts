@@ -27,11 +27,16 @@ import type {
   CrewMember,
   CrewMemberPreview,
   CrewSummary,
+  EventCrewGoing,
 } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
 import { requireFeature } from '../middleware/entitlement.js'
 import type { EntitlementVariables } from '../middleware/entitlement.js'
-import { loadCrewShows, loadUpcomingCounts } from '../lib/crew-shows.js'
+import {
+  loadCrewGoingForEvent,
+  loadCrewShows,
+  loadUpcomingCounts,
+} from '../lib/crew-shows.js'
 import {
   CREW_CLUSTER_SIZE,
   CREW_DUPLICATE_ID_CODE,
@@ -338,6 +343,25 @@ crewsRouter.get('/:crewId', async (ctx) => {
   }
 
   return ctx.json({ success: true, data: detail })
+})
+
+// GET /v1/crews/event-going/:eventId — who among your crews is going to one
+// event. Registered above the `/:crewId/...` patterns so the static first
+// segment is never read as a crew id. Not scoped to a crew on purpose: event
+// detail asks "do I know anyone going", which is a question about you, not
+// about one crew.
+crewsRouter.get('/event-going/:eventId', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('eventId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid event ID' }, 400)
+
+  const going = await loadCrewGoingForEvent(authInfo.userId, parsed.data)
+  const payload: EventCrewGoing = { count: going.length, going }
+  return ctx.json({ success: true, data: payload })
 })
 
 // GET /v1/crews/:crewId/shows — the Browse lens feed. Same upcoming predicate

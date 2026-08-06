@@ -29,6 +29,9 @@ export const EVENT_ROW_COPY = {
   },
   meta: {
     following: 'Following',
+    // The visible chip is a count only. Naming people on a list row is event
+    // detail's job, so the names ride along in the sr-only label instead.
+    crewGoing: (count: number) => `${count} going`,
   },
   a11y: {
     watchingTick: (artist: string) => `You are watching ${artist}`,
@@ -36,6 +39,21 @@ export const EVENT_ROW_COPY = {
     // carry the word itself. The row has no room for the Spotify glyph the old
     // browse-card chip used, so the source moves in here too.
     following: 'Following this artist on Spotify',
+    // Replaces the "N going" chip, so it has to restate the count as well as
+    // name who. Members without a handle are counted and never named, so the
+    // remainder is reported as "and N more" rather than silently dropped.
+    crewGoing: (names: string[], count: number) => {
+      if (names.length === 0) return `${count} from your crews going`
+      const others = Math.max(count - names.length, 0)
+      // The remainder is a list item like any other, so it takes the "and"
+      // slot and the names before it are plain commas.
+      const items = others > 0 ? [...names, `${others} more`] : names
+      const named =
+        items.length === 1
+          ? items[0]
+          : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+      return `From your crews: ${named} going`
+    },
     priceProvenance: (label: string) => `Price source: ${label}`,
     stalePrice: (relTime: string) => `Stale price, last checked ${relTime}`,
     savedDelta: (amount: string) => `Down ${amount} since you started watching`,

@@ -132,6 +132,53 @@ export const loadCrewShows = async (
 }
 
 /**
+ * Who, among the people you share a crew with, is going to one event. Event
+ * detail's crew line — the only crew surface that names anyone (locked
+ * decision 5).
+ *
+ * Two properties the query has to hold and the callers rely on:
+ * - the viewer is never in the result, because "3 going" beside your own Going
+ *   button reading as 2 friends plus you is a miscount to the person reading it
+ * - a crew-mate shared through two crews appears once, not twice
+ */
+export const loadCrewGoingForEvent = async (
+  userId: string,
+  eventId: string,
+): Promise<CrewMemberPreview[]> => {
+  // The crews you're in, then everyone in them. Two hops rather than a self
+  // join so the "not you" filter has one obvious home.
+  const mine = db
+    .select({ crewId: crewMembers.crewId })
+    .from(crewMembers)
+    .where(eq(crewMembers.userId, userId))
+
+  const rows = await db
+    .selectDistinct({
+      userId: userEvents.userId,
+      handle: userProfiles.handle,
+      avatarColor: userProfiles.avatarColor,
+    })
+    .from(crewMembers)
+    .innerJoin(userEvents, eq(userEvents.userId, crewMembers.userId))
+    .leftJoin(userProfiles, eq(userProfiles.userId, crewMembers.userId))
+    .where(
+      and(
+        inArray(crewMembers.crewId, mine),
+        ne(crewMembers.userId, userId),
+        eq(userEvents.eventId, eventId),
+        isNotNull(userEvents.attendingAt),
+      ),
+    )
+    .orderBy(asc(userProfiles.handle), asc(userEvents.userId))
+
+  return rows.map((row) => ({
+    userId: row.userId,
+    handle: row.handle ?? null,
+    avatarColor: row.avatarColor ?? null,
+  }))
+}
+
+/**
  * Upcoming-show counts for a set of crews, keyed by crew id. Used by the crews
  * list, where loading every crew's full show list would be wasteful. The
  * upcoming threshold is 1, so a distinct-event count is the whole answer;

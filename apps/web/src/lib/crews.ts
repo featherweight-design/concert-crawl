@@ -2,6 +2,7 @@ import type {
   Crew,
   CrewDetail,
   CrewInvite,
+  CrewShow,
   CrewSummary,
   PublicCrewInvite,
 } from '@concert-crawl/types'
@@ -37,6 +38,10 @@ interface CrewCreateResponse {
   crew: CrewSummary
 }
 
+interface CrewShowsResponse {
+  shows: CrewShow[]
+}
+
 export async function fetchCrews(token: string): Promise<CrewSummary[]> {
   const data = await apiClient.get<CrewsListResponse>('/v1/crews', token)
   return data.crews
@@ -66,6 +71,23 @@ export async function fetchCrew(
   crewId: string,
 ): Promise<CrewDetail> {
   return apiClient.get<CrewDetail>(`/v1/crews/${crewId}`, token)
+}
+
+/**
+ * The Browse lens feed. Deliberately the crew home's own upcoming query rather
+ * than a filtered `/v1/events`: "shows one of them is going to" is attendance,
+ * and attendance is not an attribute of an event the events endpoint could
+ * narrow by. Throws `ApiError` 403 for a non-member.
+ */
+export async function fetchCrewShows(
+  token: string,
+  crewId: string,
+): Promise<CrewShow[]> {
+  const data = await apiClient.get<CrewShowsResponse>(
+    `/v1/crews/${crewId}/shows`,
+    token,
+  )
+  return data.shows
 }
 
 /**

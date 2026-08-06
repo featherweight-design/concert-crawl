@@ -1,6 +1,8 @@
 import { Suspense } from 'react'
 import { headers } from 'next/headers'
 import type {
+  CrewShow,
+  CrewSummary,
   EventsAvailabilityResponse,
   EventsListResponse,
   SpotifyTastePicksResponse,
@@ -32,6 +34,8 @@ import { DiscoveryShelf } from '@/components/consumer/spotify/DiscoveryShelf'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 import { fetchSpotifyConnection, fetchTastePicks } from '@/lib/spotify'
+import { fetchCrews, fetchCrewShows } from '@/lib/crews'
+import { CrewLensList } from '@/components/consumer/crews'
 
 const copy = CONSUMER_COPY
 
@@ -218,12 +222,23 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         })
       : Promise.resolve(undefined)
 
+  // The lens pill needs the viewer's crews on the first paint or it pops in
+  // after the list. A failure degrades to no pill rather than a broken page:
+  // the calendar is the thing this route is for.
+  const crewsPromise: Promise<CrewSummary[]> = token
+    ? fetchCrews(token).catch((err: unknown) => {
+        console.error('[browse] crew lens list load failed', err)
+        return []
+      })
+    : Promise.resolve([])
+
   const [
     eventsFetch,
     venues,
     genres,
     watchedShows,
     initialTastePicks,
+    crews,
     requestHeaders,
   ] = await Promise.all([
     eventsPromise,
@@ -231,6 +246,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     fetchGenres(token).catch(() => []),
     watchedShowsPromise,
     tastePicksPromise,
+    crewsPromise,
     headers(),
   ])
   const eventsResult = eventsFetch.response
@@ -240,6 +256,23 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'))
 
   const watchedIds = new Set(watchedShows.map((show) => show.eventId))
+
+  // An unknown or since-left crew id resolves to null, and the page reads as
+  // resting rather than as an error: a stale shared link is not a fault.
+  const lensParam = params['crew']
+  const lensCrew =
+    typeof lensParam === 'string'
+      ? (crews.find((crew) => crew.id === lensParam) ?? null)
+      : null
+  let lensShows: CrewShow[] = []
+  if (lensCrew !== null && token) {
+    try {
+      lensShows = await fetchCrewShows(token, lensCrew.id)
+    } catch (err) {
+      console.error('[browse] crew lens shows load failed', err)
+    }
+  }
+  const lensActive = lensCrew !== null
 
   // SSR-prefetch the availability window (date→count) for the jump picker so
   // react-query is seeded and all in-picker month paging is client-side. Only
@@ -364,7 +397,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
       {/* "Based on your taste" shelf (#763 PR 8) — premium + connected only,
           list view only; renders nothing for everyone else. */}
-      {view === 'list' && (
+      {view === 'list' && !lensActive && (
         <DiscoveryShelf
           {...(initialTastePicks !== undefined && {
             initialPicks: initialTastePicks,
@@ -375,13 +408,19 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       {/* Filter bar */}
       <div className="mb-5">
         <Suspense>
-          <FilterBar venues={venues} genres={genres} scaRegion={scaRegion} />
+          <FilterBar
+            venues={venues}
+            genres={genres}
+            scaRegion={scaRegion}
+            crews={crews}
+            lensCount={lensShows.length}
+          />
         </Suspense>
       </div>
 
       {/* Taste scope banner — only when the API actually applied taste=1
           (taste-filter.jsx mock). */}
-      {tasteApplied && !tasteNudgeConnect && (
+      {tasteApplied && !tasteNudgeConnect && !lensActive && (
         <div
           className="mb-4 flex items-center gap-2 rounded-lg px-3 py-2"
           style={{
@@ -400,7 +439,14 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         </div>
       )}
 
-      {tasteNudgeConnect && (
+      {/* The lens replaces the calendar rather than composing with it: its feed
+          is the crew's attendance query, which the events endpoint's filters
+          have no purchase on. Everything below is Browse's own list. */}
+      {lensActive && (
+        <CrewLensList crewName={lensCrew.name} shows={lensShows} />
+      )}
+
+      {tasteNudgeConnect && !lensActive && (
         <EmptyState
           state="filtered"
           eyebrow={SPOTIFY_COPY.tasteFilter.emptyNotConnected.eyebrow}
@@ -417,31 +463,36 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         />
       )}
 
-      {events.length === 0 && view === 'list' && !tasteNudgeConnect && (
-        <EmptyState
-          state={isFiltered ? 'filtered' : 'no-data'}
-          eyebrow={
-            isFiltered ? copy.emptyFilteredEyebrow : copy.emptyTonightEyebrow
-          }
-          title={isFiltered ? copy.emptyFilteredTitle : copy.emptyTonightTitle}
-          body={isFiltered ? copy.emptyFilteredBody : copy.emptyTonightBody}
-          {...(isFiltered
-            ? {
-                secondaryCta: {
-                  label: copy.emptyFilteredCta,
-                  href: '/events',
-                },
-              }
-            : {
-                primaryCta: {
-                  label: copy.emptyTonightCta,
-                  href: '/events?filterWhen=this-week',
-                },
-              })}
-        />
-      )}
+      {events.length === 0 &&
+        view === 'list' &&
+        !tasteNudgeConnect &&
+        !lensActive && (
+          <EmptyState
+            state={isFiltered ? 'filtered' : 'no-data'}
+            eyebrow={
+              isFiltered ? copy.emptyFilteredEyebrow : copy.emptyTonightEyebrow
+            }
+            title={
+              isFiltered ? copy.emptyFilteredTitle : copy.emptyTonightTitle
+            }
+            body={isFiltered ? copy.emptyFilteredBody : copy.emptyTonightBody}
+            {...(isFiltered
+              ? {
+                  secondaryCta: {
+                    label: copy.emptyFilteredCta,
+                    href: '/events',
+                  },
+                }
+              : {
+                  primaryCta: {
+                    label: copy.emptyTonightCta,
+                    href: '/events?filterWhen=this-week',
+                  },
+                })}
+          />
+        )}
 
-      {heroEvent && view === 'list' && (
+      {heroEvent && view === 'list' && !lensActive && (
         <div className="mb-6">
           <HeroEventCard
             event={heroEvent}
@@ -450,7 +501,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         </div>
       )}
 
-      {view === 'cal' && selectedDate && (
+      {view === 'cal' && selectedDate && !lensActive && (
         <CalendarView
           days={weekDays}
           events={events}
@@ -463,7 +514,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         />
       )}
 
-      {view === 'list' && events.length > 0 && (
+      {view === 'list' && events.length > 0 && !lensActive && (
         <Suspense>
           <EventsList
             initialEvents={listEvents}

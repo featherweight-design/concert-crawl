@@ -3,7 +3,8 @@
  * the row drops it. Adding a surface is an entry in this file and nothing else.
  */
 
-export type RowSurface = 'browse' | 'venue' | 'watching' | 'related' | 'crew'
+export type RowSurface =
+  'browse' | 'venue' | 'watching' | 'related' | 'crew' | 'crewLens'
 
 /** The units line 3 can render, in reading order. */
 export const WHEN_WHERE_UNITS = ['date', 'time', 'venue'] as const
@@ -15,7 +16,8 @@ export type WhenWhereUnit = (typeof WHEN_WHERE_UNITS)[number]
  */
 export type CarriedContext = Extract<WhenWhereUnit, 'date' | 'venue'>
 
-export type MetaChipKind = 'following' | 'genre' | 'freshness' | 'provenance'
+export type MetaChipKind =
+  'crew' | 'following' | 'genre' | 'freshness' | 'provenance'
 
 export interface SurfaceConfig {
   /** Context the surface states elsewhere, so the row must not repeat it. */
@@ -81,7 +83,23 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   // announce a "TBA" the show never earned.
   crew: {
     carries: ['date'],
-    chipPriority: ['following', 'genre'],
+    chipPriority: ['crew', 'following', 'genre'],
+    hasActionGutter: false,
+    carded: false,
+    showsDelta: false,
+    showsPrice: false,
+  },
+  // Browse under a crew lens. The list is Browse's own date-grouped list, so
+  // the date is carried exactly as it is there; the price is suppressed for
+  // the same reason as `crew`, because the lens feed is the crew shows query.
+  //
+  // The crew chip ranks first, which is the whole of decision 5: the budget is
+  // two chips, so a row with crew presence pushes `following` out by ordering
+  // alone. There is no removal rule to keep in sync — a row with no crew chip
+  // gets `following` back for free.
+  crewLens: {
+    carries: ['date'],
+    chipPriority: ['crew', 'following', 'genre'],
     hasActionGutter: false,
     carded: false,
     showsDelta: false,

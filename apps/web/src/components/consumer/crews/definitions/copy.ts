@@ -16,6 +16,13 @@ const plural = (count: number, one: string, many: string): string =>
   count === 1 ? one : many
 
 export const CREWS_COPY = {
+  // Rendered glyphs. Here rather than inline in JSX for the same reason every
+  // other string is: the lint that keeps copy out of `.tsx` cannot tell a
+  // multiplication sign from a sentence.
+  glyphs: {
+    clear: '×',
+  },
+
   list: {
     title: 'Crews',
     eyebrow: 'YOUR PEOPLE',
@@ -232,6 +239,40 @@ export const CREWS_COPY = {
     close: 'Close',
   },
 
+  // The Browse lens. Not a filter: filters narrow the calendar by an attribute
+  // of the show, a crew narrows it by who. The strings say "going", never
+  // "matching", for exactly that reason.
+  lens: {
+    resting: 'Crews',
+    railEyebrow: 'CREW LENS',
+    railCount: (count: number) => `${count} ${plural(count, 'SHOW', 'SHOWS')}`,
+    railClear: 'Clear',
+    pickerTitle: 'Look through a crew',
+    pickerSub: 'The calendar, filtered to shows one of them is going to.',
+    pickerNone: 'Everyone',
+    pickerNoneMeta: 'EVERY SHOW IN DENVER',
+    emptyEyebrow: 'CREW LENS',
+    emptyTitle: 'Your people are homebodies.',
+    emptyBody: (crew: string) =>
+      `Nobody in ${crew} is going to anything yet. Nudge them.`,
+    emptyRail: '0 shows',
+    // The way out is the lens off, not the crew home: you came here to look at
+    // the calendar.
+    emptyCta: 'Show every show',
+    loading: 'LOOKING THROUGH THE CREW…',
+    failed: "Couldn't load that crew's shows. Try again.",
+  },
+
+  // The crew line on event detail, attached to Going. The only crew surface
+  // that names anyone out loud.
+  goingLine: {
+    chip: 'CREW',
+    suffix: ' going',
+    more: (count: number) => ` + ${count} more`,
+    // Nobody in the crew has a handle yet, so there is nothing honest to name.
+    unnamed: (count: number) => `${count} from your crews going`,
+  },
+
   // Tier name and price both come from unlockTierFor('crews'), never a literal.
   gate: {
     eyebrow: (tierName: string) => tierName.toUpperCase(),
@@ -279,5 +320,14 @@ export const CREWS_COPY = {
     reroll: 'Pull a new patch',
     options: 'Crew options',
     close: 'Close',
+    lensOn: (crew: string) =>
+      `Crew lens on: ${crew}. Showing shows a member is going to.`,
+    lensOff: 'Crew lens off. Showing all shows.',
+    // The named list on event detail. The count is stated separately, so this
+    // only has to name who and account for anyone it cannot name.
+    goingList: (names: string[], others: number) =>
+      others > 0
+        ? `Going: ${names.join(', ')} and ${others} more`
+        : `Going: ${names.join(', ')}`,
   },
 } as const

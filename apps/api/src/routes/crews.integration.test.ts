@@ -26,7 +26,12 @@ vi.mock('@hono/clerk-auth', () => ({
 import { randomUUID } from 'node:crypto'
 import { sql } from 'drizzle-orm'
 import { crewMembers, crews, subscriptions } from '@concert-crawl/db'
-import type { CrewDetail, CrewShow, CrewSummary } from '@concert-crawl/types'
+import type {
+  CrewDetail,
+  CrewShow,
+  CrewSummary,
+  EventCrewGoing,
+} from '@concert-crawl/types'
 import { createApp } from '../app.js'
 import { testDb } from '../test/helpers/db.js'
 import {
@@ -100,6 +105,7 @@ const dayOffset = (days: number): string => {
 type ListBody = { success: boolean; data: { crews: CrewSummary[] } }
 type DetailBody = { success: boolean; data: CrewDetail }
 type ShowsBody = { success: boolean; data: { shows: CrewShow[] } }
+type GoingBody = { success: boolean; data: EventCrewGoing }
 
 describe('/v1/crews', () => {
   beforeEach(async () => {
@@ -118,6 +124,7 @@ describe('/v1/crews', () => {
         ['POST', '/v1/crews'],
         ['GET', `/v1/crews/${crewId}`],
         ['GET', `/v1/crews/${crewId}/shows`],
+        ['GET', `/v1/crews/event-going/${crewId}`],
         ['PATCH', `/v1/crews/${crewId}`],
         ['POST', `/v1/crews/${crewId}/patch/reroll`],
         ['DELETE', `/v1/crews/${crewId}`],
@@ -364,6 +371,69 @@ describe('/v1/crews', () => {
         await app.request(`/v1/crews/${crewId}/shows`)
       ).json()) as ShowsBody
       expect(body.data.shows.map((show) => show.eventId)).toEqual([eventId])
+    })
+  })
+
+  // The event-detail crew line. Two properties carry the weight: the viewer is
+  // never in their own list, and a crew-mate shared through two crews is
+  // counted once.
+  describe('GET /v1/crews/event-going/:eventId', () => {
+    const seedAttended = async (
+      slug: string,
+      attendees: string[],
+    ): Promise<string> => {
+      const venue = await seedVenue({ name: `Venue ${slug}`, slug })
+      const event = await seedEvent(venue.id, {
+        date: dayOffset(6),
+        artist: `Act ${slug}`,
+      })
+      for (const userId of attendees) {
+        await seedUserEvent(userId, event.id, {
+          status: null,
+          attendingAt: new Date(),
+        })
+      }
+      return event.id
+    }
+
+    it('returns 400 on a non-uuid event id', async () => {
+      setAuth()
+      const res = await app.request('/v1/crews/event-going/not-a-uuid')
+      expect(res.status).toBe(400)
+    })
+
+    it('names crew-mates going and leaves the viewer out of the count', async () => {
+      const eventId = await seedAttended('going-basic', [KEEPER, MATE])
+      await seedUserProfile(MATE, { handle: 'natstretch' })
+      await seedCrew([KEEPER, MATE])
+      setAuth()
+      const body = (await (
+        await app.request(`/v1/crews/event-going/${eventId}`)
+      ).json()) as GoingBody
+      expect(body.data.count).toBe(1)
+      expect(body.data.going.map((who) => who.userId)).toEqual([MATE])
+      expect(body.data.going[0]?.handle).toBe('natstretch')
+    })
+
+    it('counts someone shared through two crews once', async () => {
+      const eventId = await seedAttended('going-dupe', [MATE])
+      await seedCrew([KEEPER, MATE], { name: 'Thursdays' })
+      await seedCrew([KEEPER, MATE], { name: 'Night Shift' })
+      setAuth()
+      const body = (await (
+        await app.request(`/v1/crews/event-going/${eventId}`)
+      ).json()) as GoingBody
+      expect(body.data.count).toBe(1)
+    })
+
+    it('ignores attendance by someone outside every crew you are in', async () => {
+      const eventId = await seedAttended('going-stranger', [STRANGER])
+      await seedCrew([KEEPER, MATE])
+      setAuth()
+      const body = (await (
+        await app.request(`/v1/crews/event-going/${eventId}`)
+      ).json()) as GoingBody
+      expect(body.data).toEqual({ count: 0, going: [] })
     })
   })
 

@@ -21,6 +21,7 @@ import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row'
 import { SectionHeader } from '@/components/consumer/section-header'
 import { WatchZone } from '@/components/consumer/watchers'
 import { EventDetailCtaBlock } from '@/components/consumer/going'
+import { CrewGoingZone } from '@/components/consumer/crews'
 import { SetlistPreview } from '@/components/consumer/setlist-preview'
 import { GenreChips } from '@/components/consumer/GenreChips'
 import {
@@ -217,6 +218,10 @@ export default async function EventDetailPage({
               than reading as two unrelated blocks. */}
           <div className="mt-3">
             <EventDetailCtaBlock event={event} scaRegion={scaRegion}>
+              {/* Crew presence rides with Going, not with the eye: they are
+                  different populations, and a status line belongs to the
+                  control it describes. Watching follows it, unchanged. */}
+              <CrewGoingZone eventId={event.id} />
               <WatchZone
                 eventId={event.id}
                 initialWatching={event.isWatching}

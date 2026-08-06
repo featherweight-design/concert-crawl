@@ -169,3 +169,14 @@ export interface CrewShow {
   goingCount: number
   going: CrewMemberPreview[]
 }
+
+/**
+ * Event detail's crew line. The only crew payload that names people, and it
+ * excludes the viewer: your own Going state is stated by the button beside it,
+ * so counting yourself here would read as one friend too many. Someone shared
+ * through two crews appears once.
+ */
+export interface EventCrewGoing {
+  count: number
+  going: CrewMemberPreview[]
+}

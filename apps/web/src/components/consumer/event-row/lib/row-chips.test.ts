@@ -20,6 +20,7 @@ function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
     saved: null,
     genres: [],
     isFollowed: false,
+    crewGoing: null,
     isWatching: false,
     status: 'live',
     lifecycle: 'upcoming',
@@ -96,6 +97,55 @@ describe('rowChips', () => {
       'watching',
     )
     expect(chip?.srLabel).toBe('Price source: Box office')
+  })
+
+  it('offers no crew chip on a surface with no crew context', () => {
+    const chips = rowChips(
+      makeShow({ crewGoing: { count: 2, names: ['ada'] } }),
+      'browse',
+    )
+    expect(chips).toEqual([])
+  })
+
+  it('pushes Following out of the budget when a crew is going', () => {
+    const chips = rowChips(
+      makeShow({
+        isFollowed: true,
+        genres: ['rock'],
+        crewGoing: { count: 3, names: ['ada', 'gil'] },
+      }),
+      'crewLens',
+    )
+    expect(chips.map((chip) => chip.key).slice(0, 2)).toEqual([
+      'crew',
+      'following',
+    ])
+    expect(chips[0]?.label).toBe('3 going')
+    expect(chips[0]?.tone).toBe('signal')
+  })
+
+  it('keeps Following first on a crew row with no crew presence', () => {
+    const chips = rowChips(
+      makeShow({ isFollowed: true, genres: ['rock'], crewGoing: null }),
+      'crewLens',
+    )
+    expect(chips.map((chip) => chip.key)).toEqual(['following', 'genre-rock'])
+  })
+
+  it('offers no crew chip when nobody in the crew is going', () => {
+    const chips = rowChips(
+      makeShow({ crewGoing: { count: 0, names: [] } }),
+      'crew',
+    )
+    expect(chips).toEqual([])
+  })
+
+  it('names the crew for screen readers, and counts those it cannot name', () => {
+    const [chip] = rowChips(
+      makeShow({ crewGoing: { count: 3, names: ['ada', 'gil'] } }),
+      'crew',
+    )
+    expect(chip?.srLabel).toBe('From your crews: ada, gil and 1 more going')
   })
 })
 
