@@ -514,6 +514,16 @@ describe('/v1/crews', () => {
       expect(left.status).toBe(200)
     })
 
+    it('400s an over-long member id rather than passing it to the DB', async () => {
+      const crewId = await seedCrew([KEEPER, MATE])
+      setAuth()
+      const res = await app.request(
+        `/v1/crews/${crewId}/members/${'x'.repeat(300)}`,
+        { method: 'DELETE' },
+      )
+      expect(res.status).toBe(400)
+    })
+
     it('400s a handoff to someone outside the crew', async () => {
       const crewId = await seedCrew([KEEPER, MATE])
       setAuth()

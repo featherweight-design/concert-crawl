@@ -53,8 +53,12 @@ const createBodySchema = z.object({
   name: nameSchema,
 })
 
+// Clerk user ids, which are opaque strings rather than uuids. Bounded so
+// garbage of arbitrary length never reaches the DB layer.
+const userIdSchema = z.string().trim().min(1).max(255)
+
 const renameBodySchema = z.object({ name: nameSchema })
-const handoffBodySchema = z.object({ newKeeperId: z.string().min(1) })
+const handoffBodySchema = z.object({ newKeeperId: userIdSchema })
 
 // Drizzle wraps the postgres-js error, so the SQLSTATE may sit on the error or
 // on its cause. Mirrors the both-places check in lib/pg-errors.ts.
@@ -361,6 +365,20 @@ const keeperDenied = (status: 403 | 404) =>
     ? ({ success: false, error: 'Crew not found' } as const)
     : ({ success: false, error: 'Only the keeper can do that' } as const)
 
+/**
+ * requireKeeper runs as its own statement, so a concurrent handoff or delete
+ * can land between the check and the write. Every keeper-gated write therefore
+ * repeats the keeper predicate in its own WHERE clause, which folds the check
+ * and the write into one statement and needs no transaction. Zero rows
+ * affected means the crew went away or the caller stopped being its keeper.
+ */
+const keeperOwns = (crewId: string, userId: string) =>
+  and(eq(crews.id, crewId), eq(crews.keeperId, userId))
+
+// Deliberately the same answer requireKeeper gives a non-member: a caller who
+// lost the race learns only that they can no longer act on this crew.
+const keeperRaceLost = { success: false, error: 'Crew not found' } as const
+
 // PATCH /v1/crews/:crewId — rename. Deliberately does NOT touch patchSalt:
 // renaming a crew must never move its artwork, which is the mental model the
 // whole identity system rests on.
@@ -384,7 +402,7 @@ crewsRouter.patch('/:crewId', async (ctx) => {
   const [updated] = await db
     .update(crews)
     .set({ name: bodyParsed.data.name, updatedAt: new Date() })
-    .where(eq(crews.id, idParsed.data))
+    .where(keeperOwns(idParsed.data, authInfo.userId))
     .returning({
       id: crews.id,
       name: crews.name,
@@ -393,8 +411,7 @@ crewsRouter.patch('/:crewId', async (ctx) => {
 
   // The gate above and this UPDATE are separate statements, so a concurrent
   // delete can land between them. Without this the response would omit `crew`.
-  if (!updated)
-    return ctx.json({ success: false, error: 'Crew not found' }, 404)
+  if (!updated) return ctx.json(keeperRaceLost, 404)
 
   return ctx.json({ success: true, data: { crew: updated } })
 })
@@ -416,15 +433,14 @@ crewsRouter.post('/:crewId/patch/reroll', async (ctx) => {
   const [updated] = await db
     .update(crews)
     .set({ patchSalt: sql`${crews.patchSalt} + 1`, updatedAt: new Date() })
-    .where(eq(crews.id, parsed.data))
+    .where(keeperOwns(parsed.data, authInfo.userId))
     .returning({
       id: crews.id,
       name: crews.name,
       patchSalt: crews.patchSalt,
     })
 
-  if (!updated)
-    return ctx.json({ success: false, error: 'Crew not found' }, 404)
+  if (!updated) return ctx.json(keeperRaceLost, 404)
 
   return ctx.json({ success: true, data: { crew: updated } })
 })
@@ -439,7 +455,11 @@ crewsRouter.delete('/:crewId/members/:memberId', async (ctx) => {
   if (!parsed.success)
     return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
 
-  const memberId = ctx.req.param('memberId')
+  const memberParsed = userIdSchema.safeParse(ctx.req.param('memberId'))
+  if (!memberParsed.success)
+    return ctx.json({ success: false, error: 'Invalid member ID' }, 400)
+  const memberId = memberParsed.data
+
   const gate = await requireKeeper(parsed.data, authInfo.userId)
   if (!gate.ok) return ctx.json(keeperDenied(gate.status), gate.status)
 
@@ -456,15 +476,24 @@ crewsRouter.delete('/:crewId/members/:memberId', async (ctx) => {
     )
   }
 
-  const removed = await db
-    .delete(crewMembers)
-    .where(
-      and(
-        eq(crewMembers.crewId, parsed.data),
-        eq(crewMembers.userId, memberId),
-      ),
-    )
-    .returning({ id: crewMembers.id })
+  // The write lands on crew_members, so the keeper predicate cannot ride along
+  // in its WHERE the way it does for the crews writes above. Re-check
+  // keeper-ness under the crew row lock instead, which closes the same race.
+  const removed = await db.transaction(async (tx) => {
+    const locked = await lockCrew(tx, parsed.data)
+    if (!locked || locked.keeperId !== authInfo.userId) return null
+    return tx
+      .delete(crewMembers)
+      .where(
+        and(
+          eq(crewMembers.crewId, parsed.data),
+          eq(crewMembers.userId, memberId),
+        ),
+      )
+      .returning({ id: crewMembers.id })
+  })
+
+  if (removed === null) return ctx.json(keeperRaceLost, 404)
 
   if (removed.length === 0)
     return ctx.json({ success: false, error: 'Not a member' }, 404)
@@ -487,7 +516,13 @@ crewsRouter.delete('/:crewId', async (ctx) => {
   const gate = await requireKeeper(parsed.data, authInfo.userId)
   if (!gate.ok) return ctx.json(keeperDenied(gate.status), gate.status)
 
-  await db.delete(crews).where(eq(crews.id, parsed.data))
+  const deleted = await db
+    .delete(crews)
+    .where(keeperOwns(parsed.data, authInfo.userId))
+    .returning({ id: crews.id })
+
+  if (deleted.length === 0) return ctx.json(keeperRaceLost, 404)
+
   return ctx.json({ success: true, data: { deleted: true } })
 })
 
@@ -579,7 +614,7 @@ crewsRouter.post('/:crewId/handoff', async (ctx) => {
   const [updated] = await db
     .update(crews)
     .set({ keeperId: newKeeperId, updatedAt: new Date() })
-    .where(eq(crews.id, idParsed.data))
+    .where(keeperOwns(idParsed.data, authInfo.userId))
     .returning({
       id: crews.id,
       name: crews.name,
@@ -587,8 +622,7 @@ crewsRouter.post('/:crewId/handoff', async (ctx) => {
       keeperId: crews.keeperId,
     })
 
-  if (!updated)
-    return ctx.json({ success: false, error: 'Crew not found' }, 404)
+  if (!updated) return ctx.json(keeperRaceLost, 404)
 
   return ctx.json({ success: true, data: { crew: updated } })
 })
