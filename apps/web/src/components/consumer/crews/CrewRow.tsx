@@ -38,10 +38,14 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
         minHeight: 64,
       }}
     >
+      {/* Fixed sizes, not wide-scaled: the desktop list is a two-column grid
+          inside a 720px column, so a wide cell (~338px) is barely roomier than
+          a 320px phone. Scaling the patch and cluster up there spent the name's
+          space and truncated it. */}
       <CrewPatch
         crewId={crew.id}
         patchSalt={crew.patchSalt}
-        size={wide ? 54 : 48}
+        size={48}
         scale="tile"
       />
       <span
@@ -84,8 +88,8 @@ export const CrewRow = ({ crew, wide }: CrewRowProps) => {
       <MemberCluster
         members={crew.members}
         memberCount={crew.memberCount}
-        size={wide ? 26 : 24}
-        max={wide ? 5 : 3}
+        size={24}
+        max={3}
       />
       <svg
         width="8"

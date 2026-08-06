@@ -99,16 +99,21 @@ export const CrewTabs = ({
               padding: 0,
               background: 'none',
               border: 'none',
-              flexShrink: 0,
+              // Narrow divides the row between the tabs rather than letting the
+              // strip overflow: a scrolled-off third tab reads as a missing
+              // section, since a strip this short shows no scroll affordance.
+              flex: wide ? '0 0 auto' : '1 1 0',
+              minWidth: 0,
             }}
           >
             <span
               style={{
-                display: 'inline-flex',
+                display: 'flex',
                 alignItems: 'center',
+                justifyContent: 'center',
                 gap: wide ? 6 : 4,
                 minHeight: 34,
-                padding: wide ? '7px 12px' : '7px 9px',
+                padding: wide ? '7px 12px' : '7px 6px',
                 borderRadius: 8,
                 background: selected ? 'var(--surface-2)' : 'transparent',
                 border: `1px solid var(--${selected ? 'border-strong' : 'border'})`,

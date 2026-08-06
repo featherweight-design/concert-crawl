@@ -153,6 +153,60 @@ const manifest: AuditManifest = validateManifest([
     tags: ['consumer'],
     auth: 'user',
   },
+  {
+    // #1226 Concert Crews. The index is stable; crew detail keys on a UUID
+    // created at runtime by whoever made the crew, so it is reached by
+    // clicking the first crew card instead (same reasoning as
+    // open-first-venue). When the audit user belongs to no crews the click
+    // fails and the sweep records an interaction error — which is the honest
+    // signal that staging has no crew data, not a false green.
+    id: 'crews',
+    path: '/crews',
+    tags: ['consumer'],
+    auth: 'user',
+    interactions: [
+      {
+        id: 'open-first-crew',
+        description:
+          'Open the first crew from the crews index (UUID-stable coverage of /crews/[crewId])',
+        run: async (page: Page) => {
+          await page.locator('a[href^="/crews/"]:visible').first().click()
+          // The crew home fetches after navigation, so the sweep's own
+          // networkidle wait can still land on the skeleton. Waiting for the
+          // skeleton to DETACH is a race — it is not mounted yet at the moment
+          // the click returns, so the wait passes instantly against nothing.
+          // Wait for a resolved-state control to appear instead.
+          await page
+            .getByRole('button', { name: /invite people/i })
+            .first()
+            .waitFor({ state: 'visible', timeout: 30000 })
+        },
+      },
+      {
+        // Runs on the page open-first-crew left behind. The tab that opens by
+        // default depends on the data — a crew with nights opens on Coming up
+        // — so this deliberately targets the roster, which never opens by
+        // default once there is anything upcoming. Clicking the already-active
+        // tab would produce a capture byte-identical to the previous one and
+        // read as coverage of a surface nothing ever visited.
+        id: 'crew-roster',
+        description:
+          "Switch the crew home to the Who's in tab to capture the roster",
+        run: async (page: Page) => {
+          await page
+            .getByRole('tab', { name: /who's in/i })
+            .first()
+            .click()
+        },
+      },
+    ],
+  },
+  // `/crew/join/[token]` has NO entry, deliberately. An invite token is a
+  // capability minted per invite and consumed on join, so there is no stable
+  // value to hardcode; any placeholder resolves to the `unknown` dead end and
+  // the page calls notFound(), meaning the sweep would screenshot the 404 and
+  // report it as coverage of the landing surface. It is walked by hand during
+  // the journey gate instead.
 
   // --- Additional admin routes --------------------------------------------
   {
