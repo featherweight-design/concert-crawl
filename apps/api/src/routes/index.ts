@@ -15,6 +15,7 @@ import { usersRouter } from './users.js'
 import { watchingRouter } from './watching.js'
 import { attendingRouter } from './attending.js'
 import { historyRouter } from './history.js'
+import { crewsRouter } from './crews.js'
 import { feedbackRouter } from './feedback.js'
 import { searchRouter } from './search.js'
 import { spotifyRouter } from './spotify.js'
@@ -52,6 +53,7 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/watching', watchingRouter)
   app.route('/v1/attending', attendingRouter)
   app.route('/v1/history', historyRouter)
+  app.route('/v1/crews', crewsRouter)
   app.route('/v1/feedback', feedbackRouter)
   app.route('/v1/search', searchRouter)
   app.route('/v1/spotify', spotifyRouter)

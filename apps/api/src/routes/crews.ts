@@ -1,0 +1,632 @@
+// apps/api/src/routes/crews.ts
+//
+// Concert Crews (#1226) — the crews router. A crew is a lens on your people,
+// not a per-event roll-call, so nothing here writes an attendance signal:
+// crew shows are derived from the shipped user_events.attending_at (plan D1).
+//
+// Entitlement placement is deliberate and load-bearing: requireFeature('crews')
+// gates POST / and NOTHING else. Reading, leaving, and muting stay open on
+// every plan, which is how a lapsed creator keeps every crew they already made
+// (plan D6). Do not "fix" the apparent gap by gating the reads.
+
+import { Hono } from 'hono'
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
+import { and, asc, eq, inArray, sql } from 'drizzle-orm'
+import { z } from 'zod'
+import {
+  crewMembers,
+  crewMutes,
+  crews,
+  db,
+  userProfiles,
+} from '@concert-crawl/db'
+import type {
+  CrewDetail,
+  CrewMember,
+  CrewMemberPreview,
+  CrewSummary,
+} from '@concert-crawl/types'
+import { apiLogger } from '../lib/logger.js'
+import { requireFeature } from '../middleware/entitlement.js'
+import type { EntitlementVariables } from '../middleware/entitlement.js'
+import { loadCrewShows, loadUpcomingCounts } from '../lib/crew-shows.js'
+import {
+  CREW_CLUSTER_SIZE,
+  CREW_DUPLICATE_ID_CODE,
+  CREW_HANDOFF_REQUIRED_CODE,
+  CREW_LAST_MEMBER_CODE,
+  countMembers,
+  isMember,
+  lockCrew,
+} from '../lib/crews.js'
+import { PG_UNIQUE_VIOLATION } from '../lib/pg-errors.js'
+
+const uuidSchema = z.string().uuid()
+const nameSchema = z.string().trim().min(1).max(40)
+
+const createBodySchema = z.object({
+  // Client-suppliable so the create sheet's patch preview is truthful: the
+  // patch is seeded from the id, so a server-minted id would make the preview
+  // a lie. Safe because the id is not a capability — the invite token is
+  // (plan D2).
+  id: uuidSchema.optional(),
+  name: nameSchema,
+})
+
+const renameBodySchema = z.object({ name: nameSchema })
+const handoffBodySchema = z.object({ newKeeperId: z.string().min(1) })
+
+// Drizzle wraps the postgres-js error, so the SQLSTATE may sit on the error or
+// on its cause. Mirrors the both-places check in lib/pg-errors.ts.
+const isUniqueViolation = (err: unknown): boolean => {
+  const matches = (candidate: unknown): boolean =>
+    typeof candidate === 'object' &&
+    candidate !== null &&
+    'code' in candidate &&
+    Reflect.get(candidate, 'code') === PG_UNIQUE_VIOLATION
+  if (matches(err)) return true
+  return err instanceof Error && 'cause' in err ? matches(err.cause) : false
+}
+
+export const crewsRouter = new Hono<{ Variables: EntitlementVariables }>()
+
+crewsRouter.use('*', clerkMiddleware())
+
+// GET /v1/crews — every crew the caller belongs to.
+crewsRouter.get('/', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const userId = authInfo.userId
+
+  const myRows = await db
+    .select({ crewId: crewMembers.crewId })
+    .from(crewMembers)
+    .where(eq(crewMembers.userId, userId))
+
+  const crewIds = myRows.map((row) => row.crewId)
+  if (crewIds.length === 0) {
+    return ctx.json({ success: true, data: { crews: [] } })
+  }
+
+  const [crewRows, memberRows, mutedRows, upcomingCounts] = await Promise.all([
+    db
+      .select({
+        id: crews.id,
+        name: crews.name,
+        patchSalt: crews.patchSalt,
+        keeperId: crews.keeperId,
+      })
+      .from(crews)
+      .where(inArray(crews.id, crewIds))
+      // Stable and rename-proof. Alphabetical would reshuffle the whole list
+      // the moment a keeper renames one crew.
+      .orderBy(asc(crews.createdAt)),
+    db
+      .select({
+        crewId: crewMembers.crewId,
+        userId: crewMembers.userId,
+        joinedAt: crewMembers.joinedAt,
+        handle: userProfiles.handle,
+        avatarColor: userProfiles.avatarColor,
+      })
+      .from(crewMembers)
+      .leftJoin(userProfiles, eq(userProfiles.userId, crewMembers.userId))
+      .where(inArray(crewMembers.crewId, crewIds))
+      .orderBy(asc(crewMembers.joinedAt)),
+    db
+      .select({ crewId: crewMutes.crewId })
+      .from(crewMutes)
+      .where(
+        and(inArray(crewMutes.crewId, crewIds), eq(crewMutes.userId, userId)),
+      ),
+    loadUpcomingCounts(crewIds),
+  ])
+
+  const membersByCrew = new Map<string, CrewMemberPreview[]>()
+  for (const row of memberRows) {
+    const list = membersByCrew.get(row.crewId) ?? []
+    list.push({
+      userId: row.userId,
+      handle: row.handle ?? null,
+      avatarColor: row.avatarColor ?? null,
+    })
+    membersByCrew.set(row.crewId, list)
+  }
+  const mutedIds = new Set(mutedRows.map((row) => row.crewId))
+
+  const summaries: CrewSummary[] = crewRows.map((crew) => {
+    const members = membersByCrew.get(crew.id) ?? []
+    return {
+      id: crew.id,
+      name: crew.name,
+      patchSalt: crew.patchSalt,
+      memberCount: members.length,
+      members: members.slice(0, CREW_CLUSTER_SIZE),
+      upcomingCount: upcomingCounts.get(crew.id) ?? 0,
+      isKeeper: crew.keeperId === userId,
+      muted: mutedIds.has(crew.id),
+    }
+  })
+
+  return ctx.json({ success: true, data: { crews: summaries } })
+})
+
+// POST /v1/crews — the one entitlement-gated route in this file (plan D6).
+crewsRouter.post('/', requireFeature('crews'), async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const userId = authInfo.userId
+
+  const raw: unknown = await ctx.req.json().catch(() => null)
+  const parsed = createBodySchema.safeParse(raw)
+  if (!parsed.success) {
+    return ctx.json({ success: false, error: 'Invalid crew' }, 400)
+  }
+
+  try {
+    // The crew and the creator's membership land together: a crew with no
+    // members would be unreachable forever.
+    const created = await db.transaction(async (tx) => {
+      const [crew] = await tx
+        .insert(crews)
+        .values({
+          ...(parsed.data.id ? { id: parsed.data.id } : {}),
+          name: parsed.data.name,
+          keeperId: userId,
+          // Never set from user input. It moves only on an explicit reroll.
+          patchSalt: 0,
+        })
+        .returning()
+      if (!crew) throw new Error('crew insert returned no rows')
+      await tx.insert(crewMembers).values({ crewId: crew.id, userId })
+      return crew
+    })
+
+    const summary: CrewSummary = {
+      id: created.id,
+      name: created.name,
+      patchSalt: created.patchSalt,
+      memberCount: 1,
+      members: [{ userId, handle: null, avatarColor: null }],
+      upcomingCount: 0,
+      isKeeper: true,
+      muted: false,
+    }
+    return ctx.json({ success: true, data: { crew: summary } }, 201)
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      // A retried POST carrying the same client-minted id is idempotent by
+      // rejection rather than by minting a second crew (plan D2).
+      return ctx.json(
+        {
+          success: false,
+          error: 'That crew already exists',
+          code: CREW_DUPLICATE_ID_CODE,
+        },
+        409,
+      )
+    }
+    apiLogger.warn({ err, userId }, 'crew create failed')
+    return ctx.json({ success: false, error: 'Failed to create crew' }, 500)
+  }
+})
+
+/**
+ * Membership is the authorization boundary for every read. Resolves the crew
+ * only when the caller belongs to it; a non-member gets the same 404 a
+ * non-existent crew gets, so crew ids are not probeable.
+ */
+const resolveMembership = async (
+  crewId: string,
+  userId: string,
+): Promise<{
+  id: string
+  name: string
+  patchSalt: number
+  keeperId: string
+} | null> => {
+  const [row] = await db
+    .select({
+      id: crews.id,
+      name: crews.name,
+      patchSalt: crews.patchSalt,
+      keeperId: crews.keeperId,
+    })
+    .from(crews)
+    .innerJoin(crewMembers, eq(crewMembers.crewId, crews.id))
+    .where(and(eq(crews.id, crewId), eq(crewMembers.userId, userId)))
+    .limit(1)
+  return row ?? null
+}
+
+// GET /v1/crews/:crewId — the crew home.
+crewsRouter.get('/:crewId', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const userId = authInfo.userId
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+  const crewId = parsed.data
+
+  // 403 whether or not the crew exists. Membership is the authorization
+  // boundary for every read, and a uniform answer keeps crew ids unprobeable.
+  const crew = await resolveMembership(crewId, userId)
+  if (!crew)
+    return ctx.json({ success: false, error: 'Not a member of this crew' }, 403)
+
+  const memberRows = await db
+    .select({
+      userId: crewMembers.userId,
+      joinedAt: crewMembers.joinedAt,
+      handle: userProfiles.handle,
+      avatarColor: userProfiles.avatarColor,
+    })
+    .from(crewMembers)
+    .leftJoin(userProfiles, eq(userProfiles.userId, crewMembers.userId))
+    .where(eq(crewMembers.crewId, crewId))
+    .orderBy(asc(crewMembers.joinedAt))
+
+  const memberIds = memberRows.map((row) => row.userId)
+  const [upcoming, nights, mute] = await Promise.all([
+    loadCrewShows(memberIds, 'upcoming'),
+    loadCrewShows(memberIds, 'past'),
+    db
+      .select({ id: crewMutes.id })
+      .from(crewMutes)
+      .where(and(eq(crewMutes.crewId, crewId), eq(crewMutes.userId, userId)))
+      .limit(1),
+  ])
+
+  const members: CrewMember[] = memberRows.map((row) => ({
+    userId: row.userId,
+    handle: row.handle ?? null,
+    avatarColor: row.avatarColor ?? null,
+    joinedAt: row.joinedAt.toISOString(),
+    isKeeper: row.userId === crew.keeperId,
+    isYou: row.userId === userId,
+  }))
+
+  const detail: CrewDetail = {
+    id: crew.id,
+    name: crew.name,
+    patchSalt: crew.patchSalt,
+    memberCount: members.length,
+    isKeeper: crew.keeperId === userId,
+    muted: mute.length > 0,
+    members,
+    upcoming,
+    nights,
+  }
+
+  return ctx.json({ success: true, data: detail })
+})
+
+// GET /v1/crews/:crewId/shows — the Browse lens feed. Same upcoming predicate
+// as the crew home, so the lens is a filter over the existing list rather than
+// a parallel event model. Row surfaces render `goingCount`; the names are
+// event-detail-only (locked decision 5).
+crewsRouter.get('/:crewId/shows', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const userId = authInfo.userId
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+
+  const crew = await resolveMembership(parsed.data, userId)
+  if (!crew)
+    return ctx.json({ success: false, error: 'Not a member of this crew' }, 403)
+
+  const memberRows = await db
+    .select({ userId: crewMembers.userId })
+    .from(crewMembers)
+    .where(eq(crewMembers.crewId, parsed.data))
+
+  const shows = await loadCrewShows(
+    memberRows.map((row) => row.userId),
+    'upcoming',
+  )
+  return ctx.json({ success: true, data: { shows } })
+})
+
+/**
+ * The keeper gate for rename, reroll, remove, and delete. A non-member gets
+ * 404 and a non-keeper member gets 403, so a stranger cannot tell "this crew
+ * exists and you're not the keeper" from "no such crew".
+ */
+const requireKeeper = async (
+  crewId: string,
+  userId: string,
+): Promise<{ ok: true } | { ok: false; status: 403 | 404 }> => {
+  const [crew] = await db
+    .select({ keeperId: crews.keeperId })
+    .from(crews)
+    .where(eq(crews.id, crewId))
+    .limit(1)
+  if (!crew) return { ok: false, status: 404 }
+  if (!(await isMember(db, crewId, userId))) return { ok: false, status: 404 }
+  if (crew.keeperId !== userId) return { ok: false, status: 403 }
+  return { ok: true }
+}
+
+const keeperDenied = (status: 403 | 404) =>
+  status === 404
+    ? ({ success: false, error: 'Crew not found' } as const)
+    : ({ success: false, error: 'Only the keeper can do that' } as const)
+
+// PATCH /v1/crews/:crewId — rename. Deliberately does NOT touch patchSalt:
+// renaming a crew must never move its artwork, which is the mental model the
+// whole identity system rests on.
+crewsRouter.patch('/:crewId', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const idParsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!idParsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+
+  const raw: unknown = await ctx.req.json().catch(() => null)
+  const bodyParsed = renameBodySchema.safeParse(raw)
+  if (!bodyParsed.success)
+    return ctx.json({ success: false, error: 'Invalid name' }, 400)
+
+  const gate = await requireKeeper(idParsed.data, authInfo.userId)
+  if (!gate.ok) return ctx.json(keeperDenied(gate.status), gate.status)
+
+  const [updated] = await db
+    .update(crews)
+    .set({ name: bodyParsed.data.name, updatedAt: new Date() })
+    .where(eq(crews.id, idParsed.data))
+    .returning({
+      id: crews.id,
+      name: crews.name,
+      patchSalt: crews.patchSalt,
+    })
+
+  return ctx.json({ success: true, data: { crew: updated } })
+})
+
+// POST /v1/crews/:crewId/patch/reroll — server-side increment. The client
+// never supplies a salt; it only asks for the next one.
+crewsRouter.post('/:crewId/patch/reroll', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+
+  const gate = await requireKeeper(parsed.data, authInfo.userId)
+  if (!gate.ok) return ctx.json(keeperDenied(gate.status), gate.status)
+
+  const [updated] = await db
+    .update(crews)
+    .set({ patchSalt: sql`${crews.patchSalt} + 1`, updatedAt: new Date() })
+    .where(eq(crews.id, parsed.data))
+    .returning({
+      id: crews.id,
+      name: crews.name,
+      patchSalt: crews.patchSalt,
+    })
+
+  return ctx.json({ success: true, data: { crew: updated } })
+})
+
+// DELETE /v1/crews/:crewId/members/:userId — keeper removes someone else.
+crewsRouter.delete('/:crewId/members/:memberId', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+
+  const memberId = ctx.req.param('memberId')
+  const gate = await requireKeeper(parsed.data, authInfo.userId)
+  if (!gate.ok) return ctx.json(keeperDenied(gate.status), gate.status)
+
+  if (memberId === authInfo.userId) {
+    // The keeper's own exit is leave + handoff, which carries the "pass it on
+    // first" rule. Letting remove double as it would route around that.
+    return ctx.json(
+      {
+        success: false,
+        error: 'The keeper leaves by handing the crew on',
+        code: CREW_HANDOFF_REQUIRED_CODE,
+      },
+      409,
+    )
+  }
+
+  const removed = await db
+    .delete(crewMembers)
+    .where(
+      and(
+        eq(crewMembers.crewId, parsed.data),
+        eq(crewMembers.userId, memberId),
+      ),
+    )
+    .returning({ id: crewMembers.id })
+
+  if (removed.length === 0)
+    return ctx.json({ success: false, error: 'Not a member' }, 404)
+
+  return ctx.json({ success: true, data: { removed: true } })
+})
+
+// DELETE /v1/crews/:crewId — cascade clears members, invites, and mutes.
+// Attendance rows in user_events are untouched: the nights you went stay in
+// your Concerts.
+crewsRouter.delete('/:crewId', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+
+  const gate = await requireKeeper(parsed.data, authInfo.userId)
+  if (!gate.ok) return ctx.json(keeperDenied(gate.status), gate.status)
+
+  await db.delete(crews).where(eq(crews.id, parsed.data))
+  return ctx.json({ success: true, data: { deleted: true } })
+})
+
+// POST /v1/crews/:crewId/leave — un-gated on every plan (plan D6).
+crewsRouter.post('/:crewId/leave', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const userId = authInfo.userId
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+  const crewId = parsed.data
+
+  const result = await db.transaction(async (tx) => {
+    const crew = await lockCrew(tx, crewId)
+    if (!crew) return { kind: 'missing' } as const
+    if (!(await isMember(tx, crewId, userId)))
+      return { kind: 'missing' } as const
+
+    if (crew.keeperId === userId) {
+      const total = await countMembers(tx, crewId)
+      // The server refuses; the client does not get to skip the step
+      // (locked decision 7).
+      return total > 1
+        ? ({ kind: 'handoff' } as const)
+        : ({ kind: 'last' } as const)
+    }
+
+    await tx
+      .delete(crewMembers)
+      .where(
+        and(eq(crewMembers.crewId, crewId), eq(crewMembers.userId, userId)),
+      )
+    return { kind: 'left' } as const
+  })
+
+  if (result.kind === 'missing')
+    return ctx.json({ success: false, error: 'Crew not found' }, 404)
+  if (result.kind === 'handoff')
+    return ctx.json(
+      {
+        success: false,
+        error: 'Pass the crew on before you go',
+        code: CREW_HANDOFF_REQUIRED_CODE,
+      },
+      409,
+    )
+  if (result.kind === 'last')
+    return ctx.json(
+      {
+        success: false,
+        // Deletion stays an explicit second call.
+        error: "You're the last one here",
+        code: CREW_LAST_MEMBER_CODE,
+      },
+      409,
+    )
+
+  return ctx.json({ success: true, data: { left: true } })
+})
+
+// POST /v1/crews/:crewId/handoff — keeper only; the target must be a member.
+crewsRouter.post('/:crewId/handoff', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const idParsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!idParsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+
+  const raw: unknown = await ctx.req.json().catch(() => null)
+  const bodyParsed = handoffBodySchema.safeParse(raw)
+  if (!bodyParsed.success)
+    return ctx.json({ success: false, error: 'Invalid new keeper' }, 400)
+
+  const gate = await requireKeeper(idParsed.data, authInfo.userId)
+  if (!gate.ok) return ctx.json(keeperDenied(gate.status), gate.status)
+
+  const { newKeeperId } = bodyParsed.data
+  if (!(await isMember(db, idParsed.data, newKeeperId)))
+    return ctx.json(
+      { success: false, error: 'That person is not in this crew' },
+      400,
+    )
+
+  const [updated] = await db
+    .update(crews)
+    .set({ keeperId: newKeeperId, updatedAt: new Date() })
+    .where(eq(crews.id, idParsed.data))
+    .returning({
+      id: crews.id,
+      name: crews.name,
+      patchSalt: crews.patchSalt,
+      keeperId: crews.keeperId,
+    })
+
+  return ctx.json({ success: true, data: { crew: updated } })
+})
+
+// PUT/DELETE /v1/crews/:crewId/mute — member-only, not keeper-only. Mute
+// suppresses at write time (plan D5): a muted crew writes no notification rows
+// at all, so unmuting surfaces what happens next rather than a backlog.
+crewsRouter.put('/:crewId/mute', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+
+  const crew = await resolveMembership(parsed.data, authInfo.userId)
+  if (!crew)
+    return ctx.json({ success: false, error: 'Not a member of this crew' }, 403)
+
+  await db
+    .insert(crewMutes)
+    .values({ crewId: parsed.data, userId: authInfo.userId })
+    .onConflictDoNothing()
+
+  return ctx.json({ success: true, data: { muted: true } })
+})
+
+crewsRouter.delete('/:crewId/mute', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+
+  const crew = await resolveMembership(parsed.data, authInfo.userId)
+  if (!crew)
+    return ctx.json({ success: false, error: 'Not a member of this crew' }, 403)
+
+  await db
+    .delete(crewMutes)
+    .where(
+      and(
+        eq(crewMutes.crewId, parsed.data),
+        eq(crewMutes.userId, authInfo.userId),
+      ),
+    )
+
+  return ctx.json({ success: true, data: { muted: false } })
+})

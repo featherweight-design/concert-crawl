@@ -53,6 +53,25 @@ export interface CrewSummary {
 }
 
 /**
+ * The crew home payload. Membership is the authorization boundary, so this is
+ * only ever served to a member — `upcoming` and `nights` carry attendance and
+ * have no business leaving that boundary.
+ */
+export interface CrewDetail {
+  id: string
+  name: string
+  patchSalt: number
+  memberCount: number
+  isKeeper: boolean
+  muted: boolean
+  members: CrewMember[]
+  /** Dated today or later, ≥1 member going, ascending. */
+  upcoming: CrewShow[]
+  /** Dated before today, ≥2 members attended, descending. */
+  nights: CrewShow[]
+}
+
+/**
  * The live invite, returned to members only. `token` is the capability, so it
  * belongs in a response body and nowhere else — never a log line, a Sentry
  * breadcrumb, or an error payload (D3).
