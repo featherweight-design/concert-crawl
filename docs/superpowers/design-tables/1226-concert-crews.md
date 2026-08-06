@@ -385,24 +385,24 @@ reading anything else.
 
 ## AC. Tabs
 
-| #    | Requirement                                                                                                          | Source                                      |
-| ---- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| AC1  | The tab strip is `role="tablist"` with `aria-label={detail.tabsLabel}`                                               | crews-destination.jsx:143                   |
-| AC2  | Three tabs render in order: Coming up, Been there, Who's in                                                          | crews-destination.jsx:519-523               |
-| AC3  | Tab labels come from `detail.upcomingTitle`, `detail.pastTitle`, `detail.rosterTitle`                                | crew-copy.jsx:35,38,41                      |
-| AC4  | Each tab is `role="tab"` with `id`, `aria-controls` pointing at the panel id, and `aria-selected`                    | crews-destination.jsx:158-162               |
-| AC5  | Roving tabIndex: the selected tab is `tabIndex={0}`, the others `tabIndex={-1}`                                      | crews-destination.jsx:163                   |
-| AC6  | ← / → move selection with wraparound; Home selects the first tab, End the last                                       | crews-destination.jsx:145-155               |
-| AC7  | Each tab shows a count: upcoming shows, past nights, member count                                                    | crews-destination.jsx:519-523               |
-| AC8  | The count is mono weight 700 at 10px, `letterSpacing: .04em`                                                         | crews-destination.jsx:186-190               |
-| AC9  | Count colour is `--signal` on the active tab and `--fg-subtle` on inactive tabs                                      | crews-destination.jsx:188                   |
-| AC10 | The tab `<button>` is >=44px tall; the visible pill inside is 34px tall with `borderRadius: 8`                       | crews-destination.jsx:165-172               |
-| AC11 | Active pill is `--surface-2` with a `--border-strong` border; inactive is transparent with `--border`                | crews-destination.jsx:173-175               |
-| AC12 | Label weight is 700 in both states (weight does not change on selection)                                             | crews-destination.jsx:180-184               |
-| AC13 | The strip is horizontally scrollable with `scrollbarWidth: 'none'` and no visible scrollbar                          | crews-destination.jsx:143                   |
-| AC14 | Each panel is `role="tabpanel"`, `tabIndex={0}`, with `aria-labelledby` naming its tab                               | crews-destination.jsx:530-534               |
-| AC15 | Lead order: Coming up opens when it has content; otherwise Been there opens when it has content; otherwise Coming up | crews-destination.jsx:516; plan PR-5 Task 1 |
-| AC16 | Only the selected panel's content is in the DOM (inactive panels are not rendered hidden)                            | crews-destination.jsx:530-534               |
+| #    | Requirement                                                                                                                                                         | Source                                      |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| AC1  | The tab strip is `role="tablist"` with `aria-label={detail.tabsLabel}`                                                                                              | crews-destination.jsx:143                   |
+| AC2  | Three tabs render in order: Coming up, Been there, Who's in                                                                                                         | crews-destination.jsx:519-523               |
+| AC3  | Tab labels come from `detail.upcomingTitle`, `detail.pastTitle`, `detail.rosterTitle`                                                                               | crew-copy.jsx:35,38,41                      |
+| AC4  | Each tab is `role="tab"` with `id`, `aria-controls` pointing at the panel id, and `aria-selected`                                                                   | crews-destination.jsx:158-162               |
+| AC5  | Roving tabIndex: the selected tab is `tabIndex={0}`, the others `tabIndex={-1}`                                                                                     | crews-destination.jsx:163                   |
+| AC6  | ← / → move selection with wraparound; Home selects the first tab, End the last                                                                                      | crews-destination.jsx:145-155               |
+| AC7  | Each tab shows a count: upcoming shows, past nights, member count                                                                                                   | crews-destination.jsx:519-523               |
+| AC8  | The count is mono weight 700 at 10px, `letterSpacing: .04em`                                                                                                        | crews-destination.jsx:186-190               |
+| AC9  | Count colour is `--signal` on the active tab and `--fg-subtle` on inactive tabs                                                                                     | crews-destination.jsx:188                   |
+| AC10 | The tab `<button>` is >=44px tall; the visible pill inside is 34px tall with `borderRadius: 8`                                                                      | crews-destination.jsx:165-172               |
+| AC11 | Active pill is `--surface-2` with a `--border-strong` border; inactive is transparent with `--border`                                                               | crews-destination.jsx:173-175               |
+| AC12 | Label weight is 700 in both states (weight does not change on selection)                                                                                            | crews-destination.jsx:180-184               |
+| AC13 | The strip is horizontally scrollable with `scrollbarWidth: 'none'` and no visible scrollbar                                                                         | crews-destination.jsx:143                   |
+| AC14 | Each panel is `role="tabpanel"`, `tabIndex={0}`, with `aria-labelledby` naming its tab                                                                              | crews-destination.jsx:530-534               |
+| AC15 | Lead order: Coming up opens when it has content; otherwise Been there opens when it has content; otherwise the roster, which is the one tab a quiet crew can act on | crews-destination.jsx:516; plan PR-5 Task 1 |
+| AC16 | Only the selected panel's content is in the DOM (inactive panels are not rendered hidden)                                                                           | crews-destination.jsx:530-534               |
 
 ## AD. Coming up
 
@@ -440,27 +440,27 @@ reading anything else.
 
 ## AF. Who's in (roster)
 
-| #    | Requirement                                                                                                               | Source                                                   |
-| ---- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| AF1  | The roster header shows `{memberCount} / 12 SPOTS` in mono uppercase                                                      | crews-destination.jsx:377-383                            |
-| AF2  | That header switches to `--warning` when the crew is at 12                                                                | crews-destination.jsx:380                                |
-| AF3  | A ghost `detail.invite` button sits in the roster header                                                                  | crews-destination.jsx:384                                |
-| AF4  | Member rows are >=48px tall with an 11px gap                                                                              | crews-destination.jsx:392-394                            |
-| AF5  | Each row after the first has a 1px `--border` top rule; the first has none                                                | crews-destination.jsx:395                                |
-| AF6  | Avatar is `MemberDot size={32}` from the shipped `crews/MemberCluster.tsx`, not a new component                           | apps/web/src/components/consumer/crews/MemberCluster.tsx |
-| AF7  | A member with a handle renders it at Inter 700 14px                                                                       | crews-destination.jsx:399-401                            |
-| AF8  | `isYou` appends ` · You` using `roster.you`, it does not replace the handle                                               | crews-destination.jsx:401                                |
-| AF9  | A member with no handle renders `roster.noHandle` at Inter 600 14px in `--fg-subtle`                                      | crews-destination.jsx:399-401                            |
-| AF10 | A no-handle member's `MemberDot` is the letterless dashed dot — no initial is invented                                    | crew-shared.jsx:156-174; #762 rule                       |
-| AF11 | A no-handle member's dot carries `aria-label` = `a11y.memberNoHandle`                                                     | crew-copy.jsx:209                                        |
-| AF12 | A no-handle member is still counted in `memberCount` and in the tab count                                                 | README §2; #762 rule                                     |
-| AF13 | The secondary line is mono 9px and reads `roster.joined(rel)` derived from `CrewMember.joinedAt`, never a hardcoded month | packages/types/src/crew.ts                               |
-| AF14 | The keeper's row shows a keeper badge driven by `CrewMember.isKeeper`                                                     | plan PR-5 Task 3                                         |
-| AF15 | A Remove control renders only when the viewer is the keeper **and** the row is not the viewer                             | crews-destination.jsx:405-410                            |
-| AF16 | A Leave control renders only on the viewer's own row when the viewer is not the keeper                                    | crews-destination.jsx:405-410                            |
-| AF17 | Remove calls `DELETE /v1/crews/:crewId/members/:memberId`                                                                 | apps/api/src/routes/crews.ts                             |
-| AF18 | Leave calls `POST /v1/crews/:crewId/leave`                                                                                | apps/api/src/routes/crews.ts                             |
-| AF19 | Roster ordering is stable across renders (keeper first, then `joinedAt` ascending)                                        | plan PR-5 Task 3                                         |
+| #    | Requirement                                                                                                                                            | Source                                                   |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| AF1  | The roster header shows `{memberCount} / 12 SPOTS` in mono uppercase                                                                                   | crews-destination.jsx:377-383                            |
+| AF2  | That header switches to `--warning` when the crew is at 12                                                                                             | crews-destination.jsx:380                                |
+| AF3  | A ghost `detail.invite` button sits in the roster header                                                                                               | crews-destination.jsx:384                                |
+| AF4  | Member rows are >=48px tall with an 11px gap                                                                                                           | crews-destination.jsx:392-394                            |
+| AF5  | Each row after the first has a 1px `--border` top rule; the first has none                                                                             | crews-destination.jsx:395                                |
+| AF6  | Avatar is `MemberDot size={32}` from the shipped `crews/MemberCluster.tsx`, not a new component                                                        | apps/web/src/components/consumer/crews/MemberCluster.tsx |
+| AF7  | A member with a handle renders it at Inter 700 14px                                                                                                    | crews-destination.jsx:399-401                            |
+| AF8  | `isYou` appends ` · You` using `roster.you`, it does not replace the handle                                                                            | crews-destination.jsx:401                                |
+| AF9  | A member with no handle renders `roster.noHandle` at Inter 600 14px in `--fg-subtle`                                                                   | crews-destination.jsx:399-401                            |
+| AF10 | A no-handle member's `MemberDot` is the letterless dashed dot — no initial is invented                                                                 | crew-shared.jsx:156-174; #762 rule                       |
+| AF11 | A no-handle member's dot carries `aria-label` = `a11y.memberNoHandle`                                                                                  | crew-copy.jsx:209                                        |
+| AF12 | A no-handle member is still counted in `memberCount` and in the tab count                                                                              | README §2; #762 rule                                     |
+| AF13 | The secondary line is mono 9px and reads `roster.joined(rel)` derived from `CrewMember.joinedAt`, never a hardcoded month                              | packages/types/src/crew.ts                               |
+| AF14 | The keeper's row shows a keeper badge driven by `CrewMember.isKeeper`                                                                                  | plan PR-5 Task 3                                         |
+| AF15 | A Remove control renders only when the viewer is the keeper **and** the row is not the viewer                                                          | crews-destination.jsx:405-410                            |
+| AF16 | A Leave control renders on the viewer's own row, keeper included: a keeper's leave is answered with 409 and becomes the handoff or last-member confirm | crews-destination.jsx:405-410                            |
+| AF17 | Remove calls `DELETE /v1/crews/:crewId/members/:memberId`                                                                                              | apps/api/src/routes/crews.ts                             |
+| AF18 | Leave calls `POST /v1/crews/:crewId/leave`                                                                                                             | apps/api/src/routes/crews.ts                             |
+| AF19 | Roster ordering is stable across renders (keeper first, then `joinedAt` ascending)                                                                     | plan PR-5 Task 3                                         |
 
 ## AG. At-cap notice
 
