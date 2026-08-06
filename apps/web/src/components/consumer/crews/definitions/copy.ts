@@ -27,6 +27,8 @@ export const CREWS_COPY = {
         ? 'Nothing upcoming'
         : `${count} ${plural(count, 'show', 'shows')} coming up`,
     justYou: 'Just you so far',
+    // Announced, never rendered: the new row appears silently otherwise.
+    created: (name: string) => `${name} is ready.`,
   },
 
   empty: {
@@ -43,7 +45,9 @@ export const CREWS_COPY = {
     sub: "Name it something they'll recognize in a group chat.",
     nameLabel: 'Crew name',
     namePlace: 'Thursdays',
-    nameHelp: 'You can change this later. The artwork stays put.',
+    // "The artwork stays put" lived here too, two elements below rerollHelp
+    // saying the same thing.
+    nameHelp: 'You can change this later.',
     submit: 'Make the crew',
     submitting: 'Making the crew…',
     artNote: "Every crew gets its own patch. This one's yours.",

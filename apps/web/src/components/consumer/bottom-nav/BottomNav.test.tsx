@@ -135,13 +135,14 @@ describe('BottomNav crews slot (#1226)', () => {
     render(<BottomNav />)
     const links = screen.getAllByRole('link')
     // Four links plus the account button. Nothing claims a fixed width, so the
-    // bar distributes by flex; each slot only reserves the 44px tap target.
+    // bar distributes by flex; each slot only reserves a 56px floor, the same
+    // number the account trigger beside it uses.
     expect(links).toHaveLength(4)
-    const reserved = links.length * 44 + 56
+    const reserved = links.length * 56 + 56
     expect(reserved).toBeLessThanOrEqual(320)
     for (const link of links) {
       expect(link.style.width).toBe('')
-      expect(link.style.minWidth).toBe('44px')
+      expect(link.style.minWidth).toBe('56px')
       expect(link.style.minHeight).toBe('44px')
       // A clipped label is what "5 slots at 320" actually risks, so assert the
       // label is neither ellipsised nor wrapped.

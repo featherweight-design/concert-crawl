@@ -56,7 +56,41 @@ export function ModalShell({
 
   const handleKeyDown = useCallback(
     (ev: KeyboardEvent) => {
-      if (ev.key === 'Escape') onClose()
+      if (ev.key === 'Escape') {
+        onClose()
+        return
+      }
+      if (ev.key !== 'Tab') return
+      // Without this, Tab walks out of the dialog and into the page behind the
+      // scrim, which is still fully focusable. `aria-modal` tells a screen
+      // reader the rest is inert; it does not stop the keyboard.
+      const dialog = dialogRef.current
+      if (dialog === null) return
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      )
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      // An empty dialog still traps: focus stays on the container itself.
+      if (first === undefined || last === undefined) {
+        ev.preventDefault()
+        dialog.focus()
+        return
+      }
+      // Focus opens on the dialog container itself, which is not in `focusable`
+      // — Shift+Tab from there would otherwise step backwards out of the modal.
+      const active = document.activeElement
+      if (active === dialog) {
+        ev.preventDefault()
+        ;(ev.shiftKey ? last : first).focus()
+        return
+      }
+      if (ev.shiftKey && active !== first) return
+      if (!ev.shiftKey && active !== last) return
+      ev.preventDefault()
+      ;(ev.shiftKey ? last : first).focus()
     },
     [onClose],
   )
@@ -91,6 +125,8 @@ export function ModalShell({
     <>
       <div
         data-testid="modal-scrim"
+        aria-hidden="true"
+        tabIndex={-1}
         style={{
           position: 'fixed',
           inset: 0,

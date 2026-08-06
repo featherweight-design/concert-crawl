@@ -25,8 +25,32 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
     open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
 }))
 vi.mock('./CreateCrewSheet', () => ({
-  CreateCrewSheet: ({ open }: { open: boolean }) =>
-    open ? <div data-testid="create-sheet" /> : null,
+  CreateCrewSheet: ({
+    open,
+    onCreated,
+  }: {
+    open: boolean
+    onCreated: (crew: CrewSummary) => void
+  }) =>
+    open ? (
+      <button
+        data-testid="create-sheet"
+        onClick={() =>
+          onCreated({
+            id: 'new',
+            name: 'Mondays',
+            patchSalt: 0,
+            memberCount: 1,
+            members: [],
+            upcomingCount: 0,
+            isKeeper: true,
+            muted: false,
+          })
+        }
+      >
+        {'confirm'}
+      </button>
+    ) : null,
 }))
 
 import { CrewsContent } from './CrewsContent'
@@ -170,6 +194,16 @@ describe('CrewsContent server-data sync (#1226)', () => {
     view.rerender(<CrewsContent initialCrews={[crew()]} scaRegion={false} />)
     expect(screen.getByText('Thursdays')).toBeInTheDocument()
     expect(screen.queryByText(CREWS_COPY.empty.title)).not.toBeInTheDocument()
+  })
+
+  // The sheet closes and a row appears; without this the whole mutation is
+  // silent to a screen reader.
+  it('announces a newly created crew in a live region', () => {
+    render(<CrewsContent initialCrews={[]} scaRegion={false} />)
+    fireEvent.click(screen.getAllByText(CREWS_COPY.list.create)[0]!)
+    fireEvent.click(screen.getByTestId('create-sheet'))
+    const live = screen.getByText(CREWS_COPY.list.created('Mondays'))
+    expect(live).toHaveAttribute('aria-live', 'polite')
   })
 
   it('drops an optimistic row once the server returns the same crew', () => {

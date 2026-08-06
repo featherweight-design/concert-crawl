@@ -89,6 +89,7 @@ export const CrewsContent = ({
   // list into useState freezes it at first render, so router.refresh() refetched
   // and the list still painted the empty state it was seeded with.
   const [created, setCreated] = useState<CrewSummary[]>([])
+  const [announcement, setAnnouncement] = useState('')
   const serverCrews = initialCrews ?? []
   // The override clears on the SERVER value changing, not on the mutation
   // resolving — dropping it at mutation time flashes the old list back.
@@ -108,10 +109,18 @@ export const CrewsContent = ({
   // A newly made crew lands at the top rather than waiting on a refetch: the
   // customer just named it, and an empty list a beat after creating one reads
   // as a failure.
-  const onCreated = (crew: CrewSummary) => setCreated((prev) => [crew, ...prev])
+  const onCreated = (crew: CrewSummary) => {
+    setCreated((prev) => [crew, ...prev])
+    setAnnouncement(COPY.list.created(crew.name))
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-10 pt-5">
+      {/* Mounted for the life of the page and empty until something happens:
+          a live region populated at mount time is not announced. */}
+      <span aria-live="polite" className="sr-only">
+        {announcement}
+      </span>
       <PageHeader wide={wide}>
         {/* Hidden in loading and error: there is nothing to add to yet. */}
         {(state === 'ready' || state === 'empty') && (
@@ -126,7 +135,18 @@ export const CrewsContent = ({
       {state === 'loading' && (
         <>
           <ShimmerKeyframes />
-          <span aria-live="polite" className="sr-only">
+          {/* Visible, per the handoff. It was an sr-only live region, but a
+              live region that mounts with its text already in it is not
+              reliably spoken — and this branch mounts already loading. */}
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9.5,
+              fontWeight: 700,
+              letterSpacing: '0.18em',
+              color: 'var(--fg-subtle)',
+            }}
+          >
             {COPY.net.loading}
           </span>
           <div

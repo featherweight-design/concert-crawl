@@ -164,3 +164,43 @@ describe('ModalShell', () => {
     expect(screen.queryByRole('button')).toBeNull()
   })
 })
+
+// `aria-modal` tells a screen reader the rest of the page is inert; it does
+// nothing to the keyboard, so Tab used to walk straight out behind the scrim.
+describe('ModalShell focus containment', () => {
+  const TwoControls = () => (
+    <ModalShell open onClose={vi.fn()} ariaLabel="Test">
+      <button>First</button>
+      <button>Last</button>
+    </ModalShell>
+  )
+
+  it('moves focus to the dialog rather than leaving it on the trigger', () => {
+    render(<TwoControls />)
+    expect(document.activeElement).toBe(screen.getByRole('dialog'))
+  })
+
+  it('wraps Tab from the last control back to the first', () => {
+    render(<TwoControls />)
+    screen.getByRole('button', { name: 'Last' }).focus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'First' }),
+    )
+  })
+
+  it('wraps Shift+Tab off the dialog itself to the last control', () => {
+    render(<TwoControls />)
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(
+      screen.getByRole('button', { name: 'Last' }),
+    )
+  })
+
+  it('hides the scrim from assistive tech and from the tab order', () => {
+    render(<TwoControls />)
+    const scrim = screen.getByTestId('modal-scrim')
+    expect(scrim.getAttribute('aria-hidden')).toBe('true')
+    expect(scrim.tabIndex).toBe(-1)
+  })
+})

@@ -263,8 +263,10 @@ export function BottomNav() {
             className="flex flex-col items-center justify-center gap-[3px]"
             // No fixed per-slot width: five slots share the bar by flex, so the
             // labels stay whole at 320px instead of being clipped to a budget.
+            // 56 is a floor, not a width, and it matches the account trigger
+            // beside it; five slots at 56 is 280, inside the 320 budget.
             style={{
-              minWidth: 44,
+              minWidth: 56,
               minHeight: 44,
               color: isActive ? 'var(--signal)' : 'var(--fg-subtle)',
             }}
