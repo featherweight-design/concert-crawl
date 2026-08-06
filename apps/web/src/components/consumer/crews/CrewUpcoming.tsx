@@ -65,41 +65,45 @@ export const CrewUpcoming = ({ shows, wide }: CrewUpcomingProps) => {
               ? fromCrewShow(group.items[0]).dateLabel
               : group.key}
           </h3>
-          {group.items.map((show) => (
-            <EventRow
-              key={show.eventId}
-              show={fromCrewShow(show)}
-              surface="browse"
-              footer={
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                >
-                  <MemberCluster
-                    members={show.going}
-                    memberCount={show.goingCount}
-                    size={wide ? 24 : 22}
-                    max={wide ? 5 : 3}
-                  />
+          <div
+            className={wide ? 'grid grid-cols-2 gap-2' : 'flex flex-col gap-2'}
+          >
+            {group.items.map((show) => (
+              <EventRow
+                key={show.eventId}
+                show={fromCrewShow(show)}
+                surface="browse"
+                footer={
                   <span
                     style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: 9.5,
-                      fontWeight: 700,
-                      letterSpacing: '0.12em',
-                      textTransform: 'uppercase',
-                      color: 'var(--signal)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 8,
                     }}
                   >
-                    {COPY.detail.going(show.goingCount)}
+                    <MemberCluster
+                      members={show.going}
+                      memberCount={show.goingCount}
+                      size={wide ? 24 : 22}
+                      max={wide ? 5 : 3}
+                    />
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 9.5,
+                        fontWeight: 700,
+                        letterSpacing: '0.12em',
+                        textTransform: 'uppercase',
+                        color: 'var(--signal)',
+                      }}
+                    >
+                      {COPY.detail.going(show.goingCount)}
+                    </span>
                   </span>
-                </span>
-              }
-            />
-          ))}
+                }
+              />
+            ))}
+          </div>
         </section>
       ))}
     </div>

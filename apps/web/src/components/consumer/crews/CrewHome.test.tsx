@@ -261,6 +261,23 @@ describe('CrewHome leave 409 mapping (#1226)', () => {
     ).toBeInTheDocument()
   })
 
+  // The 409 swaps the kind without unmounting the dialog, so a reset keyed to
+  // close alone leaves the confirm it just opened permanently disabled.
+  it('leaves the handoff confirm usable after the 409 swapped the kind', async () => {
+    leaveCrew.mockRejectedValueOnce(
+      new ApiError(409, 'nope', CREW_HANDOFF_REQUIRED_CODE),
+    )
+    openLeave()
+    confirmLeave()
+    await screen.findByText(CREWS_COPY.confirm.handoffTitle)
+
+    const dialog = within(screen.getByRole('alertdialog'))
+    fireEvent.click(dialog.getAllByRole('radio')[0] as HTMLElement)
+    expect(
+      dialog.getByRole('button', { name: CREWS_COPY.confirm.handoffCta }),
+    ).toBeEnabled()
+  })
+
   it('turns a last-member 409 into the delete-is-the-only-outcome confirm', async () => {
     leaveCrew.mockRejectedValueOnce(
       new ApiError(409, 'nope', CREW_LAST_MEMBER_CODE),

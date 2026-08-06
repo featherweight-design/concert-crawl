@@ -11,6 +11,7 @@ const COPY = CREWS_COPY
 interface StubRowProps {
   show: CrewShow
   wide: boolean
+  viewerId: string | null
 }
 
 /**
@@ -18,7 +19,7 @@ interface StubRowProps {
  * already happened, so a row built to sell a ticket would carry a price, a
  * countdown and a watch control that all mean nothing here.
  */
-export const StubRow = ({ show, wide }: StubRowProps) => {
+export const StubRow = ({ show, wide, viewerId }: StubRowProps) => {
   const { month, day } = stubDate(show.iso)
 
   return (
@@ -134,7 +135,10 @@ export const StubRow = ({ show, wide }: StubRowProps) => {
               color: 'var(--fg-subtle)',
             }}
           >
-            {COPY.detail.went(show.goingCount)}
+            {viewerId !== null &&
+            show.going.some((one) => one.userId === viewerId)
+              ? COPY.detail.together(show.goingCount - 1)
+              : COPY.detail.went(show.goingCount)}
           </span>
         )}
       </span>
@@ -145,9 +149,10 @@ export const StubRow = ({ show, wide }: StubRowProps) => {
 interface CrewNightsProps {
   shows: CrewShow[]
   wide: boolean
+  viewerId: string | null
 }
 
-export const CrewNights = ({ shows, wide }: CrewNightsProps) => {
+export const CrewNights = ({ shows, wide, viewerId }: CrewNightsProps) => {
   if (shows.length === 0) {
     return (
       <EmptyState
@@ -205,7 +210,12 @@ export const CrewNights = ({ shows, wide }: CrewNightsProps) => {
             {group.key}
           </h3>
           {group.items.map((show) => (
-            <StubRow key={show.eventId} show={show} wide={wide} />
+            <StubRow
+              key={show.eventId}
+              show={show}
+              wide={wide}
+              viewerId={viewerId}
+            />
           ))}
         </section>
       ))}

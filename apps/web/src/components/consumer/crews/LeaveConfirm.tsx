@@ -103,8 +103,10 @@ export const LeaveConfirm = ({
   const [working, setWorking] = useState(false)
   const [failed, setFailed] = useState(false)
 
+  // Resets on every kind change, not just on close: a keeper's `leave` comes
+  // back 409 and swaps the kind to `handoff` or `last` without unmounting, so
+  // leaving `working` set would disable the confirm the swap just opened.
   useEffect(() => {
-    if (kind !== null) return
     setPicked(null)
     setWorking(false)
     setFailed(false)

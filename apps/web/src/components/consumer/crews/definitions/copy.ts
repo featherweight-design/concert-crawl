@@ -211,7 +211,6 @@ export const CREWS_COPY = {
     // the accessible name reads "Start a crew, paid feature".
     gatedCreate: 'paid feature',
     reroll: 'Pull a new patch',
-    patch: (crew: string) => `${crew} crew artwork`,
     options: 'Crew options',
     goingList: (names: string[]) => `Going: ${names.join(', ')}`,
     close: 'Close',

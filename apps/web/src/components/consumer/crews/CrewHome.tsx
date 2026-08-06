@@ -84,10 +84,14 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
     saltOverride !== null && saltOverride !== crew.patchSalt
       ? saltOverride
       : crew.patchSalt
-  const members = crew.members.filter(
-    (member) => !removedIds.includes(member.userId),
-  )
+  // Keeper first, then the API's joinedAt order. Sorting here rather than in
+  // the query keeps the roster stable through a handoff, which moves the badge
+  // without moving anyone's join date.
+  const members = crew.members
+    .filter((member) => !removedIds.includes(member.userId))
+    .sort((one, two) => Number(two.isKeeper) - Number(one.isKeeper))
   const memberCount = members.length
+  const viewerId = members.find((member) => member.isYou)?.userId ?? null
   const others = members.filter((member) => !member.isYou)
 
   const tabs: CrewTab[] = [
@@ -234,7 +238,9 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
         {active === 'upcoming' && (
           <CrewUpcoming shows={crew.upcoming} wide={wide} />
         )}
-        {active === 'nights' && <CrewNights shows={crew.nights} wide={wide} />}
+        {active === 'nights' && (
+          <CrewNights shows={crew.nights} wide={wide} viewerId={viewerId} />
+        )}
         {active === 'roster' && (
           <CrewRoster
             members={members}
@@ -245,6 +251,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
               setConfirm('remove')
             }}
             onLeave={() => setConfirm('leave')}
+            onInvite={() => setInvite(true)}
           />
         )}
       </div>

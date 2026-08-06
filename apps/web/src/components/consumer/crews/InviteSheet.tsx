@@ -91,7 +91,10 @@ export const InviteSheet = ({
     if (invite === null) return
     // Synchronous, deliberately. No await above this line.
     navigator.clipboard.writeText(inviteUrl(invite.token)).then(
-      () => setCopied(true),
+      () => {
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 2400)
+      },
       (err: unknown) => {
         console.error('InviteSheet: clipboard write failed', err)
         setFailed(true)
@@ -321,10 +324,25 @@ export const InviteSheet = ({
                 onClick={() => void onNewLink()}
                 disabled={busy}
                 className="cursor-pointer"
-                style={ghost}
+                style={
+                  revoked
+                    ? {
+                        ...ghost,
+                        background: 'var(--signal)',
+                        border: 'none',
+                        color: 'var(--fg-on-accent)',
+                      }
+                    : ghost
+                }
               >
                 {COPY.invite.newLink}
               </button>
+            </div>
+
+            {/* The button's own label change is not announced, so the copy
+                result gets a live region of its own. */}
+            <div role="status" aria-live="polite" className="sr-only">
+              {copied ? COPY.invite.copied : ''}
             </div>
           </>
         )}
