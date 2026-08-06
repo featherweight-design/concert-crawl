@@ -105,7 +105,7 @@ crewsRouter.get('/', async (ctx) => {
       .where(inArray(crews.id, crewIds))
       // Stable and rename-proof. Alphabetical would reshuffle the whole list
       // the moment a keeper renames one crew.
-      .orderBy(asc(crews.createdAt)),
+      .orderBy(asc(crews.createdAt), asc(crews.id)),
     db
       .select({
         crewId: crewMembers.crewId,
@@ -117,7 +117,10 @@ crewsRouter.get('/', async (ctx) => {
       .from(crewMembers)
       .leftJoin(userProfiles, eq(userProfiles.userId, crewMembers.userId))
       .where(inArray(crewMembers.crewId, crewIds))
-      .orderBy(asc(crewMembers.joinedAt)),
+      // joinedAt alone ties whenever two people accept in the same transaction
+      // or the same clock tick, and the cluster then reshuffles between
+      // requests. userId breaks the tie deterministically.
+      .orderBy(asc(crewMembers.joinedAt), asc(crewMembers.userId)),
     db
       .select({ crewId: crewMutes.crewId })
       .from(crewMutes)
@@ -291,7 +294,7 @@ crewsRouter.get('/:crewId', async (ctx) => {
     .from(crewMembers)
     .leftJoin(userProfiles, eq(userProfiles.userId, crewMembers.userId))
     .where(eq(crewMembers.crewId, crewId))
-    .orderBy(asc(crewMembers.joinedAt))
+    .orderBy(asc(crewMembers.joinedAt), asc(crewMembers.userId))
 
   const memberIds = memberRows.map((row) => row.userId)
   const [upcoming, nights, mute] = await Promise.all([

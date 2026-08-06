@@ -380,6 +380,23 @@ describe('/v1/crews', () => {
       expect(body.data.crew.members).toEqual(list.data.crews[0]?.members)
     })
 
+    it('orders a roster deterministically when joinedAt ties', async () => {
+      // A single insert gives every row the same joinedAt, so joinedAt alone
+      // leaves the order up to the planner and the cluster flickers.
+      const crewId = await seedCrew([KEEPER, MATE, STRANGER])
+      setAuth()
+      const first = (await (
+        await app.request(`/v1/crews/${crewId}`)
+      ).json()) as DetailBody
+      const second = (await (
+        await app.request(`/v1/crews/${crewId}`)
+      ).json()) as DetailBody
+      expect(first.data.members.map((member) => member.userId)).toEqual(
+        [KEEPER, MATE, STRANGER].sort(),
+      )
+      expect(second.data.members).toEqual(first.data.members)
+    })
+
     it('honours a client-minted id and 409s a repeat of it', async () => {
       setAuth()
       await seedSupporter()
