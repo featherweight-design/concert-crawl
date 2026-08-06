@@ -90,7 +90,10 @@ const CrewPickerRow = ({
   <button
     type="button"
     onClick={onSelect}
-    aria-pressed={selected}
+    // Picking a crew is a single-select set, not a set of independent
+    // toggles, so the rows carry radio semantics rather than `aria-pressed`.
+    role="radio"
+    aria-checked={selected}
     className="flex w-full cursor-pointer items-center gap-3 text-left"
     style={{
       minHeight: 56,
@@ -168,7 +171,11 @@ const CrewPickerBody = ({
   compact,
   onSelect,
 }: CrewPickerBodyProps) => (
-  <div className="flex flex-col">
+  <div
+    role="radiogroup"
+    aria-label={COPY.a11y.lensPicker}
+    className="flex flex-col"
+  >
     <CrewPickerRow
       crew={null}
       selected={selectedId === null}

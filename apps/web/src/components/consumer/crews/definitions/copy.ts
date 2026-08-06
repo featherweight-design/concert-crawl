@@ -325,8 +325,10 @@ export const CREWS_COPY = {
     options: 'Crew options',
     close: 'Close',
     lensOn: (crew: string) =>
-      `Crew lens on: ${crew}. Showing shows a member is going to.`,
+      `Crew lens on: ${crew}. Only what a member is going to.`,
     lensOff: 'Crew lens off. Showing all shows.',
+    // Names the picker's option set, which the radiogroup role requires.
+    lensPicker: 'Look through a crew',
     // The named list on event detail. The count is stated separately, so this
     // only has to name who and account for anyone it cannot name.
     goingList: (names: string[], others: number) =>

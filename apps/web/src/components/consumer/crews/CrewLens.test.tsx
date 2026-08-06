@@ -71,6 +71,31 @@ describe('CrewLensPill', () => {
     // Selecting dismisses: no confirm step, like every shipped sheet.
     expect(screen.queryByText('Everyone')).not.toBeInTheDocument()
   })
+
+  it('offers the crews as one single-select set, not loose toggles', () => {
+    render(
+      <CrewLensPill
+        crews={CREWS}
+        activeCrew={CREWS[0]!}
+        onSelect={vi.fn()}
+        wide={false}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button'))
+
+    const group = screen.getByRole('radiogroup')
+    expect(group).toBeInTheDocument()
+    // Everyone + the two crews, with only the active one checked.
+    const options = screen.getAllByRole('radio')
+    expect(options).toHaveLength(3)
+    expect(
+      options.filter((opt) => opt.getAttribute('aria-checked') === 'true'),
+    ).toHaveLength(1)
+    expect(screen.getByRole('radio', { name: /Thursdays/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    )
+  })
 })
 
 describe('CrewLensRail', () => {
