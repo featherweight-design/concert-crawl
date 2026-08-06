@@ -11,9 +11,10 @@
 
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { and, asc, eq, inArray, sql } from 'drizzle-orm'
+import { and, asc, desc, eq, gt, inArray, isNull, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
+  crewInvites,
   crewMembers,
   crewMutes,
   crews,
@@ -22,6 +23,7 @@ import {
 } from '@concert-crawl/db'
 import type {
   CrewDetail,
+  CrewInvite,
   CrewMember,
   CrewMemberPreview,
   CrewSummary,
@@ -39,6 +41,10 @@ import {
   isMember,
   lockCrew,
 } from '../lib/crews.js'
+import {
+  CREW_INVITE_TTL_MS,
+  generateCrewInviteToken,
+} from '../lib/crew-invite-token.js'
 import { PG_UNIQUE_VIOLATION } from '../lib/pg-errors.js'
 
 const uuidSchema = z.string().uuid()
@@ -714,4 +720,167 @@ crewsRouter.delete('/:crewId/mute', async (ctx) => {
     )
 
   return ctx.json({ success: true, data: { muted: false } })
+})
+
+// --- Invites (PR-3) -------------------------------------------------------
+//
+// Minting, reading, and retiring the link are all member-level, not
+// keeper-level: there is no gatekeeping to do inside a group of 12, and a crew
+// that can only grow when one particular person is awake does not grow.
+
+/** "Live" is not revoked and not yet expired. Liveness is a clock predicate,
+ * which is exactly why it cannot be a partial unique index. */
+const liveInvite = (crewId: string) =>
+  and(
+    eq(crewInvites.crewId, crewId),
+    isNull(crewInvites.revokedAt),
+    gt(crewInvites.expiresAt, sql`now()`),
+  )
+
+const toInvite = (row: {
+  id: string
+  crewId: string
+  token: string
+  createdBy: string
+  expiresAt: Date
+  createdAt: Date
+}): CrewInvite => ({
+  id: row.id,
+  crewId: row.crewId,
+  token: row.token,
+  createdBy: row.createdBy,
+  expiresAt: row.expiresAt.toISOString(),
+  createdAt: row.createdAt.toISOString(),
+})
+
+// Built per call rather than read at module load: the route unit tests mock
+// `@concert-crawl/db` with an explicit export list, and touching a table's
+// columns at import time makes this module unloadable under those mocks.
+const inviteColumns = () => ({
+  id: crewInvites.id,
+  crewId: crewInvites.crewId,
+  token: crewInvites.token,
+  createdBy: crewInvites.createdBy,
+  expiresAt: crewInvites.expiresAt,
+  createdAt: crewInvites.createdAt,
+})
+
+// POST /v1/crews/:crewId/invites — mint. A crew has at most one live link, so
+// "Retire this link" means something.
+crewsRouter.post('/:crewId/invites', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+  const userId = authInfo.userId
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+  const crewId = parsed.data
+
+  // Revoke and insert run inside ONE transaction that takes the crew row lock
+  // first — the same lock the join path takes (plan D4). Revoke-then-insert
+  // without it does not give "at most one live link": two members minting
+  // concurrently both read zero live invites and both insert.
+  const result = await db.transaction(async (tx) => {
+    const locked = await lockCrew(tx, crewId)
+    if (!locked) return { kind: 'denied' } as const
+    if (!(await isMember(tx, crewId, userId)))
+      return { kind: 'denied' } as const
+
+    await tx
+      .update(crewInvites)
+      .set({ revokedAt: new Date(), revokedBy: userId })
+      .where(liveInvite(crewId))
+
+    const [minted] = await tx
+      .insert(crewInvites)
+      .values({
+        crewId,
+        token: generateCrewInviteToken(),
+        createdBy: userId,
+        expiresAt: new Date(Date.now() + CREW_INVITE_TTL_MS),
+      })
+      .returning(inviteColumns())
+    if (!minted) throw new Error('crew invite insert returned no rows')
+    return { kind: 'minted', minted } as const
+  })
+
+  if (result.kind === 'denied')
+    return ctx.json({ success: false, error: 'Not a member of this crew' }, 403)
+
+  return ctx.json(
+    { success: true, data: { invite: toInvite(result.minted) } },
+    201,
+  )
+})
+
+// GET /v1/crews/:crewId/invites/current — the live invite, or null.
+crewsRouter.get('/:crewId/invites/current', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+
+  const crew = await resolveMembership(parsed.data, authInfo.userId)
+  if (!crew)
+    return ctx.json({ success: false, error: 'Not a member of this crew' }, 403)
+
+  // At most one row should qualify, but the ORDER BY is not decoration: if a
+  // race ever produced two, the sheet must show the same one on every read.
+  // createdAt alone ties when two rows land in the same tick, so id breaks it.
+  const [row] = await db
+    .select(inviteColumns())
+    .from(crewInvites)
+    .where(liveInvite(parsed.data))
+    .orderBy(desc(crewInvites.createdAt), desc(crewInvites.id))
+    .limit(1)
+
+  return ctx.json({
+    success: true,
+    data: { invite: row ? toInvite(row) : null },
+  })
+})
+
+// POST /v1/crews/:crewId/invites/:inviteId/revoke — retire the link.
+crewsRouter.post('/:crewId/invites/:inviteId/revoke', async (ctx) => {
+  const authInfo = getAuth(ctx)
+  if (!authInfo?.userId)
+    return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+
+  const parsed = uuidSchema.safeParse(ctx.req.param('crewId'))
+  if (!parsed.success)
+    return ctx.json({ success: false, error: 'Invalid crew ID' }, 400)
+
+  const inviteParsed = uuidSchema.safeParse(ctx.req.param('inviteId'))
+  if (!inviteParsed.success)
+    return ctx.json({ success: false, error: 'Invalid invite ID' }, 400)
+
+  const crew = await resolveMembership(parsed.data, authInfo.userId)
+  if (!crew)
+    return ctx.json({ success: false, error: 'Not a member of this crew' }, 403)
+
+  // The crew predicate rides in the UPDATE's own WHERE rather than being
+  // checked first, so an invite belonging to another crew cannot be retired by
+  // a member of this one. `revokedAt IS NULL` makes a double tap a no-op
+  // rather than a second write that moves the timestamp.
+  const [revoked] = await db
+    .update(crewInvites)
+    .set({ revokedAt: new Date(), revokedBy: authInfo.userId })
+    .where(
+      and(
+        eq(crewInvites.id, inviteParsed.data),
+        eq(crewInvites.crewId, parsed.data),
+        isNull(crewInvites.revokedAt),
+      ),
+    )
+    .returning({ id: crewInvites.id })
+
+  if (!revoked)
+    return ctx.json({ success: false, error: 'Invite not found' }, 404)
+
+  return ctx.json({ success: true, data: { revoked: true } })
 })
