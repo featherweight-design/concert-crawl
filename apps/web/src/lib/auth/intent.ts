@@ -65,17 +65,49 @@ export const stripIntentParams = (
   return `${pathname}${query ? `?${query}` : ''}${hash}`
 }
 
+/** A path still unstable after this many passes is an attack, not a route. */
+const MAX_DECODE_PASSES = 5
+
+/** Rejects `//evil.example` and `/\evil.example`, both resolvable as hosts. */
+const isPlainInAppPath = (value: string): boolean => /^\/[^/\\]/.test(value)
+
 /**
  * A `return` param is a redirect target, so anything that could leave the origin
- * is an open redirect. Only a plain absolute in-app path is accepted —
- * `//evil.com` and `/\evil.com` are both browser-resolvable as hosts, so the
- * second character must be neither slash nor backslash.
+ * is an open redirect. Only a plain absolute in-app path is accepted.
+ *
+ * Decoding runs to a fixed point rather than once, because percent-encoding
+ * hides a hostile shape from a single check — `/%5Cevil.example` decodes to
+ * `/\evil.example`, and `/%255Cevil.example` survives one pass to become
+ * `/%5Cevil.example`. Every intermediate form is validated, not just the last:
+ * deciding one is safe would require knowing how many times each downstream
+ * consumer decodes, and validating them all requires knowing nothing.
+ *
+ * This is the single validator for the whole funnel — middleware, the beta code
+ * action, and /auth/complete all route through it. A second copy of this logic
+ * is how one branch ended up weaker than its sibling.
  */
-export const sanitizeReturnPath = (raw: string | null | undefined): string => {
-  if (!raw) return DEFAULT_RETURN_PATH
-  if (!/^\/[^/\\]/.test(raw)) return DEFAULT_RETURN_PATH
-  return raw
+export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
+  if (!raw) return false
+
+  let current = raw
+  for (let i = 0; i < MAX_DECODE_PASSES; i++) {
+    if (!isPlainInAppPath(current)) return false
+    let next: string
+    try {
+      next = decodeURIComponent(current)
+    } catch {
+      // Malformed escapes: undecodable is not the same as safe.
+      return false
+    }
+    if (next === current) return true
+    current = next
+  }
+
+  return false
 }
+
+export const sanitizeReturnPath = (raw: string | null | undefined): string =>
+  isSafeReturnPath(raw) && raw ? raw : DEFAULT_RETURN_PATH
 
 const MAX_LABEL_LENGTH = 60
 

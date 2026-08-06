@@ -1,7 +1,11 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isPublicBrowseEnabled } from '@/lib/launch-mode'
-import { sanitizeReturnPath } from '@/lib/auth/intent'
+import {
+  DEFAULT_RETURN_PATH,
+  isSafeReturnPath,
+  sanitizeReturnPath,
+} from '@/lib/auth/intent'
 
 /**
  * Routes any visitor may reach, signed in or out, in either launch mode.
@@ -75,54 +79,17 @@ const isPublicOnceLaunched = createRouteMatcher([
 ])
 
 /** Where a signed-out visitor is returned to when the attempted path is unsafe. */
-const SAFE_RETURN_FALLBACK = '/events'
-
-/** Decode passes allowed before a path is treated as hostile. */
-const MAX_DECODE_PASSES = 5
+const SAFE_RETURN_FALLBACK = DEFAULT_RETURN_PATH
 
 /**
  * Reduces an attempted path to something that can only ever resolve back to
- * this origin, for use as Clerk's `redirect_url`.
- *
- * A single leading slash followed by anything other than a slash or backslash
- * is the only accepted shape. `//evil.example` and `/\evil.example` are both
- * browser-resolvable as hosts, and percent-encoding hides either from a naive
- * check — `/%5Cevil.example` decodes to `/\evil.example`.
- *
- * Decoding runs to a fixed point rather than once. A single pass is enough for
- * the browser itself (browsers do not re-decode a path), but the value is
- * handed to Clerk and then to whatever consumes the `redirect_url` after it, and
- * `/%255Cevil.example` survives one pass to become `/%5Cevil.example`. Deciding
- * this is safe requires knowing how many times every downstream consumer will
- * decode; validating the fully-decoded form requires knowing nothing. A path
- * still unstable after MAX_DECODE_PASSES, or one whose escapes are malformed, is
- * rejected — both are far more likely to be an attack than a real route.
+ * this origin, for use as Clerk's `redirect_url`. The judgement about what is
+ * safe lives in `sanitizeReturnPath`; this only re-attaches the query string,
+ * which the validator has no opinion about.
  */
 const toSafeReturnPath = (pathname: string, search: string): string => {
-  let decoded = pathname
-
-  for (let i = 0; i < MAX_DECODE_PASSES; i++) {
-    let next: string
-    try {
-      next = decodeURIComponent(decoded)
-    } catch (err) {
-      console.warn('middleware: undecodable path, dropping redirect_url', err)
-      return SAFE_RETURN_FALLBACK
-    }
-
-    // Every intermediate form has to be safe too, not just the final one — a
-    // consumer that stops decoding early must not be handed a hostile value.
-    if (!/^\/[^/\\]/.test(next)) return SAFE_RETURN_FALLBACK
-
-    if (next === decoded) return pathname + search
-    decoded = next
-  }
-
-  console.warn(
-    'middleware: path still decoding after %d passes, dropping redirect_url',
-    MAX_DECODE_PASSES,
-  )
-  return SAFE_RETURN_FALLBACK
+  if (!isSafeReturnPath(pathname)) return SAFE_RETURN_FALLBACK
+  return pathname + search
 }
 
 /**

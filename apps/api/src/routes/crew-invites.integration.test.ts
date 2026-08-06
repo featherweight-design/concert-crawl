@@ -229,7 +229,7 @@ describe('crew invites', () => {
   })
 
   describe('POST /v1/crews/:crewId/invites/:inviteId/revoke', () => {
-    it('lets any member retire the link and 404s a second attempt', async () => {
+    it('lets any member retire the link, and a second tap is idempotent', async () => {
       const crewId = await seedCrew([KEEPER, MATE])
       const invite = await seedInvite(crewId)
       setAuth(MATE)
@@ -247,11 +247,30 @@ describe('crew invites', () => {
       expect(row?.revokedAt).not.toBeNull()
       expect(row?.revokedBy).toBe(MATE)
 
+      // Asking for a state that already holds is a success, not a 404 — and it
+      // must not move the timestamp of the revoke that actually happened.
       const second = await app.request(
         `/v1/crews/${crewId}/invites/${invite.id}/revoke`,
         { method: 'POST' },
       )
-      expect(second.status).toBe(404)
+      expect(second.status).toBe(200)
+
+      const [after] = await testDb
+        .select()
+        .from(crewInvites)
+        .where(eq(crewInvites.id, invite.id))
+      expect(after?.revokedAt).toEqual(row?.revokedAt)
+    })
+
+    it('404s an invite id that does not exist', async () => {
+      const crewId = await seedCrew([KEEPER])
+      setAuth(KEEPER)
+
+      const res = await app.request(
+        `/v1/crews/${crewId}/invites/${randomUUID()}/revoke`,
+        { method: 'POST' },
+      )
+      expect(res.status).toBe(404)
     })
 
     it('cannot retire an invite belonging to another crew', async () => {

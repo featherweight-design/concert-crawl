@@ -790,16 +790,20 @@ crewsRouter.post('/:crewId/invites', async (ctx) => {
 
     await tx
       .update(crewInvites)
-      .set({ revokedAt: new Date(), revokedBy: userId })
+      .set({ revokedAt: sql`now()`, revokedBy: userId })
       .where(liveInvite(crewId))
 
+    // The TTL is measured from the database clock, like every other decision
+    // about whether an invite is live (`liveInvite`, and the join path's
+    // expiry check). Minting against the API instance's clock would let a
+    // skewed instance hand out a link that the DB considers already dead.
     const [minted] = await tx
       .insert(crewInvites)
       .values({
         crewId,
         token: generateCrewInviteToken(),
         createdBy: userId,
-        expiresAt: new Date(Date.now() + CREW_INVITE_TTL_MS),
+        expiresAt: sql`now() + make_interval(secs => ${CREW_INVITE_TTL_MS / 1000})`,
       })
       .returning(inviteColumns())
     if (!minted) throw new Error('crew invite insert returned no rows')
@@ -871,11 +875,11 @@ crewsRouter.post('/:crewId/invites/:inviteId/revoke', async (ctx) => {
 
     // The crew predicate rides in the UPDATE's own WHERE rather than being
     // checked first, so an invite belonging to another crew cannot be retired
-    // by a member of this one. `revokedAt IS NULL` makes a double tap a no-op
-    // rather than a second write that moves the timestamp.
+    // by a member of this one. `revokedAt IS NULL` keeps a double tap from
+    // moving the timestamp.
     const [revoked] = await tx
       .update(crewInvites)
-      .set({ revokedAt: new Date(), revokedBy: authInfo.userId })
+      .set({ revokedAt: sql`now()`, revokedBy: authInfo.userId })
       .where(
         and(
           eq(crewInvites.id, inviteParsed.data),
@@ -884,8 +888,24 @@ crewsRouter.post('/:crewId/invites/:inviteId/revoke', async (ctx) => {
         ),
       )
       .returning({ id: crewInvites.id })
+    if (revoked) return { kind: 'revoked' } as const
 
-    return revoked
+    // Zero rows updated means either "already revoked" or "no such invite", and
+    // those are different answers. Revoking is idempotent — the second tap asks
+    // for a state that already holds, which is a success — so only a genuinely
+    // absent invite is a 404.
+    const [existing] = await tx
+      .select({ id: crewInvites.id })
+      .from(crewInvites)
+      .where(
+        and(
+          eq(crewInvites.id, inviteParsed.data),
+          eq(crewInvites.crewId, parsed.data),
+        ),
+      )
+      .limit(1)
+
+    return existing
       ? ({ kind: 'revoked' } as const)
       : ({ kind: 'gone' } as const)
   })
