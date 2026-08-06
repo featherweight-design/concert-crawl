@@ -60,7 +60,8 @@ export const CreateCrewSheet = ({
       if (token === null) throw new Error('Not signed in')
       const crew = await createCrew(token, { id: crewId, name: trimmed })
       onCreated(crew)
-    } catch {
+    } catch (err) {
+      console.error('CreateCrewSheet: could not create crew', err)
       // The id is kept on failure so a retry produces the patch they saw.
       setFailed(true)
       setSaving(false)
