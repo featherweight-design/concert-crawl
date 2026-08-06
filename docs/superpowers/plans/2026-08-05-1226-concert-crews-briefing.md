@@ -33,14 +33,15 @@ hardcoded tier name, which is the exact rot class the copy pass removed.
 | Last shipped migration is `0075_latin_extended_canonical`, `when: 1786665600000` | `tail packages/db/migrations/meta/_journal.json` | ✅ confirmed. Note the path is `packages/db/migrations/`, **not** `packages/db/drizzle/` |
 | `PREMIUM_FEATURES` holds 7 keys; `crews` is not among them | `packages/entitlements/src/index.ts:10-30` | ✅ confirmed. PR-1 takes it to 8 |
 | `concert-history` and `calendar-export` are `supporter: 'visible-active'` | same file, 2026-07-29 amendment comment | ✅ confirmed. This is the precedent the crews cell follows |
-| Neither `/crews` nor `/crew/join` appears in `isAlwaysPublic` or `isPublicOnceLaunched` | `apps/web/src/middleware.ts:13-60` | ✅ confirmed absent, which is the intended end state (PR-3 Task 5 changes nothing here) |
+| Neither the `/crews(.*)` nor the `/crew/join(.*)` matcher pattern appears in `isAlwaysPublic` or `isPublicOnceLaunched` | `apps/web/src/middleware.ts:13-60` | ✅ confirmed absent, which is the intended end state (PR-3 Task 5 changes nothing here) |
 | Latest release entry is `v0.34.0-beta` | `apps/web/src/lib/definitions/releases.ts:34` | ✅ confirmed. PR-7 adds the version above it |
 | `prepareAuditAuth('user' \| 'admin')` exists for the cold-eyes sweep | `apps/e2e/src/audit/audit-auth.ts:17` | ✅ exists |
 | `E2E_AUDIT_USER_*` / `E2E_AUDIT_ADMIN_*` are placed | `env \| grep -c E2E_AUDIT` → 4 | ✅ all four present. **The cold-eyes capture is not blocked** — do not report it as such |
 | `main` is green | Release `1.216.7` published after PR #1489 fixed the lockfile | ✅ green as of 2026-08-06 |
 
 Things that intentionally do **not** exist yet: the four crews tables, the `crews` entitlement
-key, the three `crew.*` notification categories, `/crews`, `/crew/join`, and the fifth nav slot.
+key, the three `crew.*` notification categories, `/crews`, `/crew/join/<token>`, and the fifth
+nav slot.
 All are introduced by this plan.
 
 No new env vars, no new external accounts, and no new infrastructure. Crews adds no cron, no
@@ -218,7 +219,8 @@ first.
 
 - **Any production database migration.** `0076_crews.sql` is additive and ships through the
   normal deploy, which needs no sign-off — but a hand-run `psql` against prod does.
-- **Any proposal to make a crews route public.** Adding `/crews` or `/crew/join` to either
+- **Any proposal to make a crews route public.** Adding a `/crews(.*)` or `/crew/join(.*)`
+  matcher pattern to either
   matcher reverses a resolved decision and re-opens #794's failure. Escalate; never decide it
   in-run.
 - **Any proposal to move the `crews` entitlement cell.** Supporter was settled 2026-08-05 with
@@ -253,6 +255,6 @@ first.
 - Staging validation on the real staging URL for J1–J5, not CI green.
 - `releases.ts` entry above `v0.34.0-beta` and one ✅ Complete `progress.md` row, both on PR-7.
 - Every crews route authenticated, verified by a middleware test that pins the **absence** of
-  `/crew/join` and `/crews` from both public matchers.
+  the `/crew/join(.*)` and `/crews(.*)` matcher patterns from both public matchers.
 - Pickup memory `project_pickup_1226_concert_crews.md` updated after every merged PR.
 - Final report produced by the `feature-run-report` skill.
