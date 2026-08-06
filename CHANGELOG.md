@@ -1,3 +1,21 @@
+# [1.221.0](https://github.com/HartiganHM/concert-crawl/compare/v1.220.0...v1.221.0) (2026-08-06)
+
+
+### Bug Fixes
+
+* **crews:** clear the invite failure notice at every action entry point ([9c862b8](https://github.com/HartiganHM/concert-crawl/commit/9c862b87f7e5c5c46b38a9839166ec567a6143a3))
+* **crews:** close the Gate 4 gaps on the crew home ([0543d6c](https://github.com/HartiganHM/concert-crawl/commit/0543d6cf9d2a787afd04badcf9b489f7f73d243a))
+* **crews:** correct the going cluster's announcement and share one stub date ([c48f285](https://github.com/HartiganHM/concert-crawl/commit/c48f285e6de52a8eb582885d02041d77bac4419c))
+* **crews:** disable the invite copy button while a revoke is in flight ([ce00af3](https://github.com/HartiganHM/concert-crawl/commit/ce00af372e3932e568f506b09cfab1f6c15cc0a5))
+* **crews:** don't claim a copy that landed after the sheet closed ([8e9d458](https://github.com/HartiganHM/concert-crawl/commit/8e9d4582617d06aeb0ed337bf6fd3e017ae8f618))
+* **crews:** give crew rows their own surface and prune stale removals ([74fd788](https://github.com/HartiganHM/concert-crawl/commit/74fd788d7a67236c184124ab9883cb1d1f10d4e5))
+* **crews:** reset busy on close and guard the clipboard in InviteSheet ([062e6e0](https://github.com/HartiganHM/concert-crawl/commit/062e6e0c95a9b8ab870b0a613863d295caddf464))
+
+
+### Features
+
+* **crews:** crew home page with tabs, roster, invite and leave flows ([c09f0f1](https://github.com/HartiganHM/concert-crawl/commit/c09f0f1fe31675efcef4604dee57a0bef825d5c7))
+
 # [1.220.0](https://github.com/HartiganHM/concert-crawl/compare/v1.219.0...v1.220.0) (2026-08-06)
 
 
