@@ -170,16 +170,21 @@ const manifest: AuditManifest = validateManifest([
         description:
           'Open the first crew from the crews index (UUID-stable coverage of /crews/[crewId])',
         run: async (page: Page) => {
-          await page.locator('a[href^="/crews/"]:visible').first().click()
+          const link = page.locator('a[href^="/crews/"]:visible').first()
+          // Short bound: an audit user with no crews is a fixture problem, and
+          // the default 30s timeout would hide it behind a slow sweep.
+          await link.waitFor({ state: 'visible', timeout: 5000 })
+          await link.click()
           // The crew home fetches after navigation, so the sweep's own
           // networkidle wait can still land on the skeleton. Waiting for the
           // skeleton to DETACH is a race — it is not mounted yet at the moment
           // the click returns, so the wait passes instantly against nothing.
-          // Wait for a resolved-state control to appear instead.
+          // Wait for a resolved-state control to appear instead. Crew options
+          // is the one the whole roster sees, keeper or not, at cap or not.
           await page
-            .getByRole('button', { name: /invite people/i })
+            .getByRole('button', { name: /crew options/i })
             .first()
-            .waitFor({ state: 'visible', timeout: 30000 })
+            .waitFor({ state: 'visible', timeout: 15000 })
         },
       },
       {
