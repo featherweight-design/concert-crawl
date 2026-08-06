@@ -107,7 +107,7 @@ describe('rowChips', () => {
     expect(chips).toEqual([])
   })
 
-  it('pushes Following out of the budget when a crew is going', () => {
+  it('takes the first chip slot when a crew is going, dropping genre', () => {
     const chips = rowChips(
       makeShow({
         isFollowed: true,

@@ -33,9 +33,10 @@ export function rowChips(show: EventRowShow, surface: RowSurface): ChipSpec[] {
 
   for (const kind of SURFACES[surface].chipPriority) {
     // First in the crew surfaces' order, which is the whole displacement rule:
-    // a row with crew presence spends the first chip slot here and `following`
-    // falls off the two-chip budget on its own. No removal logic exists, so a
-    // row without crew presence gets `following` back for free.
+    // a row with crew presence spends the first chip slot here and `genre`,
+    // last in the priority, falls off the two-chip budget on its own. No
+    // removal logic exists, so a row without crew presence gets `genre` back
+    // for free.
     if (
       kind === 'crew' &&
       show.crewGoing !== null &&

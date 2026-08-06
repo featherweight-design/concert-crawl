@@ -259,8 +259,12 @@ export const CREWS_COPY = {
     // The way out is the lens off, not the crew home: you came here to look at
     // the calendar.
     emptyCta: 'Show every show',
-    loading: 'LOOKING THROUGH THE CREW…',
-    failed: "Couldn't load that crew's shows. Try again.",
+    // A failed load is not an empty crew, and must never borrow the empty
+    // state's words: "your people are homebodies" is a lie about the data.
+    failedEyebrow: 'CREW LENS',
+    failedTitle: "Couldn't look through that crew.",
+    failedBody: 'Reload the page, or drop the lens and browse everything.',
+    failedRail: 'NO RESULT',
   },
 
   // The crew line on event detail, attached to Going. The only crew surface

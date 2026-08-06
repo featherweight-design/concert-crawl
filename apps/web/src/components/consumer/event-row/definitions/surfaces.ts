@@ -94,9 +94,9 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
   // the same reason as `crew`, because the lens feed is the crew shows query.
   //
   // The crew chip ranks first, which is the whole of decision 5: the budget is
-  // two chips, so a row with crew presence pushes `following` out by ordering
-  // alone. There is no removal rule to keep in sync — a row with no crew chip
-  // gets `following` back for free.
+  // two chips, so a row with crew presence pushes `genre`, last in the
+  // priority, out by ordering alone. There is no removal rule to keep in
+  // sync: a row with no crew chip gets `genre` back for free.
   crewLens: {
     carries: ['date'],
     chipPriority: ['crew', 'following', 'genre'],

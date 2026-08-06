@@ -10,6 +10,14 @@ const COPY = CREWS_COPY
 interface CrewLensListProps {
   crewName: string
   shows: CrewShow[]
+  /** A load failure, which is not the same state as a crew going to nothing. */
+  failed?: boolean
+  /**
+   * Browse's current URL with only `crew` removed. Passed in rather than
+   * hardcoded to `/events`, so clearing the lens keeps the view and filters the
+   * viewer already chose.
+   */
+  clearLensHref: string
 }
 
 /**
@@ -18,7 +26,25 @@ interface CrewLensListProps {
  * list exactly as they do on Browse, so the surface declares the date carried
  * and the row drops it.
  */
-export const CrewLensList = ({ crewName, shows }: CrewLensListProps) => {
+export const CrewLensList = ({
+  crewName,
+  shows,
+  failed = false,
+  clearLensHref,
+}: CrewLensListProps) => {
+  if (failed) {
+    return (
+      <EmptyState
+        state="filtered"
+        eyebrow={COPY.lens.failedEyebrow}
+        title={COPY.lens.failedTitle}
+        body={COPY.lens.failedBody}
+        railLabel={COPY.lens.failedRail}
+        secondaryCta={{ label: COPY.lens.emptyCta, href: clearLensHref }}
+      />
+    )
+  }
+
   if (shows.length === 0) {
     return (
       <EmptyState
@@ -27,7 +53,7 @@ export const CrewLensList = ({ crewName, shows }: CrewLensListProps) => {
         title={COPY.lens.emptyTitle}
         body={COPY.lens.emptyBody(crewName)}
         railLabel={COPY.lens.emptyRail}
-        secondaryCta={{ label: COPY.lens.emptyCta, href: '/events' }}
+        secondaryCta={{ label: COPY.lens.emptyCta, href: clearLensHref }}
       />
     )
   }

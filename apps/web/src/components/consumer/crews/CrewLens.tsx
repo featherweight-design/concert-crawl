@@ -338,7 +338,8 @@ export const CrewLensPill = ({
 }
 
 interface CrewLensRailProps {
-  count: number
+  /** Null when the lens feed failed to load, where "0 shows" would be a lie. */
+  count: number | null
   onClear: () => void
 }
 
@@ -370,7 +371,8 @@ export const CrewLensRail = ({ count, onClear }: CrewLensRailProps) => (
         color: 'var(--signal)',
       }}
     >
-      {COPY.lens.railEyebrow} · {COPY.lens.railCount(count)}
+      {COPY.lens.railEyebrow} ·{' '}
+      {count === null ? COPY.lens.failedRail : COPY.lens.railCount(count)}
     </span>
     <span
       aria-hidden="true"

@@ -265,14 +265,34 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       ? (crews.find((crew) => crew.id === lensParam) ?? null)
       : null
   let lensShows: CrewShow[] = []
-  if (lensCrew !== null && token) {
-    try {
-      lensShows = await fetchCrewShows(token, lensCrew.id)
-    } catch (err) {
-      console.error('[browse] crew lens shows load failed', err)
+  // Tracked separately from the empty list: a failed fetch that fell through to
+  // `[]` would otherwise render as "nobody is going to anything".
+  let lensFailed = false
+  if (lensCrew !== null) {
+    if (token) {
+      try {
+        lensShows = await fetchCrewShows(token, lensCrew.id)
+      } catch (err) {
+        console.error('[browse] crew lens shows load failed', err)
+        lensFailed = true
+      }
+    } else {
+      lensFailed = true
     }
   }
   const lensActive = lensCrew !== null
+
+  // Everything the viewer already chose, minus the lens. Clearing the lens is
+  // not a trip back to a bare /events.
+  const clearLensParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (key === 'crew') continue
+    if (typeof value === 'string') clearLensParams.set(key, value)
+    else if (Array.isArray(value))
+      for (const entry of value) clearLensParams.append(key, entry)
+  }
+  const clearLensQuery = clearLensParams.toString()
+  const clearLensHref = clearLensQuery ? `/events?${clearLensQuery}` : '/events'
 
   // SSR-prefetch the availability window (date→count) for the jump picker so
   // react-query is seeded and all in-picker month paging is client-side. Only
@@ -413,7 +433,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
             genres={genres}
             scaRegion={scaRegion}
             crews={crews}
-            lensCount={lensShows.length}
+            lensCount={lensFailed ? null : lensShows.length}
           />
         </Suspense>
       </div>
@@ -443,7 +463,12 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           is the crew's attendance query, which the events endpoint's filters
           have no purchase on. Everything below is Browse's own list. */}
       {lensActive && (
-        <CrewLensList crewName={lensCrew.name} shows={lensShows} />
+        <CrewLensList
+          crewName={lensCrew.name}
+          shows={lensShows}
+          failed={lensFailed}
+          clearLensHref={clearLensHref}
+        />
       )}
 
       {tasteNudgeConnect && !lensActive && (

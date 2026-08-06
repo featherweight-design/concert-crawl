@@ -34,8 +34,8 @@ interface FilterBarProps {
    * worse than no control.
    */
   crews?: CrewSummary[]
-  /** Shows in the active lens, for the rail's count. */
-  lensCount?: number
+  /** Shows in the active lens, for the rail's count. Null when it failed. */
+  lensCount?: number | null
 }
 
 function IconList({ size = 13 }: { size?: number }) {
@@ -102,7 +102,7 @@ export function FilterBar({
   className,
   scaRegion = true,
   crews = [],
-  lensCount = 0,
+  lensCount = null,
 }: FilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()

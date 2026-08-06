@@ -81,4 +81,10 @@ describe('CrewLensRail', () => {
     fireEvent.click(screen.getByRole('button', { name: /Crew lens off/ }))
     expect(onClear).toHaveBeenCalledTimes(1)
   })
+
+  it('declines to claim zero shows when the feed failed', () => {
+    render(<CrewLensRail count={null} onClear={vi.fn()} />)
+    expect(screen.getByText(/CREW LENS · NO RESULT/)).toBeInTheDocument()
+    expect(screen.queryByText(/0 SHOWS/)).not.toBeInTheDocument()
+  })
 })
