@@ -75,7 +75,9 @@ export const CREWS_COPY = {
   a11y: {
     // The patch itself is decorative; the row's accessible name is the crew.
     memberNoHandle: 'Crew member without a handle',
-    gatedCreate: 'Starting a crew is a paid feature',
+    // Appended to the button's own label, so it must not restate it:
+    // the accessible name reads "Start a crew, paid feature".
+    gatedCreate: 'paid feature',
     reroll: 'Pull a new patch',
     close: 'Close',
   },

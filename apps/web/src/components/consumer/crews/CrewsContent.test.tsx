@@ -3,7 +3,7 @@
 import '@testing-library/jest-dom'
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
-import type { CrewSummary } from '@concert-crawl/types'
+import type { CrewSummary, PlanState } from '@concert-crawl/types'
 
 const refresh = vi.fn()
 vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }))
@@ -16,8 +16,9 @@ const entitlement = {
 vi.mock('@/lib/queries/use-entitlement', () => ({
   useEntitlement: () => entitlement,
 }))
+const planQuery: { data: PlanState | undefined } = { data: undefined }
 vi.mock('@/lib/queries/use-plan-state', () => ({
-  usePlanState: () => ({ data: undefined }),
+  usePlanState: () => planQuery,
 }))
 vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
   TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
@@ -38,6 +39,7 @@ beforeEach(() => {
   entitlement.isLoading = false
   entitlement.active = true
   entitlement.surface = 'visible-active'
+  planQuery.data = undefined
   window.matchMedia = vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
@@ -118,5 +120,40 @@ describe('CrewsContent create gating (#1226)', () => {
     fireEvent.click(screen.getByText(CREWS_COPY.list.create))
     const picker = screen.getByTestId('tier-picker')
     expect(picker.dataset.entry).toBe('logged-out-paywall')
+  })
+})
+
+describe('CrewsContent lapsed-plan copy (#1226)', () => {
+  // `status` is null until a subscription row has ever existed. Keying the
+  // lapsed line off `plan === 'free'` instead told every first-time viewer
+  // that starting a crew needs the tier "again".
+  const plan = (status: PlanState['status']): PlanState => ({
+    plan: 'free',
+    onTrial: false,
+    trialEndsAt: null,
+    status,
+    cancelAtPeriodEnd: false,
+    currentPeriodEnd: null,
+    roleComped: false,
+  })
+
+  const openGate = () => {
+    entitlement.active = false
+    entitlement.surface = 'paywall'
+    render(<CrewsContent initialCrews={[crew()]} scaRegion={false} />)
+    fireEvent.click(screen.getByText(CREWS_COPY.list.create))
+  }
+
+  it('omits the lapsed line for someone who never subscribed', () => {
+    planQuery.data = plan(null)
+    openGate()
+    expect(screen.getByText(CREWS_COPY.gate.title)).toBeInTheDocument()
+    expect(screen.queryByText(/needs .* again/)).not.toBeInTheDocument()
+  })
+
+  it('shows the lapsed line once a subscription has existed', () => {
+    planQuery.data = plan('canceled')
+    openGate()
+    expect(screen.getByText(/needs .* again/)).toBeInTheDocument()
   })
 })

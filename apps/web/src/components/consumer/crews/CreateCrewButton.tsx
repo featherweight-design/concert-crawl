@@ -52,8 +52,11 @@ export const CreateCrewButton = ({
   const tier = unlockTierFor('crews')
   // A plan that once paid and no longer does keeps its crews; only starting
   // another one is gated. Saying so is the difference between a paywall and a
-  // false alarm about work they already did.
-  const lapsed = planState?.status === 'past_due' || planState?.plan === 'free'
+  // false alarm about work they already did. `status` is null until a
+  // subscription row has ever existed, so it — not `plan === 'free'` — is what
+  // separates a lapsed subscriber from someone who never paid; the lapsed copy
+  // says "again", which is a lie to a first-time viewer.
+  const lapsed = (planState?.status ?? null) !== null
 
   // Never flash a locked treatment while the plan is still resolving.
   const gated = !isLoading && !active
@@ -86,7 +89,6 @@ export const CreateCrewButton = ({
         disabled={isLoading}
         aria-haspopup="dialog"
         aria-expanded={createOpen || gateOpen || pickerOpen}
-        {...(gated ? { 'aria-description': COPY.a11y.gatedCreate } : {})}
         className="flex cursor-pointer items-center justify-center gap-1.5"
         style={{
           minHeight: 44,
@@ -104,6 +106,13 @@ export const CreateCrewButton = ({
         }}
       >
         {COPY.list.create}
+        {gated && (
+          // The star is the whole visual difference between the gated and
+          // ungated button, so it has to reach a screen reader too. It goes in
+          // the accessible NAME rather than aria-description, which Safari and
+          // Firefox still ignore.
+          <span className="sr-only">{COPY.a11y.gatedCreate}</span>
+        )}
         {gated && (
           <span
             aria-hidden="true"
