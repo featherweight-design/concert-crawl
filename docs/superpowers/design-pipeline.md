@@ -83,6 +83,21 @@ Both tracks converge on the same plan-PR-and-Copilot-review step. Track 2 design
 
 ---
 
+## Who owns copy
+
+**Copy is a copy-writer call, not a Design call.** Design owns layout, hierarchy, which states exist, and what a component does. It does not own the words.
+
+Two rules follow:
+
+1. **Copy changes go to the copy-writer persona** (`~/.claude/skills/copy-review/SKILL.md`), never back to Design. A wrong, stale, or off-voice string never justifies a design round.
+2. **Design's copy gets a copy-review pass before it is implemented.** Strings in a handoff are a draft input to copy review, not a locked artifact. Where the review calls for changes, **make them in place with the copy-writer persona** — do not return the handoff to Design for wording.
+
+This narrows the "open questions go back to Design" rule: open *product* questions still do, open *wording* questions do not. Where copy length forces a layout change, the layout question is Design's and the words stay the copy-writer's.
+
+Adopted 2026-08-05, after the #1226 Concert Crews entitlement flip (Supporter rather than Premium) invalidated four strings in `crew-copy.jsx` and the proposed remedy was to block the build PR on a Design round. That is the copy-writer's work.
+
+---
+
 ## Design Readiness Review
 
 The gate between design handoff and plan PR. Audits a design folder against seven dimensions and outputs a verdict.
@@ -218,6 +233,7 @@ No solution language. No "decisions needed" section.>
 | Hugh + me workshop | Design ticket | GitHub Issues |
 | Design produces | Design handoff folder + README | `design/design_handoff_X/` |
 | Hugh + me audit | Readiness Review | `design/design_handoff_X/READINESS.md` |
+| Copy-writer persona audits | Copy review of the handoff's strings — findings applied in place, never returned to Design | Build PR (see "Who owns copy") |
 | Hugh + me workshop | Implementation plan | `docs/superpowers/plans/<feature>.md` (plan PR) |
 | Copilot reviews | Review threads on plan PR | GitHub PR |
 | Eng builds | Implementation PR(s) | GitHub PR — references plan PR |

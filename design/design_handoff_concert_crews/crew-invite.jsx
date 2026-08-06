@@ -93,7 +93,7 @@ function PremiumGate({ variant = "mobile", lapsed }) {
   const Body = (
     <div style={{ padding: "0 18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 9, padding: 14, borderRadius: 12, background: "var(--surface-1)", border: "1px solid var(--border)" }}>
-        {[["Join a crew", "Free, forever"], ["Start a crew", "Premium · $5/mo"]].map(([l, r], i) => (
+        {[["Join a crew", "Free, forever"], ["Start a crew", "Supporter · $2/mo"]].map(([l, r], i) => (
           <div key={l} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingTop: i ? 9 : 0, borderTop: i ? "1px solid var(--border)" : "none" }}>
             <span style={{ fontFamily: CS_UI, fontWeight: 700, fontSize: 13.5, color: "var(--fg)" }}>{l}</span>
             <MonoEyebrow size={9.5} color={i ? "var(--signal)" : "var(--fg-muted)"}>{r}</MonoEyebrow>

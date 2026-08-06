@@ -163,7 +163,7 @@ The lint decides _where_ a string lives; the skill decides _what it says_. Neith
 
 **Scope and exemptions.** Admin copy is excluded from all three (CLAUDE.md already allows ad-hoc admin UI, and it has no copy-review bar). Release-note hero illustrations are artwork, not copy. Punctuation and icon glyphs are allowlisted. An em-dash is legal when it is the whole string (the empty-data placeholder) or leads it (the `— Hugh` sign-off, the `— end of log —` divider).
 
-**Suppressing a rule requires a reason.** The eight surviving em-dashes carry an `eslint-disable-next-line` naming why: each is design-locked, and the audit recorded the fix without applying it because Design owns the change. Never add a bare disable — a suppression with no reason is indistinguishable from a mistake later. Already-merged `releases.ts` entries are a frozen historical record and are never rewritten for style.
+**Suppressing a rule requires a reason.** The eight surviving em-dashes carry an `eslint-disable-next-line` naming why: the 2026-08 audit recorded each fix without applying it, on the since-retired belief that Design owned the change. Copy is a copy-writer call (see below), so those eight are now in scope for a normal copy-review pass rather than parked. Never add a bare disable — a suppression with no reason is indistinguishable from a mistake later. Already-merged `releases.ts` entries are a frozen historical record and are never rewritten for style.
 
 ### Design pipeline
 
@@ -172,6 +172,7 @@ All design work — both new design tickets and the build of existing handoffs �
 - **Pre-existing handoffs** (merged before 2026-06-23) require a Design Readiness Review (verdict in `design/design_handoff_X/READINESS.md`) before opening a plan PR
 - **New design tickets** (Track 2) use the handoff prompt template — objective problem + app context + technical requirements, design decisions left to Design
 - **Plan PRs** live in `docs/superpowers/plans/` and go through the Copilot review loop (see the canonical merge bar in `~/.claude/CLAUDE.md`) before implementation
+- **Copy is a copy-writer call, not a Design call** — Design owns layout, hierarchy, and which states exist; it does not own the words. Route every copy change to the `copy-review` skill, and give a handoff's strings a copy-review pass **before** implementing them, applying findings in place. Never send a handoff back to Design over wording, and never call a string design-locked as grounds for leaving it wrong. See design-pipeline.md § "Who owns copy"
 
 #### Customer-facing vocabulary (locked)
 

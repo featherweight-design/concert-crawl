@@ -94,12 +94,14 @@ const CREW_COPY = {
     rerollHelp:   "Don't like it? Pull another. Renaming won't change it; only this will.",
   },
   gate: {
-    eyebrow:      "PREMIUM",
-    title:        "Starting a crew is a Premium move.",
-    body:         "Joining one is free, forever. Nobody hits a paywall on your invite link. Making one is $5/mo.",
-    cta:          "See Premium",
+    // Tier names below are illustrative only. The build renders them from
+    // unlockTierFor('crews'); see the copy-review table in the eng plan.
+    eyebrow:      "SUPPORTER",
+    title:        "Starting one is the paid part.",
+    body:         "Joining one is free, forever. Nobody hits a paywall on your invite link.",
+    cta:          "Pick Supporter",
     later:        "Not now",
-    lapsed:       "Your crews all still work. Starting another one needs Premium again.",
+    lapsed:       "Your crews all still work. Starting another one needs Supporter again.",
   },
   invite: {
     title:        "Invite people",
