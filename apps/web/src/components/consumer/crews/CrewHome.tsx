@@ -4,7 +4,7 @@
 // tabs and the destructive flows can never disagree about which crew they are
 // acting on.
 
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import {
@@ -75,6 +75,19 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
   const [reroll, setReroll] = useState(false)
   const [confirm, setConfirm] = useState<ConfirmKind | null>(null)
   const [target, setTarget] = useState<CrewMember | null>(null)
+
+  // A removal override lives only until the server agrees, exactly like the
+  // salt below. Left to accumulate it would still be hiding the same person
+  // after they were invited back, since the id it is keyed by outlives the
+  // membership it stands for.
+  useEffect(() => {
+    setRemovedIds((ids) => {
+      const pending = ids.filter((id) =>
+        crew.members.some((member) => member.userId === id),
+      )
+      return pending.length === ids.length ? ids : pending
+    })
+  }, [crew.members])
 
   const active = chosen ?? leadTabFor(crew)
   // Both overrides clear on the SERVER value catching up rather than on the

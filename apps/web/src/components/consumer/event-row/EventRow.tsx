@@ -144,7 +144,9 @@ export const EventRow = ({
           />
         </div>
 
-        <PriceStack show={show} surface={surface} narrow={narrow} />
+        {config.showsPrice && (
+          <PriceStack show={show} surface={surface} narrow={narrow} />
+        )}
 
         {/* Reserved only where the surface has an action — reserving it on
             Browse collapses the title column to 80px at 320. */}

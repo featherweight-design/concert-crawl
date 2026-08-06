@@ -14,9 +14,9 @@ interface CrewUpcomingProps {
 }
 
 /**
- * Coming up. Rows render at `surface="browse"` because that surface already
- * declares the date as carried context, which is exactly true here: the date
- * headers run the list. The going cluster rides the row's `footer` slot —
+ * Coming up. The `crew` surface declares the date as carried context, which is
+ * exactly true here (the date headers run the list) and suppresses the price
+ * slot, since `CrewShow` carries no price. The going cluster rides `footer` —
  * it is a crew fact, not one of the row's four contract lines.
  */
 export const CrewUpcoming = ({ shows, wide }: CrewUpcomingProps) => {
@@ -72,7 +72,7 @@ export const CrewUpcoming = ({ shows, wide }: CrewUpcomingProps) => {
               <EventRow
                 key={show.eventId}
                 show={fromCrewShow(show)}
-                surface="browse"
+                surface="crew"
                 footer={
                   <span
                     style={{

@@ -7,6 +7,7 @@ import {
   screen,
   fireEvent,
   cleanup,
+  waitFor,
   within,
 } from '@testing-library/react'
 import type { CrewDetail, CrewMember, CrewShow } from '@concert-crawl/types'
@@ -290,6 +291,46 @@ describe('CrewHome leave 409 mapping (#1226)', () => {
     expect(
       await screen.findByText(CREWS_COPY.confirm.lastOneTitle('Thursdays')),
     ).toBeInTheDocument()
+  })
+})
+
+// The optimistic removal is keyed by userId, which outlives the membership.
+// Left unpruned it would keep hiding someone who was later invited back.
+describe('CrewHome optimistic removal lifetime (#1226)', () => {
+  const roster = (ids: string[]) =>
+    detail({
+      members: ids.map((id, i) =>
+        member({
+          userId: id,
+          handle: id,
+          isKeeper: i === 0,
+          isYou: i === 0,
+        }),
+      ),
+      memberCount: ids.length,
+    })
+
+  it('hides a removed member, then shows them again once re-invited', async () => {
+    const view = render(<CrewHome crew={roster(['u1', 'u2'])} />)
+    fireEvent.click(screen.getByRole('tab', { name: /Who's in/ }))
+    fireEvent.click(
+      screen.getByRole('button', { name: CREWS_COPY.roster.remove }),
+    )
+    fireEvent.click(
+      within(screen.getByRole('alertdialog')).getByRole('button', {
+        name: CREWS_COPY.confirm.removeCta,
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.queryByText('u2')).not.toBeInTheDocument(),
+    )
+
+    // The server catches up: u2 really is gone.
+    view.rerender(<CrewHome crew={roster(['u1'])} />)
+    // ...and is later invited back.
+    view.rerender(<CrewHome crew={roster(['u1', 'u2'])} />)
+    fireEvent.click(screen.getByRole('tab', { name: /Who's in/ }))
+    expect(screen.getByText('u2')).toBeInTheDocument()
   })
 })
 
