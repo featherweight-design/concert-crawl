@@ -118,9 +118,10 @@ const loadInvite = async (token: string): Promise<LoadedInvite | null> => {
 }
 
 /** Dead means dead: expired, revoked, and unknown are indistinguishable to the
- * caller apart from the reason, and none of them carries crew identity. */
-const deadReason = (invite: LoadedInvite | null): DeadReason | null => {
-  if (!invite) return 'unknown'
+ * caller apart from the reason, and none of them carries crew identity. An
+ * absent invite is answered by the caller, which narrows on it anyway — taking
+ * a nullable here would leave the caller with a second, unreachable check. */
+const deadReason = (invite: LoadedInvite): DeadReason | null => {
   if (invite.revokedAt) return 'revoked'
   if (invite.expired) return 'expired'
   return null
@@ -150,17 +151,20 @@ crewInvitesRouter.get('/:token', async (ctx) => {
   }
 
   const invite = await loadInvite(parsed.data)
+  if (!invite) {
+    apiLogger.info(
+      { userId, reason: 'unknown' },
+      'crew invite resolved as dead',
+    )
+    return ctx.json({ success: false, reason: 'unknown' }, 404)
+  }
+
   const dead = deadReason(invite)
   if (dead) {
     // A dead link renders no crew identity at all (locked decision 11), so
     // `reason` is the whole payload — no name, no patch, no member count.
     apiLogger.info({ userId, reason: dead }, 'crew invite resolved as dead')
     return ctx.json({ success: false, reason: dead }, 404)
-  }
-  if (!invite) {
-    // Unreachable — deadReason returns 'unknown' for null — but narrowing here
-    // beats a non-null assertion.
-    return ctx.json({ success: false, reason: 'unknown' }, 404)
   }
 
   const [memberCount, inviter] = await Promise.all([
