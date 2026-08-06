@@ -333,3 +333,317 @@ judged on the merits rather than forced back to the table; the table is amended 
 | Z11 | J4 — `crews/error.tsx`                | **Not built, deliberately.** `page.tsx` catches the fetch failure and passes `null` down, so `CrewsContent` paints the in-page error state with its own retry — a treatment that keeps the header and nav rather than replacing the route. A thrown render still lands on `(protected)/error.tsx`. A third boundary would only add a worse-looking path to the same outcome.                                           |
 | Z12 | M4 — empty-state rail reads `0 / 0`   | **Overridden to `0 crews`.** The default rail counts events, which says nothing on a surface that is not counting events. Implemented as a `railLabel` prop on the shared `EmptyState` so every future non-event surface can do the same, rather than crews forking the component.                                                                                                                                     |
 | Z13 | Q4 — `tier-picker-on-tap` on `/crews` | **Coded but unreachable, and kept.** `/crews` sits under `(protected)`, so no logged-out viewer renders the create button, and `logged-out` is the only entitlement cell producing that surface. The branch mirrors `EventDetailCtaBlock`; dropping it would make this the one gated control that handles the surface set incompletely if `/crews` ever goes public. Recorded so it is not re-flagged as a dead state. |
+
+---
+
+# PR-5 — Crew home, roster, destructive flows
+
+Scope: `/crews/[crewId]` route shell, hero, tabs, Coming up, Been there, Who's in,
+crew-of-one waiting room, invite sheet, reroll sheet, and the five-kind confirm dialog.
+Source precedence is unchanged from PR-4: **plan > handoff jsx/README > `crew-copy.jsx`
+(key names only)**. Rows carrying copy the plan's copy-review verdict supersedes are marked
+**[PLAN-COPY]**. Citations are `plan:N`, `README:N`, `file.jsx:N`, or a built path.
+
+Legend is unchanged: every row is one assertion a verifier can answer yes/no on without
+reading anything else.
+
+## AA. `/crews/[crewId]` route shell
+
+| #    | Requirement                                                                                                                                            | Source                                                     |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| AA1  | Route exists at `apps/web/src/app/(protected)/crews/[crewId]/page.tsx`                                                                                 | plan PR-5 Task 1                                           |
+| AA2  | A sibling `loading.tsx` exists in the same directory                                                                                                   | plan PR-5 Task 1                                           |
+| AA3  | A sibling `error.tsx` exists in the same directory                                                                                                     | plan PR-5 Task 1                                           |
+| AA4  | Page data comes from `GET /v1/crews/:crewId`, typed as `CrewDetail` from `@repo/types` with no `as` cast                                               | packages/types/src/crew.ts                                 |
+| AA5  | A 404 from that endpoint renders Next's `notFound()`, not the in-page error state                                                                      | plan global constraints                                    |
+| AA6  | The loading state renders **no crew name and no patch** — only shimmer geometry                                                                        | plan global constraints ("never render a name or a patch") |
+| AA7  | Loading hero shimmer is a `Shimmer` block sized 92 wide (>=768px) / 72 (<768px) with `borderRadius: 22`                                                | crews-destination.jsx:489-495                              |
+| AA8  | Loading renders two text shimmers at 62% and 38% width below the patch shimmer                                                                         | crews-destination.jsx:496-499                              |
+| AA9  | Loading renders three button-shaped shimmers in the action row                                                                                         | crews-destination.jsx:500-503                              |
+| AA10 | Loading renders exactly three 70px-tall `CrewRowSkeleton`-style row shimmers under the hero                                                            | crews-destination.jsx:505-509                              |
+| AA11 | The loading eyebrow is in an `aria-live="polite"` region and reads `CREWS_COPY.net.loadingCrew`                                                        | crews-destination.jsx:504; crew-copy.jsx:230               |
+| AA12 | The error branch renders the shared error object with eyebrow `CONNECTION`, title `net.errCrewTitle`, body `net.errCrewBody`, and a `net.retry` action | crews-destination.jsx:255-260, 511                         |
+| AA13 | Retry re-fetches the crew in place; it does not do a full page reload                                                                                  | crews-destination.jsx:257                                  |
+| AA14 | `ShimmerKeyframes` is injected once per page, not once per skeleton row                                                                                | crews-destination.jsx:223-235                              |
+
+## AB. Crew hero
+
+| #    | Requirement                                                                                                             | Source                         |
+| ---- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| AB1  | Hero renders `<CrewPatch patchSalt={crew.patchSalt} size={wide ? 92 : 72} scale="hero" />`                              | crews-destination.jsx:266      |
+| AB2  | The patch carries `aria-label` = `a11y.patch(crew.name)` from the crews copy file                                       | crew-copy.jsx:205              |
+| AB3  | The crew name is an `<h1>`, Inter weight 900, 34px at >=768px / 25px below                                              | crews-destination.jsx:274-279  |
+| AB4  | `<h1>` uses `letterSpacing: -0.035em`, `lineHeight: 1.05`, `textWrap: 'balance'`                                        | crews-destination.jsx:276-278  |
+| AB5  | The meta line is mono 9.5px and reads `list.memberCount(crew.memberCount)`                                              | crews-destination.jsx:281      |
+| AB6  | Meta segments are separated by a 3px round dot in `--border-strong`, not a text bullet                                  | crews-destination.jsx:282      |
+| AB7  | When `crew.muted` is true, a `MUTED` chip renders in `--warning` in the meta line; when false it is absent from the DOM | crews-destination.jsx:283-286  |
+| AB8  | Hero action row primary button reads `detail.seeLens` and carries a 13px lens svg                                       | crews-destination.jsx:288-290  |
+| AB9  | Hero action row ghost button reads `detail.invite` and opens the invite sheet                                           | crews-destination.jsx:291      |
+| AB10 | The 3-dot options control is a real `<button type="button">` with a visually-hidden accessible name from the copy file  | crews-destination.jsx:292-297  |
+| AB11 | Every hero control has a >=44px hit target                                                                              | plan global constraints (a11y) |
+| AB12 | No hex literal appears in the hero; every colour is a `var(--token)` or a `color-mix()` over one                        | plan global constraints        |
+
+## AC. Tabs
+
+| #    | Requirement                                                                                                          | Source                                      |
+| ---- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| AC1  | The tab strip is `role="tablist"` with `aria-label={detail.tabsLabel}`                                               | crews-destination.jsx:143                   |
+| AC2  | Three tabs render in order: Coming up, Been there, Who's in                                                          | crews-destination.jsx:519-523               |
+| AC3  | Tab labels come from `detail.upcomingTitle`, `detail.pastTitle`, `detail.rosterTitle`                                | crew-copy.jsx:35,38,41                      |
+| AC4  | Each tab is `role="tab"` with `id`, `aria-controls` pointing at the panel id, and `aria-selected`                    | crews-destination.jsx:158-162               |
+| AC5  | Roving tabIndex: the selected tab is `tabIndex={0}`, the others `tabIndex={-1}`                                      | crews-destination.jsx:163                   |
+| AC6  | ← / → move selection with wraparound; Home selects the first tab, End the last                                       | crews-destination.jsx:145-155               |
+| AC7  | Each tab shows a count: upcoming shows, past nights, member count                                                    | crews-destination.jsx:519-523               |
+| AC8  | The count is mono weight 700 at 10px, `letterSpacing: .04em`                                                         | crews-destination.jsx:186-190               |
+| AC9  | Count colour is `--signal` on the active tab and `--fg-subtle` on inactive tabs                                      | crews-destination.jsx:188                   |
+| AC10 | The tab `<button>` is >=44px tall; the visible pill inside is 34px tall with `borderRadius: 8`                       | crews-destination.jsx:165-172               |
+| AC11 | Active pill is `--surface-2` with a `--border-strong` border; inactive is transparent with `--border`                | crews-destination.jsx:173-175               |
+| AC12 | Label weight is 700 in both states (weight does not change on selection)                                             | crews-destination.jsx:180-184               |
+| AC13 | The strip is horizontally scrollable with `scrollbarWidth: 'none'` and no visible scrollbar                          | crews-destination.jsx:143                   |
+| AC14 | Each panel is `role="tabpanel"`, `tabIndex={0}`, with `aria-labelledby` naming its tab                               | crews-destination.jsx:530-534               |
+| AC15 | Lead order: Coming up opens when it has content; otherwise Been there opens when it has content; otherwise Coming up | crews-destination.jsx:516; plan PR-5 Task 1 |
+| AC16 | Only the selected panel's content is in the DOM (inactive panels are not rendered hidden)                            | crews-destination.jsx:530-534               |
+
+## AD. Coming up
+
+| #    | Requirement                                                                                         | Source                        |
+| ---- | --------------------------------------------------------------------------------------------------- | ----------------------------- |
+| AD1  | Shows are grouped by date, in ascending date order                                                  | crews-destination.jsx:310-318 |
+| AD2  | Each date group has a mono 9.5px uppercase label                                                    | crews-destination.jsx:322-325 |
+| AD3  | Each date label is followed by a 1px `--border` rule filling the remaining width                    | crews-destination.jsx:326     |
+| AD4  | Rows use the shipped `EventRow` with `surface="crew"`, `density="cozy"`, and `carded`               | crews-destination.jsx:330     |
+| AD5  | At >=768px the rows lay out in a 2-column `minmax(0, 1fr)` grid; below, a single column             | crews-destination.jsx:328     |
+| AD6  | Each row shows who is going via `MemberCluster` sourced from `CrewShow.going`                       | packages/types/src/crew.ts    |
+| AD7  | When `going.length` exceeds the cluster max, the overflow chip count equals `goingCount - rendered` | crew-shared.jsx:175-205       |
+| AD8  | Empty state title is `empty.noUpcomingTitle` ("Nobody's committed.")                                | plan PR-5 Task 2              |
+| AD9  | Empty state uses the shared `EmptyState` with `variant`/`state` hybrid, not a bespoke block         | crews-destination.jsx:52-65   |
+| AD10 | A show appears here when at least one member is going (>=1), never at 0                             | plan tense rule               |
+
+## AE. Been there (past) and StubRow
+
+| #    | Requirement                                                                                            | Source                           |
+| ---- | ------------------------------------------------------------------------------------------------------ | -------------------------------- |
+| AE1  | Nights are grouped by year, most recent first                                                          | crews-destination.jsx:340-350    |
+| AE2  | The panel header shows `detail.pastStat(n)` in `--signal`                                              | crews-destination.jsx:356-360    |
+| AE3  | Each night renders as a ticket stub, not an `EventRow`                                                 | README §2 item 6                 |
+| AE4  | Stub grid is `62px 1fr auto` at >=768px and `54px 1fr auto` below                                      | crews-destination.jsx:78         |
+| AE5  | Stub column gap is 16px wide / 12px narrow                                                             | crews-destination.jsx:79         |
+| AE6  | Stub background is `--surface-1` with a 1px `--border` and `borderRadius: 10`                          | crews-destination.jsx:80-82      |
+| AE7  | The stub end block is `--surface-2` with `borderRight: '1.5px dashed var(--border-strong)'`            | crews-destination.jsx:86-88      |
+| AE8  | Stub end shows a mono 9px uppercase month above a `CS_UI` weight-900 day at 19px wide / 17px narrow    | crews-destination.jsx:89-93      |
+| AE9  | Artist title is 15px wide / 14px narrow, weight 700, single-line ellipsised                            | crews-destination.jsx:96-99      |
+| AE10 | Venue line is mono 10.5px in `--fg-muted`                                                              | crews-destination.jsx:100-102    |
+| AE11 | Attendee cluster is `MemberCluster` with `size={wide ? 26 : 23}` and `max={wide ? 5 : 3}`              | crews-destination.jsx:104        |
+| AE12 | At >=768px only, a mono 9.5px line reads `detail.together(others)` when you attended, else `${n} went` | crews-destination.jsx:105-107    |
+| AE13 | A night appears only when at least **two** members attended                                            | plan tense rule; README §2       |
+| AE14 | Empty state title is `empty.noPastTitle` and the body states the two-person minimum                    | plan PR-5 Task 2 **[PLAN-COPY]** |
+
+## AF. Who's in (roster)
+
+| #    | Requirement                                                                                                               | Source                                                   |
+| ---- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| AF1  | The roster header shows `{memberCount} / 12 SPOTS` in mono uppercase                                                      | crews-destination.jsx:377-383                            |
+| AF2  | That header switches to `--warning` when the crew is at 12                                                                | crews-destination.jsx:380                                |
+| AF3  | A ghost `detail.invite` button sits in the roster header                                                                  | crews-destination.jsx:384                                |
+| AF4  | Member rows are >=48px tall with an 11px gap                                                                              | crews-destination.jsx:392-394                            |
+| AF5  | Each row after the first has a 1px `--border` top rule; the first has none                                                | crews-destination.jsx:395                                |
+| AF6  | Avatar is `MemberDot size={32}` from the shipped `crews/MemberCluster.tsx`, not a new component                           | apps/web/src/components/consumer/crews/MemberCluster.tsx |
+| AF7  | A member with a handle renders it at Inter 700 14px                                                                       | crews-destination.jsx:399-401                            |
+| AF8  | `isYou` appends ` · You` using `roster.you`, it does not replace the handle                                               | crews-destination.jsx:401                                |
+| AF9  | A member with no handle renders `roster.noHandle` at Inter 600 14px in `--fg-subtle`                                      | crews-destination.jsx:399-401                            |
+| AF10 | A no-handle member's `MemberDot` is the letterless dashed dot — no initial is invented                                    | crew-shared.jsx:156-174; #762 rule                       |
+| AF11 | A no-handle member's dot carries `aria-label` = `a11y.memberNoHandle`                                                     | crew-copy.jsx:209                                        |
+| AF12 | A no-handle member is still counted in `memberCount` and in the tab count                                                 | README §2; #762 rule                                     |
+| AF13 | The secondary line is mono 9px and reads `roster.joined(rel)` derived from `CrewMember.joinedAt`, never a hardcoded month | packages/types/src/crew.ts                               |
+| AF14 | The keeper's row shows a keeper badge driven by `CrewMember.isKeeper`                                                     | plan PR-5 Task 3                                         |
+| AF15 | A Remove control renders only when the viewer is the keeper **and** the row is not the viewer                             | crews-destination.jsx:405-410                            |
+| AF16 | A Leave control renders only on the viewer's own row when the viewer is not the keeper                                    | crews-destination.jsx:405-410                            |
+| AF17 | Remove calls `DELETE /v1/crews/:crewId/members/:memberId`                                                                 | apps/api/src/routes/crews.ts                             |
+| AF18 | Leave calls `POST /v1/crews/:crewId/leave`                                                                                | apps/api/src/routes/crews.ts                             |
+| AF19 | Roster ordering is stable across renders (keeper first, then `joinedAt` ascending)                                        | plan PR-5 Task 3                                         |
+
+## AG. At-cap notice
+
+| #   | Requirement                                                                                                        | Source                        |
+| --- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------- |
+| AG1 | At 12 members a `CrewNotice` renders **above** the roster grid                                                     | plan PR-5 Task 3              |
+| AG2 | The at-cap block is **not** an `EmptyState` — the roster is full, not empty                                        | README §3; plan PR-5 Task 3   |
+| AG3 | Notice padding is `16px 16px 15px` with `borderRadius: 12` and a 7px internal gap                                  | crews-destination.jsx:206-210 |
+| AG4 | Notice background is `--surface-1`; border is `1px solid color-mix(in oklch, var(--warning) 28%, var(--border))`   | crews-destination.jsx:211     |
+| AG5 | A 6px round dot in `--warning` precedes the mono 9.5px `.14em` eyebrow                                             | crews-destination.jsx:213-215 |
+| AG6 | Notice title is Inter 800 17px with `letterSpacing: -0.02em`                                                       | crews-destination.jsx:217     |
+| AG7 | Notice body is Inter 13px `--fg-muted`, `lineHeight: 1.45`, `maxWidth: 380`                                        | crews-destination.jsx:218     |
+| AG8 | While at cap, the roster Invite control is disabled or absent — the invite sheet is not reachable from a full crew | plan PR-5 Task 5              |
+| AG9 | Title and body come from `empty.atCapTitle` / `empty.atCapBody`                                                    | crew-copy.jsx:154-155         |
+
+## AH. Crew of one (waiting room)
+
+| #   | Requirement                                                                            | Source                |
+| --- | -------------------------------------------------------------------------------------- | --------------------- |
+| AH1 | When `memberCount === 1`, an inline notice renders **above** the tab strip             | README §2 item 4      |
+| AH2 | The hero remains fully rendered in this state                                          | plan PR-5 Task 4      |
+| AH3 | Both content tabs remain present and selectable in this state                          | plan PR-5 Task 4      |
+| AH4 | The notice is a waiting-room block, **not** an `EmptyState`                            | README §2 item 4      |
+| AH5 | The notice carries an invite CTA that opens the invite sheet                           | plan PR-5 Task 4      |
+| AH6 | Copy is `empty.crewOfOneTitle` / `empty.crewOfOneBody`                                 | crew-copy.jsx:146-147 |
+| AH7 | The notice disappears the moment `memberCount` reaches 2, with no page reload required | plan PR-5 Task 4      |
+
+## AI. Invite sheet
+
+| #    | Requirement                                                                                                      | Source                                                      |
+| ---- | ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| AI1  | The sheet renders a crew card with `CrewPatch size={48} scale="tile"` using the crew's `patchSalt`               | crew-invite.jsx:146                                         |
+| AI2  | The crew name in that card is Inter 800 15px                                                                     | crew-invite.jsx:148                                         |
+| AI3  | Spots-left line is mono 9.5px and reads `invite.seatsLeft(left)`                                                 | crew-invite.jsx:150-153                                     |
+| AI4  | Spots-left switches to `--warning` when 2 or fewer spots remain                                                  | crew-invite.jsx:151                                         |
+| AI5  | The link box is >=48px tall, padding `0 6px 0 13px`, `borderRadius: 10`                                          | crew-invite.jsx:126-129                                     |
+| AI6  | The link text is monospace 11.5px and ellipsises rather than wrapping                                            | crew-invite.jsx:133-135                                     |
+| AI7  | The link box border is `--border-strong` normally and `--signal` for the copied state                            | crew-invite.jsx:130                                         |
+| AI8  | The link URL is built from the invite token returned by `POST /v1/crews/:crewId/invites`, never a hardcoded host | apps/api/src/routes/crew-invites.ts                         |
+| AI9  | Copy uses `navigator.clipboard.writeText` with **no `await` before the call** in the click handler               | plan global constraints; #72 lesson                         |
+| AI10 | After a successful copy the button label becomes `invite.copied` and reverts after a timeout                     | crew-copy.jsx:110                                           |
+| AI11 | The copy result is announced in an `aria-live` region                                                            | plan global constraints (a11y)                              |
+| AI12 | The expiry line reads `invite.expiry(days)` with `days` derived from the invite's `expiresAt`, not a literal 7   | packages/types/src/crew.ts                                  |
+| AI13 | `invite.expiryHelp` renders beneath the expiry line                                                              | crew-invite.jsx:172                                         |
+| AI14 | A danger-tone `invite.revoke` control renders while a live link exists                                           | crew-invite.jsx:174                                         |
+| AI15 | Revoke calls `POST /v1/crews/:crewId/invites/:inviteId/revoke`                                                   | apps/api/src/routes/crew-invites.ts                         |
+| AI16 | After revoke, the link renders with `line-through` and `opacity: 0.5` and the copy control is disabled           | crew-invite.jsx:134-136                                     |
+| AI17 | The revoked branch shows `invite.revoked` plus a primary `invite.newLink` button                                 | crew-invite.jsx:177-180                                     |
+| AI18 | Only one live invite exists per crew at a time; a new link supersedes the previous one                           | plan PR-3 Task 1                                            |
+| AI19 | At 12 members the sheet renders a `CrewNotice` and no link controls                                              | crew-invite.jsx:155-158                                     |
+| AI20 | Desktop chrome is `ModalShell` with `desktopWidth={540}`                                                         | crew-invite.jsx:184; Z10 precedent                          |
+| AI21 | Mobile chrome is the shared sheet overlay: scrim click, header ⨯, Escape; no swipe gesture                       | Z9                                                          |
+| AI22 | The sheet title reads `invite.title` and is wired via `ariaLabelledBy` on `ModalShell`                           | apps/web/src/components/consumer/modal-shell/ModalShell.tsx |
+
+## AJ. Reroll sheet
+
+| #    | Requirement                                                                                              | Source                       |
+| ---- | -------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| AJ1  | The sheet shows the current patch and a candidate patch side by side                                     | crew-invite.jsx:191-227      |
+| AJ2  | Both patches render at `size={76} scale="hero"`                                                          | crew-invite.jsx:200,205      |
+| AJ3  | The current patch renders at `opacity: 0.45` under a `NOW` label                                         | crew-invite.jsx:200-202      |
+| AJ4  | The candidate renders at full opacity under a `NEW` label in `--signal`                                  | crew-invite.jsx:205-207      |
+| AJ5  | An arrow svg sits between the two                                                                        | crew-invite.jsx:203          |
+| AJ6  | The candidate salt comes from `nextPatchSalt(crewId, currentSalt)`, the shipped shared helper            | Section G                    |
+| AJ7  | A ghost shuffle control cycles to a new candidate without applying it                                    | crew-invite.jsx:215          |
+| AJ8  | The shuffle control carries `aria-label` = `a11y.reroll`                                                 | crew-copy.jsx:206            |
+| AJ9  | Applying is explicit: `roster.newPatchCta` primary; `roster.newPatchKeep` ghost dismisses with no change | crew-invite.jsx:219-222      |
+| AJ10 | Apply calls `POST /v1/crews/:crewId/patch/reroll`; shuffling alone issues no request                     | apps/api/src/routes/crews.ts |
+| AJ11 | The reroll entry point is visible only to the keeper                                                     | README §2 item 11            |
+| AJ12 | `roster.newPatchBody` states the change applies to the whole crew                                        | crew-copy.jsx:66             |
+| AJ13 | Desktop chrome is `ModalShell` with `desktopWidth={480}`                                                 | crew-invite.jsx:226          |
+| AJ14 | Renaming the crew does not change the patch (rename and reroll are independent)                          | create.nameHelp; README §2   |
+
+## AK. LeaveConfirm — five kinds
+
+| #    | Requirement                                                                                                   | Source                         |
+| ---- | ------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| AK1  | One component covers all five kinds; there are not five separate dialogs                                      | plan PR-5 Task 6               |
+| AK2  | The kind union is exactly `leave` / `remove` / `delete` / `handoff` / `last` (plan spelling, not `del`)       | plan PR-5 Task 6               |
+| AK3  | `leave` renders `confirm.leaveTitle(crew)`, `confirm.leaveBody`, danger `confirm.leaveCta`                    | crew-copy.jsx:183-185          |
+| AK4  | `remove` renders `confirm.removeTitle(handle)`, `confirm.removeBody`, danger `confirm.removeCta`              | crew-copy.jsx:186-188          |
+| AK5  | `delete` renders `confirm.deleteTitle(crew)`, `confirm.deleteBody`, danger `confirm.deleteCta`                | crew-copy.jsx:189-191          |
+| AK6  | `handoff` is entered only after a `crew_handoff_required` 409 from the leave call                             | apps/api/src/lib/crews.ts      |
+| AK7  | `last` is entered only after a `crew_last_member` 409 from the leave call                                     | apps/api/src/lib/crews.ts      |
+| AK8  | Kind is derived from the typed 409 `code`, never from a message-string match                                  | plan global constraints        |
+| AK9  | `handoff` renders a selectable list of other members with `MemberDot size={30}`                               | crew-invite.jsx:366-375        |
+| AK10 | The handoff list is a real single-select control (radio semantics), keyboard-operable                         | plan global constraints (a11y) |
+| AK11 | Confirming a handoff calls `POST /v1/crews/:crewId/handoff` with the chosen member id, then retries the leave | apps/api/src/routes/crews.ts   |
+| AK12 | The handoff confirm is disabled until a member is selected                                                    | plan PR-5 Task 6               |
+| AK13 | `last` renders a crew card with `CrewPatch size={44} scale="tile"`                                            | crew-invite.jsx:381-386        |
+| AK14 | `last` names deletion as the only outcome: danger `confirm.lastOneCta` ("Delete crew")                        | README §2 item 11              |
+| AK15 | `last` offers `confirm.lastOneAlt` ("Invite someone instead") as the secondary, which opens the invite sheet  | crew-copy.jsx:199              |
+| AK16 | `last` states that the viewer's own nights survive in Concerts                                                | crew-copy.jsx:197              |
+| AK17 | Every kind's dismissive action reads `confirm.never`                                                          | crew-copy.jsx:200              |
+| AK18 | Destructive primaries use the danger tone; the dismissive control is ghost                                    | crew-invite.jsx:388-393        |
+| AK19 | Desktop chrome is `ModalShell` with `desktopWidth={480}`, `role="alertdialog"`                                | crew-invite.jsx:394; a11y      |
+| AK20 | On confirm, the dialog shows an in-flight disabled state (label swap, no spinner)                             | Z8 precedent                   |
+| AK21 | A successful delete or leave navigates back to `/crews`                                                       | plan PR-5 Task 6               |
+| AK22 | A failed confirm keeps the dialog open and surfaces the error inside it                                       | plan global constraints        |
+
+## AL. Cross-cutting: tokens, copy, a11y
+
+| #    | Requirement                                                                                                                                            | Source                                                      |
+| ---- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| AL1  | Every customer-facing string on these surfaces lives in `crews/definitions/copy.ts`, including every `aria-label`                                      | plan global constraints                                     |
+| AL2  | No em-dash appears in any string added by PR-5                                                                                                         | plan global constraints                                     |
+| AL3  | `git diff origin/main -- apps/web/src \| grep -n '^+.*[Hh]eart'` returns nothing                                                                       | plan global constraints                                     |
+| AL4  | The word "Watching" is not reused to mean people; a crew is people, Watching is shows                                                                  | CLAUDE.md locked vocabulary                                 |
+| AL5  | No banned synonym ("group", "squad", "circle", "friends list") appears in PR-5 copy                                                                    | crew-copy.jsx:18-20                                         |
+| AL6  | PR-5 adds no new patch, member-dot, modal, or empty-state component — it consumes `CrewPatch`, `MemberCluster`/`MemberDot`, `ModalShell`, `EmptyState` | plan global constraints                                     |
+| AL7  | All nine themes render these surfaces with no hardcoded colour                                                                                         | plan global constraints                                     |
+| AL8  | Mobile and desktop parity is delivered in this PR, not deferred                                                                                        | plan global constraints                                     |
+| AL9  | No native `title=` attribute is used as a tooltip anywhere on these surfaces                                                                           | repo a11y convention                                        |
+| AL10 | No `as` cast appears in PR-5 source                                                                                                                    | plan global constraints                                     |
+| AL11 | PR-5 adds **no** `releases.ts` entry and **no** `progress.md` row (both land on PR-7)                                                                  | plan global constraints                                     |
+| AL12 | Opening any sheet or dialog traps Tab and closes on Escape via `ModalShell`                                                                            | apps/web/src/components/consumer/modal-shell/ModalShell.tsx |
+| AL13 | Closing a sheet or dialog restores focus to the control that opened it                                                                                 | a11y baseline                                               |
+| AL14 | Every interactive target on these surfaces is >=44px                                                                                                   | plan global constraints                                     |
+
+## AM. Tests owned by PR-5
+
+| #   | Requirement                                                                                           | Source                  |
+| --- | ----------------------------------------------------------------------------------------------------- | ----------------------- |
+| AM1 | Lead-order test: content in Coming up opens Coming up; empty Coming up with nights opens Been there   | plan PR-5 Task 1        |
+| AM2 | Tabs keyboard test: ←/→ wrap, Home/End jump, `aria-selected` follows                                  | plan PR-5 Task 1        |
+| AM3 | Roster test: a no-handle member renders the dashed dot and no invented name, and is still counted     | plan PR-5 Task 3        |
+| AM4 | At-cap test: 12 members renders `CrewNotice`, not `EmptyState`                                        | plan PR-5 Task 3        |
+| AM5 | Crew-of-one test: notice renders above the tabs and the hero is still present                         | plan PR-5 Task 4        |
+| AM6 | 409 mapping test: each of `crew_handoff_required` / `crew_last_member` selects the right confirm kind | plan PR-5 Task 6        |
+| AM7 | Reroll test: shuffling issues no network call; apply issues exactly one                               | plan PR-5 Task 6        |
+| AM8 | Loading test: the loading branch renders neither the crew name nor a `CrewPatch`                      | plan global constraints |
+
+---
+
+## PR-5 rows to resolve — plan vs handoff copy conflicts
+
+Copy is not design-locked. These are recorded, not decided, per the standing rule that a
+duplicate is reported rather than silently resolved.
+
+| ID  | Conflict                                                                                                                                                                     |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CR1 | `crew-copy.jsx:151` `noPastBody` is a three-sentence paragraph; the plan's PR-5 Task 2 gives "No history yet. Two of you, minimum." Plan wins.                               |
+| CR2 | `crew-copy.jsx:117` `seatsLeft` interpolates a hardcoded `${12}` instead of the shared `cap` constant. The cap must come from one source.                                    |
+| CR3 | `crew-invite.jsx:356` uses kind key `del`; the plan's Task 6 names it `delete`. The plan's five-kind union wins.                                                             |
+| CR4 | `crew-copy.jsx:53` `roster.creator` reads "Started it" — creator attribution the schema does not carry. X4/Z4 already ruled this out; the keeper badge needs its own string. |
+| CR5 | `crew-copy.jsx:112` `expiryHelp` and `:134` `expiredBody` both hardcode "7 days" in prose while `expiry(days)` is parameterised. One source.                                 |
+
+## PR-5 — wrong or unbuildable in the handoff
+
+Named, not fixed.
+
+| ID  | Finding                                                                                                                                                                                                                                   |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1  | `crews-destination.jsx:264,278` and `:403` read `crew.createdBy` and render "Started it". The schema has `keeperId` only. Already ruled by X4/Z4; the crew-home artboard still carries it.                                                |
+| W2  | `crews-destination.jsx:292-297` draws a 3-dot "Crew options" control with no menu behind it. Mute, rename, reroll and delete all need a home; the handoff never draws that menu's contents.                                               |
+| W3  | `crews-destination.jsx:284-290` puts "See it in Browse" in the hero, but the Browse crew lens ships in PR-6. The control has no destination in PR-5.                                                                                      |
+| W4  | `crews-destination.jsx:386` gives the roster-full `CrewNotice` a "Start a crew" CTA that bypasses the PR-4 entitlement gate. Per Z7 it must route through the one gated-create component.                                                 |
+| W5  | `crews-destination.jsx:403` hardcodes `joined("in June")`. `CrewMember.joinedAt` is an ISO string and needs a real relative formatter.                                                                                                    |
+| W6  | `crews-destination.jsx:526` draws crew-of-one as `CrewEmpty`, contradicting README §2 item 4 ("a waiting room, not an empty state") and the plan's Task 4.                                                                                |
+| W7  | `crew-invite.jsx:69,146,200,205` pass a `salt` prop; the shipped `CrewPatch` takes `patchSalt`. `:200` also passes an unsupported `style` prop.                                                                                           |
+| W8  | `crew-invite.jsx:163` hardcodes the invite URL host and `:172` calls `expiry(7)` with a literal, so the sheet cannot reflect a real token or a real `expiresAt`.                                                                          |
+| W9  | `crew-invite.jsx:215` ships a bare "Shuffle again" JSX literal (with siblings elsewhere in the file). `react/jsx-no-literals` is build-blocking here.                                                                                     |
+| W10 | `crew-invite.jsx:366-375` draws the handoff picker as decorative 19px circles with no radio group, no selected state, and no `newKeeperId` wiring. The `POST /handoff` body has nowhere to come from.                                     |
+| W11 | `README §7` still says the entitlement cell is `paywall-on-tap` for Supporter. Stale; superseded by Z2.                                                                                                                                   |
+| W12 | The at-cap Invite affordance is drawn in both the roster header (`crews-destination.jsx:384`) and the invite sheet (`crew-invite.jsx:155-158`) with different at-cap behaviour — one disables, one shows a notice. Only one can be right. |
+
+### PR-5 rulings on W1–W12 and CR1–CR5
+
+Decided before the build so none of these is re-litigated in review. Each is either a
+handoff defect we do not copy, or a conflict where a higher authority already settled it.
+
+| ID      | Ruling                                                                                                                                                                                                                                                                                 |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| W1      | No "Started it" line and no `createdBy`. The schema has `keeperId`; the hero shows the keeper label off `isKeeper`, which is the only creator-ish fact that survives a handoff.                                                                                                        |
+| W2      | Build the overflow menu for real. An affordance that opens nothing is the defect class this gate exists to catch, and PR-5's destructive actions need a home. It opens a `ModalShell` action sheet whose rows are filtered by keeper-ness: Invite, New patch, Leave crew, Delete crew. |
+| W3      | Drop "See it in Browse" from PR-5. The lens it points at lands in PR-6, and a link to nothing is worse than no link. It returns with the surface it needs.                                                                                                                             |
+| W4      | No create affordance at cap. Creating is gated at `POST /v1/crews` and has nothing to do with a full roster; the at-cap treatment is a notice, never a CTA.                                                                                                                            |
+| W5      | Joined date is formatted from `joinedAt`. No literal month survives into the build.                                                                                                                                                                                                    |
+| W6      | Crew of one is an inline notice with the hero and both tabs still rendered, per plan Task 4. The plan outranks the artboard: the crew exists, so an empty state would lie about that.                                                                                                  |
+| W7      | Use `CrewPatch`'s shipped props as PR-4 merged them (`crewId`, `patchSalt`, `size`). The handoff's `salt` and freeform `style` predate the component.                                                                                                                                  |
+| W8      | Invite URL is built from the request origin and the real token; the expiry line is formatted from the API's `expiresAt`. Nothing about a link is a literal.                                                                                                                            |
+| W9      | All strings live in `crews/definitions/copy.ts`. `react/jsx-no-literals` is build-blocking, so this resolves itself.                                                                                                                                                                   |
+| W10     | The handoff picker is a real radio group that produces `newKeeperId`. Decorative circles cannot satisfy the endpoint.                                                                                                                                                                  |
+| W11     | README §7 is stale; Z2 stands (Supporter is `visible-active` for `crews`).                                                                                                                                                                                                             |
+| W12     | One behaviour: at cap the Invite affordance stays reachable and the sheet carries the at-cap notice. Disabling it hides the explanation behind the thing it is explaining.                                                                                                             |
+| CR1–CR5 | The plan's copy-review verdict table wins over `crew-copy.jsx` wherever they differ, per the same rule PR-4 followed. The cap is read from the shared constant, never re-typed as `12`.                                                                                                |
