@@ -276,7 +276,7 @@ export const InviteSheet = ({
               <button
                 type="button"
                 onClick={onCopy}
-                disabled={invite === null || revoked}
+                disabled={invite === null || revoked || busy}
                 className="cursor-pointer"
                 style={{
                   ...ghost,

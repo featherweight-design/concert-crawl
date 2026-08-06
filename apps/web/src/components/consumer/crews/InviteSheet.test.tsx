@@ -65,6 +65,9 @@ describe('InviteSheet (#1226)', () => {
 
     fireEvent.click(screen.getByRole('button', { name: COPY.revoke }))
     expect(screen.getByRole('button', { name: COPY.newLink })).toBeDisabled()
+    // Every button's disabled state matches its handler's own guard, so none
+    // of them is a control that looks live and silently does nothing.
+    expect(screen.getByRole('button', { name: COPY.copy })).toBeDisabled()
 
     view.rerender(
       <InviteSheet
