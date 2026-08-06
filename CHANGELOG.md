@@ -1,3 +1,20 @@
+# [1.218.0](https://github.com/HartiganHM/concert-crawl/compare/v1.217.0...v1.218.0) (2026-08-06)
+
+
+### Bug Fixes
+
+* **crews:** break roster and list ordering ties deterministically ([06877da](https://github.com/HartiganHM/concert-crawl/commit/06877daf0d2378f2b51d08d7ad0706a8be897ceb))
+* **crews:** close the keeper TOCTOU on every gated write ([c8e0900](https://github.com/HartiganHM/concert-crawl/commit/c8e09000b7c26ffd02ccb41e58ae7c8b55f0c4ae))
+* **crews:** guard every returning() destructure and correct membership doc ([9f8420f](https://github.com/HartiganHM/concert-crawl/commit/9f8420ff75eabba4ad658c63f774ee9af78d5218))
+* **crews:** hydrate the creator's member preview on create ([8d923e5](https://github.com/HartiganHM/concert-crawl/commit/8d923e5b8c26c173ed6a9a721b109305afb23d63))
+* **crews:** run handoff under the crew row lock ([24ed674](https://github.com/HartiganHM/concert-crawl/commit/24ed67484c50cae6ea261b4cdad89efc6c055c23))
+* **crews:** stabilise the going list on a crew show ([c0fc692](https://github.com/HartiganHM/concert-crawl/commit/c0fc69222e26a34f7d7c622860ad3df1bc4015d6))
+
+
+### Features
+
+* **crews:** add the /v1/crews router ([80a7942](https://github.com/HartiganHM/concert-crawl/commit/80a794268b4f18be0181c2e68ecb210809d63a7e)), closes [#1226](https://github.com/HartiganHM/concert-crawl/issues/1226)
+
 # [1.217.0](https://github.com/HartiganHM/concert-crawl/compare/v1.216.7...v1.217.0) (2026-08-06)
 
 
