@@ -104,6 +104,10 @@ crewInvitesRouter.get('/:token', async (ctx) => {
     RESOLVE_WINDOW_MS,
   )
   if (!limit.allowed) {
+    // Every other 429 in this API carries Retry-After (feedback.ts,
+    // spotify.ts), and a client that cannot see the window backs off by
+    // guessing.
+    ctx.header('Retry-After', String(Math.ceil(limit.retryAfterMs / 1000)))
     apiLogger.info({ userId }, 'crew invite resolution rate limited')
     return ctx.json({ success: false, error: 'Too many requests' }, 429)
   }

@@ -11,11 +11,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('server-only', () => ({}))
 
-const { cookieStore, redirectCalls, authState } = vi.hoisted(() => ({
-  cookieStore: new Map<string, string>(),
-  redirectCalls: [] as string[],
-  authState: { userId: 'user_new_arrival' as string | null },
-}))
+const { cookieStore, redirectCalls, authState } = vi.hoisted(() => {
+  const cookies = new Map<string, string>()
+  const redirects: string[] = []
+  const auth: { userId: string | null } = { userId: 'user_new_arrival' }
+  return { cookieStore: cookies, redirectCalls: redirects, authState: auth }
+})
 
 vi.mock('next/headers', () => ({
   cookies: async () => ({

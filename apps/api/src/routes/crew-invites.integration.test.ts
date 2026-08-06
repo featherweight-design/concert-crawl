@@ -9,14 +9,15 @@
 //   3. The cap. Concurrent joins at 11 members yield 12 and one 409, never 13.
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-const { authState } = vi.hoisted(() => ({
-  authState: {
-    current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
-    } | null,
-  },
-}))
+interface TestAuth {
+  userId: string
+  sessionClaims: { metadata?: { role?: string } }
+}
+
+const { authState } = vi.hoisted(() => {
+  const state: { current: TestAuth | null } = { current: null }
+  return { authState: state }
+})
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
@@ -371,17 +372,19 @@ describe('crew invites', () => {
       const grinder = `user_grinder_${randomUUID()}`
       setAuth(grinder)
 
-      let sawLimit = false
+      let limited: Response | null = null
       for (let i = 0; i < 40; i++) {
         const res = await app.request(
           `/v1/crew-invites/${generateCrewInviteToken()}`,
         )
         if (res.status === 429) {
-          sawLimit = true
+          limited = res
           break
         }
       }
-      expect(sawLimit).toBe(true)
+      expect(limited).not.toBeNull()
+      // A client that cannot see the window backs off by guessing.
+      expect(Number(limited?.headers.get('Retry-After'))).toBeGreaterThan(0)
     })
   })
 
