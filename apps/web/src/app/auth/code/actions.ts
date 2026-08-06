@@ -72,7 +72,13 @@ export async function validateAndSetInviteCode(
   // than the default to go — a visitor who came in the front door leaves no
   // cookie behind and lands on /events exactly as before.
   const safeReturn = sanitizeReturnPath(returnPath)
-  if (safeReturn !== DEFAULT_RETURN_PATH) {
+  if (safeReturn === DEFAULT_RETURN_PATH) {
+    // Nothing to carry, so clear whatever an abandoned earlier attempt left
+    // behind. Otherwise a stale cookie survives to be spent on a later,
+    // unrelated trip through the funnel and lands the visitor somewhere they
+    // never asked to go.
+    cookieStore.delete(RETURN_PATH_COOKIE_NAME)
+  } else {
     cookieStore.set(
       RETURN_PATH_COOKIE_NAME,
       signInviteCookie(safeReturn, secret),

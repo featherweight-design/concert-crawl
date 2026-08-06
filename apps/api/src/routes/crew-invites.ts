@@ -31,7 +31,7 @@ import {
   isMember,
   lockCrew,
 } from '../lib/crews.js'
-import { isCrewInviteTokenShape } from '../lib/crew-invite-token.js'
+import { crewInviteTokenSchema } from '../lib/crew-invite-token.js'
 
 /**
  * 72 bits is only strong if enumeration is also expensive. Keyed on the Clerk
@@ -108,16 +108,16 @@ crewInvitesRouter.get('/:token', async (ctx) => {
     return ctx.json({ success: false, error: 'Too many requests' }, 429)
   }
 
-  const token = ctx.req.param('token')
   // A malformed token can only ever be unknown, so it never reaches the DB.
   // The token itself is the capability and is deliberately absent from the
   // log line (plan D3).
-  if (!isCrewInviteTokenShape(token)) {
+  const parsed = crewInviteTokenSchema.safeParse(ctx.req.param('token'))
+  if (!parsed.success) {
     apiLogger.info({ userId }, 'crew invite rejected on token shape')
     return ctx.json({ success: false, reason: 'unknown' }, 404)
   }
 
-  const invite = await loadInvite(token)
+  const invite = await loadInvite(parsed.data)
   const dead = deadReason(invite)
   if (dead) {
     // A dead link renders no crew identity at all (locked decision 11), so
@@ -162,11 +162,12 @@ crewInvitesRouter.post('/:token/join', async (ctx) => {
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
   const userId = authInfo.userId
 
-  const token = ctx.req.param('token')
-  if (!isCrewInviteTokenShape(token)) {
+  const parsed = crewInviteTokenSchema.safeParse(ctx.req.param('token'))
+  if (!parsed.success) {
     apiLogger.info({ userId }, 'crew join rejected on token shape')
     return ctx.json({ success: false, reason: 'unknown' }, 404)
   }
+  const token = parsed.data
 
   // Everything after the crew id is resolved runs under the crew row lock. The
   // token is re-validated inside it, so a link revoked between the landing
@@ -228,11 +229,15 @@ crewInvitesRouter.post('/:token/join', async (ctx) => {
     )
   }
 
+  // `joined` reports whether THIS call created the membership row, so a client
+  // can tell "welcome in" from "you were already here" without reading two
+  // fields against each other. Membership is guaranteed in both branches — the
+  // pair to check for "am I in the crew now" is `joined || alreadyMember`.
   return ctx.json({
     success: true,
     data: {
       crewId: result.crewId,
-      joined: true,
+      joined: result.kind === 'joined',
       alreadyMember: result.kind === 'already',
     },
   })

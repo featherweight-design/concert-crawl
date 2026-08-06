@@ -113,6 +113,21 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     },
   )
 
+  it('clears a cookie left behind by an abandoned earlier attempt', async () => {
+    // A first trip started at a crew link and was never finished, so its
+    // cookie outlives it. A later trip with nowhere to go must not inherit it.
+    cookieStore.set(
+      RETURN_PATH_COOKIE_NAME,
+      signInviteCookie(CREW_LINK, SECRET),
+    )
+
+    await runToRedirect(() => validateAndSetInviteCode(CODE))
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
+
+    const landing = await runToRedirect(() => AuthCompletePage())
+    expect(landing).toBe('/events')
+  })
+
   it.each(['//evil.com', '/\\evil.com', 'https://evil.com'])(
     're-sanitises a hostile cookie value %s on read',
     async (hostile) => {

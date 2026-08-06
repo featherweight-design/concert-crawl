@@ -462,7 +462,9 @@ describe('crew invites', () => {
       })
       expect(res.status).toBe(200)
       const body: JoinBody = await res.json()
-      expect(body.data.alreadyMember).toBe(true)
+      // No row was created, so `joined` is false — the two fields disagree on
+      // purpose, and that disagreement is how a client tells the taps apart.
+      expect(body.data).toEqual({ crewId, joined: false, alreadyMember: true })
 
       const rows = await testDb
         .select()

@@ -6,6 +6,7 @@
 // crewId instead.
 
 import { randomBytes } from 'node:crypto'
+import { z } from 'zod'
 
 /** 9 bytes → exactly 12 base64url characters, no padding. ~72 bits. */
 const TOKEN_BYTES = 9
@@ -26,7 +27,11 @@ export const generateCrewInviteToken = (): string =>
 
 /**
  * base64url only. Bounds what reaches the DB and rejects the obvious probes
- * before a query runs.
+ * before a query runs. Zod rather than a hand-rolled predicate because every
+ * Hono boundary here validates with Zod, path params included — see
+ * `uuidSchema` in routes/crews.ts.
  */
-export const isCrewInviteTokenShape = (value: string): boolean =>
-  value.length === CREW_INVITE_TOKEN_LENGTH && /^[A-Za-z0-9_-]+$/.test(value)
+export const crewInviteTokenSchema = z
+  .string()
+  .length(CREW_INVITE_TOKEN_LENGTH)
+  .regex(/^[A-Za-z0-9_-]+$/)
