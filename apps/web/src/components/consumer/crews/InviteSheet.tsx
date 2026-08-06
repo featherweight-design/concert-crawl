@@ -92,7 +92,11 @@ export const InviteSheet = ({
   }, [open, crewId, getToken])
 
   const onCopy = () => {
-    if (invite === null) return
+    // Copying mid-revoke would hand out a link already on its way out.
+    if (invite === null || busy) return
+    // Every action entry point clears the last failure first, so the notice
+    // describes this attempt rather than the previous one.
+    setFailed(false)
     // `navigator.clipboard` is undefined on insecure origins and older Safari,
     // and `writeText` throws rather than rejecting there, so the rejection
     // handler alone would not catch it.
@@ -122,6 +126,7 @@ export const InviteSheet = ({
   const onRevoke = async () => {
     if (invite === null || busy) return
     setBusy(true)
+    setFailed(false)
     try {
       const token = await getToken()
       if (token === null) throw new Error('Not signed in')

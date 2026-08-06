@@ -104,4 +104,27 @@ describe('InviteSheet (#1226)', () => {
     fireEvent.click(screen.getByRole('button', { name: COPY.copy }))
     expect(screen.getByRole('alert')).toHaveTextContent(COPY.failed)
   })
+
+  // The failure notice used to outlive the attempt that caused it, so a copy
+  // that worked still sat under a message saying it had not.
+  it('clears an earlier failure once a later copy succeeds', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', {
+      value: undefined,
+      configurable: true,
+    })
+    mount(true)
+    await screen.findByText(`${COPY.expiry(6)}`)
+
+    fireEvent.click(screen.getByRole('button', { name: COPY.copy }))
+    expect(screen.getByRole('alert')).toHaveTextContent(COPY.failed)
+
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    fireEvent.click(screen.getByRole('button', { name: COPY.copy }))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining('tok-abc'))
+  })
 })

@@ -22,7 +22,9 @@ export const tabId = (prefix: string, id: string) => `${prefix}-tab-${id}`
 export const panelId = (prefix: string, id: string) => `${prefix}-panel-${id}`
 
 /**
- * The ARIA tabs pattern, manually activated. Roving tabIndex means the strip
+ * The ARIA tabs pattern with automatic activation: an arrow both moves focus
+ * and selects, since every panel is already in hand and none costs a fetch.
+ * Roving tabIndex means the strip
  * is one tab stop and the arrows move within it; wrapping at both ends is what
  * makes a three-tab strip navigable without counting.
  */
