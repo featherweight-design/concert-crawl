@@ -96,13 +96,21 @@ export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
     try {
       next = decodeURIComponent(current)
     } catch {
-      // Malformed escapes: undecodable is not the same as safe.
+      // Malformed escapes: undecodable is not the same as safe. Logged
+      // because a rejection here is either a hand-crafted param or a bug in
+      // whatever built the link, and both are worth seeing. The path itself
+      // is attacker-controlled and stays out of the log line — the pass index
+      // is what distinguishes a malformed input from one that survived a
+      // decode and then broke.
+      console.warn('[auth] return path rejected: undecodable', { pass: i })
       return false
     }
     if (next === current) return true
     current = next
   }
 
+  // Still changing after five passes is layered encoding, not a route.
+  console.warn('[auth] return path rejected: never reached a fixed point')
   return false
 }
 
