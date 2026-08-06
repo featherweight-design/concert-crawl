@@ -9,21 +9,20 @@ import { and, eq, sql } from 'drizzle-orm'
 import { crewMembers, crews } from '@concert-crawl/db'
 import type { DbExecutor } from './db-executor.js'
 
-/**
- * Locked at 12 (handoff README §2 item 1). Not a DB constraint: a unique index
- * cannot express "at most 12 rows in this group", so the cap is enforced in
- * the API under the row lock below (plan D4).
- */
-export const CREW_MEMBER_CAP = 12
+// The cap and the two leave codes are re-exported, not redeclared: the crew
+// home renders both (the spots-left line, and the confirm kind a 409 selects),
+// so they live with the wire contract in `@concert-crawl/types`. Not a DB
+// constraint either way — a unique index cannot express "at most 12 rows in
+// this group", so the cap is enforced here under the row lock below (plan D4).
+export {
+  CREW_MEMBER_CAP,
+  CREW_HANDOFF_REQUIRED_CODE,
+  CREW_LAST_MEMBER_CODE,
+} from '@concert-crawl/types'
 
 /** Up to five avatars ride the cluster on a crews-list row. */
 export const CREW_CLUSTER_SIZE = 5
 
-// Machine-readable 409 codes. The client maps these straight onto a confirm
-// sheet rather than re-deriving keeper-ness locally, so client and server can
-// never disagree about whether a handoff is required (plan PR-5 Task 6).
-export const CREW_HANDOFF_REQUIRED_CODE = 'crew_handoff_required'
-export const CREW_LAST_MEMBER_CODE = 'crew_last_member'
 export const CREW_FULL_CODE = 'crew_full'
 export const CREW_DUPLICATE_ID_CODE = 'crew_duplicate_id'
 

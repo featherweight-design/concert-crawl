@@ -1,6 +1,7 @@
 import type {
   EventWithVenue,
   EventStatus,
+  CrewShow,
   SourceCategory,
   WatchingShow,
 } from '@concert-crawl/types'
@@ -161,5 +162,39 @@ export function fromEventWithVenue(
     // until a surface that knows better says otherwise.
     status: 'live',
     lifecycle: event.status,
+  }
+}
+
+/**
+ * A crew show. `CrewShow` is deliberately thin — it carries no billing, no
+ * artwork and no price — so most of the row's four lines simply never appear.
+ * The going cluster is not folded in here: it is a surface concern, and the
+ * crew home passes it through `footer`.
+ */
+export function fromCrewShow(show: CrewShow): EventRowShow {
+  return {
+    id: show.eventId,
+    headliner: show.title,
+    fallbackTitle: show.title,
+    supports: [],
+    tourName: null,
+    imageUrl: null,
+    venueName: venueShort(show.venue),
+    venueSlug: show.venueSlug,
+    dateLabel: formatEventDate(show.iso, undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    }),
+    timeLabel: formatShowTime(show.showTime),
+    price: null,
+    saved: null,
+    genres: [],
+    isFollowed: false,
+    // Whether *you* watch it is not what this list is about; the going count
+    // beneath the row is.
+    isWatching: false,
+    status: 'live',
+    lifecycle: 'upcoming',
   }
 }

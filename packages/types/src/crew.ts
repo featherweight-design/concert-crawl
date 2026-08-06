@@ -4,6 +4,22 @@
 
 import type { AvatarColor } from './index.js'
 
+/**
+ * Locked at 12 (handoff README §2 item 1). It lives with the wire contract
+ * rather than in the API because the crew home states the cap out loud
+ * ("3 of 12 spots left"), and a second copy of the number on the client is how
+ * a repriced cap ships half-applied.
+ */
+export const CREW_MEMBER_CAP = 12
+
+/**
+ * Machine-readable 409 codes on `POST /v1/crews/:crewId/leave`. The client maps
+ * these straight onto a confirm kind instead of re-deriving keeper-ness, so the
+ * two sides can never disagree about whether a handoff is required.
+ */
+export const CREW_HANDOFF_REQUIRED_CODE = 'crew_handoff_required'
+export const CREW_LAST_MEMBER_CODE = 'crew_last_member'
+
 /** A crew as stored. `keeperId` moves on handoff; it is not the creator. */
 export interface Crew {
   id: string
