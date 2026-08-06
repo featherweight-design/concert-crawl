@@ -1,3 +1,15 @@
+# [1.222.0](https://github.com/HartiganHM/concert-crawl/compare/v1.221.0...v1.222.0) (2026-08-06)
+
+
+### Bug Fixes
+
+* **crews:** keep invite tokens out of telemetry and encode them in paths ([1da86a0](https://github.com/HartiganHM/concert-crawl/commit/1da86a01c13a1016a1464dc83312b6c6136f47ee))
+
+
+### Features
+
+* **crews:** add the public invite landing at /crew/join/[token] ([2d237fd](https://github.com/HartiganHM/concert-crawl/commit/2d237fd5e2864b8d3c8ff0765bd97dc491261b01)), closes [#1226](https://github.com/HartiganHM/concert-crawl/issues/1226)
+
 # [1.221.0](https://github.com/HartiganHM/concert-crawl/compare/v1.220.0...v1.221.0) (2026-08-06)
 
 
