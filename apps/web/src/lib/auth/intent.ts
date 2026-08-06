@@ -72,15 +72,10 @@ const MAX_DECODE_PASSES = 5
  * Every value this module accepts ends up in a `Location` header — middleware's
  * redirect and `redirect()` both — so a CR or LF in one is response splitting.
  * `/%0Aevil` is same-origin by every other measure here, which is why this is a
- * separate question from where the path points.
- *
- * Exported because the query string is subject to the same header, and callers
- * that re-attach one after validating a path (middleware's `toSafeReturnPath`)
- * need this check without the rest of the path validator: a query legitimately
- * carries escapes that a decode-to-fixed-point pass would reject, `?q=50%25`
- * being the obvious one.
+ * separate question from where the path points — and why it is asked of the
+ * whole value, query and fragment included, rather than of the path alone.
  */
-export const hasControlCharacters = (value: string): boolean =>
+const hasControlCharacters = (value: string): boolean =>
   /[\x00-\x1f\x7f]/.test(value)
 
 /**
@@ -123,7 +118,20 @@ const warnOnServer = (
 export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
   if (!raw) return false
 
-  let current = raw
+  // The control-character rule covers the whole value, since all of it reaches
+  // the header. Everything below concerns only where the value points, which
+  // is settled entirely before the first `?` or `#` — a query and a fragment
+  // cannot name a host, so they are opaque here.
+  //
+  // Splitting them off is not tidiness. Decoding to a fixed point over a query
+  // rejects `/me?q=50%25`: the first pass turns `%25` into a bare `%` and the
+  // next throws on it. That is a legitimate return path, and answering it with
+  // /events loses the visitor's place.
+  if (hasControlCharacters(raw)) return false
+  const suffixAt = raw.search(/[?#]/)
+  const pathOnly = suffixAt === -1 ? raw : raw.slice(0, suffixAt)
+
+  let current = pathOnly
   for (let i = 0; i < MAX_DECODE_PASSES; i++) {
     if (!isPlainInAppPath(current)) return false
     let next: string

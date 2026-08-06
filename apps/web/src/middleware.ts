@@ -3,7 +3,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { isPublicBrowseEnabled } from '@/lib/launch-mode'
 import {
   DEFAULT_RETURN_PATH,
-  hasControlCharacters,
   isSafeReturnPath,
   sanitizeReturnPath,
 } from '@/lib/auth/intent'
@@ -84,25 +83,13 @@ const SAFE_RETURN_FALLBACK = DEFAULT_RETURN_PATH
 
 /**
  * Reduces an attempted path to something that can only ever resolve back to
- * this origin, for use as Clerk's `redirect_url`. Where the value points is
- * `isSafeReturnPath`'s judgement and is asked of the path alone, since a query
- * string cannot name a host.
- *
- * The re-attached query is still checked for control characters, because that
- * hazard follows the whole string into the `Location` header rather than just
- * its path. `URL` parsing percent-encodes them on the way in, so this is a
- * guard on the seam rather than on anything a request can currently deliver —
- * it costs one regex and it means the two halves of the returned string are
- * held to the same rule.
- *
- * It is deliberately not the full validator. A decode-to-fixed-point pass would
- * reject `?q=50%25`, which is a legitimate query rather than an attack, and
- * would send the visitor to /events for it.
+ * this origin, for use as Clerk's `redirect_url`. The query rides along and is
+ * validated with the path rather than appended behind its back — the whole
+ * string is what reaches the `Location` header.
  */
 const toSafeReturnPath = (pathname: string, search: string): string => {
-  if (!isSafeReturnPath(pathname)) return SAFE_RETURN_FALLBACK
-  if (hasControlCharacters(search)) return SAFE_RETURN_FALLBACK
-  return pathname + search
+  const attempted = pathname + search
+  return isSafeReturnPath(attempted) ? attempted : SAFE_RETURN_FALLBACK
 }
 
 /**

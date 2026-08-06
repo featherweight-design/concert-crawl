@@ -98,6 +98,26 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
   })
 
+  it('carries a link whose query holds an escape the path rules cannot resolve', async () => {
+    // `%25` decodes to a bare `%`, which the next decode pass throws on. Only
+    // the part before the `?` decides where the value points, so the query is
+    // not put through that pass and a legitimate link survives.
+    const withQuery = `${CREW_LINK}?ref=50%25`
+
+    await runToRedirect(() => validateAndSetInviteCode(CODE, withQuery))
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(true)
+
+    const landing = await runToRedirect(() => AuthCompletePage())
+    expect(landing).toBe(withQuery)
+  })
+
+  it('still reads the path through a hostile query', async () => {
+    await runToRedirect(() =>
+      validateAndSetInviteCode(CODE, '//evil.com?ref=/crew/join/abc'),
+    )
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
+  })
+
   it('leaves a front-door arrival on /events', async () => {
     await runToRedirect(() => validateAndSetInviteCode(CODE))
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
