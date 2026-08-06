@@ -20,6 +20,23 @@ export const CREW_MEMBER_CAP = 12
 export const CREW_HANDOFF_REQUIRED_CODE = 'crew_handoff_required'
 export const CREW_LAST_MEMBER_CODE = 'crew_last_member'
 
+/**
+ * The 409 on `POST /v1/crew-invites/:token/join`. Shared for the same reason as
+ * the pair above: the invite landing swaps itself to the at-capacity surface on
+ * this code, so both sides read one spelling of it.
+ */
+export const CREW_FULL_CODE = 'crew_full'
+
+/**
+ * How long an invite link lives. Here rather than in the API because the dead-
+ * link surface states the number out loud ("Invites expire after 7 days") with
+ * no invite payload left to derive it from — the link is dead, so there is no
+ * `expiresAt` to count off. A literal in that string would quietly start lying
+ * the day the TTL moves.
+ */
+export const CREW_INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+export const CREW_INVITE_TTL_DAYS = CREW_INVITE_TTL_MS / (24 * 60 * 60 * 1000)
+
 /** A crew as stored. `keeperId` moves on handoff; it is not the creator. */
 export interface Crew {
   id: string

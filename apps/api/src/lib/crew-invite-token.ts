@@ -14,8 +14,10 @@ const TOKEN_BYTES = 9
 /** Length of the base64url encoding of TOKEN_BYTES, used to bound input. */
 export const CREW_INVITE_TOKEN_LENGTH = 12
 
-/** Seven days, matching the expiry line the invite sheet renders. */
-export const CREW_INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000
+// Re-exported, not redeclared: the dead-link surface renders the day count
+// with no invite payload to derive it from, so the TTL lives with the wire
+// contract for the same reason the 409 codes do.
+export { CREW_INVITE_TTL_MS } from '@concert-crawl/types'
 
 /**
  * Follows the shape of `generateCode()` in routes/admin/invite-codes.ts —

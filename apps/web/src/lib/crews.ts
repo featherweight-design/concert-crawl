@@ -3,8 +3,31 @@ import type {
   CrewDetail,
   CrewInvite,
   CrewSummary,
+  PublicCrewInvite,
 } from '@concert-crawl/types'
 import { apiClient } from './api'
+
+/**
+ * The 409 code on join when the crew filled up between the landing render and
+ * the tap. Re-exported from the wire contract so the landing reads the same
+ * spelling the API sends.
+ */
+export { CREW_FULL_CODE } from '@concert-crawl/types'
+
+/** The three dead-link outcomes the invite endpoints answer 404 with. */
+export type CrewInviteDeadReason = 'unknown' | 'expired' | 'revoked'
+
+/** Narrows `ApiError.reason`, which is a plain string on the wire. */
+export const isCrewInviteDeadReason = (
+  value: unknown,
+): value is CrewInviteDeadReason =>
+  value === 'unknown' || value === 'expired' || value === 'revoked'
+
+export interface CrewJoinResult {
+  crewId: string
+  joined: boolean
+  alreadyMember: boolean
+}
 
 interface CrewsListResponse {
   crews: CrewSummary[]
@@ -80,6 +103,39 @@ export async function revokeInvite(
 ): Promise<void> {
   await apiClient.post(
     `/v1/crews/${crewId}/invites/${inviteId}/revoke`,
+    token,
+    {},
+  )
+}
+
+/**
+ * The invite landing's payload. Identity-lite by contract: a name, a patch and
+ * a count, and no attendance or member list. Throws `ApiError` 404 carrying
+ * `reason` for a dead link — at capacity is NOT dead, it comes back 200 with
+ * `isFull` set and the CTA swaps.
+ */
+export async function resolveInvite(
+  token: string,
+  inviteToken: string,
+): Promise<PublicCrewInvite> {
+  const data = await apiClient.get<{ invite: PublicCrewInvite }>(
+    `/v1/crew-invites/${inviteToken}`,
+    token,
+  )
+  return data.invite
+}
+
+/**
+ * Joining. `alreadyMember` is a success, not a failure: a forwarded link
+ * tapped twice must land on the crew rather than error. Membership holds
+ * whenever `joined || alreadyMember`.
+ */
+export async function joinCrew(
+  token: string,
+  inviteToken: string,
+): Promise<CrewJoinResult> {
+  return apiClient.post<CrewJoinResult>(
+    `/v1/crew-invites/${inviteToken}/join`,
     token,
     {},
   )

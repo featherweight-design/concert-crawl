@@ -10,7 +10,7 @@
 // matrix actually resolves, so a repriced or renamed tier can never leave a
 // stale name on a paywall.
 
-import { CREW_MEMBER_CAP } from '@concert-crawl/types'
+import { CREW_INVITE_TTL_DAYS, CREW_MEMBER_CAP } from '@concert-crawl/types'
 
 const plural = (count: number, one: string, many: string): string =>
   count === 1 ? one : many
@@ -100,6 +100,58 @@ export const CREWS_COPY = {
     seatsLeft: (left: number) => `${left} OF ${CREW_MEMBER_CAP} SPOTS LEFT`,
     seatsFull: `${CREW_MEMBER_CAP} OF ${CREW_MEMBER_CAP} SPOTS`,
     failed: "Couldn't sort the link out. Try again.",
+  },
+
+  // The invite landing. Two deliberate departures from the handoff's
+  // crew-copy.jsx, recorded here so neither gets "restored":
+  //  1. `landing.haveAccount` ("Already have an account? Sign in") is dropped.
+  //     The handoff assumed a signed-out landing; gate #1483 made the route
+  //     authenticated, so the viewer is always signed in and the line is
+  //     unreachable.
+  //  2. `landing.body` ended "Concert Crawl is free, and so is joining a
+  //     crew." The first half addresses a stranger with no account and is also
+  //     untrue (there are paid tiers). Only the load-bearing half survives:
+  //     creating a crew IS gated, so a visitor can reasonably fear joining is
+  //     too, and the line answers that.
+  landing: {
+    eyebrow: "YOU'RE INVITED",
+    title: (inviter: string, crew: string) =>
+      `${inviter} wants you in ${crew}.`,
+    // Not "You're invited to X" — the eyebrow directly above already says
+    // YOU'RE INVITED, and a title that repeats it wastes the one line that
+    // carries the point. "Someone" names nobody, which is the honest answer
+    // when the inviter has no handle (#762) and keeps the construction
+    // parallel to the titled case.
+    titleNoName: (crew: string) => `Someone wants you in ${crew}.`,
+    body: (count: number) =>
+      `${count} ${plural(count, 'person is', 'people are')} already in. Joining costs nothing.`,
+    privacy:
+      "We're not showing you what they're going to until you're in. That's the point of a crew.",
+    cta: (crew: string) => `Join ${crew}`,
+    joining: 'Joining…',
+  },
+
+  // Dead links carry no crew identity at all — no name, no patch, no count.
+  // The at-capacity landing borrows `fullBody` and `browse` from here while
+  // keeping full identity: being full is a normal outcome, not a dead end.
+  linkDead: {
+    eyebrow: 'INVITE LINK',
+    expiredTitle: "This link's gone stale.",
+    expiredBody: `Invites expire after ${CREW_INVITE_TTL_DAYS} days. Ask whoever sent it for a fresh one.`,
+    revokedTitle: 'This link was retired.',
+    revokedBody:
+      'Someone in the crew pulled it. Ask them for a new one. No hard feelings.',
+    // The handoff's `fullTitle` ("This crew's full.") is deliberately not here.
+    // At capacity the landing keeps the crew's own title, because the crew is
+    // still the thing you arrived for; only the body and the CTA change.
+    // The cap is interpolated, never spelled out: `empty.atCapBody` two blocks
+    // down states the same number from the constant, and a written-out
+    // "Twelve" is how the two quietly disagree after a repricing.
+    fullBody: `${CREW_MEMBER_CAP} is the cap. Any more and it stops being your people and starts being a group project.`,
+    browse: 'Browse shows instead',
+    // Announced, never rendered: the landing swaps to the at-capacity body in
+    // place, and a swap with no announcement is silent to a screen reader.
+    filledUp: 'This crew filled up. There is no longer room to join.',
   },
 
   // Destructive flows. Sober, no cheek.
@@ -205,6 +257,14 @@ export const CREWS_COPY = {
     errCrewEyebrow: 'CONNECTION',
     errCrewTitle: "Couldn't open this crew.",
     errCrewBody: "The crew is fine. The connection isn't. Give it another go.",
+    loadingInvite: 'CHECKING THE INVITE…',
+    // Ours, stated as ours. Distinct from an expired or retired link, which
+    // are normal outcomes rather than faults.
+    errInviteEyebrow: 'CONNECTION',
+    errInviteTitle: "Couldn't check this invite.",
+    errInviteBody:
+      'Something on our end went sideways. The link is probably fine. Try again in a second.',
+    joinFailed: "That didn't go through. Try again.",
   },
 
   a11y: {
@@ -213,6 +273,9 @@ export const CREWS_COPY = {
     // Appended to the button's own label, so it must not restate it:
     // the accessible name reads "Start a crew, paid feature".
     gatedCreate: 'paid feature',
+    // Names the landing's main region: the page has no app chrome, so nothing
+    // else places a screen-reader user on it.
+    inviteLanding: 'Crew invite',
     reroll: 'Pull a new patch',
     options: 'Crew options',
     close: 'Close',

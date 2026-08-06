@@ -19,11 +19,18 @@ export class ApiError extends Error {
   // Hono's zValidator (body shape: { success: false, error: { issues: [...] } }).
   // Callers that need field-level errors (e.g. mapping a cross-field
   // refine to a specific form input) read this instead of the message.
+  //
+  // `reason` carries the crew-invite dead-link discriminator on a 404
+  // ('unknown' | 'expired' | 'revoked'). That body has no `error` field at
+  // all, so without this the landing could not tell an expired link from a
+  // retired one. Kept a plain string here; call sites narrow it themselves.
+  // Last in the parameter list so no existing throw site changes.
   constructor(
     public readonly status: number,
     message: string,
     public readonly code?: string,
     public readonly zodIssues?: ZodIssue[],
+    public readonly reason?: string,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -104,6 +111,8 @@ async function request<T>(
   const errorField = record['error']
   const codeField =
     typeof record['code'] === 'string' ? record['code'] : undefined
+  const reasonField =
+    typeof record['reason'] === 'string' ? record['reason'] : undefined
 
   if (!res.ok || !success) {
     const zodIssues = parseZodIssues(errorField)
@@ -115,7 +124,7 @@ async function request<T>(
         ? errorField
         : (zodIssues?.[0]?.message ??
           `Request failed with status ${res.status}`)
-    throw new ApiError(res.status, message, codeField, zodIssues)
+    throw new ApiError(res.status, message, codeField, zodIssues, reasonField)
   }
 
   // The success payload's shape is the caller's generic T; the API client

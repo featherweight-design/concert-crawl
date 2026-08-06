@@ -47,4 +47,24 @@ describe('apiClient', () => {
       apiClient.get('/v1/admin/venues', 'test-token'),
     ).rejects.toThrow('Forbidden')
   })
+
+  // The crew-invite 404 body has no `error` field at all — its `reason` is the
+  // whole payload, and the invite landing cannot tell an expired link from a
+  // retired one without it.
+  it('carries `reason` off an error body onto ApiError', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ success: false, reason: 'expired' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    )
+
+    const { apiClient, ApiError } = await import('./api.js')
+    const err = await apiClient
+      .get('/v1/crew-invites/tok', 'test-token')
+      .catch((caught: unknown) => caught)
+    expect(err).toBeInstanceOf(ApiError)
+    expect(err instanceof ApiError ? err.reason : null).toBe('expired')
+    expect(err instanceof ApiError ? err.status : null).toBe(404)
+  })
 })

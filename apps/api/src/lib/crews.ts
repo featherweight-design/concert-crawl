@@ -9,21 +9,22 @@ import { and, eq, sql } from 'drizzle-orm'
 import { crewMembers, crews } from '@concert-crawl/db'
 import type { DbExecutor } from './db-executor.js'
 
-// The cap and the two leave codes are re-exported, not redeclared: the crew
-// home renders both (the spots-left line, and the confirm kind a 409 selects),
-// so they live with the wire contract in `@concert-crawl/types`. Not a DB
-// constraint either way — a unique index cannot express "at most 12 rows in
-// this group", so the cap is enforced here under the row lock below (plan D4).
+// The cap and the three client-read codes are re-exported, not redeclared: the
+// crew home and the invite landing render them (the spots-left line, the
+// confirm kind a 409 selects, the at-capacity swap), so they live with the wire
+// contract in `@concert-crawl/types`. Not a DB constraint either way — a unique
+// index cannot express "at most 12 rows in this group", so the cap is enforced
+// here under the row lock below (plan D4).
 export {
   CREW_MEMBER_CAP,
   CREW_HANDOFF_REQUIRED_CODE,
   CREW_LAST_MEMBER_CODE,
+  CREW_FULL_CODE,
 } from '@concert-crawl/types'
 
 /** Up to five avatars ride the cluster on a crews-list row. */
 export const CREW_CLUSTER_SIZE = 5
 
-export const CREW_FULL_CODE = 'crew_full'
 export const CREW_DUPLICATE_ID_CODE = 'crew_duplicate_id'
 
 /**

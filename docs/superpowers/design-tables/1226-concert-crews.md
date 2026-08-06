@@ -647,3 +647,32 @@ handoff defect we do not copy, or a conflict where a higher authority already se
 | W11     | README §7 is stale; Z2 stands (Supporter is `visible-active` for `crews`).                                                                                                                                                                                                             |
 | W12     | One behaviour: at cap the Invite affordance stays reachable and the sheet carries the at-cap notice. Disabling it hides the explanation behind the thing it is explaining.                                                                                                             |
 | CR1–CR5 | The plan's copy-review verdict table wins over `crew-copy.jsx` wherever they differ, per the same rule PR-4 followed. The cap is read from the shared constant, never re-typed as `12`.                                                                                                |
+
+---
+
+## §AN — `/crew/join/[token]`, the invitee landing (added at build time)
+
+The enumeration above stops at the creator-side invite _sheet_ (§AI). The invitee's
+_landing_ — the page the shared link actually opens — had no rows, which is why it was
+built against the prototype directly and then verified back against this table. These
+rows are the record of that verification, taken from `crew-invite.jsx` (`Landing`,
+`DeadLink`, and the `loading` branch of its `Shell`).
+
+| ID   | Element                    | Handoff                                                                           | Built                                                                                                        |
+| ---- | -------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| AN1  | Shell padding              | `70px 22px 40px` narrow, `40px 40px` wide; lockup at `top` 54 / 22                | ✅ `pt-[70px] px-[22px] pb-10 sm:px-10 sm:pt-10`                                                             |
+| AN2  | Shell gap                  | 18 narrow / 22 wide on the landing; fixed 18 on the dead link                     | ✅ `tightGap` suppresses `sm:gap-[22px]` for the dead link                                                   |
+| AN3  | Patch                      | `CrewPatch` `scale="hero"`, 108 narrow / 132 wide                                 | ✅                                                                                                           |
+| AN4  | Eyebrow                    | `MonoEyebrow` 9.5 / `0.18em` / `--signal`                                         | ✅ `tone="signal"`                                                                                           |
+| AN5  | Title                      | 27 / 38, weight 900, `-0.035em`, `lineHeight` 1.08, balanced                      | ✅                                                                                                           |
+| AN6  | Member cluster             | Avatar cluster + count                                                            | ⛔ Cluster dropped: the payload is identity-lite and carries no member list. Count kept                      |
+| AN7  | Member count               | `MonoEyebrow` 10 / `0.14em` / `--fg-muted`                                        | ✅ `tone="count"`                                                                                            |
+| AN8  | Body                       | 13.5 / 15, `--fg-muted`, `lineHeight` 1.5, pretty                                 | ✅                                                                                                           |
+| AN9  | Join CTA                   | `Btn primary wide` — radius 10, 46px, 14.5 / 700 / `-0.01em`                      | ✅ `primaryButtonStyle`, `w-full`                                                                            |
+| AN10 | At-capacity CTA            | `Btn ghost wide` in the same 340px column                                         | ✅ `<BrowseInstead wide />`                                                                                  |
+| AN11 | `landing.haveAccount` line | Sub-line under the CTA                                                            | ⛔ Dropped: the route is authenticated, so the reader is already signed in                                   |
+| AN12 | Privacy note               | Padlock + 11.5 copy, `--surface-1` on `--border`, radius 10, max 330 / 430        | ✅ Hidden at capacity, as drawn                                                                              |
+| AN13 | Dead link                  | Dimmed mark, warning eyebrow, title 25 / 32, non-wide ghost CTA, no crew identity | ✅                                                                                                           |
+| AN14 | Loading skeleton           | Patch 108 / 132, bars 24 / 30, CTA 280 / 340 × 46 r10                             | ✅ Mobile/desktop pair; `Shimmer` carries geometry inline                                                    |
+| AN15 | Loading eyebrow            | `MonoEyebrow` 9.5, default `0.14em`, `--fg-subtle`, `aria-live`                   | ✅ `tone="subtle"`                                                                                           |
+| AN16 | Unknown token              | Not drawn                                                                         | ✅ App's ordinary 404 via a route-local `not-found.tsx`; a branded dead end would confirm which tokens exist |
