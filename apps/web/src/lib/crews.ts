@@ -119,7 +119,7 @@ export async function resolveInvite(
   inviteToken: string,
 ): Promise<PublicCrewInvite> {
   const data = await apiClient.get<{ invite: PublicCrewInvite }>(
-    `/v1/crew-invites/${inviteToken}`,
+    `/v1/crew-invites/${encodeURIComponent(inviteToken)}`,
     token,
   )
   return data.invite
@@ -135,7 +135,7 @@ export async function joinCrew(
   inviteToken: string,
 ): Promise<CrewJoinResult> {
   return apiClient.post<CrewJoinResult>(
-    `/v1/crew-invites/${inviteToken}/join`,
+    `/v1/crew-invites/${encodeURIComponent(inviteToken)}/join`,
     token,
     {},
   )
