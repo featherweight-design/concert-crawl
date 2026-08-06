@@ -429,7 +429,7 @@ crewsRouter.post('/:crewId/patch/reroll', async (ctx) => {
   return ctx.json({ success: true, data: { crew: updated } })
 })
 
-// DELETE /v1/crews/:crewId/members/:userId — keeper removes someone else.
+// DELETE /v1/crews/:crewId/members/:memberId — keeper removes someone else.
 crewsRouter.delete('/:crewId/members/:memberId', async (ctx) => {
   const authInfo = getAuth(ctx)
   if (!authInfo?.userId)
