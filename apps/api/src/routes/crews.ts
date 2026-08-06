@@ -859,27 +859,40 @@ crewsRouter.post('/:crewId/invites/:inviteId/revoke', async (ctx) => {
   if (!inviteParsed.success)
     return ctx.json({ success: false, error: 'Invalid invite ID' }, 400)
 
-  const crew = await resolveMembership(parsed.data, authInfo.userId)
-  if (!crew)
+  // Takes the same crew row lock as minting and joining (plan D4). Without it
+  // a revoke lands between a join's re-validation and its insert, and the
+  // membership row is written against a link that is already dead — which is
+  // the exact race the join path takes the lock to avoid.
+  const result = await db.transaction(async (tx) => {
+    const locked = await lockCrew(tx, parsed.data)
+    if (!locked) return { kind: 'denied' } as const
+    if (!(await isMember(tx, parsed.data, authInfo.userId)))
+      return { kind: 'denied' } as const
+
+    // The crew predicate rides in the UPDATE's own WHERE rather than being
+    // checked first, so an invite belonging to another crew cannot be retired
+    // by a member of this one. `revokedAt IS NULL` makes a double tap a no-op
+    // rather than a second write that moves the timestamp.
+    const [revoked] = await tx
+      .update(crewInvites)
+      .set({ revokedAt: new Date(), revokedBy: authInfo.userId })
+      .where(
+        and(
+          eq(crewInvites.id, inviteParsed.data),
+          eq(crewInvites.crewId, parsed.data),
+          isNull(crewInvites.revokedAt),
+        ),
+      )
+      .returning({ id: crewInvites.id })
+
+    return revoked
+      ? ({ kind: 'revoked' } as const)
+      : ({ kind: 'gone' } as const)
+  })
+
+  if (result.kind === 'denied')
     return ctx.json({ success: false, error: 'Not a member of this crew' }, 403)
-
-  // The crew predicate rides in the UPDATE's own WHERE rather than being
-  // checked first, so an invite belonging to another crew cannot be retired by
-  // a member of this one. `revokedAt IS NULL` makes a double tap a no-op
-  // rather than a second write that moves the timestamp.
-  const [revoked] = await db
-    .update(crewInvites)
-    .set({ revokedAt: new Date(), revokedBy: authInfo.userId })
-    .where(
-      and(
-        eq(crewInvites.id, inviteParsed.data),
-        eq(crewInvites.crewId, parsed.data),
-        isNull(crewInvites.revokedAt),
-      ),
-    )
-    .returning({ id: crewInvites.id })
-
-  if (!revoked)
+  if (result.kind === 'gone')
     return ctx.json({ success: false, error: 'Invite not found' }, 404)
 
   return ctx.json({ success: true, data: { revoked: true } })
