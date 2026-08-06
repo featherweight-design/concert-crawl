@@ -223,7 +223,10 @@ crewsRouter.post('/', requireFeature('crews'), async (ctx) => {
   } catch (err) {
     if (isUniqueViolation(err)) {
       // A retried POST carrying the same client-minted id is idempotent by
-      // rejection rather than by minting a second crew (plan D2).
+      // rejection rather than by minting a second crew (plan D2). Handled, so
+      // it logs at info: a burst of these is a client retry loop worth seeing,
+      // not an error worth paging on.
+      apiLogger.info({ userId }, 'crew create rejected as duplicate')
       return ctx.json(
         {
           success: false,
