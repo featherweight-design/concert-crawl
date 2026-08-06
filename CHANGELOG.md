@@ -1,3 +1,10 @@
+# [1.217.0](https://github.com/HartiganHM/concert-crawl/compare/v1.216.7...v1.217.0) (2026-08-06)
+
+
+### Features
+
+* **crews:** add crews data model, entitlement key, and notification categories ([b81106c](https://github.com/HartiganHM/concert-crawl/commit/b81106c827f60ac5769eb2fa7c72a192bba443d2))
+
 ## [1.216.7](https://github.com/HartiganHM/concert-crawl/compare/v1.216.6...v1.216.7) (2026-08-06)
 
 
