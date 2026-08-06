@@ -111,6 +111,20 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     expect(landing).toBe(withQuery)
   })
 
+  // The query is never decoded here, so an encoded newline in one has to be
+  // read in its encoded form or it is accepted by default — and downstream
+  // consumers of a redirect target do decode. `%25` is the escape for `%`, so
+  // each extra layer is another attempt at the same hiding place.
+  it.each(['?x=%0Aevil', '?x=%0Devil', '?x=%250Aevil', '#%0Aevil'])(
+    'refuses a link whose suffix %s hides a newline',
+    async (suffix) => {
+      await runToRedirect(() =>
+        validateAndSetInviteCode(CODE, `${CREW_LINK}${suffix}`),
+      )
+      expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
+    },
+  )
+
   it('still reads the path through a hostile query', async () => {
     await runToRedirect(() =>
       validateAndSetInviteCode(CODE, '//evil.com?ref=/crew/join/abc'),

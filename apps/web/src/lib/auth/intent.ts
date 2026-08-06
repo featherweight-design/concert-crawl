@@ -79,6 +79,24 @@ const hasControlCharacters = (value: string): boolean =>
   /[\x00-\x1f\x7f]/.test(value)
 
 /**
+ * The same rule for a value that is never going to be decoded here.
+ *
+ * The path is decoded to a fixed point, so an encoded newline surfaces on
+ * whichever pass reveals it. A query is deliberately not decoded — doing so
+ * rejects legitimate escapes — which would leave `?x=%0Aevil` accepted purely
+ * because nothing here ever looked at it in its decoded form. Downstream
+ * consumers do decode, so the encoded form is read directly instead.
+ *
+ * `%25` is the escape for `%` itself, so `%250A` is one layer of hiding and
+ * `%25250A` is two. The wrapper is allowed to repeat up to the same budget the
+ * decode loop gets, for the same reason it has one.
+ */
+const ENCODED_CONTROL_CHARACTER = new RegExp(
+  `%(?:25){0,${MAX_DECODE_PASSES}}(?:0[0-9a-f]|1[0-9a-f]|7f)`,
+  'i',
+)
+
+/**
  * Rejects `//evil.example` and `/\evil.example`, both resolvable as hosts, and
  * any control character. The control-character test runs on each decode pass,
  * so an encoded newline is caught at whichever pass reveals it.
@@ -128,6 +146,7 @@ export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
   // next throws on it. That is a legitimate return path, and answering it with
   // /events loses the visitor's place.
   if (hasControlCharacters(raw)) return false
+  if (ENCODED_CONTROL_CHARACTER.test(raw)) return false
   const suffixAt = raw.search(/[?#]/)
   const pathOnly = suffixAt === -1 ? raw : raw.slice(0, suffixAt)
 
