@@ -82,9 +82,17 @@ const seedCrew = async (
 }
 
 // Dates relative to today so the Mountain-Time tense predicate is exercised
-// rather than frozen against a literal that ages out of the future.
+// rather than frozen against a literal that ages out of the future. Anchored on
+// Mountain Time rather than UTC, because the route splits tense on
+// `NOW() AT TIME ZONE 'America/Denver'`: for the seven UTC hours where Denver is
+// still on the previous calendar day, a UTC anchor puts offset 0 one day ahead
+// of the boundary the query uses and flips the boundary cases.
 const dayOffset = (days: number): string => {
-  const when = new Date()
+  // en-CA renders as YYYY-MM-DD, which is what the date column stores.
+  const today = new Date().toLocaleDateString('en-CA', {
+    timeZone: 'America/Denver',
+  })
+  const when = new Date(`${today}T00:00:00Z`)
   when.setUTCDate(when.getUTCDate() + days)
   return when.toISOString().slice(0, 10)
 }
