@@ -66,6 +66,10 @@ export const InviteSheet = ({
       setCopied(false)
       setRevoked(false)
       setFailed(false)
+      // Including `busy`: dismissing the sheet mid-revoke otherwise leaves the
+      // next open with every button disabled and nothing in flight to re-enable
+      // them.
+      setBusy(false)
       return
     }
     let live = true
@@ -89,17 +93,30 @@ export const InviteSheet = ({
 
   const onCopy = () => {
     if (invite === null) return
-    // Synchronous, deliberately. No await above this line.
-    navigator.clipboard.writeText(inviteUrl(invite.token)).then(
-      () => {
-        setCopied(true)
-        window.setTimeout(() => setCopied(false), 2400)
-      },
-      (err: unknown) => {
-        console.error('InviteSheet: clipboard write failed', err)
-        setFailed(true)
-      },
-    )
+    // `navigator.clipboard` is undefined on insecure origins and older Safari,
+    // and `writeText` throws rather than rejecting there, so the rejection
+    // handler alone would not catch it.
+    const { clipboard } = navigator
+    if (clipboard === undefined) {
+      setFailed(true)
+      return
+    }
+    try {
+      // Synchronous, deliberately. No await above this line.
+      clipboard.writeText(inviteUrl(invite.token)).then(
+        () => {
+          setCopied(true)
+          window.setTimeout(() => setCopied(false), 2400)
+        },
+        (err: unknown) => {
+          console.error('InviteSheet: clipboard write failed', err)
+          setFailed(true)
+        },
+      )
+    } catch (err) {
+      console.error('InviteSheet: clipboard unavailable', err)
+      setFailed(true)
+    }
   }
 
   const onRevoke = async () => {

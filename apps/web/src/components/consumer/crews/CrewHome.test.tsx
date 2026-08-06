@@ -272,7 +272,10 @@ describe('CrewHome leave 409 mapping (#1226)', () => {
     await screen.findByText(CREWS_COPY.confirm.handoffTitle)
 
     const dialog = within(screen.getByRole('alertdialog'))
-    fireEvent.click(dialog.getAllByRole('radio')[0] as HTMLElement)
+    const [candidate] = dialog.getAllByRole('radio')
+    if (candidate === undefined)
+      throw new Error('no handoff candidate rendered')
+    fireEvent.click(candidate)
     expect(
       dialog.getByRole('button', { name: CREWS_COPY.confirm.handoffCta }),
     ).toBeEnabled()
