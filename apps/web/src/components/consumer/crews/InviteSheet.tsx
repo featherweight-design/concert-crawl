@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { CREW_MEMBER_CAP, type CrewInvite } from '@concert-crawl/types'
 
@@ -55,6 +55,11 @@ export const InviteSheet = ({
   const [revoked, setRevoked] = useState(false)
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(false)
+  // The clipboard write resolves on its own schedule, which can be after the
+  // sheet is gone. A ref rather than the `open` prop because the handler's
+  // closure still holds the value it was clicked with.
+  const openRef = useRef(open)
+  openRef.current = open
 
   // The link is fetched (and minted if there isn't one) on open, so by the
   // time the copy button can be tapped the token is already in hand. Awaiting
@@ -109,12 +114,13 @@ export const InviteSheet = ({
       // Synchronous, deliberately. No await above this line.
       clipboard.writeText(inviteUrl(invite.token)).then(
         () => {
+          if (!openRef.current) return
           setCopied(true)
           window.setTimeout(() => setCopied(false), 2400)
         },
         (err: unknown) => {
           console.error('InviteSheet: clipboard write failed', err)
-          setFailed(true)
+          if (openRef.current) setFailed(true)
         },
       )
     } catch (err) {

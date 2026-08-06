@@ -2,10 +2,14 @@
 
 import '@testing-library/jest-dom'
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react'
 
+// One stable `getToken` for the whole file. A fresh function per render would
+// re-fire the sheet's load effect on every render, which no real Clerk hook
+// does, and which quietly hides any bug in that effect's reset branch.
+const getToken = async () => 'tok'
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: async () => 'tok' }),
+  useAuth: () => ({ getToken }),
 }))
 
 const fetchCurrentInvite = vi.fn()
@@ -129,5 +133,53 @@ describe('InviteSheet (#1226)', () => {
     fireEvent.click(screen.getByRole('button', { name: COPY.copy }))
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     expect(writeText).toHaveBeenCalledWith(expect.stringContaining('tok-abc'))
+  })
+
+  // The clipboard promise can resolve after the sheet is gone, which used to
+  // set `copied` past the close reset and open the sheet already claiming a
+  // copy the customer never made on this visit.
+  it('does not report a copy that resolved after the sheet closed', async () => {
+    let settle = (): void => undefined
+    const writeText = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          settle = resolve
+        }),
+    )
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    })
+    const view = mount(true)
+    await screen.findByText(`${COPY.expiry(6)}`)
+    fireEvent.click(screen.getByRole('button', { name: COPY.copy }))
+
+    view.rerender(
+      <InviteSheet
+        open={false}
+        onClose={vi.fn()}
+        crewId="crew-1"
+        crewName="Thursdays"
+        patchSalt={1}
+        memberCount={2}
+      />,
+    )
+    await act(async () => {
+      settle()
+    })
+    view.rerender(
+      <InviteSheet
+        open
+        onClose={vi.fn()}
+        crewId="crew-1"
+        crewName="Thursdays"
+        patchSalt={1}
+        memberCount={2}
+      />,
+    )
+
+    await screen.findByText(`${COPY.expiry(6)}`)
+    expect(writeText).toHaveBeenCalled()
+    expect(screen.queryAllByText(COPY.copied)).toHaveLength(0)
   })
 })

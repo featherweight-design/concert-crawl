@@ -97,7 +97,9 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
     saltOverride !== null && saltOverride !== crew.patchSalt
       ? saltOverride
       : crew.patchSalt
-  // Keeper first, then the API's joinedAt order. Sorting here rather than in
+  // Keeper first. Everyone else keeps the order the API sent, which is joinedAt
+  // ascending — a stable sort is what preserves it, so this comparator must stay
+  // a pure isKeeper test rather than gain a tiebreak. Sorting here rather than in
   // the query keeps the roster stable through a handoff, which moves the badge
   // without moving anyone's join date.
   const members = crew.members
