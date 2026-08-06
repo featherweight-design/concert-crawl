@@ -72,6 +72,20 @@ const MAX_DECODE_PASSES = 5
 const isPlainInAppPath = (value: string): boolean => /^\/[^/\\]/.test(value)
 
 /**
+ * This module runs in three places — edge middleware, server actions, and
+ * client components like ReturnSeamReplay. A rejection is worth recording on
+ * the server, where it is a signal; in the browser it is a console the visitor
+ * can fill on demand by editing their own URL, so it is suppressed there.
+ */
+const warnOnServer = (
+  message: string,
+  detail?: Record<string, number>,
+): void => {
+  if (typeof window !== 'undefined') return
+  console.warn(message, detail)
+}
+
+/**
  * A `return` param is a redirect target, so anything that could leave the origin
  * is an open redirect. Only a plain absolute in-app path is accepted.
  *
@@ -102,7 +116,7 @@ export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
       // is attacker-controlled and stays out of the log line — the pass index
       // is what distinguishes a malformed input from one that survived a
       // decode and then broke.
-      console.warn('[auth] return path rejected: undecodable', { pass: i })
+      warnOnServer('[auth] return path rejected: undecodable', { pass: i })
       return false
     }
     if (next === current) return true
@@ -110,7 +124,7 @@ export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
   }
 
   // Still changing after five passes is layered encoding, not a route.
-  console.warn('[auth] return path rejected: never reached a fixed point')
+  warnOnServer('[auth] return path rejected: never reached a fixed point')
   return false
 }
 

@@ -84,7 +84,7 @@ const SAFE_RETURN_FALLBACK = DEFAULT_RETURN_PATH
 /**
  * Reduces an attempted path to something that can only ever resolve back to
  * this origin, for use as Clerk's `redirect_url`. The judgement about what is
- * safe lives in `sanitizeReturnPath`; this only re-attaches the query string,
+ * safe lives in `isSafeReturnPath`; this only re-attaches the query string,
  * which the validator has no opinion about.
  */
 const toSafeReturnPath = (pathname: string, search: string): string => {
@@ -162,12 +162,15 @@ export const middlewareHandler = async (
   if (isInviteGated(req) || (!launched && isInviteGatedBeforeLaunch(req))) {
     const cookieValue = req.cookies.get('invite_verified')?.value
     if (!cookieValue) {
-      // Carry the return path into the beta funnel. The only invite-gated
-      // matcher is `/sign-up(.*)`, so a visitor reaching this branch is
-      // already on `/sign-up?redirect_url=/crew/join/<token>` — the path
-      // itself is `/sign-up`, and `toSafeReturnPath` alone would return them
-      // to the sign-up screen (or, once signed in, bounce them to /events)
-      // instead of the crew link. So the INCOMING param wins when present.
+      // Carry the return path into the beta funnel. This branch is reached
+      // from `/sign-up(.*)` and, before launch, `/onboarding(.*)` — both are
+      // funnel steps rather than destinations, so `toSafeReturnPath` alone
+      // would return the visitor to the step they were bounced from (or,
+      // once signed in, bounce them on to /events) instead of the crew link
+      // they actually tapped. A visitor arriving at
+      // `/sign-up?redirect_url=/crew/join/<token>` has their real
+      // destination in the querystring, so the INCOMING param wins when
+      // present.
       // It arrived from the querystring and is attacker-controllable, hence
       // sanitizeReturnPath before it is reused.
       const incoming = req.nextUrl.searchParams.get('redirect_url')
