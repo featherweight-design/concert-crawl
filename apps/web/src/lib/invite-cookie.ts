@@ -4,6 +4,18 @@ import { createHmac, timingSafeEqual } from 'crypto'
 export const INVITE_COOKIE_NAME = 'invite_verified'
 export const INVITE_COOKIE_MAX_AGE = 3600 // 1 hour in seconds
 
+/**
+ * Where to send a new arrival once signup completes, when they started at a
+ * link rather than at the front door — a crew invite, today (#1226).
+ *
+ * A query param cannot cross Clerk's own screens; a cookie can. It rides the
+ * same HMAC as `invite_verified` (`signInviteCookie` / `verifyInviteCookie`),
+ * so the `code` field on that payload carries a path here. Signed only means
+ * "we wrote it": the value is still a redirect target and is re-sanitised on
+ * read as well as on write.
+ */
+export const RETURN_PATH_COOKIE_NAME = 'invite_return_path'
+
 export function signInviteCookie(code: string, secret: string): string {
   const iat = Math.floor(Date.now() / 1000)
   const payload = JSON.stringify({ code, iat })

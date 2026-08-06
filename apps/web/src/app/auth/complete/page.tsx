@@ -1,7 +1,12 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
-import { verifyInviteCookie, INVITE_COOKIE_NAME } from '@/lib/invite-cookie'
+import {
+  verifyInviteCookie,
+  INVITE_COOKIE_NAME,
+  RETURN_PATH_COOKIE_NAME,
+} from '@/lib/invite-cookie'
+import { DEFAULT_RETURN_PATH, sanitizeReturnPath } from '@/lib/auth/intent'
 
 export default async function AuthCompletePage() {
   const { userId, getToken } = await auth()
@@ -51,5 +56,20 @@ export default async function AuthCompletePage() {
     }
   }
 
-  redirect('/events')
+  // Where the visitor was headed before the funnel took over (#1226). The
+  // cookie is signed, but it is still a redirect target, so it is re-sanitised
+  // on read and not only on write. Cleared in the same pass — a return path is
+  // spent once. /events stays the fallback, so a visitor with no pending
+  // return path is unaffected.
+  const returnCookie = cookieStore.get(RETURN_PATH_COOKIE_NAME)?.value
+  const pendingReturn = returnCookie
+    ? verifyInviteCookie(returnCookie, secret)
+    : null
+  if (returnCookie) cookieStore.delete(RETURN_PATH_COOKIE_NAME)
+
+  redirect(
+    pendingReturn
+      ? sanitizeReturnPath(pendingReturn.code)
+      : DEFAULT_RETURN_PATH,
+  )
 }

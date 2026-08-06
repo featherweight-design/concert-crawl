@@ -43,8 +43,15 @@ export default function InviteCodePage() {
   function handleSubmit(ev: React.FormEvent) {
     ev.preventDefault()
     if (!isComplete || isPending) return
+    // Read at submit time rather than through `useSearchParams`, which would
+    // force this page behind a Suspense boundary for a value only the click
+    // needs. The middleware attaches `redirect_url` when it bounces an
+    // invite-gated route here; the action sanitises it.
+    const returnPath = new URLSearchParams(window.location.search).get(
+      'redirect_url',
+    )
     startTransition(async () => {
-      const result = await validateAndSetInviteCode(code)
+      const result = await validateAndSetInviteCode(code, returnPath)
       if (!result.ok) setErrorKind(result.error)
     })
   }

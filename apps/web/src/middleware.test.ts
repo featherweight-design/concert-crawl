@@ -587,3 +587,93 @@ describe('middleware — private-beta launch gate (#794)', () => {
     }
   })
 })
+
+// The crew join surface (#1226) is authenticated. The correct middleware change
+// for it was NO change at all — it falls through to auth.protect() and gets
+// redirect_url for free. This suite pins that, so a later reader does not
+// "fix" the missing matcher entry by adding one. /crew/join and /crews differ
+// by one character and neither is public.
+describe('middleware — crew join surface (#1226)', () => {
+  it.each(['false', 'true'])(
+    'sends a signed-out visitor to sign-in with the link intact, flag %s',
+    async (flag) => {
+      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', flag)
+      const { middlewareHandler } = await import('./middleware')
+      const auth = makeAuth(null)
+      const path = '/crew/join/abc'
+
+      await expect(middlewareHandler(auth, makeReq(path))).rejects.toThrow()
+
+      const url = new URL(auth.protect.mock.calls[0]![0].unauthenticatedUrl)
+      expect(url.pathname).toBe('/sign-in')
+      expect(url.searchParams.get('redirect_url')).toBe(path)
+    },
+  )
+
+  it.each(['false', 'true'])(
+    'keeps /crews, /me, and /admin gated alongside it, flag %s',
+    async (flag) => {
+      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', flag)
+      const { middlewareHandler } = await import('./middleware')
+
+      for (const path of ['/crews', '/crews/abc', '/me', '/admin']) {
+        const auth = makeAuth(null)
+        await expect(middlewareHandler(auth, makeReq(path))).rejects.toThrow()
+        expect(auth.protect).toHaveBeenCalled()
+      }
+    },
+  )
+})
+
+// Gate (b): a visitor who arrives at a crew link with no account is bounced
+// through the beta code screen, and has to land back on the link afterwards.
+// The middleware owns the first hop.
+describe('middleware — beta funnel return path (#1226)', () => {
+  beforeEach(() => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
+  })
+
+  it('prefers the incoming redirect_url over the /sign-up path itself', async () => {
+    const { middlewareHandler } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    const result = await middlewareHandler(
+      auth,
+      makeReq('/sign-up?redirect_url=%2Fcrew%2Fjoin%2Fabc'),
+    )
+
+    const location = redirectLocation(result)
+    expect(location).not.toBeNull()
+    const url = new URL(location!)
+    expect(url.pathname).toBe('/auth/code')
+    // Without this preference the visitor would be returned to /sign-up.
+    expect(url.searchParams.get('redirect_url')).toBe('/crew/join/abc')
+  })
+
+  it('falls back to the attempted path when no param is present', async () => {
+    const { middlewareHandler } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    const result = await middlewareHandler(auth, makeReq('/sign-up'))
+
+    const url = new URL(redirectLocation(result)!)
+    expect(url.pathname).toBe('/auth/code')
+    expect(url.searchParams.get('redirect_url')).toBe('/sign-up')
+  })
+
+  it.each(['//evil.com', '/\\evil.com', 'https://evil.com'])(
+    'refuses to forward the hostile redirect_url %s',
+    async (hostile) => {
+      const { middlewareHandler } = await import('./middleware')
+      const auth = makeAuth(null)
+
+      const result = await middlewareHandler(
+        auth,
+        makeReq(`/sign-up?redirect_url=${encodeURIComponent(hostile)}`),
+      )
+
+      const url = new URL(redirectLocation(result)!)
+      expect(url.searchParams.get('redirect_url')).toBe('/events')
+    },
+  )
+})

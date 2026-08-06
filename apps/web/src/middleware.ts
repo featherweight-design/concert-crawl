@@ -1,6 +1,7 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isPublicBrowseEnabled } from '@/lib/launch-mode'
+import { sanitizeReturnPath } from '@/lib/auth/intent'
 
 /**
  * Routes any visitor may reach, signed in or out, in either launch mode.
@@ -194,7 +195,23 @@ export const middlewareHandler = async (
   if (isInviteGated(req) || (!launched && isInviteGatedBeforeLaunch(req))) {
     const cookieValue = req.cookies.get('invite_verified')?.value
     if (!cookieValue) {
-      return NextResponse.redirect(new URL('/auth/code', req.url))
+      // Carry the return path into the beta funnel. The only invite-gated
+      // matcher is `/sign-up(.*)`, so a visitor reaching this branch is
+      // already on `/sign-up?redirect_url=/crew/join/<token>` — the path
+      // itself is `/sign-up`, and `toSafeReturnPath` alone would return them
+      // to the sign-up screen (or, once signed in, bounce them to /events)
+      // instead of the crew link. So the INCOMING param wins when present.
+      // It arrived from the querystring and is attacker-controllable, hence
+      // sanitizeReturnPath before it is reused.
+      const incoming = req.nextUrl.searchParams.get('redirect_url')
+      const codeUrl = new URL('/auth/code', req.url)
+      codeUrl.searchParams.set(
+        'redirect_url',
+        incoming
+          ? sanitizeReturnPath(incoming)
+          : toSafeReturnPath(req.nextUrl.pathname, req.nextUrl.search),
+      )
+      return NextResponse.redirect(codeUrl)
     }
     return
   }

@@ -6,7 +6,9 @@ import {
   signInviteCookie,
   INVITE_COOKIE_NAME,
   INVITE_COOKIE_MAX_AGE,
+  RETURN_PATH_COOKIE_NAME,
 } from '@/lib/invite-cookie'
+import { DEFAULT_RETURN_PATH, sanitizeReturnPath } from '@/lib/auth/intent'
 
 type ValidationResult =
   | { ok: true }
@@ -23,6 +25,10 @@ type ValidationResult =
 
 export async function validateAndSetInviteCode(
   code: string,
+  // The `redirect_url` the middleware attached when it bounced an invite-gated
+  // route here. Arrives from the querystring, so it is attacker-controllable
+  // and is sanitised before it is written anywhere.
+  returnPath?: string | null,
 ): Promise<ValidationResult> {
   const codePattern = /^BETA-[A-Z0-9]{4}-[A-Z0-9]{4}$/
   if (!codePattern.test(code.toUpperCase())) {
@@ -60,6 +66,25 @@ export async function validateAndSetInviteCode(
     maxAge: INVITE_COOKIE_MAX_AGE,
     path: '/',
   })
+
+  // A second signed cookie beside invite_verified, because a query param
+  // cannot cross Clerk's screens. Only written when there is somewhere other
+  // than the default to go — a visitor who came in the front door leaves no
+  // cookie behind and lands on /events exactly as before.
+  const safeReturn = sanitizeReturnPath(returnPath)
+  if (safeReturn !== DEFAULT_RETURN_PATH) {
+    cookieStore.set(
+      RETURN_PATH_COOKIE_NAME,
+      signInviteCookie(safeReturn, secret),
+      {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: INVITE_COOKIE_MAX_AGE,
+        path: '/',
+      },
+    )
+  }
 
   redirect('/onboarding')
 }
