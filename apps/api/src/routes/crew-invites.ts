@@ -14,7 +14,7 @@
 import { Hono } from 'hono'
 import type { Context } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, sql, type SQL } from 'drizzle-orm'
 import {
   crewInvites,
   crewMembers,
@@ -80,8 +80,14 @@ crewInvitesRouter.use('*', clerkMiddleware())
  * `liveInvite()` in routes/crews.ts. Two instances with a few seconds of skew
  * would otherwise disagree about who may join in the seconds either side of
  * the TTL boundary, and the minting side already answers to `now()`.
+ *
+ * Built on call rather than held as a module constant, for the same reason
+ * `liveInvite()` is: evaluating `sql` at import time obliges every suite that
+ * partially mocks `drizzle-orm` to supply that export, and routes/index.ts
+ * puts this router in the import graph of all of them.
  */
-const isExpired = sql<boolean>`${crewInvites.expiresAt} <= now()`
+const isExpired = (): SQL<boolean> =>
+  sql<boolean>`${crewInvites.expiresAt} <= now()`
 
 interface LoadedInvite {
   inviteId: string
@@ -99,7 +105,7 @@ const loadInvite = async (token: string): Promise<LoadedInvite | null> => {
       inviteId: crewInvites.id,
       crewId: crewInvites.crewId,
       createdBy: crewInvites.createdBy,
-      expired: isExpired,
+      expired: isExpired(),
       revokedAt: crewInvites.revokedAt,
       name: crews.name,
       patchSalt: crews.patchSalt,
@@ -218,7 +224,7 @@ crewInvitesRouter.post('/:token/join', async (ctx) => {
 
     const [live] = await tx
       .select({
-        expired: isExpired,
+        expired: isExpired(),
         revokedAt: crewInvites.revokedAt,
       })
       .from(crewInvites)
