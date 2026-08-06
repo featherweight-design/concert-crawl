@@ -196,6 +196,17 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     },
   )
 
+  it('clears a present-but-empty cookie rather than reprocessing it forever', async () => {
+    // `Cookie: invite_return_path=` is a cookie whose value is the empty
+    // string. Keying the clear off the value being truthy leaves it in place
+    // on every subsequent visit.
+    cookieStore.set(RETURN_PATH_COOKIE_NAME, '')
+
+    const landing = await runToRedirect(() => AuthCompletePage())
+    expect(landing).toBe('/events')
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
+  })
+
   it('ignores a forged cookie and clears it', async () => {
     cookieStore.set(RETURN_PATH_COOKIE_NAME, 'forged.payload')
 

@@ -61,9 +61,12 @@ export default async function AuthCompletePage() {
   // on read and not only on write. Cleared in the same pass — a return path is
   // spent once. /events stays the fallback, so a visitor with no pending
   // return path is unaffected.
-  const returnCookie = cookieStore.get(RETURN_PATH_COOKIE_NAME)?.value
-  const pendingReturn = returnCookie
-    ? verifyInviteCookie(returnCookie, secret)
+  // Clearing keys off the cookie being PRESENT, not off its value being
+  // truthy: `Cookie: invite_return_path=` is a cookie whose value is `''`,
+  // which verifies to nothing and would otherwise survive every visit.
+  const returnCookie = cookieStore.get(RETURN_PATH_COOKIE_NAME)
+  const pendingReturn = returnCookie?.value
+    ? verifyInviteCookie(returnCookie.value, secret)
     : null
   if (returnCookie) cookieStore.delete(RETURN_PATH_COOKIE_NAME)
 
