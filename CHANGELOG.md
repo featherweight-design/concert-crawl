@@ -1,3 +1,19 @@
+# [1.220.0](https://github.com/HartiganHM/concert-crawl/compare/v1.219.0...v1.220.0) (2026-08-06)
+
+
+### Bug Fixes
+
+* **crews:** close the gaps the pre-PR verification pass found ([ff1345d](https://github.com/HartiganHM/concert-crawl/commit/ff1345d19b95ccac88a4f022b9d38e066a48251d))
+* **crews:** close the six defects Gate 2 found by driving the browser ([2e1ab0c](https://github.com/HartiganHM/concert-crawl/commit/2e1ab0ce0ee748430ba9bd30ab6a7b6f5624b504))
+* **crews:** key the lapsed gate line on a prior subscription, not a free plan ([a3f5f23](https://github.com/HartiganHM/concert-crawl/commit/a3f5f2358385d303749a10f5c7bd38db17a27e9c))
+* **crews:** log the create failure instead of swallowing it ([be8ef78](https://github.com/HartiganHM/concert-crawl/commit/be8ef788a685c4a3ef8f24e07e1361de573d8db7))
+* **crews:** match the loading eyebrow to its uppercase siblings ([e43206b](https://github.com/HartiganHM/concert-crawl/commit/e43206bd6d77533100f64e240a4084c494ac27ee))
+
+
+### Features
+
+* **crews:** ship the /crews destination, patch art and gated create sheet ([4a9ed53](https://github.com/HartiganHM/concert-crawl/commit/4a9ed5395e2ca07bdf05d448e161bfa930c982d4))
+
 # [1.219.0](https://github.com/HartiganHM/concert-crawl/compare/v1.218.0...v1.219.0) (2026-08-06)
 
 
