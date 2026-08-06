@@ -125,6 +125,16 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     },
   )
 
+  it('refuses a link too long to survive the cookie it would be signed into', async () => {
+    // A browser drops a cookie whose serialisation passes ~4096 bytes, so an
+    // unbounded path breaks the funnel for the visitor carrying it rather
+    // than being caught anywhere.
+    const overlong = `${CREW_LINK}?ref=${'a'.repeat(512)}`
+
+    await runToRedirect(() => validateAndSetInviteCode(CODE, overlong))
+    expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
+  })
+
   it('still reads the path through a hostile query', async () => {
     await runToRedirect(() =>
       validateAndSetInviteCode(CODE, '//evil.com?ref=/crew/join/abc'),

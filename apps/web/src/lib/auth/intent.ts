@@ -69,6 +69,18 @@ export const stripIntentParams = (
 const MAX_DECODE_PASSES = 5
 
 /**
+ * An accepted path is both written into a `Location` header and signed into a
+ * cookie, and a browser drops a cookie whose whole serialisation passes ~4096
+ * bytes. An unbounded value therefore breaks the funnel for the visitor
+ * carrying it rather than being caught anywhere. 512 is far above any route
+ * this app builds and far below the limit once the signature is added.
+ *
+ * Checked against the raw value: decoding only ever shortens it, so this is
+ * the upper bound on every later pass.
+ */
+const MAX_RETURN_PATH_LENGTH = 512
+
+/**
  * Every value this module accepts ends up in a `Location` header — middleware's
  * redirect and `redirect()` both — so a CR or LF in one is response splitting.
  * `/%0Aevil` is same-origin by every other measure here, which is why this is a
@@ -145,6 +157,12 @@ export const isSafeReturnPath = (raw: string | null | undefined): boolean => {
   // rejects `/me?q=50%25`: the first pass turns `%25` into a bare `%` and the
   // next throws on it. That is a legitimate return path, and answering it with
   // /events loses the visitor's place.
+  if (raw.length > MAX_RETURN_PATH_LENGTH) {
+    warnOnServer('[auth] return path rejected: too long', {
+      length: raw.length,
+    })
+    return false
+  }
   if (hasControlCharacters(raw)) return false
   if (ENCODED_CONTROL_CHARACTER.test(raw)) return false
   const suffixAt = raw.search(/[?#]/)
