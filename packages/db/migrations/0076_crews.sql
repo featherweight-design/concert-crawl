@@ -4,8 +4,14 @@
 --   1. crews         — identity: name, keeper (moves on handoff), patch salt.
 --   2. crew_members  — membership; the 12-member cap is enforced in the API
 --                      under a row lock on crews, not by a constraint here.
---   3. crew_invites  — one live shareable link per crew, 7-day expiry,
---                      revocable by any member.
+--   3. crew_invites  — shareable links: 7-day expiry, revocable by any member.
+--                      "At most one LIVE link per crew" is an API invariant,
+--                      not a constraint here, and deliberately so: liveness is
+--                      now() against expires_at, which a partial unique index
+--                      cannot express. PR-3 mints under the same SELECT ... FOR
+--                      UPDATE row lock the join path uses, which is what makes
+--                      concurrent minting safe. Expired and revoked rows are
+--                      retained, so multiple rows per crew is the normal state.
 --   4. crew_mutes    — presence of a row IS the muted state; unmuting deletes.
 --
 -- There is deliberately no crew_shows table (D1) and no member_count column:

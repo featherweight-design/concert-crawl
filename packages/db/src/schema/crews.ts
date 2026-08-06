@@ -79,6 +79,11 @@ export const crewInvites = pgTable(
       .notNull()
       .defaultNow(),
   },
+  // Many rows per crew is normal — expired and revoked invites are retained.
+  // "At most one live link" is enforced in the API (PR-3) under the same
+  // SELECT ... FOR UPDATE lock on the crews row that the join path takes, not
+  // by a partial unique index: liveness is now() against expires_at, which no
+  // index predicate can express.
   (table) => ({
     crewIdx: index('crew_invites_crew_idx').on(table.crewId),
   }),
