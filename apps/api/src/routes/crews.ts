@@ -188,12 +188,30 @@ crewsRouter.post('/', requireFeature('crews'), async (ctx) => {
       return crew
     })
 
+    // Hydrated rather than hard-coded null: the creator is looking at their own
+    // crew the instant this returns, and a null preview renders them as an
+    // anonymous avatar until the list refetches contradicts it.
+    const [profile] = await db
+      .select({
+        handle: userProfiles.handle,
+        avatarColor: userProfiles.avatarColor,
+      })
+      .from(userProfiles)
+      .where(eq(userProfiles.userId, userId))
+      .limit(1)
+
     const summary: CrewSummary = {
       id: created.id,
       name: created.name,
       patchSalt: created.patchSalt,
       memberCount: 1,
-      members: [{ userId, handle: null, avatarColor: null }],
+      members: [
+        {
+          userId,
+          handle: profile?.handle ?? null,
+          avatarColor: profile?.avatarColor ?? null,
+        },
+      ],
       upcomingCount: 0,
       isKeeper: true,
       muted: false,

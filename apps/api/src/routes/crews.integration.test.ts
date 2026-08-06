@@ -361,6 +361,25 @@ describe('/v1/crews', () => {
       expect(list.data.crews).toHaveLength(1)
     })
 
+    it('returns the creator preview the list would, not an anonymous one', async () => {
+      setAuth()
+      await seedSupporter()
+      await seedUserProfile(KEEPER, {
+        handle: 'regular',
+        avatarColor: 'signal',
+      })
+      const res = await app.request('/v1/crews', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name: 'The Regulars' }),
+      })
+      const body = (await res.json()) as { data: { crew: CrewSummary } }
+      const list = (await (await app.request('/v1/crews')).json()) as ListBody
+      // A hard-coded null here renders the creator as an anonymous avatar on
+      // their own brand-new crew until the list refetches and contradicts it.
+      expect(body.data.crew.members).toEqual(list.data.crews[0]?.members)
+    })
+
     it('honours a client-minted id and 409s a repeat of it', async () => {
       setAuth()
       await seedSupporter()
