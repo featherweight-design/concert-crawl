@@ -144,19 +144,22 @@ export const CREWS_COPY = {
     crewOfOneTitle: 'Party of one.',
     crewOfOneBody: 'You made a crew. Now the hard part: telling people.',
 
-    noUpcomingEyebrow: 'COMING UP',
+    // Not 'COMING UP' / 'BEEN THERE': the selected tab renders directly above
+    // and already says both.
+    noUpcomingEyebrow: 'NO PLANS',
     noUpcomingTitle: "Nobody's committed.",
     noUpcomingBody: 'Not one of you has said yes to anything yet. Bold.',
     noUpcomingRail: '0 shows',
 
-    noPastEyebrow: 'BEEN THERE',
+    noPastEyebrow: 'CLEAN SLATE',
     noPastTitle: 'No history yet.',
     noPastBody: 'Go to a show together and it lands here. Two of you, minimum.',
     noPastRail: '0 nights',
 
-    atCapEyebrow: 'ROSTER FULL',
+    // 'ROSTER FULL' said the title's job; the eyebrow only places you.
+    atCapEyebrow: 'ROSTER',
     atCapTitle: "This crew's full.",
-    atCapBody: 'Twelve is the cap. Start another crew for the overflow.',
+    atCapBody: `${CREW_MEMBER_CAP} is the cap. Start another crew for the overflow.`,
   },
 
   create: {
@@ -212,7 +215,6 @@ export const CREWS_COPY = {
     gatedCreate: 'paid feature',
     reroll: 'Pull a new patch',
     options: 'Crew options',
-    goingList: (names: string[]) => `Going: ${names.join(', ')}`,
     close: 'Close',
   },
 } as const

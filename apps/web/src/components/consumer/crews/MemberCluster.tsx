@@ -67,6 +67,12 @@ interface MemberClusterProps {
   memberCount: number
   size: number
   max: number
+  /**
+   * What the count means on this surface. The same cluster stands for the whole
+   * roster on the crews list and for the people going on a show row, and
+   * announcing "5 members" over a going cluster names the wrong set.
+   */
+  label?: (count: number) => string
 }
 
 export const MemberCluster = ({
@@ -74,6 +80,7 @@ export const MemberCluster = ({
   memberCount,
   size,
   max,
+  label = CREWS_COPY.list.memberCount,
 }: MemberClusterProps) => {
   const shown = members.slice(0, max)
   // Count, not the preview length: the API caps `members` at five, so a crew
@@ -93,9 +100,7 @@ export const MemberCluster = ({
         isolation: 'isolate',
       }}
     >
-      <span className="sr-only">
-        {CREWS_COPY.list.memberCount(memberCount)}
-      </span>
+      <span className="sr-only">{label(memberCount)}</span>
       <span
         style={{ display: 'inline-flex', alignItems: 'center', paddingLeft: 3 }}
       >

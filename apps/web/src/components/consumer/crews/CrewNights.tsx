@@ -21,6 +21,13 @@ interface StubRowProps {
  */
 export const StubRow = ({ show, wide, viewerId }: StubRowProps) => {
   const { month, day } = stubDate(show.iso)
+  // The going count reads differently when you were one of them, and the mono
+  // line that says so is desktop-only — so the cluster carries the same words
+  // for a screen reader at every width.
+  const wentWith =
+    viewerId !== null && show.going.some((one) => one.userId === viewerId)
+  const goingLabel = (count: number) =>
+    wentWith ? COPY.detail.together(count - 1) : COPY.detail.went(count)
 
   return (
     <Link
@@ -123,9 +130,11 @@ export const StubRow = ({ show, wide, viewerId }: StubRowProps) => {
           memberCount={show.goingCount}
           size={wide ? 26 : 23}
           max={wide ? 5 : 3}
+          label={goingLabel}
         />
         {wide && (
           <span
+            aria-hidden="true"
             style={{
               fontFamily: 'var(--font-mono)',
               fontSize: 9.5,
@@ -135,10 +144,7 @@ export const StubRow = ({ show, wide, viewerId }: StubRowProps) => {
               color: 'var(--fg-subtle)',
             }}
           >
-            {viewerId !== null &&
-            show.going.some((one) => one.userId === viewerId)
-              ? COPY.detail.together(show.goingCount - 1)
-              : COPY.detail.went(show.goingCount)}
+            {goingLabel(show.goingCount)}
           </span>
         )}
       </span>

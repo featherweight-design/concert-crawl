@@ -1,25 +1,10 @@
 // Crew-home formatting. Every date the crew home renders is a `YYYY-MM-DD`
-// string straight from `events.date`, so nothing here parses one into a local
-// `Date` — that is the #596 drift, and a stub reading "AUG 14" for a show on
-// the 15th is the visible half of it.
+// string straight from `events.date`, so a stub reading "AUG 14" for a show on
+// the 15th is the visible half of the #596 drift.
+
+import { stampDateParts } from '@/lib/passport/stamp'
 
 import { CREWS_COPY } from '../definitions/copy'
-
-/** "AUG" / "14" from `YYYY-MM-DD`, without constructing a Date. */
-const MONTHS = [
-  'JAN',
-  'FEB',
-  'MAR',
-  'APR',
-  'MAY',
-  'JUN',
-  'JUL',
-  'AUG',
-  'SEP',
-  'OCT',
-  'NOV',
-  'DEC',
-]
 
 export interface StubDate {
   month: string
@@ -27,12 +12,18 @@ export interface StubDate {
   year: string
 }
 
+/**
+ * "AUG" / "14" from `YYYY-MM-DD`. The month and day come from the passport's
+ * UTC-noon-anchored formatter rather than a second month table, so the stub and
+ * the passport punch can never disagree about the same date. The day loses its
+ * leading zero: the stub sets it at 19px, where "05" reads as a typo.
+ */
 export const stubDate = (iso: string): StubDate => {
-  const [year = '', month = '', day = ''] = iso.split('-')
-  const index = Number(month) - 1
+  const [year = ''] = iso.split('-')
+  const punch = stampDateParts(iso)
   return {
-    month: MONTHS[index] ?? '',
-    day: String(Number(day) || ''),
+    month: punch?.month ?? '',
+    day: punch === null ? '' : String(Number(punch.day) || ''),
     year,
   }
 }
@@ -70,6 +61,9 @@ const DAY_MS = 86_400_000
  * A joined date, relative while that is still the more useful reading and
  * absolute once it isn't. `now` is injectable so the test does not depend on
  * the day it runs.
+ *
+ * Not `formatRelativeTime`: that one flips to absolute at 7 days, which on a
+ * roster would put a month-and-year stamp beside someone who joined last week.
  */
 export const joinedLabel = (
   joinedAt: string,

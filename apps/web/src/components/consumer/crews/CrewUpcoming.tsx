@@ -86,8 +86,10 @@ export const CrewUpcoming = ({ shows, wide }: CrewUpcomingProps) => {
                       memberCount={show.goingCount}
                       size={wide ? 24 : 22}
                       max={wide ? 5 : 3}
+                      label={COPY.detail.going}
                     />
                     <span
+                      aria-hidden="true"
                       style={{
                         fontFamily: 'var(--font-mono)',
                         fontSize: 9.5,
