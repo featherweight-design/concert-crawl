@@ -14,6 +14,12 @@ export interface EmptyStateProps {
   eyebrow: string
   title: string
   body: string
+  /**
+   * Overrides the status rail's right-hand label. The default reads "0 / 0",
+   * which is a count of events and says nothing on a surface that isn't
+   * counting events.
+   */
+  railLabel?: string
   primaryCta?: EmptyStateCta
   secondaryCta?: EmptyStateCta
   className?: string
@@ -85,6 +91,7 @@ export function EmptyState({
   eyebrow,
   title,
   body,
+  railLabel,
   primaryCta,
   secondaryCta,
   className,
@@ -97,7 +104,8 @@ export function EmptyState({
         ? 'var(--signal)'
         : 'var(--accent)'
   const railRight =
-    state === 'error' ? 'err' : state === 'filtered' ? '0 hits' : '0 / 0'
+    railLabel ??
+    (state === 'error' ? 'err' : state === 'filtered' ? '0 hits' : '0 / 0')
 
   return (
     <div

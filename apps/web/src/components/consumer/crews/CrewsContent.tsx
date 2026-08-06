@@ -85,7 +85,17 @@ export const CrewsContent = ({
 }: CrewsContentProps) => {
   const router = useRouter()
   const wide = !useIsMobileViewport()
-  const [crews, setCrews] = useState<CrewSummary[]>(initialCrews ?? [])
+  // Only the optimistic additions live in state. Mirroring the whole server
+  // list into useState freezes it at first render, so router.refresh() refetched
+  // and the list still painted the empty state it was seeded with.
+  const [created, setCreated] = useState<CrewSummary[]>([])
+  const serverCrews = initialCrews ?? []
+  // The override clears on the SERVER value changing, not on the mutation
+  // resolving — dropping it at mutation time flashes the old list back.
+  const crews = [
+    ...created.filter((own) => !serverCrews.some((row) => row.id === own.id)),
+    ...serverCrews,
+  ]
 
   const state: CrewsState = loading
     ? 'loading'
@@ -98,7 +108,7 @@ export const CrewsContent = ({
   // A newly made crew lands at the top rather than waiting on a refetch: the
   // customer just named it, and an empty list a beat after creating one reads
   // as a failure.
-  const onCreated = (crew: CrewSummary) => setCrews((prev) => [crew, ...prev])
+  const onCreated = (crew: CrewSummary) => setCreated((prev) => [crew, ...prev])
 
   return (
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-10 pt-5">
@@ -122,7 +132,12 @@ export const CrewsContent = ({
           <div
             className="grid gap-2.5"
             style={{
-              gridTemplateColumns: wide ? '1fr 1fr' : '1fr',
+              // minmax(0,…) not `1fr`: a bare 1fr floors at min-content, so a
+              // long nowrap crew name widens the track past the viewport and
+              // the row's own ellipsis can never fire.
+              gridTemplateColumns: wide
+                ? 'minmax(0,1fr) minmax(0,1fr)'
+                : 'minmax(0,1fr)',
             }}
           >
             {[0, 1, 2, 3].map((key) => (
@@ -135,7 +150,11 @@ export const CrewsContent = ({
       {state === 'ready' && (
         <div
           className="grid gap-2.5"
-          style={{ gridTemplateColumns: wide ? '1fr 1fr' : '1fr' }}
+          style={{
+            gridTemplateColumns: wide
+              ? 'minmax(0,1fr) minmax(0,1fr)'
+              : 'minmax(0,1fr)',
+          }}
         >
           {crews.map((crew) => (
             <CrewRow key={crew.id} crew={crew} wide={wide} />
@@ -153,6 +172,7 @@ export const CrewsContent = ({
             eyebrow={COPY.empty.eyebrow}
             title={COPY.empty.title}
             body={COPY.empty.body}
+            railLabel={COPY.empty.rail}
           />
           <CreateCrewButton
             variant="empty"

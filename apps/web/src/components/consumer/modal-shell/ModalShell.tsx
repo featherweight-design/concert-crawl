@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 interface ModalShellProps {
@@ -40,6 +40,7 @@ export function ModalShell({
 }: ModalShellProps) {
   const [isMobile, setIsMobile] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const dialogRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -66,6 +67,18 @@ export function ModalShell({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [open, handleKeyDown])
 
+  // Focus stayed on the trigger behind the scrim, so a screen reader carried on
+  // reading the page the modal had just covered. Focus lands on the dialog
+  // itself rather than its first control, which would skip the heading.
+  useEffect(() => {
+    if (!open || !mounted) return
+    const trigger = document.activeElement
+    dialogRef.current?.focus()
+    return () => {
+      if (trigger instanceof HTMLElement && trigger.isConnected) trigger.focus()
+    }
+  }, [open, mounted])
+
   if (!open || !mounted) return null
 
   const heightValue = sheetHeight === 'tall' ? '85%' : '62%'
@@ -90,6 +103,8 @@ export function ModalShell({
 
       {isMobile ? (
         <div
+          ref={dialogRef}
+          tabIndex={-1}
           role={role}
           aria-modal="true"
           aria-label={ariaLabelledBy === undefined ? ariaLabel : undefined}
@@ -161,6 +176,8 @@ export function ModalShell({
         </div>
       ) : (
         <div
+          ref={dialogRef}
+          tabIndex={-1}
           role={role}
           aria-modal="true"
           aria-label={ariaLabelledBy === undefined ? ariaLabel : undefined}

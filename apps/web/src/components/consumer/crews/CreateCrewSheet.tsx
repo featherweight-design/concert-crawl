@@ -72,8 +72,32 @@ export const CreateCrewSheet = ({
       open={open}
       onClose={onClose}
       ariaLabel={COPY.title}
-      sheetHeight="short"
+      // "short" is 62% of the viewport, which on a 320×568 phone put "Make the
+      // crew" below the fold with no internal scroll to reach it.
+      sheetHeight="tall"
       desktopWidth={520}
+      header={
+        <div className="flex items-center justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="cursor-pointer"
+            style={{
+              minHeight: 44,
+              padding: '0 4px',
+              background: 'none',
+              border: 'none',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: 'var(--fg-subtle)',
+            }}
+          >
+            {COPY.close}
+          </button>
+        </div>
+      }
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-4 pb-2">
         <div className="flex flex-col gap-1.5">

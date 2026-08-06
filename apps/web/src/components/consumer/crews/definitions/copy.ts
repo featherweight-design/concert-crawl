@@ -33,6 +33,9 @@ export const CREWS_COPY = {
     eyebrow: 'NOBODY YET',
     title: 'No crews yet.',
     body: 'A crew is four friends and a group chat. We handle the calendar part.',
+    // The shared EmptyState rail counts events by default, which means nothing
+    // here.
+    rail: '0 crews',
   },
 
   create: {
@@ -48,6 +51,7 @@ export const CREWS_COPY = {
     rerollHelp:
       "Don't like it? Pull another. Renaming won't change it; only this will.",
     failed: "Couldn't start that crew. Try again.",
+    close: 'Close',
   },
 
   // Tier name and price both come from unlockTierFor('crews'), never a literal.
@@ -79,6 +83,5 @@ export const CREWS_COPY = {
     // the accessible name reads "Start a crew, paid feature".
     gatedCreate: 'paid feature',
     reroll: 'Pull a new patch',
-    close: 'Close',
   },
 } as const

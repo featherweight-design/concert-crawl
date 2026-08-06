@@ -152,8 +152,32 @@ describe('CrewsContent lapsed-plan copy (#1226)', () => {
   })
 
   it('shows the lapsed line once a subscription has existed', () => {
-    planQuery.data = plan('canceled')
+    planQuery.data = plan('cancelled')
     openGate()
     expect(screen.getByText(/needs .* again/)).toBeInTheDocument()
+  })
+})
+
+describe('CrewsContent server-data sync (#1226)', () => {
+  // The list used to seed useState from initialCrews and never look again, so
+  // the error state's retry refetched successfully and still painted "no crews".
+  it('picks up crews that arrive after the first render', () => {
+    const view = render(<CrewsContent initialCrews={null} scaRegion={false} />)
+    expect(
+      screen.getByRole('button', { name: CREWS_COPY.net.retry }),
+    ).toBeInTheDocument()
+
+    view.rerender(<CrewsContent initialCrews={[crew()]} scaRegion={false} />)
+    expect(screen.getByText('Thursdays')).toBeInTheDocument()
+    expect(screen.queryByText(CREWS_COPY.empty.title)).not.toBeInTheDocument()
+  })
+
+  it('drops an optimistic row once the server returns the same crew', () => {
+    const view = render(<CrewsContent initialCrews={[]} scaRegion={false} />)
+    fireEvent.click(screen.getAllByText(CREWS_COPY.list.create)[0]!)
+    expect(screen.getByTestId('create-sheet')).toBeInTheDocument()
+
+    view.rerender(<CrewsContent initialCrews={[crew()]} scaRegion={false} />)
+    expect(screen.getAllByText('Thursdays')).toHaveLength(1)
   })
 })
