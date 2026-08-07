@@ -1,3 +1,12 @@
+## [1.222.1](https://github.com/HartiganHM/concert-crawl/compare/v1.222.0...v1.222.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* **api:** give every Spotify fetch a hard deadline ([#1500](https://github.com/HartiganHM/concert-crawl/issues/1500)) ([6cc5c21](https://github.com/HartiganHM/concert-crawl/commit/6cc5c21ecdef8475b26326fee7d012a2506d9b40))
+* **crews:** drop the roster's duplicate spots line and Invite button ([9a57588](https://github.com/HartiganHM/concert-crawl/commit/9a575883d2fe3f27c237e8a7a176e09328a8f06f))
+* **crews:** give the crew name room on desktop and stop the tab strip clipping ([105c487](https://github.com/HartiganHM/concert-crawl/commit/105c4879a9b03f89fa5c230d6ca3cd6ee1a568d6))
+
 # [1.222.0](https://github.com/HartiganHM/concert-crawl/compare/v1.221.0...v1.222.0) (2026-08-06)
 
 
