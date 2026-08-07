@@ -5,6 +5,7 @@ import { describe, it, expect } from 'vitest'
 import {
   createSpotifyClient,
   fetchWithTimeout,
+  MAX_RETRY_AFTER_MS,
   SpotifyAuthError,
   SpotifyRateLimitError,
   SpotifyApiError,
@@ -202,6 +203,45 @@ describe('createSpotifyClient', () => {
       // toUTCString truncates to whole seconds, so allow a generous window
       expect(sleeps[0]).toBeGreaterThan(2000)
       expect(sleeps[0]).toBeLessThanOrEqual(5000)
+    })
+
+    it('refuses to sleep out a Retry-After longer than the ceiling', async () => {
+      const sleeps: number[] = []
+      const { fetchFn, calls } = makeFetchStub([
+        { status: 429, headers: { 'Retry-After': '3600' } },
+        { status: 200, body: { items: [artist('t1', 'Top One')] } },
+      ])
+      const client = createSpotifyClient('tok', {
+        fetchFn,
+        sleepFn: async (ms) => {
+          sleeps.push(ms)
+        },
+      })
+      await expect(client.getTopArtists()).rejects.toBeInstanceOf(
+        SpotifyRateLimitError,
+      )
+      // The point of the ceiling: no wait at all, and no second request.
+      expect(sleeps).toEqual([])
+      expect(calls).toHaveLength(1)
+    })
+
+    it('still sleeps a Retry-After sitting exactly on the ceiling', async () => {
+      const sleeps: number[] = []
+      const { fetchFn } = makeFetchStub([
+        {
+          status: 429,
+          headers: { 'Retry-After': String(MAX_RETRY_AFTER_MS / 1000) },
+        },
+        { status: 200, body: { items: [artist('t1', 'Top One')] } },
+      ])
+      const client = createSpotifyClient('tok', {
+        fetchFn,
+        sleepFn: async (ms) => {
+          sleeps.push(ms)
+        },
+      })
+      await client.getTopArtists()
+      expect(sleeps).toEqual([MAX_RETRY_AFTER_MS])
     })
 
     it('throws SpotifyRateLimitError on a second consecutive 429', async () => {

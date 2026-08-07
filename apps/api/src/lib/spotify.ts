@@ -158,9 +158,21 @@ const defaultSleep = (ms: number): Promise<void> =>
     setTimeout(resolve, ms)
   })
 
+/**
+ * Longest `Retry-After` we will actually wait out in-process.
+ *
+ * Spotify answers sustained over-use with a cooldown measured in hours, not
+ * seconds. Sleeping that out inside a cron run is indistinguishable from a
+ * hang: no log, no throw, no Sentry event, and the container just sits there
+ * until the platform kills it. Prod did exactly that on 2026-08-06 and again
+ * on 2026-08-07. Past this ceiling we abort instead — the caller records the
+ * rate limit and the next scheduled run picks the backlog up.
+ */
+export const MAX_RETRY_AFTER_MS = 60_000
+
 // Retry-After is delta-seconds or an HTTP-date (RFC 9110 §10.2.3); Spotify
 // sends seconds, but honor both. Unparseable or non-positive → 1s.
-const parseRetryAfterMs = (header: string | null): number => {
+export const parseRetryAfterMs = (header: string | null): number => {
   if (header === null) return 1000
   const seconds = Number(header)
   if (Number.isFinite(seconds)) {
@@ -204,7 +216,13 @@ export const createSpotifyClient = (
           `Spotify rate limit persisted after retry for ${path}`,
         )
       }
-      await sleepFn(parseRetryAfterMs(response.headers.get('Retry-After')))
+      const waitMs = parseRetryAfterMs(response.headers.get('Retry-After'))
+      if (waitMs > MAX_RETRY_AFTER_MS) {
+        throw new SpotifyRateLimitError(
+          `Spotify asked for a ${Math.ceil(waitMs / 1000)}s cooldown for ${path}, over the ${MAX_RETRY_AFTER_MS / 1000}s ceiling`,
+        )
+      }
+      await sleepFn(waitMs)
       return requestJson(path, true)
     }
 

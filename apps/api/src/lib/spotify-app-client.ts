@@ -22,6 +22,8 @@ import { z } from 'zod'
 import { httpUrl } from './url-schema.js'
 import {
   fetchWithTimeout,
+  MAX_RETRY_AFTER_MS,
+  parseRetryAfterMs,
   SpotifyApiError,
   SpotifyAuthError,
   SpotifyRateLimitError,
@@ -232,23 +234,6 @@ export const getAppToken = async (
   return cachedToken.token
 }
 
-// Retry-After is delta-seconds or an HTTP-date (RFC 9110 §10.2.3); Spotify
-// sends seconds, but honor both. Unparseable or non-positive → 1s, matching
-// spotify.ts — a literal `Retry-After: 0` must not become a tight retry loop
-// against an endpoint that is already rate-limiting us.
-const parseRetryAfterMs = (header: string | null): number => {
-  if (header === null) return 1000
-  const seconds = Number(header)
-  if (Number.isFinite(seconds)) {
-    return seconds > 0 ? seconds * 1000 : 1000
-  }
-  const dateMs = Date.parse(header)
-  if (!Number.isNaN(dateMs) && dateMs > Date.now()) {
-    return dateMs - Date.now()
-  }
-  return 1000
-}
-
 /**
  * Build an app-token Spotify client, or `null` when the credentials are
  * unset. A null return is the "PR-C not provisioned" state and callers must
@@ -289,7 +274,15 @@ export const createSpotifyAppClient = async (
           `Spotify rate limit persisted after retry for ${path}`,
         )
       }
-      await sleepFn(parseRetryAfterMs(response.headers.get('Retry-After')))
+      const waitMs = parseRetryAfterMs(response.headers.get('Retry-After'))
+      if (waitMs > MAX_RETRY_AFTER_MS) {
+        throw new SpotifyRateLimitError(
+          // Ceil, not round: a 60_001ms wait must not print as "60s cooldown,
+          // over the 60s ceiling".
+          `Spotify asked for a ${Math.ceil(waitMs / 1000)}s cooldown for ${path}, over the ${MAX_RETRY_AFTER_MS / 1000}s ceiling`,
+        )
+      }
+      await sleepFn(waitMs)
       return requestJson(path, true)
     }
 

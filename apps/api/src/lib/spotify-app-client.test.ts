@@ -250,6 +250,31 @@ describe('createSpotifyAppClient().searchArtists', () => {
       SpotifyRateLimitError,
     )
   })
+
+  it('aborts rather than sleeping out an hours-long Retry-After', async () => {
+    const sleeps: number[] = []
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValue(
+        new Response('slow down', {
+          status: 429,
+          headers: { 'Retry-After': '76000' },
+        }),
+      )
+
+    const client = await createSpotifyAppClient({
+      fetchFn,
+      sleepFn: async (ms) => {
+        sleeps.push(ms)
+      },
+    })
+    await expect(client?.searchArtists('Khruangbin')).rejects.toBeInstanceOf(
+      SpotifyRateLimitError,
+    )
+    // Sleeping this out is the silent-hang bug — the job must fail loudly.
+    expect(sleeps).toEqual([])
+  })
 })
 
 describe('createSpotifyAppClient().fetchGenres', () => {
