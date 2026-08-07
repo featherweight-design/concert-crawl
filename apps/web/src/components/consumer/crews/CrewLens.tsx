@@ -9,7 +9,8 @@
 // thin. So the lens lives in the title-block row that already exists above the
 // chips, and the filter bar's own markup is untouched.
 
-import { useId } from 'react'
+import { useId, useRef, useState } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import type { CrewSummary } from '@concert-crawl/types'
 
 import { CrewPatch } from '@/components/consumer/crew-patch'
@@ -78,6 +79,9 @@ interface CrewPickerRowProps {
   crew: CrewSummary | null
   selected: boolean
   compact: boolean
+  /** The group is one tab stop, so only the active row is reachable by Tab. */
+  tabbable: boolean
+  rowRef: (node: HTMLButtonElement | null) => void
   onSelect: () => void
 }
 
@@ -85,15 +89,19 @@ const CrewPickerRow = ({
   crew,
   selected,
   compact,
+  tabbable,
+  rowRef,
   onSelect,
 }: CrewPickerRowProps) => (
   <button
+    ref={rowRef}
     type="button"
     onClick={onSelect}
     // Picking a crew is a single-select set, not a set of independent
     // toggles, so the rows carry radio semantics rather than `aria-pressed`.
     role="radio"
     aria-checked={selected}
+    tabIndex={tabbable ? 0 : -1}
     className="flex w-full cursor-pointer items-center gap-3 text-left"
     style={{
       minHeight: 56,
@@ -170,29 +178,67 @@ const CrewPickerBody = ({
   selectedId,
   compact,
   onSelect,
-}: CrewPickerBodyProps) => (
-  <div
-    role="radiogroup"
-    aria-label={COPY.a11y.lensPicker}
-    className="flex flex-col"
-  >
-    <CrewPickerRow
-      crew={null}
-      selected={selectedId === null}
-      compact={compact}
-      onSelect={() => onSelect(null)}
-    />
-    {crews.map((crew) => (
-      <CrewPickerRow
-        key={crew.id}
-        crew={crew}
-        selected={crew.id === selectedId}
-        compact={compact}
-        onSelect={() => onSelect(crew.id)}
-      />
-    ))}
-  </div>
-)
+}: CrewPickerBodyProps) => {
+  // `null` first: the options are the reset row followed by the crews.
+  const options: (CrewSummary | null)[] = [null, ...crews]
+  const selectedIndex = options.findIndex(
+    (option) => (option?.id ?? null) === selectedId,
+  )
+  // A radiogroup is a single tab stop, so Tab lands on the checked row and the
+  // arrows move within the group from there.
+  const [activeIndex, setActiveIndex] = useState(
+    selectedIndex === -1 ? 0 : selectedIndex,
+  )
+  const rowsRef = useRef<(HTMLButtonElement | null)[]>([])
+
+  const moveTo = (index: number) => {
+    const wrapped = (index + options.length) % options.length
+    setActiveIndex(wrapped)
+    rowsRef.current[wrapped]?.focus()
+  }
+
+  const onKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const step: Record<string, number> = {
+      ArrowDown: 1,
+      ArrowRight: 1,
+      ArrowUp: -1,
+      ArrowLeft: -1,
+    }
+    if (event.key in step) {
+      event.preventDefault()
+      moveTo(activeIndex + (step[event.key] ?? 0))
+    } else if (event.key === 'Home') {
+      event.preventDefault()
+      moveTo(0)
+    } else if (event.key === 'End') {
+      event.preventDefault()
+      moveTo(options.length - 1)
+    }
+  }
+
+  return (
+    <div
+      role="radiogroup"
+      aria-label={COPY.a11y.lensPicker}
+      onKeyDown={onKeyDown}
+      className="flex flex-col"
+    >
+      {options.map((crew, index) => (
+        <CrewPickerRow
+          key={crew?.id ?? 'everyone'}
+          crew={crew}
+          selected={(crew?.id ?? null) === selectedId}
+          compact={compact}
+          tabbable={index === activeIndex}
+          rowRef={(node) => {
+            rowsRef.current[index] = node
+          }}
+          onSelect={() => onSelect(crew?.id ?? null)}
+        />
+      ))}
+    </div>
+  )
+}
 
 interface CrewLensPillProps {
   crews: CrewSummary[]

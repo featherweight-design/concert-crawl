@@ -119,12 +119,13 @@ describe('/v1/crews', () => {
   describe('auth and entitlement shape', () => {
     it('returns 401 on every route when unauthenticated', async () => {
       const crewId = randomUUID()
+      const eventId = randomUUID()
       const routes: [string, string][] = [
         ['GET', '/v1/crews'],
         ['POST', '/v1/crews'],
         ['GET', `/v1/crews/${crewId}`],
         ['GET', `/v1/crews/${crewId}/shows`],
-        ['GET', `/v1/crews/event-going/${crewId}`],
+        ['GET', `/v1/crews/event-going/${eventId}`],
         ['PATCH', `/v1/crews/${crewId}`],
         ['POST', `/v1/crews/${crewId}/patch/reroll`],
         ['DELETE', `/v1/crews/${crewId}`],

@@ -96,6 +96,27 @@ describe('CrewLensPill', () => {
       'true',
     )
   })
+
+  it('keeps the group to one tab stop and moves focus with the arrows', () => {
+    render(
+      <CrewLensPill
+        crews={CREWS}
+        activeCrew={CREWS[0]!}
+        onSelect={vi.fn()}
+        wide={false}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button'))
+
+    const options = screen.getAllByRole('radio')
+    expect(options.filter((opt) => opt.tabIndex === 0)).toHaveLength(1)
+
+    fireEvent.keyDown(screen.getByRole('radiogroup'), { key: 'ArrowDown' })
+    expect(screen.getByRole('radio', { name: /Night Shift/ })).toHaveFocus()
+
+    fireEvent.keyDown(screen.getByRole('radiogroup'), { key: 'Home' })
+    expect(screen.getByRole('radio', { name: /Everyone/ })).toHaveFocus()
+  })
 })
 
 describe('CrewLensRail', () => {
