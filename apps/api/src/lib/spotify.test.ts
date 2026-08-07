@@ -4,9 +4,11 @@
 import { describe, it, expect } from 'vitest'
 import {
   createSpotifyClient,
+  fetchWithTimeout,
   SpotifyAuthError,
   SpotifyRateLimitError,
   SpotifyApiError,
+  SpotifyTimeoutError,
 } from './spotify.js'
 
 interface StubCall {
@@ -226,6 +228,84 @@ describe('createSpotifyClient', () => {
         expect(failure.status).toBe(503)
       }
     })
+  })
+
+  it('gives up on a Spotify endpoint that accepts the connection and never answers', async () => {
+    // A hang, not an error: without the deadline this fetch never settles and
+    // the caller (a cron run) blocks silently forever.
+    const hangingFetch: typeof fetch = (_input, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('Aborted', 'AbortError'))
+        })
+      })
+
+    await expect(
+      fetchWithTimeout(hangingFetch, 'https://api.spotify.com/v1/me', {}, 20),
+    ).rejects.toBeInstanceOf(SpotifyTimeoutError)
+  })
+
+  it('keeps the query string out of the timeout message', async () => {
+    const hangingFetch: typeof fetch = (_input, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('Aborted', 'AbortError'))
+        })
+      })
+
+    const failure = await fetchWithTimeout(
+      hangingFetch,
+      'https://api.spotify.com/v1/search?q=khruangbin&type=artist',
+      {},
+      20,
+    ).catch((err: unknown) => err)
+
+    expect(failure).toBeInstanceOf(SpotifyTimeoutError)
+    if (failure instanceof SpotifyTimeoutError) {
+      expect(failure.message).toContain('https://api.spotify.com/v1/search')
+      expect(failure.message).not.toContain('khruangbin')
+    }
+  })
+
+  it('lets a real network error through even after the deadline elapses', async () => {
+    // The connection dies on its own, slowly enough that the deadline has
+    // already fired by the time the rejection surfaces. Reporting that as a
+    // timeout would bury the actual cause.
+    const failingFetch: typeof fetch = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 40))
+      throw new TypeError('fetch failed')
+    }
+
+    const failure = await fetchWithTimeout(
+      failingFetch,
+      'https://api.spotify.com/v1/me',
+      {},
+      10,
+    ).catch((err: unknown) => err)
+
+    expect(failure).toBeInstanceOf(TypeError)
+    expect(failure).not.toBeInstanceOf(SpotifyTimeoutError)
+  })
+
+  it('keeps a caller-supplied signal alongside the timeout', async () => {
+    const controller = new AbortController()
+    const hangingFetch: typeof fetch = (_input, init) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => {
+          reject(new DOMException('Aborted', 'AbortError'))
+        })
+      })
+
+    const pending = fetchWithTimeout(
+      hangingFetch,
+      'https://api.spotify.com/v1/me',
+      { signal: controller.signal },
+      60_000,
+    )
+    controller.abort()
+
+    // The caller's abort wins, so it surfaces as an abort, not a timeout.
+    await expect(pending).rejects.not.toBeInstanceOf(SpotifyTimeoutError)
   })
 
   it('counts every HTTP call for cost tracking (E10)', async () => {

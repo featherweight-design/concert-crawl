@@ -11,7 +11,7 @@ import {
   runMatchArtists,
 } from './match-artists.js'
 import type { SpotifyAppClient } from '../lib/spotify-app-client.js'
-import { SpotifyRateLimitError } from '../lib/spotify.js'
+import { SpotifyRateLimitError, SpotifyTimeoutError } from '../lib/spotify.js'
 
 const NOW = new Date('2026-08-01T12:00:00Z')
 const DAY_MS = 24 * 60 * 60 * 1000
@@ -144,6 +144,30 @@ describe('runMatchArtists', () => {
 
     expect(summary.abortedReason).toBe('rate_limit')
     expect(summary.considered).toBe(0)
+    const rows = await testDb.select().from(artists).orderBy(asc(artists.name))
+    expect(rows.map((row) => row.matchStatus)).toEqual([
+      'unmatched',
+      'unmatched',
+    ])
+    expect(rows.every((row) => row.matchCheckedAt === null)).toBe(true)
+  })
+
+  it('aborts the batch on a Spotify timeout rather than retrying every row', async () => {
+    await seedArtist({ canonicalName: 'aaa first' })
+    await seedArtist({ canonicalName: 'bbb second' })
+    let searches = 0
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => {
+        searches += 1
+        throw new SpotifyTimeoutError()
+      }),
+    })
+
+    expect(summary.abortedReason).toBe('timeout')
+    expect(summary.considered).toBe(0)
+    expect(searches).toBe(1)
     const rows = await testDb.select().from(artists).orderBy(asc(artists.name))
     expect(rows.map((row) => row.matchStatus)).toEqual([
       'unmatched',

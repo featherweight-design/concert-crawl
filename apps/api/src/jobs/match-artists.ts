@@ -31,7 +31,11 @@ import {
   createSpotifyAppClient,
   type SpotifyAppClient,
 } from '../lib/spotify-app-client.js'
-import { SpotifyAuthError, SpotifyRateLimitError } from '../lib/spotify.js'
+import {
+  SpotifyAuthError,
+  SpotifyRateLimitError,
+  SpotifyTimeoutError,
+} from '../lib/spotify.js'
 
 /** Rows touched per run. Spotify's app-token search quota is the constraint. */
 export const MATCH_BATCH_SIZE = 100
@@ -49,7 +53,7 @@ export interface MatchArtistsSummary {
   noMatch: number
   photosRefreshed: number
   failures: number
-  abortedReason: 'rate_limit' | 'auth' | null
+  abortedReason: 'rate_limit' | 'auth' | 'timeout' | null
   spotifyCalls: number
 }
 
@@ -180,6 +184,18 @@ export const runMatchArtists = async (
           { artistId: row.id },
           'match-artists: rate limited — aborting batch',
         )
+        break
+      }
+      if (err instanceof SpotifyTimeoutError) {
+        // A stalled Spotify would otherwise cost the full timeout on every
+        // remaining row, turning one hang into a batch-long one.
+        summary.abortedReason = 'timeout'
+        summary.considered -= 1
+        apiLogger.error(
+          { err, artistId: row.id },
+          'match-artists: Spotify timed out — aborting batch',
+        )
+        Sentry.captureException(err, { tags: { job: 'match-artists' } })
         break
       }
       if (err instanceof SpotifyAuthError) {

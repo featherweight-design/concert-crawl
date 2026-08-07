@@ -21,6 +21,7 @@
 import { z } from 'zod'
 import { httpUrl } from './url-schema.js'
 import {
+  fetchWithTimeout,
   SpotifyApiError,
   SpotifyAuthError,
   SpotifyRateLimitError,
@@ -188,7 +189,7 @@ export const getAppToken = async (
     `${credentials.clientId}:${credentials.clientSecret}`,
   ).toString('base64')
 
-  const response = await fetchFn(SPOTIFY_TOKEN_URL, {
+  const response = await fetchWithTimeout(fetchFn, SPOTIFY_TOKEN_URL, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${basic}`,
@@ -270,9 +271,11 @@ export const createSpotifyAppClient = async (
     retried = false,
   ): Promise<unknown> => {
     callCount += 1
-    const response = await fetchFn(`${SPOTIFY_API_BASE}${path}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const response = await fetchWithTimeout(
+      fetchFn,
+      `${SPOTIFY_API_BASE}${path}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
 
     if (response.status === 401 || response.status === 403) {
       throw new SpotifyAuthError(

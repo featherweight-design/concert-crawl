@@ -40,6 +40,78 @@ export class SpotifyApiError extends Error {
   }
 }
 
+export class SpotifyTimeoutError extends Error {
+  constructor(message = 'Spotify request timed out') {
+    super(message)
+    this.name = 'SpotifyTimeoutError'
+  }
+}
+
+/**
+ * Ceiling on a single Spotify HTTP call. `fetch` has no default timeout, so an
+ * endpoint that accepts the connection and then never answers blocks forever.
+ * A cron job hung that way never logs, never throws, and never reaches Sentry —
+ * it just stops advancing `lastSuccessfulRunAt`, which is invisible from
+ * outside. Prod hit exactly that on 2026-08-06: match-artists ran for ~80
+ * minutes doing nothing while every trigger still returned HTTP 200.
+ */
+export const SPOTIFY_REQUEST_TIMEOUT_MS = 15_000
+
+// A timed-out `/search` would otherwise carry its query string — an artist
+// name read from the DB — into every log line and Sentry event.
+const withoutQuery = (input: string): string => {
+  try {
+    const url = new URL(input)
+    return `${url.origin}${url.pathname}`
+  } catch {
+    return input
+  }
+}
+
+// `AbortSignal.timeout` rejects with a `TimeoutError`; a controller rejects
+// with an `AbortError`. Either can reach us through `AbortSignal.any`.
+const isAbortError = (err: unknown): boolean =>
+  err instanceof Error &&
+  (err.name === 'AbortError' || err.name === 'TimeoutError')
+
+/**
+ * `fetch` with a hard deadline, translating an abort into the shared error
+ * taxonomy so callers handle one set of failures. Any caller-supplied signal is
+ * kept — the timeout is added to it, never a replacement for it.
+ */
+export const fetchWithTimeout = async (
+  fetchFn: typeof fetch,
+  input: string,
+  init: RequestInit = {},
+  timeoutMs: number = SPOTIFY_REQUEST_TIMEOUT_MS,
+): Promise<Response> => {
+  const callerSignal = init.signal instanceof AbortSignal ? init.signal : null
+  const timeoutSignal = AbortSignal.timeout(timeoutMs)
+  const signal =
+    callerSignal === null
+      ? timeoutSignal
+      : AbortSignal.any([callerSignal, timeoutSignal])
+
+  try {
+    return await fetchFn(input, { ...init, signal })
+  } catch (err) {
+    // Only our own deadline makes a timeout. A caller's abort stays the
+    // caller's, and a genuine network error stays itself even when the
+    // deadline happens to elapse while it is surfacing — misreporting either
+    // one would bury the real cause under a wrong Sentry title.
+    if (
+      isAbortError(err) &&
+      timeoutSignal.aborted &&
+      callerSignal?.aborted !== true
+    ) {
+      throw new SpotifyTimeoutError(
+        `Spotify request exceeded ${timeoutMs}ms for ${withoutQuery(input)}`,
+      )
+    }
+    throw err
+  }
+}
+
 const artistSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
@@ -114,9 +186,11 @@ export const createSpotifyClient = (
     retried = false,
   ): Promise<unknown> => {
     callCount += 1
-    const response = await fetchFn(`${SPOTIFY_API_BASE}${path}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
+    const response = await fetchWithTimeout(
+      fetchFn,
+      `${SPOTIFY_API_BASE}${path}`,
+      { headers: { Authorization: `Bearer ${accessToken}` } },
+    )
 
     if (response.status === 401 || response.status === 403) {
       throw new SpotifyAuthError(
