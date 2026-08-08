@@ -55,7 +55,7 @@ import {
 } from './stripe-provision-helpers.js'
 
 // Pinned to the installed stripe@22 SDK types (matches apps/api/src/lib/stripe.ts).
-const STRIPE_API_VERSION = '2026-06-24.dahlia'
+const STRIPE_API_VERSION = '2026-07-29.dahlia'
 
 /**
  * Minimal structural boundary over the Stripe SDK slice this script uses,

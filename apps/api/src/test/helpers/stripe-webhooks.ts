@@ -12,13 +12,14 @@ import type {
   StripeInvoicePreviewParams,
   StripeSubscriptionUpdateParams,
 } from '../../lib/stripe.js'
+import { STRIPE_API_VERSION } from '../../lib/stripe.js'
 import { createStripeWebhooksRouter } from '../../routes/stripe-webhooks.js'
 
 export const TEST_WEBHOOK_SECRET = 'whsec_test_secret_for_vitest'
 
 // Key never used for network calls — webhooks utilities are offline.
 const stripeSdk = new Stripe('sk_test_dummy_key_never_used', {
-  apiVersion: '2026-06-24.dahlia',
+  apiVersion: STRIPE_API_VERSION,
 })
 
 export interface FakeWebhookStripe {
