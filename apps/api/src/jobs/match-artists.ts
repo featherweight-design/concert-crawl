@@ -3,7 +3,7 @@
 // Spotify identity-match job for the artists projection table (#1115, plan
 // PR-C Task 9).
 //
-// Two kinds of work, one pass:
+// Three kinds of work, one pass:
 //
 //   1. IDENTITY  — rows with matchStatus 'unmatched', oldest first, capped at
 //                  MATCH_BATCH_SIZE. Each gets a confidence-gated match
@@ -15,6 +15,14 @@
 //                  identity: if the re-search no longer resolves, the row
 //                  keeps its spotifyArtistId and matchStatus and only
 //                  matchCheckedAt moves.
+//   3. RETRY     — 'no_match' rows last checked more than NO_MATCH_RETRY_DAYS
+//                  ago. Without this they are terminal, and a local band that
+//                  simply wasn't on Spotify the night we first looked would
+//                  never be looked at again however much they released after.
+//
+// 'ambiguous' is deliberately NOT retried. It means Spotify returned several
+// exact-name candidates, so asking again just reproduces the same tie — only
+// the admin candidate picker can break it.
 //
 // DORMANT UNTIL PROVISIONED: createSpotifyAppClient() returns null when
 // SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET are unset, and this job then
@@ -42,6 +50,14 @@ export const MATCH_BATCH_SIZE = 100
 
 /** Cached Spotify photo URLs older than this are re-fetched. */
 export const PHOTO_REFETCH_DAYS = 7
+
+/**
+ * How long a 'no_match' verdict stands before the job asks Spotify again.
+ * Long, because the only thing that changes the answer is Spotify's catalogue
+ * gaining the artist — which is slow — and every retry spends the search quota
+ * that MATCH_BATCH_SIZE exists to ration.
+ */
+export const NO_MATCH_RETRY_DAYS = 30
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -95,7 +111,14 @@ export const runMatchArtists = async (
     return summary
   }
 
-  const staleBefore = new Date(now().getTime() - PHOTO_REFETCH_DAYS * DAY_MS)
+  // One instant for both cutoffs. They describe a single batch's selection
+  // window, so reading the clock twice could straddle a tick and leave the two
+  // halves of the same query disagreeing about when "now" was. The per-row
+  // now() calls below are deliberately separate: those stamp when each row was
+  // actually checked, which is not the same question.
+  const selectedAt = now().getTime()
+  const staleBefore = new Date(selectedAt - PHOTO_REFETCH_DAYS * DAY_MS)
+  const retryBefore = new Date(selectedAt - NO_MATCH_RETRY_DAYS * DAY_MS)
 
   const rows = await db
     .select({
@@ -107,6 +130,13 @@ export const runMatchArtists = async (
     .where(
       or(
         eq(artists.matchStatus, 'unmatched'),
+        // Both writers of matchStatus set matchCheckedAt in the same update,
+        // so a 'no_match' row always carries one and this comparison never
+        // silently drops a row to NULL.
+        and(
+          eq(artists.matchStatus, 'no_match'),
+          lt(artists.matchCheckedAt, retryBefore),
+        ),
         and(
           eq(artists.matchStatus, 'matched'),
           isNotNull(artists.photoUrl),
@@ -115,6 +145,9 @@ export const runMatchArtists = async (
       ),
     )
     // Oldest first: never-checked rows lead, then the least recently checked.
+    // This is what keeps retries cheap — 'unmatched' rows have a NULL
+    // matchCheckedAt, so they always sort ahead and a backlog of retries can
+    // only ever spend budget the first-pass work didn't want.
     .orderBy(sql`${artists.matchCheckedAt} asc nulls first`, artists.createdAt)
     .limit(batchSize)
 

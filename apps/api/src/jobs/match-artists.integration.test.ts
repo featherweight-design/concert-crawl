@@ -8,6 +8,7 @@ import { testDb } from '../test/helpers/db.js'
 import { apiLogger } from '../lib/logger.js'
 import {
   MATCH_BATCH_SIZE,
+  NO_MATCH_RETRY_DAYS,
   PHOTO_REFETCH_DAYS,
   runMatchArtists,
 } from './match-artists.js'
@@ -260,6 +261,76 @@ describe('runMatchArtists', () => {
     expect(row?.spotifyArtistId).toBe('sp_khru')
     expect(row?.photoUrl).toBe('https://i.scdn.co/image/expired')
     expect(row?.matchCheckedAt).toEqual(NOW)
+  })
+
+  it(`retries a no_match row checked over ${NO_MATCH_RETRY_DAYS} days ago`, async () => {
+    const staleId = await seedArtist({
+      canonicalName: 'khruangbin',
+      matchStatus: 'no_match',
+      matchCheckedAt: new Date(
+        NOW.getTime() - (NO_MATCH_RETRY_DAYS + 1) * DAY_MS,
+      ),
+    })
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => [
+        {
+          id: 'sp_khru',
+          name: 'Khruangbin',
+          images: [{ url: 'https://i.scdn.co/image/khru' }],
+          popularity: 70,
+        },
+      ]),
+    })
+
+    // A retry that resolves is a new identity, not a photo refresh.
+    expect(summary).toMatchObject({ considered: 1, matched: 1 })
+    const row = await readArtist(staleId)
+    expect(row?.matchStatus).toBe('matched')
+    expect(row?.spotifyArtistId).toBe('sp_khru')
+    expect(row?.photoUrl).toBe('https://i.scdn.co/image/khru')
+    expect(row?.matchCheckedAt).toEqual(NOW)
+  })
+
+  it('leaves a recently checked no_match row alone', async () => {
+    const freshId = await seedArtist({
+      canonicalName: 'khruangbin',
+      matchStatus: 'no_match',
+      matchCheckedAt: new Date(
+        NOW.getTime() - (NO_MATCH_RETRY_DAYS - 1) * DAY_MS,
+      ),
+    })
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => {
+        throw new Error('Spotify must not be asked about a fresh no_match')
+      }),
+    })
+
+    expect(summary.considered).toBe(0)
+    expect((await readArtist(freshId))?.matchStatus).toBe('no_match')
+  })
+
+  it('never retries an ambiguous row, however stale', async () => {
+    const ancientId = await seedArtist({
+      canonicalName: 'nirvana',
+      matchStatus: 'ambiguous',
+      matchCheckedAt: new Date(NOW.getTime() - 365 * DAY_MS),
+    })
+
+    // Re-searching reproduces the same exact-name tie; only the admin
+    // candidate picker can resolve it, so spending quota here buys nothing.
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => {
+        throw new Error('Spotify must not be asked about an ambiguous row')
+      }),
+    })
+
+    expect(summary.considered).toBe(0)
+    expect((await readArtist(ancientId))?.matchStatus).toBe('ambiguous')
   })
 
   it('logs and continues past a single-row failure', async () => {
