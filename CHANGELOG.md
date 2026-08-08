@@ -1,3 +1,16 @@
+# [1.229.0](https://github.com/HartiganHM/concert-crawl/compare/v1.228.0...v1.229.0) (2026-08-08)
+
+
+### Bug Fixes
+
+* **settings:** drop a redundant undefined union and cover the new defaults ([2d808f2](https://github.com/HartiganHM/concert-crawl/commit/2d808f2e2f53ab7d2677ae83d975812f5a5540eb))
+* **web:** make notification section ids per-instance ([9dce916](https://github.com/HartiganHM/concert-crawl/commit/9dce916e753dec718b54f2211aae6f5d68b765ea))
+
+
+### Features
+
+* **settings:** add the Artists you follow notification group ([aa3c5c3](https://github.com/HartiganHM/concert-crawl/commit/aa3c5c368c09347ec74d2a1ea0545e8824c8a8b1))
+
 # [1.228.0](https://github.com/HartiganHM/concert-crawl/compare/v1.227.0...v1.228.0) (2026-08-08)
 
 
