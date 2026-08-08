@@ -21,7 +21,7 @@ Verified against `origin/main` at e8df22f2d. Anything not listed here is new.
 
 | Thing | Where | State |
 |---|---|---|
-| `artists` projection table | `packages/db/src/schema/social.ts:41` | Ships. Projection off event billing; `hidden` kill switch |
+| `artists` projection table | `packages/db/src/schema/artists.ts:41` | Ships. Projection off event billing; `hidden` kill switch |
 | `user_artist_follows` with `source` enum | `packages/db/src/schema/social.ts:84` | Ships. `'manual' \| 'spotify_followed' \| 'spotify_top'` |
 | `POST/DELETE /v1/artists/:slug/follow` | `apps/api/src/routes/artist-follows.ts` | Ships. POST carries `requireFeature('following')`; DELETE deliberately does not |
 | `following` entitlement, premium+ | `packages/entitlements/src/index.ts:84` | Ships. free/supporter = `paywall-on-tap`, logged-out = `tier-picker-on-tap` |
