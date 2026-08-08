@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.37.0-beta',
+    date: 'Aug 8, 2026',
+    headline: 'The show you said yes to has somewhere to sit.',
+    items: [
+      {
+        kind: 'fixed',
+        text: "Tapping I'm going! used to make a show vanish until the night had already passed. The second My shows tab is now Concerts, and it opens on Upcoming.",
+      },
+      {
+        kind: 'changed',
+        text: 'Your nights, venues and spend still count the shows behind you, and the calendar export is still a record of what happened.',
+      },
+    ],
+  },
+  {
     version: 'v0.36.0-beta',
     date: 'Aug 8, 2026',
     headline: 'Following an artist finally does something.',

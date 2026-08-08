@@ -66,7 +66,11 @@ describe('GET /passport/[ratio]', () => {
     getTokenMock.mockResolvedValue('test-token')
     fetchMeMock.mockResolvedValue(profile)
     fetchHistoryMock.mockResolvedValue({
-      data: { shows: [historyShow(1), historyShow(2)], stats: {} },
+      data: {
+        past: [historyShow(1), historyShow(2)],
+        upcoming: [],
+        stats: {},
+      },
       locked: false,
     })
   })
@@ -142,8 +146,10 @@ describe('GET /passport/[ratio]', () => {
   it(
     'renders a passport for an account with nothing attended yet',
     async () => {
+      // A night still ahead of you is not a stamp: the card is drawn from the
+      // past half alone, so this account is empty despite the upcoming row.
       fetchHistoryMock.mockResolvedValue({
-        data: { shows: [], stats: {} },
+        data: { past: [], upcoming: [historyShow(1)], stats: {} },
         locked: false,
       })
 

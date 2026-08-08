@@ -19,7 +19,7 @@ describe('MyShowsTabs', () => {
       '/watching',
     )
     expect(
-      screen.getByRole('link', { name: new RegExp(COPY.history) }),
+      screen.getByRole('link', { name: new RegExp(COPY.concerts) }),
     ).toHaveAttribute('href', '/history')
   })
 
@@ -31,15 +31,15 @@ describe('MyShowsTabs', () => {
       'page',
     )
     expect(
-      screen.getByRole('link', { name: new RegExp(COPY.history) }),
+      screen.getByRole('link', { name: new RegExp(COPY.concerts) }),
     ).not.toHaveAttribute('aria-current')
   })
 
-  it('marks History as the current page when active', () => {
+  it('marks Concerts as the current page when active', () => {
     render(<MyShowsTabs active="history" />)
 
     expect(
-      screen.getByRole('link', { name: new RegExp(COPY.history) }),
+      screen.getByRole('link', { name: new RegExp(COPY.concerts) }),
     ).toHaveAttribute('aria-current', 'page')
     expect(
       screen.getByRole('link', { name: COPY.watching }),
@@ -62,6 +62,8 @@ describe('MyShowsTabs', () => {
     // Match the chip's shape ("+ <tier>"), not one tier's name — renaming the
     // tier shouldn't let the chip regress past this test.
     expect(screen.queryByText(/^\+\s*\S/)).toBeNull()
-    expect(screen.getByRole('link', { name: COPY.history })).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: COPY.concerts }),
+    ).toBeInTheDocument()
   })
 })

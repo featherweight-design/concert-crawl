@@ -1,11 +1,14 @@
-// Reverse-chronological month buckets for the History list.
+// Month buckets for the Concerts list, in whatever order the server sent.
 //
 // Watching's grouper (WatchingContent.groupShows) buckets *forward* — tonight /
-// this week / next week, then month names. History only ever looks backwards, so
-// the relative buckets are meaningless here; the shape is the same
-// (insertion-ordered groups with a mono label and a count) and the API already
-// returns rows newest-first, so this preserves the server's order rather than
-// re-sorting.
+// this week / next week, then month names. Neither half of Concerts wants those
+// relative buckets; the shape is the same (insertion-ordered groups with a mono
+// label and a count).
+//
+// This never sorts. It walks the rows once and opens a bucket per new month, so
+// the reading direction is the API's to decide: Past arrives newest-first and
+// buckets backwards, Upcoming arrives soonest-first and buckets forwards (#1357).
+// Re-sorting here would break one of the two halves.
 
 import type { HistoryShow } from '@concert-crawl/types'
 

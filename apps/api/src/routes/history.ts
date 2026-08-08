@@ -1,8 +1,17 @@
 // apps/api/src/routes/history.ts
 //
-// Concert History (#70) — the nights a user explicitly said "I'm going!" to.
-// Never derived from the watch list: Watching and Attending are separate
-// concepts, and that separation is asserted at this boundary in the tests.
+// The nights a user explicitly said "I'm going!" to (#70). Never derived from
+// the watch list: Watching and Attending are separate concepts, and that
+// separation is asserted at this boundary in the tests.
+//
+// #1357 split the response by time rather than adding a second endpoint: a
+// "going" future show and a past one are the same row, so one read serves both
+// and the two halves can never disagree about what attendance is. The split
+// happens in memory against a `today` the same statement produced, because two
+// queries would each evaluate their own NOW() and a show could fall through the
+// gap — or land in both halves — if the clock crossed midnight between them.
+// The route, the entitlement key and this module keep the `history` identifier;
+// only the customer-facing label moved to "Concerts".
 //
 // #764 first-timer predicate (do not build until #764 opens):
 //   SELECT EXISTS (
@@ -18,7 +27,7 @@
 
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { and, desc, eq, isNotNull, ne, sql } from 'drizzle-orm'
+import { and, asc, eq, isNotNull, ne, sql } from 'drizzle-orm'
 import { db, userEvents, events, venues } from '@concert-crawl/db'
 import type { HistoryShow, HistoryResponse } from '@concert-crawl/types'
 import { requireFeature } from '../middleware/entitlement.js'
@@ -67,9 +76,19 @@ const parsePrice = (raw: string | null): number | null => {
   return Number.isNaN(parsed) ? null : parsed
 }
 
-const loadHistory = async (userId: string): Promise<HistoryShow[]> => {
+interface Attendance {
+  past: HistoryShow[]
+  upcoming: HistoryShow[]
+}
+
+const loadAttendance = async (userId: string): Promise<Attendance> => {
   const rows = await db
     .select({
+      // Mountain Time, not UTC: a late-evening Denver user would otherwise see
+      // tonight's show cross into Past hours early. Selected as a column so the
+      // boundary is one value from one statement, shared by both halves. Cast
+      // to text to compare against `events.date`, which is also YYYY-MM-DD.
+      today: sql<string>`((NOW() AT TIME ZONE ${MT_TIME_ZONE})::date)::text`,
       eventId: events.id,
       artist: events.artist,
       date: events.date,
@@ -88,26 +107,27 @@ const loadHistory = async (userId: string): Promise<HistoryShow[]> => {
       and(
         eq(userEvents.userId, userId),
         isNotNull(userEvents.attendingAt),
-        // Mountain Time, not UTC: a late-evening Denver user would otherwise
-        // see tonight's show appear in History hours early.
-        sql`${events.date} < (NOW() AT TIME ZONE ${MT_TIME_ZONE})::date`,
         eq(events.hiddenFromConsumer, false),
         // #1212: event_status has no terminal value, so a past date plus
         // not-cancelled is the definition of "this show happened". Postponed
         // rows stay in — the surviving date row is the one that matters.
+        // A cancelled show is equally not a night you are going to.
         ne(events.status, 'cancelled'),
       ),
     )
-    .orderBy(desc(events.date), desc(events.showTime))
+    .orderBy(asc(events.date), asc(events.showTime))
 
-  // The query filters `attending_at IS NOT NULL`, so a null here is impossible
-  // rather than merely unlikely. Dropping such a row keeps a broken invariant
-  // out of History instead of inventing a commitment time the user never made.
-  return rows
-    .filter((row): row is (typeof rows)[number] & { attendingAt: Date } =>
-      Boolean(row.attendingAt),
-    )
-    .map((row) => ({
+  const past: HistoryShow[] = []
+  const upcoming: HistoryShow[] = []
+
+  for (const row of rows) {
+    // The query filters `attending_at IS NOT NULL`, so a null here is
+    // impossible rather than merely unlikely. Dropping such a row keeps a
+    // broken invariant off the surface instead of inventing a commitment the
+    // user never made.
+    if (!row.attendingAt) continue
+
+    const show: HistoryShow = {
       eventId: row.eventId,
       artist: row.artist,
       venueName: row.venueName,
@@ -119,7 +139,20 @@ const loadHistory = async (userId: string): Promise<HistoryShow[]> => {
       priceFinal: parsePrice(row.ticketPriceMin ?? null),
       genre: row.genre?.[0] ?? null,
       attendingAt: row.attendingAt.toISOString(),
-    }))
+    }
+
+    if (row.date < row.today) {
+      past.push(show)
+    } else {
+      upcoming.push(show)
+    }
+  }
+
+  // Past reads backwards from the most recent night; upcoming reads forwards
+  // from the next one. Both start at today and move away from it.
+  past.reverse()
+
+  return { past, upcoming }
 }
 
 export const historyRouter = new Hono<{ Variables: EntitlementVariables }>()
@@ -134,9 +167,12 @@ historyRouter.get('/export.ics', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
 
-  const shows = await loadHistory(authInfo.userId)
+  // Past only. The export is a record of nights that happened; a show still
+  // ahead of you belongs in your calendar via the show page, not via a file
+  // named for your history.
+  const { past } = await loadAttendance(authInfo.userId)
 
-  return new Response(buildHistoryIcs(shows), {
+  return new Response(buildHistoryIcs(past), {
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
       'Content-Disposition': 'attachment; filename="concert-crawl-history.ics"',
@@ -150,8 +186,13 @@ historyRouter.get('/', async (ctx) => {
   if (!authInfo?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
 
-  const shows = await loadHistory(authInfo.userId)
-  const data: HistoryResponse = { shows, stats: computeHistoryStats(shows) }
+  const { past, upcoming } = await loadAttendance(authInfo.userId)
+  const data: HistoryResponse = {
+    past,
+    upcoming,
+    // Nights, venues, spend: all past-tense claims, so upcoming stays out.
+    stats: computeHistoryStats(past),
+  }
 
   return ctx.json({ success: true, data })
 })

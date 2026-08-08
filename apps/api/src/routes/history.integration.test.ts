@@ -49,10 +49,18 @@ const seedSupporter = async (userId = USER_ID): Promise<void> => {
   })
 }
 
+type HistoryRow = {
+  eventId: string
+  artist: string
+  dateLabel: string
+  showTime: string | null
+}
+
 type Body = {
   success: boolean
   data: {
-    shows: { eventId: string; artist: string; dateLabel: string }[]
+    past: HistoryRow[]
+    upcoming: HistoryRow[]
     stats: { nights: number; venues: number; totalSpent: number | null }
   }
 }
@@ -90,7 +98,7 @@ describe('GET /v1/history', () => {
     setAuth()
     await seedSupporter()
     const body = await getHistory()
-    expect(body.data.shows).toHaveLength(0)
+    expect(body.data.past).toHaveLength(0)
     expect(body.data.stats.nights).toBe(0)
     expect(body.data.stats.totalSpent).toBeNull()
   })
@@ -111,15 +119,15 @@ describe('GET /v1/history', () => {
     })
 
     const body = await getHistory()
-    expect(body.data.shows).toHaveLength(1)
-    expect(body.data.shows[0]?.artist).toBe('Khruangbin')
+    expect(body.data.past).toHaveLength(1)
+    expect(body.data.past[0]?.artist).toBe('Khruangbin')
     // Mountain Time, not UTC — a UTC label would read "Jun 1" off by a day for
     // late-evening rows.
-    expect(body.data.shows[0]?.dateLabel).toBe('Mon, Jun 1')
+    expect(body.data.past[0]?.dateLabel).toBe('Mon, Jun 1')
     // show_time is a wall-clock Postgres `time` already in Mountain, so it must
     // pass through untouched. Treating it as a UTC instant and converting to
     // Denver would render this 20:00 door as "2:00 PM".
-    expect(body.data.shows[0]?.showTime).toBe('8:00 PM')
+    expect(body.data.past[0]?.showTime).toBe('8:00 PM')
     expect(body.data.stats.nights).toBe(1)
     expect(body.data.stats.venues).toBe(1)
     expect(body.data.stats.totalSpent).toBe(45)
@@ -133,7 +141,7 @@ describe('GET /v1/history', () => {
     await seedUserEvent(USER_ID, event.id, { status: 'watching' })
 
     const body = await getHistory()
-    expect(body.data.shows).toHaveLength(0)
+    expect(body.data.past).toHaveLength(0)
   })
 
   it('includes a show the user both watched and attended', async () => {
@@ -147,21 +155,73 @@ describe('GET /v1/history', () => {
     })
 
     const body = await getHistory()
-    expect(body.data.shows).toHaveLength(1)
+    expect(body.data.past).toHaveLength(1)
   })
 
-  it('excludes a future attended show', async () => {
+  it('puts a future attended show in upcoming, not past (#1357)', async () => {
     setAuth()
     await seedSupporter()
     const venue = await seedVenue()
-    const event = await seedEvent(venue.id, { date: '2099-06-01' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Still Ahead',
+      date: '2099-06-01',
+    })
     await seedUserEvent(USER_ID, event.id, {
       status: null,
       attendingAt: ATTENDED,
     })
 
     const body = await getHistory()
-    expect(body.data.shows).toHaveLength(0)
+    expect(body.data.past).toHaveLength(0)
+    expect(body.data.upcoming.map((show) => show.artist)).toEqual([
+      'Still Ahead',
+    ])
+    // Nights, venues and spend are past-tense claims, so an upcoming show
+    // cannot inflate them.
+    expect(body.data.stats.nights).toBe(0)
+  })
+
+  it('orders upcoming forwards from the next night', async () => {
+    setAuth()
+    await seedSupporter()
+    const venue = await seedVenue()
+    const later = await seedEvent(venue.id, {
+      artist: 'Later',
+      date: '2099-09-01',
+    })
+    const sooner = await seedEvent(venue.id, {
+      artist: 'Sooner',
+      date: '2099-07-01',
+    })
+    for (const event of [later, sooner]) {
+      await seedUserEvent(USER_ID, event.id, {
+        status: null,
+        attendingAt: ATTENDED,
+      })
+    }
+
+    const body = await getHistory()
+    expect(body.data.upcoming.map((show) => show.artist)).toEqual([
+      'Sooner',
+      'Later',
+    ])
+  })
+
+  it('excludes a cancelled upcoming show', async () => {
+    setAuth()
+    await seedSupporter()
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-06-01',
+      status: 'cancelled',
+    })
+    await seedUserEvent(USER_ID, event.id, {
+      status: null,
+      attendingAt: ATTENDED,
+    })
+
+    const body = await getHistory()
+    expect(body.data.upcoming).toHaveLength(0)
   })
 
   it('excludes a cancelled past attended show but keeps a postponed one', async () => {
@@ -188,7 +248,7 @@ describe('GET /v1/history', () => {
     })
 
     const body = await getHistory()
-    expect(body.data.shows.map((show) => show.artist)).toEqual([
+    expect(body.data.past.map((show) => show.artist)).toEqual([
       'Postponed Show',
     ])
   })
@@ -207,7 +267,7 @@ describe('GET /v1/history', () => {
     })
 
     const body = await getHistory()
-    expect(body.data.shows).toHaveLength(0)
+    expect(body.data.past).toHaveLength(0)
   })
 
   it('excludes another user’s attendance', async () => {
@@ -221,10 +281,10 @@ describe('GET /v1/history', () => {
     })
 
     const body = await getHistory()
-    expect(body.data.shows).toHaveLength(0)
+    expect(body.data.past).toHaveLength(0)
   })
 
-  it('orders shows reverse-chronologically', async () => {
+  it('orders past shows reverse-chronologically', async () => {
     setAuth()
     await seedSupporter()
     const venue = await seedVenue()
@@ -248,7 +308,7 @@ describe('GET /v1/history', () => {
     }
 
     const body = await getHistory()
-    expect(body.data.shows.map((show) => show.artist)).toEqual([
+    expect(body.data.past.map((show) => show.artist)).toEqual([
       'Late',
       'Middle',
       'Early',

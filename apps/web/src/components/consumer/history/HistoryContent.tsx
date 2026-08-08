@@ -10,8 +10,15 @@
 //
 // The handoff's themeKey and density designer knobs are not props: theme comes
 // from the shipped theme context, and density is fixed at cozy to match Watching.
+//
+// #1357 added the Upcoming half. A show you tapped "I'm going!" on used to have
+// nowhere to sit until its date passed. Upcoming and Past are the same rows
+// split by date, so they share HistoryItem and the month grouper untouched —
+// only the reading direction differs, and the API returns each half already
+// ordered. The header, the export and the passport stay past-only: nights,
+// venues and spend are all past-tense claims.
 
-import type { HistoryResponse } from '@concert-crawl/types'
+import type { HistoryResponse, HistoryShow } from '@concert-crawl/types'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
 import { useHistory } from '@/lib/queries/use-history'
 import { MyShowsTabs } from './MyShowsTabs'
@@ -23,6 +30,9 @@ import { SaveCalendarRow } from './SaveCalendarRow'
 import { PassportTeaser } from './PassportTeaser'
 import { groupHistoryByMonth } from './lib/buckets'
 import { HISTORY_DENSITY } from './definitions/constants'
+import { HISTORY_COPY } from './definitions/copy'
+
+const SECTION_COPY = HISTORY_COPY.sections
 
 interface HistoryContentProps {
   // null when the server's fetch came back 403 — see `locked`.
@@ -36,6 +46,88 @@ const Shell = ({ children }: { children: React.ReactNode }) => (
   <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:px-8 sm:pb-10 sm:pt-8 lg:max-w-[960px]">
     {children}
   </main>
+)
+
+const MonthBuckets = ({ shows }: { shows: HistoryShow[] }) => (
+  <>
+    {groupHistoryByMonth(shows).map((bucket) => (
+      <section key={bucket.key}>
+        <div className="flex items-baseline gap-2 px-1 pb-1 pt-2.5">
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.14em',
+              color: 'var(--fg-subtle)',
+            }}
+          >
+            {bucket.label}
+          </span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              fontWeight: 500,
+              color: 'var(--fg-subtle)',
+            }}
+          >
+            {`· ${bucket.shows.length}`}
+          </span>
+        </div>
+        <div className="flex flex-col gap-2.5">
+          {bucket.shows.map((show) => (
+            <HistoryItem
+              key={show.eventId}
+              show={show}
+              density={HISTORY_DENSITY}
+            />
+          ))}
+        </div>
+      </section>
+    ))}
+  </>
+)
+
+// One half of the attendance list. The empty line is inline rather than a full
+// EmptyState: the other half has rows, so this is a gap in a populated screen,
+// not an empty screen.
+const AttendanceSection = ({
+  heading,
+  emptyLabel,
+  shows,
+}: {
+  heading: string
+  emptyLabel: string
+  shows: HistoryShow[]
+}) => (
+  <section aria-label={heading} className="flex flex-col gap-2 sm:gap-3">
+    <h2
+      style={{
+        fontFamily: 'var(--font-ui)',
+        fontSize: 15,
+        fontWeight: 800,
+        letterSpacing: '-0.02em',
+        color: 'var(--fg)',
+      }}
+    >
+      {heading}
+    </h2>
+    {shows.length === 0 ? (
+      <p
+        style={{
+          fontFamily: 'var(--font-ui)',
+          fontSize: 12.5,
+          color: 'var(--fg-muted)',
+        }}
+      >
+        {emptyLabel}
+      </p>
+    ) : (
+      <MonthBuckets shows={shows} />
+    )}
+  </section>
 )
 
 export const HistoryContent = ({
@@ -76,7 +168,7 @@ export const HistoryContent = ({
     )
   }
 
-  if (history.shows.length === 0) {
+  if (history.past.length === 0 && history.upcoming.length === 0) {
     return (
       <Shell>
         <MyShowsTabs active="history" />
@@ -84,8 +176,6 @@ export const HistoryContent = ({
       </Shell>
     )
   }
-
-  const buckets = groupHistoryByMonth(history.shows)
 
   return (
     <Shell>
@@ -100,48 +190,21 @@ export const HistoryContent = ({
           data-testid="history-rail"
           className="mb-4 flex flex-col gap-3.5 lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1 lg:mb-0"
         >
-          <SaveCalendarRow count={history.shows.length} />
-          <PassportTeaser stats={history.stats} shows={history.shows} />
+          <SaveCalendarRow count={history.past.length} />
+          <PassportTeaser stats={history.stats} shows={history.past} />
         </aside>
 
-        <div className="flex flex-col gap-2 sm:gap-3 lg:col-start-1 lg:row-start-1">
-          {buckets.map((bucket) => (
-            <section key={bucket.key}>
-              <div className="flex items-baseline gap-2 px-1 pb-1 pt-2.5">
-                <span
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.14em',
-                    color: 'var(--fg-subtle)',
-                  }}
-                >
-                  {bucket.label}
-                </span>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 10,
-                    fontWeight: 500,
-                    color: 'var(--fg-subtle)',
-                  }}
-                >
-                  · {bucket.shows.length}
-                </span>
-              </div>
-              <div className="flex flex-col gap-2.5">
-                {bucket.shows.map((show) => (
-                  <HistoryItem
-                    key={show.eventId}
-                    show={show}
-                    density={HISTORY_DENSITY}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
+        <div className="flex flex-col gap-6 lg:col-start-1 lg:row-start-1">
+          <AttendanceSection
+            heading={SECTION_COPY.upcoming}
+            emptyLabel={SECTION_COPY.upcomingEmpty}
+            shows={history.upcoming}
+          />
+          <AttendanceSection
+            heading={SECTION_COPY.past}
+            emptyLabel={SECTION_COPY.pastEmpty}
+            shows={history.past}
+          />
         </div>
       </div>
     </Shell>

@@ -4,7 +4,7 @@ import { fetchHistory } from '@/lib/history'
 import { isScaRegion } from '@/lib/sca-region'
 import { HistoryContent } from '@/components/consumer/history'
 
-export const metadata = { title: 'History — Concert Crawl' }
+export const metadata = { title: 'Concerts — Concert Crawl' }
 
 export default async function HistoryPage() {
   const { getToken } = await auth()

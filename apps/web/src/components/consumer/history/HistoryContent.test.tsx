@@ -58,7 +58,8 @@ const show = (eventId: string, date: string): HistoryShow => ({
 const year = new Date().getFullYear()
 
 const RESPONSE: HistoryResponse = {
-  shows: [show('a', `${year}-05-14`), show('bb', `${year}-03-02`)],
+  past: [show('a', `${year}-05-14`), show('bb', `${year}-03-02`)],
+  upcoming: [],
   stats: {
     nights: 2,
     venues: 1,
@@ -72,7 +73,8 @@ const RESPONSE: HistoryResponse = {
 }
 
 const EMPTY: HistoryResponse = {
-  shows: [],
+  past: [],
+  upcoming: [],
   stats: {
     nights: 0,
     venues: 0,
@@ -156,7 +158,7 @@ describe('HistoryContent', () => {
   })
 
   it('prefers the refetched payload over the server seed once it lands', () => {
-    query.data = { ...RESPONSE, shows: [show('cc', `${year}-05-14`)] }
+    query.data = { ...RESPONSE, past: [show('cc', `${year}-05-14`)] }
     render(
       <HistoryContent
         initialData={RESPONSE}
@@ -226,6 +228,59 @@ describe('HistoryContent', () => {
     expect(grid?.firstElementChild).toBe(rail)
     expect(rail.className).toContain('lg:col-start-2')
     expect(rail.className).toContain('lg:row-start-1')
+  })
+
+  it('gives a show you are going to a home before its date (#1357)', () => {
+    render(
+      <HistoryContent
+        initialData={{ ...RESPONSE, upcoming: [show('up', `${year}-12-20`)] }}
+        locked={false}
+        scaRegion={false}
+      />,
+    )
+
+    expect(
+      screen.getByRole('region', { name: HISTORY_COPY.sections.upcoming }),
+    ).toHaveTextContent('Artist up')
+    // The future show must not leak into Past.
+    expect(
+      screen.getByRole('region', { name: HISTORY_COPY.sections.past }),
+    ).not.toHaveTextContent('Artist up')
+  })
+
+  it('names each empty half rather than hiding it, while the other has rows', () => {
+    render(
+      <HistoryContent
+        initialData={RESPONSE}
+        locked={false}
+        scaRegion={false}
+      />,
+    )
+
+    // Nothing upcoming, but Past is populated, so this is a gap in a full
+    // screen — the whole-surface empty state must stay away.
+    expect(
+      screen.getByText(HISTORY_COPY.sections.upcomingEmpty),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(HISTORY_COPY.empty.headline),
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps the export past-only when only upcoming shows exist', () => {
+    // The .ics is a record of nights that happened, so a future-only list has
+    // nothing to export.
+    render(
+      <HistoryContent
+        initialData={{ ...EMPTY, upcoming: [show('up', `${year}-12-20`)] }}
+        locked={false}
+        scaRegion={false}
+      />,
+    )
+
+    expect(screen.getByTestId('history-rail')).toHaveTextContent(
+      HISTORY_COPY.calendar.detailEmpty,
+    )
   })
 
   it('mounts the calendar row and the Passport teaser in the rail', () => {

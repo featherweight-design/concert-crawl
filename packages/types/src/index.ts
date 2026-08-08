@@ -1161,8 +1161,13 @@ export interface HistoryStats {
   totalSpent: number | null // null when no row has priceFinal
 }
 
+// Attendance is one list split by time (#1357): `past` and `upcoming` are the
+// same `attending_at IS NOT NULL` rows differing only by whether the date has
+// gone by. `stats` covers `past` alone — a night that hasn't happened yet can't
+// be counted, priced, or ranked.
 export interface HistoryResponse {
-  shows: HistoryShow[]
+  past: HistoryShow[]
+  upcoming: HistoryShow[]
   stats: HistoryStats
 }
 

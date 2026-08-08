@@ -114,7 +114,7 @@ export const GET = async (
     <PassportCard
       mode={PASSPORT_PRINT_MODE}
       scale={PASSPORT_PRINT_SCALE}
-      shows={toAttendedShows(history.data?.shows ?? [])}
+      shows={toAttendedShows(history.data?.past ?? [])}
       tokens={tokens}
       handle={profile.handle}
       year={passportYear()}

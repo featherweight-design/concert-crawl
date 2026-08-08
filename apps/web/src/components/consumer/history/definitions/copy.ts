@@ -1,6 +1,11 @@
-// Every customer-facing string on the Concert History surface (#70).
+// Every customer-facing string on the Concerts surface (#70, #1357).
 // Sourced from design_handoff_concert_history/history-screens.jsx and
 // history-routes.jsx.
+//
+// The identifier stays `HISTORY_COPY` and the route stays `/history` on purpose
+// (#1357): the entitlement key, the API route and the ICS filename all carry
+// `history`, and renaming the constant to chase the label would touch far more
+// than the words. Only what the customer reads says "Concerts".
 //
 // No tier is named in this file. Which plan unlocks History has already moved
 // once (#1225), so every string that would say "Supporter" instead takes the
@@ -13,7 +18,16 @@ export const HISTORY_COPY = {
     // The container is "My shows"; the two sub-tabs keep the locked vocabulary.
     ariaLabel: 'My shows',
     watching: 'Watching',
-    history: 'History',
+    concerts: 'Concerts',
+  },
+
+  // The two halves of the attendance list. They carry the tense the tab label
+  // deliberately doesn't, so a show you're going to has somewhere to sit.
+  sections: {
+    upcoming: 'Upcoming',
+    past: 'Past',
+    upcomingEmpty: 'Nothing ahead of you yet.',
+    pastEmpty: 'Nothing behind you yet.',
   },
 
   header: {
@@ -39,15 +53,15 @@ export const HISTORY_COPY = {
   },
 
   empty: {
-    eyebrow: 'HISTORY',
-    headline: "Nothing's behind you yet.",
-    body: "Tap I'm going! on a show you've got tickets for. After the date, it lands here as a keepsake.",
+    eyebrow: 'CONCERTS',
+    headline: 'No nights on the books yet.',
+    body: "Tap I'm going! on a show and it lands here, first as a plan, then as a keepsake.",
     cta: "Browse tonight's shows",
   },
 
   locked: {
     headline: 'Keep the nights.',
-    body: "Every show you tap I'm going! lands here after the date: same artist art, same dates, no work on your end. You can export the lot to your calendar too.",
+    body: "Every show you tap I'm going! lands here, the ones ahead of you and the ones behind. Same artist art, same dates, and you can export the lot to your calendar.",
     cta: (tierName: string) => `Pick ${tierName}`,
     // Used only if the matrix somehow exposes no purchasable lane for the
     // feature — the picker still opens, it just can't promise which plan.

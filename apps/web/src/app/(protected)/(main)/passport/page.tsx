@@ -35,7 +35,7 @@ export default async function PassportPage() {
 
   return (
     <PassportContent
-      shows={toAttendedShows(data?.shows ?? [])}
+      shows={toAttendedShows(data?.past ?? [])}
       tokens={tokens}
       handle={profile.handle}
       year={passportYear()}

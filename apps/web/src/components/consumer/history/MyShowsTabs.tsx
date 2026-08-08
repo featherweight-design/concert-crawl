@@ -1,6 +1,10 @@
 'use client'
 
-// The "My shows" sub-tab bar — Watching · History (#70).
+// The "My shows" sub-tab bar — Watching · Concerts (#70, #1357).
+//
+// The tab key and the href stay `history`; only the label moved. The route, the
+// entitlement key and the API path all carry `history`, and the tense now lives
+// in the Upcoming/Past section headers rather than in the tab name.
 //
 // One responsive component, not a mobile/desktop pair: the handoff draws them
 // separately (history-screens.jsx:329 segmented pill, history-routes.jsx:406
@@ -19,7 +23,7 @@ type MyShowsTab = 'watching' | 'history'
 
 const TABS: readonly { key: MyShowsTab; label: string; href: string }[] = [
   { key: 'watching', label: COPY.watching, href: '/watching' },
-  { key: 'history', label: COPY.history, href: '/history' },
+  { key: 'history', label: COPY.concerts, href: '/history' },
 ]
 
 export const MyShowsTabs = ({ active }: { active: MyShowsTab }) => (
