@@ -60,6 +60,20 @@ const seedFollow = async (
   })
 }
 
+const seedFollowAt = async (
+  artistName: string,
+  source: ArtistFollowSource,
+  createdAt: Date,
+) => {
+  await testDb.insert(userArtistFollows).values({
+    userId: USER,
+    artistName,
+    canonicalName: artistName.toLowerCase().trim(),
+    source,
+    createdAt,
+  })
+}
+
 const seedPremium = async () => {
   await testDb.insert(subscriptions).values({
     userId: USER,
@@ -153,6 +167,24 @@ describe('GET /v1/me/artist-follows', () => {
     const { body } = await fetchList()
     expect(body.data).toHaveLength(1)
     expect(body.data[0]?.source).toBe('manual')
+  })
+
+  // The collapse picks the manual row but the Spotify one may be newer, so the
+  // slot it occupied is not the slot its `followedAt` belongs in. Ordering has
+  // to be re-derived from the rows that actually ship.
+  it('orders by the followedAt it returns, not by the row the collapse dropped', async () => {
+    await seedArtist({ name: 'Alpha Act' })
+    await seedArtist({ name: 'Beta Act' })
+    // Alpha: an old manual row plus a NEWER Spotify row. The manual row wins
+    // the collapse, so Alpha must sort by its old date and fall behind Beta.
+    await seedFollowAt('Alpha Act', 'manual', new Date('2026-01-01'))
+    await seedFollowAt('Alpha Act', 'spotify_followed', new Date('2026-06-01'))
+    await seedFollowAt('Beta Act', 'manual', new Date('2026-03-01'))
+    signIn()
+
+    const { body } = await fetchList()
+    expect(body.data.map((row) => row.name)).toEqual(['Beta Act', 'Alpha Act'])
+    expect(body.data[1]?.followedAt.startsWith('2026-01-01')).toBe(true)
   })
 
   // A Spotify-synced follow for an act never billed in Denver has no

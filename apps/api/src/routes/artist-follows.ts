@@ -224,9 +224,15 @@ meArtistFollowsRouter.get('/artist-follows', async (ctx) => {
       followByCanonical.set(row.canonicalName, row)
     }
   }
-  // The select is already ordered newest-first; Map preserves insertion order,
-  // so the collapsed list keeps it.
-  const uniqueFollowRows = [...followByCanonical.values()]
+  // Re-sort rather than lean on the Map's insertion order. The SQL ordering is
+  // per ROW, and the collapse can swap a newer Spotify row for an older manual
+  // one while keeping the newer row's slot — which would leave the list holding
+  // a `followedAt` that no longer matches its position.
+  const uniqueFollowRows = [...followByCanonical.values()].sort(
+    (left, right) =>
+      right.createdAt.getTime() - left.createdAt.getTime() ||
+      left.artistName.localeCompare(right.artistName),
+  )
 
   const canonicalNames = [...followByCanonical.keys()]
 
