@@ -19,8 +19,16 @@ import { setCrewMuted } from '@/lib/crews'
 export const crewsQueryKey = (userId: string | null | undefined) =>
   ['crews', userId ?? null] as const
 
+// Settings needs the identity plus the mute, and nothing else the crews index
+// returns. Narrowing to exactly that keeps the guard honest: a wider claim would
+// vouch for `members` and `upcomingCount` without checking either.
+export type CrewMuteRow = Pick<
+  CrewSummary,
+  'id' | 'name' | 'patchSalt' | 'muted'
+>
+
 // apps/web ships no zod — the boundary is narrowed with hand-written guards.
-const isCrewSummary = (value: unknown): value is CrewSummary => {
+const isCrewMuteRow = (value: unknown): value is CrewMuteRow => {
   if (typeof value !== 'object' || value === null) return false
   const record: Record<string, unknown> = { ...value }
   return (
@@ -36,7 +44,7 @@ export function useCrews() {
 
   return useQuery({
     queryKey: crewsQueryKey(userId),
-    queryFn: async (): Promise<CrewSummary[]> => {
+    queryFn: async (): Promise<CrewMuteRow[]> => {
       const token = await getToken()
       if (!token) return []
       const raw = await apiClient.get<unknown>('/v1/crews', token)
@@ -44,7 +52,7 @@ export function useCrews() {
         typeof raw === 'object' && raw !== null && 'crews' in raw
           ? raw.crews
           : null
-      if (!Array.isArray(crews) || !crews.every(isCrewSummary)) {
+      if (!Array.isArray(crews) || !crews.every(isCrewMuteRow)) {
         throw new Error('Unexpected /v1/crews response shape')
       }
       return crews
@@ -78,9 +86,9 @@ export function useCrewMuteToggle() {
     },
     onMutate: async ({ crewId, muted }) => {
       await queryClient.cancelQueries({ queryKey: key })
-      const previous = queryClient.getQueryData<CrewSummary[]>(key)
+      const previous = queryClient.getQueryData<CrewMuteRow[]>(key)
       if (previous) {
-        queryClient.setQueryData<CrewSummary[]>(
+        queryClient.setQueryData<CrewMuteRow[]>(
           key,
           previous.map((crew) =>
             crew.id === crewId ? { ...crew, muted } : crew,

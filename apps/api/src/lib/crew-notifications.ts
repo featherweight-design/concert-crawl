@@ -56,8 +56,8 @@ interface CrewNotificationMetadata {
 }
 
 /**
- * The actor's handle, or `null` when they have not picked one. Never invented:
- * the caller substitutes "Someone", the same fallback the invite landing uses.
+ * The actor's handle, falling back to "Someone" when they have not picked one.
+ * Never invented: that fallback is the same string the invite landing uses.
  */
 const loadActorName = async (userId: string): Promise<string> => {
   const [row] = await db
