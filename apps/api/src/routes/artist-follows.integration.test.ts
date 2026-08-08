@@ -34,7 +34,7 @@ vi.mock('../lib/spotify.js', async (importOriginal) => {
 })
 
 import { and, eq } from 'drizzle-orm'
-import { userArtistFollows } from '@concert-crawl/db'
+import { subscriptions, userArtistFollows } from '@concert-crawl/db'
 import type { ArtistDetailResponse } from '@concert-crawl/types'
 import { createApp } from '../app.js'
 import { testDb } from '../test/helpers/db.js'
@@ -53,6 +53,20 @@ const follow = async (slug: string): Promise<Response> =>
 
 const unfollow = async (slug: string): Promise<Response> =>
   app.request(`/v1/artists/${slug}/follow`, { method: 'DELETE' })
+
+// POST is gated on the `following` entitlement, which is premium-and-up. The
+// free plan is modelled by the ABSENCE of a subscriptions row, so every test
+// that expects a successful follow has to seed one.
+const seedPremiumPlan = async (userId = USER_ID): Promise<void> => {
+  await testDb.insert(subscriptions).values({
+    userId,
+    stripeCustomerId: `cus_${userId}`,
+    stripeSubscriptionId: `sub_${userId}`,
+    tier: 'premium',
+    status: 'active',
+    currentPeriodEnd: new Date(Date.now() + 30 * 86400000),
+  })
+}
 
 const followRows = async (
   userId = USER_ID,
@@ -77,6 +91,9 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
   })
 
   it('404s an unknown slug', async () => {
+    // Premium, because the entitlement gate runs BEFORE the artist lookup. A
+    // free user probing slugs gets 403 and learns nothing about what exists.
+    await seedPremiumPlan()
     authState.current = { userId: USER_ID }
     const res = await follow('no-such-artist')
     expect(res.status).toBe(404)
@@ -90,6 +107,7 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
       canonicalName: 'nightjar choir',
       spotifyArtistId: 'sp_nightjar',
     })
+    await seedPremiumPlan()
     authState.current = { userId: USER_ID }
 
     const res = await follow('nightjar-choir')
@@ -113,6 +131,7 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
       name: 'Wax Harbour',
       canonicalName: 'wax harbour',
     })
+    await seedPremiumPlan()
     authState.current = { userId: USER_ID }
 
     await follow('wax-harbour')
@@ -126,6 +145,7 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
       name: 'Wax Harbour',
       canonicalName: 'wax harbour',
     })
+    await seedPremiumPlan()
     authState.current = { userId: USER_ID }
 
     const first = await follow('wax-harbour')
@@ -143,6 +163,7 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
       name: 'Wax Harbour',
       canonicalName: 'wax harbour',
     })
+    await seedPremiumPlan()
     authState.current = { userId: USER_ID }
 
     // Both requests see an empty table, so both reach the INSERT. Only the
@@ -164,6 +185,7 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
       canonicalName: 'synced act',
       spotifyArtistId: 'sp_synced',
     })
+    await seedPremiumPlan()
     authState.current = { userId: USER_ID }
 
     await follow('synced-act')
@@ -171,18 +193,51 @@ describe('POST /v1/artists/:slug/follow — integration', () => {
 
     expect(spotifyMock.createSpotifyClient).not.toHaveBeenCalled()
   })
+})
 
-  it('succeeds for a free-plan user — Follow carries no entitlement gate', async () => {
-    await seedArtist({
-      name: 'Free Act',
-      canonicalName: 'free act',
-    })
+describe('POST /v1/artists/:slug/follow — entitlement gate', () => {
+  beforeEach(async () => {
+    authState.current = null
+    spotifyMock.createSpotifyClient.mockClear()
+    await clearTables()
+  })
+
+  it('returns 403 with entitlement_required for a free plan', async () => {
+    const artist = await seedArtist({ name: 'Big Head Todd' })
     // No subscriptions row at all: the default free plan.
-    authState.current = { userId: 'user_free_plan' }
+    authState.current = { userId: USER_ID }
 
-    const res = await follow('free-act')
+    const res = await follow(artist.slug)
+    expect(res.status).toBe(403)
+    const body: { code: string; feature: string } = await res.json()
+    expect(body.code).toBe('entitlement_required')
+    expect(body.feature).toBe('following')
+    expect(await followRows()).toHaveLength(0)
+  })
+
+  it('lets a premium plan follow', async () => {
+    const artist = await seedArtist({ name: 'Big Head Todd' })
+    await seedPremiumPlan()
+    authState.current = { userId: USER_ID }
+
+    const res = await follow(artist.slug)
     expect(res.status).toBe(200)
-    expect(await followRows('user_free_plan')).toHaveLength(1)
+    expect(await followRows()).toHaveLength(1)
+  })
+
+  it('lets a lapsed plan unfollow — DELETE is never gated', async () => {
+    const artist = await seedArtist({ name: 'Big Head Todd' })
+    await seedPremiumPlan()
+    authState.current = { userId: USER_ID }
+    await follow(artist.slug)
+
+    // The real downgrade path: followed while premium, then lapsed. Seeding a
+    // free user with no follow to remove would pass trivially.
+    await testDb.delete(subscriptions)
+
+    const res = await unfollow(artist.slug)
+    expect(res.status).toBe(200)
+    expect(await followRows()).toHaveLength(0)
   })
 })
 
@@ -204,6 +259,7 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
       name: 'Wax Harbour',
       canonicalName: 'wax harbour',
     })
+    await seedPremiumPlan()
     authState.current = { userId: USER_ID }
 
     await follow('wax-harbour')
@@ -232,6 +288,7 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
       canonicalArtist: 'synced act',
       date: '2099-09-04',
     })
+    await seedPremiumPlan()
     authState.current = { userId: USER_ID }
     await testDb.insert(userArtistFollows).values({
       userId: USER_ID,

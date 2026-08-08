@@ -27,7 +27,10 @@ export async function clearTables(): Promise<void> {
   await testDb.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(7777)`)
     await tx.execute(
-      sql`TRUNCATE notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, artists, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking, crews RESTART IDENTITY CASCADE`,
+      // `subscriptions` is in the list because entitlement-gated routes now
+      // read it: a premium row left behind makes a later 403 test pass or fail
+      // purely on file order.
+      sql`TRUNCATE notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, artists, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking, crews, subscriptions RESTART IDENTITY CASCADE`,
     )
   })
 }

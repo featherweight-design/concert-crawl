@@ -4,15 +4,21 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { and, eq } from 'drizzle-orm'
 import { db, artists, userArtistFollows } from '@concert-crawl/db'
+import { requireFeature } from '../middleware/entitlement.js'
 import { ARTIST_SLUG_MAX_LENGTH } from '@concert-crawl/types'
 import type { ArtistFollowResponse } from '@concert-crawl/types'
 
 /**
  * Follow / unfollow an artist (#1115, PR-D).
  *
- * Following an artist is FREE for all signed-in plans (design brief §3.6),
- * exactly like Watching. Do NOT add a requireFeature() gate here; a session is
- * the only requirement.
+ * Following is a PREMIUM feature. The entitlements matrix has always said so
+ * (`following` is paywall-on-tap for free/supporter); this router shipped
+ * ungated on the strength of design brief #1115 §3.6, which Hugh retired on
+ * 2026-08-04. POST carries requireFeature('following'); free and supporter get
+ * a 403 the client turns into the paywall.
+ *
+ * DELETE is deliberately NOT gated. A user who downgrades must still be able
+ * to unfollow, or they are stranded with rows they cannot remove.
  *
  * This router writes `user_artist_follows` and NOTHING else. It must never
  * call the Spotify API: the button does not follow the artist on the user's
@@ -38,64 +44,69 @@ const slugValidator = zValidator('param', slugParamSchema, (result, ctx) => {
 })
 
 // POST /v1/artists/:slug/follow
-artistFollowsRouter.post('/:slug/follow', slugValidator, async (ctx) => {
-  const authInfo = getAuth(ctx)
-  if (!authInfo?.userId) return ctx.json(unauthorized, 401)
+artistFollowsRouter.post(
+  '/:slug/follow',
+  slugValidator,
+  requireFeature('following'),
+  async (ctx) => {
+    const authInfo = getAuth(ctx)
+    if (!authInfo?.userId) return ctx.json(unauthorized, 401)
 
-  const { slug } = ctx.req.valid('param')
+    const { slug } = ctx.req.valid('param')
 
-  const [artist] = await db
-    .select({
-      name: artists.name,
-      canonicalName: artists.canonicalName,
-      spotifyArtistId: artists.spotifyArtistId,
-    })
-    .from(artists)
-    // A hidden row (#1342) 404s here exactly like the detail route: you cannot
-    // start following something with no page. DELETE deliberately does NOT
-    // filter — a user who followed before an admin hid the row must still be
-    // able to unfollow it.
-    .where(and(eq(artists.slug, slug), eq(artists.hidden, false)))
-
-  if (!artist) return ctx.json(notFound, 404)
-
-  // Read-before-insert so a repeat follow is a cheap no-op rather than a
-  // wasted write. It is not the correctness guarantee — two concurrent
-  // requests can both pass it. The partial unique index
-  // (user_id, canonical_name) WHERE source='manual' is what actually makes
-  // this idempotent; see migration 0070.
-  const [existing] = await db
-    .select({ id: userArtistFollows.id })
-    .from(userArtistFollows)
-    .where(
-      and(
-        eq(userArtistFollows.userId, authInfo.userId),
-        eq(userArtistFollows.canonicalName, artist.canonicalName),
-        eq(userArtistFollows.source, 'manual'),
-      ),
-    )
-    .limit(1)
-
-  if (!existing) {
-    await db
-      .insert(userArtistFollows)
-      .values({
-        userId: authInfo.userId,
-        artistName: artist.name,
-        canonicalName: artist.canonicalName,
-        // Copied from the projection when the artist is matched, so a later
-        // Spotify sync can reconcile against the same id. Null is fine.
-        spotifyArtistId: artist.spotifyArtistId,
-        source: 'manual',
+    const [artist] = await db
+      .select({
+        name: artists.name,
+        canonicalName: artists.canonicalName,
+        spotifyArtistId: artists.spotifyArtistId,
       })
-      // Untargeted on purpose: it covers whichever unique index the loser of
-      // a concurrent double-tap trips, so neither request 500s.
-      .onConflictDoNothing()
-  }
+      .from(artists)
+      // A hidden row (#1342) 404s here exactly like the detail route: you cannot
+      // start following something with no page. DELETE deliberately does NOT
+      // filter — a user who followed before an admin hid the row must still be
+      // able to unfollow it.
+      .where(and(eq(artists.slug, slug), eq(artists.hidden, false)))
 
-  const data: ArtistFollowResponse = { following: true }
-  return ctx.json({ success: true, data })
-})
+    if (!artist) return ctx.json(notFound, 404)
+
+    // Read-before-insert so a repeat follow is a cheap no-op rather than a
+    // wasted write. It is not the correctness guarantee — two concurrent
+    // requests can both pass it. The partial unique index
+    // (user_id, canonical_name) WHERE source='manual' is what actually makes
+    // this idempotent; see migration 0070.
+    const [existing] = await db
+      .select({ id: userArtistFollows.id })
+      .from(userArtistFollows)
+      .where(
+        and(
+          eq(userArtistFollows.userId, authInfo.userId),
+          eq(userArtistFollows.canonicalName, artist.canonicalName),
+          eq(userArtistFollows.source, 'manual'),
+        ),
+      )
+      .limit(1)
+
+    if (!existing) {
+      await db
+        .insert(userArtistFollows)
+        .values({
+          userId: authInfo.userId,
+          artistName: artist.name,
+          canonicalName: artist.canonicalName,
+          // Copied from the projection when the artist is matched, so a later
+          // Spotify sync can reconcile against the same id. Null is fine.
+          spotifyArtistId: artist.spotifyArtistId,
+          source: 'manual',
+        })
+        // Untargeted on purpose: it covers whichever unique index the loser of
+        // a concurrent double-tap trips, so neither request 500s.
+        .onConflictDoNothing()
+    }
+
+    const data: ArtistFollowResponse = { following: true }
+    return ctx.json({ success: true, data })
+  },
+)
 
 // DELETE /v1/artists/:slug/follow
 artistFollowsRouter.delete('/:slug/follow', slugValidator, async (ctx) => {
