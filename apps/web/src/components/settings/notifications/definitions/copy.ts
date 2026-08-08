@@ -1,7 +1,13 @@
-// Verbatim voice-passed copy from design/design_handoff_pwa_cluster/pwa-data.jsx
-// PUSH_COPY.settings — do not rewrite; the strings passed the #782 Sour Patch
-// voice bar during the design brief workshop (2026-07-18) and were locked in
-// the READINESS review.
+// Mixed sources, so check which one a string belongs to before editing it.
+//
+// The push strings are verbatim from
+// design/design_handoff_pwa_cluster/pwa-data.jsx PUSH_COPY.settings — do not
+// rewrite; they passed the #782 Sour Patch voice bar during the design brief
+// workshop (2026-07-18) and were locked in the READINESS review.
+//
+// Everything under `artists` is native following and is NOT design-locked: it
+// was written here and passed the copy-review skill. Ordinary copy-review rules
+// apply to it. Each block below says which it is.
 
 export const NOTIFICATIONS_COPY = {
   heading: 'Notifications',
