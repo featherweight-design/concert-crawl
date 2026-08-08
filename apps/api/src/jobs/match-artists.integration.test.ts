@@ -1,10 +1,11 @@
 // Integration tests for the Spotify identity-match job (#1115, plan PR-C
 // Task 9, Step 24). Spotify is stubbed at the client boundary; the DB is real
 // (per-worktree test DB), so every verdict is asserted against actual rows.
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { asc, eq } from 'drizzle-orm'
 import { artists } from '@concert-crawl/db'
 import { testDb } from '../test/helpers/db.js'
+import { apiLogger } from '../lib/logger.js'
 import {
   MATCH_BATCH_SIZE,
   PHOTO_REFETCH_DAYS,
@@ -150,6 +151,29 @@ describe('runMatchArtists', () => {
       'unmatched',
     ])
     expect(rows.every((row) => row.matchCheckedAt === null)).toBe(true)
+  })
+
+  it('logs the rate-limit error itself, not just the artist id', async () => {
+    await seedArtist({ canonicalName: 'aaa first' })
+    const warn = vi.spyOn(apiLogger, 'warn')
+
+    await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => {
+        throw new SpotifyRateLimitError('Spotify asked for a 3600s cooldown')
+      }),
+    })
+
+    // The error message carries Spotify's Retry-After. Dropping it leaves an
+    // operator with no way to tell a 60s cooldown from an all-day one.
+    const logged = warn.mock.calls.find(
+      ([context]) =>
+        typeof context === 'object' && context !== null && 'err' in context,
+    )
+    expect(logged?.[0]).toMatchObject({
+      err: { message: 'Spotify asked for a 3600s cooldown' },
+    })
+    warn.mockRestore()
   })
 
   it('aborts the batch on a Spotify timeout rather than retrying every row', async () => {

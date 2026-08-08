@@ -2327,7 +2327,7 @@ export const ADMIN_COPY = {
     candidatesDormant:
       'Spotify search is not configured on the API, so candidates cannot be fetched. Paste an artist id below instead.',
     candidatesRateLimited:
-      'Spotify is rate limiting us. Wait a moment and search again.',
+      'Spotify is rate limiting us. Cooldowns usually run for hours, so searching again now will not help. The API logs record how long it asked for.',
     candidatesCredentialsRejected:
       'Spotify rejected our app credentials. Check SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET on the API.',
     exactMatchBadge: 'Exact name',

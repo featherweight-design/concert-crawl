@@ -180,8 +180,11 @@ export const runMatchArtists = async (
       if (err instanceof SpotifyRateLimitError) {
         summary.abortedReason = 'rate_limit'
         summary.considered -= 1
+        // `err` carries the Retry-After Spotify asked for. It is the only
+        // signal for how long the cooldown runs, and dropping it leaves an
+        // operator guessing whether to retry in minutes or tomorrow.
         apiLogger.warn(
-          { artistId: row.id },
+          { err, artistId: row.id },
           'match-artists: rate limited — aborting batch',
         )
         break

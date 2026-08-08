@@ -247,15 +247,19 @@ describe('createSpotifyClient', () => {
     it('throws SpotifyRateLimitError on a second consecutive 429', async () => {
       const { fetchFn, calls } = makeFetchStub([
         { status: 429, headers: { 'Retry-After': '1' } },
-        { status: 429, headers: { 'Retry-After': '1' } },
+        { status: 429, headers: { 'Retry-After': '900' } },
       ])
       const client = createSpotifyClient('tok', {
         fetchFn,
         sleepFn: async () => {},
       })
-      await expect(client.getTopArtists()).rejects.toBeInstanceOf(
-        SpotifyRateLimitError,
-      )
+      const failure = await client.getTopArtists().catch((err: unknown) => err)
+      expect(failure).toBeInstanceOf(SpotifyRateLimitError)
+      // The message must carry the *second* Retry-After, not the 1s already
+      // slept: it is the only record of how long the cooldown actually runs.
+      if (failure instanceof SpotifyRateLimitError) {
+        expect(failure.message).toContain('900s')
+      }
       expect(calls).toHaveLength(2)
     })
 

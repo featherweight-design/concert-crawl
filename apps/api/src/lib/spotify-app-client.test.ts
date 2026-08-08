@@ -251,6 +251,38 @@ describe('createSpotifyAppClient().searchArtists', () => {
     )
   })
 
+  it('reports the second Retry-After when a 429 persists through the retry', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(
+        new Response('slow down', {
+          status: 429,
+          headers: { 'Retry-After': '1' },
+        }),
+      )
+      .mockResolvedValue(
+        new Response('slow down', {
+          status: 429,
+          headers: { 'Retry-After': '900' },
+        }),
+      )
+
+    const client = await createSpotifyAppClient({
+      fetchFn,
+      sleepFn: async () => {},
+    })
+    const failure = await client
+      ?.searchArtists('Khruangbin')
+      .catch((err: unknown) => err)
+    expect(failure).toBeInstanceOf(SpotifyRateLimitError)
+    // Without this the abort says nothing about how long to wait, which is
+    // the whole reason an operator reads the log.
+    if (failure instanceof SpotifyRateLimitError) {
+      expect(failure.message).toContain('900s')
+    }
+  })
+
   it('aborts rather than sleeping out an hours-long Retry-After', async () => {
     const sleeps: number[] = []
     const fetchFn = vi

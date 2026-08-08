@@ -270,8 +270,11 @@ export const createSpotifyAppClient = async (
 
     if (response.status === 429) {
       if (retried) {
+        // Re-read Retry-After rather than reporting the wait we already slept:
+        // a second 429 usually carries a longer cooldown than the first, and
+        // the current one is what an operator needs to plan around.
         throw new SpotifyRateLimitError(
-          `Spotify rate limit persisted after retry for ${path}`,
+          `Spotify rate limit persisted after retry for ${path}, now asking for ${Math.ceil(parseRetryAfterMs(response.headers.get('Retry-After')) / 1000)}s`,
         )
       }
       const waitMs = parseRetryAfterMs(response.headers.get('Retry-After'))

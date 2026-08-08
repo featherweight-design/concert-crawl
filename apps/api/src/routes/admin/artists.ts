@@ -312,7 +312,8 @@ artistsAdminRouter.get(
         return ctx.json(
           {
             success: false,
-            error: 'Spotify is rate limiting us — try again shortly',
+            error:
+              'Spotify is rate limiting us — cooldowns usually run for hours',
           },
           429,
         )
