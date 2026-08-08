@@ -66,7 +66,10 @@ Design brief has merged; Claude Design needs to produce the hi-fi handoff (mocks
 
 | Rank | Ticket | Brief PR | Path to eng handoff | Why this rank |
 |---|---|---|---|---|
-| 1 | **#1226** Concert Crews (Launch · Normal) | This PR | Claude Design produces R1 into `design/design_handoff_concert_crews/` → audit → 🟡 / 🟢 on the verdict. | Only item; brief locked 2026-08-02 across 12 questions. |
+| 1 | **#1226** Concert Crews (Launch · Normal) | [#1371](https://github.com/HartiganHM/concert-crawl/pull/1371) | Claude Design produces R1 into `design/design_handoff_concert_crews/` → audit → 🟡 / 🟢 on the verdict. | Brief locked 2026-08-02 across 12 questions. |
+| 2 | **No ticket yet** — Event & Artist Imagery (Launch · Normal) | [#1514](https://github.com/HartiganHM/concert-crawl/pull/1514) | Hand `2026-08-08-imagery-identityart-design-handoff-prompt.md` to Claude Design → R1 into `design/design_handoff_event_artist_imagery/` → audit → 🟡 / 🟢. | Brief locked 2026-08-08. Ranked second only because #1226 is further along; the eng half (Spec A) is partially unblocked and can start now. |
+
+**⚠️ Row 2 has no GitHub ticket.** Per the standing intake rule, no issue is opened without Hugh's explicit sign-off, so the imagery work exists only as a brief and this row. A `design-status` read is the only thing that surfaces it. If Hugh signs off, file it as `type: design` · `phase: launch` · `priority: normal` · `source: internal` and replace "No ticket yet" with the number.
 
 **Maintenance note:** when Design produces the handoff, move to 🎨 (audit in flight) → then 🟡 / 🟢 based on verdict.
 
