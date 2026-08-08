@@ -56,6 +56,19 @@ vi.mock('@/lib/push/client', () => ({
   unsubscribeFromPush: vi.fn(),
 }))
 
+// Likewise the artist group: not under test here, but NotificationsSection
+// renders it, and the tier picker it mounts reaches for the app router, which
+// jsdom has no provider for.
+vi.mock('@/lib/queries/use-plan-state', () => ({
+  usePlanState: () => ({ data: undefined, isPending: false }),
+}))
+vi.mock('@/lib/queries/use-spotify-connection', () => ({
+  useSpotifyConnection: () => ({ data: undefined }),
+}))
+vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+  TierPickerSheet: () => null,
+}))
+
 import { CrewActivityBlock } from '../CrewActivityBlock'
 import { NotificationsSection } from '../NotificationsSection'
 import { NOTIFICATIONS_COPY } from '../definitions/copy'

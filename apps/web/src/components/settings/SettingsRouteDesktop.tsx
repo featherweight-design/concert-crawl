@@ -433,7 +433,7 @@ export function SettingsRouteDesktop({
             )}
 
             {activeSection === 'notifications' && (
-              <NotificationsSection variant="desktop" />
+              <NotificationsSection variant="desktop" scaRegion={scaRegion} />
             )}
 
             {activeSection === 'submissions' && submissionsPanel}

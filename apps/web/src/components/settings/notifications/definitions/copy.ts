@@ -8,6 +8,47 @@ export const NOTIFICATIONS_COPY = {
   master: 'Push notifications',
   masterOnDetail: 'On for this device',
   masterOffDetail: 'Off',
+  // Native following. The artist group sits ABOVE the watch group so the list
+  // reads in funnel order: an artist announces a date, you watch it, the price
+  // moves. Copy passed the copy-review skill in apply mode on the branch that
+  // added it; the design prototype's strings were placeholders.
+  artists: {
+    heading: 'Artists you follow',
+    alerts: {
+      label: 'New show alerts',
+      // The one fact the interface cannot carry: these are event-driven, so
+      // there is no schedule to wait for and no digest to compare them to.
+      detail:
+        'An artist you follow books a Denver date. Sent when we find it, not on a schedule.',
+    },
+    autoWatch: {
+      label: 'Add them to Watching for me',
+      detail: 'Off means you get the ping and decide yourself.',
+    },
+    digest: {
+      label: 'Weekly digest',
+      // MONDAY, matching the shipped `concert-crawl-spotify-weekly` cron
+      // (`30 15 * * 1`, 15:30 UTC). The design prototype said Friday in two
+      // places and was wrong; nothing in this epic moves the cron.
+      detail:
+        'One email Monday morning with everything your artists have coming up.',
+    },
+    // Rendered uppercase in CSS so the accessible name stays readable.
+    newBadge: 'New',
+    locked: {
+      title: 'New show alerts',
+      detail:
+        'Following artists is part of Premium. Upgrade and these switch on.',
+      cta: 'See Premium',
+    },
+    // Only for a connected user: the same switches govern Spotify-sourced
+    // artists, so nobody goes hunting for a second set in Connections.
+    spotifyNote:
+      'These cover artists from Spotify too. One set of switches, whatever filled the list.',
+  },
+  watching: {
+    heading: "Shows you're watching",
+  },
   subs: [
     {
       key: 'watch',
@@ -81,5 +122,8 @@ export const NOTIFICATIONS_COPY = {
       "Saved the subscription but couldn't record your preference. We tried to undo it. Please try again.",
     generic:
       'Something went sideways turning that on. Try again; if it keeps happening let us know.',
+    // Any of the preference switches below the master one. They write nothing
+    // but a boolean, so there is no rollback to describe, only a retry.
+    preference: "Couldn't save that switch. Flip it again in a moment.",
   },
 } as const

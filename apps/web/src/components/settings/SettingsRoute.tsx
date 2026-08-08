@@ -107,7 +107,7 @@ export function SettingsRoute({
 
         {/* Notifications (#1063) */}
         <div className="flex flex-col gap-2 px-4">
-          <NotificationsSection />
+          <NotificationsSection scaRegion={scaRegion} />
         </div>
 
         <div className="mx-4 h-px bg-border" />

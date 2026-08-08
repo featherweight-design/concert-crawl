@@ -12,12 +12,24 @@ export interface NotificationPreferences {
   masterEnabled: boolean
   watchUpdatesEnabled: boolean
   priceDropsEnabled: boolean
+  // Artist following (migration 0078). The PATCH body is `.strict()` on the
+  // API, so a key missing from this interface is a 400 rather than a silently
+  // dropped field.
+  artistAlertsEnabled: boolean
+  artistAutoWatch: boolean
+  weeklyDigestEnabled: boolean
 }
 
+// Mirrors DEFAULT_PREFS in apps/api/src/routes/me-push.ts. These are only
+// reached when the API returns no body at all; the GET already substitutes
+// the same defaults when a user has no preferences row yet.
 const DEFAULT_PREFERENCES: NotificationPreferences = {
   masterEnabled: false,
   watchUpdatesEnabled: true,
   priceDropsEnabled: true,
+  artistAlertsEnabled: true,
+  artistAutoWatch: false,
+  weeklyDigestEnabled: true,
 }
 
 // Scoped by userId — the app-level QueryClient outlives sign-in sessions, so

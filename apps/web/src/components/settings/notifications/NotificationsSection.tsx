@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
+import { nfLocked } from '@concert-crawl/entitlements'
 import {
   getPushDeviceState,
   subscribeToPush,
@@ -14,13 +15,71 @@ import {
   type PushDeviceState,
 } from '@/lib/push/client'
 import { isIosSafari, isStandalone } from '@/lib/pwa/beforeinstallprompt'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 import {
   useNotificationPreferences,
   usePatchNotificationPreferences,
+  type NotificationPreferences,
 } from '@/lib/queries/use-notification-preferences'
+import { usePlanState } from '@/lib/queries/use-plan-state'
+import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection'
 import { ToggleSwitch } from '../connections/ToggleSwitch'
 import { CrewActivityBlock } from './CrewActivityBlock'
 import { NOTIFICATIONS_COPY } from './definitions/copy'
+
+const ARTISTS_COPY = NOTIFICATIONS_COPY.artists
+
+// Shared row chrome. The switch is labelled by the title and described by the
+// body, so both ids are stable per row rather than generated per render.
+const ROW_IDS = {
+  alerts: 'nf-artist-alerts-detail',
+  autoWatch: 'nf-artist-auto-watch-detail',
+  digest: 'nf-weekly-digest-detail',
+} as const
+
+/**
+ * A sub-group label inside the section. `h3`, not `h2`: "Notifications" is the
+ * section's own `h2` and labels it via `aria-labelledby`, so a sibling `h2`
+ * here would flatten the outline and claim these rows sit beside the section
+ * rather than inside it. CrewActivityBlock, the shipped sub-group in this same
+ * section, is an `h3` for the same reason.
+ */
+const GroupHeading = ({ text }: { text: string }) => (
+  <h3
+    className="pt-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle"
+    style={{ fontFamily: 'var(--font-mono)' }}
+  >
+    {text}
+  </h3>
+)
+
+const LockGlyph = () => (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 15 15"
+    fill="none"
+    aria-hidden
+    focusable="false"
+  >
+    <rect
+      x="2.75"
+      y="6.5"
+      width="9.5"
+      height="6.75"
+      rx="1.75"
+      stroke="currentColor"
+      strokeWidth="1.4"
+    />
+    <path
+      d="M5 6.5V4.75a2.5 2.5 0 1 1 5 0V6.5"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+    />
+  </svg>
+)
 
 // Detail line under the master switch: shows "On" only when BOTH the server
 // preference has push enabled AND this device holds a live subscription. The
@@ -44,14 +103,24 @@ interface NotificationsSectionProps {
    * both lives at the mount site, so the component stays layout-neutral.
    */
   variant?: 'mobile' | 'desktop'
+  /**
+   * Server-resolved SCA-region boolean, forwarded to the TierPickerSheet the
+   * locked artist card opens. Both settings shells already hold it for
+   * PlanPanel, so it is passed down rather than re-resolved here.
+   */
+  scaRegion?: boolean
 }
 
 export const NotificationsSection = ({
   variant = 'mobile',
+  scaRegion = false,
 }: NotificationsSectionProps) => {
   const { getToken } = useAuth()
   const { data: prefs, isLoading, isError } = useNotificationPreferences()
   const patch = usePatchNotificationPreferences()
+  const { data: planState, isPending: planPending } = usePlanState()
+  const { data: spotify } = useSpotifyConnection()
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [deviceState, setDeviceState] = useState<PushDeviceState | null>(null)
   // #1130 fix — surface a visible error when the toggle pipeline fails
   // (subscribe returns error, or PATCH throws). Previously the click just
@@ -88,6 +157,17 @@ export const NotificationsSection = ({
   const masterOn = prefs?.masterEnabled ?? false
   const watchUpdatesOn = prefs?.watchUpdatesEnabled ?? true
   const priceDropsOn = prefs?.priceDropsEnabled ?? true
+  const artistAlertsOn = prefs?.artistAlertsEnabled ?? true
+  const artistAutoWatchOn = prefs?.artistAutoWatch ?? false
+  const weeklyDigestOn = prefs?.weeklyDigestEnabled ?? true
+
+  // ONE gate for the whole artist group, asked through nfLocked rather than by
+  // testing a tier string — design R2 leaked a live Follow control to Supporter
+  // on six surfaces doing exactly that. Fails closed: a plan state that never
+  // arrives renders the locked card, which offers an upgrade, rather than live
+  // switches the API would then reject.
+  const artistsLocked = planState === undefined || nfLocked(planState)
+  const spotifyConnected = spotify?.status === 'connected'
 
   const refreshDeviceState = useCallback(async () => {
     const state = await getPushDeviceState()
@@ -204,22 +284,23 @@ export const NotificationsSection = ({
   }, [getToken, refreshDeviceState])
 
   const onToggleSub = useCallback(
-    (key: 'watch' | 'price', next: boolean) => {
+    (updates: Partial<NotificationPreferences>) => {
       // Sub-toggle changes don't refresh device state (they only affect the
       // server preference). Use mutate() so the mutation's onError has a
       // chance to log — plain unhandled rejections from `void mutateAsync`
       // surface as noisy console errors.
-      const updates =
-        key === 'watch'
-          ? { watchUpdatesEnabled: next }
-          : { priceDropsEnabled: next }
+      setToggleError(null)
       patch.mutate(updates, {
         onError: (subToggleErr) => {
           console.warn(
             'notifications: sub-toggle patch failed',
-            { key, next },
+            updates,
             subToggleErr,
           )
+          // Previously log-only, which read to the user as a switch that
+          // snapped back for no reason. The banner above the rows is the one
+          // place a settings failure can be told.
+          setToggleError(NOTIFICATIONS_COPY.toggleError.preference)
         },
       })
     },
@@ -411,43 +492,199 @@ export const NotificationsSection = ({
               </button>
             </div>
           )}
+        </>
+      )}
 
-          {masterOn && (
-            <div className="flex flex-col gap-2">
-              {NOTIFICATIONS_COPY.subs.map((sub) => {
-                const checked =
-                  sub.key === 'watch' ? watchUpdatesOn : priceDropsOn
-                return (
-                  <div
-                    key={sub.key}
-                    className="flex items-center justify-between rounded-lg border border-border bg-surface-1 px-4 py-3"
-                  >
-                    <div className="flex flex-col">
+      {/* ── Artists you follow ───────────────────────────────────────────
+          Above the watch group on purpose: an artist announcement is the
+          earliest signal in the chain, so reading top-down feels like the
+          funnel does (artist announces → you watch it → the price moves).
+
+          Rendered outside the denied/empty/master branches above, because the
+          weekly digest is an EMAIL. Same reasoning as CrewActivityBlock: a
+          channel that push does not carry must not have its only off-switch
+          hidden behind the push master. The two push rows inside still do
+          gate on it, because those two really are pushes. */}
+      {planPending ? (
+        <div aria-busy="true" className="flex flex-col gap-2">
+          <div className="h-4 w-32 rounded bg-surface-2" />
+          <div className="h-10 rounded-lg bg-surface-1" />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <GroupHeading text={ARTISTS_COPY.heading} />
+
+          {artistsLocked ? (
+            // ONE locked card for the whole group, never three dead switches.
+            // A switch that does nothing is the worst version of this screen,
+            // and the card is the only place the upgrade gets offered here.
+            <div className="flex flex-col gap-3 rounded-xl border border-border-strong bg-surface-1 p-4">
+              <div className="flex items-start gap-3">
+                <span aria-hidden className="mt-0.5 shrink-0 text-signal">
+                  <LockGlyph />
+                </span>
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-sm font-semibold text-fg">
+                    {ARTISTS_COPY.locked.title}
+                  </span>
+                  <span className="mt-1 text-xs text-fg-muted">
+                    {ARTISTS_COPY.locked.detail}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPickerOpen(true)}
+                className="inline-flex min-h-[44px] w-fit items-center justify-center rounded-md border border-border-strong px-4 py-2 text-sm font-semibold text-fg"
+              >
+                {ARTISTS_COPY.locked.cta}
+              </button>
+            </div>
+          ) : (
+            <>
+              {masterOn && (
+                <div className="overflow-hidden rounded-lg border border-border bg-surface-1">
+                  <div className="flex min-h-[44px] items-center justify-between gap-3 px-4 py-3">
+                    <div className="flex min-w-0 flex-col">
+                      {/* No New badge here, unlike the digest row below: the
+                          label already opens with the word "New", and the two
+                          together read as one confused phrase. */}
                       <span className="text-sm font-semibold text-fg">
-                        {sub.label}
+                        {ARTISTS_COPY.alerts.label}
                       </span>
-                      <span className="text-xs text-fg-muted">
-                        {sub.detail}
+                      <span
+                        id={ROW_IDS.alerts}
+                        className="text-xs text-fg-muted"
+                      >
+                        {ARTISTS_COPY.alerts.detail}
                       </span>
                     </div>
                     <ToggleSwitch
-                      checked={checked}
-                      onChange={(next) => onToggleSub(sub.key, next)}
-                      ariaLabel={sub.label}
+                      checked={artistAlertsOn}
+                      onChange={(next) =>
+                        onToggleSub({ artistAlertsEnabled: next })
+                      }
+                      ariaLabel={ARTISTS_COPY.alerts.label}
+                      ariaDescribedBy={ROW_IDS.alerts}
                       disabled={patch.isPending}
                     />
                   </div>
-                )
-              })}
-            </div>
+                  {/* Indented sub-row of the above, not a sibling: it only
+                      means anything while the alert it modifies is on. */}
+                  <div className="flex min-h-[44px] items-center justify-between gap-3 border-t border-border py-3 pl-[34px] pr-4">
+                    <div className="flex min-w-0 flex-col">
+                      <span className="text-sm font-semibold text-fg">
+                        {ARTISTS_COPY.autoWatch.label}
+                      </span>
+                      <span
+                        id={ROW_IDS.autoWatch}
+                        className="text-xs text-fg-muted"
+                      >
+                        {ARTISTS_COPY.autoWatch.detail}
+                      </span>
+                    </div>
+                    <ToggleSwitch
+                      checked={artistAutoWatchOn}
+                      onChange={(next) =>
+                        onToggleSub({ artistAutoWatch: next })
+                      }
+                      ariaLabel={ARTISTS_COPY.autoWatch.label}
+                      ariaDescribedBy={ROW_IDS.autoWatch}
+                      disabled={patch.isPending}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 px-4 py-3">
+                <div className="flex min-w-0 flex-col">
+                  <span className="flex flex-wrap items-center gap-2 text-sm font-semibold text-fg">
+                    {ARTISTS_COPY.digest.label}
+                    <span className="rounded border border-signal px-1.5 py-px text-[9px] font-bold uppercase tracking-[0.12em] text-signal">
+                      {ARTISTS_COPY.newBadge}
+                    </span>
+                  </span>
+                  <span id={ROW_IDS.digest} className="text-xs text-fg-muted">
+                    {ARTISTS_COPY.digest.detail}
+                  </span>
+                </div>
+                <ToggleSwitch
+                  checked={weeklyDigestOn}
+                  onChange={(next) =>
+                    onToggleSub({ weeklyDigestEnabled: next })
+                  }
+                  ariaLabel={ARTISTS_COPY.digest.label}
+                  ariaDescribedBy={ROW_IDS.digest}
+                  disabled={patch.isPending}
+                />
+              </div>
+
+              {/* One set of switches whatever filled the list — without this
+                  a Spotify user goes hunting for a second set in Connections. */}
+              {spotifyConnected && (
+                <p className="text-xs text-fg-muted">
+                  {ARTISTS_COPY.spotifyNote}
+                </p>
+              )}
+            </>
           )}
-        </>
+        </div>
+      )}
+
+      {/* ── Shows you're watching ──────────────────────────────────────── */}
+      {masterOn && (
+        <div className="flex flex-col gap-2">
+          <GroupHeading text={NOTIFICATIONS_COPY.watching.heading} />
+          {NOTIFICATIONS_COPY.subs.map((sub) => {
+            const checked = sub.key === 'watch' ? watchUpdatesOn : priceDropsOn
+            const detailId = `nf-sub-${sub.key}-detail`
+            return (
+              <div
+                key={sub.key}
+                className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 px-4 py-3"
+              >
+                <div className="flex min-w-0 flex-col">
+                  <span className="text-sm font-semibold text-fg">
+                    {sub.label}
+                  </span>
+                  <span id={detailId} className="text-xs text-fg-muted">
+                    {sub.detail}
+                  </span>
+                </div>
+                <ToggleSwitch
+                  checked={checked}
+                  onChange={(next) =>
+                    onToggleSub(
+                      sub.key === 'watch'
+                        ? { watchUpdatesEnabled: next }
+                        : { priceDropsEnabled: next },
+                    )
+                  }
+                  ariaLabel={sub.label}
+                  ariaDescribedBy={detailId}
+                  disabled={patch.isPending}
+                />
+              </div>
+            )
+          })}
+        </div>
       )}
 
       {/* Outside every push branch above, including the empty and denied
           states: crew activity is bell-only and stays controllable with push
           switched fully off. */}
       <CrewActivityBlock />
+
+      <TierPickerSheet
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        planState={planState ?? LOGGED_OUT_PLAN_STATE}
+        scaRegion={scaRegion}
+        // No 'follow' entry value exists yet — PR 10 adds it with the
+        // FOLLOW_ANCHOR copy. Until then this matches the artist page's
+        // locked follow tap so both reaches report on one dimension value.
+        entry="paywall"
+      />
     </section>
   )
 }
