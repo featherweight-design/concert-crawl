@@ -1,3 +1,16 @@
+# [1.228.0](https://github.com/HartiganHM/concert-crawl/compare/v1.227.0...v1.228.0) (2026-08-08)
+
+
+### Bug Fixes
+
+* **api:** collapse a double-sourced follow to one list entry ([9f9174d](https://github.com/HartiganHM/concert-crawl/commit/9f9174d22b2fb5cb8469e9352a58399afb8a6348))
+* **api:** sort the collapsed follow list by the followedAt it returns ([59443e6](https://github.com/HartiganHM/concert-crawl/commit/59443e679123abbff059251e731723dea3f4f1f5))
+
+
+### Features
+
+* **api:** native following data layer — scope filter, /me collection, bulk ([c2aa386](https://github.com/HartiganHM/concert-crawl/commit/c2aa386dc9bed1ea3a9446dd561f649422ca7f64))
+
 # [1.227.0](https://github.com/HartiganHM/concert-crawl/compare/v1.226.1...v1.227.0) (2026-08-08)
 
 
