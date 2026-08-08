@@ -112,6 +112,9 @@ function StickyBar({ name, following, compact, showFollow = true, state }) {
 // how "played here before, nothing upcoming" reads instead.
 function FollowButton({ following, name, size = "full", signedOut = false, state, onToggle }) {
   const compact = size === "compact";
+  // useId, not a counter: several of these can share a screen (bill rows), and
+  // a colliding describedby would point every locked button at one sentence.
+  const gateId = `nfgate${React.useId().replace(/:/g, "")}`;
   const base = {
     all: "unset", boxSizing: "border-box", cursor: "pointer", display: "flex",
     alignItems: "center", justifyContent: "center", gap: 7,
@@ -144,14 +147,31 @@ function FollowButton({ following, name, size = "full", signedOut = false, state
             strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M2 7.5l3.4 3.4L12 3.6"/></svg>
         : <svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="currentColor"
             strokeWidth="2.4" strokeLinecap="round"><path d="M7 2v10M2 7h10"/></svg>);
+  // locked keeps idle's visible label, so on its own the accessible name would
+  // promise a follow that won't happen. The gate sentence is what carries "this
+  // opens the paywall" — it is the a11y half of "no state is inert".
+  const locked = state === "locked";
   return (
-    <button onClick={onToggle} aria-pressed={signedOut || state ? undefined : !!following}
-      aria-label={signedOut ? ARTIST_COPY.followSignedOut
-        : following ? ARTIST_COPY.followingAria(name) : ARTIST_COPY.followAria(name)}
-      style={{ ...style, ...skin }}>
-      {glyph}
-      {label}
-    </button>
+    <>
+      <button onClick={onToggle} aria-pressed={signedOut || state ? undefined : !!following}
+        aria-label={locked ? ARTIST_COPY.followAria(name)
+          : signedOut ? ARTIST_COPY.followSignedOut
+          : following ? ARTIST_COPY.followingAria(name) : ARTIST_COPY.followAria(name)}
+        aria-describedby={locked ? gateId : undefined}
+        style={{ ...style, ...skin }}>
+        {glyph}
+        {label}
+      </button>
+      {/* Visually hidden, NOT `hidden`: a describedby target with the hidden
+          attribute is dropped from the a11y tree, so the sentence would never
+          be announced. */}
+      {locked && (
+        <span id={gateId} style={{ position: "absolute", width: 1, height: 1, padding: 0,
+          margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+          Following artists is a Premium feature. Opens upgrade options.
+        </span>
+      )}
+    </>
   );
 }
 

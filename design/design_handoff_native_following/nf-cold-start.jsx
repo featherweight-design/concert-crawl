@@ -150,8 +150,11 @@ function ShelfFollowBadge({ state = "idle", size = 34 }) {
   const on = state === "following";
   const locked = state === "locked";
   const label = on ? "Following" : "Follow";
+  const gateId = `nfgate${React.useId().replace(/:/g, "")}`;
   return (
-    <button aria-pressed={locked ? undefined : on} aria-label={label} style={{
+    <>
+    <button aria-pressed={locked ? undefined : on} aria-label={label}
+      aria-describedby={locked ? gateId : undefined} style={{
       all: "unset", boxSizing: "border-box", cursor: "pointer",
       position: "absolute", top: 7, right: 7, width: size, height: size, borderRadius: size,
       display: "flex", alignItems: "center", justifyContent: "center",
@@ -161,6 +164,13 @@ function ShelfFollowBadge({ state = "idle", size = 34 }) {
     }}>
       {on ? <GlyphCheck size={14} w={2.6}/> : locked ? <GlyphLock size={13}/> : <GlyphPlus size={13} w={2.4}/>}
     </button>
+    {locked && (
+      <span id={gateId} style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1,
+        overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+        Following artists is a Premium feature. Opens upgrade options.
+      </span>
+    )}
+    </>
   );
 }
 

@@ -167,6 +167,9 @@ function nfLocked(tier) { return tier === "free" || tier === "supporter"; }
 
 function NFFollow({ state = "idle", size = "md", iconOnly = false, full = false, source, onClick }) {
   const s = NF_FOLLOW_SIZES[size] || NF_FOLLOW_SIZES.md;
+  // useId, not a counter: a bill can put four of these on one screen, and a
+  // colliding id would aim every gate sentence at one node.
+  const gateId = `nfgate${React.useId().replace(/:/g, "")}`;
   const base = {
     all: "unset", boxSizing: "border-box", cursor: "pointer",
     display: "flex", alignItems: "center", justifyContent: "center", gap: s.g,
@@ -185,13 +188,28 @@ function NFFollow({ state = "idle", size = "md", iconOnly = false, full = false,
   const glyph = state === "following" ? <GlyphCheck size={s.gl} w={2.4}/>
               : state === "locked" ? <GlyphLock size={s.gl}/>
               : <GlyphPlus size={s.gl} w={2.4}/>;
+  // locked keeps idle's label ("Follow"), so the accessible name alone promises
+  // a follow that won't happen. The gate sentence carries "this opens the
+  // paywall" — the a11y half of "locked is never inert".
+  const locked = state === "locked";
   return (
-    <button onClick={onClick} aria-pressed={state === "locked" ? undefined : state === "following"}
-      aria-label={iconOnly ? label : undefined} style={{ ...base, ...skins[state] }}>
-      {glyph}
-      {!iconOnly && <span>{label}</span>}
-      {!iconOnly && source === "spotify" && state === "following" && <SpotifySlot size={10}/>}
-    </button>
+    <>
+      <button onClick={onClick} aria-pressed={locked ? undefined : state === "following"}
+        aria-label={iconOnly ? label : undefined}
+        aria-describedby={locked ? gateId : undefined} style={{ ...base, ...skins[state] }}>
+        {glyph}
+        {!iconOnly && <span>{label}</span>}
+        {!iconOnly && source === "spotify" && state === "following" && <SpotifySlot size={10}/>}
+      </button>
+      {/* Visually hidden, NOT `hidden`: the hidden attribute drops a node from
+          the a11y tree, so a describedby pointed at it announces nothing. */}
+      {locked && (
+        <span id={gateId} style={{ position: "absolute", width: 1, height: 1, padding: 0,
+          margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+          Following artists is a Premium feature. Opens upgrade options.
+        </span>
+      )}
+    </>
   );
 }
 

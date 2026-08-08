@@ -65,8 +65,13 @@ function FollowFilterChip({ state = "off", count = 7 }) {
   if (state === "absent") return null;
   const on = state === "on";
   const locked = state === "locked";
+  // Locked sets no aria-disabled (it opens the paywall, so it stays in the tab
+  // order); the gate sentence is what tells a screen reader that.
+  const gateId = `nfgate${React.useId().replace(/:/g, "")}`;
   return (
-    <button aria-pressed={locked ? undefined : on} style={{
+    <>
+    <button aria-pressed={locked ? undefined : on}
+      aria-describedby={locked ? gateId : undefined} style={{
       all: "unset", boxSizing: "border-box", cursor: "pointer", flexShrink: 0,
       display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 999,
       border: `1px solid ${on ? "var(--signal)" : "var(--border-strong)"}`,
@@ -78,6 +83,13 @@ function FollowFilterChip({ state = "off", count = 7 }) {
       <span>My artists{on ? ` · ${count}` : ""}</span>
       {on && <span style={{ fontSize: 12, opacity: 0.85 }}>×</span>}
     </button>
+    {locked && (
+      <span id={gateId} style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1,
+        overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}>
+        Filtering to your artists is a Premium feature. Opens upgrade options.
+      </span>
+    )}
+    </>
   );
 }
 
