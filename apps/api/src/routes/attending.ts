@@ -9,6 +9,7 @@ import { apiLogger } from '../lib/logger.js'
 import { requireFeature } from '../middleware/entitlement.js'
 import type { EntitlementVariables } from '../middleware/entitlement.js'
 import { releaseAttendance } from '../lib/user-events.js'
+import { notifyCrewGoing } from '../lib/crew-notifications.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -81,6 +82,14 @@ attendingRouter.put('/:eventId', async (ctx) => {
     )
     return ctx.json({ success: false, error: 'Failed to save attendance' }, 500)
   }
+
+  // Crew fan-out runs AFTER the upsert commits and never throws (#1226 PR-7).
+  // Awaited rather than fired-and-forgotten so the row is visible to a client
+  // that opens the bell immediately; the helper swallows its own failures, so
+  // a notification problem cannot fail an attendance that already landed.
+  // Only the transition into going fans out — the idempotent re-PUT above
+  // returns earlier, so re-tapping never re-notifies.
+  await notifyCrewGoing({ actorUserId: authInfo.userId, eventId })
 
   const response: AttendingToggleResponse = {
     going: true,

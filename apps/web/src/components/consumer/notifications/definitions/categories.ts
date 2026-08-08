@@ -9,7 +9,13 @@
 //   --success   good news                      watch.backonsale · watch.pricedrop
 //   --fg-muted  a neutral verdict              contest.resolved
 //   --signal    a task — you owe a reply       contest.needs_info
-//   --accent    discovery, not your shows      spotify.new_show
+//   --accent    discovery, not your shows      spotify.new_show · crew.*
+//
+// The three `crew.*` categories share one ink and one glyph on purpose: they
+// are not three kinds of news, they are one social channel, and a crew row
+// normally shows the crew's own patch in place of the tile anyway (see
+// lib/crew-meta.ts). The tile and label here are the fallback for a row whose
+// crew metadata did not survive.
 //
 // The five `watch.*` categories are deliberately NOT collapsed into one
 // "Watching" class: cancelled and backonsale are opposite news. Do not
@@ -92,6 +98,24 @@ export const CATEGORY_MAP: Record<NotificationCategory, CategoryPresentation> =
       ink: 'var(--accent)',
       glyph: 'spotify',
       verb: 'New Denver date',
+    },
+    'crew.going': {
+      label: 'Crew',
+      ink: 'var(--accent)',
+      glyph: 'crew',
+      verb: 'Crew plans',
+    },
+    'crew.joined': {
+      label: 'Crew',
+      ink: 'var(--accent)',
+      glyph: 'crew',
+      verb: 'New crew member',
+    },
+    'crew.left': {
+      label: 'Crew',
+      ink: 'var(--accent)',
+      glyph: 'crew',
+      verb: 'Crew member left',
     },
   }
 

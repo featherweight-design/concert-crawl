@@ -76,6 +76,41 @@ describe('sendPushForNotification', () => {
     expect(result.delivered).toBe(0)
   })
 
+  // #1226 PR-7. Crew activity is bell-only. The category list already excludes
+  // the three from PUSH_ELIGIBLE_CATEGORIES, but this asserts the whole send
+  // path with the most favourable conditions possible — VAPID configured,
+  // master on, both sub-toggles on, a live subscription waiting — and still no
+  // outbound push. A future edit that adds a crew category to the eligible set
+  // fails here rather than in someone's lock screen.
+  it.each(['crew.going', 'crew.joined', 'crew.left'] as const)(
+    'never reaches the send pipeline for %s',
+    async (category) => {
+      process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
+      process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
+      process.env['VAPID_SUBJECT'] = 'ops@example.com'
+      dbSelectMock.mockResolvedValue([
+        {
+          masterEnabled: true,
+          watchUpdatesEnabled: true,
+          priceDropsEnabled: true,
+        },
+      ])
+      const { sendPushForNotification } = await import('./send-push.js')
+      const result = await sendPushForNotification({
+        userId: 'user_1',
+        category,
+        title: 't',
+        body: 'b',
+      })
+      expect(result.skipped).toBe('not_eligible')
+      expect(result.delivered).toBe(0)
+      expect(sendNotificationMock).not.toHaveBeenCalled()
+      // Bailed before the prefs read, so nothing about the user's push state
+      // can ever make a crew row eligible.
+      expect(dbSelectMock).not.toHaveBeenCalled()
+    },
+  )
+
   it('skips with not_configured when VAPID env is missing', async () => {
     delete process.env['VAPID_PUBLIC_KEY']
     delete process.env['VAPID_PRIVATE_KEY']

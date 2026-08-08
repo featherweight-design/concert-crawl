@@ -37,6 +37,21 @@ export const NOTIFICATIONS_COPY = {
     "On iPhone, notifications only work from the home-screen app, which you've got. Nice.",
   iosNeedsInstallHint:
     'On iPhone, notifications only work when Concert Crawl is added to your Home Screen. Tap Install (top right) to add it.',
+  // #1226 PR-7. Crew activity is bell-only, so this block sits OUTSIDE the
+  // push master switch: muting a crew has nothing to do with whether push is
+  // on, and burying it under a switch most users leave off would make it
+  // unreachable. One row per crew, because a mute is per crew.
+  crew: {
+    heading: 'Crew activity',
+    detail:
+      'Crew news only ever shows up in your bell, never as a push. Mute a crew to keep it out of there too.',
+    empty: "You're not in a crew yet.",
+    loadError: "Couldn't load your crews. Refresh the page to try again.",
+    /** The switch is ON when the crew is UNMUTED — a switch reads as "am I getting this". */
+    rowLabel: (name: string) => `Crew activity for ${name}`,
+    on: 'In your bell',
+    off: 'Muted',
+  },
   loadError:
     "Couldn't load your notification settings. Refresh the page to try again.",
   // Shown when the master preference is on (from another device) but this

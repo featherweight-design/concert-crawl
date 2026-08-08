@@ -19,8 +19,12 @@ import { apiClient, ApiError } from './api'
  * (packages/push/src/notification-categories.ts), which is the source of
  * truth. Duplicated rather than imported because @concert-crawl/push is a
  * server package (web-push, node crypto) and must not enter the browser
- * bundle. If a ninth category lands there, add it here too — an unrecognised
+ * bundle. If a twelfth category lands there, add it here too — an unrecognised
  * value still renders, via CATEGORY_FALLBACK.
+ *
+ * The three `crew.*` categories are bell-only by design (#1226): they are
+ * absent from PUSH_ELIGIBLE_CATEGORIES, so they reach this panel and nothing
+ * else.
  */
 export const NOTIFICATION_CATEGORIES = [
   'watch.cancelled',
@@ -31,6 +35,9 @@ export const NOTIFICATION_CATEGORIES = [
   'contest.resolved',
   'contest.needs_info',
   'spotify.new_show',
+  'crew.going',
+  'crew.joined',
+  'crew.left',
 ] as const
 
 /**

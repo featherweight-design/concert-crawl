@@ -14,11 +14,16 @@
 // and a trailing dot. Any one of them can be missed; all four cannot.
 
 import type { ConsumerNotification } from '@/lib/notifications'
+import { CrewPatch } from '@/components/consumer/crew-patch/CrewPatch'
 import { categoryFor } from './definitions/categories'
 import { NMono } from './NMono'
 import { NotifTile } from './NotifTile'
 import { itemLabel, isUnread, relTime } from './lib/format-time'
 import { activateOnKey } from './lib/activate-keys'
+import { crewRowIdentity } from './lib/crew-meta'
+
+/** Matches NotifTile's default box, so the row's rhythm is unchanged. */
+const CREW_PATCH_SIZE = 28
 
 export const NotifItem = ({
   item,
@@ -34,6 +39,11 @@ export const NotifItem = ({
 }) => {
   const cat = categoryFor(item.category)
   const unread = isUnread(item)
+  // A crew row swaps the category tile for the crew's own patch and the
+  // category eyebrow for the crew's name — the patch is the fastest "which
+  // crew is this" cue there is, and "Crew" three times over is not. A row
+  // whose metadata failed the guard keeps the ordinary presentation.
+  const crew = crewRowIdentity(item.category, item.metadata)
 
   const open = (): void => {
     onOpen?.(item)
@@ -83,7 +93,26 @@ export const NotifItem = ({
         borderBottom: '1px solid var(--border)',
       }}
     >
-      <NotifTile category={item.category} read={!unread} />
+      {crew === null ? (
+        <NotifTile category={item.category} read={!unread} />
+      ) : (
+        <span
+          style={{
+            display: 'inline-flex',
+            flexShrink: 0,
+            // Same dim-when-read treatment the tile gets: the mark stays put,
+            // it just stops competing with the unread rows above it.
+            opacity: unread ? 1 : 0.55,
+          }}
+        >
+          <CrewPatch
+            crewId={crew.crewId}
+            patchSalt={crew.patchSalt}
+            size={CREW_PATCH_SIZE}
+            scale="micro"
+          />
+        </span>
+      )}
       <div
         style={{
           flex: 1,
@@ -135,10 +164,11 @@ export const NotifItem = ({
             marginTop: 1,
           }}
         >
-          <NMono>{cat.label}</NMono>
+          <NMono>{crew === null ? cat.label : crew.crewName}</NMono>
           {unread && (
             <span
               aria-hidden="true"
+              data-testid="notif-unread-dot"
               style={{
                 width: 5,
                 height: 5,

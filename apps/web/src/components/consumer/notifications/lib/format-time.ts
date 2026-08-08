@@ -16,6 +16,7 @@ import { RELATIVE_TIME_COPY } from '@/lib/definitions/copy'
 import type { ConsumerNotification } from '@/lib/notifications'
 import { NOTIFICATIONS_COPY } from '../definitions/copy'
 import { categoryFor } from '../definitions/categories'
+import { crewRowIdentity } from './crew-meta'
 
 const MIN = 60_000
 const HOUR = 60 * MIN
@@ -152,13 +153,22 @@ export const isUnread = (item: ConsumerNotification): boolean =>
 export const itemLabel = (
   item: ConsumerNotification,
   now: Date = new Date(),
-): string =>
-  `${categoryFor(item.category).verb}. ${item.title} ${item.body} ${relTimeLong(
+): string => {
+  // A crew row shows the crew's name where every other row shows the category
+  // label, so the name has to be spoken too — otherwise "hugh joined The
+  // Regulars" and a second crew's identical row are indistinguishable by ear.
+  const crew = crewRowIdentity(item.category, item.metadata)
+  const lead =
+    crew === null
+      ? categoryFor(item.category).verb
+      : `${categoryFor(item.category).verb}, ${crew.crewName}`
+  return `${lead}. ${item.title} ${item.body} ${relTimeLong(
     item.createdAt,
     now,
   )}${isUnread(item) ? '. Unread' : ''}`
     .replace(/\s+/g, ' ')
     .trim()
+}
 
 /**
  * Unread rows in a page. Note this is the count of what is LOADED — the

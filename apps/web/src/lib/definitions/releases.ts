@@ -31,6 +31,25 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.35.0-beta',
+    date: 'Aug 8, 2026',
+    headline: 'Go with your people.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Crews. Start one, send the link to up to eleven friends, and you get a shared page: everyone in it, the shows any of you are going to, and a patch that belongs to that crew and nobody else.',
+      },
+      {
+        kind: 'added',
+        text: 'When someone in your crew marks a show, you hear about it. Crew news lands in your bell and only in your bell, so nothing here can ever buzz your phone.',
+      },
+      {
+        kind: 'added',
+        text: 'One crew talking more than you want it to? Mute it in Settings. It is per crew, so the rest keep coming through.',
+      },
+    ],
+  },
+  {
     version: 'v0.34.0-beta',
     date: 'Aug 3, 2026',
     headline: 'The date stops disappearing.',

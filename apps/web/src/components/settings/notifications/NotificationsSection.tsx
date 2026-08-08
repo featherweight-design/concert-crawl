@@ -19,6 +19,7 @@ import {
   usePatchNotificationPreferences,
 } from '@/lib/queries/use-notification-preferences'
 import { ToggleSwitch } from '../connections/ToggleSwitch'
+import { CrewActivityBlock } from './CrewActivityBlock'
 import { NOTIFICATIONS_COPY } from './definitions/copy'
 
 // Detail line under the master switch: shows "On" only when BOTH the server
@@ -231,25 +232,36 @@ export const NotificationsSection = ({
   // state we don't actually own. Render a dedicated error state instead.
   // Checked before the loading gate so the error is reached even when
   // the device-state effect hasn't settled.
+  // The push half's states are rendered INSIDE the section rather than
+  // early-returned from it, so the crew block below survives them (#1226
+  // PR-7): a push preferences outage has nothing to do with crew activity,
+  // which is bell-only, and returning early would take the only mute control
+  // off the page with it.
+  const heading = (
+    <h2
+      id="notifications-heading"
+      className={
+        variant === 'desktop'
+          ? 'text-lg font-extrabold text-fg'
+          : 'text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle'
+      }
+      style={variant === 'mobile' ? { fontFamily: 'var(--font-mono)' } : {}}
+    >
+      {NOTIFICATIONS_COPY.heading}
+    </h2>
+  )
+
   if (isError) {
     return (
       <section
-        role="alert"
         aria-labelledby="notifications-heading"
-        className="flex flex-col gap-2"
+        className="flex flex-col gap-4"
       >
-        <h2
-          id="notifications-heading"
-          className={
-            variant === 'desktop'
-              ? 'text-lg font-extrabold text-fg'
-              : 'text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle'
-          }
-          style={variant === 'mobile' ? { fontFamily: 'var(--font-mono)' } : {}}
-        >
-          {NOTIFICATIONS_COPY.heading}
-        </h2>
-        <p className="text-xs text-fg-muted">{NOTIFICATIONS_COPY.loadError}</p>
+        {heading}
+        <p role="alert" className="text-xs text-fg-muted">
+          {NOTIFICATIONS_COPY.loadError}
+        </p>
+        <CrewActivityBlock />
       </section>
     )
   }
@@ -262,9 +274,16 @@ export const NotificationsSection = ({
   // devices.
   if (isLoading || deviceState === null) {
     return (
-      <section aria-busy="true" className="flex flex-col gap-2">
-        <div className="h-4 w-32 rounded bg-surface-2" />
-        <div className="h-10 rounded-lg bg-surface-1" />
+      <section
+        aria-labelledby="notifications-heading"
+        className="flex flex-col gap-4"
+      >
+        {heading}
+        <div aria-busy="true" className="flex flex-col gap-2">
+          <div className="h-4 w-32 rounded bg-surface-2" />
+          <div className="h-10 rounded-lg bg-surface-1" />
+        </div>
+        <CrewActivityBlock />
       </section>
     )
   }
@@ -286,17 +305,7 @@ export const NotificationsSection = ({
       className="flex flex-col gap-4"
       aria-labelledby="notifications-heading"
     >
-      <h2
-        id="notifications-heading"
-        className={
-          variant === 'desktop'
-            ? 'text-lg font-extrabold text-fg'
-            : 'text-[10px] font-bold uppercase tracking-[0.14em] text-fg-subtle'
-        }
-        style={variant === 'mobile' ? { fontFamily: 'var(--font-mono)' } : {}}
-      >
-        {NOTIFICATIONS_COPY.heading}
-      </h2>
+      {heading}
 
       {isIosNeedsInstall && (
         <p className="text-xs text-fg-muted">
@@ -434,6 +443,11 @@ export const NotificationsSection = ({
           )}
         </>
       )}
+
+      {/* Outside every push branch above, including the empty and denied
+          states: crew activity is bell-only and stays controllable with push
+          switched fully off. */}
+      <CrewActivityBlock />
     </section>
   )
 }

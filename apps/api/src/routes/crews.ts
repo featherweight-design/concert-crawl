@@ -51,6 +51,7 @@ import {
   generateCrewInviteToken,
 } from '../lib/crew-invite-token.js'
 import { PG_UNIQUE_VIOLATION } from '../lib/pg-errors.js'
+import { notifyCrewMembershipChange } from '../lib/crew-notifications.js'
 
 const uuidSchema = z.string().uuid()
 const nameSchema = z.string().trim().min(1).max(40)
@@ -636,6 +637,14 @@ crewsRouter.post('/:crewId/leave', async (ctx) => {
       },
       409,
     )
+
+  // After the delete committed (#1226 PR-7). The actor's membership row is
+  // already gone, so the recipient query cannot notify them of their own exit.
+  await notifyCrewMembershipChange({
+    actorUserId: userId,
+    crewId,
+    action: 'left',
+  })
 
   return ctx.json({ success: true, data: { left: true } })
 })

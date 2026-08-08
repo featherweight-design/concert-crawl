@@ -203,6 +203,27 @@ export async function removeMember(
   await apiClient.delete(`/v1/crews/${crewId}/members/${memberId}`, token)
 }
 
+/**
+ * Muting a crew (#1226 PR-7). A mute is the PRESENCE of a row, so the verb
+ * carries the state: PUT to mute, DELETE to unmute. It suppresses at write
+ * time — a muted crew stops producing bell rows for this user rather than
+ * hiding rows already written.
+ *
+ * Per crew, and independent of push: crew activity is bell-only, so this stays
+ * reachable with push switched fully off.
+ */
+export async function setCrewMuted(
+  token: string,
+  crewId: string,
+  muted: boolean,
+): Promise<void> {
+  if (muted) {
+    await apiClient.put(`/v1/crews/${crewId}/mute`, token, {})
+    return
+  }
+  await apiClient.delete(`/v1/crews/${crewId}/mute`, token)
+}
+
 export async function deleteCrew(token: string, crewId: string): Promise<void> {
   await apiClient.delete(`/v1/crews/${crewId}`, token)
 }

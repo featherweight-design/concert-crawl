@@ -33,6 +33,7 @@ import {
   lockCrew,
 } from '../lib/crews.js'
 import { crewInviteTokenSchema } from '../lib/crew-invite-token.js'
+import { notifyCrewMembershipChange } from '../lib/crew-notifications.js'
 
 /**
  * 72 bits is only strong if enumeration is also expensive. Keyed on the Clerk
@@ -265,6 +266,17 @@ crewInvitesRouter.post('/:token/join', async (ctx) => {
       },
       409,
     )
+  }
+
+  // Fan-out only on the branch that actually created the row, and only after
+  // the transaction above committed (#1226 PR-7). A forwarded link tapped
+  // twice returns `already` and must not re-announce the same person.
+  if (result.kind === 'joined') {
+    await notifyCrewMembershipChange({
+      actorUserId: userId,
+      crewId: result.crewId,
+      action: 'joined',
+    })
   }
 
   // `joined` reports whether THIS call created the membership row, so a client
