@@ -18,7 +18,7 @@
 The spec's §1.2 lists **five** things the design handoff asserts that are false about shipped code. Two of them describe work that is already done:
 
 - **There is no hardcoded Spotify logo on the Following chip.** The handoff calls fixing it the epic's highest-value item. `row-chips.ts:58` renders a text-only chip gated on `show.isFollowed`, and there is no `SpotifyLogo` import anywhere under `event-row/`. Do not go looking for it.
-- **The bottom-nav tab-3 label already reads "my shows".** #70 renamed it. `BottomNav.test.tsx` asserts it three times. **No task in this plan touches the nav.**
+- **The bottom-nav tab-3 label already reads "my shows".** #70 renamed it. `BottomNav.test.tsx` asserts it in several places. **No task in this plan touches the nav.**
 
 The other three: `MiniPaywall` does not exist (the paywall is `TierPickerSheet`), the entitlement code is `'entitlement_required'`, and artists carry no genre (only `events.genre` does).
 
