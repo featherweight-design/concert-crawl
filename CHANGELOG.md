@@ -1,3 +1,10 @@
+# [1.226.0](https://github.com/HartiganHM/concert-crawl/compare/v1.225.2...v1.226.0) (2026-08-08)
+
+
+### Features
+
+* **concerts:** give a show you're going to a home before its date ([#1519](https://github.com/HartiganHM/concert-crawl/issues/1519)) ([1c3f98c](https://github.com/HartiganHM/concert-crawl/commit/1c3f98c364cd5741114a360955e1e254af0767f2))
+
 ## [1.225.2](https://github.com/HartiganHM/concert-crawl/compare/v1.225.1...v1.225.2) (2026-08-08)
 
 
