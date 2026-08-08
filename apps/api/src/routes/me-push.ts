@@ -25,16 +25,21 @@ const subscribeSchema = z.object({
   userAgent: z.string().max(500).optional(),
 })
 
-const preferencesSchema = z.object({
-  masterEnabled: z.boolean().optional(),
-  watchUpdatesEnabled: z.boolean().optional(),
-  priceDropsEnabled: z.boolean().optional(),
-  // Artist following (migration 0078). Same partial-PATCH shape as the three
-  // above: an absent key means "leave it alone", never "reset it".
-  artistAlertsEnabled: z.boolean().optional(),
-  artistAutoWatch: z.boolean().optional(),
-  weeklyDigestEnabled: z.boolean().optional(),
-})
+// `.strict()`, like the sibling toggle PATCH in routes/spotify.ts. Without it
+// a misspelled key is stripped and the request 200s having changed nothing,
+// which is the hardest kind of no-op to notice from the client.
+const preferencesSchema = z
+  .object({
+    masterEnabled: z.boolean().optional(),
+    watchUpdatesEnabled: z.boolean().optional(),
+    priceDropsEnabled: z.boolean().optional(),
+    // Artist following (migration 0078). Same partial-PATCH shape as the three
+    // above: an absent key means "leave it alone", never "reset it".
+    artistAlertsEnabled: z.boolean().optional(),
+    artistAutoWatch: z.boolean().optional(),
+    weeklyDigestEnabled: z.boolean().optional(),
+  })
+  .strict()
 
 // Read VAPID vars directly from process.env rather than the validated
 // `env` object so this route module doesn't trigger env.ts evaluation on

@@ -116,6 +116,14 @@ describe('/v1/me/notification-preferences', () => {
     expect(res.status).toBe(400)
   })
 
+  it('rejects an unknown key rather than silently stripping it', async () => {
+    const res = await patch({
+      // @ts-expect-error — a typo'd key is exactly what `.strict()` is for.
+      artistAlertsEnabledd: true,
+    })
+    expect(res.status).toBe(400)
+  })
+
   it('401s an anonymous caller', async () => {
     authState.current = null
     expect((await get()).status).toBe(401)
