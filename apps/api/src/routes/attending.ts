@@ -13,6 +13,18 @@ import { notifyCrewGoing } from '../lib/crew-notifications.js'
 
 const uuidSchema = z.string().uuid()
 
+const readAttendingAt = async (
+  userId: string,
+  eventId: string,
+): Promise<Date | null> => {
+  const [row] = await db
+    .select({ attendingAt: userEvents.attendingAt })
+    .from(userEvents)
+    .where(and(eq(userEvents.userId, userId), eq(userEvents.eventId, eventId)))
+    .limit(1)
+  return row?.attendingAt ?? null
+}
+
 // Attending ("I'm going!") is what Concert History is built from — it is never
 // derived from the watch list (#70 locked concept). Gated on the entitlement
 // key, never a hardcoded tier: ENTITLEMENTS_MATRIX owns the tier answer.
@@ -70,7 +82,7 @@ attendingRouter.put('/:eventId', async (ctx) => {
   // `existing` check above is a read-then-write and so cannot settle a double
   // tap on its own; this makes "who moved attendingAt off null" atomic, which
   // is what keeps the crew fan-out below to exactly one round per attendance.
-  let claimed: { id: string }[] = []
+  let claimed: { attendingAt: Date | null }[] = []
   try {
     claimed = await db
       .insert(userEvents)
@@ -81,7 +93,7 @@ attendingRouter.put('/:eventId', async (ctx) => {
         set: { attendingAt },
         setWhere: isNull(userEvents.attendingAt),
       })
-      .returning({ id: userEvents.id })
+      .returning({ attendingAt: userEvents.attendingAt })
   } catch (err) {
     apiLogger.warn(
       { err, userId: authInfo.userId, eventId },
@@ -100,9 +112,15 @@ attendingRouter.put('/:eventId', async (ctx) => {
     await notifyCrewGoing({ actorUserId: authInfo.userId, eventId })
   }
 
+  // A request that lost the race must report the timestamp that actually
+  // persisted, not the one it generated, or two concurrent taps disagree about
+  // when the user committed.
+  const settledAt =
+    claimed[0]?.attendingAt ?? (await readAttendingAt(authInfo.userId, eventId))
+
   const response: AttendingToggleResponse = {
     going: true,
-    attendingAt: attendingAt.toISOString(),
+    attendingAt: (settledAt ?? attendingAt).toISOString(),
   }
   return ctx.json({ success: true, data: response })
 })

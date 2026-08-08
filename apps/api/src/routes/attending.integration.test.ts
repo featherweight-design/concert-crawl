@@ -222,6 +222,27 @@ describe('PUT/DELETE /v1/attending/:eventId', () => {
       expect(await mateRowCount()).toBe(1)
     })
 
+    it('reports the persisted timestamp to the request that lost the race', async () => {
+      setAuth()
+      await seedSupporter()
+      await seedSharedCrew()
+      const venue = await seedVenue()
+      const event = await seedEvent(venue.id, { date: '2026-01-01' })
+
+      const [first, second] = await Promise.all([
+        app.request(`/v1/attending/${event.id}`, { method: 'PUT' }),
+        app.request(`/v1/attending/${event.id}`, { method: 'PUT' }),
+      ])
+      const bodies = (await Promise.all([first?.json(), second?.json()])) as {
+        data: { attendingAt: string }
+      }[]
+
+      // The loser generated its own timestamp; it must report the stored one.
+      const stored = (await rowFor(USER_ID, event.id))?.attendingAt
+      expect(bodies[0]?.data.attendingAt).toBe(stored?.toISOString())
+      expect(bodies[1]?.data.attendingAt).toBe(stored?.toISOString())
+    })
+
     it('notifies again after the user un-goes and goes back', async () => {
       setAuth()
       await seedSupporter()

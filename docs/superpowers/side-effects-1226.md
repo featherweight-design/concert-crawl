@@ -29,10 +29,14 @@ yet" and both fan out. Fixed by making the transition atomic — the upsert carr
 move off `null`, and only the claiming request notifies. **No separate idempotency key is needed:
 `(userId, eventId)` with the null-attendingAt predicate is the key.**
 
+The request that _loses_ the claim still has to answer honestly: it reports the timestamp that
+persisted rather than the one it generated, so two concurrent taps never disagree about when the
+user committed.
+
 Proved in `apps/api/src/routes/attending.integration.test.ts`:
 
 - sequential double `PUT` → 1 row
-- two concurrent `PUT`s via `Promise.all` → 1 row
+- two concurrent `PUT`s via `Promise.all` → 1 row, and both responses carry the stored timestamp
 - go → un-go → go → 2 rows (a genuine second decision _is_ news; suppressing it would be a bug)
 
 `crew.joined` / `crew.left` cannot double-fire: the membership row's unique index means the second
