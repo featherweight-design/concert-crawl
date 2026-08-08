@@ -271,7 +271,7 @@ function App() {
               <NFNote tone="warn" title="Built on the shipped components, not lookalikes" items={[
                 "Browse renders the real FilterBar chrome from browse-home.jsx and the real EventRowList (surface=browse) from design_handoff_event_row_system.",
                 "Event detail is the real EventDetail from design_handoff_event_detail_v2. The only change is one new optional prop, billBlock, rendered directly under the Watch CTA.",
-                "The artist page is the real ArtistPageMobile from design_handoff_artist_page, with two pass-through props added: followState and followers.",
+                "The artist page is the real ArtistPageMobile from design_handoff_artist_page, with ONE pass-through prop added: followState. Follower count is cut, so there is no second prop.",
                 "Art is the real IdentityArt from Phase 7.5 — no stand-in gradients anywhere in this pass.",
               ]}/>
               <NFNote tone="note" title="1 · Discovery + cold start" items={[

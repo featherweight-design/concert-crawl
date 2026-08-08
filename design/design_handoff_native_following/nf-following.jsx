@@ -171,7 +171,7 @@ function ArtistManageRow({ a, source, narrow = false }) {
 }
 
 // The "find more artists" row. Named as a destination, not a verb-plus-noun:
-// it opens the same suggestion picker as onboarding step 5, and the meta line
+// it opens the same suggestion picker as onboarding step 7, and the meta line
 // says so, because "+ Follow more" beside a list of Following buttons reads
 // like it might follow everything at once.
 function FindArtistsRow({ dense = false }) {
