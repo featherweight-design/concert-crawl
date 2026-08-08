@@ -17,6 +17,7 @@ import {
 } from './filter-defs'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { TasteFilterChip } from './TasteFilterChip'
+import { FollowFilterChip } from './FollowFilterChip'
 
 const copy = CONSUMER_COPY.filterBar
 
@@ -36,6 +37,13 @@ interface FilterBarProps {
   crews?: CrewSummary[]
   /** Shows in the active lens, for the rail's count. Null when it failed. */
   lensCount?: number | null
+  /**
+   * Follows the server counted, for the "My artists" chip (native following,
+   * PR 4). `null` means UNKNOWN — the seed failed, or there was no session to
+   * read it with — and the chip keeps rendering rather than vanishing on a
+   * viewer who follows fifty artists. `0` is a claim; `null` is an admission.
+   */
+  followCount?: number | null
 }
 
 function IconList({ size = 13 }: { size?: number }) {
@@ -103,6 +111,7 @@ export function FilterBar({
   scaRegion = true,
   crews = [],
   lensCount = null,
+  followCount = null,
 }: FilterBarProps) {
   const router = useRouter()
   const pathname = usePathname()
@@ -152,6 +161,8 @@ export function FilterBar({
   // Taste scope (#763 PR 7) — a mode, not a dimension: excluded from the
   // active-filter count / Clear all (it has its own ✕ on the chip).
   const tasteActive = searchParams.get('filterTaste') === '1'
+  // Same treatment for the follow scope: a mode, not a dimension.
+  const followActive = searchParams.get('filterFollowing') === '1'
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 640px)')
@@ -352,8 +363,21 @@ export function FilterBar({
           </button>
         )}
 
-        {/* Taste scope chip leads the row (taste-filter.jsx: it's a mode,
-            so it sits before the dimension chips, split by a divider). */}
+        {/* Scope chips lead the row (taste-filter.jsx: they're modes, so they
+            sit before the dimension chips, each split off by its own trailing
+            divider). "My artists" comes first: it scopes to a list the viewer
+            built by hand, where the taste chip scopes to one Spotify inferred.
+            Either chip can render nothing, and because each owns the divider
+            that FOLLOWS it, no combination can strand a leading rule. */}
+        <FollowFilterChip
+          active={followActive}
+          onToggle={(next) =>
+            updateParams({ filterFollowing: next ? '1' : '' })
+          }
+          followCount={followCount}
+          scaRegion={scaRegion}
+        />
+
         <TasteFilterChip
           active={tasteActive}
           onToggle={(next) => updateParams({ filterTaste: next ? '1' : '' })}

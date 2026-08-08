@@ -867,6 +867,12 @@ export interface EventsListResponse {
   total: number
   limit: number
   offset: number
+  /**
+   * Whether the API actually narrowed this list to followed artists. Present
+   * only on `?following=1` requests. The UI reads this flag rather than its own
+   * request intent, so it can never claim a scope the API didn't apply.
+   */
+  followingApplied?: boolean
 }
 
 export interface AvailabilityDay {

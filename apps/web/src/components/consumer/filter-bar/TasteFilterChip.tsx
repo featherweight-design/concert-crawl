@@ -19,6 +19,7 @@ import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 import { TasteUpsellSheet } from './TasteUpsellSheet'
+import { ChipDivider } from './ChipDivider'
 
 const COPY = SPOTIFY_COPY.tasteFilter
 
@@ -40,22 +41,6 @@ const LockGlyph = () => (
       strokeLinecap="round"
     />
   </svg>
-)
-
-// Divider between the taste scope chip and the dimension chips (mock:
-// 1×20px --border with 2px side margins). Rendered by the chip itself so
-// it never shows orphaned while the entitlement is still resolving.
-const ChipDivider = () => (
-  <span
-    aria-hidden
-    className="shrink-0"
-    style={{
-      width: 1,
-      height: 20,
-      background: 'var(--border)',
-      margin: '0 2px',
-    }}
-  />
 )
 
 interface TasteFilterChipProps {

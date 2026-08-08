@@ -244,9 +244,13 @@ export const SPOTIFY_COPY = {
     // A11y: the locked chip stays operable (it opens the upsell), so the
     // paid state is conveyed by this label alone — no aria-disabled.
     chipLockedAria: 'Following filter, paid',
-    chipAria: 'Filter to artists you follow',
-    banner: (count: number) => `${count} Denver shows by artists you follow`,
-    bannerSingular: '1 Denver show by artists you follow',
+    // "on Spotify" is load-bearing since native following shipped: the chip
+    // row now also carries "My artists", which scopes to follows made HERE.
+    // Without the qualifier a screen reader hears two near-identical chips.
+    chipAria: 'Filter to artists you follow on Spotify',
+    banner: (count: number) =>
+      `${count} Denver shows by artists you follow on Spotify`,
+    bannerSingular: '1 Denver show by artists you follow on Spotify',
     // Empty state when the filter is on but no Spotify is linked — the API
     // returns an empty 200 for entitled viewers with zero follow rows, so
     // without this the page shows a generic "no hits" with no way forward.

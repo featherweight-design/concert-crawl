@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.39.0-beta',
+    date: 'Aug 8, 2026',
+    headline: 'Browse, narrowed to the artists you follow.',
+    items: [
+      {
+        kind: 'added',
+        text: 'A My artists chip on browse. Tap it and the calendar drops to Denver dates by artists you follow.',
+      },
+      {
+        kind: 'added',
+        text: 'A shelf above the list for the ones with something on the books, and if you follow nobody yet, a starting six who do.',
+      },
+    ],
+  },
+  {
     version: 'v0.38.0-beta',
     date: 'Aug 8, 2026',
     headline: 'A price tells you where it came from.',

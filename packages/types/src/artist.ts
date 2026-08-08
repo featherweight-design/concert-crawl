@@ -135,6 +135,32 @@ export interface FollowedArtist {
 }
 
 /**
+ * One row of `GET /v1/artists/suggestions` — a followable artist with at least
+ * one upcoming consumer-visible Denver date. Every row is followable by
+ * construction (it has a `slug`, so it has a projection row), which is why
+ * `slug` is non-nullable here and nullable on `FollowedArtist`.
+ */
+export interface ArtistSuggestion {
+  name: string
+  slug: string
+  photoUrl: string | null
+  /** Consumer-visible upcoming Denver shows. Always >= 1. */
+  upcomingShowCount: number
+  /** Never null — a suggestion exists because it has an upcoming date. */
+  nextShow: FollowedArtistNextShow
+  /**
+   * Whether the requesting viewer already follows this artist. `null` when the
+   * request is anonymous — there is no session to read, and `false` would be a
+   * claim we cannot make.
+   */
+  following: boolean | null
+}
+
+/** Default and hard cap on `GET /v1/artists/suggestions?limit=`. */
+export const ARTIST_SUGGESTIONS_DEFAULT_LIMIT = 12
+export const ARTIST_SUGGESTIONS_MAX_LIMIT = 24
+
+/**
  * Per-slug outcome of `POST /v1/me/artist-follows/bulk`. `already_following`
  * is a SUCCESS — the endpoint is idempotent, so re-committing a selection that
  * partially landed is never a conflict.

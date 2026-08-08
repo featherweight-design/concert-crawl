@@ -36,6 +36,21 @@ import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 import { fetchSpotifyConnection, fetchTastePicks } from '@/lib/spotify'
 import { fetchCrews, fetchCrewShows } from '@/lib/crews'
 import { CrewLensList } from '@/components/consumer/crews'
+import { FollowShelf } from '@/components/consumer/following'
+import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
+import {
+  SHELF_SUGGESTION_POOL,
+  SHELF_VISIBLE_CARDS,
+} from '@/components/consumer/following/definitions/constants'
+import type { ShelfMode } from '@/components/consumer/following/definitions/types'
+import {
+  datedFollows,
+  followsToShelfArtists,
+  hasSpotifyFollows,
+  seedArtistSuggestions,
+  seedFollowedArtists,
+  suggestionsToShelfArtists,
+} from '@/lib/following'
 
 const copy = CONSUMER_COPY
 
@@ -54,6 +69,7 @@ async function fetchEvents(
   token: string | null,
   limit = PAGE_LIMIT,
   taste = false,
+  following = false,
 ): Promise<EventsListResponse> {
   const qs = new URLSearchParams()
   if (typeof params['search'] === 'string') qs.set('search', params['search'])
@@ -72,6 +88,7 @@ async function fetchEvents(
   if (typeof params['filterVibe'] === 'string')
     qs.set('filterVibe', params['filterVibe'])
   if (taste) qs.set('taste', '1')
+  if (following) qs.set('following', '1')
   qs.set('limit', String(limit))
   const url = `/v1/events?${qs.toString()}`
   return token
@@ -171,34 +188,49 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   // tasteApplied drives the scope banner so the UI never claims a filter
   // the API didn't apply.
   const tasteRequested = params['filterTaste'] === '1' && token != null
+  // Follow scope (native following PR 4): identical server gating to taste,
+  // and the same rejection contract, so both scopes share one fallback path.
+  // `followingApplied` is read back off the RESPONSE rather than assumed from
+  // the request — the banner must never claim a scope the API declined.
+  const followingRequested = params['filterFollowing'] === '1' && token != null
   const eventsPromise: Promise<{
     response: EventsListResponse
     tasteApplied: boolean
+    followingApplied: boolean
   }> = (async () => {
     // Calendar fetches a bounded week — use the API max (100) so all shows in
     // the week are returned. List view uses PAGE_LIMIT and paginates
     // client-side.
     const viewLimit = view === 'cal' ? 100 : PAGE_LIMIT
     try {
+      const response = await fetchEvents(
+        fetchParams,
+        token,
+        viewLimit,
+        tasteRequested,
+        followingRequested,
+      )
       return {
-        response: await fetchEvents(
-          fetchParams,
-          token,
-          viewLimit,
-          tasteRequested,
-        ),
+        response,
         tasteApplied: tasteRequested,
+        followingApplied:
+          followingRequested && response.followingApplied === true,
       }
     } catch (err) {
+      const scopeRequested = tasteRequested || followingRequested
       if (
-        tasteRequested &&
+        scopeRequested &&
         err instanceof ApiError &&
         (err.status === 401 || err.status === 403)
       ) {
-        console.warn('taste filter rejected — falling back to unfiltered', err)
+        // One retry drops BOTH scopes. Which one the API rejected isn't in the
+        // error, and a second probe to find out costs a round-trip to render a
+        // list the viewer can re-scope in one tap.
+        console.warn('scope filter rejected — falling back to unfiltered', err)
         return {
           response: await fetchEvents(fetchParams, token, viewLimit, false),
           tasteApplied: false,
+          followingApplied: false,
         }
       }
       throw err
@@ -225,6 +257,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   // The lens pill needs the viewer's crews on the first paint or it pops in
   // after the list. A failure degrades to no pill rather than a broken page:
   // the calendar is the thing this route is for.
+  // ⚠️ ONE fetch, TWO consumers. The scope chip's count and the shelf's mode
+  // are both decided from this list. Do not add a second call for either.
+  const followsPromise = seedFollowedArtists(token)
+
   const crewsPromise: Promise<CrewSummary[]> = token
     ? fetchCrews(token).catch((err: unknown) => {
         console.error('[browse] crew lens list load failed', err)
@@ -239,6 +275,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     watchedShows,
     initialTastePicks,
     crews,
+    follows,
     requestHeaders,
   ] = await Promise.all([
     eventsPromise,
@@ -247,10 +284,12 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     watchedShowsPromise,
     tastePicksPromise,
     crewsPromise,
+    followsPromise,
     headers(),
   ])
   const eventsResult = eventsFetch.response
   const tasteApplied = eventsFetch.tasteApplied
+  const followingApplied = eventsFetch.followingApplied
   // Monetization spec §1.7: SCA notice gating for the tier picker the locked
   // taste chip can open. Unknown (local dev, header absent) fails safe to true.
   const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'))
@@ -312,6 +351,51 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     }
   }
 
+  // ── Follow surfaces (native following PR 4) ──────────────────────────
+  //
+  // A signed-out visitor provably follows nobody, so 0 is a fact rather than a
+  // guess. With a token, `undefined` from the seed means the fetch FAILED, and
+  // that stays `null` (unknown) all the way to the chip: treating "we couldn't
+  // ask" as "you follow nobody" would pull the chip out from under a viewer
+  // who follows fifty artists.
+  const followCount: number | null =
+    token === null ? 0 : (follows?.length ?? null)
+
+  // The shelf only exists in the browse list, and the crew lens replaces that
+  // list wholesale — a shelf above someone else's feed is a non sequitur.
+  const shelfSlotOpen = view === 'list' && !lensActive
+  // `zero` recruits, so it runs for logged-out visitors too (their badges
+  // render locked and hand off to the tier picker). Unknown gets no shelf: the
+  // Spotify taste shelf still has the slot in that case.
+  const shelfMode: ShelfMode | null = !shelfSlotOpen
+    ? null
+    : followCount === null
+      ? null
+      : followCount === 0
+        ? 'zero'
+        : hasSpotifyFollows(follows ?? [])
+          ? 'spotify'
+          : 'some'
+
+  // Serial by necessity: we can't know the follow count until the seed lands,
+  // and fetching suggestions unconditionally would tax every browse load with
+  // a call the large majority of viewers never see the result of. Same shape
+  // as the fetchCrewShows await above.
+  const suggestions =
+    shelfMode === 'zero'
+      ? await seedArtistSuggestions(SHELF_SUGGESTION_POOL)
+      : undefined
+
+  const shelfArtists =
+    shelfMode === null
+      ? []
+      : shelfMode === 'zero'
+        ? suggestionsToShelfArtists(suggestions ?? [])
+        : followsToShelfArtists(datedFollows(follows ?? [])).slice(
+            0,
+            SHELF_VISIBLE_CARDS,
+          )
+
   const { data: events, total, limit } = eventsResult
 
   if (view === 'cal') {
@@ -361,7 +445,8 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
     params['filterWhere'] ??
     params['filterPrice'] ??
     params['filterVibe'] ??
-    (tasteApplied ? '1' : undefined)
+    (tasteApplied ? '1' : undefined) ??
+    (followingApplied ? '1' : undefined)
   const currentOffset = eventsResult.offset
 
   // Compute week navigation hrefs server-side so they can be passed as plain
@@ -415,14 +500,28 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           is in an error/revoked state. */}
       <SpotifyStatusBanner />
 
-      {/* "Based on your taste" shelf (#763 PR 8) — premium + connected only,
-          list view only; renders nothing for everyone else. */}
-      {view === 'list' && !lensActive && (
-        <DiscoveryShelf
-          {...(initialTastePicks !== undefined && {
-            initialPicks: initialTastePicks,
-          })}
+      {/* One shelf slot, two claimants. The follow shelf wins it whenever the
+          server could decide a mode, because following is the thing this
+          surface is now for; the Spotify taste shelf keeps the slot only when
+          the follow seed came back unknown. Deliberately NOT a removal of the
+          taste shelf — it still renders for every viewer the follow seed
+          couldn't answer for. */}
+      {shelfMode !== null ? (
+        <FollowShelf
+          mode={shelfMode}
+          artists={shelfArtists}
+          followCount={followCount ?? 0}
+          scaRegion={scaRegion}
         />
+      ) : (
+        view === 'list' &&
+        !lensActive && (
+          <DiscoveryShelf
+            {...(initialTastePicks !== undefined && {
+              initialPicks: initialTastePicks,
+            })}
+          />
+        )
       )}
 
       {/* Filter bar */}
@@ -434,9 +533,33 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
             scaRegion={scaRegion}
             crews={crews}
             lensCount={lensFailed ? null : lensShows.length}
+            followCount={followCount}
           />
         </Suspense>
       </div>
+
+      {/* Follow scope banner — role="status" so a screen reader hears the
+          list narrow when the chip is toggled, and rendered only when the API
+          reported `followingApplied`. Same shell as the taste banner beside
+          it, minus the Spotify mark: these follows are ours. */}
+      {followingApplied && !lensActive && (
+        <div
+          role="status"
+          className="mb-4 flex items-center gap-2 rounded-lg px-3 py-2"
+          style={{
+            background:
+              'color-mix(in oklch, var(--signal) 10%, var(--surface-1))',
+            border:
+              '1px solid color-mix(in oklch, var(--signal) 28%, var(--border))',
+          }}
+        >
+          <span className="text-xs font-semibold text-fg">
+            {total === 1
+              ? FOLLOWING_COPY.bannerSingular
+              : FOLLOWING_COPY.banner(total)}
+          </span>
+        </div>
+      )}
 
       {/* Taste scope banner — only when the API actually applied taste=1
           (taste-filter.jsx mock). */}

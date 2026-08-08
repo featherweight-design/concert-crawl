@@ -22,12 +22,18 @@ import {
   or,
   sql,
 } from 'drizzle-orm'
-import { ARTIST_SLUG_MAX_LENGTH } from '@concert-crawl/types'
+import {
+  ARTIST_SLUG_MAX_LENGTH,
+  ARTIST_SUGGESTIONS_DEFAULT_LIMIT,
+  ARTIST_SUGGESTIONS_MAX_LIMIT,
+} from '@concert-crawl/types'
 import type {
   ArtistDetailResponse,
   ArtistPastShow,
   ArtistShow,
+  ArtistSuggestion,
 } from '@concert-crawl/types'
+import { loadNextShowByCanonical } from '../lib/artist-follows.js'
 import { todayInTimezone } from '../lib/time.js'
 
 export const artistsPublicRouter = new Hono()
@@ -73,6 +79,144 @@ const parsePrice = (raw: string | null): number | null => {
   const parsed = Number.parseFloat(raw)
   return Number.isNaN(parsed) ? null : parsed
 }
+
+// Cancelled and postponed rows stay, matching every other list surface.
+const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const
+
+const suggestionsQuerySchema = z.object({
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(ARTIST_SUGGESTIONS_MAX_LIMIT)
+    .optional()
+    .default(ARTIST_SUGGESTIONS_DEFAULT_LIMIT),
+})
+
+// GET /v1/artists/suggestions — followable artists with an upcoming Denver date
+//
+// ⚠️ MUST stay registered above `GET /:slug`. `suggestions` satisfies
+// slugParamSchema, so a later registration would be shadowed and answer 404 as
+// a missing artist.
+//
+// Ordering is by count of upcoming consumer-visible Denver shows desc, then
+// soonest date asc, then name asc. The eng spec asked for "follower count",
+// which describes a column that does not exist and is not being added —
+// artists are a projection off event billing strings, not an authored table
+// with metrics (Gate 1 decision D3). Local booking volume is the better signal
+// anyway: this shelf recruits follows for shows you can actually go to, not
+// for global fame.
+//
+// EXTENSION POINT (PR 8, onboarding): add an optional `?genres=` array-overlap
+// filter to THIS endpoint rather than authoring a second one. That query is
+// this query plus a WHERE.
+artistsPublicRouter.get(
+  '/suggestions',
+  zValidator('query', suggestionsQuerySchema, (result, ctx) => {
+    if (!result.success) {
+      return ctx.json({ success: false, error: 'Invalid limit' }, 400)
+    }
+  }),
+  async (ctx) => {
+    const { limit } = ctx.req.valid('query')
+    const today = todayInTimezone(MT_TIME_ZONE)
+
+    // Same three-arm billing match the detail route uses, but column-to-column
+    // rather than against a literal: the equality arm is the indexed fast
+    // path, and both array arms use `&&` (not `= ANY`) because only overlap
+    // can use the GIN indexes. The co-headliner arm is #1203 — without it the
+    // second act on a co-headline bill is invisible to its own counts.
+    const canonicalArray = sql`ARRAY[${artists.canonicalName}]::text[]`
+    const appearsOnBill = or(
+      eq(events.canonicalArtist, artists.canonicalName),
+      sql`${events.canonicalHeadliners} && ${canonicalArray}`,
+      sql`${events.canonicalSupporting} && ${canonicalArray}`,
+    )
+
+    const upcomingCount = sql<number>`count(distinct ${events.id})::int`
+    const soonestDate = sql<string>`min(${events.date})`
+
+    const rows = await db
+      .select({
+        name: artists.name,
+        slug: artists.slug,
+        canonicalName: artists.canonicalName,
+        photoUrl: artists.photoUrl,
+        upcomingShowCount: upcomingCount,
+      })
+      .from(artists)
+      .innerJoin(events, appearsOnBill)
+      .innerJoin(
+        venues,
+        and(eq(events.venueId, venues.id), eq(venues.active, true)),
+      )
+      .where(
+        and(
+          eq(artists.hidden, false),
+          // The consumer filter pair every public query applies (#607).
+          eq(events.hiddenFromConsumer, false),
+          isNull(events.firstMissingAt),
+          inArray(events.status, [...SCHEDULED_STATUSES]),
+          gte(events.date, today),
+        ),
+      )
+      .groupBy(
+        artists.id,
+        artists.name,
+        artists.slug,
+        artists.canonicalName,
+        artists.photoUrl,
+      )
+      .orderBy(desc(upcomingCount), asc(soonestDate), asc(artists.name))
+      .limit(limit)
+
+    const canonicalNames = rows.map((row) => row.canonicalName)
+    const nextShows = await loadNextShowByCanonical(canonicalNames)
+
+    // Anonymous readers get `following: null` — there is no session to read,
+    // and `false` would be a claim we cannot make.
+    const authInfo = getAuth(ctx)
+    let followed: Set<string> | null = null
+    if (authInfo?.userId && canonicalNames.length > 0) {
+      // `spotify_top` is listening history, not a follow — counting it would
+      // render the badge pre-engaged for an artist the user never followed.
+      // Mirrors the detail route above.
+      const followRows = await db
+        .select({ canonicalName: userArtistFollows.canonicalName })
+        .from(userArtistFollows)
+        .where(
+          and(
+            eq(userArtistFollows.userId, authInfo.userId),
+            inArray(userArtistFollows.canonicalName, canonicalNames),
+            ne(userArtistFollows.source, 'spotify_top'),
+          ),
+        )
+      followed = new Set(followRows.map((row) => row.canonicalName))
+    }
+
+    const data: ArtistSuggestion[] = rows.flatMap((row): ArtistSuggestion[] => {
+      const nextShow = nextShows.get(row.canonicalName)
+      // Unreachable by construction — the row exists because it has an
+      // upcoming consumer-visible date at an active venue, which is exactly
+      // what loadNextShowByCanonical asks. Dropped rather than faked so a
+      // future divergence between the two queries can never emit a
+      // suggestion with no date attached.
+      if (!nextShow) return []
+      return [
+        {
+          name: row.name,
+          slug: row.slug,
+          photoUrl: row.photoUrl,
+          upcomingShowCount: row.upcomingShowCount,
+          nextShow,
+          following: followed === null ? null : followed.has(row.canonicalName),
+        },
+      ]
+    })
+
+    return ctx.json({ success: true, data })
+  },
+)
 
 // GET /v1/artists/:slug — artist detail + upcoming/past shows (public)
 artistsPublicRouter.get(
