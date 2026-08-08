@@ -47,6 +47,12 @@ export const ARTIST_COPY = {
   // signed-out visitor (above), so the accessible name is where we tell the
   // truth about what activation actually does.
   followSignedOutAria: (name: string) => `Follow ${name}: sign in to follow`,
+  // The locked control keeps the visible label "Follow" and the accessible
+  // name "Follow <artist>" — same reasoning as the signed-out case, and the
+  // handoff draws the same button. That name alone promises a follow that will
+  // not happen, so this sentence is where the gate is told. It is referenced by
+  // aria-describedby, never rendered visibly.
+  followGate: 'Following artists is a Premium feature. Opens upgrade options.',
 
   // History line — prose. `since` is DATA (crawl start), never hardcoded here,
   // so a licensed backfill changes the number without touching this string.

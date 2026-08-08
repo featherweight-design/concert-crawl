@@ -59,3 +59,24 @@ export const AP_MONOGRAM_BOTTOM = 38
 
 /** Spotify embed heights (consumed by PR-F). */
 export const EMBED_H = { compact: 152, tall: 352 } as const
+
+/**
+ * Follow-button geometry, verbatim from the native-following handoff
+ * (`nf-shared.jsx` NF_FOLLOW_SIZES). One table so every follow affordance in
+ * the app — artist page, search rows, the bill block — is the same control at
+ * three densities rather than three lookalikes.
+ *
+ * `sm` (36) is below the 44px touch minimum and is permitted ONLY where the
+ * row containing it is itself the target, which is why nothing on the artist
+ * page uses it: this page's buttons are the target. It is consumed by the
+ * search-results row.
+ *
+ * `full` carries padding even though it renders at `width: 100%` — the padding
+ * insets the label rather than sizing the control, and keeping it here means
+ * an icon-only `full` (no width override) still matches the handoff.
+ */
+export const NF_FOLLOW_SIZES = {
+  sm: { height: 36, padding: '0 12px', fontSize: 12.5, gap: 6, glyph: 12 },
+  md: { height: 44, padding: '0 14px', fontSize: 13.5, gap: 7, glyph: 13 },
+  full: { height: 48, padding: '0 18px', fontSize: 15, gap: 7, glyph: 13 },
+} as const

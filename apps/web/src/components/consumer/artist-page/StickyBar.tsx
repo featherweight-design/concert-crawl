@@ -23,13 +23,11 @@ interface StickyBarProps extends Omit<FollowButtonProps, 'size'> {
  * sub-header, deliberately.
  */
 export const StickyBar = ({
-  name,
   visible,
   showFollow,
-  following,
-  signedOut,
-  onToggle,
+  ...followProps
 }: StickyBarProps) => {
+  const { name } = followProps
   if (!visible) return null
 
   return (
@@ -68,15 +66,7 @@ export const StickyBar = ({
       >
         {name}
       </span>
-      {showFollow ? (
-        <FollowButton
-          name={name}
-          following={following}
-          signedOut={signedOut}
-          size="compact"
-          onToggle={onToggle}
-        />
-      ) : null}
+      {showFollow ? <FollowButton {...followProps} size="compact" /> : null}
     </div>
   )
 }

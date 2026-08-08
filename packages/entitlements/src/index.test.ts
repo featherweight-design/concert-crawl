@@ -6,6 +6,7 @@ import {
   USER_PLANS,
   canUseFeature,
   lockedSurface,
+  nfLocked,
   type EntitlementCell,
   type PremiumFeature,
 } from './index.js'
@@ -154,4 +155,36 @@ describe('lockedSurface', () => {
       )
     },
   )
+})
+
+describe('nfLocked', () => {
+  it.each<UserPlan>(['logged-out', 'free', 'supporter'])(
+    'locks following for %s',
+    (plan) => {
+      expect(nfLocked({ plan, roleComped: false })).toBe(true)
+    },
+  )
+
+  it.each<UserPlan>(['premium', 'founder', 'gifted'])(
+    'unlocks following for %s',
+    (plan) => {
+      expect(nfLocked({ plan, roleComped: false })).toBe(false)
+    },
+  )
+
+  // roleComped is an override the matrix does not encode. A helper that only
+  // saw a tier string would render a comped user locked.
+  it('unlocks a comped user whose plan is free', () => {
+    expect(nfLocked({ plan: 'free', roleComped: true })).toBe(false)
+  })
+
+  // The exact failure mode a tier enumeration produces: `tier === 'free' ||
+  // tier === 'supporter'` answers false for logged-out, leaking a live Follow
+  // button to a visitor with no account.
+  it('agrees with the matrix on every plan', () => {
+    for (const plan of USER_PLANS) {
+      const state = { plan, roleComped: false }
+      expect(nfLocked(state)).toBe(!canUseFeature(state, 'following'))
+    }
+  })
 })

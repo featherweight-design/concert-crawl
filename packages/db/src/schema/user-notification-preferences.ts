@@ -15,6 +15,21 @@ export const userNotificationPreferences = pgTable(
       .notNull()
       .default(true),
     priceDropsEnabled: boolean('price_drops_enabled').notNull().default(true),
+    // Artist following (migration 0078). These three moved here off
+    // `user_spotify_connections` so a user who never connected Spotify can
+    // still control what a follow sends them.
+    //
+    // The defaults are asymmetric on purpose, matching the COALESCE the crawl
+    // fan-out already encodes: following is the opt-in, so alerts default on;
+    // following must never silently mutate Watching, so auto-watch defaults
+    // off. Do not tidy them into a matching pair.
+    artistAlertsEnabled: boolean('artist_alerts_enabled')
+      .notNull()
+      .default(true),
+    artistAutoWatch: boolean('artist_auto_watch').notNull().default(false),
+    weeklyDigestEnabled: boolean('weekly_digest_enabled')
+      .notNull()
+      .default(true),
     updatedAt: timestamp('updated_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -1,5 +1,6 @@
 'use client'
 
+import { nfLocked } from '@concert-crawl/entitlements'
 import type { ArtistDetailResponse } from '@concert-crawl/types'
 import React, { useCallback, useState } from 'react'
 
@@ -78,11 +79,23 @@ export const ArtistPageContent = ({
   const scrolled = useScrolledPast(AP_STICKY_AFTER)
   const { theme } = useTheme()
 
+  // ONE gate, asked once, passed down. `nfLocked` takes the plan state rather
+  // than a tier string because `roleComped` is an override the matrix does not
+  // encode — never test `plan === 'free'` here.
+  //
+  // Undefined while the plan is still resolving, and `false` is the right
+  // answer for that window: a locked skin that appears a beat after paint is a
+  // worse lie than a live button whose 403 opens the same picker (which is what
+  // `openUpgrade` already handles).
+  const locked = !signedOut && planState !== undefined && nfLocked(planState)
+
   const followProps = {
     name: artist.name,
     following,
     signedOut,
+    locked,
     onToggle: toggle,
+    onLockedTap: openUpgrade,
   }
 
   // Mobile hands the follow control to the sub-header the moment the bar
@@ -181,9 +194,9 @@ export const ArtistPageContent = ({
         </div>
       </div>
 
-      {/* Following is Premium, and the button still issues the request rather
-          than rendering a locked state, so this sheet is how a free tap gets
-          told why nothing happened. */}
+      {/* Following is Premium. This one sheet serves both routes into the
+          upgrade: a locked tap (which never issues a request) and the 403 a
+          request gets when the plan resolved late or lapsed mid-session. */}
       <TierPickerSheet
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}

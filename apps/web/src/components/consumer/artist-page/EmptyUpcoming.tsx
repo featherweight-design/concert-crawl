@@ -21,11 +21,8 @@ interface EmptyUpcomingProps extends Omit<FollowButtonProps, 'size'> {
  * nothing, and offers the one thing that makes the next date find the visitor.
  */
 export const EmptyUpcoming = ({
-  name,
-  following,
-  signedOut,
   inlineFollow,
-  onToggle,
+  ...followProps
 }: EmptyUpcomingProps) => (
   <section>
     {/* No count — zero is already said in words below, and the mono count is
@@ -62,16 +59,11 @@ export const EmptyUpcoming = ({
           textWrap: 'pretty',
         }}
       >
-        {following ? ARTIST_COPY.emptyBodyFollowing : ARTIST_COPY.emptyBody}
+        {followProps.following && !followProps.locked
+          ? ARTIST_COPY.emptyBodyFollowing
+          : ARTIST_COPY.emptyBody}
       </p>
-      {inlineFollow ? (
-        <FollowButton
-          name={name}
-          following={following}
-          signedOut={signedOut}
-          onToggle={onToggle}
-        />
-      ) : null}
+      {inlineFollow ? <FollowButton {...followProps} /> : null}
     </div>
   </section>
 )

@@ -139,6 +139,24 @@ export const canUseFeature = (
   state.roleComped ||
   ENTITLEMENTS_MATRIX[feature][state.plan] === 'visible-active'
 
+// The follow affordance's gate, in one place. Every surface that renders a
+// Follow control asks this and nothing else.
+//
+// It takes PlanStateLike rather than a bare UserPlan because `roleComped` is an
+// override the matrix does not encode — a comped user on plan 'free' would
+// otherwise render locked. And it negates canUseFeature rather than listing
+// tiers: `tier === 'free' || tier === 'supporter'` answers false for
+// 'logged-out', which is locked too. Design R2 leaked a live Follow button to
+// Supporter on six surfaces by testing the tier string inline; that is what
+// this exists to end.
+//
+// Most call sites should still prefer useEntitlement('following') and read
+// `surface`, which also answers whether a locked tap opens the paywall or the
+// tier picker. nfLocked is for render paths that already hold a plan state and
+// would otherwise re-query.
+export const nfLocked = (state: PlanStateLike): boolean =>
+  !canUseFeature(state, 'following')
+
 // UX routing for the false case — what the renderer shows on locked taps.
 // roleComped short-circuits to 'visible-active' so callers that skip the
 // canUseFeature pre-check can never route a comped user to a locked surface.

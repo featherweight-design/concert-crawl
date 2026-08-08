@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -214,5 +214,198 @@ describe('FollowButton', () => {
     )
     fireEvent.click(getByRole('button'))
     expect(onToggle).toHaveBeenCalledTimes(1)
+  })
+
+  describe('locked', () => {
+    const renderLocked = (onLockedTap = noop) =>
+      render(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          locked
+          onToggle={noop}
+          onLockedTap={onLockedTap}
+        />,
+      )
+
+    it('draws the gated skin without changing the label or the geometry', () => {
+      const { getByRole } = renderLocked()
+      const button = getByRole('button')
+      expect(button.style.background).toBe('transparent')
+      expect(button.style.color).toBe('var(--fg)')
+      expect(button.style.border).toBe('1px solid var(--border-strong)')
+      // Same word, same box as idle: the gate is a skin, not a different
+      // control, and a shorter label would reflow the rail.
+      expect(button.textContent).toBe(ARTIST_COPY.follow)
+      expect(button.style.height).toBe('48px')
+      expect(button.querySelector('[data-glyph="lock"]')).not.toBeNull()
+    })
+
+    it('is never disabled and never leaves the tab order', () => {
+      // A disabled button cannot be focused, so the paywall becomes
+      // unreachable by keyboard — the whole point of the locked state is that
+      // tapping it is what offers the upgrade.
+      const { getByRole } = renderLocked()
+      const button = getByRole('button')
+      expect(button.hasAttribute('disabled')).toBe(false)
+      expect(button.getAttribute('tabindex')).toBeNull()
+    })
+
+    it('opens the upgrade instead of writing a follow', () => {
+      const onLockedTap = vi.fn()
+      const onToggle = vi.fn()
+      const { getByRole } = render(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          locked
+          onToggle={onToggle}
+          onLockedTap={onLockedTap}
+        />,
+      )
+      fireEvent.click(getByRole('button'))
+      expect(onLockedTap).toHaveBeenCalledTimes(1)
+      expect(onToggle).not.toHaveBeenCalled()
+    })
+
+    it('drops aria-pressed and describes the gate from a clipped node', () => {
+      const { getByRole, container } = renderLocked()
+      const button = getByRole('button')
+      // Not a toggle: announcing an off switch nobody can turn on is worse
+      // than announcing nothing.
+      expect(button.getAttribute('aria-pressed')).toBeNull()
+      const describedBy = button.getAttribute('aria-describedby')
+      expect(describedBy).not.toBeNull()
+      const gate = container.querySelector(`#${describedBy ?? ''}`)
+      expect(gate?.textContent).toBe(ARTIST_COPY.followGate)
+      // `hidden` would drop the node from the a11y tree and the describedby
+      // would announce nothing. Clip keeps it there.
+      expect(gate?.hasAttribute('hidden')).toBe(false)
+      expect(gate).toBeInstanceOf(HTMLElement)
+      if (gate instanceof HTMLElement) {
+        // jsdom collapses the rect, so match the technique, not the string.
+        expect(gate.style.clip).toMatch(/^rect\(/)
+        expect(gate.style.position).toBe('absolute')
+      }
+    })
+
+    it('gives every instance on the page its own gate id', () => {
+      // A bill can carry four of these. A module counter collides across
+      // mounts and aims every gate sentence at one node.
+      const { container } = render(
+        <>
+          <FollowButton
+            name="Wax Harbour"
+            following={false}
+            signedOut={false}
+            locked
+            onToggle={noop}
+          />
+          <FollowButton
+            name="Pale Quarry"
+            following={false}
+            signedOut={false}
+            locked
+            onToggle={noop}
+          />
+        </>,
+      )
+      const ids = Array.from(container.querySelectorAll('button')).map((btn) =>
+        btn.getAttribute('aria-describedby'),
+      )
+      expect(ids).toHaveLength(2)
+      expect(ids[0]).not.toBe(ids[1])
+      ids.forEach((id) => {
+        expect(container.querySelectorAll(`#${id ?? ''}`)).toHaveLength(1)
+      })
+    })
+  })
+
+  describe('optimism', () => {
+    it('flips before the server answers', () => {
+      const { getByRole } = render(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          onToggle={() => new Promise<void>(() => undefined)}
+        />,
+      )
+      const button = getByRole('button')
+      fireEvent.click(button)
+      expect(button.textContent).toBe(ARTIST_COPY.following)
+      expect(button.getAttribute('aria-pressed')).toBe('true')
+      expect(button.querySelector('[data-glyph="check"]')).not.toBeNull()
+    })
+
+    it('rolls back when the write rejects', async () => {
+      const { getByRole } = render(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          onToggle={() => Promise.reject(new Error('offline'))}
+        />,
+      )
+      const button = getByRole('button')
+      fireEvent.click(button)
+      expect(button.textContent).toBe(ARTIST_COPY.following)
+      await waitFor(() => {
+        expect(button.textContent).toBe(ARTIST_COPY.follow)
+      })
+      expect(button.getAttribute('aria-pressed')).toBe('false')
+    })
+
+    it('holds the optimistic value until the SERVER value changes', () => {
+      // #1467: clearing on mutation success re-reads a prop the parent has not
+      // refetched yet, which flashes the old state back for one render.
+      const { getByRole, rerender } = render(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          onToggle={() => Promise.resolve()}
+        />,
+      )
+      const button = getByRole('button')
+      fireEvent.click(button)
+      expect(button.textContent).toBe(ARTIST_COPY.following)
+
+      // The parent re-renders with the STALE server value — the override has
+      // to win here, or the button snaps back under the user's finger.
+      rerender(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          onToggle={() => Promise.resolve()}
+        />,
+      )
+      expect(button.textContent).toBe(ARTIST_COPY.following)
+
+      // Server catches up: the override is dropped and the prop drives again.
+      rerender(
+        <FollowButton
+          name="Wax Harbour"
+          following
+          signedOut={false}
+          onToggle={() => Promise.resolve()}
+        />,
+      )
+      expect(button.textContent).toBe(ARTIST_COPY.following)
+
+      // And a later server-side unfollow (another tab, say) now shows through.
+      rerender(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          onToggle={() => Promise.resolve()}
+        />,
+      )
+      expect(button.textContent).toBe(ARTIST_COPY.follow)
+    })
   })
 })

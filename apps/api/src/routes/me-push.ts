@@ -29,6 +29,11 @@ const preferencesSchema = z.object({
   masterEnabled: z.boolean().optional(),
   watchUpdatesEnabled: z.boolean().optional(),
   priceDropsEnabled: z.boolean().optional(),
+  // Artist following (migration 0078). Same partial-PATCH shape as the three
+  // above: an absent key means "leave it alone", never "reset it".
+  artistAlertsEnabled: z.boolean().optional(),
+  artistAutoWatch: z.boolean().optional(),
+  weeklyDigestEnabled: z.boolean().optional(),
 })
 
 // Read VAPID vars directly from process.env rather than the validated
@@ -133,10 +138,16 @@ mePushRouter.delete('/push/subscriptions/:id', async (ctx) => {
   }
 })
 
+// Mirrors the column defaults in migration 0078. The artist defaults are
+// asymmetric on purpose: following is the opt-in, so alerts default on;
+// following must never silently mutate Watching, so auto-watch defaults off.
 const DEFAULT_PREFS = {
   masterEnabled: false,
   watchUpdatesEnabled: true,
   priceDropsEnabled: true,
+  artistAlertsEnabled: true,
+  artistAutoWatch: false,
+  weeklyDigestEnabled: true,
 } as const
 
 // GET /v1/me/notification-preferences — side-effect-free. Returns defaults
@@ -155,6 +166,9 @@ mePushRouter.get('/notification-preferences', async (ctx) => {
           masterEnabled: row.masterEnabled,
           watchUpdatesEnabled: row.watchUpdatesEnabled,
           priceDropsEnabled: row.priceDropsEnabled,
+          artistAlertsEnabled: row.artistAlertsEnabled,
+          artistAutoWatch: row.artistAutoWatch,
+          weeklyDigestEnabled: row.weeklyDigestEnabled,
         }
       : DEFAULT_PREFS
     return ctx.json({ success: true, data })
@@ -194,6 +208,18 @@ mePushRouter.patch(
           body.priceDropsEnabled ??
           existing?.priceDropsEnabled ??
           DEFAULT_PREFS.priceDropsEnabled,
+        artistAlertsEnabled:
+          body.artistAlertsEnabled ??
+          existing?.artistAlertsEnabled ??
+          DEFAULT_PREFS.artistAlertsEnabled,
+        artistAutoWatch:
+          body.artistAutoWatch ??
+          existing?.artistAutoWatch ??
+          DEFAULT_PREFS.artistAutoWatch,
+        weeklyDigestEnabled:
+          body.weeklyDigestEnabled ??
+          existing?.weeklyDigestEnabled ??
+          DEFAULT_PREFS.weeklyDigestEnabled,
       }
       await db
         .insert(userNotificationPreferences)

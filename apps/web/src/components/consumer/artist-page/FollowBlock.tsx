@@ -12,26 +12,19 @@ type FollowBlockProps = Omit<FollowButtonProps, 'size'>
  * does. The pitch is the honesty rail: it promises neither a notification nor
  * an automatic entry in Watching, because a manual follow delivers neither.
  */
-export const FollowBlock = ({
-  name,
-  following,
-  signedOut,
-  onToggle,
-}: FollowBlockProps) => {
+export const FollowBlock = (props: FollowBlockProps) => {
+  const { following, signedOut, locked = false } = props
+  // A locked plan cannot be following, whatever the prop says, so it never gets
+  // the "you're following" line.
   const pitch = signedOut
     ? ARTIST_COPY.followSignedOutPitch
-    : following
+    : following && !locked
       ? ARTIST_COPY.followPitchActive
       : ARTIST_COPY.followPitch
 
   return (
     <div>
-      <FollowButton
-        name={name}
-        following={following}
-        signedOut={signedOut}
-        onToggle={onToggle}
-      />
+      <FollowButton {...props} />
       <p
         data-follow-pitch=""
         style={{

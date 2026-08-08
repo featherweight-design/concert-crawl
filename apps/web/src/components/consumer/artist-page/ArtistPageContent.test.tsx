@@ -1,6 +1,10 @@
 // @vitest-environment jsdom
 
-import type { ArtistDetailResponse, ArtistShow } from '@concert-crawl/types'
+import type {
+  ArtistDetailResponse,
+  ArtistShow,
+  PlanState,
+} from '@concert-crawl/types'
 import { act, cleanup, fireEvent, render } from '@testing-library/react'
 import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -20,9 +24,23 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
   TierPickerSheet: () => null,
 }))
 
-vi.mock('@/lib/queries/use-plan-state', () => ({
-  usePlanState: () => ({ data: undefined }),
+const { plan } = vi.hoisted(() => ({
+  plan: { current: undefined as PlanState | undefined },
 }))
+
+vi.mock('@/lib/queries/use-plan-state', () => ({
+  usePlanState: () => ({ data: plan.current }),
+}))
+
+const planOn = (tier: PlanState['plan'], roleComped = false): PlanState => ({
+  plan: tier,
+  onTrial: false,
+  trialEndsAt: null,
+  status: null,
+  cancelAtPeriodEnd: false,
+  currentPeriodEnd: null,
+  roleComped,
+})
 
 vi.mock('@/components/consumer/watch-show-button/WatchShowButton', () => ({
   WatchShowButton: () => <button data-testid="watch-stub" type="button" />,
@@ -116,6 +134,7 @@ const countFollows = (container: HTMLElement, name: string) =>
 beforeEach(() => {
   setViewport(false)
   window.scrollY = 0
+  plan.current = undefined
 })
 
 afterEach(cleanup)
@@ -227,6 +246,47 @@ describe('ArtistPageContent', () => {
     expect(follow).toBeLessThan(skip)
     expect(skip).toBeLessThan(iframe)
     expect(iframe).toBeLessThan(firstRow)
+  })
+
+  // The gate is asked once, here, and passed down — six surfaces each asking
+  // for themselves is how one of them ships ungated (design R2 did exactly
+  // that by testing `tier === 'free'` inline).
+  describe('the follow gate', () => {
+    const signedIn: ArtistDetailResponse = { ...withShows, following: false }
+    const lockGlyph = (container: HTMLElement) =>
+      container.querySelector('[data-glyph="lock"]')
+
+    it('locks a plan that cannot follow', () => {
+      plan.current = planOn('supporter')
+      const { container } = render(<ArtistPageContent data={signedIn} />)
+      expect(lockGlyph(container)).not.toBeNull()
+    })
+
+    it('leaves a premium plan live', () => {
+      plan.current = planOn('premium')
+      const { container } = render(<ArtistPageContent data={signedIn} />)
+      expect(lockGlyph(container)).toBeNull()
+    })
+
+    it('leaves a comped free account live', () => {
+      // roleComped is an override the matrix does not encode, which is why the
+      // page asks nfLocked(planState) and never `plan === 'free'`.
+      plan.current = planOn('free', true)
+      const { container } = render(<ArtistPageContent data={signedIn} />)
+      expect(lockGlyph(container)).toBeNull()
+    })
+
+    it('never flashes a lock while the plan is still resolving', () => {
+      plan.current = undefined
+      const { container } = render(<ArtistPageContent data={signedIn} />)
+      expect(lockGlyph(container)).toBeNull()
+    })
+
+    it('does not lock a signed-out visitor, who gets the sign-in hand-off', () => {
+      plan.current = planOn('logged-out')
+      const { container } = render(<ArtistPageContent data={withShows} />)
+      expect(lockGlyph(container)).toBeNull()
+    })
   })
 
   it('drops the player block when we have no Spotify match', () => {
