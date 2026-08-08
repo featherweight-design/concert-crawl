@@ -358,6 +358,37 @@ describe('FollowButton', () => {
       expect(button.getAttribute('aria-pressed')).toBe('false')
     })
 
+    it('leaves optimism to a sync parent, so a swallowed tap cannot strand it', () => {
+      // useArtistFollow is sync: it flips its own state and swallows a second
+      // tap while a request is in flight. A local override on that swallowed
+      // tap would never clear, because the prop it waits on never moves.
+      const { getByRole, rerender } = render(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          onToggle={() => undefined}
+        />,
+      )
+      const button = getByRole('button')
+      fireEvent.click(button)
+      // The parent has flipped; it re-renders with the new value.
+      rerender(
+        <FollowButton
+          name="Wax Harbour"
+          following
+          signedOut={false}
+          onToggle={() => undefined}
+        />,
+      )
+      expect(button.textContent).toBe(ARTIST_COPY.following)
+
+      // Second tap, swallowed by the parent — the button must not flip on its
+      // own, and must still be reading the prop afterwards.
+      fireEvent.click(button)
+      expect(button.textContent).toBe(ARTIST_COPY.following)
+    })
+
     it('holds the optimistic value until the SERVER value changes', () => {
       // #1467: clearing on mutation success re-reads a prop the parent has not
       // refetched yet, which flashes the old state back for one render.

@@ -121,9 +121,15 @@ export const FollowButton = ({
       return
     }
     const next = !active
-    setOptimistic(next)
+    // The override is only ours to set when `onToggle` is async. A sync parent
+    // owns its own optimism (useArtistFollow flips immediately and swallows a
+    // second tap while a request is in flight), and overriding on top of that
+    // strands the swallowed tap: the `following` prop never moves, so the
+    // effect below never fires and the button shows the wrong state until the
+    // next real change. Sync parents get no local override at all.
     const result = onToggle()
     if (result instanceof Promise) {
+      setOptimistic(next)
       void result.catch(() => {
         // Back to whatever the server last said. Not `setOptimistic(!next)`,
         // which would invent a second wrong answer if the prop moved meanwhile.
