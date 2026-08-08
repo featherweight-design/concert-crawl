@@ -20,7 +20,13 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { and, eq, sql } from 'drizzle-orm'
-import { subscriptions, userEvents } from '@concert-crawl/db'
+import {
+  crewMembers,
+  crews,
+  notifications,
+  subscriptions,
+  userEvents,
+} from '@concert-crawl/db'
 import { createApp } from '../app.js'
 import { testDb } from '../test/helpers/db.js'
 import {
@@ -159,6 +165,77 @@ describe('PUT/DELETE /v1/attending/:eventId', () => {
     ).json()) as { data: { attendingAt: string } }
 
     expect(second.data.attendingAt).toBe(first.data.attendingAt)
+  })
+
+  // Gate 6 (side-effect provenance): the crew bell row is created by attendance
+  // happening, so "fires once" has to be proved at the trigger, not the helper.
+  describe('crew fan-out fires exactly once per attendance', () => {
+    const MATE = 'user_attending_crewmate'
+
+    const seedSharedCrew = async (): Promise<void> => {
+      const [crew] = await testDb
+        .insert(crews)
+        .values({ name: 'The Regulars', keeperId: USER_ID })
+        .returning()
+      if (!crew) throw new Error('seedSharedCrew: insert returned no rows')
+      await testDb.insert(crewMembers).values([
+        { crewId: crew.id, userId: USER_ID },
+        { crewId: crew.id, userId: MATE },
+      ])
+    }
+
+    const mateRowCount = async (): Promise<number> => {
+      const rows = await testDb
+        .select()
+        .from(notifications)
+        .where(eq(notifications.userId, MATE))
+      return rows.length
+    }
+
+    it('does not re-notify when the same user PUTs twice', async () => {
+      setAuth()
+      await seedSupporter()
+      await seedSharedCrew()
+      const venue = await seedVenue()
+      const event = await seedEvent(venue.id, { date: '2026-01-01' })
+
+      await app.request(`/v1/attending/${event.id}`, { method: 'PUT' })
+      await app.request(`/v1/attending/${event.id}`, { method: 'PUT' })
+
+      expect(await mateRowCount()).toBe(1)
+    })
+
+    it('does not double-notify when two PUTs race', async () => {
+      setAuth()
+      await seedSupporter()
+      await seedSharedCrew()
+      const venue = await seedVenue()
+      const event = await seedEvent(venue.id, { date: '2026-01-01' })
+
+      // Both requests read "not going yet", so only the atomic transition
+      // claim can keep this to one bell row.
+      await Promise.all([
+        app.request(`/v1/attending/${event.id}`, { method: 'PUT' }),
+        app.request(`/v1/attending/${event.id}`, { method: 'PUT' }),
+      ])
+
+      expect(await mateRowCount()).toBe(1)
+    })
+
+    it('notifies again after the user un-goes and goes back', async () => {
+      setAuth()
+      await seedSupporter()
+      await seedSharedCrew()
+      const venue = await seedVenue()
+      const event = await seedEvent(venue.id, { date: '2026-01-01' })
+
+      await app.request(`/v1/attending/${event.id}`, { method: 'PUT' })
+      await app.request(`/v1/attending/${event.id}`, { method: 'DELETE' })
+      await app.request(`/v1/attending/${event.id}`, { method: 'PUT' })
+
+      // A genuine second decision is genuinely news, unlike a re-tap.
+      expect(await mateRowCount()).toBe(2)
+    })
   })
 
   it('DELETE removes an attending-only row entirely', async () => {

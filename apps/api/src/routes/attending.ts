@@ -1,7 +1,7 @@
 // apps/api/src/routes/attending.ts
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, userEvents, events } from '@concert-crawl/db'
 import type { AttendingToggleResponse } from '@concert-crawl/types'
@@ -66,15 +66,22 @@ attendingRouter.put('/:eventId', async (ctx) => {
 
   const attendingAt = new Date()
 
+  // `claimed` is empty when a concurrent request won the transition. The
+  // `existing` check above is a read-then-write and so cannot settle a double
+  // tap on its own; this makes "who moved attendingAt off null" atomic, which
+  // is what keeps the crew fan-out below to exactly one round per attendance.
+  let claimed: { id: string }[] = []
   try {
-    await db
+    claimed = await db
       .insert(userEvents)
       .values({ userId: authInfo.userId, eventId, status: null, attendingAt })
       .onConflictDoUpdate({
         target: [userEvents.userId, userEvents.eventId],
         // status is deliberately absent: an existing watch must survive.
         set: { attendingAt },
+        setWhere: isNull(userEvents.attendingAt),
       })
+      .returning({ id: userEvents.id })
   } catch (err) {
     apiLogger.warn(
       { err, userId: authInfo.userId, eventId },
@@ -87,9 +94,11 @@ attendingRouter.put('/:eventId', async (ctx) => {
   // Awaited rather than fired-and-forgotten so the row is visible to a client
   // that opens the bell immediately; the helper swallows its own failures, so
   // a notification problem cannot fail an attendance that already landed.
-  // Only the transition into going fans out — the idempotent re-PUT above
-  // returns earlier, so re-tapping never re-notifies.
-  await notifyCrewGoing({ actorUserId: authInfo.userId, eventId })
+  // Only the request that actually won the transition fans out, so neither a
+  // sequential re-tap nor two concurrent ones can notify a crew twice.
+  if (claimed.length > 0) {
+    await notifyCrewGoing({ actorUserId: authInfo.userId, eventId })
+  }
 
   const response: AttendingToggleResponse = {
     going: true,
