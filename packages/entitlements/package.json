@@ -23,7 +23,7 @@
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
     "@typescript-eslint/eslint-plugin": "^8.66.0",
-    "@typescript-eslint/parser": "^8.60.0",
+    "@typescript-eslint/parser": "^8.66.0",
     "eslint": "^9.39.5",
     "typescript": "^5.0.0",
     "vite": "^6.0.0",
