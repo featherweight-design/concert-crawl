@@ -1,3 +1,11 @@
+## [1.223.1](https://github.com/HartiganHM/concert-crawl/compare/v1.223.0...v1.223.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* **billing:** bump pinned Stripe API version to 2026-07-29.dahlia ([c918966](https://github.com/HartiganHM/concert-crawl/commit/c918966ac0ef40c49ce103c31c7cb168cc09235f))
+* **deps:** align @typescript-eslint/parser with the bumped plugin ([1c143f5](https://github.com/HartiganHM/concert-crawl/commit/1c143f51954f39558c7cbc3e8c54cf793db6fdfe))
+
 # [1.223.0](https://github.com/HartiganHM/concert-crawl/compare/v1.222.1...v1.223.0) (2026-08-08)
 
 
