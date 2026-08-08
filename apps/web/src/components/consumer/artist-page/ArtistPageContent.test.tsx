@@ -24,9 +24,11 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
   TierPickerSheet: () => null,
 }))
 
-const { plan } = vi.hoisted(() => ({
-  plan: { current: undefined as PlanState | undefined },
-}))
+const { plan } = vi.hoisted(
+  (): { plan: { current: PlanState | undefined } } => ({
+    plan: { current: undefined },
+  }),
+)
 
 vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: plan.current }),

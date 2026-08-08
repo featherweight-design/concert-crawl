@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
 
-const { authState } = vi.hoisted(() => ({
-  authState: {
-    current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
-    } | null,
-  },
-}))
+interface TestAuthState {
+  userId: string
+  sessionClaims: { metadata?: { role?: string } }
+}
+
+const { authState } = vi.hoisted(
+  (): { authState: { current: TestAuthState | null } } => ({
+    authState: { current: null },
+  }),
+)
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>

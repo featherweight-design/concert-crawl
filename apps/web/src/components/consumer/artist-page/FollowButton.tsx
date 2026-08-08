@@ -45,7 +45,7 @@ export interface FollowButtonProps {
    * can legitimately come back still-following when a Spotify sync also holds
    * the row. A second override in here could not see that and would strand.
    */
-  onToggle: () => void | Promise<void>
+  onToggle: () => void
   /** Locked activation — opens the parent's TierPickerSheet. */
   onLockedTap?: () => void
 }
