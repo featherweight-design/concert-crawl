@@ -48,6 +48,9 @@ vi.mock('@/lib/queries/use-push-toggle', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // vi.stubEnv persists for the whole file. Without this, the first test to
+  // set the connect flag silently sets it for every test after it.
+  vi.unstubAllEnvs()
   connectionQuery = { data: undefined, isPending: true }
   mutations = [makeMutation(), makeMutation(), makeMutation()]
   Object.defineProperty(window, 'matchMedia', {
@@ -84,6 +87,7 @@ describe('ConnectionsPanel', () => {
   })
 
   it('renders the disconnected entry card and opens the honesty-rail handoff', () => {
+    vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '1')
     connectionQuery = { data: { status: 'disconnected' }, isPending: false }
     renderPanel()
     expect(screen.getByText(SPOTIFY_COPY.connectEntry.pitch)).toBeTruthy()
@@ -98,6 +102,49 @@ describe('ConnectionsPanel', () => {
     for (const line of SPOTIFY_COPY.honestyRail) {
       expect(screen.getByText(line.head)).toBeTruthy()
     }
+  })
+
+  // The flag closes the door; it never evicts the people already inside.
+  it('hides the connect entry card when the flag is off', () => {
+    vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '0')
+    connectionQuery = { data: { status: 'disconnected' }, isPending: false }
+    renderPanel()
+    expect(screen.queryByText(SPOTIFY_COPY.connectEntry.pitch)).toBeNull()
+  })
+
+  it('shows the connect entry card when the flag is on', () => {
+    vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '1')
+    connectionQuery = { data: { status: 'disconnected' }, isPending: false }
+    renderPanel()
+    expect(screen.getByText(SPOTIFY_COPY.connectEntry.pitch)).toBeTruthy()
+  })
+
+  it('still renders the connected card when the flag is off', () => {
+    vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '0')
+    connectionQuery = {
+      data: {
+        status: 'connected',
+        displayName: 'maya.k',
+        artistCount: 34,
+        lastSyncedAt: new Date().toISOString(),
+        autoWatch: false,
+        digestEnabled: true,
+        pushEnabled: false,
+        denverArtistCount: 9,
+        denverShowCount: 12,
+        matchedArtists: [],
+      },
+      isPending: false,
+    }
+    renderPanel()
+    expect(screen.getByText(SPOTIFY_COPY.connectedCard.linkedPill)).toBeTruthy()
+  })
+
+  it('does not blank the panel when the query errors and the flag is off', () => {
+    vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '0')
+    connectionQuery = { data: undefined, isPending: false }
+    const { container } = renderPanel()
+    expect(container.textContent).not.toBe('')
   })
 
   it('renders the connected card for a connected row', () => {

@@ -26,6 +26,7 @@ import {
   spotifyConnectionQueryKeyBase,
   useSpotifyConnection,
 } from '@/lib/queries/use-spotify-connection'
+import { spotifyConnectEnabled } from '@/lib/spotify'
 import { ConnectEntryCard } from './ConnectEntryCard'
 import { ConnectedCard } from './ConnectedCard'
 
@@ -107,6 +108,21 @@ const BrokenState = ({
   )
 }
 
+const StatusUnavailable = () => {
+  const copy = SPOTIFY_COPY.statusUnavailable
+  return (
+    <section
+      aria-label={copy.regionAria}
+      className="rounded-2xl border border-border bg-surface-1 px-5 py-4"
+    >
+      <span className="block text-[13px] font-bold text-fg">{copy.head}</span>
+      <span className="mt-px block text-[11.5px] text-fg-muted">
+        {copy.sub}
+      </span>
+    </section>
+  )
+}
+
 const resolveContent = (
   data: SpotifyConnectionResponse | undefined,
   isPending: boolean,
@@ -122,10 +138,24 @@ const resolveContent = (
       />
     )
   }
-  // No data (query error) is treated as disconnected: connecting is safe and
-  // idempotent — the POST returns the existing connection if one exists.
-  if (!data || data.status === 'disconnected') {
-    return <ConnectEntryCard onConnect={openHandoff} />
+  if (data?.status === 'disconnected') {
+    return spotifyConnectEnabled() ? (
+      <ConnectEntryCard onConnect={openHandoff} />
+    ) : null
+  }
+  if (!data) {
+    // Query errored, so the status is unknown — this user may well be
+    // connected. Connecting is idempotent (the POST returns the existing
+    // connection), so the entry card is safe here while the flag is on. With
+    // the flag off we must not offer a door we cannot honour, and we must not
+    // blank the panel either: that would hide a connected user's disconnect
+    // control behind a network blip. SpotifyStatusBanner is not the fallback
+    // here — it self-queries and returns null on exactly this `!data` case.
+    return spotifyConnectEnabled() ? (
+      <ConnectEntryCard onConnect={openHandoff} />
+    ) : (
+      <StatusUnavailable />
+    )
   }
   if (data.status === 'connected') {
     return <ConnectedCard connection={data} />

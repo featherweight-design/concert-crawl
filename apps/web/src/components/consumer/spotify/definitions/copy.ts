@@ -194,6 +194,14 @@ export const SPOTIFY_COPY = {
     primaryCta: 'Reconnect Spotify',
     secondaryCta: 'Leave it unlinked',
   },
+  // The connection query failed, so we cannot tell whether this user is
+  // linked. Shown only while the connect entry point is flagged off, where the
+  // alternative would be an empty panel that reads as "Spotify is gone".
+  statusUnavailable: {
+    head: "Couldn't load your Spotify status.",
+    sub: 'Refresh to try again.',
+    regionAria: 'Spotify connection status unavailable',
+  },
   revokeBanner: {
     token: {
       head: 'Sync paused: link expired',

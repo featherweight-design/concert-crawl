@@ -44,12 +44,14 @@ vi.mock('@tanstack/react-query', () => ({
 }))
 
 let eligible: boolean
+let connectEnabled: boolean
 const fetchEligibility = vi.fn(async (_token: string) => ({ eligible }))
 const markSeen = vi.fn(async (_token: string) => undefined)
 
 vi.mock('@/lib/spotify', () => ({
   fetchSpotifyNudgeEligibility: (token: string) => fetchEligibility(token),
   markSpotifyNudgeSeen: (token: string) => markSeen(token),
+  spotifyConnectEnabled: () => connectEnabled,
 }))
 
 vi.mock('./OAuthHandoffSheet', () => ({
@@ -63,6 +65,7 @@ beforeEach(() => {
   pathname = '/events'
   cacheListeners = []
   eligible = true
+  connectEnabled = true
   signedIn = true
 })
 
@@ -201,6 +204,18 @@ describe('FirstWatchNudgeGate', () => {
     await Promise.resolve()
     expect(fetchEligibility).not.toHaveBeenCalled()
     expect(getToken).not.toHaveBeenCalled()
+  })
+
+  // The nudge is a new-connect door, so the flag closes it — and must do so
+  // before the eligibility call, which spends the once-ever seen marker.
+  it('stays silent and never spends the seen marker when the flag is off', async () => {
+    connectEnabled = false
+    const { container } = render(<FirstWatchNudgeGate />)
+    expect(container.innerHTML).toBe('')
+    emit(watchSuccess(true))
+    await Promise.resolve()
+    expect(fetchEligibility).not.toHaveBeenCalled()
+    expect(markSeen).not.toHaveBeenCalled()
   })
 
   it('renders nothing on admin routes', () => {

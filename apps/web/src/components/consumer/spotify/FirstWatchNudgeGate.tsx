@@ -15,6 +15,7 @@ import { useAuth } from '@clerk/nextjs'
 import {
   fetchSpotifyNudgeEligibility,
   markSpotifyNudgeSeen,
+  spotifyConnectEnabled,
 } from '@/lib/spotify'
 import { FirstWatchNudge } from './FirstWatchNudge'
 import { OAuthHandoffSheet } from './OAuthHandoffSheet'
@@ -42,7 +43,12 @@ export const FirstWatchNudgeGate = () => {
   // guarantees once-ever across sessions.
   const triggeredRef = useRef(false)
 
-  const hidden = pathname.startsWith('/admin')
+  // The nudge only fires for users with no connection row, so it is a second
+  // new-connect door and the flag has to close it too. Folding it into
+  // `hidden` stops the eligibility call rather than just the render: the
+  // server marks the nudge seen on display, one impression ever, and spending
+  // that on a door we cannot open loses it permanently.
+  const hidden = pathname.startsWith('/admin') || !spotifyConnectEnabled()
   // Ref mirror so the cache listener sees the current route without the
   // effect re-subscribing on every navigation.
   const hiddenRef = useRef(hidden)

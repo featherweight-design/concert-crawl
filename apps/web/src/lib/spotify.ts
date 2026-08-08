@@ -7,6 +7,20 @@ import type {
 } from '@concert-crawl/types'
 import { apiClient } from './api'
 
+// Spotify is in Development Mode: 5 authenticated users, hard cap, and
+// Extended Quota needs 250k MAU. Past the cap OAuth still SUCCEEDS and every
+// subsequent API call 403s, which reads to the user as a working connection
+// that does nothing. Hiding the door is the only honest option.
+//
+// This gates the surfaces that offer a NEW connection. It never touches the
+// ones that offer a reconnect (SpotifyStatusBanner, DiscoveryShelf), because
+// those only render for a user who already holds one of the five slots.
+//
+// Deliberately global. A per-user override belongs to the flag system, not an
+// env var.
+export const spotifyConnectEnabled = (): boolean =>
+  process.env['NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED'] === '1'
+
 export async function fetchSpotifyConnection(
   token: string,
 ): Promise<SpotifyConnectionResponse> {
