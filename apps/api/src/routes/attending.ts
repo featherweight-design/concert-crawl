@@ -13,16 +13,30 @@ import { notifyCrewGoing } from '../lib/crew-notifications.js'
 
 const uuidSchema = z.string().uuid()
 
+// Returns null rather than throwing: this runs AFTER the attendance write has
+// committed, so a transient read failure must not turn an action that already
+// landed into a 500. The caller falls back to its own timestamp, which differs
+// by milliseconds at worst.
 const readAttendingAt = async (
   userId: string,
   eventId: string,
 ): Promise<Date | null> => {
-  const [row] = await db
-    .select({ attendingAt: userEvents.attendingAt })
-    .from(userEvents)
-    .where(and(eq(userEvents.userId, userId), eq(userEvents.eventId, eventId)))
-    .limit(1)
-  return row?.attendingAt ?? null
+  try {
+    const [row] = await db
+      .select({ attendingAt: userEvents.attendingAt })
+      .from(userEvents)
+      .where(
+        and(eq(userEvents.userId, userId), eq(userEvents.eventId, eventId)),
+      )
+      .limit(1)
+    return row?.attendingAt ?? null
+  } catch (err) {
+    apiLogger.warn(
+      { err, userId, eventId },
+      'attendance read-back failed; reporting the locally generated timestamp',
+    )
+    return null
+  }
 }
 
 // Attending ("I'm going!") is what Concert History is built from — it is never
