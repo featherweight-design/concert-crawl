@@ -3,6 +3,9 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { ApiError } from '@/lib/api'
+import { ENTITLEMENT_REQUIRED_CODE } from '@/lib/history'
+
 import { useArtistFollow } from './use-artist-follow'
 
 const getToken = vi.fn(async () => 'token')
@@ -12,12 +15,28 @@ vi.mock('@clerk/nextjs', () => ({
 
 const post = vi.fn()
 const del = vi.fn()
-vi.mock('@/lib/api', () => ({
-  apiClient: {
-    post: (...args: unknown[]) => post(...args),
-    delete: (...args: unknown[]) => del(...args),
-  },
-}))
+// The hook narrows failures with `instanceof ApiError`, so the mocked module
+// has to carry a real class — a plain object would make every branded 403 fall
+// through to the generic rollback and the entitlement test would pass for the
+// wrong reason.
+vi.mock('@/lib/api', () => {
+  class ApiError extends Error {
+    constructor(
+      public readonly status: number,
+      message: string,
+      public readonly code?: string,
+    ) {
+      super(message)
+    }
+  }
+  return {
+    ApiError,
+    apiClient: {
+      post: (...args: unknown[]) => post(...args),
+      delete: (...args: unknown[]) => del(...args),
+    },
+  }
+})
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -79,6 +98,45 @@ describe('useArtistFollow', () => {
 
     await waitFor(() => expect(result.current.following).toBe(true))
     expect(del).toHaveBeenCalledWith('/v1/artists/wax-harbour/follow', 'token')
+  })
+
+  it('sends a branded 403 to the upgrade path instead of failing quietly', async () => {
+    // Following is Premium, so a free tap gets a 403. Rolling back alone reads
+    // as a dead button, which is the whole reason this callback exists.
+    post.mockRejectedValue(
+      new ApiError(403, 'premium', ENTITLEMENT_REQUIRED_CODE),
+    )
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const onEntitlementRequired = vi.fn()
+    const { result } = renderHook(() =>
+      useArtistFollow('wax-harbour', false, onEntitlementRequired),
+    )
+
+    act(() => {
+      result.current.toggle()
+    })
+
+    await waitFor(() => expect(onEntitlementRequired).toHaveBeenCalledTimes(1))
+    expect(result.current.following).toBe(false)
+    expect(warn).not.toHaveBeenCalled()
+    warn.mockRestore()
+  })
+
+  it('leaves an unbranded 403 on the generic rollback', async () => {
+    post.mockRejectedValue(new ApiError(403, 'forbidden'))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const onEntitlementRequired = vi.fn()
+    const { result } = renderHook(() =>
+      useArtistFollow('wax-harbour', false, onEntitlementRequired),
+    )
+
+    act(() => {
+      result.current.toggle()
+    })
+
+    await waitFor(() => expect(result.current.following).toBe(false))
+    expect(onEntitlementRequired).not.toHaveBeenCalled()
+    warn.mockRestore()
   })
 
   it('ignores a second click while one is in flight', async () => {

@@ -12,12 +12,14 @@
 // Data fetching is token-optional from day one so the flip changes the
 // directory, not this file's logic.
 import type { ArtistDetailResponse } from '@concert-crawl/types'
+import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import React from 'react'
 
 import { ArtistPageContent } from '@/components/consumer/artist-page/ArtistPageContent'
 import { auth } from '@/lib/auth'
 import { ApiError, apiClient, publicApiClient } from '@/lib/api'
+import { isScaRegion } from '@/lib/sca-region'
 
 const fetchArtist = async (
   slug: string,
@@ -49,7 +51,10 @@ const ArtistPage = async ({
   const data = await fetchArtist(slug, token)
   if (!data) notFound()
 
-  return <ArtistPageContent data={data} />
+  const requestHeaders = await headers()
+  const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'))
+
+  return <ArtistPageContent data={data} scaRegion={scaRegion} />
 }
 
 export default ArtistPage

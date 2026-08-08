@@ -1,8 +1,11 @@
 'use client'
 
 import type { ArtistDetailResponse } from '@concert-crawl/types'
-import React from 'react'
+import React, { useCallback, useState } from 'react'
 
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { usePlanState } from '@/lib/queries/use-plan-state'
 import { useTheme } from '@/theme'
 
 import { BackChip } from '../back-chip/BackChip'
@@ -49,16 +52,26 @@ import { UpcomingShows } from './UpcomingShows'
  *   mobile, no shows   → the empty-upcoming block owns it, and the sub-header
  *                        is told not to grow one (`showFollow={false}`)
  */
-export const ArtistPageContent = ({ data }: { data: ArtistDetailResponse }) => {
+export const ArtistPageContent = ({
+  data,
+  scaRegion = false,
+}: {
+  data: ArtistDetailResponse
+  scaRegion?: boolean
+}) => {
   const { artist, shows, past, history } = data
   const hasShows = shows.length > 0
 
   // `null` is the API's word for "nobody is signed in" — distinct from `false`,
   // which is a real signed-in user who does not follow this artist.
   const signedOut = data.following === null
+  const { data: planState } = usePlanState()
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const openUpgrade = useCallback(() => setPickerOpen(true), [])
   const { following, toggle } = useArtistFollow(
     artist.slug,
     data.following ?? false,
+    openUpgrade,
   )
 
   const isDesktop = useIsDesktop()
@@ -167,6 +180,17 @@ export const ArtistPageContent = ({ data }: { data: ArtistDetailResponse }) => {
           </div>
         </div>
       </div>
+
+      {/* Following is Premium, and the button still issues the request rather
+          than rendering a locked state, so this sheet is how a free tap gets
+          told why nothing happened. */}
+      <TierPickerSheet
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        planState={planState ?? LOGGED_OUT_PLAN_STATE}
+        scaRegion={scaRegion}
+        entry="paywall"
+      />
     </main>
   )
 }

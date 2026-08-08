@@ -3,7 +3,8 @@
 import { useCallback, useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 
-import { apiClient } from '@/lib/api'
+import { ApiError, apiClient } from '@/lib/api'
+import { ENTITLEMENT_REQUIRED_CODE } from '@/lib/history'
 
 interface ArtistFollowResult {
   following: boolean
@@ -28,7 +29,11 @@ const isFollowResponse = (value: unknown): value is { following: boolean } =>
   'following' in value &&
   typeof Reflect.get(value, 'following') === 'boolean'
 
-export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
+export const useArtistFollow = (
+  slug: string,
+  initialFollowing: boolean,
+  onEntitlementRequired?: () => void,
+) => {
   const { getToken } = useAuth()
   const [following, setFollowing] = useState(initialFollowing)
   const [pending, setPending] = useState(false)
@@ -59,14 +64,21 @@ export const useArtistFollow = (slug: string, initialFollowing: boolean) => {
         }
         setFollowing(result.following)
       } catch (err) {
-        console.warn('artist follow toggle failed; rolling back', err)
         setFollowing(previous)
+        // Following is Premium. A rollback on its own is indistinguishable
+        // from a dead button, so route the branded 403 to the upgrade path
+        // rather than leaving the tap looking like it did nothing.
+        if (err instanceof ApiError && err.code === ENTITLEMENT_REQUIRED_CODE) {
+          onEntitlementRequired?.()
+          return
+        }
+        console.warn('artist follow toggle failed; rolling back', err)
       } finally {
         inFlight.current = false
         setPending(false)
       }
     })()
-  }, [following, getToken, slug])
+  }, [following, getToken, slug, onEntitlementRequired])
 
   const result: ArtistFollowResult = { following, pending, toggle }
   return result
