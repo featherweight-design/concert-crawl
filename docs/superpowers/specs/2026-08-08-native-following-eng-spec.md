@@ -32,14 +32,18 @@ Verified against `origin/main` at e8df22f2d. Anything not listed here is new.
 | `user_notification_preferences` | `packages/db/src/schema/user-notification-preferences.ts` | Ships: `masterEnabled`, `watchUpdatesEnabled`, `priceDropsEnabled` |
 | Weekly digest template + job | `apps/api/src/emails/templates/spotify-digest.ts`, `apps/api/src/jobs/spotify-weekly.ts` | Ships, **Spotify-gated** |
 | `TierPickerSheet` | `apps/web/src/components/consumer/tier-picker/` | Ships. This is the paywall |
+| Event-row Following chip | `apps/web/src/components/consumer/event-row/lib/row-chips.ts:58` | Ships. Text-only, tone `signal`, gated on `show.isFollowed`, which `row-model.ts` derives from `followedArtists`. **No Spotify logo** |
+| Bottom-nav tab-3 label "my shows" | `apps/web/src/components/consumer/bottom-nav/BottomNav.tsx` | Ships (#70). Asserted three times in `BottomNav.test.tsx` |
 
 ### 1.2 Handoff corrections
 
-Three things the handoff names do not exist in shipped code. The handoff is a design artifact and was written against the prototypes; these are eng calls, not design rounds.
+Five things the handoff asserts are wrong about shipped code. The handoff is a design artifact written against the prototypes; these are eng calls, not design rounds. Two of them (4 and 5) describe work the handoff asks for that is **already done** — a builder acting on them would either find nothing to change or change it in the wrong direction.
 
 1. **`MiniPaywall` does not exist.** It lives only in `design/design_handoff_monetization_tier_states/`. The shipped paywall is `TierPickerSheet`. "Do not fork the paywall" still binds — we render `TierPickerSheet`, and `FOLLOW_ANCHOR` becomes a new `PickerEntry` value plus a header-copy variant, not a new component. See §6.2.
 2. **`ENTITLEMENT_REQUIRED_CODE` is `'entitlement_required'`** (`apps/web/src/lib/history.ts:9`), not the longer string.
 3. **Artists carry no genre.** The only genre data in the schema is `events.genre` (`text[]`, `packages/db/src/schema/events.ts:82`). The onboarding genre picker therefore filters artists through their *events'* genre arrays. Consistent with artists being a projection, but it means a genre pick can only ever surface artists with a dated Denver event — which is what the handoff wants anyway ("every suggestion is followable by construction").
+4. **The Following chip carries no hardcoded Spotify logo.** The handoff calls fixing it the epic's highest-value item; there is nothing to fix. See §5.5.
+5. **The nav label is already "my shows".** The handoff's one open product question is already answered in code. See §7.6.
 
 ---
 
@@ -61,7 +65,7 @@ Discovery and management for native follows, plus the notification plumbing that
 10. Push: per-crawl-run batching.
 11. Premium tier copy: following becomes the headline benefit.
 12. First-watch nudge: artist-anchored, replacing the Spotify pitch.
-13. Nav: bottom-nav tab 3 label `watching` → `my shows`.
+13. Nav: **nothing.** The tab-3 label already reads "my shows" (#70). See §7.6.
 
 ### 2.2 Out
 
@@ -206,7 +210,9 @@ In shelves and the onboarding picker the affordance is a **badge on the art**, n
 
 Read-only attribution in the row meta line, never beside a button. It takes `RowMetaChip`'s grammar from the shipped event-row system rather than inventing a third chip shape.
 
-**`buildMeta` in the event-row system hardcodes the Spotify logo on the Following chip.** It must become conditional on `followSource`, or every native follow is labelled Spotify. This is a one-line fix in shipped code and it is the highest-value item in the whole epic per unit of effort.
+**Correction to the handoff.** The handoff states that `buildMeta` in the event-row system hardcodes the Spotify logo on the Following chip and calls fixing it the epic's highest-value item. That is true of the *prototype* (`event-row.jsx`) and false of shipped code. In `apps/web/src/components/consumer/event-row/lib/row-chips.ts` the Following chip is text-only, tone `signal`, gated on `show.isFollowed` — there is no `SpotifyLogo` anywhere under `event-row/`, and `isFollowed` is already derived from `followedArtists` in `row-model.ts`. Nothing is mislabelled today.
+
+The real work is therefore **additive, not corrective**: the chip is currently source-blind, so `followSource` must be threaded through `row-model.ts` if the row is to distinguish a native follow from a Spotify one. Whether it should is a judgment call the build makes with the copy-review pass, since the chip's whole job is a one-word status and a source qualifier may not earn its place. Default to **not** adding the logo. Do not go looking for a hardcoded logo to remove; you will not find one and will fork the prototype trying.
 
 ---
 
@@ -247,7 +253,7 @@ Each entry names the shipped thing it modifies. Anything described as "new compo
   - `absent` at zero follows: rendered absent **from first paint**, server-side, for a 0-follow user. Never removed mid-session — a chip that vanishes while you look at it is worse than one that was never there.
   - Additive (AND) with date / venue / price / genre, exactly like `taste=1`.
   - Active state uses `--signal`. The scope banner is `role="status"`.
-- **API:** `GET /v1/events?following=1`, modelled on the existing `taste=1` flag (`apps/api/src/routes/events.ts`) — Zod-validated, `requireAuth`, entitlement-checked, an `EXISTS` subquery over `user_artist_follows` matching every row regardless of `source`. If the API rejects the flag, `followingApplied` is false and the banner must not claim a filter applied.
+- **API:** `GET /v1/events?following=1`, modelled on the existing `taste` flag (`apps/api/src/routes/events.ts`, `z.literal('1').optional()`, applied via `spotifyTasteCondition(userId)` in the conditions array) — Zod-validated, `requireAuth`, entitlement-checked, an `EXISTS` subquery over `user_artist_follows` matching every row regardless of `source`. If the API rejects the flag, `followingApplied` is false and the banner must not claim a filter applied.
 - **Shelf slot** — one component, three modes, in the slot `DiscoveryShelf` occupies:
   - `zero` — starter shelf: followable artists with dates, shuffled per session. The slot **recruits** rather than rendering an apology.
   - `some` — your followed artists with upcoming dates.
@@ -282,11 +288,11 @@ An alerts row deep-links to Settings ▸ Notifications with the current state as
 
 **API:** `GET /v1/me/artist-follows` — the user's follows with each artist's next Denver date and `source`. Not gated by `requireFeature`: a downgraded user must still be able to see and manage the list.
 
-### 7.6 Nav rename
+### 7.6 Nav rename — already shipped, no work
 
-Bottom-nav tab 3 label `watching` → `my shows`. This was the handoff's one open product question and it is settled: the container already holds Watching and History, and now Artists, so the tab label naming one of its three children is wrong. **The Watching concept itself does not change** — the list, the sub-tab and every string that says "Watching" stay exactly as they are. This is a one-word change in `BottomNav.tsx` plus its test.
+The handoff's one open product question was whether the bottom-nav tab-3 label should become "my shows" when Artists lands. **It already is.** #70 renamed it when History joined the container; `BottomNav.test.tsx` asserts the accessible name `'my shows'` on the `/watching` link in three places.
 
-Gate 3 sweep: grep for the old label across `apps/e2e` selectors and snapshots, which do not fail typecheck.
+The answer to the open question is therefore "yes, and it happened a week ago." **No PR in this epic touches the nav label.** A builder who tries to make this change will find nothing to change and may well "fix" it in the wrong direction. The route stays `/watching`; only the label was ever in question, and the Watching concept is untouched.
 
 ---
 
@@ -307,7 +313,7 @@ Free/supporter get the whole artist group as **one locked card with an upgrade r
 
 Toggles are `role="switch"`, labelled by the row title, described by the body line, rows ≥44px.
 
-**API:** extend the existing `GET`/`PATCH /v1/me/notification-preferences` with the three new fields. Same lazy-create-on-PATCH semantics.
+**API:** extend the existing `GET`/`PATCH /v1/me/notification-preferences` (`apps/api/src/routes/me-push.ts`, Zod schema `preferencesSchema`) with the three new fields. Same lazy-create-on-PATCH semantics. The web screen is `apps/web/src/components/settings/notifications/NotificationsSection.tsx` with copy in its sibling `definitions/copy.ts`.
 
 ### 8.2 Push batching
 
@@ -424,7 +430,7 @@ Standard epic-run gates apply. The ones with teeth here:
 
 - **Gate 1 (state reachability)** at the API→UI seam, before each UI PR's build starts. The state that will fail this is the browse scope chip's `absent` mode: it must be decided server-side at first paint, and a component that computes it from a client query renders `off` for a frame first.
 - **Gate 2 (forced-state runtime)** — force the paywall, the 403 race, the zero-follow states, the digest zero variant, and a throttled network for every mutation. A fast local machine hides the optimistic-update bug completely.
-- **Gate 3 (sibling sweep)** — the `buildMeta` Spotify-logo fix and the nav rename are both exactly this shape. Grep the *old* value; E2E selectors and snapshots do not fail typecheck.
+- **Gate 3 (sibling sweep)** — the row-model `followSource` threading is this shape if the build takes it. Grep the *old* value; E2E selectors and snapshots do not fail typecheck.
 - **Gate 5 (journey lifecycle)** — the §3.3 script, run forward, reverse, repeat and resume. The repeat pass is the one that matters: unfollow → re-follow, and watch → unwatch → re-watch for the nudge key.
 - **Gate 6 (side-effect provenance)** — mandatory here. The digest and the batched push are both records created by something else happening, and their characteristic failure is silence. Prove each fires, fires once, and fires for exactly the right audience using a second account.
 - **Gate 7 (copy review)** on every PR that adds a string.
@@ -440,7 +446,7 @@ Integration tests run against the per-worktree test DB. The digest template test
 | The digest half-fix | Same two-part trap as #1515: fixing the source filter alone looks correct and silently drops every native follower | §8.3 names both halves. An integration test asserts a native-only follower receives a digest |
 | Preference migration loses Spotify users' settings | Preference rows are created lazily, so an UPDATE-only backfill silently misses them | §4.2 inserts, with `ON CONFLICT DO UPDATE` |
 | Nudge dismissal keyed by `eventId` | Exactly the #70 bug. Renders correctly on a single forward pass and survives every gate except Gate 5's repeat | §8.4 mandates `userEventId`. Gate 5 verifies |
-| `buildMeta` marks native follows as Spotify | The logo is hardcoded today. Ships silently wrong on every browse row | §5.5. One-line fix, sweep for siblings |
+| Building against the prototypes instead of shipped code | Two handoff claims are already false: the Following chip carries no Spotify logo, and the nav label is already renamed. Both would send a PR after work that does not exist | §5.5 and §7.6 correct them. §1.1 is the verified inventory; trust it over any `nf-*.jsx` |
 | Optimistic update flashes the old state | Clearing the override on mutation success drops it before the new HTML lands | §5.1: clear on the server value changing |
 | Bulk commit tapped twice | A multi-second write with no acknowledgement | §5.1: `pending` retained for bulk buttons only |
 | Push storm on a large crawl | Eight pushes in ninety seconds reads as spam and costs the notification permission | §8.2 batches delivery while keeping per-pair exactly-once |
