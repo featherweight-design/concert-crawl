@@ -5,7 +5,7 @@
 // push-client subscribe flow (#763 PR 9 shipped push-client itself; this
 // consumes it).
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useId, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { nfLocked } from '@concert-crawl/entitlements'
 import {
@@ -29,14 +29,6 @@ import { CrewActivityBlock } from './CrewActivityBlock'
 import { NOTIFICATIONS_COPY } from './definitions/copy'
 
 const ARTISTS_COPY = NOTIFICATIONS_COPY.artists
-
-// Shared row chrome. The switch is labelled by the title and described by the
-// body, so both ids are stable per row rather than generated per render.
-const ROW_IDS = {
-  alerts: 'nf-artist-alerts-detail',
-  autoWatch: 'nf-artist-auto-watch-detail',
-  digest: 'nf-weekly-digest-detail',
-} as const
 
 /**
  * A sub-group label inside the section. `h3`, not `h2`: "Notifications" is the
@@ -115,6 +107,17 @@ export const NotificationsSection = ({
   variant = 'mobile',
   scaRegion = false,
 }: NotificationsSectionProps) => {
+  // Per-instance, because `/me` mounts this section twice: the mobile shell and
+  // the desktop one are both in the DOM with one CSS-hidden. A fixed id would
+  // appear twice, and a switch could resolve its description to the hidden copy.
+  const idPrefix = useId()
+  const headingId = `${idPrefix}-heading`
+  const rowIds = {
+    alerts: `${idPrefix}-artist-alerts-detail`,
+    autoWatch: `${idPrefix}-artist-auto-watch-detail`,
+    digest: `${idPrefix}-weekly-digest-detail`,
+  }
+
   const { getToken } = useAuth()
   const { data: prefs, isLoading, isError } = useNotificationPreferences()
   const patch = usePatchNotificationPreferences()
@@ -320,7 +323,7 @@ export const NotificationsSection = ({
   // off the page with it.
   const heading = (
     <h2
-      id="notifications-heading"
+      id={headingId}
       className={
         variant === 'desktop'
           ? 'text-lg font-extrabold text-fg'
@@ -334,10 +337,7 @@ export const NotificationsSection = ({
 
   if (isError) {
     return (
-      <section
-        aria-labelledby="notifications-heading"
-        className="flex flex-col gap-4"
-      >
+      <section aria-labelledby={headingId} className="flex flex-col gap-4">
         {heading}
         <p role="alert" className="text-xs text-fg-muted">
           {NOTIFICATIONS_COPY.loadError}
@@ -355,10 +355,7 @@ export const NotificationsSection = ({
   // devices.
   if (isLoading || deviceState === null) {
     return (
-      <section
-        aria-labelledby="notifications-heading"
-        className="flex flex-col gap-4"
-      >
+      <section aria-labelledby={headingId} className="flex flex-col gap-4">
         {heading}
         <div aria-busy="true" className="flex flex-col gap-2">
           <div className="h-4 w-32 rounded bg-surface-2" />
@@ -382,10 +379,7 @@ export const NotificationsSection = ({
   const isIosInstalled = isIosSafari() && isStandalone()
 
   return (
-    <section
-      className="flex flex-col gap-4"
-      aria-labelledby="notifications-heading"
-    >
+    <section className="flex flex-col gap-4" aria-labelledby={headingId}>
       {heading}
 
       {isIosNeedsInstall && (
@@ -553,7 +547,7 @@ export const NotificationsSection = ({
                         {ARTISTS_COPY.alerts.label}
                       </span>
                       <span
-                        id={ROW_IDS.alerts}
+                        id={rowIds.alerts}
                         className="text-xs text-fg-muted"
                       >
                         {ARTISTS_COPY.alerts.detail}
@@ -565,7 +559,7 @@ export const NotificationsSection = ({
                         onToggleSub({ artistAlertsEnabled: next })
                       }
                       ariaLabel={ARTISTS_COPY.alerts.label}
-                      ariaDescribedBy={ROW_IDS.alerts}
+                      ariaDescribedBy={rowIds.alerts}
                       disabled={patch.isPending}
                     />
                   </div>
@@ -577,7 +571,7 @@ export const NotificationsSection = ({
                         {ARTISTS_COPY.autoWatch.label}
                       </span>
                       <span
-                        id={ROW_IDS.autoWatch}
+                        id={rowIds.autoWatch}
                         className="text-xs text-fg-muted"
                       >
                         {ARTISTS_COPY.autoWatch.detail}
@@ -589,7 +583,7 @@ export const NotificationsSection = ({
                         onToggleSub({ artistAutoWatch: next })
                       }
                       ariaLabel={ARTISTS_COPY.autoWatch.label}
-                      ariaDescribedBy={ROW_IDS.autoWatch}
+                      ariaDescribedBy={rowIds.autoWatch}
                       disabled={patch.isPending}
                     />
                   </div>
@@ -604,7 +598,7 @@ export const NotificationsSection = ({
                       {ARTISTS_COPY.newBadge}
                     </span>
                   </span>
-                  <span id={ROW_IDS.digest} className="text-xs text-fg-muted">
+                  <span id={rowIds.digest} className="text-xs text-fg-muted">
                     {ARTISTS_COPY.digest.detail}
                   </span>
                 </div>
@@ -614,7 +608,7 @@ export const NotificationsSection = ({
                     onToggleSub({ weeklyDigestEnabled: next })
                   }
                   ariaLabel={ARTISTS_COPY.digest.label}
-                  ariaDescribedBy={ROW_IDS.digest}
+                  ariaDescribedBy={rowIds.digest}
                   disabled={patch.isPending}
                 />
               </div>
@@ -637,7 +631,7 @@ export const NotificationsSection = ({
           <GroupHeading text={NOTIFICATIONS_COPY.watching.heading} />
           {NOTIFICATIONS_COPY.subs.map((sub) => {
             const checked = sub.key === 'watch' ? watchUpdatesOn : priceDropsOn
-            const detailId = `nf-sub-${sub.key}-detail`
+            const detailId = `${idPrefix}-sub-${sub.key}-detail`
             return (
               <div
                 key={sub.key}
