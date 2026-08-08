@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useId, useMemo, useRef, useState } from 'react'
+import React, { useId, useMemo, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { usePathname, useSearchParams } from 'next/navigation'
 
@@ -39,8 +39,11 @@ export interface FollowButtonProps {
   /** `full` is the rail/hero bar; `compact` is the sticky sub-header. */
   size?: 'full' | 'compact'
   /**
-   * Signed-in activation. Never called while signed out or locked. May return a
-   * promise: a rejection rolls the optimistic flip back.
+   * Signed-in activation. Never called while signed out or locked. The caller
+   * owns optimism — `useArtistFollow` flips its own state before the request
+   * and reconciles to the server's answer, which it has to, because unfollow
+   * can legitimately come back still-following when a Spotify sync also holds
+   * the row. A second override in here could not see that and would strand.
    */
   onToggle: () => void | Promise<void>
   /** Locked activation — opens the parent's TierPickerSheet. */
@@ -53,8 +56,9 @@ export interface FollowButtonProps {
  * softer "like" gesture in this product, and no glyph for one.
  *
  * THREE states, not four: `idle`, `following`, `locked`. There is no `pending`
- * skin — the button is optimistic, so the flip is instant and a spinner would
- * only ever flash. And no `unavailable`: an artist row exists only because a
+ * skin — the flip is instant, so a spinner would only ever flash. This control
+ * is presentational: it renders `following` and reports taps. The optimism the
+ * spec requires lives in `useArtistFollow`, in one place. And no `unavailable`: an artist row exists only because a
  * crawl found them on a bill, so a zero-show artist cannot be reached.
  *
  * #794 §3.10: the signed-out control is pixel-identical to signed-in-and-not-
@@ -94,22 +98,10 @@ export const FollowButton = ({
     return `/sign-up?redirect_url=${encodeURIComponent(`/onboarding?${tour.toString()}`)}`
   }, [returnTo, name])
 
-  // Optimism, the #1467 way. The override is cleared when the SERVER value
-  // changes, never on mutation success: clearing on success re-reads a prop the
-  // parent has not refetched yet, which flashes the old state back for one
-  // render. Rollback on rejection is the only other exit.
-  const [optimistic, setOptimistic] = useState<boolean | null>(null)
-  const lastFollowing = useRef(following)
-  useEffect(() => {
-    const changed = lastFollowing.current !== following
-    lastFollowing.current = following
-    if (changed && following === optimistic) setOptimistic(null)
-  }, [following, optimistic])
-
   // Signed out we draw the at-rest skin, never the following one — there is no
   // relationship to render for a visitor who has no account. Locked likewise:
   // a plan that cannot follow cannot be following.
-  const active = !signedOut && !locked && (optimistic ?? following)
+  const active = !signedOut && !locked && following
 
   const onClick = () => {
     if (signedOut) {
@@ -120,22 +112,7 @@ export const FollowButton = ({
       onLockedTap?.()
       return
     }
-    const next = !active
-    // The override is only ours to set when `onToggle` is async. A sync parent
-    // owns its own optimism (useArtistFollow flips immediately and swallows a
-    // second tap while a request is in flight), and overriding on top of that
-    // strands the swallowed tap: the `following` prop never moves, so the
-    // effect below never fires and the button shows the wrong state until the
-    // next real change. Sync parents get no local override at all.
-    const result = onToggle()
-    if (result instanceof Promise) {
-      setOptimistic(next)
-      void result.catch(() => {
-        // Back to whatever the server last said. Not `setOptimistic(!next)`,
-        // which would invent a second wrong answer if the prop moved meanwhile.
-        setOptimistic(null)
-      })
-    }
+    onToggle()
   }
 
   const geometry = size === 'full' ? NF_FOLLOW_SIZES.full : NF_FOLLOW_SIZES.md

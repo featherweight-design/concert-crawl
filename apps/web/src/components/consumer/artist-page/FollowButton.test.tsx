@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render } from '@testing-library/react'
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -323,120 +323,37 @@ describe('FollowButton', () => {
     })
   })
 
-  describe('optimism', () => {
-    it('flips before the server answers', () => {
-      const { getByRole } = render(
+  describe('the follow contract', () => {
+    it('reports the tap and renders the prop, leaving optimism to the caller', () => {
+      // The spec's optimism (flip on click, roll back on error, reconcile to
+      // the server's answer) lives in useArtistFollow. A second override here
+      // could not see an unfollow that legitimately comes back still-following
+      // via a Spotify sync, and would strand the button showing the wrong state.
+      const onToggle = vi.fn()
+      const { getByRole, rerender } = render(
         <FollowButton
           name="Wax Harbour"
           following={false}
           signedOut={false}
-          onToggle={() => new Promise<void>(() => undefined)}
+          onToggle={onToggle}
         />,
       )
       const button = getByRole('button')
       fireEvent.click(button)
+      expect(onToggle).toHaveBeenCalledTimes(1)
+      expect(button.textContent).toBe(ARTIST_COPY.follow)
+
+      rerender(
+        <FollowButton
+          name="Wax Harbour"
+          following
+          signedOut={false}
+          onToggle={onToggle}
+        />,
+      )
       expect(button.textContent).toBe(ARTIST_COPY.following)
       expect(button.getAttribute('aria-pressed')).toBe('true')
       expect(button.querySelector('[data-glyph="check"]')).not.toBeNull()
-    })
-
-    it('rolls back when the write rejects', async () => {
-      const { getByRole } = render(
-        <FollowButton
-          name="Wax Harbour"
-          following={false}
-          signedOut={false}
-          onToggle={() => Promise.reject(new Error('offline'))}
-        />,
-      )
-      const button = getByRole('button')
-      fireEvent.click(button)
-      expect(button.textContent).toBe(ARTIST_COPY.following)
-      await waitFor(() => {
-        expect(button.textContent).toBe(ARTIST_COPY.follow)
-      })
-      expect(button.getAttribute('aria-pressed')).toBe('false')
-    })
-
-    it('leaves optimism to a sync parent, so a swallowed tap cannot strand it', () => {
-      // useArtistFollow is sync: it flips its own state and swallows a second
-      // tap while a request is in flight. A local override on that swallowed
-      // tap would never clear, because the prop it waits on never moves.
-      const { getByRole, rerender } = render(
-        <FollowButton
-          name="Wax Harbour"
-          following={false}
-          signedOut={false}
-          onToggle={() => undefined}
-        />,
-      )
-      const button = getByRole('button')
-      fireEvent.click(button)
-      // The parent has flipped; it re-renders with the new value.
-      rerender(
-        <FollowButton
-          name="Wax Harbour"
-          following
-          signedOut={false}
-          onToggle={() => undefined}
-        />,
-      )
-      expect(button.textContent).toBe(ARTIST_COPY.following)
-
-      // Second tap, swallowed by the parent — the button must not flip on its
-      // own, and must still be reading the prop afterwards.
-      fireEvent.click(button)
-      expect(button.textContent).toBe(ARTIST_COPY.following)
-    })
-
-    it('holds the optimistic value until the SERVER value changes', () => {
-      // #1467: clearing on mutation success re-reads a prop the parent has not
-      // refetched yet, which flashes the old state back for one render.
-      const { getByRole, rerender } = render(
-        <FollowButton
-          name="Wax Harbour"
-          following={false}
-          signedOut={false}
-          onToggle={() => Promise.resolve()}
-        />,
-      )
-      const button = getByRole('button')
-      fireEvent.click(button)
-      expect(button.textContent).toBe(ARTIST_COPY.following)
-
-      // The parent re-renders with the STALE server value — the override has
-      // to win here, or the button snaps back under the user's finger.
-      rerender(
-        <FollowButton
-          name="Wax Harbour"
-          following={false}
-          signedOut={false}
-          onToggle={() => Promise.resolve()}
-        />,
-      )
-      expect(button.textContent).toBe(ARTIST_COPY.following)
-
-      // Server catches up: the override is dropped and the prop drives again.
-      rerender(
-        <FollowButton
-          name="Wax Harbour"
-          following
-          signedOut={false}
-          onToggle={() => Promise.resolve()}
-        />,
-      )
-      expect(button.textContent).toBe(ARTIST_COPY.following)
-
-      // And a later server-side unfollow (another tab, say) now shows through.
-      rerender(
-        <FollowButton
-          name="Wax Harbour"
-          following={false}
-          signedOut={false}
-          onToggle={() => Promise.resolve()}
-        />,
-      )
-      expect(button.textContent).toBe(ARTIST_COPY.follow)
     })
   })
 })
