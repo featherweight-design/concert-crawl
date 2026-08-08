@@ -193,8 +193,10 @@ There is no `unavailable` state. An artist with zero Denver shows cannot exist �
 
 ```ts
 export const nfLocked = (tier: UserPlan): boolean =>
-  tier === 'free' || tier === 'supporter'
+  ENTITLEMENTS_MATRIX.following[tier] !== 'visible-active'
 ```
+
+Derived from the entitlement map rather than listing tiers, so it cannot drift from it. Listing tiers is what produced this spec's own first draft bug: `tier === 'free' || tier === 'supporter'` silently returns `false` for `'logged-out'`, which `UserPlan` includes and which the map already assigns `tier-picker-on-tap`. Locked is therefore every tier except premium, founder and gifted; §5.1's `locked` row covers signed-out too, and the call site decides between the paywall and the tier picker by reading `surface`.
 
 Lives beside the existing entitlement helpers. **Never test `tier === 'free'` inline** — design R2 leaked a live Follow button to Supporter on six surfaces doing exactly that. In practice most call sites should prefer `useEntitlement('following')` and read `surface`; `nfLocked` exists for the render paths that already have a tier in hand and would otherwise re-query.
 
@@ -305,7 +307,7 @@ Add to the shipped screen. No new section, no new page. Grouped:
 **Artists you follow**
 - `New show alerts` — **above** Watch updates, because an artist announcement is the earliest signal in the chain and reading top-down should feel like the funnel does (artist announces → you watch it → the price moves).
 - `Add them to Watching for me` — an indented **sub-row** of the above, default **off**.
-- `Weekly digest` — Friday, one email.
+- `Weekly digest` — Monday, one email. The cadence is the shipped `concert-crawl-spotify-weekly` cron (`30 15 * * 1`, Monday 15:30 UTC). This epic does not change it.
 
 **Shows you're watching** — the existing Watch updates and Price drops rows, unmoved.
 
@@ -341,7 +343,7 @@ Content:
 
 - A quiet week **still sends**, light, with two follow suggestions. Never a blank send.
 - Inline hex, not CSS vars — email clients cannot read them. This is the sole documented exception to token-only colour.
-- **The zero variant must exist in the plain-text part as well as the HTML.** An HTML/plain-text disagreement is a defect, not a formatting detail, and `templates.test.ts` asserts exact strings on both. Both parts also carry lines the other does not, so read both.
+- **The zero variant must exist in the plain-text part as well as the HTML.** An HTML/plain-text disagreement is a defect, not a formatting detail. Note the limit of the existing safety net: `templates.test.ts` uses targeted `toContain` assertions on selected strings, so a divergence in a line nobody asserted passes silently. Every new digest line therefore needs its own assertion against **both** `rendered.html` and `rendered.text`. Both parts also carry lines the other does not, so read both.
 - Unsubscribe: per-family first, global secondary. The existing signed one-click URL machinery applies unchanged.
 
 Ships behind `NATIVE_DIGEST_ENABLED`, default off, per §3.1.
@@ -435,7 +437,7 @@ Standard epic-run gates apply. The ones with teeth here:
 - **Gate 6 (side-effect provenance)** — mandatory here. The digest and the batched push are both records created by something else happening, and their characteristic failure is silence. Prove each fires, fires once, and fires for exactly the right audience using a second account.
 - **Gate 7 (copy review)** on every PR that adds a string.
 
-Integration tests run against the per-worktree test DB. The digest template test asserts exact strings on both the HTML and plain-text parts; changing either without the other fails, which is the intended behaviour.
+Integration tests run against the per-worktree test DB. The digest template test asserts targeted substrings, not whole rendered outputs, so it only catches an HTML/plain-text divergence on lines it explicitly asserts. Add an assertion per new line against both parts in the PR that adds the line.
 
 ---
 
