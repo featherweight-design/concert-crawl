@@ -1,3 +1,10 @@
+## [1.224.1](https://github.com/HartiganHM/concert-crawl/compare/v1.224.0...v1.224.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* **copy:** stop the app claiming features it does not have ([#1511](https://github.com/HartiganHM/concert-crawl/issues/1511)) ([e3e0cdc](https://github.com/HartiganHM/concert-crawl/commit/e3e0cdc3a43e45a7cb90cc785c88c7320eff5ada)), closes [#1393](https://github.com/HartiganHM/concert-crawl/issues/1393) [#1450](https://github.com/HartiganHM/concert-crawl/issues/1450) [#1391](https://github.com/HartiganHM/concert-crawl/issues/1391) [#1388](https://github.com/HartiganHM/concert-crawl/issues/1388) [#1107](https://github.com/HartiganHM/concert-crawl/issues/1107) [#1393](https://github.com/HartiganHM/concert-crawl/issues/1393) [#1450](https://github.com/HartiganHM/concert-crawl/issues/1450) [#1391](https://github.com/HartiganHM/concert-crawl/issues/1391) [#1388](https://github.com/HartiganHM/concert-crawl/issues/1388)
+
 # [1.224.0](https://github.com/HartiganHM/concert-crawl/compare/v1.223.1...v1.224.0) (2026-08-08)
 
 
