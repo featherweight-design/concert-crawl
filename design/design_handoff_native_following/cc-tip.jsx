@@ -67,7 +67,7 @@ const TIP_CONTENT = {
     label: "Watching",
     variant: "titled",
     title: "Keep an eye on a show.",
-    body: "Tap the eye and we'll track the price for you — pings on drops and sold-outs. It doesn't say you're going; that lives on the show's page.",
+    body: "Tap the eye and we'll track the price for you. Pings on drops and sold-outs. It doesn't say you're going; that lives on the show's page.",
   },
   // Admin · First-timer guide (screenshots 5 + 6 — definition rows)
   "chip-states": {

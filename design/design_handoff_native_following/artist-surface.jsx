@@ -153,7 +153,10 @@ function FollowButton({ following, name, size = "full", signedOut = false, state
   const locked = state === "locked";
   return (
     <>
-      <button onClick={onToggle} aria-pressed={signedOut || state ? undefined : !!following}
+      {/* Only locked and signed-out drop aria-pressed, because neither is a
+          toggle. `pending` still is one: it is a real follow mid-flight, so it
+          keeps the pressed state its optimistic `following` value describes. */}
+      <button onClick={onToggle} aria-pressed={signedOut || locked ? undefined : !!following}
         aria-label={locked ? ARTIST_COPY.followAria(name)
           : signedOut ? ARTIST_COPY.followSignedOut
           : following ? ARTIST_COPY.followingAria(name) : ARTIST_COPY.followAria(name)}
