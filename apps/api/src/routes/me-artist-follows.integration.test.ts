@@ -141,6 +141,20 @@ describe('GET /v1/me/artist-follows', () => {
     expect(typeof row?.followedAt).toBe('string')
   })
 
+  // The partial unique index is (user_id, canonical_name) WHERE source='manual',
+  // so a manual row and a Spotify one coexist for the same artist by design.
+  // The list is a read, and reads are source-agnostic: one entry, manual wins.
+  it('lists an artist once when both a manual and a Spotify row exist', async () => {
+    await seedArtist({ name: 'Phoebe Bridgers' })
+    await seedFollow('Phoebe Bridgers', 'spotify_followed')
+    await seedFollow('Phoebe Bridgers', 'manual')
+    signIn()
+
+    const { body } = await fetchList()
+    expect(body.data).toHaveLength(1)
+    expect(body.data[0]?.source).toBe('manual')
+  })
+
   // A Spotify-synced follow for an act never billed in Denver has no
   // projection row, so there is nothing to link to. Not an error.
   it('returns a null slug when no projection row exists', async () => {
@@ -292,6 +306,28 @@ describe('POST /v1/me/artist-follows/bulk', () => {
 
     const rows = await testDb.select().from(userArtistFollows)
     expect(rows).toHaveLength(1)
+  })
+
+  // A Spotify-sourced row is already visible as "following" everywhere else,
+  // so bulk must agree with the screen the caller came from. It still writes
+  // the manual anchor, which is what survives the user unfollowing on Spotify.
+  it('reports a Spotify-sourced follow as already following, and still anchors it', async () => {
+    await seedArtist({ name: 'Phoebe Bridgers' })
+    await seedPremium()
+    await seedFollow('Phoebe Bridgers', 'spotify_followed')
+    signIn()
+
+    const { body } = await postBulk(['phoebe-bridgers'])
+    expect(body.data?.results).toEqual([
+      { slug: 'phoebe-bridgers', status: 'already_following' },
+    ])
+    expect(body.data?.followedCount).toBe(0)
+
+    const rows = await testDb.select().from(userArtistFollows)
+    expect(rows.map((row) => row.source).sort()).toEqual([
+      'manual',
+      'spotify_followed',
+    ])
   })
 
   it('dedupes a repeated slug within one body', async () => {

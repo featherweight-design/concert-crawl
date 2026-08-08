@@ -207,9 +207,28 @@ meArtistFollowsRouter.get('/artist-follows', async (ctx) => {
     return ctx.json({ success: true, data: [] })
   }
 
-  const canonicalNames = [
-    ...new Set(followRows.map((row) => row.canonicalName)),
-  ]
+  // One entry per artist, not per row. A user can hold BOTH a manual row and a
+  // Spotify-sourced one for the same artist: the partial unique index is
+  // (user_id, canonical_name) WHERE source='manual', so the two coexist by
+  // design and the manual POST inserts its own row without consulting the sync's.
+  // Writes stay source-scoped for that reason; reads are source-agnostic, so
+  // collapsing here is what keeps the list honest.
+  //
+  // The manual row wins the tie because it is the one the user owns — a Spotify
+  // row disappears the moment they unfollow over there, and reporting that
+  // source would make the follow look borrowed when it isn't.
+  const followByCanonical = new Map<string, (typeof followRows)[number]>()
+  for (const row of followRows) {
+    const held = followByCanonical.get(row.canonicalName)
+    if (!held || (held.source !== 'manual' && row.source === 'manual')) {
+      followByCanonical.set(row.canonicalName, row)
+    }
+  }
+  // The select is already ordered newest-first; Map preserves insertion order,
+  // so the collapsed list keeps it.
+  const uniqueFollowRows = [...followByCanonical.values()]
+
+  const canonicalNames = [...followByCanonical.keys()]
 
   // Two supporting reads, both keyed on the canonical name: the projection row
   // (for the page link and the photo) and the next date.
@@ -236,7 +255,7 @@ meArtistFollowsRouter.get('/artist-follows', async (ctx) => {
     projectionRows.map((row) => [row.canonicalName, row]),
   )
 
-  const data: FollowedArtist[] = followRows.map((row) => {
+  const data: FollowedArtist[] = uniqueFollowRows.map((row) => {
     const projection = projectionByCanonical.get(row.canonicalName)
     return {
       name: row.artistName,
@@ -312,16 +331,23 @@ meArtistFollowsRouter.post(
 
     const artistBySlug = new Map(artistRows.map((row) => [row.slug, row]))
 
+    // Read across EVERY source, not just 'manual'. `already_following` reports
+    // what the user can see, and every read in this feature is source-agnostic
+    // — an artist a Spotify sync already holds shows as followed everywhere,
+    // so calling it `followed` here would contradict the screen the caller
+    // just came from.
     const existingRows =
       artistRows.length === 0
         ? []
         : await db
-            .select({ canonicalName: userArtistFollows.canonicalName })
+            .select({
+              canonicalName: userArtistFollows.canonicalName,
+              source: userArtistFollows.source,
+            })
             .from(userArtistFollows)
             .where(
               and(
                 eq(userArtistFollows.userId, authInfo.userId),
-                eq(userArtistFollows.source, 'manual'),
                 inArray(
                   userArtistFollows.canonicalName,
                   artistRows.map((row) => row.canonicalName),
@@ -332,25 +358,38 @@ meArtistFollowsRouter.post(
     const alreadyFollowing = new Set(
       existingRows.map((row) => row.canonicalName),
     )
+    // The write stays manual-scoped, matching the single POST. A Spotify row is
+    // owned by the sync and vanishes when the user unfollows over there, so a
+    // deliberate pick still earns its own manual anchor even though the status
+    // above already reads `already_following`.
+    const manuallyFollowing = new Set(
+      existingRows
+        .filter((row) => row.source === 'manual')
+        .map((row) => row.canonicalName),
+    )
 
     const toInsert: Array<typeof userArtistFollows.$inferInsert> = []
     const results: BulkFollowResult[] = requestedSlugs.map((slug) => {
       const artist = artistBySlug.get(slug)
       if (!artist) return { slug, status: 'artist_not_found' }
-      if (alreadyFollowing.has(artist.canonicalName)) {
-        return { slug, status: 'already_following' }
+      const wasVisiblyFollowed = alreadyFollowing.has(artist.canonicalName)
+      // Two slugs can canonicalize to the same artist; the second adds nothing,
+      // so the insert set stays unique.
+      if (!manuallyFollowing.has(artist.canonicalName)) {
+        manuallyFollowing.add(artist.canonicalName)
+        toInsert.push({
+          userId: authInfo.userId,
+          artistName: artist.name,
+          canonicalName: artist.canonicalName,
+          spotifyArtistId: artist.spotifyArtistId,
+          source: 'manual',
+        })
       }
-      // Two slugs can canonicalize to the same artist; treat the second as
-      // already-following so the insert set stays unique.
       alreadyFollowing.add(artist.canonicalName)
-      toInsert.push({
-        userId: authInfo.userId,
-        artistName: artist.name,
-        canonicalName: artist.canonicalName,
-        spotifyArtistId: artist.spotifyArtistId,
-        source: 'manual',
-      })
-      return { slug, status: 'followed' }
+      return {
+        slug,
+        status: wasVisiblyFollowed ? 'already_following' : 'followed',
+      }
     })
 
     if (toInsert.length > 0) {
@@ -361,7 +400,10 @@ meArtistFollowsRouter.post(
 
     const data: BulkFollowResponse = {
       results,
-      followedCount: toInsert.length,
+      // Counts what the user newly gains, which is not `toInsert.length`: an
+      // artist a Spotify sync already holds still earns a manual anchor row
+      // while reporting `already_following`.
+      followedCount: results.filter((row) => row.status === 'followed').length,
     }
     return ctx.json({ success: true, data })
   },
