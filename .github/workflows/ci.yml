@@ -138,7 +138,7 @@ jobs:
     name: Test
     needs: install
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -161,8 +161,11 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .turbo
-          key: turbo-test-${{ runner.os }}-${{ github.sha }}
-          restore-keys: turbo-test-${{ runner.os }}-
+          key: turbo-test-expA-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-test-expA-${{ runner.os }}-
+
+      - name: Runner capacity
+        run: node -e "const os=require('os');console.log('cpus',os.cpus().length,'avail',os.availableParallelism(),'memGB',(os.totalmem()/1e9).toFixed(1))"
 
       - name: Test
         run: pnpm test
