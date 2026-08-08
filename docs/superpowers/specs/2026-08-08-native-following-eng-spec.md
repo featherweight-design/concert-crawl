@@ -66,7 +66,7 @@ Discovery and management for native follows, plus the notification plumbing that
 ### 2.2 Out
 
 - **Follower counts.** Cut by the handoff. Not an API build item.
-- **Contracting the legacy connection preference columns.** §7.1 expands; the drop is a later PR after a full digest cycle has run on the new columns.
+- **Contracting the legacy connection preference columns.** §4.2 expands; the drop is a later PR after a full digest cycle has run on the new columns.
 - **Any change to Watching.** Following never writes to Watching except through the existing, default-off auto-watch path.
 - **Artists who have never played Denver.** They are not in the index and cannot be.
 - **A fifth follow state.** See §5.1.
@@ -110,7 +110,7 @@ Drives Gate 5 and the cold-eyes capture. Numbered, end-to-end.
 5. Upgrade to Premium from Settings.
 6. Search an artist by name. Follow from the results row.
 7. Browse: expect the "My artists" chip to now be present and off, and the shelf to have flipped from starter to your-artists.
-8. Activate the chip. Expect a `role=status` count line and a filtered list.
+8. Activate the chip. Expect a `role="status"` count line and a filtered list.
 9. Open an event with a multi-act bill. Use "Follow all N". Expect one write and N rows flipping.
 10. Watch that show. Expect the first-watch nudge, artist-anchored, once.
 11. My shows ▸ Artists: expect all follows, split upcoming vs no-dates, with the alerts row.
@@ -246,8 +246,8 @@ Each entry names the shipped thing it modifies. Anything described as "new compo
   - `locked` sets **no `aria-disabled`** — it opens the paywall, so it stays in the tab order and stays activatable. There is no disabled access state anywhere in the entitlements model.
   - `absent` at zero follows: rendered absent **from first paint**, server-side, for a 0-follow user. Never removed mid-session — a chip that vanishes while you look at it is worse than one that was never there.
   - Additive (AND) with date / venue / price / genre, exactly like `taste=1`.
-  - Active state uses `--signal`. The scope banner is `role=status`.
-- **API:** `GET /v1/events?following=1`, modelled on the existing `taste=1` flag (`apps/api/src/routes/events.ts`) — Zod-validated, `requireAuth`, entitlement-checked, an `EXISTS` subquery over `user_artist_follows` matching the §9.1 canonical rule. If the API rejects the flag, `followingApplied` is false and the banner must not claim a filter applied.
+  - Active state uses `--signal`. The scope banner is `role="status"`.
+- **API:** `GET /v1/events?following=1`, modelled on the existing `taste=1` flag (`apps/api/src/routes/events.ts`) — Zod-validated, `requireAuth`, entitlement-checked, an `EXISTS` subquery over `user_artist_follows` matching every row regardless of `source`. If the API rejects the flag, `followingApplied` is false and the banner must not claim a filter applied.
 - **Shelf slot** — one component, three modes, in the slot `DiscoveryShelf` occupies:
   - `zero` — starter shelf: followable artists with dates, shuffled per session. The slot **recruits** rather than rendering an apology.
   - `some` — your followed artists with upcoming dates.
