@@ -131,6 +131,12 @@ export interface PendingCardBProps {
   needed: number
   view: 'other' | 'submitter' | 'self-locked'
   note?: string | null
+  /**
+   * Announces the sign-up gate to assistive tech without drawing it (#1247).
+   * The button is unchanged visually and still opens the corroboration sheet,
+   * which swaps itself for the tier picker when there is no session.
+   */
+  signedOut?: boolean
   onConfirm: () => void
   onWithdraw: () => void
   onEdit: () => void
@@ -162,6 +168,7 @@ export const PendingCardB = ({
   note,
   confirms,
   needed,
+  signedOut = false,
   onConfirm,
   onWithdraw,
   onEdit,
@@ -479,7 +486,11 @@ export const PendingCardB = ({
                 <CounterPointerLink href={counterPointer.href} />
               ) : (
                 <button
+                  type="button"
                   onClick={onEdit}
+                  {...(signedOut
+                    ? { 'aria-label': copy.ariaSawDifferentNumberSignedOut }
+                    : {})}
                   style={{
                     all: 'unset',
                     cursor: 'pointer',
@@ -494,7 +505,11 @@ export const PendingCardB = ({
                 </button>
               )}
               <button
+                type="button"
                 onClick={onConfirm}
+                {...(signedOut
+                  ? { 'aria-label': copy.ariaConfirmPriceSignedOut }
+                  : {})}
                 style={{
                   all: 'unset',
                   cursor: 'pointer',
@@ -567,6 +582,7 @@ export const PendingCardB = ({
               </span>
               <div style={{ display: 'flex', gap: '14px' }}>
                 <button
+                  type="button"
                   onClick={onEdit}
                   style={{
                     all: 'unset',
@@ -581,6 +597,7 @@ export const PendingCardB = ({
                   {copy.editButton}
                 </button>
                 <button
+                  type="button"
                   onClick={onWithdraw}
                   style={{
                     all: 'unset',

@@ -173,6 +173,9 @@ export const CONSUMER_COPY = {
     heading: 'Submit another price',
     subheading: 'Prices are confirmed by the community before they go live.',
     ctaLabel: 'Submit',
+    // The gate is announced, not drawn (#1247): signed out, the card looks
+    // identical and only the accessible name carries the invitation.
+    ariaSignedOut: 'Submit another price: sign up to submit',
   },
 
   // ── Sold out CTA ───────────────────────────────────────────────────
@@ -1092,7 +1095,11 @@ export const CONSUMER_COPY = {
     anonymousFan: 'an anonymous fan',
     // Footer — other view
     confirmPrice: 'Confirm price',
+    // Same announced-not-drawn gate as the submit card (#1247).
+    ariaConfirmPriceSignedOut: 'Confirm price: sign up to confirm',
     sawDifferentNumber: 'Saw a different number?',
+    ariaSawDifferentNumberSignedOut:
+      'Saw a different number? Sign up to submit a price',
     // Footer — self-locked view
     yourSubmissionLabel: 'Your submission',
     waitingOnOneFan: 'Waiting on one more fan',
@@ -1382,6 +1389,8 @@ export const CONSUMER_COPY = {
     footer: {
       preButtonCopy: 'Got a different number?',
       buttonLabel: 'Submit an update',
+      // Same announced-not-drawn gate as the submit card (#1247).
+      ariaButtonLabelSignedOut: 'Submit an update: sign up to submit a price',
     },
   },
 

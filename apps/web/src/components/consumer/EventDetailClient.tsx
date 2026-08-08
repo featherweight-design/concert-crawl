@@ -379,8 +379,11 @@ export function EventDetailPriceBlock({
   reports,
   currentUserId: _currentUserId,
 }: EventDetailSharedProps) {
-  const { getToken } = useAuth()
+  const { getToken, isLoaded: authLoaded, isSignedIn } = useAuth()
   const router = useRouter()
+  // Only announce the gate once Clerk has resolved; before that a signed-in
+  // visitor would briefly get the sign-up accessible name (#1247).
+  const priceGateSignedOut = authLoaded && !isSignedIn
   const [activeCorroborationId, setActiveCorroborationId] = useState<
     string | null
   >(null)
@@ -618,6 +621,7 @@ export function EventDetailPriceBlock({
     event.status !== 'cancelled' ? (
       <div className="mt-3">
         <SubmitPriceCardButton
+          signedOut={priceGateSignedOut}
           onClick={() => {
             setPreselectedTier(null)
             setSubmitPriceEditMode(false)
@@ -675,6 +679,7 @@ export function EventDetailPriceBlock({
         needed: firstPending.confirmsNeeded,
         view: firstPending.isSubmitter ? 'submitter' : 'other',
         note: firstPending.note,
+        signedOut: priceGateSignedOut,
         ...(block.counterSubmission != null
           ? {
               counterPointer: {
@@ -1510,6 +1515,7 @@ export function EventDetailPriceBlock({
         lastAdminActionKind={counter.lastAdminActionKind ?? null}
         eventId={event.id}
         disputedSubmissionId={counter.parentSubmissionId}
+        signedOut={priceGateSignedOut}
         onUpdateSuccess={() => router.refresh()}
       />
     )
@@ -1809,6 +1815,7 @@ export function EventDetailPriceBlock({
         {event.status !== 'cancelled' && (
           <div className="mt-3">
             <SubmitPriceCardButton
+              signedOut={priceGateSignedOut}
               onClick={() => {
                 setSubmitPriceEditMode(false)
                 setSubmitPriceOpen(true)
@@ -1874,6 +1881,11 @@ export function EventDetailPriceBlock({
           confirms={SUBMITTER_OBSERVATION}
           needed={corroborationConfirmsRequired(event.date)}
           view="other"
+          // Deliberately not gated: this legacy branch's confirm and edit are
+          // already no-ops for everyone, because EventDetailResponse does not
+          // surface a submissionId here. Announcing "sign up to confirm" would
+          // promise a signed-out visitor something a signed-in one cannot do
+          // either. The dead affordances need the API field, not a gate.
           onConfirm={() => setLegacyCorroborationOpen(true)}
           onWithdraw={() => {
             // Requires submissionId from API — future work

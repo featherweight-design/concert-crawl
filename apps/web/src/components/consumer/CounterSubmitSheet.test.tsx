@@ -16,8 +16,16 @@ import { VENDOR_PICKER_COPY } from '@/components/consumer/definitions/copy'
 const getToken = vi.fn(async () => 'test-token')
 const refresh = vi.fn()
 
+const authState = { isLoaded: true, isSignedIn: true }
+
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken }),
+  useAuth: () => ({ getToken, ...authState }),
+}))
+
+vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+  TierPickerSheet: ({ entry }: { entry: string }) => (
+    <div data-testid="tier-picker" data-entry={entry} />
+  ),
 }))
 
 vi.mock('next/navigation', () => ({
@@ -73,6 +81,29 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals()
   vi.clearAllMocks()
+  authState.isLoaded = true
+  authState.isSignedIn = true
+})
+
+describe('CounterSubmitSheet signed-out gate (#1247)', () => {
+  it('shows the tier picker instead of the form when there is no session', () => {
+    authState.isSignedIn = false
+    renderSheet()
+
+    expect(screen.queryByLabelText(/floor/i)).not.toBeInTheDocument()
+    expect(screen.getByTestId('tier-picker')).toHaveAttribute(
+      'data-entry',
+      'logged-out-price',
+    )
+  })
+
+  it('renders the form while Clerk is still resolving', () => {
+    authState.isLoaded = false
+    authState.isSignedIn = false
+    renderSheet()
+
+    expect(screen.getByLabelText(/floor/i)).toBeInTheDocument()
+  })
 })
 
 describe('CounterSubmitSheet vendor picker', () => {

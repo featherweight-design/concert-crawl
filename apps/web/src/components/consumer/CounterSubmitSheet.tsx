@@ -7,6 +7,8 @@ import { SPNumberField } from './SPNumberField'
 import { ChipGroup } from './ChipGroup'
 import { ArrowGlyph } from './glyphs'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { VendorField } from '@/components/consumer/submit-price/VendorField'
 import { apiErrorMessage } from '@/components/consumer/lib/api-error-message'
@@ -104,7 +106,7 @@ export function CounterSubmitSheet({
   currentVendor,
   onSuccess,
 }: CounterSubmitSheetProps) {
-  const { getToken } = useAuth()
+  const { getToken, isLoaded, isSignedIn } = useAuth()
   const router = useRouter()
 
   const [sheetState, setSheetState] = useState<SheetState>('form')
@@ -292,6 +294,24 @@ export function CounterSubmitSheet({
         </p>
       </>
     ) : undefined
+
+  // Gated here rather than at the trigger, matching SubmitPriceModal: the
+  // counter POST needs a Clerk token, so a signed-out visitor previously filled
+  // the whole form and got silence (#1247). A price check is free; the account
+  // is the only thing missing.
+  if (open && isLoaded && !isSignedIn) {
+    return (
+      <TierPickerSheet
+        open
+        onClose={handleClose}
+        planState={LOGGED_OUT_PLAN_STATE}
+        // No payment element is reachable signed out; `true` only adds legal
+        // copy, matching the other logged-out picker call-sites.
+        scaRegion
+        entry="logged-out-price"
+      />
+    )
+  }
 
   return (
     <ModalShell

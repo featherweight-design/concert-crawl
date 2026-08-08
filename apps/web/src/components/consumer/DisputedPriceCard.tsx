@@ -55,6 +55,13 @@ export interface DisputedPriceCardProps {
   eventId: string
   disputedSubmissionId: string
 
+  /**
+   * Announces the sign-up gate to assistive tech without drawing it (#1247).
+   * The button is unchanged visually and still opens CounterSubmitSheet, which
+   * swaps itself for the tier picker when there is no session.
+   */
+  signedOut?: boolean
+
   onUpdateSuccess?: () => void
 }
 
@@ -77,6 +84,7 @@ export const DisputedPriceCard = ({
   lastAdminActionKind = null,
   eventId,
   disputedSubmissionId,
+  signedOut = false,
   onUpdateSuccess,
 }: DisputedPriceCardProps) => {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -353,6 +361,9 @@ export const DisputedPriceCard = ({
           <button
             type="button"
             onClick={handleOpenSheet}
+            {...(signedOut
+              ? { 'aria-label': copy.footer.ariaButtonLabelSignedOut }
+              : {})}
             style={{
               all: 'unset',
               cursor: 'pointer',

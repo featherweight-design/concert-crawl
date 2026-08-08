@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { CheckGlyph, LockGlyph, PendingTrustPill } from './glyphs'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 
 const copy = CONSUMER_COPY.corroborationSheet
 
@@ -386,6 +389,7 @@ export const CorroborationSheet = ({
   onWithdraw,
   onSubmitUpdate,
 }: CorroborationSheetProps) => {
+  const { isLoaded, isSignedIn } = useAuth()
   const [selectedMethod, setSelectedMethod] = useState<VerifyMethod | null>(
     null,
   )
@@ -429,6 +433,24 @@ export const CorroborationSheet = ({
       : []),
   ]
 
+  // Gated here rather than at each trigger, matching SubmitPriceModal: two
+  // surfaces open this sheet, and the confirm POST needs a Clerk token, so a
+  // signed-out visitor previously picked a verify method and got silence
+  // (#1247). Corroborating is free; the account is the only thing missing.
+  if (open && isLoaded && !isSignedIn) {
+    return (
+      <TierPickerSheet
+        open
+        onClose={onClose}
+        planState={LOGGED_OUT_PLAN_STATE}
+        // No payment element is reachable signed out; `true` only adds legal
+        // copy, matching the other logged-out picker call-sites.
+        scaRegion
+        entry="logged-out-price"
+      />
+    )
+  }
+
   return (
     <ModalShell
       open={open}
@@ -457,6 +479,7 @@ export const CorroborationSheet = ({
               {copy.eyebrow}
             </span>
             <button
+              type="button"
               onClick={onClose}
               style={{
                 fontFamily: 'JetBrains Mono, monospace',
@@ -515,6 +538,7 @@ export const CorroborationSheet = ({
             }}
           >
             <button
+              type="button"
               onClick={onSubmitUpdate}
               style={{
                 background: 'var(--surface-1)',
@@ -532,6 +556,7 @@ export const CorroborationSheet = ({
               {copy.selfLocked.editButton}
             </button>
             <button
+              type="button"
               onClick={onWithdraw ?? onClose}
               style={{
                 background: 'transparent',
@@ -553,6 +578,7 @@ export const CorroborationSheet = ({
           /* Fresh state footer: Confirm CTA + escape link + disclaimer */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <button
+              type="button"
               onClick={() => {
                 if (selectedMethod !== null) {
                   onConfirm(VERIFY_METHOD_TO_API[selectedMethod])
@@ -582,6 +608,7 @@ export const CorroborationSheet = ({
               {copy.confirmButton}
             </button>
             <button
+              type="button"
               onClick={onSubmitUpdate}
               style={{
                 background: 'none',

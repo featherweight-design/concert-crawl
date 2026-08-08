@@ -17,11 +17,25 @@ interface SubmitPriceCardCtaProps {
 // and delegates the click. Pending branches that already mount a state-wired
 // SubmitPriceModal use this so the CTA routes into that shared modal (keeping
 // localSubmissions/MTAddTierSuccess in sync) instead of spawning a second one.
-export function SubmitPriceCardButton({ onClick }: { onClick: () => void }) {
+export function SubmitPriceCardButton({
+  onClick,
+  signedOut = false,
+}: {
+  onClick: () => void
+  /**
+   * Announces the sign-up gate to assistive tech without drawing it (#1247).
+   * The card is unchanged visually and still opens on tap; SubmitPriceModal
+   * swaps itself for the tier picker once it is open.
+   */
+  signedOut?: boolean
+}) {
   return (
     <button
       type="button"
       onClick={onClick}
+      {...(signedOut
+        ? { 'aria-label': copy.submitPriceCardCta.ariaSignedOut }
+        : {})}
       className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--signal)] focus-visible:ring-offset-1"
       style={{
         appearance: 'none',

@@ -432,4 +432,39 @@ describe('PendingCardB', () => {
       expect(screen.getByText(/to go/i)).toBeTruthy()
     })
   })
+  describe('signed-out gate is announced, not drawn (#1247)', () => {
+    it('carries the sign-up invitation on the accessible name only', () => {
+      render(
+        <PendingCardB {...buildProps({ view: 'other', signedOut: true })} />,
+      )
+
+      expect(
+        screen.getByRole('button', {
+          name: CONSUMER_COPY.pendingCardB.ariaConfirmPriceSignedOut,
+        }),
+      ).toBeTruthy()
+      expect(
+        screen.getByRole('button', {
+          name: CONSUMER_COPY.pendingCardB.ariaSawDifferentNumberSignedOut,
+        }),
+      ).toBeTruthy()
+      // The visible labels are unchanged: no dimming, no lock, no relabel.
+      expect(
+        screen.getByText(CONSUMER_COPY.pendingCardB.confirmPrice),
+      ).toBeTruthy()
+      expect(
+        screen.getByText(CONSUMER_COPY.pendingCardB.sawDifferentNumber),
+      ).toBeTruthy()
+    })
+
+    it('leaves the accessible name alone when signed in', () => {
+      render(<PendingCardB {...buildProps({ view: 'other' })} />)
+
+      expect(
+        screen.getByRole('button', {
+          name: CONSUMER_COPY.pendingCardB.confirmPrice,
+        }),
+      ).toBeTruthy()
+    })
+  })
 })
