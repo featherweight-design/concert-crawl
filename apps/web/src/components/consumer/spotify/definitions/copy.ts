@@ -202,6 +202,14 @@ export const SPOTIFY_COPY = {
     sub: 'Refresh to try again.',
     regionAria: 'Spotify connection status unavailable',
   },
+  // A disconnected user while the connect entry point is flagged off. Without
+  // this the Connections section renders its header over an empty body, which
+  // reads as broken rather than as a door we closed on purpose.
+  connectUnavailable: {
+    head: 'Connecting Spotify is off right now.',
+    sub: 'Spotify caps how many people an app our size can connect. Existing connections keep syncing.',
+    regionAria: 'Spotify connection unavailable',
+  },
   revokeBanner: {
     token: {
       head: 'Sync paused: link expired',

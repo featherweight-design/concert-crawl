@@ -108,8 +108,11 @@ const BrokenState = ({
   )
 }
 
-const StatusUnavailable = () => {
-  const copy = SPOTIFY_COPY.statusUnavailable
+const Notice = ({
+  copy,
+}: {
+  copy: { head: string; sub: string; regionAria: string }
+}) => {
   return (
     <section
       aria-label={copy.regionAria}
@@ -139,9 +142,13 @@ const resolveContent = (
     )
   }
   if (data?.status === 'disconnected') {
+    // With the flag off this is the common case, so it cannot render nothing:
+    // the section header would sit over an empty body and read as broken.
     return spotifyConnectEnabled() ? (
       <ConnectEntryCard onConnect={openHandoff} />
-    ) : null
+    ) : (
+      <Notice copy={SPOTIFY_COPY.connectUnavailable} />
+    )
   }
   if (!data) {
     // Query errored, so the status is unknown — this user may well be
@@ -154,7 +161,7 @@ const resolveContent = (
     return spotifyConnectEnabled() ? (
       <ConnectEntryCard onConnect={openHandoff} />
     ) : (
-      <StatusUnavailable />
+      <Notice copy={SPOTIFY_COPY.statusUnavailable} />
     )
   }
   if (data.status === 'connected') {

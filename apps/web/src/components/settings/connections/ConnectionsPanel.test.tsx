@@ -112,6 +112,15 @@ describe('ConnectionsPanel', () => {
     expect(screen.queryByText(SPOTIFY_COPY.connectEntry.pitch)).toBeNull()
   })
 
+  // Disconnected plus flag-off is the common case in prod, so an empty body
+  // here would be the state most people see, and it reads as a broken panel.
+  it('explains itself instead of blanking when a disconnected user meets the flag', () => {
+    vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '0')
+    connectionQuery = { data: { status: 'disconnected' }, isPending: false }
+    renderPanel()
+    expect(screen.getByText(SPOTIFY_COPY.connectUnavailable.head)).toBeTruthy()
+  })
+
   it('shows the connect entry card when the flag is on', () => {
     vi.stubEnv('NEXT_PUBLIC_SPOTIFY_CONNECT_ENABLED', '1')
     connectionQuery = { data: { status: 'disconnected' }, isPending: false }
