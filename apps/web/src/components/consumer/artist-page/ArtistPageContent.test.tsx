@@ -20,6 +20,10 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
   TierPickerSheet: () => null,
 }))
 
+vi.mock('@/lib/queries/use-plan-state', () => ({
+  usePlanState: () => ({ data: undefined }),
+}))
+
 vi.mock('@/components/consumer/watch-show-button/WatchShowButton', () => ({
   WatchShowButton: () => <button data-testid="watch-stub" type="button" />,
 }))

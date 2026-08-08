@@ -28,6 +28,10 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
   TierPickerSheet: () => null,
 }))
 
+vi.mock('@/lib/queries/use-plan-state', () => ({
+  usePlanState: () => ({ data: undefined }),
+}))
+
 vi.mock('next/link', () => ({
   default: ({
     children,

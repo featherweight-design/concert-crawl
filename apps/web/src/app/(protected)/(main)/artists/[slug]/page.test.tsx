@@ -58,6 +58,16 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
   TierPickerSheet: () => null,
 }))
 
+vi.mock('@/lib/queries/use-plan-state', () => ({
+  usePlanState: () => ({ data: undefined }),
+}))
+
+// The page reads the Vercel geo header to decide whether the tier picker needs
+// SCA copy; there is no request scope here.
+vi.mock('next/headers', () => ({
+  headers: async () => new Headers({ 'x-vercel-ip-country': 'US' }),
+}))
+
 vi.mock('@/components/consumer/watch-show-button/WatchShowButton', () => ({
   WatchShowButton: () => <button data-testid="watch-stub" type="button" />,
 }))
