@@ -32,6 +32,11 @@ export const RenameSheet = ({
   const { getToken } = useAuth()
   const nameId = useId()
   const [name, setName] = useState(crewName)
+  // The name as it stood when the sheet opened. `crewName` is live, so
+  // comparing against it would arm the submit button the moment a rename from
+  // another device landed, offering to overwrite that newer name with the
+  // stale one still sitting in the field.
+  const [opened, setOpened] = useState(crewName)
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
 
@@ -40,16 +45,17 @@ export const RenameSheet = ({
   // typist by the refetch that lands behind it. `crewName` is read here but
   // deliberately not a dependency, which is exactly the case exhaustive-deps
   // cannot express.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!open) return
     setName(crewName)
+    setOpened(crewName)
     setSaving(false)
     setFailed(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const trimmed = name.trim()
-  const canSubmit = trimmed !== '' && trimmed !== crewName && !saving
+  const canSubmit = trimmed !== '' && trimmed !== opened && !saving
 
   const onSubmit = async (ev: React.FormEvent<HTMLFormElement>) => {
     ev.preventDefault()

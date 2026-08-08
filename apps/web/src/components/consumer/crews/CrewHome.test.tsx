@@ -426,6 +426,21 @@ describe('CrewHome rename (#1226)', () => {
     view.rerender(<CrewHome crew={detail({ name: 'Saturdays' })} />)
     expect(field).toHaveValue('Frid')
   })
+
+  // Submit arms on the customer editing the field, never on the crew being
+  // renamed elsewhere. Armed by a refetch, one tap would overwrite the newer
+  // name with the stale one the field is still holding.
+  it('stays disabled when the name changes underneath an untouched field', () => {
+    const view = openRename()
+    fireEvent.click(
+      screen.getByRole('button', { name: CREWS_COPY.rename.title }),
+    )
+
+    view.rerender(<CrewHome crew={detail({ name: 'Saturdays' })} />)
+    expect(
+      screen.getByRole('button', { name: CREWS_COPY.rename.submit }),
+    ).toBeDisabled()
+  })
 })
 
 // AM7
