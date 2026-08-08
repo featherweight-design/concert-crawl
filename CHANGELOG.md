@@ -1,3 +1,20 @@
+# [1.227.0](https://github.com/HartiganHM/concert-crawl/compare/v1.226.1...v1.227.0) (2026-08-08)
+
+
+### Bug Fixes
+
+* **api:** reject unknown keys on the notification-preferences PATCH ([5ecb424](https://github.com/HartiganHM/concert-crawl/commit/5ecb4245236031720d7adc1687fc4f2e65206d2c))
+* **nf:** keep follow optimism in one place, the hook ([90846cb](https://github.com/HartiganHM/concert-crawl/commit/90846cb163501fec0100de5e36d287cb15567609))
+* **nf:** keep the follow control live on an existing follow after a downgrade ([bf4f55b](https://github.com/HartiganHM/concert-crawl/commit/bf4f55bd06d6e58010b6648522488ef1aeca499a))
+* **nf:** let a sync parent own follow optimism ([6420315](https://github.com/HartiganHM/concert-crawl/commit/6420315a2870a731b97b1c98fe2d59f293e46c0d))
+* **nf:** let the follow size table set the button's minimum height ([4a8229c](https://github.com/HartiganHM/concert-crawl/commit/4a8229c78ae58050cf93d0427a4d1424da75e940))
+* **nf:** require onLockedTap so a locked follow button cannot be inert ([71cfcf3](https://github.com/HartiganHM/concert-crawl/commit/71cfcf3d4f797b241286256cb24135297d342b57))
+
+
+### Features
+
+* **following:** preference foundation and the locked follow state ([f20777f](https://github.com/HartiganHM/concert-crawl/commit/f20777f9c108d7f2f4a846872a991bc12b3882ad))
+
 ## [1.226.1](https://github.com/HartiganHM/concert-crawl/compare/v1.226.0...v1.226.1) (2026-08-08)
 
 
