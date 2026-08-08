@@ -1,3 +1,13 @@
+## [1.226.1](https://github.com/HartiganHM/concert-crawl/compare/v1.226.0...v1.226.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* **crews:** baseline the rename submit on the name as opened ([f90e54d](https://github.com/HartiganHM/concert-crawl/commit/f90e54d9e93b8a900b195b1d27c24557ada24bdb))
+* **crews:** close the Gate 5 journey findings ([3e0fde6](https://github.com/HartiganHM/concert-crawl/commit/3e0fde676c7cd931a3028ecd0f5921dd6f33e2ea))
+* **crews:** let a change from another device beat a stale override ([7045f76](https://github.com/HartiganHM/concert-crawl/commit/7045f764230f60bcc51c175cda1829922a8e067b))
+* **crews:** stop a background rename from clearing the rename field ([52255cc](https://github.com/HartiganHM/concert-crawl/commit/52255ccb9c84591f9c80c4646f90171314c1c3c4))
+
 # [1.226.0](https://github.com/HartiganHM/concert-crawl/compare/v1.225.2...v1.226.0) (2026-08-08)
 
 
