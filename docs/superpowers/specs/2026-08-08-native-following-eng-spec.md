@@ -192,11 +192,16 @@ There is no `unavailable` state. An artist with zero Denver shows cannot exist �
 ### 5.2 The gate helper
 
 ```ts
-export const nfLocked = (tier: UserPlan): boolean =>
-  ENTITLEMENTS_MATRIX.following[tier] !== 'visible-active'
+export const nfLocked = (state: PlanStateLike): boolean =>
+  !canUseFeature(state, 'following')
 ```
 
-Derived from the entitlement map rather than listing tiers, so it cannot drift from it. Listing tiers is what produced this spec's own first draft bug: `tier === 'free' || tier === 'supporter'` silently returns `false` for `'logged-out'`, which `UserPlan` includes and which the map already assigns `tier-picker-on-tap`. Locked is therefore every tier except premium, founder and gifted; §5.1's `locked` row covers signed-out too, and the call site decides between the paywall and the tier picker by reading `surface`.
+A thin negation of the shipped `canUseFeature`, not a reimplementation. Two drafts of this helper were wrong before this one, and both failures came from reaching past the existing entitlement API:
+
+- **Take `PlanStateLike`, never a bare `UserPlan`.** `roleComped` is an override the matrix does not encode, so a comped user on `plan: 'free'` renders locked if the helper only sees a tier. `canUseFeature` already short-circuits on it.
+- **Never enumerate tiers.** `tier === 'free' || tier === 'supporter'` returns `false` for `'logged-out'`, which `UserPlan` includes and which the matrix already assigns `tier-picker-on-tap`.
+
+Locked is therefore every state `canUseFeature` rejects. §5.1's `locked` row covers signed-out too, and the call site decides between the paywall and the tier picker by reading `lockedSurface(state, 'following')`.
 
 Lives beside the existing entitlement helpers. **Never test `tier === 'free'` inline** — design R2 leaked a live Follow button to Supporter on six surfaces doing exactly that. In practice most call sites should prefer `useEntitlement('following')` and read `surface`; `nfLocked` exists for the render paths that already have a tier in hand and would otherwise re-query.
 
@@ -255,7 +260,7 @@ Each entry names the shipped thing it modifies. Anything described as "new compo
   - `absent` at zero follows: rendered absent **from first paint**, server-side, for a 0-follow user. Never removed mid-session — a chip that vanishes while you look at it is worse than one that was never there.
   - Additive (AND) with date / venue / price / genre, exactly like `taste=1`.
   - Active state uses `--signal`. The scope banner is `role="status"`.
-- **API:** `GET /v1/events?following=1`, modelled on the existing `taste` flag (`apps/api/src/routes/events.ts`, `z.literal('1').optional()`, applied via `spotifyTasteCondition(userId)` in the conditions array) — Zod-validated, `requireAuth`, entitlement-checked, an `EXISTS` subquery over `user_artist_follows` matching every row regardless of `source`. If the API rejects the flag, `followingApplied` is false and the banner must not claim a filter applied.
+- **API:** `GET /v1/events?following=1`, modelled on the existing `taste` flag (`apps/api/src/routes/events.ts`, `z.literal('1').optional()`, applied via `spotifyTasteCondition(userId)` in the conditions array) — Zod-validated, **gated inline rather than by middleware**, entitlement-checked, an `EXISTS` subquery over `user_artist_follows` matching every row regardless of `source`. `/v1/events` is a public route and must stay one: `taste` returns 401 only when the flag is present and the caller is anonymous, and `following` copies that shape exactly. Adding `requireAuth` as middleware would take signed-out browse offline. If the API rejects the flag, `followingApplied` is false and the banner must not claim a filter applied.
 - **Shelf slot** — one component, three modes, in the slot `DiscoveryShelf` occupies:
   - `zero` — starter shelf: followable artists with dates, shuffled per session. The slot **recruits** rather than rendering an apology.
   - `some` — your followed artists with upcoming dates.
