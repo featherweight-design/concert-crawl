@@ -165,7 +165,10 @@ export const FollowButton = ({
     alignItems: 'center',
     justifyContent: 'center',
     gap: geometry.gap,
-    minHeight: 44,
+    // The size table is authoritative, so this tracks it rather than pinning
+    // 44 — `sm` is deliberately 36 and a hardcoded floor would silently
+    // override it wherever that density lands.
+    minHeight: geometry.height,
     borderRadius: 10,
     fontFamily: 'Inter, system-ui, sans-serif',
     fontWeight: 800,
