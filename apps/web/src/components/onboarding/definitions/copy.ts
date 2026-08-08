@@ -67,6 +67,7 @@ export const ONBOARDING_COPY = {
       'Compare real prices side by side, with their sources',
       'Watch shows you care about, and we track the price',
       'Submit a price you saw, or confirm one someone else did',
+      'Follow an artist and see everything they have coming up',
     ],
   },
 
@@ -78,20 +79,16 @@ export const ONBOARDING_COPY = {
     lede: "These are coming, not abandoned. We'd rather say so than fake it.",
     items: [
       {
-        title: 'Notifications.',
-        body: "No push or email alerts yet. We'll bother you when it's ready.",
-      },
-      {
         title: 'Cities outside Denver.',
         body: 'The crawl is regional for now. Others onboard later.',
       },
       {
-        title: 'Artist following.',
-        body: 'Follow a band and we surface their shows before you go looking.',
+        title: 'One feed for your artists.',
+        body: 'You can follow a band today, but their shows still live on their own page.',
       },
       {
         title: 'Price alerts.',
-        body: "Watch a show and we'll ping you when it drops into your range.",
+        body: "We catch some drops, not all of them. Don't count on us to tell you yet.",
       },
     ],
   },

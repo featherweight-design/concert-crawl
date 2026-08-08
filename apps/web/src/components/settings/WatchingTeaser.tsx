@@ -22,7 +22,7 @@ export function WatchingTeaser() {
         }}
       />
 
-      {/* star icon */}
+      {/* eye icon — Watching is always an eye, never a star or a heart */}
       <div
         className="relative inline-flex shrink-0 items-center justify-center rounded-[10px]"
         style={{
@@ -33,12 +33,20 @@ export function WatchingTeaser() {
           color: 'var(--accent)',
         }}
       >
-        <svg width="18" height="18" viewBox="0 0 16 16" fill="none" aria-hidden>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
           <path
-            d="M8 1.5l1.94 3.93 4.34.63-3.14 3.06.74 4.32L8 11.4l-3.88 2.04.74-4.32L1.72 6.06l4.34-.63z"
+            d="M1 9C1 9 4 3 9 3s8 6 8 6-3 6-8 6-8-6-8-6z"
             stroke="currentColor"
             strokeWidth="1.5"
             strokeLinejoin="round"
+            strokeLinecap="round"
+          />
+          <circle
+            cx="9"
+            cy="9"
+            r="2.5"
+            stroke="currentColor"
+            strokeWidth="1.5"
           />
         </svg>
       </div>

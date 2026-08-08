@@ -115,7 +115,7 @@ export const CONSUMER_COPY = {
   watchingEmptyEyebrow: 'Watching',
   watchingEmptyTitle: 'No shows, grandpa.',
   watchingEmptyBody:
-    "Watch a show and it lands here. Soon, we'll track the price for you and notify you of drops, spikes, or sell-outs.",
+    'Watch a show and it lands here. We track the price from then on.',
   watchingEmptyCta: "Browse tonight's shows",
 
   // ── Search ─────────────────────────────────────────────────────────
@@ -948,9 +948,11 @@ export const CONSUMER_COPY = {
     rosterTitle: 'The crawl on this show',
     rosterOthers: (count: number) =>
       `${count} other ${count === 1 ? 'watcher' : 'watchers'}, no handle yet`,
-    // The alerts affordance the retired "N watching · alerts on price + sold
-    // out" count tail used to carry now rides under the inactive Watch button.
-    watchHint: 'Watch to get pinged on price drops + sold-out.',
+    // The affordance the retired "N watching · alerts on price + sold out"
+    // count tail used to carry now rides under the inactive Watch button. It
+    // claims tracking and nothing else: fan-out fires only from the admin
+    // price-review path, so a crawled drop notifies nobody (#1107).
+    watchHint: 'Watch to track the price.',
     // The watching half of the same line. Both states carry copy so the strip
     // holds its height across a toggle.
     watchStatusOn: "You're watching this one.",
@@ -1250,7 +1252,7 @@ export const CONSUMER_COPY = {
     watchingTeaser: {
       title: 'Watching',
       badge: 'Coming soon',
-      body: "Star a show. We'll ping you when prices drop or new tickets surface.",
+      body: "Everything you're keeping an eye on, in one list.",
     },
 
     // ── EditProfileForm ───────────────────────────────────────────
