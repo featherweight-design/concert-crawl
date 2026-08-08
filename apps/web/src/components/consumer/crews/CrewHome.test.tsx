@@ -387,6 +387,32 @@ describe('CrewHome rename (#1226)', () => {
     expect(refresh).toHaveBeenCalled()
   })
 
+  // The override has to step aside for whatever the server says next, not just
+  // for the value it was hoping for. Another device renaming the crew would
+  // otherwise lose to an override that can now never match.
+  it('yields to a rename that came from somewhere else', async () => {
+    const view = openRename()
+    fireEvent.click(
+      screen.getByRole('button', { name: CREWS_COPY.rename.title }),
+    )
+    fireEvent.change(screen.getByLabelText(CREWS_COPY.create.nameLabel), {
+      target: { value: 'Fridays' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: CREWS_COPY.rename.submit }),
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Fridays' }),
+      ).toBeInTheDocument(),
+    )
+
+    view.rerender(<CrewHome crew={detail({ name: 'Saturdays' })} />)
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Saturdays' }),
+    ).toBeInTheDocument()
+  })
+
   // A server refetch landing while the sheet is open must not reach into the
   // field. Someone mid-word loses what they typed otherwise.
   it('leaves the field alone when the name changes underneath it', () => {

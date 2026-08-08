@@ -92,18 +92,21 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
     })
   }, [crew.members])
 
+  // Both scalar overrides clear on the SERVER value moving rather than on the
+  // mutation resolving: dropping them at mutation time flashes the old value
+  // back for a frame. Keyed on the server value changing at all, not on it
+  // arriving at the override, so a rename from another device still wins
+  // instead of losing to an override that will now never match.
+  useEffect(() => {
+    setSaltOverride(null)
+  }, [crew.patchSalt])
+  useEffect(() => {
+    setNameOverride(null)
+  }, [crew.name])
+
   const active = chosen ?? leadTabFor(crew)
-  // All three overrides clear on the SERVER value catching up rather than on
-  // the mutation resolving — dropping them at mutation time flashes the old
-  // value back for a frame.
-  const patchSalt =
-    saltOverride !== null && saltOverride !== crew.patchSalt
-      ? saltOverride
-      : crew.patchSalt
-  const name =
-    nameOverride !== null && nameOverride !== crew.name
-      ? nameOverride
-      : crew.name
+  const patchSalt = saltOverride ?? crew.patchSalt
+  const name = nameOverride ?? crew.name
   // Keeper first. Everyone else keeps the order the API sent, which is joinedAt
   // ascending — a stable sort is what preserves it, so this comparator must stay
   // a pure isKeeper test rather than gain a tiebreak. Sorting here rather than in
