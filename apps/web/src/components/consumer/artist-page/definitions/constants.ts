@@ -68,8 +68,8 @@ export const EMBED_H = { compact: 152, tall: 352 } as const
  *
  * `sm` (36) is below the 44px touch minimum and is permitted ONLY where the
  * row containing it is itself the target, which is why nothing on the artist
- * page uses it: this page's buttons are the target. It is consumed by the
- * search-results row.
+ * page uses it: this page's buttons are the target. Nothing consumes it yet —
+ * the search-results row (PR 5 of this epic) is what it is sized for.
  *
  * `full` carries padding even though it renders at `width: 100%` — the padding
  * insets the label rather than sizing the control, and keeping it here means
