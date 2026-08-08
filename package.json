@@ -18,6 +18,7 @@
     "db:seed:staging:synthetic": "tsx scripts/seed-staging/seed-synthetic.ts",
     "venues:sync": "tsx scripts/sync-venues.ts",
     "worktree:prune": "scripts/worktree-prune.sh",
+    "backlog:status": "scripts/backlog-status.sh",
     "release:draft": "tsx scripts/draft-release.ts",
     "test:scripts": "vitest run --config vitest.scripts.config.ts",
     "prepare": "husky"

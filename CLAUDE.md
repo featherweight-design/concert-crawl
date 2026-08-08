@@ -13,7 +13,8 @@ Concert Crawl aggregates live music events from Denver venue websites into a sin
 **Key documents:**
 
 - Original design spec: `docs/superpowers/specs/2026-04-23-denver-concert-calendar-design.md`
-- **Beta-to-launch plan (current):** `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md`
+- **🚩 Launch bar (authoritative):** `docs/superpowers/launch-bar.md` — the four gates that decide when we launch. **There is no launch date.** An item is launch-gating if and only if it appears there; the `phase: launch` label does not make it so. Never widen the bar without Hugh's sign-off.
+- **Beta-to-launch plan (historical):** `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md` — its Aug 18–22 window is superseded by the launch bar; read it for tier/feature intent, not for schedule
 - **Design pipeline workflow:** `docs/superpowers/design-pipeline.md` — two-track design pipeline (Track 1: build pending, gated by Readiness Review; Track 2: needs design, workshopped before handoff)
 - DB rollback runbook: `docs/runbooks/db-rollback.md`
 
@@ -232,6 +233,20 @@ must name the one it displaces. P3 items untouched for 90 days are proposed for 
 next audit. The `backlog-audit` skill (user scope) carries the full Scrum Leader persona and runs
 monthly, or whenever open issues exceed the sum of the ceilings. Ledgers land in
 `docs/superpowers/backlog/`.
+
+**Both ceilings are currently breached** (P2 57/40, P3 46/20 as of 2026-08-08). Until an audit
+brings them under, treat every band as at cap: filing anything means naming what it displaces.
+
+**⚠️ The failure mode this exists to stop is agent-filed "deferred" tickets.** The backlog did not
+grow because Hugh filed too much — it grew because agents mid-epic hit something out of scope and
+quietly opened an issue for it. That is invisible to Hugh at the moment it happens and only
+surfaces months later as a graveyard. So:
+
+- **Run `pnpm backlog:status` before filing anything.** It prints open counts per band against the
+  caps. If you are about to file without having run it, you are the failure mode.
+- A deferral discovered mid-task is a **line in your final report**, not a `gh issue create`. Layer
+  1 (fix it now) and layer 2 (decide it now) resolve the large majority of them.
+- Never file during an autonomous run. Collect under **Proposed intake** and let Hugh choose.
 
 **Workflows:**
 
