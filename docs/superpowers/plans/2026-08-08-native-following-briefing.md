@@ -31,8 +31,13 @@ writes into), `#1115` artist page (the surface that already carries a follow but
 - **`user_notification_preferences` exists** (`packages/db/src/schema/user-notification-preferences.ts`)
   and creates rows lazily, so the backfill must be `INSERT … ON CONFLICT DO UPDATE`.
 - **`user_artist_follows` exists** (`packages/db/src/schema/social.ts:84`) with a `source`
-  column. Spotify writes `'spotify'`; the shipped manual Follow button writes `'manual'`.
-  This epic's queries match every row regardless of `source`.
+  column typed by `artistFollowSourceEnum` (`social.ts:78`). It has **three** values, not two:
+  `'manual'` (what the shipped Follow button writes, and the column default) plus
+  `'spotify_followed'` and `'spotify_top'`. There is no `'spotify'` value — a filter written
+  against one matches nothing. The shipped constant `SPOTIFY_FOLLOW_SOURCES`
+  (`apps/api/src/lib/spotify-sync.ts:40`) is the canonical grouping of the two Spotify
+  values; use it rather than listing them. This epic's queries match every row regardless of
+  `source`, so the enum matters only where `followSource` is surfaced to the UI.
 - **`NATIVE_DIGEST_ENABLED` does not exist yet.** PR 9 introduces it, defaulting off in both
   environments. Hugh flips it.
 - **The weekly digest cron is Monday, not Friday** — `concert-crawl-spotify-weekly`,
