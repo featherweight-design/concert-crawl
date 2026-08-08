@@ -34,7 +34,7 @@ export const NOTIFICATION_CATEGORIES = [
   'watch.pricedrop',
   'contest.resolved',
   'contest.needs_info',
-  'spotify.new_show',
+  'artist.new_show',
   'crew.going',
   'crew.joined',
   'crew.left',

@@ -33,7 +33,7 @@ describe('pruneNotifications', () => {
     await seedNotification({
       userId: 'user_owner',
       type: 'user_notification',
-      category: 'spotify.new_show',
+      category: 'artist.new_show',
       title: 'Big Head Todd: new Denver date',
       body: 'Fillmore · Oct 12. Added to your Watching.',
       createdAt: new Date(Date.now() - DAY_MS),

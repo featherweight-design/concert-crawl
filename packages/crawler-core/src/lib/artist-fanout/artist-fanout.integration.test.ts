@@ -185,11 +185,11 @@ describe('runArtistFanout — channel gating (#763 §10.1)', () => {
     expect(sendPush).toHaveBeenCalledTimes(1)
     expect(sendPush).toHaveBeenCalledWith({
       userId: PREMIUM_USER,
-      category: 'spotify.new_show',
+      category: 'artist.new_show',
       title: 'Big Head Todd: new Denver date',
       body: 'Fillmore · Oct 12. Want in? Tap to watch.',
       actionUrl: `/events/${eventId}`,
-      tag: `spotify-new-show-${eventId}`,
+      tag: `artist-new-show-${eventId}`,
     })
     const premiumTray = await db
       .select()
@@ -198,7 +198,7 @@ describe('runArtistFanout — channel gating (#763 §10.1)', () => {
     expect(premiumTray).toHaveLength(1)
     expect(premiumTray[0]).toMatchObject({
       type: 'user_notification',
-      category: 'spotify.new_show',
+      category: 'artist.new_show',
       actionUrl: `/events/${eventId}`,
     })
 

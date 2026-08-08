@@ -49,7 +49,7 @@ import { newShowDateLabel, newShowCopy } from './definitions/copy.js'
 
 const fanoutLogger = createLogger('artist-fanout')
 
-const NEW_SHOW_CATEGORY = 'spotify.new_show'
+const NEW_SHOW_CATEGORY = 'artist.new_show'
 
 // Clerk publicMetadata is untyped at the boundary — parsed, never cast.
 const publicMetadataSchema = z.object({ role: z.string().optional() })
@@ -337,7 +337,7 @@ export async function runArtistFanout(
                 actionUrl,
                 // Stable tag so a duplicate delivery for the same event
                 // coalesces into one OS notification.
-                tag: `spotify-new-show-${event.id}`,
+                tag: `artist-new-show-${event.id}`,
               })
               summary.pushesClaimed += 1
             }

@@ -256,7 +256,7 @@ describe('fanoutWatchNotification', () => {
     // No watchers query issued because composeMessage returns empty title.
     const result = await fanoutWatchNotification(deps, {
       eventId: 'evt_1',
-      category: 'spotify.new_show',
+      category: 'artist.new_show',
     })
     expect(result).toEqual({ watchersNotified: 0, pushDelivered: 0 })
     expect(deps.insertCalls).toHaveLength(0)

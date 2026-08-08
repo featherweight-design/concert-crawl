@@ -161,7 +161,7 @@ describe('sendPushForNotification', () => {
     expect(result.skipped).toBe('category_off')
   })
 
-  it('sends spotify.new_show regardless of watch/price sub-toggles (master only)', async () => {
+  it('sends artist.new_show regardless of watch/price sub-toggles (master only)', async () => {
     process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
     process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
     process.env['VAPID_SUBJECT'] = 'ops@example.com'
@@ -180,7 +180,7 @@ describe('sendPushForNotification', () => {
     const { sendPushForNotification } = await import('./send-push.js')
     const result = await sendPushForNotification({
       userId: 'user_1',
-      category: 'spotify.new_show',
+      category: 'artist.new_show',
       title: 't',
       body: 'b',
     })

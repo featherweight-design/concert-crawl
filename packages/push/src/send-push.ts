@@ -65,7 +65,7 @@ export interface SendPushInput {
  * - `masterEnabled` gates everything.
  * - `watchUpdatesEnabled` gates watch.cancelled/postponed/soldout/backonsale.
  * - `priceDropsEnabled` gates watch.pricedrop.
- * - `spotify.new_show` has no sub-toggle here — its per-connection
+ * - `artist.new_show` has no sub-toggle here — its per-connection
  *   `pushEnabled` + premium entitlement gates live at the fan-out call site.
  * - Non-push-eligible categories (contest.*) return without firing.
  *

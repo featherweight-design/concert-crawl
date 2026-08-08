@@ -24,7 +24,7 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { and, eq } from 'drizzle-orm'
-import { userArtistFollows } from '@concert-crawl/db'
+import { subscriptions, userArtistFollows } from '@concert-crawl/db'
 import { createApp } from '../app.js'
 import { testDb } from '../test/helpers/db.js'
 import { resolveArtistSlugs } from '../lib/artist-slugs.js'
@@ -119,6 +119,16 @@ describe('#1342 hidden artists are absent from every public surface', () => {
 
   it('refuses a new follow but still allows unfollowing an existing one', async () => {
     const { hiddenSlug } = await seedPair()
+    // Premium, so the `following` entitlement gate passes and the 404 below
+    // proves the hidden-artist path, not the paywall.
+    await testDb.insert(subscriptions).values({
+      userId: 'user_hidden_test',
+      stripeCustomerId: 'cus_user_hidden_test',
+      stripeSubscriptionId: 'sub_user_hidden_test',
+      tier: 'premium',
+      status: 'active',
+      currentPeriodEnd: new Date(Date.now() + 30 * 86400000),
+    })
     authState.current = { userId: 'user_hidden_test' }
 
     const follow = await app.request(`/v1/artists/${hiddenSlug}/follow`, {

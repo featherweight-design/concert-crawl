@@ -9,7 +9,7 @@
 //   --success   good news                      watch.backonsale · watch.pricedrop
 //   --fg-muted  a neutral verdict              contest.resolved
 //   --signal    a task — you owe a reply       contest.needs_info
-//   --accent    discovery, not your shows      spotify.new_show · crew.*
+//   --accent    discovery, not your shows      artist.new_show · crew.*
 //
 // The three `crew.*` categories share one ink and one glyph on purpose: they
 // are not three kinds of news, they are one social channel, and a crew row
@@ -93,10 +93,10 @@ export const CATEGORY_MAP: Record<NotificationCategory, CategoryPresentation> =
       glyph: 'needsinfo',
       verb: 'Price check needs you',
     },
-    'spotify.new_show': {
-      label: 'Spotify',
+    'artist.new_show': {
+      label: 'Artists',
       ink: 'var(--accent)',
-      glyph: 'spotify',
+      glyph: 'newshow',
       verb: 'New Denver date',
     },
     'crew.going': {

@@ -1,15 +1,18 @@
-// Customer-facing push/tray copy for the Spotify new-show fan-out (#763
-// eng spec §10.1). Strings are lifted verbatim from the locked design mock
-// (design/design_handoff_spotify_sync/push-alert.jsx):
+// Customer-facing push/tray copy for the new-show fan-out (#763 eng spec
+// §10.1), which now covers follows from every source rather than only
+// Spotify-synced ones. Strings are lifted verbatim from the locked design
+// mock (design/design_handoff_spotify_sync/push-alert.jsx):
 //
 //   autoOn:    "Big Head Todd: new Denver date"
 //              "Fillmore · Oct 12. Added to your Watching."
 //   highlight: "Big Head Todd: new Denver date"
 //              "Fillmore · Oct 12. Want in? Tap to watch."
 //
-// The body variant is keyed off the user's per-connection autoWatch state
-// (design lock): auto-watch users are told the show is already on their
-// Watching list; highlight-only users get the tap-to-watch invite.
+// The body variant is keyed off the user's resolved autoWatch state (design
+// lock): auto-watch users are told the show is already on their Watching
+// list; highlight-only users get the tap-to-watch invite. A follower with no
+// Spotify connection resolves to the default, false, so they always get the
+// invite — following must never silently mutate someone's Watching list.
 
 export const newShowCopy = {
   title: (artist: string): string => `${artist}: new Denver date`,

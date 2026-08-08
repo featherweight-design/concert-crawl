@@ -40,7 +40,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
 // strings, so the tests pin the real ones rather than the prototype's mocks:
 //   packages/push/src/definitions/copy.ts            (watch.*)
 //   apps/api/src/lib/contest-notifications.ts        (contest.*)
-//   packages/crawler-core/.../artist-fanout/copy.ts (spotify.new_show)
+//   packages/crawler-core/.../artist-fanout/copy.ts (artist.new_show)
 const PRICE_DROP = {
   category: 'watch.pricedrop',
   title: '$28 tickets for Geese at Bluebird Theater just went on sale.',
@@ -52,7 +52,7 @@ const CONTEST_RESOLVED = {
   body: 'Fees were already included in the listed price.',
 }
 const SPOTIFY_NEW_SHOW = {
-  category: 'spotify.new_show',
+  category: 'artist.new_show',
   title: 'Big Head Todd: new Denver date',
   body: 'Fillmore · Oct 12. Added to your Watching.',
 }
@@ -192,7 +192,7 @@ describe('GET /v1/notifications', () => {
     await seedUserNotification('user_owner', SPOTIFY_NEW_SHOW)
     const body = await getList()
     expect(body.data.items).toHaveLength(1)
-    expect(body.data.items[0]?.category).toBe('spotify.new_show')
+    expect(body.data.items[0]?.category).toBe('artist.new_show')
   })
 
   it('excludes rows older than the backfill window', async () => {

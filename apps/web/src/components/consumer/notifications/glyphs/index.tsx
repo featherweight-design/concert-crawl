@@ -2,8 +2,8 @@
 // from design_handoff_in_app_notifications/notifications-data.jsx (GLYPH).
 //
 // All marks are 16-viewBox, fill="none", stroked in currentColor so the tile
-// supplies the category ink. No filled icons, no brand marks — spotify's glyph
-// is a signal arc, not the Spotify logo, and contest.resolved is a balance
+// supplies the category ink. No filled icons, no brand marks — newshow's glyph
+// is a signal arc, never the Spotify logo, and contest.resolved is a balance
 // scale rather than a ticket (two numbers were weighed, nobody won a prize).
 
 import type { JSX } from 'react'
@@ -16,7 +16,7 @@ export type GlyphName =
   | 'backonsale'
   | 'resolved'
   | 'needsinfo'
-  | 'spotify'
+  | 'newshow'
   | 'crew'
   | 'bell'
 
@@ -128,7 +128,7 @@ export const GLYPH: Record<GlyphName, JSX.Element> = {
       <circle cx="8.4" cy="11.2" r="0.85" fill="currentColor" />
     </>
   ),
-  spotify: (
+  newshow: (
     <>
       <circle
         cx="4.6"
