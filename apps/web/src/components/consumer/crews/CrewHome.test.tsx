@@ -345,10 +345,11 @@ describe('CrewHome optimistic removal lifetime (#1226)', () => {
 // place to be kept. Keeper-only, and the patch must survive it.
 describe('CrewHome rename (#1226)', () => {
   const openRename = (crew: CrewDetail = detail()) => {
-    render(<CrewHome crew={crew} />)
+    const view = render(<CrewHome crew={crew} />)
     fireEvent.click(
       screen.getByRole('button', { name: CREWS_COPY.a11y.options }),
     )
+    return view
   }
 
   it('offers rename to the keeper only', () => {
@@ -384,6 +385,20 @@ describe('CrewHome rename (#1226)', () => {
     expect(renameCrew).toHaveBeenCalledWith('tok', 'c1', 'Fridays')
     expect(rerollPatch).not.toHaveBeenCalled()
     expect(refresh).toHaveBeenCalled()
+  })
+
+  // A server refetch landing while the sheet is open must not reach into the
+  // field. Someone mid-word loses what they typed otherwise.
+  it('leaves the field alone when the name changes underneath it', () => {
+    const view = openRename()
+    fireEvent.click(
+      screen.getByRole('button', { name: CREWS_COPY.rename.title }),
+    )
+    const field = screen.getByLabelText(CREWS_COPY.create.nameLabel)
+    fireEvent.change(field, { target: { value: 'Frid' } })
+
+    view.rerender(<CrewHome crew={detail({ name: 'Saturdays' })} />)
+    expect(field).toHaveValue('Frid')
   })
 })
 

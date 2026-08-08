@@ -37,13 +37,16 @@ export const RenameSheet = ({
 
   // Reseeded on open rather than on `crewName` changing: a rename that is
   // still in flight would otherwise have the field yanked out from under the
-  // typist by the refetch that lands behind it.
+  // typist by the refetch that lands behind it. `crewName` is read here but
+  // deliberately not a dependency, which is exactly the case exhaustive-deps
+  // cannot express.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!open) return
     setName(crewName)
     setSaving(false)
     setFailed(false)
-  }, [open, crewName])
+  }, [open])
 
   const trimmed = name.trim()
   const canSubmit = trimmed !== '' && trimmed !== crewName && !saving
