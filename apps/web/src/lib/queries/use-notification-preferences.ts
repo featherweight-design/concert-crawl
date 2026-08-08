@@ -13,8 +13,8 @@ export interface NotificationPreferences {
   watchUpdatesEnabled: boolean
   priceDropsEnabled: boolean
   // Artist following (migration 0078). The PATCH body is `.strict()` on the
-  // API, so a key missing from this interface is a 400 rather than a silently
-  // dropped field.
+  // API, so this interface is what keeps a typo from reaching it: an unknown
+  // key is a 400 there rather than a field the server quietly drops.
   artistAlertsEnabled: boolean
   artistAutoWatch: boolean
   weeklyDigestEnabled: boolean
