@@ -34,7 +34,10 @@ const isCrewMuteRow = (value: unknown): value is CrewMuteRow => {
   return (
     typeof record.id === 'string' &&
     typeof record.name === 'string' &&
+    // Whole steps only, matching crew-meta's reader: the salt picks a patch
+    // variant, so a float or NaN would draw an identity no crew actually has.
     typeof record.patchSalt === 'number' &&
+    Number.isInteger(record.patchSalt) &&
     typeof record.muted === 'boolean'
   )
 }
