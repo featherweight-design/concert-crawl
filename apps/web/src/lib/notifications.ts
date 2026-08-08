@@ -19,7 +19,7 @@ import { apiClient, ApiError } from './api'
  * (packages/push/src/notification-categories.ts), which is the source of
  * truth. Duplicated rather than imported because @concert-crawl/push is a
  * server package (web-push, node crypto) and must not enter the browser
- * bundle. If a twelfth category lands there, add it here too — an unrecognised
+ * bundle. When a new category lands there, add it here too — an unrecognised
  * value still renders, via CATEGORY_FALLBACK.
  *
  * The three `crew.*` categories are bell-only by design (#1226): they are
