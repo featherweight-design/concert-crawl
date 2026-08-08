@@ -24,12 +24,12 @@ Spotify-powered personalization stays behind the existing feature flag for conne
 |---|---|---|
 | `idle` | `--signal` fill | follow |
 | `following` | shipped skin: `--signal` @14% fill, `--signal` border + text, check | unfollow, no confirm |
-| `locked` | outline `--signal` + lock glyph, **same size/label as idle** | opens paywall. **Not `disabled`.** Logged-out → tier picker |
+| `locked` | the shipped signed-out skin (transparent, `--border-strong`, `--fg`) + lock glyph, **same size/label as idle** | opens paywall. **Not `disabled`.** Logged-out → tier picker |
 | `pending` | idle at 0.72 opacity, label "Following…" | label swap only, **no width change** |
 
 **There is no fifth state.** An artist with zero Denver shows cannot exist (artists are a projection off event billing; the detail endpoint 404s with no visible event). The real case is "played Denver before, nothing upcoming": **normal live Follow button**, plus a muted `NoDatesLine` in artist rows (search results, shelves, the Artists tab). On the artist page, `EmptyUpcoming`'s own copy already carries the fact. Never inert.
 
-`--accent` is reserved for Watching a show. Following never uses it. Sizes: `sm` 32 (only where the row is also a target) · `md` 44 · `lg` 48.
+`--accent` is reserved for Watching a show. Following never uses it. Sizes, per `NF_FOLLOW_SIZES`: `sm` 36 (only where the row is also a target) · `md` 44 · `full` 48.
 
 In shelves and the onboarding picker the affordance is a **badge on the art**, not a full button (same states, same gesture, less shouting). Row attribution is the shipped `RowMetaChip`. The artist page shows exactly **one** live follow affordance (keep both guards from the artist-page work: `showFollow` on the sticky sub-header, `hasShows` on `FollowBlock`).
 

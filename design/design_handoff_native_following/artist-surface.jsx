@@ -76,7 +76,11 @@ function Crumb({ name }) {
 // follow with it. The page never has two live follow affordances at once.
 // showFollow=false in the no-shows state, where the page's single follow lives
 // inside the empty block — duplicating it here would break the invariant.
-function StickyBar({ name, following, compact, showFollow = true }) {
+// NATIVE FOLLOWING: `state` is threaded through to the sticky Follow button.
+// While scrolled this IS the page's one live follow affordance, so it has to
+// carry locked and pending like every other instance. Without it the same user
+// state would look different depending on scroll position.
+function StickyBar({ name, following, compact, showFollow = true, state }) {
   return (
     <div style={{ position: "absolute", top: compact ? 0 : 44, left: 0, right: 0, zIndex: 30,
       height: 56, display: "flex", alignItems: "center", gap: 10, padding: "0 12px",
@@ -89,7 +93,7 @@ function StickyBar({ name, following, compact, showFollow = true }) {
       <span style={{ flex: 1, minWidth: 0, fontFamily: "Inter, system-ui", fontWeight: 800,
         fontSize: 15, color: "var(--fg)", letterSpacing: "-0.01em", whiteSpace: "nowrap",
         overflow: "hidden", textOverflow: "ellipsis" }}>{name}</span>
-      {showFollow && <FollowButton following={following} name={name} size="compact"/>}
+      {showFollow && <FollowButton following={following} name={name} size="compact" state={state}/>}
     </div>
   );
 }

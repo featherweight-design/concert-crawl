@@ -261,11 +261,11 @@ function FollowStepDesktop({ selected = ["Amyl and The Sniffers", "Wednesday", "
     <div style={{ width: "100%", height: "100%", background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui", display: "flex", alignItems: "center", justifyContent: "center", padding: 30, overflow: "hidden" }}>
       <div style={{ width: 760, maxHeight: "100%", borderRadius: 18, background: "var(--bg-elevated)", border: "1px solid var(--border-strong)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ padding: "20px 26px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <NFDots total={6} index={4}/>
+          <NFDots total={8} index={6}/>
           <Mono size={10.5} color="var(--fg-subtle)" ls="0.12em">Skip</Mono>
         </div>
         <div style={{ padding: "20px 26px 14px" }}>
-          <Mono size={10} color="var(--signal)">Step 5 of 6 · playing denver</Mono>
+          <Mono size={10} color="var(--signal)">Step 7 of 8 · playing denver</Mono>
           <h1 style={{ margin: "9px 0 0", fontSize: 30, fontWeight: 900, letterSpacing: "-0.03em", color: "var(--fg)" }}>Know any of these?</h1>
           <p style={{ margin: "9px 0 0", fontSize: 14.5, color: "var(--fg-muted)", lineHeight: 1.5, maxWidth: 560, textWrap: "pretty" }}>
             Punk, indie rock and shoegaze acts with Denver dates on the books. Tap to add. Pick as many as you like.

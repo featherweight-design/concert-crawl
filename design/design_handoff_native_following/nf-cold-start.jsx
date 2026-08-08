@@ -75,7 +75,7 @@ function FollowStepGenres({ narrow = false, picked = ["punk", "indie rock", "sho
         <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>Skip</span>
       </div>
       <ScreenShell pad={narrow ? "22px 16px 16px" : "26px 20px 16px"} gap={0}>
-        <Mono color="var(--signal)" size={10}>Step 4 of 6 · your artists</Mono>
+        <Mono color="var(--signal)" size={10}>Step 6 of 8 · your artists</Mono>
         <h1 style={{ margin: "10px 0 0", fontSize: narrow ? 25 : 28, fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.08, color: "var(--fg)" }}>
           What do you actually listen to?
         </h1>
@@ -108,7 +108,7 @@ function FollowStepArtists({ narrow = false, selected = ["Amyl and The Sniffers"
         <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>Skip</span>
       </div>
       <div style={{ padding: narrow ? "20px 16px 12px" : "24px 20px 12px" }}>
-        <Mono color="var(--signal)" size={10}>Step 5 of 6 · playing denver</Mono>
+        <Mono color="var(--signal)" size={10}>Step 7 of 8 · playing denver</Mono>
         <h1 style={{ margin: "9px 0 0", fontSize: narrow ? 24 : 27, fontWeight: 900, letterSpacing: "-0.03em", lineHeight: 1.08, color: "var(--fg)" }}>
           Know any of these?
         </h1>

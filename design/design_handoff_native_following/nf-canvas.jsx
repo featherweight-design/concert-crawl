@@ -326,7 +326,7 @@ function App() {
               <NFNote title="A11y" items={[
                 "Artist tiles are role=checkbox + aria-checked; the grid is a labelled group. Selection is check glyph + border + fill, never colour alone.",
                 "Commit button text carries the count ('Follow 4 artists'), so the number is announced, not just seen.",
-                "Icon-only NFFollow (320 + desktop grids) carries aria-label; every variant is ≥44px except the sm row button at 32px paired with a full-row tap target.",
+                "Icon-only NFFollow (320 + desktop grids) carries aria-label; every variant is ≥44px except the sm row button at 36px paired with a full-row tap target.",
                 "'Follow all 3' on the bill announces the resulting count, and each row keeps its own button for partial follows.",
               ]}/>
             </div></NotePaper>
@@ -390,7 +390,7 @@ function App() {
                 "Locked sets NO aria-disabled at all: a lock glyph plus aria-describedby pointing at the gate sentence. Tapping must open the paywall, so the control stays in the tab order and stays activatable. R2 set aria-disabled on the scope chip, contradicting this; fixed. There is no disabled access state in the entitlements model.",
                 "The gate is one helper, nfLocked(tier) = free || supporter. R2 tested tier === 'free' inline on six surfaces, which leaked a live Follow button to Supporter. Never test the tier string directly.",
                 "Pending swaps the label only; no width change, so the target doesn't move under a finger mid-tap.",
-                "The lg follow button is 48px; sm is 32px and only used where the whole row is also a target.",
+                "The full-width follow button is 48px; sm is 36px and only used where the whole row is also a target.",
               ]}/>
             </div></NotePaper>
           </DCArtboard>

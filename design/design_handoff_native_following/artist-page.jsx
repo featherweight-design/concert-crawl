@@ -50,7 +50,7 @@ function ArtistPageMobile({
       position: "relative", width: "100%", height: "100%", overflow: "hidden",
       background: "var(--bg)", color: "var(--fg)", fontFamily: "Inter, system-ui" }}>
       {scrolled && <window.StickyBar name={name} following={following} compact={!deviceChrome}
-        showFollow={hasShows}/>}
+        showFollow={hasShows} state={followState}/>}
       <main aria-label={ARTIST_COPY.pageAria(name)}>
         <div style={{ position: "relative" }}>
           {loadingArtist
