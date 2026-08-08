@@ -1,3 +1,28 @@
+# [1.225.0](https://github.com/HartiganHM/concert-crawl/compare/v1.224.1...v1.225.0) (2026-08-08)
+
+
+### Bug Fixes
+
+* address Copilot round 1 ([b497af6](https://github.com/HartiganHM/concert-crawl/commit/b497af65b05a4dfcdce9a474b4c4565f8c0bceda))
+* **ci:** invoke the web test script for shards and name the workspaces job accurately ([3a85af7](https://github.com/HartiganHM/concert-crawl/commit/3a85af730f27cf44622de2c37ce9efb4c58b9b82))
+* **web:** explain the closed Spotify door instead of blanking the panel ([e8df22f](https://github.com/HartiganHM/concert-crawl/commit/e8df22f2df3b16f4ab08778eca322efa73d4d18b))
+* **web:** turn a Premium follow 403 into the upgrade sheet ([1f1a411](https://github.com/HartiganHM/concert-crawl/commit/1f1a411d0500bf13a58fb943ad31f67db92d24cc))
+
+
+### Features
+
+* **api:** gate artist follow on the following entitlement ([1854129](https://github.com/HartiganHM/concert-crawl/commit/18541293ea577016ade60349dfb0a74d29891dd1))
+* **crawler:** fan out new-show alerts for every follow source ([8527015](https://github.com/HartiganHM/concert-crawl/commit/8527015ebcd3409ccf29ef3c4be67781bfeb14b4))
+* **notifications:** rename spotify.new_show to artist.new_show ([a5ae5e2](https://github.com/HartiganHM/concert-crawl/commit/a5ae5e2d7bb9178c0c4e78693553e56b28e009bb))
+* **web:** gate the Spotify connect entry point behind an env flag ([da81e0b](https://github.com/HartiganHM/concert-crawl/commit/da81e0b9ec21303a428522992aa4092d171eca62))
+
+
+### Performance Improvements
+
+* **ci:** experiment A - cache-busted baseline Test measurement ([00d1435](https://github.com/HartiganHM/concert-crawl/commit/00d1435672e22f6b405a841e27f5398e94547326))
+* **ci:** experiment B - size the web vitest fork pool to the full core count ([8d89297](https://github.com/HartiganHM/concert-crawl/commit/8d892972bb0ee5930090217e4e25c3228c65de4e))
+* **ci:** shard the web test suite across four runners ([e15c669](https://github.com/HartiganHM/concert-crawl/commit/e15c6695062783fc246c14e99f13576e75cb084d))
+
 ## [1.224.1](https://github.com/HartiganHM/concert-crawl/compare/v1.224.0...v1.224.1) (2026-08-08)
 
 
