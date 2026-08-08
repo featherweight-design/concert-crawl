@@ -1,14 +1,16 @@
 // Spotify new-show fan-out (#763 eng spec §10.1). After a venue crawl
 // persists its events, the crawler calls runSpotifyFanoutSafely with the
-// venue's *inserted* (brand-new) event ids. For every user whose
-// Spotify-sourced follows match a new event (§9.1 canonical rule):
+// venue's *inserted* (brand-new) event ids. For every user whose follows
+// match a new event (§9.1 canonical rule) — from ANY source, Spotify-synced
+// or followed natively in-app:
 //
 //   - AUTO-WATCH (free): connection has autoWatch on → claim
 //     spotify_alert_log (kind='auto_watch'), then upsert user_events
 //     status='watching' (skipped if the user already has any row for the
 //     event — an existing going/interested/watching is never overwritten).
-//   - PUSH (premium): connection has pushEnabled on AND
-//     canUseFeature(planState, 'spotify-sync') → claim spotify_alert_log
+//     A follower with no connection never auto-watches; the default is off.
+//   - PUSH (premium): pushEnabled on (the default for a native follower) AND
+//     canUseFeature(planState, 'following') → claim spotify_alert_log
 //     (kind='push'), insert the #737 tray `notifications` row, then send Web
 //     Push. Copy variant is keyed off autoWatch (design lock).
 //
@@ -21,7 +23,7 @@
 // than detached because both crawler entrypoints hard-exit via
 // process.exit(0), which would sever a floating promise mid-flight (the same
 // #649 lesson as the crawl-failure emails).
-import { and, eq, inArray, ne } from 'drizzle-orm'
+import { and, eq, inArray, ne, sql } from 'drizzle-orm'
 import {
   db,
   events,
@@ -46,10 +48,6 @@ import { z } from 'zod'
 import { newShowDateLabel, spotifyNewShowCopy } from './definitions/copy.js'
 
 const fanoutLogger = createLogger('spotify-fanout')
-
-// Spotify-sourced follows only — manual follows are out of scope for the
-// fan-out, matching the weekly digest's SPOTIFY_FOLLOW_SOURCES.
-const SPOTIFY_FOLLOW_SOURCES = ['spotify_followed', 'spotify_top'] as const
 
 const NEW_SHOW_CATEGORY = 'spotify.new_show'
 
@@ -206,8 +204,9 @@ export async function runSpotifyFanout(
   }
 
   // One batched candidate query for the whole crawl (§9.1 canonical match),
-  // then pure in-memory per-event overlap — no per-event queries. Connection
-  // gate matches the weekly job: any non-revoked row participates.
+  // then pure in-memory per-event overlap — no per-event queries. EVERY follow
+  // source participates: the Spotify connection is now only a source of
+  // notification preferences, never a condition of entry.
   const allCanonicalNames = [
     ...new Set(
       newEvents.flatMap((event) => [
@@ -220,23 +219,29 @@ export async function runSpotifyFanout(
 
   const candidates: MatchedConnection[] = await db
     .selectDistinct({
-      userId: userSpotifyConnections.userId,
+      // From the follow, not the connection — a manual follower has no
+      // connection row and would otherwise select as null.
+      userId: userArtistFollows.userId,
       canonicalName: userArtistFollows.canonicalName,
-      autoWatch: userSpotifyConnections.autoWatch,
-      pushEnabled: userSpotifyConnections.pushEnabled,
+      // Defaults are deliberately asymmetric, and applied here in SQL so no
+      // downstream consumer can forget them: pushEnabled defaults TRUE
+      // (following IS the opt-in), autoWatch defaults FALSE (following must
+      // never silently mutate someone's Watching list).
+      autoWatch: sql<boolean>`coalesce(${userSpotifyConnections.autoWatch}, false)`,
+      pushEnabled: sql<boolean>`coalesce(${userSpotifyConnections.pushEnabled}, true)`,
     })
     .from(userArtistFollows)
-    .innerJoin(
+    // LEFT, and the revoked check lives INSIDE the join condition. In the
+    // WHERE clause it would filter the null-connection rows straight back
+    // out, reinstating the inner join it replaced.
+    .leftJoin(
       userSpotifyConnections,
-      eq(userSpotifyConnections.userId, userArtistFollows.userId),
-    )
-    .where(
       and(
+        eq(userSpotifyConnections.userId, userArtistFollows.userId),
         ne(userSpotifyConnections.status, 'revoked'),
-        inArray(userArtistFollows.source, [...SPOTIFY_FOLLOW_SOURCES]),
-        inArray(userArtistFollows.canonicalName, allCanonicalNames),
       ),
     )
+    .where(inArray(userArtistFollows.canonicalName, allCanonicalNames))
   if (candidates.length === 0) return summary
 
   const usersByCanonical = new Map<string, MatchedConnection[]>()
@@ -297,7 +302,9 @@ export async function runSpotifyFanout(
 
         if (connection.pushEnabled) {
           const planState = await planFor(connection.userId)
-          if (canUseFeature(planState, 'spotify-sync')) {
+          // Gated on `following`, not `spotify-sync` — the alert belongs to
+          // the follow that earned it, whatever source created it.
+          if (canUseFeature(planState, 'following')) {
             const claimed = await claimAlert(
               connection.userId,
               event.id,

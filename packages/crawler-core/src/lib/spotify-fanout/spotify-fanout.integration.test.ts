@@ -96,7 +96,22 @@ async function seedFollower(input: SeedFollowerInput): Promise<void> {
   })
 }
 
-// A live premium subscription — canUseFeature(plan, 'spotify-sync') active.
+// A follow with NO connection row — the manual-only user, which seedFollower
+// cannot represent because it always pairs a follow with a connection.
+async function seedManualFollow(input: {
+  userId: string
+  canonicalName: string
+}): Promise<void> {
+  await db.insert(userArtistFollows).values({
+    userId: input.userId,
+    artistName: input.canonicalName,
+    spotifyArtistId: null,
+    source: 'manual',
+    canonicalName: input.canonicalName,
+  })
+}
+
+// A live premium subscription — canUseFeature(plan, 'following') active.
 async function seedPremiumSubscription(userId: string): Promise<void> {
   await db.insert(subscriptions).values({
     userId,
@@ -352,7 +367,10 @@ describe('runSpotifyFanout — matching + idempotency', () => {
     expect(ledger).toHaveLength(2)
   })
 
-  it('ignores revoked connections and hidden events', async () => {
+  // A revoked connection no longer removes the follower — it removes their
+  // stored preferences, so the defaults apply. The user below has autoWatch
+  // ON, and must still not be auto-watched.
+  it('ignores hidden events, and falls back to defaults on a revoked connection', async () => {
     const venueId = await seedVenue('Fillmore')
     const visibleId = await seedEvent({
       venueId,
@@ -384,8 +402,11 @@ describe('runSpotifyFanout — matching + idempotency', () => {
 
     expect(summary).toMatchObject({
       newEvents: 1,
-      matchedPairs: 0,
+      // The revoked user still matches; the hidden-event follower does not.
+      matchedPairs: 1,
+      // autoWatch:true came off the revoked connection, so it is discarded.
       autoWatched: 0,
+      // pushEnabled defaults true, but this user has no paid plan.
       pushesClaimed: 0,
     })
   })
@@ -439,5 +460,136 @@ describe('runSpotifyFanout — failure isolation', () => {
       getRole: noRole,
     })
     expect(summary).toMatchObject({ newEvents: 0, matchedPairs: 0 })
+  })
+})
+
+describe('runSpotifyFanout — native follows', () => {
+  it('notifies a manual follower who has no Spotify connection at all', async () => {
+    const venueId = await seedVenue('Fillmore')
+    const eventId = await seedEvent({
+      venueId,
+      artist: 'Big Head Todd',
+      canonicalArtist: 'big head todd',
+    })
+    await seedManualFollow({
+      userId: PREMIUM_USER,
+      canonicalName: 'big head todd',
+    })
+    await seedPremiumSubscription(PREMIUM_USER)
+
+    const sendPush = makeSendPush()
+    const summary = await runSpotifyFanout([eventId], {
+      sendPush,
+      getRole: noRole,
+    })
+
+    expect(summary).toMatchObject({ matchedPairs: 1, pushesClaimed: 1 })
+    expect(sendPush).toHaveBeenCalledTimes(1)
+  })
+
+  it('never auto-watches a manual follower — autoWatch defaults off', async () => {
+    const venueId = await seedVenue('Fillmore')
+    const eventId = await seedEvent({
+      venueId,
+      artist: 'Big Head Todd',
+      canonicalArtist: 'big head todd',
+    })
+    await seedManualFollow({
+      userId: PREMIUM_USER,
+      canonicalName: 'big head todd',
+    })
+    await seedPremiumSubscription(PREMIUM_USER)
+
+    const summary = await runSpotifyFanout([eventId], {
+      sendPush: makeSendPush(),
+      getRole: noRole,
+    })
+
+    expect(summary?.autoWatched).toBe(0)
+    const watching = await db
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, PREMIUM_USER))
+    expect(watching).toHaveLength(0)
+  })
+
+  it('still notifies a manual follower whose Spotify connection is revoked', async () => {
+    const venueId = await seedVenue('Fillmore')
+    const eventId = await seedEvent({
+      venueId,
+      artist: 'Big Head Todd',
+      canonicalArtist: 'big head todd',
+    })
+    await db.insert(userSpotifyConnections).values({
+      userId: PREMIUM_USER,
+      spotifyUserId: `spotify_${PREMIUM_USER}`,
+      autoWatch: false,
+      pushEnabled: true,
+      status: 'revoked',
+    })
+    await seedManualFollow({
+      userId: PREMIUM_USER,
+      canonicalName: 'big head todd',
+    })
+    await seedPremiumSubscription(PREMIUM_USER)
+
+    const sendPush = makeSendPush()
+    const summary = await runSpotifyFanout([eventId], {
+      sendPush,
+      getRole: noRole,
+    })
+
+    expect(summary).toMatchObject({ matchedPairs: 1, pushesClaimed: 1 })
+    expect(sendPush).toHaveBeenCalledTimes(1)
+  })
+
+  it('sends exactly one push when the same artist is followed both ways', async () => {
+    const venueId = await seedVenue('Fillmore')
+    const eventId = await seedEvent({
+      venueId,
+      artist: 'Big Head Todd',
+      canonicalArtist: 'big head todd',
+    })
+    await seedFollower({
+      userId: PREMIUM_USER,
+      canonicalName: 'big head todd',
+      pushEnabled: true,
+    })
+    await seedManualFollow({
+      userId: PREMIUM_USER,
+      canonicalName: 'big head todd',
+    })
+    await seedPremiumSubscription(PREMIUM_USER)
+
+    const sendPush = makeSendPush()
+    const summary = await runSpotifyFanout([eventId], {
+      sendPush,
+      getRole: noRole,
+    })
+
+    expect(summary).toMatchObject({ matchedPairs: 1, pushesClaimed: 1 })
+    expect(sendPush).toHaveBeenCalledTimes(1)
+  })
+
+  it('sends no push to a manual follower on the free plan', async () => {
+    const venueId = await seedVenue('Fillmore')
+    const eventId = await seedEvent({
+      venueId,
+      artist: 'Big Head Todd',
+      canonicalArtist: 'big head todd',
+    })
+    await seedManualFollow({
+      userId: FREE_USER,
+      canonicalName: 'big head todd',
+    })
+
+    const sendPush = makeSendPush()
+    const summary = await runSpotifyFanout([eventId], {
+      sendPush,
+      getRole: noRole,
+    })
+
+    expect(summary?.pushesClaimed).toBe(0)
+    expect(sendPush).not.toHaveBeenCalled()
   })
 })
