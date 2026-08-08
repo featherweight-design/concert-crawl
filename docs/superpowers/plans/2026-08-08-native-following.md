@@ -26,6 +26,12 @@ The other three: `MiniPaywall` does not exist (the paywall is `TierPickerSheet`)
 
 **All copy in the handoff and the prototypes is placeholder.** Nothing in `nf-*.jsx` ships verbatim.
 
+### There is no artist index route, and this epic does not add one
+
+The handoff's follow shelf and its My shows ▸ Artists empty state both offer a "browse all artists" affordance. It has no destination: `apps/web/src/app/(protected)/(main)/artists/` contains only `[slug]`, and artists are a projection off event billing rather than a browsable catalogue, so an index would be a new surface with its own ranking, pagination and empty-state design that no handoff covers.
+
+**Every such affordance points at `/search` instead.** PR 5 puts an Artists section at the top of search results, which makes search the artist-discovery surface the link wants. Do not add an `/artists` index, and do not quietly drop the affordance either — a shelf that recruits follows with no way to see more is the recruiting problem this epic exists to fix.
+
 ---
 
 ## Global Constraints
