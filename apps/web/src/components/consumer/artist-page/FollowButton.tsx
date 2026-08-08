@@ -10,8 +10,9 @@ import { ARTIST_COPY } from './definitions/copy'
 import { NF_FOLLOW_SIZES } from './definitions/constants'
 
 // Same reasoning as WatchShowButton: the sheet drags @stripe/stripe-js in via
-// CheckoutPanel, and only a signed-out visitor can ever open it — a static
-// import would put the Stripe chunk in every artist page's bundle.
+// CheckoutPanel, so it is loaded on demand rather than on first paint. This is
+// the signed-out picker only; a signed-in locked tap calls `onLockedTap` and
+// opens the parent's sheet, which ArtistPageContent imports statically.
 // ssr:false because the picker is a modal that is always closed on first paint.
 const TierPickerSheet = dynamic(
   () =>
