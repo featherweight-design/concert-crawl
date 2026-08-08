@@ -19,21 +19,21 @@ This spec covers the front half. Today a user can only acquire a follow by conne
 
 Verified against `origin/main` at e8df22f2d. Anything not listed here is new.
 
-| Thing | Where | State |
-|---|---|---|
-| `artists` projection table | `packages/db/src/schema/artists.ts:41` | Ships. Projection off event billing; `hidden` kill switch |
-| `user_artist_follows` with `source` enum | `packages/db/src/schema/social.ts:84` | Ships. `'manual' \| 'spotify_followed' \| 'spotify_top'` |
-| `POST/DELETE /v1/artists/:slug/follow` | `apps/api/src/routes/artist-follows.ts` | Ships. POST carries `requireFeature('following')`; DELETE deliberately does not |
-| `following` entitlement, premium+ | `packages/entitlements/src/index.ts:84` | Ships. free/supporter = `paywall-on-tap`, logged-out = `tier-picker-on-tap` |
-| Artist page + `FollowButton` + `FollowBlock` + `EmptyUpcoming` + `StickyBar` | `apps/web/src/components/consumer/artist-page/` | Ships, incl. the `hasShows` and `showFollow` guards |
-| `GET /v1/search/artists?q=` | `apps/api/src/routes/search.ts:105` | Ships. Returns top 3, filtered to artists with a consumer-visible event |
-| Crawl-discovery fan-out, source-agnostic | `packages/crawler-core/src/lib/artist-fanout/` | Ships (#1515). Asymmetric defaults applied as SQL `COALESCE` |
-| My shows, Watching / History tablist | `apps/web/src/components/consumer/history/MyShowsTabs.tsx` | Ships |
-| `user_notification_preferences` | `packages/db/src/schema/user-notification-preferences.ts` | Ships: `masterEnabled`, `watchUpdatesEnabled`, `priceDropsEnabled` |
-| Weekly digest template + job | `apps/api/src/emails/templates/spotify-digest.ts`, `apps/api/src/jobs/spotify-weekly.ts` | Ships, **Spotify-gated** |
-| `TierPickerSheet` | `apps/web/src/components/consumer/tier-picker/` | Ships. This is the paywall |
-| Event-row Following chip | `apps/web/src/components/consumer/event-row/lib/row-chips.ts:58` | Ships. Text-only, tone `signal`, gated on `show.isFollowed`, which `row-model.ts` derives from `followedArtists`. **No Spotify logo** |
-| Bottom-nav tab-3 label "my shows" | `apps/web/src/components/consumer/bottom-nav/BottomNav.tsx` | Ships (#70). Asserted three times in `BottomNav.test.tsx` |
+| Thing                                                                        | Where                                                                                    | State                                                                                                                                 |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `artists` projection table                                                   | `packages/db/src/schema/artists.ts:41`                                                   | Ships. Projection off event billing; `hidden` kill switch                                                                             |
+| `user_artist_follows` with `source` enum                                     | `packages/db/src/schema/social.ts:84`                                                    | Ships. `'manual' \| 'spotify_followed' \| 'spotify_top'`                                                                              |
+| `POST/DELETE /v1/artists/:slug/follow`                                       | `apps/api/src/routes/artist-follows.ts`                                                  | Ships. POST carries `requireFeature('following')`; DELETE deliberately does not                                                       |
+| `following` entitlement, premium+                                            | `packages/entitlements/src/index.ts:84`                                                  | Ships. free/supporter = `paywall-on-tap`, logged-out = `tier-picker-on-tap`                                                           |
+| Artist page + `FollowButton` + `FollowBlock` + `EmptyUpcoming` + `StickyBar` | `apps/web/src/components/consumer/artist-page/`                                          | Ships, incl. the `hasShows` and `showFollow` guards                                                                                   |
+| `GET /v1/search/artists?q=`                                                  | `apps/api/src/routes/search.ts:105`                                                      | Ships. Returns top 3, filtered to artists with a consumer-visible event                                                               |
+| Crawl-discovery fan-out, source-agnostic                                     | `packages/crawler-core/src/lib/artist-fanout/`                                           | Ships (#1515). Asymmetric defaults applied as SQL `COALESCE`                                                                          |
+| My shows, Watching / History tablist                                         | `apps/web/src/components/consumer/history/MyShowsTabs.tsx`                               | Ships                                                                                                                                 |
+| `user_notification_preferences`                                              | `packages/db/src/schema/user-notification-preferences.ts`                                | Ships: `masterEnabled`, `watchUpdatesEnabled`, `priceDropsEnabled`                                                                    |
+| Weekly digest template + job                                                 | `apps/api/src/emails/templates/spotify-digest.ts`, `apps/api/src/jobs/spotify-weekly.ts` | Ships, **Spotify-gated**                                                                                                              |
+| `TierPickerSheet`                                                            | `apps/web/src/components/consumer/tier-picker/`                                          | Ships. This is the paywall                                                                                                            |
+| Event-row Following chip                                                     | `apps/web/src/components/consumer/event-row/lib/row-chips.ts:58`                         | Ships. Text-only, tone `signal`, gated on `show.isFollowed`, which `row-model.ts` derives from `followedArtists`. **No Spotify logo** |
+| Bottom-nav tab-3 label "my shows"                                            | `apps/web/src/components/consumer/bottom-nav/BottomNav.tsx`                              | Ships (#70). Asserted three times in `BottomNav.test.tsx`                                                                             |
 
 ### 1.2 Handoff corrections
 
@@ -41,7 +41,7 @@ Five things the handoff asserts are wrong about shipped code. The handoff is a d
 
 1. **`MiniPaywall` does not exist.** It lives only in `design/design_handoff_monetization_tier_states/`. The shipped paywall is `TierPickerSheet`. "Do not fork the paywall" still binds — we render `TierPickerSheet`, and `FOLLOW_ANCHOR` becomes a new `PickerEntry` value plus a header-copy variant, not a new component. See §6.2.
 2. **`ENTITLEMENT_REQUIRED_CODE` is `'entitlement_required'`** (`apps/web/src/lib/history.ts:9`), not the longer string.
-3. **Artists carry no genre.** The only genre data in the schema is `events.genre` (`text[]`, `packages/db/src/schema/events.ts:82`). The onboarding genre picker therefore filters artists through their *events'* genre arrays. Consistent with artists being a projection, but it means a genre pick can only ever surface artists with a dated Denver event — which is what the handoff wants anyway ("every suggestion is followable by construction").
+3. **Artists carry no genre.** The only genre data in the schema is `events.genre` (`text[]`, `packages/db/src/schema/events.ts:82`). The onboarding genre picker therefore filters artists through their _events'_ genre arrays. Consistent with artists being a projection, but it means a genre pick can only ever surface artists with a dated Denver event — which is what the handoff wants anyway ("every suggestion is followable by construction").
 4. **The Following chip carries no hardcoded Spotify logo.** The handoff calls fixing it the epic's highest-value item; there is nothing to fix. See §5.5.
 5. **The nav label is already "my shows".** The handoff's one open product question is already answered in code. See §7.6.
 
@@ -83,7 +83,7 @@ epic-run refuses to start without these answered. They are answered here, not in
 
 ### 3.1 Launch gating
 
-**Nothing in this epic makes a new vertical publicly reachable.** Every surface is inside `(protected)`, and the two public-adjacent ones (artist page, search) already ship with follow affordances today. The only flag-like decision is the **digest**, which must not send from the new query until the preference migration has run in prod and been verified. Gate: the generalized digest job ships in its own PR, *after* the preference migration PR has been live through one weekly cycle, and lands with `NATIVE_DIGEST_ENABLED` defaulting off. Hugh flips it. See §8.3.
+**Nothing in this epic makes a new vertical publicly reachable.** Every surface is inside `(protected)`, and the two public-adjacent ones (artist page, search) already ship with follow affordances today. The only flag-like decision is the **digest**, which must not send from the new query until the preference migration has run in prod and been verified. Gate: the generalized digest job ships in its own PR, _after_ the preference migration PR has been live through one weekly cycle, and lands with `NATIVE_DIGEST_ENABLED` defaulting off. Hugh flips it. See §8.3.
 
 There is a second, quieter gate: **do not ship the notification settings rows before delivery exists.** #737 has landed, so this is satisfied — but the artist rows in Settings must not appear in a PR that precedes the fan-out reading them, or the toggles are decorative.
 
@@ -91,15 +91,15 @@ There is a second, quieter gate: **do not ship the notification settings rows be
 
 Every new state a user can be in, and where they live:
 
-| State | Home |
-|---|---|
-| Follows nobody, free/supporter | Browse starter shelf (recruiting), My shows ▸ Artists empty state, onboarding step 7 with a locked commit |
-| Follows nobody, premium | Same, unlocked |
-| Follows someone with no upcoming Denver date | My shows ▸ Artists, "Nothing on the books" group (muted, alphabetical). Artist rows elsewhere carry `NoDatesLine` |
-| Follows someone, then downgrades to free | **Follows are retained.** The user keeps the list, loses the alerts and the scope chip. Artists tab still renders; the alerts row shows the locked card. Unfollow stays available (DELETE is unentitled by design) |
-| Followed via Spotify, then disconnects Spotify | Spotify-sourced rows persist; the user keeps the follows. Preferences now come from `user_notification_preferences`, so nothing is lost |
-| Selected artists in onboarding, then hit the paywall | Picks held in component state **and** `sessionStorage`; commit retried after checkout closes. See §9.3 |
-| Zero-follow user who dismisses the starter shelf | No dismiss affordance. The shelf is the slot's zero mode, not a promo |
+| State                                                | Home                                                                                                                                                                                                               |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Follows nobody, free/supporter                       | Browse starter shelf (recruiting), My shows ▸ Artists empty state, onboarding step 7 with a locked commit                                                                                                          |
+| Follows nobody, premium                              | Same, unlocked                                                                                                                                                                                                     |
+| Follows someone with no upcoming Denver date         | My shows ▸ Artists, "Nothing on the books" group (muted, alphabetical). Artist rows elsewhere carry `NoDatesLine`                                                                                                  |
+| Follows someone, then downgrades to free             | **Follows are retained.** The user keeps the list, loses the alerts and the scope chip. Artists tab still renders; the alerts row shows the locked card. Unfollow stays available (DELETE is unentitled by design) |
+| Followed via Spotify, then disconnects Spotify       | Spotify-sourced rows persist; the user keeps the follows. Preferences now come from `user_notification_preferences`, so nothing is lost                                                                            |
+| Selected artists in onboarding, then hit the paywall | Picks held in component state **and** `sessionStorage`; commit retried after checkout closes. See §9.3                                                                                                             |
+| Zero-follow user who dismisses the starter shelf     | No dismiss affordance. The shelf is the slot's zero mode, not a promo                                                                                                                                              |
 
 The downgrade row is the one that has bitten before. It is settled: **downgrading never deletes follows.**
 
@@ -141,7 +141,7 @@ The defaults mirror the asymmetry #1515 already encodes in SQL, and for the same
 
 ### 4.2 Backfill
 
-`user_notification_preferences` rows are created *lazily* on first PATCH. That is the trap: a Spotify-connected user with settings on their connection row and no preferences row would silently lose them. The migration must therefore **insert** rows, not only update:
+`user_notification_preferences` rows are created _lazily_ on first PATCH. That is the trap: a Spotify-connected user with settings on their connection row and no preferences row would silently lose them. The migration must therefore **insert** rows, not only update:
 
 ```sql
 INSERT INTO user_notification_preferences
@@ -181,11 +181,13 @@ Rationale, and this is the one place the spec deliberately departs from the hand
 
 Final contract:
 
-| state | look | behaviour |
-|---|---|---|
-| `idle` | `--signal` fill | follow |
-| `following` | `--signal` @14% fill, `--signal` border + text, check glyph | unfollow, no confirm |
-| `locked` | shipped signed-out skin (transparent, `--border-strong`, `--fg`) + lock glyph, **same size and label as idle** | opens the paywall. **Never `disabled`.** Logged-out opens the tier picker |
+| state       | look                                                                                                             | behaviour                                |
+| ----------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `idle`      | `--signal` fill                                                                                                  | follow                                   |
+| `following` | `--signal` @14% fill, `--signal` border + text, check glyph                                                      | unfollow, no confirm                     |
+| `locked`    | a new signed-in-only skin: transparent, `--border-strong`, `--fg`, + lock glyph, **same size and label as idle** | opens the paywall. **Never `disabled`.** |
+
+`locked` is signed-in-only: `ArtistPageContent` computes it as `!signedOut && nfLocked(planState)`. A logged-out visitor draws the **idle** skin (#794 §3.10 — the signed-out control is pixel-identical to signed-in-and-not-following) and its tap opens the tier picker.
 
 There is no `unavailable` state. An artist with zero Denver shows cannot exist — artists are a projection off event billing, search filters to artists with a visible event, and the detail endpoint 404s. The real and common case is "played Denver before, nothing upcoming", and that artist gets a **normal live Follow button** plus a muted `NoDatesLine` meta line. Never inert.
 
@@ -211,13 +213,13 @@ Lives beside the existing entitlement helpers. **Never test `tier === 'free'` in
 
 ### 5.4 Badge variant
 
-In shelves and the onboarding picker the affordance is a **badge on the art**, not a full button — same states, same gesture. The onboarding tile *is* the checkbox (`role="checkbox"`), so a 12-artist grid is 12 targets, not 24.
+In shelves and the onboarding picker the affordance is a **badge on the art**, not a full button — same states, same gesture. The onboarding tile _is_ the checkbox (`role="checkbox"`), so a 12-artist grid is 12 targets, not 24.
 
 ### 5.5 `FollowingTag` and row attribution
 
 Read-only attribution in the row meta line, never beside a button. It takes `RowMetaChip`'s grammar from the shipped event-row system rather than inventing a third chip shape.
 
-**Correction to the handoff.** The handoff states that `buildMeta` in the event-row system hardcodes the Spotify logo on the Following chip and calls fixing it the epic's highest-value item. That is true of the *prototype* (`event-row.jsx`) and false of shipped code. In `apps/web/src/components/consumer/event-row/lib/row-chips.ts` the Following chip is text-only, tone `signal`, gated on `show.isFollowed` — there is no `SpotifyLogo` anywhere under `event-row/`, and `isFollowed` is already derived from `followedArtists` in `row-model.ts`. Nothing is mislabelled today.
+**Correction to the handoff.** The handoff states that `buildMeta` in the event-row system hardcodes the Spotify logo on the Following chip and calls fixing it the epic's highest-value item. That is true of the _prototype_ (`event-row.jsx`) and false of shipped code. In `apps/web/src/components/consumer/event-row/lib/row-chips.ts` the Following chip is text-only, tone `signal`, gated on `show.isFollowed` — there is no `SpotifyLogo` anywhere under `event-row/`, and `isFollowed` is already derived from `followedArtists` in `row-model.ts`. Nothing is mislabelled today.
 
 The real work is therefore **additive, not corrective**: the chip is currently source-blind, so `followSource` must be threaded through `row-model.ts` if the row is to distinguish a native follow from a Spotify one. Whether it should is a judgment call the build makes with the copy-review pass, since the chip's whole job is a one-word status and a source qualifier may not earn its place. Default to **not** adding the logo. Do not go looking for a hardcoded logo to remove; you will not find one and will fork the prototype trying.
 
@@ -241,7 +243,7 @@ Not a new component. It becomes:
 - a new `PickerEntry` value, `'follow'`, in `packages/types/src/analytics-events.ts` (which already carries `'logged-out-follow'` for the signed-out artist-page reach — these are different reaches and must not be merged);
 - a header-copy variant in `TIER_PICKER_COPY.header`.
 
-The anchor's structural content (eyebrow, title, body, three bullets, CTA) is placeholder copy and goes through `copy-review` before it ships. Its *shape* is locked.
+The anchor's structural content (eyebrow, title, body, three bullets, CTA) is placeholder copy and goes through `copy-review` before it ships. Its _shape_ is locked.
 
 ### 6.3 Bill block gates as one unit
 
@@ -310,6 +312,7 @@ The answer to the open question is therefore "yes, and it happened a week ago." 
 Add to the shipped screen. No new section, no new page. Grouped:
 
 **Artists you follow**
+
 - `New show alerts` — **above** Watch updates, because an artist announcement is the earliest signal in the chain and reading top-down should feel like the funnel does (artist announces → you watch it → the price moves).
 - `Add them to Watching for me` — an indented **sub-row** of the above, default **off**.
 - `Weekly digest` — Monday, one email. The cadence is the shipped `concert-crawl-spotify-weekly` cron (`30 15 * * 1`, Monday 15:30 UTC). This epic does not change it.
@@ -328,7 +331,7 @@ The fan-out currently fires one push per (user, event). A large crawl run must n
 
 Design:
 
-- **Exactly-once is unchanged.** The `spotify_alert_log` claim stays per `(user, event, 'push')` via `onConflictDoNothing().returning()`. Only *delivery* is coalesced.
+- **Exactly-once is unchanged.** The `spotify_alert_log` claim stays per `(user, event, 'push')` via `onConflictDoNothing().returning()`. Only _delivery_ is coalesced.
 - The fan-out accumulates claimed pairs across the whole run, then flushes per user at the end:
   - 1 event → the existing single-show copy, keyed off `artistAutoWatch` as it is today.
   - ≥2 events → one push, the "N artists you follow just booked Denver" shape.
@@ -385,7 +388,7 @@ Selection is held client-side and committed as **one write**: `POST /v1/me/artis
 
 Free/supporter may **select freely**; only the commit is paywalled. Picks must survive the upgrade round-trip:
 
-- Selection lives in component state **and** mirrors to `sessionStorage` under a namespaced key. The session mirror is the belt for a mid-flow reload; checkout itself is embedded (`CheckoutPanel`) and SCA challenges mount in-page, so there is no navigation away and component state alone would *usually* suffice. "Usually" is why the mirror exists.
+- Selection lives in component state **and** mirrors to `sessionStorage` under a namespaced key. The session mirror is the belt for a mid-flow reload; checkout itself is embedded (`CheckoutPanel`) and SCA challenges mount in-page, so there is no navigation away and component state alone would _usually_ suffice. "Usually" is why the mirror exists.
 - On a `403 entitlement_required`, open `TierPickerSheet` with `entry: 'follow'` and **keep the selection**.
 - On picker close, re-read the entitlement and retry the commit if it is now active.
 - Clear the mirror only on a successful commit or an explicit skip.
@@ -437,7 +440,7 @@ Standard epic-run gates apply. The ones with teeth here:
 
 - **Gate 1 (state reachability)** at the API→UI seam, before each UI PR's build starts. The state that will fail this is the browse scope chip's `absent` mode: it must be decided server-side at first paint, and a component that computes it from a client query renders `off` for a frame first.
 - **Gate 2 (forced-state runtime)** — force the paywall, the 403 race, the zero-follow states, the digest zero variant, and a throttled network for every mutation. A fast local machine hides the optimistic-update bug completely.
-- **Gate 3 (sibling sweep)** — the row-model `followSource` threading is this shape if the build takes it. Grep the *old* value; E2E selectors and snapshots do not fail typecheck.
+- **Gate 3 (sibling sweep)** — the row-model `followSource` threading is this shape if the build takes it. Grep the _old_ value; E2E selectors and snapshots do not fail typecheck.
 - **Gate 5 (journey lifecycle)** — the §3.3 script, run forward, reverse, repeat and resume. The repeat pass is the one that matters: unfollow → re-follow, and watch → unwatch → re-watch for the nudge key.
 - **Gate 6 (side-effect provenance)** — mandatory here. The digest and the batched push are both records created by something else happening, and their characteristic failure is silence. Prove each fires, fires once, and fires for exactly the right audience using a second account.
 - **Gate 7 (copy review)** on every PR that adds a string.
@@ -448,16 +451,16 @@ Integration tests run against the per-worktree test DB. The digest template test
 
 ## 14. Risks
 
-| Risk | Why it bites | Mitigation |
-|---|---|---|
-| The digest half-fix | Same two-part trap as #1515: fixing the source filter alone looks correct and silently drops every native follower | §8.3 names both halves. An integration test asserts a native-only follower receives a digest |
-| Preference migration loses Spotify users' settings | Preference rows are created lazily, so an UPDATE-only backfill silently misses them | §4.2 inserts, with `ON CONFLICT DO UPDATE` |
-| Nudge dismissal keyed by `eventId` | Exactly the #70 bug. Renders correctly on a single forward pass and survives every gate except Gate 5's repeat | §8.4 mandates `userEventId`. Gate 5 verifies |
-| Building against the prototypes instead of shipped code | Two handoff claims are already false: the Following chip carries no Spotify logo, and the nav label is already renamed. Both would send a PR after work that does not exist | §5.5 and §7.6 correct them. §1.1 is the verified inventory; trust it over any `nf-*.jsx` |
-| Optimistic update flashes the old state | Clearing the override on mutation success drops it before the new HTML lands | §5.1: clear on the server value changing |
-| Bulk commit tapped twice | A multi-second write with no acknowledgement | §5.1: `pending` retained for bulk buttons only |
-| Push storm on a large crawl | Eight pushes in ninety seconds reads as spam and costs the notification permission | §8.2 batches delivery while keeping per-pair exactly-once |
-| Supporter leaks a live Follow button | Happened in design R2 on six surfaces via inline `tier === 'free'` | §5.2. Gate 3 greps for inline tier tests |
+| Risk                                                    | Why it bites                                                                                                                                                                | Mitigation                                                                                   |
+| ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| The digest half-fix                                     | Same two-part trap as #1515: fixing the source filter alone looks correct and silently drops every native follower                                                          | §8.3 names both halves. An integration test asserts a native-only follower receives a digest |
+| Preference migration loses Spotify users' settings      | Preference rows are created lazily, so an UPDATE-only backfill silently misses them                                                                                         | §4.2 inserts, with `ON CONFLICT DO UPDATE`                                                   |
+| Nudge dismissal keyed by `eventId`                      | Exactly the #70 bug. Renders correctly on a single forward pass and survives every gate except Gate 5's repeat                                                              | §8.4 mandates `userEventId`. Gate 5 verifies                                                 |
+| Building against the prototypes instead of shipped code | Two handoff claims are already false: the Following chip carries no Spotify logo, and the nav label is already renamed. Both would send a PR after work that does not exist | §5.5 and §7.6 correct them. §1.1 is the verified inventory; trust it over any `nf-*.jsx`     |
+| Optimistic update flashes the old state                 | Clearing the override on mutation success drops it before the new HTML lands                                                                                                | §5.1: clear on the server value changing                                                     |
+| Bulk commit tapped twice                                | A multi-second write with no acknowledgement                                                                                                                                | §5.1: `pending` retained for bulk buttons only                                               |
+| Push storm on a large crawl                             | Eight pushes in ninety seconds reads as spam and costs the notification permission                                                                                          | §8.2 batches delivery while keeping per-pair exactly-once                                    |
+| Supporter leaks a live Follow button                    | Happened in design R2 on six surfaces via inline `tier === 'free'`                                                                                                          | §5.2. Gate 3 greps for inline tier tests                                                     |
 
 ---
 

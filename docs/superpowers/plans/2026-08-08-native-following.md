@@ -54,20 +54,20 @@ The handoff's follow shelf and its My shows ▸ Artists empty state both offer a
 
 Order is load-bearing. API lands before the UI that consumes it, so Gate 1 (state reachability) has something real to check.
 
-| # | Branch | Delivers | Depends on |
-|---|---|---|---|
-| 1 | `feat/nf-preferences-foundation` | Migration 0078, preferences API, `nfLocked`, `FollowButton` locked + optimistic | — |
-| 2 | `feat/nf-settings-artist-group` | Settings ▸ Notifications "Artists you follow" group | 1 |
-| 3 | `feat/nf-follow-api` | `following=1`, `GET`/`POST bulk /v1/me/artist-follows`, search `following` | 1 |
-| 4 | `feat/nf-browse-scope-shelf` | "My artists" scope chip + three-mode shelf | 3 |
-| 5 | `feat/nf-search-artists` | Search results Artists section | 3 |
-| 6 | `feat/nf-my-shows-artists` | My shows ▸ Artists tab + the shared artist picker | 3 |
-| — | — | **Mid-run cold-eyes review** (§ below) | 6 |
-| 7 | `feat/nf-bill-block` | Event detail `billBlock` + "Follow all N" | 3, 6 |
-| 8 | `feat/nf-onboarding-steps` | Onboarding genres + artists steps | 6 |
-| 9 | `feat/nf-alerts-digest` | Push batching + generalized digest | 1, 2 |
-| 10 | `feat/nf-nudge-tier-copy` | First-watch nudge + Premium tier copy | 3 |
-| 11 | `feat/nf-polish` | **Reserved, unscoped.** Do not pre-fill | all |
+| #   | Branch                           | Delivers                                                                        | Depends on |
+| --- | -------------------------------- | ------------------------------------------------------------------------------- | ---------- |
+| 1   | `feat/nf-preferences-foundation` | Migration 0078, preferences API, `nfLocked`, `FollowButton` locked + optimistic | —          |
+| 2   | `feat/nf-settings-artist-group`  | Settings ▸ Notifications "Artists you follow" group                             | 1          |
+| 3   | `feat/nf-follow-api`             | `following=1`, `GET`/`POST bulk /v1/me/artist-follows`, search `following`      | 1          |
+| 4   | `feat/nf-browse-scope-shelf`     | "My artists" scope chip + three-mode shelf                                      | 3          |
+| 5   | `feat/nf-search-artists`         | Search results Artists section                                                  | 3          |
+| 6   | `feat/nf-my-shows-artists`       | My shows ▸ Artists tab + the shared artist picker                               | 3          |
+| —   | —                                | **Mid-run cold-eyes review** (§ below)                                          | 6          |
+| 7   | `feat/nf-bill-block`             | Event detail `billBlock` + "Follow all N"                                       | 3, 6       |
+| 8   | `feat/nf-onboarding-steps`       | Onboarding genres + artists steps                                               | 6          |
+| 9   | `feat/nf-alerts-digest`          | Push batching + generalized digest                                              | 1, 2       |
+| 10  | `feat/nf-nudge-tier-copy`        | First-watch nudge + Premium tier copy                                           | 3          |
+| 11  | `feat/nf-polish`                 | **Reserved, unscoped.** Do not pre-fill                                         | all        |
 
 PR 11 is reserved on purpose. Cold-eyes triage and Hugh's own walk produce subjective calls, and a reserved slot means they land in one branch instead of spawning four cleanup PRs after the run closes.
 
@@ -77,30 +77,30 @@ PR 11 is reserved on purpose. Cold-eyes triage and Hugh's own walk produce subje
 
 Every path is an existing file to modify unless marked **(new)**.
 
-| File | Responsibility | PR |
-|---|---|---|
-| `packages/db/migrations/0078_artist_follow_preferences.sql` **(new)** | Three columns + upsert backfill | 1 |
-| `packages/db/src/schema/user-notification-preferences.ts` | Schema for the three columns | 1 |
-| `apps/api/src/routes/me-push.ts` | `preferencesSchema` + GET/PATCH `/v1/me/notification-preferences` | 1 |
-| `packages/entitlements/src/index.ts` | `nfLocked` helper | 1 |
-| `apps/web/src/components/consumer/artist-page/FollowButton.tsx` | `locked` state, optimistic follow | 1 |
-| `apps/web/src/components/consumer/artist-page/definitions/` | `NF_FOLLOW_SIZES` | 1 |
-| `apps/web/src/components/settings/notifications/NotificationsSection.tsx` | Artist group + locked card | 2 |
-| `apps/web/src/components/settings/notifications/definitions/copy.ts` | `NOTIFICATIONS_COPY` additions | 2 |
-| `apps/api/src/routes/events.ts` | `following` query flag beside `taste` | 3 |
-| `apps/api/src/routes/artist-follows.ts` | `GET /v1/me/artist-follows`, `POST .../bulk` | 3 |
-| `apps/api/src/routes/search.ts` | `following` on the artist result shape | 3 |
-| `apps/web/src/components/consumer/filter-bar/FilterBar.tsx` | "My artists" scope chip | 4 |
-| `apps/web/src/components/consumer/spotify/DiscoveryShelf.tsx` | Three-mode follow shelf in the same slot | 4 |
-| `apps/web/src/components/consumer/search/SearchResultsState.tsx` | Artists section above shows | 5 |
-| `apps/web/src/components/consumer/history/MyShowsTabs.tsx` | Third tab | 6 |
-| `apps/web/src/components/consumer/artist-picker/**` **(new)** | Shared picker | 6 |
-| `apps/web/src/components/consumer/event-detail/PublicEventDetail.tsx` | Optional `billBlock` prop | 7 |
-| `apps/web/src/components/onboarding/OnboardingShell.tsx` | `FLOW` + `StepContent` | 8 |
-| `packages/crawler-core/src/lib/artist-fanout/index.ts` | Per-run push batching | 9 |
-| `apps/api/src/jobs/spotify-weekly.ts`, `apps/api/src/emails/templates/spotify-digest.ts` | Digest generalization | 9 |
-| `apps/web/src/components/consumer/spotify/FirstWatchNudge.tsx` | Artist-anchored variant | 10 |
-| `apps/web/src/lib/definitions/releases.ts` | Release note (user-facing PRs only) | 4, 6, 8 |
+| File                                                                                     | Responsibility                                                    | PR      |
+| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------- |
+| `packages/db/migrations/0078_artist_follow_preferences.sql` **(new)**                    | Three columns + upsert backfill                                   | 1       |
+| `packages/db/src/schema/user-notification-preferences.ts`                                | Schema for the three columns                                      | 1       |
+| `apps/api/src/routes/me-push.ts`                                                         | `preferencesSchema` + GET/PATCH `/v1/me/notification-preferences` | 1       |
+| `packages/entitlements/src/index.ts`                                                     | `nfLocked` helper                                                 | 1       |
+| `apps/web/src/components/consumer/artist-page/FollowButton.tsx`                          | `locked` state, optimistic follow                                 | 1       |
+| `apps/web/src/components/consumer/artist-page/definitions/`                              | `NF_FOLLOW_SIZES`                                                 | 1       |
+| `apps/web/src/components/settings/notifications/NotificationsSection.tsx`                | Artist group + locked card                                        | 2       |
+| `apps/web/src/components/settings/notifications/definitions/copy.ts`                     | `NOTIFICATIONS_COPY` additions                                    | 2       |
+| `apps/api/src/routes/events.ts`                                                          | `following` query flag beside `taste`                             | 3       |
+| `apps/api/src/routes/artist-follows.ts`                                                  | `GET /v1/me/artist-follows`, `POST .../bulk`                      | 3       |
+| `apps/api/src/routes/search.ts`                                                          | `following` on the artist result shape                            | 3       |
+| `apps/web/src/components/consumer/filter-bar/FilterBar.tsx`                              | "My artists" scope chip                                           | 4       |
+| `apps/web/src/components/consumer/spotify/DiscoveryShelf.tsx`                            | Three-mode follow shelf in the same slot                          | 4       |
+| `apps/web/src/components/consumer/search/SearchResultsState.tsx`                         | Artists section above shows                                       | 5       |
+| `apps/web/src/components/consumer/history/MyShowsTabs.tsx`                               | Third tab                                                         | 6       |
+| `apps/web/src/components/consumer/artist-picker/**` **(new)**                            | Shared picker                                                     | 6       |
+| `apps/web/src/components/consumer/event-detail/PublicEventDetail.tsx`                    | Optional `billBlock` prop                                         | 7       |
+| `apps/web/src/components/onboarding/OnboardingShell.tsx`                                 | `FLOW` + `StepContent`                                            | 8       |
+| `packages/crawler-core/src/lib/artist-fanout/index.ts`                                   | Per-run push batching                                             | 9       |
+| `apps/api/src/jobs/spotify-weekly.ts`, `apps/api/src/emails/templates/spotify-digest.ts` | Digest generalization                                             | 9       |
+| `apps/web/src/components/consumer/spotify/FirstWatchNudge.tsx`                           | Artist-anchored variant                                           | 10      |
+| `apps/web/src/lib/definitions/releases.ts`                                               | Release note (user-facing PRs only)                               | 4, 6, 8 |
 
 ---
 
@@ -111,6 +111,7 @@ Relocates artist alert preferences onto a table every user can have, and gives `
 **No new surface ships here.** The artist page's existing follow button gains `locked`; nothing else changes visually for a premium user.
 
 **Files:**
+
 - Add: `packages/db/migrations/0078_artist_follow_preferences.sql`
 - Modify: `packages/db/migrations/meta/_journal.json` (idx 78, `when: 1786924800000`)
 - Modify: `packages/db/src/schema/user-notification-preferences.ts`
@@ -179,13 +180,13 @@ Route the locked tap with `lockedSurface(state, 'following')`. Tests: assert loc
 
 Three states, not four. The spec's §5.1 drops `pending` from the single-artist button: its entire visual difference is `opacity: 0.72` and a label swap, visible for roughly 120ms, which is a flash rather than feedback. The Event Detail CTA work removed its own `pending` on 2026-08-04 for the same reason, and #1467 was a bug caused by a loading state that flashed.
 
-| state | look | behaviour |
-|---|---|---|
-| `idle` | `--signal` fill | follow |
-| `following` | `--signal` @14% fill, `--signal` border and text, check glyph | unfollow, no confirm |
-| `locked` | the shipped signed-out skin (transparent, `--border-strong`, `--fg`) plus a lock glyph, **same size and label as idle** | opens the paywall |
+| state       | look                                                                                                                  | behaviour            |
+| ----------- | --------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `idle`      | `--signal` fill                                                                                                       | follow               |
+| `following` | `--signal` @14% fill, `--signal` border and text, check glyph                                                         | unfollow, no confirm |
+| `locked`    | a new signed-in-only skin: transparent, `--border-strong`, `--fg`, plus a lock glyph, **same size and label as idle** | opens the paywall    |
 
-`locked` is **never `disabled`**. It opens `TierPickerSheet`, so it stays in the tab order and stays activatable. Logged-out opens the tier picker rather than the paywall.
+`locked` is **never `disabled`**. It opens `TierPickerSheet`, so it stays in the tab order and stays activatable. `locked` is signed-in-only — `ArtistPageContent` computes it as `!signedOut && nfLocked(planState)`. A logged-out visitor draws the **idle** skin (#794 §3.10: the signed-out control is pixel-identical to signed-in-and-not-following) and its tap opens the tier picker rather than the paywall.
 
 Optimistic update: flip to `following` on click, roll back on error, and **clear the override when the server value changes, never on mutation success**. Clearing on success drops the override before the new data lands and flashes the old state.
 
@@ -210,6 +211,7 @@ Add to the shipped screen. No new section, no new page.
 - [ ] **Step 1: The rows**
 
 **Artists you follow**
+
 - `New show alerts` — placed **above** Watch updates. An artist announcement is the earliest signal in the chain, and reading top-down should feel like the funnel does: artist announces → you watch it → the price moves.
 - `Add them to Watching for me` — an indented **sub-row of the above**, default off.
 - `Weekly digest` — Monday, one email, matching the shipped `concert-crawl-spotify-weekly` cron (`30 15 * * 1`). This plan does not change the cadence.
@@ -427,7 +429,7 @@ This PR creates records in response to events, so **Gate 6 (side-effect provenan
 
 `runArtistFanout()` currently sends a push inside its per-event loop. A large crawl run must not fire eight pushes in ninety seconds.
 
-- **Exactly-once is unchanged.** The `spotify_alert_log` claim stays per `(user, event, 'push')` via `onConflictDoNothing().returning()`. Only *delivery* is coalesced.
+- **Exactly-once is unchanged.** The `spotify_alert_log` claim stays per `(user, event, 'push')` via `onConflictDoNothing().returning()`. Only _delivery_ is coalesced.
 - Accumulate claimed pairs across the whole run, then flush per user at the end: one event uses the existing single-show copy keyed off `artistAutoWatch`; two or more collapse into one "N artists you follow just booked Denver" push.
 - **Tray rows stay per event.** The tray is a list, and collapsing it would lose the individual deep links.
 - **The flush must be awaited, not detached.** Both crawler entrypoints hard-exit via `process.exit(0)`, which severs a floating promise mid-flight. Same #649 lesson the fan-out module already documents in its header.
@@ -492,15 +494,15 @@ Unscoped by design. Fill from the cold-eyes triage's subjective residue and Hugh
 
 ## Gates
 
-| Gate | When | Artifact |
-|---|---|---|
-| 1 State reachability | After PR 3, before PR 4 builds | `docs/superpowers/state-coverage-native-following.md` (new) |
-| 2 Forced-state runtime | Before each `gh pr create` | Recorded in the PR body |
-| 3 Sibling duplicate sweep | Before each `gh pr create` | — |
-| 4 design-review, both halves | Agent 1 before any code; Agents 2–3 pre-PR | `docs/superpowers/design-tables/native-following.md` (new) |
-| 5 Journey lifecycle | Once each journey is reachable | `docs/superpowers/journey-lifecycle-native-following.md` (new) |
-| 6 Side-effect provenance | PR 9 | `docs/superpowers/side-effects-native-following.md` (new) |
-| 7 Copy review | Every PR adding a string | Applied in the diff |
+| Gate                         | When                                       | Artifact                                                       |
+| ---------------------------- | ------------------------------------------ | -------------------------------------------------------------- |
+| 1 State reachability         | After PR 3, before PR 4 builds             | `docs/superpowers/state-coverage-native-following.md` (new)    |
+| 2 Forced-state runtime       | Before each `gh pr create`                 | Recorded in the PR body                                        |
+| 3 Sibling duplicate sweep    | Before each `gh pr create`                 | —                                                              |
+| 4 design-review, both halves | Agent 1 before any code; Agents 2–3 pre-PR | `docs/superpowers/design-tables/native-following.md` (new)     |
+| 5 Journey lifecycle          | Once each journey is reachable             | `docs/superpowers/journey-lifecycle-native-following.md` (new) |
+| 6 Side-effect provenance     | PR 9                                       | `docs/superpowers/side-effects-native-following.md` (new)      |
+| 7 Copy review                | Every PR adding a string                   | Applied in the diff                                            |
 
 Every path marked `(new)` is an artifact this run produces. None exist yet; each is committed on the branch of the PR whose gate produced it.
 
