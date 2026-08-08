@@ -27,11 +27,13 @@ export interface FollowButtonProps {
   following: boolean
   signedOut: boolean
   /**
-   * Signed in, but the plan does not carry `following`. Never `disabled` — a
-   * locked tap is how the upgrade gets offered, so the control keeps its place
-   * in the tab order and calls `onLockedTap`. Computed by the parent with
-   * `nfLocked(planState)` from @concert-crawl/entitlements, never by testing a
-   * tier string here.
+   * Signed in, the plan does not carry `following`, and there is no existing
+   * follow to undo. Never `disabled` — a locked tap is how the upgrade gets
+   * offered, so the control keeps its place in the tab order and calls
+   * `onLockedTap`. Computed by the parent with `nfLocked(planState)` from
+   * @concert-crawl/entitlements, never by testing a tier string here, and
+   * never while `following` is true (a downgraded user must be able to
+   * unfollow — eng spec §3.2).
    */
   locked?: boolean
   /** `full` is the rail/hero bar; `compact` is the sticky sub-header. */

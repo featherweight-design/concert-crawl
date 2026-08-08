@@ -282,6 +282,17 @@ describe('ArtistPageContent', () => {
       expect(lockGlyph(container)).toBeNull()
     })
 
+    it('leaves an existing follow unlocked after a downgrade, so it can be undone', () => {
+      // Eng spec §3.2: downgrading never deletes follows, and DELETE is
+      // unentitled by design. A locked skin here would strand the follow on
+      // the one surface a user would go to to remove it.
+      plan.current = planOn('free')
+      const { container } = render(
+        <ArtistPageContent data={{ ...withShows, following: true }} />,
+      )
+      expect(lockGlyph(container)).toBeNull()
+    })
+
     it('does not lock a signed-out visitor, who gets the sign-in hand-off', () => {
       plan.current = planOn('logged-out')
       const { container } = render(<ArtistPageContent data={withShows} />)

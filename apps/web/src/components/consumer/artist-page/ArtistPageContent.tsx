@@ -87,7 +87,15 @@ export const ArtistPageContent = ({
   // answer for that window: a locked skin that appears a beat after paint is a
   // worse lie than a live button whose 403 opens the same picker (which is what
   // `openUpgrade` already handles).
-  const locked = !signedOut && planState !== undefined && nfLocked(planState)
+  //
+  // `&& !following` is the downgrade case, and it is load-bearing. Eng spec
+  // §3.2 settles it: downgrading never deletes follows, and DELETE is
+  // unentitled by design so the user can always undo one. Gating on the plan
+  // alone would draw the locked skin over an existing follow and strand it —
+  // the artist page is the surface most people would reach for to remove it.
+  // Once the follow is gone the control locks again, which is correct.
+  const locked =
+    !signedOut && planState !== undefined && nfLocked(planState) && !following
 
   const followProps = {
     name: artist.name,
