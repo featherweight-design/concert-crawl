@@ -1,3 +1,10 @@
+## [1.225.2](https://github.com/HartiganHM/concert-crawl/compare/v1.225.1...v1.225.2) (2026-08-08)
+
+
+### Bug Fixes
+
+* **consumer:** point the public event mirror's CTA at sign-up ([#1516](https://github.com/HartiganHM/concert-crawl/issues/1516)) ([88ee628](https://github.com/HartiganHM/concert-crawl/commit/88ee62858e54098beb728e27c341dd029924d436)), closes [#1359](https://github.com/HartiganHM/concert-crawl/issues/1359)
+
 ## [1.225.1](https://github.com/HartiganHM/concert-crawl/compare/v1.225.0...v1.225.1) (2026-08-08)
 
 
