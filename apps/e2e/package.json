@@ -11,12 +11,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@sentry/node": "^10.67.0"
+    "@sentry/node": "^10.69.0"
   },
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
-    "@playwright/test": "^1.61.1",
-    "@types/node": "^26.1.1",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.1.2",
     "jsdom": "^29.1.1",
     "typescript": "^5.0.0",
     "vitest": "^4.1.10",
