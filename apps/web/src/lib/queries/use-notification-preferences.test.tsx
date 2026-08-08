@@ -84,6 +84,9 @@ describe('useNotificationPreferences', () => {
       masterEnabled: false,
       watchUpdatesEnabled: true,
       priceDropsEnabled: true,
+      artistAlertsEnabled: true,
+      artistAutoWatch: false,
+      weeklyDigestEnabled: true,
     })
   })
 
@@ -129,6 +132,9 @@ describe('usePatchNotificationPreferences', () => {
       masterEnabled: false,
       watchUpdatesEnabled: true,
       priceDropsEnabled: true,
+      artistAlertsEnabled: true,
+      artistAutoWatch: false,
+      weeklyDigestEnabled: true,
     })
   })
 

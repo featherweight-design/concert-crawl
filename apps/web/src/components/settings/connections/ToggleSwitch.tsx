@@ -13,7 +13,7 @@ interface ToggleSwitchProps {
    * accessible name, which leaves the body line unannounced; pointing at it
    * here is the only way a screen reader gets what the switch actually does.
    */
-  ariaDescribedBy?: string | undefined
+  ariaDescribedBy?: string
   disabled?: boolean
 }
 
