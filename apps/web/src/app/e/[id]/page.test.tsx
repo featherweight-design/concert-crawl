@@ -1,3 +1,7 @@
+import { existsSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { EventDetailResponse } from '@concert-crawl/types'
 
@@ -149,6 +153,27 @@ describe('/e/[id] — public event mirror (#72)', () => {
       '[public event] event fetch failed',
       expect.objectContaining({ id: EVENT_ID }),
     )
+  })
+
+  // #1359. The mirror looking like a public show page rather than the logged-in
+  // app is not a property of any component — it is a property of where the
+  // route file sits. No component test can catch someone adding a layout here
+  // or folding the route back under (protected), which is exactly how the
+  // signed-in app's header, bottom nav and account menu would reappear around a
+  // page whose whole point is having no session.
+  describe('renders outside the app shell', () => {
+    const here = dirname(fileURLToPath(import.meta.url))
+
+    it('sits outside the (protected) route group', () => {
+      expect(here).not.toContain('(protected)')
+      expect(here).not.toContain('(main)')
+    })
+
+    it('introduces no layout of its own between the root layout and the page', () => {
+      for (const dir of [here, join(here, '..')]) {
+        expect(existsSync(join(dir, 'layout.tsx'))).toBe(false)
+      }
+    })
   })
 
   it('still renders when only the related fetch fails', async () => {

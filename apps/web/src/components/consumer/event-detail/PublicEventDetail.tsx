@@ -197,9 +197,14 @@ export const PublicEventDetail = ({
             </div>
           )}
 
-          {/* The one account-shaped thing on the page. /sign-in, never
-              /sign-up: before launch sign-up bounces to the invite wall at
-              /auth/code, which is a dead end for someone with no code. */}
+          {/* The one account-shaped thing on the page, and it points at
+              /sign-up. This used to point at /sign-in on the grounds that
+              /sign-up bounced to the invite wall at /auth/code — but middleware
+              lists `/sign-up(.*)` and `/e/(.*)` in the same
+              `isPublicOnceLaunched` matcher, so they open in the same deploy.
+              A signed-out visitor can therefore never be standing here while
+              /sign-up is still walled, and this page exists for someone with no
+              account (#1359). */}
           <div
             className="mt-5 flex flex-col items-center gap-3 rounded-xl px-5 py-6 text-center"
             style={{
@@ -211,10 +216,10 @@ export const PublicEventDetail = ({
               className="text-[13px] leading-[1.5] text-fg-muted"
               style={{ maxWidth: 320 }}
             >
-              {publicCopy.signInPrompt}
+              {publicCopy.signUpPrompt}
             </p>
             <Link
-              href="/sign-in"
+              href="/sign-up"
               className="inline-flex items-center justify-center rounded-[10px] px-5 text-fg-on-accent"
               style={{
                 minHeight: 44,
@@ -226,7 +231,7 @@ export const PublicEventDetail = ({
                 textDecoration: 'none',
               }}
             >
-              {publicCopy.signInButton}
+              {publicCopy.signUpButton}
             </Link>
           </div>
 

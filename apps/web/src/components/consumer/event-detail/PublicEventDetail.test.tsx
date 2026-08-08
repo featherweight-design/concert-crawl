@@ -90,18 +90,50 @@ const buildEvent = (
 })
 
 describe('PublicEventDetail (#72)', () => {
-  it('renders the show, and exactly one sign-in CTA pointed at /sign-in', () => {
+  it('renders the show, and exactly one account CTA pointed at /sign-up', () => {
     render(<PublicEventDetail event={buildEvent()} related={[]} />)
 
     expect(screen.getByText('Nightjar Choir')).toBeDefined()
     expect(screen.getByTestId('event-venue-name')).toBeDefined()
     expect(screen.getByText('Bluebird Theater')).toBeDefined()
 
-    // /sign-in, never /sign-up: before launch sign-up bounces to the invite
-    // wall at /auth/code, a dead end for someone with no code.
-    const signIn = screen.getByRole('link', { name: copy.signInButton })
-    expect(signIn.getAttribute('href')).toBe('/sign-in')
-    expect(screen.queryByRole('link', { name: /sign up/i })).toBeNull()
+    // The recipient of a pasted link has no account by definition, so the one
+    // account-shaped affordance offers to make one (#1359). Middleware opens
+    // `/sign-up(.*)` and `/e/(.*)` in the same matcher, so this destination can
+    // never be walled while a visitor is standing here.
+    const signUp = screen.getAllByRole('link', { name: copy.signUpButton })
+    expect(signUp).toHaveLength(1)
+    expect(signUp[0]?.getAttribute('href')).toBe('/sign-up')
+    expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull()
+  })
+
+  // #1359: what a link recipient can actually do here. Everything that needs a
+  // session is absent, so the page must not be one dead control after another.
+  it('leaves the recipient exactly three controls, all of them live', () => {
+    render(<PublicEventDetail event={buildEvent()} related={[]} />)
+
+    // Enumerated rather than probed one by one: the claim is about what is
+    // absent as much as what is present, and a fourth control added later
+    // would pass every individual assertion.
+    const names = [
+      ...screen.getAllByRole('link'),
+      ...screen.getAllByRole('button'),
+    ].map((el) => el.getAttribute('aria-label') ?? el.textContent)
+
+    expect(names).toHaveLength(3)
+    // Tickets, because that is the whole reason the link was sent.
+    expect(names).toContain(detailCopy.getTickets)
+    // Sharing it onward, which needs no session at all.
+    expect(names).toContain(CONSUMER_COPY.share.triggerLabel)
+    expect(names).toContain(copy.signUpButton)
+  })
+
+  it('names what an account is for rather than just asking for one', () => {
+    render(<PublicEventDetail event={buildEvent()} related={[]} />)
+
+    // The three affordances the mirror omits are the three the prompt promises,
+    // so the omissions read as gated rather than missing.
+    expect(screen.getByText(copy.signUpPrompt)).toBeDefined()
   })
 
   it('omits every account-gated affordance', () => {
@@ -194,8 +226,8 @@ describe('PublicEventDetail (#72)', () => {
         name: new RegExp(detailCopy.getTickets, 'i'),
       }),
     ).toBeNull()
-    // The sign-in CTA is still the one thing on offer.
-    expect(screen.getByRole('link', { name: copy.signInButton })).toBeDefined()
+    // The account CTA is still the one thing on offer.
+    expect(screen.getByRole('link', { name: copy.signUpButton })).toBeDefined()
   })
 
   it('filters an unsafe ticket url out of the CTA', () => {

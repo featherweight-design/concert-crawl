@@ -1054,8 +1054,8 @@ export const CONSUMER_COPY = {
   // has no Watching pill, no price submission and no reports — those all need
   // an account — so the one thing it offers instead is a way in.
   publicEvent: {
-    signInPrompt: 'Watch this show, track prices, and get alerts.',
-    signInButton: 'Sign in to Concert Crawl',
+    signUpPrompt: 'Watch this show, track prices, and get alerts.',
+    signUpButton: 'Create an account',
     // The mirror's own 404. A shared link outlives the show it points at, so
     // "old link" is the likeliest story, not "you typed it wrong".
     notFoundHeading: 'This show is gone.',
