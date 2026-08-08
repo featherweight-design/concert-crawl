@@ -1,3 +1,10 @@
+## [1.225.1](https://github.com/HartiganHM/concert-crawl/compare/v1.225.0...v1.225.1) (2026-08-08)
+
+
+### Bug Fixes
+
+* **consumer:** gate signed-out price CTAs behind the tier picker ([#1513](https://github.com/HartiganHM/concert-crawl/issues/1513)) ([87d18aa](https://github.com/HartiganHM/concert-crawl/commit/87d18aa11400852539e90cc51cfab951fabcbc82)), closes [#1247](https://github.com/HartiganHM/concert-crawl/issues/1247) [#1247](https://github.com/HartiganHM/concert-crawl/issues/1247) [#1247](https://github.com/HartiganHM/concert-crawl/issues/1247)
+
 # [1.225.0](https://github.com/HartiganHM/concert-crawl/compare/v1.224.1...v1.225.0) (2026-08-08)
 
 
