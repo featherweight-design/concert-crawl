@@ -242,7 +242,7 @@ export const CreateCrewSheet = ({
         <button
           type="submit"
           disabled={!canSubmit}
-          className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg"
+          className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg disabled:cursor-default"
           style={{
             background: canSubmit ? 'var(--signal)' : 'var(--surface-2)',
             color: canSubmit ? 'var(--fg-on-accent)' : 'var(--fg-subtle)',

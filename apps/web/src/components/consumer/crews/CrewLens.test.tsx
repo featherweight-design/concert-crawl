@@ -38,7 +38,10 @@ describe('CrewLensPill', () => {
     expect(pill).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('wears the crew name and reports itself on', () => {
+  // The h1 immediately left of the pill already renders the crew's name, and at
+  // 390px both truncated rather than either one reading. The patch carries which
+  // crew visually; the label carries it for everyone else.
+  it('leaves the name to the heading and reports itself on', () => {
     render(
       <CrewLensPill
         crews={CREWS}
@@ -48,7 +51,8 @@ describe('CrewLensPill', () => {
       />,
     )
     const pill = screen.getByRole('button')
-    expect(pill).toHaveTextContent('Thursdays')
+    expect(pill).toHaveTextContent('Crews')
+    expect(pill).not.toHaveTextContent('Thursdays')
     expect(pill).toHaveAttribute('aria-pressed', 'true')
     expect(pill).toHaveAccessibleName(/Crew lens on: Thursdays/)
   })

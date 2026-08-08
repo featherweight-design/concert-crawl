@@ -283,7 +283,7 @@ export const InviteSheet = ({
                 type="button"
                 onClick={onCopy}
                 disabled={invite === null || revoked || busy}
-                className="cursor-pointer"
+                className="cursor-pointer disabled:cursor-default"
                 style={{
                   ...ghost,
                   background: copied ? 'transparent' : 'var(--signal)',
@@ -341,7 +341,7 @@ export const InviteSheet = ({
                   type="button"
                   onClick={() => void onRevoke()}
                   disabled={busy}
-                  className="cursor-pointer"
+                  className="cursor-pointer disabled:cursor-default"
                   style={ghost}
                 >
                   {COPY.invite.revoke}
@@ -351,7 +351,7 @@ export const InviteSheet = ({
                 type="button"
                 onClick={() => void onNewLink()}
                 disabled={busy}
-                className="cursor-pointer"
+                className="cursor-pointer disabled:cursor-default"
                 style={
                   revoked
                     ? {

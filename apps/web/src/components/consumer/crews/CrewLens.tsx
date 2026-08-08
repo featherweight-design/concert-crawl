@@ -323,9 +323,11 @@ export const CrewLensPill = ({
         ) : (
           <LensGlyph size={13} />
         )}
-        <span className="min-w-0 truncate">
-          {on ? activeCrew.name : COPY.lens.resting}
-        </span>
+        {/* Never the crew's name, even when on: the h1 immediately left of
+            this pill already renders it, and at 390px both truncate rather
+            than either one reading. The patch above carries which crew, and
+            the aria-label names it for anyone who can't see the patch. */}
+        <span className="min-w-0 truncate">{COPY.lens.resting}</span>
         <Chevron />
       </button>
       {trigger.open &&

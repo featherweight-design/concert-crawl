@@ -168,13 +168,14 @@ crewInvitesRouter.get('/:token', async (ctx) => {
     return ctx.json({ success: false, reason: dead }, 404)
   }
 
-  const [memberCount, inviter] = await Promise.all([
+  const [memberCount, inviter, viewerIsMember] = await Promise.all([
     countMembers(db, invite.crewId),
     db
       .select({ handle: userProfiles.handle })
       .from(userProfiles)
       .where(eq(userProfiles.userId, invite.createdBy))
       .limit(1),
+    isMember(db, invite.crewId, userId),
   ])
 
   // At capacity is NOT a dead link: crew identity stays visible and the CTA
@@ -186,6 +187,7 @@ crewInvitesRouter.get('/:token', async (ctx) => {
     memberCount,
     invitedByHandle: inviter[0]?.handle ?? null,
     isFull: memberCount >= CREW_MEMBER_CAP,
+    viewerIsMember,
   }
 
   return ctx.json({ success: true, data: { invite: payload } })

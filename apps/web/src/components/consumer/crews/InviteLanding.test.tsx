@@ -50,6 +50,7 @@ const invite: PublicCrewInvite = {
   memberCount: 4,
   invitedByHandle: 'mvp_ross',
   isFull: false,
+  viewerIsMember: false,
 }
 
 beforeEach(() => {
@@ -117,6 +118,43 @@ describe('InviteLanding (#1226)', () => {
       screen.queryByRole('button', { name: COPY.landing.cta(invite.name) }),
     ).not.toBeInTheDocument()
     expect(screen.queryByText(COPY.landing.privacy)).not.toBeInTheDocument()
+  })
+
+  // A forwarded link opened by someone already in the crew. Everything written
+  // for a stranger goes; the way in replaces the way to join.
+  it('offers the way in rather than a join CTA to an existing member', () => {
+    mount({ viewerIsMember: true })
+    expect(
+      screen.getByRole('heading', {
+        name: COPY.landing.memberTitle('Thursdays'),
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(COPY.landing.memberEyebrow)).toBeInTheDocument()
+    expect(screen.getByText(COPY.list.memberCount(4))).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: COPY.landing.cta(invite.name) }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(COPY.landing.body(4))).not.toBeInTheDocument()
+    expect(screen.queryByText(COPY.landing.privacy)).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: COPY.landing.memberCta('Thursdays') }),
+    )
+    expect(push).toHaveBeenCalledWith('/crews/crew-1')
+    expect(joinCrew).not.toHaveBeenCalled()
+  })
+
+  // Membership outranks capacity: a full crew is not a reason to shut a member
+  // out of their own crew.
+  it('keeps the member surface when the crew is also full', () => {
+    mount({ viewerIsMember: true, isFull: true })
+    expect(
+      screen.getByRole('button', { name: COPY.landing.memberCta('Thursdays') }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: COPY.linkDead.browse }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText(COPY.linkDead.fullBody)).not.toBeInTheDocument()
   })
 
   it('navigates to the crew on a successful join', async () => {

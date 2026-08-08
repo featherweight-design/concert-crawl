@@ -131,6 +131,12 @@ export interface PublicCrewInvite {
   memberCount: number
   invitedByHandle: string | null
   isFull: boolean
+  /**
+   * The viewer is already in this crew — a forwarded link tapped by someone who
+   * is in it. Resolvable here because the endpoint is authenticated, and it is
+   * membership only: still no attendance, no member list.
+   */
+  viewerIsMember: boolean
 }
 
 // The no-attendance guarantee above is only as good as something that fails
@@ -141,7 +147,13 @@ export interface PublicCrewInvite {
 type AssertTrue<T extends true> = T
 
 type PublicCrewInviteKeys =
-  'crewId' | 'name' | 'patchSalt' | 'memberCount' | 'invitedByHandle' | 'isFull'
+  | 'crewId'
+  | 'name'
+  | 'patchSalt'
+  | 'memberCount'
+  | 'invitedByHandle'
+  | 'isFull'
+  | 'viewerIsMember'
 
 // Bidirectional, so an added key and a removed key both fail. Catches optional
 // additions, which a runtime `Object.keys()` pass cannot see.

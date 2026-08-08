@@ -162,7 +162,7 @@ export const RerollSheet = ({
             type="button"
             onClick={() => void onApply()}
             disabled={saving}
-            className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg"
+            className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg disabled:cursor-default"
             style={{
               background: 'var(--signal)',
               color: 'var(--fg-on-accent)',

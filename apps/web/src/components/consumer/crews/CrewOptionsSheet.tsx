@@ -10,6 +10,7 @@ interface CrewOptionsSheetProps {
   onClose: () => void
   isKeeper: boolean
   onInvite: () => void
+  onRename: () => void
   onReroll: () => void
   onLeave: () => void
   onDelete: () => void
@@ -41,6 +42,7 @@ export const CrewOptionsSheet = ({
   onClose,
   isKeeper,
   onInvite,
+  onRename,
   onReroll,
   onLeave,
   onDelete,
@@ -49,6 +51,12 @@ export const CrewOptionsSheet = ({
     { key: 'invite', label: COPY.detail.invite, run: onInvite, danger: false },
     ...(isKeeper
       ? [
+          {
+            key: 'rename',
+            label: COPY.rename.title,
+            run: onRename,
+            danger: false,
+          },
           {
             key: 'reroll',
             label: COPY.roster.newPatch,

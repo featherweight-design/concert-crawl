@@ -16,6 +16,7 @@ describe('PublicCrewInvite', () => {
       memberCount: 4,
       invitedByHandle: null,
       isFull: false,
+      viewerIsMember: false,
     }
 
     expect(Object.keys(invite).sort()).toEqual([
@@ -25,6 +26,7 @@ describe('PublicCrewInvite', () => {
       'memberCount',
       'name',
       'patchSalt',
+      'viewerIsMember',
     ])
   })
 })

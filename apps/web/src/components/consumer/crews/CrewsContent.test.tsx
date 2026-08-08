@@ -6,7 +6,8 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import type { CrewSummary, PlanState } from '@concert-crawl/types'
 
 const refresh = vi.fn()
-vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }))
+const push = vi.fn()
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh, push }) }))
 
 const entitlement = {
   isLoading: false,
@@ -60,6 +61,7 @@ afterEach(cleanup)
 
 beforeEach(() => {
   refresh.mockClear()
+  push.mockClear()
   entitlement.isLoading = false
   entitlement.active = true
   entitlement.surface = 'visible-active'
@@ -204,6 +206,18 @@ describe('CrewsContent server-data sync (#1226)', () => {
     fireEvent.click(screen.getByTestId('create-sheet'))
     const live = screen.getByText(CREWS_COPY.list.created('Mondays'))
     expect(live).toHaveAttribute('aria-live', 'polite')
+  })
+
+  // Join, leave, delete and handoff all navigate; creating one was the only
+  // path that left you looking at the list you just added to.
+  it('lands on the new crew rather than the list', () => {
+    render(<CrewsContent initialCrews={[]} scaRegion={false} />)
+    fireEvent.click(screen.getAllByText(CREWS_COPY.list.create)[0]!)
+    fireEvent.click(screen.getByTestId('create-sheet'))
+    expect(push).toHaveBeenCalledWith('/crews/new')
+    // The optimistic row survives the navigation: the list is what a back tap
+    // returns to, and it is still cached without the new crew in it.
+    expect(screen.getByText('Mondays')).toBeInTheDocument()
   })
 
   it('drops an optimistic row once the server returns the same crew', () => {

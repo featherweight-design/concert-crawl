@@ -89,7 +89,7 @@ export const CreateCrewButton = ({
         disabled={isLoading}
         aria-haspopup="dialog"
         aria-expanded={createOpen || gateOpen || pickerOpen}
-        className="flex cursor-pointer items-center justify-center gap-1.5"
+        className="flex cursor-pointer items-center justify-center gap-1.5 disabled:cursor-default"
         style={{
           minHeight: 44,
           padding: isHeader ? '0 14px' : '0 20px',

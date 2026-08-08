@@ -106,12 +106,15 @@ export const CrewsContent = ({
         ? 'empty'
         : 'ready'
 
-  // A newly made crew lands at the top rather than waiting on a refetch: the
-  // customer just named it, and an empty list a beat after creating one reads
-  // as a failure.
+  // Straight into the crew, which is where every other membership change ends
+  // up — join, leave, delete and handoff all navigate, and creating one was
+  // the only path that left you looking at the list. The optimistic row and
+  // the announcement stay: navigation is client-side and the list is what a
+  // back tap returns to.
   const onCreated = (crew: CrewSummary) => {
     setCreated((prev) => [crew, ...prev])
     setAnnouncement(COPY.list.created(crew.name))
+    router.push(`/crews/${crew.id}`)
   }
 
   return (

@@ -69,7 +69,10 @@ const Padlock = () => (
 export const InviteLanding = ({ inviteToken, invite }: InviteLandingProps) => {
   const router = useRouter()
   const { getToken } = useAuth()
-  const [full, setFull] = useState(invite.isFull)
+  // Membership outranks capacity: a member arriving on a forwarded link is not
+  // shut out of their own crew by it being full.
+  const member = invite.viewerIsMember
+  const [full, setFull] = useState(invite.isFull && !member)
   // Mounted empty and kept mounted: a live region that already holds its text
   // when it enters the DOM goes unannounced by VoiceOver and NVDA. Only the
   // in-place swap fills it, so a landing that arrives full says nothing extra.
@@ -156,7 +159,9 @@ export const InviteLanding = ({ inviteToken, invite }: InviteLandingProps) => {
       </span>
 
       <div className="flex max-w-[320px] flex-col items-center gap-2.5 sm:max-w-[520px]">
-        <InviteEyebrow tone="signal">{COPY.landing.eyebrow}</InviteEyebrow>
+        <InviteEyebrow tone="signal">
+          {member ? COPY.landing.memberEyebrow : COPY.landing.eyebrow}
+        </InviteEyebrow>
         <h1
           className="text-[27px] sm:text-[38px]"
           style={{
@@ -168,9 +173,11 @@ export const InviteLanding = ({ inviteToken, invite }: InviteLandingProps) => {
             color: 'var(--fg)',
           }}
         >
-          {invite.invitedByHandle === null
-            ? COPY.landing.titleNoName(invite.name)
-            : COPY.landing.title(invite.invitedByHandle, invite.name)}
+          {member
+            ? COPY.landing.memberTitle(invite.name)
+            : invite.invitedByHandle === null
+              ? COPY.landing.titleNoName(invite.name)
+              : COPY.landing.title(invite.invitedByHandle, invite.name)}
         </h1>
         {/* The prototype's avatar cluster is deliberately absent: the payload
             is identity-lite and carries no member list, and showing a
@@ -184,22 +191,35 @@ export const InviteLanding = ({ inviteToken, invite }: InviteLandingProps) => {
             {COPY.list.memberCount(invite.memberCount)}
           </InviteEyebrow>
         )}
-        <InviteBody>
-          {full
-            ? COPY.linkDead.fullBody
-            : COPY.landing.body(invite.memberCount)}
-        </InviteBody>
+        {/* Both bodies argue for joining, which this viewer has done. The
+            title and the count say everything left to say. */}
+        {!member && (
+          <InviteBody>
+            {full
+              ? COPY.linkDead.fullBody
+              : COPY.landing.body(invite.memberCount)}
+          </InviteBody>
+        )}
       </div>
 
       <div className="flex w-full max-w-[340px] flex-col items-center gap-3">
-        {full ? (
+        {member ? (
+          <button
+            type="button"
+            onClick={() => router.push(`/crews/${invite.crewId}`)}
+            className="w-full cursor-pointer"
+            style={primaryButtonStyle}
+          >
+            {COPY.landing.memberCta(invite.name)}
+          </button>
+        ) : full ? (
           <BrowseInstead wide />
         ) : (
           <button
             type="button"
             onClick={() => void onJoin()}
             disabled={busy}
-            className="w-full cursor-pointer"
+            className="w-full cursor-pointer disabled:cursor-default"
             style={primaryButtonStyle}
           >
             {busy ? COPY.landing.joining : COPY.landing.cta(invite.name)}
@@ -226,8 +246,9 @@ export const InviteLanding = ({ inviteToken, invite }: InviteLandingProps) => {
       )}
 
       {/* The prototype drops the privacy note at capacity: there is nothing
-          left to explain once there is nothing to join. */}
-      {!full && (
+          left to explain once there is nothing to join. A member is past the
+          decision it exists to inform, so it goes there too. */}
+      {!full && !member && (
         <div
           className="flex max-w-[330px] items-start gap-[9px] text-left sm:max-w-[430px]"
           style={{

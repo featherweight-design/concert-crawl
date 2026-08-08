@@ -164,6 +164,22 @@ export async function joinCrew(
 }
 
 /**
+ * Renaming. Keeper-only, and deliberately does NOT touch `patchSalt`: the
+ * artwork is the crew's identity and must survive a rename, which is the whole
+ * reason the create sheet can promise the name is changeable.
+ */
+export async function renameCrew(
+  token: string,
+  crewId: string,
+  name: string,
+): Promise<Pick<Crew, 'id' | 'name' | 'patchSalt'>> {
+  const data = await apiClient.patch<{
+    crew: Pick<Crew, 'id' | 'name' | 'patchSalt'>
+  }>(`/v1/crews/${crewId}`, token, { name })
+  return data.crew
+}
+
+/**
  * The salt is server-side (`patchSalt + 1`) — the client asks for the next
  * one and never proposes a value, so a candidate it previews is only honest
  * if it is drawn at exactly `patchSalt + 1`.

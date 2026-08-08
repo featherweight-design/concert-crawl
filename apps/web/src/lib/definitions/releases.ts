@@ -81,6 +81,14 @@ export const RELEASES: Release[] = [
         kind: 'added',
         text: 'One crew talking more than you want it to? Mute it in Settings. It is per crew, so the rest keep coming through.',
       },
+      {
+        kind: 'added',
+        text: 'Named it in a hurry? Whoever keeps the crew can rename it from Crew options. The patch stays exactly as it was.',
+      },
+      {
+        kind: 'changed',
+        text: 'Starting a crew now drops you into it rather than back on the list, and a link forwarded to someone already in offers them the way in instead of a join button.',
+      },
     ],
   },
   {

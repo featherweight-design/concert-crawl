@@ -136,6 +136,17 @@ export const CREWS_COPY = {
       "We're not showing you what they're going to until you're in. That's the point of a crew.",
     cta: (crew: string) => `Join ${crew}`,
     joining: 'Joining…',
+    // A forwarded link opened by someone already in the crew. It keeps the
+    // crew's identity and its count and loses everything written for a
+    // stranger: the invitation, the body, and the privacy note all address a
+    // decision this viewer already made.
+    //
+    // The eyebrow only places you, because the title directly under it already
+    // says you're in; 'ALREADY IN' above "You're already in Thursdays." spent
+    // the line saying nothing twice.
+    memberEyebrow: 'INVITE LINK',
+    memberTitle: (crew: string) => `You're already in ${crew}.`,
+    memberCta: (crew: string) => `Open ${crew}`,
   },
 
   // Dead links carry no crew identity at all — no name, no patch, no count.
@@ -237,6 +248,18 @@ export const CREWS_COPY = {
       "Don't like it? Pull another. Renaming won't change it; only this will.",
     failed: "Couldn't start that crew. Try again.",
     close: 'Close',
+  },
+
+  // Renaming. `create.nameHelp` promises the name is changeable, so this is
+  // where that promise is kept. The patch is deliberately absent from this
+  // sheet: renaming never moves the artwork, and drawing it here would suggest
+  // otherwise.
+  rename: {
+    title: 'Rename crew',
+    sub: 'Everyone in the crew sees the new name.',
+    submit: 'Save the name',
+    submitting: 'Saving…',
+    failed: "Couldn't save that name. Try again.",
   },
 
   // The Browse lens. Not a filter: filters narrow the calendar by an attribute

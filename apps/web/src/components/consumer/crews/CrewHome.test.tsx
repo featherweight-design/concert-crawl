@@ -29,6 +29,11 @@ const rerollPatch = vi.fn(async () => ({
   name: 'Thursdays',
   patchSalt: 4,
 }))
+const renameCrew = vi.fn(async (_token: string, _id: string, name: string) => ({
+  id: 'c1',
+  name,
+  patchSalt: 3,
+}))
 const fetchCurrentInvite = vi.fn(async () => null)
 const mintInvite = vi.fn(async () => ({
   id: 'i1',
@@ -41,6 +46,8 @@ const mintInvite = vi.fn(async () => ({
 vi.mock('@/lib/crews', () => ({
   leaveCrew: () => leaveCrew(),
   rerollPatch: () => rerollPatch(),
+  renameCrew: (token: string, id: string, name: string) =>
+    renameCrew(token, id, name),
   fetchCurrentInvite: () => fetchCurrentInvite(),
   mintInvite: () => mintInvite(),
   revokeInvite: vi.fn(),
@@ -331,6 +338,52 @@ describe('CrewHome optimistic removal lifetime (#1226)', () => {
     view.rerender(<CrewHome crew={roster(['u1', 'u2'])} />)
     fireEvent.click(screen.getByRole('tab', { name: /Who's in/ }))
     expect(screen.getByText('u2')).toBeInTheDocument()
+  })
+})
+
+// The create sheet promises the name is changeable, so the promise needs a
+// place to be kept. Keeper-only, and the patch must survive it.
+describe('CrewHome rename (#1226)', () => {
+  const openRename = (crew: CrewDetail = detail()) => {
+    render(<CrewHome crew={crew} />)
+    fireEvent.click(
+      screen.getByRole('button', { name: CREWS_COPY.a11y.options }),
+    )
+  }
+
+  it('offers rename to the keeper only', () => {
+    openRename()
+    expect(
+      screen.getByRole('button', { name: CREWS_COPY.rename.title }),
+    ).toBeInTheDocument()
+    cleanup()
+
+    openRename(detail({ isKeeper: false }))
+    expect(
+      screen.queryByRole('button', { name: CREWS_COPY.rename.title }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows the new name straight away and leaves the patch alone', async () => {
+    openRename()
+    fireEvent.click(
+      screen.getByRole('button', { name: CREWS_COPY.rename.title }),
+    )
+    fireEvent.change(screen.getByLabelText(CREWS_COPY.create.nameLabel), {
+      target: { value: 'Fridays' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: CREWS_COPY.rename.submit }),
+    )
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Fridays' }),
+      ).toBeInTheDocument(),
+    )
+    expect(renameCrew).toHaveBeenCalledWith('tok', 'c1', 'Fridays')
+    expect(rerollPatch).not.toHaveBeenCalled()
+    expect(refresh).toHaveBeenCalled()
   })
 })
 

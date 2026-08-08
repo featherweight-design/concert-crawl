@@ -262,7 +262,7 @@ export const LeaveConfirm = ({
             type="button"
             onClick={() => void onSubmit()}
             disabled={working || blocked}
-            className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg"
+            className="flex min-h-[44px] w-full cursor-pointer items-center justify-center rounded-lg disabled:cursor-default"
             style={{
               background: copy.danger ? 'var(--danger)' : 'var(--signal)',
               color: 'var(--fg-on-accent)',

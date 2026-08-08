@@ -317,7 +317,21 @@ describe('crew invites', () => {
         memberCount: 2,
         invitedByHandle: 'thefrontrow',
         isFull: false,
+        viewerIsMember: false,
       })
+    })
+
+    // The landing swaps to a way in rather than a live join CTA, so the
+    // endpoint has to say which of the two the viewer is.
+    it('reports viewerIsMember for a link forwarded to someone already in', async () => {
+      const crewId = await seedCrew([KEEPER, MATE])
+      const invite = await seedInvite(crewId)
+      setAuth(MATE)
+
+      const res = await app.request(`/v1/crew-invites/${invite.token}`)
+      expect(res.status).toBe(200)
+      const body: PublicBody = await res.json()
+      expect(body.data.invite.viewerIsMember).toBe(true)
     })
 
     it('reports a null handle rather than inventing a name', async () => {

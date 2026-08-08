@@ -25,6 +25,7 @@ import { CrewRoster } from './CrewRoster'
 import { CrewNotice } from './CrewNotice'
 import { CrewOptionsSheet } from './CrewOptionsSheet'
 import { InviteSheet } from './InviteSheet'
+import { RenameSheet } from './RenameSheet'
 import { RerollSheet } from './RerollSheet'
 import { LeaveConfirm, type ConfirmKind } from './LeaveConfirm'
 import { CREWS_COPY } from './definitions/copy'
@@ -69,9 +70,11 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
   // still lands where it should.
   const [chosen, setChosen] = useState<CrewTabId | null>(null)
   const [saltOverride, setSaltOverride] = useState<number | null>(null)
+  const [nameOverride, setNameOverride] = useState<string | null>(null)
   const [removedIds, setRemovedIds] = useState<string[]>([])
   const [options, setOptions] = useState(false)
   const [invite, setInvite] = useState(false)
+  const [rename, setRename] = useState(false)
   const [reroll, setReroll] = useState(false)
   const [confirm, setConfirm] = useState<ConfirmKind | null>(null)
   const [target, setTarget] = useState<CrewMember | null>(null)
@@ -90,13 +93,17 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
   }, [crew.members])
 
   const active = chosen ?? leadTabFor(crew)
-  // Both overrides clear on the SERVER value catching up rather than on the
-  // mutation resolving — dropping them at mutation time flashes the old value
-  // back for a frame.
+  // All three overrides clear on the SERVER value catching up rather than on
+  // the mutation resolving — dropping them at mutation time flashes the old
+  // value back for a frame.
   const patchSalt =
     saltOverride !== null && saltOverride !== crew.patchSalt
       ? saltOverride
       : crew.patchSalt
+  const name =
+    nameOverride !== null && nameOverride !== crew.name
+      ? nameOverride
+      : crew.name
   // Keeper first. Everyone else keeps the order the API sent, which is joinedAt
   // ascending — a stable sort is what preserves it, so this comparator must stay
   // a pure isKeeper test rather than gain a tiebreak. Sorting here rather than in
@@ -171,7 +178,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
     <div className="mx-auto flex w-full max-w-[720px] flex-col gap-5 px-4 pb-10 pt-5">
       <CrewHero
         crewId={crew.id}
-        name={crew.name}
+        name={name}
         patchSalt={patchSalt}
         memberCount={memberCount}
         isKeeper={crew.isKeeper}
@@ -275,6 +282,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
         onClose={() => setOptions(false)}
         isKeeper={crew.isKeeper}
         onInvite={() => setInvite(true)}
+        onRename={() => setRename(true)}
         onReroll={() => setReroll(true)}
         onLeave={() => setConfirm('leave')}
         onDelete={() => setConfirm('delete')}
@@ -284,9 +292,20 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
         open={invite}
         onClose={() => setInvite(false)}
         crewId={crew.id}
-        crewName={crew.name}
+        crewName={name}
         patchSalt={patchSalt}
         memberCount={memberCount}
+      />
+
+      <RenameSheet
+        open={rename}
+        onClose={() => setRename(false)}
+        crewId={crew.id}
+        crewName={name}
+        onRenamed={(next) => {
+          setNameOverride(next)
+          router.refresh()
+        }}
       />
 
       <RerollSheet
@@ -303,7 +322,7 @@ export const CrewHome = ({ crew }: CrewHomeProps) => {
       <LeaveConfirm
         kind={confirm}
         onClose={() => setConfirm(null)}
-        crewName={crew.name}
+        crewName={name}
         crewId={crew.id}
         patchSalt={patchSalt}
         target={target}
