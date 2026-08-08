@@ -28,6 +28,7 @@ describe('FollowBlock', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     expect(container.textContent).toContain(ARTIST_COPY.followPitch)
@@ -39,6 +40,7 @@ describe('FollowBlock', () => {
         following
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     expect(active.textContent).toContain(ARTIST_COPY.followPitchActive)
@@ -52,6 +54,7 @@ describe('FollowBlock', () => {
         following={false}
         signedOut
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     expect(out.textContent).toContain(ARTIST_COPY.followSignedOutPitch)
@@ -65,6 +68,7 @@ describe('FollowBlock', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     expect(getByRole('button')).not.toBeNull()

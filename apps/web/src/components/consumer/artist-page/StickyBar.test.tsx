@@ -31,6 +31,7 @@ describe('StickyBar', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     expect(container.firstChild).toBeNull()
@@ -45,6 +46,7 @@ describe('StickyBar', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     const bar = container.querySelector('[data-sticky-bar]')
@@ -72,6 +74,7 @@ describe('StickyBar', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     expect(

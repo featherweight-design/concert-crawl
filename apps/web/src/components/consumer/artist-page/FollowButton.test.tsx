@@ -35,6 +35,7 @@ describe('FollowButton', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     const signedIn = getByRole('button')
@@ -48,6 +49,7 @@ describe('FollowButton', () => {
         following={false}
         signedOut
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     const signedOut = get2('button')
@@ -72,6 +74,7 @@ describe('FollowButton', () => {
         following={false}
         signedOut
         onToggle={onToggle}
+        onLockedTap={() => undefined}
       />,
     )
     expect(queryByRole('dialog')).toBeNull()
@@ -87,6 +90,7 @@ describe('FollowButton', () => {
         following={false}
         signedOut
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     expect(getByRole('button').getAttribute('data-return-to')).toBe(
@@ -101,6 +105,7 @@ describe('FollowButton', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     const full = getByRole('button')
@@ -118,6 +123,7 @@ describe('FollowButton', () => {
         signedOut={false}
         size="compact"
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     const compact = get2('button')
@@ -136,6 +142,7 @@ describe('FollowButton', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     expect(getByRole('button').className).toContain('ap-follow')
@@ -148,6 +155,7 @@ describe('FollowButton', () => {
         following={false}
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     const off = getByRole('button')
@@ -170,6 +178,7 @@ describe('FollowButton', () => {
         following
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     const on = get2('button')
@@ -195,6 +204,7 @@ describe('FollowButton', () => {
         following
         signedOut={false}
         onToggle={noop}
+        onLockedTap={() => undefined}
       />,
     )
     expect(container.querySelector('[data-glyph="eye"]')).toBeNull()
@@ -210,6 +220,7 @@ describe('FollowButton', () => {
         following={false}
         signedOut={false}
         onToggle={onToggle}
+        onLockedTap={() => undefined}
       />,
     )
     fireEvent.click(getByRole('button'))
@@ -302,6 +313,7 @@ describe('FollowButton', () => {
             signedOut={false}
             locked
             onToggle={noop}
+            onLockedTap={() => undefined}
           />
           <FollowButton
             name="Pale Quarry"
@@ -309,6 +321,7 @@ describe('FollowButton', () => {
             signedOut={false}
             locked
             onToggle={noop}
+            onLockedTap={() => undefined}
           />
         </>,
       )
@@ -336,6 +349,7 @@ describe('FollowButton', () => {
           following={false}
           signedOut={false}
           onToggle={onToggle}
+          onLockedTap={() => undefined}
         />,
       )
       const button = getByRole('button')
@@ -349,6 +363,7 @@ describe('FollowButton', () => {
           following
           signedOut={false}
           onToggle={onToggle}
+          onLockedTap={() => undefined}
         />,
       )
       expect(button.textContent).toBe(ARTIST_COPY.following)
