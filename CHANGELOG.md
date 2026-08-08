@@ -1,3 +1,19 @@
+# [1.224.0](https://github.com/HartiganHM/concert-crawl/compare/v1.223.1...v1.224.0) (2026-08-08)
+
+
+### Bug Fixes
+
+* **attending:** never 500 on a read-back after the write committed ([55ef174](https://github.com/HartiganHM/concert-crawl/commit/55ef1741913e0ce7a27f33251f2bc6eac5c21387))
+* **attending:** report the persisted timestamp when a concurrent tap wins ([30f3ccf](https://github.com/HartiganHM/concert-crawl/commit/30f3ccfe0010b1670602c20efc07baff82601961))
+* **crews:** claim the going transition atomically so fan-out fires once ([48f1b33](https://github.com/HartiganHM/concert-crawl/commit/48f1b33f1434f31fd7386d08a8e138a32de393bf))
+* **crews:** narrow the settings crew guard to the fields it actually checks ([6dec65b](https://github.com/HartiganHM/concert-crawl/commit/6dec65bf97120b5471222d87ae566d61f6d060a9))
+* **crews:** reject a non-integer patchSalt at the settings boundary ([69d100c](https://github.com/HartiganHM/concert-crawl/commit/69d100c87e0d1f474b7162f02eee114a62a6decd))
+
+
+### Features
+
+* **crews:** notification fan-out, bell rendering, and per-crew mute ([f656fcd](https://github.com/HartiganHM/concert-crawl/commit/f656fcdc6441c11642aaccc60b924f7490d0b203)), closes [#1226](https://github.com/HartiganHM/concert-crawl/issues/1226)
+
 ## [1.223.1](https://github.com/HartiganHM/concert-crawl/compare/v1.223.0...v1.223.1) (2026-08-08)
 
 
