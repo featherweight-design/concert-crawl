@@ -352,9 +352,9 @@ export const createBillingRouter = (
         items: [{ price: price.id }],
         payment_behavior: 'default_incomplete',
         payment_settings: { save_default_payment_method: 'on_subscription' },
-        // Since the dahlia releases `latest_invoice.payment_intent` no longer
-        // exists as an expansion — confirmation_secret carries the same
-        // PaymentIntent client_secret for the Payment Element.
+        // Under the pinned STRIPE_API_VERSION `latest_invoice.payment_intent`
+        // no longer exists as an expansion — confirmation_secret carries the
+        // same PaymentIntent client_secret for the Payment Element.
         expand: ['latest_invoice.confirmation_secret'],
         metadata: {
           userId,

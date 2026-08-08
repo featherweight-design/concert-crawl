@@ -17,9 +17,9 @@ export interface StripeCustomerCreateResult {
   id: string
 }
 
-// Expanded `latest_invoice.confirmation_secret` shape. Since the dahlia
-// releases the legacy `invoice.payment_intent` field no longer exists; the
-// Payment Element client secret is surfaced via the invoice's
+// Expanded `latest_invoice.confirmation_secret` shape. Under the pinned
+// STRIPE_API_VERSION the legacy `invoice.payment_intent` field no longer
+// exists; the Payment Element client secret is surfaced via the invoice's
 // confirmation_secret (same PaymentIntent client_secret value).
 export interface StripeInvoiceConfirmationSecret {
   client_secret: string | null

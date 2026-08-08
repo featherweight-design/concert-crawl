@@ -7,12 +7,12 @@
 
 import Stripe from 'stripe'
 import { Hono } from 'hono'
-import type {
-  BillingStripeClient,
-  StripeInvoicePreviewParams,
-  StripeSubscriptionUpdateParams,
+import {
+  STRIPE_API_VERSION,
+  type BillingStripeClient,
+  type StripeInvoicePreviewParams,
+  type StripeSubscriptionUpdateParams,
 } from '../../lib/stripe.js'
-import { STRIPE_API_VERSION } from '../../lib/stripe.js'
 import { createStripeWebhooksRouter } from '../../routes/stripe-webhooks.js'
 
 export const TEST_WEBHOOK_SECRET = 'whsec_test_secret_for_vitest'

@@ -14,9 +14,9 @@ const stripeIdSchema = z
 
 const metadataSchema = z.record(z.string()).nullish()
 
-// Subscription items carry the price + period bounds. Since the dahlia
-// releases the current_period_* fields live on the item (moved off the
-// subscription in the 2025 basil release).
+// Subscription items carry the price + period bounds. The current_period_*
+// fields moved off the subscription onto the item in the 2025 basil release,
+// and still live there under the pinned STRIPE_API_VERSION.
 const subscriptionItemSchema = z.object({
   // The subscription item ID (`si_…`) — required by the change-tier price
   // switch (subscriptions.update items[].id); nullish because webhook test
