@@ -69,9 +69,11 @@ PR 11 is reserved on purpose. Cold-eyes triage and Hugh's own walk produce subje
 
 ## File Structure
 
+Every path is an existing file to modify unless marked **(new)**.
+
 | File | Responsibility | PR |
 |---|---|---|
-| `packages/db/migrations/0078_artist_follow_preferences.sql` | Three columns + upsert backfill | 1 |
+| `packages/db/migrations/0078_artist_follow_preferences.sql` **(new)** | Three columns + upsert backfill | 1 |
 | `packages/db/src/schema/user-notification-preferences.ts` | Schema for the three columns | 1 |
 | `apps/api/src/routes/me-push.ts` | `preferencesSchema` + GET/PATCH `/v1/me/notification-preferences` | 1 |
 | `packages/entitlements/src/index.ts` | `nfLocked` helper | 1 |
@@ -86,7 +88,7 @@ PR 11 is reserved on purpose. Cold-eyes triage and Hugh's own walk produce subje
 | `apps/web/src/components/consumer/spotify/DiscoveryShelf.tsx` | Three-mode follow shelf in the same slot | 4 |
 | `apps/web/src/components/consumer/search/SearchResultsState.tsx` | Artists section above shows | 5 |
 | `apps/web/src/components/consumer/history/MyShowsTabs.tsx` | Third tab | 6 |
-| `apps/web/src/components/consumer/artist-picker/**` | Shared picker, new | 6 |
+| `apps/web/src/components/consumer/artist-picker/**` **(new)** | Shared picker | 6 |
 | `apps/web/src/components/consumer/event-detail/PublicEventDetail.tsx` | Optional `billBlock` prop | 7 |
 | `apps/web/src/components/onboarding/OnboardingShell.tsx` | `FLOW` + `StepContent` | 8 |
 | `packages/crawler-core/src/lib/artist-fanout/index.ts` | Per-run push batching | 9 |
@@ -486,13 +488,15 @@ Unscoped by design. Fill from the cold-eyes triage's subjective residue and Hugh
 
 | Gate | When | Artifact |
 |---|---|---|
-| 1 State reachability | After PR 3, before PR 4 builds | `docs/superpowers/state-coverage-native-following.md` |
+| 1 State reachability | After PR 3, before PR 4 builds | `docs/superpowers/state-coverage-native-following.md` (new) |
 | 2 Forced-state runtime | Before each `gh pr create` | Recorded in the PR body |
 | 3 Sibling duplicate sweep | Before each `gh pr create` | — |
-| 4 design-review, both halves | Agent 1 before any code; Agents 2–3 pre-PR | `docs/superpowers/design-tables/native-following.md` |
-| 5 Journey lifecycle | Once each journey is reachable | `docs/superpowers/journey-lifecycle-native-following.md` |
-| 6 Side-effect provenance | PR 9 | `docs/superpowers/side-effects-native-following.md` |
+| 4 design-review, both halves | Agent 1 before any code; Agents 2–3 pre-PR | `docs/superpowers/design-tables/native-following.md` (new) |
+| 5 Journey lifecycle | Once each journey is reachable | `docs/superpowers/journey-lifecycle-native-following.md` (new) |
+| 6 Side-effect provenance | PR 9 | `docs/superpowers/side-effects-native-following.md` (new) |
 | 7 Copy review | Every PR adding a string | Applied in the diff |
+
+Every path marked `(new)` is an artifact this run produces. None exist yet; each is committed on the branch of the PR whose gate produced it.
 
 **Gate 2 specifics.** Force the paywall, the 403 stale-entitlement race, every zero-follow state, and the digest zero variant. Throttle the network for every mutation: **a fast local machine hides the optimistic-update bug completely.** "Renders in the happy path" is not this gate.
 
