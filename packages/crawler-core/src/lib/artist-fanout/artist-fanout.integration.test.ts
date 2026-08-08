@@ -20,6 +20,7 @@ import { runArtistFanout, runArtistFanoutSafely } from './index.js'
 
 const FREE_USER = 'user_fanout_free'
 const PREMIUM_USER = 'user_fanout_premium'
+const BYSTANDER_USER = 'user_fanout_bystander'
 
 async function clearFanoutState(): Promise<void> {
   await db.execute(
@@ -326,6 +327,51 @@ describe('runArtistFanout — matching + idempotency', () => {
       .from(userEvents)
       .where(eq(userEvents.userId, FREE_USER))
     expect(watch).toHaveLength(1)
+  })
+
+  // Fan-out bugs are invisible from a single account: an over-broad match
+  // still looks correct to the user who was supposed to get the alert. The
+  // bystander here is equally premium and equally push-enabled, so the ONLY
+  // thing keeping them out is the canonical match.
+  it('reaches the matching follower and nobody else', async () => {
+    const venueId = await seedVenue('Fillmore')
+    const eventId = await seedEvent({
+      venueId,
+      artist: 'Big Head Todd',
+      canonicalArtist: 'big head todd',
+    })
+    await seedFollower({
+      userId: PREMIUM_USER,
+      canonicalName: 'big head todd',
+      autoWatch: true,
+    })
+    await seedPremiumSubscription(PREMIUM_USER)
+    await seedFollower({
+      userId: BYSTANDER_USER,
+      canonicalName: 'someone else entirely',
+      autoWatch: true,
+    })
+    await seedPremiumSubscription(BYSTANDER_USER)
+
+    const sendPush = makeSendPush()
+    const summary = await runArtistFanout([eventId], {
+      sendPush,
+      getRole: noRole,
+    })
+
+    expect(summary).toMatchObject({ matchedPairs: 1, pushesClaimed: 1 })
+    expect(sendPush).toHaveBeenCalledTimes(1)
+    expect(sendPush.mock.calls[0]?.[0]).toMatchObject({ userId: PREMIUM_USER })
+    const bystanderTray = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, BYSTANDER_USER))
+    expect(bystanderTray).toHaveLength(0)
+    const bystanderWatch = await db
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, BYSTANDER_USER))
+    expect(bystanderWatch).toHaveLength(0)
   })
 
   it('re-running the fan-out sends nothing twice (spotify_alert_log claims)', async () => {

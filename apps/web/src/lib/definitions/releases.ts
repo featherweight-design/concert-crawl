@@ -65,21 +65,6 @@ export const RELEASES: Release[] = [
       {
         kind: 'added',
         text: 'One crew talking more than you want it to? Mute it in Settings. It is per crew, so the rest keep coming through.',
-=======
-    headline: 'Following an artist finally does something.',
-    items: [
-      {
-        kind: 'fixed',
-        text: 'New Denver dates used to only reach people who followed an artist through Spotify, and now any follow gets you the alert.',
-      },
-      {
-        kind: 'changed',
-        text: 'Following an artist is a Premium feature from here on, though anyone already following someone keeps them.',
-      },
-      {
-        kind: 'changed',
-        text: 'Connecting Spotify is switched off while we sit at the cap Spotify gives apps our size, but existing connections keep working.',
->>>>>>> 74a62d17c (docs: release note and progress row for artist fan-out)
       },
     ],
   },
