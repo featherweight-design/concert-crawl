@@ -264,18 +264,18 @@ Sources abbreviated: `SPEC §x` = eng spec section; `README` = handoff README; `
 
 ## Ambiguities
 
-Things the handoff leaves genuinely undecided; each needs a build-time call or a question back to Design.
+Things the handoff leaves undecided. Items marked **RESOLVED** were settled by the merged eng spec or the run briefing after this table was first enumerated; they are kept rather than deleted so a verifier can see the call was made deliberately. The rest still need a build-time call, and the two product ones go to the run report rather than being answered in code.
 
 1. **Event-row follow source.** SPEC §5.5 explicitly leaves "should the Following chip say where the follow came from" as a build/copy-review judgment, with the default being no change. There is no drawn state for a source-labelled chip.
-2. **"Browse all artists" destination.** The shelf header and My Shows both link to an all-artists view. Neither the handoff nor the spec names a route, and no artists-index page is enumerated as shipped. Whether this is a new route, a filtered search, or the Artists tab is undecided.
-3. **Where the "find artists" picker lives.** `FindArtistsRow` (following:189) and the nudge variant-B CTA both send the user to a picker. Whether that is a route, a sheet, or simply focused search is not specified.
+2. **"Browse all artists" destination. RESOLVED — `/search`, and this epic adds no artist index.** `apps/web/src/app/(protected)/(main)/artists/` holds only `[slug]`; there is no index route and building one is out of scope. Every all-artists affordance points at `/search`. Do not add an index, and do not drop the affordance.
+3. **Where the "find artists" picker lives. RESOLVED — focused search, not a new surface.** `FindArtistsRow` (following:189) and the nudge variant-B CTA route to `/search` for the same reason as item 2. No picker route and no picker sheet ship in this epic.
 4. **Eight onboarding steps.** The handoff itself flags that adding two steps makes the flow eight long and asks which existing step should be dropped. The spec locks the eight-step list but does not resolve the product concern.
 5. **Starter-shelf shuffle mechanics.** "Shuffled per session" is stated; the seed, storage (session storage vs. server), and whether the order must be stable across a back-navigation are unspecified.
 6. **Suggestion ranking.** With follower counts cut from scope, nothing defines how starter-shelf and onboarding artist suggestions are ordered or selected.
 7. **Icon-only breakpoint value.** The spec says "under 360px"; the prototypes drive icon-only off a `narrow` boolean tied to a 320px artboard. The exact media-query value is a build call.
 8. **Batched push tray state.** `NF_PUSH.many` exists as a lock-screen variant, but there is no drawn notification-tray row for a coalesced multi-artist alert.
 9. **Digest suppression vs. empty send.** A `zero` template variant exists for the digest, but nothing says whether a zero-content week sends it or suppresses the email entirely.
-10. **Downgrade behaviour for existing follows.** `GET /v1/me/artist-follows` is deliberately ungated, but whether a downgraded user's follows continue to generate alerts (or are silently muted) is not stated.
+10. **Downgrade behaviour for existing follows. RESOLVED — follows are retained, alerts stop.** Eng spec §3.2: downgrading never deletes follows. The user keeps the list and the Artists tab, loses the alerts and the scope chip, and can still unfollow, because DELETE is unentitled by design.
 
 ---
 
