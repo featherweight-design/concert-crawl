@@ -51,7 +51,7 @@ const CONTEST_RESOLVED = {
   title: 'Your price submission was reviewed.',
   body: 'Fees were already included in the listed price.',
 }
-const SPOTIFY_NEW_SHOW = {
+const ARTIST_NEW_SHOW = {
   category: 'artist.new_show',
   title: 'Big Head Todd: new Denver date',
   body: 'Fillmore · Oct 12. Added to your Watching.',
@@ -189,7 +189,7 @@ describe('GET /v1/notifications', () => {
   it('excludes admin_alert rows', async () => {
     setAuth('user_owner')
     await seedNotification({ userId: 'user_owner', type: 'admin_alert' })
-    await seedUserNotification('user_owner', SPOTIFY_NEW_SHOW)
+    await seedUserNotification('user_owner', ARTIST_NEW_SHOW)
     const body = await getList()
     expect(body.data.items).toHaveLength(1)
     expect(body.data.items[0]?.category).toBe('artist.new_show')

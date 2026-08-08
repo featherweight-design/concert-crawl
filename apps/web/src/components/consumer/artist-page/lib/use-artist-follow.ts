@@ -69,6 +69,7 @@ export const useArtistFollow = (
         // from a dead button, so route the branded 403 to the upgrade path
         // rather than leaving the tap looking like it did nothing.
         if (err instanceof ApiError && err.code === ENTITLEMENT_REQUIRED_CODE) {
+          console.info('artist follow needs Premium; opening the tier picker')
           onEntitlementRequired?.()
           return
         }

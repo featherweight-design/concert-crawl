@@ -23,10 +23,11 @@ export const ARTIST_COPY = {
   // this copy never conflates them.
   //
   // ⚠️ Nothing here may promise that following an artist puts their shows in
-  // your Watching. It doesn't: the Spotify fan-out that auto-watches shows is
-  // scoped to `spotify_followed` / `spotify_top` sources, while this button
-  // writes `source: 'manual'` (see packages/crawler-core/src/lib/
-  // artist-fanout — and issue #1306, which is the deliberate scope call).
+  // your Watching. The fan-out now reaches every follow source, but auto-watch
+  // is a per-connection preference that a manual follower has never set, and
+  // it coalesces to false — deliberately, so that following can never silently
+  // mutate Watching (see packages/crawler-core/src/lib/artist-fanout, and
+  // issue #1306, which is the scope call behind it).
   // The staging walk for Gate 5 followed an artist with two upcoming shows and
   // /watching still read "0 shows". The behaviour stays; the claim goes.
   follow: 'Follow',
