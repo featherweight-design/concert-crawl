@@ -137,7 +137,7 @@ jobs:
   # `apps/web` is ~3200 of the repo's ~3400 unit tests and needs ~700 CPU-seconds.
   # A GitHub standard runner is 2 vCPU, so no amount of worker tuning gets that
   # under ~8 minutes — the only lever is more machines. Shard the web suite across
-  # four runners and run the ten small packages on a fifth, in parallel.
+  # four runners and run the other ten workspaces on a fifth, in parallel.
   #
   # Deliberately NOT run through `turbo run test`: Turbo hashes the task, not the
   # `--shard` argument, so every shard would replay shard 1's cached result and
@@ -180,11 +180,14 @@ jobs:
       - name: Build workspace dependencies
         run: pnpm turbo run build --filter=@concert-crawl/web^...
 
+      # No `--` before `--shard`: pnpm forwards it literally and vitest reads it
+      # as the end of its filter list, silently ignoring the shard and running
+      # all 321 files in every shard.
       - name: Test
-        run: pnpm --filter @concert-crawl/web exec vitest run --shard=${{ matrix.shard }}/4
+        run: pnpm --filter @concert-crawl/web run test --shard=${{ matrix.shard }}/4
 
-  test-packages:
-    name: Test (packages)
+  test-workspaces:
+    name: Test (other workspaces)
     needs: install
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -221,17 +224,17 @@ jobs:
   # when a shard fails, and a skipped required check never resolves.
   test:
     name: Test
-    needs: [test-web, test-packages]
+    needs: [test-web, test-workspaces]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: Check shard results
         run: |
-          echo "web shards: ${{ needs.test-web.result }}"
-          echo "packages:   ${{ needs.test-packages.result }}"
+          echo "web shards:       ${{ needs.test-web.result }}"
+          echo "other workspaces: ${{ needs.test-workspaces.result }}"
           [ "${{ needs.test-web.result }}" = "success" ] || exit 1
-          [ "${{ needs.test-packages.result }}" = "success" ] || exit 1
+          [ "${{ needs.test-workspaces.result }}" = "success" ] || exit 1
 
   build:
     name: Build
