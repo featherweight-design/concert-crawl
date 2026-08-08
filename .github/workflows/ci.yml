@@ -134,8 +134,57 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-  test:
-    name: Test
+  # `apps/web` is ~3200 of the repo's ~3400 unit tests and needs ~700 CPU-seconds.
+  # A GitHub standard runner is 2 vCPU, so no amount of worker tuning gets that
+  # under ~8 minutes — the only lever is more machines. Shard the web suite across
+  # four runners and run the ten small packages on a fifth, in parallel.
+  #
+  # Deliberately NOT run through `turbo run test`: Turbo hashes the task, not the
+  # `--shard` argument, so every shard would replay shard 1's cached result and
+  # silently skip its own tests. Build the workspace deps with Turbo (safe to
+  # cache), then invoke vitest directly.
+  test-web:
+    name: Test (web shard ${{ matrix.shard }}/4)
+    needs: install
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Turborepo
+        uses: actions/cache@v6
+        with:
+          path: .turbo
+          key: turbo-test-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-test-${{ runner.os }}-
+
+      - name: Build workspace dependencies
+        run: pnpm turbo run build --filter=@concert-crawl/web^...
+
+      - name: Test
+        run: pnpm --filter @concert-crawl/web exec vitest run --shard=${{ matrix.shard }}/4
+
+  test-packages:
+    name: Test (packages)
     needs: install
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -161,14 +210,28 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .turbo
-          key: turbo-test-expB-${{ runner.os }}-${{ github.sha }}
-          restore-keys: turbo-test-expB-${{ runner.os }}-
-
-      - name: Runner capacity
-        run: node -e "const os=require('os');console.log('cpus',os.cpus().length,'avail',os.availableParallelism(),'memGB',(os.totalmem()/1e9).toFixed(1))"
+          key: turbo-test-pkg-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-test-pkg-${{ runner.os }}-
 
       - name: Test
-        run: pnpm test
+        run: pnpm turbo run test --filter=!@concert-crawl/web
+
+  # Keeps a check literally named "Test" so the branch-protection rule does not
+  # have to change. `if: always()` matters — without it this job would be skipped
+  # when a shard fails, and a skipped required check never resolves.
+  test:
+    name: Test
+    needs: [test-web, test-packages]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check shard results
+        run: |
+          echo "web shards: ${{ needs.test-web.result }}"
+          echo "packages:   ${{ needs.test-packages.result }}"
+          [ "${{ needs.test-web.result }}" = "success" ] || exit 1
+          [ "${{ needs.test-packages.result }}" = "success" ] || exit 1
 
   build:
     name: Build
