@@ -40,7 +40,7 @@ const DAY_MS = 24 * 60 * 60 * 1000
 // strings, so the tests pin the real ones rather than the prototype's mocks:
 //   packages/push/src/definitions/copy.ts            (watch.*)
 //   apps/api/src/lib/contest-notifications.ts        (contest.*)
-//   packages/crawler-core/.../spotify-fanout/copy.ts (spotify.new_show)
+//   packages/crawler-core/.../artist-fanout/copy.ts (spotify.new_show)
 const PRICE_DROP = {
   category: 'watch.pricedrop',
   title: '$28 tickets for Geese at Bluebird Theater just went on sale.',

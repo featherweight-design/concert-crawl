@@ -103,7 +103,7 @@ const shortDate = (raw: string): string => {
 
 // Compose the notification title + body for a given category. Copy templates
 // live in ./definitions/copy.ts (centralized per convention — see
-// packages/crawler-core/src/lib/spotify-fanout/definitions/copy.ts). Categories
+// packages/crawler-core/src/lib/artist-fanout/definitions/copy.ts). Categories
 // that don't fan out through this helper (contest.*, spotify.new_show, crew.*)
 // return empty strings so the caller can skip the write.
 const composeMessage = (

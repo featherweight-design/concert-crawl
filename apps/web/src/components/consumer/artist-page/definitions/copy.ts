@@ -26,7 +26,7 @@ export const ARTIST_COPY = {
   // your Watching. It doesn't: the Spotify fan-out that auto-watches shows is
   // scoped to `spotify_followed` / `spotify_top` sources, while this button
   // writes `source: 'manual'` (see packages/crawler-core/src/lib/
-  // spotify-fanout — and issue #1306, which is the deliberate scope call).
+  // artist-fanout — and issue #1306, which is the deliberate scope call).
   // The staging walk for Gate 5 followed an artist with two upcoming shows and
   // /watching still read "0 shows". The behaviour stays; the claim goes.
   follow: 'Follow',

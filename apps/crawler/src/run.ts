@@ -6,7 +6,7 @@ import { db, venues, crawlTriggers, events } from '@concert-crawl/db'
 import { eq, and, isNull, lt, sql } from 'drizzle-orm'
 import {
   crawlVenue,
-  runSpotifyFanoutSafely,
+  runArtistFanoutSafely,
   sweepStaleEvents,
   tagEventsWithGenres,
   type CrossVenueCandidate,
@@ -240,7 +240,7 @@ export async function runTriggeredCrawls(): Promise<{ processed: number }> {
           // events. Awaited (not detached) because this process hard-exits
           // via process.exit(0) — a floating promise would be severed
           // (#649). Never throws; a fan-out bug cannot fail the trigger.
-          await runSpotifyFanoutSafely(crawlRun.insertedEventIds)
+          await runArtistFanoutSafely(crawlRun.insertedEventIds)
         }
         const triggerStatus = crawlRun.status === 'failed' ? 'failed' : 'done'
         await db
@@ -376,7 +376,7 @@ export async function runDailyCrawl(): Promise<{
               await runPricesForVenue(batch[idx].id)
               // #763 §10.1 — same awaited-never-throwing fan-out as the
               // triggered path (see comment there).
-              await runSpotifyFanoutSafely(result.value.insertedEventIds)
+              await runArtistFanoutSafely(result.value.insertedEventIds)
             }
           }
         } else {

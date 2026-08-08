@@ -11,7 +11,7 @@
 // (design lock): auto-watch users are told the show is already on their
 // Watching list; highlight-only users get the tap-to-watch invite.
 
-export const spotifyNewShowCopy = {
+export const newShowCopy = {
   title: (artist: string): string => `${artist}: new Denver date`,
   autoWatchBody: (venueName: string, dateLabel: string): string =>
     `${venueName} · ${dateLabel}. Added to your Watching.`,

@@ -11,7 +11,7 @@ import {
   userSpotifyConnections,
   venues,
 } from '@concert-crawl/db'
-import { runSpotifyFanout, runSpotifyFanoutSafely } from './index.js'
+import { runArtistFanout, runArtistFanoutSafely } from './index.js'
 
 // Real-Postgres coverage for the #763 §10.1 fan-out: the exactly-once
 // spotify_alert_log claims, the free/premium channel gating, and the §9.1
@@ -132,7 +132,7 @@ beforeEach(async () => {
   await clearFanoutState()
 })
 
-describe('runSpotifyFanout — channel gating (#763 §10.1)', () => {
+describe('runArtistFanout — channel gating (#763 §10.1)', () => {
   it('free tier gets auto-watch only; premium gets push + tray row', async () => {
     const venueId = await seedVenue('Fillmore')
     const eventId = await seedEvent({
@@ -155,7 +155,7 @@ describe('runSpotifyFanout — channel gating (#763 §10.1)', () => {
     await seedPremiumSubscription(PREMIUM_USER)
 
     const sendPush = makeSendPush()
-    const summary = await runSpotifyFanout([eventId], {
+    const summary = await runArtistFanout([eventId], {
       sendPush,
       getRole: noRole,
     })
@@ -223,7 +223,7 @@ describe('runSpotifyFanout — channel gating (#763 §10.1)', () => {
     await seedPremiumSubscription(PREMIUM_USER)
 
     const sendPush = makeSendPush()
-    const summary = await runSpotifyFanout([eventId], {
+    const summary = await runArtistFanout([eventId], {
       sendPush,
       getRole: noRole,
     })
@@ -252,7 +252,7 @@ describe('runSpotifyFanout — channel gating (#763 §10.1)', () => {
     await seedPremiumSubscription(PREMIUM_USER)
 
     const sendPush = makeSendPush()
-    const summary = await runSpotifyFanout([eventId], {
+    const summary = await runArtistFanout([eventId], {
       sendPush,
       getRole: noRole,
     })
@@ -283,7 +283,7 @@ describe('runSpotifyFanout — channel gating (#763 §10.1)', () => {
       .insert(userEvents)
       .values({ userId: FREE_USER, eventId, status: 'going' })
 
-    const summary = await runSpotifyFanout([eventId], {
+    const summary = await runArtistFanout([eventId], {
       sendPush: makeSendPush(),
       getRole: noRole,
     })
@@ -300,7 +300,7 @@ describe('runSpotifyFanout — channel gating (#763 §10.1)', () => {
   })
 })
 
-describe('runSpotifyFanout — matching + idempotency', () => {
+describe('runArtistFanout — matching + idempotency', () => {
   it('matches via canonical_supporting overlap', async () => {
     const venueId = await seedVenue('Fillmore')
     const eventId = await seedEvent({
@@ -315,7 +315,7 @@ describe('runSpotifyFanout — matching + idempotency', () => {
       autoWatch: true,
     })
 
-    const summary = await runSpotifyFanout([eventId], {
+    const summary = await runArtistFanout([eventId], {
       sendPush: makeSendPush(),
       getRole: noRole,
     })
@@ -344,11 +344,11 @@ describe('runSpotifyFanout — matching + idempotency', () => {
     await seedPremiumSubscription(PREMIUM_USER)
 
     const sendPush = makeSendPush()
-    const first = await runSpotifyFanout([eventId], {
+    const first = await runArtistFanout([eventId], {
       sendPush,
       getRole: noRole,
     })
-    const second = await runSpotifyFanout([eventId], {
+    const second = await runArtistFanout([eventId], {
       sendPush,
       getRole: noRole,
     })
@@ -395,7 +395,7 @@ describe('runSpotifyFanout — matching + idempotency', () => {
       status: 'revoked',
     })
 
-    const summary = await runSpotifyFanout([visibleId, hiddenId], {
+    const summary = await runArtistFanout([visibleId, hiddenId], {
       sendPush: makeSendPush(),
       getRole: noRole,
     })
@@ -412,7 +412,7 @@ describe('runSpotifyFanout — matching + idempotency', () => {
   })
 })
 
-describe('runSpotifyFanout — failure isolation', () => {
+describe('runArtistFanout — failure isolation', () => {
   it('a throwing sendPush is counted and logged, and auto-watch is unaffected', async () => {
     const venueId = await seedVenue('Fillmore')
     const eventId = await seedEvent({
@@ -429,7 +429,7 @@ describe('runSpotifyFanout — failure isolation', () => {
     await seedPremiumSubscription(PREMIUM_USER)
 
     const sendPush = vi.fn().mockRejectedValue(new Error('push transport down'))
-    const summary = await runSpotifyFanout([eventId], {
+    const summary = await runArtistFanout([eventId], {
       sendPush,
       getRole: noRole,
     })
@@ -443,19 +443,19 @@ describe('runSpotifyFanout — failure isolation', () => {
     expect(watch).toHaveLength(1)
   })
 
-  it('runSpotifyFanoutSafely never throws — a run-level failure returns null', async () => {
+  it('runArtistFanoutSafely never throws — a run-level failure returns null', async () => {
     // A malformed uuid makes the initial events query itself throw (Postgres
     // uuid parse error) — the run-level failure mode Safely must swallow so
     // a fan-out bug can never fail a crawl.
-    const summary = await runSpotifyFanoutSafely(['not-a-uuid'], {
+    const summary = await runArtistFanoutSafely(['not-a-uuid'], {
       sendPush: makeSendPush(),
       getRole: noRole,
     })
     expect(summary).toBeNull()
   })
 
-  it('runSpotifyFanoutSafely passes through a successful summary', async () => {
-    const summary = await runSpotifyFanoutSafely([], {
+  it('runArtistFanoutSafely passes through a successful summary', async () => {
+    const summary = await runArtistFanoutSafely([], {
       sendPush: makeSendPush(),
       getRole: noRole,
     })
@@ -463,7 +463,7 @@ describe('runSpotifyFanout — failure isolation', () => {
   })
 })
 
-describe('runSpotifyFanout — native follows', () => {
+describe('runArtistFanout — native follows', () => {
   it('notifies a manual follower who has no Spotify connection at all', async () => {
     const venueId = await seedVenue('Fillmore')
     const eventId = await seedEvent({
@@ -478,7 +478,7 @@ describe('runSpotifyFanout — native follows', () => {
     await seedPremiumSubscription(PREMIUM_USER)
 
     const sendPush = makeSendPush()
-    const summary = await runSpotifyFanout([eventId], {
+    const summary = await runArtistFanout([eventId], {
       sendPush,
       getRole: noRole,
     })
@@ -500,7 +500,7 @@ describe('runSpotifyFanout — native follows', () => {
     })
     await seedPremiumSubscription(PREMIUM_USER)
 
-    const summary = await runSpotifyFanout([eventId], {
+    const summary = await runArtistFanout([eventId], {
       sendPush: makeSendPush(),
       getRole: noRole,
     })
@@ -534,7 +534,7 @@ describe('runSpotifyFanout — native follows', () => {
     await seedPremiumSubscription(PREMIUM_USER)
 
     const sendPush = makeSendPush()
-    const summary = await runSpotifyFanout([eventId], {
+    const summary = await runArtistFanout([eventId], {
       sendPush,
       getRole: noRole,
     })
@@ -562,7 +562,7 @@ describe('runSpotifyFanout — native follows', () => {
     await seedPremiumSubscription(PREMIUM_USER)
 
     const sendPush = makeSendPush()
-    const summary = await runSpotifyFanout([eventId], {
+    const summary = await runArtistFanout([eventId], {
       sendPush,
       getRole: noRole,
     })
@@ -584,7 +584,7 @@ describe('runSpotifyFanout — native follows', () => {
     })
 
     const sendPush = makeSendPush()
-    const summary = await runSpotifyFanout([eventId], {
+    const summary = await runArtistFanout([eventId], {
       sendPush,
       getRole: noRole,
     })

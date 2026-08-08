@@ -94,14 +94,14 @@ const mockCrawlVenue = vi.fn().mockResolvedValue({
   insertedEventIds: [],
 })
 const mockTagEventsWithGenres = vi.fn().mockResolvedValue(undefined)
-// Contract: runSpotifyFanoutSafely never throws (it swallows internally), so
+// Contract: runArtistFanoutSafely never throws (it swallows internally), so
 // the resolved-null default is its worst-case observable behavior.
-const mockRunSpotifyFanoutSafely = vi.fn().mockResolvedValue(null)
+const mockRunArtistFanoutSafely = vi.fn().mockResolvedValue(null)
 const mockSweepStaleEvents = vi.fn().mockResolvedValue({ cancelled: 0 })
 vi.mock('@concert-crawl/crawler-core', () => ({
   crawlVenue: mockCrawlVenue,
   tagEventsWithGenres: mockTagEventsWithGenres,
-  runSpotifyFanoutSafely: mockRunSpotifyFanoutSafely,
+  runArtistFanoutSafely: mockRunArtistFanoutSafely,
   sweepStaleEvents: mockSweepStaleEvents,
 }))
 
@@ -139,7 +139,7 @@ describe('runDailyCrawl', () => {
     mockCrawlVenue.mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
     mockBrowser.close.mockResolvedValue(undefined)
     mockRunPricePipeline.mockResolvedValue(undefined)
-    mockRunSpotifyFanoutSafely.mockResolvedValue(null)
+    mockRunArtistFanoutSafely.mockResolvedValue(null)
     mockSentryCaptureException.mockReset()
     mockSentryLoggerInfo.mockReset()
     mockSentryLoggerWarn.mockReset()
@@ -340,8 +340,8 @@ describe('runDailyCrawl', () => {
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
 
-    expect(mockRunSpotifyFanoutSafely).toHaveBeenCalledTimes(4)
-    expect(mockRunSpotifyFanoutSafely).toHaveBeenCalledWith([
+    expect(mockRunArtistFanoutSafely).toHaveBeenCalledTimes(4)
+    expect(mockRunArtistFanoutSafely).toHaveBeenCalledWith([
       'evt-new-1',
       'evt-new-2',
       'evt-new-3',
@@ -357,12 +357,12 @@ describe('runDailyCrawl', () => {
     const { runDailyCrawl } = await import('./run.js')
     await runDailyCrawl()
 
-    expect(mockRunSpotifyFanoutSafely).not.toHaveBeenCalled()
+    expect(mockRunArtistFanoutSafely).not.toHaveBeenCalled()
   })
 
   it('daily crawl counts are unaffected when the fan-out reports a run-level failure (#763)', async () => {
-    // null = runSpotifyFanoutSafely swallowed a run-level error internally.
-    mockRunSpotifyFanoutSafely.mockResolvedValue(null)
+    // null = runArtistFanoutSafely swallowed a run-level error internally.
+    mockRunArtistFanoutSafely.mockResolvedValue(null)
     const { runDailyCrawl } = await import('./run.js')
     const result = await runDailyCrawl()
 
@@ -508,7 +508,7 @@ describe('runTriggeredCrawls', () => {
     mockCrawlVenue.mockResolvedValue(SUCCESSFUL_CRAWL_RUN)
     mockBrowser.close.mockResolvedValue(undefined)
     mockRunPricePipeline.mockResolvedValue(undefined)
-    mockRunSpotifyFanoutSafely.mockResolvedValue(null)
+    mockRunArtistFanoutSafely.mockResolvedValue(null)
     mockSentryCaptureException.mockReset()
     mockSentryLoggerInfo.mockReset()
     mockSentryLoggerWarn.mockReset()
@@ -723,8 +723,8 @@ describe('runTriggeredCrawls', () => {
     const { runTriggeredCrawls } = await import('./run.js')
     await runTriggeredCrawls()
 
-    expect(mockRunSpotifyFanoutSafely).toHaveBeenCalledTimes(2)
-    expect(mockRunSpotifyFanoutSafely).toHaveBeenCalledWith([
+    expect(mockRunArtistFanoutSafely).toHaveBeenCalledTimes(2)
+    expect(mockRunArtistFanoutSafely).toHaveBeenCalledWith([
       'evt-new-1',
       'evt-new-2',
       'evt-new-3',
@@ -740,7 +740,7 @@ describe('runTriggeredCrawls', () => {
     const { runTriggeredCrawls } = await import('./run.js')
     await runTriggeredCrawls()
 
-    expect(mockRunSpotifyFanoutSafely).not.toHaveBeenCalled()
+    expect(mockRunArtistFanoutSafely).not.toHaveBeenCalled()
   })
 
   it('calls Sentry.captureException when crawlVenue resolves with status: failed', async () => {

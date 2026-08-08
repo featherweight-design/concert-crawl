@@ -39,13 +39,13 @@ export {
   type TicketLinkVenueContext,
 } from './lib/ticket-links/index.js'
 export {
-  runSpotifyFanout,
-  runSpotifyFanoutSafely,
-} from './lib/spotify-fanout/index.js'
+  runArtistFanout,
+  runArtistFanoutSafely,
+} from './lib/artist-fanout/index.js'
 export type {
-  SpotifyFanoutDeps,
-  SpotifyFanoutSummary,
-} from './lib/spotify-fanout/index.js'
+  ArtistFanoutDeps,
+  ArtistFanoutSummary,
+} from './lib/artist-fanout/index.js'
 export {
   sweepStaleEvents,
   STALE_EVENT_CANCEL_DAYS,

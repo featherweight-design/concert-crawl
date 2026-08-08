@@ -1,5 +1,5 @@
-// Spotify new-show fan-out (#763 eng spec §10.1). After a venue crawl
-// persists its events, the crawler calls runSpotifyFanoutSafely with the
+// New-show fan-out (#763 eng spec §10.1). After a venue crawl
+// persists its events, the crawler calls runArtistFanoutSafely with the
 // venue's *inserted* (brand-new) event ids. For every user whose follows
 // match a new event (§9.1 canonical rule) — from ANY source, Spotify-synced
 // or followed natively in-app:
@@ -18,7 +18,7 @@
 // spotify_alert_log FIRST via onConflictDoNothing().returning() — a re-crawl
 // or retry that reaches the same pair simply fails to claim and does nothing.
 //
-// Failure isolation: runSpotifyFanoutSafely never throws (async-catch rule) —
+// Failure isolation: runArtistFanoutSafely never throws (async-catch rule) —
 // a fan-out bug can never fail a crawl. It is AWAITED by the crawler rather
 // than detached because both crawler entrypoints hard-exit via
 // process.exit(0), which would sever a floating promise mid-flight (the same
@@ -45,9 +45,9 @@ import {
 } from '@concert-crawl/push'
 import type { PlanState } from '@concert-crawl/types'
 import { z } from 'zod'
-import { newShowDateLabel, spotifyNewShowCopy } from './definitions/copy.js'
+import { newShowDateLabel, newShowCopy } from './definitions/copy.js'
 
-const fanoutLogger = createLogger('spotify-fanout')
+const fanoutLogger = createLogger('artist-fanout')
 
 const NEW_SHOW_CATEGORY = 'spotify.new_show'
 
@@ -71,7 +71,7 @@ const fetchClerkRole = async (userId: string): Promise<string | undefined> => {
   } catch (err) {
     fanoutLogger.warn(
       { err, userId },
-      'spotify-fanout: Clerk role fetch failed — deriving plan without it',
+      'artist-fanout: Clerk role fetch failed — deriving plan without it',
     )
     return undefined
   }
@@ -121,7 +121,7 @@ const loadPlanStateForUser = async (
   })
 }
 
-export interface SpotifyFanoutDeps {
+export interface ArtistFanoutDeps {
   // Injectable for tests; production uses the real Web Push sender.
   sendPush?: (input: SendPushInput) => Promise<unknown>
   // Injectable for tests; production lazily fetches the Clerk role.
@@ -129,7 +129,7 @@ export interface SpotifyFanoutDeps {
   now?: Date
 }
 
-export interface SpotifyFanoutSummary {
+export interface ArtistFanoutSummary {
   newEvents: number
   matchedPairs: number
   autoWatched: number
@@ -137,7 +137,7 @@ export interface SpotifyFanoutSummary {
   failures: number
 }
 
-const EMPTY_SUMMARY: SpotifyFanoutSummary = {
+const EMPTY_SUMMARY: ArtistFanoutSummary = {
   newEvents: 0,
   matchedPairs: 0,
   autoWatched: 0,
@@ -167,10 +167,10 @@ const claimAlert = async (
   return claimed.length > 0
 }
 
-export async function runSpotifyFanout(
+export async function runArtistFanout(
   insertedEventIds: string[],
-  deps: SpotifyFanoutDeps = {},
-): Promise<SpotifyFanoutSummary> {
+  deps: ArtistFanoutDeps = {},
+): Promise<ArtistFanoutSummary> {
   if (insertedEventIds.length === 0) return { ...EMPTY_SUMMARY }
 
   const sendPush = deps.sendPush ?? sendPushForNotification
@@ -198,7 +198,7 @@ export async function runSpotifyFanout(
       ),
     )
 
-  const summary: SpotifyFanoutSummary = {
+  const summary: ArtistFanoutSummary = {
     ...EMPTY_SUMMARY,
     newEvents: newEvents.length,
   }
@@ -311,11 +311,11 @@ export async function runSpotifyFanout(
               'push',
             )
             if (claimed) {
-              const title = spotifyNewShowCopy.title(event.artist)
+              const title = newShowCopy.title(event.artist)
               const dateLabel = newShowDateLabel(event.date)
               const body = connection.autoWatch
-                ? spotifyNewShowCopy.autoWatchBody(event.venueName, dateLabel)
-                : spotifyNewShowCopy.highlightBody(event.venueName, dateLabel)
+                ? newShowCopy.autoWatchBody(event.venueName, dateLabel)
+                : newShowCopy.highlightBody(event.venueName, dateLabel)
               const actionUrl = `/events/${event.id}`
               // Tray row first (#737 back-fill), then push — sendPush is
               // best-effort and never throws, so a delivery failure still
@@ -347,7 +347,7 @@ export async function runSpotifyFanout(
         summary.failures += 1
         fanoutLogger.error(
           { err, userId: connection.userId, eventId: event.id },
-          'spotify-fanout: user/event pair failed',
+          'artist-fanout: user/event pair failed',
         )
       }
     }
@@ -358,20 +358,20 @@ export async function runSpotifyFanout(
 
 // Crawler-facing wrapper: never throws (a fan-out bug can never fail a
 // crawl). Returns null on a run-level failure so callers can log-and-move-on.
-export async function runSpotifyFanoutSafely(
+export async function runArtistFanoutSafely(
   insertedEventIds: string[],
-  deps: SpotifyFanoutDeps = {},
-): Promise<SpotifyFanoutSummary | null> {
+  deps: ArtistFanoutDeps = {},
+): Promise<ArtistFanoutSummary | null> {
   try {
-    const summary = await runSpotifyFanout(insertedEventIds, deps)
+    const summary = await runArtistFanout(insertedEventIds, deps)
     if (summary.newEvents > 0) {
-      fanoutLogger.info({ summary }, 'spotify-fanout: run complete')
+      fanoutLogger.info({ summary }, 'artist-fanout: run complete')
     }
     return summary
   } catch (err) {
     fanoutLogger.error(
       { err, insertedCount: insertedEventIds.length },
-      'spotify-fanout: run failed — crawl unaffected',
+      'artist-fanout: run failed — crawl unaffected',
     )
     return null
   }
