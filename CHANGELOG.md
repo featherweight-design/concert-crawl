@@ -1,3 +1,17 @@
+# [1.223.0](https://github.com/HartiganHM/concert-crawl/compare/v1.222.1...v1.223.0) (2026-08-08)
+
+
+### Bug Fixes
+
+* **crews:** distinguish a failed lens load from a crew going to nothing ([ead3afa](https://github.com/HartiganHM/concert-crawl/commit/ead3afac1014162a01469df0500e718cb7f9d9fc))
+* **crews:** give the lens picker radio semantics and clearer SR wording ([f19dc19](https://github.com/HartiganHM/concert-crawl/commit/f19dc198df4801aad2b75793e4a39b7323380286))
+* **crews:** make the lens picker keyboard-navigable as one radiogroup ([96a1157](https://github.com/HartiganHM/concert-crawl/commit/96a11570c89695a89dfb9a23b1f564ad1d4b713b))
+
+
+### Features
+
+* **crews:** browse crew lens and crew presence on rows and detail ([129c78c](https://github.com/HartiganHM/concert-crawl/commit/129c78c18c5d812b1178a79925073078d98815d6)), closes [#1226](https://github.com/HartiganHM/concert-crawl/issues/1226)
+
 ## [1.222.1](https://github.com/HartiganHM/concert-crawl/compare/v1.222.0...v1.222.1) (2026-08-07)
 
 
