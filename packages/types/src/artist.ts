@@ -75,9 +75,83 @@ export interface ArtistSearchResult {
   photoUrl: string | null
   /** Consumer-visible upcoming shows. May be 0 for an artist with only past shows. */
   upcomingShowCount: number
+  /**
+   * Whether the requesting viewer follows this artist, from ANY source. Always
+   * `false` for an anonymous request — the search route stays public, so there
+   * is no session to read.
+   */
+  following: boolean
 }
 
 /** Response body for POST/DELETE `/v1/artists/:slug/follow`. */
 export interface ArtistFollowResponse {
   following: boolean
 }
+
+/**
+ * Every way a `user_artist_follows` row can come into existence. Ground truth
+ * for `artistFollowSourceEnum` (`packages/db/src/schema/social.ts`), which is
+ * declared from this tuple so the DB enum and the API contract cannot drift.
+ * There is no bare `'spotify'` value — a Spotify-sourced follow is one of the
+ * two `spotify_*` members.
+ */
+export const ARTIST_FOLLOW_SOURCES = [
+  'manual',
+  'spotify_followed',
+  'spotify_top',
+] as const
+
+export type ArtistFollowSource = (typeof ARTIST_FOLLOW_SOURCES)[number]
+
+/**
+ * The artist's next consumer-visible Denver date. Null on a `FollowedArtist`
+ * is a normal, common case — "played Denver before, nothing upcoming" — not an
+ * error, and the row still renders a live follow affordance (eng spec §5.1).
+ */
+export interface FollowedArtistNextShow {
+  eventId: string
+  /** `YYYY-MM-DD`, straight from `events.date` — no timezone conversion. */
+  iso: string
+  venue: string
+  venueSlug: string
+}
+
+/** One row of `GET /v1/me/artist-follows`. */
+export interface FollowedArtist {
+  /** Display name from the follow row, not the projection. */
+  name: string
+  /**
+   * Null when no `artists` projection row matches (or it is hidden) — a
+   * Spotify-synced follow for an act that has never been billed in Denver has
+   * no page to route to. The UI renders the name without a link.
+   */
+  slug: string | null
+  canonicalName: string
+  photoUrl: string | null
+  source: ArtistFollowSource
+  /** ISO-8601 timestamp of `user_artist_follows.created_at`. */
+  followedAt: string
+  nextShow: FollowedArtistNextShow | null
+}
+
+/**
+ * Per-slug outcome of `POST /v1/me/artist-follows/bulk`. `already_following`
+ * is a SUCCESS — the endpoint is idempotent, so re-committing a selection that
+ * partially landed is never a conflict.
+ */
+export type BulkFollowStatus =
+  'followed' | 'already_following' | 'artist_not_found'
+
+export interface BulkFollowResult {
+  slug: string
+  status: BulkFollowStatus
+}
+
+export interface BulkFollowResponse {
+  results: BulkFollowResult[]
+  /** Slugs newly followed by this call — the count of `status: 'followed'`. */
+  followedCount: number
+}
+
+/** Hard cap on `POST /v1/me/artist-follows/bulk` body length. */
+export const BULK_FOLLOW_MAX_SLUGS = 50

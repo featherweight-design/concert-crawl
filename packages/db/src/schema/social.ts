@@ -11,6 +11,7 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
+import { ARTIST_FOLLOW_SOURCES } from '@concert-crawl/types'
 import { events } from './events.js'
 
 /**
@@ -75,11 +76,13 @@ export const userEvents = pgTable(
   }),
 )
 
-export const artistFollowSourceEnum = pgEnum('artist_follow_source', [
-  'manual',
-  'spotify_followed',
-  'spotify_top',
-])
+// Declared from the shared tuple in @concert-crawl/types so the DB enum and
+// the `ArtistFollowSource` API contract cannot drift. Same values, same order
+// as before — drizzle-kit sees no diff.
+export const artistFollowSourceEnum = pgEnum(
+  'artist_follow_source',
+  ARTIST_FOLLOW_SOURCES,
+)
 
 export const userArtistFollows = pgTable(
   'user_artist_follows',

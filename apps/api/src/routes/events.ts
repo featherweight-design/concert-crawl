@@ -40,9 +40,11 @@ import {
   vendorTrustRank,
   type AvailabilityDay,
   type EventsAvailabilityResponse,
+  type PlanState,
   type SourceCategory,
   type Tier,
 } from '@concert-crawl/types'
+import { followedArtistsCondition } from '../lib/artist-follows.js'
 import { resolveArtistSlugs } from '../lib/artist-slugs.js'
 import { getEventWatchers } from '../lib/event-watchers.js'
 import { isImminentEvent, todayInTimezone } from '../lib/time.js'
@@ -84,6 +86,9 @@ const listEventsSchema = z.object({
   // Taste filter (#763 PR 7, §9.3) — presence flag; only '1' is valid so a
   // tampered value fails validation instead of silently passing unfiltered.
   taste: z.literal('1').optional(),
+  // "My artists" scope filter (native following, §7.1) — same presence-flag
+  // shape as `taste`, for the same reason.
+  following: z.literal('1').optional(),
 })
 
 // Shape of the custom claims added by our Clerk JWT template — same contract
@@ -140,12 +145,89 @@ eventsRouter.get(
       filterPrice,
       filterVibe,
       taste,
+      following,
     } = ctx.req.valid('query')
 
     // Resolved up front (getAuth is a local JWT read — no network/DB cost)
-    // because the taste gate below needs it before any query runs; the
+    // because the scope gates below need it before any query runs; the
     // followedArtists overlay after the queries reuses the same value.
     const listAuth = getAuth(ctx)
+
+    // ── Scope-flag gates ───────────────────────────────────────────────────
+    // Run before ANY other filter so an unknown venueSlug can't short-circuit
+    // to a 200 and hide a 401/403 the client needs to route on.
+    //
+    // taste=1 (#763 PR 7, §9.3) narrows the list to events matching the
+    // viewer's Spotify-sourced follow rows. following=1 (native following,
+    // §7.1) does the same over follow rows of EVERY source. Both are
+    // entitlement-gated inline — this route is public, so requireFeature can't
+    // mount route-wide: anonymous → 401, a plan without the feature → 403 with
+    // the same typed body the middleware emits, so the web client's
+    // locked-surface routing works identically. An entitled viewer with zero
+    // matching rows gets an empty 200 (the EXISTS matches nothing).
+    //
+    // Both flags can arrive together, so plan state is resolved at most once.
+    const scopeConditions: SQL[] = []
+    let cachedPlanState: PlanState | null = null
+    const listPlanState = async (userId: string): Promise<PlanState> => {
+      if (cachedPlanState) return cachedPlanState
+      const claims = listClaimsSchema.safeParse(listAuth?.sessionClaims)
+      const metadata = claims.success ? claims.data.metadata : undefined
+      cachedPlanState = await loadPlanState(userId, metadata)
+      return cachedPlanState
+    }
+
+    if (taste) {
+      if (!listAuth?.userId) {
+        return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+      }
+      const planState = await listPlanState(listAuth.userId)
+      if (!canUseFeature(planState, 'spotify-sync')) {
+        apiLogger.debug(
+          { userId: listAuth.userId, plan: planState.plan },
+          'taste filter entitlement denied',
+        )
+        return ctx.json(
+          {
+            success: false,
+            error: 'This feature requires an upgraded plan',
+            code: ENTITLEMENT_REQUIRED_CODE,
+            feature: 'spotify-sync',
+          },
+          403,
+        )
+      }
+      scopeConditions.push(spotifyTasteCondition(listAuth.userId))
+    }
+
+    if (following) {
+      if (!listAuth?.userId) {
+        return ctx.json({ success: false, error: 'Unauthorized' }, 401)
+      }
+      const planState = await listPlanState(listAuth.userId)
+      if (!canUseFeature(planState, 'following')) {
+        apiLogger.debug(
+          { userId: listAuth.userId, plan: planState.plan },
+          'following filter entitlement denied',
+        )
+        return ctx.json(
+          {
+            success: false,
+            error: 'This feature requires an upgraded plan',
+            code: ENTITLEMENT_REQUIRED_CODE,
+            feature: 'following',
+          },
+          403,
+        )
+      }
+      scopeConditions.push(followedArtistsCondition(listAuth.userId))
+    }
+
+    // The scope banner is a `role="status"` announcement, so it must never
+    // claim a filter that did not apply. Reaching here means the flag survived
+    // both gates; a rejected flag returned 401/403 above and the client renders
+    // the locked surface instead.
+    const followingApplied = Boolean(following)
 
     // Without the firstMissingAt filter, every LLM artist-string drift produces
     // a visible dupe (BASS BINGO – Wooli Edition showed 3 rows for one show on
@@ -154,6 +236,10 @@ eventsRouter.get(
       from: from ?? todayInTimezone('UTC'),
       statuses: SCHEDULED_STATUSES,
     })
+
+    // Shared conditions array — the EXISTS applies to both the count and row
+    // queries, so `total` reflects the filtered set.
+    conditions.push(...scopeConditions)
 
     if (to) {
       conditions.push(lte(events.date, to))
@@ -168,7 +254,7 @@ eventsRouter.get(
       if (!venue) {
         return ctx.json({
           success: true,
-          data: { data: [], total: 0, limit, offset },
+          data: { data: [], total: 0, limit, offset, followingApplied },
         })
       }
       conditions.push(eq(events.venueId, venue.id))
@@ -220,40 +306,6 @@ eventsRouter.get(
       conditions.push(
         sql`${events.genre} && ARRAY[${genrePlaceholders}]::text[]`,
       )
-    }
-
-    // taste=1 (#763 PR 7, §9.3) — narrows the list to events matching the
-    // viewer's Spotify-sourced follow rows. Entitlement-gated inline (this
-    // route is public, so requireFeature can't mount route-wide): anonymous
-    // → 401, plans without spotify-sync → 403 with the same typed body the
-    // middleware emits, so the web client's locked-surface routing works
-    // identically. Entitled viewers with zero Spotify rows get an empty 200
-    // (EXISTS matches nothing) — no special case per §6's purge invariant.
-    if (taste) {
-      if (!listAuth?.userId) {
-        return ctx.json({ success: false, error: 'Unauthorized' }, 401)
-      }
-      const claims = listClaimsSchema.safeParse(listAuth.sessionClaims)
-      const metadata = claims.success ? claims.data.metadata : undefined
-      const planState = await loadPlanState(listAuth.userId, metadata)
-      if (!canUseFeature(planState, 'spotify-sync')) {
-        apiLogger.debug(
-          { userId: listAuth.userId, plan: planState.plan },
-          'taste filter entitlement denied',
-        )
-        return ctx.json(
-          {
-            success: false,
-            error: 'This feature requires an upgraded plan',
-            code: ENTITLEMENT_REQUIRED_CODE,
-            feature: 'spotify-sync',
-          },
-          403,
-        )
-      }
-      // Shared conditions array — the EXISTS applies to both the count and
-      // row queries, so `total` reflects the filtered set.
-      conditions.push(spotifyTasteCondition(listAuth.userId))
     }
 
     const where = and(...conditions)
@@ -400,7 +452,7 @@ eventsRouter.get(
 
     return ctx.json({
       success: true,
-      data: { data: enrichedRows, total, limit, offset },
+      data: { data: enrichedRows, total, limit, offset, followingApplied },
     })
   },
 )

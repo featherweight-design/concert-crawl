@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import { z } from 'zod'
 import { db, artists, events, userEvents, venues } from '@concert-crawl/db'
 import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events'
@@ -15,6 +16,7 @@ import {
 } from 'drizzle-orm'
 import { canonicalizeArtist } from '@concert-crawl/types'
 import type { ArtistSearchResult } from '@concert-crawl/types'
+import { loadFollowedCanonicalNames } from '../lib/artist-follows.js'
 import { todayInTimezone } from '../lib/time.js'
 
 export const searchRouter = new Hono()
@@ -102,8 +104,12 @@ const artistSearchQuerySchema = z.string().trim().min(2).max(200)
 const escapeLikePattern = (raw: string): string =>
   raw.replace(/[\\%_]/g, (char) => `\\${char}`)
 
-// GET /v1/search/artists?q= — artists with their own page, no auth required
-searchRouter.get('/artists', async (ctx) => {
+// GET /v1/search/artists?q= — artists with their own page, no auth required.
+// clerkMiddleware() verifies any bearer JWT locally (no network/DB cost) so a
+// signed-in caller gets `following` stamped on each row; anonymous requests
+// pass straight through, skip the follow query, and read `following: false`.
+// The route stays PUBLIC — never mount requireAuth here.
+searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
   const parsed = artistSearchQuerySchema.safeParse(ctx.req.query('q'))
   if (!parsed.success) {
     return ctx.json({ success: false, error: 'Invalid search query' }, 400)
@@ -207,6 +213,14 @@ searchRouter.get('/artists', async (ctx) => {
     }
   }
 
+  // Follow state for the row's inline Follow button. Matched on the canonical
+  // name and NOT filtered by `source` — a Spotify-synced follow and a native
+  // one are the same product concept, so both read as following.
+  const searchAuth = getAuth(ctx)
+  const followed = searchAuth?.userId
+    ? await loadFollowedCanonicalNames(searchAuth.userId)
+    : null
+
   // "At least one non-hidden event" is the gate — an artist whose only rows
   // are hidden or stale has a page with nothing on it, so it stays out of
   // search even though the projection row exists.
@@ -218,6 +232,7 @@ searchRouter.get('/artists', async (ctx) => {
       slug: row.slug,
       photoUrl: row.photoUrl,
       upcomingShowCount: upcomingCounts.get(row.canonicalName) ?? 0,
+      following: followed?.has(row.canonicalName) ?? false,
     }))
 
   return ctx.json({ success: true, data })

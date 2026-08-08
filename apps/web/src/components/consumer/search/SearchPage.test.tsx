@@ -213,6 +213,9 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
       slug: 'radiohead',
       photoUrl: null,
       upcomingShowCount: 2,
+      // PR 5 renders the inline Follow button off this; PR 3 only adds the
+      // field to the contract.
+      following: false,
     },
   ]
 
