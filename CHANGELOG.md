@@ -1,3 +1,17 @@
+# [1.231.0](https://github.com/HartiganHM/concert-crawl/compare/v1.230.0...v1.231.0) (2026-08-09)
+
+
+### Bug Fixes
+
+* **seed-staging:** day-anchor crew timestamps and guard the full crowd slice ([59dfa56](https://github.com/HartiganHM/concert-crawl/commit/59dfa5657e243d8f57960d406d47a8036eaeae0d))
+* **seed-staging:** seed an attending-only member on the crew past boundary ([c515c64](https://github.com/HartiganHM/concert-crawl/commit/c515c648e27b756525e3e88508db547ecf78cfc3))
+* **seed-staging:** stamp crew joins in roster order, not reversed ([0916817](https://github.com/HartiganHM/concert-crawl/commit/0916817f957abf606a0d15e49a3b785a14f58e29))
+
+
+### Features
+
+* **seed-staging:** seed Concert Crews fixtures for staging walks ([e98cb2e](https://github.com/HartiganHM/concert-crawl/commit/e98cb2e835490260052cb92ffeed6fa391db73cf))
+
 # [1.230.0](https://github.com/HartiganHM/concert-crawl/compare/v1.229.3...v1.230.0) (2026-08-09)
 
 
