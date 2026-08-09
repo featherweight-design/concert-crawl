@@ -394,6 +394,24 @@ describe('BillFollowBlock — "Follow all N"', () => {
     expect(screen.getByTestId('bill-follow-all')).toBeInTheDocument()
     expect(followButtons()).toHaveLength(0)
   })
+
+  // The downgrade case: a lapsed Premium viewer follows the whole bill, so
+  // there is nothing left to commit — but nothing is reachable either, and a
+  // block with no control in it is a dead surface.
+  it('keeps the locked action even when the viewer follows every act', () => {
+    planState.current = plan({ plan: 'supporter' })
+
+    render(
+      <BillFollowBlock
+        artists={BILL.map((artist) => ({ ...artist, following: true }))}
+        scaRegion={false}
+      />,
+    )
+
+    const bulk = screen.getByTestId('bill-follow-all')
+    expect(bulk).toHaveAttribute('aria-haspopup', 'dialog')
+    expect(bulk).toHaveTextContent(COPY.followAll(3))
+  })
 })
 
 describe('BillFollowBlock — a single row', () => {

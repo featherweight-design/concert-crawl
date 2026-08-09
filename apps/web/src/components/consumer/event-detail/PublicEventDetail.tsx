@@ -214,7 +214,11 @@ export const PublicEventDetail = ({
 
           {/* Under the CTA, in the main column — the same slot at every width.
               Neither event-detail screen has a right rail, so there is no
-              breakpoint at which this appears on one viewport only. */}
+              breakpoint at which this appears on one viewport only.
+
+              Truthy rather than a nullish check on purpose: the wrapper exists
+              only to space the block, so a falsy slot must draw no wrapper at
+              all rather than leave a bare 20px gap under the CTA. */}
           {billBlock && <div className="mt-5">{billBlock}</div>}
 
           {/* The one account-shaped thing on the page, and it points at

@@ -118,8 +118,17 @@ export const BillFollowBlock = ({
   // "Follow", so a bulk action beside it offers one decision twice. Locked is
   // the exception, because the rows are not drawn at all there (ED-05) and
   // this is the block's only control however many acts are on the bill.
-  const showBulk =
-    !signedOut && unfollowed.length > 0 && (locked || unfollowed.length > 1)
+  //
+  // Locked therefore counts the BILL, not what is left of it. A viewer who
+  // downgraded while following all three acts still has none of it reachable,
+  // which is the same reasoning that makes `bulkLabel` say "Follow all 3"
+  // there; keying the control off `unfollowed` instead would leave that
+  // viewer a block with no control in it at all.
+  const showBulk = signedOut
+    ? false
+    : locked
+      ? artists.length > 0
+      : unfollowed.length > 1
   const bulkLabel = COPY.followAll(locked ? artists.length : unfollowed.length)
 
   const onBulkClick = () => {
