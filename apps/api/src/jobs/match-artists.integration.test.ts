@@ -72,13 +72,29 @@ describe('runMatchArtists', () => {
               name: 'Khruangbin',
               images: [{ url: 'https://i.scdn.co/image/khru' }],
               popularity: 70,
+              genres: [],
+              spotifyUrl: null,
             },
           ]
         }
         if (query === 'nirvana') {
           return [
-            { id: 'sp_a', name: 'Nirvana', images: [], popularity: 90 },
-            { id: 'sp_b', name: 'NIRVANA', images: [], popularity: 40 },
+            {
+              id: 'sp_a',
+              name: 'Nirvana',
+              images: [],
+              popularity: 90,
+              genres: [],
+              spotifyUrl: null,
+            },
+            {
+              id: 'sp_b',
+              name: 'NIRVANA',
+              images: [],
+              popularity: 40,
+              genres: [],
+              spotifyUrl: null,
+            },
           ]
         }
         return []
@@ -109,6 +125,67 @@ describe('runMatchArtists', () => {
     expect(ambiguous?.matchCheckedAt).toEqual(NOW)
 
     expect((await readArtist(noMatchId))?.matchStatus).toBe('no_match')
+  })
+
+  // #1525 — the picker opens on this instead of re-running the same search.
+  it('snapshots the candidate list on every verdict, unhydrated', async () => {
+    const ambiguousId = await seedArtist({ canonicalName: 'nirvana' })
+    const noMatchId = await seedArtist({ canonicalName: 'nobody at all' })
+
+    await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async (query) =>
+        query === 'nirvana'
+          ? [
+              {
+                id: 'sp_a',
+                name: 'Nirvana',
+                images: [{ url: 'https://i.scdn.co/image/a' }],
+                popularity: 90,
+                genres: [],
+                spotifyUrl: null,
+              },
+              {
+                id: 'sp_b',
+                name: 'NIRVANA',
+                images: [],
+                popularity: 40,
+                genres: [],
+                spotifyUrl: null,
+              },
+            ]
+          : [],
+      ),
+    })
+
+    const ambiguous = await readArtist(ambiguousId)
+    expect(ambiguous?.spotifyCandidates).toEqual([
+      {
+        id: 'sp_a',
+        name: 'Nirvana',
+        imageUrl: 'https://i.scdn.co/image/a',
+        popularity: 90,
+        // `/search` carries no genres and the job spends no second call to get
+        // them — the picker hydrates lazily on first open.
+        genres: null,
+        spotifyUrl: null,
+      },
+      {
+        id: 'sp_b',
+        name: 'NIRVANA',
+        imageUrl: null,
+        popularity: 40,
+        genres: null,
+        spotifyUrl: null,
+      },
+    ])
+    expect(ambiguous?.spotifyCandidatesFetchedAt).toEqual(NOW)
+
+    // An empty search is still an answer: the picker should show "nothing
+    // found" from cache rather than paying to rediscover it.
+    const noMatch = await readArtist(noMatchId)
+    expect(noMatch?.spotifyCandidates).toEqual([])
+    expect(noMatch?.spotifyCandidatesFetchedAt).toEqual(NOW)
   })
 
   it('selects oldest-checked rows first and caps at the batch size', async () => {
@@ -227,6 +304,8 @@ describe('runMatchArtists', () => {
           name: 'Khruangbin',
           images: [{ url: 'https://i.scdn.co/image/renewed' }],
           popularity: 70,
+          genres: [],
+          spotifyUrl: null,
         },
       ]),
     })
@@ -261,6 +340,10 @@ describe('runMatchArtists', () => {
     expect(row?.spotifyArtistId).toBe('sp_khru')
     expect(row?.photoUrl).toBe('https://i.scdn.co/image/expired')
     expect(row?.matchCheckedAt).toEqual(NOW)
+    // The verdict is held back; the snapshot is not. It means "what the last
+    // search returned", and a matched row is no exception.
+    expect(row?.spotifyCandidates).toEqual([])
+    expect(row?.spotifyCandidatesFetchedAt).toEqual(NOW)
   })
 
   it(`retries a no_match row checked over ${NO_MATCH_RETRY_DAYS} days ago`, async () => {
@@ -280,6 +363,8 @@ describe('runMatchArtists', () => {
           name: 'Khruangbin',
           images: [{ url: 'https://i.scdn.co/image/khru' }],
           popularity: 70,
+          genres: [],
+          spotifyUrl: null,
         },
       ]),
     })

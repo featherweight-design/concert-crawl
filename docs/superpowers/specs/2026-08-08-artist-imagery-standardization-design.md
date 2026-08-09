@@ -22,18 +22,18 @@ The consequence is that we show generated art on events for which we hold a perf
 
 Neon project `small-bird-62431126`, `events` filtered to `date >= current_date AND NOT hidden_from_consumer`.
 
-| Upcoming consumer-visible events | Count | Share |
-|---|---:|---:|
-| Total | 990 | 100% |
-| Has venue `image_url` | 380 | 38.4% |
-| No venue image, but headliner has a Spotify photo | 317 | 32.0% |
-| Neither — IdentityArt is the only option | 293 | 29.6% |
+| Upcoming consumer-visible events                  | Count | Share |
+| ------------------------------------------------- | ----: | ----: |
+| Total                                             |   990 |  100% |
+| Has venue `image_url`                             |   380 | 38.4% |
+| No venue image, but headliner has a Spotify photo |   317 | 32.0% |
+| Neither — IdentityArt is the only option          |   293 | 29.6% |
 
 | Artists with a consumer-visible page | Count | Share |
-|---|---:|---:|
-| Total | 1,621 | 100% |
-| Has `photo_url` | 737 | 45.5% |
-| No `photo_url` | 884 | 54.5% |
+| ------------------------------------ | ----: | ----: |
+| Total                                | 1,621 |  100% |
+| Has `photo_url`                      |   737 | 45.5% |
+| No `photo_url`                       |   884 | 54.5% |
 
 Photoless pageable artists by `match_status`: 326 `ambiguous`, 303 `no_match`, 249 `unmatched`, 6 `matched`.
 
@@ -45,10 +45,10 @@ Photoless pageable artists by `match_status`: 326 `ambiguous`, 303 `no_match`, 2
 
 > **Event surfaces prefer the event's own artwork; artist surfaces prefer the artist's own portrait; each falls to IdentityArt rather than borrowing across the boundary.**
 
-| Surface class | Resolution order |
-|---|---|
+| Surface class                                | Resolution order                                               |
+| -------------------------------------------- | -------------------------------------------------------------- |
 | Event (rows, tiles, hero cards, detail hero) | `event.imageUrl` → headliner's `artist.photoUrl` → IdentityArt |
-| Artist (artist page, artist search results) | `artist.photoUrl` → IdentityArt |
+| Artist (artist page, artist search results)  | `artist.photoUrl` → IdentityArt                                |
 
 Expected effect: event-surface IdentityArt drops from ~62% to ~30% of upcoming events. Artist pages are unchanged at ~55%.
 
@@ -66,7 +66,7 @@ When the headliner has no photo, we do **not** search supporting artists for one
 
 Of the 293 floor events, 83 have a supporting artist with a Spotify photo, and zero are rescued by a second headliner (`canonical_artist` already carries top billing, so `canonical_headliners` contributes nothing). Walking the bill would take the floor from 293 to 210 — 29.6% to 21.2%.
 
-Rejected because those 83 events would show the **opener's** face beside the headliner's name. That is a wrong picture a user can catch, which is the same failure mode already ruled unacceptable at the matching layer, where `ARTIST_MATCH_MIN_CONFIDENCE` demands exact canonical-name equality on the grounds that a wrong photo is worse than no photo. The principle extends from *which artist* to *which billing*.
+Rejected because those 83 events would show the **opener's** face beside the headliner's name. That is a wrong picture a user can catch, which is the same failure mode already ruled unacceptable at the matching layer, where `ARTIST_MATCH_MIN_CONFIDENCE` demands exact canonical-name equality on the grounds that a wrong photo is worse than no photo. The principle extends from _which artist_ to _which billing_.
 
 ### 2.3 — Artist surfaces never borrow event imagery
 
@@ -140,7 +140,13 @@ Out of scope for Design: the source priority (locked in §2) and all copy (a cop
 
 Independent of Spec A: no shared files, no shared surfaces, and it can land first. Backend plus admin UI, so no design pass (admin is exempt).
 
-### 5.1 — Why there is no dominance rule
+### 5.1 — Why there is no _automatic_ dominance rule
+
+> **Amended 2026-08-08, before implementation.** The section below argued that no dominance signal was needed because a human with the picker judges better than a threshold. Hugh withdrew that premise on reading it: _"Many I'm not familiar with and don't know how to make a determination."_ The bottleneck is not the admin's time, which the argument correctly sized — it is the admin's confidence, which the argument never tested.
+>
+> The volume arithmetic still holds and is left intact below; only the conclusion changes. Nothing is auto-applied, so §5.2's "nothing is auto-resolved" is untouched. Instead the picker computes a **dominance ratio** from the cached candidates' `popularity` and pre-selects the dominant one, surfacing the ratio so the admin confirms a suggestion rather than adjudicates a list of identical names. That is strictly cheaper than the threshold engine rejected below, because it runs against the cache §5.2 already builds and spends no Spotify call of its own.
+>
+> Two facts constrain the signal. Spotify's `/search` returns simplified artist objects with **no follower count**, so `popularity` (0–100) is the only dominance signal available without a second call per row — and it is already parsed and already displayed in the picker. And `ARTIST_MATCH_MIN_CONFIDENCE` is untouched: the suggestion lives in the admin UI, never in the matcher.
 
 523 artist rows are `ambiguous`, meaning Spotify returned several exact-name candidates. A 40-row sample showed these are mostly not true homonyms — they are well-known artists (Lewis Capaldi, Bonobo, DJ Shadow, JPEGMAFIA) colliding with tribute, karaoke and bedroom uploads that share the name exactly. A popularity-dominance rule would plausibly clear most of them.
 
@@ -157,7 +163,7 @@ Loosening `ARTIST_MATCH_MIN_CONFIDENCE` is explicitly not on the table. Exact ca
 
 ### 5.2 — What we build
 
-Persist the candidate set on the `artists` row whenever the match job or the picker fetches one from Spotify. Per candidate: Spotify artist id, name, popularity, follower count, image URL, and a fetched-at timestamp for the set.
+Persist the candidate set on the `artists` row whenever the match job or the picker fetches one from Spotify. Per candidate: Spotify artist id, name, popularity, image URL, Spotify URL, genres, and a fetched-at timestamp for the set. No follower count — `/search` does not return one, and a second call per row to get it is exactly the quota spend this section exists to avoid.
 
 - The picker reads the cache and opens with **zero Spotify calls**. A second look at a row is free.
 - An explicit refresh control re-searches when the admin wants fresh data.

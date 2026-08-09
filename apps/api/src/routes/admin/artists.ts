@@ -9,12 +9,19 @@ import { Hono } from 'hono'
 import { createLogger } from '@concert-crawl/logger'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, asc, desc, eq, ilike, sql } from 'drizzle-orm'
-import { artists, db } from '@concert-crawl/db'
+import { and, asc, desc, eq, ilike, isNull, sql } from 'drizzle-orm'
+import { artists, db, type SpotifyCandidateSnapshot } from '@concert-crawl/db'
 import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical'
 import { getAuthUser } from '../../middleware/auth.js'
 import { httpUrl } from '../../lib/url-schema.js'
-import { createSpotifyAppClient } from '../../lib/spotify-app-client.js'
+import {
+  dedupeCandidates,
+  toCandidateSnapshot,
+} from '../../lib/artist-match.js'
+import {
+  createSpotifyAppClient,
+  type SpotifyAppClient,
+} from '../../lib/spotify-app-client.js'
 import { SpotifyAuthError, SpotifyRateLimitError } from '../../lib/spotify.js'
 import type { AdminVariables } from './index.js'
 
@@ -204,22 +211,81 @@ artistsAdminRouter.patch(
   },
 )
 
-// GET /v1/admin/artists/:id/candidates?query= — what Spotify returns for this row.
+/**
+ * Fill in the genres a snapshot is missing, in one extra Spotify call.
+ *
+ * `/search` returns simplified artist objects whose genre list is always
+ * empty, so a snapshot straight from the match job carries `genres: null`
+ * throughout and the picker's disambiguation line would read "No genres
+ * listed" on every candidate. Genres only exist on the full artist object.
+ *
+ * Returns `null` when nothing changed — no candidate needed hydrating, or the
+ * call failed. Failing is not a reason to fail the request: the picker is
+ * still usable on name, photo and popularity alone.
+ *
+ * Takes a client factory rather than a client so a fully-hydrated snapshot
+ * resolves without one: building a client mints an app token over the network.
+ */
+const hydrateGenres = async (
+  getClient: () => Promise<SpotifyAppClient | null>,
+  candidates: SpotifyCandidateSnapshot[],
+  artistId: string,
+): Promise<SpotifyCandidateSnapshot[] | null> => {
+  const missing = candidates.filter((candidate) => candidate.genres === null)
+  if (missing.length === 0) return null
+
+  const client = await getClient()
+  if (client === null) return null
+
+  try {
+    const genresById = await client.fetchGenres(
+      missing.map((candidate) => candidate.id),
+    )
+    // An id Spotify did not resolve stays `null`. Defaulting it to `[]` would
+    // persist "Spotify lists no genres" for an artist we never actually read,
+    // and no later open would ever try again.
+    if (missing.every((candidate) => !genresById.has(candidate.id))) return null
+    return candidates.map((candidate) => {
+      const genres = genresById.get(candidate.id)
+      return candidate.genres === null && genres !== undefined
+        ? { ...candidate, genres }
+        : candidate
+    })
+  } catch (err) {
+    logger.warn(
+      { err, artistId },
+      'candidate genre hydration failed — serving candidates without genres',
+    )
+    return null
+  }
+}
+
+// GET /v1/admin/artists/:id/candidates?query=&refresh= — what Spotify returned
+// for this row.
 //
-// The matcher already fetched these and threw them away, keeping only its
-// verdict (#1345). Re-running the search on demand is the cheapest way to get
-// them back: caching them would mean a column that goes stale the moment an
-// artist changes their Spotify profile, and prefetching the whole table would
-// spend the app-token search quota that MATCH_BATCH_SIZE exists to ration.
-// One row, one admin click, one search.
+// Cache-first (#1525). The match job already searched this row and now
+// snapshots the result onto `artists.spotifyCandidates`, so the common case —
+// an admin opening the picker on a queued `ambiguous` row — costs no search at
+// all. That reverses the original decision here, which was to re-search on
+// every open because a cached column goes stale the moment an artist edits
+// their Spotify profile. It still does. What changed is that staleness is now
+// handled where it belongs: the picker shows when the snapshot was taken and
+// offers `refresh=true`, and nothing is ever auto-resolved from the cache. The
+// quota this was spending is the binding constraint on the whole match
+// pipeline, and paying it twice for one search bought nothing.
 //
 // `query` overrides the search term. `no_match` usually means the artist exists under a
 // spelling exact matching cannot reach ("Michael Smoak" vs "Mike Smoak"), and
 // without an override the endpoint would keep returning the same empty list.
+// An override always searches live — it is by definition a different search
+// from the one the snapshot holds, and caching it under the canonical name
+// would poison the row.
 //
 // `isExactMatch` marks the candidates the matcher itself accepted — on an
 // `ambiguous` row those are precisely the ones that collided, which is the
-// question the admin is actually trying to answer.
+// question the admin is actually trying to answer. It is recomputed on read
+// rather than stored, so a later canonicalization change can never leave a
+// snapshot asserting a match the matcher would no longer make.
 artistsAdminRouter.get(
   '/:id/candidates',
   zValidator('param', artistIdSchema),
@@ -234,14 +300,22 @@ artistsAdminRouter.get(
         .transform((value) =>
           value === undefined || value === '' ? undefined : value,
         ),
+      refresh: z
+        .enum(['true', 'false'])
+        .optional()
+        .transform((value) => value === 'true'),
     }),
   ),
   async (ctx) => {
     const { id } = ctx.req.valid('param')
-    const { query } = ctx.req.valid('query')
+    const { query, refresh } = ctx.req.valid('query')
 
     const [artist] = await db
-      .select({ canonicalName: artists.canonicalName })
+      .select({
+        canonicalName: artists.canonicalName,
+        spotifyCandidates: artists.spotifyCandidates,
+        spotifyCandidatesFetchedAt: artists.spotifyCandidatesFetchedAt,
+      })
       .from(artists)
       .where(eq(artists.id, id))
 
@@ -249,60 +323,93 @@ artistsAdminRouter.get(
       return ctx.json({ success: false, error: 'Artist not found' }, 404)
     }
 
-    const client = await createSpotifyAppClient()
-    // Null means SPOTIFY_CLIENT_ID/SECRET are unset — the dormant path the
-    // whole match feature is built around. That is a configuration state, not
-    // a failure of this request, so it gets its own status and message rather
-    // than a generic 500.
-    if (client === null) {
-      return ctx.json(
-        {
-          success: false,
-          error: 'Spotify app credentials are not configured',
-        },
-        503,
-      )
-    }
-
     const searchTerm = query ?? artist.canonicalName
+    const cached =
+      query === undefined && !refresh ? artist.spotifyCandidates : null
 
-    try {
-      const candidates = await client.searchArtists(searchTerm)
+    // Building a client mints or refreshes an app token, so it is itself a
+    // Spotify call — deferred until a path needs the network, and memoized so
+    // a search plus a hydration still cost one. A fully-hydrated cache hit
+    // never calls this, which is what makes the second open free.
+    let clientPromise: Promise<SpotifyAppClient | null> | undefined
+    const getClient = () => (clientPromise ??= createSpotifyAppClient())
 
-      // Spotify can echo one artist across a rescored result; the admin should
-      // see each artist once.
-      const seen = new Set<string>()
-      const deduped = candidates.filter((candidate) => {
-        if (seen.has(candidate.id)) return false
-        seen.add(candidate.id)
-        return true
+    const respond = (
+      candidates: SpotifyCandidateSnapshot[],
+      cachedAt: Date | null,
+    ) =>
+      ctx.json({
+        success: true,
+        data: candidates.map((candidate) => ({
+          ...candidate,
+          isExactMatch:
+            canonicalizeArtist(candidate.name) === artist.canonicalName,
+        })),
+        query: searchTerm,
+        cachedAt: cachedAt === null ? null : cachedAt.toISOString(),
       })
 
-      // Search results always carry an empty `genres`, so the picker's
-      // disambiguation line read "No genres listed" on every candidate. Genres
-      // only exist on the full artist object, which is one extra call.
-      // Failing to get them is not a reason to fail the search: the picker is
-      // still usable on name, photo and popularity alone.
-      let genresById = new Map<string, string[]>()
-      try {
-        genresById = await client.fetchGenres(
-          deduped.map((candidate) => candidate.id),
-        )
-      } catch (err) {
-        logger.warn(
-          { err, artistId: id },
-          'candidate genre hydration failed — serving candidates without genres',
+    try {
+      if (cached !== null) {
+        const hydrated = await hydrateGenres(getClient, cached, id)
+        if (hydrated !== null) {
+          // Hydration is a round trip, so a concurrent refresh can land a
+          // newer snapshot while it runs. Writing then would replace that
+          // newer list with the older one this request read. The fetched-at
+          // it read is the version to check — no match, no write, and the
+          // admin still gets the genres in the response.
+          const unchanged =
+            artist.spotifyCandidatesFetchedAt === null
+              ? isNull(artists.spotifyCandidatesFetchedAt)
+              : eq(
+                  artists.spotifyCandidatesFetchedAt,
+                  artist.spotifyCandidatesFetchedAt,
+                )
+          await db
+            .update(artists)
+            .set({ spotifyCandidates: hydrated, updatedAt: new Date() })
+            .where(and(eq(artists.id, id), unchanged))
+        }
+        return respond(hydrated ?? cached, artist.spotifyCandidatesFetchedAt)
+      }
+
+      // Null means SPOTIFY_CLIENT_ID/SECRET are unset — the dormant path the
+      // whole match feature is built around. That is a configuration state,
+      // not a failure of this request, so it gets its own status and message
+      // rather than a generic 500. Only the live-search path can reach it: a
+      // cache hit is local data, and refusing it because Spotify is
+      // unreachable would make the picker useless when it is most needed.
+      const client = await getClient()
+      if (client === null) {
+        return ctx.json(
+          {
+            success: false,
+            error: 'Spotify app credentials are not configured',
+          },
+          503,
         )
       }
 
-      const data = deduped.map((candidate) => ({
-        ...candidate,
-        genres: genresById.get(candidate.id) ?? candidate.genres,
-        isExactMatch:
-          canonicalizeArtist(candidate.name) === artist.canonicalName,
-      }))
+      const found = dedupeCandidates(await client.searchArtists(searchTerm))
+      const snapshot = found.map(toCandidateSnapshot)
+      const hydrated = await hydrateGenres(getClient, snapshot, id)
+      const candidates = hydrated ?? snapshot
 
-      return ctx.json({ success: true, data, query: searchTerm })
+      // An overridden query answers a different question from the one the row
+      // asks, so it is served but never written back.
+      const fetchedAt = new Date()
+      if (query === undefined) {
+        await db
+          .update(artists)
+          .set({
+            spotifyCandidates: candidates,
+            spotifyCandidatesFetchedAt: fetchedAt,
+            updatedAt: fetchedAt,
+          })
+          .where(eq(artists.id, id))
+      }
+
+      return respond(candidates, query === undefined ? fetchedAt : null)
     } catch (err) {
       logger.warn(
         { err, artistId: id, searchTerm },

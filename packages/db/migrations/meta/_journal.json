@@ -554,6 +554,13 @@
       "when": 1786924800000,
       "tag": "0078_artist_follow_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1787011200000,
+      "tag": "0079_artist_spotify_candidates",
+      "breakpoints": true
     }
   ]
 }

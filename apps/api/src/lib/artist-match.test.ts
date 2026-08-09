@@ -6,7 +6,29 @@ const candidate = (
   id: string,
   name: string,
   images: { url: string }[] = [],
-): SpotifyArtistCandidate => ({ id, name, images, popularity: 50 })
+): SpotifyArtistCandidate => ({
+  id,
+  name,
+  images,
+  popularity: 50,
+  // `/search` returns simplified artist objects, so this is always empty in
+  // production too — the picker hydrates genres in a separate call.
+  genres: [],
+  spotifyUrl: `https://open.spotify.com/artist/${id}`,
+})
+
+const snapshotOf = (
+  id: string,
+  name: string,
+  imageUrl: string | null = null,
+) => ({
+  id,
+  name,
+  imageUrl,
+  popularity: 50,
+  genres: null,
+  spotifyUrl: `https://open.spotify.com/artist/${id}`,
+})
 
 const searchReturning = (
   candidates: SpotifyArtistCandidate[],
@@ -35,6 +57,10 @@ describe('matchArtist', () => {
       spotifyArtistId: 'sp1',
       confidence: 1,
       photoUrl: 'https://i.scdn.co/image/big',
+      candidates: [
+        snapshotOf('sp1', 'Khruangbin', 'https://i.scdn.co/image/big'),
+        snapshotOf('sp2', 'Khruangbin Tribute Band'),
+      ],
     })
     expect(deps.search).toHaveBeenCalledWith('khruangbin')
   })
@@ -49,6 +75,7 @@ describe('matchArtist', () => {
       spotifyArtistId: 'sp1',
       confidence: 1,
       photoUrl: null,
+      candidates: [snapshotOf('sp1', 'Khruangbin')],
     })
   })
 
@@ -65,6 +92,10 @@ describe('matchArtist', () => {
       spotifyArtistId: null,
       confidence: null,
       photoUrl: null,
+      candidates: [
+        snapshotOf('sp1', 'Nirvana', 'https://i.scdn.co/image/one'),
+        snapshotOf('sp2', 'NIRVANA', 'https://i.scdn.co/image/two'),
+      ],
     })
   })
 
@@ -78,6 +109,7 @@ describe('matchArtist', () => {
       spotifyArtistId: null,
       confidence: null,
       photoUrl: null,
+      candidates: [],
     })
   })
 
@@ -104,5 +136,33 @@ describe('matchArtist', () => {
 
     expect(result.status).toBe('matched')
     expect(result.spotifyArtistId).toBe('sp1')
+    // Deduping happens before scoring, so the snapshot the caller persists
+    // carries the same one-per-artist list the matcher judged.
+    expect(result.candidates).toHaveLength(1)
+  })
+
+  // The snapshot is what lets the admin picker open on a search the match job
+  // already paid for (#1525), so it has to survive the verdict that discards
+  // everything else.
+  it('snapshots every candidate on an unresolved verdict, not just the exact hits', async () => {
+    const deps = searchReturning([
+      candidate('sp1', 'The Beatles'),
+      candidate('sp2', 'Beatles Karaoke'),
+    ])
+
+    const result = await matchArtist('beatles', deps)
+
+    expect(result.status).toBe('no_match')
+    expect(result.candidates.map((entry) => entry.id)).toEqual(['sp1', 'sp2'])
+  })
+
+  // `[]` would claim Spotify lists no genres. It cannot say that from a
+  // `/search` response, which never carries them.
+  it('records unhydrated genres as null rather than an empty list', async () => {
+    const deps = searchReturning([candidate('sp1', 'Khruangbin')])
+
+    const result = await matchArtist('khruangbin', deps)
+
+    expect(result.candidates[0]?.genres).toBeNull()
   })
 })

@@ -20,7 +20,11 @@
 // function the crawler and spotify-sync write with. A second normalizer here
 // would reintroduce the SQL↔JS parity class of bug (the Ø/ø incident).
 import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical'
-import type { SpotifySearch } from './spotify-app-client.js'
+import type { SpotifyCandidateSnapshot } from '@concert-crawl/db'
+import type {
+  SpotifyArtistCandidate,
+  SpotifySearch,
+} from './spotify-app-client.js'
 
 /** Minimum confidence for a `matched` verdict. 1.0 = exact canonical equality. */
 export const ARTIST_MATCH_MIN_CONFIDENCE = 1.0
@@ -35,17 +39,53 @@ export interface ArtistMatchResult {
   spotifyArtistId: string | null
   confidence: number | null
   photoUrl: string | null
+  /**
+   * Every distinct candidate the search returned, in Spotify's own order.
+   * Surfaced so the caller can snapshot a search it has already paid for —
+   * the matcher itself still decides on exact canonical equality alone.
+   */
+  candidates: SpotifyCandidateSnapshot[]
 }
 
 export interface ArtistMatchDeps {
   search: SpotifySearch
 }
 
-const unresolved = (status: ArtistMatchStatus): ArtistMatchResult => ({
+/** Trim a search hit to the fields the picker renders. */
+export const toCandidateSnapshot = (
+  candidate: SpotifyArtistCandidate,
+): SpotifyCandidateSnapshot => ({
+  id: candidate.id,
+  name: candidate.name,
+  imageUrl: candidate.images[0]?.url ?? null,
+  popularity: candidate.popularity,
+  // Search results always carry an empty list, so an empty one here would
+  // claim Spotify lists no genres. Only a genre-hydrated snapshot may say that.
+  genres: candidate.genres.length > 0 ? candidate.genres : null,
+  spotifyUrl: candidate.spotifyUrl,
+})
+
+/** Spotify can echo one artist across a rescored result; keep first occurrences. */
+export const dedupeCandidates = (
+  candidates: SpotifyArtistCandidate[],
+): SpotifyArtistCandidate[] => {
+  const seen = new Set<string>()
+  return candidates.filter((candidate) => {
+    if (seen.has(candidate.id)) return false
+    seen.add(candidate.id)
+    return true
+  })
+}
+
+const unresolved = (
+  status: ArtistMatchStatus,
+  candidates: SpotifyCandidateSnapshot[],
+): ArtistMatchResult => ({
   status,
   spotifyArtistId: null,
   confidence: null,
   photoUrl: null,
+  candidates,
 })
 
 /**
@@ -59,7 +99,8 @@ export const matchArtist = async (
   canonicalName: string,
   deps: ArtistMatchDeps,
 ): Promise<ArtistMatchResult> => {
-  const candidates = await deps.search(canonicalName)
+  const candidates = dedupeCandidates(await deps.search(canonicalName))
+  const snapshot = candidates.map(toCandidateSnapshot)
 
   // Score, then gate on the bar. There is one scoring tier today (exact
   // canonical equality); a fuzzy tier would add a score here and lower the
@@ -75,24 +116,23 @@ export const matchArtist = async (
     .filter((entry) => entry.confidence >= ARTIST_MATCH_MIN_CONFIDENCE)
     .map((entry) => entry.candidate)
 
-  // Spotify can echo the same artist twice across a paged/rescored result.
   // Distinctness is by id, not by name — two rows for one artist are one
-  // artist, not an ambiguity.
-  const distinctIds = new Set(exact.map((candidate) => candidate.id))
-
-  if (distinctIds.size === 0) return unresolved('no_match')
-  if (distinctIds.size > 1) return unresolved('ambiguous')
+  // artist, not an ambiguity. `candidates` is already deduped by id, so this
+  // is just a count of the exact hits.
+  if (exact.length === 0) return unresolved('no_match', snapshot)
+  if (exact.length > 1) return unresolved('ambiguous', snapshot)
 
   // Prefer the first occurrence that actually carries an image — Spotify
   // orders images widest-first, so images[0] is the best available.
   const withImage = exact.find((candidate) => candidate.images.length > 0)
   const winner = withImage ?? exact[0]
-  if (winner === undefined) return unresolved('no_match')
+  if (winner === undefined) return unresolved('no_match', snapshot)
 
   return {
     status: 'matched',
     spotifyArtistId: winner.id,
     confidence: EXACT_MATCH_CONFIDENCE,
     photoUrl: winner.images[0]?.url ?? null,
+    candidates: snapshot,
   }
 }

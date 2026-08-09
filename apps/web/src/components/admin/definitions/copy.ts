@@ -2320,7 +2320,9 @@ export const ADMIN_COPY = {
     visibilityError: 'Could not change that artist’s visibility.',
     findOnSpotify: 'Find on Spotify',
     hideCandidates: 'Close',
-    candidatesLoading: 'Searching Spotify…',
+    // Covers both paths: opening the picker reads a saved snapshot, searching
+    // or refreshing hits Spotify.
+    candidatesLoading: 'Loading candidates…',
     candidatesEmpty:
       'Spotify returned nothing for this search. Try a different spelling.',
     candidatesError: 'Could not search Spotify.',
@@ -2337,6 +2339,10 @@ export const ADMIN_COPY = {
     openInSpotify: 'Open in Spotify',
     popularity: 'Popularity',
     noGenres: 'No genres listed',
+    /** `genres: null` — hydration never ran or failed, so we do not know. */
+    genresUnknown: 'Genres unavailable',
+    candidatesCachedAt: (when: string) => `Fetched from Spotify on ${when}.`,
+    candidatesRefresh: 'Refresh from Spotify',
     loadingState: 'Loading artists…',
     emptyState: 'Nothing in this queue.',
     errorState: 'Could not load artists.',

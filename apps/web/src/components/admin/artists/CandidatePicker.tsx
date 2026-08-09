@@ -6,6 +6,11 @@
 // It owns its own fetch rather than lifting candidates into the page, because
 // each search spends from the same app-token quota MATCH_BATCH_SIZE rations —
 // scoping the request to the row the admin opened is what keeps it on-demand.
+//
+// Opening the picker sends no `query`, which is what makes the request a cache
+// read (#1525): the match job already snapshotted this row's candidates, so
+// the common case costs no Spotify search. Typing a term or hitting refresh is
+// the explicit opt-in to spend one.
 
 import { useCallback, useEffect, useState } from 'react'
 import { AdminButton, StatusBadge } from '@/components/admin/primitives'
@@ -17,9 +22,10 @@ const COPY = ADMIN_COPY.artists
 export interface SpotifyCandidate {
   id: string
   name: string
-  images: { url: string }[]
+  imageUrl: string | null
   popularity: number | null
-  genres: string[]
+  /** `null` means Spotify was never asked, `[]` means it lists none. */
+  genres: string[] | null
   spotifyUrl: string | null
   isExactMatch: boolean
 }
@@ -35,6 +41,19 @@ interface CandidatePickerProps {
 interface CandidatesResponse {
   success: boolean
   data?: SpotifyCandidate[]
+  /**
+   * When the row's snapshot was last fetched from Spotify. A cache read, a
+   * canonical search and a refresh all carry it; genre hydration does not
+   * move it, since it fills in a snapshot rather than taking a new one. Null
+   * only for a hand-typed query, which is never cached.
+   */
+  cachedAt?: string | null
+}
+
+interface LoadOptions {
+  /** Overrides the search term. Null reads the row's snapshot. */
+  query?: string | null
+  refresh?: boolean
 }
 
 export const CandidatePicker = ({
@@ -49,9 +68,10 @@ export const CandidatePicker = ({
   const [pastedId, setPastedId] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [cachedAt, setCachedAt] = useState<string | null>(null)
 
-  const search = useCallback(
-    async (query: string) => {
+  const load = useCallback(
+    async ({ query = null, refresh = false }: LoadOptions = {}) => {
       setIsLoading(true)
       setError(null)
       // Results from the previous term stay clickable otherwise, so an admin
@@ -59,14 +79,19 @@ export const CandidatePicker = ({
       // looking at — the exact wrong-identity mistake this queue exists to
       // prevent.
       setCandidates([])
+      setCachedAt(null)
       try {
         const token = await getToken()
         if (!token) {
           setError(COPY.candidatesError)
           return
         }
+        const params = new URLSearchParams()
+        if (query !== null) params.set('query', query)
+        if (refresh) params.set('refresh', 'true')
+        const search = params.toString()
         const resp = await fetch(
-          `${apiBase}/v1/admin/artists/${artistId}/candidates?query=${encodeURIComponent(query)}`,
+          `${apiBase}/v1/admin/artists/${artistId}/candidates${search === '' ? '' : `?${search}`}`,
           { headers: { Authorization: `Bearer ${token}` } },
         )
         if (!resp.ok) {
@@ -83,6 +108,7 @@ export const CandidatePicker = ({
         }
         const body: CandidatesResponse = await resp.json()
         setCandidates(body.data ?? [])
+        setCachedAt(body.cachedAt ?? null)
       } catch (err) {
         console.error('[admin artists] candidate search failed', err)
         setError(COPY.candidatesError)
@@ -95,8 +121,8 @@ export const CandidatePicker = ({
   )
 
   useEffect(() => {
-    void search(canonicalName)
-  }, [search, canonicalName])
+    void load()
+  }, [load])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -106,8 +132,14 @@ export const CandidatePicker = ({
           ev.preventDefault()
           // Enter submits past the disabled button, and an empty term would
           // spend a Spotify search re-running the canonical one.
-          if (term.trim().length === 0) return
-          void search(term.trim())
+          const trimmed = term.trim()
+          if (trimmed.length === 0) return
+          // The box starts on the canonical name, so submitting it untouched
+          // is a refresh. Sending it as an override would spend the same
+          // search and throw the result away instead of caching it.
+          void load(
+            trimmed === canonicalName ? { refresh: true } : { query: trimmed },
+          )
         }}
       >
         <label
@@ -140,6 +172,28 @@ export const CandidatePicker = ({
           {COPY.candidateSearch}
         </AdminButton>
       </form>
+
+      {/* Shown whenever the list on screen is also the row's stored snapshot —
+          a cache hit, a live canonical search, or a refresh. A snapshot can be
+          as old as the row's last match-job pass and the artist may have
+          changed their Spotify profile since, so this is the explicit, and
+          only, way to spend a search on finding out. Hidden for a hand-typed
+          query, which is never written back and so has nothing to date. */}
+      {cachedAt !== null && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
+            {COPY.candidatesCachedAt(new Date(cachedAt).toLocaleString())}
+          </span>
+          <AdminButton
+            size="sm"
+            variant="outline"
+            onClick={() => void load({ refresh: true })}
+            disabled={isLoading}
+          >
+            {COPY.candidatesRefresh}
+          </AdminButton>
+        </div>
+      )}
 
       {isLoading && (
         <p style={{ fontSize: 13, color: 'var(--fg-subtle)', margin: 0 }}>
@@ -187,7 +241,7 @@ export const CandidatePicker = ({
                 images.remotePatterns is a config change per host. */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={candidate.images[0]?.url}
+              src={candidate.imageUrl ?? undefined}
               alt=""
               width={56}
               height={56}
@@ -225,9 +279,14 @@ export const CandidatePicker = ({
                   margin: '4px 0 0',
                 }}
               >
-                {candidate.genres.length > 0
-                  ? candidate.genres.slice(0, 3).join(', ')
-                  : COPY.noGenres}
+                {/* null is "we never got them", [] is "Spotify lists none" —
+                    collapsing the two would tell an admin the artist has no
+                    genres when hydration simply failed. */}
+                {candidate.genres === null
+                  ? COPY.genresUnknown
+                  : candidate.genres.length > 0
+                    ? candidate.genres.slice(0, 3).join(', ')
+                    : COPY.noGenres}
                 {candidate.popularity !== null &&
                   ` · ${COPY.popularity} ${candidate.popularity}`}
               </p>
@@ -261,9 +320,7 @@ export const CandidatePicker = ({
               <AdminButton
                 size="sm"
                 variant="primary"
-                onClick={() =>
-                  onPick(candidate.id, candidate.images[0]?.url ?? null)
-                }
+                onClick={() => onPick(candidate.id, candidate.imageUrl)}
               >
                 {COPY.useCandidate}
               </AdminButton>

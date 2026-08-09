@@ -1,6 +1,7 @@
 import {
   boolean,
   index,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -9,6 +10,25 @@ import {
   uniqueIndex,
   uuid,
 } from 'drizzle-orm/pg-core'
+
+/**
+ * A Spotify search hit, snapshotted at match time into
+ * `artists.spotifyCandidates`.
+ *
+ * `genres` is `null` when the snapshot has not been genre-hydrated: `/search`
+ * returns simplified artist objects that always carry an empty genre list, and
+ * the real list needs a second call the match job deliberately does not make.
+ * `null` therefore means "unknown" and `[]` means "Spotify lists none" — the
+ * picker needs to tell those apart to know whether hydrating is worth a call.
+ */
+export type SpotifyCandidateSnapshot = {
+  id: string
+  name: string
+  imageUrl: string | null
+  popularity: number | null
+  genres: string[] | null
+  spotifyUrl: string | null
+}
 
 /**
  * Where an artist sits in the Spotify identity-match lifecycle (#1115).
@@ -68,6 +88,26 @@ export const artists = pgTable(
      */
     hidden: boolean('hidden').notNull().default(false),
     matchCheckedAt: timestamp('match_checked_at', { withTimezone: true }),
+    /**
+     * What Spotify returned the last time this row was searched.
+     *
+     * Written on every verdict, not just the unresolved ones: the picker is
+     * also how an admin corrects a wrong `matched` row, and a scoped write
+     * would leave a stale list behind whenever a row changes status. One
+     * invariant holds instead — this is what the last search returned. The
+     * search is already paid for by the match job, so snapshotting it is free;
+     * without it the picker re-runs that same search against the quota
+     * MATCH_BATCH_SIZE exists to ration.
+     *
+     * Deliberately a cache, not a source of truth. It goes stale the moment an
+     * artist edits their Spotify profile, so the picker offers an explicit
+     * refresh and nothing auto-resolves from it.
+     */
+    spotifyCandidates:
+      jsonb('spotify_candidates').$type<SpotifyCandidateSnapshot[]>(),
+    spotifyCandidatesFetchedAt: timestamp('spotify_candidates_fetched_at', {
+      withTimezone: true,
+    }),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

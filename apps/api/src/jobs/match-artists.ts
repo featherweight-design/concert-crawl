@@ -24,6 +24,13 @@
 // exact-name candidates, so asking again just reproduces the same tie — only
 // the admin candidate picker can break it.
 //
+// Every verdict also snapshots the search's candidate list onto
+// artists.spotifyCandidates, so the picker can open on a search this job
+// already paid for instead of re-running it against the same quota
+// MATCH_BATCH_SIZE exists to ration. The snapshot costs no extra Spotify call:
+// it is the result already in hand. Genres are NOT hydrated here — that is a
+// second call per row, and the picker fills them in lazily on first open.
+//
 // DORMANT UNTIL PROVISIONED: createSpotifyAppClient() returns null when
 // SPOTIFY_CLIENT_ID / SPOTIFY_CLIENT_SECRET are unset, and this job then
 // returns `skipped: 'unconfigured'` without touching a row. That is the
@@ -159,11 +166,24 @@ export const runMatchArtists = async (
         search: client.searchArtists,
       })
 
+      // One instant per row. Every timestamp below records the same pass, and
+      // a "cached at" that reads later than its own "checked at" is confusing
+      // for no reason.
+      const checkedAt = now()
+
       if (isRefresh && result.status !== 'matched') {
-        // Don't downgrade an established identity on a flaky re-search.
+        // Don't downgrade an established identity on a flaky re-search. The
+        // snapshot is still written: it means "what the last search returned",
+        // and holding a matched row's old list back would be the one exception
+        // the picker has no way to know about.
         await db
           .update(artists)
-          .set({ matchCheckedAt: now(), updatedAt: now() })
+          .set({
+            matchCheckedAt: checkedAt,
+            spotifyCandidates: result.candidates,
+            spotifyCandidatesFetchedAt: checkedAt,
+            updatedAt: checkedAt,
+          })
           .where(eq(artists.id, row.id))
         continue
       }
@@ -177,9 +197,11 @@ export const runMatchArtists = async (
             matchConfidence:
               result.confidence === null ? null : result.confidence.toFixed(3),
             photoUrl: result.photoUrl,
-            photoFetchedAt: result.photoUrl === null ? null : now(),
-            matchCheckedAt: now(),
-            updatedAt: now(),
+            photoFetchedAt: result.photoUrl === null ? null : checkedAt,
+            matchCheckedAt: checkedAt,
+            spotifyCandidates: result.candidates,
+            spotifyCandidatesFetchedAt: checkedAt,
+            updatedAt: checkedAt,
           })
           .where(eq(artists.id, row.id))
         if (isRefresh) {
@@ -195,8 +217,10 @@ export const runMatchArtists = async (
         .set({
           matchStatus: result.status,
           matchConfidence: null,
-          matchCheckedAt: now(),
-          updatedAt: now(),
+          matchCheckedAt: checkedAt,
+          spotifyCandidates: result.candidates,
+          spotifyCandidatesFetchedAt: checkedAt,
+          updatedAt: checkedAt,
         })
         .where(eq(artists.id, row.id))
       if (result.status === 'ambiguous') {
