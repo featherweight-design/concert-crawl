@@ -1,3 +1,19 @@
+# [1.237.0](https://github.com/HartiganHM/concert-crawl/compare/v1.236.1...v1.237.0) (2026-08-09)
+
+
+### Bug Fixes
+
+* **following:** cold-eyes triage on My shows ▸ Artists ([0f1f4a0](https://github.com/HartiganHM/concert-crawl/commit/0f1f4a0b0c3be57b2d534b5d8c8685a07b5ed5d4))
+* **following:** copy-review pass on My shows ▸ Artists ([2e69271](https://github.com/HartiganHM/concert-crawl/commit/2e69271f0e73c21d1409805ab4aac974b0cdc0b4))
+* **following:** give the mobile artist row a 44px follow target ([2762338](https://github.com/HartiganHM/concert-crawl/commit/2762338fd61ce0ebc7f6f3d439f8ad8ee6c20b21))
+* **following:** keep Artists actions reachable in an all-undated list ([92dcc91](https://github.com/HartiganHM/concert-crawl/commit/92dcc913edf5889c69c20922200c1ba4a5243f47))
+* **following:** one <main> landmark on My shows > Artists ([fd2ac3d](https://github.com/HartiganHM/concert-crawl/commit/fd2ac3dc11ca98af05c513a39b4579206994c5a2))
+
+
+### Features
+
+* **web:** my shows ▸ Artists sub-tab (native following, PR 6) ([79af0bc](https://github.com/HartiganHM/concert-crawl/commit/79af0bc108439108e59d8a95ee36d1d12d810f97))
+
 ## [1.236.1](https://github.com/HartiganHM/concert-crawl/compare/v1.236.0...v1.236.1) (2026-08-09)
 
 
