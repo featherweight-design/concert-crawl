@@ -169,6 +169,9 @@ export const FollowButton = ({
     padding: iconOnly ? 0 : geometry.padding,
     ...(iconOnly ? { minWidth: geometry.height } : {}),
     ...(size === 'full' ? { width: '100%' } : {}),
+    // A square: the glyph has nothing beside it, so the horizontal padding
+    // would only make a lopsided pill.
+    ...(iconOnly ? { width: geometry.height } : {}),
   }
 
   // Locked keeps idle's accessible name; the gate sentence carries the truth.

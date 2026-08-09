@@ -105,8 +105,10 @@ export function SettingsRoute({
 
         <div className="mx-4 h-px bg-border" />
 
-        {/* Notifications (#1063) */}
-        <div className="flex flex-col gap-2 px-4">
+        {/* Notifications (#1063). The id is the deep-link target for the
+            alerts row on My shows ▸ Artists — there is one settings route, so
+            an anchor is the only way to land a link on this section. */}
+        <div id="notifications" className="flex flex-col gap-2 px-4">
           <NotificationsSection scaRegion={scaRegion} />
         </div>
 

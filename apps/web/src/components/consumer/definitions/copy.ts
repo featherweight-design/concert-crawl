@@ -712,12 +712,13 @@ export const CONSUMER_COPY = {
       tabs: [
         { label: 'Browse', href: '/events' },
         { label: 'Venues', href: '/venues' },
-        // "My shows" is the container for Watching + History; the href stays
-        // /watching because that is still the default landing sub-tab.
+        // "My shows" is the container for Watching + History + Artists; the
+        // href stays /watching because that is still the default landing
+        // sub-tab.
         {
           label: 'My shows',
           href: '/watching',
-          matchPrefixes: ['/history'],
+          matchPrefixes: ['/history', '/following'],
         },
         { label: 'Crews', href: '/crews' },
       ] as const,
@@ -750,7 +751,7 @@ export const CONSUMER_COPY = {
           key: 'watching',
           label: 'my shows',
           href: '/watching',
-          matchPrefixes: ['/history'],
+          matchPrefixes: ['/history', '/following'],
         },
         { key: 'crews', label: 'crews', href: '/crews' },
       ] as const,

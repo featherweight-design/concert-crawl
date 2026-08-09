@@ -19,6 +19,13 @@ export const HISTORY_COPY = {
     ariaLabel: 'My shows',
     watching: 'Watching',
     concerts: 'Concerts',
+    // The third sub-tab (native following). "Artists" is the locked term for
+    // the people you follow, the same way Watching is the term for shows.
+    artists: 'Artists',
+    // The follow count rides the accessible NAME rather than being announced
+    // as a node of its own beside the label, so a screen reader hears one
+    // thing ("Artists, 7") where the eye sees a label and a small number.
+    tabCountAria: (label: string, count: number) => `${label}, ${count}`,
   },
 
   // The two halves of the attendance list. They carry the tense the tab label

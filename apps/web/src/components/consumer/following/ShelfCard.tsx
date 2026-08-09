@@ -59,8 +59,13 @@ const LockGlyph = () => (
   </svg>
 )
 
-/** Press photo with a render-time error gate — signed URLs expire. */
-const CardArt = ({
+/**
+ * Press photo with a render-time error gate — signed URLs expire. Exported
+ * because My shows ▸ Artists needs the same fall-back behaviour at a different
+ * size, and two copies of an `onError` gate is how one of them goes stale.
+ * Fills its parent, so the caller owns the box.
+ */
+export const CardArt = ({
   name,
   photoUrl,
 }: {

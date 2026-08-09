@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.41.0-beta',
+    date: 'Aug 8, 2026',
+    headline: 'The artists you follow, in one place.',
+    items: [
+      {
+        kind: 'added',
+        text: 'An Artists tab under My shows. The ones with a Denver date come first, soonest first, and everyone else is right below in alphabetical order.',
+      },
+      {
+        kind: 'added',
+        text: 'Unfollow from the list without opening a page, and if a follow came in from Spotify, the row says so.',
+      },
+    ],
+  },
+  {
     version: 'v0.40.0-beta',
     date: 'Aug 8, 2026',
     headline: 'Fewer shows with nothing to look at.',

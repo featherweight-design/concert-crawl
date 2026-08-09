@@ -5,6 +5,7 @@ import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ARTIST_COPY } from './definitions/copy'
+import { NF_FOLLOW_SIZES } from './definitions/constants'
 import { FollowButton } from './FollowButton'
 
 vi.mock('next/navigation', () => ({
@@ -392,6 +393,49 @@ describe('FollowButton', () => {
       expect(button.textContent).toBe(ARTIST_COPY.following)
       expect(button.getAttribute('aria-pressed')).toBe('true')
       expect(button.querySelector('[data-glyph="check"]')).not.toBeNull()
+    })
+  })
+
+  // The row density on My shows ▸ Artists. 36px is below the 44px floor every
+  // other variant holds, and is permitted only because the row it sits in is
+  // itself a tap target.
+  describe('the sm / iconOnly row variant', () => {
+    it('renders at the sm geometry', () => {
+      const { getByRole } = render(
+        <FollowButton
+          name="Wax Harbour"
+          following
+          signedOut={false}
+          size="sm"
+          onToggle={noop}
+          onLockedTap={noop}
+        />,
+      )
+      const style = getByRole('button').getAttribute('style') ?? ''
+      expect(style).toContain(`height: ${NF_FOLLOW_SIZES.sm.height}px`)
+      expect(style).toContain(`font-size: ${NF_FOLLOW_SIZES.sm.fontSize}px`)
+    })
+
+    it('drops the label but keeps the accessible name when iconOnly', () => {
+      const { getByRole } = render(
+        <FollowButton
+          name="Wax Harbour"
+          following
+          signedOut={false}
+          size="sm"
+          iconOnly
+          onToggle={noop}
+          onLockedTap={noop}
+        />,
+      )
+      const button = getByRole('button')
+      expect(button.textContent).toBe('')
+      expect(button.getAttribute('aria-label')).toBe(
+        ARTIST_COPY.followingAria('Wax Harbour'),
+      )
+      // The glyph is the whole control, so it must stay square.
+      const style = button.getAttribute('style') ?? ''
+      expect(style).toContain(`width: ${NF_FOLLOW_SIZES.sm.height}px`)
     })
   })
 })

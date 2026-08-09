@@ -11,7 +11,7 @@ afterEach(cleanup)
 const COPY = HISTORY_COPY.tabs
 
 describe('MyShowsTabs', () => {
-  it('renders both tabs as links to their routes', () => {
+  it('renders all three tabs as links to their routes', () => {
     render(<MyShowsTabs active="watching" />)
 
     expect(screen.getByRole('link', { name: COPY.watching })).toHaveAttribute(
@@ -21,6 +21,9 @@ describe('MyShowsTabs', () => {
     expect(
       screen.getByRole('link', { name: new RegExp(COPY.concerts) }),
     ).toHaveAttribute('href', '/history')
+    expect(
+      screen.getByRole('link', { name: new RegExp(COPY.artists) }),
+    ).toHaveAttribute('href', '/following')
   })
 
   it('marks Watching as the current page when active', () => {
@@ -52,6 +55,40 @@ describe('MyShowsTabs', () => {
     expect(
       screen.getByRole('navigation', { name: COPY.ariaLabel }),
     ).toBeInTheDocument()
+  })
+
+  it('marks Artists as the current page when active', () => {
+    render(<MyShowsTabs active="artists" />)
+
+    expect(
+      screen.getByRole('link', { name: new RegExp(COPY.artists) }),
+    ).toHaveAttribute('aria-current', 'page')
+  })
+
+  // ACC-02: the count rides the accessible name rather than being a second
+  // announced node beside the label.
+  it('carries the follow count inside the Artists accessible name', () => {
+    render(<MyShowsTabs active="artists" artistCount={7} />)
+
+    expect(
+      screen.getByRole('link', { name: COPY.tabCountAria(COPY.artists, 7) }),
+    ).toHaveAttribute('href', '/following')
+  })
+
+  // AMB-04: zero is not a number worth announcing, and the prototype only ever
+  // draws the count on the active tab.
+  it('omits the count entirely at zero', () => {
+    render(<MyShowsTabs active="artists" artistCount={0} />)
+
+    expect(screen.getByRole('link', { name: COPY.artists })).toBeInTheDocument()
+    expect(screen.queryByText('0')).toBeNull()
+  })
+
+  it('renders no count on the Artists tab while it is inactive', () => {
+    render(<MyShowsTabs active="watching" artistCount={7} />)
+
+    expect(screen.getByRole('link', { name: COPY.artists })).toBeInTheDocument()
+    expect(screen.queryByText('7')).toBeNull()
   })
 
   // The locked takeover is where an unentitled user meets the price; the tab

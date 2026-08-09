@@ -93,7 +93,9 @@ export const hasSpotifyFollows = (follows: FollowedArtist[]): boolean =>
  * "Venue · Sep 12", or null when nothing is on the books. Built server-side so
  * both shelf sources arrive at the card in one shape.
  */
-const dateLine = (next: FollowedArtistNextShow | null): string | null =>
+export const followDateLine = (
+  next: FollowedArtistNextShow | null,
+): string | null =>
   next === null
     ? null
     : `${next.venue}${FOLLOWING_COPY.cardDateSeparator}${formatShortDate(next.iso)}`
@@ -107,7 +109,7 @@ export const followsToShelfArtists = (
     name: follow.name,
     slug: follow.slug,
     photoUrl: follow.photoUrl,
-    dateLine: dateLine(follow.nextShow),
+    dateLine: followDateLine(follow.nextShow),
     following: true,
   }))
 
@@ -123,6 +125,6 @@ export const suggestionsToShelfArtists = (
     name: suggestion.name,
     slug: suggestion.slug,
     photoUrl: suggestion.photoUrl,
-    dateLine: dateLine(suggestion.nextShow),
+    dateLine: followDateLine(suggestion.nextShow),
     following: suggestion.following === true,
   }))
