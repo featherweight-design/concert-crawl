@@ -1,3 +1,10 @@
+## [1.229.2](https://github.com/HartiganHM/concert-crawl/compare/v1.229.1...v1.229.2) (2026-08-09)
+
+
+### Bug Fixes
+
+* **consumer:** cut the empty-state eyebrow on Watching and Concerts ([#1529](https://github.com/HartiganHM/concert-crawl/issues/1529)) ([ce6f579](https://github.com/HartiganHM/concert-crawl/commit/ce6f57989e0022fcd70ba1c46c155e8e20625c22))
+
 ## [1.229.1](https://github.com/HartiganHM/concert-crawl/compare/v1.229.0...v1.229.1) (2026-08-09)
 
 
