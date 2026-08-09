@@ -226,9 +226,19 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         // One retry drops BOTH scopes. Which one the API rejected isn't in the
         // error, and a second probe to find out costs a round-trip to render a
         // list the viewer can re-scope in one tap.
+        //
+        // 401 means the token itself was refused, so the retry drops it too —
+        // reusing it would earn a second 401 and throw the page away rather
+        // than degrade it. 403 is entitlement-only and keeps the token, since
+        // the identity is fine and the list still wants watch state on it.
         console.warn('scope filter rejected — falling back to unfiltered', err)
         return {
-          response: await fetchEvents(fetchParams, token, viewLimit, false),
+          response: await fetchEvents(
+            fetchParams,
+            err.status === 401 ? null : token,
+            viewLimit,
+            false,
+          ),
           tasteApplied: false,
           followingApplied: false,
         }

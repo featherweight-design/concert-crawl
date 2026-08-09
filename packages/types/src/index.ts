@@ -868,9 +868,11 @@ export interface EventsListResponse {
   limit: number
   offset: number
   /**
-   * Whether the API actually narrowed this list to followed artists. Present
-   * only on `?following=1` requests. The UI reads this flag rather than its own
-   * request intent, so it can never claim a scope the API didn't apply.
+   * Whether the API actually narrowed this list to followed artists. Sent on
+   * every `/v1/events` response and simply false when the scope wasn't asked
+   * for; optional here only for older clients. The UI reads this flag rather
+   * than its own request intent, so it can never claim a scope the API
+   * didn't apply.
    */
   followingApplied?: boolean
 }
