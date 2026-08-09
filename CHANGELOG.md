@@ -1,3 +1,10 @@
+# [1.235.0](https://github.com/HartiganHM/concert-crawl/compare/v1.234.0...v1.235.0) (2026-08-09)
+
+
+### Features
+
+* **admin:** suggest the dominant Spotify candidate in the picker ([#1538](https://github.com/HartiganHM/concert-crawl/issues/1538)) ([7c361b2](https://github.com/HartiganHM/concert-crawl/commit/7c361b22d6b5f8b2fa8c226bcb683b7b1e2041da)), closes [#1525](https://github.com/HartiganHM/concert-crawl/issues/1525)
+
 # [1.234.0](https://github.com/HartiganHM/concert-crawl/compare/v1.233.0...v1.234.0) (2026-08-09)
 
 
