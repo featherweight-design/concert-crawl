@@ -114,14 +114,21 @@ export const useBillFollows = (
 
   const followAll = useCallback(() => {
     if (bulkInFlight.current) return
+    // A row already mid-write is not the bulk's to move: two writes against one
+    // artist settle in whichever order the network decides, and the loser's
+    // response would then overwrite the winner's.
     const slugs = artists
       .map((artist) => artist.slug)
-      .filter((slug) => !following.has(slug))
+      .filter((slug) => !following.has(slug) && !rowsInFlight.current.has(slug))
     if (slugs.length === 0) return
 
     bulkInFlight.current = true
     setCommitting(true)
-    const previous = following
+    // The bulk holds its own slugs for the duration, which is what makes
+    // `toggle`'s existing guard cover the bulk case too. Rows the bulk is NOT
+    // committing stay tappable — an unfollow of an act you already followed
+    // conflicts with nothing.
+    for (const slug of slugs) rowsInFlight.current.add(slug)
 
     void (async () => {
       try {
@@ -140,7 +147,16 @@ export const useBillFollows = (
           return next
         })
       } catch (err) {
-        setFollowing(previous)
+        // Roll back THIS COMMIT'S slugs, never the whole set. Restoring a
+        // snapshot taken before the write would also undo any row the viewer
+        // toggled while the bulk was in flight, silently reversing a tap they
+        // watched succeed. Every slug here was not-following when the commit
+        // started, so undoing it means removing it.
+        setFollowing((current) => {
+          const next = new Set(current)
+          for (const slug of slugs) next.delete(slug)
+          return next
+        })
         if (err instanceof ApiError && err.code === ENTITLEMENT_REQUIRED_CODE) {
           console.info('bulk bill follow needs Premium; opening the picker')
           onEntitlementRequired()
@@ -148,6 +164,7 @@ export const useBillFollows = (
         }
         console.warn('bulk bill follow failed; rolling back', err)
       } finally {
+        for (const slug of slugs) rowsInFlight.current.delete(slug)
         bulkInFlight.current = false
         setCommitting(false)
       }

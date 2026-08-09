@@ -304,6 +304,67 @@ describe('BillFollowBlock — "Follow all N"', () => {
     expect(followButtons()).toHaveLength(3)
   })
 
+  // A failed bulk used to restore a snapshot of the whole set, which also
+  // reversed any row the viewer toggled while it was in flight — a tap they
+  // watched succeed, silently undone by an unrelated failure.
+  it('rolls back only its own acts, leaving a row toggled meanwhile alone', async () => {
+    const { ApiError } = await vi.importActual<typeof ApiModule>('@/lib/api')
+    let reject: (reason: unknown) => void = () => {}
+    followArtistsBulk.mockImplementation(
+      () =>
+        new Promise<BulkFollowResponse>((_resolve, rejectBulk) => {
+          reject = rejectBulk
+        }),
+    )
+    apiDelete.mockResolvedValue({ following: false })
+
+    // Nightjar Choir is already followed, so the bulk does not carry it and it
+    // stays tappable while the other two commit.
+    const artists: BillArtist[] = [
+      { ...BILL[0]!, following: true },
+      BILL[1]!,
+      BILL[2]!,
+    ]
+    render(<BillFollowBlock artists={artists} scaRegion={false} />)
+
+    fireEvent.click(screen.getByTestId('bill-follow-all'))
+    await waitFor(() =>
+      expect(followArtistsBulk).toHaveBeenCalledWith('token', [
+        'paper-tigers',
+        'low-ceiling',
+      ]),
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: ARTIST_COPY.followingAria('Nightjar Choir'),
+      }),
+    )
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {
+          name: ARTIST_COPY.followAria('Nightjar Choir'),
+        }),
+      ).toBeInTheDocument(),
+    )
+
+    reject(new ApiError(500, 'Server error', 'internal_error'))
+
+    // The two the bulk carried come back; the one it never touched does not.
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', {
+          name: ARTIST_COPY.followAria('Paper Tigers'),
+        }),
+      ).toBeInTheDocument(),
+    )
+    expect(
+      screen.getByRole('button', {
+        name: ARTIST_COPY.followAria('Nightjar Choir'),
+      }),
+    ).toBeInTheDocument()
+  })
+
   it('is withheld once every act on the bill is followed', () => {
     render(
       <BillFollowBlock
