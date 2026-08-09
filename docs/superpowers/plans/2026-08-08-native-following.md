@@ -312,15 +312,40 @@ Two-column: results list plus an explainer rail. Desktop is required in this PR,
 
 ---
 
-### PR 6: My shows ▸ Artists, and the shared picker
+### PR 6: My shows ▸ Artists
 
-**Files:** `apps/web/src/components/consumer/history/MyShowsTabs.tsx`, new `apps/web/src/components/consumer/artist-picker/`.
+**Files:** `apps/web/src/components/consumer/history/MyShowsTabs.tsx`, new `apps/web/src/components/consumer/following/my-shows/`.
+
+> **Amended 2026-08-09, before the build**, after the Gate 4 pre-implementation enumeration
+> (`docs/superpowers/design-tables/native-following.md`, appendix P6) read the handoff against this
+> scope. Six decisions, each of which would otherwise have been made silently mid-build:
+>
+> 1. **The picker moves to PR 8** (was Step 5). PR 6 has no surface that opens one — the find-more
+>    row routes to `/search`, which is what PR 4 already shipped and what this document's own
+>    Ambiguity 3 resolved. Building a component with no call site in its own PR cannot be exercised
+>    by Gate 2 and is scope this PR does not carry. PR 8 has the real call site (onboarding step 7),
+>    so it is built there, once, as the plan always intended.
+> 2. **The tab strip stays a `<nav>` of links.** `MyShowsTabs` is routed, not panelled, and carries a
+>    comment explicitly rejecting `role="tab"` on those grounds. `role="tab"` without a `tabpanel`
+>    is invalid ARIA, so "a real tablist" is not available without converting three routes into
+>    client-swapped panels — far outside this PR. The count-in-the-accessible-name half stands.
+> 3. **Tab 2 reads "Concerts", not "History".** Locked vocabulary. Every prototype artboard draws
+>    "History"; all of them predate #1357 and none of them override CLAUDE.md.
+> 4. **Desktop is a separate layout, not a reflow.** `MyShowsArtistsDesktop` (`nf-desktop.jsx:184`)
+>    is a 940px container with an `h1`, three-column card grids, and the Alerts and Find rows
+>    promoted into the group-heading row. Parity ships in this PR, as it always must.
+> 5. **The Spotify-source variants are in scope.** `hasSpotifyFollows` already ships, and the
+>    handoff draws a per-row `SourceMark` plus the "won't touch your Spotify library" footnote
+>    across three artboards. The original six steps missed them.
+> 6. **`--accent` stays in the empty-state eyebrow.** The enumeration flagged it as reserved for
+>    Watching, but PR 5 already shipped `--accent` on the artist row tag in search, so the premise
+>    is retired rather than the token.
 
 - [ ] **Step 1: The third tab**
 
-Beside Watching / History. The `TABS` const already carries `'watching'` and `'history'` with labels from `HISTORY_COPY.tabs`; add `'artists'`.
+Beside Watching / Concerts. The `TABS` const already carries `'watching'` and `'history'` with labels from `HISTORY_COPY.tabs`; add `'artists'`.
 
-A real tablist with arrow-key navigation and the **count inside the accessible name** ("Artists, 7").
+Keep the shipped `<nav>` + `aria-current="page"` structure (see amendment 2) and put the **count inside the accessible name** ("Artists, 7"). Omit the count entirely at zero — the empty state carries that, and a "0" badge is noise.
 
 **The nav is not touched.** Tab-3's bottom-nav label already reads "my shows".
 
@@ -336,15 +361,17 @@ A **labelled row**, not a button: "Find artists to follow" with a supporting lin
 
 Deep-links to Settings ▸ Notifications, carrying the current state as its meta line.
 
-- [ ] **Step 5: The shared picker**
+- [ ] **Step 5: Desktop**
 
-Build the artist picker as a standalone component here. **PR 8 reuses it for onboarding step 7 — build it once.** In the picker the affordance is a **badge on the art**, not a full button: same states, same gesture, less shouting.
+`MyShowsArtistsDesktop` (`nf-desktop.jsx:184`) is its own layout, not the mobile column widened: 940px container, `h1`, three-column card grids, and the Alerts and Find rows promoted into the group-heading row as dense buttons. It has its own empty state. Ships here, in the same PR, as parity always does.
 
-Artist tiles are `role="checkbox"` in a labelled group. **The tile itself is the checkbox**, so a 12-artist grid is 12 targets, not 24. Selection is check glyph **+** border **+** fill — never colour alone; the Light theme needs all three for AA.
+- [ ] **Step 6: Empty state, and the Spotify source marks**
 
-- [ ] **Step 6: Empty state**
+Per the handoff's `MyShowsArtistsEmpty` and `MyShowsArtistsDesktopEmpty`. Structure only; the words go through `copy-review`.
 
-Per the handoff's `MyShowsArtistsEmpty`. Structure only; the words go through `copy-review`.
+`hasSpotifyFollows` already ships. Where a row came from a Spotify import, draw the per-row `SourceMark`, and carry the footnote that says unfollowing here won't touch their Spotify library — the reassurance is the whole reason the mark exists.
+
+> **The picker was Step 5 and is now PR 8's.** See amendment 1 above.
 
 ---
 
@@ -389,11 +416,25 @@ Both new steps slot in **before `done`**, are skippable, and neither blocks sign
 
 - [ ] **Step 2: The suggestion query**
 
-Artists with an upcoming Denver date, filtered by the picked genres, ordered by follower count — so **every suggestion is followable by construction**.
+Artists with an upcoming Denver date, filtered by the picked genres — so **every suggestion is followable by construction**.
+
+**This does not author a query.** PR 4 shipped `GET /v1/artists/suggestions` and left the extension point in a comment at `apps/api/src/routes/artists-public.ts:110`: add an optional `?genres=` array-overlap filter to *that* endpoint. The onboarding query is the shelf query plus a `WHERE`, and a second endpoint would be two things to keep in step.
+
+**Not "ordered by follower count."** That clause named a column that does not exist and is not being added — artists are a projection off event billing strings, not an authored table with metrics (Gate 1 decision D3). The shipped ordering is upcoming Denver show count desc, soonest date asc, name asc, which is the better signal for a shelf recruiting follows for shows you can actually get to.
 
 Genre comes from `events.genre` (`text[]`), matched by array overlap against the artist's billed events. **Artists carry no genre of their own; do not add an `artist_genres` table.**
 
 **Genres are not persisted as preferences.** They filter this one screen. Do not add a column.
+
+- [ ] **Step 2b: The picker itself (moved here from PR 6)**
+
+Build the artist picker as a standalone component, in `apps/web/src/components/consumer/artist-picker/`. It lands here rather than in PR 6 because this is where the first real call site is; PR 6 has no surface that opens one.
+
+In the picker the affordance is a **badge on the art**, not a full button: same states, same gesture, less shouting.
+
+Artist tiles are `role="checkbox"` in a labelled group. **The tile itself is the checkbox**, so a 12-artist grid is 12 targets, not 24. Selection is check glyph **+** border **+** fill — never colour alone; the Light theme needs all three for AA.
+
+Anatomy is the handoff's onboarding grid (`ArtistPick` + `PickGrid`, 2-up mobile / 5-up desktop). The `BulkFollowSheet` list is a different component for a different job and is not this.
 
 - [ ] **Step 3: One write at commit**
 

@@ -292,3 +292,376 @@ Beyond the five corrections given as inputs. In every case the spec wins; these 
 | 4   | `canvas` StateGallery renders the event-row Following chip with `tone="strong"`.                                                            | §1.1 records the shipped chip as tone `signal`.                                                                                                                                      | Leave the shipped chip alone; the gallery mis-labels it.                                           |
 | 5   | `NFTabBar` (`shared:339`) still labels tab 3 "watching".                                                                                    | §1.1: BottomNav already reads "my shows".                                                                                                                                            | Prototype chrome is stale; consistent with correction 5. No nav work.                              |
 | 6   | README asks for a `MiniPaywall` and states `buildMeta` hardcodes a Spotify logo on the Following chip.                                      | §1.1/§1.2: `MiniPaywall` does not exist (`TierPickerSheet` is shipped) and the chip is already text-only.                                                                            | Given as corrections 1 and 4; restated here because the README text remains in the merged handoff. |
+
+---
+---
+
+# APPENDIX P6 — PR 6: My shows ▸ Artists, and the shared picker
+
+> **Scope of this appendix.** Everything below enumerates **PR 6 only**. It is appended rather than
+> merged into sections A–N above because those enumerate the epic at large; section H (`MS-01`…`MS-11`)
+> covers the same surface at a much coarser grain. Where a row here disagrees with an `MS-` row, this
+> appendix is the finer reading — but both are kept so a verifier can see the difference.
+>
+> **ID prefixes used here** (chosen not to collide with `FA-`/`AP-`/`MS-`/`ST-`/`DG-`/`PU-`/`TP-`/`FW-`/`XC-`):
+> `T-` tabs · `G-` list groups + rows · `FR-` find-more row · `AL-` alerts row · `SP-` Spotify variants ·
+> `PK-` picker · `EM-` empty state · `DK-` desktop · `SCV-` state coverage · `CP-` copy · `ACC-` a11y ·
+> `RS-` responsive · `OOS-` not in the plan's scope · `AMB-` ambiguities.
+>
+> **All copy in the prototypes is placeholder** (handoff README banner). Every `CP-` row is marked
+> accordingly; every string must go through the `copy-review` skill and land in a `definitions/copy.ts`
+> before it ships. The strings below are what to review, not what to paste.
+
+## P6.0 — What already exists vs. what is new
+
+| ID     | Thing                                                                                | Status                                   | Where                                                                             |
+| ------ | ------------------------------------------------------------------------------------ | ---------------------------------------- | --------------------------------------------------------------------------------- |
+| EX-01  | `MyShowsTabs` — two tabs, rendered as a `<nav>` of `<Link>`s with `aria-current`      | **Shipped, and must be rewritten**       | `apps/web/src/components/consumer/history/MyShowsTabs.tsx`                        |
+| EX-02  | `HISTORY_COPY.tabs = { ariaLabel: 'My shows', watching: 'Watching', concerts: 'Concerts' }` | **Shipped; no `artists` key**       | `apps/web/src/components/consumer/history/definitions/copy.ts`                    |
+| EX-03  | `FollowShelf` + `ShelfCard` (badge-on-art affordance, 34px, gate span, `useArtistFollow`) | **Shipped — reuse, do not re-draw**  | `apps/web/src/components/consumer/following/ShelfCard.tsx`                        |
+| EX-04  | `FOLLOWING_COPY` (`cardNoDate`, `followAria`, `followingAria`, `followGate`, `shelfAria`, `cardDateSeparator`) | **Shipped**             | `apps/web/src/components/consumer/following/definitions/copy.ts`                  |
+| EX-05  | `SHELF_NARROW_QUERY = '(max-width: 359px)'` — the concrete narrow breakpoint precedent | **Shipped — reuse this value**           | `apps/web/src/components/consumer/following/definitions/constants.ts`             |
+| EX-06  | `GET /v1/me/artist-follows` → `FollowedArtist[]`, **deliberately ungated**            | **Shipped**                              | `apps/api/src/routes/artist-follows.ts`                                           |
+| EX-07  | `POST /v1/me/artist-follows/bulk`, `requireFeature('following')`, `slugs` 1…50        | **Shipped**                              | `apps/api/src/routes/artist-follows.ts`                                           |
+| EX-08  | `fetchFollowedArtists` / `seedFollowedArtists` / `datedFollows` / `hasSpotifyFollows` / `dateLine` / `followsToShelfArtists` | **Shipped**   | `apps/web/src/lib/following.ts`                                                   |
+| EX-09  | `TierPickerSheet`, entry `'follow'`                                                   | **Shipped**                              | consumer tier picker                                                              |
+| NEW-01 | A route for the Artists tab                                                           | **New** — `(protected)/(main)/` has `watching`, `history`, `artists/[slug]` only, no artists index | `apps/web/src/app/(protected)/(main)/`      |
+| NEW-02 | Third tab + count in the accessible name                                              | **New**                                  | `MyShowsTabs.tsx`                                                                 |
+| NEW-03 | Two-group followed-artist list + `ArtistManageRow`                                    | **New**                                  | new dir                                                                           |
+| NEW-04 | `FindArtistsRow`                                                                      | **New**                                  | new dir                                                                           |
+| NEW-05 | Alerts deep-link row                                                                  | **New**                                  | new dir                                                                           |
+| NEW-06 | `apps/web/src/components/consumer/artist-picker/`                                     | **New** (and contested — see `AMB-05`)   | new dir                                                                           |
+| NEW-07 | Artists empty state (mobile + desktop)                                                | **New**                                  | new dir                                                                           |
+| NEW-08 | Spotify-imported variants of the list                                                 | **New, and unnamed by the plan**         | see `OOS-02`                                                                      |
+
+---
+
+## P6.1 — Surface + component inventory
+
+Every component PR 6 names, with the prototype component that draws it and its file + line.
+
+| ID    | Surface / component (build name)   | Prototype component        | File + line                                  | Notes                                                                 |
+| ----- | ---------------------------------- | -------------------------- | -------------------------------------------- | --------------------------------------------------------------------- |
+| CI-01 | Artists tab (tab strip)            | `NFTabs`                   | `nf-shared.jsx:315`                          | Prototype tabs are `["Watching","Artists","History"]`, `active={1}`    |
+| CI-02 | Artists tab page (mobile)          | `MyShowsArtists`           | `nf-following.jsx:203`                       | App bar + tabs + 2 groups + find row + alerts card + Spotify footnote  |
+| CI-03 | Followed-artist row                | `ArtistManageRow`          | `nf-following.jsx:169`                       | Art + name + meta + trailing `NFFollow state="following"`              |
+| CI-04 | "No dates announced" meta          | `NoDatesLine`              | `nf-shared.jsx:223`                          | Used as the meta line of the second group                             |
+| CI-05 | Spotify provenance mark            | `SourceMark`               | `nf-shared.jsx:125`                          | Per-row, under the meta line, `marginTop:1`                            |
+| CI-06 | Find-more row                      | `FindArtistsRow`           | `nf-following.jsx:189`                       | A row, not a button (plan Step 3)                                      |
+| CI-07 | Alerts deep-link card              | inline in `MyShowsArtists` | `nf-following.jsx:203` (card block)          | Deep link into Settings ▸ Notifications; **not** a second control      |
+| CI-08 | Spotify footnote card              | inline in `MyShowsArtists` | `nf-following.jsx:203` (footnote block)      | Only when the list contains imported artists                           |
+| CI-09 | Empty state (mobile)               | `MyShowsArtistsEmpty`      | `nf-following.jsx:245`                       | Plan Step 6                                                            |
+| CI-10 | Spotify fresh-import variant       | `MyShowsArtistsSpotifyFresh` | `nf-following.jsx:272`                     | Sync header card + explanatory footnote — see `OOS-02`                 |
+| CI-11 | Artists tab page (desktop)         | `MyShowsArtistsDesktop`    | `nf-desktop.jsx:184`                         | 940px, 3-col card grids — see `OOS-01`                                 |
+| CI-12 | Picker tile                        | `ArtistPick`               | `nf-cold-start.jsx:35`                       | `role="checkbox"`, badge on art                                        |
+| CI-13 | Picker grid                        | `PickGrid`                 | `nf-cold-start.jsx:65`                       | `repeat(cols, minmax(0,1fr))`, gap 10                                  |
+| CI-14 | Picker body + commit bar           | `FollowStepArtists`        | `nf-cold-start.jsx:100`                      | The onboarding step; PR 6 extracts the reusable half                   |
+| CI-15 | Picker (desktop / modal)           | `FollowStepDesktop`        | `nf-desktop.jsx:258`                         | 760px card, 5-col grid                                                 |
+| CI-16 | Bulk sheet (list, not grid)        | `BulkFollowSheet`          | `nf-cold-start.jsx:350`                      | Different anatomy from the picker — see `AMB-06`                       |
+| CI-17 | Follow button atom                 | `NFFollow`                 | `nf-shared.jsx:168`                          | `NF_FOLLOW_SIZES` at `nf-shared.jsx:156`                               |
+| CI-18 | Primary / ghost buttons            | `NFPrimary` / `NFGhost`    | `nf-shared.jsx:65` / `:77`                   | Empty-state and desktop-header CTAs                                    |
+| CI-19 | Artwork                            | `NFArt`                    | `nf-shared.jsx:45`                           | Wraps shipped `IdentityArt kind="artist"`; `aria-hidden`               |
+| CI-20 | Mono label                         | `Mono`                     | `nf-shared.jsx:57`                           | Group headings, counts, provenance                                     |
+| CI-21 | Sample data                        | `NF_ARTISTS`               | `nf-shared.jsx:379`                          | 12 artists; 10 dated, 2 undated (`Jessica Pratt`, `Been Stellar`)      |
+| CI-22 | Artboards for this surface         | section 4 `manage`         | `nf-canvas.jsx:399`                          | `mg-mobile`, `mg-320`, `mg-empty`, `mg-spotify`, `mg-mixed`, `mg-desk`, `mg-desk-empty`; plus `du-light`, `du-jade-empty` in section 8 |
+
+---
+
+## P6.2 — State coverage
+
+Every visual state, and how a build/verify agent reaches it.
+
+| ID     | Surface        | State                        | How triggered                                                                       | Drawn at                                  |
+| ------ | -------------- | ---------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------- |
+| SCV-01 | Artists tab    | Empty (zero follows)         | `GET /v1/me/artist-follows` → `[]`                                                   | `nf-following.jsx:245`, `mg-empty`        |
+| SCV-02 | Artists tab    | Loading                      | Request in flight; `seedFollowedArtists` returns `undefined` (UNKNOWN ≠ zero)        | **Not drawn** — see `OOS-06`              |
+| SCV-03 | Artists tab    | Error                        | Fetch rejects / non-2xx                                                              | **Not drawn** — see `OOS-06`              |
+| SCV-04 | Artists tab    | One artist, dated            | Single follow with `nextShow != null`                                                | Row form only, `nf-following.jsx:169`     |
+| SCV-05 | Artists tab    | One artist, undated          | Single follow, `nextShow == null` → group 2 only, group 1 absent                     | Row form only; heading behaviour undefined (`AMB-07`) |
+| SCV-06 | Artists tab    | Many, both groups            | ≥1 dated and ≥1 undated                                                              | `mg-mobile` (7 follows)                   |
+| SCV-07 | Artists tab    | All dated                    | Every follow has `nextShow`                                                          | Implied; group 2 + its heading must not render |
+| SCV-08 | Artists tab    | All undated                  | No follow has `nextShow`                                                             | Implied; group 1 + its heading must not render |
+| SCV-09 | Artists tab    | Contains imported artists    | Any follow with `source` ∈ `spotify_followed \| spotify_top`                          | `mg-mixed`; footnote card                 |
+| SCV-10 | Artists tab    | Fresh large Spotify import   | Large imported list, recent sync                                                     | `nf-following.jsx:272`, `mg-spotify` (112)|
+| SCV-11 | Row            | Following (default)          | Every row on this surface starts `following`                                          | `NFFollow state="following"`              |
+| SCV-12 | Row            | Idle (after unfollow)        | Tap the row's button once; optimistic; **row stays on screen until navigation**       | canvas §4 Structure note                  |
+| SCV-13 | Row            | Locked                       | `nfLocked(planState)` true (downgraded user viewing a retained list)                  | `nf-shared.jsx:168` locked skin           |
+| SCV-14 | Row            | Icon-only                    | Viewport narrow (`narrow` → `iconOnly`)                                               | `mg-320`                                  |
+| SCV-15 | Row            | Slug-less artist             | `slug === null` (hidden projection) — shipped `ShelfCard` precedent renders no badge   | **Not drawn for this row** (`AMB-08`)     |
+| SCV-16 | Row            | Art fails to load            | Signed URL 404 → `IdentityArt` fallback (shipped `CardArt` precedent)                  | **Not drawn**                             |
+| SCV-17 | Empty state    | Entitled                     | Zero follows, `nfLocked` false → primary reads "Find artists to follow"                | `nf-following.jsx:245`                    |
+| SCV-18 | Empty state    | Locked                       | Zero follows, `nfLocked` true → primary reads "See who's playing Denver"                | same, ternary on `nfLocked(tier)`         |
+| SCV-19 | Empty state    | Desktop                      | ≥ desktop breakpoint                                                                   | `nf-desktop.jsx:184` (`mg-desk-empty`)    |
+| SCV-20 | Signed-out     | —                            | `/watching` and `/history` are protected; the Artists route sits under `(protected)`   | **Not drawn** — no signed-out artboard    |
+| SCV-21 | Tab strip      | Artists active               | On the Artists route                                                                   | `NFTabs active={1}`                       |
+| SCV-22 | Tab strip      | Artists inactive             | On Watching or Concerts — count is **not** rendered (count shows on active tab only)   | `nf-shared.jsx:315`                       |
+| SCV-23 | Tab strip      | Zero-count                   | No follows → what the accessible name says is undefined (`AMB-04`)                     | **Not drawn**                             |
+| SCV-24 | Picker tile    | Unselected                   | Initial                                                                                | `nf-cold-start.jsx:35`                    |
+| SCV-25 | Picker tile    | Selected                     | Tap / Space                                                                            | same                                      |
+| SCV-26 | Picker tile    | Undated artist               | `artist.next == null` → sub-line "no date yet"                                          | same                                      |
+| SCV-27 | Picker         | Zero selected                | Initial → commit bar shows the "continue without" pairing                                | `nf-cold-start.jsx:100`                   |
+| SCV-28 | Picker         | n selected, entitled         | ≥1 selected, `nfLocked` false                                                            | same                                      |
+| SCV-29 | Picker         | n selected, locked           | ≥1 selected, `nfLocked` true → commit reads "…with Premium", picks held                  | same                                      |
+| SCV-30 | Picker         | Committing                   | Bulk POST in flight → `NFFollow` `pending` ("Following…", `opacity 0.72`)                | `nf-shared.jsx:168`                       |
+| SCV-31 | Picker         | Commit error                 | Bulk POST fails                                                                          | **Not drawn** — see `OOS-06`              |
+| SCV-32 | Picker         | Suggestions empty            | Suggestions endpoint returns `[]`                                                        | **Not drawn**                             |
+| SCV-33 | Picker         | Desktop                      | ≥ desktop breakpoint → 5-col grid in a 760px modal                                       | `nf-desktop.jsx:258`                      |
+| SCV-34 | Whole surface  | Light theme                  | `data-theme` Light — selection must hold AA on glyph + border + fill                     | `du-light`                                |
+| SCV-35 | Whole surface  | Jade theme (empty)           | `data-theme` Jade                                                                        | `du-jade-empty`                           |
+
+---
+
+## P6.3 — Exact values
+
+### Tab strip
+
+| ID    | Property                | Prototype value (`nf-shared.jsx:315`)                                              | Shipped value (`MyShowsTabs.tsx`)                          |
+| ----- | ----------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| T-01  | Container               | `display:flex; gap:4; padding:0 16px; border-bottom:1px solid var(--border)`         | segmented pill: `rounded-[10px] border border-border bg-surface-1 p-[3px]` |
+| T-02  | Tab box                 | `padding:12px 4px 10px; margin-right:14; gap:6`                                       | `min-h-[44px] flex-1 rounded-md px-3.5`                     |
+| T-03  | Active indicator        | `border-bottom:2px solid var(--signal)`, `margin-bottom:-1px`                          | `background: var(--surface-3)`, `border: 1px solid var(--border-strong)` |
+| T-04  | Inactive indicator      | `border-bottom:2px solid transparent`                                                  | transparent bg + transparent border                          |
+| T-05  | Label type              | Inter, `14px`, weight `800` active / `600` inactive                                     | `var(--font-ui)`, `12.5px`, weight `700` / `500`, `letter-spacing:-0.005em` |
+| T-06  | Label colour            | `var(--fg)` active / `var(--fg-subtle)` inactive                                        | `var(--fg)` / `var(--fg-muted)`                              |
+| T-07  | Count                   | mono `10px`, weight `700`, `var(--fg-subtle)`, **active tab only**                       | **no count shipped**                                         |
+| T-08  | Desktop tab strip       | `gap:26; border-bottom:1px solid var(--border); margin-bottom:22`; label `15.5px`, active weight `800`; underline `2px solid var(--signal)`; count mono `11px/700`, active only | `nf-desktop.jsx:184` |
+| T-09  | Tab order + labels      | Prototype: `Watching · Artists · History`, Artists at index 1                            | Shipped: `Watching · Concerts` — see `AMB-02`                |
+
+### Followed-artist row (`ArtistManageRow`, `nf-following.jsx:169`)
+
+| ID    | Property             | Value                                                                                     |
+| ----- | -------------------- | ----------------------------------------------------------------------------------------- |
+| G-01  | Row box              | `display:flex; align-items:center; gap:12px; padding:11px 16px; border-top:1px solid var(--border)` |
+| G-02  | Art                  | `NFArt size={narrow ? 48 : 56} radius={8}`; `aria-hidden`                                  |
+| G-03  | Name                 | Inter `14.5px`, weight `800`, `color:var(--fg)`, `letter-spacing:-0.015em`, `white-space:nowrap` + ellipsis |
+| G-04  | Meta (dated)         | JetBrains Mono `9.5px`, `color:var(--signal)`, `letter-spacing:0.06em`, uppercase          |
+| G-05  | Meta (undated)       | `NoDatesLine` — mono `9.5px`, weight `600`, `letter-spacing:0.08em`, uppercase, `var(--fg-subtle)` |
+| G-06  | Provenance           | `SourceMark source="spotify"` with `margin-top:1px` — mono `9px`, weight `700`, `letter-spacing:0.1em`, uppercase, `var(--fg-subtle)`, `SpotifySlot size={9}` |
+| G-07  | Trailing control     | `NFFollow state="following" size="sm" iconOnly={narrow}` → `height:36px; padding:0 12px; font-size:12.5px; gap:6px; glyph 12px` |
+| G-08  | Following skin       | `background: color-mix(in oklab, var(--signal) 14%, transparent)`; `color: var(--signal)`; `border: 1px solid var(--signal)`; `border-radius:10px`; Inter `800`; `letter-spacing:-0.01em`; `white-space:nowrap` |
+| G-09  | Idle skin            | `background: var(--signal)`; `color: var(--fg-on-accent)`; `border: 1px solid var(--signal)` |
+| G-10  | Locked skin          | `background: transparent`; `color: var(--fg)`; `border: 1px solid var(--border-strong)`     |
+| G-11  | Pending skin         | idle skin at `opacity: 0.72` (bulk commit only — see contradiction row 1 above)             |
+| G-12  | Group 1 heading      | `Mono size={9.5}` in `padding:13px 16px 9px`                                                 |
+| G-13  | Group 2 heading      | `Mono size={9.5}` in `padding:22px 16px 9px`                                                 |
+| G-14  | `Mono` defaults      | JetBrains Mono, `10px`, weight `700`, `letter-spacing:0.14em`, uppercase, `var(--fg-subtle)` |
+| G-15  | Sort, group 1        | soonest date first                                                                           |
+| G-16  | Sort, group 2        | alphabetical                                                                                 |
+| G-17  | **Never** `--accent` | `--accent` is reserved for Watching and brand; Following uses `--signal`. Only the empty-state eyebrow uses `--accent`. |
+
+### Find-more row (`FindArtistsRow`, `nf-following.jsx:189`)
+
+| ID    | Property        | Value                                                                                  |
+| ----- | --------------- | -------------------------------------------------------------------------------------- |
+| FR-01 | Row box         | `padding:13px 16px`, `margin-top:18px` in `MyShowsArtists`                              |
+| FR-02 | Leading glyph   | dashed-border square, `48px` narrow / `56px`, containing `GlyphSearch size={19}` in `var(--signal)` |
+| FR-03 | Title           | Inter `14.5px`, weight `800`                                                             |
+| FR-04 | Body            | `12px`, `var(--fg-subtle)`, `margin-top:3px`                                             |
+| FR-05 | Trailing        | `GlyphChevron size={15}`                                                                 |
+| FR-06 | Affordance      | A labelled **row**, not a button (plan Step 3: "+ Follow more" reads like bulk-follow)   |
+
+### Alerts row (`nf-following.jsx:203`)
+
+| ID    | Property | Value                                                                                              |
+| ----- | -------- | -------------------------------------------------------------------------------------------------- |
+| AL-01 | Card box | `margin:18px 16px 0; padding:13px 14px; border-radius:10px; background:var(--surface-1); border:1px solid var(--border)` |
+| AL-02 | Title    | `13.5px`, weight `700`                                                                              |
+| AL-03 | Meta     | `11.5px`, `var(--fg-subtle)` — carries the **current** notification state                            |
+| AL-04 | Glyphs   | `GlyphBell size={17}` leading, chevron trailing                                                       |
+| AL-05 | Behaviour| Deep link into Settings ▸ Notifications. **Not a second place to change the setting** (canvas §4 note) |
+
+### Empty state (`MyShowsArtistsEmpty`, `nf-following.jsx:245`)
+
+| ID    | Property   | Value                                                                                        |
+| ----- | ---------- | ---------------------------------------------------------------------------------------------- |
+| EM-01 | Container  | centred, `padding:0 26px`                                                                       |
+| EM-02 | Mark       | `54×54` dashed square, `border-radius:14px`, `GlyphPlus size={20} w={1.8}`                       |
+| EM-03 | Eyebrow    | `Mono size={10} color="var(--accent)" ls="0.18em"` — the one sanctioned `--accent` use here      |
+| EM-04 | Headline   | `narrow ? 22px : 25px`, weight `900`, `letter-spacing:-0.03em`, `line-height:1.1`                |
+| EM-05 | Body       | `13.5px`, `var(--fg-muted)`, `max-width:290px`                                                    |
+| EM-06 | CTA column | `max-width:300px; gap:8px; margin-top:22px`                                                       |
+| EM-07 | Primary    | `NFPrimary` — `min-height:46px` (dense 40), `padding:13px 20px`, `border-radius:10px`, `--signal` fill, Inter `800`, `14.5px` |
+| EM-08 | Ghost      | `NFGhost` — same box, `1px solid var(--border-strong)`, `var(--fg)`, weight `700`, `14px`          |
+| EM-09 | Desktop    | `padding:70px 0`; mark `60×60` radius `15px`; eyebrow `Mono size={10.5}`; headline `28px/900`; body `max-width:430px`; buttons side by side `full={false}`, `gap:10px; margin-top:24px` |
+
+### Picker (`ArtistPick` / `PickGrid`, `nf-cold-start.jsx:35`/`:65`)
+
+| ID    | Property          | Value                                                                                           |
+| ----- | ----------------- | ------------------------------------------------------------------------------------------------- |
+| PK-01 | Tile box          | `border-radius:12px; padding:8px; gap:8px`                                                         |
+| PK-02 | Tile background   | `selected ? var(--surface-2) : var(--surface-1)`                                                     |
+| PK-03 | Tile border       | `1px solid (selected ? var(--signal) : var(--border))`                                               |
+| PK-04 | Tile inner ring   | `box-shadow: inset 0 0 0 1px var(--signal)` when selected, else `none`                                |
+| PK-05 | Art wrapper       | `aspect-ratio: 1 / 1; border-radius:9px`                                                             |
+| PK-06 | Badge box         | absolute `top:6px; right:6px`; `24×24`; `border-radius:24px`                                          |
+| PK-07 | Badge fill        | `selected ? var(--signal) : rgba(0,0,0,0.5)`                                                          |
+| PK-08 | Badge border      | `1.5px solid (selected ? var(--signal) : rgba(255,255,255,0.6))`                                       |
+| PK-09 | Badge glyph       | `GlyphCheck size={12} w={2.6}` selected / `GlyphPlus size={11} w={2.4}` unselected                     |
+| PK-10 | Three-signal rule | Selection = check glyph **+** border **+** fill. Never colour alone; Light needs all three for AA.     |
+| PK-11 | Name              | `12.5px`, weight `800`, ellipsised                                                                    |
+| PK-12 | Sub-line          | mono `9px`, `var(--fg-subtle)`; `artist.next.split(" · ")[1]` or the no-date string                    |
+| PK-13 | Grid              | `grid-template-columns: repeat(${cols}, minmax(0,1fr)); gap:10px`                                       |
+| PK-14 | Mobile columns    | **2**, "ALWAYS two-up, 320 through desktop" (`nf-cold-start.jsx:65`)                                    |
+| PK-15 | Desktop columns   | **5** (`nf-cold-start.jsx` desktop use and `nf-desktop.jsx:258`)                                        |
+| PK-16 | Search escape     | dashed button, `min-height:44px`                                                                        |
+| PK-17 | Desktop modal     | `760px`, `border-radius:18px`, `background:var(--bg-elevated)`, `1px solid var(--border-strong)`         |
+| PK-18 | Selection persist | component state **and** `sessionStorage` (eng spec §9.x) so picks survive an upgrade round-trip          |
+| PK-19 | Commit            | **ONE** bulk write at commit (`POST /v1/me/artist-follows/bulk`, `slugs` 1…`BULK_FOLLOW_MAX_SLUGS`=50), never per-tap |
+| PK-20 | Source list       | Onboarding uses `NF_ARTISTS.slice(0,10)`; desktop shows all 12. Real source: artist suggestions, default limit 12, max 24 |
+
+### Desktop page (`MyShowsArtistsDesktop`, `nf-desktop.jsx:184`)
+
+| ID    | Property        | Value                                                                                               |
+| ----- | --------------- | ----------------------------------------------------------------------------------------------------- |
+| DK-01 | Container       | `max-width:940px; margin:0 auto; padding:28px 30px 40px`                                                |
+| DK-02 | `h1`            | `30px`, weight `900`, `letter-spacing:-0.03em`                                                          |
+| DK-03 | Heading row     | `Mono size={10}` left; two dense buttons right                                                          |
+| DK-04 | Header actions  | `NFGhost dense` + `GlyphBell size={13}`; `NFPrimary dense` + `GlyphSearch size={13}`                     |
+| DK-05 | Card grid       | `grid-template-columns: repeat(3, 1fr); gap:12px`                                                       |
+| DK-06 | Card            | `padding:12px; border-radius:12px; border:1px solid var(--border)`; group 1 adds `background:var(--surface-1)` |
+| DK-07 | Card art        | `52px`                                                                                                   |
+| DK-08 | Card name       | `14px`, weight `800`                                                                                     |
+| DK-09 | Card date       | mono `9px`, `var(--signal)`                                                                              |
+| DK-10 | Card control    | `NFFollow state="following" size="sm" iconOnly`                                                          |
+| DK-11 | Group 2 heading | `margin:26px 0 12px`; rows use `NoDatesLine`                                                              |
+| DK-12 | Shell           | `DeskShell` (`nf-desktop.jsx:11`) — `60px` header bar, `padding:0 26px`                                    |
+
+### Shared size ramp (`NF_FOLLOW_SIZES`, `nf-shared.jsx:156`)
+
+| ID    | Size   | Height | Padding    | Font   | Gap | Glyph |
+| ----- | ------ | ------ | ---------- | ------ | --- | ----- |
+| SZ-01 | `sm`   | 36px   | `0 12px`   | 12.5px | 6   | 12    |
+| SZ-02 | `md`   | 44px   | `0 14px`   | 13.5px | 7   | 13    |
+| SZ-03 | `full` | 48px   | `0 18px`   | 15px   | 7   | 13    |
+
+---
+
+## P6.4 — Copy (every string verbatim; **all placeholder**)
+
+| ID     | Component                          | String (verbatim)                                                                                                                            |
+| ------ | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| CP-01  | Tab label                          | `Artists`                                                                                                                                       |
+| CP-02  | Tab accessible name pattern        | `Artists, 7`                                                                                                                                    |
+| CP-03  | App bar (`MyShowsArtists`)         | `My shows`                                                                                                                                      |
+| CP-04  | Group 1 heading                    | `{n} playing denver` (rendered uppercase by `Mono`)                                                                                             |
+| CP-05  | Group 2 heading                    | `Nothing on the books · {n}`                                                                                                                    |
+| CP-06  | Undated meta                       | `No dates announced`                                                                                                                            |
+| CP-07  | Provenance mark                    | `Spotify`                                                                                                                                       |
+| CP-08  | Row control                        | `Following` / `Follow` / `Following…`                                                                                                           |
+| CP-09  | Gate sentence                      | `Following artists is a Premium feature. Opens upgrade options.` (already shipped as `FOLLOWING_COPY.followGate`)                                |
+| CP-10  | Find row title                     | `Find artists to follow`                                                                                                                        |
+| CP-11  | Find row body                      | `Search by name, or browse who's playing Denver soon.`                                                                                          |
+| CP-12  | Alerts title                       | `Alerts for these artists`                                                                                                                      |
+| CP-13  | Alerts meta                        | `Push on · weekly digest on`                                                                                                                    |
+| CP-14  | Spotify footnote (normal list)     | `4 of these came in from Spotify. Unfollowing here won't touch your Spotify library.`                                                            |
+| CP-15  | Empty eyebrow                      | `No one yet`                                                                                                                                    |
+| CP-16  | Empty headline                     | `Nobody on your list.`                                                                                                                          |
+| CP-17  | Empty body                         | `Follow an artist and we'll tell you the moment they book a Denver date. Even the ones who only come through once a year.`                       |
+| CP-18  | Empty primary (entitled)           | `Find artists to follow`                                                                                                                        |
+| CP-19  | Empty primary (locked)             | `See who's playing Denver`                                                                                                                      |
+| CP-20  | Empty ghost                        | `Follow from a show you're watching`                                                                                                            |
+| CP-21  | Spotify-fresh header title         | `112 artists from Spotify`                                                                                                                      |
+| CP-22  | Spotify-fresh header meta          | `Synced 2 hours ago · 6 playing Denver`                                                                                                         |
+| CP-23  | Spotify-fresh footnote             | `Same list, same controls. Spotify just filled it for you. Follow or unfollow anyone here without touching your Spotify account.`                |
+| CP-24  | Picker tile no-date sub-line       | `no date yet` (already shipped as `FOLLOWING_COPY.cardNoDate`)                                                                                  |
+| CP-25  | Picker search escape               | `Search for someone specific`                                                                                                                   |
+| CP-26  | Picker commit, locked              | `Follow {n} artist(s) with Premium`                                                                                                             |
+| CP-27  | Picker sub-line, locked            | `Your picks are held while you upgrade. Nothing gets lost.`                                                                                      |
+| CP-28  | Picker commit, unlocked            | `Follow {n} artist(s) →`                                                                                                                        |
+| CP-29  | Picker secondary, unlocked         | `Continue without following →`                                                                                                                  |
+| CP-30  | Picker sub-line, unlocked (n>0)    | `Unfollow any of them any time.`                                                                                                                |
+| CP-31  | Picker sub-line, unlocked (n=0)    | `You can follow anyone from search later.`                                                                                                      |
+| CP-32  | Desktop picker footer              | `{n} selected · unfollow any of them any time.` / `Follow {n} artists →`                                                                        |
+| CP-33  | Desktop header actions             | `Alerts` / `Find artists to follow`                                                                                                             |
+| CP-34  | Shipped tab labels (do not change) | `Watching` / `Concerts` — `HISTORY_COPY.tabs`                                                                                                   |
+| CP-35  | Aria patterns already shipped      | `Follow ${name}` / `Following ${name}` — `FOLLOWING_COPY.followAria` / `followingAria`                                                            |
+
+**Copy rules that apply to every row above:** no em-dashes; strings live in `definitions/copy.ts`, never in the `.tsx`; the locked vocabulary is Watching (shows) / Concerts (label for the `history` identifier) / Following + Artists (artists); there is no "Saved". Pluralisation of `artist(s)` must be real, not a literal `(s)`.
+
+---
+
+## P6.5 — Interaction + accessibility
+
+| ID     | Requirement                                                                                                                                                  | Source                              |
+| ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| ACC-01 | Tabs are a **real tablist**: `role="tablist"`, `role="tab"`, `aria-selected`, arrow-key navigation                                                              | README a11y; spec §7.5; plan Step 1 |
+| ACC-02 | The count is inside the tab's accessible name ("Artists, 7"), not a separate announced node                                                                     | canvas §4 A11Y note                 |
+| ACC-03 | Group headings are `h2` elements (the prototype renders `Mono` divs — the divs are wrong)                                                                       | canvas §4 A11Y note; plan Step 2    |
+| ACC-04 | The Spotify footnote is **associated with the list**, not decorative                                                                                            | canvas §4 A11Y note                 |
+| ACC-05 | Picker tiles are `role="checkbox"` with `aria-checked`, inside a **labelled group**                                                                              | README a11y; `nf-cold-start.jsx:35` |
+| ACC-06 | The tile itself is the checkbox — a 12-artist grid is **12** targets, not 24 (no separate badge button)                                                          | plan Step 5                         |
+| ACC-07 | Selection is signalled by check glyph + border + fill, never colour alone                                                                                        | README a11y; `PK-10`                |
+| ACC-08 | Locked controls are **never** `disabled` or `aria-disabled`; they open `TierPickerSheet` with entry `'follow'`                                                    | eng spec §5.2                       |
+| ACC-09 | Locked controls carry `aria-describedby` pointing at a visually-hidden gate sentence, hidden by **clip** (not `hidden` / `display:none`), id from `React.useId()`  | eng spec §5.2; shipped `ShelfCard`  |
+| ACC-10 | `aria-pressed` is set only when not locked (`aria-pressed={locked ? undefined : state === 'following'}`)                                                          | `nf-shared.jsx:168`                 |
+| ACC-11 | `aria-label` on the follow control **only** when `iconOnly`                                                                                                       | `nf-shared.jsx:168`                 |
+| ACC-12 | Every follow variant is ≥44px except the `sm` row button at 36px, which is permitted only because it is paired with a full-row tap target                          | canvas §1 A11Y note                 |
+| ACC-13 | Commit button text carries the count                                                                                                                              | canvas §1 A11Y note                 |
+| ACC-14 | Unfollow is the same button tapped again. **No confirm dialog.** The artist stays on screen until you navigate away                                                | canvas §4 Structure note            |
+| ACC-15 | Single-artist follow/unfollow is **optimistic** — do not render `pending` on a single tap                                                                          | eng spec §5.1                       |
+| ACC-16 | `pending` renders only for the bulk commit                                                                                                                        | eng spec §5.1                       |
+| ACC-17 | Artwork is `aria-hidden` (`NFArt` / shipped `IdentityArt`)                                                                                                        | `nf-shared.jsx:45`                  |
+| ACC-18 | The alerts row is a link into Settings ▸ Notifications, not a toggle — do not make it operable as a control                                                        | canvas §4 Structure note            |
+| ACC-19 | `nfLocked` must be `(state: PlanStateLike) => !canUseFeature(state, 'following')` — never the prototype's tier-string test                                          | eng spec §5.2                       |
+| ACC-20 | The picker's search escape is ≥44px                                                                                                                               | `nf-cold-start.jsx:100`             |
+| ACC-21 | Focus must survive an unfollow (the row does not unmount) and a tab switch                                                                                        | derived from `ACC-14`               |
+
+---
+
+## P6.6 — Responsive
+
+| ID    | Rule                                                                                                                    | Value / source                                        |
+| ----- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| RS-01 | 320px baseline artboard exists for this surface                                                                            | `mg-320`                                               |
+| RS-02 | `narrow` shrinks row art 56 → 48px                                                                                         | `nf-following.jsx:169`                                 |
+| RS-03 | `narrow` collapses the row follow button to `iconOnly` (which then requires `aria-label`)                                   | `nf-following.jsx:169`; `ACC-11`                       |
+| RS-04 | `narrow` shrinks the find-row glyph square 56 → 48px                                                                        | `nf-following.jsx:189`                                 |
+| RS-05 | `narrow` shrinks the empty headline 25 → 22px                                                                              | `nf-following.jsx:245`                                 |
+| RS-06 | The narrow breakpoint value: spec says "under 360px"; reuse the shipped `SHELF_NARROW_QUERY = '(max-width: 359px)'`         | `following/definitions/constants.ts`                   |
+| RS-07 | Picker grid is **2 columns from 320px through mobile**, explicitly never 1                                                  | `nf-cold-start.jsx:65`                                 |
+| RS-08 | Picker grid is **5 columns** on desktop                                                                                     | `nf-desktop.jsx:258`                                   |
+| RS-09 | Desktop list is a **3-column card grid**, not rows                                                                          | `nf-desktop.jsx:184`                                   |
+| RS-10 | Desktop content is capped at 940px and centred                                                                             | `DK-01`                                                |
+| RS-11 | Desktop moves Alerts and Find from stacked rows into the group-heading row as dense buttons                                  | `DK-03`/`DK-04`                                        |
+| RS-12 | Desktop empty state is a distinct layout, not the mobile one scaled                                                         | `EM-09`                                                |
+| RS-13 | Mobile/desktop parity is non-negotiable and ships in the same PR                                                            | project convention                                     |
+
+---
+
+## P6.7 — Not in the plan's scope
+
+Drawn by the designer, or required by shipped reality, and **not named by PR 6 Steps 1–6**. These are decisions to make, not silent additions.
+
+| ID     | Missing thing                                                                                                                                                                                                              | Where it is drawn                             | Why it matters                                                                                                       |
+| ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| OOS-01 | **The entire desktop surface.** `MyShowsArtistsDesktop` — 940px container, `h1`, 3-column card grids, header-level Alerts + Find buttons, its own empty state, its own tab-strip metrics. The plan's six steps describe mobile only. | `nf-desktop.jsx:184`, `mg-desk`, `mg-desk-empty` | Mobile/desktop parity is non-negotiable and must ship in the same PR, so this is real work the estimate does not contain. |
+| OOS-02 | **The Spotify-source variants.** `MyShowsArtistsSpotifyFresh` (sync header card with count + "synced N ago · N playing Denver" + chevron), the per-row `SourceMark`, and the "won't touch your Spotify library" footnote card.        | `nf-following.jsx:272` + `:203`; `mg-spotify`, `mg-mixed` | Three artboards and two of the six mobile blocks. `hasSpotifyFollows` already ships, so the data is there and the UI is not. |
+| OOS-03 | **`MyShowsTabs` is not a tab strip.** It is a `<nav>` of `<Link>`s with `aria-current="page"` and an explicit code comment rejecting `role="tab"` ("there is no panel to associate and no in-place switching"), styled as a segmented pill at 12.5px with no count. | `MyShowsTabs.tsx`                             | Step 1 says "add `'artists'` to the `TABS` const" plus "a real tablist" — those are incompatible; it is a rewrite, and it changes Watching and Concerts too. |
+| OOS-04 | **The route.** `(protected)/(main)/` has no artists index; `artists/` holds only `[slug]`. A new route, its metadata, and its data fetch are unnamed.                                                                                | `apps/web/src/app/(protected)/(main)/`        | Nothing renders without it.                                                                                            |
+| OOS-05 | **Sorting is server-mismatched.** `GET /v1/me/artist-follows` orders `desc(createdAt), asc(artistName)` — newest-followed-first. The design needs soonest-date-first then alphabetical, in two groups.                                | `apps/api/src/routes/artist-follows.ts`       | A client-side regroup/sort layer nobody costed, plus a decision about whether to change the endpoint.                    |
+| OOS-06 | **No loading, error, or commit-failure states are drawn** for the list or the picker. `seedFollowedArtists` distinguishes UNKNOWN (`undefined`) from zero (`[]`), which means a skeleton is required to avoid flashing the empty state. | —                                             | The empty state is prominent and wrong-looking if it flashes.                                                           |
+| OOS-07 | **The locked variant of the empty state.** The primary CTA swaps to "See who's playing Denver" when `nfLocked`. Step 6 says only "per the handoff's `MyShowsArtistsEmpty`".                                                             | `nf-following.jsx:245`                        | It is the only entitlement branch in the empty state and it is easy to miss.                                            |
+| OOS-08 | **The app-bar bell action.** A 40×40 circle beside the title in `MyShowsArtists`.                                                                                                                                                      | `nf-following.jsx:203`                        | Overlaps the shipped notifications bell; needs a keep/drop call.                                                        |
+| OOS-09 | **The 320px variants** — art 48px, icon-only follow, 48px find-row glyph, 22px headline — and the breakpoint value to drive them.                                                                                                       | `mg-320`; `RS-02`…`RS-06`                     | Icon-only introduces an `aria-label` requirement that only exists at that width.                                        |
+| OOS-10 | **Theme artboards.** Light and Jade variants of this surface, including the AA constraint on picker selection.                                                                                                                          | `du-light`, `du-jade-empty`                   | Selection using colour alone fails Light; the three-signal rule exists because of it.                                   |
+| OOS-11 | **Slug-less and art-failure rows.** Hidden projections have `slug === null`; shipped `ShelfCard` renders those unlinked and badge-less, and falls back to `IdentityArt` on image error. Neither is drawn for `ArtistManageRow`.           | shipped `ShelfCard.tsx`                       | Real data produces both.                                                                                               |
+| OOS-12 | **`BulkFollowSheet` is a different component from the picker** — a 72%-height sheet with a 44px-art **list** and 24px check boxes, not a grid. Step 5 implies one picker; the handoff draws two anatomies.                                | `nf-cold-start.jsx:350`                       | Building one and reusing it for the other silently changes a drawn design.                                             |
+
+---
+
+## P6.8 — Ambiguities and contradictions
+
+| ID     | Question                                     | Reading A                                                                                              | Reading B                                                                                                              |
+| ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| AMB-01 | Tablist or links?                            | Convert `MyShowsTabs` to a real `role="tablist"` with panels and arrow-key nav, as the plan, spec §7.5 and the README a11y note all say. Requires in-place switching or `aria-controls` against routed panels. | Keep link navigation and `aria-current="page"` (the shipped comment's reasoning: there is no panel), and satisfy only the "count inside the accessible name" half. |
+| AMB-02 | Tab 2's label                                | The plan and every prototype say `History`.                                                              | Shipped copy and the locked vocabulary say `Concerts`; `history` is the identifier only. **B is correct** — but it means the drawn strip never existed. |
+| AMB-03 | Group headings                               | Prototype renders `Mono` **divs**.                                                                       | The a11y note and plan Step 2 require `h2`. **B wins**; style the `h2` with the `Mono` metrics.                            |
+| AMB-04 | Zero-count tab name                          | Render "Artists, 0".                                                                                     | Omit the count entirely when zero, matching the prototype's active-only count rule.                                        |
+| AMB-05 | Does a picker ship at all?                   | Plan Step 5 and eng spec §9.x: build a standalone picker component here, reused by onboarding step 7.     | This table's **Ambiguity 3 above is marked RESOLVED**: `FindArtistsRow` routes to `/search`, "No picker route and no picker sheet ship in this epic." These cannot both hold. |
+| AMB-06 | Which picker anatomy?                        | The onboarding grid (`ArtistPick` + `PickGrid`, 2-up mobile / 5-up desktop).                             | The `BulkFollowSheet` list (44px art, 24px check box). No standalone My-shows picker surface is drawn anywhere.             |
+| AMB-07 | Headings when only one group has members     | Always render both headings, with a zero count.                                                          | Render a heading only when its group is non-empty. Nothing is drawn for the single-group case.                              |
+| AMB-08 | Slug-less rows                               | Render the name unlinked with no follow control, mirroring shipped `ShelfCard`.                          | Render the control anyway and no-op. **A** matches shipped behaviour but is undrawn here.                                   |
+| AMB-09 | Alerts meta content                          | Derive verbatim from live notification settings ("Push on · weekly digest on").                          | Show a static summary. The canvas note says it carries "its current state", implying A, but no zero/off string is drawn.     |
+| AMB-10 | Unfollow persistence within the session      | Row stays until navigation (canvas §4).                                                                  | Row also stays across a tab switch back and forth. Undefined.                                                                |
+| AMB-11 | Where the count comes from                   | Length of the fetched follows list.                                                                      | A server-provided count. Matters for the tab label while the list is still loading (`SCV-02`).                               |
+| AMB-12 | `--accent` in the empty-state eyebrow        | Keep it: it is drawn twice (mobile + desktop) as `var(--accent)`.                                        | Change it: `--accent` is reserved for Watching and brand, and Following must never borrow it. Needs an explicit call.        |
