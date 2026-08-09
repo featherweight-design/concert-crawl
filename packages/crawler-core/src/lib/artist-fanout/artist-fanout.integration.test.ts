@@ -522,7 +522,7 @@ describe('runArtistFanout — push batching (PR 9)', () => {
       newEvents: 2,
       matchedPairs: 2,
       pushesClaimed: 2,
-      pushDeliveries: 1,
+      pushBatchesAttempted: 1,
       failures: 0,
     })
     expect(sendPush).toHaveBeenCalledTimes(1)
@@ -613,7 +613,7 @@ describe('runArtistFanout — push batching (PR 9)', () => {
       getRole: noRole,
     })
 
-    expect(summary).toMatchObject({ pushesClaimed: 4, pushDeliveries: 2 })
+    expect(summary).toMatchObject({ pushesClaimed: 4, pushBatchesAttempted: 2 })
     expect(sendPush).toHaveBeenCalledTimes(2)
     expect(sendPush.mock.calls.map((call) => call[0].userId).sort()).toEqual(
       [BYSTANDER_USER, PREMIUM_USER].sort(),

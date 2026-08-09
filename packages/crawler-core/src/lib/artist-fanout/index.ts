@@ -147,9 +147,12 @@ export interface ArtistFanoutSummary {
   matchedPairs: number
   autoWatched: number
   pushesClaimed: number
-  // Claims vs. deliveries: the gap between these two is the batching, and it
-  // is the only way to prove from a prod log that coalescing happened.
-  pushDeliveries: number
+  // Claims vs. sends: the gap between these two is the batching, and it is the
+  // only way to prove from a prod log that coalescing happened. ATTEMPTED is
+  // the honest word — send-push resolves whether or not anything reached a
+  // device (master toggle off, no subscriptions), so this is a count of
+  // batches handed to the push pipeline, not of notifications anyone saw.
+  pushBatchesAttempted: number
   failures: number
 }
 
@@ -158,7 +161,7 @@ const EMPTY_SUMMARY: ArtistFanoutSummary = {
   matchedPairs: 0,
   autoWatched: 0,
   pushesClaimed: 0,
-  pushDeliveries: 0,
+  pushBatchesAttempted: 0,
   failures: 0,
 }
 
@@ -424,7 +427,7 @@ export async function runArtistFanout(
     if (delivery === null) continue
     try {
       await sendPush(delivery)
-      summary.pushDeliveries += 1
+      summary.pushBatchesAttempted += 1
     } catch (err) {
       summary.failures += 1
       fanoutLogger.error(
