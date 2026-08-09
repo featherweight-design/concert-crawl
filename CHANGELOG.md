@@ -1,3 +1,11 @@
+## [1.237.1](https://github.com/HartiganHM/concert-crawl/compare/v1.237.0...v1.237.1) (2026-08-09)
+
+
+### Bug Fixes
+
+* **following:** cross-surface cold-eyes findings ([fc8c91a](https://github.com/HartiganHM/concert-crawl/commit/fc8c91a654f4f8cd13567e37c877f00ee93bcbd2))
+* **spotify:** say 'paid feature' in the locked chip's aria, as every sibling does ([22b19ae](https://github.com/HartiganHM/concert-crawl/commit/22b19ae71fde0133980f846c6d575090b7f630d0))
+
 # [1.237.0](https://github.com/HartiganHM/concert-crawl/compare/v1.236.1...v1.237.0) (2026-08-09)
 
 
