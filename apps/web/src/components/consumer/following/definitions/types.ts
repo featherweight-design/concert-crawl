@@ -6,7 +6,12 @@
 // a second information architecture" rule made structural.
 
 export interface ShelfArtist {
-  /** Stable React key. Canonical name, which both sources carry. */
+  /**
+   * Stable React key, and the one field whose source differs by mode: follows
+   * key on `canonicalName`, suggestions on `slug`, because neither contract
+   * carries the other's. Each is unique within its own list, which is all a
+   * key needs — the two never populate the same shelf.
+   */
   key: string
   name: string
   /**

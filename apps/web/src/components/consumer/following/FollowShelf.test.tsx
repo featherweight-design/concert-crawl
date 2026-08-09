@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { EntitlementResult } from '@/lib/queries/use-entitlement'
 import type { ShelfArtist } from './definitions/types'
@@ -43,11 +43,18 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
 }))
 
 const toggle = vi.fn()
+// Captured so a test can fire the 403 path the way the real hook does, which
+// is the only way to prove it stays live while the gated tap is failing closed.
+let onEntitlementRequired: (() => void) | undefined
 vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
-  useArtistFollow: (_slug: string, initialFollowing: boolean) => ({
-    following: initialFollowing,
-    toggle,
-  }),
+  useArtistFollow: (
+    _slug: string,
+    initialFollowing: boolean,
+    onNeedsEntitlement?: () => void,
+  ) => {
+    onEntitlementRequired = onNeedsEntitlement
+    return { following: initialFollowing, toggle }
+  },
 }))
 
 import { FollowShelf } from './FollowShelf'
@@ -210,6 +217,19 @@ describe('FollowShelf', () => {
       }),
     )
     expect(toggle).not.toHaveBeenCalled()
+    // Nor the paywall: `pickerEntry` reads the surface, so an early sheet
+    // would show an entitled viewer the wrong pitch.
+    expect(screen.queryByTestId('tier-picker')).toBeNull()
+  })
+
+  // The gated tap can decline while the plan resolves; a 403 cannot. It is the
+  // server's settled answer, so it opens the sheet whatever the client knows.
+  it('a 403 opens the picker even while the entitlement is unresolved', () => {
+    authState.isSignedIn = undefined
+    entitlementState.current = { isLoading: true, active: false, surface: null }
+    renderShelf()
+    act(() => onEntitlementRequired?.())
+    expect(screen.getByTestId('tier-picker')).toBeTruthy()
   })
 
   it('entitled viewers toggle the follow directly', () => {

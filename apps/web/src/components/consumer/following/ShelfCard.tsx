@@ -104,6 +104,12 @@ interface ShelfCardProps {
   signedOut: boolean
   /** Locked or signed-out activation. The shelf owns the sheet. */
   onGatedTap: () => void
+  /**
+   * The API answered 403. Separate from `onGatedTap` because that one can
+   * decline to open the sheet while the plan is still resolving, whereas a 403
+   * is the server's settled answer and must always be honoured.
+   */
+  onEntitlementRequired: () => void
 }
 
 export const ShelfCard = ({
@@ -112,6 +118,7 @@ export const ShelfCard = ({
   locked,
   signedOut,
   onGatedTap,
+  onEntitlementRequired,
 }: ShelfCardProps) => {
   // Hooks run unconditionally; a slug-less row simply never renders the badge
   // that would call `toggle` (the follow endpoint is keyed by slug, so there
@@ -119,7 +126,7 @@ export const ShelfCard = ({
   const follow = useArtistFollow(
     artist.slug ?? '',
     artist.following,
-    onGatedTap,
+    onEntitlementRequired,
   )
   const gateId = `nf-shelf-gate-${useId().replace(/:/g, '')}`
 

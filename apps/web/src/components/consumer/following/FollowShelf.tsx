@@ -170,6 +170,11 @@ export const FollowShelf = ({
     mode === 'zero' &&
     (!resolved || (!signedOut && surface !== 'visible-active'))
 
+  // Fail-closed cuts both ways: an unresolved tap must not write a follow, and
+  // it must not show an entitled viewer a paywall either. `pickerEntry` reads
+  // `surface`, so opening the sheet early would also pick the wrong pitch. A
+  // 403 comes back through `onEntitlementRequired` instead, which never
+  // declines — that answer is the server's and is already settled.
   const pickerEntry: PickerEntry =
     surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall'
 
@@ -211,7 +216,10 @@ export const FollowShelf = ({
               width={width}
               locked={locked}
               signedOut={signedOut}
-              onGatedTap={() => setPickerOpen(true)}
+              onGatedTap={() => {
+                if (resolved) setPickerOpen(true)
+              }}
+              onEntitlementRequired={() => setPickerOpen(true)}
             />
           ))}
         </ul>
