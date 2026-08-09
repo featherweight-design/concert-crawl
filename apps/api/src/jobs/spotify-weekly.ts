@@ -16,7 +16,10 @@
 //               revive them.
 //   2. DIGEST — every non-revoked connection with digestEnabled, gated at
 //               send time by canUseFeature(planState, 'spotify-sync') (§7:
-//               Premium-only). Matches = events in the next 7 Denver-local
+//               Premium-only) — or, under NATIVE_DIGEST_ENABLED, every
+//               follower whatever the follow source (see the generalized
+//               digest note below).
+//               Matches = events in the next 7 Denver-local
 //               days whose canonical_artist equals — or canonical_supporting
 //               overlaps — the user's followed canonical names (§9.1).
 //               Zero-match weeks send the LIGHT variant with up to 2 taste
@@ -29,6 +32,15 @@
 // SPOTIFY_SYNC_DRY_RUN=1 runs a log-only cycle: no artist-set writes (sync
 // calls are skipped entirely), no emails — but eligibility + matching still
 // evaluate, and the summary row is written with dryRun:true.
+//
+// GENERALIZED DIGEST (native following PR 9). NATIVE_DIGEST_ENABLED=1 flips
+// the digest from "Spotify subscribers" to "anyone who follows an artist":
+// recipients come from user_artist_follows joined to
+// user_notification_preferences.weekly_digest_enabled, the source filter goes
+// away, and the entitlement key becomes 'following'. All three move together
+// on purpose — leaving the connection join in place would have dropped every
+// native follower while the run still reported success (#1515). Default off;
+// the summary carries nativeDigest so a prod log says which shape ran.
 
 import { pathToFileURL } from 'node:url'
 import * as Sentry from '@sentry/hono/node'
@@ -38,6 +50,7 @@ import {
   db,
   events,
   userArtistFollows,
+  userNotificationPreferences,
   userSpotifyConnections,
   venues,
 } from '@concert-crawl/db'
@@ -61,6 +74,9 @@ const TASTE_PICK_COUNT = 2
 const DENVER_TZ = 'America/Denver'
 
 const isDryRun = (): boolean => process.env['SPOTIFY_SYNC_DRY_RUN'] === '1'
+
+const isNativeDigest = (): boolean =>
+  process.env['NATIVE_DIGEST_ENABLED'] === '1'
 
 // ---------------------------------------------------------------------------
 // Date helpers — events.date is a Denver-local calendar date (YYYY-MM-DD), so
@@ -250,6 +266,9 @@ const toDigestShow = (row: MatchedEventRow): DigestEmailShow => ({
 interface WeeklySummary {
   job: 'spotify-weekly'
   dryRun: boolean
+  // Which digest shape ran — the only way a prod summary row distinguishes a
+  // legitimately small Spotify-only audience from the flag being off.
+  nativeDigest: boolean
   isoWeek: string
   windowStart: string
   windowEnd: string
@@ -286,7 +305,14 @@ const digestForUser = async (
     publicMetadata = undefined
   }
   const planState = await loadPlanState(userId, publicMetadata)
-  if (!canUseFeature(planState, 'spotify-sync')) {
+  // The generalized digest is a following feature, so it rides the following
+  // entitlement; the Spotify-only shape stays on 'spotify-sync'.
+  if (
+    !canUseFeature(
+      planState,
+      summary.nativeDigest ? 'following' : 'spotify-sync',
+    )
+  ) {
     return 'skipped-entitlement'
   }
 
@@ -296,9 +322,15 @@ const digestForUser = async (
     .where(
       and(
         eq(userArtistFollows.userId, userId),
-        // The digest copy says "artists you follow on Spotify" — manual
-        // follows (and future sources) are out of scope for this email.
-        inArray(userArtistFollows.source, ['spotify_followed', 'spotify_top']),
+        // Legacy shape only: the digest copy said "artists you follow on
+        // Spotify", so manual follows were out of scope. Generalized, every
+        // source counts and the filter drops away.
+        summary.nativeDigest
+          ? undefined
+          : inArray(userArtistFollows.source, [
+              'spotify_followed',
+              'spotify_top',
+            ]),
         ne(userArtistFollows.canonicalName, ''),
       ),
     )
@@ -358,6 +390,7 @@ export const runSpotifyWeekly = async (
   const summary: WeeklySummary = {
     job: 'spotify-weekly',
     dryRun: isDryRun(),
+    nativeDigest: isNativeDigest(),
     isoWeek: isoWeekKey(dayUtcMs),
     windowStart: toDateString(dayUtcMs),
     windowEnd: toDateString(dayUtcMs + (DIGEST_WINDOW_DAYS - 1) * DAY_MS),
@@ -423,15 +456,29 @@ export const runSpotifyWeekly = async (
     }
     const { createClerkClient } = await import('@clerk/backend')
     const clerk = createClerkClient({ secretKey: clerkSecretKey })
-    const recipients = await db
-      .select({ userId: userSpotifyConnections.userId })
-      .from(userSpotifyConnections)
-      .where(
-        and(
-          ne(userSpotifyConnections.status, 'revoked'),
-          eq(userSpotifyConnections.digestEnabled, true),
-        ),
-      )
+    const recipients = summary.nativeDigest
+      ? await db
+          .selectDistinct({ userId: userArtistFollows.userId })
+          .from(userArtistFollows)
+          // LEFT: preference rows are written lazily on the first PATCH, so a
+          // follower who never opened Settings has none. An inner join here
+          // would mail nobody but the users who touched a toggle.
+          .leftJoin(
+            userNotificationPreferences,
+            eq(userNotificationPreferences.userId, userArtistFollows.userId),
+          )
+          .where(
+            sql`coalesce(${userNotificationPreferences.weeklyDigestEnabled}, true)`,
+          )
+      : await db
+          .select({ userId: userSpotifyConnections.userId })
+          .from(userSpotifyConnections)
+          .where(
+            and(
+              ne(userSpotifyConnections.status, 'revoked'),
+              eq(userSpotifyConnections.digestEnabled, true),
+            ),
+          )
     summary.digestCandidates = recipients.length
     const getTastePicks = lazyTastePicks(summary.windowStart, summary.windowEnd)
     for (const { userId } of recipients) {

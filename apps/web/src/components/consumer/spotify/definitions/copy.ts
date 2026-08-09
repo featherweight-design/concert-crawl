@@ -110,20 +110,8 @@ export const SPOTIFY_COPY = {
     lastSyncedLabel: 'Last synced',
     lastSyncedNever: '—',
     syncingValue: 'Syncing…',
-    autoWatchLabel: 'Auto-watch matches',
-    // Web Push toggle (#763 PR 9). Label matches the R2 surface name locked
-    // in the taste-filter upsell ("New-show alerts"); the state notes aren't
-    // in the mocks (real-browser constraints), written in the same voice.
-    pushLabel: 'New-show alerts',
-    pushAria: 'Push alerts when your artists add Denver shows',
-    pushDenied:
-      "Notifications are blocked for us in this browser. Allow them in your browser's site settings, then flip this on.",
-    pushPromptDismissed:
-      'No worries. Flip this on whenever you change your mind and allow notifications.',
-    pushUnsupported: "This browser can't do push notifications.",
-    pushIosInstall:
-      'On iPhone, push needs the app on your Home Screen first: Share → Add to Home Screen, then flip this on.',
-    pushError: "Couldn't update push alerts. Give it another try in a second.",
+    // No auto-watch or new-show-alert strings here: both toggles now live in
+    // Settings ▸ Notifications, which is the only surface that owns them.
     refreshCta: 'Refresh my taste',
     refreshingCta: 'Syncing…',
     disconnectCta: 'Disconnect',
@@ -132,7 +120,6 @@ export const SPOTIFY_COPY = {
     footerRefreshing:
       'Checking Spotify for anything new since your last sync. Takes a few seconds.',
     rateLimited: 'Taste was refreshed recently. Try again in a few minutes.',
-    autoWatchAria: 'Auto-watch matching shows',
   },
   disconnectConfirm: {
     title: 'Unlink Spotify?',

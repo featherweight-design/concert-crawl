@@ -29,10 +29,13 @@ import { sanitizeInlineText } from './format.js'
 
 const MAX_FEATURED_SHOWS = 5
 const MAX_TASTE_PICKS = 2
+// Source-neutral by contract (native following PR 9). The digest now goes to
+// anyone who follows an artist, so naming Spotify would read as a lie to a
+// follower who never connected it. The template key keeps its Spotify name
+// for the send-log history.
 const FOOTER_NOTE =
-  'You get this because you follow artists on Spotify and turned on the weekly digest.'
-const WEEK_SUB =
-  'The ones you told Spotify you love: all playing Denver in the next 7 days.'
+  'You get this because you follow artists and turned on the weekly digest.'
+const WEEK_SUB = 'All of them playing Denver in the next 7 days.'
 const ZERO_TITLE = 'A quiet one for your artists.'
 const ZERO_SUB =
   "Nobody you follow is playing Denver this week. Here's a couple we think you'd click with anyway."
@@ -123,7 +126,7 @@ ${
   const ctaInner = `<a href="${escapeHtml(appUrl())}" style="display: block; background: ${ME.signal}; color: ${ME.onSignal}; font-family: ${EMAIL_FONT}; font-weight: 800; font-size: 14px; text-decoration: none; text-align: center; padding: 13px; border-radius: 12px;">Open Concert Crawl</a>`
 
   const bodyRows = [
-    headerRow('Weekly · Spotify'),
+    headerRow('Weekly · Following'),
     row('22px 26px 6px', ledeInner),
     row('6px 26px 4px', listInner),
     row('8px 26px 20px', ctaInner),
@@ -135,15 +138,15 @@ ${
     }),
   ].join('\n')
 
-  const textIntro = zero
-    ? [ZERO_TITLE, '', ZERO_SUB, '', 'Based on your taste', '']
-    : [
-        'CONCERT CRAWL: This week in Denver',
-        '',
-        `${countLabel} by artists you follow on Spotify,`,
-        'all playing Denver in the next 7 days.',
-        '',
-      ]
+  // Both branches lead with the masthead line: the zero variant used to skip
+  // it, so a text-only client read a headerless email.
+  const textIntro = [
+    'CONCERT CRAWL: This week in Denver',
+    '',
+    ...(zero
+      ? [ZERO_TITLE, '', ZERO_SUB, '', 'Based on your taste', '']
+      : [`${countLabel} by artists you follow.`, WEEK_SUB, '']),
+  ]
   const textShows = (zero ? picks : featured).flatMap(showTextLines)
   const textMore =
     !zero && moreCount > 0

@@ -11,8 +11,14 @@
 // The body variant is keyed off the user's resolved autoWatch state (design
 // lock): auto-watch users are told the show is already on their Watching
 // list; highlight-only users get the tap-to-watch invite. A follower with no
-// Spotify connection resolves to the default, false, so they always get the
+// stored preference resolves to the default, false, so they always get the
 // invite — following must never silently mutate someone's Watching list.
+//
+// The batch strings cover a run that claimed several shows for one user. A
+// nightly crawl can land eight of them inside ninety seconds, and eight
+// separate pushes is the fastest way to get notifications switched off, so
+// delivery collapses into one. `batchTitle` counts ARTISTS, not shows: two
+// dates from the same act would otherwise read "1 artists".
 
 export const newShowCopy = {
   title: (artist: string): string => `${artist}: new Denver date`,
@@ -20,6 +26,13 @@ export const newShowCopy = {
     `${venueName} · ${dateLabel}. Added to your Watching.`,
   highlightBody: (venueName: string, dateLabel: string): string =>
     `${venueName} · ${dateLabel}. Want in? Tap to watch.`,
+  batchTitle: (artistCount: number): string =>
+    `${artistCount} artists you follow just booked Denver`,
+  multiDateTitle: (artist: string): string => `${artist}: new Denver dates`,
+  batchAutoWatchBody: (showCount: number): string =>
+    `${showCount} new shows, all added to your Watching.`,
+  batchHighlightBody: (showCount: number): string =>
+    `${showCount} new shows. Want in? Tap to watch.`,
 } as const
 
 const DATE_LABEL_FORMAT = new Intl.DateTimeFormat('en-US', {

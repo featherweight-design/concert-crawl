@@ -723,6 +723,67 @@ describe('spotify_digest (#763 §8.2)', () => {
     expect(rendered.html).not.toContain('Artist 3')
   })
 
+  // The zero variant used to exist only in the HTML branch's full form: the
+  // plain-text intro dropped the masthead line the non-zero branch carries,
+  // so a text-only client got a headerless email nobody ever looked at.
+  it('renders the zero-week variant in the plain-text part too', () => {
+    const rendered = renderSpotifyDigest({
+      shows: [],
+      tastePicks: digestShows(2),
+      unsubscribeUrl: null,
+    })
+    for (const line of [
+      'CONCERT CRAWL: This week in Denver',
+      'A quiet one for your artists.',
+      'Based on your taste',
+      'Artist 1',
+      'Artist 2',
+    ]) {
+      expect(rendered.text).toContain(line)
+    }
+    expect(rendered.html).toContain('This week in Denver')
+  })
+
+  // PR 9 generalized the digest to every follow source. Naming Spotify would
+  // make it read as a lie to a native follower who never connected it.
+  it('names no follow source in either part', () => {
+    for (const rendered of [
+      renderSpotifyDigest({
+        shows: digestShows(2),
+        tastePicks: [],
+        unsubscribeUrl: null,
+      }),
+      renderSpotifyDigest({
+        shows: [],
+        tastePicks: digestShows(2),
+        unsubscribeUrl: null,
+      }),
+    ]) {
+      expect(rendered.html).not.toContain('Spotify')
+      expect(rendered.text).not.toContain('Spotify')
+      expect(rendered.subject).not.toContain('Spotify')
+    }
+  })
+
+  it('explains the send in both parts without naming a source', () => {
+    const rendered = renderSpotifyDigest({
+      shows: digestShows(2),
+      tastePicks: [],
+      unsubscribeUrl: null,
+    })
+    const note =
+      'You get this because you follow artists and turned on the weekly digest.'
+    expect(rendered.html).toContain(note)
+    expect(rendered.text).toContain(note)
+    expect(rendered.text).toContain('2 shows by artists you follow.')
+    expect(rendered.text).toContain(
+      'All of them playing Denver in the next 7 days.',
+    )
+    expect(rendered.html).toContain(
+      'All of them playing Denver in the next 7 days.',
+    )
+  })
+
   it('links the digest-family footer to the signed unsubscribe URL', () => {
     const unsubscribeUrl =
       'https://api.example.com/v1/email/unsubscribe?uid=u1&family=digest&token=abc'

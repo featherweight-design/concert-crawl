@@ -9,7 +9,11 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { eq } from 'drizzle-orm'
-import { db, userSpotifyConnections } from '@concert-crawl/db'
+import {
+  db,
+  userNotificationPreferences,
+  userSpotifyConnections,
+} from '@concert-crawl/db'
 import { createApp } from '../app.js'
 import { testDb } from '../test/helpers/db.js'
 import { clearTables } from '../test/helpers/seed.js'
@@ -64,6 +68,24 @@ describe('GET /v1/email/unsubscribe — integration', () => {
     expect((await app.request(url)).status).toBe(200)
     expect((await app.request(url)).status).toBe(200)
     expect(await getDigestEnabled('user_unsub_2')).toBe(false)
+  })
+
+  // The generalized digest reads user_notification_preferences, so writing
+  // only the connection column would leave the link visibly broken for a
+  // follower who never connected Spotify.
+  it('turns weekly_digest_enabled off for a user with no connection', async () => {
+    const token = buildUnsubscribeToken('user_native_unsub', 'digest')
+    const res = await app.request(
+      `/v1/email/unsubscribe?uid=user_native_unsub&family=digest&token=${token}`,
+    )
+    expect(res.status).toBe(200)
+    const rows = await testDb
+      .select()
+      .from(userNotificationPreferences)
+      .where(eq(userNotificationPreferences.userId, 'user_native_unsub'))
+    expect(rows[0]?.weeklyDigestEnabled).toBe(false)
+    // Untouched defaults must survive the upsert.
+    expect(rows[0]?.artistAlertsEnabled).toBe(true)
   })
 
   it('succeeds without leaking whether a connection exists', async () => {

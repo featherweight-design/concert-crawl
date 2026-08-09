@@ -1,9 +1,13 @@
 'use client'
 
 // Settings ▸ Connections — connected Spotify card (#763 PR 5): account,
-// artist counts, last-synced, on-demand refresh, auto-watch preference and
-// disconnect (with confirm sheet). Also covers the refreshing (mid-sync)
-// variant from the handoff mock.
+// artist counts, last-synced, on-demand refresh and disconnect (with confirm
+// sheet). Also covers the refreshing (mid-sync) variant from the handoff mock.
+//
+// Deliberately carries NO preference toggles. Auto-watch and artist alerts
+// moved to Settings ▸ Notifications with the columns themselves, so a user who
+// never connected Spotify can reach them; leaving duplicates here would give
+// the same preference two homes and one of them a legacy write path.
 
 import { useState } from 'react'
 import type { SpotifyConnectionView } from '@concert-crawl/types'
@@ -11,16 +15,10 @@ import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 import {
   useSpotifyDisconnect,
-  useSpotifyPatch,
   useSpotifySync,
 } from '@/lib/queries/use-spotify-connection'
-import {
-  usePushDeviceState,
-  usePushToggle,
-} from '@/lib/queries/use-push-toggle'
 import { ApiError } from '@/lib/api'
 import { formatRelativeTime } from '@/lib/relative-time'
-import { ToggleSwitch } from './ToggleSwitch'
 import { DisconnectConfirmSheet } from './DisconnectConfirmSheet'
 
 const COPY = SPOTIFY_COPY.connectedCard
@@ -61,50 +59,12 @@ export const ConnectedCard = ({
   connection: SpotifyConnectionView
 }) => {
   const sync = useSpotifySync()
-  const patch = useSpotifyPatch()
   const disconnect = useSpotifyDisconnect()
-  const pushDevice = usePushDeviceState()
-  const pushToggle = usePushToggle()
   const [confirmOpen, setConfirmOpen] = useState(false)
 
   const refreshing = sync.isPending
   const rateLimited =
     sync.error instanceof ApiError && sync.error.status === 429
-
-  // Push toggle state (#763 PR 9). Checked = the server preference AND a live
-  // subscription on this device — the preference alone can't deliver a push
-  // here, so an unsubscribed device honestly shows OFF.
-  const pushSupport = pushDevice.data?.support
-  const permissionDenied = pushDevice.data?.permission === 'denied'
-  // subscribeToPush reports 'permission-denied' for a dismissed prompt too,
-  // where live permission can still be 'default' — surface a retry note (not
-  // the blocked wording) and keep the toggle operable.
-  const promptRefused =
-    pushToggle.data !== undefined &&
-    !pushToggle.data.ok &&
-    pushToggle.data.reason === 'permission-denied'
-  const pushChecked =
-    connection.pushEnabled && pushDevice.data?.subscribed === true
-  const pushUnavailable =
-    !pushDevice.data || pushSupport !== 'supported' || permissionDenied
-  const pushErrored =
-    pushToggle.data !== undefined &&
-    !pushToggle.data.ok &&
-    pushToggle.data.reason === 'error'
-  // One note at a time, hardest constraint first: install gate → unsupported
-  // → permission → transient failure.
-  const pushNote =
-    pushSupport === 'ios-needs-install'
-      ? { text: COPY.pushIosInstall, warning: false }
-      : pushSupport === 'unsupported'
-        ? { text: COPY.pushUnsupported, warning: false }
-        : permissionDenied
-          ? { text: COPY.pushDenied, warning: true }
-          : promptRefused
-            ? { text: COPY.pushPromptDismissed, warning: true }
-            : pushErrored
-              ? { text: COPY.pushError, warning: true }
-              : null
 
   const account = connection.displayName
     ? `${connection.displayName}${COPY.accountSuffix}`
@@ -155,7 +115,7 @@ export const ConnectedCard = ({
           </div>
         </div>
 
-        {/* Stats + preferences */}
+        {/* Stats */}
         <div className="px-4 pb-1.5 pt-0.5">
           <CardRow label={COPY.artistsLabel} first>
             <span className="text-[14px] font-extrabold text-fg">
@@ -193,32 +153,6 @@ export const ConnectedCard = ({
               </span>
             )}
           </CardRow>
-          <CardRow label={COPY.autoWatchLabel}>
-            <ToggleSwitch
-              checked={connection.autoWatch}
-              onChange={(next) => patch.mutate({ autoWatch: next })}
-              ariaLabel={COPY.autoWatchAria}
-              disabled={patch.isPending}
-            />
-          </CardRow>
-          <CardRow label={COPY.pushLabel}>
-            <ToggleSwitch
-              checked={pushChecked}
-              onChange={(next) => pushToggle.mutate(next)}
-              ariaLabel={COPY.pushAria}
-              disabled={pushToggle.isPending || pushUnavailable}
-            />
-          </CardRow>
-          {pushNote && (
-            <p
-              role={pushNote.warning ? 'status' : undefined}
-              className={`-mt-1.5 pb-[13px] text-[12px] leading-[1.5] ${
-                pushNote.warning ? 'text-warning' : 'text-fg-subtle'
-              }`}
-            >
-              {pushNote.text}
-            </p>
-          )}
         </div>
 
         {/* Actions */}

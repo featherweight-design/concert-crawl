@@ -61,6 +61,7 @@ import {
   emailSendLog,
   subscriptions,
   userArtistFollows,
+  userNotificationPreferences,
   userSpotifyConnections,
 } from '@concert-crawl/db'
 import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js'
@@ -187,6 +188,7 @@ beforeEach(async () => {
   vi.stubEnv('CLERK_SECRET_KEY', 'sk_test_key')
   vi.stubEnv('EMAIL_UNSUBSCRIBE_SECRET', 'weekly-job-test-secret')
   vi.stubEnv('SPOTIFY_SYNC_DRY_RUN', '')
+  vi.stubEnv('NATIVE_DIGEST_ENABLED', '')
 })
 
 afterEach(() => {
@@ -480,6 +482,158 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 2)', () => {
 
     expect(await getDigestLogRows(USER)).toHaveLength(0)
     expect(resendState.sends).toHaveLength(0)
+  })
+})
+
+// PR 9 step 3. Both halves of the digest were Spotify-shaped: the recipient
+// query inner-joined user_spotify_connections for digestEnabled, and the
+// match query filtered follows to the two spotify_* sources. Fixing either
+// alone drops every native follower while still reporting success (#1515).
+describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () => {
+  const seedFollow = async (userId: string, name: string): Promise<void> => {
+    await testDb.insert(userArtistFollows).values({
+      userId,
+      artistName: name,
+      source: 'manual',
+      canonicalName: name.toLowerCase(),
+    })
+  }
+
+  it('sends nothing to a native-only follower while the flag is off', async () => {
+    await seedPremium(USER)
+    clerkState.emails.set(USER, 'native@example.com')
+    const venue = await seedVenue({ slug: `venue-${USER}` })
+    await seedEvent(venue.id, {
+      artist: 'Sleep Token',
+      canonicalArtist: 'sleep token',
+      date: '2026-07-22',
+    })
+    await seedFollow(USER, 'Sleep Token')
+
+    await runSpotifyWeekly(NOW)
+
+    expect(await getDigestLogRows(USER)).toHaveLength(0)
+    expect(resendState.sends).toHaveLength(0)
+  })
+
+  it('sends to a follower with no Spotify connection at all', async () => {
+    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1')
+    await seedPremium(USER)
+    clerkState.emails.set(USER, 'native@example.com')
+    const venue = await seedVenue({ slug: `venue-${USER}` })
+    await seedEvent(venue.id, {
+      artist: 'Sleep Token',
+      canonicalArtist: 'sleep token',
+      date: '2026-07-22',
+      ticketPriceMin: '42.00',
+    })
+    await seedFollow(USER, 'Sleep Token')
+
+    await runSpotifyWeekly(NOW)
+
+    // No user_spotify_connections row exists for this user at any point.
+    expect(
+      await testDb
+        .select()
+        .from(userSpotifyConnections)
+        .where(eq(userSpotifyConnections.userId, USER)),
+    ).toHaveLength(0)
+    const rows = await getDigestLogRows(USER)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.status).toBe('sent')
+    expect(resendState.sends[0]?.html).toContain('Sleep Token')
+  })
+
+  it('reaches a follower who never opened Settings (no preferences row)', async () => {
+    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1')
+    await seedPremium(USER)
+    clerkState.emails.set(USER, 'lazy-row@example.com')
+    const venue = await seedVenue({ slug: `venue-${USER}` })
+    await seedEvent(venue.id, {
+      artist: 'Sleep Token',
+      canonicalArtist: 'sleep token',
+      date: '2026-07-22',
+    })
+    await seedFollow(USER, 'Sleep Token')
+
+    await runSpotifyWeekly(NOW)
+
+    expect(
+      await testDb
+        .select()
+        .from(userNotificationPreferences)
+        .where(eq(userNotificationPreferences.userId, USER)),
+    ).toHaveLength(0)
+    expect(await getDigestLogRows(USER)).toHaveLength(1)
+  })
+
+  it('honours weekly_digest_enabled=false from the preferences table', async () => {
+    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1')
+    await seedPremium(USER)
+    clerkState.emails.set(USER, 'opted-out@example.com')
+    // The legacy column stays true: a regression back to reading the
+    // connection would send this email anyway.
+    await seedConnection(USER, { digestEnabled: true })
+    await testDb.insert(userNotificationPreferences).values({
+      userId: USER,
+      weeklyDigestEnabled: false,
+    })
+    const venue = await seedVenue({ slug: `venue-${USER}` })
+    await seedEvent(venue.id, {
+      artist: 'Sleep Token',
+      canonicalArtist: 'sleep token',
+      date: '2026-07-22',
+    })
+    await seedFollow(USER, 'Sleep Token')
+
+    await runSpotifyWeekly(NOW)
+
+    expect(await getDigestLogRows(USER)).toHaveLength(0)
+    expect(resendState.sends).toHaveLength(0)
+  })
+
+  it('gates on the following entitlement, not spotify-sync', async () => {
+    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1')
+    clerkState.emails.set(USER, 'free-native@example.com')
+    const venue = await seedVenue({ slug: `venue-${USER}` })
+    await seedEvent(venue.id, {
+      artist: 'Sleep Token',
+      canonicalArtist: 'sleep token',
+      date: '2026-07-22',
+    })
+    await seedFollow(USER, 'Sleep Token')
+
+    await runSpotifyWeekly(NOW)
+
+    expect(await getDigestLogRows(USER)).toHaveLength(0)
+    const costs = await testDb
+      .select()
+      .from(costTracking)
+      .where(eq(costTracking.service, 'spotify'))
+    const summary = costs.find((row) =>
+      (row.metadata ?? '').includes('"job":"spotify-weekly"'),
+    )
+    expect(summary?.metadata).toContain('"digestSkippedEntitlement":1')
+    expect(summary?.metadata).toContain('"nativeDigest":true')
+  })
+
+  it('still sends to a Spotify follower once generalized', async () => {
+    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1')
+    await seedConnection(USER)
+    await seedPremium(USER)
+    clerkState.emails.set(USER, 'both@example.com')
+    grantSpotify(USER, [{ id: 'sp1', name: 'Sleep Token' }])
+    const venue = await seedVenue({ slug: `venue-${USER}` })
+    await seedEvent(venue.id, {
+      artist: 'Sleep Token',
+      canonicalArtist: 'sleep token',
+      date: '2026-07-22',
+    })
+
+    await runSpotifyWeekly(NOW)
+
+    expect(await getDigestLogRows(USER)).toHaveLength(1)
+    expect(resendState.sends).toHaveLength(1)
   })
 })
 

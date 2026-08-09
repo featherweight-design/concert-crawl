@@ -8,6 +8,7 @@ import {
   subscriptions,
   userArtistFollows,
   userEvents,
+  userNotificationPreferences,
   userSpotifyConnections,
   venues,
 } from '@concert-crawl/db'
@@ -24,7 +25,7 @@ const BYSTANDER_USER = 'user_fanout_bystander'
 
 async function clearFanoutState(): Promise<void> {
   await db.execute(
-    sql`TRUNCATE events, venues, notifications, spotify_alert_log, user_events, user_artist_follows, user_spotify_connections, subscriptions, gifted_comps, user_billing RESTART IDENTITY CASCADE`,
+    sql`TRUNCATE events, venues, notifications, spotify_alert_log, user_events, user_artist_follows, user_notification_preferences, user_spotify_connections, subscriptions, gifted_comps, user_billing RESTART IDENTITY CASCADE`,
   )
 }
 
@@ -80,14 +81,17 @@ interface SeedFollowerInput {
   status?: 'connected' | 'error' | 'revoked'
 }
 
+// A Spotify-sourced follower. The connection row is seeded with its LEGACY
+// columns left at their defaults on purpose — preferences now live in
+// user_notification_preferences, so any test asserting autoWatch would fail
+// loudly if the fan-out ever read the connection again.
 async function seedFollower(input: SeedFollowerInput): Promise<void> {
   await db.insert(userSpotifyConnections).values({
     userId: input.userId,
     spotifyUserId: `spotify_${input.userId}`,
-    autoWatch: input.autoWatch ?? false,
-    pushEnabled: input.pushEnabled ?? true,
     status: input.status ?? 'connected',
   })
+  await seedPrefs(input)
   await db.insert(userArtistFollows).values({
     userId: input.userId,
     artistName: input.canonicalName,
@@ -95,6 +99,27 @@ async function seedFollower(input: SeedFollowerInput): Promise<void> {
     source: 'spotify_followed',
     canonicalName: input.canonicalName,
   })
+}
+
+async function seedPrefs(input: {
+  userId: string
+  autoWatch?: boolean
+  pushEnabled?: boolean
+}): Promise<void> {
+  await db
+    .insert(userNotificationPreferences)
+    .values({
+      userId: input.userId,
+      artistAutoWatch: input.autoWatch ?? false,
+      artistAlertsEnabled: input.pushEnabled ?? true,
+    })
+    .onConflictDoUpdate({
+      target: userNotificationPreferences.userId,
+      set: {
+        artistAutoWatch: input.autoWatch ?? false,
+        artistAlertsEnabled: input.pushEnabled ?? true,
+      },
+    })
 }
 
 // A follow with NO connection row — the manual-only user, which seedFollower
@@ -413,10 +438,9 @@ describe('runArtistFanout — matching + idempotency', () => {
     expect(ledger).toHaveLength(2)
   })
 
-  // A revoked connection no longer removes the follower — it removes their
-  // stored preferences, so the defaults apply. The user below has autoWatch
-  // ON, and must still not be auto-watched.
-  it('ignores hidden events, and falls back to defaults on a revoked connection', async () => {
+  // Preferences no longer live on the connection, so revoking Spotify leaves
+  // them untouched: the user below keeps auto-watch ON.
+  it('ignores hidden events, and keeps preferences when the connection is revoked', async () => {
     const venueId = await seedVenue('Fillmore')
     const visibleId = await seedEvent({
       venueId,
@@ -450,11 +474,150 @@ describe('runArtistFanout — matching + idempotency', () => {
       newEvents: 1,
       // The revoked user still matches; the hidden-event follower does not.
       matchedPairs: 1,
-      // autoWatch:true came off the revoked connection, so it is discarded.
-      autoWatched: 0,
-      // pushEnabled defaults true, but this user has no paid plan.
+      // The stored preference outlives the revoked connection.
+      autoWatched: 1,
+      // Alerts default on, but this user has no paid plan.
       pushesClaimed: 0,
     })
+  })
+})
+
+// A nightly crawl can claim eight pairs for one user inside ninety seconds.
+// The claims and the tray rows stay per event; only DELIVERY collapses.
+describe('runArtistFanout — push batching (PR 9)', () => {
+  it('collapses several new shows into one push, keeping every tray row and claim', async () => {
+    const venueId = await seedVenue('Fillmore')
+    const first = await seedEvent({
+      venueId,
+      artist: 'Big Head Todd',
+      canonicalArtist: 'big head todd',
+    })
+    const second = await seedEvent({
+      venueId,
+      artist: 'Other Act',
+      canonicalArtist: 'other act',
+      date: '2026-10-14',
+    })
+    await seedFollower({
+      userId: PREMIUM_USER,
+      canonicalName: 'big head todd',
+      pushEnabled: true,
+    })
+    await db.insert(userArtistFollows).values({
+      userId: PREMIUM_USER,
+      artistName: 'Other Act',
+      spotifyArtistId: null,
+      source: 'manual',
+      canonicalName: 'other act',
+    })
+    await seedPremiumSubscription(PREMIUM_USER)
+
+    const sendPush = makeSendPush()
+    const summary = await runArtistFanout([first, second], {
+      sendPush,
+      getRole: noRole,
+    })
+
+    expect(summary).toMatchObject({
+      newEvents: 2,
+      matchedPairs: 2,
+      pushesClaimed: 2,
+      pushDeliveries: 1,
+      failures: 0,
+    })
+    expect(sendPush).toHaveBeenCalledTimes(1)
+    expect(sendPush).toHaveBeenCalledWith({
+      userId: PREMIUM_USER,
+      category: 'artist.new_show',
+      title: '2 artists you follow just booked Denver',
+      body: '2 new shows. Want in? Tap to watch.',
+      actionUrl: '/following',
+      tag: 'artist-new-show-batch',
+    })
+
+    // The tray keeps one deep-linked row per show, and the ledger keeps one
+    // claim per pair — batching must not weaken exactly-once.
+    const tray = await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, PREMIUM_USER))
+    expect(tray).toHaveLength(2)
+    expect(tray.map((row) => row.actionUrl).sort()).toEqual(
+      [`/events/${first}`, `/events/${second}`].sort(),
+    )
+    const ledger = await db.select().from(spotifyAlertLog)
+    expect(ledger).toHaveLength(2)
+  })
+
+  it('says "dates" rather than "1 artists" when one act books twice', async () => {
+    const venueId = await seedVenue('Fillmore')
+    const first = await seedEvent({
+      venueId,
+      artist: 'Big Head Todd',
+      canonicalArtist: 'big head todd',
+    })
+    const second = await seedEvent({
+      venueId,
+      artist: 'Big Head Todd',
+      canonicalArtist: 'big head todd',
+      date: '2026-10-14',
+    })
+    await seedFollower({
+      userId: PREMIUM_USER,
+      canonicalName: 'big head todd',
+      autoWatch: true,
+    })
+    await seedPremiumSubscription(PREMIUM_USER)
+
+    const sendPush = makeSendPush()
+    await runArtistFanout([first, second], { sendPush, getRole: noRole })
+
+    expect(sendPush).toHaveBeenCalledTimes(1)
+    expect(sendPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Big Head Todd: new Denver dates',
+        body: '2 new shows, all added to your Watching.',
+        actionUrl: '/watching',
+      }),
+    )
+  })
+
+  it('batches per user — two followers get one push each', async () => {
+    const venueId = await seedVenue('Fillmore')
+    const first = await seedEvent({
+      venueId,
+      artist: 'Big Head Todd',
+      canonicalArtist: 'big head todd',
+    })
+    const second = await seedEvent({
+      venueId,
+      artist: 'Other Act',
+      canonicalArtist: 'other act',
+      date: '2026-10-14',
+    })
+    for (const userId of [PREMIUM_USER, BYSTANDER_USER]) {
+      await seedFollower({ userId, canonicalName: 'big head todd' })
+      await db.insert(userArtistFollows).values({
+        userId,
+        artistName: 'Other Act',
+        spotifyArtistId: null,
+        source: 'manual',
+        canonicalName: 'other act',
+      })
+      await seedPremiumSubscription(userId)
+    }
+
+    const sendPush = makeSendPush()
+    const summary = await runArtistFanout([first, second], {
+      sendPush,
+      getRole: noRole,
+    })
+
+    expect(summary).toMatchObject({ pushesClaimed: 4, pushDeliveries: 2 })
+    expect(sendPush).toHaveBeenCalledTimes(2)
+    expect(sendPush.mock.calls.map((call) => call[0].userId).sort()).toEqual(
+      [BYSTANDER_USER, PREMIUM_USER].sort(),
+    )
   })
 })
 
@@ -615,6 +778,41 @@ describe('runArtistFanout — native follows', () => {
 
     expect(summary).toMatchObject({ matchedPairs: 1, pushesClaimed: 1 })
     expect(sendPush).toHaveBeenCalledTimes(1)
+  })
+
+  // The whole point of moving the columns: a user who never touched Spotify
+  // can still steer both channels.
+  it('honours user_notification_preferences for a follower with no connection', async () => {
+    const venueId = await seedVenue('Fillmore')
+    const eventId = await seedEvent({
+      venueId,
+      artist: 'Big Head Todd',
+      canonicalArtist: 'big head todd',
+    })
+    await seedManualFollow({
+      userId: PREMIUM_USER,
+      canonicalName: 'big head todd',
+    })
+    await seedPrefs({
+      userId: PREMIUM_USER,
+      autoWatch: true,
+      pushEnabled: false,
+    })
+    await seedPremiumSubscription(PREMIUM_USER)
+
+    const sendPush = makeSendPush()
+    const summary = await runArtistFanout([eventId], {
+      sendPush,
+      getRole: noRole,
+    })
+
+    expect(summary).toMatchObject({ autoWatched: 1, pushesClaimed: 0 })
+    expect(sendPush).not.toHaveBeenCalled()
+    const watching = await db
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, PREMIUM_USER))
+    expect(watching).toHaveLength(1)
   })
 
   it('sends no push to a manual follower on the free plan', async () => {

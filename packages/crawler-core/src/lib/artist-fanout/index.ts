@@ -4,26 +4,39 @@
 // match a new event (§9.1 canonical rule) — from ANY source, Spotify-synced
 // or followed natively in-app:
 //
-//   - AUTO-WATCH (free): connection has autoWatch on → claim
+//   - AUTO-WATCH (free): artist_auto_watch on → claim
 //     spotify_alert_log (kind='auto_watch'), then upsert user_events
 //     status='watching' (skipped if the user already has any row for the
 //     event — an existing going/interested/watching is never overwritten).
-//     A follower with no connection never auto-watches; the default is off.
-//   - PUSH (premium): pushEnabled on (the default for a native follower) AND
-//     canUseFeature(planState, 'following') → claim spotify_alert_log
-//     (kind='push'), insert the #737 tray `notifications` row, then send Web
-//     Push. Copy variant is keyed off autoWatch (design lock).
+//     A follower with no stored preference never auto-watches; the default
+//     is off.
+//   - PUSH (premium): artist_alerts_enabled on (the default for every
+//     follower) AND canUseFeature(planState, 'following') → claim
+//     spotify_alert_log (kind='push'), insert the #737 tray `notifications`
+//     row, then send Web Push. Copy variant is keyed off autoWatch (design
+//     lock).
+//
+// Preferences come from `user_notification_preferences`, which every user can
+// have — `user_spotify_connections` is not read here at all, because Spotify
+// is capped at 5 authenticated accounts and a native follower must get the
+// same alerts.
 //
 // Exactly-once: both channels claim their (user, event, kind) row in
 // spotify_alert_log FIRST via onConflictDoNothing().returning() — a re-crawl
 // or retry that reaches the same pair simply fails to claim and does nothing.
+//
+// Batching: the CLAIM stays per (user, event, 'push') and the tray row stays
+// per event (the tray is a list; collapsing it would lose the deep links).
+// Only DELIVERY is coalesced — claimed pairs accumulate across the whole run
+// and flush once per user at the end, so a nightly crawl that lands eight
+// matches cannot fire eight pushes in ninety seconds.
 //
 // Failure isolation: runArtistFanoutSafely never throws (async-catch rule) —
 // a fan-out bug can never fail a crawl. It is AWAITED by the crawler rather
 // than detached because both crawler entrypoints hard-exit via
 // process.exit(0), which would sever a floating promise mid-flight (the same
 // #649 lesson as the crawl-failure emails).
-import { and, eq, inArray, ne, sql } from 'drizzle-orm'
+import { and, eq, inArray, sql } from 'drizzle-orm'
 import {
   db,
   events,
@@ -34,7 +47,7 @@ import {
   userArtistFollows,
   userBilling,
   userEvents,
-  userSpotifyConnections,
+  userNotificationPreferences,
   venues,
 } from '@concert-crawl/db'
 import { canUseFeature, derivePlanState } from '@concert-crawl/entitlements'
@@ -134,6 +147,9 @@ export interface ArtistFanoutSummary {
   matchedPairs: number
   autoWatched: number
   pushesClaimed: number
+  // Claims vs. deliveries: the gap between these two is the batching, and it
+  // is the only way to prove from a prod log that coalescing happened.
+  pushDeliveries: number
   failures: number
 }
 
@@ -142,6 +158,7 @@ const EMPTY_SUMMARY: ArtistFanoutSummary = {
   matchedPairs: 0,
   autoWatched: 0,
   pushesClaimed: 0,
+  pushDeliveries: 0,
   failures: 0,
 }
 
@@ -150,6 +167,16 @@ interface MatchedConnection {
   canonicalName: string
   autoWatch: boolean
   pushEnabled: boolean
+}
+
+// One claimed (user, event) push, held until the run ends so a user's whole
+// crawl can be delivered as a single notification.
+interface PendingPush {
+  eventId: string
+  artist: string
+  venueName: string
+  dateLabel: string
+  autoWatch: boolean
 }
 
 // Attempt to claim the (user, event, kind) ledger row. True = this call owns
@@ -165,6 +192,49 @@ const claimAlert = async (
     .onConflictDoNothing()
     .returning({ id: spotifyAlertLog.id })
   return claimed.length > 0
+}
+
+// One user's whole run, as one notification. A single claimed show keeps the
+// design-locked single-show copy verbatim; two or more collapse.
+const buildDelivery = (
+  userId: string,
+  pending: PendingPush[],
+): SendPushInput | null => {
+  const [first] = pending
+  if (first === undefined) return null
+  if (pending.length === 1) {
+    return {
+      userId,
+      category: NEW_SHOW_CATEGORY,
+      title: newShowCopy.title(first.artist),
+      body: first.autoWatch
+        ? newShowCopy.autoWatchBody(first.venueName, first.dateLabel)
+        : newShowCopy.highlightBody(first.venueName, first.dateLabel),
+      actionUrl: `/events/${first.eventId}`,
+      // Stable tag so a duplicate delivery for the same event coalesces into
+      // one OS notification.
+      tag: `artist-new-show-${first.eventId}`,
+    }
+  }
+  const artists = new Set(pending.map((push) => push.artist))
+  const autoWatch = pending.every((push) => push.autoWatch)
+  return {
+    userId,
+    category: NEW_SHOW_CATEGORY,
+    // batchTitle counts artists, so one act playing two nights would read
+    // "1 artists" without this branch.
+    title:
+      artists.size === 1
+        ? newShowCopy.multiDateTitle(first.artist)
+        : newShowCopy.batchTitle(artists.size),
+    body: autoWatch
+      ? newShowCopy.batchAutoWatchBody(pending.length)
+      : newShowCopy.batchHighlightBody(pending.length),
+    // There is no notifications page (the bell is a popover), so the batch
+    // opens whichever list its body just named.
+    actionUrl: autoWatch ? '/watching' : '/following',
+    tag: 'artist-new-show-batch',
+  }
 }
 
 export async function runArtistFanout(
@@ -227,19 +297,16 @@ export async function runArtistFanout(
       // downstream consumer can forget them: pushEnabled defaults TRUE
       // (following IS the opt-in), autoWatch defaults FALSE (following must
       // never silently mutate someone's Watching list).
-      autoWatch: sql<boolean>`coalesce(${userSpotifyConnections.autoWatch}, false)`,
-      pushEnabled: sql<boolean>`coalesce(${userSpotifyConnections.pushEnabled}, true)`,
+      autoWatch: sql<boolean>`coalesce(${userNotificationPreferences.artistAutoWatch}, false)`,
+      pushEnabled: sql<boolean>`coalesce(${userNotificationPreferences.artistAlertsEnabled}, true)`,
     })
     .from(userArtistFollows)
-    // LEFT, and the revoked check lives INSIDE the join condition. In the
-    // WHERE clause it would filter the null-connection rows straight back
-    // out, reinstating the inner join it replaced.
+    // LEFT: preference rows are created lazily on the first PATCH, so most
+    // followers have none and the coalesced defaults above must apply. An
+    // inner join here would silently alert nobody who never opened Settings.
     .leftJoin(
-      userSpotifyConnections,
-      and(
-        eq(userSpotifyConnections.userId, userArtistFollows.userId),
-        ne(userSpotifyConnections.status, 'revoked'),
-      ),
+      userNotificationPreferences,
+      eq(userNotificationPreferences.userId, userArtistFollows.userId),
     )
     .where(inArray(userArtistFollows.canonicalName, allCanonicalNames))
   if (candidates.length === 0) return summary
@@ -262,6 +329,8 @@ export async function runArtistFanout(
     }
     return cached
   }
+
+  const pendingByUser = new Map<string, PendingPush[]>()
 
   for (const event of newEvents) {
     const eventCanonicals = [
@@ -311,34 +380,29 @@ export async function runArtistFanout(
               'push',
             )
             if (claimed) {
-              const title = newShowCopy.title(event.artist)
               const dateLabel = newShowDateLabel(event.date)
-              const body = connection.autoWatch
-                ? newShowCopy.autoWatchBody(event.venueName, dateLabel)
-                : newShowCopy.highlightBody(event.venueName, dateLabel)
-              const actionUrl = `/events/${event.id}`
-              // Tray row first (#737 back-fill), then push — sendPush is
-              // best-effort and never throws, so a delivery failure still
-              // leaves the tray row (and the claim) in place.
+              // The TRAY row stays per event — it is a list, and collapsing
+              // it would lose the per-show deep link. Only delivery batches.
               await db.insert(notifications).values({
                 userId: connection.userId,
                 type: 'user_notification',
                 category: NEW_SHOW_CATEGORY,
-                title,
-                body,
-                actionUrl,
+                title: newShowCopy.title(event.artist),
+                body: connection.autoWatch
+                  ? newShowCopy.autoWatchBody(event.venueName, dateLabel)
+                  : newShowCopy.highlightBody(event.venueName, dateLabel),
+                actionUrl: `/events/${event.id}`,
                 metadata: JSON.stringify({ eventId: event.id }),
               })
-              await sendPush({
-                userId: connection.userId,
-                category: NEW_SHOW_CATEGORY,
-                title,
-                body,
-                actionUrl,
-                // Stable tag so a duplicate delivery for the same event
-                // coalesces into one OS notification.
-                tag: `artist-new-show-${event.id}`,
+              const pending = pendingByUser.get(connection.userId) ?? []
+              pending.push({
+                eventId: event.id,
+                artist: event.artist,
+                venueName: event.venueName,
+                dateLabel,
+                autoWatch: connection.autoWatch,
               })
+              pendingByUser.set(connection.userId, pending)
               summary.pushesClaimed += 1
             }
           }
@@ -350,6 +414,23 @@ export async function runArtistFanout(
           'artist-fanout: user/event pair failed',
         )
       }
+    }
+  }
+
+  // Flush once per user, AWAITED — both crawler entrypoints process.exit(0),
+  // which would sever a detached delivery mid-flight (#649).
+  for (const [userId, pending] of pendingByUser) {
+    const delivery = buildDelivery(userId, pending)
+    if (delivery === null) continue
+    try {
+      await sendPush(delivery)
+      summary.pushDeliveries += 1
+    } catch (err) {
+      summary.failures += 1
+      fanoutLogger.error(
+        { err, userId, pendingCount: pending.length },
+        'artist-fanout: batched push delivery failed',
+      )
     }
   }
 

@@ -52,10 +52,9 @@ export const PRICE_DROP_CATEGORY: UserNotificationCategory = 'watch.pricedrop'
 //
 // `artist.new_show` is deliberately in NEITHER sub-toggle set: within
 // send-push only `masterEnabled` gates it. Its own opt-outs — the follow
-// itself, the per-connection `userSpotifyConnections.pushEnabled` toggle
-// where a connection exists, and the premium `following` entitlement — are
-// enforced at the fan-out call site before send-push is ever invoked
-// (eng spec §10.1).
+// itself, the `userNotificationPreferences.artistAlertsEnabled` toggle, and
+// the premium `following` entitlement — are enforced at the fan-out call site
+// before send-push is ever invoked (eng spec §10.1).
 export const WATCH_UPDATE_CATEGORIES: ReadonlySet<UserNotificationCategory> =
   new Set([
     'watch.cancelled',

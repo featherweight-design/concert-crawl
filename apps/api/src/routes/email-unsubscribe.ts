@@ -2,8 +2,8 @@
 //
 // Linked from the digest email footer. No auth (email links must work
 // logged-out); the signed HMAC token IS the authorization — recomputed
-// server-side and compared in constant time. On match, flips
-// user_spotify_connections.digestEnabled off and renders a plain HTML
+// server-side and compared in constant time. On match, turns the digest off
+// in both homes (see the digest case below) and renders a plain HTML
 // confirmation. Responds identically whether or not a connection row exists
 // (no account enumeration via unsubscribe links).
 
@@ -11,7 +11,11 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { eq } from 'drizzle-orm'
-import { db, userSpotifyConnections } from '@concert-crawl/db'
+import {
+  db,
+  userNotificationPreferences,
+  userSpotifyConnections,
+} from '@concert-crawl/db'
 import { apiLogger } from '../lib/logger.js'
 import {
   UNSUBSCRIBE_FAMILIES,
@@ -104,10 +108,21 @@ emailUnsubscribeRouter.get(
       // explicit.
       switch (family) {
         case 'digest':
+          // Both homes. The generalized digest reads the preferences table,
+          // but the legacy column still gates the Spotify-shaped query while
+          // NATIVE_DIGEST_ENABLED is off — writing only one would leave the
+          // link silently broken for half the audience.
           await db
             .update(userSpotifyConnections)
             .set({ digestEnabled: false })
             .where(eq(userSpotifyConnections.userId, uid))
+          await db
+            .insert(userNotificationPreferences)
+            .values({ userId: uid, weeklyDigestEnabled: false })
+            .onConflictDoUpdate({
+              target: userNotificationPreferences.userId,
+              set: { weeklyDigestEnabled: false, updatedAt: new Date() },
+            })
           break
       }
     } catch (err) {
@@ -130,7 +145,7 @@ emailUnsubscribeRouter.get(
     return ctx.html(
       confirmationPage(
         'You’re unsubscribed.',
-        'The weekly digest is off. You can turn it back on any time from Settings → Connections.',
+        'The weekly digest is off. You can turn it back on any time from Settings → Notifications.',
       ),
     )
   },

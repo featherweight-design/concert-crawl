@@ -105,6 +105,8 @@ services:
         sync: false # Set to https://concertcrawl.app (digest links point at the web app)
       - key: SPOTIFY_SYNC_DRY_RUN
         sync: false # Optional: set to 1 for a log-only cycle (no writes, no emails)
+      - key: NATIVE_DIGEST_ENABLED
+        sync: false # Optional: set to 1 to digest every follower, not just Spotify ones
       - key: SENTRY_DSN
         sync: false # Enter manually in Render dashboard
       - key: SENTRY_ENVIRONMENT
@@ -283,6 +285,8 @@ services:
         sync: false # Set to the Vercel preview URL (digest links point at the web app)
       - key: SPOTIFY_SYNC_DRY_RUN
         sync: false # Optional: set to 1 for a log-only cycle (no writes, no emails)
+      - key: NATIVE_DIGEST_ENABLED
+        sync: false # Optional: set to 1 to digest every follower, not just Spotify ones
       - key: SENTRY_DSN
         sync: false # Enter manually in Render dashboard
       - key: SENTRY_ENVIRONMENT

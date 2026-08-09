@@ -15,10 +15,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
 import { ApiError } from '@/lib/api'
-import {
-  useSpotifyConnect,
-  useSpotifyPatch,
-} from '@/lib/queries/use-spotify-connection'
+import { useSpotifyConnect } from '@/lib/queries/use-spotify-connection'
+import { usePatchNotificationPreferences } from '@/lib/queries/use-notification-preferences'
 import { SPOTIFY_COPY } from './definitions/copy'
 import { AutoWatchSheet } from './AutoWatchSheet'
 import { ConnectSuccessModal } from './ConnectSuccessModal'
@@ -42,7 +40,7 @@ export const SpotifyReturnFlow = () => {
   const searchParams = useSearchParams()
   const router = useRouter()
   const connect = useSpotifyConnect()
-  const patch = useSpotifyPatch()
+  const patch = usePatchNotificationPreferences()
   const [phase, setPhase] = useState<FlowPhase>('idle')
   // Distinguishes the "Clerk has no linked Spotify account" 400 (usually a
   // dev-mode allowlist miss) from generic connect failures, so the failure
@@ -95,7 +93,10 @@ export const SpotifyReturnFlow = () => {
   const watchAndBrowse = () => {
     // Navigate only once auto-watch actually saved — on failure the current
     // sheet stays open, so the same CTA retries the PATCH.
-    patch.mutate({ autoWatch: true }, { onSuccess: goBrowse })
+    // artistAutoWatch, not the connection's legacy column — a follow's
+    // preferences live in user_notification_preferences now, and that is the
+    // only copy the crawl fan-out reads.
+    patch.mutate({ artistAutoWatch: true }, { onSuccess: goBrowse })
   }
 
   const view = connect.data

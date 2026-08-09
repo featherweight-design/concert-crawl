@@ -31,14 +31,20 @@ interface PatchOptions {
 
 let patchFails: boolean
 const patchMutate = vi.fn(
-  (_vars: { autoWatch: boolean }, opts?: PatchOptions) => {
+  (_vars: { artistAutoWatch: boolean }, opts?: PatchOptions) => {
     if (!patchFails) opts?.onSuccess?.()
   },
 )
 
 vi.mock('@/lib/queries/use-spotify-connection', () => ({
   useSpotifyConnect: () => ({ mutate: connectMutate, data: connectView }),
-  useSpotifyPatch: () => ({ mutate: patchMutate, isPending: false }),
+}))
+
+vi.mock('@/lib/queries/use-notification-preferences', () => ({
+  usePatchNotificationPreferences: () => ({
+    mutate: patchMutate,
+    isPending: false,
+  }),
 }))
 
 beforeEach(() => {
@@ -131,7 +137,7 @@ describe('SpotifyReturnFlow', () => {
       }),
     )
     expect(patchMutate).toHaveBeenCalledWith(
-      { autoWatch: true },
+      { artistAutoWatch: true },
       expect.anything(),
     )
     expect(push).toHaveBeenCalledWith('/events')
@@ -169,7 +175,7 @@ describe('SpotifyReturnFlow', () => {
       }),
     )
     expect(patchMutate).toHaveBeenCalledWith(
-      { autoWatch: true },
+      { artistAutoWatch: true },
       expect.anything(),
     )
     expect(push).toHaveBeenCalledWith('/events')
