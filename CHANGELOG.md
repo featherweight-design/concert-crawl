@@ -1,3 +1,10 @@
+## [1.236.1](https://github.com/HartiganHM/concert-crawl/compare/v1.236.0...v1.236.1) (2026-08-09)
+
+
+### Bug Fixes
+
+* **web:** load the tier picker on demand everywhere it is offered ([32782a6](https://github.com/HartiganHM/concert-crawl/commit/32782a6c9bdcb5b60393912f38738dfca5763206))
+
 # [1.236.0](https://github.com/HartiganHM/concert-crawl/compare/v1.235.0...v1.236.0) (2026-08-09)
 
 
