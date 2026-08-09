@@ -8,6 +8,7 @@
 // means the two trees can never disagree about what is on offer.
 
 import { useQuery } from '@tanstack/react-query'
+import { useAuth } from '@clerk/nextjs'
 import { formatShortDate } from '@/components/consumer/definitions/lib'
 import { fetchArtistSuggestions } from '@/lib/following'
 import {
@@ -19,6 +20,11 @@ import {
  * Suggestions as picker tiles, minus anyone already followed: the tile has one
  * unchecked state and no way to say "you already have this one", so offering
  * it would let a user "select" something the commit could not change.
+ *
+ * That filter is why the token is sent. The route only fills `following` for a
+ * reader it can identify, so an anonymous fetch answers `null` on every row and
+ * the exclusion quietly does nothing. Onboarding is post-auth, so a missing
+ * token here means the read failed, not that nobody is signed in.
  */
 export function useOnboardingSuggestions(
   genres: readonly string[],
@@ -27,9 +33,11 @@ export function useOnboardingSuggestions(
   // The genre set is part of the key, so re-picking on the step before this
   // one refetches rather than showing the previous lane's artists.
   const sorted = Array.from(genres).sort()
+  const { getToken } = useAuth()
   const query = useQuery({
     queryKey: ['onboarding', 'artist-suggestions', sorted],
-    queryFn: () => fetchArtistSuggestions(PICK_SUGGESTION_LIMIT, sorted),
+    queryFn: async () =>
+      fetchArtistSuggestions(PICK_SUGGESTION_LIMIT, sorted, await getToken()),
     enabled,
     // The tour is a single sitting; refetching mid-step would swap tiles out
     // from under a half-made selection.

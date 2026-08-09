@@ -43,35 +43,62 @@ vi.mock('@clerk/nextjs', () => ({
   }),
 }))
 
+const fetchArtistSuggestions =
+  vi.fn<
+    (
+      limit?: number,
+      genres?: readonly string[],
+      token?: string | null,
+    ) => Promise<unknown[]>
+  >()
+
 vi.mock('@/lib/following', () => ({
-  fetchArtistSuggestions: async () => [
-    {
-      slug: 'geese',
-      name: 'Geese',
-      photoUrl: null,
-      nextShow: {
-        eventId: 'ev1',
-        iso: '2026-09-12',
-        venue: 'Hi-Dive',
-        venueSlug: 'hi-dive',
-      },
-      following: false,
-    },
-    {
-      slug: 'ekko',
-      name: 'Ekko Astral',
-      photoUrl: null,
-      nextShow: {
-        eventId: 'ev2',
-        iso: '2026-09-20',
-        venue: 'Larimer Lounge',
-        venueSlug: 'larimer-lounge',
-      },
-      following: false,
-    },
-  ],
+  fetchArtistSuggestions: (
+    limit?: number,
+    genres?: readonly string[],
+    token?: string | null,
+  ) => fetchArtistSuggestions(limit, genres, token),
   followArtistsBulk: async () => undefined,
 }))
+
+const SUGGESTIONS = [
+  {
+    slug: 'geese',
+    name: 'Geese',
+    photoUrl: null,
+    nextShow: {
+      eventId: 'ev1',
+      iso: '2026-09-12',
+      venue: 'Hi-Dive',
+      venueSlug: 'hi-dive',
+    },
+    following: false,
+  },
+  {
+    slug: 'ekko',
+    name: 'Ekko Astral',
+    photoUrl: null,
+    nextShow: {
+      eventId: 'ev2',
+      iso: '2026-09-20',
+      venue: 'Larimer Lounge',
+      venueSlug: 'larimer-lounge',
+    },
+    following: false,
+  },
+  {
+    slug: 'wednesday',
+    name: 'Wednesday',
+    photoUrl: null,
+    nextShow: {
+      eventId: 'ev3',
+      iso: '2026-09-28',
+      venue: 'Gothic',
+      venueSlug: 'gothic',
+    },
+    following: true,
+  },
+]
 
 vi.mock('@/components/consumer/tier-picker/lazy', () => ({
   TierPickerSheet: () => null,
@@ -99,6 +126,8 @@ Object.defineProperty(window, 'matchMedia', {
 
 beforeEach(() => {
   push.mockClear()
+  fetchArtistSuggestions.mockReset()
+  fetchArtistSuggestions.mockResolvedValue(SUGGESTIONS)
   // jsdom implements no scrolling; the shell resets scroll on every step change.
   Element.prototype.scrollTo = vi.fn()
   window.sessionStorage.clear()
@@ -330,6 +359,26 @@ describe('OnboardingShell — genres then artists', () => {
         window.sessionStorage.getItem('cc.onboarding.artistPicks') ?? '[]',
       ),
     ).toEqual(['geese'])
+  })
+
+  it('asks as the signed-in reader, so the followed can be left out', async () => {
+    renderShell()
+    await goToArtists()
+
+    // Anonymously the route answers `following: null` on every row and the
+    // exclusion below quietly does nothing.
+    await waitFor(() =>
+      expect(fetchArtistSuggestions).toHaveBeenCalledWith(
+        expect.any(Number),
+        expect.any(Array),
+        'test-token',
+      ),
+    )
+    // No unchecked tile for someone you already follow — it would let you
+    // "select" something the commit could not change.
+    expect(
+      screen.queryAllByRole('checkbox', { name: /wednesday/i, hidden: true }),
+    ).toHaveLength(0)
   })
 
   it('drops picks the refetched grid no longer offers', async () => {

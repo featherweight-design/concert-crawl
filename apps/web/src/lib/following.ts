@@ -55,7 +55,11 @@ export async function followArtistsBulk(
 }
 
 /**
- * Followable artists with an upcoming Denver date. Public — no token needed.
+ * Followable artists with an upcoming Denver date. Public, but a token is
+ * worth passing when there is one: the route resolves an optional session and
+ * only fills `following` for a reader it can identify. Anonymously it answers
+ * `null`, which is honestly "we don't know" rather than "you follow nobody" —
+ * so a caller that filters on `following` and sends no token filters nothing.
  *
  * `genres` (onboarding) narrows to artists billed on an upcoming event in one
  * of those buckets. It filters the SAME endpoint the shelf reads rather than a
@@ -67,6 +71,7 @@ export async function followArtistsBulk(
 export async function fetchArtistSuggestions(
   limit?: number,
   genres?: readonly string[],
+  token?: string | null,
 ): Promise<ArtistSuggestion[]> {
   const params = new URLSearchParams()
   if (limit !== undefined) params.set('limit', String(limit))
@@ -74,7 +79,10 @@ export async function fetchArtistSuggestions(
     params.set('genres', genres.join(','))
   }
   const qs = params.size === 0 ? '' : `?${params.toString()}`
-  return publicApiClient.get<ArtistSuggestion[]>(`/v1/artists/suggestions${qs}`)
+  const path = `/v1/artists/suggestions${qs}`
+  return token
+    ? apiClient.get<ArtistSuggestion[]>(path, token)
+    : publicApiClient.get<ArtistSuggestion[]>(path)
 }
 
 /**
