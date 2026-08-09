@@ -1,3 +1,18 @@
+# [1.238.0](https://github.com/HartiganHM/concert-crawl/compare/v1.237.1...v1.238.0) (2026-08-09)
+
+
+### Bug Fixes
+
+* **following:** keep the locked action for a viewer who follows the bill ([bdd18fc](https://github.com/HartiganHM/concert-crawl/commit/bdd18fc7d9b856f36b2067215ee9b40cffd59078))
+* **following:** make the bulk button's aria-disabled bind its own handler ([6b6c1d1](https://github.com/HartiganHM/concert-crawl/commit/6b6c1d1c94db1d9b729efa5b1e2751b55781f312))
+* **following:** scope a failed bulk's rollback to its own acts ([5feb9e2](https://github.com/HartiganHM/concert-crawl/commit/5feb9e21fe7c3ca08ae72f2c1497f2794c945d0c))
+* **following:** withhold the bulk action when one act is left to take ([1dfc722](https://github.com/HartiganHM/concert-crawl/commit/1dfc7220704c20d8d1984f0582de182454b7e422))
+
+
+### Features
+
+* **event-detail:** follow the whole bill from the show that made you care ([a4cd9d3](https://github.com/HartiganHM/concert-crawl/commit/a4cd9d3208373d6f86d4942f1ba138c72ca229c4))
+
 ## [1.237.1](https://github.com/HartiganHM/concert-crawl/compare/v1.237.0...v1.237.1) (2026-08-09)
 
 
