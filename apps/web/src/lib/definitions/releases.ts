@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.38.0-beta',
+    date: 'Aug 8, 2026',
+    headline: 'A price tells you where it came from.',
+    items: [
+      {
+        kind: 'fixed',
+        text: 'A price we read off the venue used to appear as one submitted by a fan, waiting on confirmations that a Confirm button was never going to collect.',
+      },
+      {
+        kind: 'changed',
+        text: 'Those prices now say the venue is where they came from.',
+      },
+    ],
+  },
+  {
     version: 'v0.37.0-beta',
     date: 'Aug 8, 2026',
     headline: 'The show you said yes to has somewhere to sit.',

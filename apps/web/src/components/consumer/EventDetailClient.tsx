@@ -367,7 +367,9 @@ export function EventDetailBanners({
 //   1. Pending sold-out report              → PendingSoldOutCard
 //   2. Pending cancelled report             → null (price area hidden)
 //   3. Live price + alternates              → MultiTierLiveCard
-//   4. Single pending submission (no price) → PendingCardB
+//   4. Pending submissions                  → PendingCardB, or
+//        SubmitPriceCardCta once the last local submission is withdrawn, or
+//        PriceDisplay once one clears the promotion threshold
 //   5. Everything else                      → null (let PriceDisplay show)
 //
 // Note: PendingStack, MixedTierCard, and DisputedPriceCard require the API
@@ -389,7 +391,6 @@ export function EventDetailPriceBlock({
   >(null)
   const [submitPriceOpen, setSubmitPriceOpen] = useState(false)
   const [submitPriceEditMode, setSubmitPriceEditMode] = useState(false)
-  const [legacyCorroborationOpen, setLegacyCorroborationOpen] = useState(false)
   const [soldOutSawDifferentOpen, setSoldOutSawDifferentOpen] = useState(false)
   const [soldOutEvidenceFormOpen, setSoldOutEvidenceFormOpen] = useState(false)
   const [soldOutEvidenceReportType, setSoldOutEvidenceReportType] = useState<
@@ -566,7 +567,7 @@ export function EventDetailPriceBlock({
   )
 
   // #895 symptom: the two legacy pending-card branches transition shape as
-  // localSubmissions populates (noPriceState branch 5 → branch 4a), which
+  // localSubmissions populates (noPriceState branch 5 → branch 4), which
   // remounts their SubmitPriceModal and discards its internal success state —
   // so the form re-appears instead of the success surface. Combine the
   // optimistic pending-row update with handleSubmitSuccess: the latter closes
@@ -1564,7 +1565,7 @@ export function EventDetailPriceBlock({
     )
   }
 
-  // ── 4a. Pending submissions — no corroborated price yet ──────────
+  // ── 4. Pending submissions — no corroborated price yet ───────────
   // Guard enters on server submissions OR client-tracked ones (e.g. user just
   // submitted and localSubmissions was updated without a page refresh).
   if (
@@ -1847,93 +1848,18 @@ export function EventDetailPriceBlock({
     )
   }
 
-  // ── 4. Single pending submission (no corroborated price yet) ─────
-  // Detected when priceMin is present but priceApprovalKind is null and
-  // priceStatus is not 'live'. The submissionId is not yet surfaced in the
-  // EventDetailResponse, so corroboration is read-only for now.
-  if (
-    priceMin !== null &&
-    event.priceApprovalKind == null &&
-    event.priceStatus !== 'live'
-  ) {
-    // API does not expose submitter userId or isSubmitter boolean;
-    // isSelf cannot be determined client-side. Always show the 'other' view
-    // until the API surfaces a dedicated field.
-    return (
-      <>
-        <PendingCardB
-          floor={priceMin}
-          {...(priceMax !== null ? { ceiling: priceMax } : {})}
-          tier="General Admission"
-          vendor={event.priceVendor ?? event.venue.name}
-          kind="community"
-          submitter={
-            event.priceSubmitterHandle
-              ? { handle: event.priceSubmitterHandle, url: '' }
-              : null
-          }
-          submittedAt={event.priceObservedAt ?? new Date().toISOString()}
-          // Submitter counts as observation #1 (#831). API doesn't surface
-          // confirmsCount on this legacy path, so the floor for a fresh
-          // pending row is the submitter alone. `needed` is derived from
-          // the policy + event date so imminent shows render the right
-          // denominator (#835 Copilot R3).
-          confirms={SUBMITTER_OBSERVATION}
-          needed={corroborationConfirmsRequired(event.date)}
-          view="other"
-          // Deliberately not gated: this legacy branch's confirm and edit are
-          // already no-ops for everyone, because EventDetailResponse does not
-          // surface a submissionId here. Announcing "sign up to confirm" would
-          // promise a signed-out visitor something a signed-in one cannot do
-          // either. The dead affordances need the API field, not a gate.
-          onConfirm={() => setLegacyCorroborationOpen(true)}
-          onWithdraw={() => {
-            // Requires submissionId from API — future work
-          }}
-          onEdit={() => {
-            // Requires submissionId from API — future work
-          }}
-        />
-        {legacyCorroborationOpen && (
-          <CorroborationSheet
-            submission={{
-              floor: priceMin,
-              ...(priceMax !== null ? { ceiling: priceMax } : {}),
-              tier: 'General Admission',
-              vendor: event.priceVendor ?? event.venue.name,
-              kind: 'community',
-              submitter: event.priceSubmitterHandle
-                ? { handle: event.priceSubmitterHandle, url: '' }
-                : null,
-              submittedAt: event.priceObservedAt ?? new Date().toISOString(),
-              // Submitter counts as observation #1 (#831). Sheet stays in
-              // sync with the card above — same policy-derived denominator
-              // so legacy imminent shows match the rest of the price block
-              // (#835 Copilot R3).
-              confirms: SUBMITTER_OBSERVATION,
-              needed: corroborationConfirmsRequired(event.date),
-              // The submission ID is not yet surfaced in EventDetailResponse.
-              // This is a placeholder until the API exposes it.
-              submissionId: '',
-            }}
-            open={legacyCorroborationOpen}
-            onClose={() => setLegacyCorroborationOpen(false)}
-            onConfirm={(_method) => {
-              // submissionId not yet in EventDetailResponse; confirm is a no-op
-              // until the API exposes it. Sheet will close without confirming.
-              setLegacyCorroborationOpen(false)
-            }}
-            onSubmitUpdate={() => setLegacyCorroborationOpen(false)}
-          />
-        )}
-      </>
-    )
-  }
+  // A crawler-sourced price used to render here as a pending *community*
+  // submission: "Community · submitted by an anonymous fan · 1 of 2
+  // confirmed", with an observedAt that fell back to now() so a price read
+  // weeks ago claimed to be minutes old. Nobody submitted it, so its Confirm
+  // and "Saw a different number?" buttons had no submission to act on and did
+  // nothing. Priced events with no submissions now fall through to the
+  // standard PriceDisplay below, which states the real source.
 
   // ── 5. Standard PriceDisplay ────────────────────────────────────
   // No Phase 8.5 override applies — render the existing price card.
   // When price is null (community-handoff card), own the submit modal so
-  // onSuccess can update localSubmissions and transition into section 4a.
+  // onSuccess can update localSubmissions and transition into section 4.
   const noPriceState = event.ticketPriceMin === null
   return (
     <>

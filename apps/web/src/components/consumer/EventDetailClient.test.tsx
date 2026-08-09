@@ -1065,7 +1065,7 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
 
   // Regression — issue #895 (post-submit form re-open). Submitting from the
   // no-price branch populates localSubmissions, which flips the decision tree
-  // to the legacy pending branch (4a) and remounts the SubmitPriceModal. The
+  // to the legacy pending branch (4) and remounts the SubmitPriceModal. The
   // remounted modal loses its internal success state and re-renders the form.
   // The fix lifts the success payload to the parent (submitSuccessSurface) via
   // onPendingSubmitSuccess, so the success card survives the branch switch
@@ -1151,5 +1151,58 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     // TierAlternateRow renders "pending · {confirms}/{needed}".
     expect(screen.getByText(/pending · 1\/2/i)).toBeDefined()
     expect(screen.queryByText(/pending · 0\/2/i)).toBeNull()
+  })
+})
+
+describe('EventDetailPriceBlock — crawled price, no submissions', () => {
+  // Regression: this state used to render PendingCardB, dressing a
+  // crawler-sourced price up as a community submission awaiting corroboration
+  // ("Community", "Submitted by an anonymous fan", "1 of 2 confirmed"), with
+  // an observedAt that fell back to now(). Its Confirm and "Saw a different
+  // number?" buttons had no submission behind them and did nothing.
+  const crawledPriceEvent = () =>
+    buildBaseEvent({
+      ticketPriceMin: '45.00',
+      priceSource: 'structured_data',
+      priceByTier: null,
+      pendingSubmissions: null,
+      ticketLinks: null,
+      priceStatus: null,
+      priceApprovalKind: null,
+    })
+
+  it('does not claim the price came from the community', () => {
+    render(
+      <EventDetailPriceBlock
+        event={crawledPriceEvent()}
+        reports={[]}
+        currentUserId={null}
+      />,
+    )
+    expect(screen.queryByText('Submitted by')).toBeNull()
+    expect(screen.queryByText(/of 2 confirmed/)).toBeNull()
+  })
+
+  it('offers no corroboration affordance with nothing to corroborate', () => {
+    render(
+      <EventDetailPriceBlock
+        event={crawledPriceEvent()}
+        reports={[]}
+        currentUserId={null}
+      />,
+    )
+    expect(screen.queryByText('Confirm price')).toBeNull()
+    expect(screen.queryByText('Saw a different number?')).toBeNull()
+  })
+
+  it('falls through to the standard PriceDisplay', () => {
+    render(
+      <EventDetailPriceBlock
+        event={crawledPriceEvent()}
+        reports={[]}
+        currentUserId={null}
+      />,
+    )
+    expect(screen.getByTestId('price-display-stub')).toBeDefined()
   })
 })
