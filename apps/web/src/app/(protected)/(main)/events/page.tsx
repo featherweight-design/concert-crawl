@@ -506,11 +506,11 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
           the follow seed came back unknown. Deliberately NOT a removal of the
           taste shelf — it still renders for every viewer the follow seed
           couldn't answer for. */}
-      {shelfMode !== null ? (
+      {shelfMode !== null && followCount !== null ? (
         <FollowShelf
           mode={shelfMode}
           artists={shelfArtists}
-          followCount={followCount ?? 0}
+          followCount={followCount}
           scaRegion={scaRegion}
         />
       ) : (

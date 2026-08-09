@@ -149,9 +149,16 @@ export const FollowShelf = ({
   if (visible.length === 0) return null
 
   const signedOut = isSignedIn === false
-  // A viewer already following someone is never locked out of unfollowing
-  // them, so `locked` is only ever asserted on the starter shelf's rows.
-  const locked = !signedOut && surface !== null && surface !== 'visible-active'
+  // Scoped to `zero` on purpose. A downgraded viewer still has to be able to
+  // unfollow, and DELETE /v1/artists/:slug/follow is deliberately ungated to
+  // let them (artist-follows.ts:121) — so locking the badge on `some`/`spotify`
+  // would strand them holding follows they cannot release. Only the starter
+  // shelf, whose rows are all not-yet-followed, gates on entitlement.
+  const locked =
+    mode === 'zero' &&
+    !signedOut &&
+    surface !== null &&
+    surface !== 'visible-active'
 
   const pickerEntry: PickerEntry =
     surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall'

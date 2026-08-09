@@ -94,6 +94,18 @@ describe('FollowFilterChip', () => {
     ).toBeTruthy()
   })
 
+  it('an active chip with an unknown count drops the number, never prints 0', () => {
+    entitlementState.current = ENTITLED
+    renderChip({ followCount: null, active: true })
+    const chip = screen.getByTestId('follow-scope-chip')
+    // The ✕ clear glyph rides an active chip, so assert on the label rather
+    // than the whole node: the point is that no count, and specifically no
+    // zero, reaches the string.
+    expect(chip.textContent).toContain(FOLLOWING_COPY.chip)
+    expect(chip.textContent).not.toContain('·')
+    expect(chip.textContent).not.toContain('0')
+  })
+
   // D1: entitlement is read BEFORE the count, so the paywall is reachable from
   // browse for a free user who has never followed anyone.
   it('locked beats absent for a free viewer with zero follows', () => {

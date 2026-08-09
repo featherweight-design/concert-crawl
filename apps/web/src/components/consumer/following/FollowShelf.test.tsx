@@ -158,6 +158,27 @@ describe('FollowShelf', () => {
     )
   })
 
+  // A downgraded viewer keeps their follows and DELETE stays ungated, so the
+  // badge on their own artists must still toggle rather than open the paywall.
+  it('a downgraded viewer can still unfollow from the some shelf', () => {
+    entitlementState.current = {
+      isLoading: false,
+      active: false,
+      surface: 'paywall-on-tap',
+    }
+    renderShelf({
+      mode: 'some',
+      followCount: 1,
+      artists: [artist({ following: true })],
+    })
+    const badge = screen.getByRole('button', {
+      name: FOLLOWING_COPY.followingAria('Ratbag'),
+    })
+    fireEvent.click(badge)
+    expect(toggle).toHaveBeenCalled()
+    expect(screen.queryByTestId('tier-picker')).toBeNull()
+  })
+
   it('signed-out viewers hand off to the logged-out picker entry', () => {
     authState.isSignedIn = false
     entitlementState.current = {

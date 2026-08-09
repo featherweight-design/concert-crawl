@@ -98,9 +98,14 @@ export const FollowFilterChip = ({
     // the chip mid-scope would strand the viewer on an unclearable empty list.
     if (followCount === 0 && !active) return null
 
-    const label = active
-      ? FOLLOWING_COPY.chipActive(followCount ?? 0)
-      : FOLLOWING_COPY.chip
+    // An unknown count drops the number rather than printing zero. `null` means
+    // the SSR seed failed, and "My artists · 0" would tell a viewer who follows
+    // fifty artists that they follow none — the exact claim the null-vs-zero
+    // split upstream exists to prevent.
+    const label =
+      active && followCount !== null
+        ? FOLLOWING_COPY.chipActive(followCount)
+        : FOLLOWING_COPY.chip
 
     return (
       <>
