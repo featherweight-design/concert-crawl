@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { eq, sql } from 'drizzle-orm'
+import { z } from 'zod'
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
@@ -1841,5 +1842,112 @@ describe('GET /v1/events/availability', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+})
+
+// The headliner's portrait, second link in the event-surface imagery chain.
+// `artists` is a projection joined on canonicalName with no foreign key, so
+// every assertion here is really about that join behaving like a lookup.
+describe('GET /v1/events — artistPhotoUrl join', () => {
+  const PORTRAIT = 'https://i.scdn.co/image/headliner'
+
+  // Parsed rather than cast: the point of these cases is that the field is
+  // actually serialized, and a cast would assert that instead of checking it.
+  const photoFields = z.object({
+    imageUrl: z.string().nullable(),
+    artistPhotoUrl: z.string().nullable(),
+  })
+  const listShape = z.object({ data: z.object({ data: z.array(photoFields) }) })
+  const detailShape = z.object({ data: photoFields })
+  const relatedShape = z.object({
+    data: z.object({ data: z.array(photoFields) }),
+  })
+
+  beforeEach(async () => {
+    await clearTables()
+  })
+
+  const listRow = async (): Promise<z.infer<typeof photoFields>> => {
+    const res = await app.request('/v1/events')
+    expect(res.status).toBe(200)
+    const body = listShape.parse(await res.json())
+    // One event seeded per test, so a second row would mean the left join
+    // fanned out — the failure mode the unique canonicalName index prevents.
+    expect(body.data.data).toHaveLength(1)
+    return body.data.data[0]!
+  }
+
+  it('returns both sources when the event has art and the headliner is matched', async () => {
+    const venue = await seedVenue({ slug: 'photo-both' })
+    await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT })
+    await seedEvent(venue.id, {
+      artist: 'Khruangbin',
+      date: '2027-06-01',
+      imageUrl: 'https://venue.test/poster.jpg',
+    })
+
+    expect(await listRow()).toEqual({
+      imageUrl: 'https://venue.test/poster.jpg',
+      artistPhotoUrl: PORTRAIT,
+    })
+  })
+
+  it('returns the portrait alone when the event has no art', async () => {
+    const venue = await seedVenue({ slug: 'photo-artist-only' })
+    await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT })
+    await seedEvent(venue.id, {
+      artist: 'Khruangbin',
+      date: '2027-06-01',
+      imageUrl: null,
+    })
+
+    expect(await listRow()).toEqual({
+      imageUrl: null,
+      artistPhotoUrl: PORTRAIT,
+    })
+  })
+
+  // Ordinary, not an error: most events have no projection row at all, and a
+  // matched row may still be waiting on the photo backfill.
+  it('returns null when no projection row matches, and when it has no photo', async () => {
+    const venue = await seedVenue({ slug: 'photo-none' })
+    await seedEvent(venue.id, { artist: 'Nobody Here', date: '2027-06-01' })
+    expect(await listRow()).toEqual({ imageUrl: null, artistPhotoUrl: null })
+
+    await clearTables()
+    const other = await seedVenue({ slug: 'photo-unmatched' })
+    await seedArtist({ name: 'Khruangbin', photoUrl: null })
+    await seedEvent(other.id, { artist: 'Khruangbin', date: '2027-06-01' })
+    expect(await listRow()).toEqual({ imageUrl: null, artistPhotoUrl: null })
+  })
+
+  // A projection row keyed on a different canonical name must not leak in.
+  it('does not match a different artist', async () => {
+    const venue = await seedVenue({ slug: 'photo-other' })
+    await seedArtist({ name: 'Some Opener', photoUrl: PORTRAIT })
+    await seedEvent(venue.id, { artist: 'Khruangbin', date: '2027-06-01' })
+
+    expect(await listRow()).toEqual({ imageUrl: null, artistPhotoUrl: null })
+  })
+
+  it('serializes the portrait on the detail and related shapes too', async () => {
+    const venue = await seedVenue({ slug: 'photo-detail' })
+    await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT })
+    const source = await seedEvent(venue.id, {
+      artist: 'Khruangbin',
+      date: '2027-06-01',
+    })
+    await seedEvent(venue.id, { artist: 'Khruangbin', date: '2027-06-02' })
+
+    const detail = await app.request(`/v1/events/${source.id}`)
+    expect(detail.status).toBe(200)
+    const detailBody = detailShape.parse(await detail.json())
+    expect(detailBody.data.artistPhotoUrl).toBe(PORTRAIT)
+
+    const related = await app.request(`/v1/events/${source.id}/related`)
+    expect(related.status).toBe(200)
+    const relatedBody = relatedShape.parse(await related.json())
+    expect(relatedBody.data.data).toHaveLength(1)
+    expect(relatedBody.data.data[0]?.artistPhotoUrl).toBe(PORTRAIT)
   })
 })

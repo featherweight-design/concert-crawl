@@ -37,4 +37,61 @@ describe('<EventImage />', () => {
       'https://example.test/b.jpg',
     )
   })
+
+  const venue = 'https://example.test/venue.jpg'
+  const portrait = 'https://example.test/artist.jpg'
+  const srcOf = (root: HTMLElement) => photo(root)?.getAttribute('src') ?? null
+
+  it('prefers the event image over the artist photo', () => {
+    const { container } = render(
+      <EventImage src={venue} artistPhotoUrl={portrait} alt="Show A" />,
+    )
+    expect(srcOf(container)).toBe(venue)
+  })
+
+  it('uses the artist photo when there is no event image', () => {
+    const { container } = render(
+      <EventImage src={null} artistPhotoUrl={portrait} alt="Show A" />,
+    )
+    expect(srcOf(container)).toBe(portrait)
+  })
+
+  it('falls to identity art when neither source is present', () => {
+    const { container } = render(
+      <EventImage src={null} artistPhotoUrl={null} alt="Show A" />,
+    )
+    expect(photo(container)).toBeNull()
+  })
+
+  // A 404 on the venue image is the common case the chain exists for — it must
+  // not skip past real imagery straight to the placeholder.
+  it('walks from a failed event image to the artist photo, then identity art', () => {
+    const { container } = render(
+      <EventImage src={venue} artistPhotoUrl={portrait} alt="Show A" />,
+    )
+    fireEvent.error(photo(container)!)
+    expect(srcOf(container)).toBe(portrait)
+
+    fireEvent.error(photo(container)!)
+    expect(photo(container)).toBeNull()
+  })
+
+  it('retries the whole chain when the event changes', () => {
+    const { container, rerender } = render(
+      <EventImage src={venue} artistPhotoUrl={portrait} alt="Show A" />,
+    )
+    fireEvent.error(photo(container)!)
+    fireEvent.error(photo(container)!)
+    expect(photo(container)).toBeNull()
+
+    rerender(
+      <EventImage
+        src="https://example.test/b.jpg"
+        artistPhotoUrl={portrait}
+        alt="Show B"
+      />,
+    )
+
+    expect(srcOf(container)).toBe('https://example.test/b.jpg')
+  })
 })

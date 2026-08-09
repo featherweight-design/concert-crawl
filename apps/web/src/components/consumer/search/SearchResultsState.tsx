@@ -1,6 +1,7 @@
 import { MapPin, Mic2, User } from 'lucide-react'
 import type { ArtistSearchResult } from '@concert-crawl/types'
 import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch'
+import { EventImage } from '../event-image'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY.search
@@ -137,20 +138,18 @@ function ArtistPageSection({
                   flexShrink: 0,
                 }}
               >
-                {artist.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={artist.photoUrl}
-                    alt=""
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover' as const,
-                    }}
-                  />
-                ) : (
-                  <Mic2 size={18} strokeWidth={1.5} />
-                )}
+                {/* An artist surface: the portrait or IdentityArt, never an
+                    event's artwork. No second source for the same reason.
+                    Decorative — the row already renders the name as text, and an
+                    empty alt also leaves IdentityArt without a role, so neither
+                    branch announces the name twice. */}
+                <EventImage
+                  src={artist.photoUrl}
+                  alt=""
+                  artist={artist.name}
+                  identityScale="micro"
+                  className="h-full w-full"
+                />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div

@@ -17,6 +17,13 @@ function getVenueName(event: EventWithVenue | Event): string | null {
   return null
 }
 
+// The bare `Event` shape has no artist join, so callers passing one get the
+// venue image or IdentityArt exactly as before.
+function getArtistPhotoUrl(event: EventWithVenue | Event): string | null {
+  if ('artistPhotoUrl' in event) return event.artistPhotoUrl ?? null
+  return null
+}
+
 export function SmallEventRow({
   event,
   date,
@@ -43,6 +50,7 @@ export function SmallEventRow({
       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md">
         <EventImage
           src={event.imageUrl}
+          artistPhotoUrl={getArtistPhotoUrl(event)}
           alt={event.artist}
           artist={event.artist}
           identityScale="micro"

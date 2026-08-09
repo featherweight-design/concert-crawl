@@ -246,6 +246,40 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     expect(screen.getByText('Past shows only')).toBeTruthy()
   })
 
+  // Conformance, not a design call: a photoless artist gets the same
+  // IdentityArt every other surface shows, rather than a generic mic icon.
+  it('falls to identity art for a photoless artist', () => {
+    const { container } = render(
+      <SearchResultsState
+        artistResults={[]}
+        artistPageResults={ARTIST_PAGES}
+        venueResults={[]}
+        onNavigateTo={mockNavigateTo}
+      />,
+    )
+    expect(screen.getAllByTestId('identity-art').length).toBeGreaterThan(0)
+    expect(container.querySelector('img')).toBeNull()
+  })
+
+  it('renders the portrait when the artist has one', () => {
+    const { container } = render(
+      <SearchResultsState
+        artistResults={[]}
+        artistPageResults={[
+          { ...ARTIST_PAGES[0]!, photoUrl: 'https://i.scdn.co/image/rh' },
+        ]}
+        venueResults={[]}
+        onNavigateTo={mockNavigateTo}
+      />,
+    )
+    expect(container.querySelector('img')?.getAttribute('src')).toBe(
+      'https://i.scdn.co/image/rh',
+    )
+    // Decorative: the row already renders the name as text, so a populated alt
+    // would land in the button's accessible name and announce it twice.
+    expect(container.querySelector('img')?.getAttribute('alt')).toBe('')
+  })
+
   it('routes an artist-page row to the page, not a filtered browse', () => {
     render(
       <SearchResultsState

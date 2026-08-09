@@ -4,6 +4,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import {
   db,
+  artists,
   events,
   venues,
   userEvents,
@@ -353,6 +354,7 @@ eventsRouter.get(
         canonicalArtist: events.canonicalArtist,
         canonicalHeadliners: events.canonicalHeadliners,
         canonicalSupporting: events.canonicalSupporting,
+        artistPhotoUrl: artists.photoUrl,
         venue: {
           id: venues.id,
           name: venues.name,
@@ -367,6 +369,12 @@ eventsRouter.get(
         venues,
         and(eq(events.venueId, venues.id), eq(venues.active, true)),
       )
+      // Headliner portrait. There is no event_artists table and no foreign
+      // key: `artists` is a projection keyed on canonicalName, which carries a
+      // unique index. That index is what keeps this join cardinality-preserving
+      // — drop it and every event row with a duplicated canonical name fans out
+      // silently, past the pagination count that does not join here.
+      .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
       .where(where)
       .orderBy(asc(events.date), asc(events.showTime))
       .limit(limit)
@@ -580,6 +588,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       // needs to know whether the chip has anywhere to point. Stripped from the
       // response below in favour of the boolean.
       venueGuidePublishedAt: venues.guidePublishedAt,
+      artistPhotoUrl: artists.photoUrl,
       venue: {
         id: venues.id,
         name: venues.name,
@@ -594,6 +603,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       venues,
       and(eq(events.venueId, venues.id), eq(venues.active, true)),
     )
+    .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
     // isNull(firstMissingAt) mirrors the list-filter intent: if the crawler
     // stopped seeing this event, direct-link traffic from old emails / search
     // results should 404 rather than render a stale detail page. The crawler
@@ -1195,6 +1205,7 @@ eventsRouter.get('/:id/related', async (ctx) => {
       sourceUrl: events.sourceUrl,
       createdAt: events.createdAt,
       updatedAt: events.updatedAt,
+      artistPhotoUrl: artists.photoUrl,
       venue: {
         id: venues.id,
         name: venues.name,
@@ -1209,6 +1220,7 @@ eventsRouter.get('/:id/related', async (ctx) => {
       venues,
       and(eq(events.venueId, venues.id), eq(venues.active, true)),
     )
+    .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
     .where(and(...relatedConditions))
     .orderBy(asc(events.date), asc(events.showTime))
     .limit(3)

@@ -12,6 +12,7 @@ function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
     supports: [],
     tourName: null,
     imageUrl: null,
+    artistPhotoUrl: null,
     venueName: 'Test',
     venueSlug: 'test',
     dateLabel: 'Sat, Aug 15',

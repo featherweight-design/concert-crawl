@@ -91,6 +91,7 @@ export const EventRow = ({
         >
           <EventImage
             src={show.imageUrl}
+            artistPhotoUrl={show.artistPhotoUrl}
             alt={show.headliner}
             artist={show.headliner}
             identityScale="tile"

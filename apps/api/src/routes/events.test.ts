@@ -7,6 +7,7 @@ const { mockDb } = vi.hoisted(() => {
     where: vi.fn(),
     orderBy: vi.fn(),
     innerJoin: vi.fn(),
+    leftJoin: vi.fn(),
     limit: vi.fn(),
     offset: vi.fn(),
     groupBy: vi.fn(),
@@ -148,6 +149,7 @@ function resetChain() {
   mockDb.select.mockReturnValue(mockDb)
   mockDb.from.mockReturnValue(mockDb)
   mockDb.innerJoin.mockReturnValue(mockDb)
+  mockDb.leftJoin.mockReturnValue(mockDb)
   mockDb.orderBy.mockReturnValue(mockDb)
   mockDb.limit.mockReturnValue(mockDb)
   mockDb.where.mockReturnValue(mockDb)

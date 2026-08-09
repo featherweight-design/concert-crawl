@@ -667,6 +667,13 @@ export interface EventWithVenue extends Event {
   // users with Spotify-sourced follow rows — a possibly empty array per
   // event. Absent entirely for anonymous/unconnected viewers.
   followedArtists?: string[]
+  // The headliner's Spotify portrait, from the `artists` projection joined on
+  // `canonicalArtist`. Second link in the event-surface chain: `imageUrl` →
+  // `artistPhotoUrl` → IdentityArt. Null whenever the event has no canonical
+  // headliner, no projection row, or a row without a photo — all ordinary.
+  // Never populated from a supporting artist: a wrong face beside the right
+  // name is worse than no face.
+  artistPhotoUrl?: string | null
 }
 
 // Per-tier price-aggregation building blocks (issue #644). Surfaced inside

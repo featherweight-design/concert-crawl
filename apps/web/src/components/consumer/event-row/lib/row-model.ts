@@ -52,6 +52,8 @@ export interface EventRowShow {
   supports: string[]
   tourName: string | null
   imageUrl: string | null
+  /** Second choice behind `imageUrl`. Null on payloads that omit the join. */
+  artistPhotoUrl: string | null
   venueName: string
   venueSlug: string
   /** "Sat, Aug 15". Line 3 shortens it in place rather than reformatting. */
@@ -84,6 +86,7 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
     supports: [],
     tourName: null,
     imageUrl: show.imageUrl,
+    artistPhotoUrl: null,
     venueName: venueShort(show.venueName),
     venueSlug: show.venueSlug,
     dateLabel: formatEventDate(show.date, undefined, {
@@ -156,6 +159,7 @@ export function fromEventWithVenue(
     supports: event.supportingArtists ?? [],
     tourName: event.tourName ?? null,
     imageUrl: event.imageUrl ?? null,
+    artistPhotoUrl: event.artistPhotoUrl ?? null,
     venueName: venueShort(event.venue.name),
     venueSlug: event.venue.slug,
     dateLabel: formatEventDate(event.date, event.venue.timezone ?? undefined, {
@@ -193,6 +197,7 @@ export function fromCrewShow(show: CrewShow): EventRowShow {
     supports: [],
     tourName: null,
     imageUrl: null,
+    artistPhotoUrl: null,
     venueName: venueShort(show.venue),
     venueSlug: show.venueSlug,
     dateLabel: formatEventDate(show.iso, undefined, {

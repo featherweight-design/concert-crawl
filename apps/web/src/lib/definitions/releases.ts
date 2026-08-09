@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.40.0-beta',
+    date: 'Aug 8, 2026',
+    headline: 'Fewer shows with nothing to look at.',
+    items: [
+      {
+        kind: 'changed',
+        text: 'A show with no venue artwork now gets the headliner’s photo instead of a placeholder.',
+      },
+    ],
+  },
+  {
     version: 'v0.39.0-beta',
     date: 'Aug 8, 2026',
     headline: 'Browse, narrowed to the artists you follow.',
