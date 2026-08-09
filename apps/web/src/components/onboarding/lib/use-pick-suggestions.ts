@@ -36,8 +36,15 @@ export function useOnboardingSuggestions(
   const { getToken } = useAuth()
   const query = useQuery({
     queryKey: ['onboarding', 'artist-suggestions', sorted],
-    queryFn: async () =>
-      fetchArtistSuggestions(PICK_SUGGESTION_LIMIT, sorted, await getToken()),
+    queryFn: async () => {
+      // Failing beats degrading. `fetchArtistSuggestions` falls back to the
+      // public client on a null token, and that read answers `following: null`
+      // on every row, so the exclusion below would pass everything through and
+      // the step would offer tiles the commit cannot change.
+      const token = await getToken()
+      if (token === null) throw new Error('onboarding suggestions: no token')
+      return fetchArtistSuggestions(PICK_SUGGESTION_LIMIT, sorted, token)
+    },
     enabled,
     // The tour is a single sitting; refetching mid-step would swap tiles out
     // from under a half-made selection.

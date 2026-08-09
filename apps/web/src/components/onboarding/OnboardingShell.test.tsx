@@ -35,9 +35,14 @@ vi.mock('next/link', () => ({
 // The tour now reaches two steps that talk to the network and to Clerk. None of
 // that is what these tests are about, so the boundaries are stubbed and the
 // picker steps get their own suites.
+// Held in a box so a test can take the token away: the suggestions read has to
+// fail rather than fall back to the anonymous client, which answers
+// `following: null` and would re-offer artists the visitor already follows.
+const token: { current: string | null } = { current: 'test-token' }
+
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => ({
-    getToken: async () => 'test-token',
+    getToken: async () => token.current,
     isSignedIn: false,
     userId: null,
   }),
@@ -167,6 +172,7 @@ beforeEach(() => {
   followArtistsBulk.mockResolvedValue(undefined)
   tierPickerRender.mockClear()
   planState.current = FREE_PLAN
+  token.current = 'test-token'
   // jsdom implements no scrolling; the shell resets scroll on every step change.
   Element.prototype.scrollTo = vi.fn()
   window.sessionStorage.clear()
@@ -467,6 +473,24 @@ describe('OnboardingShell — genres then artists', () => {
         window.sessionStorage.getItem('cc.onboarding.artistPicks') ?? '[]',
       ),
     ).toEqual(['geese', 'ghost'])
+  })
+
+  // Anonymously the route answers `following: null` on every row, so a
+  // token-less read would re-offer artists the visitor already follows and the
+  // tile has no way to say so. Failing is the better shape.
+  it('does not read suggestions anonymously when the token is missing', async () => {
+    token.current = null
+    renderShell()
+    for (let i = 0; i < ARTISTS_STEP_INDEX; i += 1) next()
+
+    await waitFor(
+      () =>
+        expect(
+          screen.getAllByText(ARTIST_PICKER_COPY.emptyTitle).length,
+        ).toBeGreaterThan(0),
+      { timeout: 5000 },
+    )
+    expect(fetchArtistSuggestions).not.toHaveBeenCalled()
   })
 
   // `advance()` steps relative to wherever the tour is when the write settles,
