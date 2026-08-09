@@ -1,3 +1,16 @@
+# [1.236.0](https://github.com/HartiganHM/concert-crawl/compare/v1.235.0...v1.236.0) (2026-08-09)
+
+
+### Bug Fixes
+
+* **search:** drop the EventImage import the row extraction orphaned ([d789826](https://github.com/HartiganHM/concert-crawl/commit/d789826b264021c5ea22a3439092ae8d10b12cb9))
+* **search:** read the media query during render so desktop doesn't paint narrow first ([1927119](https://github.com/HartiganHM/concert-crawl/commit/19271199a5993e229bd5bdb4458024f8ac75f458))
+
+
+### Features
+
+* **search:** put the follow control on artist search results ([cce50fc](https://github.com/HartiganHM/concert-crawl/commit/cce50fc4b84066511835a06092ecc9b7e1a3c6fa))
+
 # [1.235.0](https://github.com/HartiganHM/concert-crawl/compare/v1.234.0...v1.235.0) (2026-08-09)
 
 
