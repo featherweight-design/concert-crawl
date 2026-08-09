@@ -113,7 +113,13 @@ export const BillFollowBlock = ({
   // ED-03: the bulk action disappears once there is nothing left to commit.
   // Withheld entirely while signed out — every row already routes to sign-up,
   // and a second route to the same place in the same block is noise.
-  const showBulk = !signedOut && unfollowed.length > 0
+  //
+  // A one-act bill is the same case: the row's own button already reads
+  // "Follow", so a bulk action beside it offers one decision twice. Locked is
+  // the exception, because the rows are not drawn at all there (ED-05) and
+  // this is the block's only control however many acts are on the bill.
+  const showBulk =
+    !signedOut && unfollowed.length > 0 && (locked || unfollowed.length > 1)
   const bulkLabel = COPY.followAll(locked ? artists.length : unfollowed.length)
 
   const onBulkClick = () => {

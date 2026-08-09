@@ -283,10 +283,9 @@ describe('BillFollowBlock — "Follow all N"', () => {
         name: ARTIST_COPY.followingAria('Nightjar Choir'),
       }),
     ).toBeInTheDocument()
-    // One act is still on offer, so the bulk action stays.
-    expect(screen.getByTestId('bill-follow-all')).toHaveTextContent(
-      COPY.followAll(1),
-    )
+    // One act is still on offer, and its own row button is the way to take
+    // it — a bulk action for a single row is the same decision twice.
+    expect(screen.queryByTestId('bill-follow-all')).toBeNull()
   })
 
   it('rolls the bill back and opens the picker on a stale entitlement', async () => {
@@ -373,6 +372,27 @@ describe('BillFollowBlock — "Follow all N"', () => {
       />,
     )
     expect(screen.queryByTestId('bill-follow-all')).toBeNull()
+  })
+
+  // Two buttons reading "Follow" in one block is one decision offered twice.
+  it('is withheld on a one-act bill, where the row already carries it', () => {
+    render(<BillFollowBlock artists={[BILL[0]!]} scaRegion={false} />)
+    expect(screen.queryByTestId('bill-follow-all')).toBeNull()
+    expect(
+      screen.getByRole('button', {
+        name: ARTIST_COPY.followAria('Nightjar Choir'),
+      }),
+    ).toBeInTheDocument()
+  })
+
+  // ...unless the rows are not drawn at all, which is every act below Premium.
+  it('survives on a one-act bill while locked, as the only control there', () => {
+    planState.current = plan({ plan: 'supporter' })
+
+    render(<BillFollowBlock artists={[BILL[0]!]} scaRegion={false} />)
+
+    expect(screen.getByTestId('bill-follow-all')).toBeInTheDocument()
+    expect(followButtons()).toHaveLength(0)
   })
 })
 
