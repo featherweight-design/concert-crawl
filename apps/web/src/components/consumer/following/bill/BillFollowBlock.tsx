@@ -117,6 +117,11 @@ export const BillFollowBlock = ({
   const bulkLabel = COPY.followAll(locked ? artists.length : unfollowed.length)
 
   const onBulkClick = () => {
+    // Honour `aria-disabled` here rather than only in the hook. The hook's ref
+    // guard already makes a second tap a no-op, but a control that announces
+    // itself as disabled and still runs its handler is the inconsistency the
+    // attribute exists to prevent.
+    if (follows.committing) return
     if (locked) {
       setPickerOpen(true)
       return

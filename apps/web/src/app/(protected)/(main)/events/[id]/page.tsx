@@ -133,9 +133,12 @@ export default async function EventDetailPage({
     fetchEvent(id, token),
     fetchReports(id, token),
     fetchRelatedById(id, token),
-    // `undefined` on failure, never an empty list: seeding a bill as
-    // "following nobody" would draw live Follow buttons beside acts the viewer
-    // already follows. seedFollowedArtists keeps that distinction.
+    // Resolves `undefined` on failure, which `followedSlugSet` reads as an
+    // empty set — so a failed seed draws every act as not-yet-followed.
+    // Deliberate rather than ideal: the optimistic write takes the SERVER's
+    // answer, so tapping Follow on an act already followed settles as
+    // Following and duplicates nothing. Withholding the whole block over a
+    // transient prefetch failure would cost more than the wrong glyph does.
     seedFollowedArtists(token),
     headers(),
   ])
