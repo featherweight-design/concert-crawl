@@ -5,7 +5,8 @@
  * generators can insert fresh rows without hitting duplicate-key conflicts.
  * This implements the "delete and regenerate" idempotency model.
  *
- * Crews go first, and are the one exception to the user-scoped sweep in two
+ * Crews go ahead of the user-scoped sweep — after only the narrow user_events
+ * delete, which is unrelated to them — and are its one exception in two
  * ways. They are matched on fixed ids rather than on their keeper, because the
  * keeper of a seeded crew is sometimes the owner account, whose hand-made rows
  * must survive (see SEEDED_CREW_ID_LIST). And they need no child-before-parent
