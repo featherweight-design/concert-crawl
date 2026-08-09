@@ -9,6 +9,10 @@ export const REPORTING_COPY = {
       `A fan reported this show as ${statusLabel}. If there's new information, let the people know!`,
     bottomNote:
       'Reports are reviewed by the community. Good-faith reports help everyone.',
+    // The gate is announced, not drawn (#1247): signed out the row looks
+    // identical and only the accessible name carries the invitation.
+    ariaSignedOut: 'Report a status change: sign up to report',
+    ariaSignedOutHasStatus: 'Tickets still available? Sign up to report',
   },
 
   // ── ReportSheet ──────────────────────────────────────────────────

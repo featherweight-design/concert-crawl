@@ -36,6 +36,10 @@ export type PickerEntry =
   // bucketing it with `logged-out-watch` would hide which of the two the
   // artist page actually converts on.
   | 'logged-out-follow'
+  // A gated status report on the event page. Kept apart from
+  // `logged-out-price` because reporting a cancellation and submitting a price
+  // are different asks, and one bucket would hide which one earns accounts.
+  | 'logged-out-report'
   | 'takeover'
 
 // Per-event property shapes. Keys are the canonical event names; the map is

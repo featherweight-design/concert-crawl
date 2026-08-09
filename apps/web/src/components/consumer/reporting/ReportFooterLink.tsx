@@ -13,11 +13,18 @@ const STATUS_LABELS: Record<'sold-out' | 'cancelled' | 'postponed', string> = {
 export interface ReportFooterLinkProps {
   liveStatus: null | 'sold-out' | 'cancelled' | 'postponed'
   onOpen: () => void
+  /**
+   * Announces the sign-up gate to assistive tech without drawing it (#1247).
+   * The row is unchanged visually and still opens on tap; ReportSheet swaps
+   * itself for the tier picker once it is open.
+   */
+  signedOut?: boolean
 }
 
 export const ReportFooterLink = ({
   liveStatus,
   onOpen,
+  signedOut = false,
 }: ReportFooterLinkProps) => {
   const hasStatus = liveStatus !== null
   const title = hasStatus ? copy.titleHasStatus : copy.title
@@ -53,6 +60,13 @@ export const ReportFooterLink = ({
       {/* Button row */}
       <button
         onClick={onOpen}
+        {...(signedOut
+          ? {
+              'aria-label': hasStatus
+                ? copy.ariaSignedOutHasStatus
+                : copy.ariaSignedOut,
+            }
+          : {})}
         style={{
           display: 'flex',
           justifyContent: 'space-between',

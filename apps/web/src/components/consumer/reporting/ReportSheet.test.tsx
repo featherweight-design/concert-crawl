@@ -7,6 +7,19 @@ import { REPORTING_COPY } from './definitions/copy'
 
 const copy = REPORTING_COPY.reportSheet
 
+let isSignedIn = true
+let isLoaded = true
+
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ isLoaded, isSignedIn }),
+}))
+
+vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+  TierPickerSheet: ({ entry }: { entry: string }) => (
+    <div data-testid="tier-picker" data-entry={entry} />
+  ),
+}))
+
 const renderSheet = () =>
   render(
     <ReportSheet
@@ -19,6 +32,9 @@ const renderSheet = () =>
   )
 
 beforeEach(() => {
+  isSignedIn = true
+  isLoaded = true
+
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
@@ -60,5 +76,24 @@ describe('ReportSheet', () => {
     expect(continueButton.hasAttribute('disabled')).toBe(false)
     expect(continueButton.getAttribute('aria-describedby')).toBe(null)
     expect(screen.queryByText(copy.continueHint)).toBe(null)
+  })
+
+  it('sends a signed-out visitor to the tier picker instead of the form', () => {
+    isSignedIn = false
+    renderSheet()
+
+    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
+      'logged-out-report',
+    )
+    expect(screen.queryByText(copy.options.cancelled.title)).toBe(null)
+  })
+
+  it('does not flash the picker while Clerk is still loading', () => {
+    isLoaded = false
+    isSignedIn = false
+    renderSheet()
+
+    expect(screen.queryByTestId('tier-picker')).toBe(null)
+    expect(screen.getByText(copy.options.cancelled.title)).toBeTruthy()
   })
 })

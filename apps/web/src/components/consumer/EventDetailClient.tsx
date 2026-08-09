@@ -1931,6 +1931,7 @@ export function EventDetailFooter({
   reports,
 }: Omit<EventDetailSharedProps, 'currentUserId'>) {
   const router = useRouter()
+  const { isLoaded: authLoaded, isSignedIn } = useAuth()
   const [isReportSheetOpen, setIsReportSheetOpen] = useState(false)
   const [evidenceFormOpen, setEvidenceFormOpen] = useState(false)
   const [evidenceFormReportType, setEvidenceFormReportType] = useState<
@@ -1984,6 +1985,7 @@ export function EventDetailFooter({
       <ReportFooterLink
         liveStatus={footerLiveStatus}
         onOpen={() => setIsReportSheetOpen(true)}
+        signedOut={authLoaded && !isSignedIn}
       />
       <ReportSheet
         open={isReportSheetOpen}

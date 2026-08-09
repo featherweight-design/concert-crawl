@@ -6,6 +6,8 @@ import { confirmEventReport } from '@/lib/events'
 import { REPORT_TOKENS } from './reportTokens'
 import { REPORTING_COPY } from './definitions/copy'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 
 const copy = REPORTING_COPY.confirmReportSheet
 
@@ -258,7 +260,7 @@ export const ConfirmReportSheet = ({
     null,
   )
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { getToken } = useAuth()
+  const { getToken, isLoaded, isSignedIn } = useAuth()
 
   const token = REPORT_TOKENS[reportType]
   const Glyph = GLYPHS_16[reportType]
@@ -303,6 +305,23 @@ export const ConfirmReportSheet = ({
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  // Same gate as ReportSheet: signed out, `getToken()` returned null and
+  // handleConfirm bailed without telling anyone, so the confirm button looked
+  // broken. Confirming is free, so the reach goes to the picker instead.
+  if (open && isLoaded && !isSignedIn) {
+    return (
+      <TierPickerSheet
+        open
+        onClose={onClose}
+        planState={LOGGED_OUT_PLAN_STATE}
+        // No payment element is reachable signed out; `true` only adds legal
+        // copy, matching the other logged-out picker call-sites.
+        scaRegion
+        entry="logged-out-report"
+      />
+    )
   }
 
   return (

@@ -1,10 +1,13 @@
 'use client'
 
 import { useId, useState } from 'react'
+import { useAuth } from '@clerk/nextjs'
 import { REPORTING_COPY } from './definitions/copy'
 import { REPORT_TOKENS } from './reportTokens'
 import { ReportTypeMark } from './ReportTypeMark'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 
 // ── Report type glyphs (15×15) ────────────────────────────────────
 
@@ -272,6 +275,7 @@ export const ReportSheet = ({
 }: ReportSheetProps) => {
   const [selectedType, setSelectedType] = useState<ReportType | null>(null)
   const hintId = useId()
+  const { isLoaded, isSignedIn } = useAuth()
 
   const visibleOptions = getVisibleOptions(liveStatus)
   const sheetHeight: 'tall' | 'short' =
@@ -281,6 +285,24 @@ export const ReportSheet = ({
     if (selectedType !== null) {
       onSelect(selectedType)
     }
+  }
+
+  // Gated here rather than at each trigger: three surfaces open this sheet, and
+  // signed out a visitor could pick a report type and fill the whole evidence
+  // form before EvidenceForm threw on submit. Reporting is free, so the
+  // signed-out reach goes to the picker rather than a dead end.
+  if (open && isLoaded && !isSignedIn) {
+    return (
+      <TierPickerSheet
+        open
+        onClose={onClose}
+        planState={LOGGED_OUT_PLAN_STATE}
+        // No payment element is reachable signed out; `true` only adds legal
+        // copy, matching the other logged-out picker call-sites.
+        scaRegion
+        entry="logged-out-report"
+      />
+    )
   }
 
   return (
