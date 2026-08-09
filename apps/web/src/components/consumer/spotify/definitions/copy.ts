@@ -240,13 +240,15 @@ export const SPOTIFY_COPY = {
   // The chip is the one locked-visible surface in the entitlements matrix —
   // free/supporter viewers see it locked and tapping opens the upsell.
   tasteFilter: {
-    chip: 'Following',
+    // Names the SOURCE, not the verb. It used to read "Following", which since
+    // native following shipped sat directly beside a "My artists" chip meaning
+    // the same words about a different list. The logo alone did not carry the
+    // distinction: it is decorative, so a screen reader heard two near-identical
+    // chips and a first-time viewer had to tap one to learn which was which.
+    chip: 'Spotify',
     // A11y: the locked chip stays operable (it opens the upsell), so the
     // paid state is conveyed by this label alone — no aria-disabled.
-    chipLockedAria: 'Following filter, paid',
-    // "on Spotify" is load-bearing since native following shipped: the chip
-    // row now also carries "My artists", which scopes to follows made HERE.
-    // Without the qualifier a screen reader hears two near-identical chips.
+    chipLockedAria: 'Filter to artists you follow on Spotify, paid',
     chipAria: 'Filter to artists you follow on Spotify',
     banner: (count: number) =>
       `${count} Denver shows by artists you follow on Spotify`,

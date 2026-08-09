@@ -594,4 +594,20 @@ describe('SearchResultsState — inline following (native following PR 5)', () =
     )
     expect(screen.queryByText(FOLLOWING_COPY.searchRailEyebrow)).toBeNull()
   })
+
+  // The rail shipped desktop-only, so mobile got the artist rows and no
+  // explanation of what following one does. Only the shape forks on viewport.
+  it('mobile: the same case renders as a footnote under the results', () => {
+    matchOnly('(max-width: 1px)')
+    renderRows([artistPage()], { withExplainerRail: true })
+    expect(screen.getByText(FOLLOWING_COPY.searchRailBody)).toBeTruthy()
+    // The eyebrow labels a column that does not exist at this width.
+    expect(screen.queryByText(FOLLOWING_COPY.searchRailEyebrow)).toBeNull()
+  })
+
+  it('mobile: no artist rows means no footnote', () => {
+    matchOnly('(max-width: 1px)')
+    renderRows([], { withExplainerRail: true })
+    expect(screen.queryByText(FOLLOWING_COPY.searchRailBody)).toBeNull()
+  })
 })

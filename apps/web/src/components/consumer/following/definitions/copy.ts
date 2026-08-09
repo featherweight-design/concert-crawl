@@ -45,15 +45,19 @@ export const FOLLOWING_COPY = {
   // ── Shelf · zero follows (starter) ────────────────────────────────────
   // No dismiss affordance and no apology. A shelf that can be dismissed on
   // day one is a shelf the audience it exists for never sees twice.
-  starterEyebrow: 'Start here',
+  // Names what the shelf holds, the job its populated sibling's eyebrow does.
+  // It read "Start here", which was a second instruction above a title that is
+  // already one, leaving nothing on the shelf to say what the cards below are.
+  starterEyebrow: 'Artists',
   starterTitle: 'Follow someone. Anyone.',
   // Does NOT re-say "follow an artist" — the title just did. What the body
   // owes is the payoff and what the cards below it are.
   starterBody:
     'We flag their Denver dates the moment they land. These are already on the books.',
-  // There is no /artists index route and this epic does not add one, so every
-  // "browse all artists" affordance points at search.
-  starterAction: 'Browse all artists',
+  // There is no /artists index route and this epic does not add one, so the
+  // label names the search box it actually opens. "Browse all artists" promised
+  // a catalogue nothing in the product can show.
+  starterAction: 'Find artists',
 
   // ── Shelf · one or more follows ───────────────────────────────────────
   // No "followed" after the count: "your artists" already said how they got
@@ -64,22 +68,28 @@ export const FOLLOWING_COPY = {
   spotifyEyebrow: (count: number) =>
     `Your artists · ${count}, some from Spotify`,
   yoursTitle: 'Coming to Denver',
-  // Opens browse scoped to your artists — the "all" view that exists today.
-  yoursAction: 'All',
+  // Opens browse scoped to your artists. A bare "All" sat beside the title
+  // "Coming to Denver", where it read as every Denver show rather than every
+  // date the shelf had run out of room for.
+  yoursAction: 'All their dates',
 
   // ── Shelf cards ───────────────────────────────────────────────────────
   shelfAria: 'Artists',
-  cardNoDate: 'no date yet',
+  // Same words as My shows ▸ Artists. One fact deserves one sentence: the
+  // shelf card said "no date yet" while the manage row said "No dates
+  // announced", which reads as two different states of the same artist.
+  cardNoDate: 'No dates announced',
   // Venue and date are DATA; only the glue between them lives here.
   cardDateSeparator: ' · ',
   followAria: (name: string) => `Follow ${name}`,
   followingAria: (name: string) => `Following ${name}`,
   followGate: 'Following artists is a Premium feature. Opens upgrade options.',
 
-  // ── Search results, desktop explainer rail ────────────────────────────
-  // Desktop only. At 1080px the mobile footnote would be one lonely sentence
-  // under a short list, and the explanation is what makes a viewer with no
-  // follows act. Mobile carries the same case in the rows themselves.
+  // ── Search results, explainer rail (desktop) / footnote (mobile) ──────
+  // The eyebrow labels the desktop column, so only desktop renders it. Mobile
+  // used to render nothing at all, on a comment claiming the rows carried the
+  // case themselves; they did not, so the smaller viewport got artist rows and
+  // no explanation of what following one does.
   searchRailEyebrow: 'What following does',
   // Says what lands and what does not. Careful: following surfaces dates, it
   // never moves them into Watching.

@@ -227,6 +227,32 @@ function ExplainerRail() {
   )
 }
 
+/**
+ * The same case, below the list, where there is no second column to put it in.
+ * The rail shipped desktop-only on the reasoning that "mobile carries it in the
+ * rows themselves" — mobile carried nothing, so the majority viewport got the
+ * artist rows with no explanation of what following them does.
+ *
+ * It is the body only. The rail's eyebrow labels a column that does not exist
+ * here, and its no-dates paragraph argues against a muted row line the mobile
+ * list already shows.
+ */
+function ExplainerFootnote() {
+  return (
+    <p
+      style={{
+        margin: '4px 16px 12px',
+        fontSize: 13,
+        color: 'var(--fg-muted)',
+        lineHeight: 1.5,
+        textWrap: 'pretty',
+      }}
+    >
+      {FOLLOWING_COPY.searchRailBody}
+    </p>
+  )
+}
+
 function ArtistSection({
   artistResults,
   selectedIdx,
@@ -440,11 +466,11 @@ export function SearchResultsState({
 }: SearchResultsStateProps) {
   const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY)
 
-  // The rail is a desktop affordance for a list that has artists in it. With no
-  // artist rows there is nothing for it to explain, and an empty second column
-  // would just narrow the shows.
-  const showRail =
-    withExplainerRail && isDesktop && artistPageResults.length > 0
+  // The explanation is owed whenever the list has artist rows to explain. With
+  // none there is nothing to say, and an empty second column would just narrow
+  // the shows. Only the SHAPE forks on viewport: a rail beside, a footnote below.
+  const explain = withExplainerRail && artistPageResults.length > 0
+  const showRail = explain && isDesktop
 
   // Artist pages always sit first and occupy keyboard indices 0..n-1, so the
   // venue/artist bases below shift by that count. `venueFirst` still decides
@@ -504,6 +530,7 @@ export function SearchResultsState({
           />
         </>
       )}
+      {explain && !isDesktop && <ExplainerFootnote />}
     </div>
   )
 
