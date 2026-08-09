@@ -7,9 +7,15 @@
 // in box and type scale only — same fields, same order, same control — so a
 // change to what a row says lands on both by construction.
 //
-// The control is the shipped FollowButton at `sm`. There is no second follow
+// The control is the shipped FollowButton. There is no second follow
 // affordance in this product and no confirm step on unfollow: the row stays
 // where it is until the next navigation, so a mis-tap is one tap to undo.
+//
+// It runs at `md` (44px) on the mobile row and `sm` (36px) in the desktop
+// card. `sm` is below the touch minimum and NF_FOLLOW_SIZES permits it only
+// where the containing row is itself the tap target — which is true of the
+// search result row, but not here: the name is a link to the artist page, so
+// unfollow has no target but the button.
 
 import Link from 'next/link'
 import { CardArt } from '@/components/consumer/following/ShelfCard'
@@ -145,7 +151,7 @@ export const ArtistManageRow = ({
           name={artist.name}
           following={follow.following}
           signedOut={false}
-          size="sm"
+          size={card ? 'sm' : 'md'}
           iconOnly={card || narrow}
           onToggle={follow.toggle}
           // Unreachable: every row here is an existing follow, and DELETE is

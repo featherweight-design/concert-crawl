@@ -67,10 +67,12 @@ export const EMBED_H = { compact: 152, tall: 352 } as const
  * three densities rather than three lookalikes.
  *
  * `sm` (36) is below the 44px touch minimum and is permitted ONLY where the
- * row containing it is itself the target, which is why nothing on the artist
- * page uses it: this page's buttons are the target. The search-results artist
- * row (PR 5 of this epic) is its one consumer, and that row is a ≥56px target
- * in its own right.
+ * containing row is itself the target, or where there is no touch — which is
+ * why nothing on the artist page uses it: this page's buttons are the target.
+ * Two consumers. The search-results artist row, which is a ≥56px target in its
+ * own right; and the desktop card on My shows ▸ Artists, a mouse surface. That
+ * page's MOBILE row takes `md` instead, because its name is a link to the
+ * artist page, leaving the button as the only place unfollow can be tapped.
  *
  * `full` carries padding even though it renders at `width: 100%` — the padding
  * insets the label rather than sizing the control, and keeping it here means
