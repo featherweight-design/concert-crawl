@@ -1,3 +1,10 @@
+# [1.234.0](https://github.com/HartiganHM/concert-crawl/compare/v1.233.0...v1.234.0) (2026-08-09)
+
+
+### Features
+
+* **events:** fall back to the headliner's photo when a show has no art ([#1536](https://github.com/HartiganHM/concert-crawl/issues/1536)) ([b712995](https://github.com/HartiganHM/concert-crawl/commit/b712995138ff00aab63bdca8ce8049c1ceefb4fa))
+
 # [1.233.0](https://github.com/HartiganHM/concert-crawl/compare/v1.232.0...v1.233.0) (2026-08-09)
 
 
