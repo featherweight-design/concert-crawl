@@ -1,3 +1,15 @@
+# [1.241.0](https://github.com/HartiganHM/concert-crawl/compare/v1.240.0...v1.241.0) (2026-08-09)
+
+
+### Bug Fixes
+
+* **nudge:** restore the secondary control's focus ring ([31157fe](https://github.com/HartiganHM/concert-crawl/commit/31157fe9df0a3e83b7df9ce37cf7cfa0d26b1718))
+
+
+### Features
+
+* **following:** first-watch follow nudge and Premium tier copy reversal ([57fb0d5](https://github.com/HartiganHM/concert-crawl/commit/57fb0d57bffd4c1831dc6f708e798e4f1061012a))
+
 # [1.240.0](https://github.com/HartiganHM/concert-crawl/compare/v1.239.0...v1.240.0) (2026-08-09)
 
 
