@@ -120,6 +120,24 @@ describe('FollowNudgeCard', () => {
     expect(onAnswer).toHaveBeenCalledTimes(1)
   })
 
+  // jsdom computes no styles, so the assertion is on the two things that
+  // actually broke it: the ring class being present, and no inline `all` or
+  // `box-shadow` resolving over the top of it at inline priority.
+  it('leaves the secondary control a focus ring a keyboard can see', () => {
+    render(
+      <FollowNudgeCard
+        target={TARGET}
+        variant="inline"
+        scaRegion={false}
+        onAnswer={vi.fn()}
+      />,
+    )
+    const secondary = screen.getByText(FOLLOW_NUDGE_COPY.dismiss)
+    expect(secondary.className).toContain('focus-visible:ring-2')
+    expect(secondary.style.all).toBe('')
+    expect(secondary.style.boxShadow).toBe('')
+  })
+
   it('follows, then stands its ground with a close instead of a decline', async () => {
     const onAnswer = vi.fn()
     render(

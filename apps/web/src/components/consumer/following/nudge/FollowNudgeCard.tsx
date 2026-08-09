@@ -178,8 +178,19 @@ export const FollowNudgeCard = ({
       <button
         type="button"
         onClick={onAnswer}
+        // Same ring the dismiss glyph above carries; without it this control
+        // is invisible to a keyboard.
+        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        // ⚠️ Reset the button chrome field by field rather than with
+        // `all: unset`. Tailwind draws the ring above as a box-shadow, and an
+        // inline `all: unset` resolves box-shadow to none at inline priority —
+        // it would silently win over the class and take the focus ring with it.
         style={{
-          all: 'unset',
+          appearance: 'none',
+          background: 'none',
+          border: 'none',
+          padding: 0,
+          textAlign: 'center',
           boxSizing: 'border-box',
           cursor: 'pointer',
           display: 'flex',
