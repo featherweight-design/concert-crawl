@@ -343,6 +343,10 @@ describe('runSynthetic — determinism and idempotency', () => {
     expect(generateCrews).toHaveBeenCalledTimes(1)
     const args = vi.mocked(generateCrews).mock.calls[0]?.[0]
     expect(args?.excludeEventIds).toEqual(['evt-showcase-1'])
+    expect(args?.crowdUserIds).toEqual(CROWD_USER_IDS)
+    expect(args?.ownerUserId).toBe(OWNER_USER_ID)
+    expect(args?.eventIds).toEqual(eventIds)
+    expect(args?.pastEventIds).toEqual(eventIds.slice(0, 5))
     expect(result.inserted['crews']).toBe(4)
     expect(result.inserted['crewMembers']).toBe(20)
   })
