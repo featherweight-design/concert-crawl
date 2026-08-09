@@ -1,3 +1,24 @@
+# [1.239.0](https://github.com/HartiganHM/concert-crawl/compare/v1.238.0...v1.239.0) (2026-08-09)
+
+
+### Bug Fixes
+
+* **onboarding:** ask for suggestions as the signed-in reader ([b9a2cf6](https://github.com/HartiganHM/concert-crawl/commit/b9a2cf642cd6fa24e49a14f0c2271585d30066c8))
+* **onboarding:** cap genre length, wait for the real plan, lock Back mid-write ([0c51aa4](https://github.com/HartiganHM/concert-crawl/commit/0c51aa4ad1a2c7683f748cc441fb711e4c696a2b))
+* **onboarding:** clear the genre picks when the artists step ends ([cc41e5e](https://github.com/HartiganHM/concert-crawl/commit/cc41e5eed2ffa0970e53e5afa6bae9992feb14e5))
+* **onboarding:** drop both pick mirrors when the tour is left on purpose ([2c752b5](https://github.com/HartiganHM/concert-crawl/commit/2c752b5c30b9f78e8fa30602c7d3b53d794797c7))
+* **onboarding:** fail the suggestions read when Clerk hands back no token ([2dbdb7f](https://github.com/HartiganHM/concert-crawl/commit/2dbdb7fdd4e44a2cf6551bcd6fc33a5552313e45))
+* **onboarding:** only prune picks against a successful fetch, normalize the mirror ([9d57088](https://github.com/HartiganHM/concert-crawl/commit/9d57088c2dd0b2ebe935e4fc36a37514b8d5accd))
+* **onboarding:** prune picks the refetched grid no longer offers ([7c8c45d](https://github.com/HartiganHM/concert-crawl/commit/7c8c45de54a973771900e4ac1f1a8f70fe7fddbb))
+* **onboarding:** resolve the PR 7 collisions and retire OB-13 ([d8d6f83](https://github.com/HartiganHM/concert-crawl/commit/d8d6f83a2b06362af44917a13a21bdccd097435e))
+* **onboarding:** restore the picks mirror in an effect, not during render ([14cbaff](https://github.com/HartiganHM/concert-crawl/commit/14cbaff61987b3d0ed6a31ec2425ad406adbb96b))
+* **onboarding:** say a failed suggestions read failed, not that Denver is empty ([5a56452](https://github.com/HartiganHM/concert-crawl/commit/5a564526abda7c968273d8325b7c5d68a0e987bc))
+
+
+### Features
+
+* **onboarding:** pick genres, then follow artists, before the send-off ([a97394c](https://github.com/HartiganHM/concert-crawl/commit/a97394ce94ef28c1adcb705c18e44f179695dde5))
+
 # [1.238.0](https://github.com/HartiganHM/concert-crawl/compare/v1.237.1...v1.238.0) (2026-08-09)
 
 
