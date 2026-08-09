@@ -16,11 +16,14 @@ export const metadata = { title: 'Artists — Concert Crawl' }
 export default async function FollowingPage() {
   const { getToken } = await auth()
   const token = await getToken()
-  if (!token) return null
 
   // `undefined` means the read failed, which the surface renders as an error.
   // It is NOT collapsed to an empty list — see MyShowsArtistsContent.
-  const artists = await seedFollowedArtists(token)
+  //
+  // A missing token takes the same path rather than returning null: a bare
+  // null renders a body with no tabs and no message, which is the one state
+  // on this route with no way back out.
+  const artists = token ? await seedFollowedArtists(token) : undefined
 
   const requestHeaders = await headers()
   const scaRegion = isScaRegion(requestHeaders.get('x-vercel-ip-country'))

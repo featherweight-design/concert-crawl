@@ -11,11 +11,13 @@
 // affordance in this product and no confirm step on unfollow: the row stays
 // where it is until the next navigation, so a mis-tap is one tap to undo.
 //
-// It runs at `md` (44px) on the mobile row and `sm` (36px) in the desktop
-// card. `sm` is below the touch minimum and NF_FOLLOW_SIZES permits it only
-// where the containing row is itself the tap target — which is true of the
-// search result row, but not here: the name is a link to the artist page, so
-// unfollow has no target but the button.
+// It runs at `md` (44px) in both densities. NF_FOLLOW_SIZES permits `sm` only
+// where the containing row is itself the tap target, which is true of the
+// search result row but not here: the name links to the artist page, so
+// unfollow has no target but the button. It also keeps its label in both,
+// because an unlabelled check reads as confirmation rather than as a toggle
+// you can switch off. 320px is the one exception, where `narrow` drops the
+// word for want of room.
 
 import Link from 'next/link'
 import { CardArt } from '@/components/consumer/following/ShelfCard'
@@ -151,8 +153,8 @@ export const ArtistManageRow = ({
           name={artist.name}
           following={follow.following}
           signedOut={false}
-          size={card ? 'sm' : 'md'}
-          iconOnly={card || narrow}
+          size="md"
+          iconOnly={narrow}
           onToggle={follow.toggle}
           // Unreachable: every row here is an existing follow, and DELETE is
           // ungated, so `locked` is never true. A 403 on a re-follow comes

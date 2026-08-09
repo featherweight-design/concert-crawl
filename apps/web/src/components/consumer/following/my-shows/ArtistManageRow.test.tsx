@@ -109,13 +109,25 @@ describe('ArtistManageRow', () => {
     expect(button).not.toBeDisabled()
   })
 
-  it('drops the control label in the desktop card variant', () => {
+  it('keeps the control label in the desktop card variant', () => {
     render(
       <ArtistManageRow
         artist={artist()}
         variant="card"
         onEntitlementRequired={noop}
       />,
+    )
+
+    expect(
+      screen.getByRole('button', {
+        name: ARTIST_COPY.followingAria('Wax Harbour'),
+      }).textContent,
+    ).not.toBe('')
+  })
+
+  it('drops the control label only at 320px', () => {
+    render(
+      <ArtistManageRow artist={artist()} narrow onEntitlementRequired={noop} />,
     )
 
     expect(

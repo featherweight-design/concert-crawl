@@ -28,9 +28,9 @@ import { AlertsRow } from './AlertsRow'
 import { ArtistsEmpty } from './ArtistsEmpty'
 import { FindArtistsRow } from './FindArtistsRow'
 import { Mono } from './Mono'
-import { GlyphBell, GlyphSearch } from './Glyphs'
+import { GlyphSearch } from './Glyphs'
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
-import { ALERTS_HREF, FIND_ARTISTS_HREF } from './definitions/constants'
+import { FIND_ARTISTS_HREF } from './definitions/constants'
 import { groupFollows, spotifyFollowCount } from './lib/group-follows'
 
 const COPY = MY_SHOWS_ARTISTS_COPY
@@ -122,28 +122,23 @@ export const MyShowsArtistsContent = ({
   const datedHeading = COPY.groups.dated(groups.dated.length)
   const undatedHeading = COPY.groups.undated(groups.undated.length)
 
-  // Desktop promotes these into whichever group heading renders first. They
-  // used to live only in the dated row, which stranded them for anyone whose
-  // follows all lack a date — the one state where "find artists" matters most.
+  // Desktop promotes this into whichever group heading renders first. It used
+  // to live only in the dated row, which stranded it for anyone whose follows
+  // all lack a date — the one state where finding artists matters most.
+  //
+  // Alerts is NOT here. It shipped as a second dense button beside this one,
+  // pointing at the same place as the AlertsRow below and carrying none of
+  // that row's live "push on · digest off" readout, so desktop offered the
+  // control twice and the state zero times.
   const desktopActions = (
-    <div className="flex gap-[9px]">
-      <Link
-        href={ALERTS_HREF}
-        className="inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-        style={denseGhost}
-      >
-        <GlyphBell size={13} />
-        {COPY.alerts.short}
-      </Link>
-      <Link
-        href={FIND_ARTISTS_HREF}
-        className="inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-        style={densePrimary}
-      >
-        <GlyphSearch size={13} />
-        {COPY.find.title}
-      </Link>
-    </div>
+    <Link
+      href={FIND_ARTISTS_HREF}
+      className="inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+      style={densePrimary}
+    >
+      <GlyphSearch size={13} />
+      {COPY.find.title}
+    </Link>
   )
 
   const spotifyNote = spotifyCount > 0 && (
@@ -227,17 +222,10 @@ export const MyShowsArtistsContent = ({
 
       {/* Desktop: 940px column, three-up cards, actions in the heading row. */}
       <div className="mx-auto hidden w-full max-w-[940px] flex-1 px-[30px] pb-10 pt-7 sm:block">
-        <h1
-          style={{
-            margin: '0 0 18px',
-            fontSize: 30,
-            fontWeight: 900,
-            letterSpacing: '-0.03em',
-            color: 'var(--fg)',
-          }}
-        >
-          {COPY.pageTitle}
-        </h1>
+        {/* No page title: the active sub-tab 18px below already reads
+            "Artists", and the sibling Watching and Concerts tabs ship none
+            either. It also only rendered on the populated branch, so the
+            heading appeared and vanished with the list length. */}
         <MyShowsTabs active="artists" artistCount={follows.length} />
 
         {groups.dated.length > 0 && (
@@ -285,6 +273,9 @@ export const MyShowsArtistsContent = ({
           </>
         )}
 
+        {/* Same row as mobile, for the live preference readout desktop
+            otherwise never showed. */}
+        <AlertsRow />
         {spotifyNote}
       </div>
     </main>
@@ -300,14 +291,6 @@ const denseButton = {
   letterSpacing: '-0.01em',
   textDecoration: 'none',
 } as const
-
-const denseGhost = {
-  ...denseButton,
-  background: 'transparent',
-  color: 'var(--fg)',
-  border: '1px solid var(--border-strong)',
-  fontWeight: 700,
-}
 
 const densePrimary = {
   ...denseButton,

@@ -58,16 +58,6 @@ export const FindArtistsRow = ({ narrow = false }: { narrow?: boolean }) => {
         >
           {COPY.title}
         </span>
-        <span
-          style={{
-            display: 'block',
-            fontSize: 12,
-            color: 'var(--fg-subtle)',
-            marginTop: 3,
-          }}
-        >
-          {COPY.body}
-        </span>
       </span>
       <span aria-hidden style={{ color: 'var(--fg-subtle)', display: 'flex' }}>
         <GlyphChevron size={15} />

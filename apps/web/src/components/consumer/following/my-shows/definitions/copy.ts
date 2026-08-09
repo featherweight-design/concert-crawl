@@ -8,9 +8,6 @@
 // the container is "My shows". Nothing here says "saved".
 
 export const MY_SHOWS_ARTISTS_COPY = {
-  /** Desktop h1. Mobile takes its heading from the sub-tab bar instead. */
-  pageTitle: 'Artists',
-
   /**
    * The list could not be read. Never the empty state: "nobody on your list"
    * is a claim about the account, and a failed fetch cannot make it.
@@ -33,8 +30,12 @@ export const MY_SHOWS_ARTISTS_COPY = {
   },
 
   find: {
+    /**
+     * No sub-line. The one it had promised a browse index that does not
+     * exist — the destination is a search box — and otherwise restated the
+     * title and the magnifier beside it.
+     */
     title: 'Find artists to follow',
-    body: "Search by name, or browse who's playing Denver soon.",
   },
 
   alerts: {
@@ -42,8 +43,6 @@ export const MY_SHOWS_ARTISTS_COPY = {
     /** Reads the live notification preferences, never a guess. */
     state: (push: boolean, digest: boolean) =>
       `Push ${push ? 'on' : 'off'} · weekly digest ${digest ? 'on' : 'off'}`,
-    /** Dense desktop button in the group-heading row. */
-    short: 'Alerts',
   },
 
   /**
