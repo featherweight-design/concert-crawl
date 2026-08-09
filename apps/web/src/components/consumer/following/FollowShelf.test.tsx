@@ -21,7 +21,7 @@ beforeEach(() => {
   })
 })
 
-const authState = { isSignedIn: true }
+const authState: { isSignedIn: boolean | undefined } = { isSignedIn: true }
 vi.mock('@clerk/nextjs', () => ({
   useAuth: () => authState,
 }))
@@ -195,6 +195,21 @@ describe('FollowShelf', () => {
     expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
       'logged-out-follow',
     )
+  })
+
+  // Clerk and the entitlement resolve after mount. A tap in that window must
+  // not reach `toggle`: with no token yet it dies on "Not authenticated",
+  // which is not an ApiError and so never reaches the 403 → picker handoff.
+  it('the starter shelf fails closed while auth and entitlement resolve', () => {
+    authState.isSignedIn = undefined
+    entitlementState.current = { isLoading: true, active: false, surface: null }
+    renderShelf()
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: FOLLOWING_COPY.followAria('Ratbag'),
+      }),
+    )
+    expect(toggle).not.toHaveBeenCalled()
   })
 
   it('entitled viewers toggle the follow directly', () => {

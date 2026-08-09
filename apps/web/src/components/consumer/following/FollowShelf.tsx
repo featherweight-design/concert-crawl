@@ -149,6 +149,18 @@ export const FollowShelf = ({
   if (visible.length === 0) return null
 
   const signedOut = isSignedIn === false
+  // Clerk and the entitlement both resolve after mount. Until they do the
+  // starter shelf fails CLOSED: a tap that reached `toggle` before Clerk
+  // answered would find no token and die on "Not authenticated", which is not
+  // an ApiError and so never reaches the 403 → picker handoff.
+  //
+  // The artist page deliberately fails OPEN in the same window
+  // (ArtistPageContent.tsx:96) because a locked skin arriving a beat after
+  // paint would draw over an existing follow there. The starter shelf has no
+  // followed rows by definition and locked renders the same at-rest skin as
+  // idle, so failing closed here costs nothing visible.
+  const resolved = isSignedIn !== undefined && surface !== null
+
   // Scoped to `zero` on purpose. A downgraded viewer still has to be able to
   // unfollow, and DELETE /v1/artists/:slug/follow is deliberately ungated to
   // let them (artist-follows.ts:121) — so locking the badge on `some`/`spotify`
@@ -156,9 +168,7 @@ export const FollowShelf = ({
   // shelf, whose rows are all not-yet-followed, gates on entitlement.
   const locked =
     mode === 'zero' &&
-    !signedOut &&
-    surface !== null &&
-    surface !== 'visible-active'
+    (!resolved || (!signedOut && surface !== 'visible-active'))
 
   const pickerEntry: PickerEntry =
     surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall'
