@@ -117,6 +117,20 @@ describe('generateCrews', () => {
     expect(members).toEqual([expect.objectContaining({ userId: ownerUserId })])
   })
 
+  // The roster route orders by asc(joinedAt), so a stagger that counts down
+  // seats the owner — written first, and the founding member of every crew —
+  // last, labelled the newest joiner. Every row is also in the past, because a
+  // future join date reads as a bug rather than a fixture.
+  it('stamps joins in the order members are written, all in the past', async () => {
+    const { rowsAt } = await run()
+    const rows = rowsAt<MemberRow & { joinedAt: Date }>(MEMBERS)
+    const times = rows.map((row) => row.joinedAt.getTime())
+
+    expect(times).toEqual([...times].sort((first, second) => first - second))
+    expect(new Set(times).size).toBe(times.length)
+    expect(Math.max(...times)).toBeLessThan(Date.now())
+  })
+
   it('mutes exactly the muted crew, for the owner', async () => {
     const { rowsAt } = await run()
     expect(rowsAt<MemberRow>(MUTES)).toEqual([

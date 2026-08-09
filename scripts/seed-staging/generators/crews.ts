@@ -96,6 +96,12 @@ const REQUIRED_CROWD_SIZE =
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
+/**
+ * How far back the earliest join sits. Every seeded member joins within an hour
+ * of the last, so this only has to exceed the total roster size in hours.
+ */
+const JOIN_WINDOW_MS = 30 * DAY_MS
+
 export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
   const {
     staging,
@@ -170,9 +176,13 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
   await staging.insert(crews).values(crewRows)
 
   // joinedAt is staggered so the roster has a stable, meaningful order rather
-  // than four rows landing on the same defaultNow() and sorting arbitrarily.
+  // than rows landing on the same defaultNow() and sorting arbitrarily. It
+  // counts UP from a month back, because the roster route orders by
+  // `asc(joinedAt)` — counting down would seat the founding owner last and
+  // label him the newest joiner in every crew.
   let joinOffset = 0
-  const joinedAt = (): Date => new Date(now - (joinOffset += 3600_000))
+  const joinedAt = (): Date =>
+    new Date(now - JOIN_WINDOW_MS + (joinOffset += 3600_000))
 
   const memberRows: { crewId: string; userId: string; joinedAt: Date }[] = []
   const addMembers = (crewId: string, userIds: readonly string[]): void => {

@@ -1,9 +1,9 @@
 /**
  * Concert Crawl — delete all fixture-user-owned rows from staging.
  *
- * Called at the start of every `pnpm db:seed:staging:synthetic` run so that
- * generators (Tasks 3–5) can insert fresh rows without hitting duplicate-key
- * conflicts. This implements the "delete and regenerate" idempotency model.
+ * Called at the start of every `pnpm db:seed:staging:synthetic` run so that the
+ * generators can insert fresh rows without hitting duplicate-key conflicts.
+ * This implements the "delete and regenerate" idempotency model.
  *
  * Crews go first, and are the one exception to the user-scoped sweep in two
  * ways. They are matched on fixed ids rather than on their keeper, because the
