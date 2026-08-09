@@ -196,13 +196,15 @@ describe('generateCrews', () => {
     expect(touched.length).toBeGreaterThan(0)
   })
 
-  // A crowd too small to fill the cap would produce a crew that is merely
-  // large, silently removing the one shape this generator exists to provide.
-  it('writes nothing when the crowd cannot fill the cap', async () => {
+  // The slices are disjoint, so the at-cap crew needs a crowd big enough to
+  // fill it AFTER the keeper crew has taken its share. A crowd of exactly
+  // CREW_MEMBER_CAP - 1 passes a naive guard and still yields a crew that is
+  // merely large, silently removing the one shape this generator provides.
+  it('writes nothing when the crowd cannot fill the cap after the other slices', async () => {
     const { staging, valuesSpy } = buildStagingMock()
     const result = await generateCrews({
       staging: staging as never,
-      crowdUserIds: crowdUserIds.slice(0, CREW_MEMBER_CAP - 2),
+      crowdUserIds: crowdUserIds.slice(0, CREW_MEMBER_CAP - 1),
       ownerUserId,
       eventIds,
       pastEventIds,
@@ -213,10 +215,25 @@ describe('generateCrews', () => {
     expect(result.insertedCrews).toBe(0)
   })
 
-  it('produces identical rows for the same seed', async () => {
-    const first = await run()
-    const second = await run()
-    expect(first.rowsAt(CREWS)).toEqual(second.rowsAt(CREWS))
-    expect(first.result).toEqual(second.result)
+  // Every timestamp has to be day-anchored, not clock-anchored, or re-seeding
+  // rewrites rows the seed says are fixed. Two runs back to back would land in
+  // the same millisecond and prove nothing, so the clock is moved 22 hours
+  // between them — far enough to catch Date.now(), still the same UTC day.
+  // The dates live on the four child tables, not on crews itself.
+  it('produces identical rows, timestamps included, across the same UTC day', async () => {
+    vi.useFakeTimers()
+    try {
+      vi.setSystemTime(new Date('2026-08-08T01:00:00.000Z'))
+      const first = await run()
+      vi.setSystemTime(new Date('2026-08-08T23:00:00.000Z'))
+      const second = await run()
+
+      for (const table of [CREWS, MEMBERS, INVITES, MUTES, ATTENDANCE]) {
+        expect(first.rowsAt(table)).toEqual(second.rowsAt(table))
+      }
+      expect(first.result).toEqual(second.result)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

@@ -86,6 +86,14 @@ const MUTED_CREW_OTHERS = 4
 /** Members in the keeper crew, over and above the owner. */
 const KEEPER_CREW_OTHERS = 3
 
+/**
+ * Crowd accounts needed to cut all three slices disjointly. Below this the
+ * at-cap crew comes up short and the generator produces a crew that is merely
+ * large, which is the one shape it exists to guarantee.
+ */
+const REQUIRED_CROWD_SIZE =
+  KEEPER_CREW_OTHERS + (CREW_MEMBER_CAP - 1) + MUTED_CREW_OTHERS
+
 const DAY_MS = 24 * 60 * 60 * 1000
 
 export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
@@ -107,12 +115,13 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
     insertedUserEvents: 0,
   }
 
-  // The at-cap crew needs CREW_MEMBER_CAP - 1 non-owner members. Below that
-  // there is no cap shape to seed and the generator would quietly produce a
-  // crew that is merely large, which is the one thing it exists to avoid.
-  if (crowdUserIds.length < CREW_MEMBER_CAP - 1) return empty
+  if (crowdUserIds.length < REQUIRED_CROWD_SIZE) return empty
 
-  const now = Date.now()
+  // Anchored to UTC midnight rather than the clock, so re-seeding twice in a
+  // day writes byte-identical rows — the same-seed contract every sibling
+  // generator keeps via a fixed epoch. A fixed epoch is wrong here because the
+  // live invite has to still be live whenever the seeder is next run.
+  const now = new Date().setUTCHours(0, 0, 0, 0)
 
   // Draw disjoint slices so no account lands in two crews with a stale handle
   // in one of them. The head of the crowd pool is where the handle-less
@@ -127,11 +136,15 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
     KEEPER_CREW_OTHERS + CREW_MEMBER_CAP - 1 + MUTED_CREW_OTHERS,
   )
 
+  // Every slice above is full, guaranteed by the REQUIRED_CROWD_SIZE guard.
+  const atCapKeeperId = atCapMembers[0]!
+  const mutedKeeperId = mutedMembers[0]!
+
   const crewRows = [
     {
       id: SEEDED_CREW_IDS.atCap,
       name: 'Sold Out Every Time',
-      keeperId: atCapMembers[0] ?? ownerUserId,
+      keeperId: atCapKeeperId,
       patchSalt: rng.int(0, 999),
     },
     {
@@ -149,7 +162,7 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
     {
       id: SEEDED_CREW_IDS.muted,
       name: 'Loud Ones',
-      keeperId: mutedMembers[0] ?? ownerUserId,
+      keeperId: mutedKeeperId,
       patchSalt: rng.int(0, 999),
     },
   ]
@@ -174,21 +187,17 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
   addMembers(SEEDED_CREW_IDS.solo, [ownerUserId])
   addMembers(SEEDED_CREW_IDS.muted, [ownerUserId, ...mutedMembers.slice(1)])
 
-  // atCap's keeper is atCapMembers[0], which addMembers skipped above.
-  if (atCapMembers.length > 0) {
-    memberRows.push({
-      crewId: SEEDED_CREW_IDS.atCap,
-      userId: atCapMembers[0]!,
-      joinedAt: joinedAt(),
-    })
-  }
-  if (mutedMembers.length > 0) {
-    memberRows.push({
-      crewId: SEEDED_CREW_IDS.muted,
-      userId: mutedMembers[0]!,
-      joinedAt: joinedAt(),
-    })
-  }
+  // Both keepers were skipped by the slice(1) calls above.
+  memberRows.push({
+    crewId: SEEDED_CREW_IDS.atCap,
+    userId: atCapKeeperId,
+    joinedAt: joinedAt(),
+  })
+  memberRows.push({
+    crewId: SEEDED_CREW_IDS.muted,
+    userId: mutedKeeperId,
+    joinedAt: joinedAt(),
+  })
 
   await staging.insert(crewMembers).values(memberRows)
 
@@ -256,24 +265,20 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
     }
   }
 
+  const [goerOne, goerTwo] = [keeperMembers[0]!, keeperMembers[1]!]
+
   // Upcoming needs >= 1 going, so one member is the boundary and must render.
   const upcomingOne = usableUpcoming[0]
-  if (upcomingOne && keeperMembers[0]) {
-    markGoing(upcomingOne, [keeperMembers[0]])
-  }
+  if (upcomingOne) markGoing(upcomingOne, [goerOne])
 
   // Past needs >= 2. One member is BELOW the boundary and must not render —
   // this is the row that catches a `>= 1` where the predicate wants `>= 2`.
   const pastOne = usablePast[0]
-  if (pastOne && keeperMembers[0]) {
-    markGoing(pastOne, [keeperMembers[0]])
-  }
+  if (pastOne) markGoing(pastOne, [goerOne])
 
   // Two members is the past boundary and must render.
   const pastTwo = usablePast[1]
-  if (pastTwo && keeperMembers[0] && keeperMembers[1]) {
-    markGoing(pastTwo, [keeperMembers[0], keeperMembers[1]])
-  }
+  if (pastTwo) markGoing(pastTwo, [goerOne, goerTwo])
 
   if (attendanceRows.length > 0) {
     await staging.insert(userEvents).values(attendanceRows)

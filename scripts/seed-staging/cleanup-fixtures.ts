@@ -5,14 +5,20 @@
  * generators (Tasks 3–5) can insert fresh rows without hitting duplicate-key
  * conflicts. This implements the "delete and regenerate" idempotency model.
  *
- * Delete order respects FK constraints — children before parents:
+ * Crews go first, and are the one exception to the user-scoped sweep in two
+ * ways. They are matched on fixed ids rather than on their keeper, because the
+ * keeper of a seeded crew is sometimes the owner account, whose hand-made rows
+ * must survive (see SEEDED_CREW_ID_LIST). And they need no child-before-parent
+ * ordering of their own: crew_members, crew_invites and crew_mutes all declare
+ * `onDelete: 'cascade'` from crews, so the one parent delete clears the
+ * vertical. Running it first also keeps it outside the early return below,
+ * which is correct because the ids are constants rather than derived from the
+ * fixture user set.
+ *
+ * The user-scoped deletes that follow have no such cascade, so their order
+ * respects FK constraints — children before parents:
  *   submissionConfirms → priceSubmissions → feedback → userEvents
  *     → notifications → userProfiles
- *
- * Crews are the one exception to the user-scoped sweep: they are matched on
- * fixed ids rather than on their keeper, because the keeper of a seeded crew is
- * sometimes the owner account, whose hand-made rows must survive. See
- * SEEDED_CREW_ID_LIST.
  *
  * Notifications: the `userId` column is nullable to accommodate real
  * admin-broadcast rows (system-generated, no owner). This cleanup uses

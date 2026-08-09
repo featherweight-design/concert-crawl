@@ -85,7 +85,7 @@ describe('cleanupFixtures', () => {
     expect(result.deleted).toHaveProperty('crews')
   })
 
-  it('deletes in child-before-parent order', async () => {
+  it('sweeps cascading crews first, then user-scoped tables child-before-parent', async () => {
     const callOrder: string[] = []
 
     // Capture the actual table object passed to `.delete()` on each call,
