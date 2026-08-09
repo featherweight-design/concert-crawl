@@ -53,7 +53,7 @@ function loggedOutHeader(entry: PickerEntry) {
   return variants[entry] ?? HEADER_COPY.loggedOut.default
 }
 
-interface TierPickerSheetProps {
+export interface TierPickerSheetProps {
   open: boolean
   onClose: () => void
   planState: PlanState

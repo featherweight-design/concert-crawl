@@ -3,6 +3,7 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { stubMatchMedia } from '@/test-utils/match-media'
 
 const mockPush = vi.fn()
 const mockNavigateTo = vi.fn()
@@ -97,20 +98,11 @@ const onClose = vi.fn()
 beforeEach(() => {
   vi.clearAllMocks()
   // jsdom has no matchMedia, and the artist rows size their follow control off
-  // one. `false` everywhere is the hook's own widest-first default.
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    value: vi.fn().mockImplementation((query: string) => ({
-      matches: false,
-      media: query,
-      onchange: null,
-      addListener: vi.fn(),
-      removeListener: vi.fn(),
-      addEventListener: vi.fn(),
-      removeEventListener: vi.fn(),
-      dispatchEvent: vi.fn(),
-    })),
-  })
+  // one. `false` is the hook's own widest-first default. The shared helper
+  // rather than a local literal: its listeners are real, so a later test that
+  // flips the viewport after mount fails honestly instead of passing on a
+  // no-op addEventListener.
+  stubMatchMedia(false)
   // Reset to non-empty query so SearchResultsState renders by default
   mockHookState.query = 'radio'
   mockHookState.artistResults = [

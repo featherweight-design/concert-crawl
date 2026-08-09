@@ -1,26 +1,13 @@
 'use client'
 
 import React, { useId, useMemo, useState } from 'react'
-import dynamic from 'next/dynamic'
 import { usePathname, useSearchParams } from 'next/navigation'
 
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 
 import { ARTIST_COPY } from './definitions/copy'
 import { NF_FOLLOW_SIZES } from './definitions/constants'
-
-// Same reasoning as WatchShowButton: the sheet drags @stripe/stripe-js in via
-// CheckoutPanel, so it is loaded on demand rather than on first paint. This is
-// the signed-out picker only; a signed-in locked tap calls `onLockedTap` and
-// opens the parent's sheet, which ArtistPageContent imports statically.
-// ssr:false because the picker is a modal that is always closed on first paint.
-const TierPickerSheet = dynamic(
-  () =>
-    import('@/components/consumer/tier-picker/TierPickerSheet').then(
-      (mod) => mod.TierPickerSheet,
-    ),
-  { ssr: false },
-)
 
 export interface FollowButtonProps {
   /** Artist name — used only to build the accessible name. */

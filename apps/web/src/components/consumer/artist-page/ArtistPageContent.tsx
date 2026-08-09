@@ -5,7 +5,7 @@ import type { ArtistDetailResponse } from '@concert-crawl/types'
 import React, { useCallback, useState } from 'react'
 
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 import { usePlanState } from '@/lib/queries/use-plan-state'
 import { useTheme } from '@/theme'
 

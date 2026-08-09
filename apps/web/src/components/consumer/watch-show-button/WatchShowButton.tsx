@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import dynamic from 'next/dynamic'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { encodeIntent } from '@/lib/auth/intent'
@@ -25,19 +24,7 @@ import { PostWatchSheet } from '@/components/pwa/PostWatchSheet'
 import { IosHowToSheet } from '@/components/pwa/IosHowToSheet'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
-
-// Lazy, unlike the two single-instance callers that import the picker directly.
-// This button renders once per card across the browse grid AND on /watching,
-// which otherwise pulls no checkout code at all — a static import would put
-// @stripe/stripe-js in that page's bundle for a sheet most visitors never open.
-// ssr:false because the picker is a modal that is always closed on first paint.
-const TierPickerSheet = dynamic(
-  () =>
-    import('@/components/consumer/tier-picker/TierPickerSheet').then(
-      (mod) => mod.TierPickerSheet,
-    ),
-  { ssr: false },
-)
+import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 
 interface WatchShowButtonProps {
   eventId: string
