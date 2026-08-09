@@ -95,8 +95,8 @@ vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
   },
 }))
 
-// jsdom has no matchMedia, and `useMediaQuery` calls it on mount. `false` for
-// every query is the widest-first default the hook itself ships.
+// jsdom has no matchMedia, and `useMediaQuery` reads it during render. `false`
+// for every query is the widest-first default the hook itself ships.
 beforeEach(() => {
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
