@@ -1254,13 +1254,6 @@ export const CONSUMER_COPY = {
     submissionCredEarned: '+1 cred',
     submissionDisputed: 'Someone disputed this. Tap to see what they saw.',
 
-    // ── WatchingTeaser ────────────────────────────────────────────
-    watchingTeaser: {
-      title: 'Watching',
-      badge: 'Coming soon',
-      body: "Everything you're keeping an eye on, in one list.",
-    },
-
     // ── EditProfileForm ───────────────────────────────────────────
     editCancelButton: '← Cancel',
     editProfileTitle: 'Edit profile',
