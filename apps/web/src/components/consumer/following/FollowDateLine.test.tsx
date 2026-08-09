@@ -24,6 +24,10 @@ describe('FollowDateLine', () => {
     const [venue, date] = Array.from(container.querySelectorAll('span > span'))
     expect(venue?.textContent).toBe('Red Rocks Amphitheatre')
     expect(venue?.className).toContain('text-ellipsis')
+    // A flex item's automatic minimum size is its content. Without min-w-0
+    // the venue will not shrink, and it pushes the date out of the box —
+    // which is the bug, wearing a different hat.
+    expect(venue?.className).toContain('min-w-0')
     expect(date?.textContent).toBe(`${SEP}Aug 10`)
     expect(date?.className).toContain('shrink-0')
     expect(date?.className).not.toContain('text-ellipsis')

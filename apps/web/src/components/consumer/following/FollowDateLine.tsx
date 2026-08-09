@@ -44,7 +44,13 @@ export const FollowDateLine = ({
 
   return (
     <span className="flex min-w-0 items-baseline" style={style}>
-      <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+      {/* `min-w-0` is load-bearing, not defensive. A flex item's automatic
+          minimum size is its content, so without it the venue refuses to
+          shrink and shoves the date out of the box — the exact failure this
+          component exists to fix. `overflow-hidden` zeroes that minimum too,
+          but then the fix rests on a side effect of a property someone could
+          reasonably move to the parent. */}
+      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
         {dateLine.slice(0, cut)}
       </span>
       <span className="shrink-0 whitespace-nowrap">{dateLine.slice(cut)}</span>

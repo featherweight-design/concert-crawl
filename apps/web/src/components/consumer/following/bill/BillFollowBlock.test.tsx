@@ -415,6 +415,22 @@ describe('BillFollowBlock — "Follow all N"', () => {
 })
 
 describe('BillFollowBlock — a single row', () => {
+  // The row is a flex ROW, so the name's automatic minimum size is the whole
+  // name. Without min-w-0 a long one shoves the follow button off the end
+  // instead of ellipsising — the same class as the FollowDateLine defect.
+  it('lets a long artist name shrink rather than push the button out', () => {
+    const { container } = render(
+      <BillFollowBlock
+        artists={[{ ...BILL[0]!, name: 'A Band With A Very Long Name Indeed' }]}
+        scaRegion={false}
+      />,
+    )
+
+    const name = container.querySelector('li > span')
+    expect(name?.className).toContain('text-ellipsis')
+    expect(name?.className).toContain('min-w-0')
+  })
+
   it('takes the server answer rather than keeping the optimistic guess', async () => {
     apiDelete.mockResolvedValue({ following: true })
 

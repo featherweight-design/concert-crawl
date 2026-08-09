@@ -212,8 +212,12 @@ export const BillFollowBlock = ({
               borderTop: '1px solid var(--border)',
             }}
           >
+            {/* min-w-0 for the same reason as FollowDateLine: this is a flex
+                item in a ROW, so its automatic minimum size is the whole
+                artist name, and a long one would shove the follow button off
+                the end rather than ellipsising. */}
             <span
-              className="overflow-hidden text-ellipsis whitespace-nowrap"
+              className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
               style={{
                 fontSize: 14,
                 fontWeight: 700,
