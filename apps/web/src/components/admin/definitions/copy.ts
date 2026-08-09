@@ -2333,6 +2333,12 @@ export const ADMIN_COPY = {
     candidatesCredentialsRejected:
       'Spotify rejected our app credentials. Check SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET on the API.',
     exactMatchBadge: 'Exact name',
+    suggestedBadge: 'Suggested',
+    suggestedRatio: (ratio: string) => `${ratio}× the next candidate`,
+    /** The runner-up scores zero, so there is no multiple to quote. */
+    suggestedRatioUnbounded: 'the only candidate with any popularity',
+    suggestedNote:
+      'The suggestion reads popularity alone. Nothing is applied until you pick one.',
     useCandidate: 'Use this one',
     candidateSearchLabel: 'Search Spotify for',
     candidateSearch: 'Search',
