@@ -1,4 +1,5 @@
-// Server-side reads for native following (PR 4 — browse scope chip + shelf).
+// Reads and shaping for native following (PR 4 — browse scope chip + shelf),
+// plus the one bulk mutation the epic shares (PR 7 — "Follow all N").
 //
 // ⚠️ ONE fetch serves BOTH consumers on browse. The scope chip's `absent` state
 // (entitled, zero follows) and the shelf's `some`/`spotify` modes are decided
@@ -6,6 +7,7 @@
 // second call for the shelf.
 import type {
   ArtistSuggestion,
+  BulkFollowResponse,
   FollowedArtist,
   FollowedArtistNextShow,
 } from '@concert-crawl/types'
@@ -23,6 +25,31 @@ export async function fetchFollowedArtists(
   token: string,
 ): Promise<FollowedArtist[]> {
   return apiClient.get<FollowedArtist[]>('/v1/me/artist-follows', token)
+}
+
+/**
+ * Commit a whole selection in ONE write (`POST /v1/me/artist-follows/bulk`).
+ * The only mutation in this file, and it is here rather than beside a
+ * component so the epic's two bulk callers — "Follow all N" on the bill and
+ * the onboarding artist step — hit the endpoint through one wrapper.
+ *
+ * The response is per-slug on purpose: a partial failure must stay visible, so
+ * callers apply `followed` / `already_following` row by row rather than
+ * treating the call as all-or-nothing. Entitlement is enforced server-side and
+ * arrives as a 403 `entitlement_required`, which is the caller's cue to open
+ * the tier picker — it is deliberately not swallowed here.
+ */
+export async function followArtistsBulk(
+  token: string,
+  slugs: string[],
+): Promise<BulkFollowResponse> {
+  return apiClient.post<BulkFollowResponse>(
+    '/v1/me/artist-follows/bulk',
+    token,
+    {
+      slugs,
+    },
+  )
 }
 
 /** Followable artists with an upcoming Denver date. Public — no token needed. */

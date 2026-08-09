@@ -11,6 +11,7 @@ import type {
 import { resolveGuideViewerMode } from '@concert-crawl/types'
 import { EventFirstTimerChip } from '@/components/consumer/venue-guide'
 import { publicApiClient, apiClient } from '@/lib/api'
+import { seedFollowedArtists } from '@/lib/following'
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 import { isScaRegion } from '@/lib/sca-region'
 import { fetchEventReports } from '@/lib/events'
@@ -36,6 +37,11 @@ import {
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { EventTitleBlock } from '@/components/consumer/event-title-block'
 import { DetailFollowStrip } from '@/components/consumer/spotify/FollowHighlight'
+import {
+  BillFollowBlock,
+  billArtists,
+  followedSlugSet,
+} from '@/components/consumer/following/bill'
 import {
   InfoRow,
   IconPin,
@@ -123,10 +129,14 @@ export default async function EventDetailPage({
   // The new id-keyed /v1/events/:id/related resolves the venue server-side, so
   // all three round-trips run concurrently and the page load drops by one
   // full Vercel→Render hop (~400-700ms warm, much more on cold start).
-  const [event, reports, related, requestHeaders] = await Promise.all([
+  const [event, reports, related, follows, requestHeaders] = await Promise.all([
     fetchEvent(id, token),
     fetchReports(id, token),
     fetchRelatedById(id, token),
+    // `undefined` on failure, never an empty list: seeding a bill as
+    // "following nobody" would draw live Follow buttons beside acts the viewer
+    // already follows. seedFollowedArtists keeps that distinction.
+    seedFollowedArtists(token),
     headers(),
   ])
   if (!event) notFound()
@@ -151,6 +161,10 @@ export default async function EventDetailPage({
     isSignedIn: token !== null,
     hasAttendedVenue: null,
   })
+
+  // Headliner plus billed support, minus any name the artists projection has
+  // no row for. Empty for a legacy row with no slugs, which renders no block.
+  const bill = billArtists(event, followedSlugSet(follows))
 
   const safeTicketUrl = isSafeHttpUrl(event.ticketUrl) ? event.ticketUrl : null
   const safeEventUrl = isSafeHttpUrl(event.eventUrl) ? event.eventUrl : null
@@ -229,6 +243,16 @@ export default async function EventDetailPage({
               />
             </EventDetailCtaBlock>
           </div>
+
+          {/* The bill follow block, directly under the Watch CTA (native
+              following, PR 7). Following an act here does not touch the
+              event's watch state above it — they are separate relationships
+              that happen to share a card edge. */}
+          {bill.length > 0 && (
+            <div className="mt-3">
+              <BillFollowBlock artists={bill} scaRegion={scaRegion} />
+            </div>
+          )}
 
           {/* Spotify attribution strip — directly under the Watching pill
               (#763 PR 6). followedArtists only exists for signed-in viewers

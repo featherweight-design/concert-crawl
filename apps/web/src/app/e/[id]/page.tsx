@@ -6,6 +6,7 @@
 // `isPublicOnceLaunched`, i.e. it is invite-gated until the public launch and
 // open after — the same terms as /events and /artists.
 import type { Metadata } from 'next'
+import { headers } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import type {
@@ -15,7 +16,13 @@ import type {
 } from '@concert-crawl/types'
 
 import { publicApiClient } from '@/lib/api'
+import { isScaRegion } from '@/lib/sca-region'
 import { PublicEventDetail } from '@/components/consumer/event-detail'
+import {
+  BillFollowBlock,
+  billArtists,
+  followedSlugSet,
+} from '@/components/consumer/following/bill'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { absoluteUrl } from '@/lib/share/site-origin'
 import { toPosterEvent } from '@/lib/share/poster-event'
@@ -176,10 +183,32 @@ const PublicEventPage = async ({
 
   // Same parallel shape as the protected page (#833), minus the reports fetch —
   // reports are auth-only and the mirror does not render them.
-  const [event, related] = await Promise.all([fetchEvent(id), fetchRelated(id)])
+  const [event, related, requestHeaders] = await Promise.all([
+    fetchEvent(id),
+    fetchRelated(id),
+    headers(),
+  ])
   if (!event) notFound()
 
-  return <PublicEventDetail event={event} related={related} />
+  // Nobody standing here has a session, so nothing on the bill can be followed
+  // yet — the empty set is the truth, not a fallback.
+  const bill = billArtists(event, followedSlugSet([]))
+
+  return (
+    <PublicEventDetail
+      event={event}
+      related={related}
+      billBlock={
+        bill.length > 0 ? (
+          <BillFollowBlock
+            artists={bill}
+            signedOut
+            scaRegion={isScaRegion(requestHeaders.get('x-vercel-ip-country'))}
+          />
+        ) : null
+      }
+    />
+  )
 }
 
 export default PublicEventPage

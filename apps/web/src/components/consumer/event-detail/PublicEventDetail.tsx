@@ -19,6 +19,7 @@
 // the authed page is the lucide Eye; the mirror simply omits it rather than
 // substituting another glyph — there is no second show-tracking concept.
 import { Fragment } from 'react'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import type { EventDetailResponse, EventWithVenue } from '@concert-crawl/types'
 
@@ -53,15 +54,29 @@ import { EventTicketCta } from './EventTicketCta'
 const copy = CONSUMER_COPY.eventDetail
 const publicCopy = CONSUMER_COPY.publicEvent
 
-interface PublicEventDetailProps {
+export interface PublicEventDetailProps {
   event: EventDetailResponse
   /** Other upcoming shows at the same venue. Empty when the fetch failed. */
   related: EventWithVenue[]
+  /**
+   * The bill follow block (native following, PR 7), rendered directly under
+   * the primary CTA. A SLOT rather than data: the block is a client component
+   * that resolves entitlement and owns its own writes, and passing it in is
+   * what keeps this screen from being forked to carry it (design table ED-06).
+   *
+   * Optional, and every caller predating PR 7 omits it — nothing renders in
+   * its place when it is absent. It is the one account-shaped affordance the
+   * mirror carries, and it earns the exception: a visitor who arrived from
+   * someone else's poster is exactly the person worth recruiting, and the
+   * signed-out follow control is a sign-up route by construction (#794 §3.10).
+   */
+  billBlock?: ReactNode
 }
 
 export const PublicEventDetail = ({
   event,
   related,
+  billBlock,
 }: PublicEventDetailProps) => {
   const showTime = formatShowTime(event.showTime)
   const doorsTime = formatShowTime(event.doorsTime)
@@ -196,6 +211,11 @@ export const PublicEventDetail = ({
               />
             </div>
           )}
+
+          {/* Under the CTA, in the main column — the same slot at every width.
+              Neither event-detail screen has a right rail, so there is no
+              breakpoint at which this appears on one viewport only. */}
+          {billBlock && <div className="mt-5">{billBlock}</div>}
 
           {/* The one account-shaped thing on the page, and it points at
               /sign-up. This used to point at /sign-in on the grounds that

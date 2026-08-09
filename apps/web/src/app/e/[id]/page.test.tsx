@@ -24,6 +24,12 @@ vi.mock('@clerk/nextjs/server', () => ({
   auth: () => mockAuth(),
 }))
 
+// The mirror reads the edge country header so the bill block can hand the
+// picker an SCA verdict resolved on the server.
+vi.mock('next/headers', () => ({
+  headers: () => Promise.resolve(new Headers({ 'x-vercel-ip-country': 'US' })),
+}))
+
 const mockPublicGet = vi.fn()
 vi.mock('@/lib/api', () => ({
   publicApiClient: { get: (path: string) => mockPublicGet(path) },

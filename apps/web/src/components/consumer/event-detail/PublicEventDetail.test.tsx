@@ -256,4 +256,53 @@ describe('PublicEventDetail (#72)', () => {
 
     expect(screen.getByTestId('related-card').textContent).toBe('Other Band')
   })
+
+  // The bill block arrives as a SLOT (design table ED-06) so neither detail
+  // screen is forked to carry it.
+  describe('the bill follow slot', () => {
+    it('renders nothing in its place for a caller that predates it', () => {
+      render(<PublicEventDetail event={buildEvent()} related={[]} />)
+
+      expect(screen.queryByTestId('bill-slot')).toBeNull()
+    })
+
+    it('places the slot after the ticket CTA and before the account CTA', () => {
+      render(
+        <PublicEventDetail
+          event={buildEvent()}
+          related={[]}
+          billBlock={<div data-testid="bill-slot" />}
+        />,
+      )
+
+      const slot = screen.getByTestId('bill-slot')
+      const cta = screen.getByRole('link', {
+        name: new RegExp(detailCopy.getTickets, 'i'),
+      })
+      const signUp = screen.getByRole('link', { name: copy.signUpButton })
+
+      // DOCUMENT_POSITION_PRECEDING === 2: the CTA comes first in the DOM.
+      expect(slot.compareDocumentPosition(cta)).toBe(
+        Node.DOCUMENT_POSITION_PRECEDING,
+      )
+      expect(slot.compareDocumentPosition(signUp)).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      )
+    })
+
+    // Parity is structural: one slot in the single centred column, so there is
+    // no breakpoint at which one viewport gets a block the other does not.
+    it('gives the slot no breakpoint-gated wrapper', () => {
+      render(
+        <PublicEventDetail
+          event={buildEvent()}
+          related={[]}
+          billBlock={<div data-testid="bill-slot" />}
+        />,
+      )
+
+      const wrapper = screen.getByTestId('bill-slot').parentElement
+      expect(wrapper?.className ?? '').not.toMatch(/(sm|md|lg|xl):/)
+    })
+  })
 })
