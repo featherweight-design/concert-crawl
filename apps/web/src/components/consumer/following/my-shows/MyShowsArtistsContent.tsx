@@ -2,7 +2,7 @@
 
 // My shows ▸ Artists — the third sub-tab (native following, PR 6).
 //
-// Mobile is a full-bleed list; desktop is a 940px column with a three-up card
+// Mobile is a full-bleed list; desktop is a 940px column with a two-up card
 // grid and the two actions promoted into the group-heading row. Both ship in
 // this component, and the list body is the only part that forks — everything
 // above it (tabs, headings, footnote, empty state) is shared, so the two can
@@ -220,7 +220,14 @@ export const MyShowsArtistsContent = ({
         {picker}
       </div>
 
-      {/* Desktop: 940px column, three-up cards, actions in the heading row. */}
+      {/* Desktop: 940px column, two-up cards, actions in the heading row.
+          DELTA vs the handoff, which draws three-up: the handoff's card carries
+          an `sm` ICON-ONLY control, and this one deliberately keeps the
+          labelled `md` button (see ArtistManageRow's header). A labelled
+          control costs ~110px, which left a three-up cell 285px wide and
+          ellipsised the artist NAME — the Gate 5 walk caught "Tame I…" at
+          1280px against "Tame Impala" rendering in full at 390px, so desktop
+          was truncating what mobile showed. Two-up gives the cell 434px. */}
       <div className="mx-auto hidden w-full max-w-[940px] flex-1 px-[30px] pb-10 pt-7 sm:block">
         {/* No page title: the active sub-tab 18px below already reads
             "Artists", and the sibling Watching and Concerts tabs ship none
@@ -236,7 +243,7 @@ export const MyShowsArtistsContent = ({
               </Mono>
               {desktopActions}
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {groups.dated.map((artist) => (
                 <ArtistManageRow
                   key={artist.canonicalName}
@@ -260,7 +267,7 @@ export const MyShowsArtistsContent = ({
               </Mono>
               {groups.dated.length === 0 && desktopActions}
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {groups.undated.map((artist) => (
                 <ArtistManageRow
                   key={artist.canonicalName}

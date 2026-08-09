@@ -97,6 +97,17 @@ describe('ARTIST_COPY', () => {
     expect('playerLoading' in ARTIST_COPY).toBe(false)
   })
 
+  it('drops the second absent-player line the pointer clause forced', () => {
+    expect('playerNoneSubLast' in ARTIST_COPY).toBe(false)
+    expect(ARTIST_COPY.playerNoneSub).not.toContain('below')
+  })
+
+  it('does not restate the follow button in the line beneath it', () => {
+    expect(ARTIST_COPY.followPitchActive).not.toMatch(
+      new RegExp(ARTIST_COPY.following, 'i'),
+    )
+  })
+
   it('pluralises the show count', () => {
     expect(ARTIST_COPY.showCount(1)).toBe('1 show')
     expect(ARTIST_COPY.showCount(13)).toBe('13 shows')

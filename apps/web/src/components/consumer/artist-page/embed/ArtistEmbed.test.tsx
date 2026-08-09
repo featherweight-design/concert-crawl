@@ -141,19 +141,20 @@ describe('ArtistEmbed — the player', () => {
     expect(container.querySelector('[data-embed-mat]')).toBeNull()
   })
 
-  // Gate 5 / J4: on an artist with no upcoming AND no past, the player is the
-  // last block on the page, so "Their shows are below" points at nothing.
-  it('drops the "shows are below" pointer when nothing follows the player', () => {
-    const { container } = render(
-      <ArtistEmbed
-        name="Neal Francis"
-        spotifyArtistId={null}
-        skipTo={null}
-        themeKey="electric"
-      />,
-    )
-    expect(container.textContent).toContain(ARTIST_COPY.playerNone)
-    expect(container.textContent).toContain(ARTIST_COPY.playerNoneSubLast)
-    expect(container.textContent).not.toContain('below')
-  })
+  it.each([['upcoming'], [null]])(
+    'never points at shows below the player (skipTo=%s)',
+    (skipTo: string | null) => {
+      const { container } = render(
+        <ArtistEmbed
+          name="Neal Francis"
+          spotifyArtistId={null}
+          skipTo={skipTo}
+          themeKey="electric"
+        />,
+      )
+      expect(container.textContent).toContain(ARTIST_COPY.playerNone)
+      expect(container.textContent).toContain(ARTIST_COPY.playerNoneSub)
+      expect(container.textContent).not.toContain('below')
+    },
+  )
 })

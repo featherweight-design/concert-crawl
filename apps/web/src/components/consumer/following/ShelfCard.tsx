@@ -13,6 +13,7 @@ import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
+import { FollowDateLine } from './FollowDateLine'
 import { FOLLOWING_COPY } from './definitions/copy'
 import type { ShelfArtist } from './definitions/types'
 
@@ -212,8 +213,9 @@ export const ShelfCard = ({
         </span>
       )}
 
-      <span
-        className="overflow-hidden text-ellipsis whitespace-nowrap"
+      <FollowDateLine
+        dateLine={artist.dateLine}
+        fallback={FOLLOWING_COPY.cardNoDate}
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: 9,
@@ -221,9 +223,7 @@ export const ShelfCard = ({
           marginTop: -3,
           color: on ? 'var(--signal)' : 'var(--fg-subtle)',
         }}
-      >
-        {artist.dateLine ?? FOLLOWING_COPY.cardNoDate}
-      </span>
+      />
     </li>
   )
 }

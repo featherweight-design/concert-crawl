@@ -3,7 +3,7 @@
 // One followed artist on My shows ▸ Artists.
 //
 // Two densities of the SAME row, not two components: `row` is the mobile
-// full-bleed list item, `card` is the desktop three-up grid cell. They differ
+// full-bleed list item, `card` is the desktop two-up grid cell. They differ
 // in box and type scale only — same fields, same order, same control — so a
 // change to what a row says lands on both by construction.
 //
@@ -17,10 +17,12 @@
 // unfollow has no target but the button. It also keeps its label in both,
 // because an unlabelled check reads as confirmation rather than as a toggle
 // you can switch off. 320px is the one exception, where `narrow` drops the
-// word for want of room.
+// word for want of room. That labelled control is also why the desktop grid is
+// two-up rather than the handoff's three-up: it needs the width.
 
 import Link from 'next/link'
 import { CardArt } from '@/components/consumer/following/ShelfCard'
+import { FollowDateLine } from '@/components/consumer/following/FollowDateLine'
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton'
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
 import { followDateLine } from '@/lib/following'
@@ -125,8 +127,9 @@ export const ArtistManageRow = ({
           </Link>
         )}
 
-        <span
-          className="overflow-hidden text-ellipsis whitespace-nowrap"
+        <FollowDateLine
+          dateLine={dateLine}
+          fallback={COPY.groups.noDates}
           style={{
             fontFamily: 'var(--font-mono)',
             fontSize: card ? 9 : 9.5,
@@ -137,9 +140,7 @@ export const ArtistManageRow = ({
             // colour — the date line earns that by being actionable.
             color: dateLine === null ? 'var(--fg-subtle)' : 'var(--signal)',
           }}
-        >
-          {dateLine ?? COPY.groups.noDates}
-        </span>
+        />
 
         {artist.source !== 'manual' && (
           <span style={{ marginTop: card ? 4 : 1 }}>

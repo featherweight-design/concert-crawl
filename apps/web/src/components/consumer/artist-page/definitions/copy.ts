@@ -33,7 +33,10 @@ export const ARTIST_COPY = {
   follow: 'Follow',
   following: 'Following',
   followPitch: 'Marks them as one of yours. Their dates live on this page.',
-  followPitchActive: "You're following. Their dates live on this page.",
+  // "You're following." is dropped: the button directly above this line already
+  // reads "Following", and a caption that restates the control it sits under is
+  // the redundancy rule 1 forbids (copy-audit 02-monetization-artist).
+  followPitchActive: 'Their dates live on this page.',
   // DELTA vs the handoff: `followSignedOut` ("Sign in to follow") is dropped.
   // #794 locked the identical-pixels rule — a signed-out visitor sees the same
   // control a signed-in one does, and the sign-in happens on activation. A
@@ -81,11 +84,10 @@ export const ARTIST_COPY = {
   playerTitle: (name: string) => `Spotify player for ${name}`,
   playerNoneRail: 'No player',
   playerNone: "We don't have them on Spotify.",
-  playerNoneSub:
-    "Doesn't mean much. Plenty of good bands aren't. Their shows are below.",
-  // The same fact minus the pointer, for when the player is the last block on
-  // the page and there is nothing below it to point at.
-  playerNoneSubLast: "Doesn't mean much. Plenty of good bands aren't.",
+  // The pointer clause ("Their shows are below.") is dropped: the shows are
+  // visibly below, so it labelled the obvious, and carrying it forced a second
+  // key for the case where the player is the last block on the page.
+  playerNoneSub: "Doesn't mean much. Plenty of good bands aren't.",
   // DELTA vs the handoff: new. The player is a <section>; an unlabelled region
   // is a landmark a screen reader can only announce as "region".
   playerAria: (name: string) => `Player for ${name}`,

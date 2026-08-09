@@ -62,9 +62,7 @@ export const ArtistEmbed = ({
             {ARTIST_COPY.playerNone}
           </span>{' '}
           <span style={{ fontWeight: 500, color: 'var(--fg-subtle)' }}>
-            {skipTo === null
-              ? ARTIST_COPY.playerNoneSubLast
-              : ARTIST_COPY.playerNoneSub}
+            {ARTIST_COPY.playerNoneSub}
           </span>
         </p>
       </section>

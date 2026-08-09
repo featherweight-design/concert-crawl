@@ -110,6 +110,28 @@ describe('MyShowsArtistsContent', () => {
     ).not.toHaveLength(0)
   })
 
+  // Three-up put a 940px column's cards at 285px, which ellipsised the artist
+  // NAME on desktop while mobile rendered it in full. The labelled unfollow
+  // control is deliberate, so the grid is what gives way.
+  it('lays the desktop cards out two-up, never three', () => {
+    const { container } = render(
+      <MyShowsArtistsContent
+        artists={[
+          artist('Wax Harbour', '2026-09-12'),
+          artist('Null Signal', null),
+        ]}
+        scaRegion={false}
+      />,
+    )
+
+    const grids = container.querySelectorAll('[class*="grid-cols-"]')
+    expect(grids).not.toHaveLength(0)
+    for (const grid of grids) {
+      expect(grid.className).toContain('grid-cols-2')
+      expect(grid.className).not.toContain('grid-cols-3')
+    }
+  })
+
   // A heading over nothing is a heading that lies about there being content.
   it('renders no undated heading when every follow has a date', () => {
     render(
