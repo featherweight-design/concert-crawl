@@ -27,6 +27,7 @@ import { ApiError } from '@/lib/api'
 import { ENTITLEMENT_REQUIRED_CODE } from '@/lib/history'
 import {
   ARTIST_PICKS_KEY,
+  GENRE_PICKS_KEY,
   writePicks,
   readPicks,
 } from '@/components/consumer/artist-picker'
@@ -78,6 +79,7 @@ describe('useArtistPicksCommit', () => {
   it('advances without a write when nothing is selected', () => {
     const onDone = vi.fn()
     writePicks(ARTIST_PICKS_KEY, ['stale'])
+    writePicks(GENRE_PICKS_KEY, ['punk'])
     const { result } = renderHook(() => useArtistPicksCommit(onDone), {
       wrapper,
     })
@@ -88,12 +90,14 @@ describe('useArtistPicksCommit', () => {
     expect(onDone).toHaveBeenCalledTimes(1)
     // Skipping is a real outcome, so the mirror goes with it.
     expect(readPicks(ARTIST_PICKS_KEY)).toEqual([])
+    expect(readPicks(GENRE_PICKS_KEY)).toEqual([])
   })
 
   it('writes every pick in ONE request, then clears the mirror', async () => {
     const onDone = vi.fn()
     followArtistsBulk.mockResolvedValue(undefined)
     writePicks(ARTIST_PICKS_KEY, ['aa', 'bb'])
+    writePicks(GENRE_PICKS_KEY, ['punk', 'metal'])
     const { result } = renderHook(() => useArtistPicksCommit(onDone), {
       wrapper,
     })
@@ -104,12 +108,16 @@ describe('useArtistPicksCommit', () => {
     expect(followArtistsBulk).toHaveBeenCalledTimes(1)
     expect(followArtistsBulk).toHaveBeenCalledWith('test-token', ['aa', 'bb'])
     expect(readPicks(ARTIST_PICKS_KEY)).toEqual([])
+    // The lede promises the genres are not saved, so they cannot outlive the
+    // step that used them as a filter.
+    expect(readPicks(GENRE_PICKS_KEY)).toEqual([])
   })
 
   it('opens the picker on a 403 and keeps the selection', async () => {
     const onDone = vi.fn()
     followArtistsBulk.mockRejectedValue(entitlementError())
     writePicks(ARTIST_PICKS_KEY, ['aa', 'bb'])
+    writePicks(GENRE_PICKS_KEY, ['punk'])
     const { result } = renderHook(() => useArtistPicksCommit(onDone), {
       wrapper,
     })
@@ -120,6 +128,8 @@ describe('useArtistPicksCommit', () => {
     // The step holds — this is the one failure that has somewhere to send you.
     expect(onDone).not.toHaveBeenCalled()
     expect(readPicks(ARTIST_PICKS_KEY)).toEqual(['aa', 'bb'])
+    // An interrupted upgrade comes back to the grid it left, genres included.
+    expect(readPicks(GENRE_PICKS_KEY)).toEqual(['punk'])
   })
 
   it('retries the same write when the picker closes on an active plan', async () => {
@@ -127,6 +137,7 @@ describe('useArtistPicksCommit', () => {
     followArtistsBulk.mockRejectedValueOnce(entitlementError())
     followArtistsBulk.mockResolvedValueOnce(undefined)
     fetchMe.mockResolvedValue({ planState: PREMIUM })
+    writePicks(GENRE_PICKS_KEY, ['punk'])
     const { result } = renderHook(() => useArtistPicksCommit(onDone), {
       wrapper,
     })
@@ -142,6 +153,7 @@ describe('useArtistPicksCommit', () => {
       'bb',
     ])
     expect(readPicks(ARTIST_PICKS_KEY)).toEqual([])
+    expect(readPicks(GENRE_PICKS_KEY)).toEqual([])
   })
 
   it('does not retry blind when the upgrade did not land', async () => {
@@ -149,6 +161,7 @@ describe('useArtistPicksCommit', () => {
     followArtistsBulk.mockRejectedValue(entitlementError())
     fetchMe.mockResolvedValue({ planState: FREE })
     writePicks(ARTIST_PICKS_KEY, ['aa'])
+    writePicks(GENRE_PICKS_KEY, ['punk'])
     const { result } = renderHook(() => useArtistPicksCommit(onDone), {
       wrapper,
     })
@@ -162,11 +175,14 @@ describe('useArtistPicksCommit', () => {
     // A blind retry would 403 again and reopen the picker in a loop.
     expect(followArtistsBulk).toHaveBeenCalledTimes(1)
     expect(readPicks(ARTIST_PICKS_KEY)).toEqual(['aa'])
+    expect(readPicks(GENRE_PICKS_KEY)).toEqual(['punk'])
   })
 
   it('moves on when the write fails for any other reason', async () => {
     const onDone = vi.fn()
     followArtistsBulk.mockRejectedValue(new ApiError(500, 'Boom'))
+    writePicks(ARTIST_PICKS_KEY, ['aa'])
+    writePicks(GENRE_PICKS_KEY, ['punk'])
     const { result } = renderHook(() => useArtistPicksCommit(onDone), {
       wrapper,
     })
@@ -176,5 +192,8 @@ describe('useArtistPicksCommit', () => {
     // Onboarding may never become a wall.
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1))
     expect(result.current.pickerOpen).toBe(false)
+    // The step is over either way, so neither mirror survives it.
+    expect(readPicks(ARTIST_PICKS_KEY)).toEqual([])
+    expect(readPicks(GENRE_PICKS_KEY)).toEqual([])
   })
 })

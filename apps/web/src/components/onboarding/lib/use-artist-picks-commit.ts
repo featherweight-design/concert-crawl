@@ -19,6 +19,7 @@ import { fetchMe } from '@/lib/users'
 import { planStateQueryKey } from '@/lib/queries/use-plan-state'
 import {
   ARTIST_PICKS_KEY,
+  GENRE_PICKS_KEY,
   clearPicks,
 } from '@/components/consumer/artist-picker'
 
@@ -45,6 +46,22 @@ export function useArtistPicksCommit(onDone: () => void): ArtistPicksCommit {
   const heldSlugs = useRef<readonly string[]>([])
   const inFlight = useRef(false)
 
+  // Every exit that ends the step goes through here, and the 403 path is the
+  // one that must NOT: it returns early so an interrupted upgrade comes back
+  // to the grid it left.
+  //
+  // Both keys clear together. The genres key is not the artists key's
+  // companion — it is a filter for a screen that is now behind the visitor,
+  // and the step's own lede promises we don't save it. Leaving it behind would
+  // make that a lie on the next visit to /onboarding, which would open
+  // pre-filtered by months-old buckets that may no longer be in the listings
+  // at all, silently hiding suggestions.
+  const finishStep = useCallback(() => {
+    clearPicks(ARTIST_PICKS_KEY)
+    clearPicks(GENRE_PICKS_KEY)
+    onDone()
+  }, [onDone])
+
   const runCommit = useCallback(
     async (slugs: readonly string[]): Promise<void> => {
       if (inFlight.current) return
@@ -54,10 +71,7 @@ export function useArtistPicksCommit(onDone: () => void): ArtistPicksCommit {
         const token = await getToken()
         if (!token) throw new Error('Not authenticated')
         await followArtistsBulk(token, slugs)
-        // Cleared only here and on an explicit skip: anywhere else and an
-        // interrupted upgrade would come back to an empty grid.
-        clearPicks(ARTIST_PICKS_KEY)
-        onDone()
+        finishStep()
       } catch (err: unknown) {
         if (err instanceof ApiError && err.code === ENTITLEMENT_REQUIRED_CODE) {
           console.info('onboarding follow picks need Premium; opening picker')
@@ -68,13 +82,13 @@ export function useArtistPicksCommit(onDone: () => void): ArtistPicksCommit {
         // A failed write is not worth stranding someone on step 7 of 8. Log it
         // and move on; the artists are all still followable from search.
         console.warn('onboarding bulk follow failed; continuing', err)
-        onDone()
+        finishStep()
       } finally {
         inFlight.current = false
         setPending(false)
       }
     },
-    [getToken, onDone],
+    [getToken, finishStep],
   )
 
   const commit = useCallback(
@@ -82,13 +96,12 @@ export function useArtistPicksCommit(onDone: () => void): ArtistPicksCommit {
       if (slugs.length === 0) {
         // Nothing to write. Skipping is a first-class outcome here, so it
         // clears the mirror rather than leaving picks for a step that is done.
-        clearPicks(ARTIST_PICKS_KEY)
-        onDone()
+        finishStep()
         return
       }
       void runCommit(slugs)
     },
-    [onDone, runCommit],
+    [finishStep, runCommit],
   )
 
   const closePicker = useCallback(() => {
