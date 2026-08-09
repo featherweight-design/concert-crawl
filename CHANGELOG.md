@@ -1,3 +1,21 @@
+# [1.230.0](https://github.com/HartiganHM/concert-crawl/compare/v1.229.3...v1.230.0) (2026-08-09)
+
+
+### Bug Fixes
+
+* **auth:** carry redirect_url through the launched sign-up funnel ([#1533](https://github.com/HartiganHM/concert-crawl/issues/1533)) ([cd4c14e](https://github.com/HartiganHM/concert-crawl/commit/cd4c14e3e38c85fa097995ce857e14b7f59f3552))
+* **following:** let the shelf own its own card cap ([ff4e15b](https://github.com/HartiganHM/concert-crawl/commit/ff4e15bf13caa052d8fa02913b6dbef9985c157b))
+* **following:** log the expected 401 rather than swallowing it ([47de129](https://github.com/HartiganHM/concert-crawl/commit/47de1294eed38e188a63e625381cf744c6b63909))
+* **following:** unlock unfollow for downgraded viewers, drop the phantom zero ([4dfa180](https://github.com/HartiganHM/concert-crawl/commit/4dfa1804bd69752e4d6aa2e13a9452f7245c964b))
+* **web:** drop a refused token on the scope-fallback retry ([f91311a](https://github.com/HartiganHM/concert-crawl/commit/f91311a61e38acf1c2d7181cba4aa853eb0873b8))
+* **web:** fail the starter shelf closed while auth and plan resolve ([44472de](https://github.com/HartiganHM/concert-crawl/commit/44472de25d3a96b9ab76ce5add18af13b0ef850e))
+* **web:** split the shelf's gated tap from its 403 handler ([7c52c91](https://github.com/HartiganHM/concert-crawl/commit/7c52c915d4bcea2cd4817eddd0ea227d57b51263))
+
+
+### Features
+
+* **web:** browse scope chip + follow shelf (native following, PR 4) ([4f437ae](https://github.com/HartiganHM/concert-crawl/commit/4f437aedcacbad8aaabc9351be00329e40791bdd))
+
 ## [1.229.3](https://github.com/HartiganHM/concert-crawl/compare/v1.229.2...v1.229.3) (2026-08-09)
 
 
