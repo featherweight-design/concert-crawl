@@ -19,7 +19,9 @@ export const MY_SHOWS_ARTISTS_COPY = {
   groups: {
     /** Group 1. Uppercased by CSS, so it is written in sentence case here. */
     dated: (count: number) => `${count} playing Denver`,
-    undated: (count: number) => `Nothing on the books · ${count}`,
+    /** Same shape as its sibling: the count leads, so the two headings scan
+     *  as one list rather than two designs. */
+    undated: (count: number) => `${count} with nothing on the books`,
     /** Per-row line where group 2 would otherwise show a date. */
     noDates: 'No dates announced',
   },
@@ -53,7 +55,6 @@ export const MY_SHOWS_ARTISTS_COPY = {
       : `${count} of these came in from Spotify. Unfollowing here won't touch your Spotify library.`,
 
   empty: {
-    eyebrow: 'No one yet',
     headline: 'Nobody on your list.',
     body: "Follow an artist and we'll tell you the moment they book a Denver date. Even the ones who only come through once a year.",
     /** Entitled: the real next move is search. */

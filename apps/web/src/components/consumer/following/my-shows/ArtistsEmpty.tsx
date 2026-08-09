@@ -2,8 +2,11 @@
 //
 // Both CTAs go somewhere known-static, which is why they are buttons rather
 // than a chip rail: there is nothing to pick from until you have followed
-// someone. The eyebrow is the one sanctioned use of --accent on this surface;
-// everything follow-shaped is --signal.
+// someone.
+//
+// There is no eyebrow above the headline. "No one yet" over "Nobody on your
+// list." is one fact in two type sizes, and the headline is the layer that
+// survives that collision.
 
 import Link from 'next/link'
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
@@ -13,7 +16,6 @@ import {
   WATCHING_HREF,
 } from './definitions/constants'
 import { GlyphPlus } from './Glyphs'
-import { Mono } from './Mono'
 
 const COPY = MY_SHOWS_ARTISTS_COPY.empty
 
@@ -67,10 +69,6 @@ export const ArtistsEmpty = ({
     >
       <GlyphPlus size={desktop ? 22 : 20} />
     </span>
-
-    <Mono size={desktop ? 10.5 : 10} color="var(--accent)" ls="0.18em">
-      {COPY.eyebrow}
-    </Mono>
 
     <h2
       style={{
