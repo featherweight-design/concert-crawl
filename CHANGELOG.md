@@ -1,3 +1,10 @@
+## [1.229.1](https://github.com/HartiganHM/concert-crawl/compare/v1.229.0...v1.229.1) (2026-08-09)
+
+
+### Bug Fixes
+
+* **price:** stop dressing a crawled price as a fan submission ([#1526](https://github.com/HartiganHM/concert-crawl/issues/1526)) ([d865423](https://github.com/HartiganHM/concert-crawl/commit/d865423b18d771a2c49321decd8389c1ff9344f9))
+
 # [1.229.0](https://github.com/HartiganHM/concert-crawl/compare/v1.228.0...v1.229.0) (2026-08-08)
 
 
