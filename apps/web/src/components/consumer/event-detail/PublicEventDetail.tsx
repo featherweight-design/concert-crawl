@@ -204,7 +204,11 @@ export const PublicEventDetail = ({
               `isPublicOnceLaunched` matcher, so they open in the same deploy.
               A signed-out visitor can therefore never be standing here while
               /sign-up is still walled, and this page exists for someone with no
-              account (#1359). */}
+              account (#1359).
+
+              It carries `redirect_url` so a new account lands back on the show
+              that was shared with them. Without it /auth/complete falls through
+              to /events and the link they were sent is gone. */}
           <div
             className="mt-5 flex flex-col items-center gap-3 rounded-xl px-5 py-6 text-center"
             style={{
@@ -219,7 +223,7 @@ export const PublicEventDetail = ({
               {publicCopy.signUpPrompt}
             </p>
             <Link
-              href="/sign-up"
+              href={`/sign-up?redirect_url=${encodeURIComponent(`/e/${event.id}`)}`}
               className="inline-flex items-center justify-center rounded-[10px] px-5 text-fg-on-accent"
               style={{
                 minHeight: 44,

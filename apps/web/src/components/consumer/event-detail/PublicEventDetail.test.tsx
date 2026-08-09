@@ -103,7 +103,11 @@ describe('PublicEventDetail (#72)', () => {
     // never be walled while a visitor is standing here.
     const signUp = screen.getAllByRole('link', { name: copy.signUpButton })
     expect(signUp).toHaveLength(1)
-    expect(signUp[0]?.getAttribute('href')).toBe('/sign-up')
+    // It carries the show back through auth: without redirect_url the new
+    // account lands on /events and the link they were sent is lost.
+    expect(signUp[0]?.getAttribute('href')).toBe(
+      '/sign-up?redirect_url=%2Fe%2F11111111-1111-4111-8111-111111111111',
+    )
     expect(screen.queryByRole('link', { name: /sign in/i })).toBeNull()
   })
 

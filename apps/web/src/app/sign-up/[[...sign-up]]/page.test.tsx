@@ -16,18 +16,39 @@ vi.mock('@clerk/nextjs', () => ({
   ),
 }))
 
+const renderPage = async (
+  searchParams: Record<string, string | string[] | undefined>,
+) => {
+  // Dynamic import so the vi.mock above is guaranteed to be in place
+  // before the page module resolves `@clerk/nextjs` — matches the
+  // convention used by other page-level tests in this repo
+  // (e.g. app/page.test.ts, admin/events/[id]/edit/page.test.tsx).
+  const { default: SignUpPage } = await import('./page')
+  render(await SignUpPage({ searchParams: Promise.resolve(searchParams) }))
+  return screen
+    .getByTestId('clerk-signup')
+    .getAttribute('data-force-redirect-url')
+}
+
 describe('SignUpPage (#1113)', () => {
   it('routes Clerk sign-up through /auth/complete so the invite cookie gets consumed', async () => {
-    // Dynamic import so the vi.mock above is guaranteed to be in place
-    // before the page module resolves `@clerk/nextjs` — matches the
-    // convention used by other page-level tests in this repo
-    // (e.g. app/page.test.ts, admin/events/[id]/edit/page.test.tsx).
-    const { default: SignUpPage } = await import('./page')
-    render(<SignUpPage />)
-    const clerk = screen.getByTestId('clerk-signup')
     // Without this prop, Clerk's default post-signup destination is `/`
     // and `/v1/auth/redeem-code` never runs — the invite row stays
     // unclaimed even for successful signups.
-    expect(clerk.getAttribute('data-force-redirect-url')).toBe('/auth/complete')
+    expect(await renderPage({})).toBe('/auth/complete')
+  })
+
+  it('forwards a safe redirect_url so the caller keeps its destination', async () => {
+    // forceRedirectUrl outranks Clerk's own redirect_url param, so a caller
+    // that appends one is dropped unless the page forwards it by hand.
+    expect(await renderPage({ redirect_url: '/e/abc' })).toBe(
+      '/auth/complete?return=%2Fe%2Fabc',
+    )
+  })
+
+  it('drops an off-origin redirect_url rather than forwarding it', async () => {
+    expect(await renderPage({ redirect_url: 'https://evil.test/x' })).toBe(
+      '/auth/complete',
+    )
   })
 })

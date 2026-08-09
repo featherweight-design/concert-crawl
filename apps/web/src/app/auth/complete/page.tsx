@@ -8,13 +8,19 @@ import {
 } from '@/lib/invite-cookie'
 import { DEFAULT_RETURN_PATH, sanitizeReturnPath } from '@/lib/auth/intent'
 
-export default async function AuthCompletePage() {
+interface AuthCompletePageProps {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}
+
+export default async function AuthCompletePage({
+  searchParams,
+}: AuthCompletePageProps) {
   const { userId, getToken } = await auth()
   if (!userId) redirect('/sign-in')
 
   const secret = process.env.INVITE_COOKIE_SECRET
   if (!secret) {
-    redirect('/events')
+    redirect(DEFAULT_RETURN_PATH)
   }
 
   const cookieStore = await cookies()
@@ -70,9 +76,15 @@ export default async function AuthCompletePage() {
     : null
   if (returnCookie) cookieStore.delete(RETURN_PATH_COOKIE_NAME)
 
+  // The launched funnel has no invite step, so nothing writes the cookie and
+  // the destination rides a query param forwarded by /sign-up instead. The
+  // cookie still wins where both exist: it is signed, and an invite link is a
+  // stronger claim on where someone was headed than a param anyone can append.
+  const rawReturn = (await searchParams)['return']
+
   redirect(
-    pendingReturn
-      ? sanitizeReturnPath(pendingReturn.code)
-      : DEFAULT_RETURN_PATH,
+    sanitizeReturnPath(
+      pendingReturn?.code ?? (typeof rawReturn === 'string' ? rawReturn : null),
+    ),
   )
 }

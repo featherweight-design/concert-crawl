@@ -61,6 +61,11 @@ const SECRET = 'test-secret-32-bytes-minimum-len'
 const CODE = 'BETA-AB12-CD34'
 const CREW_LINK = '/crew/join/abc123XYZ_-0'
 
+/** Next always supplies searchParams; most cases here have none to supply. */
+const completePage = (
+  searchParams: Record<string, string | string[] | undefined> = {},
+) => AuthCompletePage({ searchParams: Promise.resolve(searchParams) })
+
 /** Both entry points redirect, which throws. */
 const runToRedirect = async (work: () => Promise<unknown>): Promise<string> => {
   const before = redirectCalls.length
@@ -92,7 +97,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     // clear-and-editable sense the query param was.
     expect(cookieStore.get(RETURN_PATH_COOKIE_NAME)).not.toBe(CREW_LINK)
 
-    const landing = await runToRedirect(() => AuthCompletePage())
+    const landing = await runToRedirect(() => completePage())
     expect(landing).toBe(CREW_LINK)
     // A return path is spent once — a later visit must not replay it.
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
@@ -107,7 +112,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     await runToRedirect(() => validateAndSetInviteCode(CODE, withQuery))
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(true)
 
-    const landing = await runToRedirect(() => AuthCompletePage())
+    const landing = await runToRedirect(() => completePage())
     expect(landing).toBe(withQuery)
   })
 
@@ -146,7 +151,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     await runToRedirect(() => validateAndSetInviteCode(CODE))
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
 
-    const landing = await runToRedirect(() => AuthCompletePage())
+    const landing = await runToRedirect(() => completePage())
     expect(landing).toBe('/events')
   })
 
@@ -176,7 +181,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     await runToRedirect(() => validateAndSetInviteCode(CODE))
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
 
-    const landing = await runToRedirect(() => AuthCompletePage())
+    const landing = await runToRedirect(() => completePage())
     expect(landing).toBe('/events')
   })
 
@@ -191,7 +196,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
         signInviteCookie(hostile, SECRET),
       )
 
-      const landing = await runToRedirect(() => AuthCompletePage())
+      const landing = await runToRedirect(() => completePage())
       expect(landing).toBe('/events')
     },
   )
@@ -202,7 +207,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     // on every subsequent visit.
     cookieStore.set(RETURN_PATH_COOKIE_NAME, '')
 
-    const landing = await runToRedirect(() => AuthCompletePage())
+    const landing = await runToRedirect(() => completePage())
     expect(landing).toBe('/events')
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
   })
@@ -210,9 +215,42 @@ describe('the beta funnel carries a crew link across Clerk', () => {
   it('ignores a forged cookie and clears it', async () => {
     cookieStore.set(RETURN_PATH_COOKIE_NAME, 'forged.payload')
 
-    const landing = await runToRedirect(() => AuthCompletePage())
+    const landing = await runToRedirect(() => completePage())
     expect(landing).toBe('/events')
     expect(cookieStore.has(RETURN_PATH_COOKIE_NAME)).toBe(false)
+  })
+
+  it('lands a launched signup back on the shared show', async () => {
+    // No invite step once /sign-up is public, so nothing writes the cookie and
+    // the destination arrives as a param forwarded by the sign-up page.
+    const landing = await runToRedirect(() =>
+      completePage({ return: '/e/11111111-1111-4111-8111-111111111111' }),
+    )
+    expect(landing).toBe('/e/11111111-1111-4111-8111-111111111111')
+  })
+
+  it.each(['//evil.com', '/\\evil.com', 'https://evil.com', '/%0Aevil'])(
+    'sends a hostile return param %s to the fallback',
+    async (hostile) => {
+      const landing = await runToRedirect(() =>
+        completePage({ return: hostile }),
+      )
+      expect(landing).toBe('/events')
+    },
+  )
+
+  it('lets the signed cookie outrank the return param', async () => {
+    // An invite link is a stronger claim on where someone was headed than a
+    // param anyone can append to /sign-up.
+    cookieStore.set(
+      RETURN_PATH_COOKIE_NAME,
+      signInviteCookie(CREW_LINK, SECRET),
+    )
+
+    const landing = await runToRedirect(() =>
+      completePage({ return: '/e/abc' }),
+    )
+    expect(landing).toBe(CREW_LINK)
   })
 
   it('still redeems the beta code on the way through', async () => {
@@ -222,7 +260,7 @@ describe('the beta funnel carries a crew link across Clerk', () => {
       signInviteCookie(CREW_LINK, SECRET),
     )
 
-    const landing = await runToRedirect(() => AuthCompletePage())
+    const landing = await runToRedirect(() => completePage())
 
     expect(landing).toBe(CREW_LINK)
     expect(cookieStore.has(INVITE_COOKIE_NAME)).toBe(false)
