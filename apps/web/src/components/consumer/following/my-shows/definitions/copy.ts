@@ -1,7 +1,8 @@
 // Every customer-facing string on My shows ▸ Artists (native following PR 6).
 //
 // Sourced from design/design_handoff_native_following/nf-following.jsx and
-// nf-desktop.jsx, then given a copy pass. Placeholders until copy-review runs.
+// nf-desktop.jsx, then taken through a copy-review pass, which cut the empty
+// state's eyebrow and squared up the two group headings.
 //
 // The locked vocabulary applies: an artist is FOLLOWED, a show is WATCHED, and
 // the container is "My shows". Nothing here says "saved".

@@ -355,7 +355,7 @@ Upcoming Denver dates first (date in `--signal`, soonest first), then no dates (
 
 - [ ] **Step 3: The find-more row**
 
-A **labelled row**, not a button: "Find artists to follow" with a supporting line about searching by name or browsing who is playing Denver soon. Beside a column of Following buttons, a "+ Follow more" button reads like it might follow everything at once. Copy is placeholder; run `copy-review`.
+A **labelled row**, not a button: "Find artists to follow" with a supporting line about searching by name or browsing who is playing Denver soon. Beside a column of Following buttons, a "+ Follow more" button reads like it might follow everything at once. Copy went through `copy-review` before the PR opened, per Gate 7.
 
 - [ ] **Step 4: The alerts row**
 
@@ -418,7 +418,7 @@ Both new steps slot in **before `done`**, are skippable, and neither blocks sign
 
 Artists with an upcoming Denver date, filtered by the picked genres — so **every suggestion is followable by construction**.
 
-**This does not author a query.** PR 4 shipped `GET /v1/artists/suggestions` and left the extension point in a comment at `apps/api/src/routes/artists-public.ts:110`: add an optional `?genres=` array-overlap filter to *that* endpoint. The onboarding query is the shelf query plus a `WHERE`, and a second endpoint would be two things to keep in step.
+**This does not author a query.** PR 4 shipped `GET /v1/artists/suggestions` and left the extension point in a comment at `apps/api/src/routes/artists-public.ts:110`: add an optional `?genres=` array-overlap filter to _that_ endpoint. The onboarding query is the shelf query plus a `WHERE`, and a second endpoint would be two things to keep in step.
 
 **Not "ordered by follower count."** That clause named a column that does not exist and is not being added — artists are a projection off event billing strings, not an authored table with metrics (Gate 1 decision D3). The shipped ordering is upcoming Denver show count desc, soonest date asc, name asc, which is the better signal for a shelf recruiting follows for shows you can actually get to.
 

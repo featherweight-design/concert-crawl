@@ -37,7 +37,7 @@ export const RELEASES: Release[] = [
     items: [
       {
         kind: 'added',
-        text: 'An Artists tab under My shows. The ones with a Denver date come first, soonest first, and everyone else is right below in alphabetical order.',
+        text: 'An Artists tab under My shows, with the Denver dates at the top, soonest first, and everyone else alphabetically below.',
       },
       {
         kind: 'added',
