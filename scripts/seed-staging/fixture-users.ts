@@ -45,4 +45,20 @@ export const CROWD_USER_IDS: readonly string[] = Array.from(
   (_, idx) => `user_seedcrowd_${String(idx).padStart(4, '0')}`,
 )
 
+/**
+ * Fixed crew ids. Cleanup deletes exactly these, so a crew Hugh made by hand on
+ * staging is never swept — and because the match is on id rather than name, it
+ * still holds after the rename journey renames one. `5eeded00` is a valid hex
+ * prefix and reads as "seeded", which makes a stray row obvious in a psql dump.
+ */
+export const SEEDED_CREW_IDS = {
+  atCap: '5eeded00-0000-0000-0000-000000000001',
+  keeper: '5eeded00-0000-0000-0000-000000000002',
+  solo: '5eeded00-0000-0000-0000-000000000003',
+  muted: '5eeded00-0000-0000-0000-000000000004',
+} as const
+
+export const SEEDED_CREW_ID_LIST: readonly string[] =
+  Object.values(SEEDED_CREW_IDS)
+
 export const FIXTURE_SEED = 202607_12

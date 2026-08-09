@@ -9,6 +9,11 @@
  *   submissionConfirms → priceSubmissions → feedback → userEvents
  *     → notifications → userProfiles
  *
+ * Crews are the one exception to the user-scoped sweep: they are matched on
+ * fixed ids rather than on their keeper, because the keeper of a seeded crew is
+ * sometimes the owner account, whose hand-made rows must survive. See
+ * SEEDED_CREW_ID_LIST.
+ *
  * Notifications: the `userId` column is nullable to accommodate real
  * admin-broadcast rows (system-generated, no owner). This cleanup uses
  * `inArray(notifications.userId, fixtureUserIds)`, which is safe because SQL
@@ -25,6 +30,7 @@
 
 import { inArray, or } from 'drizzle-orm'
 import {
+  crews,
   feedback,
   notifications,
   priceSubmissions,
@@ -32,6 +38,7 @@ import {
   userEvents,
   userProfiles,
 } from '../../packages/db/src/schema/index.js'
+import { SEEDED_CREW_ID_LIST } from './fixture-users.js'
 import type { DrizzleWriteDb } from './sync-venues.js'
 
 export async function cleanupFixtures(deps: {
@@ -58,6 +65,16 @@ export async function cleanupFixtures(deps: {
           .returning({ id: userEvents.id })
       : []
 
+  // Seeded crews, matched on their fixed ids so a crew Hugh made by hand on
+  // staging is never swept. crew_members, crew_invites and crew_mutes all
+  // cascade from crews, so deleting the parent clears the vertical. Runs
+  // outside the fixture-set gate because the ids are constants, not derived
+  // from the user set.
+  const deletedCrews = await staging
+    .delete(crews)
+    .where(inArray(crews.id, [...SEEDED_CREW_ID_LIST]))
+    .returning({ id: crews.id })
+
   // Empty fixture set → nothing further to delete. Drizzle's inArray([]) emits
   // `IN ()`, which is invalid Postgres SQL (some drivers substitute
   // `IN (NULL)` or fail outright); returning up front avoids the
@@ -72,6 +89,7 @@ export async function cleanupFixtures(deps: {
         userEvents: deletedNarrowUserEvents.length,
         notifications: 0,
         userProfiles: 0,
+        crews: deletedCrews.length,
       },
     }
   }
@@ -148,6 +166,7 @@ export async function cleanupFixtures(deps: {
       userEvents: deletedUserEvents.length + deletedNarrowUserEvents.length,
       notifications: deletedNotifications.length,
       userProfiles: deletedUserProfiles.length,
+      crews: deletedCrews.length,
     },
   }
 }

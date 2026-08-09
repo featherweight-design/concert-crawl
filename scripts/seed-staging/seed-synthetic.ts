@@ -11,6 +11,7 @@
  *   7. generateNotifications
  *   8. generateWatcherCrowd      (skipped if eventIds is empty)
  *   9. generateOwnerHistory       (skipped if pastEventIds is empty)
+ *  10. generateCrews             (skipped if eventIds is empty)
  *
  * Usage:
  *   NEON_PROD_DIRECT=... NEON_STAGING_DIRECT=... pnpm db:seed:staging:synthetic
@@ -50,6 +51,7 @@ import { generatePriceSubmissions } from './generators/price-submissions.js'
 import { generateNotifications } from './generators/notifications.js'
 import { generateWatcherCrowd } from './generators/watcher-crowd.js'
 import { generateOwnerHistory } from './generators/owner-history.js'
+import { generateCrews } from './generators/crews.js'
 import type { DrizzleWriteDb } from './sync-venues.js'
 
 // ---------------------------------------------------------------------------
@@ -184,6 +186,29 @@ export async function runSynthetic(deps: {
     ownerHistoryInserted = ownerHistoryResult.inserted
   }
 
+  // Crews run after owner history for the same reason: appending here leaves
+  // every previously-seeded row byte-identical for a given seed.
+  let crewsResult = {
+    insertedCrews: 0,
+    insertedMembers: 0,
+    insertedInvites: 0,
+    insertedMutes: 0,
+    insertedUserEvents: 0,
+  }
+  if (eventIds.length > 0) {
+    crewsResult = await generateCrews({
+      staging,
+      crowdUserIds,
+      ownerUserId,
+      eventIds,
+      pastEventIds,
+      // The crowd already has user_events on the showcase events; reusing one
+      // would collide on the (user_id, event_id) unique index and abort the run.
+      excludeEventIds: showcaseEventIds,
+      rng,
+    })
+  }
+
   if (showcaseEventIds.length > 0) {
     console.log(
       '[synthetic] Watcher-roster showcase events (deep / mixed / single): ' +
@@ -196,11 +221,18 @@ export async function runSynthetic(deps: {
     inserted: {
       userProfiles: profilesResult.inserted + crowdProfilesInserted,
       userEvents:
-        userEventsInserted + crowdUserEventsInserted + ownerHistoryInserted,
+        userEventsInserted +
+        crowdUserEventsInserted +
+        ownerHistoryInserted +
+        crewsResult.insertedUserEvents,
       feedback: feedbackResult.inserted,
       priceSubmissions: priceSubmissionsInserted,
       submissionConfirms: submissionConfirmsInserted,
       notifications: notificationsResult.inserted,
+      crews: crewsResult.insertedCrews,
+      crewMembers: crewsResult.insertedMembers,
+      crewInvites: crewsResult.insertedInvites,
+      crewMutes: crewsResult.insertedMutes,
     },
   }
 }

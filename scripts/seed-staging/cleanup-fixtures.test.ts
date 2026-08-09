@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
+  crews,
   submissionConfirms,
   priceSubmissions,
   feedback,
@@ -48,10 +49,10 @@ describe('cleanupFixtures', () => {
     return { staging, returningSpies }
   }
 
-  it('issues one delete per table (6 total)', async () => {
+  it('issues one delete per table (7 total)', async () => {
     const { staging, returningSpies } = makeStaging(2)
     await cleanupFixtures({ staging: staging as any, fixtureUserIds })
-    expect(returningSpies).toHaveLength(6)
+    expect(returningSpies).toHaveLength(7)
     for (const spy of returningSpies) {
       expect(spy).toHaveBeenCalledOnce()
     }
@@ -63,13 +64,13 @@ describe('cleanupFixtures', () => {
       staging: staging as any,
       fixtureUserIds,
     })
-    expect(Object.keys(result.deleted)).toHaveLength(6)
+    expect(Object.keys(result.deleted)).toHaveLength(7)
     for (const count of Object.values(result.deleted)) {
       expect(count).toBe(3)
     }
   })
 
-  it('result includes all six expected table keys', async () => {
+  it('result includes all seven expected table keys', async () => {
     const { staging } = makeStaging(0)
     const result = await cleanupFixtures({
       staging: staging as any,
@@ -81,6 +82,7 @@ describe('cleanupFixtures', () => {
     expect(result.deleted).toHaveProperty('userEvents')
     expect(result.deleted).toHaveProperty('notifications')
     expect(result.deleted).toHaveProperty('userProfiles')
+    expect(result.deleted).toHaveProperty('crews')
   })
 
   it('deletes in child-before-parent order', async () => {
@@ -99,6 +101,7 @@ describe('cleanupFixtures', () => {
       [userEvents, 'userEvents'],
       [notifications, 'notifications'],
       [userProfiles, 'userProfiles'],
+      [crews, 'crews'],
     ])
 
     const staging = {
@@ -122,6 +125,7 @@ describe('cleanupFixtures', () => {
     await cleanupFixtures({ staging: staging as any, fixtureUserIds })
 
     expect(callOrder).toEqual([
+      'crews',
       'submissionConfirms',
       'priceSubmissions',
       'feedback',
@@ -129,6 +133,34 @@ describe('cleanupFixtures', () => {
       'notifications',
       'userProfiles',
     ])
+  })
+
+  // Crew ids are constants, not derived from the user set, so the crew sweep
+  // must not sit behind the empty-fixture-set early return.
+  it('still sweeps seeded crews when the fixture set is empty', async () => {
+    const deletedTables: unknown[] = []
+    const staging = {
+      select: (_cols: unknown) => ({
+        from: (_table: unknown) => ({
+          where: (_cond: unknown) => Promise.resolve([]),
+        }),
+      }),
+      delete: (table: unknown) => {
+        deletedTables.push(table)
+        return {
+          where: (_cond: unknown) => ({
+            returning: vi.fn().mockResolvedValue([{ id: 'crew-1' }]),
+          }),
+        }
+      },
+    }
+
+    const result = await cleanupFixtures({
+      staging: staging as any,
+      fixtureUserIds: [],
+    })
+    expect(deletedTables).toContain(crews)
+    expect(result.deleted['crews']).toBe(1)
   })
 
   it('returns zero counts when no rows are deleted', async () => {

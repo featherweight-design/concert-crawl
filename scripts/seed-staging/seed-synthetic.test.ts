@@ -73,6 +73,16 @@ vi.mock('./generators/owner-history.js', () => ({
   generateOwnerHistory: vi.fn().mockResolvedValue({ inserted: 18 }),
 }))
 
+vi.mock('./generators/crews.js', () => ({
+  generateCrews: vi.fn().mockResolvedValue({
+    insertedCrews: 4,
+    insertedMembers: 20,
+    insertedInvites: 3,
+    insertedMutes: 1,
+    insertedUserEvents: 4,
+  }),
+}))
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -309,6 +319,32 @@ describe('runSynthetic — determinism and idempotency', () => {
 
     expect(generateWatcherCrowd).toHaveBeenCalledTimes(1)
     expect(generateOwnerHistory).toHaveBeenCalledTimes(1)
+  })
+
+  // Crew attendance on an event the crowd already watched would collide on the
+  // (user_id, event_id) unique index and abort the entire run.
+  it('hands the crews generator the watcher-crowd showcase events to avoid', async () => {
+    const { generateCrews } = await import('./generators/crews.js')
+
+    const stagingMock = buildStagingMock(
+      eventIds.map((id, idx) => ({
+        id,
+        date: idx < 5 ? '2020-01-01' : '2099-01-01',
+      })),
+    )
+    const result = await runSynthetic({
+      staging: stagingMock as any,
+      fixtureUserIds: FIXTURE_USER_IDS,
+      crowdUserIds: CROWD_USER_IDS,
+      ownerUserId: OWNER_USER_ID,
+      seed: FIXTURE_SEED,
+    })
+
+    expect(generateCrews).toHaveBeenCalledTimes(1)
+    const args = vi.mocked(generateCrews).mock.calls[0]?.[0]
+    expect(args?.excludeEventIds).toEqual(['evt-showcase-1'])
+    expect(result.inserted['crews']).toBe(4)
+    expect(result.inserted['crewMembers']).toBe(20)
   })
 
   it('passes the same rng instance to every generator (same object reference)', async () => {
