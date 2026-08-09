@@ -51,7 +51,9 @@ function ArtistRowSkeleton({ delay }: { delay: number }) {
       <div
         style={{
           width: 92,
-          height: 36,
+          // NF_FOLLOW_SIZES.md — the height the real row's follow control
+          // resolves to, so the skeleton swap costs no layout shift.
+          height: 44,
           borderRadius: 10,
           background: 'var(--surface-2)',
           flexShrink: 0,

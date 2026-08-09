@@ -136,6 +136,14 @@ const manifest: AuditManifest = validateManifest([
     auth: 'user',
   },
   {
+    // Shows the empty state until the audit user follows an artist. That is
+    // the state a new user meets first, so it is worth sweeping either way.
+    id: 'my-shows-artists',
+    path: '/following',
+    tags: ['consumer'],
+    auth: 'user',
+  },
+  {
     id: 'changelog',
     path: '/changelog',
     tags: ['consumer'],

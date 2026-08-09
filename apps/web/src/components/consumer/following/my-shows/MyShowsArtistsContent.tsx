@@ -122,6 +122,30 @@ export const MyShowsArtistsContent = ({
   const datedHeading = COPY.groups.dated(groups.dated.length)
   const undatedHeading = COPY.groups.undated(groups.undated.length)
 
+  // Desktop promotes these into whichever group heading renders first. They
+  // used to live only in the dated row, which stranded them for anyone whose
+  // follows all lack a date — the one state where "find artists" matters most.
+  const desktopActions = (
+    <div className="flex gap-[9px]">
+      <Link
+        href={ALERTS_HREF}
+        className="inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        style={denseGhost}
+      >
+        <GlyphBell size={13} />
+        {COPY.alerts.short}
+      </Link>
+      <Link
+        href={FIND_ARTISTS_HREF}
+        className="inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+        style={densePrimary}
+      >
+        <GlyphSearch size={13} />
+        {COPY.find.title}
+      </Link>
+    </div>
+  )
+
   const spotifyNote = spotifyCount > 0 && (
     <div
       style={{
@@ -222,24 +246,7 @@ export const MyShowsArtistsContent = ({
               <Mono as="h2" size={10}>
                 {datedHeading}
               </Mono>
-              <div className="flex gap-[9px]">
-                <Link
-                  href={ALERTS_HREF}
-                  className="inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-                  style={denseGhost}
-                >
-                  <GlyphBell size={13} />
-                  {COPY.alerts.short}
-                </Link>
-                <Link
-                  href={FIND_ARTISTS_HREF}
-                  className="inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-                  style={densePrimary}
-                >
-                  <GlyphSearch size={13} />
-                  {COPY.find.title}
-                </Link>
-              </div>
+              {desktopActions}
             </div>
             <div className="grid grid-cols-3 gap-3">
               {groups.dated.map((artist) => (
@@ -256,10 +263,14 @@ export const MyShowsArtistsContent = ({
 
         {groups.undated.length > 0 && (
           <>
-            <div style={{ margin: '26px 0 12px' }}>
+            <div
+              className="flex items-center justify-between gap-3"
+              style={{ margin: '26px 0 12px' }}
+            >
               <Mono as="h2" size={10}>
                 {undatedHeading}
               </Mono>
+              {groups.dated.length === 0 && desktopActions}
             </div>
             <div className="grid grid-cols-3 gap-3">
               {groups.undated.map((artist) => (
