@@ -1,3 +1,10 @@
+# [1.240.0](https://github.com/HartiganHM/concert-crawl/compare/v1.239.0...v1.240.0) (2026-08-09)
+
+
+### Features
+
+* **alerts:** batch fan-out pushes and generalize the weekly digest ([f0c19fb](https://github.com/HartiganHM/concert-crawl/commit/f0c19fbf38ab232ff77d62be3e10c449c47c8a03)), closes [#649](https://github.com/HartiganHM/concert-crawl/issues/649) [#1515](https://github.com/HartiganHM/concert-crawl/issues/1515)
+
 # [1.239.0](https://github.com/HartiganHM/concert-crawl/compare/v1.238.0...v1.239.0) (2026-08-09)
 
 
