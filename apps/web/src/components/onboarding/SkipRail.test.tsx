@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 
 vi.mock('next/link', () => ({
   default: ({
@@ -19,9 +19,18 @@ vi.mock('next/link', () => ({
   ),
 }))
 
+import {
+  ARTIST_PICKS_KEY,
+  GENRE_PICKS_KEY,
+  writePicks,
+  readPicks,
+} from '@/components/consumer/artist-picker'
 import { SkipRail } from './SkipRail'
 
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  window.sessionStorage.clear()
+})
 
 describe('SkipRail — three weights, one position (#794)', () => {
   it('renders a quiet mono link by default', () => {
@@ -71,5 +80,29 @@ describe('SkipRail — three weights, one position (#794)', () => {
   it('shows no pending strip by default either', () => {
     render(<SkipRail mode={{ kind: 'default', href: '/events' }} />)
     expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  // The mirrors survive the upgrade round-trip on purpose. Leaving on purpose
+  // is the opposite of that, and a stale genre mirror would silently pre-filter
+  // the next visit against buckets the lede promised we never saved.
+  describe('leaving on purpose drops both pick mirrors', () => {
+    it.each([
+      ['default', { kind: 'default', href: '/events' }, /^skip$/i],
+      ['menu', { kind: 'menu' }, /^close$/i],
+      [
+        'mid-intent',
+        { kind: 'mid-intent', destinationLabel: 'Geese', href: '/events/e1' },
+        /geese/i,
+      ],
+    ] as const)('on the %s exit', (_label, mode, name) => {
+      writePicks(GENRE_PICKS_KEY, ['punk'])
+      writePicks(ARTIST_PICKS_KEY, ['aa'])
+
+      render(<SkipRail mode={mode} />)
+      fireEvent.click(screen.getByRole('link', { name }))
+
+      expect(readPicks(GENRE_PICKS_KEY)).toEqual([])
+      expect(readPicks(ARTIST_PICKS_KEY)).toEqual([])
+    })
   })
 })

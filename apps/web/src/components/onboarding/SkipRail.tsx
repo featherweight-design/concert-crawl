@@ -1,8 +1,26 @@
+'use client'
+
 import Link from 'next/link'
 import { ONBOARDING_COPY } from './definitions/copy'
 import { DEFAULT_RETURN_PATH } from '@/lib/auth/intent'
+import {
+  ARTIST_PICKS_KEY,
+  GENRE_PICKS_KEY,
+  clearPicks,
+} from '@/components/consumer/artist-picker'
 
 const copy = ONBOARDING_COPY.nav.skip
+
+/**
+ * The mirrors exist for exactly one round-trip: the upgrade that leaves the
+ * page and comes back. Leaving on purpose is the opposite of that, so both die
+ * here. The rail owns this rather than taking a callback, because a third
+ * render site that forgets to pass one would silently reintroduce the leak.
+ */
+const dropPickMirrors = () => {
+  clearPicks(GENRE_PICKS_KEY)
+  clearPicks(ARTIST_PICKS_KEY)
+}
 
 export type SkipMode =
   /**
@@ -63,7 +81,7 @@ export const SkipRail = ({ mode }: { mode: SkipMode }) => {
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <Link href={mode.href} style={LOUD_LINK}>
+          <Link href={mode.href} style={LOUD_LINK} onClick={dropPickMirrors}>
             {copy.midIntent(mode.destinationLabel)}
           </Link>
         </div>
@@ -90,6 +108,7 @@ export const SkipRail = ({ mode }: { mode: SkipMode }) => {
     <Link
       href={mode.kind === 'menu' ? DEFAULT_RETURN_PATH : mode.href}
       style={QUIET_LINK}
+      onClick={dropPickMirrors}
     >
       {mode.kind === 'menu' ? copy.menu : copy.default}
     </Link>
