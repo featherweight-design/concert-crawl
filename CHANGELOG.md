@@ -1,3 +1,10 @@
+# [1.233.0](https://github.com/HartiganHM/concert-crawl/compare/v1.232.0...v1.233.0) (2026-08-09)
+
+
+### Features
+
+* **artists:** cache Spotify candidates so the picker opens for free ([#1531](https://github.com/HartiganHM/concert-crawl/issues/1531)) ([fa4cb76](https://github.com/HartiganHM/concert-crawl/commit/fa4cb76d448e9354d1136ae2ff9c419dac26255f))
+
 # [1.232.0](https://github.com/HartiganHM/concert-crawl/compare/v1.231.0...v1.232.0) (2026-08-09)
 
 
