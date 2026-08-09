@@ -1,3 +1,10 @@
+# [1.232.0](https://github.com/HartiganHM/concert-crawl/compare/v1.231.0...v1.232.0) (2026-08-09)
+
+
+### Features
+
+* **web:** carry a chosen tier through sign-up ([#1284](https://github.com/HartiganHM/concert-crawl/issues/1284)) ([#1535](https://github.com/HartiganHM/concert-crawl/issues/1535)) ([45cf019](https://github.com/HartiganHM/concert-crawl/commit/45cf01968bc1a9fec6f90f5d05742abf2c4ba982)), closes [#1533](https://github.com/HartiganHM/concert-crawl/issues/1533)
+
 # [1.231.0](https://github.com/HartiganHM/concert-crawl/compare/v1.230.0...v1.231.0) (2026-08-09)
 
 
