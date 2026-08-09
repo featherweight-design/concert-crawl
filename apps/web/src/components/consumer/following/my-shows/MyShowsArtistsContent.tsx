@@ -150,9 +150,12 @@ export const MyShowsArtistsContent = ({
   )
 
   return (
-    <>
+    // One landmark, two densities. The responsive wrappers are plain divs
+    // because a page gets a single <main>, and landmark navigation still walks
+    // a CSS-hidden one.
+    <main className="flex w-full flex-1 flex-col">
       {/* Mobile: full-bleed list. */}
-      <main className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:hidden">
+      <div className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:hidden">
         <MyShowsTabs active="artists" artistCount={follows.length} />
         <div className="-mx-4">
           {groups.dated.length > 0 && (
@@ -196,10 +199,10 @@ export const MyShowsArtistsContent = ({
           {spotifyNote}
         </div>
         {picker}
-      </main>
+      </div>
 
       {/* Desktop: 940px column, three-up cards, actions in the heading row. */}
-      <main className="mx-auto hidden w-full max-w-[940px] flex-1 px-[30px] pb-10 pt-7 sm:block">
+      <div className="mx-auto hidden w-full max-w-[940px] flex-1 px-[30px] pb-10 pt-7 sm:block">
         <h1
           style={{
             margin: '0 0 18px',
@@ -272,8 +275,8 @@ export const MyShowsArtistsContent = ({
         )}
 
         {spotifyNote}
-      </main>
-    </>
+      </div>
+    </main>
   )
 }
 
