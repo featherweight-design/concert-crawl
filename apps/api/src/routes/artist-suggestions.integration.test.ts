@@ -281,6 +281,91 @@ describe('GET /v1/artists/suggestions — integration', () => {
     expect((await getSuggestions('?limit=0')).status).toBe(400)
   })
 
+  // PR 8 (onboarding): the genre step filters this same endpoint rather than
+  // authoring a second query. Genre lives on the EVENT (artists carry none of
+  // their own), so the filter is an array overlap against the billed events.
+  describe('?genres= filter', () => {
+    const seedGenreFixture = async (): Promise<void> => {
+      const venue = await seedVenue({ slug: 'globe-hall' })
+      await seedArtist({ name: 'Punk Act', canonicalName: 'punk act' })
+      await seedEvent(venue.id, {
+        artist: 'Punk Act',
+        canonicalArtist: 'punk act',
+        date: '2099-01-01',
+        genre: ['emo', 'pop punk'],
+      })
+
+      await seedArtist({ name: 'Jazz Act', canonicalName: 'jazz act' })
+      await seedEvent(venue.id, {
+        artist: 'Jazz Act',
+        canonicalArtist: 'jazz act',
+        date: '2099-01-02',
+        genre: ['blues'],
+      })
+
+      await seedArtist({ name: 'Blank Act', canonicalName: 'blank act' })
+      await seedEvent(venue.id, {
+        artist: 'Blank Act',
+        canonicalArtist: 'blank act',
+        date: '2099-01-03',
+        genre: [],
+      })
+    }
+
+    it('keeps only artists whose upcoming events overlap the chosen buckets', async () => {
+      await seedGenreFixture()
+
+      // 'punk' is a bucket label, not a raw genre — it must expand to its
+      // sub-genres (emo, pop punk, ...) or this artist is invisible.
+      expect(await readNames(await getSuggestions('?genres=punk'))).toEqual([
+        'Punk Act',
+      ])
+      expect(await readNames(await getSuggestions('?genres=jazz'))).toEqual([
+        'Jazz Act',
+      ])
+    })
+
+    it('unions multiple buckets rather than intersecting them', async () => {
+      await seedGenreFixture()
+
+      const names = await readNames(await getSuggestions('?genres=punk,jazz'))
+      expect(names).toEqual(['Punk Act', 'Jazz Act'])
+    })
+
+    it('accepts a raw sub-genre verbatim, matching the browse filter', async () => {
+      await seedGenreFixture()
+
+      expect(await readNames(await getSuggestions('?genres=emo'))).toEqual([
+        'Punk Act',
+      ])
+    })
+
+    it('returns every artist when the param is absent', async () => {
+      await seedGenreFixture()
+
+      expect(await readNames(await getSuggestions())).toEqual([
+        'Punk Act',
+        'Jazz Act',
+        'Blank Act',
+      ])
+    })
+
+    it('returns an empty list for a bucket nothing is playing', async () => {
+      await seedGenreFixture()
+
+      expect(await readNames(await getSuggestions('?genres=reggae'))).toEqual(
+        [],
+      )
+    })
+
+    it('rejects an empty or over-long genre list', async () => {
+      expect((await getSuggestions('?genres=')).status).toBe(400)
+      expect((await getSuggestions('?genres=,,')).status).toBe(400)
+      const tooMany = Array.from({ length: 40 }, (_, i) => `g${i}`).join(',')
+      expect((await getSuggestions(`?genres=${tooMany}`)).status).toBe(400)
+    })
+  })
+
   it('is not shadowed by GET /:slug', async () => {
     // `suggestions` satisfies the slug param schema, so a route-order
     // regression would answer 404 here rather than an empty list.

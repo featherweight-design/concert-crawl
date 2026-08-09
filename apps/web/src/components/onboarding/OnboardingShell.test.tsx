@@ -2,7 +2,14 @@
 
 import React from 'react'
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { render, screen, cleanup, act } from '@testing-library/react'
+import {
+  render,
+  screen,
+  cleanup,
+  act,
+  waitFor,
+  fireEvent,
+} from '@testing-library/react'
 
 const push = vi.fn()
 
@@ -25,6 +32,52 @@ vi.mock('next/link', () => ({
   ),
 }))
 
+// The tour now reaches two steps that talk to the network and to Clerk. None of
+// that is what these tests are about, so the boundaries are stubbed and the
+// picker steps get their own suites.
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({
+    getToken: async () => 'test-token',
+    isSignedIn: false,
+    userId: null,
+  }),
+}))
+
+vi.mock('@/lib/following', () => ({
+  fetchArtistSuggestions: async () => [
+    {
+      slug: 'geese',
+      name: 'Geese',
+      photoUrl: null,
+      nextShow: {
+        eventId: 'ev1',
+        iso: '2026-09-12',
+        venue: 'Hi-Dive',
+        venueSlug: 'hi-dive',
+      },
+      following: false,
+    },
+    {
+      slug: 'ekko',
+      name: 'Ekko Astral',
+      photoUrl: null,
+      nextShow: {
+        eventId: 'ev2',
+        iso: '2026-09-20',
+        venue: 'Larimer Lounge',
+        venueSlug: 'larimer-lounge',
+      },
+      following: false,
+    },
+  ],
+  followArtistsBulk: async () => undefined,
+}))
+
+vi.mock('@/components/consumer/tier-picker/lazy', () => ({
+  TierPickerSheet: () => null,
+}))
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { OnboardingShell, type OnboardingShellProps } from './OnboardingShell'
 import { ONBOARDING_COPY } from './definitions/copy'
 import { ThemeProvider } from '@/theme/ThemeProvider'
@@ -48,6 +101,7 @@ beforeEach(() => {
   push.mockClear()
   // jsdom implements no scrolling; the shell resets scroll on every step change.
   Element.prototype.scrollTo = vi.fn()
+  window.sessionStorage.clear()
 })
 
 afterEach(cleanup)
@@ -55,24 +109,35 @@ afterEach(cleanup)
 // The theme step reads the theme context.
 const renderShell = (props: OnboardingShellProps = {}) =>
   render(
-    <ThemeProvider>
-      <OnboardingShell {...props} />
-    </ThemeProvider>,
+    <QueryClientProvider
+      client={
+        new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      }
+    >
+      <ThemeProvider>
+        <OnboardingShell {...props} />
+      </ThemeProvider>
+    </QueryClientProvider>,
   )
 
 // Both layouts render at once; the desktop half is display:none, so anything
 // that should exist in both is queried with `hidden: true`.
 const primaryCtas = () =>
   screen.getAllByRole('button', {
-    name: /next|back to|start browsing/i,
+    name: /next|back to|start browsing|continue without following|^follow /i,
     hidden: true,
   })
 
 const next = () => act(() => primaryCtas()[0]!.click())
 
-/** 6 steps → 5 presses. The two layouts share one index, so one click moves both. */
+/**
+ * FLOW.length - 1 presses. Derived, not typed: the whole point of the counter
+ * reading FLOW.length is that adding a step is a one-line change.
+ */
+const STEP_COUNT = Object.keys(nav.stepLabels).length
+
 const advanceToEnd = () => {
-  for (let i = 0; i < 5; i += 1) next()
+  for (let i = 0; i < STEP_COUNT - 1; i += 1) next()
 }
 
 describe('OnboardingShell — post-auth tour (#794)', () => {
@@ -80,13 +145,13 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     renderShell()
     const labels = Object.values(nav.stepLabels)
     const seen: string[] = []
-    for (let i = 0; i < 6; i += 1) {
+    for (let i = 0; i < STEP_COUNT; i += 1) {
       seen.push(
         screen.getAllByText((text) => labels.includes(text), {
           ignore: false,
         })[0]!.textContent!,
       )
-      if (i < 5) next()
+      if (i < STEP_COUNT - 1) next()
     }
     expect(seen).toEqual([
       nav.stepLabels.welcome,
@@ -94,6 +159,8 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
       nav.stepLabels.today,
       nav.stepLabels.theme,
       nav.stepLabels.notyet,
+      nav.stepLabels.genres,
+      nav.stepLabels.artists,
       nav.stepLabels.done,
     ])
   })
@@ -108,11 +175,11 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
 
   it('offers a skip on every step, in both layouts', () => {
     renderShell()
-    for (let i = 0; i < 6; i += 1) {
+    for (let i = 0; i < STEP_COUNT; i += 1) {
       expect(
         screen.getAllByRole('link', { name: /^skip$/i, hidden: true }),
       ).toHaveLength(2)
-      if (i < 5) next()
+      if (i < STEP_COUNT - 1) next()
     }
   })
 
@@ -209,5 +276,68 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     ).toHaveLength(2)
     advanceToEnd()
     expect(primaryCtas()[0]!.textContent).toBe(nav.finishButton(null))
+  })
+})
+
+const pickCopy = ONBOARDING_COPY.pickArtists
+const ARTISTS_STEP_INDEX = Object.keys(nav.stepLabels).indexOf('artists')
+
+/** Walk to the artists step and wait for its suggestions to land. */
+const goToArtists = async () => {
+  for (let i = 0; i < ARTISTS_STEP_INDEX; i += 1) next()
+  await waitFor(() =>
+    expect(
+      screen.getAllByRole('checkbox', { name: /geese/i, hidden: true }).length,
+    ).toBeGreaterThan(0),
+  )
+}
+
+const tile = (name: RegExp) =>
+  screen.getAllByRole('checkbox', { name, hidden: true })[0]!
+
+describe('OnboardingShell — genres then artists', () => {
+  it('offers the two picker steps before the send-off, both skippable', async () => {
+    renderShell()
+    await goToArtists()
+    // Nothing picked is a legitimate way through: the CTA is a skip, not a wall.
+    expect(primaryCtas()[0]!.textContent).toBe(pickCopy.skip)
+    next()
+    expect(
+      screen.getAllByText(nav.stepLabels.done, { ignore: false }).length,
+    ).toBeGreaterThan(0)
+  })
+
+  it('counts the picks in the CTA, pluralised for real', async () => {
+    renderShell()
+    await goToArtists()
+
+    act(() => fireEvent.click(tile(/geese/i)))
+    expect(primaryCtas()[0]!.textContent).toMatch(/\b1 artist\b/)
+
+    act(() => fireEvent.click(tile(/ekko/i)))
+    expect(primaryCtas()[0]!.textContent).toMatch(/\b2 artists\b/)
+  })
+
+  it('mirrors the selection so an upgrade can come back to it', async () => {
+    renderShell()
+    await goToArtists()
+    act(() => fireEvent.click(tile(/geese/i)))
+
+    // The picker unmounts this tree on some platforms; sessionStorage is what
+    // survives it (PK-18, OB-06).
+    expect(
+      JSON.parse(
+        window.sessionStorage.getItem('cc.onboarding.artistPicks') ?? '[]',
+      ),
+    ).toEqual(['geese'])
+  })
+
+  it('never locks the tiles themselves — only the commit is paywalled', async () => {
+    renderShell()
+    await goToArtists()
+    for (const box of screen.getAllByRole('checkbox', { hidden: true })) {
+      expect(box.hasAttribute('disabled')).toBe(false)
+      expect(box.getAttribute('aria-disabled')).toBeNull()
+    }
   })
 })

@@ -117,6 +117,46 @@ export const ONBOARDING_COPY = {
       "Most shows don't have a price yet. If you see one (at the box office, on a listing, on your receipt), drop it in. Every price you add makes the calendar more useful for the next person.",
   },
 
+  // Step 6. The genres are a FILTER for the next screen and nothing else: we
+  // store no preference, so the lede has to say so plainly rather than let a
+  // visitor assume they have just configured something permanent.
+  pickGenres: {
+    eyebrow: 'Your lanes',
+    heading: 'What do you actually listen to?',
+    lede: "Pick a few and we'll suggest artists playing Denver soon. This only shapes the next screen; we don't save it.",
+    // Names the chip group for screen readers, which otherwise meet a run of
+    // unexplained checkboxes.
+    groupLabel: 'Genres',
+    // Nothing came back from the listings. Rare, and survivable: the step is
+    // skippable and the next one falls back to every suggestion.
+    empty:
+      "We couldn't load genres. The next screen will suggest a bit of everything.",
+  },
+
+  // Step 7. Following is the only thing in the tour that writes anything, so
+  // the copy carries the whole bargain: what it costs, that a pick is not a
+  // commitment, and that leaving empty-handed is a real option.
+  pickArtists: {
+    eyebrow: 'Follow',
+    heading: 'Follow a few of these.',
+    // Says what a follow DOES. Careful: following surfaces dates, it never
+    // moves shows into your Watching.
+    lede: "They all have a Denver date coming up. Follow one and we'll tell you the day they book the next.",
+    // Real pluralisation, never a literal "(s)".
+    commitLocked: (count: number) =>
+      `Follow ${count} ${count === 1 ? 'artist' : 'artists'} with Premium`,
+    commit: (count: number) =>
+      `Follow ${count} ${count === 1 ? 'artist' : 'artists'} →`,
+    // Zero selected. The step is skippable, so the button says what it does
+    // rather than pretending a follow is on its way.
+    skip: 'Continue without following →',
+    // Under the button. The locked line answers the fear the locked button
+    // just created; the unlocked ones answer "what am I signing up for".
+    subLocked: 'Your picks are held while you upgrade. Nothing gets lost.',
+    subSelected: 'Unfollow any of them any time.',
+    subNone: 'You can follow anyone from search later.',
+  },
+
   nav: {
     // Replaces the beta-era 'Code accepted · Welcome'. The tour is now a
     // post-auth welcome on a permanent route, not the end of an invite funnel.
@@ -146,6 +186,8 @@ export const ONBOARDING_COPY = {
       today: 'TODAY',
       notyet: 'NOT YET',
       theme: 'MAKE IT YOURS',
+      genres: 'YOUR LANES',
+      artists: 'FOLLOW',
       done: "THAT'S THE TOUR",
     },
   },

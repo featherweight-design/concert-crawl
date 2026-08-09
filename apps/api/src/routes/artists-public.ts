@@ -34,6 +34,7 @@ import type {
   ArtistSuggestion,
 } from '@concert-crawl/types'
 import { loadNextShowByCanonical } from '../lib/artist-follows.js'
+import { expandBucket } from '../lib/genre-buckets.js'
 import { todayInTimezone } from '../lib/time.js'
 
 export const artistsPublicRouter = new Hono()
@@ -83,6 +84,11 @@ const parsePrice = (raw: string | null): number | null => {
 // Cancelled and postponed rows stay, matching every other list surface.
 const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const
 
+// There are 16 buckets (lib/genre-buckets.ts) and the onboarding step can only
+// send bucket labels, so anything past that is not a real selection — the cap
+// exists so a hand-rolled query string can't expand into an unbounded ARRAY[].
+const MAX_GENRE_FILTERS = 24
+
 const suggestionsQuerySchema = z.object({
   limit: z.coerce
     .number()
@@ -91,6 +97,27 @@ const suggestionsQuerySchema = z.object({
     .max(ARTIST_SUGGESTIONS_MAX_LIMIT)
     .optional()
     .default(ARTIST_SUGGESTIONS_DEFAULT_LIMIT),
+  // Comma-separated bucket labels from the onboarding genre step. Parsed here
+  // rather than repeated per-callsite so an all-empty list (`?genres=,,`) is a
+  // 400 instead of silently behaving like "no filter" — a caller that asked
+  // for a filter and got everything would look like the filter was ignored.
+  genres: z
+    .string()
+    .optional()
+    .transform((raw) =>
+      raw === undefined
+        ? undefined
+        : raw
+            .split(',')
+            .map((value) => value.trim())
+            .filter((value) => value.length > 0),
+    )
+    .refine(
+      (values) =>
+        values === undefined ||
+        (values.length > 0 && values.length <= MAX_GENRE_FILTERS),
+      { message: 'Invalid genres' },
+    ),
 })
 
 // GET /v1/artists/suggestions — followable artists with an upcoming Denver date
@@ -107,19 +134,41 @@ const suggestionsQuerySchema = z.object({
 // anyway: this shelf recruits follows for shows you can actually go to, not
 // for global fame.
 //
-// EXTENSION POINT (PR 8, onboarding): add an optional `?genres=` array-overlap
-// filter to THIS endpoint rather than authoring a second one. That query is
-// this query plus a WHERE.
+// `?genres=` (PR 8, onboarding) is that WHERE. It filters on the EVENT's genre
+// array, never the artist's: artists carry no genre of their own and are not
+// getting a table for one (Gate 1, decision D3). Overlapping the billed events
+// is also what makes every onboarding suggestion followable by construction —
+// a row only appears because it has an upcoming Denver date in that bucket.
 artistsPublicRouter.get(
   '/suggestions',
   zValidator('query', suggestionsQuerySchema, (result, ctx) => {
     if (!result.success) {
-      return ctx.json({ success: false, error: 'Invalid limit' }, 400)
+      return ctx.json({ success: false, error: 'Invalid query' }, 400)
     }
   }),
   async (ctx) => {
-    const { limit } = ctx.req.valid('query')
+    const { limit, genres } = ctx.req.valid('query')
     const today = todayInTimezone(MT_TIME_ZONE)
+
+    // Bucket taxonomy (#1101), same expansion the browse Vibe filter applies
+    // in events.ts: 'punk' widens to every sub-genre in the bucket, and an
+    // unknown value falls through verbatim so a raw sub-genre still matches.
+    // Multiple buckets UNION — one overlap against the merged value set —
+    // because picking two genres means "either", not "both".
+    const genreCondition =
+      genres === undefined
+        ? undefined
+        : (() => {
+            const values = Array.from(
+              new Set(genres.flatMap((genre) => expandBucket(genre))),
+            )
+            const placeholders = sql.join(
+              values.map((value) => sql`${value}`),
+              sql`, `,
+            )
+            // `&&` rather than `= ANY` so the GIN index on events.genre is usable.
+            return sql`${events.genre} && ARRAY[${placeholders}]::text[]`
+          })()
 
     // Same three-arm billing match the detail route uses, but column-to-column
     // rather than against a literal: the equality arm is the indexed fast
@@ -158,6 +207,7 @@ artistsPublicRouter.get(
           isNull(events.firstMissingAt),
           inArray(events.status, [...SCHEDULED_STATUSES]),
           gte(events.date, today),
+          genreCondition,
         ),
       )
       .groupBy(

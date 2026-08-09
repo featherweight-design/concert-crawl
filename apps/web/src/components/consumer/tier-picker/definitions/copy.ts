@@ -47,6 +47,20 @@ export const TIER_PICKER_COPY = {
           'Start on Free; pick a lane later if you ever want to chip in.',
       },
     },
+    // Keyed the same way, for the reaches a SIGNED-IN visitor can hit. Only
+    // entries specific enough to name get a variant; everything else keeps the
+    // generic header above, which is what opening the picker from the account
+    // menu should read as.
+    signedIn: {
+      // Committing a set of onboarding artist picks without the entitlement.
+      // The sub-line's whole job is to answer the fear the button just
+      // created: that backing out costs the picks already made.
+      follow: {
+        eyebrow: 'Following · Premium',
+        title: 'Follow all of them at once.',
+        sub: 'Following artists comes with Premium. Your picks are held while you decide, and nothing gets lost if you back out.',
+      },
+    },
     tiersCode: (count: number) => `${count} tiers`,
   },
   signIn: {

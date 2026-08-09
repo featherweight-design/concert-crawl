@@ -44,13 +44,24 @@ import type {
 
 const HEADER_COPY = TIER_PICKER_COPY.header
 
-// The signed-out gate is one surface serving several reaches. Entries without
-// their own variant fall back to the Watching wording.
-function loggedOutHeader(entry: PickerEntry) {
-  const variants: Partial<
-    Record<PickerEntry, { eyebrow: string; title: string; sub: string }>
-  > = HEADER_COPY.loggedOut
-  return variants[entry] ?? HEADER_COPY.loggedOut.default
+interface HeaderVariant {
+  eyebrow: string
+  title: string
+  sub: string
+}
+
+// One surface serving several reaches, on both sides of auth. Signed out, an
+// entry without its own variant falls back to the Watching wording; signed in
+// it falls back to the generic "Pick a lane", which is what an account-menu
+// open should read as. Resolved in ONE place so the eyebrow, the title and the
+// sub can never be drawn from three different variants.
+function headerFor(entry: PickerEntry, loggedOut: boolean): HeaderVariant {
+  const variants: Partial<Record<PickerEntry, HeaderVariant>> = loggedOut
+    ? HEADER_COPY.loggedOut
+    : HEADER_COPY.signedIn
+  return (
+    variants[entry] ?? (loggedOut ? HEADER_COPY.loggedOut.default : HEADER_COPY)
+  )
 }
 
 export interface TierPickerSheetProps {
@@ -431,15 +442,14 @@ export const TierPickerSheet = ({
       : null
   const surfaceRail = failureRail ?? challengeRail
 
+  const header = headerFor(entry, loggedOut)
   const eyebrow =
     surfaceRail?.eyebrow ??
     (gifted
       ? TIER_PICKER_COPY.gifted.eyebrow
       : checkout !== null
         ? TIER_PICKER_COPY.checkout.eyebrow
-        : loggedOut
-          ? loggedOutHeader(entry).eyebrow
-          : HEADER_COPY.eyebrow)
+        : header.eyebrow)
   const code =
     surfaceRail?.code ??
     (gifted
@@ -560,7 +570,7 @@ export const TierPickerSheet = ({
                   color: 'var(--fg)',
                 }}
               >
-                {loggedOut ? loggedOutHeader(entry).title : HEADER_COPY.title}
+                {header.title}
               </div>
               <div
                 style={{
@@ -572,7 +582,7 @@ export const TierPickerSheet = ({
                   maxWidth: 560,
                 }}
               >
-                {loggedOut ? loggedOutHeader(entry).sub : HEADER_COPY.sub}
+                {header.sub}
               </div>
               {loggedOut && isMobile && (
                 <span style={{ marginTop: 2 }}>

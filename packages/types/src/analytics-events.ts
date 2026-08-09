@@ -36,6 +36,12 @@ export type PickerEntry =
   // bucketing it with `logged-out-watch` would hide which of the two the
   // artist page actually converts on.
   | 'logged-out-follow'
+  // A signed-in user committing their onboarding artist picks without the
+  // entitlement to follow (PR 8). Deliberately NOT merged with
+  // `logged-out-follow`: that one measures whether a follow tap earns an
+  // account, this one whether it earns a subscription. Same button, different
+  // question, and one bucket would answer neither.
+  | 'follow'
   // A gated status report on the event page. Kept apart from
   // `logged-out-price` because reporting a cancellation and submitting a price
   // are different asks, and one bucket would hide which one earns accounts.

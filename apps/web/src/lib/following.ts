@@ -31,7 +31,9 @@ export async function fetchFollowedArtists(
  * Commit a whole selection in ONE write (`POST /v1/me/artist-follows/bulk`).
  * The only mutation in this file, and it is here rather than beside a
  * component so the epic's two bulk callers — "Follow all N" on the bill and
- * the onboarding artist step — hit the endpoint through one wrapper.
+ * the onboarding artist step — hit the endpoint through one wrapper. Onboarding
+ * can hand over a dozen artists at once, and a dozen single-follow POSTs would
+ * be a dozen chances to half-succeed.
  *
  * The response is per-slug on purpose: a partial failure must stay visible, so
  * callers apply `followed` / `already_following` row by row rather than
@@ -41,7 +43,7 @@ export async function fetchFollowedArtists(
  */
 export async function followArtistsBulk(
   token: string,
-  slugs: string[],
+  slugs: readonly string[],
 ): Promise<BulkFollowResponse> {
   return apiClient.post<BulkFollowResponse>(
     '/v1/me/artist-follows/bulk',
@@ -52,11 +54,26 @@ export async function followArtistsBulk(
   )
 }
 
-/** Followable artists with an upcoming Denver date. Public — no token needed. */
+/**
+ * Followable artists with an upcoming Denver date. Public — no token needed.
+ *
+ * `genres` (onboarding) narrows to artists billed on an upcoming event in one
+ * of those buckets. It filters the SAME endpoint the shelf reads rather than a
+ * second one, so the two can never drift on what "followable" means. An empty
+ * array is treated as no filter — the server 400s on `?genres=`, and sending a
+ * request we know is invalid to represent "the user picked nothing" would turn
+ * a skipped step into an error toast.
+ */
 export async function fetchArtistSuggestions(
   limit?: number,
+  genres?: readonly string[],
 ): Promise<ArtistSuggestion[]> {
-  const qs = limit === undefined ? '' : `?limit=${limit}`
+  const params = new URLSearchParams()
+  if (limit !== undefined) params.set('limit', String(limit))
+  if (genres !== undefined && genres.length > 0) {
+    params.set('genres', genres.join(','))
+  }
+  const qs = params.size === 0 ? '' : `?${params.toString()}`
   return publicApiClient.get<ArtistSuggestion[]>(`/v1/artists/suggestions${qs}`)
 }
 

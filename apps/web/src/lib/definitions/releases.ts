@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.43.0-beta',
+    date: 'Aug 9, 2026',
+    headline: 'Leave the welcome tour already following someone.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Two new steps at the end of the tour: pick the lanes you listen to, then follow a few artists playing Denver soon.',
+      },
+      {
+        kind: 'added',
+        text: 'Both are skippable, and your picks are held if you stop to upgrade partway through.',
+      },
+    ],
+  },
+  {
     version: 'v0.42.0-beta',
     date: 'Aug 9, 2026',
     headline: 'Follow the whole bill, from the show that made you care.',
