@@ -323,7 +323,7 @@ describe('runSynthetic — determinism and idempotency', () => {
 
   // Crew attendance on an event the crowd already watched would collide on the
   // (user_id, event_id) unique index and abort the entire run.
-  it('hands the crews generator the watcher-crowd showcase events to avoid', async () => {
+  it('excludes the watcher-crowd showcase events from the crews generator', async () => {
     const { generateCrews } = await import('./generators/crews.js')
 
     const stagingMock = buildStagingMock(
