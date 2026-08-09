@@ -26,6 +26,7 @@ import {
   seedEvent,
   seedUserEvent,
   seedPriceSubmission,
+  seedArtist,
 } from '../test/helpers/seed.js'
 
 const app = createApp()
@@ -61,6 +62,27 @@ async function readProvenance(
 ): Promise<z.infer<typeof provenanceResponse>> {
   expect(res.status).toBe(200)
   return provenanceResponse.parse(await res.json())
+}
+
+// The toggle response feeds the follow nudge (PR 10), which keys its one-time
+// dismissal on `userEventId`. Parsed rather than cast: a missing field must
+// fail the test, not arrive as `undefined` and satisfy a loose assertion.
+const toggleResponse = z.object({
+  success: z.boolean(),
+  data: z.object({
+    watching: z.boolean(),
+    savedPrice: z.number().nullable(),
+    userEventId: z.string().nullable(),
+    artist: z.string().nullable(),
+    artistSlug: z.string().nullable(),
+  }),
+})
+
+async function readToggle(
+  res: Response,
+): Promise<z.infer<typeof toggleResponse>> {
+  expect(res.status).toBe(200)
+  return toggleResponse.parse(await res.json())
 }
 
 describe('GET /v1/watching', () => {
@@ -477,5 +499,124 @@ describe('PUT /v1/watching/:eventId', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0]?.status).toBe('watching')
     expect(rows[0]?.attendingAt).not.toBeNull()
+  })
+
+  // --- Follow-nudge payload (PR 10) ---
+
+  it('returns the row id and the headliner when watching on', async () => {
+    setAuth('user_nudge_payload')
+    const venue = await seedVenue({ name: 'Bluebird', slug: 'bluebird' })
+    await seedArtist({ name: 'Wednesday' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Wednesday',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-10-01',
+    })
+
+    const body = await readToggle(
+      await app.request(`/v1/watching/${event.id}`, { method: 'PUT' }),
+    )
+    expect(body.data.watching).toBe(true)
+    expect(body.data.artist).toBe('Wednesday')
+    expect(body.data.artistSlug).toBe('wednesday')
+
+    const rows = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, 'user_nudge_payload'))
+    expect(body.data.userEventId).toBe(rows[0]?.id)
+  })
+
+  it('returns a null artistSlug when the projection has no row', async () => {
+    setAuth('user_nudge_noslug')
+    const venue = await seedVenue({ name: 'Hi-Dive', slug: 'hi-dive' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Nobody In The Projection',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-10-02',
+    })
+
+    const body = await readToggle(
+      await app.request(`/v1/watching/${event.id}`, { method: 'PUT' }),
+    )
+    expect(body.data.artist).toBe('Nobody In The Projection')
+    expect(body.data.artistSlug).toBeNull()
+  })
+
+  it('nulls the nudge payload when un-watching', async () => {
+    setAuth('user_nudge_off')
+    const venue = await seedVenue({ name: 'Larimer', slug: 'larimer' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Slowdive',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-10-03',
+    })
+    await seedUserEvent('user_nudge_off', event.id, { status: 'watching' })
+
+    const body = await readToggle(
+      await app.request(`/v1/watching/${event.id}`, { method: 'PUT' }),
+    )
+    expect(body.data.watching).toBe(false)
+    expect(body.data.userEventId).toBeNull()
+    expect(body.data.artist).toBeNull()
+    expect(body.data.artistSlug).toBeNull()
+  })
+
+  // ⚠️ REGRESSION (#70 class). The nudge's dismissal is keyed on
+  // `userEventId`, so un-watching and re-watching MUST mint a new id —
+  // otherwise a dismissal taken on the first watch silences the nudge forever
+  // and the whole cycle is untestable from the client.
+  it('mints a new userEventId across un-watch then re-watch', async () => {
+    setAuth('user_nudge_cycle')
+    const venue = await seedVenue({ name: 'Meadowlark', slug: 'meadowlark' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Big Thief',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-10-04',
+    })
+
+    const first = await readToggle(
+      await app.request(`/v1/watching/${event.id}`, { method: 'PUT' }),
+    )
+    await app.request(`/v1/watching/${event.id}`, { method: 'PUT' })
+    const second = await readToggle(
+      await app.request(`/v1/watching/${event.id}`, { method: 'PUT' }),
+    )
+
+    expect(first.data.userEventId).not.toBeNull()
+    expect(second.data.userEventId).not.toBe(first.data.userEventId)
+  })
+
+  // The deliberate exception: an attending row survives `releaseWatch`, so its
+  // id survives too and the dismissal legitimately persists. Asserted so the
+  // divergence is a decision on the record rather than a surprise later.
+  it('keeps the userEventId across a re-watch when the user is also attending', async () => {
+    setAuth('user_nudge_attend')
+    const venue = await seedVenue({ name: 'Cervantes', slug: 'cervantes' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Fontaines D.C.',
+      supportingArtists: null,
+      tourName: null,
+      date: '2099-10-05',
+    })
+    await seedUserEvent('user_nudge_attend', event.id, {
+      status: 'watching',
+      attendingAt: new Date('2026-07-01T00:00:00.000Z'),
+    })
+
+    const before = await testDb
+      .select()
+      .from(userEvents)
+      .where(eq(userEvents.userId, 'user_nudge_attend'))
+    await app.request(`/v1/watching/${event.id}`, { method: 'PUT' })
+    const after = await readToggle(
+      await app.request(`/v1/watching/${event.id}`, { method: 'PUT' }),
+    )
+
+    expect(after.data.userEventId).toBe(before[0]?.id)
   })
 })

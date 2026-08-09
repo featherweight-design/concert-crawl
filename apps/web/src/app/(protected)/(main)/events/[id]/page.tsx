@@ -243,6 +243,7 @@ export default async function EventDetailPage({
                 eventId={event.id}
                 initialWatching={event.isWatching}
                 artist={event.artist}
+                scaRegion={scaRegion}
               />
             </EventDetailCtaBlock>
           </div>

@@ -1,6 +1,14 @@
 // Feature copy shared across welcome/win-back/gift-ending so the lists can't
 // drift between templates when entitlements or naming change (#783). Phrasing
-// is verbatim from the design handoff PREMIUM_FEATURES / WINBACK_FEATURES.
+// follows the design handoff PREMIUM_FEATURES / WINBACK_FEATURES, with one
+// deliberate departure.
+//
+// ⚠️ Following leads and Spotify sync is not sold beside it (native
+// following, PR 10). Sync is capped by Spotify at a handful of connected
+// accounts, so pairing it onto a line reads as half the offer to a reader who
+// will never get a seat. Every list here therefore names following as the
+// artist benefit and leaves sync out; the tier picker keeps it as a mono
+// aside, which is the one place a caveat fits.
 
 import type { FeatureItem } from '../atoms.js'
 
@@ -8,8 +16,8 @@ import type { FeatureItem } from '../atoms.js'
 export const PREMIUM_FEATURES: FeatureItem[] = [
   'Concert history — every show you attend, logged',
   'Calendar export — Apple + Google, one tap',
-  'Follow artists + new-show alerts',
-  'Price-drop alerts + Spotify sync',
+  'Follow any artist, get their Denver dates',
+  'New-show and price-drop alerts',
   { text: "More coming — you're early", future: true },
 ]
 
@@ -22,13 +30,13 @@ export const PREMIUM_FEATURES_CORE: FeatureItem[] = PREMIUM_FEATURES.slice(0, 4)
 export const WINBACK_FEATURES: FeatureItem[] = [
   'Concert history — every show you attend, logged',
   'Calendar export — Apple + Google, one tap',
-  'Follow artists + new-show alerts',
-  'Price-drop alerts + Spotify sync',
+  'Follow any artist, get their Denver dates',
+  'New-show and price-drop alerts',
 ]
 
 // Gift-ending callout uses a tighter three-line summary.
 export const GIFT_KEEP_FEATURES: FeatureItem[] = [
   'Concert history — every show you attend, logged',
-  'Calendar export + Spotify sync',
-  'Follow artists + price-drop alerts',
+  'Calendar export — Apple + Google, one tap',
+  'Follow any artist, plus new-show and price-drop alerts',
 ]

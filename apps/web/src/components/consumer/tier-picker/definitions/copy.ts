@@ -137,15 +137,27 @@ export const TIER_PICKER_COPY = {
     },
     premium: {
       tagline: 'Stuff that actually costs us money.',
-      rationale:
-        'Notification workers, email at volume, price polling, Spotify API.',
+      // Spotify API used to close this list. It came out when sync dropped to
+      // the mono aside below: naming it as a cost driver directly above a card
+      // that treats it as fine print reads as two different stories about the
+      // same feature. The three that remain are the real drivers.
+      rationale: 'Notification workers, email at volume, price polling.',
+      // ⚠️ Following is the HEADLINE benefit and Spotify sync is fine print.
+      // That reversal is deliberate (native following, PR 10): Spotify caps us
+      // at a handful of connected accounts, so a tier sold on sync is sold on
+      // something most subscribers cannot switch on. Following is native,
+      // uncapped, and works for everyone who pays on day one.
       features: [
         'Everything in Supporter',
-        'Follow the artists you love',
+        'Follow any artist, get their Denver dates',
         'New-show alerts: email + push',
         'Price-drop alerts',
-        'Spotify sync: your library, your shows',
       ],
+      // The mono aside, not a feature row: sync is included and real, but the
+      // seats are Spotify's to hand out and we are at the cap. Says the cap
+      // out loud rather than "when a seat frees up", which promised a queue
+      // that moves — Extended Quota is not a thing we can count on.
+      monoNote: 'Spotify sync too, for the few seats Spotify gives us.',
       futureFeature: 'More coming',
     },
     founder: {
@@ -172,11 +184,13 @@ export const TIER_PICKER_COPY = {
     body: "Lifetime Premium, on us. No tier to pick, no card to add, nothing to manage. You showed up early; that's the whole price.",
     signature: 'Seriously. We owe you one.',
     perksEyebrow: 'Everything Premium, switched on',
+    // Same reversal as the Premium card above: following leads, and sync is
+    // not paired onto a line where it reads as half the offer.
     perks: [
       'Concert history: shows you attended',
       'Calendar export: Apple + Google',
-      'Follow artists + new-show alerts',
-      'Price-drop alerts + Spotify sync',
+      'Follow any artist, get their Denver dates',
+      'New-show and price-drop alerts',
     ],
     footer: 'No card on file · nothing to cancel · just enjoy it',
     discover: "See everything you've got",

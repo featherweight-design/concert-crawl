@@ -322,13 +322,4 @@ export const SPOTIFY_COPY = {
       },
     },
   },
-  firstWatchNudge: {
-    eyebrow: 'NICE · FIRST ONE WATCHING',
-    title: 'Want the rest picked for your taste?',
-    body: "Link Spotify and we'll surface shows from the artists you already play. No more scrolling past them.",
-    primaryCta: 'Connect Spotify',
-    secondaryCta: 'Not now',
-    dismissAria: 'Dismiss',
-    ariaLabel: 'Connect Spotify suggestion',
-  },
 } as const

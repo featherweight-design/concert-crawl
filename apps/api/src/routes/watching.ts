@@ -13,6 +13,7 @@ import {
   lowestHeadlinePrice,
 } from '../lib/price-aggregation/index.js'
 import { releaseWatch } from '../lib/user-events.js'
+import { resolveArtistSlugs } from '../lib/artist-slugs.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -152,14 +153,22 @@ watchingRouter.put('/:eventId', async (ctx) => {
     // attendance, which must survive un-watching (#70).
     await releaseWatch(authInfo.userId, eventId)
 
-    const response: WatchToggleResponse = { watching: false, savedPrice: null }
+    const response: WatchToggleResponse = {
+      watching: false,
+      savedPrice: null,
+      // Nothing is watched any more, so there is no row for the follow nudge
+      // to key on and no artist to nudge about.
+      userEventId: null,
+      artist: null,
+      artistSlug: null,
+    }
     return ctx.json({ success: true, data: response })
   }
 
   // Not watching — fetch current price and upsert to watching.
   // PR 6 — non-concert events are 404 for consumers, including the watch flow.
   const [eventRow] = await db
-    .select({ ticketPriceMin: events.ticketPriceMin })
+    .select({ ticketPriceMin: events.ticketPriceMin, artist: events.artist })
     .from(events)
     .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
     .limit(1)
@@ -172,8 +181,12 @@ watchingRouter.put('/:eventId', async (ctx) => {
   const savedPrice = parsePrice(currentPriceRaw)
   const savedPriceStr = savedPrice !== null ? String(savedPrice) : null
 
+  // `.returning()` rather than a follow-up SELECT: the id the nudge keys on
+  // must be the id this very write produced, and the conflict branch can
+  // resurrect a row that a concurrent request just replaced.
+  let userEventId: string
   try {
-    await db
+    const [written] = await db
       .insert(userEvents)
       .values({
         userId: authInfo.userId,
@@ -185,6 +198,9 @@ watchingRouter.put('/:eventId', async (ctx) => {
         target: [userEvents.userId, userEvents.eventId],
         set: { status: 'watching', savedPrice: savedPriceStr },
       })
+      .returning({ id: userEvents.id })
+    if (!written) throw new Error('watch upsert returned no rows')
+    userEventId = written.id
   } catch (err) {
     apiLogger.warn(
       { err, userId: authInfo.userId, eventId },
@@ -193,6 +209,26 @@ watchingRouter.put('/:eventId', async (ctx) => {
     return ctx.json({ success: false, error: 'Failed to save watch' }, 500)
   }
 
-  const response: WatchToggleResponse = { watching: true, savedPrice }
+  // The nudge invites the viewer to follow the headliner, so it needs a slug.
+  // A name the artists projection has no row for is normal (see
+  // resolveArtistSlugs) and simply means there is nothing to follow — the
+  // watch itself already succeeded, so a failure here must not fail the write.
+  let artistSlug: string | null = null
+  try {
+    ;({ artistSlug } = await resolveArtistSlugs(eventRow.artist, null))
+  } catch (err) {
+    apiLogger.warn(
+      { err, userId: authInfo.userId, eventId },
+      'watch toggle artist slug resolution failed',
+    )
+  }
+
+  const response: WatchToggleResponse = {
+    watching: true,
+    savedPrice,
+    userEventId,
+    artist: eventRow.artist,
+    artistSlug,
+  }
   return ctx.json({ success: true, data: response })
 })

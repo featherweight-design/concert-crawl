@@ -1137,6 +1137,25 @@ export interface WatchingShow {
 export interface WatchToggleResponse {
   watching: boolean
   savedPrice: number | null
+  /**
+   * The `user_events` row this watch now lives on, or null when the toggle
+   * turned watching OFF.
+   *
+   * ⚠️ The follow nudge keys its one-time dismissal on THIS, never on
+   * `eventId`. Un-watching deletes the row (unless the user is also attending),
+   * so a re-watch mints a new id and the nudge is legitimately offered again.
+   * Keying on the event instead is the #70-class bug where a dismissal taken
+   * once silences the surface forever.
+   */
+  userEventId: string | null
+  /** Headliner display name, for the nudge's copy. Null when watching OFF. */
+  artist: string | null
+  /**
+   * The headliner's artist-page slug, or null when the artists projection has
+   * no row for that name (a normal case, not an error) or watching went OFF.
+   * No slug means there is nothing to follow, so there is no nudge.
+   */
+  artistSlug: string | null
 }
 
 // --- Concert History (#70) ---

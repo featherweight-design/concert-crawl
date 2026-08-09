@@ -2,7 +2,6 @@
 import type {
   SpotifyConnectionResponse,
   SpotifyConnectionView,
-  SpotifyNudgeResponse,
   SpotifyTastePicksResponse,
 } from '@concert-crawl/types'
 import { apiClient } from './api'
@@ -85,13 +84,9 @@ export async function fetchTastePicks(
   )
 }
 
-export async function fetchSpotifyNudgeEligibility(
-  token: string,
-): Promise<SpotifyNudgeResponse> {
-  return apiClient.get<SpotifyNudgeResponse>('/v1/spotify/nudge', token)
-}
-
-// Single-fire: called when the nudge is DISPLAYED, regardless of choice.
-export async function markSpotifyNudgeSeen(token: string): Promise<void> {
-  await apiClient.post<void>('/v1/spotify/nudge/seen', token, {})
-}
+// The post-first-watch nudge is no longer a Spotify pitch (native following,
+// PR 10) — it asks for a FOLLOW on the headliner, and its dismissal lives on
+// the device rather than on `spotifyNudgeSeenAt`. The client helpers that read
+// GET /v1/spotify/nudge are gone with it. The endpoints and the column are
+// left standing for a later contraction, so a rollback has something to land
+// on; nothing in the app calls them now.

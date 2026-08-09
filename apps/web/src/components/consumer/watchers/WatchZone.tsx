@@ -2,6 +2,10 @@
 
 import { useAuth } from '@clerk/nextjs'
 import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton'
+import {
+  FollowNudgeCard,
+  useFirstWatchNudge,
+} from '@/components/consumer/following/nudge'
 import { useEventWatchers } from '@/lib/queries/use-event-watchers'
 import { useWatching } from '@/lib/queries/use-watching'
 import { showWatcherCrawl } from '@/lib/watchers'
@@ -12,6 +16,8 @@ interface WatchZoneProps {
   initialWatching?: boolean
   /** Headliner name, forwarded to the button's signed-out accessible name. */
   artist?: string | undefined
+  /** Server-resolved, forwarded to the nudge's tier picker. */
+  scaRegion: boolean
 }
 
 /**
@@ -28,13 +34,23 @@ interface WatchZoneProps {
  * every WatchShowButton, because the button also sits on each EventCard and
  * HeroEventCard, where a line of copy under every card in the browse grid would
  * be noise.
+ *
+ * ⚠️ The first-watch follow nudge REPLACES this strip in place (native
+ * following, PR 10), at every width — not a ported card and not a modal. It
+ * carries the strip's own on-state sentence for exactly that reason: the slot
+ * still owes the confirmation the strip would have given. Answering the nudge
+ * restores the strip.
  */
 export const WatchZone = ({
   eventId,
   initialWatching = false,
   artist,
+  scaRegion,
 }: WatchZoneProps) => {
   const { isSignedIn } = useAuth()
+  // Scoped to this show: a watch started elsewhere in the session belongs to
+  // the floating gate, and the two are mutually exclusive by route.
+  const nudge = useFirstWatchNudge(eventId)
   const { data: watchedShows } = useWatching()
   const { data: watchers, isPending } = useEventWatchers(eventId)
 
@@ -50,6 +66,17 @@ export const WatchZone = ({
 
   const loading = isPending && !!isSignedIn
   const showCrawl = !loading && showWatcherCrawl(watchers, renderedWatching)
+
+  if (nudge.target !== null) {
+    return (
+      <FollowNudgeCard
+        target={nudge.target}
+        variant="inline"
+        scaRegion={scaRegion}
+        onAnswer={nudge.answer}
+      />
+    )
+  }
 
   return (
     <div

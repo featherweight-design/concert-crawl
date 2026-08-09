@@ -161,8 +161,8 @@ describe('welcome_paid', () => {
       'Concert history — every show you attend, logged',
     )
     expect(rendered.html).toContain('Calendar export — Apple + Google, one tap')
-    expect(rendered.html).toContain('Follow artists + new-show alerts')
-    expect(rendered.html).toContain('Price-drop alerts + Spotify sync')
+    expect(rendered.html).toContain('Follow any artist, get their Denver dates')
+    expect(rendered.html).toContain('New-show and price-drop alerts')
     expect(rendered.html).toContain(
       'Whatever you pay, you pay. We never raise it.',
     )

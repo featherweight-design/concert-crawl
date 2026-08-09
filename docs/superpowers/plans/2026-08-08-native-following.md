@@ -77,30 +77,30 @@ PR 11 is reserved on purpose. Cold-eyes triage and Hugh's own walk produce subje
 
 Every path is an existing file to modify unless marked **(new)**.
 
-| File                                                                                     | Responsibility                                                    | PR      |
-| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------- |
-| `packages/db/migrations/0078_artist_follow_preferences.sql` **(new)**                    | Three columns + upsert backfill                                   | 1       |
-| `packages/db/src/schema/user-notification-preferences.ts`                                | Schema for the three columns                                      | 1       |
-| `apps/api/src/routes/me-push.ts`                                                         | `preferencesSchema` + GET/PATCH `/v1/me/notification-preferences` | 1       |
-| `packages/entitlements/src/index.ts`                                                     | `nfLocked` helper                                                 | 1       |
-| `apps/web/src/components/consumer/artist-page/FollowButton.tsx`                          | `locked` state, optimistic follow                                 | 1       |
-| `apps/web/src/components/consumer/artist-page/definitions/`                              | `NF_FOLLOW_SIZES`                                                 | 1       |
-| `apps/web/src/components/settings/notifications/NotificationsSection.tsx`                | Artist group + locked card                                        | 2       |
-| `apps/web/src/components/settings/notifications/definitions/copy.ts`                     | `NOTIFICATIONS_COPY` additions                                    | 2       |
-| `apps/api/src/routes/events.ts`                                                          | `following` query flag beside `taste`                             | 3       |
-| `apps/api/src/routes/artist-follows.ts`                                                  | `GET /v1/me/artist-follows`, `POST .../bulk`                      | 3       |
-| `apps/api/src/routes/search.ts`                                                          | `following` on the artist result shape                            | 3       |
-| `apps/web/src/components/consumer/filter-bar/FilterBar.tsx`                              | "My artists" scope chip                                           | 4       |
-| `apps/web/src/components/consumer/spotify/DiscoveryShelf.tsx`                            | Three-mode follow shelf in the same slot                          | 4       |
-| `apps/web/src/components/consumer/search/SearchResultsState.tsx`                         | Artists section above shows                                       | 5       |
-| `apps/web/src/components/consumer/history/MyShowsTabs.tsx`                               | Third tab                                                         | 6       |
-| `apps/web/src/components/consumer/artist-picker/**` **(new)**                            | Shared picker                                                     | 6       |
-| `apps/web/src/components/consumer/event-detail/PublicEventDetail.tsx`                    | Optional `billBlock` prop                                         | 7       |
-| `apps/web/src/components/onboarding/OnboardingShell.tsx`                                 | `FLOW` + `StepContent`                                            | 8       |
-| `packages/crawler-core/src/lib/artist-fanout/index.ts`                                   | Per-run push batching                                             | 9       |
-| `apps/api/src/jobs/spotify-weekly.ts`, `apps/api/src/emails/templates/spotify-digest.ts` | Digest generalization                                             | 9       |
-| `apps/web/src/components/consumer/spotify/FirstWatchNudge.tsx`                           | Artist-anchored variant                                           | 10      |
-| `apps/web/src/lib/definitions/releases.ts`                                               | Release note (user-facing PRs only)                               | 4, 6, 8 |
+| File                                                                                                  | Responsibility                                                    | PR      |
+| ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------- |
+| `packages/db/migrations/0078_artist_follow_preferences.sql` **(new)**                                 | Three columns + upsert backfill                                   | 1       |
+| `packages/db/src/schema/user-notification-preferences.ts`                                             | Schema for the three columns                                      | 1       |
+| `apps/api/src/routes/me-push.ts`                                                                      | `preferencesSchema` + GET/PATCH `/v1/me/notification-preferences` | 1       |
+| `packages/entitlements/src/index.ts`                                                                  | `nfLocked` helper                                                 | 1       |
+| `apps/web/src/components/consumer/artist-page/FollowButton.tsx`                                       | `locked` state, optimistic follow                                 | 1       |
+| `apps/web/src/components/consumer/artist-page/definitions/`                                           | `NF_FOLLOW_SIZES`                                                 | 1       |
+| `apps/web/src/components/settings/notifications/NotificationsSection.tsx`                             | Artist group + locked card                                        | 2       |
+| `apps/web/src/components/settings/notifications/definitions/copy.ts`                                  | `NOTIFICATIONS_COPY` additions                                    | 2       |
+| `apps/api/src/routes/events.ts`                                                                       | `following` query flag beside `taste`                             | 3       |
+| `apps/api/src/routes/artist-follows.ts`                                                               | `GET /v1/me/artist-follows`, `POST .../bulk`                      | 3       |
+| `apps/api/src/routes/search.ts`                                                                       | `following` on the artist result shape                            | 3       |
+| `apps/web/src/components/consumer/filter-bar/FilterBar.tsx`                                           | "My artists" scope chip                                           | 4       |
+| `apps/web/src/components/consumer/spotify/DiscoveryShelf.tsx`                                         | Three-mode follow shelf in the same slot                          | 4       |
+| `apps/web/src/components/consumer/search/SearchResultsState.tsx`                                      | Artists section above shows                                       | 5       |
+| `apps/web/src/components/consumer/history/MyShowsTabs.tsx`                                            | Third tab                                                         | 6       |
+| `apps/web/src/components/consumer/artist-picker/**` **(new)**                                         | Shared picker                                                     | 6       |
+| `apps/web/src/components/consumer/event-detail/PublicEventDetail.tsx`                                 | Optional `billBlock` prop                                         | 7       |
+| `apps/web/src/components/onboarding/OnboardingShell.tsx`                                              | `FLOW` + `StepContent`                                            | 8       |
+| `packages/crawler-core/src/lib/artist-fanout/index.ts`                                                | Per-run push batching                                             | 9       |
+| `apps/api/src/jobs/spotify-weekly.ts`, `apps/api/src/emails/templates/spotify-digest.ts`              | Digest generalization                                             | 9       |
+| `apps/web/src/components/consumer/following/nudge/` (replaced `consumer/spotify/FirstWatchNudge.tsx`) | Artist-anchored variant                                           | 10      |
+| `apps/web/src/lib/definitions/releases.ts`                                                            | Release note (user-facing PRs only)                               | 4, 6, 8 |
 
 ---
 
@@ -507,11 +507,13 @@ Prove by running, not by reading: it **fires** (perform the real upstream crawl)
 
 ### PR 10: First-watch nudge and Premium tier copy
 
-**File:** `apps/web/src/components/consumer/spotify/FirstWatchNudge.tsx` and its gate.
+**File:** ~~`apps/web/src/components/consumer/spotify/FirstWatchNudge.tsx` and its gate.~~ **As built:** `apps/web/src/components/consumer/following/nudge/` (`FollowNudgeCard`, `FollowNudgeGate`, `lib/use-first-watch-nudge`, `lib/nudge-dismissal`). The Spotify pair was deleted rather than rewritten in place: nothing of the pitch survives, and leaving a follow card under `consumer/spotify/` would have been the last Spotify-named thing this epic left standing.
 
 - [ ] **Step 1: Artist-anchored variant**
 
-Replace the Spotify pitch. Single-fire, dismissable, never returns. Free tier still sees it, with the lock on the CTA. Also add the inline follow row to the watch confirmation as the permanent path — the nudge is the introduction, the confirmation row is the habit.
+Replace the Spotify pitch. Single-fire, dismissable, never returns. Free tier still sees it, with the lock on the CTA. ~~Also add the inline follow row to the watch confirmation as the permanent path — the nudge is the introduction, the confirmation row is the habit.~~
+
+**Amended in build:** the permanent path already exists. PR 7 shipped `BillFollowBlock` on both event-detail routes, directly below the watch strip, and it is exactly the row this step describes. Building a second one would have put two live follow affordances for the same artist on one screen. The nudge is still the introduction; the bill's follow block is the habit.
 
 - [ ] **Step 2: Desktop is not a port**
 

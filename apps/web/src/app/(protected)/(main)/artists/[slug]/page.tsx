@@ -3,7 +3,7 @@
 // ⚠️ #794 — this route lives under `(protected)` on purpose, and making it
 // genuinely public is NOT a one-line middleware edit. `(protected)/layout.tsx`
 // renders five signed-in-only gates (FeedbackEdgeTabGate, FeatureDropPillGate,
-// OnboardingThemeFlush, LifecycleNudgesGate, FirstWatchNudgeGate), so opening
+// OnboardingThemeFlush, LifecycleNudgesGate, FollowNudgeGate), so opening
 // the vertical means MOVING this directory out of `(protected)` *and* carrying
 // the matcher entry. `/artists(.*)` is in `isPublicOnceLaunched` — gated on
 // isPublicBrowseEnabled(), exactly like `/venues(.*)` — never in
