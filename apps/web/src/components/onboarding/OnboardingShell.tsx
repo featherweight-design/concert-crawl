@@ -20,7 +20,6 @@ import { useArtistPicksCommit } from './lib/use-artist-picks-commit'
 import { usePlanState } from '@/lib/queries/use-plan-state'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
-import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 import {
   ARTIST_PICKS_KEY,
   GENRE_PICKS_KEY,
@@ -292,8 +291,15 @@ export function OnboardingShell({
     onToggleArtist: toggleArtist,
   }
 
+  // Back is held shut while the follow write is in flight. `advance()` steps
+  // relative to wherever the tour is when the request settles, so a Back press
+  // during the write would land the visitor back on the artists step they had
+  // just committed. Locked rather than merely ignored, so the control looks as
+  // inert as it is.
+  const backLocked = isFirst || picksCommit.pending
+
   function goBack() {
-    if (isFirst) return
+    if (backLocked) return
     mobileScrollRef.current?.scrollTo({ top: 0 })
     setIndex((ii) => ii - 1)
   }
@@ -449,12 +455,12 @@ export function OnboardingShell({
             <button
               type="button"
               onClick={goBack}
-              disabled={isFirst}
+              disabled={backLocked}
               className="ob-btn-back"
               style={{
                 all: 'unset',
-                cursor: isFirst ? 'default' : 'pointer',
-                opacity: isFirst ? 0.4 : 1,
+                cursor: backLocked ? 'default' : 'pointer',
+                opacity: backLocked ? 0.4 : 1,
                 fontFamily: "'JetBrains Mono', monospace",
                 fontSize: 11,
                 fontWeight: 700,
@@ -500,14 +506,23 @@ export function OnboardingShell({
 
       {/* Follow is Premium, so the only paywalled thing in the tour is the
           COMMIT. The picker keeps the selection behind it; closing it re-reads
-          the plan and retries the write if the upgrade landed. */}
-      <TierPickerSheet
-        open={picksCommit.pickerOpen}
-        onClose={picksCommit.closePicker}
-        planState={planState ?? LOGGED_OUT_PLAN_STATE}
-        scaRegion={scaRegion}
-        entry="follow"
-      />
+          the plan and retries the write if the upgrade landed.
+
+          Held back until the plan is actually known rather than falling back to
+          the signed-out shape. The tour is post-auth, so "logged out" is a
+          claim we can be sure is false — it would offer the wrong ladder and
+          bill the analytics event to a visitor who does not exist. `pickerOpen`
+          survives the wait, so a 403 raised mid-load still opens the sheet the
+          moment the real plan lands. */}
+      {planState !== undefined && (
+        <TierPickerSheet
+          open={picksCommit.pickerOpen}
+          onClose={picksCommit.closePicker}
+          planState={planState}
+          scaRegion={scaRegion}
+          entry="follow"
+        />
+      )}
     </>
   )
 }
@@ -542,6 +557,9 @@ function OnboardingDesktop({
   const cardBodyRef = useRef<HTMLDivElement>(null)
   const cardWidth =
     stepKey === 'artists' ? DESKTOP_PICKER_CARD_WIDTH : DESKTOP_CARD_WIDTH
+  // Same reason as the mobile tree: a Back press mid-write would undo a step
+  // the settle is about to re-advance past.
+  const backLocked = isFirst || pending
 
   useEffect(() => {
     cardBodyRef.current?.scrollTo({ top: 0 })
@@ -747,12 +765,12 @@ function OnboardingDesktop({
               <button
                 type="button"
                 onClick={onBack}
-                disabled={isFirst}
+                disabled={backLocked}
                 className="ob-btn-back"
                 style={{
                   all: 'unset',
-                  cursor: isFirst ? 'default' : 'pointer',
-                  opacity: isFirst ? 0.4 : 1,
+                  cursor: backLocked ? 'default' : 'pointer',
+                  opacity: backLocked ? 0.4 : 1,
                   fontFamily: "'JetBrains Mono', monospace",
                   fontSize: 11,
                   fontWeight: 700,

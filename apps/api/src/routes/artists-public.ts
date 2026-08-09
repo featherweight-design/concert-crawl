@@ -89,6 +89,12 @@ const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const
 // exists so a hand-rolled query string can't expand into an unbounded ARRAY[].
 const MAX_GENRE_FILTERS = 24
 
+// The count cap alone still lets 24 megabyte-long values through into the
+// ARRAY[] predicate. The longest real bucket label is well under this, so the
+// ceiling is generous and still bounds the query. `filterVibe` on /v1/events
+// caps its single value the same way.
+const MAX_GENRE_LENGTH = 64
+
 const suggestionsQuerySchema = z.object({
   limit: z.coerce
     .number()
@@ -115,7 +121,9 @@ const suggestionsQuerySchema = z.object({
     .refine(
       (values) =>
         values === undefined ||
-        (values.length > 0 && values.length <= MAX_GENRE_FILTERS),
+        (values.length > 0 &&
+          values.length <= MAX_GENRE_FILTERS &&
+          values.every((value) => value.length <= MAX_GENRE_LENGTH)),
       { message: 'Invalid genres' },
     ),
 })

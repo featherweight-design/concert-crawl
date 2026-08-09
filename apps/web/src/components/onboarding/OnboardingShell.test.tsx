@@ -52,13 +52,35 @@ const fetchArtistSuggestions =
     ) => Promise<unknown[]>
   >()
 
+const followArtistsBulk = vi.fn<() => Promise<unknown>>()
+
 vi.mock('@/lib/following', () => ({
   fetchArtistSuggestions: (
     limit?: number,
     genres?: readonly string[],
     token?: string | null,
   ) => fetchArtistSuggestions(limit, genres, token),
-  followArtistsBulk: async () => undefined,
+  followArtistsBulk: () => followArtistsBulk(),
+}))
+
+// The tour is post-auth, so the real hook's `enabled: !!isSignedIn` would leave
+// plan state undefined forever behind the signed-out Clerk stub above. Held in
+// a box so a test can decide whether the plan has landed yet.
+const FREE_PLAN: PlanState = {
+  plan: 'free',
+  onTrial: false,
+  trialEndsAt: null,
+  status: null,
+  cancelAtPeriodEnd: false,
+  currentPeriodEnd: null,
+  roleComped: false,
+}
+
+const planState: { current: PlanState | undefined } = { current: FREE_PLAN }
+
+vi.mock('@/lib/queries/use-plan-state', () => ({
+  usePlanState: () => ({ data: planState.current }),
+  planStateQueryKey: (userId: string | null) => ['plan-state', userId],
 }))
 
 const SUGGESTIONS = [
@@ -100,11 +122,23 @@ const SUGGESTIONS = [
   },
 ]
 
+interface TierPickerProps {
+  planState: PlanState
+  open: boolean
+}
+
+const tierPickerRender = vi.fn<(props: TierPickerProps) => void>()
+
 vi.mock('@/components/consumer/tier-picker/lazy', () => ({
-  TierPickerSheet: () => null,
+  TierPickerSheet: (props: TierPickerProps) => {
+    tierPickerRender(props)
+    return null
+  },
 }))
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { PlanState } from '@concert-crawl/types'
+import { ApiError } from '@/lib/api'
 import { OnboardingShell, type OnboardingShellProps } from './OnboardingShell'
 import { ONBOARDING_COPY } from './definitions/copy'
 import { ARTIST_PICKER_COPY } from '@/components/consumer/artist-picker/definitions/copy'
@@ -129,6 +163,10 @@ beforeEach(() => {
   push.mockClear()
   fetchArtistSuggestions.mockReset()
   fetchArtistSuggestions.mockResolvedValue(SUGGESTIONS)
+  followArtistsBulk.mockReset()
+  followArtistsBulk.mockResolvedValue(undefined)
+  tierPickerRender.mockClear()
+  planState.current = FREE_PLAN
   // jsdom implements no scrolling; the shell resets scroll on every step change.
   Element.prototype.scrollTo = vi.fn()
   window.sessionStorage.clear()
@@ -429,6 +467,68 @@ describe('OnboardingShell — genres then artists', () => {
         window.sessionStorage.getItem('cc.onboarding.artistPicks') ?? '[]',
       ),
     ).toEqual(['geese', 'ghost'])
+  })
+
+  // `advance()` steps relative to wherever the tour is when the write settles,
+  // so a Back press mid-flight would drop the visitor a step and then the
+  // settle would push them forward onto the step they had just committed.
+  it('holds Back shut while the follow write is in flight', async () => {
+    let settle: () => void = () => {}
+    followArtistsBulk.mockReturnValue(
+      new Promise<undefined>((resolve) => {
+        settle = () => resolve(undefined)
+      }),
+    )
+    renderShell()
+    await goToArtists()
+    act(() => tile(/geese/i).click())
+
+    const back = () =>
+      screen.getAllByRole('button', { name: /back/i, hidden: true })[0]!
+    expect(back().hasAttribute('disabled')).toBe(false)
+
+    act(() => primaryCtas()[0]!.click())
+    await waitFor(() => expect(back().hasAttribute('disabled')).toBe(true))
+
+    await act(async () => {
+      settle()
+    })
+    await waitFor(() => expect(followArtistsBulk).toHaveBeenCalled())
+  })
+
+  // The tour is post-auth, so a signed-out fallback would offer the wrong
+  // ladder and bill the upgrade event to a visitor who does not exist.
+  it('waits for the real plan before opening the tier picker', async () => {
+    planState.current = undefined
+    followArtistsBulk.mockRejectedValue(
+      new ApiError(403, 'Premium required', 'entitlement_required'),
+    )
+    renderShell()
+    await goToArtists()
+    act(() => tile(/geese/i).click())
+    act(() => primaryCtas()[0]!.click())
+
+    await waitFor(() => expect(followArtistsBulk).toHaveBeenCalled())
+    expect(tierPickerRender).not.toHaveBeenCalled()
+  })
+
+  it('opens the tier picker against the real plan once it has landed', async () => {
+    followArtistsBulk.mockRejectedValue(
+      new ApiError(403, 'Premium required', 'entitlement_required'),
+    )
+    renderShell()
+    await goToArtists()
+    act(() => tile(/geese/i).click())
+    act(() => primaryCtas()[0]!.click())
+
+    await waitFor(() =>
+      expect(tierPickerRender.mock.calls.some(([props]) => props.open)).toBe(
+        true,
+      ),
+    )
+    for (const [props] of tierPickerRender.mock.calls) {
+      expect(props.planState.plan).toBe('free')
+    }
   })
 
   it('never locks the tiles themselves — only the commit is paywalled', async () => {

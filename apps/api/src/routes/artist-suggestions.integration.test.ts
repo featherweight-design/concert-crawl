@@ -364,6 +364,14 @@ describe('GET /v1/artists/suggestions — integration', () => {
       const tooMany = Array.from({ length: 40 }, (_, i) => `g${i}`).join(',')
       expect((await getSuggestions(`?genres=${tooMany}`)).status).toBe(400)
     })
+
+    // The count cap alone would still let a handful of enormous values expand
+    // into the ARRAY[] predicate.
+    it('rejects a single over-long genre', async () => {
+      const tooLong = 'g'.repeat(200)
+      expect((await getSuggestions(`?genres=${tooLong}`)).status).toBe(400)
+      expect((await getSuggestions(`?genres=punk,${tooLong}`)).status).toBe(400)
+    })
   })
 
   it('is not shadowed by GET /:slug', async () => {
