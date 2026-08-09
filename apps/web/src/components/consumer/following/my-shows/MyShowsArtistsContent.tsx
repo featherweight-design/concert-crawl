@@ -228,7 +228,10 @@ export const MyShowsArtistsContent = ({
           ellipsised the artist NAME — the Gate 5 walk caught "Tame I…" at
           1280px against "Tame Impala" rendering in full at 390px, so desktop
           was truncating what mobile showed. Two-up gives the cell 434px. */}
-      <div className="mx-auto hidden w-full max-w-[940px] flex-1 px-[30px] pb-10 pt-7 sm:block">
+      <div
+        data-testid="my-shows-artists-desktop"
+        className="mx-auto hidden w-full max-w-[940px] flex-1 px-[30px] pb-10 pt-7 sm:block"
+      >
         {/* No page title: the active sub-tab 18px below already reads
             "Artists", and the sibling Watching and Concerts tabs ship none
             either. It also only rendered on the populated branch, so the

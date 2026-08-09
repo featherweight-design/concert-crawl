@@ -124,8 +124,15 @@ describe('MyShowsArtistsContent', () => {
       />,
     )
 
-    const grids = container.querySelectorAll('[class*="grid-cols-"]')
-    expect(grids).not.toHaveLength(0)
+    // Scoped to the desktop block: a nested component is free to draw its own
+    // grid at any width, and this test is about the artist cards only.
+    const desktop = container.querySelector(
+      '[data-testid="my-shows-artists-desktop"]',
+    )
+    const grids = desktop?.querySelectorAll('[class*="grid-cols-"]') ?? []
+    // Both groups (dated and undated) must be present, or the assertion below
+    // passes over an empty list and proves nothing.
+    expect(grids).toHaveLength(2)
     for (const grid of grids) {
       expect(grid.className).toContain('grid-cols-2')
       expect(grid.className).not.toContain('grid-cols-3')
