@@ -1,3 +1,11 @@
+## [1.241.1](https://github.com/HartiganHM/concert-crawl/compare/v1.241.0...v1.241.1) (2026-08-09)
+
+
+### Bug Fixes
+
+* **following:** pin min-w-0 on the ellipsised flex items, not just overflow ([e01e3a7](https://github.com/HartiganHM/concert-crawl/commit/e01e3a706b58dfb10cdd9a2add7dbca0e8c25131))
+* **following:** stop truncating the date, and make desktop wider than mobile ([3d7905e](https://github.com/HartiganHM/concert-crawl/commit/3d7905e0f5d90d919bfb4c8ad716df1a18ca104d))
+
 # [1.241.0](https://github.com/HartiganHM/concert-crawl/compare/v1.240.0...v1.241.0) (2026-08-09)
 
 
