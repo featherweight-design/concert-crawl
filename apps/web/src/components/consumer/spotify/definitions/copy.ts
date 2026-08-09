@@ -248,7 +248,7 @@ export const SPOTIFY_COPY = {
     chip: 'Spotify',
     // A11y: the locked chip stays operable (it opens the upsell), so the
     // paid state is conveyed by this label alone — no aria-disabled.
-    chipLockedAria: 'Filter to artists you follow on Spotify, paid',
+    chipLockedAria: 'Filter to artists you follow on Spotify, paid feature',
     chipAria: 'Filter to artists you follow on Spotify',
     banner: (count: number) =>
       `${count} Denver shows by artists you follow on Spotify`,
