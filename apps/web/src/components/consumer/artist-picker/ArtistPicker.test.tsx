@@ -97,6 +97,18 @@ describe('ArtistPicker', () => {
     ).not.toBeInTheDocument()
   })
 
+  // A failed read also hands back zero artists. Saying "nobody booked in that
+  // lane" then blames the listings for an outage of our own.
+  it('tells a failed read apart from a genuinely empty one', () => {
+    renderPicker({ artists: [], errored: true })
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      ARTIST_PICKER_COPY.errorTitle,
+    )
+    expect(
+      screen.queryByText(ARTIST_PICKER_COPY.emptyTitle),
+    ).not.toBeInTheDocument()
+  })
+
   it('always offers the search escape, even when empty', () => {
     renderPicker({ artists: [] })
     const escape = screen.getByRole('link', {

@@ -29,4 +29,11 @@ export const ARTIST_PICKER_COPY = {
   emptyTitle: 'Nobody booked in that lane yet.',
   emptyBody:
     "Denver hasn't got an upcoming date in what you picked. Search for anyone by name instead, or come back once more shows land.",
+  // A failed load is NOT the empty state. Both hand back zero artists, and
+  // saying "nobody booked in that lane" when the request never landed blames
+  // the listings for our own outage and leaves the reader nothing to do about
+  // it. The diagnosis stays; the internals do not.
+  errorTitle: "That list didn't load.",
+  errorBody:
+    'Something went wrong on our end. Search for anyone by name instead, or give it another go in a minute.',
 } as const

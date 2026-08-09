@@ -457,13 +457,13 @@ describe('OnboardingShell — genres then artists', () => {
     renderShell()
     for (let i = 0; i < ARTISTS_STEP_INDEX; i += 1) next()
 
-    // The empty state only renders once the query has settled, so waiting on it
-    // is what makes the assertions below land after the failure, not before.
+    // The failure notice only renders once the query has settled, so waiting on
+    // it is what makes the assertions below land after the failure, not before.
     // The hook retries once, so settling outlasts waitFor's default window.
     await waitFor(
       () =>
         expect(
-          screen.getAllByText(ARTIST_PICKER_COPY.emptyTitle).length,
+          screen.getAllByText(ARTIST_PICKER_COPY.errorTitle).length,
         ).toBeGreaterThan(0),
       { timeout: 5000 },
     )
@@ -486,7 +486,7 @@ describe('OnboardingShell — genres then artists', () => {
     await waitFor(
       () =>
         expect(
-          screen.getAllByText(ARTIST_PICKER_COPY.emptyTitle).length,
+          screen.getAllByText(ARTIST_PICKER_COPY.errorTitle).length,
         ).toBeGreaterThan(0),
       { timeout: 5000 },
     )

@@ -48,12 +48,42 @@ const SkeletonTile = () => (
   </div>
 )
 
+// Both the empty and the failed grid say a headline and a sentence in the
+// space the tiles would have taken. `role="alert"` only on the failure: the
+// empty state is an answer, not an interruption.
+const Notice = ({
+  title,
+  body,
+  role,
+}: {
+  title: string
+  body: string
+  role?: 'alert'
+}) => (
+  <div role={role} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <span
+      className="text-fg"
+      style={{ fontSize: 15, fontWeight: 800, letterSpacing: '-0.02em' }}
+    >
+      {title}
+    </span>
+    <span style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--fg-muted)' }}>
+      {body}
+    </span>
+  </div>
+)
+
 interface ArtistPickerProps {
   artists: PickArtist[]
   /** Slugs currently selected. The caller owns the set; the picker only reads. */
   selected: ReadonlySet<string>
   onToggle: (slug: string) => void
   loading: boolean
+  /**
+   * The read failed. Separate from `artists.length === 0` on purpose: a
+   * failure also hands back an empty list, and the two want different words.
+   */
+  errored?: boolean
   /** 2 on mobile, 5 on desktop (RS-07 / RS-08). Never 1, even at 320px. */
   columns: number
 }
@@ -63,6 +93,7 @@ export const ArtistPicker = ({
   selected,
   onToggle,
   loading,
+  errored = false,
   columns,
 }: ArtistPickerProps) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -76,20 +107,17 @@ export const ArtistPicker = ({
           ))}
         </PickGrid>
       </div>
+    ) : errored ? (
+      <Notice
+        title={ARTIST_PICKER_COPY.errorTitle}
+        body={ARTIST_PICKER_COPY.errorBody}
+        role="alert"
+      />
     ) : artists.length === 0 ? (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span
-          className="text-fg"
-          style={{ fontSize: 15, fontWeight: 800, letterSpacing: '-0.02em' }}
-        >
-          {ARTIST_PICKER_COPY.emptyTitle}
-        </span>
-        <span
-          style={{ fontSize: 13, lineHeight: 1.45, color: 'var(--fg-muted)' }}
-        >
-          {ARTIST_PICKER_COPY.emptyBody}
-        </span>
-      </div>
+      <Notice
+        title={ARTIST_PICKER_COPY.emptyTitle}
+        body={ARTIST_PICKER_COPY.emptyBody}
+      />
     ) : (
       <div role="group" aria-label={ARTIST_PICKER_COPY.groupLabel}>
         <PickGrid columns={columns}>

@@ -29,7 +29,12 @@ import {
 export function useOnboardingSuggestions(
   genres: readonly string[],
   enabled: boolean,
-): { artists: PickArtist[]; loading: boolean; loaded: boolean } {
+): {
+  artists: PickArtist[]
+  loading: boolean
+  loaded: boolean
+  errored: boolean
+} {
   // The genre set is part of the key, so re-picking on the step before this
   // one refetches rather than showing the previous lane's artists.
   const sorted = Array.from(genres).sort()
@@ -65,9 +70,14 @@ export function useOnboardingSuggestions(
   // hands back the same empty array a genuinely empty result does — so a caller
   // that reconciles state against this list has to know which of the two it is
   // holding. Only a success says the list is the whole truth.
+  //
+  // `errored` is the same distinction told the other way round, for the reader
+  // rather than for the state: an outage that renders as "nobody booked in that
+  // lane" blames the listings for our own failure.
   return {
     artists,
     loading: enabled && query.isPending,
     loaded: query.isSuccess,
+    errored: enabled && query.isError,
   }
 }

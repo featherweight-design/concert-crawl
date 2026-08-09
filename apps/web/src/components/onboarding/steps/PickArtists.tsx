@@ -21,6 +21,8 @@ interface PickArtistsProps {
   selected: ReadonlySet<string>
   onToggle: (slug: string) => void
   loading: boolean
+  /** The suggestions read failed, which is not the same as it being empty. */
+  errored: boolean
   columns: number
 }
 
@@ -29,6 +31,7 @@ export function PickArtists({
   selected,
   onToggle,
   loading,
+  errored,
   columns,
 }: PickArtistsProps) {
   return (
@@ -41,6 +44,7 @@ export function PickArtists({
         selected={selected}
         onToggle={onToggle}
         loading={loading}
+        errored={errored}
         columns={columns}
       />
     </div>

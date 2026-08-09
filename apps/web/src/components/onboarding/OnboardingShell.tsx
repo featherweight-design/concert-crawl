@@ -71,6 +71,7 @@ interface StepContentProps {
   onToggleGenre: (genre: string) => void
   suggestions: PickArtist[]
   suggestionsLoading: boolean
+  suggestionsErrored: boolean
   pickedArtists: ReadonlySet<string>
   onToggleArtist: (slug: string) => void
 }
@@ -83,6 +84,7 @@ function StepContent({
   onToggleGenre,
   suggestions,
   suggestionsLoading,
+  suggestionsErrored,
   pickedArtists,
   onToggleArtist,
 }: StepContentProps) {
@@ -107,6 +109,7 @@ function StepContent({
         selected={pickedArtists}
         onToggle={onToggleArtist}
         loading={suggestionsLoading}
+        errored={suggestionsErrored}
         columns={columns}
       />
     )
@@ -238,6 +241,7 @@ export function OnboardingShell({
     artists: suggestions,
     loading: suggestionsLoading,
     loaded: suggestionsLoaded,
+    errored: suggestionsErrored,
   } = useOnboardingSuggestions(Array.from(pickedGenres), onArtistsStep)
 
   // Going back to change genres refetches the grid, and a pick that is no
@@ -305,6 +309,7 @@ export function OnboardingShell({
     onToggleGenre: toggleGenre,
     suggestions,
     suggestionsLoading,
+    suggestionsErrored,
     pickedArtists,
     onToggleArtist: toggleArtist,
   }
