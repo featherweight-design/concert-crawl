@@ -1,3 +1,10 @@
+## [1.229.3](https://github.com/HartiganHM/concert-crawl/compare/v1.229.2...v1.229.3) (2026-08-09)
+
+
+### Bug Fixes
+
+* **reporting:** send signed-out status reports to the tier picker ([#1532](https://github.com/HartiganHM/concert-crawl/issues/1532)) ([b2ce699](https://github.com/HartiganHM/concert-crawl/commit/b2ce69991390cea726f364c2467537b6825ef32b)), closes [#1247](https://github.com/HartiganHM/concert-crawl/issues/1247)
+
 ## [1.229.2](https://github.com/HartiganHM/concert-crawl/compare/v1.229.1...v1.229.2) (2026-08-09)
 
 
