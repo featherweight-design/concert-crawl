@@ -36,6 +36,25 @@ describe('EmptyState', () => {
     expect(screen.getByText('Slow night on the calendar.')).toBeTruthy()
   })
 
+  it('omits the eyebrow but keeps the rail when none is passed', () => {
+    // The rail is dot + [eyebrow] + rule + right-hand label, so its child
+    // count is what proves the eyebrow node is absent rather than empty.
+    const withEyebrow = render(
+      <EmptyState eyebrow="Tonight" title="No shows" body="Nothing here." />,
+    )
+    const railWith = withEyebrow.container.firstElementChild?.firstElementChild
+    expect(railWith?.children.length).toBe(4)
+    withEyebrow.unmount()
+
+    const { container } = render(
+      <EmptyState title="No shows" body="Nothing here." />,
+    )
+    const rail = container.firstElementChild?.firstElementChild
+    expect(rail?.children.length).toBe(3)
+    expect(screen.queryByText('Tonight')).toBeNull()
+    expect(screen.getByText('0 / 0')).toBeTruthy()
+  })
+
   it('renders rail-right as "0 / 0" for no-data state', () => {
     render(
       <EmptyState

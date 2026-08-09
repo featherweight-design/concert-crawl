@@ -7,7 +7,6 @@ export function WatchingEmpty() {
   return (
     <EmptyState
       state="no-data"
-      eyebrow={copy.watchingEmptyEyebrow}
       title={copy.watchingEmptyTitle}
       body={copy.watchingEmptyBody}
       primaryCta={{ label: copy.watchingEmptyCta, href: '/events' }}

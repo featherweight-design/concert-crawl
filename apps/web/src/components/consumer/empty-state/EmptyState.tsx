@@ -11,7 +11,11 @@ interface EmptyStateCta {
 export interface EmptyStateProps {
   state?: 'no-data' | 'filtered' | 'error'
   density?: 'default' | 'dense'
-  eyebrow: string
+  /**
+   * Omit on a surface whose location is already stated above the empty state,
+   * such as a sub-tab bar: the rail's dot and rule still render.
+   */
+  eyebrow?: string
   title: string
   body: string
   /**
@@ -143,19 +147,21 @@ export function EmptyState({
             flexShrink: 0,
           }}
         />
-        <div
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: dense ? 9 : 10,
-            color: accent,
-            letterSpacing: '0.16em',
-            textTransform: 'uppercase',
-            fontWeight: 700,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {eyebrow}
-        </div>
+        {eyebrow !== undefined && (
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: dense ? 9 : 10,
+              color: accent,
+              letterSpacing: '0.16em',
+              textTransform: 'uppercase',
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {eyebrow}
+          </div>
+        )}
         <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
         <div
           style={{

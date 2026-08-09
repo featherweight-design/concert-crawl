@@ -22,7 +22,6 @@ export const HistoryEmpty = () => (
     </div>
     <EmptyState
       state="no-data"
-      eyebrow={COPY.eyebrow}
       title={COPY.headline}
       body={COPY.body}
       primaryCta={{ label: COPY.cta, href: '/events' }}

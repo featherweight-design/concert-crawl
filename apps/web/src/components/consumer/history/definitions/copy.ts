@@ -53,7 +53,6 @@ export const HISTORY_COPY = {
   },
 
   empty: {
-    eyebrow: 'CONCERTS',
     headline: 'No nights on the books yet.',
     body: "Tap I'm going! on a show and it lands here, first as a plan, then as a keepsake.",
     cta: "Browse tonight's shows",
