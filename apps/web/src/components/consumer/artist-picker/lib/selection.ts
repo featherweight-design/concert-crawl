@@ -16,9 +16,12 @@ function parseSlugs(raw: string): string[] | null {
     if (!Array.isArray(parsed)) return null
     if (!parsed.every((value) => typeof value === 'string')) return null
     return parsed
-  } catch {
+  } catch (err: unknown) {
     // Corrupt JSON is indistinguishable from no mirror at all, and the right
     // answer to both is the same: fall back to whatever state the caller has.
+    // It still logs, because a silent return here reads exactly like a mirror
+    // that was never written when someone is chasing a lost selection.
+    console.warn('artist picks mirror parse failed', err)
     return null
   }
 }

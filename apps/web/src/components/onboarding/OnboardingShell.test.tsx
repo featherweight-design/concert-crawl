@@ -332,6 +332,26 @@ describe('OnboardingShell — genres then artists', () => {
     ).toEqual(['geese'])
   })
 
+  it('drops picks the refetched grid no longer offers', async () => {
+    // Changing genres refetches, and a pick with no tile left has no way to be
+    // unticked. Riding along in the count and the commit is the bug.
+    window.sessionStorage.setItem(
+      'cc.onboarding.artistPicks',
+      JSON.stringify(['geese', 'ghost']),
+    )
+    renderShell()
+    await goToArtists()
+
+    await waitFor(() =>
+      expect(primaryCtas()[0]!.textContent).toMatch(/\b1 artist\b/),
+    )
+    expect(
+      JSON.parse(
+        window.sessionStorage.getItem('cc.onboarding.artistPicks') ?? '[]',
+      ),
+    ).toEqual(['geese'])
+  })
+
   it('never locks the tiles themselves — only the commit is paywalled', async () => {
     renderShell()
     await goToArtists()
