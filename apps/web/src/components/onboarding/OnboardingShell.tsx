@@ -217,23 +217,28 @@ export function OnboardingShell({
   }, [])
 
   const onArtistsStep = stepKey === 'artists'
-  const { artists: suggestions, loading: suggestionsLoading } =
-    useOnboardingSuggestions(Array.from(pickedGenres), onArtistsStep)
+  const {
+    artists: suggestions,
+    loading: suggestionsLoading,
+    loaded: suggestionsLoaded,
+  } = useOnboardingSuggestions(Array.from(pickedGenres), onArtistsStep)
 
   // Going back to change genres refetches the grid, and a pick that is no
   // longer in it has no tile left to untick. Left alone it would keep inflating
   // the CTA count and ride along in the commit, so the selection is pruned to
-  // what is actually on screen. Only once the fetch has settled: mid-load the
-  // list is empty, and pruning against that would wipe a selection the upgrade
-  // round-trip just restored.
+  // what is actually on screen.
+  //
+  // Gated on a SUCCESSFUL fetch, not on not-loading. A failed one also stops
+  // loading and also reports an empty list, and pruning against that would wipe
+  // a selection the upgrade round-trip had just restored.
   useEffect(() => {
-    if (!onArtistsStep || suggestionsLoading) return
+    if (!onArtistsStep || !suggestionsLoaded) return
     const visible = new Set(suggestions.map((artist) => artist.slug))
     setPickedArtists((previous) => {
       const kept = Array.from(previous).filter((slug) => visible.has(slug))
       return kept.length === previous.size ? previous : new Set(kept)
     })
-  }, [onArtistsStep, suggestionsLoading, suggestions])
+  }, [onArtistsStep, suggestionsLoaded, suggestions])
 
   const { data: planState } = usePlanState()
   const following = useEntitlement('following')

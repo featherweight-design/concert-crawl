@@ -29,7 +29,7 @@ import {
 export function useOnboardingSuggestions(
   genres: readonly string[],
   enabled: boolean,
-): { artists: PickArtist[]; loading: boolean } {
+): { artists: PickArtist[]; loading: boolean; loaded: boolean } {
   // The genre set is part of the key, so re-picking on the step before this
   // one refetches rather than showing the previous lane's artists.
   const sorted = Array.from(genres).sort()
@@ -54,5 +54,13 @@ export function useOnboardingSuggestions(
       dateLabel: formatShortDate(suggestion.nextShow.iso),
     }))
 
-  return { artists, loading: enabled && query.isPending }
+  // `loaded` is not `!loading`. A failed fetch is also not-loading, and it
+  // hands back the same empty array a genuinely empty result does — so a caller
+  // that reconciles state against this list has to know which of the two it is
+  // holding. Only a success says the list is the whole truth.
+  return {
+    artists,
+    loading: enabled && query.isPending,
+    loaded: query.isSuccess,
+  }
 }

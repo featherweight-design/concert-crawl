@@ -37,6 +37,17 @@ describe('artist picks mirror', () => {
     expect(readPicks(KEY)).toEqual([])
   })
 
+  // A hand-edited mirror is the boundary this parser exists for. A blank entry
+  // would ride into `?genres=`, which the server 400s on, and a duplicate would
+  // push the "follow N artists" count past the number of tiles actually ticked.
+  it('drops blank entries and duplicates', () => {
+    window.sessionStorage.setItem(
+      KEY,
+      JSON.stringify(['alpha', '  beta ', '', '   ', 'alpha']),
+    )
+    expect(readPicks(KEY)).toEqual(['alpha', 'beta'])
+  })
+
   it('ignores corrupt JSON', () => {
     window.sessionStorage.setItem(KEY, 'not json')
     expect(readPicks(KEY)).toEqual([])

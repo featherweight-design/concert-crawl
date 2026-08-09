@@ -107,6 +107,7 @@ vi.mock('@/components/consumer/tier-picker/lazy', () => ({
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { OnboardingShell, type OnboardingShellProps } from './OnboardingShell'
 import { ONBOARDING_COPY } from './definitions/copy'
+import { ARTIST_PICKER_COPY } from '@/components/consumer/artist-picker/definitions/copy'
 import { ThemeProvider } from '@/theme/ThemeProvider'
 
 const nav = ONBOARDING_COPY.nav
@@ -399,6 +400,35 @@ describe('OnboardingShell — genres then artists', () => {
         window.sessionStorage.getItem('cc.onboarding.artistPicks') ?? '[]',
       ),
     ).toEqual(['geese'])
+  })
+
+  // A failed fetch also stops loading and also reports zero artists. Pruning
+  // against that would wipe the selection the upgrade round-trip just restored.
+  it('keeps a restored selection when the suggestions fetch fails', async () => {
+    fetchArtistSuggestions.mockRejectedValue(new Error('offline'))
+    window.sessionStorage.setItem(
+      'cc.onboarding.artistPicks',
+      JSON.stringify(['geese', 'ghost']),
+    )
+    renderShell()
+    for (let i = 0; i < ARTISTS_STEP_INDEX; i += 1) next()
+
+    // The empty state only renders once the query has settled, so waiting on it
+    // is what makes the assertions below land after the failure, not before.
+    // The hook retries once, so settling outlasts waitFor's default window.
+    await waitFor(
+      () =>
+        expect(
+          screen.getAllByText(ARTIST_PICKER_COPY.emptyTitle).length,
+        ).toBeGreaterThan(0),
+      { timeout: 5000 },
+    )
+    expect(primaryCtas()[0]!.textContent).toMatch(/\b2 artists\b/)
+    expect(
+      JSON.parse(
+        window.sessionStorage.getItem('cc.onboarding.artistPicks') ?? '[]',
+      ),
+    ).toEqual(['geese', 'ghost'])
   })
 
   it('never locks the tiles themselves — only the commit is paywalled', async () => {

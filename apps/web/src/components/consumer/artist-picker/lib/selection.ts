@@ -9,13 +9,23 @@
  * Parsed with a real element-by-element check rather than a cast. The value
  * came out of a store the user can edit with two lines of console, so
  * `JSON.parse` returning "something" says nothing about it being `string[]`.
+ *
+ * Well-typed is not the same as usable, so the survivors are normalized too:
+ * blanks would ride into `?genres=` — a shape the server 400s on — and
+ * duplicates would inflate the "follow N artists" count above the number of
+ * tiles actually ticked.
  */
 function parseSlugs(raw: string): string[] | null {
   try {
     const parsed: unknown = JSON.parse(raw)
     if (!Array.isArray(parsed)) return null
-    if (!parsed.every((value) => typeof value === 'string')) return null
-    return parsed
+    const slugs: string[] = []
+    for (const value of parsed) {
+      if (typeof value !== 'string') return null
+      const slug = value.trim()
+      if (slug !== '' && !slugs.includes(slug)) slugs.push(slug)
+    }
+    return slugs
   } catch (err: unknown) {
     // Corrupt JSON is indistinguishable from no mirror at all, and the right
     // answer to both is the same: fall back to whatever state the caller has.
