@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.42.0-beta',
+    date: 'Aug 9, 2026',
+    headline: 'Follow the whole bill, from the show that made you care.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Every act on a show page now has a Follow button, right under the CTA, opener included.',
+      },
+      {
+        kind: 'added',
+        text: 'One tap takes all of them, so a four-act bill is one decision instead of four.',
+      },
+    ],
+  },
+  {
     version: 'v0.41.0-beta',
     date: 'Aug 8, 2026',
     headline: 'The artists you follow, in one place.',
