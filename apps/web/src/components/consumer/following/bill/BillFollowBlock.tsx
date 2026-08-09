@@ -13,6 +13,12 @@
 // Above Premium the rows are independent again and the bulk action is a
 // convenience rather than the only way through.
 //
+// This holds for a viewer who downgraded while already following acts on the
+// bill: locked draws the at-rest skin and no Following state, exactly as
+// `ShelfCard` does. Their follows are not lost — DELETE is ungated at the API
+// and the artist page still unfollows — but a surface whose whole job is the
+// upsell is not the place to hand a lapsed viewer four toggles.
+//
 // ⚠️ Following an act here does NOT touch the event's watch state (ED-08).
 // Watching is the show; following is the artist. Nothing in this block's copy
 // may suggest otherwise.
