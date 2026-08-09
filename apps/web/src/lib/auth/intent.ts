@@ -38,6 +38,17 @@ export const decodeIntent = (raw: string | null | undefined): Intent | null => {
   return { action, eventId }
 }
 
+/**
+ * The tier a signed-out visitor chose in the picker, carried to the other side
+ * of sign-up so the picker can reopen on it (#1284).
+ *
+ * Deliberately not a second `intent` verb: a visitor who taps Watch and then
+ * picks Premium has two pending things, and the single `intent` slot would
+ * force dropping one. Which tier keys are valid is a picker question, so the
+ * value is validated there rather than here.
+ */
+export const PENDING_TIER_PARAM = 'tier'
+
 export const DEFAULT_RETURN_PATH = '/events'
 
 /**
@@ -52,6 +63,10 @@ const PLACEHOLDER_ORIGIN = 'https://placeholder.invalid'
  * `buildReturnUrl` preserves both, so replaying must not flatten the URL down to
  * a bare pathname. `usePathname` excludes the fragment, so callers pass
  * `window.location.hash` explicitly.
+ *
+ * All three seam params go in one pass because two components read the seam on
+ * the same page. Stripping only your own would leave each one's `router.replace`
+ * re-adding the param the other just removed.
  */
 export const stripIntentParams = (
   pathname: string,
@@ -61,6 +76,7 @@ export const stripIntentParams = (
   const kept = new URLSearchParams(search)
   kept.delete('intent')
   kept.delete('label')
+  kept.delete(PENDING_TIER_PARAM)
   const query = kept.toString()
   return `${pathname}${query ? `?${query}` : ''}${hash}`
 }
@@ -232,5 +248,22 @@ export const buildReturnUrl = (args: {
   const url = new URL(path, PLACEHOLDER_ORIGIN)
   url.searchParams.set('intent', args.intent)
   if (args.label) url.searchParams.set('label', args.label)
+  return `${url.pathname}${url.search}${url.hash}`
+}
+
+/**
+ * Adds the pending tier to a destination the funnel has already accepted.
+ *
+ * Merged into any query the destination carries, for the same reason
+ * `buildReturnUrl` merges the intent: a second `?` invalidates both. The path
+ * must be sanitised before it gets here — this only appends.
+ */
+export const appendPendingTier = (
+  path: string,
+  tier: string | null,
+): string => {
+  if (!tier) return path
+  const url = new URL(path, PLACEHOLDER_ORIGIN)
+  url.searchParams.set(PENDING_TIER_PARAM, tier)
   return `${url.pathname}${url.search}${url.hash}`
 }

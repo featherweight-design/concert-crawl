@@ -1,5 +1,6 @@
 import { SignUp } from '@clerk/nextjs'
-import { isSafeReturnPath } from '@/lib/auth/intent'
+import { isSafeReturnPath, PENDING_TIER_PARAM } from '@/lib/auth/intent'
+import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier'
 
 interface SignUpPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -18,9 +19,21 @@ export default async function SignUpPage({ searchParams }: SignUpPageProps) {
 
   // Sanitised here as well as on read: it arrives from the querystring, so it
   // is attacker-controllable, and /auth/complete is a redirect.
-  const target = isSafeReturnPath(requested)
-    ? `/auth/complete?return=${encodeURIComponent(requested ?? '')}`
-    : '/auth/complete'
+  const forwarded = new URLSearchParams()
+  if (isSafeReturnPath(requested) && requested)
+    forwarded.set('return', requested)
+
+  // The tier the picker's Sign up CTA was tapped on (#1284), forwarded for the
+  // same reason as the destination: Clerk drops everything it does not own.
+  const tier = decodePendingTier(
+    typeof params[PENDING_TIER_PARAM] === 'string'
+      ? params[PENDING_TIER_PARAM]
+      : null,
+  )
+  if (tier) forwarded.set(PENDING_TIER_PARAM, tier)
+
+  const query = forwarded.toString()
+  const target = query ? `/auth/complete?${query}` : '/auth/complete'
 
   return (
     <main className="flex min-h-screen items-center justify-center">

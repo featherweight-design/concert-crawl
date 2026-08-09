@@ -329,7 +329,16 @@ describe('TierPickerSheet — logged out', () => {
     fireEvent.click(
       screen.getByRole('button', { name: TIER_PICKER_COPY.cta.signUpFree }),
     )
+    // Free carries no tier: signing up is the whole of what its CTA promises.
     expect(mockPush).toHaveBeenCalledWith('/sign-up')
+  })
+
+  it('a paid CTA carries its tier through sign-up (#1284)', () => {
+    renderSheet(planState('logged-out'))
+    fireEvent.click(
+      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.pickPremium }),
+    )
+    expect(mockPush).toHaveBeenCalledWith('/sign-up?tier=premium')
   })
 
   // Locked vocabulary (CLAUDE.md): Watching is never "Saved"/"Favorites"/
@@ -364,6 +373,52 @@ describe('TierPickerSheet — mobile accordion', () => {
     expect(premiumToggle.getAttribute('aria-expanded')).toBe('false')
     fireEvent.click(premiumToggle)
     expect(premiumToggle.getAttribute('aria-expanded')).toBe('true')
+  })
+
+  it('opens on initialTier instead of the plan-derived default (#1284)', () => {
+    mobileViewport = true
+    render(
+      <TierPickerSheet
+        open
+        onClose={vi.fn()}
+        planState={planState('free')}
+        scaRegion
+        entry="post-signup"
+        initialTier="premium"
+      />,
+    )
+    const premiumToggle = screen.getByRole('button', {
+      name: new RegExp(TIER_PICKER_COPY.tiers.premium.tagline),
+    })
+    expect(premiumToggle.getAttribute('aria-expanded')).toBe('true')
+    const freeToggle = screen.getByRole('button', {
+      name: new RegExp(TIER_PICKER_COPY.tiers.free.tagline),
+    })
+    expect(freeToggle.getAttribute('aria-expanded')).toBe('false')
+  })
+
+  it('falls back to the default when initialTier is not on screen (#1284)', () => {
+    // The param is visitor-editable and Founder stops rendering once its
+    // window closes, so a tier that is not shown must not leave every row
+    // collapsed.
+    mobileViewport = true
+    mockUseFounderWindow.mockReturnValue({
+      data: { state: 'closed', seatsTotal: 100, seatsRemaining: 0 },
+    })
+    render(
+      <TierPickerSheet
+        open
+        onClose={vi.fn()}
+        planState={planState('free')}
+        scaRegion
+        entry="post-signup"
+        initialTier="founder"
+      />,
+    )
+    const freeToggle = screen.getByRole('button', {
+      name: new RegExp(TIER_PICKER_COPY.tiers.free.tagline),
+    })
+    expect(freeToggle.getAttribute('aria-expanded')).toBe('true')
   })
 
   it('shows the mobile footer rail', () => {

@@ -15,6 +15,7 @@ import Link from 'next/link'
 import { useAuth } from '@clerk/nextjs'
 import type { PlanState, PickerEntry, PaymentFlow } from '@concert-crawl/types'
 import { track } from '@/lib/analytics'
+import { appendPendingTier } from '@/lib/auth/intent'
 import { ModalShell } from '@/components/consumer/modal-shell'
 import { useFounderWindow } from '@/lib/queries/use-founder-window'
 import { createCheckoutSession, abandonCheckout } from '@/lib/billing'
@@ -68,6 +69,12 @@ interface TierPickerSheetProps {
    * the tour can hand it back afterwards (#794).
    */
   signUpHref?: string | undefined
+  /**
+   * Which tier's card opens expanded, overriding the plan-derived default.
+   * Set when reopening on the tier a visitor picked before signing up (#1284);
+   * ignored when that tier is not among the visible ones.
+   */
+  initialTier?: TierKey | null | undefined
 }
 
 interface CheckoutContext {
@@ -194,6 +201,7 @@ export const TierPickerSheet = ({
   scaRegion,
   entry,
   signUpHref = '/sign-up',
+  initialTier = null,
 }: TierPickerSheetProps) => {
   const router = useRouter()
   const { getToken } = useAuth()
@@ -234,10 +242,12 @@ export const TierPickerSheet = ({
 
   const [expandedTier, setExpandedTier] = useState<TierKey | null>(null)
   useEffect(() => {
-    if (open)
-      setExpandedTier(
-        defaultExpandedTier(visibleTiers(windowView.state, state), state),
-      )
+    if (!open) return
+    const shown = visibleTiers(windowView.state, state)
+    const preselected = shown.some((tier) => tier.key === initialTier)
+      ? initialTier
+      : null
+    setExpandedTier(preselected ?? defaultExpandedTier(shown, state))
     // Reset the accordion each time the sheet opens.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
@@ -309,7 +319,12 @@ export const TierPickerSheet = ({
       setErrorText(null)
       setReturnFocusTier(null)
       if (cta.action === 'sign-up') {
-        router.push(signUpHref)
+        // A paid choice rides through Clerk so the picker can reopen on it once
+        // there is an account to charge (#1284). Free carries nothing: signing
+        // up is the whole of what its CTA promises.
+        router.push(
+          appendPendingTier(signUpHref, isPaidTier(tierKey) ? tierKey : null),
+        )
         return
       }
       if (cta.action === 'manage') {

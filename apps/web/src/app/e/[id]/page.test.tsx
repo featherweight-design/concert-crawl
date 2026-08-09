@@ -63,6 +63,60 @@ describe('/e/[id] — public event mirror (#72)', () => {
     expect(mockPublicGet).not.toHaveBeenCalled()
   })
 
+  it('carries the seam params across that redirect (#1284)', async () => {
+    // The post-signup seam lands here holding a pending watch and a pending
+    // tier. Dropping them at this hop is indistinguishable from never having
+    // seeded them: neither the replay nor the picker would ever run.
+    mockAuth.mockResolvedValue({ userId: 'user_1' })
+    const Page = await loadPage()
+
+    await expect(
+      Page({
+        params: Promise.resolve({ id: EVENT_ID }),
+        searchParams: Promise.resolve({
+          intent: `watch:${EVENT_ID}`,
+          label: 'Geese',
+          tier: 'premium',
+        }),
+      }),
+    ).rejects.toThrow('NEXT_REDIRECT')
+
+    expect(mockRedirect).toHaveBeenCalledWith(
+      `/events/${EVENT_ID}?intent=watch%3A${EVENT_ID}&label=Geese&tier=premium`,
+    )
+  })
+
+  it('encodes a newline smuggled through the query rather than forwarding it', async () => {
+    // The forwarded value ends up in a `Location` header, where a raw newline
+    // is response splitting.
+    mockAuth.mockResolvedValue({ userId: 'user_1' })
+    const Page = await loadPage()
+
+    await expect(
+      Page({
+        params: Promise.resolve({ id: EVENT_ID }),
+        searchParams: Promise.resolve({ label: 'Geese\nSet-Cookie: x=1' }),
+      }),
+    ).rejects.toThrow('NEXT_REDIRECT')
+
+    expect(mockRedirect).toHaveBeenCalledTimes(1)
+    expect(mockRedirect.mock.calls[0]?.[0]).not.toMatch(/[\r\n]/)
+  })
+
+  it('redirects with no query when there is none to carry', async () => {
+    mockAuth.mockResolvedValue({ userId: 'user_1' })
+    const Page = await loadPage()
+
+    await expect(
+      Page({
+        params: Promise.resolve({ id: EVENT_ID }),
+        searchParams: Promise.resolve({}),
+      }),
+    ).rejects.toThrow('NEXT_REDIRECT')
+
+    expect(mockRedirect).toHaveBeenCalledWith(`/events/${EVENT_ID}`)
+  })
+
   it('does not redirect an anonymous visitor', async () => {
     mockPublicGet.mockImplementation((path: string) =>
       path.endsWith('/related')

@@ -24,6 +24,7 @@ import { posterImageUrl } from '@/lib/share/destinations'
 
 interface PublicEventPageProps {
   params: Promise<{ id: string }>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
 // GET /v1/events/:id validates the id as a UUID (z.string().uuid()) and 400s on
@@ -127,7 +128,33 @@ export const generateMetadata = async ({
   }
 }
 
-const PublicEventPage = async ({ params }: PublicEventPageProps) => {
+/**
+ * The incoming query, re-serialised for the signed-in redirect.
+ *
+ * Rebuilt through `URLSearchParams` rather than passed through as text: the
+ * result goes into a `Location` header, and its encoding is what stops a
+ * newline smuggled into a value from splitting the response. The values
+ * themselves are validated by whoever reads them on the other side.
+ */
+const forwardedQuery = async (
+  searchParams: PublicEventPageProps['searchParams'],
+): Promise<string> => {
+  const incoming = await searchParams
+  if (!incoming) return ''
+  const forwarded = new URLSearchParams()
+  for (const [key, value] of Object.entries(incoming)) {
+    if (typeof value === 'string') forwarded.append(key, value)
+    else if (Array.isArray(value))
+      for (const each of value) forwarded.append(key, each)
+  }
+  const query = forwarded.toString()
+  return query ? `?${query}` : ''
+}
+
+const PublicEventPage = async ({
+  params,
+  searchParams,
+}: PublicEventPageProps) => {
   const { id } = await params
   // Ahead of the redirect: a malformed id is a dead link for everyone, and
   // bouncing it to /events/:id would just hand the same garbage to a second
@@ -139,7 +166,13 @@ const PublicEventPage = async ({ params }: PublicEventPageProps) => {
   // Middleware early-returns for authenticated users, so without this a
   // signed-in visitor clicking a shared link would land on the stripped-down
   // mirror of an event they can already see in full.
-  if (userId) redirect(`/events/${id}`)
+  //
+  // The query comes along. A visitor sent here by the post-signup seam is
+  // carrying the watch they tapped or the tier they picked, and dropping it
+  // here is indistinguishable from never having seeded it. The fragment needs
+  // no handling: browsers reapply it across a redirect, and it never reaches
+  // the server to be carried by hand.
+  if (userId) redirect(`/events/${id}${await forwardedQuery(searchParams)}`)
 
   // Same parallel shape as the protected page (#833), minus the reports fetch —
   // reports are auth-only and the mirror does not render them.

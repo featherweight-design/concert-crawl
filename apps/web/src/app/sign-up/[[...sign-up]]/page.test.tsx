@@ -51,4 +51,24 @@ describe('SignUpPage (#1113)', () => {
       '/auth/complete',
     )
   })
+
+  it('forwards a chosen tier alongside the destination (#1284)', async () => {
+    expect(await renderPage({ redirect_url: '/e/abc', tier: 'premium' })).toBe(
+      '/auth/complete?return=%2Fe%2Fabc&tier=premium',
+    )
+  })
+
+  it('forwards a chosen tier with no destination of its own (#1284)', async () => {
+    expect(await renderPage({ tier: 'supporter' })).toBe(
+      '/auth/complete?tier=supporter',
+    )
+  })
+
+  it('drops a tier that is not one of ours (#1284)', async () => {
+    // The param is visitor-editable, and it decides which card opens on the
+    // far side. An unknown value opens nothing rather than a guess.
+    expect(await renderPage({ redirect_url: '/e/abc', tier: 'platinum' })).toBe(
+      '/auth/complete?return=%2Fe%2Fabc',
+    )
+  })
 })

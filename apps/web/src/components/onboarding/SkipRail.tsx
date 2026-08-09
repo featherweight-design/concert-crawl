@@ -5,7 +5,12 @@ import { DEFAULT_RETURN_PATH } from '@/lib/auth/intent'
 const copy = ONBOARDING_COPY.nav.skip
 
 export type SkipMode =
-  | { kind: 'default' }
+  /**
+   * `href` on every kind, because skipping and finishing land in the same
+   * place. A hardcoded default here dropped the pending tier for anyone who
+   * left the tour early (#1284).
+   */
+  | { kind: 'default'; href: string }
   | { kind: 'mid-intent'; destinationLabel: string; href: string }
   /** Entered from the account menu's "How Concert Crawl works" row. */
   | { kind: 'menu' }
@@ -82,7 +87,10 @@ export const SkipRail = ({ mode }: { mode: SkipMode }) => {
   }
 
   return (
-    <Link href={DEFAULT_RETURN_PATH} style={QUIET_LINK}>
+    <Link
+      href={mode.kind === 'menu' ? DEFAULT_RETURN_PATH : mode.href}
+      style={QUIET_LINK}
+    >
       {mode.kind === 'menu' ? copy.menu : copy.default}
     </Link>
   )

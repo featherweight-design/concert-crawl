@@ -14,6 +14,7 @@ import { YoureIn } from './steps/YoureIn'
 import { ONBOARDING_COPY } from './definitions/copy'
 import { SkipRail, type SkipMode } from './SkipRail'
 import {
+  appendPendingTier,
   buildReturnUrl,
   DEFAULT_RETURN_PATH,
   sanitizeReturnPath,
@@ -47,6 +48,8 @@ export interface OnboardingShellProps {
   destinationLabel?: string | null | undefined
   /** `menu` when opened from the account menu, so the rail reads "Close". */
   entry?: 'default' | 'menu' | undefined
+  /** Tier chosen before sign-up, handed on to the destination (#1284). */
+  pendingTier?: string | null | undefined
 }
 
 export function OnboardingShell({
@@ -54,6 +57,7 @@ export function OnboardingShell({
   returnPath = null,
   destinationLabel = null,
   entry = 'default',
+  pendingTier = null,
 }: OnboardingShellProps = {}) {
   const [index, setIndex] = useState(0)
   const router = useRouter()
@@ -66,13 +70,18 @@ export function OnboardingShell({
   const destination = sanitizeReturnPath(returnPath)
   const hasPendingReturn = !!intent && !!destinationLabel
   const finishLabel = hasPendingReturn ? destinationLabel : null
-  const finishHref = hasPendingReturn
-    ? buildReturnUrl({
-        returnPath: destination,
-        intent,
-        label: destinationLabel,
-      })
-    : DEFAULT_RETURN_PATH
+  // The tour is a stop on the way, not the destination, so a tier picked before
+  // sign-up has to survive it — otherwise the picker never reopens (#1284).
+  const finishHref = appendPendingTier(
+    hasPendingReturn
+      ? buildReturnUrl({
+          returnPath: destination,
+          intent,
+          label: destinationLabel,
+        })
+      : DEFAULT_RETURN_PATH,
+    pendingTier,
+  )
   // Mid-intent needs both halves: a label with no intent has nothing to replay,
   // and an intent with no label cannot be named in the copy. Skipping goes to
   // the same URL as finishing — leaving early is a choice about the tour, not an
@@ -81,7 +90,7 @@ export function OnboardingShell({
     ? { kind: 'mid-intent', destinationLabel, href: finishHref }
     : entry === 'menu'
       ? { kind: 'menu' }
-      : { kind: 'default' }
+      : { kind: 'default', href: finishHref }
 
   function goNext() {
     if (isLast) {

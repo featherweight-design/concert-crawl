@@ -25,7 +25,7 @@ afterEach(cleanup)
 
 describe('SkipRail — three weights, one position (#794)', () => {
   it('renders a quiet mono link by default', () => {
-    render(<SkipRail mode={{ kind: 'default' }} />)
+    render(<SkipRail mode={{ kind: 'default', href: '/events' }} />)
     const skip = screen.getByRole('link', { name: /^skip$/i })
     expect(skip.getAttribute('href')).toBe('/events')
     // Quiet means no button chrome — a border here would read as a CTA.
@@ -69,7 +69,7 @@ describe('SkipRail — three weights, one position (#794)', () => {
   })
 
   it('shows no pending strip by default either', () => {
-    render(<SkipRail mode={{ kind: 'default' }} />)
+    render(<SkipRail mode={{ kind: 'default', href: '/events' }} />)
     expect(screen.queryByRole('status')).toBeNull()
   })
 })

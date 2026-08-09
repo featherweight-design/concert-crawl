@@ -6,6 +6,7 @@ import {
   sanitizeDestinationLabel,
   buildReturnUrl,
   stripIntentParams,
+  appendPendingTier,
   DEFAULT_RETURN_PATH,
 } from './intent'
 
@@ -103,6 +104,17 @@ describe('stripIntentParams (#794)', () => {
     ).toBe('/events/e1?tab=prices')
   })
 
+  it('drops the pending tier alongside them (#1284)', () => {
+    // Both seam readers strip through here. If this dropped only the watch
+    // params, each one's replace would re-add what the other just removed.
+    expect(
+      stripIntentParams(
+        '/events/e1',
+        new URLSearchParams({ intent: `watch:${ID}`, tier: 'premium' }),
+      ),
+    ).toBe('/events/e1')
+  })
+
   it('leaves a param-free path alone', () => {
     expect(stripIntentParams('/events/e1', new URLSearchParams())).toBe(
       '/events/e1',
@@ -189,5 +201,53 @@ describe('buildReturnUrl (#794)', () => {
         label: null,
       }),
     ).toBe(`${DEFAULT_RETURN_PATH}?intent=watch%3A${ID}`)
+  })
+})
+
+describe('appendPendingTier (#1284)', () => {
+  it('appends the tier to a bare path', () => {
+    expect(appendPendingTier('/events/e1', 'premium')).toBe(
+      '/events/e1?tier=premium',
+    )
+  })
+
+  it('merges into an existing query rather than opening a second one', () => {
+    expect(appendPendingTier('/events/e1?tab=prices', 'premium')).toBe(
+      '/events/e1?tab=prices&tier=premium',
+    )
+  })
+
+  it('rides alongside the watch seam params', () => {
+    expect(
+      appendPendingTier(
+        buildReturnUrl({
+          returnPath: '/events/e1',
+          intent: `watch:${ID}`,
+          label: 'Geese',
+        }),
+        'supporter',
+      ),
+    ).toBe(`/events/e1?intent=watch%3A${ID}&label=Geese&tier=supporter`)
+  })
+
+  it('preserves a fragment', () => {
+    expect(appendPendingTier('/events/e1#lineup', 'founder')).toBe(
+      '/events/e1?tier=founder#lineup',
+    )
+  })
+
+  it('replaces a tier the path already carries', () => {
+    expect(appendPendingTier('/events/e1?tier=free', 'premium')).toBe(
+      '/events/e1?tier=premium',
+    )
+  })
+
+  it.each([
+    ['null', null],
+    ['empty', ''],
+  ])('leaves the path untouched for %s', (_label, tier) => {
+    expect(appendPendingTier('/events/e1?tab=prices', tier)).toBe(
+      '/events/e1?tab=prices',
+    )
   })
 })

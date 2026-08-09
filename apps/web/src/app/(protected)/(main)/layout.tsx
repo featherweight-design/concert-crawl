@@ -4,6 +4,7 @@ import { BottomNav } from '@/components/consumer/bottom-nav'
 import { InstallSlot } from '@/components/pwa/InstallSlot'
 import { OfflinePill } from '@/components/pwa/OfflinePill'
 import { ReturnSeamReplay } from '@/components/consumer/return-seam/ReturnSeamReplay'
+import { PendingTierPicker } from '@/components/consumer/tier-picker/PendingTierPicker'
 import { Suspense } from 'react'
 
 export default function MainLayout({
@@ -39,6 +40,10 @@ export default function MainLayout({
             otherwise statically rendered. */}
         <Suspense fallback={null}>
           <ReturnSeamReplay />
+          {/* Same reasoning, other half of the seam: the tier a visitor chose
+              before signing up (#1284). Kept apart from the replay because the
+              two are independent — someone can arrive carrying either, or both. */}
+          <PendingTierPicker />
         </Suspense>
         {children}
         <BottomNav />

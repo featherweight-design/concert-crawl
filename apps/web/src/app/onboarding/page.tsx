@@ -2,8 +2,10 @@ import { OnboardingShell } from '@/components/onboarding/OnboardingShell'
 import {
   decodeIntent,
   encodeIntent,
+  PENDING_TIER_PARAM,
   sanitizeDestinationLabel,
 } from '@/lib/auth/intent'
+import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier'
 
 export const metadata = { title: 'Concert Crawl — Welcome' }
 
@@ -30,6 +32,7 @@ export default async function OnboardingPage({
       returnPath={firstValue(params.return)}
       destinationLabel={sanitizeDestinationLabel(firstValue(params.label))}
       entry={firstValue(params.entry) === 'menu' ? 'menu' : 'default'}
+      pendingTier={decodePendingTier(firstValue(params[PENDING_TIER_PARAM]))}
     />
   )
 }

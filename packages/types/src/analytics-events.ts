@@ -40,6 +40,11 @@ export type PickerEntry =
   // `logged-out-price` because reporting a cancellation and submitting a price
   // are different asks, and one bucket would hide which one earns accounts.
   | 'logged-out-report'
+  // Reopened on the far side of sign-up, on the tier the visitor had picked
+  // before they had an account (#1284). Its own bucket because it measures
+  // whether carrying the choice across auth converts at all — folding it into
+  // the reach that started the trip would hide exactly that.
+  | 'post-signup'
   | 'takeover'
 
 // Per-event property shapes. Keys are the canonical event names; the map is

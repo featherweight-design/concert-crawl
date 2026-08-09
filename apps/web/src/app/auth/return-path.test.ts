@@ -253,6 +253,37 @@ describe('the beta funnel carries a crew link across Clerk', () => {
     expect(landing).toBe(CREW_LINK)
   })
 
+  it('carries a chosen tier on to the destination (#1284)', async () => {
+    const landing = await runToRedirect(() =>
+      completePage({ return: '/e/abc', tier: 'premium' }),
+    )
+    expect(landing).toBe('/e/abc?tier=premium')
+  })
+
+  it('carries the tier onto a cookie destination too (#1284)', async () => {
+    // The two halves are independent: an invite arrival can have picked a tier
+    // on the way in just as a launched signup can.
+    cookieStore.set(
+      RETURN_PATH_COOKIE_NAME,
+      signInviteCookie(CREW_LINK, SECRET),
+    )
+
+    const landing = await runToRedirect(() => completePage({ tier: 'founder' }))
+    expect(landing).toBe(`${CREW_LINK}?tier=founder`)
+  })
+
+  it.each(['platinum', '', 'free '])(
+    'drops the unrecognised tier %s rather than forwarding it (#1284)',
+    async (tier) => {
+      // It lands in a `Location` header, so an unknown value is dropped at the
+      // boundary rather than passed along for someone else to validate.
+      const landing = await runToRedirect(() =>
+        completePage({ return: '/e/abc', tier }),
+      )
+      expect(landing).toBe('/e/abc')
+    },
+  )
+
   it('still redeems the beta code on the way through', async () => {
     cookieStore.set(INVITE_COOKIE_NAME, signInviteCookie(CODE, SECRET))
     cookieStore.set(

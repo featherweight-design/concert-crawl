@@ -6,7 +6,13 @@ import {
   INVITE_COOKIE_NAME,
   RETURN_PATH_COOKIE_NAME,
 } from '@/lib/invite-cookie'
-import { DEFAULT_RETURN_PATH, sanitizeReturnPath } from '@/lib/auth/intent'
+import {
+  appendPendingTier,
+  DEFAULT_RETURN_PATH,
+  PENDING_TIER_PARAM,
+  sanitizeReturnPath,
+} from '@/lib/auth/intent'
+import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier'
 
 interface AuthCompletePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
@@ -80,11 +86,21 @@ export default async function AuthCompletePage({
   // the destination rides a query param forwarded by /sign-up instead. The
   // cookie still wins where both exist: it is signed, and an invite link is a
   // stronger claim on where someone was headed than a param anyone can append.
-  const rawReturn = (await searchParams)['return']
+  const params = await searchParams
+  const rawReturn = params['return']
+
+  // A tier chosen before signing up rides on to the destination, where the
+  // picker reopens on it (#1284). Validated against the tier keys rather than
+  // forwarded blind: it lands in a `Location` header.
+  const rawTier = params[PENDING_TIER_PARAM]
 
   redirect(
-    sanitizeReturnPath(
-      pendingReturn?.code ?? (typeof rawReturn === 'string' ? rawReturn : null),
+    appendPendingTier(
+      sanitizeReturnPath(
+        pendingReturn?.code ??
+          (typeof rawReturn === 'string' ? rawReturn : null),
+      ),
+      decodePendingTier(typeof rawTier === 'string' ? rawTier : null),
     ),
   )
 }

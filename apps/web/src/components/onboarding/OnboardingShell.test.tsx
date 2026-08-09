@@ -138,6 +138,32 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     )
   })
 
+  it('carries a tier chosen before sign-up past the tour (#1284)', () => {
+    // The tour is a stop on the way, not the destination. Dropping the tier
+    // here means the picker never reopens on the far side.
+    renderShell({
+      intent: `watch:${EVENT_ID}`,
+      returnPath: '/events/e1',
+      destinationLabel: 'Geese',
+      pendingTier: 'premium',
+    })
+    advanceToEnd()
+    next()
+    expect(push).toHaveBeenCalledWith(
+      `/events/e1?intent=watch%3A${EVENT_ID}&label=Geese&tier=premium`,
+    )
+  })
+
+  it('carries the tier out through the skip as well (#1284)', () => {
+    renderShell({ pendingTier: 'supporter' })
+    for (const link of screen.getAllByRole('link', {
+      name: /^skip$/i,
+      hidden: true,
+    })) {
+      expect(link.getAttribute('href')).toBe('/events?tier=supporter')
+    }
+  })
+
   it('names the pending show in the skip rail mid-intent', () => {
     renderShell({
       intent: `watch:${EVENT_ID}`,
