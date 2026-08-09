@@ -37,8 +37,18 @@ export interface FollowButtonProps {
    * unfollow — eng spec §3.2).
    */
   locked?: boolean
-  /** `full` is the rail/hero bar; `compact` is the sticky sub-header. */
-  size?: 'full' | 'compact'
+  /**
+   * A key of `NF_FOLLOW_SIZES`, so the size table stays the only place a
+   * density is defined. `full` is the rail/hero bar, `md` the sticky
+   * sub-header and desktop search rows, `sm` the mobile search row.
+   */
+  size?: 'full' | 'md' | 'sm'
+  /**
+   * Drop the label and render a square glyph button. Permitted only in the
+   * narrow breakpoint the spec names (under 360px); the accessible name still
+   * carries the artist, so nothing is lost to a screen reader.
+   */
+  iconOnly?: boolean
   /**
    * Signed-in activation. Never called while signed out or locked. The caller
    * owns optimism — `useArtistFollow` flips its own state before the request
@@ -81,6 +91,7 @@ export const FollowButton = ({
   signedOut,
   locked = false,
   size = 'full',
+  iconOnly = false,
   onToggle,
   onLockedTap,
 }: FollowButtonProps) => {
@@ -122,7 +133,7 @@ export const FollowButton = ({
     onToggle()
   }
 
-  const geometry = size === 'full' ? NF_FOLLOW_SIZES.full : NF_FOLLOW_SIZES.md
+  const geometry = NF_FOLLOW_SIZES[size]
 
   const skin: React.CSSProperties = locked
     ? {
@@ -157,12 +168,19 @@ export const FollowButton = ({
     fontFamily: 'Inter, system-ui, sans-serif',
     fontWeight: 800,
     letterSpacing: '-0.01em',
+    // A row-embedded button must never be the thing that wraps or shrinks; the
+    // label beside it owns the flexible width.
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
     ...skin,
     height: geometry.height,
     fontSize: geometry.fontSize,
     // `full` stretches; its padding insets the label rather than sizing the
-    // control, which is why the table carries one anyway.
-    padding: geometry.padding,
+    // control, which is why the table carries one anyway. Icon-only drops the
+    // padding and squares off against the height instead, so the tap target
+    // never narrows to the glyph.
+    padding: iconOnly ? 0 : geometry.padding,
+    ...(iconOnly ? { minWidth: geometry.height } : {}),
     ...(size === 'full' ? { width: '100%' } : {}),
   }
 
@@ -236,7 +254,7 @@ export const FollowButton = ({
             <path d={active ? 'M2 7.5l3.4 3.4L12 3.6' : 'M7 2v10M2 7h10'} />
           </svg>
         )}
-        {active ? ARTIST_COPY.following : ARTIST_COPY.follow}
+        {!iconOnly && (active ? ARTIST_COPY.following : ARTIST_COPY.follow)}
       </button>
       {/* Visually hidden, NOT `hidden`: the hidden attribute drops a node from
           the a11y tree, so an aria-describedby pointed at it announces nothing.

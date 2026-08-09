@@ -1,6 +1,7 @@
-// Customer-facing strings for the browse follow surfaces (native following,
-// PR 4): the "My artists" scope chip, its scope banner, and the three-mode
-// shelf that sits above the browse list.
+// Customer-facing strings for the follow surfaces outside the artist page
+// (native following): the "My artists" scope chip, its scope banner, the
+// three-mode browse shelf (PR 4), and the desktop search explainer rail
+// (PR 5). One file so the follow promise is worded once, not per surface.
 //
 // Artist names, venue names, dates and counts are DATA — they never live here.
 //
@@ -74,4 +75,20 @@ export const FOLLOWING_COPY = {
   followAria: (name: string) => `Follow ${name}`,
   followingAria: (name: string) => `Following ${name}`,
   followGate: 'Following artists is a Premium feature. Opens upgrade options.',
+
+  // ── Search results, desktop explainer rail ────────────────────────────
+  // Desktop only. At 1080px the mobile footnote would be one lonely sentence
+  // under a short list, and the explanation is what makes a viewer with no
+  // follows act. Mobile carries the same case in the rows themselves.
+  searchRailEyebrow: 'What following does',
+  // Says what lands and what does not. Careful: following surfaces dates, it
+  // never moves them into Watching.
+  searchRailBody:
+    "Follow an artist and we'll tell you the day they book a Denver date. No tour-wide noise, no email you didn't ask for.",
+  // The no-dates case, stated once. An artist with nothing on the books is the
+  // clearest reason to follow, so the rail names it rather than leaving the
+  // muted row line to argue for itself. The second sentence is the part the
+  // row cannot say: what an absence here does and does not mean.
+  searchRailNoDates:
+    "An artist with nothing booked is still worth following. Acts who have never played Denver aren't in here at all.",
 } as const

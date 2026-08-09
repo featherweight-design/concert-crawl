@@ -98,7 +98,7 @@ describe('FollowButton', () => {
     )
   })
 
-  it('sizes full and compact to the handoff', () => {
+  it('sizes full and md to the handoff', () => {
     const { getByRole, unmount } = render(
       <FollowButton
         name="Wax Harbour"
@@ -121,7 +121,7 @@ describe('FollowButton', () => {
         name="Wax Harbour"
         following={false}
         signedOut={false}
-        size="compact"
+        size="md"
         onToggle={noop}
         onLockedTap={() => undefined}
       />,
@@ -130,6 +130,29 @@ describe('FollowButton', () => {
     expect(compact.style.height).toBe('44px')
     expect(compact.style.padding).toBe('0px 14px')
     expect(compact.style.fontSize).toBe('13.5px')
+  })
+
+  // The narrow search row (under 360px). The label goes, the artist does not:
+  // dropping to a glyph must not cost a screen reader the name, and the target
+  // squares off against the height rather than shrinking to the icon.
+  it('sm icon-only: keeps the artist in the accessible name and stays square', () => {
+    const { getByRole } = render(
+      <FollowButton
+        name="Wax Harbour"
+        following={false}
+        signedOut={false}
+        size="sm"
+        iconOnly
+        onToggle={noop}
+        onLockedTap={() => undefined}
+      />,
+    )
+    const button = getByRole('button')
+    expect(button.textContent).toBe('')
+    expect(button.getAttribute('aria-label')).toContain('Wax Harbour')
+    expect(button.style.height).toBe('36px')
+    expect(button.style.minWidth).toBe('36px')
+    expect(button.style.padding).toBe('0px')
   })
 
   it('keeps the focus-ring hook that all:unset would otherwise destroy', () => {

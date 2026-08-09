@@ -66,7 +66,7 @@ export const StickyBar = ({
       >
         {name}
       </span>
-      {showFollow ? <FollowButton {...followProps} size="compact" /> : null}
+      {showFollow ? <FollowButton {...followProps} size="md" /> : null}
     </div>
   )
 }

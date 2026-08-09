@@ -9,6 +9,34 @@ const mockNavigateTo = vi.fn()
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
+  // FollowButton builds its signed-out return-to href from these (PR 5).
+  usePathname: () => '/events',
+  useSearchParams: () => new URLSearchParams(),
+}))
+
+// Native following PR 5 — the artist-page rows the palette draws now carry a
+// live Follow button, so the section reads Clerk, the entitlement and the plan.
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ isSignedIn: true }),
+}))
+vi.mock('@/lib/queries/use-entitlement', () => ({
+  useEntitlement: () => ({
+    isLoading: false,
+    active: true,
+    surface: 'visible-active',
+  }),
+}))
+vi.mock('@/lib/queries/use-plan-state', () => ({
+  usePlanState: () => ({ data: undefined }),
+}))
+vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+  TierPickerSheet: () => null,
+}))
+vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
+  useArtistFollow: (_slug: string, initialFollowing: boolean) => ({
+    following: initialFollowing,
+    toggle: vi.fn(),
+  }),
 }))
 vi.mock('next/link', () => ({
   default: ({
@@ -68,6 +96,21 @@ const onClose = vi.fn()
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // jsdom has no matchMedia, and the artist rows size their follow control off
+  // one. `false` everywhere is the hook's own widest-first default.
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
   // Reset to non-empty query so SearchResultsState renders by default
   mockHookState.query = 'radio'
   mockHookState.artistResults = [

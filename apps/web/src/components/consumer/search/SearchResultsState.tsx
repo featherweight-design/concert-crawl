@@ -1,8 +1,24 @@
+'use client'
+
+import { useState } from 'react'
 import { MapPin, Mic2, User } from 'lucide-react'
-import type { ArtistSearchResult } from '@concert-crawl/types'
+import { useAuth } from '@clerk/nextjs'
+import type { ArtistSearchResult, PickerEntry } from '@concert-crawl/types'
 import type { ArtistResult, VenueResult } from '../../../lib/search/useSearch'
 import { EventImage } from '../event-image'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
+import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
+import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
+import { useEntitlement } from '@/lib/queries/use-entitlement'
+import { usePlanState } from '@/lib/queries/use-plan-state'
+import { useMediaQuery } from '@/lib/hooks/useMediaQuery'
+import { ArtistResultRow } from './ArtistResultRow'
+import {
+  SEARCH_DESKTOP_QUERY,
+  SEARCH_FOLLOW_ICON_ONLY_QUERY,
+  SEARCH_RAIL_WIDTH,
+} from './definitions/constants'
 
 const copy = CONSUMER_COPY.search
 
@@ -16,6 +32,12 @@ interface SearchResultsStateProps {
   artistPageResults?: ArtistSearchResult[]
   venueResults: VenueResult[]
   venueFirst?: boolean
+  /**
+   * Render the desktop explainer rail beside the results (native following,
+   * PR 5). Opt-in because the same component draws the command palette's
+   * dropdown, which is 560px of overlay with no room for a second column.
+   */
+  withExplainerRail?: boolean
   selectedIdx?: number
   onHover?: (idx: number) => void
   onNavigateTo: (
@@ -67,10 +89,15 @@ function Divider() {
   )
 }
 
-// #1115 PR-G. Deliberately not folded into ArtistSection: these rows carry a
-// photo, an upcoming-show count, and an "Artist page" tag, and they route to
-// `/artists/{slug}` rather than a filtered browse — a reader has to be able to
-// tell at a glance which of the two an "Artists"-looking row is.
+// #1115 PR-G, extended by native following PR 5. Deliberately not folded into
+// ArtistSection: these rows carry a photo, an upcoming-show count, an "Artist
+// page" tag and a Follow button, and they route to `/artists/{slug}` rather
+// than a filtered browse — a reader has to be able to tell at a glance which of
+// the two an "Artists"-looking row is.
+//
+// The section owns the gate and the sheet; the rows own their own follow state.
+// One sheet for the whole list, one entitlement read, and no row can open a
+// picker its neighbours disagree with.
 function ArtistPageSection({
   artistPageResults,
   selectedIdx,
@@ -86,6 +113,19 @@ function ArtistPageSection({
   onHover?: (idx: number) => void
   onNavigateTo: (type: 'artistPage', value: { slug: string }) => void
 }) {
+  const { isSignedIn } = useAuth()
+  const { surface } = useEntitlement('following')
+  const { data: planState } = usePlanState()
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const iconOnly = useMediaQuery(SEARCH_FOLLOW_ICON_ONLY_QUERY)
+  const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY)
+
+  // A logged-out tap gets the sign-up pitch; a signed-in locked tap gets the
+  // paywall. `surface` is what the entitlements matrix routes on, so the entry
+  // is read from it rather than from `isSignedIn` alone.
+  const pickerEntry: PickerEntry =
+    surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall'
+
   if (artistPageResults.length === 0) return null
   return (
     <>
@@ -95,109 +135,96 @@ function ArtistPageSection({
       />
       {artistPageResults.map((artist, idx) => {
         const itemIdx = baseIdx + idx
-        const meta =
-          artist.upcomingShowCount > 0
-            ? `${artist.upcomingShowCount} ${
-                artist.upcomingShowCount === 1
-                  ? copy.upcomingShowSingular
-                  : copy.upcomingShowPlural
-              }`
-            : copy.artistPageNoUpcoming
+        const hoverProps = onHover ? { onHover: () => onHover(itemIdx) } : {}
         return (
           <div key={artist.slug}>
             {idx > 0 && <Divider />}
-            <button
-              onClick={() => onNavigateTo('artistPage', { slug: artist.slug })}
-              onMouseEnter={() => onHover?.(itemIdx)}
-              data-selected={selectedIdx === itemIdx ? 'true' : undefined}
-              style={{
-                all: 'unset',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: '12px 16px',
-                width: '100%',
-                boxSizing: 'border-box' as const,
-                background:
-                  selectedIdx === itemIdx ? 'var(--surface-2)' : 'transparent',
-              }}
-            >
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
-                  overflow: 'hidden',
-                  background: 'var(--surface-2)',
-                  border: '1px solid var(--accent)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'var(--fg-muted)',
-                  flexShrink: 0,
-                }}
-              >
-                {/* An artist surface: the portrait or IdentityArt, never an
-                    event's artwork. No second source for the same reason.
-                    Decorative — the row already renders the name as text, and an
-                    empty alt also leaves IdentityArt without a role, so neither
-                    branch announces the name twice. */}
-                <EventImage
-                  src={artist.photoUrl}
-                  alt=""
-                  artist={artist.name}
-                  identityScale="micro"
-                  className="h-full w-full"
-                />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-ui)',
-                    fontWeight: 700,
-                    fontSize: 14,
-                    color: 'var(--fg)',
-                    letterSpacing: '-0.01em',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                  }}
-                >
-                  {artist.name}
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 10,
-                    color: 'var(--fg-muted)',
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  {meta}
-                </div>
-              </div>
-              <span
-                style={{
-                  flexShrink: 0,
-                  fontFamily: 'var(--font-mono)',
-                  fontSize: 9,
-                  letterSpacing: '0.08em',
-                  textTransform: 'uppercase' as const,
-                  color: 'var(--accent)',
-                  border: '1px solid var(--border-strong)',
-                  borderRadius: 4,
-                  padding: '2px 6px',
-                }}
-              >
-                {copy.artistPageRowTag}
-              </span>
-            </button>
+            <ArtistResultRow
+              artist={artist}
+              selected={selectedIdx === itemIdx}
+              {...hoverProps}
+              onNavigate={() =>
+                onNavigateTo('artistPage', { slug: artist.slug })
+              }
+              isSignedIn={isSignedIn}
+              surface={surface}
+              onLockedTap={() => setPickerOpen(true)}
+              onEntitlementRequired={() => setPickerOpen(true)}
+              size={isDesktop ? 'md' : 'sm'}
+              iconOnly={iconOnly}
+            />
           </div>
         )
       })}
       {showDivider && <div style={{ height: 16 }} />}
+      <TierPickerSheet
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        planState={planState ?? LOGGED_OUT_PLAN_STATE}
+        // Unknowable here and only ever widens the flow, so `true` is the
+        // fail-safe: it asks for the extra confirmation rather than skipping it.
+        scaRegion
+        entry={pickerEntry}
+      />
     </>
+  )
+}
+
+/**
+ * The desktop-only second column. At 1080px the case for following would
+ * otherwise be one lonely sentence under a short list, and the explanation is
+ * what makes a viewer with no follows act at all.
+ */
+function ExplainerRail() {
+  return (
+    <aside
+      style={{
+        borderRadius: 12,
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border)',
+        padding: 18,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+        alignSelf: 'start',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 9.5,
+          fontWeight: 600,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: 'var(--signal)',
+        }}
+      >
+        {FOLLOWING_COPY.searchRailEyebrow}
+      </span>
+      <p
+        style={{
+          margin: 0,
+          fontSize: 13.5,
+          color: 'var(--fg-muted)',
+          lineHeight: 1.5,
+          textWrap: 'pretty',
+        }}
+      >
+        {FOLLOWING_COPY.searchRailBody}
+      </p>
+      <div style={{ height: 1, background: 'var(--border)' }} />
+      <p
+        style={{
+          margin: 0,
+          fontSize: 13,
+          color: 'var(--fg-muted)',
+          lineHeight: 1.5,
+          textWrap: 'pretty',
+        }}
+      >
+        {FOLLOWING_COPY.searchRailNoDates}
+      </p>
+    </aside>
   )
 }
 
@@ -407,10 +434,19 @@ export function SearchResultsState({
   artistPageResults = [],
   venueResults,
   venueFirst = false,
+  withExplainerRail = false,
   selectedIdx = -1,
   onHover,
   onNavigateTo,
 }: SearchResultsStateProps) {
+  const isDesktop = useMediaQuery(SEARCH_DESKTOP_QUERY)
+
+  // The rail is a desktop affordance for a list that has artists in it. With no
+  // artist rows there is nothing for it to explain, and an empty second column
+  // would just narrow the shows.
+  const showRail =
+    withExplainerRail && isDesktop && artistPageResults.length > 0
+
   // Artist pages always sit first and occupy keyboard indices 0..n-1, so the
   // venue/artist bases below shift by that count. `venueFirst` still decides
   // the order of the two event-derived sections beneath them.
@@ -420,7 +456,7 @@ export function SearchResultsState({
 
   const hoverProp = onHover ? { onHover } : {}
 
-  return (
+  const results = (
     <div style={{ display: 'flex', flexDirection: 'column', paddingBottom: 8 }}>
       <ArtistPageSection
         artistPageResults={artistPageResults}
@@ -469,6 +505,25 @@ export function SearchResultsState({
           />
         </>
       )}
+    </div>
+  )
+
+  if (!showRail) return results
+
+  return (
+    <div
+      style={{
+        display: 'grid',
+        // The handoff's locked desktop split. `minmax(0, 1fr)` rather than a
+        // bare `1fr` so a long artist name ellipsises instead of forcing the
+        // rail off the right edge.
+        gridTemplateColumns: `minmax(0, 1fr) ${SEARCH_RAIL_WIDTH}px`,
+        gap: 30,
+        alignItems: 'start',
+      }}
+    >
+      {results}
+      <ExplainerRail />
     </div>
   )
 }

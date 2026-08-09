@@ -3,6 +3,7 @@
 import React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { EntitlementResult } from '@/lib/queries/use-entitlement'
 
 const mockPush = vi.fn()
 const mockBack = vi.fn()
@@ -12,6 +13,9 @@ const mockNavigateTo = vi.fn()
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush, back: mockBack }),
+  // FollowButton builds its signed-out return-to href from these (PR 5).
+  usePathname: () => '/search',
+  useSearchParams: () => new URLSearchParams(),
 }))
 vi.mock('next/link', () => ({
   default: ({
@@ -49,9 +53,96 @@ vi.mock('../../../lib/search/useSearch', () => ({
   useSearch: () => baseHook,
 }))
 
+// ── Native following, PR 5 ────────────────────────────────────────────────
+// The artist-page rows now carry a live Follow button, so the section reads
+// Clerk, the entitlement and the plan. Everything below is the surrounding
+// wiring; the follow behaviour itself is asserted, not mocked away.
+
+const authState: { isSignedIn: boolean | undefined } = { isSignedIn: true }
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => authState,
+}))
+
+const entitlementState: { current: EntitlementResult } = {
+  current: { isLoading: false, active: true, surface: 'visible-active' },
+}
+vi.mock('@/lib/queries/use-entitlement', () => ({
+  useEntitlement: () => entitlementState.current,
+}))
+
+vi.mock('@/lib/queries/use-plan-state', () => ({
+  usePlanState: () => ({ data: undefined }),
+}))
+
+vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
+  TierPickerSheet: ({ open, entry }: { open: boolean; entry: string }) =>
+    open ? <div data-testid="tier-picker" data-entry={entry} /> : null,
+}))
+
+// A stand-in for the real optimistic hook: it flips in place, which is exactly
+// the behaviour the row is required to show (no collapse, no re-order).
+const mockToggle = vi.fn()
+vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
+  useArtistFollow: (_slug: string, initialFollowing: boolean) => {
+    const [following, setFollowing] = React.useState(initialFollowing)
+    return {
+      following,
+      toggle: () => {
+        mockToggle()
+        setFollowing((prev) => !prev)
+      },
+    }
+  },
+}))
+
+// jsdom has no matchMedia, and `useMediaQuery` calls it on mount. `false` for
+// every query is the widest-first default the hook itself ships.
+beforeEach(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+  authState.isSignedIn = true
+  entitlementState.current = {
+    isLoading: false,
+    active: true,
+    surface: 'visible-active',
+  }
+})
+
+import type { ArtistSearchResult } from '@concert-crawl/types'
 import { SearchDefaultState } from './SearchDefaultState'
 import { SearchResultsState } from './SearchResultsState'
 import { SearchEmptyState } from './SearchEmptyState'
+import { ARTIST_COPY } from '@/components/consumer/artist-page/definitions/copy'
+import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
+import { SEARCH_DESKTOP_QUERY } from './definitions/constants'
+
+/** Make one media query report a match, leaving every other query `false`. */
+const matchOnly = (matching: string) => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      matches: query === matching,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -332,5 +423,175 @@ describe('SearchResultsState — artist pages (#1115 PR-G)', () => {
     const selected = document.querySelectorAll('[data-selected="true"]')
     expect(selected).toHaveLength(1)
     expect(selected[0]?.textContent).toContain('Red Rocks')
+  })
+})
+
+describe('SearchResultsState — inline following (native following PR 5)', () => {
+  const artistPage = (
+    overrides: Partial<ArtistSearchResult> = {},
+  ): ArtistSearchResult => ({
+    name: 'Radiohead',
+    slug: 'radiohead',
+    photoUrl: null,
+    upcomingShowCount: 2,
+    following: false,
+    ...overrides,
+  })
+
+  const renderRows = (
+    artistPageResults: ArtistSearchResult[] = [artistPage()],
+    props: Partial<React.ComponentProps<typeof SearchResultsState>> = {},
+  ) =>
+    render(
+      <SearchResultsState
+        artistResults={[]}
+        artistPageResults={artistPageResults}
+        venueResults={[]}
+        onNavigateTo={mockNavigateTo}
+        {...props}
+      />,
+    )
+
+  it('puts a live Follow button on the row itself, not one tap in', () => {
+    renderRows()
+    const button = screen.getByLabelText(ARTIST_COPY.followAria('Radiohead'))
+    expect(button.hasAttribute('disabled')).toBe(false)
+    expect(button.getAttribute('aria-pressed')).toBe('false')
+  })
+
+  // The clearest case the whole feature exists for: nothing on the books yet.
+  // The row says so and still lets you follow.
+  it('keeps the button live for an artist with nothing upcoming', () => {
+    renderRows([artistPage({ upcomingShowCount: 0 })])
+    expect(screen.getByText('Past shows only')).toBeTruthy()
+    const button = screen.getByLabelText(ARTIST_COPY.followAria('Radiohead'))
+    expect(button.hasAttribute('disabled')).toBe(false)
+    fireEvent.click(button)
+    expect(mockToggle).toHaveBeenCalledTimes(1)
+  })
+
+  it('updates the row in place on follow, without collapsing or re-ordering', () => {
+    renderRows([artistPage(), artistPage({ name: 'Ratbag', slug: 'ratbag' })])
+    const names = () =>
+      Array.from(document.querySelectorAll('[data-selected], button')).length
+    const before = names()
+    fireEvent.click(screen.getByLabelText(ARTIST_COPY.followAria('Radiohead')))
+
+    // Same row, same position, same neighbours — only the state flipped.
+    expect(
+      screen.getByLabelText(ARTIST_COPY.followingAria('Radiohead')),
+    ).toBeTruthy()
+    expect(screen.getByText('Radiohead')).toBeTruthy()
+    expect(screen.getByText('Ratbag')).toBeTruthy()
+    expect(screen.getByLabelText(ARTIST_COPY.followAria('Ratbag'))).toBeTruthy()
+    expect(names()).toBe(before)
+  })
+
+  // Locked is never `disabled` — a locked tap is how the upgrade gets offered.
+  it('locked: results still render and a tap opens the paywall picker', () => {
+    entitlementState.current = {
+      isLoading: false,
+      active: false,
+      surface: 'paywall-on-tap',
+    }
+    renderRows()
+    expect(screen.getByText('Radiohead')).toBeTruthy()
+    const button = screen.getByLabelText(ARTIST_COPY.followAria('Radiohead'))
+    expect(button.hasAttribute('disabled')).toBe(false)
+    expect(button.getAttribute('aria-haspopup')).toBe('dialog')
+    fireEvent.click(button)
+    expect(screen.getByTestId('tier-picker').getAttribute('data-entry')).toBe(
+      'paywall',
+    )
+    expect(mockToggle).not.toHaveBeenCalled()
+  })
+
+  // A downgraded user must always be able to let go of a follow they hold.
+  it('locked: an already-followed row stays live so it can be undone', () => {
+    entitlementState.current = {
+      isLoading: false,
+      active: false,
+      surface: 'paywall-on-tap',
+    }
+    renderRows([artistPage({ following: true })])
+    fireEvent.click(
+      screen.getByLabelText(ARTIST_COPY.followingAria('Radiohead')),
+    )
+    expect(mockToggle).toHaveBeenCalledTimes(1)
+    expect(screen.queryByTestId('tier-picker')).toBeNull()
+  })
+
+  it('signed out: the row renders and a tap never fires a tokenless write', () => {
+    authState.isSignedIn = false
+    entitlementState.current = {
+      isLoading: false,
+      active: false,
+      surface: 'tier-picker-on-tap',
+    }
+    renderRows()
+    const button = screen.getByLabelText(
+      ARTIST_COPY.followSignedOutAria('Radiohead'),
+    )
+    expect(button.hasAttribute('disabled')).toBe(false)
+    fireEvent.click(button)
+    expect(mockToggle).not.toHaveBeenCalled()
+  })
+
+  // The window where Clerk has not answered yet. Treated as signed out so the
+  // tap opens a picker instead of throwing `Not authenticated`.
+  it('unresolved session: a tap opens the picker rather than writing', () => {
+    authState.isSignedIn = undefined
+    entitlementState.current = { isLoading: true, active: false, surface: null }
+    renderRows()
+    fireEvent.click(
+      screen.getByLabelText(ARTIST_COPY.followSignedOutAria('Radiohead')),
+    )
+    expect(mockToggle).not.toHaveBeenCalled()
+  })
+
+  // ...but an already-followed row proves a session on its own, so it must not
+  // flash back to "Follow" while Clerk resolves.
+  it('unresolved session: an already-followed row stays following', () => {
+    authState.isSignedIn = undefined
+    entitlementState.current = { isLoading: true, active: false, surface: null }
+    renderRows([artistPage({ following: true })])
+    expect(
+      screen.getByLabelText(ARTIST_COPY.followingAria('Radiohead')),
+    ).toBeTruthy()
+  })
+
+  // The palette draws the same component in 560px of overlay, so the rail is
+  // opt-in rather than a width check alone.
+  it('the explainer rail never appears without the opt-in', () => {
+    matchOnly(SEARCH_DESKTOP_QUERY)
+    renderRows()
+    expect(screen.queryByText(FOLLOWING_COPY.searchRailEyebrow)).toBeNull()
+  })
+
+  it('desktop: the opt-in rail renders beside the results', () => {
+    matchOnly(SEARCH_DESKTOP_QUERY)
+    renderRows([artistPage()], { withExplainerRail: true })
+    expect(screen.getByText(FOLLOWING_COPY.searchRailEyebrow)).toBeTruthy()
+    expect(screen.getByText(FOLLOWING_COPY.searchRailNoDates)).toBeTruthy()
+  })
+
+  it('desktop: no artist rows means no rail to explain them', () => {
+    matchOnly(SEARCH_DESKTOP_QUERY)
+    render(
+      <SearchResultsState
+        artistResults={[
+          {
+            name: 'Radiohead',
+            nextDate: '2027-06-01',
+            venueShort: 'Red Rocks',
+          },
+        ]}
+        artistPageResults={[]}
+        venueResults={[]}
+        withExplainerRail
+        onNavigateTo={mockNavigateTo}
+      />,
+    )
+    expect(screen.queryByText(FOLLOWING_COPY.searchRailEyebrow)).toBeNull()
   })
 })

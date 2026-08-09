@@ -59,6 +59,7 @@ export default function SearchPage() {
             artistResults={artistResults}
             artistPageResults={artistPageResults}
             venueResults={venueResults}
+            withExplainerRail
             onNavigateTo={navigateTo}
           />
         )}
