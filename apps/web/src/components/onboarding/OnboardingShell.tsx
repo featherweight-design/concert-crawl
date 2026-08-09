@@ -193,20 +193,38 @@ export function OnboardingShell({
   }, [])
 
   // ── Picker state ──────────────────────────────────────────────────────
-  // Seeded from the sessionStorage mirror so an upgrade that unmounted this
+  // Restored from the sessionStorage mirror so an upgrade that unmounted this
   // tree comes back to the same selection (PK-18, OB-06).
+  //
+  // ⚠️ Read in an effect, never during render — same rule as the shelf shuffle
+  // seed. /onboarding is a server component, so the server renders an empty
+  // selection while the client would render the restored one, and the case
+  // where they disagree is precisely the Stripe round-trip this mirror exists
+  // for. Hydrating one frame later costs nothing; a mismatch costs the tree.
   const [pickedGenres, setPickedGenres] = useState<ReadonlySet<string>>(
-    () => new Set(readPicks(GENRE_PICKS_KEY)),
+    () => new Set(),
   )
   const [pickedArtists, setPickedArtists] = useState<ReadonlySet<string>>(
-    () => new Set(readPicks(ARTIST_PICKS_KEY)),
+    () => new Set(),
   )
+  const [picksHydrated, setPicksHydrated] = useState(false)
   useEffect(() => {
+    setPickedGenres(new Set(readPicks(GENRE_PICKS_KEY)))
+    setPickedArtists(new Set(readPicks(ARTIST_PICKS_KEY)))
+    setPicksHydrated(true)
+  }, [])
+
+  // Held until the restore has run. These fire on mount too, so writing before
+  // the read would flush the empty initial state over the mirror and lose the
+  // very selection the effect above is on its way to collect.
+  useEffect(() => {
+    if (!picksHydrated) return
     writePicks(GENRE_PICKS_KEY, Array.from(pickedGenres))
-  }, [pickedGenres])
+  }, [picksHydrated, pickedGenres])
   useEffect(() => {
+    if (!picksHydrated) return
     writePicks(ARTIST_PICKS_KEY, Array.from(pickedArtists))
-  }, [pickedArtists])
+  }, [picksHydrated, pickedArtists])
 
   const toggleGenre = useCallback((genre: string) => {
     setPickedGenres((previous) => toggleIn(previous, genre))
