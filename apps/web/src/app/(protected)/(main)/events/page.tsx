@@ -38,10 +38,7 @@ import { fetchCrews, fetchCrewShows } from '@/lib/crews'
 import { CrewLensList } from '@/components/consumer/crews'
 import { FollowShelf } from '@/components/consumer/following'
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
-import {
-  SHELF_SUGGESTION_POOL,
-  SHELF_VISIBLE_CARDS,
-} from '@/components/consumer/following/definitions/constants'
+import { SHELF_SUGGESTION_POOL } from '@/components/consumer/following/definitions/constants'
 import type { ShelfMode } from '@/components/consumer/following/definitions/types'
 import {
   datedFollows,
@@ -401,10 +398,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       ? []
       : shelfMode === 'zero'
         ? suggestionsToShelfArtists(suggestions ?? [])
-        : followsToShelfArtists(datedFollows(follows ?? [])).slice(
-            0,
-            SHELF_VISIBLE_CARDS,
-          )
+        : followsToShelfArtists(datedFollows(follows ?? []))
 
   const { data: events, total, limit } = eventsResult
 

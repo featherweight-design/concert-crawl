@@ -140,9 +140,12 @@ export const FollowShelf = ({
     if (shuffles) setSeed(readSessionSeed())
   }, [shuffles])
 
+  // The cap is universal and lives here alone: a caller that sliced first would
+  // hand the shuffle a pre-truncated list, so the same six would rotate all
+  // session instead of the whole set.
   const visible = useMemo(() => {
-    if (!shuffles) return artists
-    const ordered = seed === null ? artists : shuffleWithSeed(artists, seed)
+    const ordered =
+      shuffles && seed !== null ? shuffleWithSeed(artists, seed) : artists
     return ordered.slice(0, SHELF_VISIBLE_CARDS)
   }, [artists, seed, shuffles])
 

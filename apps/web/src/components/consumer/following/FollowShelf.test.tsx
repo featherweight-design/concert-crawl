@@ -135,11 +135,21 @@ describe('FollowShelf', () => {
     expect(screen.getAllByRole('listitem').length).toBe(6)
   })
 
-  it('does not cap or shuffle your own artists', () => {
+  // The cap is the shelf's, not the starter shelf's: one row of cards is what
+  // fits, whichever mode filled it.
+  it('caps your own artists at the same count', () => {
     const many = Array.from({ length: 9 }, (_, i) =>
       artist({ key: `k${i}`, name: `Act ${i}`, slug: `act-${i}` }),
     )
     renderShelf({ mode: 'some', followCount: 9, artists: many })
+    expect(screen.getAllByRole('listitem').length).toBe(6)
+  })
+
+  it('does not shuffle your own artists', () => {
+    const many = Array.from({ length: 4 }, (_, i) =>
+      artist({ key: `k${i}`, name: `Act ${i}`, slug: `act-${i}` }),
+    )
+    renderShelf({ mode: 'some', followCount: 4, artists: many })
     const names = screen
       .getAllByRole('link')
       .map((node) => node.textContent)
