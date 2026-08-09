@@ -137,7 +137,10 @@ export const ONBOARDING_COPY = {
   // the copy carries the whole bargain: what it costs, that a pick is not a
   // commitment, and that leaving empty-handed is a real option.
   pickArtists: {
-    eyebrow: 'Follow',
+    // Says where you are, never what the heading already says: an eyebrow
+    // reading 'Follow' above 'Follow a few of these.' spends two lines on one
+    // word. Mirrors the rail label, as every other step's eyebrow does.
+    eyebrow: 'Your artists',
     heading: 'Follow a few of these.',
     // Says what a follow DOES. Careful: following surfaces dates, it never
     // moves shows into your Watching.
@@ -187,7 +190,7 @@ export const ONBOARDING_COPY = {
       notyet: 'NOT YET',
       theme: 'MAKE IT YOURS',
       genres: 'YOUR LANES',
-      artists: 'FOLLOW',
+      artists: 'YOUR ARTISTS',
       done: "THAT'S THE TOUR",
     },
   },
