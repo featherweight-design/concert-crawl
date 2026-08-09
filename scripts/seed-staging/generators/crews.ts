@@ -250,35 +250,48 @@ export const generateCrews = async (deps: CrewsDeps): Promise<CrewsResult> => {
   const attendanceRows: {
     userId: string
     eventId: string
-    status: 'watching'
+    status: 'watching' | null
     attendingAt: Date
   }[] = []
 
-  const markGoing = (eventId: string, userIds: readonly string[]): void => {
-    for (const userId of userIds) {
+  /**
+   * `status` carries the Watching relationship and is independent of going:
+   * the attending route upserts `status: null`, so tapping "I'm going!" on a
+   * show you never watched leaves it null forever. Crew shows derive from
+   * attendingAt alone and must count those members too.
+   */
+  const markGoing = (
+    eventId: string,
+    goers: readonly { userId: string; status: 'watching' | null }[],
+  ): void => {
+    for (const { userId, status } of goers) {
       attendanceRows.push({
         userId,
         eventId,
-        status: 'watching',
+        status,
         attendingAt: new Date(now - DAY_MS),
       })
     }
   }
 
-  const [goerOne, goerTwo] = [keeperMembers[0]!, keeperMembers[1]!]
+  const watcher = { userId: keeperMembers[0]!, status: 'watching' as const }
+  const attendingOnly = { userId: keeperMembers[1]!, status: null }
 
   // Upcoming needs >= 1 going, so one member is the boundary and must render.
   const upcomingOne = usableUpcoming[0]
-  if (upcomingOne) markGoing(upcomingOne, [goerOne])
+  if (upcomingOne) markGoing(upcomingOne, [watcher])
 
   // Past needs >= 2. One member is BELOW the boundary and must not render —
   // this is the row that catches a `>= 1` where the predicate wants `>= 2`.
   const pastOne = usablePast[0]
-  if (pastOne) markGoing(pastOne, [goerOne])
+  if (pastOne) markGoing(pastOne, [watcher])
 
-  // Two members is the past boundary and must render.
+  // Two members is the past boundary and must render. The second is
+  // attending-only on purpose: if the derivation ever required a Watching
+  // relationship, this show would silently fall back under the boundary, and
+  // an all-watching fixture would hide that.
   const pastTwo = usablePast[1]
-  if (pastTwo) markGoing(pastTwo, [goerOne, goerTwo])
+  if (pastTwo) markGoing(pastTwo, [watcher, attendingOnly])
 
   if (attendanceRows.length > 0) {
     await staging.insert(userEvents).values(attendanceRows)

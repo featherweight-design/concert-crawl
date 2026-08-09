@@ -57,7 +57,12 @@ const run = async (
 
 type MemberRow = { crewId: string; userId: string }
 type CrewRow = { id: string; keeperId: string; name: string }
-type AttendanceRow = { userId: string; eventId: string; attendingAt: Date }
+type AttendanceRow = {
+  userId: string
+  eventId: string
+  status: 'watching' | null
+  attendingAt: Date
+}
 
 describe('generateCrews', () => {
   it('seeds one crew per shape, on fixed ids', async () => {
@@ -182,6 +187,29 @@ describe('generateCrews', () => {
     for (const row of rows) {
       expect(row.attendingAt).toBeInstanceOf(Date)
     }
+  })
+
+  // Going and Watching are independent: the attending route upserts
+  // status null, so "I'm going!" on a show you never watched stays null.
+  // The past-boundary show carries one of each, so a derivation that wrongly
+  // required Watching would drop it under the boundary instead of passing.
+  it('puts an attending-only member on the past boundary show', async () => {
+    const { rowsAt } = await run()
+    const rows = rowsAt<AttendanceRow>(ATTENDANCE)
+    const pastSet = new Set(pastEventIds)
+
+    const byEvent = new Map<string, AttendanceRow[]>()
+    for (const row of rows) {
+      byEvent.set(row.eventId, [...(byEvent.get(row.eventId) ?? []), row])
+    }
+    const boundary = [...byEvent.entries()].find(
+      ([eventId, group]) => pastSet.has(eventId) && group.length === 2,
+    )?.[1]
+
+    const statuses = boundary?.map((row) => row.status) ?? []
+    expect(statuses).toHaveLength(2)
+    expect(statuses).toContain('watching')
+    expect(statuses).toContain(null)
   })
 
   // Reusing a watcher-crowd event would collide on the (user_id, event_id)
