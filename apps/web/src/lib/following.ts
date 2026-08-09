@@ -49,9 +49,14 @@ export async function seedFollowedArtists(
     return await fetchFollowedArtists(token)
   } catch (err: unknown) {
     // 401 is the expected shape when the token has aged out between the Clerk
-    // read and this call. Anything else is a real failure worth a log line.
-    const expected = err instanceof ApiError && err.status === 401
-    if (!expected) console.error('followed artists SSR prefetch failed', err)
+    // read and this call, so it drops to warn rather than going unlogged: an
+    // unlogged catch is indistinguishable from a shelf that silently stopped
+    // rendering. Anything else is a real failure.
+    if (err instanceof ApiError && err.status === 401) {
+      console.warn('followed artists SSR prefetch unauthenticated')
+    } else {
+      console.error('followed artists SSR prefetch failed', err)
+    }
     return undefined
   }
 }
