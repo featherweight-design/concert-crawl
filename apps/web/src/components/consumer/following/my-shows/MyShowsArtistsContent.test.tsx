@@ -221,18 +221,14 @@ describe('MyShowsArtistsContent', () => {
       const block = container.querySelector(
         `[data-testid="my-shows-artists-${density}"]`,
       )
-      expect(block).not.toBeNull()
+      if (!(block instanceof HTMLElement)) throw new Error('no density block')
+      const scope = within(block)
 
-      const alerts = within(block as HTMLElement).getByRole('link', {
+      const alerts = scope.getByRole('link', {
         name: new RegExp(COPY.alerts.title),
       })
-      const footnote = within(block as HTMLElement).getByText(
-        COPY.spotifyFootnote(1),
-      )
-      const [firstHeading] = within(block as HTMLElement).getAllByRole(
-        'heading',
-        { level: 2 },
-      )
+      const footnote = scope.getByText(COPY.spotifyFootnote(1))
+      const [firstHeading] = scope.getAllByRole('heading', { level: 2 })
       if (firstHeading === undefined) throw new Error('no group heading')
 
       for (const node of [alerts, footnote]) {

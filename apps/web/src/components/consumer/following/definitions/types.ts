@@ -24,7 +24,8 @@ export interface ShelfArtist {
   /** "Venue · Sep 12", or null when nothing is on the books. */
   dateLine: string | null
   /**
-   * Cheapest known ticket price for `dateLine`'s show, or null for "Price TBD".
+   * Cheapest known ticket price for `dateLine`'s show, or null when no price
+   * is known — the card owns how it words that.
    * Raw rather than preformatted because the card colours the row on the
    * null-vs-priced distinction, which a formatted string has already thrown away.
    */

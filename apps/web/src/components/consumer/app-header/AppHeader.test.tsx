@@ -75,7 +75,9 @@ describe('AppHeader search triggers', () => {
 
   it('renders without a provider rather than throwing', () => {
     render(<AppHeader />)
-    fireEvent.click(screen.getAllByLabelText(/search/i)[0] as HTMLElement)
+    const [trigger] = screen.getAllByLabelText(/search/i)
+    if (trigger === undefined) throw new Error('no search trigger')
+    fireEvent.click(trigger)
   })
 })
 

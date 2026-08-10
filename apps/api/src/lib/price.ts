@@ -3,7 +3,7 @@
 // before this file, differing only in punctuation, which is how one of them
 // would eventually have started disagreeing with the rest.
 
-/** `null` for absent, empty, or unparseable input — all of which read "Price TBD". */
+/** `null` for absent, empty, or unparseable input — all of which read as no known price. */
 export const parsePrice = (raw: string | null): number | null => {
   if (!raw) return null
   const parsed = Number.parseFloat(raw)

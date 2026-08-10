@@ -116,7 +116,8 @@ export interface FollowedArtistNextShow {
   venueSlug: string
   /**
    * Cheapest corroborated tier, falling back to `events.ticketPriceMin`. Null
-   * renders "Price TBD". Resolved through the price-aggregation helpers rather
+   * means no price is known; each surface words that itself, so this type does
+   * not promise a phrase. Resolved through the price-aggregation helpers rather
    * than read off the event scalar, which holds whatever price was written last
    * and made every surface that reached for it disagree with Event Detail
    * (#1364/#1365/#1366).

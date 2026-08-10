@@ -8,7 +8,7 @@ describe('parsePrice', () => {
     expect(parsePrice('0')).toBe(0)
   })
 
-  // Absent, empty and unparseable all read "Price TBD" downstream, so they must
+  // Absent, empty and unparseable all mean "no known price" downstream, so they must
   // collapse to one value rather than leaking NaN into a JSON response.
   it('returns null for anything that is not a number', () => {
     expect(parsePrice(null)).toBeNull()
