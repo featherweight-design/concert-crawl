@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parsePrice } from './price'
+import { parsePrice } from './price.js'
 
 describe('parsePrice', () => {
   it('reads a numeric string', () => {
