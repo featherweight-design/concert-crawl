@@ -1,3 +1,10 @@
+## [1.241.3](https://github.com/HartiganHM/concert-crawl/compare/v1.241.2...v1.241.3) (2026-08-10)
+
+
+### Bug Fixes
+
+* **browse:** give both shelf cards one declared box ([6e82724](https://github.com/HartiganHM/concert-crawl/commit/6e827243aae65b0dcf44f71859916365b97fe49c)), closes [#763](https://github.com/HartiganHM/concert-crawl/issues/763)
+
 ## [1.241.2](https://github.com/HartiganHM/concert-crawl/compare/v1.241.1...v1.241.2) (2026-08-10)
 
 
