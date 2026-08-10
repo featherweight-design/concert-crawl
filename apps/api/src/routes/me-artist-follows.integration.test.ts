@@ -216,6 +216,7 @@ describe('GET /v1/me/artist-follows', () => {
     const soonest = await seedEvent(venue.id, {
       artist: 'Phoebe Bridgers',
       date: FUTURE_DATE,
+      ticketPriceMin: '28.50',
     })
     await seedEvent(venue.id, {
       artist: 'Phoebe Bridgers',
@@ -226,11 +227,15 @@ describe('GET /v1/me/artist-follows', () => {
     signIn()
 
     const { body } = await fetchList()
+    // The shelf card prints the price under the date line, so nextShow carries
+    // it — and carries it raw, because the card colours the row on the
+    // null-vs-priced distinction.
     expect(body.data[0]?.nextShow).toEqual({
       eventId: soonest.id,
       iso: FUTURE_DATE,
       venue: 'Globe Hall',
       venueSlug: 'globe-hall',
+      price: 28.5,
     })
   })
 
