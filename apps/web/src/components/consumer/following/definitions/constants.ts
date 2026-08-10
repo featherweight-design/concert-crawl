@@ -9,7 +9,11 @@
  */
 export const SHELF_CARD_WIDTH = 168
 
-/** Media query the narrow width switches on. */
+/**
+ * The 320px baseline. The shelf card no longer switches on it — its width is
+ * flat now — but My shows ▸ Artists still does, dropping its row artwork and
+ * its unfollow label to an icon there.
+ */
 export const SHELF_NARROW_QUERY = '(max-width: 359px)'
 
 /**
@@ -25,6 +29,6 @@ export const SHELF_VISIBLE_CARDS = 10
 /**
  * Where the per-session shuffle seed lives. sessionStorage, not local: "per
  * session" is the spec's word, and a seed that outlived the tab would freeze
- * the same six artists on the shelf for weeks.
+ * the same ten artists on the shelf for weeks.
  */
 export const SHELF_SHUFFLE_SEED_KEY = 'cc.following.shelfSeed'

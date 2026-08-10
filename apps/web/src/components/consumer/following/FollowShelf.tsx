@@ -111,7 +111,7 @@ export const FollowShelf = ({
   }, [shuffles])
 
   // The cap is universal and lives here alone: a caller that sliced first would
-  // hand the shuffle a pre-truncated list, so the same six would rotate all
+  // hand the shuffle a pre-truncated list, so the same ten would rotate all
   // session instead of the whole set.
   const visible = useMemo(() => {
     const ordered =
