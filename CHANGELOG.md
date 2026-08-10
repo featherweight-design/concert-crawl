@@ -1,3 +1,10 @@
+## [1.241.2](https://github.com/HartiganHM/concert-crawl/compare/v1.241.1...v1.241.2) (2026-08-10)
+
+
+### Bug Fixes
+
+* **following:** post-ship feedback on the native follow shelf ([ded5e5c](https://github.com/HartiganHM/concert-crawl/commit/ded5e5cbd0d3cced369d36a176d664337bd588ba))
+
 ## [1.241.1](https://github.com/HartiganHM/concert-crawl/compare/v1.241.0...v1.241.1) (2026-08-09)
 
 
