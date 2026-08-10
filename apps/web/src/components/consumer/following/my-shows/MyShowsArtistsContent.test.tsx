@@ -2,7 +2,7 @@
 
 import '@testing-library/jest-dom'
 import { describe, it, expect, afterEach, beforeAll, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, within } from '@testing-library/react'
 import type { FollowedArtist } from '@concert-crawl/types'
 import { MyShowsArtistsContent } from './MyShowsArtistsContent'
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
@@ -82,6 +82,7 @@ const artist = (
           iso,
           venue: 'Bluebird Theater',
           venueSlug: 'bluebird-theater',
+          price: 28,
         },
 })
 
@@ -200,6 +201,48 @@ describe('MyShowsArtistsContent', () => {
       screen.getAllByRole('link', { name: new RegExp(COPY.alerts.title) })[0],
     ).toHaveAttribute('href', '/me#notifications')
   })
+
+  // Alerts is the surface's only notification affordance. Trailing the list put
+  // it below however many follows the viewer had, so a long list hid it
+  // entirely. Both densities must carry it above the first group.
+  it.each(['mobile', 'desktop'])(
+    'puts alerts and the Spotify footnote above the list on %s',
+    (density) => {
+      const { container } = render(
+        <MyShowsArtistsContent
+          artists={[
+            artist('Wax Harbour', '2026-09-12', 'spotify_followed'),
+            artist('Null Signal', null),
+          ]}
+          scaRegion={false}
+        />,
+      )
+
+      const block = container.querySelector(
+        `[data-testid="my-shows-artists-${density}"]`,
+      )
+      expect(block).not.toBeNull()
+
+      const alerts = within(block as HTMLElement).getByRole('link', {
+        name: new RegExp(COPY.alerts.title),
+      })
+      const footnote = within(block as HTMLElement).getByText(
+        COPY.spotifyFootnote(1),
+      )
+      const [firstHeading] = within(block as HTMLElement).getAllByRole(
+        'heading',
+        { level: 2 },
+      )
+      if (firstHeading === undefined) throw new Error('no group heading')
+
+      for (const node of [alerts, footnote]) {
+        expect(
+          node.compareDocumentPosition(firstHeading) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy()
+      }
+    },
+  )
 
   it('renders the empty state when the viewer follows nobody', () => {
     render(<MyShowsArtistsContent artists={[]} scaRegion={false} />)

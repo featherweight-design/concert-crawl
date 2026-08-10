@@ -21,6 +21,7 @@ const artist = (
           iso,
           venue: 'Bluebird Theater',
           venueSlug: 'bluebird-theater',
+          price: 28,
         },
 })
 

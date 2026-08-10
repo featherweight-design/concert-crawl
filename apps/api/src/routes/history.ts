@@ -34,6 +34,7 @@ import { requireFeature } from '../middleware/entitlement.js'
 import type { EntitlementVariables } from '../middleware/entitlement.js'
 import { computeHistoryStats } from '../lib/history-stats.js'
 import { buildHistoryIcs } from '../lib/ics.js'
+import { parsePrice } from '../lib/price.js'
 
 const MT_TIME_ZONE = 'America/Denver'
 
@@ -68,12 +69,6 @@ const formatShowTime = (showTime: string | null): string | null => {
   if (hours === undefined || minutes === undefined) return null
   if (Number.isNaN(hours) || Number.isNaN(minutes)) return null
   return timeFormatter.format(new Date(Date.UTC(2000, 0, 1, hours, minutes)))
-}
-
-const parsePrice = (raw: string | null): number | null => {
-  if (!raw) return null
-  const parsed = parseFloat(raw)
-  return Number.isNaN(parsed) ? null : parsed
 }
 
 interface Attendance {

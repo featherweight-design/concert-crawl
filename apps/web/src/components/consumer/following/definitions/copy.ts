@@ -63,15 +63,7 @@ export const FOLLOWING_COPY = {
   // No "followed" after the count: "your artists" already said how they got
   // there, and · is the house metadata separator, so the number needs no verb.
   yoursEyebrow: (count: number) => `Your artists · ${count}`,
-  // The ONLY difference between the `some` and `spotify` modes. Naming the
-  // source once here is what stops Spotify becoming a second shelf.
-  spotifyEyebrow: (count: number) =>
-    `Your artists · ${count}, some from Spotify`,
   yoursTitle: 'Coming to Denver',
-  // Opens browse scoped to your artists. A bare "All" sat beside the title
-  // "Coming to Denver", where it read as every Denver show rather than every
-  // date the shelf had run out of room for.
-  yoursAction: 'All their dates',
 
   // ── Shelf cards ───────────────────────────────────────────────────────
   shelfAria: 'Artists',
@@ -81,6 +73,9 @@ export const FOLLOWING_COPY = {
   cardNoDate: 'No dates announced',
   // Venue and date are DATA; only the glue between them lives here.
   cardDateSeparator: ' · ',
+  // Same word the Spotify shelf's card uses for the same row. The two cards sit
+  // in one browse slot, so a second phrasing here would read as a second state.
+  cardPriceTba: 'tba',
   followAria: (name: string) => `Follow ${name}`,
   followingAria: (name: string) => `Following ${name}`,
   followGate: 'Following artists is a Premium feature. Opens upgrade options.',

@@ -4,13 +4,9 @@
 // Following controls reads like it might follow everything at once. Naming the
 // destination and saying what happens there removes the ambiguity.
 
-import Link from 'next/link'
+import { SearchLink } from '@/components/consumer/search-palette/SearchLink'
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
-import {
-  FIND_ARTISTS_HREF,
-  ROW_ART_SIZE,
-  ROW_ART_SIZE_NARROW,
-} from './definitions/constants'
+import { ROW_ART_SIZE, ROW_ART_SIZE_NARROW } from './definitions/constants'
 import { GlyphChevron, GlyphSearch } from './Glyphs'
 
 const COPY = MY_SHOWS_ARTISTS_COPY.find
@@ -18,8 +14,7 @@ const COPY = MY_SHOWS_ARTISTS_COPY.find
 export const FindArtistsRow = ({ narrow = false }: { narrow?: boolean }) => {
   const box = narrow ? ROW_ART_SIZE_NARROW : ROW_ART_SIZE
   return (
-    <Link
-      href={FIND_ARTISTS_HREF}
+    <SearchLink
       className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
       style={{
         display: 'flex',
@@ -62,6 +57,6 @@ export const FindArtistsRow = ({ narrow = false }: { narrow?: boolean }) => {
       <span aria-hidden style={{ color: 'var(--fg-subtle)', display: 'flex' }}>
         <GlyphChevron size={15} />
       </span>
-    </Link>
+    </SearchLink>
   )
 }

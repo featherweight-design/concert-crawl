@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Search } from 'lucide-react'
@@ -8,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { isTabActive } from '@/lib/nav-tab-active'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
-import { SearchPalette } from '../search-palette/SearchPalette'
+import { useSearchPalette } from '../search-palette/search-palette-context'
 import { AuthCtaPair } from './AuthCtaPair'
 import { SignInRail } from './SignInRail'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
@@ -26,24 +25,9 @@ interface AppHeaderProps {
 
 export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
   const pathname = usePathname()
-  const [paletteOpen, setPaletteOpen] = useState(false)
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (!((event.metaKey || event.ctrlKey) && event.key === 'k')) return
-      const target = event.target as HTMLElement
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target.isContentEditable
-      )
-        return
-      event.preventDefault()
-      setPaletteOpen(true)
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [])
+  // The palette and its ⌘K listener live in the layout provider, so the
+  // "find artists" row in the page body can open the same one.
+  const palette = useSearchPalette()
 
   return (
     <header className="w-full">
@@ -63,7 +47,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
           {rightSlots}
           <AuthCtaPair />
           <button
-            onClick={() => setPaletteOpen(true)}
+            onClick={() => palette?.open()}
             aria-label={copy.search.ariaLabel}
             className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-border-strong"
           >
@@ -117,7 +101,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
         {/* Right: search bar + user avatar */}
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setPaletteOpen(true)}
+            onClick={() => palette?.open()}
             aria-label={copy.search.ariaLabel}
             className="flex h-9 w-9 cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-surface-1 px-3 text-fg-subtle lg:w-[280px] lg:justify-start"
           >
@@ -140,8 +124,6 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
           <UserMenu />
         </div>
       </div>
-
-      <SearchPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </header>
   )
 }

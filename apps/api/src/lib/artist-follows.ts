@@ -23,6 +23,11 @@ import {
 } from 'drizzle-orm'
 import { db, events, userArtistFollows, venues } from '@concert-crawl/db'
 import type { FollowedArtistNextShow } from '@concert-crawl/types'
+import {
+  loadPriceByTierByEventId,
+  lowestHeadlinePrice,
+} from './price-aggregation/index.js'
+import { parsePrice } from './price.js'
 import { todayInTimezone } from './time.js'
 
 // events.date holds event-local (Mountain Time) calendar dates. Denver is the
@@ -106,6 +111,7 @@ export async function loadNextShowByCanonical(
       canonicalSupporting: events.canonicalSupporting,
       venue: venues.name,
       venueSlug: venues.slug,
+      ticketPriceMin: events.ticketPriceMin,
     })
     .from(events)
     .innerJoin(
@@ -133,6 +139,10 @@ export async function loadNextShowByCanonical(
 
   const wanted = new Set(canonicalNames)
 
+  // Phase 1 picks the winning row per name. Prices are aggregated afterwards
+  // over only the winners, so a follow list spanning a hundred names still
+  // costs one price query rather than one per candidate row.
+  const winners = new Map<string, (typeof rows)[number]>()
   for (const row of rows) {
     const onBill = [
       ...(row.canonicalArtist === null ? [] : [row.canonicalArtist]),
@@ -140,14 +150,29 @@ export async function loadNextShowByCanonical(
       ...(row.canonicalSupporting ?? []),
     ]
     for (const canonical of onBill) {
-      if (!wanted.has(canonical) || nextShows.has(canonical)) continue
-      nextShows.set(canonical, {
-        eventId: row.eventId,
-        iso: row.iso,
-        venue: row.venue,
-        venueSlug: row.venueSlug,
-      })
+      if (!wanted.has(canonical) || winners.has(canonical)) continue
+      winners.set(canonical, row)
     }
+  }
+
+  // The cheapest corroborated tier, with the denormalized scalar only as a
+  // fallback for crawler-sourced prices that have no submissions to aggregate.
+  // Reading `ticketPriceMin` alone is what made Watching disagree with Event
+  // Detail (#1365).
+  const priceByTierByEventId = await loadPriceByTierByEventId([
+    ...new Set([...winners.values()].map((row) => row.eventId)),
+  ])
+
+  for (const [canonical, row] of winners) {
+    nextShows.set(canonical, {
+      eventId: row.eventId,
+      iso: row.iso,
+      venue: row.venue,
+      venueSlug: row.venueSlug,
+      price:
+        lowestHeadlinePrice(priceByTierByEventId.get(row.eventId) ?? []) ??
+        parsePrice(row.ticketPriceMin ?? null),
+    })
   }
 
   return nextShows

@@ -114,6 +114,14 @@ export interface FollowedArtistNextShow {
   iso: string
   venue: string
   venueSlug: string
+  /**
+   * Cheapest corroborated tier, falling back to `events.ticketPriceMin`. Null
+   * renders "Price TBD". Resolved through the price-aggregation helpers rather
+   * than read off the event scalar, which holds whatever price was written last
+   * and made every surface that reached for it disagree with Event Detail
+   * (#1364/#1365/#1366).
+   */
+  price: number | null
 }
 
 /** One row of `GET /v1/me/artist-follows`. */

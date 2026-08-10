@@ -14,7 +14,7 @@
 // 403 and routes to the tier picker from there.
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
+import { SearchLink } from '@/components/consumer/search-palette/SearchLink'
 import type { FollowedArtist, PickerEntry } from '@concert-crawl/types'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
 import { usePlanState } from '@/lib/queries/use-plan-state'
@@ -30,7 +30,6 @@ import { FindArtistsRow } from './FindArtistsRow'
 import { Mono } from './Mono'
 import { GlyphSearch } from './Glyphs'
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
-import { FIND_ARTISTS_HREF } from './definitions/constants'
 import { groupFollows, spotifyFollowCount } from './lib/group-follows'
 
 const COPY = MY_SHOWS_ARTISTS_COPY
@@ -127,24 +126,22 @@ export const MyShowsArtistsContent = ({
   // all lack a date — the one state where finding artists matters most.
   //
   // Alerts is NOT here. It shipped as a second dense button beside this one,
-  // pointing at the same place as the AlertsRow below and carrying none of
+  // pointing at the same place as the AlertsRow and carrying none of
   // that row's live "push on · digest off" readout, so desktop offered the
   // control twice and the state zero times.
   const desktopActions = (
-    <Link
-      href={FIND_ARTISTS_HREF}
+    <SearchLink
       className="inline-flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
       style={densePrimary}
     >
       <GlyphSearch size={13} />
       {COPY.find.title}
-    </Link>
+    </SearchLink>
   )
 
   const spotifyNote = spotifyCount > 0 && (
     <div
       style={{
-        margin: '12px 16px 0',
         padding: '12px 14px',
         borderRadius: 10,
         border: '1px solid var(--border)',
@@ -168,14 +165,31 @@ export const MyShowsArtistsContent = ({
     </div>
   )
 
+  // Both densities carry these ABOVE the list. Trailing it put the surface's
+  // only notification affordance below however many follows the viewer had,
+  // which for a long list meant it was never seen at all.
+  const meta = (
+    <div
+      className="flex flex-col gap-2.5"
+      style={{ marginTop: 16, marginBottom: 4 }}
+    >
+      <AlertsRow />
+      {spotifyNote}
+    </div>
+  )
+
   return (
     // One landmark, two densities. The responsive wrappers are plain divs
     // because a page gets a single <main>, and landmark navigation still walks
     // a CSS-hidden one.
     <main className="flex w-full flex-1 flex-col">
       {/* Mobile: full-bleed list. */}
-      <div className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:hidden">
+      <div
+        data-testid="my-shows-artists-mobile"
+        className="mx-auto w-full max-w-[880px] flex-1 px-4 pb-20 pt-4 sm:hidden"
+      >
         <MyShowsTabs active="artists" artistCount={follows.length} />
+        {meta}
         <div className="-mx-4">
           {groups.dated.length > 0 && (
             <>
@@ -214,8 +228,6 @@ export const MyShowsArtistsContent = ({
           <div style={{ marginTop: 18 }}>
             <FindArtistsRow narrow={narrow} />
           </div>
-          <AlertsRow />
-          {spotifyNote}
         </div>
         {picker}
       </div>
@@ -237,6 +249,7 @@ export const MyShowsArtistsContent = ({
             either. It also only rendered on the populated branch, so the
             heading appeared and vanished with the list length. */}
         <MyShowsTabs active="artists" artistCount={follows.length} />
+        {meta}
 
         {groups.dated.length > 0 && (
           <>
@@ -282,11 +295,6 @@ export const MyShowsArtistsContent = ({
             </div>
           </>
         )}
-
-        {/* Same row as mobile, for the live preference readout desktop
-            otherwise never showed. */}
-        <AlertsRow />
-        {spotifyNote}
       </div>
     </main>
   )

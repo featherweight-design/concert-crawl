@@ -2,9 +2,9 @@
 // plus the one bulk mutation the epic shares (PR 7 — "Follow all N").
 //
 // ⚠️ ONE fetch serves BOTH consumers on browse. The scope chip's `absent` state
-// (entitled, zero follows) and the shelf's `some`/`spotify` modes are decided
-// from the same follow list, SSR-seeded once in events/page.tsx. Do not add a
-// second call for the shelf.
+// (entitled, zero follows) and the shelf's mode are decided from the same
+// follow list, SSR-seeded once in events/page.tsx. Do not add a second call for
+// the shelf.
 import type {
   ArtistSuggestion,
   BulkFollowResponse,
@@ -131,15 +131,15 @@ export async function seedArtistSuggestions(
  * shelf material — the shelf is a "go see them" surface.
  */
 export const datedFollows = (follows: FollowedArtist[]): FollowedArtist[] =>
-  follows.filter((follow) => follow.nextShow !== null)
-
-/**
- * Whether ANY of the viewer's follows came from Spotify. Drives the shelf's
- * `spotify` mode, which differs from `some` only in its heading — Spotify is a
- * source, not a second information architecture.
- */
-export const hasSpotifyFollows = (follows: FollowedArtist[]): boolean =>
-  follows.some((follow) => follow.source !== 'manual')
+  follows
+    .filter((follow) => follow.nextShow !== null)
+    .sort((left, right) =>
+      // Soonest first. The endpoint answers newest-follow-first, which orders
+      // the shelf by an act of yours from months ago rather than by the night
+      // you can still buy a ticket to. `iso` is `YYYY-MM-DD`, so a string
+      // compare IS the date compare.
+      (left.nextShow?.iso ?? '').localeCompare(right.nextShow?.iso ?? ''),
+    )
 
 /**
  * "Venue · Sep 12", or null when nothing is on the books. Built server-side so
@@ -162,6 +162,7 @@ export const followsToShelfArtists = (
     slug: follow.slug,
     photoUrl: follow.photoUrl,
     dateLine: followDateLine(follow.nextShow),
+    price: follow.nextShow?.price ?? null,
     following: true,
   }))
 
@@ -178,5 +179,6 @@ export const suggestionsToShelfArtists = (
     slug: suggestion.slug,
     photoUrl: suggestion.photoUrl,
     dateLine: followDateLine(suggestion.nextShow),
+    price: suggestion.nextShow?.price ?? null,
     following: suggestion.following === true,
   }))

@@ -12,6 +12,7 @@ import {
   lowestHeadlineSourceCategory,
   lowestHeadlinePrice,
 } from '../lib/price-aggregation/index.js'
+import { parsePrice } from '../lib/price.js'
 import { releaseWatch } from '../lib/user-events.js'
 import { resolveArtistSlugs } from '../lib/artist-slugs.js'
 
@@ -29,13 +30,6 @@ function resolveWatchStatus(
 ): 'live' | 'soldout' {
   if (eventStatus === 'cancelled') return 'soldout'
   return 'live'
-}
-
-function parsePrice(raw: string | null): number | null {
-  if (!raw) return null
-  const parsed = parseFloat(raw)
-  if (Number.isNaN(parsed)) return null
-  return parsed
 }
 
 // GET /v1/watching — return user's watched upcoming shows

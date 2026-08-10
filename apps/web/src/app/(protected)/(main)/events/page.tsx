@@ -43,7 +43,6 @@ import type { ShelfMode } from '@/components/consumer/following/definitions/type
 import {
   datedFollows,
   followsToShelfArtists,
-  hasSpotifyFollows,
   seedArtistSuggestions,
   seedFollowedArtists,
   suggestionsToShelfArtists,
@@ -374,15 +373,12 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   // `zero` recruits, so it runs for logged-out visitors too (their badges
   // render locked and hand off to the tier picker). Unknown gets no shelf: the
   // Spotify taste shelf still has the slot in that case.
-  const shelfMode: ShelfMode | null = !shelfSlotOpen
-    ? null
-    : followCount === null
+  const shelfMode: ShelfMode | null =
+    !shelfSlotOpen || followCount === null
       ? null
       : followCount === 0
         ? 'zero'
-        : hasSpotifyFollows(follows ?? [])
-          ? 'spotify'
-          : 'some'
+        : 'some'
 
   // Serial by necessity: we can't know the follow count until the seed lands,
   // and fetching suggestions unconditionally would tax every browse load with

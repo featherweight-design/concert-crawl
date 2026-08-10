@@ -1,12 +1,5 @@
 // Routes and geometry for My shows ▸ Artists.
 
-/**
- * There is no `/artists` index and this epic does not add one, so every
- * "find more" affordance points at search. `/following` is deliberately not
- * `/artists/...`: middleware lists `/artists(.*)` as public-once-launched.
- */
-export const FIND_ARTISTS_HREF = '/search'
-
 /** The always-works fallback when the plan cannot follow. */
 export const BROWSE_HREF = '/events'
 

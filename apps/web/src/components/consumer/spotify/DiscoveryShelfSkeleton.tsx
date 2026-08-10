@@ -119,9 +119,12 @@ export const ShelfSkeletonHeader = ({ isTimeout }: { isTimeout: boolean }) => (
   </div>
 )
 
-// 2 cards mobile / 4 desktop, per the design handoff. Rendering 4 up-front
-// and hiding the extras on mobile avoids the SSR-vs-client mismatch a
-// window.matchMedia branch would introduce. `overflow-hidden` (not
+// 3 cards mobile / 5 desktop. Both counts are one past the fold on their
+// viewport: a skeleton that stops exactly where the screen does reserves a
+// footprint the real row overflows, and reads as a complete list rather than
+// a scrollable one. Rendering 5 up-front and hiding the extras on mobile
+// avoids the SSR-vs-client mismatch a window.matchMedia branch would
+// introduce. `overflow-hidden` (not
 // overflow-x-auto) keeps the full-bleed -mx-4 row from scrolling — the
 // browse page's horizontal-overflow regression (#33) came from exactly this
 // row, so it must never be independently scrollable.
@@ -130,6 +133,7 @@ export const ShelfSkeletonCards = () => (
     aria-hidden
     className="-mx-4 flex list-none gap-[11px] overflow-hidden px-4 pb-1 pt-0.5 sm:mx-0 sm:px-0"
   >
+    <SkeletonCard />
     <SkeletonCard />
     <SkeletonCard />
     <SkeletonCard className="hidden sm:flex" />

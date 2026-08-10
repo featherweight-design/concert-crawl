@@ -1,22 +1,33 @@
 'use client'
 
-// One artist card in the browse follow shelf (nf-cold-start.jsx ShelfCard).
-// Square art, a follow badge floated on it, the name, and the next Denver date.
+// One artist card in the browse follow shelf.
 //
-// The badge is the SAME affordance as the artist page's FollowButton — an
-// artist is followed, a show is watched, and there is no third gesture — drawn
-// at badge scale because it sits on artwork rather than in a bar. Its three
-// states are idle / following / locked; there is no pending skin, for the same
-// reason the big button has none.
+// Box, type scale and row order are the Spotify taste card's (spotify/
+// DiscoveryShelf.tsx `TastePickCard`) on purpose: the two shelves occupy ONE
+// slot on browse, so a viewer meets them as a single component that sometimes
+// says a different thing. Anything changed here is changed there too, or the
+// slot starts flickering between two card designs.
+//
+// The art is still the ARTIST photo, never the event graphic — a card about a
+// person does not borrow a show's poster (imagery rule, #1531).
+//
+// The follow badge renders only on the starter shelf. On "Your artists" every
+// row is followed by definition, so a check floating over each one restated the
+// section heading; the badge that survives is the starter shelf's plus/lock,
+// which is the only follow affordance that surface has.
 
 import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
+import { formatPrice } from '@/components/consumer/definitions/lib'
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
 import { FollowDateLine } from './FollowDateLine'
 import { FOLLOWING_COPY } from './definitions/copy'
 import type { ShelfArtist } from './definitions/types'
 
+// Only the starter shelf's badge reaches this: it is the acknowledgement of a
+// follow the viewer just made, not a label on a list that is followed by
+// definition.
 const CheckGlyph = () => (
   <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
     <path
@@ -80,11 +91,15 @@ export const CardArt = ({
 
   if (photoUrl !== null && !failed) {
     return (
+      // Positioned rather than `h-full`, which needs a DEFINITE parent height
+      // and resolves to auto inside a flex-sized box. Every caller already
+      // wraps this in a `relative` clip, and the shelf card's art is now a
+      // flex-grown row rather than a fixed square.
       <img
         src={photoUrl}
         alt=""
         onError={() => setFailed(true)}
-        className="h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-cover"
       />
     )
   }
@@ -104,6 +119,12 @@ export const CardArt = ({
 interface ShelfCardProps {
   artist: ShelfArtist
   width: number
+  /**
+   * The starter shelf, where nothing is followed yet. It is the only mode that
+   * draws a follow badge: on "Your artists" the badge could only ever say
+   * "following", which the section heading already said.
+   */
+  starter: boolean
   /** Signed in, but the plan cannot follow. Never true while already following. */
   locked: boolean
   /** No session at all — the badge hands off rather than writing anything. */
@@ -121,6 +142,7 @@ interface ShelfCardProps {
 export const ShelfCard = ({
   artist,
   width,
+  starter,
   locked,
   signedOut,
   onGatedTap,
@@ -140,90 +162,128 @@ export const ShelfCard = ({
   // Signed out or locked we draw the at-rest skin: there is no relationship to
   // render for a viewer who has none.
   const on = !gated && follow.following
+  const price = formatPrice(
+    artist.price === null ? null : String(artist.price),
+    null,
+  )
 
-  return (
-    <li
-      className="flex shrink-0 flex-col gap-[7px]"
-      style={{ width, listStyle: 'none' }}
-    >
-      <div
-        className="relative overflow-hidden"
-        style={{ width, height: width, borderRadius: 10 }}
-      >
+  // The badge is a `<button>`, so it cannot live inside the card's `<a>`. It is
+  // a sibling positioned over the art instead.
+  const badge = starter && artist.slug !== null
+
+  const body = (
+    <>
+      {/* `flex-1` with a floor rather than a fixed square: when the row
+          equalizes card heights it is the ART that absorbs the difference, so
+          a long artist name never crops its own show info. Same trade the
+          Spotify card makes. */}
+      <span className="relative block min-h-[116px] w-full flex-1 overflow-hidden">
         <CardArt name={artist.name} photoUrl={artist.photoUrl} />
-        {artist.slug !== null && (
-          <>
-            <button
-              type="button"
-              onClick={() => {
-                if (gated) {
-                  onGatedTap()
-                  return
-                }
-                follow.toggle()
-              }}
-              // Locked has no pressed state to report — it is not a toggle.
-              aria-pressed={gated ? undefined : on}
-              aria-label={
-                on
-                  ? FOLLOWING_COPY.followingAria(artist.name)
-                  : FOLLOWING_COPY.followAria(artist.name)
-              }
-              {...(gated && { 'aria-describedby': gateId })}
-              className="absolute flex cursor-pointer items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-              style={{
-                top: 7,
-                right: 7,
-                width: 34,
-                height: 34,
-                borderRadius: 34,
-                background: on
-                  ? 'color-mix(in oklab, var(--signal) 22%, rgba(0,0,0,0.5))'
-                  : 'rgba(0,0,0,0.5)',
-                border: `1.5px solid ${on ? 'var(--signal)' : 'rgba(255,255,255,0.6)'}`,
-                color: on ? 'var(--signal)' : 'rgba(255,255,255,0.95)',
-                backdropFilter: 'blur(6px)',
-              }}
-            >
-              {on ? <CheckGlyph /> : gated ? <LockGlyph /> : <PlusGlyph />}
-            </button>
-            {gated && (
-              <span id={gateId} className="sr-only">
-                {FOLLOWING_COPY.followGate}
-              </span>
-            )}
-          </>
-        )}
-      </div>
-
-      {artist.slug !== null ? (
-        <Link
-          href={`/artists/${artist.slug}`}
-          className="overflow-hidden text-ellipsis whitespace-nowrap font-extrabold text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-          style={{ fontSize: 12.5, letterSpacing: '-0.01em' }}
-        >
-          {artist.name}
-        </Link>
-      ) : (
+      </span>
+      <span
+        className="flex shrink-0 flex-col gap-[7px]"
+        style={{ padding: '10px 11px 12px' }}
+      >
         <span
-          className="overflow-hidden text-ellipsis whitespace-nowrap font-extrabold text-fg"
-          style={{ fontSize: 12.5, letterSpacing: '-0.01em' }}
+          className="overflow-hidden text-ellipsis whitespace-nowrap font-extrabold leading-[1.15] text-fg"
+          style={{
+            fontSize: '14.5px',
+            letterSpacing: '-0.015em',
+            fontFamily: 'var(--font-ui)',
+          }}
         >
           {artist.name}
         </span>
+        <FollowDateLine
+          dateLine={artist.dateLine}
+          fallback={FOLLOWING_COPY.cardNoDate}
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '10px',
+            letterSpacing: '0.02em',
+            color: 'var(--fg-muted)',
+          }}
+        />
+        <span
+          className="font-semibold"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: '11px',
+            color: price !== null ? 'var(--signal)' : 'var(--fg-subtle)',
+          }}
+        >
+          {price ?? FOLLOWING_COPY.cardPriceTba}
+        </span>
+      </span>
+    </>
+  )
+
+  const shellClass =
+    'flex w-full flex-col overflow-hidden rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal'
+  const shellStyle = {
+    background: 'var(--surface-1)',
+    border: '1px solid var(--border)',
+  }
+
+  return (
+    <li className="relative flex shrink-0" style={{ width, listStyle: 'none' }}>
+      {artist.slug !== null ? (
+        <Link
+          href={`/artists/${artist.slug}`}
+          className={shellClass}
+          style={shellStyle}
+        >
+          {body}
+        </Link>
+      ) : (
+        <span className={shellClass} style={shellStyle}>
+          {body}
+        </span>
       )}
 
-      <FollowDateLine
-        dateLine={artist.dateLine}
-        fallback={FOLLOWING_COPY.cardNoDate}
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 9,
-          letterSpacing: '0.06em',
-          marginTop: -3,
-          color: on ? 'var(--signal)' : 'var(--fg-subtle)',
-        }}
-      />
+      {badge && (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              if (gated) {
+                onGatedTap()
+                return
+              }
+              follow.toggle()
+            }}
+            // Locked has no pressed state to report — it is not a toggle.
+            aria-pressed={gated ? undefined : on}
+            aria-label={
+              on
+                ? FOLLOWING_COPY.followingAria(artist.name)
+                : FOLLOWING_COPY.followAria(artist.name)
+            }
+            {...(gated && { 'aria-describedby': gateId })}
+            className="absolute flex cursor-pointer items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
+            style={{
+              top: 7,
+              right: 7,
+              width: 34,
+              height: 34,
+              borderRadius: 34,
+              background: on
+                ? 'color-mix(in oklab, var(--signal) 22%, rgba(0,0,0,0.5))'
+                : 'rgba(0,0,0,0.5)',
+              border: `1.5px solid ${on ? 'var(--signal)' : 'rgba(255,255,255,0.6)'}`,
+              color: on ? 'var(--signal)' : 'rgba(255,255,255,0.95)',
+              backdropFilter: 'blur(6px)',
+            }}
+          >
+            {on ? <CheckGlyph /> : gated ? <LockGlyph /> : <PlusGlyph />}
+          </button>
+          {gated && (
+            <span id={gateId} className="sr-only">
+              {FOLLOWING_COPY.followGate}
+            </span>
+          )}
+        </>
+      )}
     </li>
   )
 }

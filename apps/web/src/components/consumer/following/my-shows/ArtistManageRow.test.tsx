@@ -31,6 +31,7 @@ const artist = (over: Partial<FollowedArtist> = {}): FollowedArtist => ({
     iso: '2026-09-12',
     venue: 'Bluebird Theater',
     venueSlug: 'bluebird-theater',
+    price: 28,
   },
   ...over,
 })

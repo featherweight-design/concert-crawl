@@ -7,6 +7,9 @@
 // The meta line reads the LIVE preferences. While they are unresolved it is
 // omitted entirely rather than guessing: telling someone their alerts are off
 // when they are on is worse than telling them nothing.
+//
+// Carries no outer margin: it sits in a full-bleed mobile list and a padded
+// desktop column, so the gutter is the caller's to own.
 
 import Link from 'next/link'
 import { useNotificationPreferences } from '@/lib/queries/use-notification-preferences'
@@ -34,7 +37,6 @@ export const AlertsRow = () => {
       href={ALERTS_HREF}
       className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
       style={{
-        margin: '18px 16px 0',
         padding: '13px 14px',
         borderRadius: 10,
         background: 'var(--surface-1)',

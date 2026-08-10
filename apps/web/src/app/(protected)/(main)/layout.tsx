@@ -1,5 +1,6 @@
 import { AppHeader } from '@/components/consumer/app-header'
 import { AccountMenuProvider } from '@/components/consumer/user-menu'
+import { SearchPaletteProvider } from '@/components/consumer/search-palette/SearchPaletteProvider'
 import { BottomNav } from '@/components/consumer/bottom-nav'
 import { InstallSlot } from '@/components/pwa/InstallSlot'
 import { OfflinePill } from '@/components/pwa/OfflinePill'
@@ -26,27 +27,32 @@ export default function MainLayout({
       {/* Wraps header and bottom nav so their two account triggers share one
           open state — otherwise a mobile tap could stack two menu sheets. */}
       <AccountMenuProvider>
-        <AppHeader
-          rightSlots={
-            <>
-              <OfflinePill />
-              <InstallSlot />
-            </>
-          }
-        />
-        {/* Mounted once here rather than per destination, so every page the
+        {/* Above the header AND the page body: the header's two search
+            triggers and the "find artists to follow" row in a page must open
+            one palette, and those are siblings, not ancestor and descendant. */}
+        <SearchPaletteProvider>
+          <AppHeader
+            rightSlots={
+              <>
+                <OfflinePill />
+                <InstallSlot />
+              </>
+            }
+          />
+          {/* Mounted once here rather than per destination, so every page the
             post-signup seam can land on replays through the same code path.
             Suspense because it reads useSearchParams inside a layout that is
             otherwise statically rendered. */}
-        <Suspense fallback={null}>
-          <ReturnSeamReplay />
-          {/* Same reasoning, other half of the seam: the tier a visitor chose
+          <Suspense fallback={null}>
+            <ReturnSeamReplay />
+            {/* Same reasoning, other half of the seam: the tier a visitor chose
               before signing up (#1284). Kept apart from the replay because the
               two are independent — someone can arrive carrying either, or both. */}
-          <PendingTierPicker />
-        </Suspense>
-        {children}
-        <BottomNav />
+            <PendingTierPicker />
+          </Suspense>
+          {children}
+          <BottomNav />
+        </SearchPaletteProvider>
       </AccountMenuProvider>
     </div>
   )

@@ -42,10 +42,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }))
 
-vi.mock('../search-palette/SearchPalette', () => ({
-  SearchPalette: () => null,
-}))
-
 let mockTheme = 'electric'
 const setTheme = vi.fn((next: string) => {
   mockTheme = next

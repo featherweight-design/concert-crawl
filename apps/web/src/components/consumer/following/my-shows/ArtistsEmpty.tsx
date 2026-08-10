@@ -9,12 +9,9 @@
 // survives that collision.
 
 import Link from 'next/link'
+import { SearchLink } from '@/components/consumer/search-palette/SearchLink'
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
-import {
-  BROWSE_HREF,
-  FIND_ARTISTS_HREF,
-  WATCHING_HREF,
-} from './definitions/constants'
+import { BROWSE_HREF, WATCHING_HREF } from './definitions/constants'
 import { GlyphPlus } from './Glyphs'
 
 const COPY = MY_SHOWS_ARTISTS_COPY.empty
@@ -29,6 +26,18 @@ const buttonBase = {
   fontFamily: 'Inter, system-ui, sans-serif',
   letterSpacing: '-0.01em',
   textDecoration: 'none',
+} as const
+
+const PRIMARY_CLASS =
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal'
+
+const primaryStyle = {
+  ...buttonBase,
+  background: 'var(--signal)',
+  color: 'var(--fg-on-accent)',
+  border: '1px solid var(--signal)',
+  fontWeight: 800,
+  fontSize: 14.5,
 } as const
 
 interface ArtistsEmptyProps {
@@ -107,20 +116,17 @@ export const ArtistsEmpty = ({
           : { flexDirection: 'column', width: '100%', maxWidth: 300 }),
       }}
     >
-      <Link
-        href={locked ? BROWSE_HREF : FIND_ARTISTS_HREF}
-        className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-        style={{
-          ...buttonBase,
-          background: 'var(--signal)',
-          color: 'var(--fg-on-accent)',
-          border: '1px solid var(--signal)',
-          fontWeight: 800,
-          fontSize: 14.5,
-        }}
-      >
-        {locked ? COPY.primaryLocked : COPY.primary}
-      </Link>
+      {/* Locked sends them to browse, which is a page. Unlocked is a search,
+          which is a palette. */}
+      {locked ? (
+        <Link href={BROWSE_HREF} className={PRIMARY_CLASS} style={primaryStyle}>
+          {COPY.primaryLocked}
+        </Link>
+      ) : (
+        <SearchLink className={PRIMARY_CLASS} style={primaryStyle}>
+          {COPY.primary}
+        </SearchLink>
+      )}
       <Link
         href={WATCHING_HREF}
         className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"

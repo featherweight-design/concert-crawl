@@ -35,6 +35,7 @@ import type {
 } from '@concert-crawl/types'
 import { loadNextShowByCanonical } from '../lib/artist-follows.js'
 import { expandBucket } from '../lib/genre-buckets.js'
+import { parsePrice } from '../lib/price.js'
 import { todayInTimezone } from '../lib/time.js'
 
 export const artistsPublicRouter = new Hono()
@@ -74,12 +75,6 @@ const slugParamSchema = z.object({
     .max(ARTIST_SLUG_MAX_LENGTH)
     .regex(/^[a-z0-9-]+$/),
 })
-
-const parsePrice = (raw: string | null): number | null => {
-  if (raw === null) return null
-  const parsed = Number.parseFloat(raw)
-  return Number.isNaN(parsed) ? null : parsed
-}
 
 // Cancelled and postponed rows stay, matching every other list surface.
 const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const

@@ -23,13 +23,19 @@ export interface ShelfArtist {
   photoUrl: string | null
   /** "Venue · Sep 12", or null when nothing is on the books. */
   dateLine: string | null
+  /**
+   * Cheapest known ticket price for `dateLine`'s show, or null for "Price TBD".
+   * Raw rather than preformatted because the card colours the row on the
+   * null-vs-priced distinction, which a formatted string has already thrown away.
+   */
+  price: number | null
   /** Whether the viewer already follows this artist. */
   following: boolean
 }
 
 /**
- * `spotify` differs from `some` in exactly one string. It is kept as a mode
- * rather than a boolean so the difference stays visible at every call site
- * that has to decide which heading to render.
+ * There was a third `spotify` mode, differing from `some` in one eyebrow that
+ * named the source. It went because a follow is a follow: how it got onto the
+ * list is not something the shelf owes the person who built it.
  */
-export type ShelfMode = 'zero' | 'some' | 'spotify'
+export type ShelfMode = 'zero' | 'some'

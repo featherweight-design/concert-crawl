@@ -1,21 +1,22 @@
 'use client'
 
-// The browse shelf slot (native following, PR 4). ONE component, three modes:
+// The browse shelf slot (native following, PR 4). ONE component, two modes:
 //
 //   zero     starter shelf — followable artists with upcoming Denver dates,
 //            shuffled per session. It recruits; it does not apologise, and it
 //            has no dismiss affordance. A shelf you can dismiss on day one is
 //            a shelf its whole audience never sees twice.
 //   some     the artists you follow who have a date on the books.
-//   spotify  identical to `some` but for its eyebrow. Spotify is a SOURCE,
-//            not a second information architecture — hence one component and
-//            one card, not a parallel set.
+//
+// There was a third `spotify` mode whose only difference was an eyebrow naming
+// the source. Spotify is a SOURCE, not a second information architecture, and
+// how a follow got onto the list is not something the shelf owes its owner.
 //
 // Mode is decided on the SERVER from the SSR follow seed, so the slot never
 // renders one shelf and swaps to another after a client fetch lands.
 
 import { useEffect, useMemo, useState } from 'react'
-import Link from 'next/link'
+import { SearchLink } from '@/components/consumer/search-palette/SearchLink'
 import { useAuth } from '@clerk/nextjs'
 import type { PickerEntry } from '@concert-crawl/types'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
@@ -24,12 +25,7 @@ import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 import { ShelfCard } from './ShelfCard'
 import { FOLLOWING_COPY } from './definitions/copy'
-import {
-  SHELF_CARD_WIDTH,
-  SHELF_CARD_WIDTH_NARROW,
-  SHELF_NARROW_QUERY,
-  SHELF_VISIBLE_CARDS,
-} from './definitions/constants'
+import { SHELF_CARD_WIDTH, SHELF_VISIBLE_CARDS } from './definitions/constants'
 import type { ShelfArtist, ShelfMode } from './definitions/types'
 import { readSessionSeed, shuffleWithSeed } from './lib/shuffle'
 
@@ -49,12 +45,10 @@ const ShelfHead = ({
   eyebrow,
   title,
   body,
-  action,
 }: {
   eyebrow: string
   title: string
   body?: string
-  action?: { label: string; href: string }
 }) => (
   <div className="mb-[11px] flex items-end justify-between gap-3">
     <div className="flex min-w-0 flex-col gap-[5px]">
@@ -84,28 +78,13 @@ const ShelfHead = ({
         </p>
       )}
     </div>
-    {action !== undefined && (
-      <Link
-        href={action.href}
-        className="inline-flex shrink-0 items-center gap-1 pb-0.5 font-bold uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 9.5,
-          letterSpacing: '0.1em',
-          color: 'var(--fg-subtle)',
-        }}
-      >
-        {action.label}
-        <ChevronGlyph />
-      </Link>
-    )}
   </div>
 )
 
 interface FollowShelfProps {
   mode: ShelfMode
   artists: ShelfArtist[]
-  /** Follows the server counted. Drives the `some`/`spotify` eyebrow only. */
+  /** Follows the server counted. Drives the `some` eyebrow only. */
   followCount: number
   scaRegion: boolean
 }
@@ -120,16 +99,7 @@ export const FollowShelf = ({
   const { surface } = useEntitlement('following')
   const { data: planState } = usePlanState()
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [narrow, setNarrow] = useState(false)
   const [seed, setSeed] = useState<number | null>(null)
-
-  useEffect(() => {
-    const media = window.matchMedia(SHELF_NARROW_QUERY)
-    const apply = () => setNarrow(media.matches)
-    apply()
-    media.addEventListener('change', apply)
-    return () => media.removeEventListener('change', apply)
-  }, [])
 
   // Read AFTER mount: the server rendered the API's order, and reading storage
   // during render would make the first client pass disagree with the HTML.
@@ -166,9 +136,9 @@ export const FollowShelf = ({
 
   // Scoped to `zero` on purpose. A downgraded viewer still has to be able to
   // unfollow, and DELETE /v1/artists/:slug/follow is deliberately ungated to
-  // let them (artist-follows.ts:121) — so locking the badge on `some`/`spotify`
-  // would strand them holding follows they cannot release. Only the starter
-  // shelf, whose rows are all not-yet-followed, gates on entitlement.
+  // let them (artist-follows.ts:121) — so locking the badge on `some` would
+  // strand them holding follows they cannot release. Only the starter shelf,
+  // whose rows are all not-yet-followed, gates on entitlement.
   const locked =
     mode === 'zero' &&
     (!resolved || (!signedOut && surface !== 'visible-active'))
@@ -181,8 +151,6 @@ export const FollowShelf = ({
   const pickerEntry: PickerEntry =
     surface === 'tier-picker-on-tap' ? 'logged-out-follow' : 'paywall'
 
-  const width = narrow ? SHELF_CARD_WIDTH_NARROW : SHELF_CARD_WIDTH
-
   return (
     <section aria-label={FOLLOWING_COPY.shelfAria} className="mb-5 pt-1.5">
       {mode === 'zero' ? (
@@ -193,16 +161,8 @@ export const FollowShelf = ({
         />
       ) : (
         <ShelfHead
-          eyebrow={
-            mode === 'spotify'
-              ? FOLLOWING_COPY.spotifyEyebrow(followCount)
-              : FOLLOWING_COPY.yoursEyebrow(followCount)
-          }
+          eyebrow={FOLLOWING_COPY.yoursEyebrow(followCount)}
           title={FOLLOWING_COPY.yoursTitle}
-          action={{
-            label: FOLLOWING_COPY.yoursAction,
-            href: '/events?filterFollowing=1',
-          }}
         />
       )}
 
@@ -216,7 +176,8 @@ export const FollowShelf = ({
             <ShelfCard
               key={artist.key}
               artist={artist}
-              width={width}
+              width={SHELF_CARD_WIDTH}
+              starter={mode === 'zero'}
               locked={locked}
               signedOut={signedOut}
               onGatedTap={() => {
@@ -232,8 +193,7 @@ export const FollowShelf = ({
         <div className="pt-[13px]">
           {/* There is no /artists index route and this epic does not add one,
               so "browse all artists" means search. */}
-          <Link
-            href="/search"
+          <SearchLink
             className="inline-flex items-center gap-[5px] font-bold uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
             style={{
               fontFamily: 'var(--font-mono)',
@@ -244,7 +204,7 @@ export const FollowShelf = ({
           >
             {FOLLOWING_COPY.starterAction}
             <ChevronGlyph />
-          </Link>
+          </SearchLink>
         </div>
       )}
 

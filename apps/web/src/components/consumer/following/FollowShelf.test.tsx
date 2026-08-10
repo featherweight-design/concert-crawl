@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { EntitlementResult } from '@/lib/queries/use-entitlement'
 import type { ShelfArtist } from './definitions/types'
@@ -66,6 +66,7 @@ const artist = (overrides: Partial<ShelfArtist> = {}): ShelfArtist => ({
   slug: 'ratbag',
   photoUrl: null,
   dateLine: 'Larimer Lounge · Sep 12',
+  price: 32,
   following: false,
   ...overrides,
 })
@@ -108,41 +109,36 @@ describe('FollowShelf', () => {
     expect(screen.getByText(FOLLOWING_COPY.starterAction)).toBeTruthy()
   })
 
-  it('some: names the follow count and links to the scoped list', () => {
+  // The head carries the count and nothing else: a "see them all" link beside
+  // it went the same way as the per-card check, because the My artists browse
+  // chip is already that filter.
+  it('some: names the follow count and offers no second filter', () => {
     renderShelf({ mode: 'some', followCount: 4, artists: [artist()] })
     expect(screen.getByText(FOLLOWING_COPY.yoursEyebrow(4))).toBeTruthy()
     expect(screen.getByText(FOLLOWING_COPY.yoursTitle)).toBeTruthy()
-    const action = screen.getByText(FOLLOWING_COPY.yoursAction)
-    expect(action.closest('a')?.getAttribute('href')).toBe(
-      '/events?filterFollowing=1',
-    )
     expect(screen.queryByText(FOLLOWING_COPY.starterAction)).toBeNull()
-  })
-
-  // Spotify is a SOURCE, not a second information architecture: the eyebrow is
-  // the only thing that differs from `some`.
-  it('spotify: differs from some only in the eyebrow', () => {
-    renderShelf({ mode: 'spotify', followCount: 4, artists: [artist()] })
-    expect(screen.getByText(FOLLOWING_COPY.spotifyEyebrow(4))).toBeTruthy()
-    expect(screen.getByText(FOLLOWING_COPY.yoursTitle)).toBeTruthy()
+    const hrefs = screen
+      .getAllByRole('link')
+      .map((node) => node.getAttribute('href'))
+    expect(hrefs).toEqual(['/artists/ratbag'])
   })
 
   it('caps the starter shelf at the visible-card count', () => {
-    const many = Array.from({ length: 18 }, (_, i) =>
+    const many = Array.from({ length: 24 }, (_, i) =>
       artist({ key: `k${i}`, name: `Act ${i}`, slug: `act-${i}` }),
     )
     renderShelf({ artists: many })
-    expect(screen.getAllByRole('listitem').length).toBe(6)
+    expect(screen.getAllByRole('listitem').length).toBe(10)
   })
 
   // The cap is the shelf's, not the starter shelf's: one row of cards is what
   // fits, whichever mode filled it.
   it('caps your own artists at the same count', () => {
-    const many = Array.from({ length: 9 }, (_, i) =>
+    const many = Array.from({ length: 14 }, (_, i) =>
       artist({ key: `k${i}`, name: `Act ${i}`, slug: `act-${i}` }),
     )
-    renderShelf({ mode: 'some', followCount: 9, artists: many })
-    expect(screen.getAllByRole('listitem').length).toBe(6)
+    renderShelf({ mode: 'some', followCount: 14, artists: many })
+    expect(screen.getAllByRole('listitem').length).toBe(10)
   })
 
   it('does not shuffle your own artists', () => {
@@ -150,11 +146,13 @@ describe('FollowShelf', () => {
       artist({ key: `k${i}`, name: `Act ${i}`, slug: `act-${i}` }),
     )
     renderShelf({ mode: 'some', followCount: 4, artists: many })
-    const names = screen
-      .getAllByRole('link')
-      .map((node) => node.textContent)
-      .filter((text) => text?.startsWith('Act'))
-    expect(names).toEqual(many.map((row) => row.name))
+    // A card reads name + date + price, so compare on the prefix: this test is
+    // about row ORDER, not about what each row says.
+    const rows = screen.getAllByRole('listitem').map((node) => node.textContent)
+    expect(rows).toHaveLength(many.length)
+    rows.forEach((text, index) => {
+      expect(text?.startsWith(`Act ${index}`)).toBe(true)
+    })
   })
 
   it('locked viewers get a gated badge that opens the picker', () => {
@@ -175,25 +173,16 @@ describe('FollowShelf', () => {
     )
   })
 
-  // A downgraded viewer keeps their follows and DELETE stays ungated, so the
-  // badge on their own artists must still toggle rather than open the paywall.
-  it('a downgraded viewer can still unfollow from the some shelf', () => {
-    entitlementState.current = {
-      isLoading: false,
-      active: false,
-      surface: 'paywall-on-tap',
-    }
+  // Every row under "Your artists" is followed by definition, so a badge there
+  // could only restate the heading. Unfollowing lives on My shows ▸ Artists and
+  // the artist page, both of which stay reachable from the card.
+  it('draws no follow badge on your own artists', () => {
     renderShelf({
       mode: 'some',
       followCount: 1,
       artists: [artist({ following: true })],
     })
-    const badge = screen.getByRole('button', {
-      name: FOLLOWING_COPY.followingAria('Ratbag'),
-    })
-    fireEvent.click(badge)
-    expect(toggle).toHaveBeenCalled()
-    expect(screen.queryByTestId('tier-picker')).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
   })
 
   it('signed-out viewers hand off to the logged-out picker entry', () => {
@@ -267,13 +256,14 @@ describe('ShelfCard rows', () => {
   // so no page and no follow endpoint. That is a NORMAL row, not an error.
   it('a slug-less row renders unlinked and carries no follow badge', () => {
     renderShelf({
-      mode: 'some',
-      followCount: 1,
       artists: [artist({ slug: null, name: 'Ghost Act', following: true })],
     })
     expect(screen.getByText('Ghost Act')).toBeTruthy()
-    expect(screen.queryByRole('link', { name: 'Ghost Act' })).toBeNull()
-    expect(screen.queryByRole('button')).toBeNull()
+    // Scoped to the row: the starter shelf's own "find artists" action is a
+    // link too, and it is not what this test is about.
+    const row = screen.getByRole('listitem')
+    expect(within(row).queryByRole('link')).toBeNull()
+    expect(within(row).queryByRole('button')).toBeNull()
   })
 
   it('falls back to the no-date line when nothing is on the books', () => {
@@ -285,12 +275,24 @@ describe('ShelfCard rows', () => {
     expect(screen.getByText(FOLLOWING_COPY.cardNoDate)).toBeTruthy()
   })
 
-  it('an already-followed row reads as following', () => {
+  // The card carries the same three rows as the Spotify taste card beside it,
+  // price included — the two share one browse slot.
+  it('renders the price, and says tba when there is none', () => {
+    renderShelf({ mode: 'some', followCount: 2, artists: [artist()] })
+    expect(screen.getByText('$32')).toBeTruthy()
+
     renderShelf({
       mode: 'some',
-      followCount: 1,
-      artists: [artist({ following: true })],
+      followCount: 2,
+      artists: [artist({ price: null })],
     })
+    expect(screen.getAllByText(FOLLOWING_COPY.cardPriceTba).length).toBe(1)
+  })
+
+  // The starter shelf keeps its badge: there it is the only way to follow
+  // anyone, and the check is the acknowledgement of a follow just made.
+  it('a followed starter row reads as following', () => {
+    renderShelf({ artists: [artist({ following: true })] })
     const badge = screen.getByRole('button', {
       name: FOLLOWING_COPY.followingAria('Ratbag'),
     })

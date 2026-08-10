@@ -2,8 +2,9 @@
 
 import React from 'react'
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { AppHeader } from './AppHeader'
+import { SearchPaletteContext } from '../search-palette/search-palette-context'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 let mockAuth: { isSignedIn: boolean; isLoaded: boolean } = {
@@ -23,10 +24,6 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('../user-menu', () => ({
   UserMenu: () => <div data-testid="user-menu" />,
-}))
-
-vi.mock('../search-palette/SearchPalette', () => ({
-  SearchPalette: () => null,
 }))
 
 beforeEach(() => {
@@ -56,6 +53,29 @@ describe('AppHeader', () => {
     // regardless of viewport — the responsive display: none rules hide the
     // other bar, not the absence of the slot.
     expect(screen.getAllByTestId('install-slot').length).toBeGreaterThan(0)
+  })
+})
+
+// The palette moved out of the header so the page body could open the same
+// one. The header's own triggers have to keep working through the provider.
+describe('AppHeader search triggers', () => {
+  it('asks the provider to open, at both breakpoints', () => {
+    const open = vi.fn()
+    render(
+      <SearchPaletteContext.Provider value={{ open }}>
+        <AppHeader />
+      </SearchPaletteContext.Provider>,
+    )
+
+    const triggers = screen.getAllByLabelText(/search/i)
+    expect(triggers.length).toBeGreaterThan(1)
+    for (const trigger of triggers) fireEvent.click(trigger)
+    expect(open).toHaveBeenCalledTimes(triggers.length)
+  })
+
+  it('renders without a provider rather than throwing', () => {
+    render(<AppHeader />)
+    fireEvent.click(screen.getAllByLabelText(/search/i)[0] as HTMLElement)
   })
 })
 

@@ -85,10 +85,6 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: routerPush }),
 }))
 
-vi.mock('../search-palette/SearchPalette', () => ({
-  SearchPalette: () => null,
-}))
-
 vi.mock('@/theme', () => ({
   useTheme: () => ({ theme: 'electric', setTheme: vi.fn() }),
 }))
