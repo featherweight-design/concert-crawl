@@ -20,6 +20,7 @@ import { useEffect, useId, useState } from 'react'
 import Link from 'next/link'
 import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
 import { formatPrice } from '@/components/consumer/definitions/lib'
+import { SHELF_CARD_HEIGHT } from '@/components/consumer/definitions/constants'
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
 import { FollowDateLine } from './FollowDateLine'
 import { FOLLOWING_COPY } from './definitions/copy'
@@ -173,10 +174,12 @@ export const ShelfCard = ({
 
   const body = (
     <>
-      {/* `flex-1` with a floor rather than a fixed square: when the row
-          equalizes card heights it is the ART that absorbs the difference, so
-          a long artist name never crops its own show info. Same trade the
-          Spotify card makes. */}
+      {/* The card's height is definite (SHELF_CARD_HEIGHT on the `<li>`), so
+          `flex-1` here resolves against that rather than against content: the
+          ART absorbs whatever the show info doesn't take, and a long artist
+          name never crops its own dates. The floor is what the art keeps if a
+          body ever renders taller than expected. Same trade the Spotify card
+          makes. */}
       <span className="relative block min-h-[116px] w-full flex-1 overflow-hidden">
         <CardArt name={artist.name} photoUrl={artist.photoUrl} />
       </span>
@@ -226,7 +229,11 @@ export const ShelfCard = ({
   }
 
   return (
-    <li className="relative flex shrink-0" style={{ width, listStyle: 'none' }}>
+    <li
+      className="relative flex shrink-0"
+      style={{ width, height: SHELF_CARD_HEIGHT, listStyle: 'none' }}
+      data-testid="shelf-card"
+    >
       {artist.slug !== null ? (
         <Link
           href={`/artists/${artist.slug}`}

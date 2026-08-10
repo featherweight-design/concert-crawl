@@ -26,6 +26,10 @@ import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { DiscoveryLoadingShelf } from './DiscoveryLoadingShelf'
 import { EventImage } from '@/components/consumer/event-image'
 import {
+  SHELF_CARD_HEIGHT,
+  SHELF_CARD_WIDTH,
+} from '@/components/consumer/definitions/constants'
+import {
   formatPrice,
   formatShortDate,
 } from '@/components/consumer/definitions/lib'
@@ -64,7 +68,11 @@ const ReasonChip = ({ reason }: { reason: SpotifyTastePickReason }) => (
 const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
   const price = formatPrice(pick.ticketPriceMin, null)
   return (
-    <li className="flex w-[168px] shrink-0">
+    <li
+      className="flex shrink-0"
+      style={{ width: SHELF_CARD_WIDTH, height: SHELF_CARD_HEIGHT }}
+      data-testid="taste-pick-card"
+    >
       <Link
         href={`/events/${pick.eventId}`}
         className="flex w-full flex-col overflow-hidden rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal"
@@ -73,10 +81,13 @@ const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
           border: '1px solid var(--border)',
         }}
       >
-        {/* flex-1 (basis 0) so the IMAGE absorbs any extra height when cards
-            equalize in the row — aspect ratio yields, show info never does.
-            Also neutralizes IdentityArt's inline height:100%, which beats a
-            height class and blanked fallback-graphic cards (#763 r4). */}
+        {/* flex-1 (basis 0) so the IMAGE absorbs whatever the show info
+            doesn't take — show info never yields. With the card's height
+            definite this also stops a hotlinked image's own aspect ratio from
+            sizing the card: `h-full` on the inner <img> used to fall back to
+            auto, so one portrait poster stretched the entire row. Still
+            neutralizes IdentityArt's inline height:100%, which beats a height
+            class and blanked fallback-graphic cards (#763 r4). */}
         <EventImage
           src={pick.imageUrl}
           alt=""

@@ -4,6 +4,10 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { DiscoveryLoadingShelf } from './DiscoveryLoadingShelf'
 import { SPOTIFY_COPY } from './definitions/copy'
+import {
+  SHELF_CARD_HEIGHT,
+  SHELF_CARD_WIDTH,
+} from '@/components/consumer/definitions/constants'
 
 const COPY = SPOTIFY_COPY.discovery.loading
 
@@ -16,6 +20,20 @@ afterEach(() => {
 })
 
 describe('DiscoveryLoadingShelf', () => {
+  // The skeleton's whole job is to reserve the slot the real cards land in.
+  // It reserved 210px against cards that rendered at 202px and 279px, so it
+  // guaranteed the shift it exists to prevent.
+  it('reserves the same box the real cards occupy', () => {
+    render(<DiscoveryLoadingShelf onRetry={vi.fn()} />)
+
+    const cards = screen.getAllByTestId('shelf-skeleton-card')
+    expect(cards.length).toBeGreaterThan(0)
+    for (const card of cards) {
+      expect(card.style.width).toBe(`${SHELF_CARD_WIDTH}px`)
+      expect(card.style.height).toBe(`${SHELF_CARD_HEIGHT}px`)
+    }
+  })
+
   it('renders the shimmering skeleton row with the loading eyebrow initially', () => {
     render(<DiscoveryLoadingShelf onRetry={vi.fn()} />)
 

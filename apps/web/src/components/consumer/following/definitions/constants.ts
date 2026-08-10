@@ -1,13 +1,8 @@
 // Non-copy constants for the browse follow shelf (native following, PR 4).
 
-/**
- * Card width, in px. The same 168 the Spotify taste shelf has always used, and
- * flat across viewports for the same reason it is there: the two shelves
- * occupy one slot on browse and a viewport-dependent width made the native one
- * disagree with its own loading skeleton. The earlier 138/124 narrow split is
- * gone with it — 168 already renders at the 320px baseline.
- */
-export const SHELF_CARD_WIDTH = 168
+// The card box itself (width and height) lives in
+// consumer/definitions/constants.ts, because the Spotify taste shelf and its
+// skeleton share it. The earlier 138/124 narrow split is gone with it.
 
 /**
  * The 320px baseline. The shelf card no longer switches on it — its width is

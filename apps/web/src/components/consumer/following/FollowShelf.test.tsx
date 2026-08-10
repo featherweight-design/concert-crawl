@@ -59,6 +59,10 @@ vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
 
 import { FollowShelf } from './FollowShelf'
 import { FOLLOWING_COPY } from './definitions/copy'
+import {
+  SHELF_CARD_HEIGHT,
+  SHELF_CARD_WIDTH,
+} from '@/components/consumer/definitions/constants'
 
 const artist = (overrides: Partial<ShelfArtist> = {}): ShelfArtist => ({
   key: 'k1',
@@ -93,6 +97,21 @@ describe('FollowShelf', () => {
       surface: 'visible-active',
     }
     toggle.mockClear()
+  })
+
+  // The follow shelf and the Spotify taste shelf compete for one slot on
+  // browse, so a viewer meets them as a single component. They were 77px
+  // apart: this card's art is absolutely positioned and contributed no
+  // height, pinning it to the 116px floor at 202px.
+  it('gives the card the shared shelf box', () => {
+    renderShelf({ artists: [artist(), artist({ key: 'k2', name: 'Bugbear' })] })
+
+    const cards = screen.getAllByTestId('shelf-card')
+    expect(cards).toHaveLength(2)
+    for (const card of cards) {
+      expect(card.style.width).toBe(`${SHELF_CARD_WIDTH}px`)
+      expect(card.style.height).toBe(`${SHELF_CARD_HEIGHT}px`)
+    }
   })
 
   it('renders nothing when there are no rows to show', () => {

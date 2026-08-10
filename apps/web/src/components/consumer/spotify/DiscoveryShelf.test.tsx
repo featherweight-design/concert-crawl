@@ -74,6 +74,10 @@ vi.mock('./OAuthHandoffSheet', () => ({
 import { DiscoveryShelf } from './DiscoveryShelf'
 import { SPOTIFY_COPY } from './definitions/copy'
 import { SHELF_HINT_COOKIE } from '@/lib/shelf-hint'
+import {
+  SHELF_CARD_HEIGHT,
+  SHELF_CARD_WIDTH,
+} from '@/components/consumer/definitions/constants'
 
 const COPY = SPOTIFY_COPY.discovery
 
@@ -299,6 +303,27 @@ describe('DiscoveryShelf', () => {
     }
     // Fallback-graphic card still surfaces its show info.
     expect(screen.getByText('Turnstile')).toBeTruthy()
+  })
+
+  it('gives every card the shared shelf box, whatever its image', () => {
+    // Regression: the card had no declared height, so `flex-1` art resolved
+    // against content and the inner <img>'s `h-full` fell back to auto. One
+    // portrait poster in the row therefore sized every card in it (measured:
+    // 362px for a 400x600 source, 279px for a square one), and the follow
+    // shelf sharing this slot sat at 202px. The box is declared now, so no
+    // source asset can move it.
+    picksQuery.data = connected([
+      pick(),
+      pick({ eventId: 'evt-img', artist: 'Alvvays', imageUrl: 'https://img' }),
+    ])
+    render(<DiscoveryShelf />)
+
+    const cards = screen.getAllByTestId('taste-pick-card')
+    expect(cards).toHaveLength(2)
+    for (const card of cards) {
+      expect(card.style.width).toBe(`${SHELF_CARD_WIDTH}px`)
+      expect(card.style.height).toBe(`${SHELF_CARD_HEIGHT}px`)
+    }
   })
 
   it('renders immediately from initialPicks while client entitlement/query are still resolving', () => {

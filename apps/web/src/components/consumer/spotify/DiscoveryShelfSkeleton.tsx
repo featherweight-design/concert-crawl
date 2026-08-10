@@ -5,10 +5,15 @@
 //   - events/loading.tsx (server)    — route fallback, reserves the shelf
 //                                      footprint so the shelf doesn't shove
 //                                      the page down when it paints
-// Box model mirrors TastePickCard VERBATIM (168 · 14 · surface-1 · border ·
-// image 116 · body pad 10/11/12 · gap 7) so real picks land with zero shift.
+// Box model mirrors TastePickCard VERBATIM (SHELF_CARD_WIDTH ·
+// SHELF_CARD_HEIGHT · 14 · surface-1 · border · flex-1 art · body pad
+// 10/11/12 · gap 7) so real picks land with zero shift.
 
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
+import {
+  SHELF_CARD_HEIGHT,
+  SHELF_CARD_WIDTH,
+} from '@/components/consumer/definitions/constants'
 import { SweepOverlay } from '@/components/ui/skeleton/SweepOverlay'
 import { SPOTIFY_COPY } from './definitions/copy'
 
@@ -49,15 +54,21 @@ const SkeletonBar = ({
 // One skeleton pick card — box-identical to TastePickCard.
 const SkeletonCard = ({ className = '' }: { className?: string }) => (
   <li
-    className={`relative flex w-[168px] shrink-0 flex-col overflow-hidden rounded-[14px] ${className}`}
+    className={`relative flex shrink-0 flex-col overflow-hidden rounded-[14px] ${className}`}
     style={{
+      width: SHELF_CARD_WIDTH,
+      height: SHELF_CARD_HEIGHT,
       background: 'var(--surface-1)',
       border: '1px solid var(--border)',
     }}
+    data-testid="shelf-skeleton-card"
   >
-    <div style={{ height: 116, background: 'var(--surface-2)' }} />
+    {/* flex-1, not the old fixed 116: the real cards give their art whatever
+        the body doesn't take, so a fixed art block here reserved a footprint
+        neither card lands on. */}
+    <div className="flex-1" style={{ background: 'var(--surface-2)' }} />
     <div
-      className="flex flex-col"
+      className="flex shrink-0 flex-col"
       style={{ padding: '10px 11px 12px', gap: 7 }}
     >
       <SkeletonBar width={74} height={16} />
