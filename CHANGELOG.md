@@ -1,3 +1,10 @@
+## [1.241.4](https://github.com/HartiganHM/concert-crawl/compare/v1.241.3...v1.241.4) (2026-08-13)
+
+
+### Bug Fixes
+
+* **admin:** hydrate candidate popularity via the single-artist endpoint ([#1550](https://github.com/HartiganHM/concert-crawl/issues/1550)) ([30151de](https://github.com/HartiganHM/concert-crawl/commit/30151de8fe2d6ffc8c2e34fb048a04666cf944e6))
+
 ## [1.241.3](https://github.com/HartiganHM/concert-crawl/compare/v1.241.2...v1.241.3) (2026-08-10)
 
 
