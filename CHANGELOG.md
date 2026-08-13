@@ -1,3 +1,10 @@
+## [1.241.6](https://github.com/HartiganHM/concert-crawl/compare/v1.241.5...v1.241.6) (2026-08-13)
+
+
+### Bug Fixes
+
+* **admin:** remove the suggested-pick feature Spotify made unreachable ([#1552](https://github.com/HartiganHM/concert-crawl/issues/1552)) ([8837704](https://github.com/HartiganHM/concert-crawl/commit/8837704918afceee5d967456a3a44fd20f7c2cff))
+
 ## [1.241.5](https://github.com/HartiganHM/concert-crawl/compare/v1.241.4...v1.241.5) (2026-08-13)
 
 
