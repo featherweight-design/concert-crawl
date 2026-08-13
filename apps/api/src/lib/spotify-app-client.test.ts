@@ -309,74 +309,118 @@ describe('createSpotifyAppClient().searchArtists', () => {
   })
 })
 
-describe('createSpotifyAppClient().fetchGenres', () => {
+describe('createSpotifyAppClient().fetchArtistDetails', () => {
   beforeEach(() => {
     resetAppTokenCache()
     withCredentials()
   })
 
-  it('maps genres by id from one batched request', async () => {
+  it('maps genres and popularity by id, one request per artist', async () => {
     const fetchFn = vi
       .fn<typeof fetch>()
       .mockResolvedValueOnce(tokenResponse('t1'))
       .mockResolvedValueOnce(
         jsonResponse({
-          artists: [
-            { id: 'sp1', genres: ['psychedelic soul'] },
-            { id: 'sp2', genres: [] },
-          ],
-        }),
-      )
-
-    const client = await createSpotifyAppClient({ fetchFn })
-    const genres = await client?.fetchGenres(['sp1', 'sp2'])
-
-    expect(genres?.get('sp1')).toEqual(['psychedelic soul'])
-    expect(genres?.get('sp2')).toEqual([])
-    // One call for the token, one for the batch — not one per artist.
-    expect(fetchFn).toHaveBeenCalledTimes(2)
-    expect(fetchFn.mock.calls[1]?.[0]).toContain('/artists?ids=sp1%2Csp2')
-  })
-
-  it('skips the null slots Spotify returns for unresolvable ids', async () => {
-    const fetchFn = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(tokenResponse('t1'))
-      .mockResolvedValueOnce(
-        jsonResponse({ artists: [null, { id: 'sp2', genres: ['jazz'] }] }),
-      )
-
-    const client = await createSpotifyAppClient({ fetchFn })
-    const genres = await client?.fetchGenres(['missing', 'sp2'])
-
-    expect(genres?.size).toBe(1)
-    expect(genres?.get('sp2')).toEqual(['jazz'])
-  })
-
-  it('chunks past the 50-id ceiling rather than dropping the tail', async () => {
-    const ids = Array.from({ length: 51 }, (_unused, i) => `sp${i}`)
-    const fetchFn = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(tokenResponse('t1'))
-      .mockResolvedValueOnce(
-        jsonResponse({
-          artists: ids.slice(0, 50).map((id) => ({ id, genres: ['ska'] })),
+          id: 'sp1',
+          genres: ['psychedelic soul'],
+          popularity: 72,
         }),
       )
       .mockResolvedValueOnce(
-        jsonResponse({
-          artists: ids.slice(50).map((id) => ({ id, genres: ['dub'] })),
-        }),
+        jsonResponse({ id: 'sp2', genres: [], popularity: 4 }),
       )
 
     const client = await createSpotifyAppClient({ fetchFn })
-    const genres = await client?.fetchGenres(ids)
+    const details = await client?.fetchArtistDetails(['sp1', 'sp2'])
 
-    // Token + two batches. The 51st id is the one a truncating implementation
-    // would have silently lost.
+    expect(details?.get('sp1')).toEqual({
+      genres: ['psychedelic soul'],
+      popularity: 72,
+    })
+    expect(details?.get('sp2')).toEqual({ genres: [], popularity: 4 })
+    // Token + one per artist. The `/artists?ids=` batch is unavailable to a
+    // Development Mode client since Spotify's February 2026 change.
     expect(fetchFn).toHaveBeenCalledTimes(3)
-    expect(genres?.size).toBe(51)
-    expect(genres?.get('sp50')).toEqual(['dub'])
+    expect(fetchFn.mock.calls[1]?.[0]).toContain('/artists/sp1')
+    expect(fetchFn.mock.calls[2]?.[0]).toContain('/artists/sp2')
+  })
+
+  it('never requests the batch endpoint that 403s in prod', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(
+        jsonResponse({ id: 'sp1', genres: [], popularity: 0 }),
+      )
+
+    const client = await createSpotifyAppClient({ fetchFn })
+    await client?.fetchArtistDetails(['sp1'])
+
+    for (const call of fetchFn.mock.calls) {
+      expect(String(call[0])).not.toContain('/artists?ids=')
+    }
+  })
+
+  it('carries a popularity of zero rather than reading it as absent', async () => {
+    // `0` is a real Spotify score and must survive as `0`, not collapse to
+    // null — the suggestion logic treats the two very differently.
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(
+        jsonResponse({ id: 'sp1', genres: [], popularity: 0 }),
+      )
+
+    const client = await createSpotifyAppClient({ fetchFn })
+    const details = await client?.fetchArtistDetails(['sp1'])
+
+    expect(details?.get('sp1')?.popularity).toBe(0)
+  })
+
+  it('defaults a missing popularity to null and missing genres to empty', async () => {
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(jsonResponse({ id: 'sp1' }))
+
+    const client = await createSpotifyAppClient({ fetchFn })
+    const details = await client?.fetchArtistDetails(['sp1'])
+
+    expect(details?.get('sp1')).toEqual({ genres: [], popularity: null })
+  })
+
+  it('skips an id Spotify cannot resolve and still hydrates the rest', async () => {
+    // One dead id must not cost the other candidates their hydration. The
+    // omitted id stays absent from the map, which the caller reads as "not
+    // hydrated" and retries on a later open.
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(jsonResponse({ error: 'not found' }, 404))
+      .mockResolvedValueOnce(
+        jsonResponse({ id: 'sp2', genres: ['dub'], popularity: 41 }),
+      )
+
+    const client = await createSpotifyAppClient({ fetchFn })
+    const details = await client?.fetchArtistDetails(['sp_gone', 'sp2'])
+
+    expect(details?.has('sp_gone')).toBe(false)
+    expect(details?.get('sp2')).toEqual({ genres: ['dub'], popularity: 41 })
+  })
+
+  it('aborts the run when Spotify rejects the app token', async () => {
+    // A 403 is systemic, not per-id — swallowing it would quietly return an
+    // empty map, which reads as "Spotify knows nothing about these artists".
+    const fetchFn = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(tokenResponse('t1'))
+      .mockResolvedValueOnce(jsonResponse({ error: 'forbidden' }, 403))
+
+    const client = await createSpotifyAppClient({ fetchFn })
+
+    await expect(client?.fetchArtistDetails(['sp1', 'sp2'])).rejects.toThrow(
+      SpotifyAuthError,
+    )
   })
 
   it('issues no /artists request for an empty id list', async () => {
@@ -385,9 +429,9 @@ describe('createSpotifyAppClient().fetchGenres', () => {
       .mockResolvedValueOnce(tokenResponse('t1'))
 
     const client = await createSpotifyAppClient({ fetchFn })
-    const genres = await client?.fetchGenres([])
+    const details = await client?.fetchArtistDetails([])
 
-    expect(genres?.size).toBe(0)
+    expect(details?.size).toBe(0)
     expect(fetchFn).toHaveBeenCalledTimes(1)
   })
 })

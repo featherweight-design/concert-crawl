@@ -31,12 +31,12 @@ interface SearchState {
   /** False models unset SPOTIFY_CLIENT_ID/SECRET — the dormant path. */
   clientAvailable: boolean
   lastQuery: string | null
-  /** What `GET /artists?ids=` reports, keyed by artist id. */
-  genresById: Record<string, string[]>
-  /** Thrown by `fetchGenres` — the degrade-to-no-genres path. */
-  genresError: Error | null
+  /** What `GET /artists/{id}` reports, keyed by artist id. */
+  detailsById: Record<string, { genres: string[]; popularity: number | null }>
+  /** Thrown by `fetchArtistDetails` — the degrade-to-unhydrated path. */
+  detailsError: Error | null
   /** The ids the route asked to hydrate, or null if it never asked. */
-  lastGenreIds: string[] | null
+  lastDetailIds: string[] | null
   /**
    * How many clients the route built. Building one mints an app token, so a
    * cache hit that needs no hydration must leave this at zero.
@@ -55,9 +55,9 @@ const { authState, searchState } = vi.hoisted(
       error: null,
       clientAvailable: true,
       lastQuery: null,
-      genresById: {},
-      genresError: null,
-      lastGenreIds: null,
+      detailsById: {},
+      detailsError: null,
+      lastDetailIds: null,
       clientBuilds: 0,
     },
   }),
@@ -79,13 +79,16 @@ vi.mock('../../lib/spotify-app-client.js', () => ({
         if (searchState.error !== null) throw searchState.error
         return searchState.candidates
       },
-      fetchGenres: async (artistIds: string[]) => {
-        searchState.lastGenreIds = artistIds
-        if (searchState.genresError !== null) throw searchState.genresError
+      fetchArtistDetails: async (artistIds: string[]) => {
+        searchState.lastDetailIds = artistIds
+        if (searchState.detailsError !== null) throw searchState.detailsError
         return new Map(
           artistIds
-            .filter((id) => searchState.genresById[id] !== undefined)
-            .map((id) => [id, searchState.genresById[id] ?? []]),
+            .filter((id) => searchState.detailsById[id] !== undefined)
+            .map((id) => [
+              id,
+              searchState.detailsById[id] ?? { genres: [], popularity: null },
+            ]),
         )
       },
       getCallCount: () => 1,
@@ -131,6 +134,7 @@ interface CandidateBody {
     isExactMatch: boolean
     imageUrl: string | null
     genres: string[] | null
+    popularity: number | null
   }>
   error?: string
 }
@@ -143,10 +147,12 @@ const candidate = (
   id,
   name,
   images: [{ url: `https://i.scdn.co/image/${id}` }],
-  popularity: 50,
-  // Empty on purpose: Spotify's `/search` returns simplified artist objects
-  // with no genres. Anything the picker shows has to come from the hydration
-  // call, so a fixture that pre-filled them would hide a regression.
+  // Null and empty on purpose: Spotify's `/search` returns simplified artist
+  // objects carrying neither popularity nor genres. Anything the picker shows
+  // has to come from the hydration call, so a fixture that pre-filled either
+  // would hide a regression — as a `popularity: 50` fixture did, while prod
+  // served nulls to every candidate.
+  popularity: null,
   genres: [],
   spotifyUrl: `https://open.spotify.com/artist/${id}`,
   ...overrides,
@@ -197,9 +203,9 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
     searchState.error = null
     searchState.clientAvailable = true
     searchState.lastQuery = null
-    searchState.genresById = {}
-    searchState.genresError = null
-    searchState.lastGenreIds = null
+    searchState.detailsById = {}
+    searchState.detailsError = null
+    searchState.lastDetailIds = null
     searchState.clientBuilds = 0
     await testDb.delete(artists).where(eq(artists.canonicalName, CANONICAL))
   })
@@ -210,9 +216,9 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
       candidate('spotify_ska', 'Sublime'),
       candidate('spotify_other', 'Subliminal'),
     ]
-    searchState.genresById = {
-      spotify_ska: ['ska punk', 'reggae rock'],
-      spotify_other: ['hip hop'],
+    searchState.detailsById = {
+      spotify_ska: { genres: ['ska punk', 'reggae rock'], popularity: 80 },
+      spotify_other: { genres: ['hip hop'], popularity: 12 },
     }
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
@@ -222,7 +228,7 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
 
     expect(res.status).toBe(200)
     // Hydration is asked only for the candidates actually being returned.
-    expect(searchState.lastGenreIds).toEqual(['spotify_ska', 'spotify_other'])
+    expect(searchState.lastDetailIds).toEqual(['spotify_ska', 'spotify_other'])
     // Search and hydration share one client, so one token mint covers both.
     expect(searchState.clientBuilds).toBe(1)
     expect(body.data?.map((row) => row.genres)).toEqual([
@@ -231,10 +237,38 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
     ])
   })
 
+  it('hydrates popularity, which /search never returns', async () => {
+    // The regression this locks down: hydration used to carry genres alone, so
+    // every candidate kept the `popularity: null` that `/search` hands back.
+    // The picker's suggested-pick highlight reads popularity and nothing else,
+    // and a null anywhere disqualifies the comparison — so it silently never
+    // fired in prod for any row.
+    const id = await seedAmbiguous()
+    searchState.candidates = [
+      candidate('spotify_ska', 'Sublime'),
+      candidate('spotify_other', 'Subliminal'),
+    ]
+    searchState.detailsById = {
+      spotify_ska: { genres: ['ska punk'], popularity: 80 },
+      spotify_other: { genres: ['hip hop'], popularity: 12 },
+    }
+
+    const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
+      headers: ADMIN_HEADERS,
+    })
+    const body: CandidateBody = await res.json()
+
+    expect(body.data?.map((row) => row.popularity)).toEqual([80, 12])
+    // And it is persisted, so reopening the row costs no further Spotify call.
+    expect(
+      (await readCache(id)).spotifyCandidates?.map((row) => row.popularity),
+    ).toEqual([80, 12])
+  })
+
   it('still serves candidates when genre hydration fails', async () => {
     const id = await seedAmbiguous()
     searchState.candidates = [candidate('spotify_ska', 'Sublime')]
-    searchState.genresError = new Error('spotify said no')
+    searchState.detailsError = new Error('spotify said no')
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
@@ -255,7 +289,9 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
       snapshot('spotify_ska', 'Sublime'),
       snapshot('spotify_gone', 'Sublime'),
     ])
-    searchState.genresById = { spotify_ska: ['ska punk'] }
+    searchState.detailsById = {
+      spotify_ska: { genres: ['ska punk'], popularity: 80 },
+    }
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
@@ -352,7 +388,7 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
     // Not even a client: building one mints an app token over the network.
     expect(searchState.clientBuilds).toBe(0)
     expect(searchState.lastQuery).toBeNull()
-    expect(searchState.lastGenreIds).toBeNull()
+    expect(searchState.lastDetailIds).toBeNull()
     expect(body.cachedAt).toBe(CACHED_AT.toISOString())
     expect(body.data).toEqual([
       expect.objectContaining({ id: 'spotify_ska', isExactMatch: true }),
@@ -362,7 +398,9 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
 
   it('hydrates a snapshot’s genres once and writes them back', async () => {
     const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')])
-    searchState.genresById = { spotify_ska: ['ska punk'] }
+    searchState.detailsById = {
+      spotify_ska: { genres: ['ska punk'], popularity: 80 },
+    }
 
     const first = await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
@@ -375,13 +413,13 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
       'ska punk',
     ])
 
-    searchState.lastGenreIds = null
+    searchState.lastDetailIds = null
     searchState.clientBuilds = 0
     await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
     })
     expect(searchState.clientBuilds).toBe(0)
-    expect(searchState.lastGenreIds).toBeNull()
+    expect(searchState.lastDetailIds).toBeNull()
     expect(searchState.lastQuery).toBeNull()
   })
 

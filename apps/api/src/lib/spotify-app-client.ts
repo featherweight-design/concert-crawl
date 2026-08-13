@@ -19,6 +19,7 @@
 // failures. Every response crosses a system boundary and is Zod-validated —
 // no `as` casts.
 import { z } from 'zod'
+import { apiLogger } from './logger.js'
 import { httpUrl } from './url-schema.js'
 import {
   fetchWithTimeout,
@@ -42,9 +43,6 @@ const TOKEN_EXPIRY_SKEW_MS = 60_000
 /** Candidates per search. The matcher only accepts exact canonical hits, so a
  * deep page adds nothing — it just widens the ambiguity surface. */
 const SEARCH_LIMIT = 10
-
-/** `GET /artists?ids=` accepts at most 50 ids per request. */
-const SEVERAL_ARTISTS_LIMIT = 50
 
 const tokenResponseSchema = z.object({
   access_token: z.string().min(1),
@@ -73,19 +71,25 @@ const searchResponseSchema = z.object({
   artists: z.object({ items: z.array(searchArtistSchema) }),
 })
 
-// `GET /artists?ids=` returns full artist objects. The only field read from
-// here is `genres`, which the search endpoint's simplified objects omit.
-const severalArtistsResponseSchema = z.object({
-  artists: z.array(
-    z
-      .object({
-        id: z.string().min(1),
-        genres: z.array(z.string()).nullish(),
-      })
-      // Spotify returns a null slot for an id it cannot resolve.
-      .nullable(),
-  ),
+// `GET /artists/{id}` returns a full artist object, carrying the two fields
+// `/search`'s simplified objects omit: `genres` and `popularity`.
+//
+// One id per request rather than the `GET /artists?ids=` batch. Spotify's
+// February 2026 developer-access change cut Development Mode client IDs down
+// to a smaller endpoint set, and the batch endpoint did not survive it — in
+// prod it 403s while `/search` on the very same app token succeeds. The
+// single-artist lookup did survive.
+const artistDetailResponseSchema = z.object({
+  id: z.string().min(1),
+  genres: z.array(z.string()).nullish(),
+  popularity: z.number().nullish(),
 })
+
+/** The fields a full artist object adds over a search result. */
+export interface ArtistDetail {
+  genres: string[]
+  popularity: number | null
+}
 
 export interface SpotifyArtistCandidate {
   id: string
@@ -109,14 +113,17 @@ export interface SpotifyAppClientOptions {
 export interface SpotifyAppClient {
   searchArtists: SpotifySearch
   /**
-   * Genres by artist id, for ids already in hand. Search results carry none —
-   * `/search` returns simplified artist objects — so the admin candidate
-   * picker (#1345) hydrates them in one extra call rather than reading a field
-   * that is always empty. Deliberately NOT folded into `searchArtists`: the
-   * batch matcher calls that on every row and ignores genres, so doing so
-   * would double its app-token spend for a field it never reads.
+   * Genres and popularity by artist id, for ids already in hand. `/search`
+   * returns simplified artist objects carrying neither, so the admin candidate
+   * picker (#1345) hydrates both rather than reading fields that are always
+   * absent. Deliberately NOT folded into `searchArtists`: the batch matcher
+   * calls that on every row and reads neither field, so doing so would
+   * multiply its app-token spend for nothing.
+   *
+   * Costs one call per id — see `artistDetailResponseSchema` for why the batch
+   * endpoint is unavailable. Only the picker calls this, at human pace.
    */
-  fetchGenres(artistIds: string[]): Promise<Map<string, string[]>>
+  fetchArtistDetails(artistIds: string[]): Promise<Map<string, ArtistDetail>>
   /** Total HTTP calls issued, token mint included — for cost bookkeeping. */
   getCallCount(): number
 }
@@ -320,34 +327,49 @@ export const createSpotifyAppClient = async (
     }))
   }
 
-  const fetchGenres = async (
+  const fetchArtistDetails = async (
     artistIds: string[],
-  ): Promise<Map<string, string[]>> => {
-    const genresById = new Map<string, string[]>()
+  ): Promise<Map<string, ArtistDetail>> => {
+    const detailsById = new Map<string, ArtistDetail>()
 
-    // Chunked rather than truncated: the picker only ever passes SEARCH_LIMIT
-    // ids, so this is one request today — but silently dropping the tail would
-    // make any future caller's missing genres look like Spotify's fault.
-    for (let i = 0; i < artistIds.length; i += SEVERAL_ARTISTS_LIMIT) {
-      const ids = artistIds.slice(i, i + SEVERAL_ARTISTS_LIMIT)
-      const body = await requestJson(
-        `/artists?ids=${encodeURIComponent(ids.join(','))}`,
-      )
-      const parsed = severalArtistsResponseSchema.safeParse(body)
+    // Serial, not `Promise.all`: a burst of parallel requests is what trips
+    // Spotify's rate limiter, and `requestJson`'s 429 retry sleeps the whole
+    // client. The picker waits on ten quick calls once, at human pace.
+    for (const artistId of artistIds) {
+      let body: unknown
+      try {
+        body = await requestJson(`/artists/${encodeURIComponent(artistId)}`)
+      } catch (err) {
+        // One id Spotify cannot resolve must not cost the other nine their
+        // hydration. Omitting it leaves the candidate's fields null, which the
+        // caller already treats as "not hydrated" and will retry on a later
+        // open. Only a per-id failure is swallowed: auth, rate-limit and 5xx
+        // errors are systemic, so they propagate and abort the whole run.
+        if (err instanceof SpotifyApiError && err.status < 500) {
+          apiLogger.warn(
+            { err, artistId },
+            'Spotify could not resolve an artist id — leaving its details unhydrated',
+          )
+          continue
+        }
+        throw err
+      }
+
+      const parsed = artistDetailResponseSchema.safeParse(body)
       if (!parsed.success) {
         throw new SpotifyApiError(
-          'Spotify returned an unexpected artists response shape',
+          'Spotify returned an unexpected artist response shape',
           200,
         )
       }
 
-      for (const artist of parsed.data.artists) {
-        if (artist === null) continue
-        genresById.set(artist.id, artist.genres ?? [])
-      }
+      detailsById.set(parsed.data.id, {
+        genres: parsed.data.genres ?? [],
+        popularity: parsed.data.popularity ?? null,
+      })
     }
-    return genresById
+    return detailsById
   }
 
-  return { searchArtists, fetchGenres, getCallCount: () => callCount }
+  return { searchArtists, fetchArtistDetails, getCallCount: () => callCount }
 }

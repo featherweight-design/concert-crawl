@@ -212,49 +212,58 @@ artistsAdminRouter.patch(
 )
 
 /**
- * Fill in the genres a snapshot is missing, in one extra Spotify call.
+ * Fill in the genres and popularity a snapshot is missing.
  *
- * `/search` returns simplified artist objects whose genre list is always
- * empty, so a snapshot straight from the match job carries `genres: null`
- * throughout and the picker's disambiguation line would read "No genres
- * listed" on every candidate. Genres only exist on the full artist object.
+ * `/search` returns simplified artist objects carrying neither field, so a
+ * snapshot straight from the match job has `genres: null` and
+ * `popularity: null` throughout. Untreated, the picker's disambiguation line
+ * reads "Genres unavailable" on every candidate, and the suggested-pick
+ * highlight never fires at all — a null popularity anywhere disqualifies the
+ * comparison by design. Both fields live only on the full artist object.
  *
  * Returns `null` when nothing changed — no candidate needed hydrating, or the
  * call failed. Failing is not a reason to fail the request: the picker is
- * still usable on name, photo and popularity alone.
+ * still usable on name and photo alone.
  *
  * Takes a client factory rather than a client so a fully-hydrated snapshot
  * resolves without one: building a client mints an app token over the network.
  */
-const hydrateGenres = async (
+const hydrateCandidateDetails = async (
   getClient: () => Promise<SpotifyAppClient | null>,
   candidates: SpotifyCandidateSnapshot[],
   artistId: string,
 ): Promise<SpotifyCandidateSnapshot[] | null> => {
-  const missing = candidates.filter((candidate) => candidate.genres === null)
+  const missing = candidates.filter(
+    (candidate) => candidate.genres === null || candidate.popularity === null,
+  )
   if (missing.length === 0) return null
 
   const client = await getClient()
   if (client === null) return null
 
   try {
-    const genresById = await client.fetchGenres(
+    const detailsById = await client.fetchArtistDetails(
       missing.map((candidate) => candidate.id),
     )
-    // An id Spotify did not resolve stays `null`. Defaulting it to `[]` would
-    // persist "Spotify lists no genres" for an artist we never actually read,
-    // and no later open would ever try again.
-    if (missing.every((candidate) => !genresById.has(candidate.id))) return null
+    // An id Spotify did not resolve stays `null`. Defaulting it would persist
+    // "Spotify lists no genres" for an artist we never actually read, and no
+    // later open would ever try again.
+    if (missing.every((candidate) => !detailsById.has(candidate.id))) {
+      return null
+    }
     return candidates.map((candidate) => {
-      const genres = genresById.get(candidate.id)
-      return candidate.genres === null && genres !== undefined
-        ? { ...candidate, genres }
-        : candidate
+      const detail = detailsById.get(candidate.id)
+      if (detail === undefined) return candidate
+      return {
+        ...candidate,
+        genres: candidate.genres ?? detail.genres,
+        popularity: candidate.popularity ?? detail.popularity,
+      }
     })
   } catch (err) {
     logger.warn(
       { err, artistId },
-      'candidate genre hydration failed — serving candidates without genres',
+      'candidate detail hydration failed — serving candidates unhydrated',
     )
     return null
   }
@@ -351,7 +360,7 @@ artistsAdminRouter.get(
 
     try {
       if (cached !== null) {
-        const hydrated = await hydrateGenres(getClient, cached, id)
+        const hydrated = await hydrateCandidateDetails(getClient, cached, id)
         if (hydrated !== null) {
           // Hydration is a round trip, so a concurrent refresh can land a
           // newer snapshot while it runs. Writing then would replace that
@@ -392,7 +401,7 @@ artistsAdminRouter.get(
 
       const found = dedupeCandidates(await client.searchArtists(searchTerm))
       const snapshot = found.map(toCandidateSnapshot)
-      const hydrated = await hydrateGenres(getClient, snapshot, id)
+      const hydrated = await hydrateCandidateDetails(getClient, snapshot, id)
       const candidates = hydrated ?? snapshot
 
       // An overridden query answers a different question from the one the row
