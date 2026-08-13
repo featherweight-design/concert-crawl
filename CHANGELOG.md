@@ -1,3 +1,10 @@
+## [1.241.7](https://github.com/HartiganHM/concert-crawl/compare/v1.241.6...v1.241.7) (2026-08-13)
+
+
+### Bug Fixes
+
+* **crawler:** recover events from unparseable JSON-LD blocks; silence local Sentry ([#1553](https://github.com/HartiganHM/concert-crawl/issues/1553)) ([2fe485e](https://github.com/HartiganHM/concert-crawl/commit/2fe485e72192e87240c3b851fbc1b16bf7eb0027))
+
 ## [1.241.6](https://github.com/HartiganHM/concert-crawl/compare/v1.241.5...v1.241.6) (2026-08-13)
 
 
