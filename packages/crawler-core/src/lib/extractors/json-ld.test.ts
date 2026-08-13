@@ -237,6 +237,40 @@ describe('extractJsonLd', () => {
     expect(events).toHaveLength(0)
   })
 
+  // The Oriental Theater's CMS emits event titles verbatim, so a title
+  // containing quotation marks produces a JSON-LD block with unescaped inner
+  // quotes. Every other block on the page parses, so the page yields events
+  // and never escalates to the LLM — the affected show was silently dropped.
+  it('recovers an event whose title contains unescaped double quotes', () => {
+    const html = `<html><head>
+      <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "Event",
+          "name": "All Shall Perish - 20th Anniversary of "The Price Of Existence" Album",
+          "startDate": "2026-09-09 18:45:00",
+          "performer": { "name": "All Shall Perish" }
+        }
+      </script>
+    </head></html>`
+    const events = extractJsonLd(html, SOURCE_URL)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.title).toBe(
+      'All Shall Perish - 20th Anniversary of "The Price Of Existence" Album',
+    )
+    expect(events[0]?.date).toBe('2026-09-09')
+  })
+
+  it('keeps parsing sibling blocks when one block is unrepairable', () => {
+    const html = `<html><head>
+      <script type="application/ld+json">{ "@type": "Event", "name": }</script>
+      <script type="application/ld+json">${JSON.stringify({ '@type': 'Event', name: 'Good Show', startDate: '2026-08-02', performer: { name: 'Artist' } })}</script>
+    </head></html>`
+    const events = extractJsonLd(html, SOURCE_URL)
+    expect(events).toHaveLength(1)
+    expect(events[0]?.title).toBe('Good Show')
+  })
+
   it('handles multiple script tags and picks events from each', () => {
     const html = `<html><head>
       <script type="application/ld+json">${JSON.stringify({ '@type': 'Event', name: 'Event One', startDate: '2026-08-01', performer: { name: 'Artist One' } })}</script>

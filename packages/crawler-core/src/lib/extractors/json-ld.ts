@@ -188,6 +188,62 @@ function extractEventsFromParsed(
   return events
 }
 
+function nextNonWhitespaceChar(json: string, from: number): string | undefined {
+  for (let i = from; i < json.length; i++) {
+    const ch = json[i]!
+    if (!/\s/.test(ch)) return ch
+  }
+  return undefined
+}
+
+// Venue CMSs that interpolate event titles straight into JSON-LD emit
+// unescaped inner quotes for any title containing quotation marks — e.g.
+// `"name": "20th Anniversary of "The Price Of Existence" Album"`. Escape the
+// quotes that aren't structural delimiters so the block parses. A quote only
+// closes a string when the next non-whitespace character is `,` `:` `}` `]`
+// or end-of-input; anything else means the title itself contained it.
+function escapeUnescapedQuotes(json: string): string {
+  let out = ''
+  let inString = false
+
+  for (let i = 0; i < json.length; i++) {
+    const ch = json[i]!
+
+    if (inString && ch === '\\') {
+      out += ch + (json[i + 1] ?? '')
+      i++
+      continue
+    }
+
+    if (ch !== '"') {
+      out += ch
+      continue
+    }
+
+    if (!inString) {
+      inString = true
+      out += ch
+      continue
+    }
+
+    const next = nextNonWhitespaceChar(json, i + 1)
+    if (
+      next === undefined ||
+      next === ',' ||
+      next === ':' ||
+      next === '}' ||
+      next === ']'
+    ) {
+      inString = false
+      out += ch
+    } else {
+      out += '\\"'
+    }
+  }
+
+  return out
+}
+
 export function extractJsonLd(
   html: string,
   sourceUrl: string,
@@ -207,22 +263,49 @@ export function extractJsonLd(
     const content = match[1]
     if (!content) continue
 
+    let parsed: unknown
     try {
-      const parsed: unknown = JSON.parse(content)
-      events.push(
-        ...extractEventsFromParsed(parsed, sourceUrl, effectiveTimeZone),
-      )
+      parsed = JSON.parse(content)
     } catch (err) {
-      // Include the parse error so Sentry issues are actionable. Without
-      // it, the event groups by sourceUrl alone and gives no clue what
-      // shape the malformed JSON-LD took.
-      reportFailure({
-        event: 'json-ld.parse_error',
-        severity: 'warn',
-        sourceUrl,
-        error: err instanceof Error ? err.message : String(err),
-      })
+      // A block that fails outright would otherwise be skipped silently: the
+      // page still yields events from its sibling blocks, so the cascade sees
+      // a successful structured-data extraction and never escalates to the
+      // LLM. Attempt a repair before giving the event up.
+      try {
+        parsed = JSON.parse(escapeUnescapedQuotes(content))
+        // warn, not log: a repaired block means the venue is emitting
+        // malformed structured data, which is worth filtering and alerting
+        // on even though the event itself was recovered.
+        console.warn(
+          JSON.stringify({
+            event: 'json-ld.repaired',
+            severity: 'warn',
+            sourceUrl,
+            error: err instanceof Error ? err.message : String(err),
+          }),
+        )
+      } catch (repairErr) {
+        // Include both parse errors so Sentry issues are actionable. Without
+        // them the event groups by sourceUrl alone and gives no clue what
+        // shape the malformed JSON-LD took. The two can differ: the repair
+        // moves the failure point, and where it lands is what says whether
+        // the block is malformed some other way or the repair itself is
+        // incomplete.
+        reportFailure({
+          event: 'json-ld.parse_error',
+          severity: 'warn',
+          sourceUrl,
+          error: err instanceof Error ? err.message : String(err),
+          repairError:
+            repairErr instanceof Error ? repairErr.message : String(repairErr),
+        })
+        continue
+      }
     }
+
+    events.push(
+      ...extractEventsFromParsed(parsed, sourceUrl, effectiveTimeZone),
+    )
   }
 
   console.log(

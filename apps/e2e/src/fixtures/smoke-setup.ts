@@ -15,13 +15,18 @@ function writeEmptyStorageState(filePath: string): void {
 export default async function globalSetup(config: FullConfig): Promise<void> {
   if (process.env['SENTRY_DSN']) {
     // Read SENTRY_ENVIRONMENT so staging-smoke and prod-smoke runs are
-    // tagged distinctly in Sentry. Defaults to 'production' to preserve
-    // behavior for the existing 6-hourly prod cron in smoke.yml, which
-    // does not set the variable.
-    const environment = process.env['SENTRY_ENVIRONMENT'] ?? 'production'
+    // tagged distinctly in Sentry. Unlike the app entry points this defaults
+    // to 'production', not 'local': the existing 6-hourly prod cron in
+    // smoke.yml sets no variable, so a 'local' default would silence the very
+    // run this reporting exists for.
+    const environment =
+      process.env['SENTRY_ENVIRONMENT']?.trim() || 'production'
     Sentry.init({
       dsn: process.env['SENTRY_DSN'],
       environment,
+      // See apps/api/src/instrument.ts — local runs never send, so dev noise
+      // cannot bury real production errors.
+      enabled: environment !== 'local',
       initialScope: {
         tags: { source: 'smoke-test' },
       },
