@@ -1,3 +1,10 @@
+## [1.241.5](https://github.com/HartiganHM/concert-crawl/compare/v1.241.4...v1.241.5) (2026-08-13)
+
+
+### Bug Fixes
+
+* **copy:** say Concerts, not Concert History ([#1549](https://github.com/HartiganHM/concert-crawl/issues/1549)) ([52d2f40](https://github.com/HartiganHM/concert-crawl/commit/52d2f40ebd843fe0b203d0ea9f5f6dd729588142))
+
 ## [1.241.4](https://github.com/HartiganHM/concert-crawl/compare/v1.241.3...v1.241.4) (2026-08-13)
 
 
