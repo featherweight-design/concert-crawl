@@ -122,7 +122,7 @@ export const EventDetailCtaBlock = ({
         : serverState
 
   const openUpgrade = () => {
-    // Signed out this is a reach for Concert History, not the taste paywall —
+    // Signed out this is a reach for Concerts, not the taste paywall —
     // the entry keys the gate's copy as well as the funnel dimension.
     setPickerEntry(
       surface === 'tier-picker-on-tap' ? 'logged-out-going' : 'paywall',
@@ -257,8 +257,8 @@ export const EventDetailCtaBlock = ({
           {GOING_COPY.error.survived}
         </p>
       ) : state === 'locked' ? (
-        // The gate line gets its own tip: "Concert History" is the thing being
-        // sold, and the header tip explains the distinction, not the product.
+        // The gate line gets its own tip: Concerts is the thing being sold, and
+        // the header tip explains the distinction, not the product.
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <span style={{ ...supportLine, color: 'var(--fg-subtle)' }}>
             {GOING_COPY.locked.line}

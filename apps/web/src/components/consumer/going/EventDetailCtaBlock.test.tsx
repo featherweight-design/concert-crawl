@@ -218,7 +218,7 @@ describe('EventDetailCtaBlock', () => {
     }
     renderBlock()
     fireEvent.click(goingButton())
-    // Not `logged-out-paywall`: this reach is for Concert History, and the
+    // Not `logged-out-paywall`: this reach is for Concerts, and the
     // entry keys the gate's copy as well as the funnel dimension.
     expect(screen.getByTestId('tier-picker')).toHaveAttribute(
       'data-entry',
@@ -281,9 +281,9 @@ describe('EventDetailCtaBlock', () => {
     expect(trigger.querySelector('svg')).not.toBeNull()
   })
 
-  // The gate line sells Concert History, so it carries its own tip; the header
+  // The gate line sells Concerts, so it carries its own tip; the header
   // tip explains the going/watching distinction, which is a different question.
-  it('pairs the locked line with a Concert History tip', () => {
+  it('pairs the locked line with a Concerts tip', () => {
     entitlement = { isLoading: false, active: false, surface: 'paywall-on-tap' }
     renderBlock()
     expect(

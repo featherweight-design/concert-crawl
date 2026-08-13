@@ -41,7 +41,7 @@ const microcopyRow = (text: string): string =>
   `<div style="font-family: ${EMAIL_MONO}; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: ${ME.subtle};">${text}</div>`
 
 const SUPPORTER_FEATURES: FeatureItem[] = [
-  'Concert history — every show you attend, logged',
+  'Concerts: every show you attend, logged',
   'Calendar export — Apple + Google, one tap',
   'A Supporter badge on your profile',
 ]
@@ -56,11 +56,11 @@ export const renderWelcomePaid: TemplateRenderer<
 > = ({ tier, founderSeatNumber }) => {
   if (tier === 'supporter') {
     const subject = "You're in, and you're keeping the lights on."
-    const preheader = 'Your history, your exports, your badge. All live.'
+    const preheader = 'Your Concerts, your exports, your badge. All live.'
     const microcopy = 'Both run on servers we already pay for.'
     const title = "You didn't have to. Thanks for backing us."
     const sub =
-      "Your history and your calendar exports are switched on, and the badge is live on your profile. You're chipping in so the app stays free for everyone. The glow is real."
+      "Your Concerts and your calendar exports are switched on, and the badge is live on your profile. You're chipping in so the app stays free for everyone. The glow is real."
 
     const bodyRows = [
       headerRow('Welcome · supporter'),

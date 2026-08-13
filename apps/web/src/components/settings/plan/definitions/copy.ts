@@ -100,7 +100,7 @@ export const PLAN_CARD_COPY = {
     eyebrow: (price: string, periodEnd: string | null) =>
       `${price} / month` + (periodEnd ? ` · renews ${periodEnd}` : ''),
     headline: '$2 a month. Thanks.',
-    body: "Your history and calendar exports are on, and the badge is live. You're chipping in for the stuff we run on existing infrastructure.",
+    body: "Your Concerts and calendar exports are on, and the badge is live. You're chipping in for the stuff we run on existing infrastructure.",
     punchline: "Want follows and alerts too? Premium's a tap away.",
     manageCta: 'Manage subscription',
   },
@@ -126,7 +126,7 @@ export const PLAN_CARD_COPY = {
   free: {
     eyebrow: 'On the house',
     headline: 'Free. The whole point.',
-    body: "Browse, search, watch shows, submit prices. All included. Premium's here whenever you want the alerts and history back.",
+    body: "Browse, search, watch shows, submit prices. All included. Premium's here whenever you want the alerts and Concerts back.",
     punchline: 'No card, no commitment, no FOMO emails.',
     cta: 'See the tiers',
   },
@@ -136,7 +136,7 @@ export const PLAN_CARD_COPY = {
       endedAt ? `Trial ended · ${endedAt}` : 'Trial ended',
     eyebrow: 'Back on Free',
     headline: 'Your trial ended.',
-    body: "The 14 days are up and you're on Free. Watch shows, browse, submit prices. All still here. Want the alerts, follows, and history back?",
+    body: "The 14 days are up and you're on Free. Watch shows, browse, submit prices. All still here. Want the alerts, follows, and Concerts back?",
     punchline: 'No charge happened. Upgrade whenever you like.',
     cta: 'Upgrade to Premium',
   },
@@ -150,7 +150,7 @@ export const PLAN_CARD_COPY = {
     headline: "You're on Free now.",
     body: (endedAt: string | null) =>
       (endedAt ? `Your plan wrapped on ${endedAt}. ` : 'Your plan wrapped. ') +
-      'Browsing, watching shows, and submitting prices are still yours, always. The alerts, follows, and history are napping.',
+      'Browsing, watching shows, and submitting prices are still yours, always. The alerts, follows, and Concerts are napping.',
     punchline: "Door's open. Your follows are safe for 90 days.",
     cta: 'Rejoin a plan',
   },

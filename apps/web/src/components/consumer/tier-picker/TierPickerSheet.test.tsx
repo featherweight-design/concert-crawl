@@ -288,9 +288,9 @@ describe('TierPickerSheet — logged out', () => {
     expect(signInLink.getAttribute('href')).toBe('/sign-in')
   })
 
-  // One gate, several reaches: an "I'm going!" tap is a reach for Concert
-  // History, so the Watching wording would name the wrong feature.
-  it('names Concert History when opened from the going CTA', () => {
+  // One gate, several reaches: an "I'm going!" tap is a reach for Concerts, so
+  // the Watching wording would name the wrong feature.
+  it('names Concerts when opened from the going CTA', () => {
     render(
       <TierPickerSheet
         open

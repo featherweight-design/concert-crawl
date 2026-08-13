@@ -548,7 +548,7 @@ export const CONSUMER_COPY = {
           faceValue: 'Face value',
         },
         tiers: { eyebrow: 'Founder', firstHundredOnly: 'First 100 only' },
-        history: { eyebrow: 'Concert history', nightsKept: 'Nights kept' },
+        history: { eyebrow: 'Concerts', nightsKept: 'Nights kept' },
         calendar: { eyebrow: 'Jun 2026' },
         shareable: { eyebrow: 'Share card' },
         watchers: { eyebrow: 'Watching now' },
@@ -1136,7 +1136,7 @@ export const CONSUMER_COPY = {
       signOutSubtitle: "Burn your tokens. We'll remember you.",
       deleteAccount: 'Delete account',
       deleteAccountSubtitle:
-        'Permanently remove your handle, profile, and history.',
+        'Permanently remove your handle, profile, and Concerts.',
       deleteCardBody:
         "This is permanent. Your handle, email, and plan are gone. Price submissions stay on the public record, but your name is removed from them. You can't undo deletion.",
       deleteAccountCta: 'Delete my account',

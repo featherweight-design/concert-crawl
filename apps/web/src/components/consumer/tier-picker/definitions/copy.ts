@@ -19,7 +19,7 @@ export const TIER_PICKER_COPY = {
           'pick a lane later if you ever want to chip in.',
       },
       'logged-out-going': {
-        eyebrow: 'Concert History · free with an account',
+        eyebrow: 'Concerts · free with an account',
         title: 'Keep a record of every show you go to.',
         sub:
           "Saying you're going is free. It just needs an account to save to. " +
@@ -129,7 +129,7 @@ export const TIER_PICKER_COPY = {
       rationale: "Existing infrastructure. You're just chipping in.",
       features: [
         'Everything in Free',
-        'Concert history: shows you attended',
+        'Concerts: shows you attended',
         'Calendar export: Apple + Google',
         'Supporter badge on your profile',
       ],
@@ -187,7 +187,7 @@ export const TIER_PICKER_COPY = {
     // Same reversal as the Premium card above: following leads, and sync is
     // not paired onto a line where it reads as half the offer.
     perks: [
-      'Concert history: shows you attended',
+      'Concerts: shows you attended',
       'Calendar export: Apple + Google',
       'Follow any artist, get their Denver dates',
       'New-show and price-drop alerts',

@@ -14,7 +14,7 @@ import type { FeatureItem } from '../atoms.js'
 
 // Full welcome list — five items, the last a forward-looking ★ marker.
 export const PREMIUM_FEATURES: FeatureItem[] = [
-  'Concert history — every show you attend, logged',
+  'Concerts: every show you attend, logged',
   'Calendar export — Apple + Google, one tap',
   'Follow any artist, get their Denver dates',
   'New-show and price-drop alerts',
@@ -28,7 +28,7 @@ export const PREMIUM_FEATURES_CORE: FeatureItem[] = PREMIUM_FEATURES.slice(0, 4)
 // Win-back reuses the four concrete unlocks, no ★ (nothing aspirational in a
 // "here's what you'd get back" pitch).
 export const WINBACK_FEATURES: FeatureItem[] = [
-  'Concert history — every show you attend, logged',
+  'Concerts: every show you attend, logged',
   'Calendar export — Apple + Google, one tap',
   'Follow any artist, get their Denver dates',
   'New-show and price-drop alerts',
@@ -36,7 +36,7 @@ export const WINBACK_FEATURES: FeatureItem[] = [
 
 // Gift-ending callout uses a tighter three-line summary.
 export const GIFT_KEEP_FEATURES: FeatureItem[] = [
-  'Concert history — every show you attend, logged',
+  'Concerts: every show you attend, logged',
   'Calendar export — Apple + Google, one tap',
   'Follow any artist, plus new-show and price-drop alerts',
 ]

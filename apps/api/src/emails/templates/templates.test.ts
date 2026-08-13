@@ -157,24 +157,20 @@ describe('shell contract across all templates', () => {
 describe('welcome_paid', () => {
   it('renders the premium variant with the unlock list and price promise', () => {
     const rendered = renderWelcomePaid({ tier: 'premium' })
-    expect(rendered.html).toContain(
-      'Concert history — every show you attend, logged',
-    )
+    expect(rendered.html).toContain('Concerts: every show you attend, logged')
     expect(rendered.html).toContain('Calendar export — Apple + Google, one tap')
     expect(rendered.html).toContain('Follow any artist, get their Denver dates')
     expect(rendered.html).toContain('New-show and price-drop alerts')
     expect(rendered.html).toContain(
       'Whatever you pay, you pay. We never raise it.',
     )
-    expect(rendered.text).toContain(
-      'Concert history — every show you attend, logged',
-    )
+    expect(rendered.text).toContain('Concerts: every show you attend, logged')
   })
 
   it('renders the supporter variant with its two unlocks plus the badge', () => {
     const rendered = renderWelcomePaid({ tier: 'supporter' })
     expect(rendered.html).toContain('A Supporter badge on your profile')
-    expect(rendered.html).toContain('Concert history')
+    expect(rendered.html).toContain('Concerts')
     expect(rendered.html).toContain('Calendar export')
     // Premium-only unlocks must never appear on the Supporter welcome.
     expect(rendered.html).not.toContain('Spotify sync')
@@ -188,9 +184,7 @@ describe('welcome_paid', () => {
       founderSeatNumber: 7,
     })
     expect(rendered.html).toContain('Founder badge — first 100 only')
-    expect(rendered.html).toContain(
-      'Concert history — every show you attend, logged',
-    )
+    expect(rendered.html).toContain('Concerts: every show you attend, logged')
     expect(rendered.subject).toContain('Locked in at $3, forever')
   })
 
@@ -225,9 +219,7 @@ describe('welcome_gifted', () => {
 
   it('lists the four core Premium unlocks', () => {
     const rendered = renderWelcomeGifted({ gifterName: null, giftEndsAt: null })
-    expect(rendered.html).toContain(
-      'Concert history — every show you attend, logged',
-    )
+    expect(rendered.html).toContain('Concerts: every show you attend, logged')
     expect(rendered.html).toContain('Calendar export — Apple + Google, one tap')
   })
 

@@ -6,9 +6,9 @@
 import type { TipContent } from './types'
 
 export const TIP_CONTENT = {
-  // Event Detail: the CTA pair. Going is gated behind Concert History and
-  // Watching is free, and this is the last thing a Free user reads before
-  // tapping Going, so it says so plainly, once, without becoming a paywall.
+  // Event Detail: the CTA pair. Going is gated behind Concerts and Watching is
+  // free, and this is the last thing a Free user reads before tapping Going,
+  // so it says so plainly, once, without becoming a paywall.
   'going-vs-watch': {
     label: 'Going vs. Watching',
     variant: 'defs',
@@ -20,18 +20,20 @@ export const TIP_CONTENT = {
         body: 'Keeps an eye on the price. We ping you on drops and sold-outs. Nothing else.',
       },
       {
+        // Takes its shape from the row above: the two titles are the whole
+        // contrast, so the body no longer restates that this one is paid.
         tone: 'neutral',
-        title: 'Going: part of Concert History',
-        body: "Saves the night to your history after the show. It's a paid feature. You can watch this show either way.",
+        title: 'Going: paid',
+        body: 'Adds the night to your Concerts after the show. You can watch this show either way.',
       },
     ],
   },
-  // Event Detail: what Concert History is (the locked-Going pitch).
+  // Event Detail: what Concerts is (the locked-Going pitch).
   'concert-history': {
-    label: 'Concert History',
+    label: 'Concerts',
     variant: 'titled',
     title: 'Your gig log, kept for you.',
-    body: "Mark the shows you're going to and they stack into a history: what you saw, where, who opened, what you paid. Part of the paid tier. Watching a price is free and always will be.",
+    body: "Mark the shows you're going to and they stack up: what you saw, where, who opened, what you paid. Part of the paid tier. Watching a price is free and always will be.",
   },
   // Event Detail: price provenance.
   'who-set-this-price': {
