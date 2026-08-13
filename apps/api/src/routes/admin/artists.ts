@@ -212,14 +212,17 @@ artistsAdminRouter.patch(
 )
 
 /**
- * Fill in the genres and popularity a snapshot is missing.
+ * Fill in the genres a snapshot is missing.
  *
- * `/search` returns simplified artist objects carrying neither field, so a
- * snapshot straight from the match job has `genres: null` and
- * `popularity: null` throughout. Untreated, the picker's disambiguation line
- * reads "Genres unavailable" on every candidate, and the suggested-pick
- * highlight never fires at all — a null popularity anywhere disqualifies the
- * comparison by design. Both fields live only on the full artist object.
+ * `/search` returns simplified artist objects carrying none, so a snapshot
+ * straight from the match job has `genres: null` throughout and the picker's
+ * meta line reads "Genres unavailable" on every candidate. Genres live only on
+ * the full artist object.
+ *
+ * Hydrating writes `[]` back for an artist Spotify resolved but listed no
+ * genres for, which is the common case now that Spotify has deprecated the
+ * field. That distinction is what stops this re-spending ten calls on every
+ * subsequent open of the same row.
  *
  * Returns `null` when nothing changed — no candidate needed hydrating, or the
  * call failed. Failing is not a reason to fail the request: the picker is
@@ -233,9 +236,7 @@ const hydrateCandidateDetails = async (
   candidates: SpotifyCandidateSnapshot[],
   artistId: string,
 ): Promise<SpotifyCandidateSnapshot[] | null> => {
-  const missing = candidates.filter(
-    (candidate) => candidate.genres === null || candidate.popularity === null,
-  )
+  const missing = candidates.filter((candidate) => candidate.genres === null)
   if (missing.length === 0) return null
 
   const client = await getClient()
@@ -253,11 +254,15 @@ const hydrateCandidateDetails = async (
     }
     return candidates.map((candidate) => {
       const detail = detailsById.get(candidate.id)
-      if (detail === undefined) return candidate
+      // Rebuilt field by field rather than spread: rows snapshotted before
+      // February 2026 still carry a `popularity` key in the JSONB, and a spread
+      // would write it straight back out.
       return {
-        ...candidate,
-        genres: candidate.genres ?? detail.genres,
-        popularity: candidate.popularity ?? detail.popularity,
+        id: candidate.id,
+        name: candidate.name,
+        imageUrl: candidate.imageUrl,
+        genres: candidate.genres ?? detail?.genres ?? null,
+        spotifyUrl: candidate.spotifyUrl,
       }
     })
   } catch (err) {

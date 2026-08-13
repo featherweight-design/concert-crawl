@@ -10,7 +10,6 @@ const candidate = (
   id,
   name,
   images,
-  popularity: 50,
   // `/search` returns simplified artist objects, so this is always empty in
   // production too — the picker hydrates genres in a separate call.
   genres: [],
@@ -25,7 +24,6 @@ const snapshotOf = (
   id,
   name,
   imageUrl,
-  popularity: 50,
   genres: null,
   spotifyUrl: `https://open.spotify.com/artist/${id}`,
 })

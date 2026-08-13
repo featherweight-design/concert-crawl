@@ -6,7 +6,7 @@
 // and the error taxonomy. The client's own HTTP behaviour is already covered
 // by spotify-app-client.test.ts.
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 interface AuthState {
   current: {
@@ -19,7 +19,6 @@ interface SpotifyCandidate {
   id: string
   name: string
   images: { url: string }[]
-  popularity: number | null
   genres: string[]
   spotifyUrl: string | null
 }
@@ -32,7 +31,7 @@ interface SearchState {
   clientAvailable: boolean
   lastQuery: string | null
   /** What `GET /artists/{id}` reports, keyed by artist id. */
-  detailsById: Record<string, { genres: string[]; popularity: number | null }>
+  detailsById: Record<string, { genres: string[] }>
   /** Thrown by `fetchArtistDetails` — the degrade-to-unhydrated path. */
   detailsError: Error | null
   /** The ids the route asked to hydrate, or null if it never asked. */
@@ -85,10 +84,7 @@ vi.mock('../../lib/spotify-app-client.js', () => ({
         return new Map(
           artistIds
             .filter((id) => searchState.detailsById[id] !== undefined)
-            .map((id) => [
-              id,
-              searchState.detailsById[id] ?? { genres: [], popularity: null },
-            ]),
+            .map((id) => [id, searchState.detailsById[id] ?? { genres: [] }]),
         )
       },
       getCallCount: () => 1,
@@ -118,7 +114,6 @@ const snapshot = (
   id,
   name,
   imageUrl: `https://i.scdn.co/image/${id}`,
-  popularity: 50,
   genres: null,
   spotifyUrl: `https://open.spotify.com/artist/${id}`,
   ...overrides,
@@ -134,7 +129,6 @@ interface CandidateBody {
     isExactMatch: boolean
     imageUrl: string | null
     genres: string[] | null
-    popularity: number | null
   }>
   error?: string
 }
@@ -147,12 +141,9 @@ const candidate = (
   id,
   name,
   images: [{ url: `https://i.scdn.co/image/${id}` }],
-  // Null and empty on purpose: Spotify's `/search` returns simplified artist
-  // objects carrying neither popularity nor genres. Anything the picker shows
-  // has to come from the hydration call, so a fixture that pre-filled either
-  // would hide a regression — as a `popularity: 50` fixture did, while prod
-  // served nulls to every candidate.
-  popularity: null,
+  // Empty on purpose: Spotify's `/search` returns simplified artist objects
+  // carrying no genres. Anything the picker shows has to come from the
+  // hydration call, so a pre-filled fixture would hide a regression.
   genres: [],
   spotifyUrl: `https://open.spotify.com/artist/${id}`,
   ...overrides,
@@ -217,8 +208,8 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
       candidate('spotify_other', 'Subliminal'),
     ]
     searchState.detailsById = {
-      spotify_ska: { genres: ['ska punk', 'reggae rock'], popularity: 80 },
-      spotify_other: { genres: ['hip hop'], popularity: 12 },
+      spotify_ska: { genres: ['ska punk', 'reggae rock'] },
+      spotify_other: { genres: ['hip hop'] },
     }
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
@@ -237,32 +228,60 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
     ])
   })
 
-  it('hydrates popularity, which /search never returns', async () => {
-    // The regression this locks down: hydration used to carry genres alone, so
-    // every candidate kept the `popularity: null` that `/search` hands back.
-    // The picker's suggested-pick highlight reads popularity and nothing else,
-    // and a null anywhere disqualifies the comparison — so it silently never
-    // fired in prod for any row.
-    const id = await seedAmbiguous()
-    searchState.candidates = [
-      candidate('spotify_ska', 'Sublime'),
-      candidate('spotify_other', 'Subliminal'),
-    ]
-    searchState.detailsById = {
-      spotify_ska: { genres: ['ska punk'], popularity: 80 },
-      spotify_other: { genres: ['hip hop'], popularity: 12 },
-    }
+  it('drops a legacy popularity key rather than writing it back', async () => {
+    // Rows snapshotted before February 2026 still carry `popularity` in the
+    // JSONB. Hydration rebuilds the snapshot field by field so those rows shed
+    // it on the next write instead of round-tripping a field nothing can fill.
+    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')])
+    await testDb.execute(
+      sql`update artists set spotify_candidates = ${JSON.stringify([
+        {
+          id: 'spotify_ska',
+          name: 'Sublime',
+          imageUrl: 'https://i.scdn.co/image/spotify_ska',
+          genres: null,
+          spotifyUrl: 'https://open.spotify.com/artist/spotify_ska',
+          popularity: 72,
+        },
+      ])}::jsonb where id = ${id}`,
+    )
+    searchState.detailsById = { spotify_ska: { genres: ['ska'] } }
 
-    const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
+    await app.request(`/v1/admin/artists/${id}/candidates`, {
       headers: ADMIN_HEADERS,
     })
-    const body: CandidateBody = await res.json()
 
-    expect(body.data?.map((row) => row.popularity)).toEqual([80, 12])
-    // And it is persisted, so reopening the row costs no further Spotify call.
-    expect(
-      (await readCache(id)).spotifyCandidates?.map((row) => row.popularity),
-    ).toEqual([80, 12])
+    const [cached] = (await readCache(id)).spotifyCandidates ?? []
+    expect(cached).toEqual({
+      id: 'spotify_ska',
+      name: 'Sublime',
+      imageUrl: 'https://i.scdn.co/image/spotify_ska',
+      genres: ['ska'],
+      spotifyUrl: 'https://open.spotify.com/artist/spotify_ska',
+    })
+  })
+
+  it('settles an artist Spotify lists no genres for, rather than re-hydrating forever', async () => {
+    // Spotify has deprecated genres, so `[]` is now the common answer. Writing
+    // it back is what ends the hydration: while the trigger also watched the
+    // since-removed `popularity`, which no endpoint can ever fill, every open
+    // of the row re-spent one call per candidate.
+    const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')])
+    searchState.detailsById = { spotify_ska: { genres: [] } }
+
+    const first = await app.request(`/v1/admin/artists/${id}/candidates`, {
+      headers: ADMIN_HEADERS,
+    })
+    const body: CandidateBody = await first.json()
+
+    expect(body.data?.[0]?.genres).toEqual([])
+    expect((await readCache(id)).spotifyCandidates?.[0]?.genres).toEqual([])
+
+    searchState.lastDetailIds = null
+    await app.request(`/v1/admin/artists/${id}/candidates`, {
+      headers: ADMIN_HEADERS,
+    })
+    expect(searchState.lastDetailIds).toBeNull()
   })
 
   it('still serves candidates when genre hydration fails', async () => {
@@ -290,7 +309,7 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
       snapshot('spotify_gone', 'Sublime'),
     ])
     searchState.detailsById = {
-      spotify_ska: { genres: ['ska punk'], popularity: 80 },
+      spotify_ska: { genres: ['ska punk'] },
     }
 
     const res = await app.request(`/v1/admin/artists/${id}/candidates`, {
@@ -399,7 +418,7 @@ describe('GET /v1/admin/artists/:id/candidates', () => {
   it('hydrates a snapshot’s genres once and writes them back', async () => {
     const id = await seedAmbiguous([snapshot('spotify_ska', 'Sublime')])
     searchState.detailsById = {
-      spotify_ska: { genres: ['ska punk'], popularity: 80 },
+      spotify_ska: { genres: ['ska punk'] },
     }
 
     const first = await app.request(`/v1/admin/artists/${id}/candidates`, {

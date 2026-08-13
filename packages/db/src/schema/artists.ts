@@ -25,7 +25,6 @@ export type SpotifyCandidateSnapshot = {
   id: string
   name: string
   imageUrl: string | null
-  popularity: number | null
   genres: string[] | null
   spotifyUrl: string | null
 }

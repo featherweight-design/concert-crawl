@@ -60,9 +60,8 @@ const searchArtistSchema = z.object({
   id: z.string().min(1),
   name: z.string(),
   images: z.array(artistImageSchema).nullish(),
-  popularity: z.number().nullish(),
   // Carried for the admin candidate picker (#1345), which needs enough to tell
-  // two identically-named artists apart. The matcher ignores both.
+  // two identically-named artists apart. The matcher ignores it.
   genres: z.array(z.string()).nullish(),
   external_urls: z.object({ spotify: httpUrl() }).nullable().catch(null),
 })
@@ -71,31 +70,35 @@ const searchResponseSchema = z.object({
   artists: z.object({ items: z.array(searchArtistSchema) }),
 })
 
-// `GET /artists/{id}` returns a full artist object, carrying the two fields
-// `/search`'s simplified objects omit: `genres` and `popularity`.
+// `GET /artists/{id}` returns a full artist object, carrying the `genres`
+// that `/search`'s simplified objects omit.
 //
 // One id per request rather than the `GET /artists?ids=` batch. Spotify's
 // February 2026 developer-access change cut Development Mode client IDs down
 // to a smaller endpoint set, and the batch endpoint did not survive it — in
 // prod it 403s while `/search` on the very same app token succeeds. The
 // single-artist lookup did survive.
+//
+// ⚠️ `popularity` is deliberately absent, here and everywhere downstream. The
+// same February 2026 change removed it (and `followers`) from the artist
+// object outright, so no endpoint returns it any more and no retry recovers
+// it. `genres` survives the schema but is marked deprecated and comes back
+// `[]` for every artist we have tried, including major ones — it stays only
+// because it costs nothing extra on a call we already make.
 const artistDetailResponseSchema = z.object({
   id: z.string().min(1),
   genres: z.array(z.string()).nullish(),
-  popularity: z.number().nullish(),
 })
 
 /** The fields a full artist object adds over a search result. */
 export interface ArtistDetail {
   genres: string[]
-  popularity: number | null
 }
 
 export interface SpotifyArtistCandidate {
   id: string
   name: string
   images: { url: string }[]
-  popularity: number | null
   genres: string[]
   spotifyUrl: string | null
 }
@@ -113,12 +116,12 @@ export interface SpotifyAppClientOptions {
 export interface SpotifyAppClient {
   searchArtists: SpotifySearch
   /**
-   * Genres and popularity by artist id, for ids already in hand. `/search`
-   * returns simplified artist objects carrying neither, so the admin candidate
-   * picker (#1345) hydrates both rather than reading fields that are always
-   * absent. Deliberately NOT folded into `searchArtists`: the batch matcher
-   * calls that on every row and reads neither field, so doing so would
-   * multiply its app-token spend for nothing.
+   * Genres by artist id, for ids already in hand. `/search` returns simplified
+   * artist objects carrying none, so the admin candidate picker (#1345)
+   * hydrates them rather than reading a field that is always absent.
+   * Deliberately NOT folded into `searchArtists`: the batch matcher calls that
+   * on every row and reads no genres, so doing so would multiply its app-token
+   * spend for nothing.
    *
    * Costs one call per id — see `artistDetailResponseSchema` for why the batch
    * endpoint is unavailable. Only the picker calls this, at human pace.
@@ -321,7 +324,6 @@ export const createSpotifyAppClient = async (
       id: item.id,
       name: item.name,
       images: (item.images ?? []).filter((image) => image !== null),
-      popularity: item.popularity ?? null,
       genres: item.genres ?? [],
       spotifyUrl: item.external_urls?.spotify ?? null,
     }))
@@ -341,7 +343,7 @@ export const createSpotifyAppClient = async (
         body = await requestJson(`/artists/${encodeURIComponent(artistId)}`)
       } catch (err) {
         // One id Spotify cannot resolve must not cost the other nine their
-        // hydration. Omitting it leaves the candidate's fields null, which the
+        // hydration. Omitting it leaves the candidate's genres null, which the
         // caller already treats as "not hydrated" and will retry on a later
         // open. Only a per-id failure is swallowed: auth, rate-limit and 5xx
         // errors are systemic, so they propagate and abort the whole run.
@@ -363,10 +365,7 @@ export const createSpotifyAppClient = async (
         )
       }
 
-      detailsById.set(parsed.data.id, {
-        genres: parsed.data.genres ?? [],
-        popularity: parsed.data.popularity ?? null,
-      })
+      detailsById.set(parsed.data.id, { genres: parsed.data.genres ?? [] })
     }
     return detailsById
   }

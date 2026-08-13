@@ -6,9 +6,11 @@
 // scoring to engineering. The scoring, in order of authority:
 //
 //   1. canonicalizeArtist(candidate.name) === canonicalName → confidence 1.0.
-//   2. More than one distinct Spotify artist clears (1) → `ambiguous`,
-//      regardless of popularity. Guessing would put the wrong press photo on
-//      a public page; a human resolves it from the admin queue.
+//   2. More than one distinct Spotify artist clears (1) → `ambiguous`, with no
+//      tiebreak. Guessing would put the wrong press photo on a public page; a
+//      human resolves it from the admin queue. Spotify offers nothing to break
+//      the tie with either: its February 2026 developer-access change removed
+//      `popularity` and `followers` from the artist object outright.
 //   3. Nothing clears (1) → `no_match`. There is deliberately NO fuzzy tier:
 //      a wrong photo is worse than no photo, and the brief's §3.3 fallback
 //      (IdentityArt plate) is a designed, shipped-quality state.
@@ -58,7 +60,6 @@ export const toCandidateSnapshot = (
   id: candidate.id,
   name: candidate.name,
   imageUrl: candidate.images[0]?.url ?? null,
-  popularity: candidate.popularity,
   // Search results always carry an empty list, so an empty one here would
   // claim Spotify lists no genres. Only a genre-hydrated snapshot may say that.
   genres: candidate.genres.length > 0 ? candidate.genres : null,

@@ -12,14 +12,10 @@
 // the common case costs no Spotify search. Typing a term or hitting refresh is
 // the explicit opt-in to spend one.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AdminButton, StatusBadge } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
-import {
-  formatDominanceRatio,
-  suggestDominantCandidate,
-} from '@/lib/admin/suggested-candidate'
 
 const COPY = ADMIN_COPY.artists
 
@@ -27,7 +23,6 @@ export interface SpotifyCandidate {
   id: string
   name: string
   imageUrl: string | null
-  popularity: number | null
   /** `null` means Spotify was never asked, `[]` means it lists none. */
   genres: string[] | null
   spotifyUrl: string | null
@@ -128,15 +123,6 @@ export const CandidatePicker = ({
     void load()
   }, [load])
 
-  // The row the admin most likely wants, on popularity alone. It is highlighted
-  // in place rather than sorted to the top: Spotify returns search results in
-  // its own relevance order, and reordering them would spend that signal to
-  // restate one we are already showing.
-  const suggestion = useMemo(
-    () => suggestDominantCandidate(candidates),
-    [candidates],
-  )
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <form
@@ -226,15 +212,6 @@ export const CandidatePicker = ({
         </p>
       )}
 
-      {/* Says out loud what the highlight is and is not. An admin who reads a
-          pre-selected row as a decision already taken is the one failure this
-          feature could introduce. */}
-      {suggestion !== null && (
-        <p style={{ fontSize: 12, color: 'var(--fg-subtle)', margin: 0 }}>
-          {COPY.suggestedNote}
-        </p>
-      )}
-
       <ul
         style={{
           listStyle: 'none',
@@ -246,7 +223,6 @@ export const CandidatePicker = ({
         }}
       >
         {candidates.map((candidate) => {
-          const isSuggested = suggestion?.candidateId === candidate.id
           return (
             <li
               key={candidate.id}
@@ -256,8 +232,8 @@ export const CandidatePicker = ({
                 alignItems: 'center',
                 padding: 10,
                 borderRadius: 8,
-                border: `1px solid ${isSuggested ? 'var(--accent)' : 'var(--border)'}`,
-                background: isSuggested ? 'var(--bg-subtle)' : 'var(--bg)',
+                border: '1px solid var(--border)',
+                background: 'var(--bg)',
               }}
             >
               {/* Next/Image is not used here: these are arbitrary Spotify CDN
@@ -295,11 +271,6 @@ export const CandidatePicker = ({
                       {COPY.exactMatchBadge}
                     </StatusBadge>
                   )}
-                  {isSuggested && (
-                    <StatusBadge kind="accent">
-                      {COPY.suggestedBadge}
-                    </StatusBadge>
-                  )}
                 </div>
                 <p
                   style={{
@@ -316,20 +287,6 @@ export const CandidatePicker = ({
                     : candidate.genres.length > 0
                       ? candidate.genres.slice(0, 3).join(', ')
                       : COPY.noGenres}
-                  {candidate.popularity !== null &&
-                    ` · ${COPY.popularity} ${candidate.popularity}`}
-                  {/* The margin, on the same line as the number it is drawn
-                    from, so the admin can check the reasoning rather than
-                    take the badge on faith. */}
-                  {isSuggested &&
-                    suggestion !== null &&
-                    ` · ${
-                      suggestion.ratio === null
-                        ? COPY.suggestedRatioUnbounded
-                        : COPY.suggestedRatio(
-                            formatDominanceRatio(suggestion.ratio),
-                          )
-                    }`}
                 </p>
                 <p
                   style={{
@@ -358,14 +315,9 @@ export const CandidatePicker = ({
                     {COPY.openInSpotify}
                   </SafeExternalLink>
                 )}
-                {/* Every row stayed primary before there was a suggestion. Now
-                  that one row is called out, leaving the rest primary would
-                  make the highlight the only thing distinguishing it. */}
                 <AdminButton
                   size="sm"
-                  variant={
-                    suggestion === null || isSuggested ? 'primary' : 'outline'
-                  }
+                  variant="primary"
                   onClick={() => onPick(candidate.id, candidate.imageUrl)}
                 >
                   {COPY.useCandidate}
