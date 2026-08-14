@@ -1,3 +1,10 @@
+# [1.246.0](https://github.com/HartiganHM/concert-crawl/compare/v1.245.0...v1.246.0) (2026-08-14)
+
+
+### Features
+
+* **api:** one-click unsubscribe for product emails ([#967](https://github.com/HartiganHM/concert-crawl/issues/967)) ([#1568](https://github.com/HartiganHM/concert-crawl/issues/1568)) ([5c2cef7](https://github.com/HartiganHM/concert-crawl/commit/5c2cef7b2b87f1770157a1de06626b35ca8b34c5))
+
 # [1.245.0](https://github.com/HartiganHM/concert-crawl/compare/v1.244.0...v1.245.0) (2026-08-14)
 
 
