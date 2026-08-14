@@ -1,3 +1,10 @@
+# [1.244.0](https://github.com/HartiganHM/concert-crawl/compare/v1.243.1...v1.244.0) (2026-08-14)
+
+
+### Features
+
+* **triage:** acknowledge a fault against the evidence that raised it ([#1565](https://github.com/HartiganHM/concert-crawl/issues/1565)) ([0da8247](https://github.com/HartiganHM/concert-crawl/commit/0da8247dd50eb0729399baff147ccb8f1cbeaf4f))
+
 ## [1.243.1](https://github.com/HartiganHM/concert-crawl/compare/v1.243.0...v1.243.1) (2026-08-14)
 
 
