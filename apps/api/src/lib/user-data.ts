@@ -124,9 +124,14 @@ const reassignCrews = async (
  * names, plus the one key the registry cannot express (`CREW_EXPORT_KEY`).
  *
  * ⛔ Never `SELECT *` here. #527 requires the export to exclude the Clerk user
- * id, internal ids, admin notes, and raw tokens; a star select would ship all
- * of them, and would silently ship whatever column the next migration adds.
- * `exportColumns` is the allowlist.
+ * id, admin notes, and raw tokens; a star select would ship all of them, and
+ * would silently ship whatever column the next migration adds. `exportColumns`
+ * is the allowlist, and nothing reaches a user that is not on it.
+ *
+ * Row ids are not blanket-excluded: `event_id`, `submission_id` and
+ * `report_id` are on the allowlist because they let a user reconcile two
+ * exports taken months apart. What stays out is anything that identifies US
+ * rather than them.
  */
 export const collectUserData = async (
   userId: string,
