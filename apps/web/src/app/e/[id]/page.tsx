@@ -11,8 +11,8 @@ import { notFound, redirect } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
 import type {
   EventDetailResponse,
-  EventWithVenue,
   EventsRelatedResponse,
+  RelatedEvent,
 } from '@concert-crawl/types'
 
 import { publicApiClient } from '@/lib/api'
@@ -59,7 +59,7 @@ const fetchEvent = async (id: string): Promise<EventDetailResponse | null> => {
   }
 }
 
-const fetchRelated = async (id: string): Promise<EventWithVenue[]> => {
+const fetchRelated = async (id: string): Promise<RelatedEvent[]> => {
   try {
     const result = await publicApiClient.get<EventsRelatedResponse>(
       `/v1/events/${id}/related`,

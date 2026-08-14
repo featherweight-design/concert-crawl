@@ -280,13 +280,18 @@ describe('CrewHome leave 409 mapping (#1226)', () => {
     await screen.findByText(CREWS_COPY.confirm.handoffTitle)
 
     const dialog = within(screen.getByRole('alertdialog'))
-    const [candidate] = dialog.getAllByRole('radio')
-    if (candidate === undefined)
-      throw new Error('no handoff candidate rendered')
-    fireEvent.click(candidate)
-    expect(
-      dialog.getByRole('button', { name: CREWS_COPY.confirm.handoffCta }),
-    ).toBeEnabled()
+    // The kind swap clears `picked` from a passive effect, and findByText above
+    // can resolve on the DOM mutation before that effect flushes — a click
+    // landing in the gap gets reset away. Retrying rides the gap out.
+    await waitFor(() => {
+      const [candidate] = dialog.getAllByRole('radio')
+      if (candidate === undefined)
+        throw new Error('no handoff candidate rendered')
+      fireEvent.click(candidate)
+      expect(
+        dialog.getByRole('button', { name: CREWS_COPY.confirm.handoffCta }),
+      ).toBeEnabled()
+    })
   })
 
   it('turns a last-member 409 into the delete-is-the-only-outcome confirm', async () => {

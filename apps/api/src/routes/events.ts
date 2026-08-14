@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
@@ -544,6 +545,18 @@ eventsRouter.get('/availability', async (ctx) => {
   return ctx.json({ success: true, data: body })
 })
 
+// Both '/:id' and '/:id/related' take optional auth and answer differently for
+// a signed-in caller (isWatching). Vary tells any shared cache the two answers
+// are distinct; no-store keeps the authed one out of such a cache entirely.
+// Anonymous responses stay cacheable, which is the whole point of the split —
+// the browse-adjacent surfaces are the cache's main beneficiary.
+function markViewerScoped(ctx: Context, isAuthed: boolean): void {
+  // Appended, not set: CORS contributes its own Vary, and replacing the header
+  // would drop that and make a shared cache key on the wrong axis.
+  ctx.header('Vary', 'Authorization', { append: true })
+  if (isAuthed) ctx.header('Cache-Control', 'private, no-store')
+}
+
 // GET /v1/events/:id — single event with venue, watching count, setlist
 eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   const rawId = ctx.req.param('id')
@@ -1086,6 +1099,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     ...publicRow
   } = row
 
+  markViewerScoped(ctx, authInfo?.userId != null)
   return ctx.json({
     success: true,
     data: {
@@ -1137,7 +1151,9 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
 //     + priceSource + priceVendor) renders correctly without priceByTier.
 //
 // Returns up to 3 events excluding the source event, ordered by date asc.
-eventsRouter.get('/:id/related', async (ctx) => {
+// Optional auth, matching the sibling '/:id' handler: signed-out callers get the
+// same panel, minus the per-row watch state.
+eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
   const rawId = ctx.req.param('id')
   const parsed = uuidSchema.safeParse(rawId)
   if (!parsed.success)
@@ -1193,9 +1209,14 @@ eventsRouter.get('/:id/related', async (ctx) => {
       showTime: events.showTime,
       ticketUrl: events.ticketUrl,
       ticketLinks: events.ticketLinks,
+      // eventUrl and pipelineExhaustedAt are required on the shared Event
+      // interface, so omitting them here made the response a lie about its own
+      // type. Slim means no side-table aggregation, not missing base columns.
+      eventUrl: events.eventUrl,
       ticketPriceMin: events.ticketPriceMin,
       ticketPriceMax: events.ticketPriceMax,
       priceSource: events.priceSource,
+      pipelineExhaustedAt: events.pipelineExhaustedAt,
       description: events.description,
       imageUrl: events.imageUrl,
       genre: events.genre,
@@ -1225,7 +1246,36 @@ eventsRouter.get('/:id/related', async (ctx) => {
     .orderBy(asc(events.date), asc(events.showTime))
     .limit(3)
 
-  return ctx.json({ success: true, data: { data: relatedRows } })
+  // One batched read for the whole panel rather than a query per row. The set is
+  // empty for an anonymous caller, so every row reports not-watching — which is
+  // also what the service worker's public cache stores, since it refuses to cache
+  // any request carrying an Authorization header.
+  const authInfo = getAuth(ctx)
+  const watchedIds = new Set<string>()
+  if (authInfo?.userId && relatedRows.length > 0) {
+    const watchRows = await db
+      .select({ eventId: userEvents.eventId })
+      .from(userEvents)
+      .where(
+        and(
+          eq(userEvents.userId, authInfo.userId),
+          eq(userEvents.status, 'watching'),
+          inArray(
+            userEvents.eventId,
+            relatedRows.map((row) => row.id),
+          ),
+        ),
+      )
+    for (const row of watchRows) watchedIds.add(row.eventId)
+  }
+
+  const related = relatedRows.map((row) => ({
+    ...row,
+    isWatching: watchedIds.has(row.id),
+  }))
+
+  markViewerScoped(ctx, authInfo?.userId != null)
+  return ctx.json({ success: true, data: { data: related } })
 })
 
 // GET /v1/events/:id/watchers — the social-proof roster for event detail.

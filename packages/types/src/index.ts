@@ -905,8 +905,16 @@ export interface EventsAvailabilityResponse {
 // venues, and the related panel doesn't need it). The consumer event detail
 // page calls this in parallel with /v1/events/:id and /v1/events/:id/reports
 // so the related fetch no longer blocks on resolving the venue slug first.
+// The row renders a watching tick, so the related panel needs the caller's own
+// watch state per event. It lives here rather than on EventWithVenue because
+// that shape is also served anonymously and from surfaces with no auth context;
+// only the endpoints that resolve a caller can honestly answer the question.
+export interface RelatedEvent extends EventWithVenue {
+  isWatching: boolean
+}
+
 export interface EventsRelatedResponse {
-  data: EventWithVenue[]
+  data: RelatedEvent[]
 }
 
 // VenuePublic — public-facing venue shape (subset of Venue, no crawl internals)

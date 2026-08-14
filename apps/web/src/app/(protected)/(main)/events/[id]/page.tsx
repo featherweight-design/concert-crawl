@@ -5,8 +5,8 @@ import { auth } from '@clerk/nextjs/server'
 import type {
   EventDetailResponse,
   EventReport,
-  EventWithVenue,
   EventsRelatedResponse,
+  RelatedEvent,
 } from '@concert-crawl/types'
 import { resolveGuideViewerMode } from '@concert-crawl/types'
 import { EventFirstTimerChip } from '@/components/consumer/venue-guide'
@@ -66,7 +66,8 @@ async function fetchEvent(
       return await apiClient.get<EventDetailResponse>(`/v1/events/${id}`, token)
     }
     return await publicApiClient.get<EventDetailResponse>(`/v1/events/${id}`)
-  } catch {
+  } catch (err) {
+    console.error('[event detail] event fetch failed', { id, err })
     return null
   }
 }
@@ -77,7 +78,8 @@ async function fetchReports(
 ): Promise<EventReport[]> {
   try {
     return await fetchEventReports(eventId, token ?? undefined)
-  } catch {
+  } catch (err) {
+    console.error('[event detail] reports fetch failed', { eventId, err })
     return []
   }
 }
@@ -91,7 +93,7 @@ async function fetchReports(
 async function fetchRelatedById(
   eventId: string,
   token: string | null,
-): Promise<EventWithVenue[]> {
+): Promise<RelatedEvent[]> {
   try {
     const result = token
       ? await apiClient.get<EventsRelatedResponse>(
@@ -102,7 +104,8 @@ async function fetchRelatedById(
           `/v1/events/${eventId}/related`,
         )
     return result.data
-  } catch {
+  } catch (err) {
+    console.error('[event detail] related fetch failed', { eventId, err })
     return []
   }
 }
@@ -384,7 +387,12 @@ export default async function EventDetailPage({
                       style={{ marginLeft: 60 }}
                     />
                   )}
-                  <EventRow show={fromEventWithVenue(rel)} surface="related" />
+                  <EventRow
+                    show={fromEventWithVenue(rel, {
+                      isWatching: rel.isWatching,
+                    })}
+                    surface="related"
+                  />
                 </Fragment>
               ))}
             </div>
