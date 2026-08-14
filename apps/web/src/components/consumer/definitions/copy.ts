@@ -1163,6 +1163,9 @@ export const CONSUMER_COPY = {
       // The desktop dialog's input placeholder is just the token, where
       // the mobile sheet uses `deleteConfirmPlaceholder` above.
       confirmPlaceholderDesktop: 'DELETE',
+      // Deliberately says nothing about what survived. Deletion can stop at
+      // any point, and the sheet cannot tell how far it got.
+      deleteFailed: "We didn't finish deleting. Try again.",
       keepAccountButton: 'Keep my account',
       deletingButton: 'Deleting…',
       // Desktop-only confirm label; mobile swaps between

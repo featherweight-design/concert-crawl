@@ -1,18 +1,37 @@
+import { randomUUID } from 'node:crypto'
 import { sql } from 'drizzle-orm'
 import {
+  USER_DATA_REGISTRY,
   artists,
+  auditLog,
   crawlRuns,
+  crewInvites,
+  crewMembers,
+  crewMutes,
+  crews,
+  emailSendLog,
   eventReportConfirms,
   eventReports,
   events,
+  feedback,
+  giftedComps,
+  inviteCodes,
   notifications,
   priceRetrievalLog,
   priceSubmissions,
+  pushSubscriptions,
+  spotifyAlertLog,
   submissionConfirms,
+  subscriptionEvents,
+  subscriptions,
+  userArtistFollows,
+  userBilling,
   userCred,
   userEvents,
+  userNotificationPreferences,
   userProfiles,
   userRoles,
+  userSpotifyConnections,
   venueGuideChips,
   venues,
 } from '@concert-crawl/db'
@@ -339,4 +358,168 @@ export async function seedCrawlRun(
     .returning()
   if (!run) throw new Error('seedCrawlRun: insert returned no rows')
   return run
+}
+
+// Every table USER_DATA_REGISTRY says holds data about a user — i.e. every
+// entry whose disposition is not 'none'. The deletion and export tests both
+// scope on this list.
+const USER_OWNED_ENTRIES = USER_DATA_REGISTRY.filter(
+  (entry) => entry.disposition !== 'none',
+)
+
+// Seeds exactly one row for a brand-new user in EVERY table that
+// USER_DATA_REGISTRY classifies as holding user data, then proves it did.
+//
+// The self-check at the end is the whole point of this helper. A deletion test
+// asserting "no rows remain for this user in table X" passes trivially when X
+// never got a row, so a table this helper silently skips is a hole in the
+// cascade that no test can see. The check is driven off the registry rather
+// than a hardcoded list so a table added there later fails loudly here instead
+// of being quietly untested.
+//
+// Exactly one row per table matters too: the export tests assert a length of 1
+// to prove a query didn't pick up another user's rows.
+export const seedUserWithDataEverywhere = async (): Promise<string> => {
+  const userId = `user_test_${randomUUID()}`
+  // Suffix shared by every unique-constrained value below, so repeated calls
+  // within one test file don't collide on venue slug, invite code, or push
+  // endpoint.
+  const nonce = randomUUID()
+
+  // ---- Parent rows the foreign keys require ----
+  const venue = await seedVenue({
+    name: `Deletion Venue ${nonce}`,
+    slug: `deletion-venue-${nonce}`,
+  })
+  const event = await seedEvent(venue.id, {
+    artist: `Deletion Artist ${nonce}`,
+  })
+  const [crew] = await testDb
+    .insert(crews)
+    .values({ name: `Deletion Crew ${nonce}`, keeperId: userId })
+    .returning()
+  if (!crew) throw new Error('seedUserWithDataEverywhere: crew insert failed')
+
+  // ---- Profile and identity ----
+  await seedUserProfile(userId, { handle: `deletion-${nonce}` })
+  await seedUserRole(userId)
+  await seedUserCred(userId)
+
+  // ---- Activity ----
+  await seedUserEvent(userId, event.id)
+  await testDb.insert(userArtistFollows).values({
+    userId,
+    artistName: `Deletion Artist ${nonce}`,
+    canonicalName: `deletion artist ${nonce}`,
+    source: 'manual',
+  })
+  await testDb.insert(feedback).values({
+    userId,
+    pageUrl: 'https://concertcrawl.app/browse',
+    category: 'bug',
+    message: 'Seeded feedback for the account-deletion tests.',
+  })
+
+  // ---- Prices ----
+  const submission = await seedPriceSubmission(event.id, userId)
+  await seedSubmissionConfirm(submission.id, userId)
+  const report = await seedEventReport(event.id, userId)
+  await seedEventReportConfirm(report.id, userId)
+
+  // ---- Crews ----
+  // `crews` itself is covered by the keeper_id above.
+  await testDb.insert(crewMembers).values({ crewId: crew.id, userId })
+  await testDb.insert(crewInvites).values({
+    crewId: crew.id,
+    token: `tok_${nonce}`,
+    createdBy: userId,
+    expiresAt: new Date(Date.now() + 86_400_000),
+  })
+  await testDb.insert(crewMutes).values({ crewId: crew.id, userId })
+
+  // ---- Notifications and channels ----
+  await seedNotification({
+    userId,
+    type: 'user_notification',
+    category: 'price.drop',
+    title: 'Price drop',
+    body: 'A show you are watching got cheaper',
+  })
+  await testDb.insert(userNotificationPreferences).values({ userId })
+  await testDb.insert(pushSubscriptions).values({
+    userId,
+    endpoint: `https://push.example.com/${nonce}`,
+    p256dh: 'seeded-p256dh-key',
+    auth: 'seeded-auth-key',
+  })
+
+  // ---- Spotify ----
+  await testDb.insert(userSpotifyConnections).values({
+    userId,
+    spotifyUserId: `spotify_${nonce}`,
+    displayName: 'Seeded Listener',
+  })
+  await testDb
+    .insert(spotifyAlertLog)
+    .values({ userId, eventId: event.id, kind: 'push' })
+
+  // ---- Billing ----
+  await testDb.insert(subscriptions).values({
+    userId,
+    stripeCustomerId: `cus_${nonce}`,
+    stripeSubscriptionId: `sub_${nonce}`,
+    tier: 'premium',
+    status: 'active',
+    currentPeriodEnd: new Date(Date.now() + 30 * 86_400_000),
+  })
+  await testDb.insert(userBilling).values({ userId })
+  await testDb
+    .insert(subscriptionEvents)
+    .values({ userId, type: 'subscription_created' })
+  await testDb
+    .insert(giftedComps)
+    .values({ userId, grantedBy: 'user_test_admin' })
+  await testDb.insert(emailSendLog).values({
+    userId,
+    templateKey: 'welcome_paid',
+    dedupeKey: `dedupe_${nonce}`,
+    status: 'sent',
+  })
+  await testDb
+    .insert(auditLog)
+    .values({ actorId: userId, action: 'user.seeded', targetId: event.id })
+
+  // ---- Invite codes (anonymize, keyed on used_by) ----
+  await testDb.insert(inviteCodes).values({
+    code: `code_${nonce}`,
+    createdBy: 'user_test_admin',
+    usedBy: userId,
+    usedAt: new Date(),
+  })
+
+  // ---- Self-check ----
+  const missing: string[] = []
+  for (const entry of USER_OWNED_ENTRIES) {
+    const column = entry.userIdColumn
+    if (column === null) {
+      throw new Error(
+        `seedUserWithDataEverywhere: registry entry "${entry.tableName}" has ` +
+          `disposition "${entry.disposition}" but no userIdColumn — it cannot ` +
+          'be seeded or asserted on.',
+      )
+    }
+    // postgres-js returns the row array directly; there is no `.rows` wrapper.
+    const rows = await testDb.execute(
+      sql`SELECT 1 FROM ${sql.identifier(entry.tableName)} WHERE ${sql.identifier(column)} = ${userId} LIMIT 1`,
+    )
+    if (rows.length === 0) missing.push(`${entry.tableName}.${column}`)
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      'seedUserWithDataEverywhere: no row was seeded for these user-owned ' +
+        `tables, so any deletion assertion against them would pass vacuously: ${missing.join(', ')}`,
+    )
+  }
+
+  return userId
 }

@@ -25,6 +25,8 @@ import type {
   Tier,
 } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
+import { deleteUserData } from '../lib/user-data.js'
+import { isClerkNotFound } from '../lib/clerk-errors.js'
 import { evaluateNudgeFlags } from '../lib/nudges.js'
 import { loadPlanContext } from '../lib/plan.js'
 import { resolveFounderWindowView } from './billing-founder-window.js'
@@ -419,23 +421,36 @@ usersRouter.delete('/me', async (ctx) => {
   if (!auth?.userId)
     return ctx.json({ success: false, error: 'Unauthorized' }, 401)
 
-  // Anonymize this user's submissions — preserve corroboration counts
-  await db
-    .update(priceSubmissions)
-    .set({ userId: null })
-    .where(eq(priceSubmissions.userId, auth.userId))
+  // Application data first, in one transaction, across every table the
+  // user-data registry classifies. If this throws, the Clerk account still
+  // exists and the user can retry: the previous version deleted the Clerk user
+  // even when the cleanup had only partly run, which stranded rows behind an
+  // identity nobody could sign in as.
+  await deleteUserData(auth.userId)
 
-  // Delete profile record
-  await db.delete(userProfiles).where(eq(userProfiles.userId, auth.userId))
-
-  // Delete from Clerk (throws if already deleted)
   try {
     await clerkClient.users.deleteUser(auth.userId)
   } catch (err) {
-    apiLogger.warn(
-      { err, userId: auth.userId },
-      'Clerk user delete failed — already deleted or not found',
-    )
+    // A 404 means the identity is already gone, which is the outcome we were
+    // asking for. Anything else leaves a sign-in the user still has.
+    if (isClerkNotFound(err)) {
+      apiLogger.warn(
+        { userId: auth.userId },
+        'Clerk user was already gone at account deletion',
+      )
+    } else {
+      apiLogger.error(
+        { err, userId: auth.userId },
+        'Clerk user delete failed after application data was removed',
+      )
+      // Saying the account is deleted while they can still sign in is a lie
+      // they cannot check. Retrying is safe: `deleteUserData` matches on the
+      // user id, so a second run finds nothing left to remove.
+      return ctx.json(
+        { success: false, error: 'Account deletion did not complete' },
+        500,
+      )
+    }
   }
 
   return ctx.json({ success: true })

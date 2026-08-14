@@ -24,6 +24,7 @@ export function DeleteAccountSheet({
 }: DeleteAccountSheetProps) {
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
+  const [failed, setFailed] = useState(false)
   const [isDesktop, setIsDesktop] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const { getToken } = useAuth()
@@ -43,6 +44,7 @@ export function DeleteAccountSheet({
   useEffect(() => {
     if (open) {
       setInputValue('')
+      setFailed(false)
       setTimeout(() => inputRef.current?.focus(), 100)
     }
   }, [open])
@@ -50,11 +52,19 @@ export function DeleteAccountSheet({
   async function handleDelete() {
     if (!isArmed || loading) return
     setLoading(true)
+    setFailed(false)
     try {
       const token = await getToken()
-      if (token) await deleteAccount(token)
+      // Without a token nothing was deleted, so signing out here would end the
+      // session on an account that still exists and looks deleted.
+      if (!token) throw new Error('No auth token for account deletion')
+      await deleteAccount(token)
       await signOut()
       router.push('/')
+    } catch (err) {
+      console.error('Account deletion failed', err)
+      // Staying signed in is the retry path.
+      setFailed(true)
     } finally {
       setLoading(false)
     }
@@ -132,6 +142,15 @@ export function DeleteAccountSheet({
             autoCapitalize="off"
             spellCheck={false}
           />
+          {failed && (
+            <p
+              role="alert"
+              className="mb-4 text-[13px] font-medium"
+              style={{ color: 'var(--danger)' }}
+            >
+              {DANGER_COPY.deleteFailed}
+            </p>
+          )}
           <div className="flex gap-3">
             <button
               type="button"
@@ -241,6 +260,16 @@ export function DeleteAccountSheet({
             spellCheck={false}
           />
         </div>
+
+        {failed && (
+          <p
+            role="alert"
+            className="text-[13px] font-medium"
+            style={{ color: 'var(--danger)' }}
+          >
+            {DANGER_COPY.deleteFailed}
+          </p>
+        )}
 
         <div className="flex gap-3">
           <button

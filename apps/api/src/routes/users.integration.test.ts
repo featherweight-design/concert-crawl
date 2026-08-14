@@ -1,14 +1,28 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
-const { authState, clerkState } = vi.hoisted(() => ({
-  authState: {
-    current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
-    } | null,
-  },
-  clerkState: { role: 'user' as string, plan: undefined as string | undefined },
-}))
+interface AuthState {
+  current: {
+    userId: string
+    sessionClaims: { metadata?: { role?: string } }
+  } | null
+}
+
+interface ClerkState {
+  role: string
+  plan: string | undefined
+  // The HTTP status `deleteUser` should reject with, or null to succeed.
+  deleteUserFailsWith: number | null
+}
+
+const { authState, clerkState } = vi.hoisted(() => {
+  const authState: AuthState = { current: null }
+  const clerkState: ClerkState = {
+    role: 'user',
+    plan: undefined,
+    deleteUserFailsWith: null,
+  }
+  return { authState, clerkState }
+})
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
@@ -27,7 +41,14 @@ vi.mock('@clerk/backend', () => ({
           createdAt: new Date('2026-04-01').getTime(),
         }),
       ),
-      deleteUser: vi.fn().mockResolvedValue({}),
+      deleteUser: vi.fn().mockImplementation(() => {
+        if (clerkState.deleteUserFailsWith === null) return Promise.resolve({})
+        return Promise.reject(
+          Object.assign(new Error('clerk delete failed'), {
+            status: clerkState.deleteUserFailsWith,
+          }),
+        )
+      }),
     },
   }),
 }))
@@ -671,5 +692,46 @@ describe('DELETE /v1/users/me', () => {
       headers: { Authorization: 'Bearer test' },
     })
     expect(res.status).toBe(200)
+  })
+
+  // A 200 here would tell the user their account is gone while they can still
+  // sign in, and the client would sign them out with no way back to retry.
+  it('reports failure when the Clerk account outlives the data', async () => {
+    setAuth()
+    await clearTables()
+    await seedUserProfile('user_test123')
+    clerkState.deleteUserFailsWith = 503
+
+    try {
+      const res = await app.request('/v1/users/me', {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer test' },
+      })
+      expect(res.status).toBe(500)
+      const body = z.object({ success: z.boolean() }).parse(await res.json())
+      expect(body.success).toBe(false)
+    } finally {
+      clerkState.deleteUserFailsWith = null
+    }
+  })
+
+  // Clerk 404s when the identity is already gone, which is the outcome the
+  // request asked for. Reporting that as a failure would send the user back to
+  // retry a deletion that has nothing left to do.
+  it('succeeds when Clerk says the account is already gone', async () => {
+    setAuth()
+    await clearTables()
+    await seedUserProfile('user_test123')
+    clerkState.deleteUserFailsWith = 404
+
+    try {
+      const res = await app.request('/v1/users/me', {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer test' },
+      })
+      expect(res.status).toBe(200)
+    } finally {
+      clerkState.deleteUserFailsWith = null
+    }
   })
 })
