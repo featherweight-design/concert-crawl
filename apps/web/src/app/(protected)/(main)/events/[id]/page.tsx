@@ -384,11 +384,7 @@ export default async function EventDetailPage({
                       style={{ marginLeft: 60 }}
                     />
                   )}
-                  <EventRow
-                    show={fromEventWithVenue(rel)}
-                    surface="related"
-                    className="py-2.5"
-                  />
+                  <EventRow show={fromEventWithVenue(rel)} surface="related" />
                 </Fragment>
               ))}
             </div>

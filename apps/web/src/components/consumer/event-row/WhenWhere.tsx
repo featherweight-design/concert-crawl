@@ -16,12 +16,14 @@ const GAP = 5
 
 // The measured span sits outside the rendered line, so it inherits none of the
 // line's typography. Every property that changes a glyph's advance width has to
-// be set on both, or the ladder picks its level from the wrong font.
-const TYPE = {
-  fontFamily: 'var(--font-mono)',
-  fontSize: 11,
-  letterSpacing: '0.02em',
-} as const
+// be set on both, or the ladder picks its level from the wrong font — which is
+// why the size comes from one place rather than being written out twice.
+const typeAt = (narrow: boolean) =>
+  ({
+    fontFamily: 'var(--font-mono)',
+    fontSize: narrow ? 11 : 11.5,
+    letterSpacing: '0.02em',
+  }) as const
 
 interface WhenWhereProps {
   surface: RowSurface
@@ -29,6 +31,7 @@ interface WhenWhereProps {
   timeLabel: string | null
   venueName: string
   venueSlug: string
+  narrow: boolean
 }
 
 /**
@@ -46,7 +49,9 @@ export const WhenWhere = ({
   timeLabel,
   venueName,
   venueSlug,
+  narrow,
 }: WhenWhereProps) => {
+  const TYPE = typeAt(narrow)
   const boxRef = useRef<HTMLParagraphElement>(null)
   const measureRef = useRef<HTMLSpanElement>(null)
   const [level, setLevel] = useState<WhenWhereLevel>(0)
@@ -94,10 +99,10 @@ export const WhenWhere = ({
     const observer = new ResizeObserver(remeasure)
     observer.observe(box)
     return () => observer.disconnect()
-    // The measured strings and the unit set are the only inputs to the level.
-    // The venue name is not among them: it is the one unit allowed to ellipsis,
-    // so its width never moves the ladder.
-  }, [dateLabel, timeLabel, units])
+    // The measured strings, the unit set and the type size are the only inputs
+    // to the level. The venue name is not among them: it is the one unit
+    // allowed to ellipsis, so its width never moves the ladder.
+  }, [dateLabel, timeLabel, units, narrow])
 
   const showsVenue = showsVenueUnit && level < 2
   const showsTime = showsTimeUnit && level < 3
@@ -141,7 +146,7 @@ export const WhenWhere = ({
       ref={boxRef}
       data-testid="when-where"
       data-level={level}
-      className="mt-0.5 flex min-w-0 items-center text-fg-muted"
+      className="mt-0.5 flex min-w-0 items-baseline text-fg-muted"
       style={{
         position: 'relative',
         gap: GAP,

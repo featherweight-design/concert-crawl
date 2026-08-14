@@ -51,6 +51,14 @@ describe('rowChips', () => {
     expect(chips.map((chip) => chip.key)).toEqual(['following', 'genre-rock'])
   })
 
+  it('keeps Following neutral and Spotify-marked', () => {
+    const [chip] = rowChips(makeShow({ isFollowed: true }), 'browse')
+    // --signal is reserved for CTAs and status, and --accent means watching.
+    // Borrowing either makes a follow read as an action or as a watch.
+    expect(chip?.tone).toBe('strong')
+    expect(chip?.mark).toBe('spotify')
+  })
+
   it('offers no provenance or freshness on Browse, whatever the price', () => {
     const chips = rowChips(
       makeShow({ price: priceObservedHoursAgo(48, 'boxoffice') }),

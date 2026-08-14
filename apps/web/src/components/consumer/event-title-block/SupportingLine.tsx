@@ -11,7 +11,9 @@ import {
 type Surface = 'card' | 'hero' | 'detail'
 
 const RAMP: Record<Surface, { lead: number; name: number }> = {
-  card: { lead: 10, name: 12 },
+  // The row's bill sits on the same mono scale as its when/where line, so the
+  // two secondary lines read as one voice under the headline rather than two.
+  card: { lead: 11.5, name: 11.5 },
   hero: { lead: 11, name: 13 },
   detail: { lead: 13, name: 16 },
 }
@@ -19,6 +21,8 @@ const RAMP: Record<Surface, { lead: number; name: number }> = {
 interface SupportingLineProps {
   artists: string[]
   surface?: Surface
+  /** Row-only: the ≤360px step of the card ramp. */
+  narrow?: boolean
   separator?: SeparatorKey
   maxInline?: number | null
   dim?: boolean
@@ -38,6 +42,7 @@ interface SupportingLineProps {
 export const SupportingLine = ({
   artists,
   surface = 'card',
+  narrow = false,
   separator = 'middot',
   maxInline = null,
   dim = false,
@@ -45,7 +50,8 @@ export const SupportingLine = ({
   linkArtists = false,
 }: SupportingLineProps): React.JSX.Element | null => {
   if (artists.length === 0) return null
-  const ramp = RAMP[surface]
+  const base = RAMP[surface]
+  const ramp = surface === 'card' && narrow ? { lead: 11, name: 11 } : base
   const sep = SEPARATORS[separator]
   const lead = CONSUMER_COPY.eventTitle.lead
   const limit = maxInline == null ? artists.length : Math.max(1, maxInline)
@@ -72,16 +78,17 @@ export const SupportingLine = ({
 
   // One shared style object so a linked name and a plain one sit on exactly the
   // same RAMP — the affordance is hover/focus underline, never a size change.
+  const isRow = surface === 'card'
   const nameStyle: React.CSSProperties = {
     fontSize: ramp.name,
-    letterSpacing: '-0.005em',
+    letterSpacing: isRow ? '0.01em' : '-0.005em',
   }
 
   return (
     <div
       role="group"
       aria-label={supportingA11yLabel(lead, artists)}
-      className="flex min-w-0 items-baseline"
+      className={`flex min-w-0 items-baseline ${isRow ? 'font-mono' : ''}`}
       style={{ lineHeight: 1.35 }}
     >
       <span
@@ -110,7 +117,7 @@ export const SupportingLine = ({
               )}
               {slug === null ? (
                 <span
-                  className={`font-semibold ${nameColor}`}
+                  className={`${isRow ? 'font-bold' : 'font-semibold'} ${nameColor}`}
                   style={nameStyle}
                 >
                   {name}
@@ -118,7 +125,7 @@ export const SupportingLine = ({
               ) : (
                 <Link
                   href={`/artists/${slug}`}
-                  className={`font-semibold underline-offset-2 hover:underline focus-visible:underline ${nameColor}`}
+                  className={`${isRow ? 'font-bold' : 'font-semibold'} underline-offset-2 hover:underline focus-visible:underline ${nameColor}`}
                   style={nameStyle}
                 >
                   {name}

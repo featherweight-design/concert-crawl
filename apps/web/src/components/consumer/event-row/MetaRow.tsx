@@ -2,10 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { RowMetaChip } from './RowMetaChip'
+import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { fitChips } from './lib/fit-chips'
 import type { ChipSpec } from './lib/row-chips'
 
 const CHIP_GAP = 5
+
+// The mark widens the chip, so the measure copy has to carry it too or the fit
+// pass sizes against a chip narrower than the one it renders.
+const chipMark = (chip: ChipSpec) =>
+  chip.mark === 'spotify' ? <SpotifyLogo size={11} /> : undefined
 
 interface MetaRowProps {
   chips: ChipSpec[]
@@ -76,6 +82,7 @@ export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
             label={chip.label}
             tone={chip.tone}
             srLabel={chip.srLabel}
+            icon={chipMark(chip)}
           />
         ))}
       </div>
@@ -97,6 +104,7 @@ export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
             key={chip.key}
             label={chip.label}
             tone={chip.tone}
+            icon={chipMark(chip)}
             hidden
           />
         ))}

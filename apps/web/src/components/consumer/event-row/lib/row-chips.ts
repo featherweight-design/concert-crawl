@@ -9,6 +9,8 @@ export interface ChipSpec {
   label: string
   tone: ChipTone
   srLabel?: string
+  /** Named rather than a node so this stays a pure data module. */
+  mark?: 'spotify'
 }
 
 const PROVENANCE_TONE: Record<
@@ -16,7 +18,7 @@ const PROVENANCE_TONE: Record<
   { tone: ChipTone }
 > = {
   boxoffice: { tone: 'strong' },
-  standard: { tone: 'neutral' },
+  standard: { tone: 'signal' },
   resale: { tone: 'warn' },
 }
 
@@ -59,8 +61,12 @@ export function rowChips(show: EventRowShow, surface: RowSurface): ChipSpec[] {
       chips.push({
         key: 'following',
         label: copy.meta.following,
-        tone: 'signal',
+        // Following is the neutral, Spotify-marked chip. --signal is reserved
+        // for CTAs and status, and --accent means watching; borrowing either
+        // makes a follow read as an action or as a watch.
+        tone: 'strong',
         srLabel: copy.a11y.following,
+        mark: 'spotify',
       })
     }
 

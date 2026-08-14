@@ -11,13 +11,14 @@ export const EVENT_ROW_COPY = {
   // it, so a screen reader hears the meaning rather than the symbol.
   glyphs: {
     separator: SEPARATORS.middot,
-    deltaDown: '↓',
-    deltaUp: '↑',
   },
   price: {
     fromPrefix: 'from',
     tba: 'tba',
     soldOut: 'Sold out',
+    // A move of a dollar or two is noise, not news. Saying so beats rendering
+    // an arrow that implies the price moved somewhere worth reading.
+    flat: 'flat',
   },
   provenance: {
     boxoffice: 'Box office',
@@ -36,8 +37,8 @@ export const EVENT_ROW_COPY = {
   a11y: {
     watchingTick: (artist: string) => `You are watching ${artist}`,
     // Replaces the chip's visible label rather than adding to it, so it has to
-    // carry the word itself. The row has no room for the Spotify glyph the old
-    // browse-card chip used, so the source moves in here too.
+    // carry the word itself. The Spotify mark beside it is aria-hidden, so the
+    // source is named here rather than left to the glyph.
     following: 'Following this artist on Spotify',
     // Replaces the "N going" chip, so it has to restate the count as well as
     // name who. Members without a handle are counted and never named, so the
@@ -58,5 +59,6 @@ export const EVENT_ROW_COPY = {
     stalePrice: (relTime: string) => `Stale price, last checked ${relTime}`,
     savedDelta: (amount: string) => `Down ${amount} since you started watching`,
     savedDeltaUp: (amount: string) => `Up ${amount} since you started watching`,
+    savedDeltaFlat: 'Unchanged since you started watching',
   },
 } as const

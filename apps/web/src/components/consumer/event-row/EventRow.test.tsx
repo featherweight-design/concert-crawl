@@ -96,6 +96,24 @@ describe('EventRow — watching is a report, not an action', () => {
     expect(document.querySelector('button')).toBeNull()
   })
 
+  it('renders the tick as an accent dot overhanging the artwork corner', () => {
+    render(<EventRow show={makeShow({ isWatching: true })} surface="browse" />)
+    const tick = screen.getByTestId('row-watching-tick')
+    expect(tick.className).toContain('bg-accent')
+    expect(tick.className).toContain('rounded-full')
+    expect(tick.style.top).toBe('-3px')
+    expect(tick.style.right).toBe('-3px')
+    // An icon here is the regression: watching reports state, and --signal
+    // belongs to the Following chip.
+    expect(tick.querySelector('svg')).toBeNull()
+  })
+
+  it('leaves the artwork clip box unable to crop the overhanging tick', () => {
+    render(<EventRow show={makeShow({ isWatching: true })} surface="browse" />)
+    const tick = screen.getByTestId('row-watching-tick')
+    expect(tick.parentElement?.className).not.toContain('overflow-hidden')
+  })
+
   it('renders no tick at all when the show is not watched', () => {
     render(<EventRow show={makeShow()} surface="browse" />)
     expect(screen.queryByTestId('row-watching-tick')).toBeNull()
@@ -154,6 +172,17 @@ describe('EventRow — the price slot', () => {
     // Browse fixtures do carry a saved price; gating on data would turn a
     // Browse price green for a show the user never saved.
     rerender(<EventRow show={show} surface="browse" />)
+    expect(screen.queryByTestId('row-price-delta')).toBeNull()
+  })
+
+  it('reports a dollar-or-two move as flat rather than as an arrow', () => {
+    render(
+      <EventRow
+        show={makeShow({ saved: { at: '2026-07-01', price: 69 } })}
+        surface="watching"
+      />,
+    )
+    expect(screen.getByTestId('row-price-flat')).not.toBeNull()
     expect(screen.queryByTestId('row-price-delta')).toBeNull()
   })
 })

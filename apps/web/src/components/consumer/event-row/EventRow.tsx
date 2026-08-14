@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
-import { Eye } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EventImage } from '../event-image'
 import { EventTitleBlock } from '@/components/consumer/event-title-block'
@@ -68,46 +67,65 @@ export const EventRow = ({
   return (
     <div
       className={cn(
-        config.carded && 'rounded-lg border border-border bg-surface-1 p-3',
+        config.carded && 'border border-border bg-surface-1',
         className,
       )}
+      style={{
+        // The card's left inset is tighter at narrow so the art keeps its size
+        // rather than the title column paying for the padding.
+        padding: config.carded
+          ? `13px ${config.hasActionGutter ? 8 : 12}px 13px ${narrow ? 10 : 14}px`
+          : '13px 0',
+        borderRadius: config.carded ? 12 : undefined,
+      }}
     >
       <div
         ref={rowRef}
         data-testid="event-row"
         data-narrow={narrow || undefined}
-        className="event-row group relative flex items-start"
+        className="event-row group relative flex items-center"
         style={{ gap: narrow ? 10 : 14 }}
       >
+        {/* The clip lives on the inner box, not here: the tick overhangs the
+            artwork by 3px and would be cut off by a clip on this wrapper. */}
         <div
-          className="relative shrink-0 overflow-hidden rounded-md"
-          style={{
-            width: artSize,
-            height: artSize,
-            // Sold out dims the artwork, never the row: a row-level opacity
-            // pushes --fg-muted below the AA contrast floor.
-            opacity: show.status === 'soldout' || isSuppressed ? 0.45 : 1,
-          }}
+          className="relative shrink-0"
+          style={{ width: artSize, height: artSize }}
         >
-          <EventImage
-            src={show.imageUrl}
-            artistPhotoUrl={show.artistPhotoUrl}
-            alt={show.headliner}
-            artist={show.headliner}
-            identityScale="tile"
-            className="h-full w-full"
-          />
+          <div
+            className="h-full w-full overflow-hidden rounded-md"
+            style={{
+              // Sold out dims the artwork, never the row: a row-level opacity
+              // pushes --fg-muted below the AA contrast floor.
+              opacity: show.status === 'soldout' || isSuppressed ? 0.55 : 1,
+            }}
+          >
+            <EventImage
+              src={show.imageUrl}
+              artistPhotoUrl={show.artistPhotoUrl}
+              alt={show.headliner}
+              artist={show.headliner}
+              identityScale="tile"
+              className="h-full w-full"
+            />
+          </div>
           {show.isWatching && (
             // Watching state is not a row object — it reports, it does not act.
+            // --accent is the watching colour; the Following chip must never
+            // borrow it, and this must never borrow --signal.
             <span
               role="img"
               aria-label={copy.a11y.watchingTick(show.headliner)}
               data-testid="row-watching-tick"
-              className="absolute bottom-0 right-0 flex items-center justify-center rounded-tl-md bg-surface-1"
-              style={{ padding: 2 }}
-            >
-              <Eye size={11} color="var(--signal)" />
-            </span>
+              className="absolute rounded-full bg-accent"
+              style={{
+                top: -3,
+                right: -3,
+                width: 12,
+                height: 12,
+                border: '2px solid var(--bg)',
+              }}
+            />
           )}
         </div>
 
@@ -129,6 +147,7 @@ export const EventRow = ({
               status={show.lifecycle}
               surface="card"
               maxInline={2}
+              narrow={narrow}
             />
           </Link>
           <WhenWhere
@@ -137,11 +156,12 @@ export const EventRow = ({
             timeLabel={show.timeLabel}
             venueName={show.venueName}
             venueSlug={show.venueSlug}
+            narrow={narrow}
           />
           <MetaRow
             chips={chips}
             budget={chipBudget(hasSupportLine)}
-            className="mt-1"
+            className="mt-0.5"
           />
         </div>
 
@@ -152,7 +172,10 @@ export const EventRow = ({
         {/* Reserved only where the surface has an action — reserving it on
             Browse collapses the title column to 80px at 320. */}
         {config.hasActionGutter && (
-          <div className="flex shrink-0 justify-end" style={{ width: 36 }}>
+          <div
+            className="flex shrink-0 items-center justify-center"
+            style={{ width: 36 }}
+          >
             {action}
           </div>
         )}

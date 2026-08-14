@@ -8,7 +8,7 @@ import { SupportingLine } from './SupportingLine'
 type Surface = 'card' | 'hero' | 'detail'
 
 const RAMP: Record<Surface, { head: number; tour: number; gap: number }> = {
-  card: { head: 15, tour: 9, gap: 2 },
+  card: { head: 15.5, tour: 9, gap: 3 },
   hero: { head: 22, tour: 10, gap: 3 },
   detail: { head: 34, tour: 12, gap: 5 },
 }
@@ -22,6 +22,8 @@ interface EventTitleBlockProps {
   status?: EventStatus
   maxInline?: number | null
   headlinerAs?: 'h1' | 'div'
+  /** Row-only: the ≤360px step of the card ramp. */
+  narrow?: boolean
   /**
    * #1115 PR-G — the headliner's artist-page slug, or null when the projection
    * has no row for that name. Ignored unless `linkArtists` is set.
@@ -46,11 +48,14 @@ export const EventTitleBlock = ({
   status = 'upcoming',
   maxInline = null,
   headlinerAs = 'div',
+  narrow = false,
   artistSlug = null,
   supportingArtistSlugs = null,
   linkArtists = false,
 }: EventTitleBlockProps): React.JSX.Element => {
+  const isRow = surface === 'card'
   const ramp = RAMP[surface]
+  const headSize = isRow && narrow ? 14.5 : ramp.head
   const dim = status !== 'upcoming'
   const openers = supportingArtists ?? []
   const hasOpeners = openers.length > 0
@@ -94,10 +99,13 @@ export const EventTitleBlock = ({
         // multi-line title, so it is scoped to the non-detail surfaces only.
         className={`m-0 min-w-0 ${dim ? 'text-fg-muted' : 'text-fg transition-colors group-hover/eventtitle:text-signal'} ${surface === 'detail' ? 'whitespace-normal' : 'truncate'}`}
         style={{
-          fontSize: ramp.head,
-          fontWeight: surface === 'detail' ? 900 : 800,
-          letterSpacing: surface === 'detail' ? '-0.03em' : '-0.02em',
-          lineHeight: 1.12,
+          fontSize: headSize,
+          fontWeight: surface === 'detail' ? 900 : isRow ? 700 : 800,
+          letterSpacing:
+            surface === 'detail' ? '-0.03em' : isRow ? '-0.01em' : '-0.02em',
+          // 1.35 on the row is load-bearing, not taste: `truncate` clips to the
+          // line box, so a tighter leading shears accented caps and descenders.
+          lineHeight: isRow ? 1.35 : 1.12,
           ...(status === 'cancelled'
             ? {
                 textDecoration: 'line-through',
@@ -126,6 +134,7 @@ export const EventTitleBlock = ({
         <SupportingLine
           artists={openers}
           surface={surface}
+          narrow={narrow}
           maxInline={maxInline}
           dim={dim}
           slugs={supportingArtistSlugs}
