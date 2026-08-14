@@ -1,3 +1,10 @@
+# [1.242.0](https://github.com/HartiganHM/concert-crawl/compare/v1.241.9...v1.242.0) (2026-08-14)
+
+
+### Features
+
+* **db:** user-data registry + coverage test (Gate A tasks 1-2) ([#1558](https://github.com/HartiganHM/concert-crawl/issues/1558)) ([ec760d0](https://github.com/HartiganHM/concert-crawl/commit/ec760d01be03433b124f4cf8ceb38b00e6182d33)), closes [#907](https://github.com/HartiganHM/concert-crawl/issues/907) [#527](https://github.com/HartiganHM/concert-crawl/issues/527)
+
 ## [1.241.9](https://github.com/HartiganHM/concert-crawl/compare/v1.241.8...v1.241.9) (2026-08-14)
 
 
