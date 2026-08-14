@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { eq, sql } from 'drizzle-orm'
 import type { Browser } from 'playwright'
-import { artists, db, venues } from '@concert-crawl/db'
+import { artists, db, events, venues } from '@concert-crawl/db'
 import { crawlVenue } from './crawl.js'
 
 // #1115 PR-B — the crawler keeps the `artists` projection fresh. A venue that
@@ -86,12 +86,15 @@ interface ExtractedEvent {
   ticketUrl: string
   sourceUrl: string
   confidence: number
+  /** Only the LLM extractor emits this; absent means "unclassified". */
+  isConcert?: boolean
 }
 
 function makeEvent(
   artist: string,
   date: string,
   supportingArtists: string[] = [],
+  isConcert?: boolean,
 ): ExtractedEvent {
   const title = `${artist} Live`
   return {
@@ -105,6 +108,7 @@ function makeEvent(
     ticketUrl: 'https://artist-projection.example.com/tickets',
     sourceUrl: 'https://artist-projection.example.com',
     confidence: 0.9,
+    ...(isConcert === undefined ? {} : { isConcert }),
   }
 }
 
@@ -166,6 +170,97 @@ describe('crawlVenue — artists projection write-through (#1115)', () => {
       'opener one',
       'opener two',
     ])
+  })
+
+  it('skips a listing the classifier ruled not a concert', async () => {
+    // The nightly backfill has always filtered these out via
+    // `hidden_from_consumer` (#1343); the write-through did not, and running
+    // every 10 minutes it won. A sports fixture or a tour-package title became
+    // an artist row minutes after the crawl, on a listing the backfill would
+    // never have projected.
+    const venue = await seedTestVenue()
+    mockExtraction([
+      makeEvent(
+        'Colorado Avalanche vs. Calgary Flames',
+        futureDate(27),
+        [],
+        false,
+      ),
+      makeEvent('Real Band', futureDate(28), ['Real Opener'], true),
+    ])
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const rows = await db.select().from(artists)
+    expect(rows.map((row) => row.canonicalName).sort()).toEqual([
+      'real band',
+      'real opener',
+    ])
+  })
+
+  it('skips an event an admin hid by hand, whatever the extractor says', async () => {
+    // The UPDATE path deliberately preserves an admin's `hiddenFromConsumer`
+    // over a re-crawl still reporting `isConcert: true`, so the extractor's
+    // verdict alone is not enough. Without reading the stored one back, the
+    // reaper would remove this artist and the next crawl would put it
+    // straight back, every ten minutes, forever.
+    const venue = await seedTestVenue()
+    const date = futureDate(30)
+    await db.insert(events).values({
+      venueId: venue.id,
+      title: 'Misclassified Show',
+      artist: 'Bingo Night',
+      canonicalArtist: 'bingo night',
+      canonicalTitle: 'misclassified show',
+      date,
+      status: 'upcoming',
+      hiddenFromConsumer: true,
+      sourceHash: 'stale-hash',
+    })
+    mockExtraction([makeEvent('Bingo Night', date, [], true)])
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(await db.select().from(artists)).toEqual([])
+  })
+
+  it('still projects a relist whose cancelled predecessor was hidden', async () => {
+    // The upsert's UNIQUE index is partial on `status = 'upcoming'`, so a
+    // cancelled row sits outside it and can share a key with the live event
+    // that replaced it. Reading hidden events without that same restriction
+    // would let a dead cancellation suppress a real show's artist.
+    const venue = await seedTestVenue()
+    const date = futureDate(31)
+    await db.insert(events).values({
+      venueId: venue.id,
+      title: 'Relisted Show',
+      artist: 'Relist Act',
+      canonicalArtist: 'relist act',
+      canonicalTitle: 'relisted show',
+      date,
+      status: 'cancelled',
+      hiddenFromConsumer: true,
+      sourceHash: 'cancelled-hash',
+    })
+    mockExtraction([makeEvent('Relist Act', date, [], true)])
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const rows = await db.select().from(artists)
+    expect(rows.map((row) => row.canonicalName)).toEqual(['relist act'])
+  })
+
+  it('projects an event no classifier ruled on', async () => {
+    // Only the LLM extractor emits `isConcert`. JSON-LD and the vendor
+    // extractors emit nothing, so treating absent as "not a concert" would
+    // stop projecting most of the catalogue.
+    const venue = await seedTestVenue()
+    mockExtraction([makeEvent('Unclassified Act', futureDate(29))])
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const rows = await db.select().from(artists)
+    expect(rows.map((row) => row.canonicalName)).toEqual(['unclassified act'])
   })
 
   it('de-collides a slug against an artist already in the table', async () => {

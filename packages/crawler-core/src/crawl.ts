@@ -117,6 +117,53 @@ function dedupKey(
   return `${canonicalArtist}|${date}|${showTimeKey(showTime)}`
 }
 
+/**
+ * Dedup keys of this venue's upcoming events that are hidden from consumers,
+ * whatever hid them — the extractor's original verdict or an admin's later
+ * override.
+ *
+ * Restricted to `upcoming` because the upsert's UNIQUE index is partial on
+ * exactly that (migration 0044). A cancelled row therefore sits outside it and
+ * can share a key with a live relist at the same venue, date and show time —
+ * so without this clause a hidden cancellation would suppress the projection
+ * of the legitimate event that replaced it.
+ *
+ * Read after the event writes and swallowing its own failures, on the same
+ * reasoning as `projectArtists` itself: the crawl's job is done by this point
+ * and a projection-shaped problem must never mark a successful run failed.
+ * Failing open re-admits the bug this closes for one crawl, which is strictly
+ * better than losing the run.
+ */
+async function hiddenEventKeys(venueId: string): Promise<Set<string>> {
+  try {
+    const rows = await db
+      .select({
+        canonicalArtist: events.canonicalArtist,
+        date: events.date,
+        showTime: events.showTime,
+      })
+      .from(events)
+      .where(
+        and(
+          eq(events.venueId, venueId),
+          eq(events.hiddenFromConsumer, true),
+          eq(events.status, 'upcoming'),
+        ),
+      )
+    return new Set(
+      rows.map((row) => dedupKey(row.canonicalArtist, row.date, row.showTime)),
+    )
+  } catch (err) {
+    reportFailure({
+      event: 'crawl.hidden_event_lookup_failed',
+      severity: 'warn',
+      venueId,
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return new Set()
+  }
+}
+
 // Chunk size for HTML capture. Render's log pipeline silently drops stdout
 // lines beyond ~16KB *bytes*. JS String.length is UTF-16 code units, but
 // when a code unit encodes to UTF-8 it can take up to 4 bytes (emoji,
@@ -1114,20 +1161,48 @@ export async function crawlVenue(
       // removed by hand) missing permanently. Re-offering unchanged acts
       // costs one narrowed SELECT per crawl and inserts only when a row is
       // genuinely absent, which is the repair this exists to perform.
+      //
+      // Non-concerts are excluded, matching what the nightly backfill already
+      // does with `hidden_from_consumer` (#1343). Without this the two writers
+      // disagreed, and the every-10-minutes one won — a sports fixture or a
+      // tour-package title became an artist row within minutes of being
+      // crawled, on a listing the backfill would never have projected.
+      //
+      // Two verdicts decide it, because there are two ways an event becomes a
+      // non-concert. The extractor's `isConcert === false` is what the INSERT
+      // above maps to `hiddenFromConsumer`, and it is the only signal for an
+      // event this crawl is seeing for the first time. But an admin can also
+      // hide an event by hand, and the UPDATE path deliberately preserves that
+      // over a re-crawl still reporting `isConcert: true` — so the stored
+      // verdict has to be read back or the projection would re-create a row
+      // the reaper had just removed, every ten minutes, forever.
+      //
+      // Only an explicit `false` is dropped on the extractor side: extractors
+      // other than the LLM emit no verdict at all, and treating "unclassified"
+      // as "not a concert" would stop projecting most of the catalogue.
+      const hiddenKeys = await hiddenEventKeys(venueId)
       await projectArtists(
-        eventsWithHashes.flatMap((evt) => [
-          { name: evt.artist, canonicalName: evt.canonicalArtist },
-          ...evt.canonicalSupporting.map((canonicalName) => ({
-            // No raw spelling is recoverable per supporting artist:
-            // canonical_supporting is deduped and sorted, so it is not
-            // positionally aligned with supporting_artists. The canonical
-            // string seeds the display name; the backfill's
-            // most-frequent-spelling pass corrects it when the artist later
-            // headlines.
-            name: canonicalName,
-            canonicalName,
-          })),
-        ]),
+        eventsWithHashes
+          .filter(
+            (evt) =>
+              evt.isConcert !== false &&
+              !hiddenKeys.has(
+                dedupKey(evt.canonicalArtist, evt.date, evt.showTime),
+              ),
+          )
+          .flatMap((evt) => [
+            { name: evt.artist, canonicalName: evt.canonicalArtist },
+            ...evt.canonicalSupporting.map((canonicalName) => ({
+              // No raw spelling is recoverable per supporting artist:
+              // canonical_supporting is deduped and sorted, so it is not
+              // positionally aligned with supporting_artists. The canonical
+              // string seeds the display name; the backfill's
+              // most-frequent-spelling pass corrects it when the artist later
+              // headlines.
+              name: canonicalName,
+              canonicalName,
+            })),
+          ]),
       )
     }
 

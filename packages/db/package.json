@@ -17,6 +17,10 @@
     "./scripts/backfill-artists": {
       "import": "./dist/scripts/backfill-artists.js",
       "types": "./dist/scripts/backfill-artists.d.ts"
+    },
+    "./scripts/prune-artists": {
+      "import": "./dist/scripts/prune-artists.js",
+      "types": "./dist/scripts/prune-artists.d.ts"
     }
   },
   "scripts": {
@@ -26,7 +30,8 @@
     "db:generate": "NODE_OPTIONS='--require=tsx/cjs' drizzle-kit generate",
     "db:migrate": "tsx src/migrate.ts",
     "db:seed": "tsx seed.ts",
-    "db:backfill-artists": "tsx src/scripts/run-backfill-artists.ts"
+    "db:backfill-artists": "tsx src/scripts/run-backfill-artists.ts",
+    "db:prune-artists": "tsx src/scripts/run-prune-artists.ts"
   },
   "dependencies": {
     "@concert-crawl/types": "workspace:*",
