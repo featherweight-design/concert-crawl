@@ -18,13 +18,22 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { and, desc, eq, gte, isNull, sql } from 'drizzle-orm'
-import { db, events, priceSubmissions, venues } from '@concert-crawl/db'
+import {
+  db,
+  events,
+  priceSubmissions,
+  venueFaultAcknowledgements,
+  venues,
+} from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
+import { matchesAcknowledgement } from '@concert-crawl/crawler-core/triage-conditions'
 import type { AdminVariables } from './index.js'
 import {
   TRIAGE_HISTORY_RUN_COUNT,
   deriveFaults,
   deriveSweep,
+  faultAcknowledgementKey,
+  type TriageFault,
   type TriageRunRow,
 } from './lib/triage.js'
 
@@ -125,13 +134,32 @@ const sweepSchema = z.object({
   next: z.string(),
 })
 
+// An acknowledged fault is the same fault with its provenance attached. The
+// provenance is nested rather than spread so both arrays stay assignable to the
+// base fault type and the panel cannot read `reason` off an unacknowledged row.
+const acknowledgementSchema = z.object({
+  reason: z.string(),
+  acknowledgedBy: z.string(),
+  acknowledgedAt: z.string(),
+})
+
+const acknowledgedFaultSchema = z.intersection(
+  faultSchema,
+  z.object({ acknowledgement: acknowledgementSchema }),
+)
+
 export const triageResponseSchema = z.object({
   faults: z.array(faultSchema),
+  acknowledged: z.array(acknowledgedFaultSchema),
   queues: z.array(queueSchema),
   sweep: sweepSchema,
 })
 
 export type TriageResponse = z.infer<typeof triageResponseSchema>
+
+export type AcknowledgedFault = TriageFault & {
+  acknowledgement: z.infer<typeof acknowledgementSchema>
+}
 
 // ---------------------------------------------------------------------------
 // Raw row parsing
@@ -297,18 +325,32 @@ triageAdminRouter.get('/', async (ctx) => {
     .orderBy(desc(priceSubmissions.createdAt))
     .limit(QUEUE_BREAKDOWN_LIMIT)
 
-  const [venueRows, rawRuns, coverageRows, eventFlagRows, priceRows] =
-    await Promise.all([
-      venueRowsPromise,
-      runRowsPromise,
-      coverageRowsPromise,
-      eventFlagRowsPromise,
-      priceRowsPromise,
-    ])
+  // Every acknowledgement, unfiltered. There are a handful of rows at most, and
+  // scoping the read to the venues that happen to be faulting right now would
+  // mean re-querying whenever the sweep changed.
+  const acknowledgementRowsPromise = db
+    .select()
+    .from(venueFaultAcknowledgements)
+
+  const [
+    venueRows,
+    rawRuns,
+    coverageRows,
+    eventFlagRows,
+    priceRows,
+    acknowledgementRows,
+  ] = await Promise.all([
+    venueRowsPromise,
+    runRowsPromise,
+    coverageRowsPromise,
+    eventFlagRowsPromise,
+    priceRowsPromise,
+    acknowledgementRowsPromise,
+  ])
 
   const runs = parseRunRows(rawRuns)
 
-  const faults = deriveFaults({
+  const derived = deriveFaults({
     venues: venueRows,
     runs,
     // events.venue_id is nullable in the schema; a row without a venue can't be
@@ -318,6 +360,40 @@ triageAdminRouter.get('/', async (ctx) => {
     ),
     now,
   })
+
+  // Partitioned from the one derived sweep, never re-derived. Two derivations
+  // would let the suppressed half and the visible half disagree about the same
+  // venue, which is the whole failure this feature exists to avoid.
+  const acknowledgementsByVenue = new Map<
+    string,
+    (typeof acknowledgementRows)[number][]
+  >()
+  for (const row of acknowledgementRows) {
+    const bucket = acknowledgementsByVenue.get(row.venueId)
+    if (bucket) bucket.push(row)
+    else acknowledgementsByVenue.set(row.venueId, [row])
+  }
+
+  const faults: TriageFault[] = []
+  const acknowledged: AcknowledgedFault[] = []
+  for (const fault of derived) {
+    const current = faultAcknowledgementKey(fault)
+    const match = acknowledgementsByVenue
+      .get(fault.venueId)
+      ?.find((row) => matchesAcknowledgement(current, row))
+    if (match) {
+      acknowledged.push({
+        ...fault,
+        acknowledgement: {
+          reason: match.reason,
+          acknowledgedBy: match.acknowledgedBy,
+          acknowledgedAt: match.acknowledgedAt.toISOString(),
+        },
+      })
+    } else {
+      faults.push(fault)
+    }
+  }
 
   const queues: z.infer<typeof queueSchema>[] = []
 
@@ -354,7 +430,12 @@ triageAdminRouter.get('/', async (ctx) => {
   // Parsed rather than returned raw: the panel's reading order and its
   // accessible row sentence both depend on this shape, and a silent contract
   // drift here would surface as a white screen on the busiest admin page.
-  const parsed = triageResponseSchema.safeParse({ faults, queues, sweep })
+  const parsed = triageResponseSchema.safeParse({
+    faults,
+    acknowledged,
+    queues,
+    sweep,
+  })
   if (!parsed.success) {
     logger.error(
       { issues: parsed.error.issues },

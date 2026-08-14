@@ -4,7 +4,13 @@ import { z } from 'zod'
 import { httpUrl } from '../../lib/url-schema.js'
 import { venueSlug } from '../../lib/venue-slug-schema.js'
 import Anthropic from '@anthropic-ai/sdk'
-import { db, venues, events, crawlRuns } from '@concert-crawl/db'
+import {
+  db,
+  venues,
+  events,
+  crawlRuns,
+  venueFaultAcknowledgements,
+} from '@concert-crawl/db'
 import { and, avg, count, desc, eq, gte, isNotNull, ne, not } from 'drizzle-orm'
 import {
   dispatch,
@@ -22,6 +28,7 @@ import { detectTicketVendor } from '../../lib/detect-ticket-vendor.js'
 import { runBackgroundTask } from '../../lib/background-tasks.js'
 import type { AdminVariables } from './index.js'
 import { venueGuideAdminRouter } from './venue-guide.js'
+import { TRIAGE_CONDITIONS } from './lib/triage.js'
 
 const createVenueSchema = z.object({
   name: z.string().min(1).max(200),
@@ -938,3 +945,214 @@ venuesAdminRouter.delete('/:id', async (ctx) => {
 
   return ctx.json({ success: true, data: { eventsDetached } })
 })
+
+// ---------------------------------------------------------------------------
+// Fault acknowledgements
+// ---------------------------------------------------------------------------
+//
+// An acknowledgement records the evidence figure an operator judged expected —
+// Summit's permanent Live Nation cap of 36, Red Rocks' November season end. The
+// triage endpoint suppresses the fault while the current figure still matches
+// and re-fires it the moment it moves. See
+// docs/superpowers/specs/2026-08-14-triage-fault-acknowledgement-eng-spec.md.
+//
+// The param is `:id` rather than `:venueId` because Hono's RegExpRouter rejects
+// two param names at the same path position, and every other route in this file
+// uses `:id`.
+
+// A shape that parses but is impossible — '2026-13-40', status 999 — stores
+// just as silently as a malformed one, so the day and the range are checked
+// rather than only the digit layout.
+const isCalendarDate = (value: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const parsed = new Date(`${value}T00:00:00Z`)
+  return (
+    !Number.isNaN(parsed.getTime()) &&
+    parsed.toISOString().slice(0, 10) === value
+  )
+}
+
+const isHttpStatus = (value: string): boolean =>
+  /^\d{3}$/.test(value) && Number(value) >= 100 && Number(value) <= 599
+
+// `failed` pins an error class, which is free-form, so it has no check.
+const evidenceValueFormat = (
+  condition: (typeof TRIAGE_CONDITIONS)[number],
+  evidenceKind: 'pinned_count' | 'horizon_shrank' | null,
+): { isValid: (value: string) => boolean; describe: string } | null => {
+  const count = {
+    isValid: (value: string) => /^\d+$/.test(value),
+    describe: 'a count',
+  }
+  switch (condition) {
+    case 'ceiling':
+      return evidenceKind === 'horizon_shrank'
+        ? { isValid: isCalendarDate, describe: 'a YYYY-MM-DD date' }
+        : count
+    case 'wentDark':
+    case 'coverage':
+      return count
+    case 'blocked':
+      return { isValid: isHttpStatus, describe: 'an HTTP status' }
+    case 'failed':
+      return null
+  }
+}
+
+const faultAcknowledgementSchema = z
+  .object({
+    condition: z.enum(TRIAGE_CONDITIONS),
+    // Only `ceiling` carries a kind; every other condition has one evidence
+    // shape. Nullable rather than optional so the absence is always deliberate.
+    evidenceKind: z.enum(['pinned_count', 'horizon_shrank']).nullable(),
+    // Nullable, NOT optional: a venue blocked without a recorded HTTP status has
+    // no figure to acknowledge, but an omitted key is a client bug and a 400.
+    // Trimmed like `reason` because matching is strict string equality, so a
+    // stray space would store fine and then never suppress anything.
+    evidenceValue: z
+      .string()
+      .transform((value) => value.trim())
+      .pipe(z.string().min(1).max(200))
+      .nullable(),
+    reason: z
+      .string()
+      .transform((value) => value.trim())
+      .pipe(z.string().min(1).max(500)),
+  })
+  // A shape `faultAcknowledgementKey` can never produce would store fine and
+  // then suppress nothing, which reads to an operator as the acknowledgement
+  // having silently failed. Reject it at the boundary instead.
+  .superRefine((value, ctx) => {
+    const needsKind = value.condition === 'ceiling'
+    if (needsKind !== (value.evidenceKind !== null)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['evidenceKind'],
+        message: needsKind
+          ? 'A ceiling acknowledgement must name its evidence kind'
+          : `Only a ceiling acknowledgement carries an evidence kind, not ${value.condition}`,
+      })
+    }
+    if (value.evidenceValue === null) {
+      if (value.condition !== 'blocked') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['evidenceValue'],
+          message: `A ${value.condition} acknowledgement always has a figure to pin`,
+        })
+      }
+      return
+    }
+
+    const expected = evidenceValueFormat(value.condition, value.evidenceKind)
+    if (expected && !expected.isValid(value.evidenceValue)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['evidenceValue'],
+        message: `A ${value.condition} acknowledgement pins ${expected.describe}`,
+      })
+    }
+  })
+
+const faultAcknowledgementParamSchema = z.object({
+  id: z.string().uuid(),
+})
+
+const faultAcknowledgementDeleteParamSchema = z.object({
+  id: z.string().uuid(),
+  condition: z.enum(TRIAGE_CONDITIONS),
+})
+
+venuesAdminRouter.post(
+  '/:id/fault-acknowledgements',
+  zValidator('param', faultAcknowledgementParamSchema),
+  zValidator('json', faultAcknowledgementSchema),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+    const body = ctx.req.valid('json')
+
+    const [venue] = await db.select().from(venues).where(eq(venues.id, id))
+    if (!venue) {
+      return ctx.json({ success: false, error: 'Venue not found' }, 404)
+    }
+
+    const acknowledgedBy = getAuthUser(ctx).userId
+
+    // Upsert on the unique key: re-acknowledging at a new figure replaces the
+    // old one rather than conflicting, which is what "Summit moved 36 → 41 and
+    // that is still expected" has to mean.
+    const [acknowledgement] = await db
+      .insert(venueFaultAcknowledgements)
+      .values({
+        venueId: id,
+        condition: body.condition,
+        evidenceKind: body.evidenceKind,
+        evidenceValue: body.evidenceValue,
+        reason: body.reason,
+        acknowledgedBy,
+      })
+      .onConflictDoUpdate({
+        target: [
+          venueFaultAcknowledgements.venueId,
+          venueFaultAcknowledgements.condition,
+        ],
+        set: {
+          evidenceKind: body.evidenceKind,
+          evidenceValue: body.evidenceValue,
+          reason: body.reason,
+          acknowledgedBy,
+          acknowledgedAt: new Date(),
+        },
+      })
+      .returning()
+
+    ctx.set('auditAction', 'venue.fault.acknowledge')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', acknowledgedBy)
+    ctx.set('auditMeta', {
+      condition: body.condition,
+      evidenceKind: body.evidenceKind,
+      evidenceValue: body.evidenceValue,
+      reason: body.reason,
+    })
+
+    return ctx.json({ success: true, data: acknowledgement })
+  },
+)
+
+venuesAdminRouter.delete(
+  '/:id/fault-acknowledgements/:condition',
+  zValidator('param', faultAcknowledgementDeleteParamSchema),
+  async (ctx) => {
+    const { id, condition } = ctx.req.valid('param')
+
+    const [removed] = await db
+      .delete(venueFaultAcknowledgements)
+      .where(
+        and(
+          eq(venueFaultAcknowledgements.venueId, id),
+          eq(venueFaultAcknowledgements.condition, condition),
+        ),
+      )
+      .returning()
+
+    if (!removed) {
+      return ctx.json(
+        { success: false, error: 'Acknowledgement not found' },
+        404,
+      )
+    }
+
+    ctx.set('auditAction', 'venue.fault.unacknowledge')
+    ctx.set('auditTargetId', id)
+    ctx.set('auditActorId', getAuthUser(ctx).userId)
+    ctx.set('auditMeta', {
+      condition,
+      evidenceKind: removed.evidenceKind,
+      evidenceValue: removed.evidenceValue,
+      reason: removed.reason,
+    })
+
+    return ctx.json({ success: true, data: { condition } })
+  },
+)

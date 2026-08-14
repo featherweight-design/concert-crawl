@@ -26,6 +26,7 @@ import {
   evaluateCeilingCondition,
   evaluateCoverageCondition,
   evaluateEventCountCondition,
+  type AcknowledgementKey,
 } from '@concert-crawl/crawler-core/triage-conditions'
 import { TRIAGE_NO_SWEEP } from '@concert-crawl/types'
 
@@ -234,6 +235,62 @@ interface TriageFaultBase {
   dur: string
   /** The run the evidence was read from, for the row's deep link. */
   crawlRunId: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Acknowledgement keys
+// ---------------------------------------------------------------------------
+
+/**
+ * The normalized key an acknowledgement is stored and compared against.
+ *
+ * Lives here rather than in crawler-core because it reads the evidence shapes,
+ * which are app-layer types. crawler-core owns the comparison
+ * (`matchesAcknowledgement`) and never sees a fault.
+ *
+ * A null `evidenceValue` means the figure was itself absent — a blocked venue
+ * that never returned an HTTP status. It matches only a currently-absent
+ * figure, never a present one.
+ */
+export const faultAcknowledgementKey = (
+  fault: TriageFault,
+): AcknowledgementKey => {
+  switch (fault.condition) {
+    case 'ceiling':
+      return {
+        condition: fault.condition,
+        evidenceKind: fault.evidence.kind,
+        evidenceValue:
+          fault.evidence.kind === 'horizon_shrank'
+            ? fault.evidence.furthest
+            : String(fault.evidence.count),
+      }
+    case 'wentDark':
+      return {
+        condition: fault.condition,
+        evidenceKind: null,
+        evidenceValue: String(fault.evidence.count),
+      }
+    case 'coverage':
+      return {
+        condition: fault.condition,
+        evidenceKind: null,
+        evidenceValue: String(fault.evidence.uncovered),
+      }
+    case 'blocked':
+      return {
+        condition: fault.condition,
+        evidenceKind: null,
+        evidenceValue:
+          fault.evidence.status === null ? null : String(fault.evidence.status),
+      }
+    case 'failed':
+      return {
+        condition: fault.condition,
+        evidenceKind: null,
+        evidenceValue: fault.evidence.errorClass,
+      }
+  }
 }
 
 // ---------------------------------------------------------------------------

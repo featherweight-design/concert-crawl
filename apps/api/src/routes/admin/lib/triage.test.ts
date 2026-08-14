@@ -4,6 +4,7 @@ import {
   bandForCondition,
   classifyCrawlError,
   deriveSweep,
+  faultAcknowledgementKey,
   formatDuration,
   nextNightlySweep,
   orderFaults,
@@ -189,5 +190,151 @@ describe('deriveSweep', () => {
     })
     expect(sweep.atIso).toBeNull()
     expect(sweep.at).toBe(TRIAGE_NO_SWEEP)
+  })
+})
+
+describe('faultAcknowledgementKey', () => {
+  const base = {
+    id: 'venue-1:ceiling',
+    venueId: 'venue-1',
+    venue: 'Summit Music Hall',
+    persistedSince: '2026-07-20T09:00:00Z',
+    days: 24,
+    dur: '24d',
+    crawlRunId: null,
+    band: 'suspect' as const,
+  }
+
+  it('keys a pinned ceiling on the event count', () => {
+    expect(
+      faultAcknowledgementKey({
+        ...base,
+        condition: 'ceiling',
+        evidence: {
+          kind: 'pinned_count',
+          count: 36,
+          runs: 5,
+          was: null,
+          wasWhen: null,
+          furthest: null,
+          best: null,
+          shrankDays: null,
+          series: [36, 36, 36],
+        },
+      }),
+    ).toEqual({
+      condition: 'ceiling',
+      evidenceKind: 'pinned_count',
+      evidenceValue: '36',
+    })
+  })
+
+  it('keys a shrunken horizon on the furthest event date', () => {
+    expect(
+      faultAcknowledgementKey({
+        ...base,
+        condition: 'ceiling',
+        evidence: {
+          kind: 'horizon_shrank',
+          count: 41,
+          runs: 1,
+          was: null,
+          wasWhen: null,
+          furthest: '2026-11-15',
+          best: '2027-03-02',
+          shrankDays: 107,
+          series: [41],
+        },
+      }),
+    ).toEqual({
+      condition: 'ceiling',
+      evidenceKind: 'horizon_shrank',
+      evidenceValue: '2026-11-15',
+    })
+  })
+
+  it('keys wentDark on the usable event count', () => {
+    expect(
+      faultAcknowledgementKey({
+        ...base,
+        band: 'loss',
+        condition: 'wentDark',
+        evidence: {
+          count: 0,
+          baselineCount: 30,
+          avg: 30.2,
+          pct: -100,
+          window: 5,
+          threshold: -70,
+          series: [30, 29, 0],
+        },
+      }),
+    ).toEqual({
+      condition: 'wentDark',
+      evidenceKind: null,
+      evidenceValue: '0',
+    })
+  })
+
+  it('keys coverage on the uncovered count', () => {
+    expect(
+      faultAcknowledgementKey({
+        ...base,
+        band: 'loss',
+        condition: 'coverage',
+        evidence: { matched: 4, expected: 12, uncovered: 8, wasWhen: null },
+      }),
+    ).toEqual({
+      condition: 'coverage',
+      evidenceKind: null,
+      evidenceValue: '8',
+    })
+  })
+
+  it('keys blocked on the HTTP status', () => {
+    expect(
+      faultAcknowledgementKey({
+        ...base,
+        band: 'hard',
+        condition: 'blocked',
+        evidence: { status: 403, refusals: 3, lastSuccess: 'Jul 18' },
+      }),
+    ).toEqual({
+      condition: 'blocked',
+      evidenceKind: null,
+      evidenceValue: '403',
+    })
+  })
+
+  // A venue that never returned a status has no figure to acknowledge. Null is
+  // a legal acknowledged value, not a missing one.
+  it('keys blocked with no recorded status as a null value', () => {
+    expect(
+      faultAcknowledgementKey({
+        ...base,
+        band: 'hard',
+        condition: 'blocked',
+        evidence: { status: null, refusals: 3, lastSuccess: null },
+      }),
+    ).toEqual({
+      condition: 'blocked',
+      evidenceKind: null,
+      evidenceValue: null,
+    })
+  })
+
+  it('keys a failing crawl on the error class', () => {
+    expect(
+      faultAcknowledgementKey({
+        ...base,
+        band: 'hard',
+        condition: 'failed',
+        evidence: { failures: 2, errorClass: 'timeout', pauseAt: 3 },
+      }),
+    ).toEqual({
+      condition: 'failed',
+      evidenceKind: null,
+      evidenceValue: 'timeout',
+    })
   })
 })
