@@ -12,6 +12,16 @@ vi.mock('@/lib/queries/use-admin-crawl-trigger', () => ({
   useTriggerVenueCrawl: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 
+// The history tab hosts the acknowledge control, which reads a Clerk token.
+// A null token leaves it rendering nothing, which is what this suite wants.
+vi.mock('@clerk/nextjs', () => ({
+  useAuth: () => ({ getToken: () => Promise.resolve(null) }),
+}))
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}))
+
 import { CrawlSplitView } from './CrawlSplitView'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 

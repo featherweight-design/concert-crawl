@@ -88,6 +88,8 @@ interface TriageBody {
       condition: string
       venueId: string
       acknowledgement: {
+        evidenceKind: string | null
+        evidenceValue: string | null
         reason: string
         acknowledgedBy: string
         acknowledgedAt: string
@@ -447,6 +449,16 @@ describe('GET /v1/admin/triage — acknowledgement partition', () => {
     expect(data.acknowledged[0]?.acknowledgement.acknowledgedAt).toMatch(
       /^\d{4}-\d{2}-\d{2}T/,
     )
+  })
+
+  it('returns the pinned evidence the acknowledgement is keyed to', async () => {
+    setAuth('admin')
+    const venue = await seedDarkVenue()
+    await acknowledge(venue.id, wentDarkAck)
+
+    const data = await fetchTriage()
+    expect(data.acknowledged[0]?.acknowledgement.evidenceKind).toBeNull()
+    expect(data.acknowledged[0]?.acknowledgement.evidenceValue).toBe('2')
   })
 
   it('re-fires the fault once the acknowledged figure moves', async () => {

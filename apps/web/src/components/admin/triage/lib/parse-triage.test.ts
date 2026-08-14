@@ -244,6 +244,87 @@ describe('parseTriageResponse', () => {
     ])
   })
 
+  it('parses acknowledged faults with their provenance', () => {
+    const acknowledgement = {
+      reason: 'Permanent Live Nation listing cap.',
+      acknowledgedBy: 'user_admin_1',
+      acknowledgedAt: '2026-08-14T03:00:00.000Z',
+      evidenceKind: null,
+      evidenceValue: '2',
+    }
+    const parsed = parseTriageResponse({
+      faults: [],
+      acknowledged: [{ ...blocked, acknowledgement }],
+      queues: [],
+      sweep,
+    })
+    expect(parsed?.acknowledged).toHaveLength(1)
+    expect(parsed?.acknowledged[0]?.acknowledgement).toEqual(acknowledgement)
+  })
+
+  // Web and API deploy independently, so the panel can run ahead of the
+  // serializer that added the evidence fields. Absent keys read as "no figure
+  // pinned"; the row still carries its reason and who set it.
+  it('keeps an acknowledged row from an API that sends no evidence yet', () => {
+    const acknowledgement = {
+      reason: 'Permanent Live Nation listing cap.',
+      acknowledgedBy: 'user_admin_1',
+      acknowledgedAt: '2026-08-14T03:00:00.000Z',
+    }
+    const parsed = parseTriageResponse({
+      faults: [],
+      acknowledged: [{ ...blocked, acknowledgement }],
+      queues: [],
+      sweep,
+    })
+    expect(parsed?.acknowledged).toHaveLength(1)
+    expect(parsed?.acknowledged[0]?.acknowledgement.evidenceKind).toBeNull()
+    expect(parsed?.acknowledged[0]?.acknowledgement.evidenceValue).toBeNull()
+  })
+
+  it('still drops an acknowledged row whose evidence is the wrong type', () => {
+    const parsed = parseTriageResponse({
+      faults: [],
+      acknowledged: [
+        {
+          ...blocked,
+          acknowledgement: {
+            reason: 'Expected.',
+            acknowledgedBy: 'user_admin_1',
+            acknowledgedAt: '2026-08-14T03:00:00.000Z',
+            evidenceValue: 36,
+          },
+        },
+      ],
+      queues: [],
+      sweep,
+    })
+    expect(parsed?.acknowledged).toEqual([])
+  })
+
+  it('drops an acknowledged row whose provenance is unusable', () => {
+    const parsed = parseTriageResponse({
+      faults: [],
+      acknowledged: [{ ...blocked, acknowledgement: { reason: 'Expected.' } }],
+      queues: [],
+      sweep,
+    })
+    expect(parsed?.acknowledged).toEqual([])
+  })
+
+  it('treats a payload without acknowledged as none, not unusable', () => {
+    const parsed = parseTriageResponse({ faults: [], queues: [], sweep })
+    expect(parsed?.acknowledged).toEqual([])
+  })
+
+  // Absent means an older API. Present but not a list means the contract broke,
+  // and reporting that as "nothing is acknowledged" would hide live state.
+  it('rejects a payload whose acknowledged is present but not a list', () => {
+    expect(
+      parseTriageResponse({ faults: [], acknowledged: {}, queues: [], sweep }),
+    ).toBeNull()
+  })
+
   it('returns null only when the envelope itself is unusable', () => {
     expect(parseTriageResponse(null)).toBeNull()
     expect(parseTriageResponse({ faults: [], queues: [] })).toBeNull()

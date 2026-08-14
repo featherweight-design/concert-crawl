@@ -138,6 +138,11 @@ const sweepSchema = z.object({
 // provenance is nested rather than spread so both arrays stay assignable to the
 // base fault type and the panel cannot read `reason` off an unacknowledged row.
 const acknowledgementSchema = z.object({
+  // The figure the acknowledgement is pinned to. The panel shows it so an
+  // operator can see what the suppression is keyed to without re-deriving it,
+  // and re-fire matching is strict equality against exactly this value.
+  evidenceKind: z.enum(['pinned_count', 'horizon_shrank']).nullable(),
+  evidenceValue: z.string().nullable(),
   reason: z.string(),
   acknowledgedBy: z.string(),
   acknowledgedAt: z.string(),
@@ -159,6 +164,19 @@ export type TriageResponse = z.infer<typeof triageResponseSchema>
 
 export type AcknowledgedFault = TriageFault & {
   acknowledgement: z.infer<typeof acknowledgementSchema>
+}
+
+// evidence_kind is a text column, so the stored value is narrowed at
+// serialization rather than trusted. An unrecognised kind is sent as null so
+// the response still validates. This is a wire-shape guard only — matching and
+// suppression read the stored row, not this value.
+const evidenceKindSchema = acknowledgementSchema.shape.evidenceKind
+
+const parseEvidenceKind = (
+  value: string | null,
+): z.infer<typeof evidenceKindSchema> => {
+  const parsed = evidenceKindSchema.safeParse(value)
+  return parsed.success ? parsed.data : null
 }
 
 // ---------------------------------------------------------------------------
@@ -385,6 +403,8 @@ triageAdminRouter.get('/', async (ctx) => {
       acknowledged.push({
         ...fault,
         acknowledgement: {
+          evidenceKind: parseEvidenceKind(match.evidenceKind),
+          evidenceValue: match.evidenceValue,
           reason: match.reason,
           acknowledgedBy: match.acknowledgedBy,
           acknowledgedAt: match.acknowledgedAt.toISOString(),

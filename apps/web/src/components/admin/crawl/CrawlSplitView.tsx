@@ -22,6 +22,7 @@ import { StagedApplyConfirm } from '@/components/admin/crawl/StagedApplyConfirm'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { resolveCrawlAlertBadge } from '@/components/admin/definitions/constants'
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
+import { FaultAcknowledgeControl } from '@/components/admin/fault-acknowledge-control/FaultAcknowledgeControl'
 
 const MT_TIMEZONE = 'America/Denver'
 
@@ -1209,6 +1210,9 @@ export const CrawlSplitView = ({
                     ...(isMobile ? {} : { overflowY: 'auto', flex: 1 }),
                   }}
                 >
+                  {/* Triage deep-links a fault here, so the judgement is made
+                      against the run history that raised it. */}
+                  <FaultAcknowledgeControl venueId={selected.venueId} />
                   <CrawlRunHistoryTable
                     runs={venueRuns}
                     loading={venueRunsLoading}

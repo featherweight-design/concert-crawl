@@ -125,7 +125,7 @@ const pricesQueue: TriageQueue = {
 const data = (
   faults: TriageFault[],
   queues: TriageQueue[] = [],
-): TriageData => ({ faults, queues, sweep: SWEEP })
+): TriageData => ({ faults, acknowledged: [], queues, sweep: SWEEP })
 
 // jsdom has no matchMedia. `compact` is a presentation switch — the same rows
 // with the same accessible names either way — so these render at the desktop
@@ -293,7 +293,12 @@ describe('TriagePanel — nullable evidence fields', () => {
   it('renders the all-clear body when the sweep has a null atIso', () => {
     render(
       <TriagePanel
-        data={{ faults: [], queues: [], sweep: { ...SWEEP, atIso: null } }}
+        data={{
+          faults: [],
+          acknowledged: [],
+          queues: [],
+          sweep: { ...SWEEP, atIso: null },
+        }}
       />,
     )
     expect(screen.getByText("Nothing's broken.")).toBeTruthy()

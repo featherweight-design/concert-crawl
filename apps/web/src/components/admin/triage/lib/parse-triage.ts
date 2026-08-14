@@ -15,7 +15,9 @@
 // so these are hand-written guards. No casts — every narrowing is a check.
 
 import type {
+  AcknowledgedFault,
   BlockedEvidence,
+  FaultAcknowledgement,
   CeilingEvidence,
   CoverageEvidence,
   FailedEvidence,
@@ -172,6 +174,48 @@ export const parseFault = (raw: unknown): TriageFault | null => {
   return null
 }
 
+const isEvidenceKind = (
+  value: unknown,
+): value is FaultAcknowledgement['evidenceKind'] =>
+  value === null || value === 'pinned_count' || value === 'horizon_shrank'
+
+export const parseAcknowledgedFault = (
+  raw: unknown,
+): AcknowledgedFault | null => {
+  const fault = parseFault(raw)
+  if (fault === null || !isRecord(raw)) return null
+  const { acknowledgement } = raw
+  if (!isRecord(acknowledgement)) return null
+  const {
+    evidenceKind,
+    evidenceValue,
+    reason,
+    acknowledgedBy,
+    acknowledgedAt,
+  } = acknowledgement
+  // Absent is not the same as malformed. Web and API deploy independently, so a
+  // panel running ahead of the serializer that added these fields reads them as
+  // "no figure pinned" rather than dropping the row. A wrong type still fails —
+  // that is a contract break, not version skew.
+  const kind = evidenceKind === undefined ? null : evidenceKind
+  const value = evidenceValue === undefined ? null : evidenceValue
+  if (!isEvidenceKind(kind)) return null
+  if (!isNullableString(value)) return null
+  if (!isString(reason)) return null
+  if (!isString(acknowledgedBy)) return null
+  if (!isString(acknowledgedAt)) return null
+  return {
+    ...fault,
+    acknowledgement: {
+      evidenceKind: kind,
+      evidenceValue: value,
+      reason,
+      acknowledgedBy,
+      acknowledgedAt,
+    },
+  }
+}
+
 export const parseQueue = (raw: unknown): TriageQueue | null => {
   if (!isRecord(raw)) return null
   const { id, kind, count, breakdown, action } = raw
@@ -202,9 +246,12 @@ export const parseSweep = (raw: unknown): TriageSweep | null => {
  */
 export const parseTriageResponse = (raw: unknown): TriageData | null => {
   if (!isRecord(raw)) return null
-  const { faults, queues, sweep } = raw
+  const { faults, acknowledged, queues, sweep } = raw
   if (!Array.isArray(faults)) return null
   if (!Array.isArray(queues)) return null
+  // Absent means an older API; present but not a list means the contract broke.
+  // Reporting the latter as "nothing is acknowledged" would hide live state.
+  if (acknowledged !== undefined && !Array.isArray(acknowledged)) return null
   const parsedSweep = parseSweep(sweep)
   if (parsedSweep === null) return null
 
@@ -220,5 +267,21 @@ export const parseTriageResponse = (raw: unknown): TriageData | null => {
     if (parsed !== null) parsedQueues.push(parsed)
   }
 
-  return { faults: parsedFaults, queues: parsedQueues, sweep: parsedSweep }
+  // Web and API deploy independently, so the panel can briefly read a payload
+  // from before acknowledgements shipped. An absent key is no acknowledgements,
+  // not an unusable envelope.
+  const parsedAcknowledged: AcknowledgedFault[] = []
+  if (Array.isArray(acknowledged)) {
+    for (const fault of acknowledged) {
+      const parsed = parseAcknowledgedFault(fault)
+      if (parsed !== null) parsedAcknowledged.push(parsed)
+    }
+  }
+
+  return {
+    faults: parsedFaults,
+    acknowledged: parsedAcknowledged,
+    queues: parsedQueues,
+    sweep: parsedSweep,
+  }
 }

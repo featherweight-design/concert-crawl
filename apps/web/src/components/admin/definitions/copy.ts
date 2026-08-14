@@ -2567,4 +2567,26 @@ export const ADMIN_COPY = {
     // be able to read rather than discover.
     model: 'Rows clear themselves on the next clean crawl. Nothing to dismiss.',
   },
+
+  // The acknowledge control in the crawl inspector. Every string here has to
+  // carry the same idea: this is not a dismiss. The figure is pinned, and the
+  // fault comes back the moment it moves.
+  faultAcknowledge: {
+    title: 'Is this expected?',
+    body: 'Pin the figure you judged expected. The fault stops showing, and comes straight back if that figure moves.',
+    evidenceLabel: 'Pinning',
+    noEvidence: 'no figure recorded',
+    reasonLabel: 'Why is this expected?',
+    reasonPlaceholder: 'Live Nation caps the list at 36.',
+    confirm: 'Mark expected',
+    confirming: 'Marking…',
+    remove: 'Unmark',
+    removing: 'Unmarking…',
+    acknowledgedTitle: 'Marked expected',
+    acknowledgedBy: (who: string, when: string) => `${who} · ${when}`,
+    errors: {
+      notAuthenticated: 'Session expired. Refresh and sign in again.',
+      failed: "Couldn't save that. Nothing was changed.",
+    },
+  },
 } as const

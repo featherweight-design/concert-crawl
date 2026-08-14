@@ -88,8 +88,26 @@ export interface TriageSweep {
   next: string
 }
 
+/**
+ * The evidence figure an operator judged expected, and who judged it. The
+ * fault re-fires the moment the figure moves, so this is provenance rather
+ * than a dismissal.
+ */
+export interface FaultAcknowledgement {
+  evidenceKind: 'pinned_count' | 'horizon_shrank' | null
+  evidenceValue: string | null
+  reason: string
+  acknowledgedBy: string
+  acknowledgedAt: string
+}
+
+export type AcknowledgedFault = TriageFault & {
+  acknowledgement: FaultAcknowledgement
+}
+
 export interface TriageData {
   faults: TriageFault[]
+  acknowledged: AcknowledgedFault[]
   queues: TriageQueue[]
   sweep: TriageSweep
 }
