@@ -12,8 +12,12 @@ import { clearTables, seedEvent, seedVenue } from './helpers/seed.js'
 // filter on the classifier's verdict. Both render an empty artist page and
 // both keep spending Spotify match quota.
 //
-// The safety property under test is symmetry with `backfillArtists`: the
-// reaper must only ever remove a row the backfill would decline to create.
+// Two safety properties are under test. The first is symmetry with
+// `backfillArtists`: the reaper must only ever remove a row the backfill
+// would decline to create. The second exists because symmetry alone let a
+// production dry run condemn bands with upcoming Denver dates — the backfill
+// cannot see a co-headliner billed only in an event title, so the reaper
+// spares any name a live upcoming show still prints.
 describe('prune-artists integration', () => {
   beforeEach(async () => {
     await clearTables()
@@ -21,6 +25,19 @@ describe('prune-artists integration', () => {
 
   const listArtists = async () =>
     testDb.select().from(artists).orderBy(asc(artists.canonicalName))
+
+  /** The title spare is bounded by today's Denver date, so it needs a real one. */
+  const futureDate = () =>
+    new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+  /** What the reaper's `DENVER_TODAY` resolves to, computed independently. */
+  const denverToday = () =>
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Denver',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date())
 
   it('removes an artist no event references any more', async () => {
     const venue = await seedVenue({ slug: `prune-orphan-${Date.now()}` })
@@ -128,6 +145,213 @@ describe('prune-artists integration', () => {
     expect((await listArtists()).map((row) => row.canonicalName)).toEqual([
       'deleted act',
       'live act',
+    ])
+  })
+
+  it('keeps a co-headliner billed only in the title of a live show', async () => {
+    // Canonicalisation records one headliner, so the other act in an "A & B"
+    // billing is in neither `canonical_artist` nor `canonical_supporting` and
+    // the backfill cannot see it. Production had 50 of these, including bands
+    // with upcoming Denver dates.
+    const venue = await seedVenue({ slug: `prune-cohead-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Knocked Loose',
+      canonicalArtist: 'knocked loose',
+      title: 'Knocked Loose & Denzel Curry',
+      canonicalTitle: 'knocked loose & denzel curry',
+      date: futureDate(),
+    })
+    await testDb.insert(artists).values({
+      name: 'Denzel Curry',
+      canonicalName: 'denzel curry',
+      slug: 'denzel-curry',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(0)
+    expect((await listArtists()).map((row) => row.canonicalName)).toEqual([
+      'denzel curry',
+    ])
+  })
+
+  it("keeps a co-headliner billed on tonight's show", async () => {
+    // The boundary case, and the one a UTC `CURRENT_DATE` gets wrong: every
+    // Denver evening falls on the next UTC day, so a show playing tonight
+    // reads as past for those hours and its co-headliner gets reaped.
+    const venue = await seedVenue({ slug: `prune-tonight-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Knocked Loose',
+      canonicalArtist: 'knocked loose',
+      title: 'Knocked Loose & Denzel Curry',
+      canonicalTitle: 'knocked loose & denzel curry',
+      date: denverToday(),
+    })
+    await testDb.insert(artists).values({
+      name: 'Denzel Curry',
+      canonicalName: 'denzel curry',
+      slug: 'denzel-curry',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(0)
+    expect((await listArtists()).map((row) => row.canonicalName)).toEqual([
+      'denzel curry',
+    ])
+  })
+
+  it('still reaps a name billed only in the title of a past show', async () => {
+    // The spare is for acts someone can still go and see. Without the date
+    // bound every name ever printed on a title would be permanently immune.
+    const venue = await seedVenue({ slug: `prune-past-title-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Knocked Loose',
+      canonicalArtist: 'knocked loose',
+      title: 'Knocked Loose & Denzel Curry',
+      canonicalTitle: 'knocked loose & denzel curry',
+      date: '2020-01-01',
+    })
+    await testDb.insert(artists).values({
+      name: 'Denzel Curry',
+      canonicalName: 'denzel curry',
+      slug: 'denzel-curry',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(1)
+    expect(await listArtists()).toEqual([])
+  })
+
+  it('still reaps a name billed only in the title of a hidden show', async () => {
+    const venue = await seedVenue({ slug: `prune-hidden-title-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Colorado Avalanche',
+      canonicalArtist: 'colorado avalanche',
+      title: 'Colorado Avalanche vs. Calgary Flames',
+      canonicalTitle: 'colorado avalanche vs. calgary flames',
+      hiddenFromConsumer: true,
+      date: futureDate(),
+    })
+    await testDb.insert(artists).values({
+      name: 'Calgary Flames',
+      canonicalName: 'calgary flames',
+      slug: 'calgary-flames',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(1)
+    expect(await listArtists()).toEqual([])
+  })
+
+  it('does not spare a name too short to be evidence of a booking', async () => {
+    // A three-character name is a substring of a large share of any title, so
+    // matching one says nothing about whether the act is booked.
+    const venue = await seedVenue({ slug: `prune-short-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Real Headliner',
+      canonicalArtist: 'real headliner',
+      title: 'Real Headliner: The Emo Revival Tour',
+      canonicalTitle: 'real headliner: the emo revival tour',
+      date: futureDate(),
+    })
+    await backfillArtists(testDb)
+    await testDb.insert(artists).values({
+      name: 'Emo',
+      canonicalName: 'emo',
+      slug: 'emo',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(1)
+    expect((await listArtists()).map((row) => row.canonicalName)).toEqual([
+      'real headliner',
+    ])
+  })
+
+  it('spares a name carrying LIKE and regex metacharacters', async () => {
+    // Canonical names are raw billing strings. `strpos` is what makes this
+    // safe; a LIKE pattern would read the underscore as a wildcard and a
+    // regex would choke on the dollar signs.
+    const venue = await seedVenue({ slug: `prune-meta-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Night Lovell',
+      canonicalArtist: 'night lovell',
+      title: 'Night Lovell w/ $uicideboy$ and Just_Graham',
+      canonicalTitle: 'night lovell w/ $uicideboy$ and just_graham',
+      date: futureDate(),
+    })
+    await testDb.insert(artists).values([
+      { name: '$uicideboy$', canonicalName: '$uicideboy$', slug: 'uicideboy' },
+      {
+        name: 'Just_Graham',
+        canonicalName: 'just_graham',
+        slug: 'just-graham',
+      },
+    ])
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(0)
+    // Sorted in JS rather than trusting the query's ORDER BY, because the
+    // database collation's handling of leading punctuation is not the thing
+    // under test here.
+    const names = (await listArtists()).map((row) => row.canonicalName)
+    expect([...names].sort()).toEqual(['$uicideboy$', 'just_graham'])
+  })
+
+  it('spares a name whose title billing carries diacritics', async () => {
+    // `canonical_name` is diacritic-stripped and the raw title is not, so a
+    // substring search across the two could never match. Both canonical
+    // columns come from the same pipeline, which is why the match reads
+    // `canonical_title`.
+    const venue = await seedVenue({ slug: `prune-diacritic-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Jónsi',
+      canonicalArtist: 'jonsi',
+      title: 'Jónsi & Sigur Rós',
+      canonicalTitle: 'jonsi & sigur ros',
+      date: futureDate(),
+    })
+    await testDb.insert(artists).values({
+      name: 'Sigur Rós',
+      canonicalName: 'sigur ros',
+      slug: 'sigur-ros',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(0)
+    expect((await listArtists()).map((row) => row.canonicalName)).toEqual([
+      'sigur ros',
+    ])
+  })
+
+  it('spares a name whose apostrophe the title canonicaliser dropped', async () => {
+    // The one rule the two canonicalisers disagree on: titles strip every
+    // apostrophe variant, artist names keep theirs.
+    const venue = await seedVenue({ slug: `prune-apostrophe-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Subtronics',
+      canonicalArtist: 'subtronics',
+      title: "Subtronics & Zed's Dead",
+      canonicalTitle: 'subtronics & zeds dead',
+      date: futureDate(),
+    })
+    await testDb.insert(artists).values({
+      name: "Zed's Dead",
+      canonicalName: "zed's dead",
+      slug: 'zeds-dead',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(0)
+    expect((await listArtists()).map((row) => row.canonicalName)).toEqual([
+      "zed's dead",
     ])
   })
 

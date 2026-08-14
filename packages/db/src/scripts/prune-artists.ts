@@ -15,10 +15,19 @@
  * Spotify match job, which spends quota searching for a performer that does
  * not exist.
  *
- * The keep-set is exactly what `backfillArtists` discovers: a canonical name
+ * The keep-set starts from what `backfillArtists` discovers: a canonical name
  * billed as headliner or support on at least one event an admin has not
- * hidden. That symmetry is the safety property — this can only delete a row
- * the backfill would decline to create.
+ * hidden. Symmetry with the backfill was the original safety property — this
+ * can only delete a row the backfill would decline to create.
+ *
+ * Symmetry turned out not to be enough, because the backfill has a blind spot
+ * of its own. It reads `canonical_artist` and `canonical_supporting`, and a
+ * co-headliner billed only in the title ("Knocked Loose & Denzel Curry") lands
+ * in neither. A dry run against production found 50 such rows among 272
+ * candidates — Denzel Curry, Ministry, Sleater-Kinney and The Black Dahlia
+ * Murder all had upcoming Denver shows and were all set to be deleted. So the
+ * keep-set is widened by `BILLED_IN_LIVE_TITLE` below, and stays widened until
+ * canonicalisation splits co-headliners properly.
  *
  * A delete rather than the `hidden` flag because deletion is now durable: the
  * write-through no longer projects a non-concert, so a reaped row does not
@@ -34,7 +43,7 @@ import { sql } from 'drizzle-orm'
 import type { Database } from '../client.js'
 
 export interface PruneArtistsResult {
-  /** Rows no unhidden event references. Equals `deleted` unless this was a dry run. */
+  /** Rows the predicate condemns. Equals `deleted` unless this was a dry run. */
   candidates: number
   /** Rows actually removed. Zero on a dry run. */
   deleted: number
@@ -71,6 +80,71 @@ const UNREFERENCED = sql`
   )
 `
 
+/**
+ * Shorter than this, a name is a substring of half the corpus rather than
+ * evidence of a booking. Four characters clears the initialisms that caused
+ * trouble in the production sample without sparing anything real.
+ */
+const MIN_BILLING_NAME_LENGTH = 4
+
+/**
+ * `events.date` is the show's local calendar date, so "today" has to be
+ * Denver's. Bare `CURRENT_DATE` resolves in the session timezone, which is UTC
+ * on hosted Postgres, and every Denver evening falls on the following UTC day.
+ * A show playing tonight would read as past for those hours, which is exactly
+ * when someone is most likely to be running this by hand. Matches
+ * `DENVER_TODAY` in crawler-core and `reconcile-drift-duplicates`.
+ */
+const DENVER_TODAY = sql`(NOW() AT TIME ZONE 'America/Denver')::date`
+
+/**
+ * `artists.canonical_name` rewritten into the same form `events.canonical_title`
+ * already holds, so the two can be compared directly.
+ *
+ * Both columns come from the same NFD + Latin-Extended + lowercase pipeline, so
+ * they agree on `Sigur Rós` → `sigur ros` without any help here. They disagree
+ * on exactly one rule: `canonicalizeTitle` strips every apostrophe variant so
+ * "Zed's Dead" and "Zeds Dead" collapse, and `canonicalizeArtist` does not. So
+ * the name gets that one pass applied to it and the two forms line up.
+ */
+const APOSTROPHE_STRIPPED_NAME = sql`regexp_replace(artists.canonical_name, '[''‘’‛]', '', 'g')`
+
+/**
+ * `true` when some live upcoming event names this artist in its title, even
+ * though canonicalisation never recorded them as headliner or support.
+ *
+ * Matched against `canonical_title` rather than the raw `title` so the two
+ * sides have been through the same normalisation. Against the raw title a name
+ * carrying a diacritic could never match: the artist row holds `sigur ros`
+ * while the title still reads "Sigur Rós", so the substring search misses and
+ * the band gets reaped.
+ *
+ * `strpos` rather than `LIKE` or a regex because canonical names are raw user
+ * data: `Just_Graham` carries a LIKE wildcard and `$UICIDEBOY$` carries regex
+ * metacharacters, and neither pattern language can be handed a name without
+ * escaping it first. A plain substring search has no such syntax to get wrong.
+ *
+ * Deliberately coarse, and deliberately biased. A substring hit is weak
+ * evidence — "pants" matches "DJ Housepants" — so this spares some rows that
+ * are genuinely dead. That is the direction to be wrong in: sparing junk costs
+ * one more cleanup pass, while deleting a band playing next month costs an
+ * empty artist page and the Spotify match that took quota to earn.
+ */
+const BILLED_IN_LIVE_TITLE = sql`
+  EXISTS (
+    SELECT 1
+    FROM events
+    WHERE events.hidden_from_consumer = false
+      AND events.status = 'upcoming'
+      AND events.date >= ${DENVER_TODAY}
+      AND length(${APOSTROPHE_STRIPPED_NAME}) >= ${MIN_BILLING_NAME_LENGTH}
+      AND strpos(events.canonical_title, ${APOSTROPHE_STRIPPED_NAME}) > 0
+  )
+`
+
+/** Unreferenced by the backfill's reckoning, and not billed in a live title. */
+const DOOMED = sql`${UNREFERENCED} AND NOT ${BILLED_IN_LIVE_TITLE}`
+
 export async function pruneArtists(
   database: Database,
   options: { dryRun: boolean },
@@ -78,7 +152,7 @@ export async function pruneArtists(
   const doomed = await database.execute<DoomedRow>(sql`
     SELECT name, slug, match_status
     FROM artists
-    WHERE ${UNREFERENCED}
+    WHERE ${DOOMED}
     ORDER BY name ASC
   `)
 
@@ -98,7 +172,7 @@ export async function pruneArtists(
   // this predicate is the one that decides.
   const removed = await database.execute<{ id: string }>(sql`
     DELETE FROM artists
-    WHERE ${UNREFERENCED}
+    WHERE ${DOOMED}
     RETURNING id
   `)
 
