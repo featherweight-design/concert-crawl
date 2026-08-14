@@ -15,11 +15,15 @@ import { and, eq, ne, sql } from 'drizzle-orm'
 import {
   CREW_EXPORT_KEY,
   USER_DATA_REGISTRY,
+  WATCHING_EXPORT_KEY,
   crewInvites,
   crewMembers,
   crewMutes,
   crews,
   db,
+  events,
+  userEvents,
+  venues,
 } from '@concert-crawl/db'
 import type { DbTransaction } from './db-executor.js'
 
@@ -152,8 +156,38 @@ export const collectUserData = async (
   }
 
   payload[CREW_EXPORT_KEY] = await collectCrews(userId)
+  payload[WATCHING_EXPORT_KEY] = await collectWatching(userId)
 
   return payload
+}
+
+/**
+ * Every show this user watched or attended, resolved to something readable.
+ *
+ * The join is required by #527, not a nicety: exporting a bare `event_id` UUID
+ * satisfies the letter of portability and none of its purpose, because the
+ * value is meaningless outside our database. `venue` is left-joined — an event
+ * can outlive its venue row (`venue_id` is `ON DELETE SET NULL`), and a missing
+ * venue must not drop the show from the user's copy.
+ */
+const collectWatching = async (userId: string): Promise<unknown[]> => {
+  const rows = await db
+    .select({
+      event_title: events.title,
+      event_date: events.date,
+      venue: venues.name,
+      status: userEvents.status,
+      saved_price: userEvents.savedPrice,
+      attending_at: userEvents.attendingAt,
+      created_at: userEvents.createdAt,
+    })
+    .from(userEvents)
+    .innerJoin(events, eq(userEvents.eventId, events.id))
+    .leftJoin(venues, eq(events.venueId, venues.id))
+    .where(eq(userEvents.userId, userId))
+    .orderBy(userEvents.createdAt)
+
+  return rows
 }
 
 /**

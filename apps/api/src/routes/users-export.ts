@@ -1,9 +1,14 @@
 import { Hono } from 'hono'
-import { getAuth } from '@hono/clerk-auth'
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import { collectUserData } from '../lib/user-data.js'
 import { checkRateLimit } from '../lib/rate-limit.js'
 
 export const usersExportRouter = new Hono()
+
+// The app mounts no global Clerk middleware — each authenticated router mounts
+// its own, as usersRouter does. Without this, getAuth returns null and the
+// route 401s for everyone.
+usersExportRouter.use('*', clerkMiddleware())
 
 const EXPORT_WINDOW_MS = 60 * 60 * 1000
 
@@ -41,6 +46,9 @@ usersExportRouter.get('/me/export', async (ctx) => {
   const data = await collectUserData(auth.userId)
 
   ctx.header('Content-Type', 'application/json; charset=utf-8')
+  // This body is the single most sensitive response the API produces. Keep it
+  // out of every cache between here and the browser.
+  ctx.header('Cache-Control', 'private, no-store')
   // Fixed filename. A date-stamped name reads as helpful and is not: the
   // timestamp is already inside the payload as `exportedAt`.
   ctx.header(

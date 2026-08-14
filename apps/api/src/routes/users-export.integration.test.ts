@@ -82,6 +82,28 @@ describe('GET /v1/users/me/export', () => {
     expect(crewRows[0]?.muted).toBe(true)
   })
 
+  // Same reason as crews: `user_events` carries exportKey null because the
+  // registry's single-table builder cannot reach `events` or `venues`, so
+  // nothing above would catch the join disappearing.
+  it('resolves watched shows to a title, date, and venue', async () => {
+    const userId = await seedUserWithDataEverywhere()
+    const payload = await readExport(userId)
+
+    const watchingSchema = z.array(
+      z.object({
+        event_title: z.string(),
+        event_date: z.string(),
+        venue: z.string(),
+      }),
+    )
+    const rows = watchingSchema.parse(payload.data['watching'])
+    expect(rows).toHaveLength(1)
+    // #527 asks for the join precisely so the export is not a list of UUIDs.
+    expect(rows[0]?.event_title).not.toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    )
+  })
+
   it('serves as a downloadable attachment', async () => {
     const userId = await seedUserWithDataEverywhere()
     authState.current = { userId }
@@ -90,6 +112,7 @@ describe('GET /v1/users/me/export', () => {
       'attachment; filename="concertcrawl-data-export.json"',
     )
     expect(res.headers.get('content-type')).toContain('application/json')
+    expect(res.headers.get('cache-control')).toBe('private, no-store')
   })
 
   it('never returns another user’s rows', async () => {

@@ -88,9 +88,11 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     disposition: 'delete',
     userIdColumn: 'user_id',
     otherUserIdColumns: [],
-    exportKey: 'watching',
-    exportColumns: ['event_id', 'status', 'saved_price', 'created_at'],
-    reason: 'Watching and going. The Privacy Policy already promises this.',
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'Watching and going. The Privacy Policy already promises this. ' +
+      'Excluded from the generic export — see WATCHING_EXPORT_KEY below.',
   },
   {
     tableName: 'user_artist_follows',
@@ -545,3 +547,18 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
 // is small but it is still a fact about other people, and a data-subject
 // right must not become a way to enumerate them.
 export const CREW_EXPORT_KEY = 'crews'
+
+// Watching is the second exception, for the same structural reason as crews.
+//
+// #527 specifies `event_id (+ event title/date/venue via join)`, and the join is
+// the whole point: a bare `event_id` UUID is not portable data. It resolves to
+// nothing a person can read, and it names a row in OUR database rather than a
+// night in theirs. The generic single-table builder cannot reach `events` or
+// `venues`, so `user_events` carries `exportKey: null` and collectUserData joins
+// it under this key.
+//
+// The join also carries `attending_at`, which the registry allowlist never
+// included: it postdates #527's table and is the difference between a show you
+// watched and a show you went to. That is the user's own fact about themselves
+// and belongs in their copy.
+export const WATCHING_EXPORT_KEY = 'watching'
