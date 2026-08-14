@@ -36,7 +36,7 @@ const CHANGES_BODY_TEXT =
 
 export const renderGiftingEndingNotice: TemplateRenderer<
   EmailTemplateVars['gifting_ending_notice']
-> = ({ gifterName, giftEndsAt }) => {
+> = ({ gifterName, giftEndsAt, unsubscribeUrl }) => {
   const sanitizedGifter =
     gifterName === null ? '' : sanitizeInlineText(gifterName)
   const gifterLabel = sanitizedGifter === '' ? GIFTER_FALLBACK : sanitizedGifter
@@ -82,7 +82,11 @@ export const renderGiftingEndingNotice: TemplateRenderer<
       }),
     ),
     row('10px 26px 4px', microcopy),
-    footerRow({ family: 'product', showManage: false }),
+    footerRow({
+      family: 'product',
+      showManage: false,
+      ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
+    }),
   ].join('\n')
 
   const text = [
@@ -109,6 +113,11 @@ export const renderGiftingEndingNotice: TemplateRenderer<
     subject: SUBJECT,
     preheader: PREHEADER,
     html: renderEmailShell({ preheader: PREHEADER, bodyRows }),
-    text: renderTextShell({ body: text, family: 'product', showManage: false }),
+    text: renderTextShell({
+      body: text,
+      family: 'product',
+      showManage: false,
+      ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
+    }),
   }
 }

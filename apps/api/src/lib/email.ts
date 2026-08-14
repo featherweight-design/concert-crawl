@@ -6,6 +6,7 @@ import {
   db,
   emailSendLog,
   emailTemplateConfig,
+  userNotificationPreferences,
   type EmailTemplateKey,
 } from '@concert-crawl/db'
 import { getTemplateRenderer } from '../emails/registry.js'
@@ -106,9 +107,35 @@ export async function sendAdminAlertEmail(
 export type TransactionalSendOutcome =
   'sent' | 'not-registered' | 'suppressed' | 'deduped' | 'failed'
 
+// The 'product' email family (#967) — the templates whose footers carry the
+// signed one-click unsubscribe. The gate lives here rather than at each call
+// site because an unsubscribe link that records a preference nothing reads is
+// worse than no link at all, and a fourth product template added later would
+// otherwise ship unguarded.
+//
+// Billing templates are deliberately absent: receipts and dunning are
+// transactional and stop only by cancelling the subscription.
+const PRODUCT_FAMILY_TEMPLATES: ReadonlySet<EmailTemplateKey> = new Set([
+  'winback',
+  'gifting_ending_notice',
+  'welcome_gifted',
+])
+
+// Absent row means the user never touched their preferences, which is the
+// default-on state — only an explicit false suppresses.
+const productEmailsAllowed = async (userId: string): Promise<boolean> => {
+  const [prefs] = await db
+    .select({ enabled: userNotificationPreferences.productEmailsEnabled })
+    .from(userNotificationPreferences)
+    .where(eq(userNotificationPreferences.userId, userId))
+    .limit(1)
+  return prefs?.enabled ?? true
+}
+
 /**
  * Transactional send pipeline (eng infra spec Part 2 §4.3): registry lookup →
- * per-template kill switch → dedupe-key idempotency → Clerk recipient
+ * product-family opt-out → per-template kill switch → dedupe-key idempotency →
+ * Clerk recipient
  * resolution → Resend send. NEVER throws — callers are webhook handlers whose
  * responses must not depend on email delivery.
  */
@@ -131,6 +158,28 @@ export async function sendTransactionalEmail<
         'sendTransactionalEmail: template not registered — skipping without a send-log row',
       )
       return 'not-registered'
+    }
+
+    if (
+      PRODUCT_FAMILY_TEMPLATES.has(templateKey) &&
+      !(await productEmailsAllowed(userId))
+    ) {
+      // Same claim-then-suppress shape as the kill switch: consuming the
+      // dedupe key means re-subscribing does not replay months of skipped
+      // winbacks at them.
+      await db
+        .insert(emailSendLog)
+        .values({ templateKey, userId, dedupeKey, status: 'suppressed' })
+        .onConflictDoUpdate({
+          target: [emailSendLog.templateKey, emailSendLog.dedupeKey],
+          set: { status: 'suppressed' },
+          setWhere: sql`${emailSendLog.status} = 'failed'`,
+        })
+      apiLogger.info(
+        logContext,
+        'sendTransactionalEmail: user unsubscribed from product emails — suppressed',
+      )
+      return 'suppressed'
     }
 
     const [config] = await db

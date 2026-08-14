@@ -43,7 +43,11 @@ const PORTAL_URL = 'https://billing.stripe.com/p/session/test_preview'
 // can never silently drop a template.
 const sampleVars: { [K in EmailTemplateKey]: EmailTemplateVars[K] } = {
   welcome_paid: { tier: 'founder', founderSeatNumber: 7 },
-  welcome_gifted: { gifterName: 'Sam', giftEndsAt: '2026-12-01T12:00:00Z' },
+  welcome_gifted: {
+    gifterName: 'Sam',
+    giftEndsAt: '2026-12-01T12:00:00Z',
+    unsubscribeUrl: null,
+  },
   renewal_receipt_monthly: {
     periodLabel: 'June 2026',
     amount: '$5.00',
@@ -77,8 +81,9 @@ const sampleVars: { [K in EmailTemplateKey]: EmailTemplateVars[K] } = {
   gifting_ending_notice: {
     gifterName: 'Sam',
     giftEndsAt: '2026-12-01T12:00:00Z',
+    unsubscribeUrl: null,
   },
-  winback: { tierName: 'Premium' },
+  winback: { tierName: 'Premium', unsubscribeUrl: null },
   spotify_digest: {
     shows: [
       {

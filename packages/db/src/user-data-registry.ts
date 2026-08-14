@@ -238,11 +238,9 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
       'artist_alerts_enabled',
       'artist_auto_watch',
       'weekly_digest_enabled',
+      'product_emails_enabled',
       'updated_at',
     ],
-    // NOTE: 'product_emails_enabled' is deliberately absent — that column is
-    // created in Task 5. Task 5 adds it to this allowlist. Listing it now
-    // would break Task 4's export tests against a column that does not exist.
     reason: 'Preferences for an account that no longer exists.',
   },
   {

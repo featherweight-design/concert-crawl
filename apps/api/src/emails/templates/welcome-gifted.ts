@@ -36,7 +36,7 @@ const CONTENT_PAD = '18px 26px 0'
 
 export const renderWelcomeGifted: TemplateRenderer<
   EmailTemplateVars['welcome_gifted']
-> = () => {
+> = ({ unsubscribeUrl }) => {
   const title = "You're already in."
   const sub =
     "Lifetime Premium, on us. No tier to pick, no card to add, nothing to manage. You showed up early; that's the whole price."
@@ -67,7 +67,11 @@ export const renderWelcomeGifted: TemplateRenderer<
       }),
     ),
     row('10px 26px 4px', microcopy),
-    footerRow({ family: 'product', showManage: false }),
+    footerRow({
+      family: 'product',
+      showManage: false,
+      ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
+    }),
   ].join('\n')
 
   const text = [
@@ -91,6 +95,11 @@ export const renderWelcomeGifted: TemplateRenderer<
     subject: SUBJECT,
     preheader: PREHEADER,
     html: renderEmailShell({ preheader: PREHEADER, bodyRows }),
-    text: renderTextShell({ body: text, family: 'product', showManage: false }),
+    text: renderTextShell({
+      body: text,
+      family: 'product',
+      showManage: false,
+      ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
+    }),
   }
 }

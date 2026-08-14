@@ -123,6 +123,7 @@ const TRANSACTIONAL_TEST_VARS: {
   welcome_gifted: {
     gifterName: 'Alex Rivera',
     giftEndsAt: '2026-08-15T00:00:00.000Z',
+    unsubscribeUrl: null,
   },
   renewal_receipt_monthly: {
     periodLabel: 'July 2026',
@@ -166,8 +167,9 @@ const TRANSACTIONAL_TEST_VARS: {
   gifting_ending_notice: {
     gifterName: 'Alex Rivera',
     giftEndsAt: '2026-07-20T00:00:00.000Z',
+    unsubscribeUrl: null,
   },
-  winback: { tierName: 'Premium' },
+  winback: { tierName: 'Premium', unsubscribeUrl: null },
   spotify_digest: {
     shows: [
       {

@@ -9,10 +9,19 @@
 
 import { createHmac, timingSafeEqual } from 'node:crypto'
 
-// Families with a signed one-click unsubscribe. billing/product keep linking
-// to Settings (see emails/layout.ts footer contract); only digest gets a
-// signed URL today.
-export const UNSUBSCRIBE_FAMILIES = ['digest'] as const
+// Families with a signed one-click unsubscribe.
+//
+// 'billing' is deliberately absent. Receipts, dunning, card-expiring, and
+// cancellation notices are transactional messages about an existing payment
+// relationship: CAN-SPAM exempts them, and suppressing a dunning notice would
+// cause the silent involuntary churn it was written to prevent. A user who
+// wants no billing mail cancels the subscription, which stops it at source.
+//
+// 'product' IS here because winback.ts is a commercial message whose primary
+// purpose is selling a subscription. That needs a working opt-out regardless
+// of the relationship, and gifting-ending-notice and welcome-gifted share the
+// family.
+export const UNSUBSCRIBE_FAMILIES = ['digest', 'product'] as const
 export type UnsubscribeFamily = (typeof UNSUBSCRIBE_FAMILIES)[number]
 
 const getSecret = (): string | undefined => {

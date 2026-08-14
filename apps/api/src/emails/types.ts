@@ -42,6 +42,10 @@ export interface EmailTemplateVars {
   welcome_gifted: {
     gifterName: string | null
     giftEndsAt: string | null
+    // Same contract as the digest: the caller builds the signed URL and passes
+    // null when EMAIL_UNSUBSCRIBE_SECRET is unset, so the footer falls back to
+    // the settings link rather than rendering a link that cannot verify.
+    unsubscribeUrl: string | null
   }
   renewal_receipt_monthly: ReceiptVars
   renewal_receipt_annual: ReceiptVars
@@ -74,12 +78,18 @@ export interface EmailTemplateVars {
     tierName: string | null
     accessEndsAt: string | null
   }
+  // The product-family templates carry a signed one-click opt-out (#967),
+  // same contract as the digest: null when EMAIL_UNSUBSCRIBE_SECRET is unset,
+  // and the footer falls back to the Settings link. welcome_gifted declares
+  // the same var above, so the whole family is consistent.
   gifting_ending_notice: {
     gifterName: string | null
     giftEndsAt: string
+    unsubscribeUrl: string | null
   }
   winback: {
     tierName: string | null
+    unsubscribeUrl: string | null
   }
   spotify_digest: {
     // All of the week's matched shows — the template features the first 5 and

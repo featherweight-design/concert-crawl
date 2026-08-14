@@ -117,6 +117,7 @@ describe('shell contract across all templates', () => {
       renderGiftingEndingNotice({
         gifterName: 'Sam',
         giftEndsAt: '2026-12-01T12:00:00Z',
+        unsubscribeUrl: null,
       }),
     ],
     [
@@ -124,10 +125,14 @@ describe('shell contract across all templates', () => {
       renderGiftingEndingNotice({
         gifterName: null,
         giftEndsAt: '2026-12-01T12:00:00Z',
+        unsubscribeUrl: null,
       }),
     ],
-    ['winback', renderWinback({ tierName: 'Premium' })],
-    ['winback (null tier)', renderWinback({ tierName: null })],
+    ['winback', renderWinback({ tierName: 'Premium', unsubscribeUrl: null })],
+    [
+      'winback (null tier)',
+      renderWinback({ tierName: null, unsubscribeUrl: null }),
+    ],
     [
       'spotify_digest',
       renderSpotifyDigest({
@@ -211,6 +216,7 @@ describe('welcome_gifted', () => {
     const rendered = renderWelcomeGifted({
       gifterName: 'Sam',
       giftEndsAt: null,
+      unsubscribeUrl: null,
     })
     expect(rendered.html).toContain('Lifetime Premium')
     expect(rendered.text).toContain('Lifetime Premium, on us')
@@ -218,13 +224,21 @@ describe('welcome_gifted', () => {
   })
 
   it('lists the four core Premium unlocks', () => {
-    const rendered = renderWelcomeGifted({ gifterName: null, giftEndsAt: null })
+    const rendered = renderWelcomeGifted({
+      gifterName: null,
+      giftEndsAt: null,
+      unsubscribeUrl: null,
+    })
     expect(rendered.html).toContain('Concerts: every show you attend, logged')
     expect(rendered.html).toContain('Calendar export — Apple + Google, one tap')
   })
 
   it('uses a product footer with no billing links (comped — no billing relationship)', () => {
-    const rendered = renderWelcomeGifted({ gifterName: null, giftEndsAt: null })
+    const rendered = renderWelcomeGifted({
+      gifterName: null,
+      giftEndsAt: null,
+      unsubscribeUrl: null,
+    })
     expect(rendered.html).toContain('Turn off product emails')
     expect(rendered.html).not.toContain('manage subscription')
     expect(rendered.html).not.toContain('?section=plan')
@@ -234,6 +248,7 @@ describe('welcome_gifted', () => {
     const rendered = renderWelcomeGifted({
       gifterName: 'Sam',
       giftEndsAt: null,
+      unsubscribeUrl: null,
     })
     expect(rendered.text).toContain("See everything you've got")
   })
@@ -562,6 +577,7 @@ describe('gifting_ending_notice', () => {
     const rendered = renderGiftingEndingNotice({
       gifterName: 'Sam',
       giftEndsAt: '2026-12-01T12:00:00Z',
+      unsubscribeUrl: null,
     })
     expect(rendered.html).toContain('Sam')
     expect(rendered.html).toContain('December 1, 2026')
@@ -573,6 +589,7 @@ describe('gifting_ending_notice', () => {
     const rendered = renderGiftingEndingNotice({
       gifterName: null,
       giftEndsAt: '2026-12-01T12:00:00Z',
+      unsubscribeUrl: null,
     })
     expect(rendered.html).toContain('A friend of the crawl')
     expect(rendered.text).toContain('A friend of the crawl')
@@ -582,6 +599,7 @@ describe('gifting_ending_notice', () => {
     const rendered = renderGiftingEndingNotice({
       gifterName: 'Sam\nhttps://evil.example',
       giftEndsAt: '2026-12-01T12:00:00Z',
+      unsubscribeUrl: null,
     })
     expect(rendered.text).toContain('Sam https://evil.example')
     expect(rendered.text).not.toContain('Sam\nhttps://evil.example')
@@ -592,6 +610,7 @@ describe('gifting_ending_notice', () => {
     const rendered = renderGiftingEndingNotice({
       gifterName: '<b>Evil</b>',
       giftEndsAt: '2026-12-01T12:00:00Z',
+      unsubscribeUrl: null,
     })
     expect(rendered.html).toContain('&lt;b&gt;Evil&lt;/b&gt;')
     expect(rendered.html).not.toContain('<b>Evil</b>')
@@ -601,6 +620,7 @@ describe('gifting_ending_notice', () => {
     const rendered = renderGiftingEndingNotice({
       gifterName: 'Sam',
       giftEndsAt: 'not-a-date',
+      unsubscribeUrl: null,
     })
     expect(rendered.html).toContain('Sam')
     expect(rendered.html).not.toContain('Invalid Date')
@@ -609,7 +629,10 @@ describe('gifting_ending_notice', () => {
 
 describe('winback', () => {
   it('carries no discount / coupon / percent-off offer', () => {
-    const rendered = renderWinback({ tierName: 'Premium' })
+    const rendered = renderWinback({
+      tierName: 'Premium',
+      unsubscribeUrl: null,
+    })
     const offerPattern = /discount|% off|coupon|\d+% /i
     // The winback reassurance copy deliberately says "no discount gimmick";
     // strip that negation so the ban targets an *actual* offer, not the promise
@@ -626,7 +649,10 @@ describe('winback', () => {
   })
 
   it('has exactly one CTA link in the body', () => {
-    const rendered = renderWinback({ tierName: 'Premium' })
+    const rendered = renderWinback({
+      tierName: 'Premium',
+      unsubscribeUrl: null,
+    })
     // Body links point at the plan page; the shell footer's unsubscribe links
     // go to /me and the product footer omits the manage link, so counting
     // plan-page anchors isolates the single body CTA.
@@ -637,10 +663,56 @@ describe('winback', () => {
   })
 
   it('renders the Premium name without leaking a null when tierName is null', () => {
-    const rendered = renderWinback({ tierName: null })
+    const rendered = renderWinback({ tierName: null, unsubscribeUrl: null })
     expect(rendered.html).not.toContain('null')
     expect(rendered.text).not.toContain('null')
     expect(rendered.html).toContain('Premium')
+  })
+})
+
+describe('product-family one-click unsubscribe (#967)', () => {
+  const PRODUCT_UNSUBSCRIBE_URL =
+    'https://api.example.com/v1/email/unsubscribe?uid=u1&family=product&token=abc'
+  const ESCAPED_PRODUCT_UNSUBSCRIBE_URL =
+    'https://api.example.com/v1/email/unsubscribe?uid=u1&amp;family=product&amp;token=abc'
+
+  it('links the winback footer to the signed URL', () => {
+    const rendered = renderWinback({
+      tierName: 'Premium',
+      unsubscribeUrl: PRODUCT_UNSUBSCRIBE_URL,
+    })
+    expect(rendered.html).toContain(ESCAPED_PRODUCT_UNSUBSCRIBE_URL)
+    expect(rendered.text).toContain(PRODUCT_UNSUBSCRIBE_URL)
+  })
+
+  it('links the gift-ending footer to the signed URL', () => {
+    const rendered = renderGiftingEndingNotice({
+      gifterName: 'Sam',
+      giftEndsAt: '2026-12-01T12:00:00Z',
+      unsubscribeUrl: PRODUCT_UNSUBSCRIBE_URL,
+    })
+    expect(rendered.html).toContain(ESCAPED_PRODUCT_UNSUBSCRIBE_URL)
+    expect(rendered.text).toContain(PRODUCT_UNSUBSCRIBE_URL)
+  })
+
+  it('links the gifted-welcome footer to the signed URL', () => {
+    const rendered = renderWelcomeGifted({
+      gifterName: 'Sam',
+      giftEndsAt: null,
+      unsubscribeUrl: PRODUCT_UNSUBSCRIBE_URL,
+    })
+    expect(rendered.html).toContain(ESCAPED_PRODUCT_UNSUBSCRIBE_URL)
+    expect(rendered.text).toContain(PRODUCT_UNSUBSCRIBE_URL)
+  })
+
+  it('falls back to Settings when the secret is unset', () => {
+    const rendered = renderWinback({
+      tierName: 'Premium',
+      unsubscribeUrl: null,
+    })
+    expect(rendered.html).toContain('Turn off product emails')
+    expect(rendered.html).not.toContain('/v1/email/unsubscribe')
+    expect(rendered.html).toContain('/me')
   })
 })
 

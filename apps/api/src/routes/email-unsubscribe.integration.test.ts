@@ -1,5 +1,6 @@
-// Integration tests for GET /v1/email/unsubscribe (#763 spec §8.2) — the
-// signed one-click digest opt-out. No auth (email links work logged-out).
+// Integration tests for GET /v1/email/unsubscribe — the signed one-click
+// opt-out for the digest family (#763 spec §8.2) and the product family
+// (#967). No auth (email links have to work logged-out).
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 vi.mock('@hono/clerk-auth', () => ({
@@ -181,5 +182,36 @@ describe('GET /v1/email/unsubscribe — integration', () => {
     )
     expect(res.status).toBe(503)
     expect(await getDigestEnabled('user_unsub_8')).toBe(true)
+  })
+
+  it('turns product_emails_enabled off and says what still arrives', async () => {
+    const token = buildUnsubscribeToken('user_product_1', 'product')
+    const res = await app.request(
+      `/v1/email/unsubscribe?uid=user_product_1&family=product&token=${token}`,
+    )
+    expect(res.status).toBe(200)
+    expect(await res.text()).toContain('Receipts and billing notices')
+    const rows = await testDb
+      .select()
+      .from(userNotificationPreferences)
+      .where(eq(userNotificationPreferences.userId, 'user_product_1'))
+    expect(rows[0]?.productEmailsEnabled).toBe(false)
+    // The product opt-out must not silently take the digest with it.
+    expect(rows[0]?.weeklyDigestEnabled).toBe(true)
+  })
+
+  // The token is bound to the family, so a digest footer link cannot be
+  // replayed to switch product emails off, or the reverse.
+  it('rejects a digest token replayed against the product family', async () => {
+    const token = buildUnsubscribeToken('user_product_2', 'digest')
+    const res = await app.request(
+      `/v1/email/unsubscribe?uid=user_product_2&family=product&token=${token}`,
+    )
+    expect(res.status).toBe(400)
+    const rows = await testDb
+      .select()
+      .from(userNotificationPreferences)
+      .where(eq(userNotificationPreferences.userId, 'user_product_2'))
+    expect(rows).toHaveLength(0)
   })
 })

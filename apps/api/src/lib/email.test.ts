@@ -229,6 +229,46 @@ describe('sendTransactionalEmail', () => {
     expect(mockSend).not.toHaveBeenCalled()
   })
 
+  // #967. The gate lives in sendTransactionalEmail rather than at each call
+  // site, so a product template added later cannot ship without it.
+  const winbackParams = {
+    templateKey: 'winback',
+    userId: 'user_1',
+    dedupeKey: 'winback:2026-08',
+    vars: { tierName: 'Premium', unsubscribeUrl: null },
+  } as const
+
+  it('suppresses a product-family send when the user opted out', async () => {
+    mockSelectLimit.mockResolvedValueOnce([{ enabled: false }])
+    const { sendTransactionalEmail } = await import('./email.js')
+
+    await expect(sendTransactionalEmail(winbackParams)).resolves.toBe(
+      'suppressed',
+    )
+
+    expect(mockInsertValues.mock.calls[0]![0]).toMatchObject({
+      templateKey: 'winback',
+      status: 'suppressed',
+    })
+    expect(mockSend).not.toHaveBeenCalled()
+  })
+
+  it('sends a product-family email when no preferences row exists', async () => {
+    mockSelectLimit.mockResolvedValueOnce([])
+    const { sendTransactionalEmail } = await import('./email.js')
+
+    await expect(sendTransactionalEmail(winbackParams)).resolves.toBe('sent')
+    expect(mockSend).toHaveBeenCalledOnce()
+  })
+
+  it('does not read the product preference for a billing template', async () => {
+    const { sendTransactionalEmail } = await import('./email.js')
+
+    await expect(sendTransactionalEmail(sendParams)).resolves.toBe('sent')
+    // One select only: the per-template kill switch.
+    expect(mockSelectLimit).toHaveBeenCalledOnce()
+  })
+
   it('skips the send when the dedupe key is already consumed', async () => {
     mockInsertReturning.mockResolvedValue([])
     const { sendTransactionalEmail } = await import('./email.js')

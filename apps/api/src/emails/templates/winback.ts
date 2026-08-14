@@ -28,9 +28,9 @@ const PREHEADER = "Here's what Premium would hand back, whenever you want it."
 
 const CONTENT_PAD = '18px 26px 0'
 
-export const renderWinback: TemplateRenderer<
-  EmailTemplateVars['winback']
-> = () => {
+export const renderWinback: TemplateRenderer<EmailTemplateVars['winback']> = ({
+  unsubscribeUrl,
+}) => {
   const title = "Denver's been busy."
   const sub =
     "Since you switched back to Free, Premium's quietly picked up a few things. Whenever you want them back, they're one tap away. No countdown, no discount gimmick. Just here when you are."
@@ -57,7 +57,11 @@ export const renderWinback: TemplateRenderer<
       }),
     ),
     row('10px 26px 4px', microcopy),
-    footerRow({ family: 'product', showManage: false }),
+    footerRow({
+      family: 'product',
+      showManage: false,
+      ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
+    }),
   ].join('\n')
 
   const text = [
@@ -79,6 +83,11 @@ export const renderWinback: TemplateRenderer<
     subject: SUBJECT,
     preheader: PREHEADER,
     html: renderEmailShell({ preheader: PREHEADER, bodyRows }),
-    text: renderTextShell({ body: text, family: 'product', showManage: false }),
+    text: renderTextShell({
+      body: text,
+      family: 'product',
+      showManage: false,
+      ...(unsubscribeUrl === null ? {} : { unsubscribeUrl }),
+    }),
   }
 }

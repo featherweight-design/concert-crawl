@@ -72,9 +72,10 @@ ${bodyRows}
 </body>
 </html>`
 
-// 'digest' is the #763 weekly Spotify digest family — its per-family footer
-// link is a signed one-click unsubscribe URL instead of Settings (spec §8.2),
-// supplied by the template via `unsubscribeUrl`.
+// 'digest' (#763 spec §8.2) and 'product' (#967) both carry a signed one-click
+// unsubscribe URL in place of the Settings link, supplied by the template via
+// `unsubscribeUrl`. 'billing' has no opt-out: receipts and dunning are
+// transactional and stop only when the subscription does.
 export type EmailFamily = 'billing' | 'product' | 'digest'
 
 export const familyUnsubscribeLabel = (family: EmailFamily): string =>

@@ -56,6 +56,7 @@ import {
 import { canUseFeature, USER_PLANS } from '@concert-crawl/entitlements'
 import type { PremiumFeature } from '@concert-crawl/entitlements'
 import { sendTransactionalEmail } from '../lib/email.js'
+import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js'
 import type { PaidEmailTier } from '../emails/types.js'
 import { apiLogger } from '../lib/logger.js'
 import { pruneNotifications } from '../lib/prune-notifications.js'
@@ -487,6 +488,7 @@ export const runGiftEndingNotices = async (now: Date): Promise<void> => {
             // populate a real gifter identity. Follow-up: #910.
             gifterName: null,
             giftEndsAt: expiresAt.toISOString(),
+            unsubscribeUrl: buildUnsubscribeUrl(row.userId, 'product') ?? null,
           },
         })
       }
@@ -657,7 +659,10 @@ export const runWinback = async (now: Date): Promise<void> => {
         templateKey: 'winback',
         userId: row.userId,
         dedupeKey: winbackDedupeKey(subscriptionId),
-        vars: { tierName: tierDisplayName(tier) },
+        vars: {
+          tierName: tierDisplayName(tier),
+          unsubscribeUrl: buildUnsubscribeUrl(row.userId, 'product') ?? null,
+        },
       })
     } catch (err) {
       apiLogger.error(

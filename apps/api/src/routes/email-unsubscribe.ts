@@ -1,11 +1,13 @@
 // GET /v1/email/unsubscribe — one-click per-family email opt-out (#763 §8.2).
 //
-// Linked from the digest email footer. No auth (email links must work
-// logged-out); the signed HMAC token IS the authorization — recomputed
-// server-side and compared in constant time. On match, turns the digest off
-// in both homes (see the digest case below) and renders a plain HTML
-// confirmation. Responds identically whether or not a connection row exists
-// (no account enumeration via unsubscribe links).
+// Linked from the digest and product email footers. No auth (email links must
+// work logged-out); the signed HMAC token IS the authorization — recomputed
+// server-side and compared in constant time. On match, records the opt-out and
+// renders a plain HTML confirmation. Responds identically whether or not a
+// preferences row exists (no account enumeration via unsubscribe links).
+//
+// The token is bound to the family, so a digest link cannot be replayed
+// against the product family or the reverse.
 
 import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
@@ -103,9 +105,11 @@ emailUnsubscribeRouter.get(
       )
     }
 
+    // What the confirmation page says depends on the family, and the switch
+    // below is the only place that knows which one ran.
+    let confirmationBody: string
+
     try {
-      // family is currently only 'digest'; the switch keeps additions
-      // explicit.
       switch (family) {
         case 'digest':
           // Both homes. The generalized digest reads the preferences table,
@@ -123,6 +127,21 @@ emailUnsubscribeRouter.get(
               target: userNotificationPreferences.userId,
               set: { weeklyDigestEnabled: false, updatedAt: new Date() },
             })
+          confirmationBody =
+            'The weekly digest is off. You can turn it back on any time from Settings → Notifications.'
+          break
+        case 'product':
+          // Only the preferences table. There is no legacy column for this
+          // family, and no Spotify connection is involved.
+          await db
+            .insert(userNotificationPreferences)
+            .values({ userId: uid, productEmailsEnabled: false })
+            .onConflictDoUpdate({
+              target: userNotificationPreferences.userId,
+              set: { productEmailsEnabled: false, updatedAt: new Date() },
+            })
+          confirmationBody =
+            'Product emails are off. Receipts and billing notices still come through.'
           break
       }
     } catch (err) {
@@ -142,11 +161,6 @@ emailUnsubscribeRouter.get(
     }
 
     apiLogger.info({ uid, family }, 'email unsubscribe applied')
-    return ctx.html(
-      confirmationPage(
-        'You’re unsubscribed.',
-        'The weekly digest is off. You can turn it back on any time from Settings → Notifications.',
-      ),
-    )
+    return ctx.html(confirmationPage('You’re unsubscribed.', confirmationBody))
   },
 )
