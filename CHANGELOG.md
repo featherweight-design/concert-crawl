@@ -1,3 +1,10 @@
+# [1.247.0](https://github.com/HartiganHM/concert-crawl/compare/v1.246.0...v1.247.0) (2026-08-14)
+
+
+### Features
+
+* **admin:** acknowledge a fault from the crawl inspector ([#1567](https://github.com/HartiganHM/concert-crawl/issues/1567)) ([37b4bd4](https://github.com/HartiganHM/concert-crawl/commit/37b4bd43996e8b4395e0552ec0b1c002aae9a21d))
+
 # [1.246.0](https://github.com/HartiganHM/concert-crawl/compare/v1.245.0...v1.246.0) (2026-08-14)
 
 
