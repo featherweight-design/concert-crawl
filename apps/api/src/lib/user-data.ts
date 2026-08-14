@@ -1,4 +1,7 @@
-// Account deletion, driven by USER_DATA_REGISTRY (#907).
+// Account deletion (#907) and data export (#527), both driven by
+// USER_DATA_REGISTRY. They live in one file because they read one list: a
+// table that is cleared on account closure is a table that appears in the
+// export, and keeping the two side by side is what stops them drifting.
 //
 // The registry is the cascade. There are no foreign keys from application
 // tables to the Clerk user id — it is a bare `text` column everywhere — so
@@ -10,9 +13,11 @@
 
 import { and, eq, ne, sql } from 'drizzle-orm'
 import {
+  CREW_EXPORT_KEY,
   USER_DATA_REGISTRY,
   crewInvites,
   crewMembers,
+  crewMutes,
   crews,
   db,
 } from '@concert-crawl/db'
@@ -108,4 +113,72 @@ const reassignCrews = async (
         .where(eq(crews.id, crew.id))
     }
   }
+}
+
+/**
+ * Gathers every row keyed to this user, under the registry's `exportKey`
+ * names, plus the one key the registry cannot express (`CREW_EXPORT_KEY`).
+ *
+ * ⛔ Never `SELECT *` here. #527 requires the export to exclude the Clerk user
+ * id, internal ids, admin notes, and raw tokens; a star select would ship all
+ * of them, and would silently ship whatever column the next migration adds.
+ * `exportColumns` is the allowlist.
+ */
+export const collectUserData = async (
+  userId: string,
+): Promise<Record<string, unknown[]>> => {
+  const payload: Record<string, unknown[]> = {}
+
+  for (const entry of USER_DATA_REGISTRY) {
+    if (
+      entry.exportKey === null ||
+      entry.exportColumns === null ||
+      entry.userIdColumn === null
+    ) {
+      continue
+    }
+
+    const columns = sql.join(
+      entry.exportColumns.map((name) => sql.identifier(name)),
+      sql`, `,
+    )
+
+    // postgres-js returns the row array directly; there is no `.rows` wrapper.
+    const rows = await db.execute(
+      sql`SELECT ${columns} FROM ${sql.identifier(entry.tableName)}
+          WHERE ${sql.identifier(entry.userIdColumn)} = ${userId}`,
+    )
+    payload[entry.exportKey] = [...rows]
+  }
+
+  payload[CREW_EXPORT_KEY] = await collectCrews(userId)
+
+  return payload
+}
+
+/**
+ * The crews this user belongs to: the crew's name, when THEY joined, and
+ * whether THEY muted it.
+ *
+ * ⛔ Nothing about the other members, not even a count. Hugh, 2026-08-13:
+ * "Never ever export other members identities." A data-subject right must not
+ * become a way to enumerate people who did not ask for anything.
+ */
+const collectCrews = async (userId: string): Promise<unknown[]> => {
+  const rows = await db
+    .select({
+      name: crews.name,
+      joined_at: crewMembers.joinedAt,
+      muted: sql<boolean>`${crewMutes.id} IS NOT NULL`,
+    })
+    .from(crewMembers)
+    .innerJoin(crews, eq(crewMembers.crewId, crews.id))
+    .leftJoin(
+      crewMutes,
+      and(eq(crewMutes.crewId, crews.id), eq(crewMutes.userId, userId)),
+    )
+    .where(eq(crewMembers.userId, userId))
+    .orderBy(crewMembers.joinedAt)
+
+  return rows
 }

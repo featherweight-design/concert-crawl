@@ -12,6 +12,7 @@ import { submissionsRouter } from './submissions.js'
 import { waitlistRouter } from './waitlist.js'
 import { authRouter } from './auth/index.js'
 import { usersRouter } from './users.js'
+import { usersExportRouter } from './users-export.js'
 import { watchingRouter } from './watching.js'
 import { attendingRouter } from './attending.js'
 import { historyRouter } from './history.js'
@@ -51,6 +52,7 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/waitlist', waitlistRouter)
   app.route('/v1/auth', authRouter)
   app.route('/v1/users', usersRouter)
+  app.route('/v1/users', usersExportRouter)
   app.route('/v1/watching', watchingRouter)
   app.route('/v1/attending', attendingRouter)
   app.route('/v1/history', historyRouter)
