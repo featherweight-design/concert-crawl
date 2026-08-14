@@ -7,6 +7,7 @@ import {
   COVERAGE_GAP_RATIO,
   COVERAGE_MIN_CATALOGUE,
   HORIZON_SHRINK_DAYS,
+  matchesAcknowledgement,
   PINNED_MIN_COUNT,
   PINNED_RUN_COUNT,
   SOFT_DROP_RATIO,
@@ -473,5 +474,229 @@ describe('evaluateCoverageCondition', () => {
       upcomingCount: 14,
       uncoveredCount: 5,
     })
+  })
+})
+
+describe('matchesAcknowledgement', () => {
+  const key = (
+    condition: string,
+    evidenceKind: string | null,
+    evidenceValue: string | null,
+  ) => ({ condition, evidenceKind, evidenceValue })
+
+  it('suppresses Summit while its pinned count holds at 36', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'pinned_count', '36'),
+        key('ceiling', 'pinned_count', '36'),
+      ),
+    ).toBe(true)
+  })
+
+  it('re-fires Summit when the pinned count moves to 41', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'pinned_count', '41'),
+        key('ceiling', 'pinned_count', '36'),
+      ),
+    ).toBe(false)
+  })
+
+  it('suppresses Ball Arena while its pinned count holds at 86', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'pinned_count', '86'),
+        key('ceiling', 'pinned_count', '86'),
+      ),
+    ).toBe(true)
+  })
+
+  it('re-fires Ball Arena when the pinned count moves to 130', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'pinned_count', '130'),
+        key('ceiling', 'pinned_count', '86'),
+      ),
+    ).toBe(false)
+  })
+
+  it('suppresses Red Rocks when next season ends near the same point in the year', () => {
+    // Acked 2026-11-15; the 2027 season ends six days earlier. Comparing the
+    // raw dates would read ~359 days and re-fire every single year, which is
+    // the entire reason the match is on position in the annual cycle.
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'horizon_shrank', '2027-11-09'),
+        key('ceiling', 'horizon_shrank', '2026-11-15'),
+      ),
+    ).toBe(true)
+  })
+
+  it('re-fires Red Rocks when the horizon collapses mid-season', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'horizon_shrank', '2026-09-02'),
+        key('ceiling', 'horizon_shrank', '2026-11-15'),
+      ),
+    ).toBe(false)
+  })
+
+  it('re-fires Red Rocks when the horizon drifts into the next January', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'horizon_shrank', '2027-01-20'),
+        key('ceiling', 'horizon_shrank', '2026-11-15'),
+      ),
+    ).toBe(false)
+  })
+
+  it('matches a date in the acknowledged year itself, not only shifted years', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'horizon_shrank', '2026-11-30'),
+        key('ceiling', 'horizon_shrank', '2026-11-15'),
+      ),
+    ).toBe(true)
+  })
+
+  it('matches a date two years on, since every year lands on the same position', () => {
+    // The candidate set is {y-1, y, y+1} relative to the *current* date's year,
+    // so the acknowledged 2026-11-15 is reached from 2028 via 2028-11-15.
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'horizon_shrank', '2028-11-20'),
+        key('ceiling', 'horizon_shrank', '2026-11-15'),
+      ),
+    ).toBe(true)
+  })
+
+  it('suppresses at exactly the tolerance boundary', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'horizon_shrank', '2026-12-30'),
+        key('ceiling', 'horizon_shrank', '2026-11-15'),
+      ),
+    ).toBe(true)
+  })
+
+  it('re-fires one day past the tolerance boundary', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'horizon_shrank', '2026-12-31'),
+        key('ceiling', 'horizon_shrank', '2026-11-15'),
+      ),
+    ).toBe(false)
+  })
+
+  it('clamps a Feb 29 acknowledgement to Feb 28 in a non-leap year', () => {
+    // Substituting 2027 into 2028-02-29 yields an invalid date that Date.parse
+    // silently rolls to March 1, shifting the comparison by a day.
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'horizon_shrank', '2027-02-28'),
+        key('ceiling', 'horizon_shrank', '2028-02-29'),
+      ),
+    ).toBe(true)
+  })
+
+  it('does not suppress a different condition on the same venue', () => {
+    // A seasonal venue acked for its autumn ceiling still reports going dark
+    // in winter — same underlying reason, different fault, still worth seeing.
+    expect(
+      matchesAcknowledgement(
+        key('wentDark', null, '0'),
+        key('ceiling', 'pinned_count', '36'),
+      ),
+    ).toBe(false)
+  })
+
+  it('does not suppress a different evidence kind within ceiling', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'horizon_shrank', '36'),
+        key('ceiling', 'pinned_count', '36'),
+      ),
+    ).toBe(false)
+  })
+
+  it('suppresses wentDark at the acknowledged usable count', () => {
+    expect(
+      matchesAcknowledgement(
+        key('wentDark', null, '0'),
+        key('wentDark', null, '0'),
+      ),
+    ).toBe(true)
+  })
+
+  it('suppresses coverage at the acknowledged uncovered count', () => {
+    expect(
+      matchesAcknowledgement(
+        key('coverage', null, '129'),
+        key('coverage', null, '129'),
+      ),
+    ).toBe(true)
+  })
+
+  it('suppresses failed at the acknowledged error class', () => {
+    expect(
+      matchesAcknowledgement(
+        key('failed', null, 'timeout'),
+        key('failed', null, 'timeout'),
+      ),
+    ).toBe(true)
+  })
+
+  it('re-fires failed when the error class changes', () => {
+    expect(
+      matchesAcknowledgement(
+        key('failed', null, 'dns'),
+        key('failed', null, 'timeout'),
+      ),
+    ).toBe(false)
+  })
+
+  it('suppresses blocked when both the acknowledged and current status are absent', () => {
+    expect(
+      matchesAcknowledgement(
+        key('blocked', null, null),
+        key('blocked', null, null),
+      ),
+    ).toBe(true)
+  })
+
+  it('re-fires blocked when a status appears against a null acknowledgement', () => {
+    expect(
+      matchesAcknowledgement(
+        key('blocked', null, '403'),
+        key('blocked', null, null),
+      ),
+    ).toBe(false)
+  })
+
+  it('re-fires blocked when the status disappears against a recorded one', () => {
+    expect(
+      matchesAcknowledgement(
+        key('blocked', null, null),
+        key('blocked', null, '403'),
+      ),
+    ).toBe(false)
+  })
+
+  it('fails closed on an unparseable acknowledged date', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'horizon_shrank', '2026-11-15'),
+        key('ceiling', 'horizon_shrank', 'not-a-date'),
+      ),
+    ).toBe(false)
+  })
+
+  it('fails closed on an unparseable current date', () => {
+    expect(
+      matchesAcknowledgement(
+        key('ceiling', 'horizon_shrank', 'whenever'),
+        key('ceiling', 'horizon_shrank', '2026-11-15'),
+      ),
+    ).toBe(false)
   })
 })

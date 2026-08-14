@@ -454,6 +454,18 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
       'customer column of any kind.',
   },
   {
+    tableName: 'venue_fault_acknowledgements',
+    disposition: 'none',
+    userIdColumn: null,
+    otherUserIdColumns: ['acknowledged_by'],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'Operator judgement about a venue’s crawl behaviour. `acknowledged_by` is ' +
+      'the admin who made the call, not a customer, and stays as the record of ' +
+      'who acted — same basis as crawl_triggers.triggered_by.',
+  },
+  {
     tableName: 'invite_codes',
     disposition: 'anonymize',
     userIdColumn: 'used_by',

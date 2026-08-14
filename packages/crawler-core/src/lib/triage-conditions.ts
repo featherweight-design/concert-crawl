@@ -71,6 +71,13 @@ export const COVERAGE_MIN_CATALOGUE = 10
 // catching is a venue whose whole catalogue went URL-less.
 export const COVERAGE_GAP_RATIO = 0.3
 
+// How far an acknowledged horizon date may move and still count as the same
+// seasonal event. Deliberately NOT derived from HORIZON_SHRINK_DAYS: that one
+// measures a collapse against the venue's own recent best, this one measures
+// year-over-year wobble in a season boundary that was never fixed to a date.
+// A season end that moves by more than 45 days is a real change worth seeing.
+export const HORIZON_ACK_TOLERANCE_DAYS = 45
+
 // ---------------------------------------------------------------------------
 // Went dark / dropped sharply
 // ---------------------------------------------------------------------------
@@ -355,4 +362,76 @@ export const evaluateCoverageCondition = (
     uncoveredCount,
     uncoveredPercent: uncoveredRatio * 100,
   }
+}
+
+// ---------------------------------------------------------------------------
+// Acknowledgement matching
+// ---------------------------------------------------------------------------
+
+// An operator can acknowledge a fault they have judged expected and unfixable.
+// The acknowledgement records the *evidence value* they saw, not a dismissal,
+// so the fault returns the moment that value moves. This is the comparison.
+//
+// It operates on a normalized key rather than on evidence objects: this package
+// has no concept of BlockedEvidence or FailedEvidence, which live in the API's
+// response shapes, and importing them here would invert the dependency. The API
+// derives the key; this file owns the rule.
+export interface AcknowledgementKey {
+  // A bare string rather than the TriageCondition union, which is declared in
+  // apps/api. Only equality is ever needed here; the API side enforces the type.
+  condition: string
+  evidenceKind: string | null
+  evidenceValue: string | null
+}
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/
+
+// Rebuilds a calendar date in a different year, clamping Feb 29 to Feb 28 when
+// the target year is not a leap one. Without the clamp `Date.parse` silently
+// rolls the invalid date into March and shifts the comparison by a day.
+const withYear = (isoDate: string, year: number): string => {
+  const monthDay = isoDate.slice(5)
+  const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0
+  const clamped = monthDay === '02-29' && !isLeap ? '02-28' : monthDay
+  return `${year}-${clamped}`
+}
+
+// Horizon dates are seasonal boundaries that drift year to year, so they match
+// on position in the annual cycle. Comparing the raw dates would put two
+// consecutive Novembers ~359 days apart and re-fire the fault every year, which
+// is precisely what the tolerance band exists to prevent.
+const matchesHorizonDate = (current: string, acked: string): boolean => {
+  if (!ISO_DATE.test(current) || !ISO_DATE.test(acked)) return false
+
+  const currentYear = Number(current.slice(0, 4))
+  const candidates = [currentYear - 1, currentYear, currentYear + 1].map(
+    (year) => withYear(acked, year),
+  )
+
+  return candidates.some(
+    (candidate) =>
+      Math.abs(differenceInDays(current, candidate)) <=
+      HORIZON_ACK_TOLERANCE_DAYS,
+  )
+}
+
+export const matchesAcknowledgement = (
+  current: AcknowledgementKey,
+  acked: AcknowledgementKey,
+): boolean => {
+  if (current.condition !== acked.condition) return false
+  if (current.evidenceKind !== acked.evidenceKind) return false
+
+  // A null value is a legal acknowledgement meaning "no figure recorded" — a
+  // blocked venue that never returned an HTTP status. It matches an absent
+  // figure and nothing else.
+  if (acked.evidenceValue === null || current.evidenceValue === null) {
+    return acked.evidenceValue === current.evidenceValue
+  }
+
+  if (acked.evidenceKind === 'horizon_shrank') {
+    return matchesHorizonDate(current.evidenceValue, acked.evidenceValue)
+  }
+
+  return current.evidenceValue === acked.evidenceValue
 }
