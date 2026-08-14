@@ -56,9 +56,9 @@ The rule is stated as one sentence deliberately, so a future session can apply i
 
 ### 2.1 — The chain applies in every slot, including heroes
 
-Restricting the chain to small square avatar slots was considered and rejected. The large slots — the `EventRow` tile, the 16:9 `HeroEventCard`, and the 300px full-bleed hero on the event detail page — are where the 62% figure is most visible, so excluding them forfeits most of the win.
+Restricting the chain to small square avatar slots was considered and rejected. The large slots — the `EventRow` tile, `HeroEventCard`'s full-width 180px banner, and the 300px full-bleed hero on the event detail page — are where the 62% figure is most visible, so excluding them forfeits most of the win.
 
-The cost is real and is handed to Design rather than waved away: a Spotify press portrait is square and usually a face, and it must occupy a 16:9 card and a full-bleed banner without reading as an artist profile pasted into a concert surface. §4 states this as an objective problem. Shipping a bare centre-crop into a 300px banner is **not** an acceptable outcome — the treatment is a precondition of the chain reaching hero slots, not a follow-up.
+The cost is real and is handed to Design rather than waved away: a Spotify press portrait is square and usually a face, and it must occupy a wide banner card and a full-bleed hero without reading as an artist profile pasted into a concert surface. §4 states this as an objective problem. Shipping a bare centre-crop into a 300px banner is **not** an acceptable outcome — the treatment is a precondition of the chain reaching hero slots, not a follow-up.
 
 ### 2.2 — Headliner only; never walk down the bill
 
@@ -76,7 +76,15 @@ Rejected. "Venue image wins" is an event-surface rule and does not survive the t
 
 ### 2.4 — IdentityArt is neutral chrome, not an identity mark
 
-IdentityArt is permanent on roughly 30% of event surfaces and 55% of artist pages. It should be retuned to recede — quieter, lower contrast, less palette variance, closer to a considered empty state than to decoration competing for attention. Its job is to let the eye pass to the title and date, which carry the actual information.
+IdentityArt is permanent on roughly 30% of event surfaces and 55% of artist pages. It should be retuned to recede — closer to a considered empty state than to decoration competing for attention. Its job is to let the eye pass to the title and date, which carry the actual information.
+
+**Amended 2026-08-14, after the R3 design round.** This section originally asked for three things: quieter, lower contrast, and less palette variance. Design produced the evidence rather than the assertion — `design_handoff_event_artist_imagery/Slots and States.html` §9 renders the four loudest palette/template combinations in the registry at 44 / 56 / 112 / 208, shipped beside retuned, and again inside real rows. The read that survived it:
+
+- **Quieter — accepted and delivered.** The monogram is removed at every scale and grain drops 0.10 → 0.06.
+- **Lower contrast and less palette variance — declined, on evidence.** The palettes are unchanged. At 44–56 the palette reads as a colour accent and the row's hierarchy holds; at 112–208 the geometry becomes the subject, which is what the following shelf and the artist page want. The original ask assumed the art was competing with the title, but what was actually competing was a square source stretched across a wide band — which decision 1 of the handoff (wide slots stop being image slots) removes at the source.
+- **One cut, taken:** `mesh` at **hero** scale is dropped from the template pool. Mesh is a gradient field with no geometry to resolve into, so scale only makes it a bigger gradient; it is the only combination in the registry that fails its own test. Mesh remains available at tile and micro.
+
+So the retune is: monogram off, grain 0.06, panel hairline on, and no `mesh` at hero. Palettes and contrast are unchanged and are not to be re-opened without new evidence.
 
 The opposite direction — leaning in, treating the generated art as the artist's sigil with the monogram promoted and the palette strengthened — was considered and rejected on two grounds:
 
@@ -129,7 +137,7 @@ Both remote sources are hotlinked today with no proxy, no CDN, and no `images.re
 
 The copy-pasteable prompt lives at `docs/superpowers/specs/2026-08-08-imagery-identityart-design-handoff-prompt.md`. It states two objective problems:
 
-1. A square press portrait must occupy a 16:9 card and a 300px full-bleed hero without reading as an artist profile in a concert surface. ~32% of upcoming events hit this.
+1. A square press portrait must occupy a wide banner card and a 300px full-bleed hero without reading as an artist profile in a concert surface. ~32% of upcoming events hit this.
 2. IdentityArt is permanent on ~30% of event surfaces and ~55% of artist pages, and must be retuned as neutral chrome.
 
 Out of scope for Design: the source priority (locked in §2) and all copy (a copy-writer call per `design-pipeline.md` § "Who owns copy").

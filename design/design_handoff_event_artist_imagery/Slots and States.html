@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Slots &amp; states</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html,body{margin:0;padding:0;background:#f0eee9;font-family:Inter,system-ui,sans-serif}
+  *{box-sizing:border-box}
+  a{color:#4a3fd1}a:hover{color:#2d24a8}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="spotify-shared.jsx"></script>
+<script type="text/babel" src="cc-tip.jsx"></script>
+<script type="text/babel" src="row-data.jsx"></script>
+<script type="text/babel" src="imagery-sources.jsx"></script>
+<script type="text/babel" src="imagery-slots.jsx"></script>
+<script type="text/babel" src="event-row.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEME_KEYS, CC_THEMES, ccTokenVars } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { EventRow, R_SHOWS } = window;
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio } = window;
+const { EAI_EVENTS } = window;
+const { Panel, RowTile, AvatarSlot, useSlotSource } = window;
+
+const MONO = "'JetBrains Mono', ui-monospace, monospace";
+
+// name → what that event holds. Every surface below reads the chain through
+// useSlotSource; nothing reimplements the lookup.
+const SL_EVENTS = {};
+R_SHOWS.forEach((s) => { SL_EVENTS[s.artist] = EAI_EVENTS[s.id] || {}; });
+window.SL_EVENTS = SL_EVENTS;
+
+// Which remotes are dead, for the whole subtree.
+const DeadCtx = React.createContext({});
+const DEAD_MODES = {
+  none:     {},
+  artwork:  { artwork: true },
+  portrait: { portrait: true },
+  both:     { artwork: true, portrait: true },
+};
+
+function SlotShim({ name }) {
+  const dead = React.useContext(DeadCtx);
+  const r = useSlotSource(name, dead);
+  return <Panel name={name} size="100%" radius={window.SL_RADIUS.row}
+    source={r.source} place={r.place} tone={r.tone} art={r.art}/>;
+}
+window.IdentityArt = SlotShim;   // the shipped EventRow renders through Panel, unforked
+
+function PhoneStage({ theme, width = 390, height = 700, pad = 14, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>
+        <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "var(--bg)", padding: `48px ${pad}px 0` }}>{children}</div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function BareStage({ theme, pad = 22, width, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad, display: "flex", alignItems: "flex-start", justifyContent: "center", overflow: "hidden" }}>
+        <div style={{ width: width || "100%" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+function Note({ children }) {
+  return <div style={{ fontFamily: "Inter, system-ui", fontSize: 12, color: "var(--fg-muted)", lineHeight: 1.5, textWrap: "pretty" }}>{children}</div>;
+}
+function Eyebrow({ children, tone = "var(--fg-subtle)" }) {
+  return <div style={{ fontFamily: MONO, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: tone }}>{children}</div>;
+}
+// The chain a slot walked, rendered as a receipt.
+function Chain({ chain, landed }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 5, flexWrap: "wrap", fontFamily: MONO, fontSize: 9, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+      {chain.map((c, i) => {
+        const dead = c.includes("✗");
+        const isLanded = !dead && c.replace(/\s.*/, "") === landed;
+        return (
+          <React.Fragment key={c + i}>
+            {i > 0 && <span style={{ color: "var(--fg-subtle)" }}>→</span>}
+            <span style={{
+              padding: "2px 6px", borderRadius: 4,
+              color: dead ? "var(--warning)" : isLanded ? "var(--signal)" : "var(--fg-subtle)",
+              border: `1px solid ${dead ? "color-mix(in oklch, var(--warning) 45%, transparent)" : isLanded ? "var(--signal)" : "var(--border)"}`,
+              background: isLanded ? "color-mix(in oklch, var(--signal) 10%, transparent)" : "transparent",
+              textDecoration: dead ? "line-through" : "none",
+            }}>{c.replace(" ✗", "")}</span>
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
+const MIXED = ["Holdfast.", "Masego", "Four Tet", "Hermanos Gutiérrez", "Cassandra Jenkins", "Geese"];
+
+function List({ surface = "browse", dead = {}, narrow = false, count = 6 }) {
+  const shows = MIXED.slice(0, count).map((n) => R_SHOWS.find((s) => s.artist === n));
+  return (
+    <DeadCtx.Provider value={dead}>
+      <div style={{ display: "flex", flexDirection: "column", gap: surface === "watching" ? 8 : 0 }}>
+        {shows.map((s, i) => (
+          <div key={s.id} style={{ borderTop: i && surface !== "watching" ? "1px solid var(--border)" : "none" }}>
+            <EventRow show={s} surface={surface} density="cozy" narrow={narrow}/>
+          </div>
+        ))}
+      </div>
+    </DeadCtx.Provider>
+  );
+}
+
+function SmallRow({ name, dead }) {
+  const r = useSlotSource(name, dead);
+  const show = R_SHOWS.find((x) => x.artist === name);
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "40px minmax(0,1fr) auto", gap: 10, alignItems: "center", padding: "8px 0" }}>
+      <RowTile name={name} size={40} source={r.source} place={r.place} tone={r.tone} art={r.art}/>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+        <div style={{ fontFamily: MONO, fontSize: 10.5, color: "var(--fg-muted)" }}>{show.dateLabel} · {show.venue}</div>
+      </div>
+      <span style={{ fontWeight: 800, fontSize: 14, color: "var(--fg)" }}>{show.price ? `$${show.price.amount}` : "tba"}</span>
+    </div>
+  );
+}
+function SearchRow({ name, dead }) {
+  const r = useSlotSource(name, dead, "artist");
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 0" }}>
+      <AvatarSlot name={name} size={40} source={r.source} place={r.place} tone={r.tone} art={r.art}/>
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: "var(--fg)" }}>{name}</div>
+        <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>artist</div>
+      </div>
+    </div>
+  );
+}
+
+// One failure outcome, at three sizes, with its chain receipt.
+function FailCase({ name, dead, label, landed, note }) {
+  const r = useSlotSource(name, dead);
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <Eyebrow tone={landed === "generated" ? "var(--warning)" : "var(--signal)"}>{label}</Eyebrow>
+      <Chain chain={r.chain} landed={landed}/>
+      <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+        <Panel name={name} size={104} source={r.source} place={r.place} tone={r.tone} art={r.art}/>
+        <Panel name={name} size={56} source={r.source} place={r.place} tone={r.tone} art={r.art}/>
+        <Panel name={name} size={40} source={r.source} place={r.place} tone={r.tone} art={r.art}/>
+      </div>
+      <Note>{note}</Note>
+    </div>
+  );
+}
+
+// ── Retune evidence ─────────────────────────────────────────────────────────
+// Deliberately the loudest palettes and templates in the registry, not the
+// flattering ones: p2 saffron+crimson, p4 ember+aqua, p6 violet+lime, p0
+// fuchsia+cobalt, on mesh and halftone.
+const LOUD = [
+  { p: "p2", t: "mesh",     label: "p2 saffron + crimson · mesh" },
+  { p: "p6", t: "halftone", label: "p6 violet + lime · halftone" },
+  { p: "p4", t: "stripes",  label: "p4 ember + aqua · stripes" },
+  { p: "p0", t: "mesh",     label: "p0 fuchsia + cobalt · mesh" },
+];
+const RT_SIZES = [44, 56, 112, 208];
+const IA = window.__IA_BASE;
+
+function RetuneRow({ combo, mode }) {
+  const shipped = mode === "shipped";
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
+      {RT_SIZES.map((px) => (
+        <div key={px} style={{ width: px, height: px, borderRadius: px <= 56 ? 8 : 12, overflow: "hidden", flexShrink: 0,
+          boxShadow: shipped ? "none" : "inset 0 0 0 1px color-mix(in oklch, var(--fg) 12%, transparent)" }}>
+          <IA name={`loud-${combo.p}-${combo.t}`} kind="artist"
+            templateOverride={combo.t} paletteOverride={combo.p}
+            scale={px >= 208 ? "hero" : px >= 112 ? "tile" : "micro"}
+            showInitials={shipped && px >= 128} grain={shipped ? 0.1 : 0.06}/>
+        </div>
+      ))}
+    </div>
+  );
+}
+// The only thing that matters: can the eye reach the title and date past the art?
+function RetuneRowInRow({ combo, mode }) {
+  const shipped = mode === "shipped";
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "56px minmax(0,1fr) auto", gap: 14, alignItems: "center", padding: "12px 0", borderTop: "1px solid var(--border)" }}>
+      <div style={{ width: 56, height: 56, borderRadius: 8, overflow: "hidden" }}>
+        <IA name={`loud-${combo.p}-${combo.t}`} kind="artist" templateOverride={combo.t} paletteOverride={combo.p}
+          scale="micro" showInitials={false} grain={shipped ? 0.1 : 0.06}/>
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 15.5, letterSpacing: "-0.01em", color: "var(--fg)" }}>Hotel Allan</div>
+        <div style={{ fontFamily: MONO, fontSize: 11.5, color: "var(--fg-muted)", marginTop: 3 }}>8:00 PM · Larimer Lounge</div>
+      </div>
+      <span style={{ fontWeight: 800, fontSize: 16.5, color: "var(--fg)" }}>tba</span>
+    </div>
+  );
+}
+
+const TOKENS = [
+  ["Panel hairline", "color-mix(in oklch, var(--fg) 12%, transparent)", "Inset 1px on every image, every source, every slot — including FlexArt."],
+  ["Photo tint", "var(--image-tint)", "The only pixel treatment a photograph gets. Transparent in Light by design."],
+  ["Band field · art", "color-mix(in srgb, {palette.primary} 26%, var(--bg))", "Derived from the generated art's own palette — the one non-token colour, and it comes from the art rather than from a designer."],
+  ["Band field · photo", "color-mix(in oklch, var(--surface-2) 92%, transparent) → var(--bg)", "A photograph can't be sampled client-side, so the field stays tokenised and the panel carries the colour."],
+  ["Watching tick", "var(--accent)", "On the panel, 12px, 2px var(--bg) ring. Unchanged from the Event Row system."],
+  ["Eyebrow", "var(--signal)", "Date · time in the band. Mono, 0.14em."],
+  ["Radius", "8 row · 12 panel · 14 card · full avatar", "One value per slot class, product-wide."],
+  ["Shelf width", "SHELF_CARD_WIDTH = 168", "The shipped constant. Earlier drafts said 176 — that was ours, not yours."],
+];
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "dead": "none",
+  "surface": "browse"
+}/*EDITMODE-END*/;
+const THEME_OPTS = CC_THEME_KEYS.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+
+function Root() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  const th = t.theme;
+  const dead = DEAD_MODES[t.dead] || {};
+  return (
+    <>
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Global">
+        <TweakSelect label="Theme" value={th} onChange={(x) => setT("theme", x)} options={THEME_OPTS}/>
+      </TweakSection>
+      <TweakSection label="Failed remotes">
+        <TweakRadio label="Dead" value={t.dead} onChange={(x) => setT("dead", x)}
+          options={[{ value: "none", label: "none" }, { value: "artwork", label: "artwork" }, { value: "portrait", label: "portrait" }, { value: "both", label: "both" }]}/>
+      </TweakSection>
+      <TweakSection label="§6 lists">
+        <TweakRadio label="Surface" value={t.surface} onChange={(x) => setT("surface", x)}
+          options={[{ value: "browse", label: "browse" }, { value: "watching", label: "watching" }, { value: "venue", label: "venue" }]}/>
+      </TweakSection>
+    </TweaksPanel>
+
+    <DesignCanvas title="Slots &amp; states"
+      subtitle="Round 3. Rows, tiles, avatars, the full failure CHAIN (artwork → portrait → generated, all three outcomes), and the evidence for the placeholder retune at real sizes. Built on the same Panel primitive as the bands; the shipped EventRow renders verbatim with only its image slot swapped. Pair with “Composed Bands”.">
+
+      {/* ── 6 · the mixed list ─────────────────────────── */}
+      <DCSection id="mixed" title="6 · The mixed list"
+        subtitle="Adjacent rows in all three source states. Rows were never the weak slot — they are the proof that one shape and one frame make three sources read as one product. Surface and failed-remote mode both switch in the Tweaks panel.">
+        <DCArtboard id="mx-390" label="mobile 390" width={430} height={800}>
+          <PhoneStage theme={th} width={390} height={760}>
+            <Eyebrow>All Denver shows</Eyebrow>
+            <div style={{ marginTop: 8 }}><List surface={t.surface} dead={dead}/></div>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="mx-320" label="mobile 320 · the floor" width={360} height={800}>
+          <PhoneStage theme={th} width={320} height={760} pad={12}>
+            <Eyebrow>All Denver shows</Eyebrow>
+            <div style={{ marginTop: 8 }}><List surface={t.surface} dead={dead} narrow/></div>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="mx-desk" label="desktop" width={900} height={800}>
+          <BareStage theme={th} pad={26} width={820}>
+            <Eyebrow>All Denver shows</Eyebrow>
+            <div style={{ marginTop: 10 }}><List surface={t.surface} dead={dead}/></div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 7 · small slots ───────────────────────────── */}
+      <DCSection id="small" title="7 · Small slots"
+        subtitle="Same primitive at 56 · 44 · 40, and the one circular slot in the product.">
+        <DCArtboard id="sm-sizes" label="56 · 44 · 40 · 40 circular" width={520} height={430}>
+          <BareStage theme={th} pad={22}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              {[["portrait", "Masego"], ["artwork", "Holdfast."], ["generated", "Geese"]].map(([lbl, n]) => {
+                const r = window.resolveEventImage(SL_EVENTS[n]);
+                return (
+                  <div key={n} style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)", width: 72 }}>{lbl}</span>
+                    <RowTile name={n} size={56} source={r.source} place={r.place} tone={r.tone} art={r.art} watching={n === "Masego"}/>
+                    <RowTile name={n} size={44} source={r.source} place={r.place} tone={r.tone} art={r.art}/>
+                    <RowTile name={n} size={40} source={r.source} place={r.place} tone={r.tone} art={r.art}/>
+                    <AvatarSlot name={n} size={40} source={r.source} place={r.place} tone={r.tone} art={r.art}/>
+                  </div>
+                );
+              })}
+              <Note>Flagged, not designed: at 44px a scraped flyer is unreadable text and a press portrait is a colour swatch, while the generated mark stays legible. Preferring the generated mark in the smallest slots changes the locked source priority — a spec call, parked.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="sm-rows" label="SmallEventRow · search result" width={420} height={460}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <Eyebrow>SmallEventRow · 40</Eyebrow>
+                <SmallRow name="Masego" dead={dead}/>
+                <SmallRow name="Holdfast." dead={dead}/>
+                <SmallRow name="Geese" dead={dead}/>
+              </div>
+              <div>
+                <Eyebrow>Artist search · 40 circular</Eyebrow>
+                <SearchRow name="Cassandra Jenkins" dead={dead}/>
+                <SearchRow name="Four Tet" dead={dead}/>
+              </div>
+              <Note>The search avatar resolves on the ARTIST chain — portrait → generated. It never borrows the event's artwork, so a dead artwork URL cannot change it.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 8 · the chain ─────────────────────────────── */}
+      <DCSection id="fail" title="8 · The chain, and its three failure outcomes"
+        subtitle="An event surface walks artwork → portrait → generated. A remote can die at fetch time or after render begins, so there are three outcomes, not two — and the middle one (artwork dies, the headliner's portrait takes over) is the one a mock most easily loses. Holdfast. holds both sources; Masego holds only a portrait.">
+        <DCArtboard id="fl-healthy" label="nothing dead · artwork wins" width={430} height={330}>
+          <BareStage theme={th} pad={20}>
+            <FailCase name="Holdfast." dead={{}} landed="artwork" label="healthy"
+              note="Both remotes alive. The event's own artwork outranks the headliner's portrait — locked, not re-proposed."/>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="fl-mid" label="artwork ✗ → portrait takes over" width={430} height={330}>
+          <BareStage theme={th} pad={20}>
+            <FailCase name="Holdfast." dead={{ artwork: true }} landed="portrait" label="middle state"
+              note="The state R2 mocked nowhere. A 404 on the venue's artwork must fall to the headliner's portrait — shipped EventImage already walks [imageUrl, artistPhotoUrl] before IdentityArt, and a mock that skips to generated art teaches a regression."/>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="fl-both" label="artwork ✗ portrait ✗ → generated" width={430} height={330}>
+          <BareStage theme={th} pad={20}>
+            <FailCase name="Holdfast." dead={{ artwork: true, portrait: true }} landed="generated" label="both dead"
+              note="Only when every remote is gone. Same box, same size, no reflow: the generated art is deterministic per name, so it is already decided before either URL is requested."/>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="fl-portrait-only" label="portrait ✗ · no artwork to fall back to" width={430} height={330}>
+          <BareStage theme={th} pad={20}>
+            <FailCase name="Masego" dead={{ portrait: true }} landed="generated" label="portrait-only event"
+              note="Masego's event has no scraped artwork, so its chain is two hops and a dead portrait lands on generated art directly. This is the outcome R2 drew for every case."/>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="fl-list" label="the chain, in the list" width={430} height={580}>
+          <PhoneStage theme={th} width={390} height={440}>
+            <Eyebrow tone="var(--warning)">artwork dead · portraits alive</Eyebrow>
+            <div style={{ marginTop: 8 }}><List surface="browse" dead={{ artwork: true }} count={4}/></div>
+            <div style={{ marginTop: 12 }}><Note>Holdfast. swaps artwork → portrait; the rows that never had artwork don't move at all.</Note></div>
+          </PhoneStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 9 · retune evidence ───────────────────────── */}
+      <DCSection id="retune" title="9 · The retune, shown rather than asserted"
+        subtitle="R2 claimed the generated art needs no palette or template cut once it stops being stretched — only the monogram removal and grain 0.10 → 0.06. Here is that claim at the real sizes, with the loudest four palette / template combinations in the registry deliberately chosen: p2 saffron + crimson, p6 violet + lime, p4 ember + aqua, p0 fuchsia + cobalt, on mesh and halftone. Switch theme in the Tweaks panel to check all three.">
+        <DCArtboard id="rt-shipped" label="shipped rendering · grain 0.10, monogram on at hero" width={480} height={1120}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <Eyebrow>44 · 56 · 112 · 208</Eyebrow>
+              {LOUD.map((c) => (
+                <div key={c.label} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>{c.label}</span>
+                  <RetuneRow combo={c} mode="shipped"/>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="rt-retuned" label="retuned · grain 0.06, no monogram, hairline" width={480} height={1120}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <Eyebrow tone="var(--signal)">44 · 56 · 112 · 208</Eyebrow>
+              {LOUD.map((c) => (
+                <div key={c.label} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontFamily: MONO, fontSize: 9, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>{c.label}</span>
+                  <RetuneRow combo={c} mode="retuned"/>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="rt-inrow" label="the actual test · can the eye reach title and date" width={440} height={700}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <Eyebrow tone="var(--signal)">retuned, in a real row</Eyebrow>
+              <div>{LOUD.map((c) => <RetuneRowInRow key={c.label} combo={c} mode="retuned"/>)}</div>
+              <Note><strong style={{ color: "var(--fg)" }}>Read this artboard, not the swatch grids.</strong> The brief's ask was that the art recede enough for the title and date to win, and a 56px tile is judged in a row or not at all.</Note>
+              <Note>Our read: at 44–56 the palette is a colour accent and the row's hierarchy holds in all three themes. At 112–208 the geometry becomes the subject — which is what the following shelf and the artist page want, and it is why the band exists rather than a wide crop.</Note>
+              <Note><strong style={{ color: "var(--warning)" }}>The honest exception:</strong> p2 and p0 on <em>mesh</em> at 208 still read hot, because mesh has no geometry to resolve into — it is a gradient field, and scale only makes it a bigger gradient. If you want a cut, cut mesh at hero scale and leave the palettes alone: it is the only combination in the registry that fails its own test.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="rt-themes" label="one combo, three themes, 112" width={440} height={300}>
+          <div style={{ display: "flex", height: "100%", background: "#0b0b12" }}>
+            {CC_THEME_KEYS.map((k) => (
+              <div key={k} style={{ ...ccTokenVars(k), flex: 1, background: "var(--bg)", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+                <div style={{ fontFamily: MONO, fontSize: 9, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>{CC_THEMES[k].label}</div>
+                <div style={{ width: 112, height: 112, borderRadius: 12, overflow: "hidden", boxShadow: "inset 0 0 0 1px color-mix(in oklch, var(--fg) 12%, transparent)" }}>
+                  <IA name="loud-p6-halftone" kind="artist" templateOverride="halftone" paletteOverride="p6" scale="tile" showInitials={false} grain={0.06}/>
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "var(--fg)" }}>Hotel Allan</div>
+                <div style={{ fontFamily: MONO, fontSize: 10, color: "var(--fg-muted)" }}>Sat, Oct 10</div>
+              </div>
+            ))}
+          </div>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 10 · contract ─────────────────────────────── */}
+      <DCSection id="tokens" title="10 · Token + component contract"
+        subtitle="What eng needs. Every value is a token or derived from one; the single exception is called out.">
+        <DCArtboard id="tk-table" label="tokens" width={700} height={470}>
+          <BareStage theme={th} pad={22}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {TOKENS.map(([k, v, note], i) => (
+                <div key={k} style={{ display: "grid", gridTemplateColumns: "132px 1fr", gap: 12, padding: "10px 0", borderTop: i ? "1px solid var(--border)" : "none" }}>
+                  <span style={{ fontSize: 11.5, fontWeight: 700, color: "var(--fg)" }}>{k}</span>
+                  <div>
+                    <div style={{ fontFamily: MONO, fontSize: 10.5, color: "var(--signal)", wordBreak: "break-word" }}>{v}</div>
+                    <div style={{ marginTop: 4 }}><Note>{note}</Note></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="tk-api" label="components" width={470} height={470}>
+          <BareStage theme={th} pad={22}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+              {[["Panel", "name · size · ratio · radius · source · place|art|tone", "The only image primitive. size accepts px or \"100%\"."],
+                ["FlexArt", "name · minHeight · radius · source…", "The taste-pick card. No ratio, no crop promise — the row owns the height."],
+                ["HeroBand", "+ eyebrow · title · sub · chips · size · back", "Replaces every wide hero. Owns the title block."],
+                ["BandCard", "+ eyebrow · sub · width", "Replaces HeroEventCard. Same footprint."],
+                ["ShelfCard", "+ sub · meta · width = 168", "3:4. Following shelf only."],
+                ["RowTile", "+ watching", "Panel + the accent tick."],
+                ["AvatarSlot", "size", "Panel with the avatar radius."],
+                ["useSlotSource", "(name, dead, surface)", "The chain, in one place. Every surface in both canvases reads it; nothing reimplements the lookup."],
+                ["resolveEventImage", "(entry, dead) → { source, …, chain }", "artwork → portrait → generated. Returns the chain so a surface can log or label which hop it landed on."],
+                ["resolveArtistImage", "(entry, dead)", "portrait → generated. Never borrows event artwork."]].map(([n, p, d]) => (
+                <div key={n}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, color: "var(--fg)" }}>{n}</span>
+                    <span style={{ fontFamily: MONO, fontSize: 9.5, color: "var(--fg-subtle)" }}>{p}</span>
+                  </div>
+                  <div style={{ marginTop: 3 }}><Note>{d}</Note></div>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+    </>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
+</script>
+</body>
+</html>

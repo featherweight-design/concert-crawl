@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Composed bands</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html,body{margin:0;padding:0;background:#f0eee9;font-family:Inter,system-ui,sans-serif}
+  *{box-sizing:border-box}
+  a{color:#4a3fd1}a:hover{color:#2d24a8}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="row-data.jsx"></script>
+<script type="text/babel" src="imagery-sources.jsx"></script>
+<script type="text/babel" src="imagery-slots.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEME_KEYS, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { R_SHOWS } = window;
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio } = window;
+const { PortraitBase, VenueArtBase, EAI_EVENTS, StandInTag } = window;
+const { Panel, HeroBand, BandCard, ShelfCard, RowTile, FlexArt, SLOT_SPEC } = window;
+
+const MONO = "'JetBrains Mono', ui-monospace, monospace";
+// name → what that event holds. Sources resolve through the LOCKED chain
+// (artwork → portrait → generated); `dead` marks which remotes have failed.
+const SL_EVENTS = {};
+R_SHOWS.forEach((s) => { SL_EVENTS[s.artist] = EAI_EVENTS[s.id] || {}; });
+window.SL_EVENTS = SL_EVENTS;
+const DEAD_MODES = { none: {}, artwork: { artwork: true }, portrait: { portrait: true }, both: { artwork: true, portrait: true } };
+const src = (n, dead) => window.resolveEventImage(SL_EVENTS[n], dead || {});
+const showFor = (n) => R_SHOWS.find((s) => s.artist === n);
+
+function PhoneStage({ theme, width = 390, height = 700, pad = 0, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>
+        <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "var(--bg)", paddingTop: 44 }}>
+          <div style={{ padding: `0 ${pad}px` }}>{children}</div>
+        </div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function BareStage({ theme, pad = 22, width, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad, display: "flex", alignItems: "flex-start", justifyContent: "center", overflow: "hidden" }}>
+        <div style={{ width: width || "100%" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+function Note({ children }) {
+  return <div style={{ fontFamily: "Inter, system-ui", fontSize: 12, color: "var(--fg-muted)", lineHeight: 1.5, textWrap: "pretty" }}>{children}</div>;
+}
+function Eyebrow({ children, tone = "var(--fg-subtle)" }) {
+  return <div style={{ fontFamily: MONO, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: tone }}>{children}</div>;
+}
+
+// ── TODAY, rebuilt: the wide full-bleed hero + monogram chip ────────────────
+function TodayWideHero({ name, height = 240, monogram = "MA" }) {
+  const s = src(name);
+  return (
+    <div>
+      <div style={{ position: "relative", height }}>
+        <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+          {s.source === "portrait" ? <PortraitBase place={s.place} tone={s.tone}/>
+            : s.source === "artwork" ? <VenueArtBase kind={s.art} tone={s.tone}/>
+            : <window.IdentityArt name={name} kind="artist" scale="hero" showInitials={false} grain={0.1}/>}
+        </div>
+        <div style={{ position: "absolute", inset: 0, background: "var(--image-tint)" }}/>
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 110, background: "linear-gradient(transparent, var(--bg))" }}/>
+        {s.source !== "placeholder" && <StandInTag/>}
+        <div style={{ position: "absolute", left: 14, bottom: -22, width: 72, height: 72, borderRadius: 12, background: "rgba(20,18,26,0.72)", backdropFilter: "blur(6px)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 30, letterSpacing: "-0.04em", color: "rgba(255,255,255,0.72)" }}>{monogram}</div>
+      </div>
+      <div style={{ padding: "26px 16px 16px" }}>
+        <h1 style={{ margin: 0, fontWeight: 900, fontSize: 26, letterSpacing: "-0.035em", color: "var(--fg)" }}>{name}</h1>
+        <div style={{ marginTop: 7, fontFamily: MONO, fontSize: 11.5, color: "var(--fg-muted)" }}>Mission Ballroom · 7:00 PM</div>
+      </div>
+    </div>
+  );
+}
+// Shipped HeroEventCard is a full-width 180px banner (HeroEventCard.tsx:
+// `h-[180px] w-full`) — ≈2:1 at 390, ≈4:1 on desktop. It was never 16:9; that
+// error came from the brief. Drawn here at its real mobile geometry.
+function TodayWideCard({ name, width = 390 }) {
+  const s = src(name);
+  const show = showFor(name);
+  return (
+    <div style={{ width, borderRadius: 14, overflow: "hidden", background: "var(--surface-1)", border: "1px solid var(--border)" }}>
+      <div style={{ height: 180, position: "relative", overflow: "hidden" }}>
+        {s.source === "portrait" ? <PortraitBase place={s.place} tone={s.tone}/>
+          : s.source === "artwork" ? <VenueArtBase kind={s.art} tone={s.tone}/>
+          : <window.IdentityArt name={name} kind="artist" scale="tile" showInitials={false} grain={0.06}/>}
+        <div style={{ position: "absolute", inset: 0, background: "var(--image-tint)" }}/>
+        {s.source !== "placeholder" && <StandInTag/>}
+      </div>
+      <div style={{ padding: "12px 14px 14px" }}>
+        <Eyebrow tone="var(--signal)">{show ? show.dateLabel : "Tue, Sep 8"}</Eyebrow>
+        <div style={{ marginTop: 5, fontWeight: 800, fontSize: 18, letterSpacing: "-0.02em", color: "var(--fg)" }}>{name}</div>
+        <div style={{ marginTop: 3, fontFamily: MONO, fontSize: 11.5, color: "var(--fg-muted)" }}>{show ? show.venue : "Mission Ballroom"}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Bands, in situ ──────────────────────────────────────────────────────────
+function DetailBand({ name, size = "mobile", dead }) {
+  const s = src(name, dead);
+  const show = showFor(name);
+  return (
+    <HeroBand name={name} size={size} source={s.source} place={s.place} tone={s.tone} art={s.art}
+      eyebrow={`${show ? show.dateLabel : "Tue, Sep 8"} · ${show ? show.showTime : "7:00 PM"}`}
+      sub={show ? show.venue : "Mission Ballroom"} chips={show && show.genres ? show.genres : null}/>
+  );
+}
+// Everything below the band is OUT OF SCOPE here and deliberately drawn as
+// neutral blocks. The real thing is the shipped CommitBlock from
+// design_handoff_event_detail_cta_tooltip (Going full-width + a two-row watch
+// strip carrying the watcher crawl) — re-drawing it from memory in an imagery
+// mock would assert a CTA design this handoff has no business touching.
+function DetailBelow({ size = "mobile" }) {
+  const desk = size === "desktop";
+  const box = (h2) => (
+    <div style={{ height: h2, borderRadius: 10, background: "color-mix(in oklch, var(--fg) 6%, transparent)",
+      border: "1px dashed var(--border-strong)" }}/>
+  );
+  return (
+    <div style={{ padding: desk ? "22px 34px" : "16px 16px", display: "flex", flexDirection: "column", gap: 10 }}>
+      <span style={{ fontFamily: MONO, fontSize: 9, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>
+        shipped CommitBlock · not this handoff
+      </span>
+      {box(48)}
+      {box(76)}
+    </div>
+  );
+}
+function BrowseTonightBand({ name, dead }) {
+  const s = src(name, dead);
+  const show = showFor(name);
+  return (
+    <div style={{ position: "relative" }}>
+      <div style={{ position: "absolute", left: 16, top: 14, zIndex: 3, fontFamily: MONO, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", background: "var(--accent)", color: "var(--fg-on-accent)", padding: "3px 8px", borderRadius: 6 }}>★ tonight</div>
+      <HeroBand name={name} source={s.source} place={s.place} tone={s.tone} art={s.art} back={false}
+        eyebrow={null} sub={`${show ? show.venue : "Summit Music"} · ${show ? show.showTime : "6:00 PM"}`}
+        chips={show && show.genres ? show.genres : null}/>
+    </div>
+  );
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "dead": "none"
+}/*EDITMODE-END*/;
+const THEME_OPTS = CC_THEME_KEYS.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+
+function Root() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  const th = t.theme;
+  const dead = DEAD_MODES[t.dead] || {};
+  return (
+    <>
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Global">
+        <TweakSelect label="Theme" value={th} onChange={(x) => setT("theme", x)} options={THEME_OPTS}/>
+      </TweakSection>
+      <TweakSection label="Failed remotes">
+        <TweakRadio label="Dead" value={t.dead} onChange={(x) => setT("dead", x)}
+          options={[{ value: "none", label: "none" }, { value: "artwork", label: "artwork" }, { value: "portrait", label: "portrait" }, { value: "both", label: "both" }]}/>
+      </TweakSection>
+    </TweaksPanel>
+
+    <DesignCanvas title="Composed bands"
+      subtitle="Round 2, after the live-slot review. Wide slots stop being image slots: a hero is now a 1:1 panel, an ink field derived from the art, and the type as a column beside it — which retires both the stretched colour wash and the floating monogram tile. Two shapes exist in the product, 1:1 and 3:4. Photographs get frame + --image-tint and nothing else. Photographs are geometric tonal stand-ins.">
+
+      {/* ── 1 · the shape system ────────────────────────── */}
+      <DCSection id="shapes" title="1 · Two shapes, one primitive"
+        subtitle="Every image in the product is a Panel (1:1) except the following shelf, which is a Card (3:4). Nothing is wide, so nothing needs a scrim to be legible or a monogram to say who it is.">
+        <DCArtboard id="sh-spec" label="slot map" width={640} height={420}>
+          <BareStage theme={th} pad={22}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {SLOT_SPEC.map(([slot, shape, radius, note], i) => (
+                <div key={slot} style={{ display: "grid", gridTemplateColumns: "150px 132px 62px 1fr", gap: 12, padding: "9px 0", borderTop: i ? "1px solid var(--border)" : "none", alignItems: "start" }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "var(--fg)" }}>{slot}</span>
+                  <span style={{ fontFamily: MONO, fontSize: 10.5, color: "var(--signal)" }}>{shape}</span>
+                  <span style={{ fontFamily: MONO, fontSize: 10.5, color: "var(--fg-subtle)" }}>{radius}</span>
+                  <Note>{note}</Note>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="sh-shapes" label="the two shapes, three sources each" width={520} height={420}>
+          <BareStage theme={th} pad={22}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <Eyebrow tone="var(--signal)">Panel · 1:1</Eyebrow>
+                <div style={{ marginTop: 8, display: "flex", gap: 12 }}>
+                  {["Masego", "Holdfast.", "Geese"].map((n) => {
+                    const s = src(n);
+                    return <div key={n}><Panel name={n} size={104} source={s.source} place={s.place} tone={s.tone} art={s.art} tag/>
+                      <div style={{ marginTop: 5, fontFamily: MONO, fontSize: 8.5, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>{s.source}</div></div>;
+                  })}
+                </div>
+              </div>
+              <div>
+                <Eyebrow tone="var(--signal)">Card · 3:4</Eyebrow>
+                <div style={{ marginTop: 8, display: "flex", gap: 12 }}>
+                  {["Masego", "Holdfast.", "Geese"].map((n) => {
+                    const s = src(n);
+                    return <div key={n} style={{ width: 104 }}><Panel name={n} size="100%" ratio="3 / 4" source={s.source} place={s.place} tone={s.tone} art={s.art} tag/></div>;
+                  })}
+                </div>
+              </div>
+              <Note>A press portrait is shot for 1:1 and survives 3:4. Neither shape ever needs a crop we can't predict — which is why the subject-placement problem stops being a problem.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 2 · event detail ───────────────────────────── */}
+      <DCSection id="detail" title="2 · Event detail — the weakest slot"
+        subtitle="Today: a square source stretched to 240–300px, a bottom scrim, and a monogram tile half-overlapping the title. After: the band. It absorbs the title block, so the page below starts at content instead of at a negative margin.">
+        <DCArtboard id="dt-today" label="today · wide hero + monogram @390" width={430} height={620}>
+          <PhoneStage theme={th} width={390} height={580}>
+            <TodayWideHero name="Masego" height={240}/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="dt-band-portrait" label="band · portrait source @390" width={430} height={620}>
+          <PhoneStage theme={th} width={390} height={580}>
+            <DetailBand name="Masego" dead={dead}/>
+            <DetailBelow/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="dt-band-artwork" label="band · venue artwork @390" width={430} height={620}>
+          <PhoneStage theme={th} width={390} height={580}>
+            <DetailBand name="Holdfast." dead={dead}/>
+            <DetailBelow/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="dt-band-placeholder" label="band · generated @390" width={430} height={620}>
+          <PhoneStage theme={th} width={390} height={580}>
+            <DetailBand name="Geese"/>
+            <DetailBelow/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="dt-desk" label="band · desktop 1000" width={1040} height={560}>
+          <BareStage theme={th} pad={0}>
+            <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+              <DetailBand name="Masego" size="desktop" dead={dead}/>
+              <DetailBelow size="desktop"/>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="dt-why" label="why the band works" width={400} height={520}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+              <Eyebrow tone="var(--signal)">Three things it fixes at once</Eyebrow>
+              <Note><strong style={{ color: "var(--fg)" }}>No unpredictable crop.</strong> The panel is 1:1 and the source is 1:1. A face lands where the photographer put it.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>No colour wash.</strong> The generated art renders at the size and aspect it was designed for, so its geometry survives instead of blurring out.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>No monogram tile.</strong> The panel is the identity object, and the name is right beside it at full size — the chip existed only because the wide image couldn't say who it was.</Note>
+              <div style={{ height: 1, background: "var(--border)" }}/>
+              <Note>It also costs less: the tallest image on the page drops from ~300px of filtered pixels to a 128px panel, and the ink field is a two-stop gradient.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 3 · browse hero + card ─────────────────────── */}
+      <DCSection id="browse" title="3 · Browse hero and the event card"
+        subtitle="The tonight hero is the same band with the pill and no back chip. The 16:9 card keeps its grid footprint but stops cropping — the panel sits beside the type instead of above it.">
+        <DCArtboard id="br-today" label="today · tonight hero" width={640} height={410}>
+          <BareStage theme={th} pad={16}>
+            <div style={{ border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
+              <div style={{ position: "relative", height: 150 }}>
+                <window.IdentityArt name="JUTES" kind="artist" scale="hero" showInitials={false} grain={0.1}/>
+                <div style={{ position: "absolute", left: 14, top: 12, fontFamily: MONO, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", background: "var(--accent)", color: "var(--fg-on-accent)", padding: "3px 8px", borderRadius: 6 }}>★ tonight</div>
+                <div style={{ position: "absolute", left: 14, bottom: -18, width: 62, height: 62, borderRadius: 12, background: "rgba(20,18,26,0.72)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 24, color: "rgba(255,255,255,0.7)" }}>JS</div>
+                <div style={{ position: "absolute", left: 84, bottom: 8, fontWeight: 900, fontSize: 21, letterSpacing: "-0.03em", color: "var(--fg)" }}>JUTES — Smile You're on Tour</div>
+              </div>
+              <div style={{ padding: "16px 16px 14px" }}>
+                <div style={{ fontFamily: MONO, fontSize: 11.5, color: "var(--signal)" }}>Summit Music · 6:00 PM</div>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="br-band" label="band · tonight" width={640} height={410}>
+          <BareStage theme={th} pad={16}>
+            <div style={{ border: "1px solid var(--border)", borderRadius: 14, overflow: "hidden" }}>
+              <BrowseTonightBand name="Cassandra Jenkins" dead={dead}/>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="br-cards" label="event card · today's 180px banner vs band card" width={800} height={560}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+              <div>
+                <Eyebrow>today · full-width 180px banner</Eyebrow>
+                <div style={{ marginTop: 8 }}><TodayWideCard name="Masego" width={390}/></div>
+              </div>
+              <div>
+                <Eyebrow tone="var(--signal)">band card</Eyebrow>
+                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 12 }}>
+                  {["Masego", "Holdfast.", "Geese"].map((n) => {
+                    const s = src(n, dead);
+                    const show = showFor(n);
+                    return <BandCard key={n} name={n} width={300} source={s.source}
+                      place={s.place} tone={s.tone} art={s.art}
+                      eyebrow={show ? show.dateLabel : ""} sub={show ? `${show.showTime} · ${show.venue}` : ""}/>;
+                  })}
+                </div>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 4 · following shelf ────────────────────────── */}
+      <DCSection id="shelf" title="4 · The following shelf — already the strongest, left alone"
+        subtitle="3:4, large, and it works with a photograph and with generated art. The only change is the frame: one radius, one hairline, one crop rule, so the mixed shelf reads as a set."
+        >
+        <DCArtboard id="sf-shelf" label="following shelf · mixed sources" width={860} height={420}>
+          <BareStage theme={th} pad={22}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <Eyebrow>Artists you follow</Eyebrow>
+              <div style={{ display: "flex", gap: 12, overflow: "hidden" }}>
+                {["Geese", "Masego", "Cassandra Jenkins", "Holdfast.", "Four Tet"].map((n) => {
+                  const s = window.resolveArtistImage(SL_EVENTS[n], dead);
+                  const show = showFor(n);
+                  return <ShelfCard key={n} name={n} source={s.source}
+                    place={s.place} tone={s.tone} art={s.art}
+                    sub={show ? `${show.venue} · ${show.dateLabel.replace(/^[A-Za-z]{3},\s*/, "")}` : ""}
+                    meta={show && show.price ? `$${show.price.amount}` : "tba"}/>;
+                })}
+              </div>
+              <Note>Generated art earns its place here: at 176 × 235 the concentric and stripe templates read as sleeve art next to a real press photo, which is exactly the effect the mixed browse list never achieved at 44px.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 4b · the taste-pick card ──────────────────── */}
+      <DCSection id="taste" title="4b · The taste-pick card — a fill region, not a third shape"
+        subtitle="DiscoveryShelf's Spotify pick is the one live image slot that can't take a ratio: its image region is flex-1 with a 116px floor because pinning an aspect there broke the row in #763 r4. So it is not handed 3:4 — it gets FlexArt, and the rule is written down instead of implied.">
+        <DCArtboard id="ta-shelf" label="taste-pick shelf · mixed sources, ragged heights" width={780} height={440}>
+          <BareStage theme={th} pad={22}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <Eyebrow>Because you listen to…</Eyebrow>
+              <div style={{ display: "flex", gap: 12, alignItems: "stretch" }}>
+                {[["Masego", 116], ["Holdfast.", 150], ["Geese", 132], ["Four Tet", 116]].map(([n, h2]) => {
+                  const s = src(n, dead);
+                  const show = showFor(n);
+                  return (
+                    <div key={n} style={{ width: 168, display: "flex", flexDirection: "column", gap: 10, padding: 12, background: "var(--surface-1)", border: "1px solid var(--border)", borderRadius: 14 }}>
+                      <FlexArt name={n} source={s.source} place={s.place} tone={s.tone} art={s.art} minHeight={h2} tag/>
+                      <div>
+                        <div style={{ fontWeight: 800, fontSize: 14.5, color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{n}</div>
+                        <div style={{ marginTop: 3, fontFamily: MONO, fontSize: 10.5, color: "var(--fg-muted)" }}>{show ? show.venue : "Denver"}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <Note>The four cards are given four different image heights on purpose — 116, 150, 132, 116 — because that is what the row does. Nothing inside the image reflows: the art is composed square and cover-filled, so it degrades by cropping, never by stretching. Stretching is exactly what wrecked the wide heroes.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="ta-rule" label="the rule" width={400} height={440}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+              <Eyebrow tone="var(--signal)">FlexArt · no ratio, no crop promise</Eyebrow>
+              <Note><strong style={{ color: "var(--fg)" }}>Corrects decision 2.</strong> “The Card is the following shelf and nowhere else” was true of shapes and false of slots. The product has two shapes — Panel 1:1, Card 3:4 — <em>and one fill region</em>. This is it, and it is the only one.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>The row owns the height.</strong> No <code>aspect-ratio</code>, no min/max crop promise, nothing that can fight <code>flex-1</code>. #763 r4 is the reason and the regression test.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>Art is composed square.</strong> Whatever the source, it fills by cover from a 1:1 composition — so a face stays a face and the generated geometry stays geometry at any height the row hands it.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>Same frame as everything else.</strong> Card radius, the 12% <code>--fg</code> hairline, <code>--image-tint</code> on photographs. It reads as part of the set without pretending to be a shape.</Note>
+              <div style={{ height: 1, background: "var(--border)" }}/>
+              <Note>Noted from the audit: the follow shelf renders through <code>CardArt</code> rather than the shared component, so the <code>ShelfCard</code> mock assumes a unification the eng spec never ordered — that is a Spec A amendment, not a change here.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 5 · artist page ───────────────────────────── */}
+      <DCSection id="artist" title="5 · Artist page"
+        subtitle="Desktop already had the right idea — a big square panel in a rail. Mobile gets the band, so the two agree.">
+        <DCArtboard id="ar-mobile-match" label="mobile · portrait match" width={430} height={560}>
+          <PhoneStage theme={th} width={390} height={520}>
+            <HeroBand name="Cassandra Jenkins" {...window.resolveArtistImage(SL_EVENTS["Cassandra Jenkins"], dead)}
+              sub="3 Denver shows since Feb 2026"/>
+            <div style={{ padding: 16 }}>
+              <div style={{ height: 48, borderRadius: 10, background: "var(--signal)", color: "var(--fg-on-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15 }}>+ Follow</div>
+            </div>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="ar-mobile-none" label="mobile · no match" width={430} height={560}>
+          <PhoneStage theme={th} width={390} height={520}>
+            <HeroBand name="Hotel Allan" source="placeholder" sub="First time we've caught them."/>
+            <div style={{ padding: 16 }}>
+              <div style={{ height: 48, borderRadius: 10, background: "var(--signal)", color: "var(--fg-on-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15 }}>+ Follow</div>
+            </div>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="ar-desk" label="desktop · rail panel, unchanged geometry" width={860} height={560}>
+          <BareStage theme={th} pad={26}>
+            <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 32 }}>
+              <div>
+                <Panel name="Hotel Allan" size="100%" source="placeholder" radius={14}/>
+                <div style={{ marginTop: 14, height: 52, borderRadius: 10, background: "var(--signal)", color: "var(--fg-on-accent)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 15 }}>+ Follow</div>
+                <div style={{ marginTop: 10, fontFamily: MONO, fontSize: 11, color: "var(--fg-subtle)" }}>Marks them as one of yours.</div>
+              </div>
+              <div>
+                <h1 style={{ margin: 0, fontWeight: 900, fontSize: 46, letterSpacing: "-0.04em", color: "var(--fg)" }}>HOTEL ALLAN</h1>
+                <div style={{ marginTop: 12, fontSize: 15, color: "var(--fg-muted)" }}>First time we've caught them. We only started looking in March 2026.</div>
+                <div style={{ marginTop: 26 }}><Eyebrow>Upcoming</Eyebrow></div>
+                {[["Sat 10 Oct", "Meow Wolf Denver"], ["Fri 21 Nov", "Larimer Lounge"]].map(([d, v]) => (
+                  <div key={d} style={{ display: "flex", gap: 14, alignItems: "center", padding: "14px 0", borderBottom: "1px solid var(--border)" }}>
+                    <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--fg-subtle)", width: 82 }}>{d}</span>
+                    <span style={{ fontWeight: 700, fontSize: 15, color: "var(--fg)" }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+    </>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
+</script>
+</body>
+</html>

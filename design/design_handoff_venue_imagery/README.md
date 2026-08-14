@@ -26,6 +26,13 @@ halftone screen → misregistration → grain + paper); the SVG `feComponentTran
 duotone and the misregistered pink shadow-silhouette are the whole trick and are
 documented in-code so an artist or the renderer can reproduce them on any photo.
 
+**The ink is venue-only, on purpose (Hugh, 2026-08-14).** `design_handoff_event_artist_imagery`
+decided the opposite for artist photographs — frame plus `--image-tint` and nothing
+else — and explored riso languages before dropping them. The two halves are not in
+conflict and neither should be reconciled toward the other: a venue facade is a
+place and prints well, an artist portrait is a person and does not. Don't read the
+split as drift.
+
 **Overlay language = 8 marks, one hero.** Wordmark (hero) + blob, flourish,
 burst, cluster trail, medallion, stub tag, hand arrow. Composition is
 deliberately starved: one hero + ≤2 supporting, pop ink exactly once, everything

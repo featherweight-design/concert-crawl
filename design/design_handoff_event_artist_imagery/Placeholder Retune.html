@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Event &amp; artist imagery — directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html,body{margin:0;padding:0;background:#f0eee9;font-family:Inter,system-ui,sans-serif}
+  *{box-sizing:border-box}
+  a{color:#4a3fd1}a:hover{color:#2d24a8}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="spotify-shared.jsx"></script>
+<script type="text/babel" src="cc-tip.jsx"></script>
+<script type="text/babel" src="row-data.jsx"></script>
+<script type="text/babel" src="imagery-sources.jsx"></script>
+<script type="text/babel" src="imagery-treatments.jsx"></script>
+<script type="text/babel" src="placeholder-v2.jsx"></script>
+<script type="text/babel" src="event-row.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEME_KEYS, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { EventRow, EventRowList } = window;
+const { R_SHOWS, R_HERMANOS } = window;
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio, TweakToggle } = window;
+const { PortraitBase, VenueArtBase, EAI_SOURCE_MAP, StandInTag } = window;
+const { TREATMENTS, EAI_INKS, TreatedImage, ImageFrame } = window;
+const { PlaceholderV2, PV_OPTIONS, PV_NAMES } = window;
+
+const MONO = "'JetBrains Mono', ui-monospace, monospace";
+const IdentityArtV1 = window.IdentityArt;   // Phase 7.5, kept for the "today" artboards
+
+// name → source, derived from the id-keyed map so the shipped EventRow can stay verbatim
+const BY_NAME = {};
+R_SHOWS.forEach((s) => { BY_NAME[s.artist] = EAI_SOURCE_MAP[s.id] || { source: "placeholder" }; });
+
+// Live config the art shim reads. Set on every Root render, before children render.
+const EAI_CFG = { scope: "B", treatment: "press-blue", placeholder: "ink-series", paper: "dark", failed: [] };
+
+// Per-artboard overrides travel through CONTEXT, not through the global. An
+// artboard that wants a different scope or language wraps its subtree in a
+// provider; PhotoSlot reads the nearest one. (Mutating EAI_CFG during a parent's
+// render can never reach descendants — children render after the parent returns,
+// by which point the value is already restored.)
+const EAICtx = React.createContext(null);
+function useEaiCfg() { return React.useContext(EAICtx) || EAI_CFG; }
+
+// ── PhotoSlot — one resolver for every slot ──────────────────────────────────
+// Source priority is LOCKED (artwork → portrait → placeholder) and not being
+// re-proposed here. What the scope switch changes is only which sources get the
+// pixel treatment; the frame is applied to all three in every scope.
+function PhotoSlot({ name, scale = "tile", shape = "tile", ratio, radius, scrim, tag }) {
+  const cfg = useEaiCfg();
+  const src = BY_NAME[name] || { source: "placeholder" };
+  const failed = cfg.failed.includes(name);
+  const kind = failed ? "placeholder" : src.source;
+  const ink = EAI_INKS[cfg.treatment] || null;
+
+  let inner;
+  if (kind === "placeholder") {
+    inner = <PlaceholderV2 name={name} option={cfg.placeholder} scale={scale}
+      ink={ink ? { paper: ink.paper, ink: ink.ink, pop: ink.pop } : undefined}/>;
+  } else if (kind === "portrait") {
+    inner = (
+      <TreatedImage treatment={cfg.scope === "C" ? "raw" : cfg.treatment} paper={cfg.paper}>
+        <PortraitBase place={src.place} tone={src.tone}/>
+      </TreatedImage>
+    );
+  } else {
+    // venue artwork: treated only in scope A
+    inner = (
+      <TreatedImage treatment={cfg.scope === "A" ? cfg.treatment : "raw"} paper={cfg.paper}>
+        <VenueArtBase kind={src.art} tone={src.tone}/>
+      </TreatedImage>
+    );
+  }
+  return (
+    <ImageFrame shape={shape} ratio={ratio} scrim={scrim} style={radius != null ? { borderRadius: radius } : undefined}>
+      {inner}
+      {tag && kind !== "placeholder" && <StandInTag/>}
+    </ImageFrame>
+  );
+}
+
+// Shim so the SHIPPED EventRow renders through PhotoSlot without being forked.
+function ArtShim({ name, scale = "tile" }) {
+  return <PhotoSlot name={name} scale={scale} shape="tile"/>;
+}
+
+// ── Stages ───────────────────────────────────────────────────────────────────
+function PhoneStage({ theme, width = 390, height = 700, pad = 14, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>
+        <div style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "var(--bg)", padding: `${pad === 0 ? 46 : 48}px ${pad}px 0` }}>{children}</div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function BareStage({ theme, pad = 22, width, children, align = "flex-start" }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad, display: "flex", alignItems: align, justifyContent: "center" }}>
+        <div style={{ width: width || "100%" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+function Note({ children }) {
+  return <div style={{ fontFamily: "Inter, system-ui", fontSize: 12, color: "var(--fg-muted)", lineHeight: 1.5, textWrap: "pretty" }}>{children}</div>;
+}
+function Eyebrow({ children, tone = "var(--fg-subtle)" }) {
+  return <div style={{ fontFamily: MONO, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: tone }}>{children}</div>;
+}
+
+// ── Slot mock-ups (geometry lifted from the shipped surfaces) ────────────────
+
+// Event detail hero — 300px full-bleed. Chrome matches Event Detail v2 / Artist Page.
+function DetailHero({ name, height = 300, width, desktop = false }) {
+  const show = R_SHOWS.find((s) => s.artist === name) || R_HERMANOS;
+  return (
+    <div style={{ width: width || "100%", background: "var(--bg)" }}>
+      <div style={{ position: "relative" }}>
+        <PhotoSlot name={name} scale="hero" shape="hero" ratio={undefined} scrim tag
+          radius={desktop ? 14 : 0}/>
+        <div style={{ position: "absolute", inset: 0, pointerEvents: "none" }}/>
+        <div style={{ height, width: "100%", position: "absolute", inset: 0, pointerEvents: "none" }}/>
+        <div style={{ position: "absolute", left: 14, top: desktop ? 14 : 52, width: 36, height: 36, borderRadius: 18, background: "var(--scrim)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--fg)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 3L5 8l5 5"/></svg>
+        </div>
+      </div>
+      <div style={{ padding: "0 18px 18px", marginTop: -30, position: "relative" }}>
+        <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--signal)" }}>{show.dateLabel} · {show.showTime}</div>
+        <h1 style={{ margin: "8px 0 0", fontWeight: 900, fontSize: 27, lineHeight: 1.08, letterSpacing: "-0.035em", color: "var(--fg)", textWrap: "balance" }}>{name}</h1>
+        <div style={{ marginTop: 7, fontFamily: MONO, fontSize: 12, color: "var(--fg-muted)" }}>{show.venue}</div>
+      </div>
+    </div>
+  );
+}
+// The hero image alone, at the real 300px, for language comparison.
+function HeroImageOnly({ name, height = 300 }) {
+  return (
+    <div style={{ position: "relative", width: "100%", height }}>
+      <PhotoSlot name={name} scale="hero" shape="hero" scrim tag/>
+    </div>
+  );
+}
+
+// HeroEventCard — 16:9, 180px tall.
+function HeroEventCard({ name }) {
+  const show = R_SHOWS.find((s) => s.artist === name) || R_HERMANOS;
+  return (
+    <div style={{ borderRadius: 14, overflow: "hidden", background: "var(--surface-1)", border: "1px solid var(--border)" }}>
+      <div style={{ height: 180, position: "relative" }}>
+        <PhotoSlot name={name} scale="hero" shape="card" scrim tag radius={0}/>
+      </div>
+      <div style={{ padding: "12px 14px 14px" }}>
+        <div style={{ fontFamily: MONO, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--signal)" }}>{show.dateLabel}</div>
+        <div style={{ marginTop: 5, fontWeight: 800, fontSize: 17, letterSpacing: "-0.02em", color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+        <div style={{ marginTop: 3, fontFamily: MONO, fontSize: 11.5, color: "var(--fg-muted)" }}>{show.venue}</div>
+      </div>
+    </div>
+  );
+}
+
+// SmallEventRow — 40px tile. Used in the artist page's upcoming list and digests.
+function SmallEventRow({ name }) {
+  const show = R_SHOWS.find((s) => s.artist === name) || R_HERMANOS;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "40px minmax(0,1fr) auto", gap: 10, alignItems: "center", padding: "8px 0" }}>
+      <div style={{ width: 40, height: 40 }}><PhotoSlot name={name} scale="micro" shape="tile"/></div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 13.5, color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{name}</div>
+        <div style={{ fontFamily: MONO, fontSize: 10.5, color: "var(--fg-muted)" }}>{show.dateLabel} · {show.venue}</div>
+      </div>
+      <span style={{ fontWeight: 800, fontSize: 14, color: "var(--fg)" }}>{show.price ? `$${show.price.amount}` : "—"}</span>
+    </div>
+  );
+}
+
+// Artist search result — 40px circular avatar.
+function SearchArtistRow({ name }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 11, padding: "9px 0" }}>
+      <div style={{ width: 40, height: 40, flexShrink: 0 }}>
+        <PhotoSlot name={name} scale="micro" shape="avatar" radius={999}/>
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 14, color: "var(--fg)" }}>{name}</div>
+        <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--fg-subtle)" }}>artist</div>
+      </div>
+    </div>
+  );
+}
+
+// Artist page hero — ArtistPlate geometry (200 mobile / 320 desktop).
+function ArtistHero({ name, height = 200 }) {
+  return (
+    <div style={{ background: "var(--bg)" }}>
+      <div style={{ position: "relative", height }}>
+        <PhotoSlot name={name} scale="hero" shape="hero" scrim tag/>
+        <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: 80, background: "linear-gradient(transparent, var(--bg))", pointerEvents: "none" }}/>
+      </div>
+      <div style={{ padding: "0 18px 20px", marginTop: -26, position: "relative" }}>
+        <h1 style={{ margin: 0, fontWeight: 900, fontSize: 27, lineHeight: 1.08, letterSpacing: "-0.035em", color: "var(--fg)" }}>{name}</h1>
+        <div style={{ marginTop: 8, fontFamily: MONO, fontSize: 11.5, color: "var(--fg-muted)" }}>3 Denver shows since Feb 2026</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Today's mixed list, drawn with the CURRENT components ────────────────────
+function TodayTile({ name }) {
+  const src = BY_NAME[name] || { source: "placeholder" };
+  return (
+    <div style={{ width: 56, height: 56, borderRadius: 8, overflow: "hidden", position: "relative" }}>
+      {src.source === "portrait" ? <PortraitBase place={src.place} tone={src.tone}/>
+        : src.source === "artwork" ? <VenueArtBase kind={src.art} tone={src.tone}/>
+        : <IdentityArtV1 name={name} kind="artist" scale="tile" showInitials={false} grain={0.05}/>}
+      <div style={{ position: "absolute", inset: 0, background: "var(--image-tint)" }}/>
+    </div>
+  );
+}
+function TodayRow({ show }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "56px minmax(0,1fr) auto", gap: 14, alignItems: "center", padding: "13px 0", borderTop: "1px solid var(--border)" }}>
+      <TodayTile name={show.artist}/>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontWeight: 700, fontSize: 15.5, letterSpacing: "-0.01em", color: "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{show.artist}</div>
+        <div style={{ fontFamily: MONO, fontSize: 11.5, color: "var(--fg-muted)", marginTop: 3 }}>{show.showTime} · {show.venue}</div>
+      </div>
+      <span style={{ fontWeight: 800, fontSize: 16.5, color: "var(--fg)" }}>{show.price ? `$${show.price.amount}` : "tba"}</span>
+    </div>
+  );
+}
+
+const SCOPES = [
+  { id: "A", label: "Scope A · treat everything",
+    blurb: "Venue artwork, portraits and the placeholder all run the same pass. Total unification — and it overwrites 38% of events whose scraped art is the most show-like image we have. It also treats images we do not own, on hotlinked URLs.",
+    cost: "3 sources treated · highest per-instance cost" },
+  { id: "B", label: "Scope B · treat what we can't trust",
+    blurb: "Portraits and the placeholder are treated; scraped venue artwork keeps its pixels and is unified by the frame — one ratio, one radius, one ink hairline, one scrim ramp. The 38% that already read as show art keep reading as show art, and the two sources that do NOT read as show art are the two we change.",
+    cost: "2 sources treated · frame on all three" },
+  { id: "C", label: "Scope C · frame only",
+    blurb: "Nothing is re-inked. Consistency comes entirely from geometry and chrome. Cheapest and most reversible — and it leaves a cropped face in a 300px banner exactly as wrong as it is today, because the frame can't change what the picture is of.",
+    cost: "0 sources treated · frame only" },
+];
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "scope": "B",
+  "treatment": "press-blue",
+  "placeholder": "ink-series",
+  "failLoad": false
+}/*EDITMODE-END*/;
+const THEME_OPTS = CC_THEME_KEYS.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+
+function Root() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  const th = t.theme;
+  EAI_CFG.scope = t.scope;
+  EAI_CFG.treatment = t.treatment;
+  EAI_CFG.placeholder = t.placeholder;
+  EAI_CFG.paper = th === "light" ? "light" : "dark";
+  EAI_CFG.failed = t.failLoad ? ["Masego", "Cassandra Jenkins", "The Brian Jonestown Massacre", "Hermanos Gutiérrez"] : [];
+  window.IdentityArt = ArtShim;   // shipped EventRow renders through PhotoSlot, unforked
+
+  const MIXED = ["Holdfast.", "Masego", "Four Tet", "Hermanos Gutiérrez", "Cassandra Jenkins", "Geese"];
+  const mixedShows = MIXED.map((n) => R_SHOWS.find((s) => s.artist === n));
+
+  return (
+    <>
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Global">
+        <TweakSelect label="Theme" value={th} onChange={(x) => setT("theme", x)} options={THEME_OPTS}/>
+      </TweakSection>
+      <TweakSection label="§1 unification scope">
+        <TweakRadio label="Scope" value={t.scope} onChange={(x) => setT("scope", x)}
+          options={[{ value: "A", label: "A · all" }, { value: "B", label: "B · photo+ph" }, { value: "C", label: "C · frame" }]}/>
+      </TweakSection>
+      <TweakSection label="§2 treatment language">
+        <TweakSelect label="Language" value={t.treatment} onChange={(x) => setT("treatment", x)}
+          options={TREATMENTS.map((x) => ({ value: x.id, label: x.label }))}/>
+      </TweakSection>
+      <TweakSection label="§3 placeholder retune">
+        <TweakSelect label="Retune" value={t.placeholder} onChange={(x) => setT("placeholder", x)}
+          options={PV_OPTIONS.map((x) => ({ value: x.id, label: x.label }))}/>
+      </TweakSection>
+      <TweakSection label="Failure">
+        <TweakToggle label="Photos fail to load" value={t.failLoad} onChange={(x) => setT("failLoad", x)}/>
+      </TweakSection>
+    </TweaksPanel>
+
+    <DesignCanvas title="Event &amp; artist imagery — the placeholder"
+      subtitle="Round 1, second half: how hard the permanent placeholder is retuned, and the check that a retune doesn\u2019t wreck the slots that were already fine. Pair this with \u201cImagery Directions\u201d \u2014 the scope and language picks there feed P1\u2019s ink. Split into two files on purpose: one canvas carrying every treated slot at once saturates the main thread.">
+
+      {/* ── 3 · Placeholder retune ──────────────────────── */}
+      <DCSection id="ph" title="3 · The placeholder, retuned"
+        subtitle="Permanent, not a stopgap: 30% of event surfaces and 55% of artist pages, forever. All three retunes keep the deterministic hash contract and all three drop the monogram, the vignette and the grain. Twelve names each, so variance is judged as a series."
+        >
+        {PV_OPTIONS.map((op) => (
+          <DCArtboard key={op.id} id={`ph-${op.id}`} label={op.label} width={470} height={640}>
+            <BareStage theme={th} pad={18}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                <div>
+                  <Eyebrow tone="var(--signal)">{op.id}</Eyebrow>
+                  <div style={{ marginTop: 6 }}><Note>{op.blurb}</Note></div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                  {PV_NAMES.map((n) => (
+                    <div key={n}>
+                      <div style={{ aspectRatio: "1", borderRadius: 8, overflow: "hidden", boxShadow: "inset 0 0 0 1px color-mix(in oklch, var(--fg) 12%, transparent)" }}>
+                        <PlaceholderV2 name={n} option={op.id} scale="tile"
+                          ink={EAI_INKS[t.treatment] ? { paper: EAI_INKS[t.treatment].paper, ink: EAI_INKS[t.treatment].ink, pop: EAI_INKS[t.treatment].pop } : undefined}/>
+                      </div>
+                      <div style={{ marginTop: 4, fontFamily: MONO, fontSize: 8, letterSpacing: "0.06em", color: "var(--fg-subtle)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{n}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {["Geese", "Four Tet"].map((n) => (
+                    <div key={n} style={{ height: 120, borderRadius: 12, overflow: "hidden" }}>
+                      <PlaceholderV2 name={n} option={op.id} scale="hero"
+                        ink={EAI_INKS[t.treatment] ? { paper: EAI_INKS[t.treatment].paper, ink: EAI_INKS[t.treatment].ink, pop: EAI_INKS[t.treatment].pop } : undefined}/>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </BareStage>
+          </DCArtboard>
+        ))}
+        <DCArtboard id="ph-today" label="today · for reference" width={470} height={640}>
+          <BareStage theme={th} pad={18}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div>
+                <Eyebrow>ships today · Phase 7.5</Eyebrow>
+                <div style={{ marginTop: 6 }}><Note>8 palettes (four of them dark papers) × 5 templates × rotation, plus grain, a vignette and a monogram chip at hero scale.</Note></div>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+                {PV_NAMES.slice(0, 2).map((n) => (
+                  <div key={n}>
+                    <div style={{ aspectRatio: "1", borderRadius: 8, overflow: "hidden" }}>
+                      <IdentityArtV1 name={n} kind="artist" scale="tile" showInitials={false} grain={0.05}/>
+                    </div>
+                    <div style={{ marginTop: 4, fontFamily: MONO, fontSize: 8, letterSpacing: "0.06em", color: "var(--fg-subtle)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{n}</div>
+                  </div>
+                ))}
+              </div>
+              <Note>Hero renders of the shipping placeholder are left out of this artboard on purpose: at hero scale it paints a 625-dot halftone plus a blend pass per instance, which is its own argument for the retune.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 4 · Small slots + failure ───────────────────── */}
+      <DCSection id="small" title="4 · The slots that are already fine, and the one that breaks"
+        subtitle="Tiles and avatars were never the problem — the check is that a retune doesn't wreck them. Failure state uses the Tweaks toggle: a remote URL can die at any time, including mid-render.">
+        <DCArtboard id="sm-tiles" label="56 · 44 · 40 · 40 circular" width={420} height={420}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", alignItems: "flex-end", gap: 14 }}>
+                {[["56", 56, "tile"], ["44", 44, "tile"], ["40", 40, "tile"], ["40", 40, "avatar"]].map(([lbl, px, shape], i) => (
+                  <div key={i} style={{ textAlign: "center" }}>
+                    <div style={{ width: px, height: px }}>
+                      <PhotoSlot name="Masego" scale="micro" shape={shape} radius={shape === "avatar" ? 999 : undefined}/>
+                    </div>
+                    <div style={{ marginTop: 5, fontFamily: MONO, fontSize: 8.5, color: "var(--fg-subtle)" }}>{lbl}{shape === "avatar" ? "◯" : ""}</div>
+                  </div>
+                ))}
+                {[["56", 56], ["40", 40]].map(([lbl, px], i) => (
+                  <div key={`p${i}`} style={{ textAlign: "center" }}>
+                    <div style={{ width: px, height: px }}><PhotoSlot name="Geese" scale="micro" shape="tile"/></div>
+                    <div style={{ marginTop: 5, fontFamily: MONO, fontSize: 8.5, color: "var(--fg-subtle)" }}>{lbl}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ height: 1, background: "var(--border)" }}/>
+              <div>
+                <Eyebrow>SmallEventRow · 40</Eyebrow>
+                <SmallEventRow name="Masego"/>
+                <SmallEventRow name="Geese"/>
+              </div>
+              <div>
+                <Eyebrow>Artist search result · 40 circular</Eyebrow>
+                <SearchArtistRow name="Cassandra Jenkins"/>
+                <SearchArtistRow name="Four Tet"/>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="sm-artist" label="artist page hero · 200" width={410} height={420}>
+          <PhoneStage theme={th} width={370} height={380} pad={0}>
+            <ArtistHero name="Cassandra Jenkins" height={200}/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="sm-card" label="HeroEventCard · 16:9 / 180" width={420} height={420}>
+          <BareStage theme={th} pad={18}>
+            <HeroEventCard name="Masego"/>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+    </>
+  );
+}
+
+// A list rendered at a forced scope (the artboards show all three at once).
+function ScopedList({ scope, shows }) {
+  return (
+    <EAICtx.Provider value={{ ...EAI_CFG, scope }}>
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {shows.map((s, i) => (
+          <div key={s.id} style={{ borderTop: i ? "1px solid var(--border)" : "none" }}>
+            <EventRow show={s} surface="browse" density="cozy"/>
+          </div>
+        ))}
+      </div>
+    </EAICtx.Provider>
+  );
+}
+
+// Hero + card, at one language.
+function LangStage({ treatment, theme }) {
+  return (
+    <EAICtx.Provider value={{ ...EAI_CFG, treatment, scope: treatment === "raw" ? "C" : "B" }}>
+    <div>
+      <div style={{ position: "relative" }}><HeroImageOnly name="Masego" height={300}/></div>
+      <div style={{ padding: "12px 16px 16px" }}>
+        <div style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--signal)" }}>Tue, Sep 8 · 7:00 PM</div>
+        <h1 style={{ margin: "8px 0 0", fontWeight: 900, fontSize: 25, letterSpacing: "-0.035em", color: "var(--fg)" }}>Masego</h1>
+        <div style={{ marginTop: 12 }}><div style={{ height: 130 }}><PhotoSlot name="Masego" scale="hero" shape="card" ratio="16/9"/></div></div>
+      </div>
+    </div>
+    </EAICtx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
+</script>
+</body>
+</html>
