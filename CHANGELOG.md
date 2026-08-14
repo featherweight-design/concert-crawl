@@ -1,3 +1,10 @@
+## [1.242.1](https://github.com/HartiganHM/concert-crawl/compare/v1.242.0...v1.242.1) (2026-08-14)
+
+
+### Bug Fixes
+
+* **events:** carry watch state on the related panel ([#1560](https://github.com/HartiganHM/concert-crawl/issues/1560)) ([85b447f](https://github.com/HartiganHM/concert-crawl/commit/85b447fd6d290e0d8fef42f64b4b0918a2c77589))
+
 # [1.242.0](https://github.com/HartiganHM/concert-crawl/compare/v1.241.9...v1.242.0) (2026-08-14)
 
 
