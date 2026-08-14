@@ -1,3 +1,10 @@
+# [1.243.0](https://github.com/HartiganHM/concert-crawl/compare/v1.242.2...v1.243.0) (2026-08-14)
+
+
+### Features
+
+* **triage:** fault acknowledgements table and the ack matcher ([#1563](https://github.com/HartiganHM/concert-crawl/issues/1563)) ([8ba1972](https://github.com/HartiganHM/concert-crawl/commit/8ba19721c82812dcdbc49a5f8052d9d6e52f2054))
+
 ## [1.242.2](https://github.com/HartiganHM/concert-crawl/compare/v1.242.1...v1.242.2) (2026-08-14)
 
 
