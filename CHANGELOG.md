@@ -1,3 +1,10 @@
+## [1.243.1](https://github.com/HartiganHM/concert-crawl/compare/v1.243.0...v1.243.1) (2026-08-14)
+
+
+### Bug Fixes
+
+* **api:** delete every user-owned table on account deletion ([#1561](https://github.com/HartiganHM/concert-crawl/issues/1561)) ([548d7c6](https://github.com/HartiganHM/concert-crawl/commit/548d7c6deff1590efa4ab75d810aacc3fbbf2e1b)), closes [#907](https://github.com/HartiganHM/concert-crawl/issues/907)
+
 # [1.243.0](https://github.com/HartiganHM/concert-crawl/compare/v1.242.2...v1.243.0) (2026-08-14)
 
 
