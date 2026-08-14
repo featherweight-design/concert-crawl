@@ -1,3 +1,10 @@
+# [1.249.0](https://github.com/HartiganHM/concert-crawl/compare/v1.248.0...v1.249.0) (2026-08-14)
+
+
+### Features
+
+* **artists:** break ambiguous artist ties with MusicBrainz ([#1564](https://github.com/HartiganHM/concert-crawl/issues/1564)) ([25f1d1f](https://github.com/HartiganHM/concert-crawl/commit/25f1d1fb64df4f3d9695d7028c365f3a2ca04189))
+
 # [1.248.0](https://github.com/HartiganHM/concert-crawl/compare/v1.247.0...v1.248.0) (2026-08-14)
 
 
