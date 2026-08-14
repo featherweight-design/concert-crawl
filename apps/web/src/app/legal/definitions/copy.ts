@@ -11,9 +11,10 @@ export const LEGAL_COPY = {
     privacyLink: 'Privacy Policy →',
     termsLink: 'Terms of Service →',
     bulletGlyph: '—',
-    // All three legal pages date from the day private beta opened, which is
-    // when these documents first applied to anyone.
-    effectiveDate: 'Effective date: May 25, 2026',
+    // Bumped when the documents were rewritten to describe what the product
+    // actually does (Gate A). The original date was the day private beta
+    // opened.
+    effectiveDate: 'Effective date: August 13, 2026',
   },
 
   terms: {
@@ -55,7 +56,6 @@ export const LEGAL_COPY = {
       title: '5. Prohibited conduct',
       intro: 'You agree not to:',
       items: [
-        'Scrape, crawl, or automate requests to the Service without written permission',
         'Attempt to reverse-engineer, decompile, or extract our source code',
         'Use the Service to send spam or harass other users',
         'Circumvent invite codes, rate limits, or access controls',
@@ -116,10 +116,14 @@ export const LEGAL_COPY = {
       intro: "We collect only what's necessary to run the Service:",
       items: [
         'Email address: for account creation and transactional emails (via Clerk)',
-        'Shows you watch: to power your Watching list',
+        'Shows you watch and shows you mark yourself going to: to power your Watching and Concerts lists',
         'Price information you submit: used to improve data quality for everyone',
         'Feedback you send: stored to help us prioritize improvements',
         'Your username and avatar: shown on your profile',
+        'Artists you follow: to tell you when they announce a Denver show',
+        'Crews you join: the crew name and the fact you are a member',
+        'Push notification subscriptions: only if you turn push on',
+        'Your Spotify display name and the artists you follow there: only if you connect Spotify',
         'Theme preference: stored in localStorage on your device',
       ],
     },
@@ -137,10 +141,13 @@ export const LEGAL_COPY = {
         'We use the following third-party services to operate Concert Crawl:',
       items: [
         'Clerk: authentication and account management',
-        'Render: cloud hosting and compute',
-        'Sentry: error tracking (diagnostic data such as stack traces; not explicitly configured for PII minimization)',
+        'Neon: database hosting',
+        'Vercel: web application hosting',
+        'Render: API and crawler hosting',
+        'Sentry: error tracking (diagnostic data such as stack traces)',
         'Resend: transactional email delivery',
-        'Stripe: payment processing (when subscriptions go live)',
+        'Stripe: payment processing',
+        'Spotify: only if you connect a Spotify account, and only to read the artists you follow',
       ],
       outro:
         'Each provider handles your data under their own privacy policies. We select providers that meet reasonable data protection standards.',
@@ -157,7 +164,7 @@ export const LEGAL_COPY = {
 
     retention: {
       title: 'Data retention',
-      body: "Your account data is kept for as long as your account is active. When you delete your account, your profile and the shows you're watching are deleted immediately. Price submissions you've made are anonymized (your user ID is removed) rather than deleted, to preserve corroboration data for other users.",
+      body: "Your account data is kept as long as your account is active. When you delete your account, we remove your profile, the shows you're watching, the artists you follow, your crew memberships, your notification settings, your push subscriptions, and your Spotify connection. Price submissions and feedback you've sent are anonymized rather than deleted, so the prices other people rely on stay corroborated. If you run a crew, it passes to its longest-standing remaining member; a crew with nobody else in it is deleted with your account. Billing records are kept as long as tax and accounting rules require, and administrative security logs are kept as a record of who changed what.",
     },
 
     rights: {
@@ -167,7 +174,7 @@ export const LEGAL_COPY = {
         'Edit your profile at any time from Settings',
         'Delete your account from the Settings page',
         'Request a copy of your data by emailing us',
-        'We currently only send transactional emails (e.g., account-related notices). No marketing emails.',
+        'Turn off product email with the one-click link in any product email. Receipts and billing notices still come through.',
       ],
     },
 
