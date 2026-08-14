@@ -1,3 +1,10 @@
+## [1.241.8](https://github.com/HartiganHM/concert-crawl/compare/v1.241.7...v1.241.8) (2026-08-14)
+
+
+### Bug Fixes
+
+* **event-row:** restore the watching tick and close the row's design-fidelity gaps ([#1556](https://github.com/HartiganHM/concert-crawl/issues/1556)) ([8769d3e](https://github.com/HartiganHM/concert-crawl/commit/8769d3eb4b23ee23fbde9490f279de2cc0532e3e))
+
 ## [1.241.7](https://github.com/HartiganHM/concert-crawl/compare/v1.241.6...v1.241.7) (2026-08-13)
 
 
