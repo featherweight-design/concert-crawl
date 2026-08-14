@@ -472,6 +472,9 @@ importers:
       postgres:
         specifier: ^3.4.0
         version: 3.4.9
+      zod:
+        specifier: ^3.22.0
+        version: 3.25.76
     devDependencies:
       '@concert-crawl/config':
         specifier: workspace:*
