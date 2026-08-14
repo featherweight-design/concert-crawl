@@ -1,3 +1,18 @@
+# [1.245.0](https://github.com/HartiganHM/concert-crawl/compare/v1.244.0...v1.245.0) (2026-08-14)
+
+
+### Bug Fixes
+
+* **api:** export the event id and guard an empty user id ([e1c3f06](https://github.com/HartiganHM/concert-crawl/commit/e1c3f06f2f0b7a2718c32f41ae4ecdfef983e3ac))
+* **api:** give the export a deterministic row order ([7b3518c](https://github.com/HartiganHM/concert-crawl/commit/7b3518c87d643e80dcb5a983accb027d64a27f8d))
+* **api:** mount Clerk auth, no-store the export, and join watched shows ([c642ef4](https://github.com/HartiganHM/concert-crawl/commit/c642ef4cf73defffa1b6c9988dd55b5efe6d20ac)), closes [#527](https://github.com/HartiganHM/concert-crawl/issues/527)
+* **api:** tie-break both export joins and widen the watching assertion ([2982590](https://github.com/HartiganHM/concert-crawl/commit/298259068d204fb77139e90cfebe65d6766dee81))
+
+
+### Features
+
+* **api:** add GDPR user data export endpoint ([c565856](https://github.com/HartiganHM/concert-crawl/commit/c5658563e49cc38b564141cdf36315e8ffc31e72)), closes [#527](https://github.com/HartiganHM/concert-crawl/issues/527)
+
 # [1.244.0](https://github.com/HartiganHM/concert-crawl/compare/v1.243.1...v1.244.0) (2026-08-14)
 
 
