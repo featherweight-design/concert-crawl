@@ -131,6 +131,10 @@ const reassignCrews = async (
 export const collectUserData = async (
   userId: string,
 ): Promise<Record<string, unknown[]>> => {
+  if (userId.trim().length === 0) {
+    throw new Error('collectUserData requires a non-empty user id')
+  }
+
   const payload: Record<string, unknown[]> = {}
 
   for (const entry of USER_DATA_REGISTRY) {
@@ -173,6 +177,12 @@ export const collectUserData = async (
 const collectWatching = async (userId: string): Promise<unknown[]> => {
   const rows = await db
     .select({
+      // #527 lists eventId alongside the join. It is the one internal id the
+      // issue asks for by name: it is the only stable handle a user has for a
+      // show, so two exports taken months apart can be reconciled against each
+      // other. Everything else the export excludes identifies US, not a night
+      // they went to.
+      event_id: userEvents.eventId,
       event_title: events.title,
       event_date: events.date,
       venue: venues.name,
