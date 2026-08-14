@@ -16,7 +16,7 @@ import type { TriageFault, TriageQueue } from '../definitions/types'
 
 const venuePath = (venueId: string): string => `/admin/venues/${venueId}`
 
-const inspectorPath = (
+export const inspectorPath = (
   venueId: string,
   tab: 'history' | 'diagnostics',
 ): string => `/admin/crawl?venueId=${encodeURIComponent(venueId)}&tab=${tab}`

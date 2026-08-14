@@ -28,8 +28,9 @@ vi.mock('./lib/acknowledgements', () => ({
 // per render would put the load effect in a re-fetch loop no production caller
 // sees, and a redundant re-fetch would mask a stale response behind it.
 const stableGetToken = () => Promise.resolve('test-token')
+const clerkLoaded = { current: true }
 vi.mock('@clerk/nextjs', () => ({
-  useAuth: () => ({ getToken: stableGetToken }),
+  useAuth: () => ({ getToken: stableGetToken, isLoaded: clerkLoaded.current }),
 }))
 
 const mockRefresh = vi.fn()
@@ -82,10 +83,29 @@ describe('FaultAcknowledgeControl', () => {
     mockFetchVenueFault.mockReset()
     mockAcknowledgeFault.mockReset()
     mockUnacknowledgeFault.mockReset()
+    clerkLoaded.current = true
     mockRefresh.mockReset()
   })
 
   afterEach(cleanup)
+
+  it('waits for Clerk rather than reading a pre-hydration null token', async () => {
+    clerkLoaded.current = false
+    mockFetchVenueFault.mockResolvedValue({ fault: null, acknowledged })
+
+    const { rerender } = render(<FaultAcknowledgeControl venueId={VENUE_ID} />)
+    // The read sits behind an awaited getToken, so asserting absence here
+    // passes vacuously unless the pending microtasks are flushed first.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(mockFetchVenueFault).not.toHaveBeenCalled()
+
+    clerkLoaded.current = true
+    rerender(<FaultAcknowledgeControl venueId={VENUE_ID} />)
+
+    expect(await screen.findByText(COPY.acknowledgedTitle)).toBeTruthy()
+  })
 
   it('renders nothing when the venue has no fault and no acknowledgement', async () => {
     mockFetchVenueFault.mockResolvedValue({ fault: null, acknowledged: null })

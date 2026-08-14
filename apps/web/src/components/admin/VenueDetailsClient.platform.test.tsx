@@ -59,6 +59,12 @@ vi.mock('./crawl-trigger-button/CrawlTriggerButton', () => ({
   CrawlTriggerButton: () => null,
 }))
 
+// Reads triage over the network behind Clerk auth; these suites are about the
+// venue form, and there is no ClerkProvider around them.
+vi.mock('@/components/admin/venue-expected-badge/VenueExpectedBadge', () => ({
+  VenueExpectedBadge: () => null,
+}))
+
 import { VenueDetailsClient } from './VenueDetailsClient'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 

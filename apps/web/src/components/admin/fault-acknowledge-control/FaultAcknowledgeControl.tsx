@@ -41,7 +41,7 @@ interface FaultAcknowledgeControlProps {
 export const FaultAcknowledgeControl = ({
   venueId,
 }: FaultAcknowledgeControlProps) => {
-  const { getToken } = useAuth()
+  const { getToken, isLoaded } = useAuth()
   const router = useRouter()
   const reasonId = useId()
   const [fault, setFault] = useState<TriageFault | null>(null)
@@ -72,6 +72,11 @@ export const FaultAcknowledgeControl = ({
     setErrorMessage(null)
     setIsSaving(false)
 
+    // A null token before Clerk hydrates is transient, but nothing else in
+    // these deps changes when auth arrives — so reading it as "no fault"
+    // strands the control for the rest of the session.
+    if (!isLoaded) return
+
     const load = async () => {
       try {
         const token = await getToken()
@@ -88,7 +93,7 @@ export const FaultAcknowledgeControl = ({
       }
     }
     void load()
-  }, [venueId, getToken])
+  }, [venueId, getToken, isLoaded])
 
   const runSave = async (save: (token: string) => Promise<void>) => {
     const savedFor = venueId
