@@ -1,3 +1,10 @@
+# [1.250.0](https://github.com/HartiganHM/concert-crawl/compare/v1.249.0...v1.250.0) (2026-08-14)
+
+
+### Features
+
+* **admin:** show an acknowledged fault on the venue detail page ([#1575](https://github.com/HartiganHM/concert-crawl/issues/1575)) ([5084e0b](https://github.com/HartiganHM/concert-crawl/commit/5084e0b73089c2ff55aa32bc33a7d36e43eedab9))
+
 # [1.249.0](https://github.com/HartiganHM/concert-crawl/compare/v1.248.0...v1.249.0) (2026-08-14)
 
 
