@@ -1,3 +1,10 @@
+## [1.241.9](https://github.com/HartiganHM/concert-crawl/compare/v1.241.8...v1.241.9) (2026-08-14)
+
+
+### Bug Fixes
+
+* **artists:** stop projecting non-concerts, and reap the ones already stored ([#1557](https://github.com/HartiganHM/concert-crawl/issues/1557)) ([350aa3d](https://github.com/HartiganHM/concert-crawl/commit/350aa3dfb40624ce143f2df82e0cee6f1fb90bc9)), closes [#1343](https://github.com/HartiganHM/concert-crawl/issues/1343)
+
 ## [1.241.8](https://github.com/HartiganHM/concert-crawl/compare/v1.241.7...v1.241.8) (2026-08-14)
 
 
