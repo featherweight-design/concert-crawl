@@ -70,8 +70,12 @@ export const crewInvites = pgTable(
     // Sentry breadcrumb, or an error body. Log the resolved crewId instead.
     token: text('token').notNull().unique(),
     // Immutable here, unlike crews.keeperId — an invite is attributed to
-    // whoever minted it even after the keeper changes.
-    createdBy: text('created_by').notNull(),
+    // whoever minted it even after the keeper changes. Nullable only so the
+    // inviter can delete their account: USER_DATA_REGISTRY anonymizes this row
+    // rather than dropping it, since revoking the invite would break a live
+    // link the crew is still using. Null means "the inviter has left", never
+    // "unattributed at creation".
+    createdBy: text('created_by'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     revokedAt: timestamp('revoked_at', { withTimezone: true }),
     revokedBy: text('revoked_by'),

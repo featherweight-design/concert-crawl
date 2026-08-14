@@ -129,7 +129,11 @@ export const userArtistFollows = pgTable(
 
 export const feedback = pgTable('feedback', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: text('user_id').notNull(),
+  // Nullable only so the reporter can delete their account: USER_DATA_REGISTRY
+  // anonymizes feedback rather than deleting it, because the report stays
+  // actionable after its author leaves. Null means "the reporter has left",
+  // never "submitted anonymously" — the endpoint still requires auth.
+  userId: text('user_id'),
   pageUrl: text('page_url').notNull(),
   category: feedbackCategoryEnum('category').notNull(),
   message: text('message').notNull(),

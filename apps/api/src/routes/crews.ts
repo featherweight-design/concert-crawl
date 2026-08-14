@@ -774,7 +774,7 @@ const toInvite = (row: {
   id: string
   crewId: string
   token: string
-  createdBy: string
+  createdBy: string | null
   expiresAt: Date
   createdAt: Date
 }): CrewInvite => ({

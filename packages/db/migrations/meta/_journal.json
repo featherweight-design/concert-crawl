@@ -561,6 +561,13 @@
       "when": 1787011200000,
       "tag": "0079_artist_spotify_candidates",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1787097600000,
+      "tag": "0080_anonymizable_user_columns",
+      "breakpoints": true
     }
   ]
 }

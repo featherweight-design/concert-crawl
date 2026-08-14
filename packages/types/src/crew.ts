@@ -113,7 +113,9 @@ export interface CrewInvite {
   id: string
   crewId: string
   token: string
-  createdBy: string
+  // Null once the inviter deletes their account: the invite is anonymized
+  // rather than revoked, because the link may still be live and in use.
+  createdBy: string | null
   expiresAt: string
   createdAt: string
 }

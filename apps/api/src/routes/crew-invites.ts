@@ -93,7 +93,7 @@ const isExpired = (): SQL<boolean> =>
 interface LoadedInvite {
   inviteId: string
   crewId: string
-  createdBy: string
+  createdBy: string | null
   expired: boolean
   revokedAt: Date | null
   name: string
@@ -168,13 +168,22 @@ crewInvitesRouter.get('/:token', async (ctx) => {
     return ctx.json({ success: false, reason: dead }, 404)
   }
 
-  const [memberCount, inviter, viewerIsMember] = await Promise.all([
-    countMembers(db, invite.crewId),
-    db
+  // createdBy is null once the inviter deletes their account. The link stays
+  // live — it belongs to the crew, not to them — so the invite renders with no
+  // attribution rather than reading as dead.
+  const inviterHandle = async (): Promise<string | null> => {
+    if (invite.createdBy === null) return null
+    const [row] = await db
       .select({ handle: userProfiles.handle })
       .from(userProfiles)
       .where(eq(userProfiles.userId, invite.createdBy))
-      .limit(1),
+      .limit(1)
+    return row?.handle ?? null
+  }
+
+  const [memberCount, invitedByHandle, viewerIsMember] = await Promise.all([
+    countMembers(db, invite.crewId),
+    inviterHandle(),
     isMember(db, invite.crewId, userId),
   ])
 
@@ -185,7 +194,7 @@ crewInvitesRouter.get('/:token', async (ctx) => {
     name: invite.name,
     patchSalt: invite.patchSalt,
     memberCount,
-    invitedByHandle: inviter[0]?.handle ?? null,
+    invitedByHandle,
     isFull: memberCount >= CREW_MEMBER_CAP,
     viewerIsMember,
   }
