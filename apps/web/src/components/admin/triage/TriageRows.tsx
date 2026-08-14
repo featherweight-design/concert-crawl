@@ -10,6 +10,8 @@
 
 import Link from 'next/link'
 
+import { DENVER_TIME_ZONE, formatISODate } from '@/lib/time'
+
 import { ADMIN_COPY } from '../definitions/copy'
 import { MonoLabel } from '../primitives'
 import { EvidenceBars } from './EvidenceBars'
@@ -21,7 +23,11 @@ import {
   type TriageGlyph,
 } from './definitions/meta'
 import { ADMIN_FONT, ADMIN_MONO, SR_ONLY } from './definitions/styles'
-import type { TriageFault, TriageQueue } from './definitions/types'
+import type {
+  AcknowledgedFault,
+  TriageFault,
+  TriageQueue,
+} from './definitions/types'
 import { faultHref, queueHref } from './lib/deep-links'
 import { evidenceLines } from './lib/evidence-lines'
 
@@ -409,6 +415,200 @@ export const QueueRow = ({
       </span>
 
       <ActionLink label={TRIAGE.actions[queue.action]} compact={compact} />
+    </Link>
+  )
+}
+
+// ------------------------------------------------------- ExpectedStrip
+
+export const EXPECTED_TOGGLE_ID = 'triage-expected-toggle'
+export const EXPECTED_REGION_ID = 'triage-expected-rows'
+
+/**
+ * The acknowledged tier. Unlike `TierStrip` this one is a control, because
+ * the rows beneath it start folded — they are not work, and unfolded they
+ * would outrank the faults that are. The count stays on the strip either way.
+ */
+export const ExpectedStrip = ({
+  count,
+  open,
+  onToggle,
+}: {
+  count: number
+  open: boolean
+  onToggle: () => void
+}) => (
+  // A button takes phrasing content only, so the heading wraps the control
+  // rather than sitting inside it — the WAI-ARIA disclosure pattern.
+  <h3 style={{ margin: 0 }}>
+    <button
+      type="button"
+      id={EXPECTED_TOGGLE_ID}
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-controls={EXPECTED_REGION_ID}
+      style={{
+        width: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '8px 18px',
+        minHeight: 44,
+        background: 'var(--surface-1)',
+        borderTop: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border)',
+        borderLeft: 'none',
+        borderRight: 'none',
+        cursor: 'pointer',
+        textAlign: 'left',
+        outlineOffset: -2,
+      }}
+    >
+      <MonoLabel color="var(--fg-muted)">{TRIAGE.tiers.expected}</MonoLabel>
+      <span
+        aria-hidden="true"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          fontFamily: ADMIN_FONT,
+          fontSize: 11,
+          fontWeight: 700,
+          color: 'var(--signal)',
+        }}
+      >
+        {open ? TRIAGE.expected.hide : TRIAGE.expected.show}
+      </span>
+      <span style={{ marginLeft: 'auto' }}>
+        <MonoLabel color="var(--fg-subtle)">{count}</MonoLabel>
+      </span>
+    </button>
+  </h3>
+)
+
+// -------------------------------------------------------- AcknowledgedRow
+
+/**
+ * An acknowledged fault. Deliberately unbanded and untinted: the severity ink
+ * would read as "this is broken", and the whole point of the row is that
+ * someone has judged the figure expected. The row still links to the
+ * inspector, which is where the acknowledgement can be lifted.
+ */
+export const AcknowledgedRow = ({
+  fault,
+  compact,
+}: {
+  fault: AcknowledgedFault
+  compact: boolean
+}) => {
+  const { venue, acknowledgement } = fault
+  const condition = TRIAGE.conditions[fault.condition]
+  const Check = GLYPH_ICONS.check
+
+  return (
+    <Link
+      href={faultHref(fault)}
+      aria-label={TRIAGE.a11y.expectedRowLabel(
+        venue,
+        condition.verb,
+        acknowledgement.reason,
+      )}
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '24px 1fr',
+        columnGap: 12,
+        alignItems: 'start',
+        padding: compact ? '11px 14px' : '11px 18px',
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--surface-1)',
+        cursor: 'pointer',
+        minHeight: 44,
+        outlineOffset: -2,
+        textDecoration: 'none',
+      }}
+    >
+      <span
+        aria-hidden="true"
+        style={{
+          width: 24,
+          height: 24,
+          borderRadius: 7,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--fg-muted)',
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border-strong)',
+        }}
+      >
+        <Check size={13} strokeWidth={1.9} />
+      </span>
+
+      <span style={{ minWidth: 0 }}>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            flexWrap: 'wrap',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: ADMIN_FONT,
+              fontSize: 12.5,
+              fontWeight: 700,
+              color: 'var(--fg)',
+              letterSpacing: '-0.01em',
+              lineHeight: 1.3,
+            }}
+          >
+            {venue}
+          </span>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '1px 7px',
+              borderRadius: 4,
+              fontFamily: ADMIN_MONO,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.09em',
+              textTransform: 'uppercase',
+              lineHeight: '15px',
+              whiteSpace: 'nowrap',
+              color: 'var(--fg-muted)',
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border-strong)',
+            }}
+          >
+            {condition.label}
+          </span>
+        </span>
+
+        <span
+          style={{
+            display: 'block',
+            fontFamily: ADMIN_FONT,
+            fontSize: 11.5,
+            color: 'var(--fg-muted)',
+            marginTop: 3,
+            lineHeight: 1.45,
+            textWrap: 'pretty',
+          }}
+        >
+          {acknowledgement.reason}
+        </span>
+
+        <span style={{ display: 'block', marginTop: 3 }}>
+          <MonoLabel color="var(--fg-subtle)" size={9}>
+            {TRIAGE.expected.by(
+              acknowledgement.acknowledgedBy,
+              formatISODate(acknowledgement.acknowledgedAt, DENVER_TIME_ZONE),
+            )}
+          </MonoLabel>
+        </span>
+      </span>
     </Link>
   )
 }

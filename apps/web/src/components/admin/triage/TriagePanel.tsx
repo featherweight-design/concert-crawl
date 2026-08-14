@@ -13,11 +13,19 @@
 
 import { RefreshCw } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { useTransition } from 'react'
+import { useState, useTransition } from 'react'
 
 import { ADMIN_COPY } from '../definitions/copy'
 import { AdminButton, MonoLabel, Panel, StatusBadge } from '../primitives'
-import { FaultRow, QueueRow, TierStrip } from './TriageRows'
+import {
+  AcknowledgedRow,
+  EXPECTED_REGION_ID,
+  EXPECTED_TOGGLE_ID,
+  ExpectedStrip,
+  FaultRow,
+  QueueRow,
+  TierStrip,
+} from './TriageRows'
 import { BAND_KEYS, DENSE_AT, GLYPH_ICONS, SEVERITY } from './definitions/meta'
 import { ADMIN_FONT, ADMIN_MONO, SR_ONLY } from './definitions/styles'
 import type { TriageBand, TriageData, TriageFault } from './definitions/types'
@@ -259,14 +267,21 @@ export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
     startTransition(() => router.refresh())
   }
 
+  const [expectedOpen, setExpectedOpen] = useState(false)
+
   const faults: TriageFault[] = data?.faults ?? []
+  const acknowledged = data?.acknowledged ?? []
   const queues = data?.queues ?? []
   const queueTotal = queues.reduce((sum, queue) => sum + queue.count, 0)
   // Read off the wire, not re-derived from the condition — the API decides
   // which band a condition lands in and may move one without a UI deploy.
   const topBand: TriageBand | null = faults[0]?.band ?? null
   const dense = faults.length >= denseAt
-  const nothing = faults.length === 0 && queues.length === 0
+  // Acknowledged faults count against the empty state. "Nothing's broken"
+  // over three faults someone marked expected is the reassuring-but-wrong
+  // summary this panel was built to replace.
+  const nothing =
+    faults.length === 0 && queues.length === 0 && acknowledged.length === 0
 
   // `isPending` is checked first so a refresh that follows a degraded fetch
   // still announces "checking". With `data === null` ahead of it the live
@@ -276,7 +291,7 @@ export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
     ? TRIAGE.a11y.checking
     : data === null
       ? TRIAGE.a11y.degraded
-      : TRIAGE.a11y.announce(faults.length, queueTotal)
+      : TRIAGE.a11y.announce(faults.length, queueTotal, acknowledged.length)
 
   const header = (
     <div
@@ -400,9 +415,11 @@ export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
         </>
       )}
 
-      {data !== null && faults.length === 0 && queues.length > 0 && (
-        <FaultsClearStrip venues={data.sweep.venues} at={data.sweep.at} />
-      )}
+      {data !== null &&
+        faults.length === 0 &&
+        (queues.length > 0 || acknowledged.length > 0) && (
+          <FaultsClearStrip venues={data.sweep.venues} at={data.sweep.at} />
+        )}
 
       {queues.length > 0 && (
         <>
@@ -410,6 +427,34 @@ export const TriagePanel = ({ data, denseAt = DENSE_AT }: TriagePanelProps) => {
           {queues.map((queue) => (
             <QueueRow key={queue.id} queue={queue} compact={compact} />
           ))}
+        </>
+      )}
+
+      {/* Last, under the queues: acknowledged faults are not work, so nothing
+          that is work may sit beneath them. */}
+      {acknowledged.length > 0 && (
+        <>
+          <ExpectedStrip
+            count={acknowledged.length}
+            open={expectedOpen}
+            onToggle={() => setExpectedOpen((open) => !open)}
+          />
+          {/* The region outlives the fold so the toggle's aria-controls
+              always resolves; only the rows themselves come and go. */}
+          <div
+            id={EXPECTED_REGION_ID}
+            aria-labelledby={EXPECTED_TOGGLE_ID}
+            hidden={!expectedOpen}
+          >
+            {expectedOpen &&
+              acknowledged.map((fault) => (
+                <AcknowledgedRow
+                  key={fault.id}
+                  fault={fault}
+                  compact={compact}
+                />
+              ))}
+          </div>
         </>
       )}
     </Panel>

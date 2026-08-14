@@ -2374,6 +2374,16 @@ export const ADMIN_COPY = {
     tiers: {
       faults: 'broken now',
       queues: 'work waiting',
+      expected: 'marked expected',
+    },
+
+    // The acknowledged strip. It is folded shut because these rows are not
+    // work — but the count stays visible, because an all-clear badge sitting
+    // above three hidden faults is the summary this panel exists to avoid.
+    expected: {
+      by: (who: string, when: string) => `${who} · ${when}`,
+      show: 'Show',
+      hide: 'Hide',
     },
 
     // Severity bands, only rendered in the dense/banded presentation.
@@ -2535,10 +2545,17 @@ export const ADMIN_COPY = {
     },
 
     a11y: {
-      announce: (faults: number, queued: number) =>
-        faults === 0 && queued === 0
-          ? 'Nothing is broken. Both queues are clear.'
-          : `${faults} ${faults === 1 ? 'fault' : 'faults'}, ${queued} ${queued === 1 ? 'item' : 'items'} in the queues.`,
+      // `acknowledged` is appended rather than folded into the all-clear
+      // branch: "nothing is broken" while three faults sit marked expected is
+      // true of the live list and misleading about the venue estate.
+      announce: (faults: number, queued: number, acknowledged: number) => {
+        const head =
+          faults === 0 && queued === 0
+            ? 'Nothing is broken. Both queues are clear.'
+            : `${faults} ${faults === 1 ? 'fault' : 'faults'}, ${queued} ${queued === 1 ? 'item' : 'items'} in the queues.`
+        if (acknowledged === 0) return head
+        return `${head} ${acknowledged} ${acknowledged === 1 ? 'fault' : 'faults'} marked expected.`
+      },
       checking: 'Checking venue health…',
       degraded: 'Venue health could not be checked.',
       // `suspect` rows are not asserted to be broken — the band exists
@@ -2552,6 +2569,8 @@ export const ADMIN_COPY = {
       ) =>
         `${venue} — ${verb}. ${stat}. ${band === 'suspect' ? 'Like this for' : 'Broken for'} ${dur}.`,
       queueRowLabel: (title: string) => title,
+      expectedRowLabel: (venue: string, verb: string, reason: string) =>
+        `${venue} — ${verb}, marked expected. ${reason}`,
       severity: {
         hard: 'Severity: not crawling',
         loss: 'Severity: losing events',
@@ -2565,7 +2584,8 @@ export const ADMIN_COPY = {
 
     // The absence of a dismiss button is a design decision the admin should
     // be able to read rather than discover.
-    model: 'Rows clear themselves on the next clean crawl. Nothing to dismiss.',
+    model:
+      'Rows clear themselves on the next clean crawl. Mark one expected and it returns the moment its figure moves.',
   },
 
   // The acknowledge control in the crawl inspector. Every string here has to

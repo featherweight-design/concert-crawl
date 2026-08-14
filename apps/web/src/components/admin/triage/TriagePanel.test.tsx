@@ -1,12 +1,17 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { TRIAGE_NO_SWEEP } from '@concert-crawl/types'
 
 import { TriagePanel } from './TriagePanel'
-import type { TriageData, TriageFault, TriageQueue } from './definitions/types'
+import type {
+  AcknowledgedFault,
+  TriageData,
+  TriageFault,
+  TriageQueue,
+} from './definitions/types'
 
 const refresh = vi.fn()
 vi.mock('next/navigation', () => ({
@@ -125,7 +130,23 @@ const pricesQueue: TriageQueue = {
 const data = (
   faults: TriageFault[],
   queues: TriageQueue[] = [],
-): TriageData => ({ faults, acknowledged: [], queues, sweep: SWEEP })
+  acknowledged: AcknowledgedFault[] = [],
+): TriageData => ({ faults, acknowledged, queues, sweep: SWEEP })
+
+const acknowledge = (
+  fault: TriageFault,
+  reason: string,
+  who = 'user_admin_1',
+): AcknowledgedFault => ({
+  ...fault,
+  acknowledgement: {
+    evidenceKind: null,
+    evidenceValue: '20',
+    reason,
+    acknowledgedBy: who,
+    acknowledgedAt: '2026-08-14T15:00:00.000Z',
+  },
+})
 
 // jsdom has no matchMedia. `compact` is a presentation switch — the same rows
 // with the same accessible names either way — so these render at the desktop
@@ -563,5 +584,111 @@ describe('TriagePanel — panel states', () => {
     expect(rows).toHaveLength(2)
     // The action label lives inside the row, hidden from the accessible name.
     expect(within(rows[0]!).getByText('Open venue')).toBeTruthy()
+  })
+})
+
+describe('TriagePanel — acknowledged faults', () => {
+  const summitCeiling = acknowledge(
+    { ...ceilingPinned, venue: 'Summit' },
+    'Live Nation caps the list at 36.',
+  )
+  const redRocks = acknowledge(
+    { ...ceilingHorizon, id: 'f-rocks', venue: 'Red Rocks' },
+    'Outdoor season ends in October.',
+  )
+
+  it('strips the reassuring all-clear when faults sit acknowledged', () => {
+    render(<TriagePanel data={data([], [], [summitCeiling])} />)
+    // The big empty state asserts nothing is wrong. Three acknowledged faults
+    // is precisely the reassuring-but-wrong summary this panel replaced.
+    expect(screen.queryByText("Nothing's broken.")).toBeNull()
+    expect(
+      screen.getByText('30 venues crawling clean · last checked 3:04 AM'),
+    ).toBeTruthy()
+  })
+
+  it('counts acknowledged faults on a strip of their own', () => {
+    render(<TriagePanel data={data([], [], [summitCeiling, redRocks])} />)
+    const strip = screen.getByRole('button', { name: /marked expected/i })
+    expect(strip.textContent).toContain('2')
+  })
+
+  it('keeps the rows collapsed until the strip is opened', () => {
+    render(<TriagePanel data={data([], [], [summitCeiling])} />)
+    expect(screen.queryByText('Summit')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: /marked expected/i }))
+
+    expect(screen.getByText('Summit')).toBeTruthy()
+    expect(screen.getByText('Live Nation caps the list at 36.')).toBeTruthy()
+    expect(screen.getByText(/user_admin_1/)).toBeTruthy()
+  })
+
+  it('leaves the badge reading all clear — the strip is what keeps it honest', () => {
+    render(<TriagePanel data={data([], [], [summitCeiling, redRocks])} />)
+    expect(screen.getByText('all clear')).toBeTruthy()
+    expect(screen.queryByText('2 faults')).toBeNull()
+  })
+
+  it('names the acknowledged count in the live region', () => {
+    const { container } = render(
+      <TriagePanel data={data([], [], [summitCeiling, redRocks])} />,
+    )
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      'Nothing is broken. Both queues are clear. 2 faults marked expected.',
+    )
+  })
+
+  it('announces acknowledged faults alongside live ones', () => {
+    const { container } = render(
+      <TriagePanel data={data([blocked], [], [summitCeiling])} />,
+    )
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      '1 fault, 0 items in the queues. 1 fault marked expected.',
+    )
+  })
+
+  it('exposes the strip as a heading wrapping its toggle', () => {
+    render(<TriagePanel data={data([], [], [summitCeiling])} />)
+    // A button takes phrasing content only, so the heading has to be the
+    // outer element — the WAI-ARIA disclosure pattern, not the reverse.
+    const heading = screen.getByRole('heading', {
+      level: 3,
+      name: /marked expected/i,
+    })
+    const toggle = screen.getByRole('button', { name: /marked expected/i })
+    expect(heading.contains(toggle)).toBe(true)
+  })
+
+  it('points the toggle at the region its rows live in, folded or not', () => {
+    render(<TriagePanel data={data([], [], [summitCeiling])} />)
+    const toggle = screen.getByRole('button', { name: /marked expected/i })
+    // The region has to survive the fold, or aria-controls points at nothing
+    // for the whole time the toggle is worth pressing.
+    const region = document.getElementById(
+      String(toggle.getAttribute('aria-controls')),
+    )
+    expect(region).toBeTruthy()
+    expect(region?.getAttribute('aria-labelledby')).toBe(toggle.id)
+  })
+
+  it('sits below the queues — acknowledged faults are not work', () => {
+    render(<TriagePanel data={data([], [pricesQueue], [summitCeiling])} />)
+    const queues = screen.getByText('work waiting')
+    const expected = screen.getByRole('button', { name: /marked expected/i })
+    expect(
+      queues.compareDocumentPosition(expected) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('says nothing about acknowledgements when there are none', () => {
+    const { container } = render(<TriagePanel data={data([])} />)
+    expect(container.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      'Nothing is broken. Both queues are clear.',
+    )
+    expect(
+      screen.queryByRole('button', { name: /marked expected/i }),
+    ).toBeNull()
   })
 })
