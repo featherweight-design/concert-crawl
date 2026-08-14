@@ -1,3 +1,10 @@
+## [1.242.2](https://github.com/HartiganHM/concert-crawl/compare/v1.242.1...v1.242.2) (2026-08-14)
+
+
+### Bug Fixes
+
+* **artists:** never reap an act billed in a live show's title ([#1562](https://github.com/HartiganHM/concert-crawl/issues/1562)) ([277c264](https://github.com/HartiganHM/concert-crawl/commit/277c26432f0a2bb12e41fe9774749d5cf210a0ce))
+
 ## [1.242.1](https://github.com/HartiganHM/concert-crawl/compare/v1.242.0...v1.242.1) (2026-08-14)
 
 
