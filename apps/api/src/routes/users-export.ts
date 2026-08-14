@@ -37,7 +37,9 @@ usersExportRouter.get('/me/export', async (ctx) => {
     return ctx.json(
       {
         success: false,
-        error: 'You can request one export per hour. Try again shortly.',
+        // No "try again shortly" — the wait is an hour, and Retry-After
+        // already carries the exact number of seconds.
+        error: 'You can request one export per hour.',
       },
       429,
     )

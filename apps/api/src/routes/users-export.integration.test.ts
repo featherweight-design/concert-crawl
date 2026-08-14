@@ -89,11 +89,19 @@ describe('GET /v1/users/me/export', () => {
     const userId = await seedUserWithDataEverywhere()
     const payload = await readExport(userId)
 
+    // Every field #527 asks for, so dropping one fails here rather than
+    // shipping a quietly thinner export. `venue` is nullable because the join
+    // is a left join: an event outlives its venue row.
     const watchingSchema = z.array(
       z.object({
+        event_id: z.string(),
         event_title: z.string(),
         event_date: z.string(),
-        venue: z.string(),
+        venue: z.string().nullable(),
+        status: z.string().nullable(),
+        saved_price: z.string().nullable(),
+        attending_at: z.string().nullable(),
+        created_at: z.string(),
       }),
     )
     const rows = watchingSchema.parse(payload.data['watching'])

@@ -209,7 +209,10 @@ const collectWatching = async (userId: string): Promise<unknown[]> => {
     .innerJoin(events, eq(userEvents.eventId, events.id))
     .leftJoin(venues, eq(events.venueId, venues.id))
     .where(eq(userEvents.userId, userId))
-    .orderBy(userEvents.createdAt)
+    // event_id breaks ties: a seed or a bulk import can stamp several rows with
+    // the same createdAt, and the generic exporter's determinism is worth
+    // nothing if the two hand-written joins below it shuffle.
+    .orderBy(userEvents.createdAt, userEvents.eventId)
 
   return rows
 }
@@ -236,7 +239,9 @@ const collectCrews = async (userId: string): Promise<unknown[]> => {
       and(eq(crewMutes.crewId, crews.id), eq(crewMutes.userId, userId)),
     )
     .where(eq(crewMembers.userId, userId))
-    .orderBy(crewMembers.joinedAt)
+    // Same tie-breaker reasoning as collectWatching. crew_id, not name, since
+    // two crews may legitimately share a name.
+    .orderBy(crewMembers.joinedAt, crewMembers.crewId)
 
   return rows
 }
