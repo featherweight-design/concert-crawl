@@ -1,3 +1,10 @@
+# [1.248.0](https://github.com/HartiganHM/concert-crawl/compare/v1.247.0...v1.248.0) (2026-08-14)
+
+
+### Features
+
+* **admin:** show acknowledged faults as an expected strip in triage ([#1571](https://github.com/HartiganHM/concert-crawl/issues/1571)) ([b49e012](https://github.com/HartiganHM/concert-crawl/commit/b49e012be0bb5cac9817b4cafc7488565ee74ed7))
+
 # [1.247.0](https://github.com/HartiganHM/concert-crawl/compare/v1.246.0...v1.247.0) (2026-08-14)
 
 
