@@ -151,10 +151,24 @@ export const collectUserData = async (
       sql`, `,
     )
 
+    // Order by every selected column, by ordinal. Postgres leaves row order
+    // undefined without an ORDER BY, so two exports of unchanged data can come
+    // back shuffled and read as a change that never happened.
+    //
+    // Ordinals rather than a named timestamp because the allowlists do not
+    // agree on one: some carry `created_at`, others `confirmed_at` or
+    // `used_at`, and one carries none. Sorting on all of them is total,
+    // needs no per-table knowledge, and stays correct as allowlists grow.
+    const ordering = sql.join(
+      entry.exportColumns.map((_column, index) => sql.raw(String(index + 1))),
+      sql`, `,
+    )
+
     // postgres-js returns the row array directly; there is no `.rows` wrapper.
     const rows = await db.execute(
       sql`SELECT ${columns} FROM ${sql.identifier(entry.tableName)}
-          WHERE ${sql.identifier(entry.userIdColumn)} = ${userId}`,
+          WHERE ${sql.identifier(entry.userIdColumn)} = ${userId}
+          ORDER BY ${ordering}`,
     )
     payload[entry.exportKey] = [...rows]
   }
