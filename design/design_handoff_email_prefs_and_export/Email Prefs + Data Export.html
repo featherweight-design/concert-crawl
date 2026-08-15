@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Email prefs + Data export</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+html,body{margin:0;padding:0;background:#f0eee9;font-family:Inter,system-ui,sans-serif}
+*{box-sizing:border-box}
+a{color:#1f5f7a}a:hover{color:#123c4e}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="me-primitives.jsx"></script>
+<script type="text/babel" src="email-export.jsx"></script>
+<script type="text/babel" src="me-screens.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, DesignCanvas, DCSection, DCArtboard, IOSDevice } = window;
+const { MonoEyebrow, SectionRail, SettingsRowGroup, ToggleSwitch, MeToggleRow, GroupFootnote, MeIcon } = window;
+const { EmailFromUsGroup, DataExportRow, ExportStatusLine, EX_COPY, NotificationsSection, AccountSection } = window;
+const { MeHubMobile, MeNotifDesktop, MeAccountDesktop, MeDangerDesktop } = window;
+
+// Plain phone plate for isolated component boards.
+function Plate({ w = 361, theme = "electric", pad = 18, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad, fontFamily: "Inter, system-ui", display: "flex", flexDirection: "column", justifyContent: "center", gap: 14 }}>
+      {children}
+    </ThemeProvider>
+  );
+}
+
+function Phone({ theme = "electric", w = 393, h = 852, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <IOSDevice width={w} height={h} dark={theme !== "light"}>{children}</IOSDevice>
+    </ThemeProvider>
+  );
+}
+
+function Desk({ theme = "electric", children }) {
+  return <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>{children}</ThemeProvider>;
+}
+
+// Live interactive board — the toggle + the button actually work.
+function LiveBoard() {
+  const [email, setEmail] = React.useState(true);
+  const [ex, setEx] = React.useState("rest");
+  const press = () => {
+    setEx("pending");
+    setTimeout(() => setEx("rest"), 1600);
+  };
+  return (
+    <Plate pad={20}>
+      <MonoEyebrow size={9.5}>LIVE · TAP BOTH</MonoEyebrow>
+      <EmailFromUsGroup on={email} onToggle={() => setEmail(v => !v)} />
+      <DataExportRow state={ex} onPress={press} />
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+        {["rest", "pending", "limited", "failed"].map(s => (
+          <button key={s} type="button" onClick={() => setEx(s)} style={{ all: "unset", cursor: "pointer", fontFamily: "'JetBrains Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", padding: "6px 10px", borderRadius: 999, color: ex === s ? "var(--fg-on-accent)" : "var(--fg-muted)", background: ex === s ? "var(--signal)" : "var(--surface-2)", border: "1px solid var(--border)" }}>{s}</button>
+        ))}
+      </div>
+    </Plate>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas>
+
+      <DCSection id="live" title="0 · Live" subtitle="Both new controls, interactive. The toggle flips its own detail line; the export button runs its pending state for real, and the four chips force the refusal states.">
+        <DCArtboard id="live-1" label="Interactive · electric" width={400} height={430}><LiveBoard/></DCArtboard>
+      </DCSection>
+
+      <DCSection id="email" title="1 · Email controls at rest" subtitle="One group, one switch, one footnote. The group sits OUTSIDE the push master (push off must not take email with it) and ABOVE the entitlement-gated Artists group (a free user's opt-out can never sit under an upgrade card). Billing is prose at the foot — visible, explained, not shaped like a control.">
+        <DCArtboard id="em-on" label="Product email ON · 361" width={397} height={260}>
+          <Plate><EmailFromUsGroup on/></Plate>
+        </DCArtboard>
+        <DCArtboard id="em-off" label="Product email OFF · unsubscribed by link" width={397} height={260}>
+          <Plate><EmailFromUsGroup on={false}/></Plate>
+        </DCArtboard>
+        <DCArtboard id="em-320" label="ON · 320 squeeze" width={324} height={300}>
+          <Plate w={288} pad={14}><EmailFromUsGroup on/></Plate>
+        </DCArtboard>
+        <DCArtboard id="em-jade" label="ON · jade" width={397} height={260}>
+          <Plate theme="jade"><EmailFromUsGroup on/></Plate>
+        </DCArtboard>
+        <DCArtboard id="em-light" label="OFF · light" width={397} height={260}>
+          <Plate theme="light"><EmailFromUsGroup on={false}/></Plate>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="export" title="2 · Data export · four states" subtitle="The whole row is the button — the Save-to-calendar precedent. Pending reports inside the row (spinner in the icon tile, WORKING in the chip, the meta line changes voice). Both refusals are a status line BENEATH the row, so the row's own copy never has to double as an error. Rate-limited dims and un-presses the row for the duration; failed leaves it pressable.">
+        <DCArtboard id="ex-rest" label="At rest" width={397} height={190}>
+          <Plate><DataExportRow state="rest"/></Plate>
+        </DCArtboard>
+        <DCArtboard id="ex-pending" label="Pending · inline" width={397} height={190}>
+          <Plate><DataExportRow state="pending"/></Plate>
+        </DCArtboard>
+        <DCArtboard id="ex-limited" label="Rate-limited · 1 / hour" width={397} height={250}>
+          <Plate><DataExportRow state="limited" wait="43 minutes"/></Plate>
+        </DCArtboard>
+        <DCArtboard id="ex-limited-soon" label="Rate-limited · under a minute" width={397} height={250}>
+          <Plate><DataExportRow state="limited" wait="40 seconds"/></Plate>
+        </DCArtboard>
+        <DCArtboard id="ex-failed" label="Failed · generic" width={397} height={250}>
+          <Plate><DataExportRow state="failed"/></Plate>
+        </DCArtboard>
+        <DCArtboard id="ex-320" label="Rate-limited · 320 squeeze" width={324} height={280}>
+          <Plate w={288} pad={14}><DataExportRow state="limited" wait="43 minutes"/></Plate>
+        </DCArtboard>
+        <DCArtboard id="ex-jade" label="Pending · jade" width={397} height={190}>
+          <Plate theme="jade"><DataExportRow state="pending"/></Plate>
+        </DCArtboard>
+        <DCArtboard id="ex-light" label="Failed · light" width={397} height={250}>
+          <Plate theme="light"><DataExportRow state="failed"/></Plate>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="notif-context" title="3 · Notifications section, in context" subtitle="The email group in its real neighbourhood. Premium user: the digest toggle sits in the Artists group below. Free user: that whole group collapses to one upgrade card — which is exactly why the product-email switch is above it and in a group of its own.">
+        <DCArtboard id="nc-premium" label="Premium · mobile · digest visible" width={425} height={900}>
+          <Phone><MeHubMobile scrollTo="notifications" tier="premium" insetTop={40} insetBottom={16}/></Phone>
+        </DCArtboard>
+        <DCArtboard id="nc-free" label="Free · mobile · Artists group is a paywall card" width={425} height={900}>
+          <Phone><MeHubMobile scrollTo="notifications" tier="free" insetTop={40} insetBottom={16}/></Phone>
+        </DCArtboard>
+        <DCArtboard id="nc-free-off" label="Free · product email OFF" width={425} height={900}>
+          <Phone><MeHubMobile scrollTo="notifications" tier="free" productEmail={false} insetTop={40} insetBottom={16}/></Phone>
+        </DCArtboard>
+        <DCArtboard id="nc-320" label="Premium · 320" width={352} height={780}>
+          <Phone w={320} h={720}><MeHubMobile scrollTo="notifications" tier="premium" w={320} insetTop={40} insetBottom={16}/></Phone>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="notif-desktop" title="4 · Notifications · desktop" subtitle="240px sidebar + right panel, section order unchanged. Panel copy caps at 620.">
+        <DCArtboard id="nd-on" label="Product ON · premium" width={1280} height={900}>
+          <Desk><MeNotifDesktop productEmail tier="premium"/></Desk>
+        </DCArtboard>
+        <DCArtboard id="nd-off" label="Product OFF · free" width={1280} height={900}>
+          <Desk><MeNotifDesktop productEmail={false} tier="free"/></Desk>
+        </DCArtboard>
+        <DCArtboard id="nd-light" label="Product ON · light" width={1280} height={900}>
+          <Desk theme="light"><MeNotifDesktop productEmail tier="premium"/></Desk>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="account" title="5 · Account section, in context" subtitle="Export sits as the last thing in Account — a sibling of the email / password rows. Danger zone is the next section along (its own page on desktop), so the export row is a neighbour of Delete account without sharing a container with it.">
+        <DCArtboard id="ac-rest" label="Account · at rest · mobile" width={425} height={900}>
+          <Phone><MeHubMobile scrollTo="account" insetTop={40} insetBottom={16}/></Phone>
+        </DCArtboard>
+        <DCArtboard id="ac-limited" label="Account · rate-limited · mobile" width={425} height={900}>
+          <Phone><MeHubMobile scrollTo="account" exportState="limited" insetTop={40} insetBottom={16}/></Phone>
+        </DCArtboard>
+        <DCArtboard id="ac-desk-rest" label="Account · at rest · desktop" width={1280} height={900}>
+          <Desk><MeAccountDesktop exportState="rest"/></Desk>
+        </DCArtboard>
+        <DCArtboard id="ac-desk-pending" label="Account · pending · desktop" width={1280} height={900}>
+          <Desk><MeAccountDesktop exportState="pending"/></Desk>
+        </DCArtboard>
+        <DCArtboard id="ac-desk-failed" label="Account · failed · desktop · jade" width={1280} height={900}>
+          <Desk theme="jade"><MeAccountDesktop exportState="failed"/></Desk>
+        </DCArtboard>
+        <DCArtboard id="ac-desk-danger" label="Danger zone · separate page · desktop" width={1280} height={900}>
+          <Desk><MeDangerDesktop/></Desk>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="hub" title="6 · The whole hub" subtitle="Section order untouched: Profile → Plan → Appearance → Notifications → Connections → Submitted prices → Account → Danger zone. Both new controls read in one scroll.">
+        <DCArtboard id="hub-top" label="/me · top" width={425} height={900}>
+          <Phone><MeHubMobile scrollTo="top" insetTop={40} insetBottom={16}/></Phone>
+        </DCArtboard>
+        <DCArtboard id="hub-light" label="/me · Notifications · light" width={425} height={900}>
+          <Phone theme="light"><MeHubMobile scrollTo="notifications" insetTop={40} insetBottom={16}/></Phone>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
