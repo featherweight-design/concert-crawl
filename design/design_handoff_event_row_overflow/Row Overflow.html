@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · Row overflow — tour names, legacy titles, status</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #f0eee9; font-family: Inter, system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  a { color: #4a3fd1; } a:hover { color: #2d24a8; }
+  code { font-family: 'JetBrains Mono', monospace; font-size: 0.92em; }
+  /* demo only — used to mock production's struck title in §4 */
+  .demo-strike-title a { text-decoration: line-through; text-decoration-thickness: 1px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="identity-art.jsx"></script>
+<script type="text/babel" src="spotify-shared.jsx"></script>
+<script type="text/babel" src="cc-tip.jsx"></script>
+<script type="text/babel" src="row-data.jsx"></script>
+<script type="text/babel" src="event-row.jsx"></script>
+<script type="text/babel" src="genre-pair.jsx"></script>
+<script type="text/babel" src="overflow-data.jsx"></script>
+<script type="text/babel" src="row-overflow.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, CC_THEME_KEYS, CC_THEMES } = window;
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const { IOSDevice } = window;
+const { EventRowX, EventRowListX, OVF_SURFACES, OVF_SPEC, RowMetaChip, GenrePairChip, orderGenres } = window;
+const { O_TOUR, O_LEGACY, O_STATUS, O_SPARSE, O_GENRE, O_MIXED } = window;
+const { TweaksPanel, useTweaks, TweakSection, TweakSelect, TweakRadio } = window;
+const MONO = "'JetBrains Mono', monospace";
+const NARROW = 320, PHONE = 390;
+
+function PhoneStage({ theme, width = PHONE, height = 700, hostId, pad = 14, children }) {
+  return (
+    <ThemeProvider theme={theme}>
+      <IOSDevice width={width} height={height} dark={theme !== "light"}>
+        <div id={hostId} style={{ position: "relative", width: "100%", height: "100%", overflow: "hidden", background: "var(--bg)", padding: `14px ${pad}px 0` }}>{children}</div>
+      </IOSDevice>
+    </ThemeProvider>
+  );
+}
+function BareStage({ theme, pad = 22, width, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <div style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad, display: "flex", alignItems: "flex-start", justifyContent: "center" }}>
+        <div style={{ width: width || "100%" }}>{children}</div>
+      </div>
+    </ThemeProvider>
+  );
+}
+function Note({ children }) {
+  return <div style={{ fontFamily: "Inter, system-ui", fontSize: 12, color: "var(--fg-muted)", lineHeight: 1.5, textWrap: "pretty" }}>{children}</div>;
+}
+function Eyebrow({ children, tone = "var(--fg-subtle)" }) {
+  return <div style={{ fontFamily: MONO, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: tone }}>{children}</div>;
+}
+
+// The naive answer, built so it can be looked at: each element gets its own
+// line. Four-line rows and six-line rows in the same scroll.
+function NaiveRow({ show, narrow }) {
+  const extra = [show.tourName, show.fallbackTitle].filter(Boolean);
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: `${narrow ? 44 : 56}px minmax(0,1fr) auto`, gap: narrow ? 10 : 14, alignItems: "center", padding: "13px 0", fontFamily: "Inter, system-ui" }}>
+      <div style={{ width: narrow ? 44 : 56, height: narrow ? 44 : 56, borderRadius: 8, overflow: "hidden" }}>
+        <IdentityArt name={show.artist} kind="artist" scale="tile" showInitials={false} grain={0.05}/>
+      </div>
+      <div style={{ minWidth: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+        {show.status !== "live" && <div><RowMetaChip tone="warn">{show.status}</RowMetaChip></div>}
+        <div style={{ fontWeight: 700, fontSize: narrow ? 14.5 : 15.5, color: "var(--fg)", lineHeight: 1.35, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{show.artist}</div>
+        {extra.map((x) => <div key={x} style={{ fontFamily: MONO, fontSize: 11, color: "var(--fg-subtle)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{x}</div>)}
+        {show.supports && show.supports.length > 0 && (
+          <div style={{ fontFamily: MONO, fontSize: 11, color: "var(--fg-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>with {show.supports.join(" · ")}</div>
+        )}
+        <div style={{ fontFamily: MONO, fontSize: 11, color: "var(--fg-muted)", whiteSpace: "nowrap" }}>{show.showTime} · {show.venue}</div>
+        <div style={{ display: "flex", gap: 5, marginTop: 2 }}>
+          {show.genres && show.genres[0] && <RowMetaChip tone="neutral">{show.genres[0]}</RowMetaChip>}
+        </div>
+      </div>
+      <div style={{ justifySelf: "end", fontSize: 16, fontWeight: 800, color: "var(--fg)", fontFamily: "Inter, system-ui" }}>
+        {show.price ? `$${show.price.amount}` : "—"}
+      </div>
+    </div>
+  );
+}
+
+// Measures every rendered row inside it and reports the DISTINCT heights.
+// The whole argument of this pass is that this set stays small.
+function HeightProbe({ label, deps = [], children }) {
+  const ref = React.useRef(null);
+  const [set, setSet] = React.useState([]);
+  React.useEffect(() => {
+    setSet([]);
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      const rows = Array.from(el.querySelectorAll("[data-screen-label^='row-']"));
+      const hs = rows.map((r) => Math.round(r.getBoundingClientRect().height));
+      setSet([...new Set(hs)].sort((a, b) => a - b).map((h) => [h, hs.filter((x) => x === h).length]));
+    };
+    const id = setTimeout(measure, 400);
+    return () => clearTimeout(id);
+    // ▲ R2: re-measures whenever surface or density changes — R1 measured once
+    // on mount, so the reading was a stale desktop/browse number.
+  }, deps);
+  return (
+    <div>
+      <div ref={ref}>{children}</div>
+      <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px dashed var(--border-strong)", display: "flex", flexDirection: "column", gap: 5 }}>
+        <Eyebrow tone="var(--signal)">{label} · measured row heights</Eyebrow>
+        <div style={{ fontFamily: MONO, fontSize: 11, color: "var(--fg-muted)" }}>
+          {set.length ? set.map(([h, n]) => `${h}px × ${n}`).join("   ") : "measuring…"}
+        </div>
+        <Note>{set.length ? `${set.length} distinct height${set.length === 1 ? "" : "s"} across ${set.reduce((a, b) => a + b[1], 0)} rows${set.length === 1 ? " — reserved by geometry, so nothing on the row can move it." : " — line 4 collapses on rows with no chips, and the support line comes and goes."}` : ""}</Note>
+      </div>
+    </div>
+  );
+}
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "electric",
+  "density": "cozy",
+  "surface": "browse",
+  "activeGenre": "none"
+}/*EDITMODE-END*/;
+const THEME_OPTS = CC_THEME_KEYS.map((k) => ({ value: k, label: CC_THEMES[k].label }));
+
+const INVENTORY = [
+  ["tour name", "91", "8.1%", "kept — line 1's slack"],
+  ["fallback title", "182", "16.2%", "never on the row"],
+  ["status pill", "15", "1.3%", "kept — price slot"],
+  ["any of the three", "233", "20.7%", "zero new lines"],
+];
+
+function Root() {
+  const [t, setT] = useTweaks(TWEAK_DEFAULTS);
+  const th = t.theme, dn = t.density, ag = t.activeGenre === "none" ? null : t.activeGenre;
+  return (
+    <>
+    <TweaksPanel title="Tweaks">
+      <TweakSection label="Global">
+        <TweakSelect label="Theme" value={th} onChange={(x) => setT("theme", x)} options={THEME_OPTS}/>
+        <TweakRadio label="Density" value={dn} onChange={(x) => setT("density", x)}
+          options={[{ value: "compact", label: "compact" }, { value: "cozy", label: "cozy" }, { value: "roomy", label: "roomy" }]}/>
+      </TweakSection>
+      <TweakSection label="Genre filter">
+        <TweakRadio label="Active vibe bucket" value={t.activeGenre} onChange={(x) => setT("activeGenre", x)}
+          options={[{ value: "none", label: "none" }, { value: "jazz", label: "jazz" }, { value: "indie", label: "indie" }, { value: "electronic", label: "electronic" }]}/>
+      </TweakSection>
+      <TweakSection label="Surface">
+        <TweakRadio label="Lists render as" value={t.surface} onChange={(x) => setT("surface", x)}
+          options={[{ value: "browse", label: "browse" }, { value: "watching", label: "watching" }, { value: "venue", label: "venue" }, { value: "artist", label: "artist" }]}/>
+      </TweakSection>
+    </TweaksPanel>
+
+    <DesignCanvas title="Row overflow — tour names, legacy titles, status"
+      subtitle="20.7% of upcoming inventory carries something the four-line contract has no slot for. The call: no fifth line. Three elements, three different dispositions, and row height doesn't move. Extends design_handoff_event_row_system — the slot contract, both rules and the meta budget are unchanged.">
+
+      {/* ── 0 ─────────────────────────────────────────────── */}
+      <DCSection id="problem" title="0 · What has no slot"
+        subtitle="Measured against 1,125 upcoming production events, 2026-08-13.">
+        <DCArtboard id="pr-table" label="the inventory" width={520} height={340}>
+          <BareStage theme={th} pad={22} width={460}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {INVENTORY.map(([k, n, pct, call], i) => (
+                <div key={k} style={{ display: "grid", gridTemplateColumns: "1fr 42px 46px 1fr", gap: 10, padding: "11px 0", borderTop: i ? "1px solid var(--border)" : "none", alignItems: "baseline", opacity: i === 3 ? 1 : 0.95 }}>
+                  <span style={{ fontSize: 12.5, fontWeight: i === 3 ? 700 : 500, color: i === 3 ? "var(--fg)" : "var(--fg-muted)" }}>{k}</span>
+                  <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--fg-subtle)", textAlign: "right" }}>{n}</span>
+                  <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 700, color: "var(--fg)", textAlign: "right" }}>{pct}</span>
+                  <span style={{ fontFamily: MONO, fontSize: 10, letterSpacing: "0.04em", color: "var(--signal)", textAlign: "right" }}>{call}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                <Note>Roughly one row in five renders taller than the design accounts for. The failure isn't a clip or a crash — it's <strong style={{ color: "var(--fg)" }}>variable row height</strong>, which dissolves the list rhythm the row system exists to establish.</Note>
+                <Note>Three elements, one symptom — which is exactly why the naive read ("extra text needs a line") is wrong. They are three different kinds of thing.</Note>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="pr-naive" label="rejected · a fifth line" width={PHONE + 40} height={620}>
+          <PhoneStage theme={th} width={PHONE} height={580} hostId="ovf-naive">
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {[O_TOUR[0], window.R_SHOWS[1], O_LEGACY[0], O_STATUS[0], window.R_SHOWS[5]].map((s, i) => (
+                <div key={s.id} style={{ borderTop: i ? "1px solid var(--border)" : "none" }}><NaiveRow show={s}/></div>
+              ))}
+            </div>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="pr-naive-note" label="why it's rejected" width={400} height={620}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Eyebrow tone="var(--warning)">Four, five and six-line rows in one scroll</Eyebrow>
+              <Note>A fifth line with its own type ramp is the cheapest thing to build and the most expensive thing to live with. It produces at least three row heights, in no order a reader can predict, on the surface whose entire job is to be scannable.</Note>
+              <Note>It also violates Rule 2 by the back door: the meta budget's whole function is that <em>nothing gets a slot by default</em>. Granting a line to the two lowest-value elements on the row — one of which is a data artifact — is precisely the drift the row system was built to stop.</Note>
+              <Note>And it costs the virtualised list its fixed sizing: row height stops being a function of one boolean.</Note>
+              <Note>The four-line contract is not the constraint here. It's the answer — these three elements just have to fit <em>inside</em> it, and they can.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 1 ─────────────────────────────────────────────── */}
+      <DCSection id="call" title="1 · The call"
+        subtitle="No fifth line. One element earns space that already exists, one is state and goes where state already lives, one leaves the row.">
+        <DCArtboard id="cl-spec" label="spec" width={700} height={860}>
+          <BareStage theme={th} pad={24} width={640}>
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              {OVF_SPEC.map(([k, v, note], i) => (
+                <div key={k + v} style={{ display: "grid", gridTemplateColumns: "84px 230px 1fr", gap: 12, padding: "11px 0", borderTop: i ? "1px solid var(--border)" : "none", alignItems: "start" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--fg-subtle)", paddingTop: 2 }}>{k}</span>
+                  <span style={{ fontFamily: MONO, fontSize: 11, color: "var(--signal)", paddingTop: 1, lineHeight: 1.45 }}>{v}</span>
+                  <Note>{note}</Note>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="cl-three" label="one row, all three cases" width={480} height={860}>
+          <BareStage theme={th} pad={20} width={420}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div><Eyebrow>tour name · in line 1's slack</Eyebrow><EventRowX show={O_TOUR[0]} surface="browse" density={dn}/></div>
+              <div><Eyebrow>fallback title · never renders, artist stands</Eyebrow><EventRowX show={O_LEGACY[0]} surface="browse" density={dn}/></div>
+              <div><Eyebrow>status · in the price slot</Eyebrow><EventRowX show={O_STATUS[0]} surface="browse" density={dn}/></div>
+              <Note>Three lines each. Same height as every other row on the surface.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 2 ─────────────────────────────────────────────── */}
+      <DCSection id="tour" title="2 · Tour name — line 1's slack"
+        subtitle="Measured, whole-unit, mono, fg-subtle. It renders only if the title fits in full first; otherwise the clause drops entire. The artist never truncates to make room for a tour name, and the tour name is never sliced."
+      >
+        <DCArtboard id="tr-ladder" label="the same three rows at 320 / 390 / 640" width={760} height={1135}>
+          <BareStage theme={th} pad={20} width={720}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {[["320 · narrow", 240, true], ["390", 320, false], ["640 · desktop column", 560, false]].map(([lbl, w, nr]) => (
+                <div key={lbl} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <Eyebrow>{lbl}</Eyebrow>
+                  <div style={{ width: w, border: "1px dashed var(--border-strong)", padding: "0 10px" }}>
+                    {O_TOUR.map((s) => <EventRowX key={s.id} show={s} surface="browse" density={dn} narrow={nr}/>)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="tr-note" label="what the ladder buys" width={400} height={1135}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Eyebrow tone="var(--signal)">Same grammar as the meta budget</Eyebrow>
+              <Note>“One of Those Nights Tour” survives at 640 and dies at 320. “A TOUR” survives further down. Nothing is ever half-shown, and nothing pushes the artist name into an ellipsis it didn't already need.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>The honest trade-off:</strong> the tour name is a wide-viewport detail. At 320 it essentially never renders. That's the right priority — artist, date, venue and price all outrank it — and it's the same deal every other optional element in this row already took.</Note>
+              <Note>Implementation matches <code>WhenWhere</code> and <code>MetaRow</code>: the clause renders, the title's own overflow is measured, and the clause is removed if the title is clipped. One boolean, no width table.</Note>
+              <Note>Watching drops the clause entirely, for the reason it drops the support billing: you saved the headliner, and the price is the point.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="tr-artist" label="Rule 1 · artist page promotes the tour name" width={520} height={545}>
+          <BareStage theme={th} pad={20} width={460}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div><Eyebrow>browse — artist leads, tour trails</Eyebrow><EventRowX show={O_TOUR[1]} surface="browse" density={dn}/></div>
+              <div><Eyebrow tone="var(--signal)">artist page — the page already says MEMBA</Eyebrow><EventRowX show={O_TOUR[1]} surface="artist" density={dn}/></div>
+              <div><Eyebrow>artist page, no tour name — falls back to the artist</Eyebrow><EventRowX show={window.R_HERMANOS} surface="artist" density={dn}/></div>
+              <Note>Rule 1 already subtracts the date on Browse and the venue on a venue page. An artist page carries the artist — so the tour name takes the title slot at full weight, and the redundant name drops (kept for screen readers). It's the one surface where the tour name is the most distinguishing thing on the row. <code>following</code> also leaves that surface's chip priority for the same reason.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 3 ─────────────────────────────────────────────── */}
+      <DCSection id="legacy" title="3 · Fallback title — never on the row"
+        subtitle="No conditions, no surface exceptions. The crawler already falls the title through into `artist`, so line 1 is always the artist and the fallback string has nothing left to add.">
+        <DCArtboard id="lg-rows" label="the three real shapes" width={520} height={500}>
+          <BareStage theme={th} pad={20} width={460}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <Eyebrow>artist + supports extracted → the string is already on the row, twice</Eyebrow>
+                <div style={{ fontFamily: MONO, fontSize: 10.5, color: "var(--fg-subtle)", margin: "4px 0 6px" }}>fallbackTitle: “Shwayze with Claire Wright”</div>
+                <EventRowX show={O_LEGACY[0]} surface="browse" density={dn}/>
+              </div>
+              <div>
+                <Eyebrow tone="var(--signal)">nothing resolved → the title already IS the artist</Eyebrow>
+                <div style={{ fontFamily: MONO, fontSize: 10.5, color: "var(--fg-subtle)", margin: "4px 0 6px" }}>artist: “BASS BINGO” · no Spotify match · no genre → zero chips</div>
+                <EventRowX show={O_LEGACY[1]} surface="browse" density={dn}/>
+              </div>
+              <div>
+                <Eyebrow>same, on Watching</Eyebrow>
+                <div style={{ marginTop: 6 }}><EventRowX show={O_LEGACY[2]} surface="watching" density={dn}/></div>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="lg-note" label="why it leaves" width={400} height={500}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Eyebrow tone="var(--signal)">It isn't content, it's crawl order</Eyebrow>
+              <Note>A legacy title exists only on rows processed before supporting-artist extraction shipped. It is the pre-extraction string, and once extraction has run, the row already renders its contents: “Shwayze” on line 1, “with Claire Wright” on line 2. Rendering the original as well is the same fact three times.</Note>
+              <Note>The set is not regenerated and only shrinks. Spending a permanent line — the highest-cost thing in this system — on a decaying data artifact is the worst trade available. <strong style={{ color: "var(--fg)" }}>16.2 of the 20.7 points close here</strong>, and the remaining 8.1 + 1.3 fit inside the existing four lines.</Note>
+              <Note>Where it does belong: <strong style={{ color: "var(--fg)" }}>event detail</strong>, as a quiet <code>listed as “…”</code> line under the title. There's room, and “what the venue called it” has real value when someone's checking they've got the right show. That's a one-line addition to <code>design_handoff_event_detail_v2</code>, not a row change.</Note>
+              <Note>There is no second case. Because the crawler falls the title through into <code>artist</code>, events it never resolved (“BASS BINGO”, “MAINIAK”) already render that string as line 1 — so “never on the row” needs no exception, and <code>artist</code> stays non-null. What those rows <em>do</em> introduce is a height case: no Spotify match and no genre means zero chips and no line 4. See §5.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 4 ─────────────────────────────────────────────── */}
+      <DCSection id="status" title="4 · Status — the price slot"
+        subtitle="State is not description. Sold-out already short-circuits the price stack as Rule 2's one stated exemption; cancelled and postponed are the same kind of thing, so they take the same door.">
+        <DCArtboard id="st-rows" label="precedence · cancelled > postponed > soldout > presale > price" width={720} height={950}>
+          <BareStage theme={th} pad={20} width={560}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {[["cancelled", O_STATUS[0], "watching"],
+                ["cancelled AND sold out — production reads “Sold out” today", O_STATUS[2], "watching"],
+                ["postponed", O_STATUS[1], "browse"],
+                ["postponed · fallen-through title, no price", O_LEGACY[2], "watching"],
+                ["sold out — unchanged", window.R_SHOWS.find((s) => s.id === "fkj"), "watching"],
+                ["presale — unchanged", window.R_SHOWS.find((s) => s.id === "geese"), "browse"],
+                ["live", O_TOUR[0], "watching"]].map(([lbl, sh, sf]) => (
+                <div key={lbl}><Eyebrow>{lbl}</Eyebrow><EventRowX show={sh} surface={sf} density="compact"/></div>
+              ))}
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="st-note" label="two chips, no new grammar" width={430} height={950}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <RowMetaChip tone="warn">Cancelled</RowMetaChip>
+                <RowMetaChip tone="strong">Postponed</RowMetaChip>
+                <RowMetaChip tone="warn">Sold out</RowMetaChip>
+              </div>
+              <Note>Existing chip grammar, existing tones — <code>warn</code> for cancelled (it's a loss), <code>strong</code> for postponed (it's a change, not a loss). Neither spends meta-chip budget, because neither is a chip that won the budget; they replace the price.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>Cancelled also strikes the date and time</strong> on line 3, and dims the artwork the way sold-out does. A row that keeps printing “Thu, Sep 3 · 8:00 PM” in plain type is asserting something untrue; the strike is the smallest correction that doesn't cost a line. Row text contrast is untouched — dimming stays on the artwork, per R2.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>R3.3 · postponed gets the strike and the dim too.</strong> The earlier ruling here kept postponed's date live. Eng's call supersedes it, and it's the better read: the strike and the dim are general “something's wrong with this show” cues, not per-state encodings — which is why it's fine that sold-out shares the dim. <strong style={{ color: "var(--fg)" }}>The chip is what says which problem it is</strong>, so the two cues don't get split further.</Note>
+              <Note>Strike → cancelled + postponed. Dim → cancelled + postponed + sold out. A postponed row's announced date is exactly as untrue as a cancelled one's; only the reason differs, and the chip carries the reason.</Note>
+              <Note>These are the only two elements of the three that could not be suppressed on any surface. Hiding a cancellation is the one failure mode here that actually costs someone a night out.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="st-signals" label="how many signals a cancelled row carries" width={520} height={715}>
+          <BareStage theme={th} pad={20} width={460}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <Eyebrow>production today · struck title, nothing else</Eyebrow>
+                <div className="demo-strike-title" style={{ marginTop: 6 }}><EventRowX show={{ ...O_STATUS[0], status: "live" }} surface="browse" density={dn}/></div>
+              </div>
+              <div>
+                <Eyebrow tone="var(--warning)">both, adopted without a decision · four signals</Eyebrow>
+                <div className="demo-strike-title" style={{ marginTop: 6 }}><EventRowX show={O_STATUS[0]} surface="browse" density={dn}/></div>
+              </div>
+              <div>
+                <Eyebrow tone="var(--signal)">shipping · chip + dim art + one strike</Eyebrow>
+                <div style={{ marginTop: 6 }}><EventRowX show={O_STATUS[0]} surface="browse" density={dn}/></div>
+              </div>
+              <Note><strong style={{ color: "var(--fg)" }}>One signal per channel.</strong> The chip states it in words, the dimmed artwork carries it peripherally (and matches sold-out), and one strike voids the claim that became false. Four signals isn't emphasis, it's three components each assuming the others aren't there.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>The strike goes on line 3, not line 1.</strong> The show's date and place stopped being true; the artist's name didn't. Line 1 is also the wrong host three times over: struck link text at 15.5px reads as deleted rather than cancelled, it collides with the ellipsis and the tour clause, and on an artist page the title slot holds the <em>tour name</em> — so the production rule would strike “Dreamstate Tour” while the artist name is invisible.</Note>
+              <Note>So production's struck title gets deleted, not kept alongside.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 5 ─────────────────────────────────────────────── */}
+      <DCSection id="rhythm" title="5 · Row height is a constant of geometry"
+        subtitle="R1 claimed two heights and was wrong: MetaRow already returns nothing when a row has no chips, so line 4 collapses and Browse heights already vary — worst on the zero-chip fallback population. The fix isn't an empty chip line (that's a hole); the ROW reserves its height and alignItems:center distributes the slack. One constant per surface × density × narrow. Switch surface and density in the Tweaks panel — the probes re-measure."
+      >
+        <DCArtboard id="rh-390" label="mobile 390 · mixed inventory" width={PHONE + 40} height={1080}>
+          <PhoneStage theme={th} width={PHONE} height={1040} hostId="ovf-390">
+            <EventRowListX shows={O_MIXED} surface={t.surface} density={dn} activeGenre={ag} groupBy={t.surface === "browse" ? "date" : null}/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="rh-320" label="mobile 320 · narrow" width={NARROW + 40} height={1080}>
+          <PhoneStage theme={th} width={NARROW} height={1040} hostId="ovf-320">
+            <EventRowListX shows={O_MIXED} surface={t.surface} density={dn} narrow activeGenre={ag} groupBy={t.surface === "browse" ? "date" : null}/>
+          </PhoneStage>
+        </DCArtboard>
+        <DCArtboard id="rh-collapse" label="today · line 4 collapses, heights vary" width={560} height={1350}>
+          <BareStage theme={th} pad={26} width={500}>
+            <HeightProbe label={`${t.surface} · collapsing`} deps={[t.surface, dn]}>
+              <EventRowListX shows={O_MIXED} surface={t.surface} density={dn} fixedHeight={false}/>
+            </HeightProbe>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="rh-probe" label="shipping · ROW_MIN reserved, one height" width={560} height={1350}>
+          <BareStage theme={th} pad={26} width={500}>
+            <HeightProbe label={`${t.surface} · ROW_MIN`} deps={[t.surface, dn]}>
+              <EventRowListX shows={O_MIXED} surface={t.surface} density={dn}/>
+            </HeightProbe>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="rh-sparse" label="the population that broke the claim" width={420} height={1350}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Eyebrow tone="var(--signal)">Zero chips, no line 4</Eyebrow>
+              <div><EventRowListX shows={O_SPARSE} surface="browse" density={dn} fixedHeight={false}/></div>
+              <Note>No Spotify match, no genre — so no <code>following</code> chip and no <code>genre</code> chip, and <code>MetaRow</code> renders nothing. These are exactly the events the fallback title comes from, which is why R1's fixtures (which gave BASS BINGO a genre production won't have) hid it.</Note>
+              <div style={{ height: 1, background: "var(--border)" }}/>
+              <Eyebrow>the same three, height reserved</Eyebrow>
+              <div><EventRowListX shows={O_SPARSE} surface="browse" density={dn}/></div>
+              <Note><strong style={{ color: "var(--fg)" }}>The trade:</strong> ~20–27px of air on the sparsest rows, in exchange for a row height nothing on the row can move. The slack reads as breathing room rather than a hole because the content stays optically centred against the artwork.</Note>
+              <Note>It doesn't weaken the case against a fifth line: a fifth line raises the constant for 100% of rows to serve 8%, and puts a second string in the title's hierarchy. Reserving height costs whitespace; a fifth line costs the ramp.</Note>
+              <Note>Eng: <code>ROW_MIN</code> in <code>row-overflow.jsx</code> is a starting table, not a spec — derive it from real type metrics and let the probe assert the outcome.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="rh-probe-naive" label="heights · the rejected fifth line, same data" width={520} height={1460}>
+          <BareStage theme={th} pad={26} width={460}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {O_MIXED.map((s, i) => (
+                <div key={s.id} style={{ borderTop: i ? "1px solid var(--border)" : "none" }}><NaiveRow show={s}/></div>
+              ))}
+              <div style={{ paddingTop: 10, borderTop: "1px dashed var(--border-strong)" }}>
+                <Note>Same eleven events. Scan the left edge of the artwork column and the rhythm is gone — and this is the version with only one extra element per row.</Note>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      {/* ── 6 ─────────────────────────────────────────────── */}
+      {/* ── 6 ─────────────────────────────────────────────── */}
+      <DCSection id="genre" title="6 · Two genres — one chip, not two"
+        subtitle="Masego is funk AND soul. Filtering already knew that (the query matches across the whole array, so he already comes back) — what the row got wrong is that it labelled him FUNK. The chip was never the search index; it just wasn't confirming the match. R3.3: the reorder is bucket MEMBERSHIP, not string equality — the Vibe filter passes one of 16 bucket labels — and it only fires when the primary genre sits outside the picked bucket. For same-bucket acts like Masego the pair itself is the fix."
+      >
+        <DCArtboard id="gn-pair" label="the pair · and what the filter does to it" width={520} height={1010}>
+          <BareStage theme={th} pad={20} width={460}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ fontFamily: MONO, fontSize: 10, color: "var(--fg-subtle)" }}>jazz bucket → [jazz, funk, soul, r&amp;b, fusion]</div>
+              <div>
+                <Eyebrow>no filter — primary genre leads</Eyebrow>
+                <EventRowX show={O_GENRE[0]} surface="browse" density={dn}/>
+              </div>
+              <div>
+                <Eyebrow>jazz filter · both genres are members — the pair confirms the match, nothing reorders</Eyebrow>
+                <EventRowX show={O_GENRE[0]} surface="browse" density={dn} activeGenre="jazz"/>
+              </div>
+              <div>
+                <Eyebrow tone="var(--signal)">jazz filter · primary is OUTSIDE the bucket — soul leads</Eyebrow>
+                <EventRowX show={O_GENRE[1]} surface="browse" density={dn} activeGenre="jazz"/>
+                <div style={{ fontFamily: MONO, fontSize: 10, color: "var(--fg-subtle)", marginTop: 4 }}>["hip-hop", "soul"] → SOUL/HIP-HOP · unfiltered it would read HIP-HOP and look like a mis-hit</div>
+              </div>
+              <div>
+                <Eyebrow>one genre — unchanged, no slash</Eyebrow>
+                <EventRowX show={window.R_SHOWS.find((s) => s.id === "geese")} surface="browse" density={dn}/>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", paddingTop: 4 }}>
+                <GenrePairChip genres={["funk", "soul"]}/>
+                <GenrePairChip genres={["hip-hop", "soul"]} activeGenre="jazz"/>
+                <GenrePairChip genres={["indie", "folk"]}/>
+                <GenrePairChip genres={["rock"]}/>
+              </div>
+              <Note><strong style={{ color: "var(--fg)" }}>The reorder is a no-op whenever the primary genre is already a member of the picked bucket</strong> — including Masego, the act this request came from. Buckets are wide, so that's the common case. It isn't a shortfall: under a jazz filter <code>FUNK/SOUL</code> confirms the match on its own, because both genres are jazz-bucket members. <strong style={{ color: "var(--fg)" }}>The pair confirms the match; the reorder stops the pair from confirming the wrong thing</strong> on cross-bucket acts.</Note>
+              <Note>Cap is two. A third genre never renders — the pair is an identity (“a funk/soul act”), not a tag list, and three is a list.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="gn-why" label="why not two chips" width={430} height={1010}>
+          <BareStage theme={th} pad={20}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <Eyebrow tone="var(--warning)">Rejected · a second chip</Eyebrow>
+              <div style={{ display: "flex", gap: 5 }}>
+                <RowMetaChip tone="strong">Following</RowMetaChip><RowMetaChip tone="neutral">funk</RowMetaChip><RowMetaChip tone="neutral">soul</RowMetaChip>
+              </div>
+              <Note>Rule 2's budget is two chips, dropping to one when a support line is present. A second genre chip spends the <em>whole</em> budget on one fact: a Browse row loses <code>Following</code> outright, and a row with supports can only ever show half its genre — the exact case (a hybrid act on a mixed bill) the request is about.</Note>
+              <Note>Two adjacent neutral chips also read as tag soup, which is the drift Rule 2 exists to stop. <strong style={{ color: "var(--fg)" }}>The pair costs ~34px; a second chip costs a slot.</strong></Note>
+              <div style={{ height: 1, background: "var(--border)" }}/>
+              <Eyebrow tone="var(--signal)">Shipping</Eyebrow>
+              <div style={{ display: "flex", gap: 5 }}>
+                <RowMetaChip tone="strong">Following</RowMetaChip><GenrePairChip genres={["funk", "soul"]}/>
+              </div>
+              <Note>Same budget, same grammar, one new glyph — a dimmed <code>/</code> at 45% opacity, so the pair reads as one label rather than two words jammed together.</Note>
+              <Note>Nothing in the <em>data</em> changes: <code>genres[]</code> already holds both, and the query already matches on any of them. The extractor caps at three, so cap-at-two is a live truncation — we're choosing which two, not inventing a limit.</Note>
+              <div style={{ height: 1, background: "var(--border)" }}/>
+              <Eyebrow tone="var(--warning)">Not free — flagged, not decided</Eyebrow>
+              <Note>Membership needs the bucket→sub-genre map on the client. Today the taxonomy lives in the API and the web app only sees the bare <code>filterVibe</code> string, so eng either lifts the map into a shared package or the API returns which sub-genre matched. Design has no preference between those; it just shouldn't get costed as a one-line change.</Note>
+              <Note>Until that seam exists the chip falls back to primary-genre order — no reorder, never a <em>wrong</em> reorder.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+        <DCArtboard id="gn-narrow" label="width pressure · the pair degrades inside the chip" width={700} height={1080}>
+          <BareStage theme={th} pad={20} width={660}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+              {[["320 · narrow", 240, true], ["390", 320, false], ["640", 560, false]].map(([lbl, w, nr]) => (
+                <div key={lbl} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <Eyebrow>{lbl}</Eyebrow>
+                  <div style={{ width: w, border: "1px dashed var(--border-strong)", padding: "0 10px" }}>
+                    <EventRowX show={window.R_SHOWS.find((s) => s.id === "masego")} surface="browse" density={dn} narrow={nr} activeGenre="jazz"/>
+                    <EventRowX show={window.R_SHOWS.find((s) => s.id === "cassandra")} surface="browse" density={dn} narrow={nr} activeGenre="indie"/>
+                  </div>
+                </div>
+              ))}
+              <Note><strong style={{ color: "var(--fg)" }}>Masego is Following + pair; Cassandra Jenkins is pair alone.</strong> The pair survives wherever the budget's remaining width allows it, so the second row keeps <code>FOLK/INDIE</code> down to 390 while the first gives its second genre up as soon as <code>Following</code> is sharing the line. The rule is width, not a breakpoint — which is why this is measured rather than declared.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>The meta line owns this, not the chip.</strong> <code>MetaRowX</code> measures, and if the set overflows it asks the pair to collapse <em>first</em>, re-measures, and only then starts dropping whole chips. A chip can't make this call itself — <code>MetaRow</code> wraps every child in a content-sized span, so a chip looking outward sees a box that never overflows, and by the time the fit pass has taken it out of flow the container isn't overflowing either.</Note>
+              <Note><strong style={{ color: "var(--fg)" }}>The one place this system degrades inside a unit instead of dropping it.</strong> Without the extra step the wider pair chip is dropped entirely at 320 and the row shows <em>no</em> genre — worse than today. Called out because “drop whole units” is load-bearing: the <em>unit</em> is the chip, and the chip survives. What degrades is its contents — the same way line 3 shortens the date before it drops the venue. The dropped genre moves to a screen-reader span.</Note>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="eng" title="7 · What eng changes"
+        subtitle="All of it lives in event-row.jsx plus two data fields. The slot contract, Rule 1, Rule 2, the meta budget and the narrow step are untouched.">
+        <DCArtboard id="en-list" label="the diff" width={700} height={600}>
+          <BareStage theme={th} pad={24} width={640}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 11 }}>
+              {[["data", "status gains cancelled · postponed. tourName and the related surface already exist; fallbackTitle simply stops being read by the row; artist stays non-null"],
+                ["line 1", "TitleLine replaces the bare anchor — measured tour clause, promoted tour name on the artist surface. NOT struck on cancelled: delete production's struck title"],
+                ["line 3", "WhenWhere gains strike (cancelled only) — this is the row's one strike"],
+                ["price", "PriceStack gains cancelled · postponed AHEAD of soldout — fixes the live cancelled-and-sold-out bug"],
+                ["height", "ROW_MIN: min-height per surface × density × narrow, one constant per geometry. Line 4 keeps collapsing; the row absorbs it. Assert it in a test — the probe in §5 is copyable"],
+                ["genre", "the genre slot renders GenrePairChip — two genres in one chip, collapses to one under width pressure, budget unchanged. Lead = first genre that is a MEMBER of the picked Vibe bucket, never string equality. Needs the bucket map client-side (shared package, or the API returns the matched sub-genre) — the one non-trivial cost in this pass"],
+                ["surfaces", "artist added as a SURFACES entry; new per-surface flag tour; artist carries 'artist' and drops 'following' from its chip priority"],
+                ["not changed", "the four-line contract · Rule 1 · Rule 2 · the meta budget · the measured line-3 ladder · the narrow step · the action gutter · price rendering and the surface-gated delta"]].map(([k, v]) => (
+                <div key={k} style={{ display: "grid", gridTemplateColumns: "92px 1fr", gap: 12, alignItems: "start" }}>
+                  <span style={{ fontFamily: MONO, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: k === "not changed" ? "var(--signal)" : "var(--fg-subtle)", paddingTop: 2 }}>{k}</span>
+                  <Note>{v}</Note>
+                </div>
+              ))}
+              <div style={{ marginTop: 6, paddingTop: 12, borderTop: "1px solid var(--border)" }}>
+                <Note>One thing this pass does <em>not</em> answer: what to do if tour names ever stop being short. Every sample in production reads as a title, and the measured clause degrades safely if that changes — but if the crawler starts pulling promoter boilerplate into <code>tourName</code>, that's a data problem, not a row problem.</Note>
+              </div>
+            </div>
+          </BareStage>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<Root/>);
+</script>
+</body>
+</html>
