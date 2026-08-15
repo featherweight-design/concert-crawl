@@ -1229,6 +1229,31 @@ export const CONSUMER_COPY = {
       "That's fine. Most fans stay anonymous. If you want credit on your prices (and the option to be tagged when someone confirms one), pick a handle.",
     pickHandleCta: 'Pick a handle',
 
+    // ── Download your data (#1573) ────────────────────────────────
+    // The row is the last thing in Account. `limited` and `failed` render
+    // beneath it rather than in its detail line, so the label never has to
+    // double as an error message. `wait` is formatted client-side from the
+    // 429's Retry-After header; the server sends seconds, not prose.
+    dataExport: {
+      label: 'Download your data',
+      restDetail: 'Everything we store on you, as a file. Takes a second.',
+      pendingDetail: 'Putting your file together…',
+      chipRest: 'JSON',
+      chipPending: 'Working',
+      limitedRail: 'Hold on',
+      limited: (wait: string) => `One export an hour. Try again in ${wait}.`,
+      failedRail: "Didn't work",
+      failed:
+        "Signal lost. The export didn't come through. Give it another go.",
+      waitMinutes: (minutes: number) =>
+        `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`,
+      waitSeconds: (seconds: number) =>
+        `${seconds} ${seconds === 1 ? 'second' : 'seconds'}`,
+      // Matches the server's Content-Disposition. Deliberately not
+      // date-stamped: the timestamp is inside the payload as `exportedAt`.
+      fileName: 'concertcrawl-data-export.json',
+    },
+
     // ── Clerk attribution (AccountManagementRow + desktop Account panel) ──
     clerkAttribution:
       'Sign-in credentials and connected accounts are managed by Clerk.',

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ProfileHero } from './ProfileHero'
 import { AccountManagementRow } from './AccountManagementRow'
+import { DataExportRow } from './DataExportRow'
 import { PlanPanel } from './plan'
 import { ThemePickerInline } from './ThemePickerInline'
 import { NotificationsSection } from './notifications/NotificationsSection'
@@ -154,6 +155,9 @@ export function SettingsRoute({
         <div className="flex flex-col gap-2 px-4">
           <SectionLabel>{SETTINGS_COPY.accountSection}</SectionLabel>
           <AccountManagementRow email={profile.email} />
+          {/* Last thing in Account, above Danger zone but not in it: taking
+              your data out is not the same act as deleting it. */}
+          <DataExportRow />
         </div>
 
         {/* Admin link — only for admins */}

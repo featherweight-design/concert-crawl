@@ -10,6 +10,7 @@ import { PlanPanel } from './plan'
 import { ThemePickerInline } from './ThemePickerInline'
 import { MySubmissionsList } from './MySubmissionsList'
 import { DangerZone } from './DangerZone'
+import { DataExportRow } from './DataExportRow'
 import { EditProfileForm } from './EditProfileForm'
 import { ConnectionsPanel } from './connections'
 import { NotificationsSection } from './notifications/NotificationsSection'
@@ -621,6 +622,9 @@ export function SettingsRouteDesktop({
                     </a>
                   </p>
                 </div>
+                {/* Last thing in Account, and its own panel away from Danger
+                    zone: taking your data out is not deleting it. */}
+                <DataExportRow />
               </div>
             )}
 

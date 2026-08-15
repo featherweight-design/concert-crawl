@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.46.0-beta',
+    date: 'Aug 15, 2026',
+    headline: 'Take your data with you, whenever you want it.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Settings → Account has a Download your data button that hands you everything we store on you as a file.',
+      },
+    ],
+  },
+  {
     version: 'v0.45.0-beta',
     date: 'Aug 15, 2026',
     headline: 'Turn off our news and offers without hunting for the email.',

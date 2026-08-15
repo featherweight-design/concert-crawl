@@ -173,7 +173,7 @@ export const LEGAL_COPY = {
       items: [
         'Edit your profile at any time from Settings',
         'Delete your account from the Settings page',
-        'Request a copy of your data by emailing us',
+        'Download everything we store on you from Settings → Account',
         'Turn off product email in Settings → Notifications, or with the one-click link in any product email. Receipts and billing notices still come through.',
       ],
     },
