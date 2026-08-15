@@ -7,6 +7,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // otherwise inspect off `create()` and returns the response the existing
 // tests configured via `.mockResolvedValue(...)`.
 const mockCreate = vi.fn()
+// `adjudicateEvent` calls `messages.create()` directly — one listing fits well
+// inside the token budget that forces page extraction to stream.
+const mockAdjudicate = vi.fn()
 
 vi.mock('@anthropic-ai/sdk', () => ({
   default: vi.fn().mockImplementation(
@@ -15,13 +18,14 @@ vi.mock('@anthropic-ai/sdk', () => ({
         stream: (params: unknown) => ({
           finalMessage: async () => mockCreate(params),
         }),
+        create: (params: unknown) => mockAdjudicate(params),
       }
     },
   ),
 }))
 
 // import after mock registration
-const { extractWithLlm } = await import('./llm.js')
+const { extractWithLlm, adjudicateEvent } = await import('./llm.js')
 
 const SOURCE_URL = 'https://example.com/events'
 
@@ -1046,6 +1050,42 @@ describe('extractWithLlm', () => {
     } finally {
       consoleSpy.mockRestore()
     }
+  })
+})
+
+describe('adjudicateEvent', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('trims names and drops the blanks a model sometimes pads a list with', async () => {
+    mockAdjudicate.mockResolvedValue({
+      content: [
+        {
+          type: 'tool_use',
+          id: 'tool_adj',
+          name: 'adjudicate_event',
+          input: {
+            isConcert: true,
+            headliners: ['  Turnstile  ', '   '],
+            supportingArtists: ['', ' Snail Mail'],
+          },
+        },
+      ],
+      usage: { input_tokens: 10, output_tokens: 5 },
+      stop_reason: 'tool_use',
+    })
+
+    const verdict = await adjudicateEvent({
+      title: 'Turnstile',
+      description: undefined,
+    })
+
+    // A whitespace name is a padded list, not an outage: throwing would turn a
+    // usable verdict into a failed adjudication. But it must not survive into
+    // headliners, where it would project an unnamed artist row.
+    expect(verdict.headliners).toEqual(['Turnstile'])
+    expect(verdict.supportingArtists).toEqual(['Snail Mail'])
   })
 })
 

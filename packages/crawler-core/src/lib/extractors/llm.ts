@@ -554,10 +554,20 @@ const ADJUDICATE_TOOL: Anthropic.Tool = {
   },
 }
 
+// Trimmed before the length check, and blanks dropped rather than rejected. A
+// model that emits '   ' for a name is not reporting an outage, so throwing
+// would escalate a recoverable answer into a failed adjudication — but a blank
+// must not reach `headliners`, where it would project an unnamed artist row.
+const AdjudicatedNames = z
+  .array(z.string())
+  .transform((names) =>
+    names.map((name) => name.trim()).filter((name) => name !== ''),
+  )
+
 const AdjudicationSchema = z.object({
   isConcert: z.boolean(),
-  headliners: z.array(z.string().min(1)),
-  supportingArtists: z.array(z.string().min(1)),
+  headliners: AdjudicatedNames,
+  supportingArtists: AdjudicatedNames,
 })
 
 const ADJUDICATE_PROMPT = `You are reading ONE event listing from a music venue and answering two questions about it: is this a legitimate concert, and if so, who is on the bill. The second answer follows from the first.
