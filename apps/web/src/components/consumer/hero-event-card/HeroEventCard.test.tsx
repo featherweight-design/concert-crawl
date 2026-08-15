@@ -108,9 +108,7 @@ describe('HeroEventCard — imagery chain (#1525)', () => {
         event={{ ...baseEvent, imageUrl: null, artistPhotoUrl: portrait }}
       />,
     )
-    expect(container.querySelector('img')?.getAttribute('src')).toContain(
-      encodeURIComponent(portrait),
-    )
+    expect(container.querySelector('img')?.getAttribute('src')).toBe(portrait)
   })
 
   it('keeps event artwork ahead of the portrait', () => {
@@ -120,8 +118,45 @@ describe('HeroEventCard — imagery chain (#1525)', () => {
         event={{ ...baseEvent, imageUrl: artwork, artistPhotoUrl: portrait }}
       />,
     )
-    expect(container.querySelector('img')?.getAttribute('src')).toContain(
-      encodeURIComponent(artwork),
-    )
+    expect(container.querySelector('img')?.getAttribute('src')).toBe(artwork)
+  })
+})
+
+describe('HeroEventCard — band layout (#1525 PR 4)', () => {
+  const slot = (root: HTMLElement) => {
+    // Panel marks the slot aria-hidden because it repeats the artist name the
+    // type column already carries — an inherent property, not a DOM position.
+    const found = root.querySelector('a span[aria-hidden="true"]')
+    if (!(found instanceof HTMLElement)) {
+      throw new Error('the card rendered no image slot')
+    }
+    return found
+  }
+
+  it('renders a 112px square panel, not a wide banner', () => {
+    const { container } = render(<HeroEventCard event={baseEvent} />)
+    expect(slot(container).style.width).toBe('112px')
+    expect(slot(container).style.height).toBe('112px')
+  })
+
+  it('has nothing that can outrun the card at 320px', () => {
+    const { container } = render(<HeroEventCard event={baseEvent} />)
+    // The panel is the only fixed-width child, so the type column must be
+    // free to shrink or the band overflows on the 320px baseline.
+    const column = slot(container).nextElementSibling
+    expect(column?.className).toContain('min-w-0')
+    expect(column?.className).toContain('flex-1')
+  })
+
+  it('keeps the watch button outside the link', () => {
+    const { container } = render(<HeroEventCard event={baseEvent} />)
+    const watch = screen.getByTestId('watch-stub')
+    expect(container.querySelector('a')?.contains(watch)).toBe(false)
+  })
+
+  it('puts the eyebrow badge in the type column', () => {
+    const { container } = render(<HeroEventCard event={baseEvent} />)
+    const badge = screen.getByText(/★/)
+    expect(slot(container).nextElementSibling?.contains(badge)).toBe(true)
   })
 })

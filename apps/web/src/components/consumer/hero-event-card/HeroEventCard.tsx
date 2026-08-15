@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { EventWithVenue } from '@concert-crawl/types'
-import { EventImage } from '../event-image'
+import { Panel } from '@/components/consumer/image-slot'
 import { WatchShowButton } from '../watch-show-button'
 import { formatShowTime, venueShort } from '../definitions/lib'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
@@ -30,38 +30,32 @@ export function HeroEventCard({
       : null
 
   return (
-    <div className="relative overflow-hidden rounded-[12px] border border-border-strong bg-surface-1">
-      <Link href={`/events/${event.id}`} className="block">
-        {/* Hero image — fixed 180px height */}
-        <div className="relative h-[180px] w-full">
-          <EventImage
-            src={event.imageUrl}
-            artistPhotoUrl={event.artistPhotoUrl ?? null}
-            alt={event.artist}
-            artist={event.artist}
-            identityScale="hero"
-            className="h-full w-full"
-            fill
-            sizes="(max-width: 1024px) 100vw, 720px"
-          />
-          {/* Bottom scrim */}
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                'linear-gradient(180deg, transparent 30%, var(--bg) 100%)',
-            }}
-            aria-hidden
-          />
+    <div className="relative overflow-hidden rounded-[14px] border border-border-strong bg-surface-1">
+      <Link
+        href={`/events/${event.id}`}
+        className="flex items-center gap-3.5 p-3.5"
+      >
+        {/* A square panel rather than the wide banner this slot used to crop
+            to. The old shape stretched a square source across ≈4:1 and lost
+            whatever made it recognisable (#1525). */}
+        <Panel
+          surface="event"
+          name={event.artist}
+          artworkUrl={event.imageUrl}
+          photoUrl={event.artistPhotoUrl ?? null}
+          size={112}
+        />
+
+        <div className="min-w-0 flex-1">
           {/* Eyebrow badge slot — the Spotify "Following" badge replaces the
               accent "★ Tonight's pick" badge when the bill matches a followed
               artist (#763 PR 6, follow-highlight mock). */}
-          <div className="absolute left-2.5 top-2.5">
+          <div className="mb-1.5">
             {isFollowed ? (
               <HeroFollowingBadge />
             ) : (
               <span
-                className="rounded-[4px] bg-accent px-2 py-[3px] text-fg-on-accent"
+                className="inline-block rounded-[4px] bg-accent px-2 py-[3px] text-fg-on-accent"
                 style={{
                   fontFamily: 'var(--font-mono)',
                   fontSize: '9px',
@@ -74,10 +68,6 @@ export function HeroEventCard({
               </span>
             )}
           </div>
-        </div>
-
-        {/* Content — overlaps image by 40px */}
-        <div className="relative -mt-10 px-3.5 pb-3.5 pt-3">
           <EventTitleBlock
             headliner={event.artist}
             supportingArtists={event.supportingArtists}
@@ -95,21 +85,28 @@ export function HeroEventCard({
               letterSpacing: '0.02em',
             }}
           >
-            <span className="text-signal">{venueShort(event.venue.name)}</span>
+            {/* The venue is the only elastic part of the line: the time and
+                the price are short and always worth reading in full, so the
+                name is what gives when the column is narrow. */}
+            <span className="min-w-0 truncate text-signal">
+              {venueShort(event.venue.name)}
+            </span>
             {showTime && (
               <>
-                <span className="opacity-40">·</span>
-                <span>{showTime}</span>
+                <span className="shrink-0 opacity-40">·</span>
+                <span className="shrink-0">{showTime}</span>
               </>
             )}
             {priceDisplay && (
               <>
-                <span className="opacity-40">·</span>
-                <span className="text-signal">{priceDisplay}</span>
+                <span className="shrink-0 opacity-40">·</span>
+                <span className="shrink-0 text-signal">{priceDisplay}</span>
               </>
             )}
           </div>
-          <GenreChips genres={event.genre} className="mt-2" />
+          {/* Right padding clears the watch button, which sits over this
+              corner and is deliberately outside the Link. */}
+          <GenreChips genres={event.genre} className="mt-2 pr-9" />
         </div>
       </Link>
 
