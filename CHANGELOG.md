@@ -1,3 +1,10 @@
+# [1.256.0](https://github.com/HartiganHM/concert-crawl/compare/v1.255.0...v1.256.0) (2026-08-15)
+
+
+### Features
+
+* **imagery:** the artist page hero becomes a band ([#1591](https://github.com/HartiganHM/concert-crawl/issues/1591)) ([0b6972f](https://github.com/HartiganHM/concert-crawl/commit/0b6972f9a8abfe5a68bf69cee847f2d989194a89))
+
 # [1.255.0](https://github.com/HartiganHM/concert-crawl/compare/v1.254.0...v1.255.0) (2026-08-15)
 
 
