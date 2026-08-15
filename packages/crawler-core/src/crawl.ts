@@ -26,7 +26,7 @@ import {
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractTicketure } from './lib/extractors/ticketure.js'
 import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js'
-import { deriveArtists } from './lib/derive-artists.js'
+import { deriveArtists, wouldAdjudicate } from './lib/derive-artists.js'
 import { calculateCost } from './lib/cost.js'
 import { dispatch } from './lib/fetchers/index.js'
 import type { PlatformFetcher, PlatformSource } from './lib/fetchers/index.js'
@@ -811,9 +811,15 @@ export async function crawlVenue(
       // `force` re-runs the ladder from scratch, matching what it does to the
       // source-hash skip below. An extractor newly reporting isConcert:false
       // still goes through the ladder, so step 0 can retire a stored verdict.
+      //
+      // `wouldAdjudicate` keeps the reuse gate to the one case reuse is for:
+      // an extraction with no usable performer signal, where the ladder can
+      // only reach the LLM. A source that newly starts emitting a performer
+      // field runs the ladder again — step 1 is free, and the venue's own
+      // structured answer outranks a stored LLM verdict.
       if (
         !force &&
-        evt.isConcert !== false &&
+        wouldAdjudicate(evt) &&
         prior !== undefined &&
         prior.canonicalHeadliners !== null &&
         prior.title === evt.title &&
@@ -1023,6 +1029,21 @@ export async function crawlVenue(
             if (
               existing.eventUrl === null &&
               normalizeTicketUrl(evt.eventUrl) !== null
+            ) {
+              return true
+            }
+            // Same escape hatch for the derived bill. The headliner columns
+            // are not part of sourceHash, so a source that newly starts
+            // naming its performers — or an adjudicator that changes its
+            // mind — would never reach the upsert while the title and times
+            // sat still. NULL is the no-verdict case and is deliberately not
+            // a change: it must never trigger a write that preserves the
+            // stored value anyway.
+            if (
+              evt.canonicalHeadliners !== null &&
+              (!Array.isArray(existing.canonicalHeadliners) ||
+                existing.canonicalHeadliners.join('|') !==
+                  evt.canonicalHeadliners.join('|'))
             ) {
               return true
             }

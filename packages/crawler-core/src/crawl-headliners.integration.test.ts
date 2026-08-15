@@ -426,6 +426,41 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     expect(row.canonicalHeadliners).toEqual(['daedelus'])
   })
 
+  it('drops the stored verdict once the source starts naming a performer', async () => {
+    // A venue that adds JSON-LD performer markup, or an extractor that starts
+    // populating the field, gives the ladder a step-1 answer where it
+    // previously had none. That outranks a stored LLM verdict, so the reuse
+    // gate must not hold the older answer just because the title is unchanged.
+    const venue = await seedTestVenue()
+    const date = futureDate(32)
+    mockAdjudicateEvent.mockResolvedValue({
+      isConcert: true,
+      headliners: ['Daedelus'],
+      supportingArtists: [],
+    })
+    mockExtraction([
+      makeEvent('@adsfradio presents', date, { observedPerformers: [] }),
+    ])
+    await crawlVenue(venue.id, mockBrowser)
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+
+    mockExtraction(
+      [
+        makeEvent('@adsfradio presents', date, {
+          observedPerformers: ['Daedelus', 'Busdriver'],
+        }),
+      ],
+      '<html><body><p>Performers listed</p></body></html>',
+    )
+    await crawlVenue(venue.id, mockBrowser)
+
+    // Step 1 is free, so the ladder settles without a second LLM call.
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+    const row = await loadEvent('@adsfradio presents')
+    expect(row.headliners).toEqual(['Daedelus', 'Busdriver'])
+    expect(row.canonicalHeadliners).toEqual(['busdriver', 'daedelus'])
+  })
+
   it('re-adjudicates when the title moves, because the adjudicator reads it', async () => {
     const venue = await seedTestVenue()
     const date = futureDate(30)

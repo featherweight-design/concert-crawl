@@ -60,6 +60,26 @@ export function isSuspiciousObservation(
   return EVENT_WORDS.some((word) => lowered.includes(word))
 }
 
+/**
+ * True when the ladder would fall through to the adjudicator — no usable
+ * observation, so only the LLM can answer. Callers cache verdicts on this:
+ * reusing one when the extraction DOES name somebody would ignore a source
+ * that newly started emitting a performer field, and keep projecting the older
+ * LLM answer forever. Exported so the reuse gate cannot drift from step 1.
+ */
+export function wouldAdjudicate(event: {
+  title: string
+  observedPerformers?: string[]
+  isConcert?: boolean
+}): boolean {
+  if (event.isConcert === false) return false
+  const headliner = (event.observedPerformers ?? []).filter(
+    (name) => name.trim().length > 0,
+  )[0]
+  if (headliner === undefined) return true
+  return isSuspiciousObservation(headliner, event.title)
+}
+
 export async function deriveArtists(
   event: Pick<NormalizedEvent, 'title' | 'description'> & {
     // Typed optional even though `NormalizedEvent` declares it required: the
