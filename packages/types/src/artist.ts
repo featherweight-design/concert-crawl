@@ -14,7 +14,7 @@ export interface ArtistShow {
   venue: string
   venueSlug: string
   city: string | null
-  /** Cheapest known ticket price, or null when unknown ("Price TBD"). */
+  /** Cheapest known ticket price, or null when unknown. */
   price: number | null
   /**
    * The artist page carries the artist, so the row promotes the tour name into

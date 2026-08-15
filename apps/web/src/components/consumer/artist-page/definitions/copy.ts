@@ -99,7 +99,9 @@ export const ARTIST_COPY = {
   // Same unit as the section-head count: shows, never groups.
   showAll: (count: number) => `Show all ${count} shows`,
   showFewer: 'Show fewer',
-  priceUnknown: 'Price TBD',
+  // The one-off rows on this page are EventRows now, and they state an absent
+  // price as `tba`. The run card sits beside them, so it says the same thing.
+  priceUnknown: 'tba',
 
   // Empty upcoming — first-class, the conversion moment (rendered by PR-F).
   emptyTitle: 'Nothing on the calendar.',

@@ -9,8 +9,8 @@ interface PriceChipProps {
 }
 
 /**
- * A known price gets a box; an unknown one deliberately does not — "Price TBD"
- * is an absence, and boxing it would give it the same weight as a fact.
+ * A known price gets a box; an unknown one deliberately does not — an absence
+ * boxed would carry the same weight as a fact.
  */
 export const PriceChip = ({ price }: PriceChipProps) => {
   if (price === null) {
@@ -21,7 +21,6 @@ export const PriceChip = ({ price }: PriceChipProps) => {
           fontSize: 10,
           fontWeight: 600,
           letterSpacing: '0.06em',
-          textTransform: 'uppercase',
           color: 'var(--fg-subtle)',
           flexShrink: 0,
         }}

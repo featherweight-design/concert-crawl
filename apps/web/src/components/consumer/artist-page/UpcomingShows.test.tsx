@@ -137,7 +137,7 @@ describe('UpcomingShows', () => {
     expect(link?.getAttribute('href')).toBe('/events/Hi-Dive-2026-08-08')
   })
 
-  it('shows a price when we have one and says Price TBD when we do not', () => {
+  it('shows a price when we have one and says tba when we do not', () => {
     const { getByText } = render(
       <UpcomingShows
         name="Wax Harbour"
@@ -148,8 +148,7 @@ describe('UpcomingShows', () => {
       />,
     )
     expect(getByText('$15')).toBeTruthy()
-    // The row states an absent price in its own words. The page's "Price TBD"
-    // still runs the run cards, which are not rows.
+    // The row and the run card beside it now say the same word for an absence.
     expect(getByText(EVENT_ROW_COPY.price.tba)).toBeTruthy()
   })
 
