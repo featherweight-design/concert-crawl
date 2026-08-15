@@ -27,46 +27,47 @@
 
 **Phase 1 — the derivation stage (PR 1)**
 
-| File | Responsibility |
-| --- | --- |
-| `packages/crawler-core/src/lib/derive-artists.ts` (create) | The precedence ladder. One exported `deriveArtists()`. |
-| `packages/crawler-core/src/lib/derive-artists.test.ts` (create) | Table-driven ladder tests. Carries the weight of this phase. |
-| `packages/crawler-core/src/types.ts` (modify) | Add `observedPerformers` to `NormalizedEvent`; amend the `headliners` invariant doc. |
-| `packages/crawler-core/src/lib/extractors/json-ld.ts` (modify) | Delete the `?? name` fallback; return `observedPerformers`. |
-| `packages/crawler-core/src/lib/extractors/llm.ts` (modify) | Delete the `|| title` fallback; move the derivation prompt out. |
-| `packages/crawler-core/src/lib/extractors/ticketure.ts` (modify) | No performer field exists. Keep `artist: title` as display; return `observedPerformers: []`. |
-| `packages/crawler-core/src/lib/fetchers/livenation.ts` (modify) | Keep `?? event.name` for display; return the whole `artistNames` list as `observedPerformers`. |
-| `packages/crawler-core/src/lib/fetchers/venuepilot.ts` (modify) | Return `announceArtists[].name` as `observedPerformers`; keep the title fallback for display only. |
-| `packages/crawler-core/src/lib/fetchers/aeg.ts` (modify) | Return `[title.headlinersText]`. No title fallback exists here — the path already returns null without a headliner. |
-| `packages/crawler-core/src/lib/fetchers/detail-page.ts` | **No change.** Builds no `NormalizedEvent` literal; inherits the `json-ld.ts` fix. |
-| `packages/crawler-core/src/lib/genre-tagger.ts` (modify) | Remove the `?? ''` artist coalesce. |
-| `packages/crawler-core/src/crawl.ts` (modify) | Call `deriveArtists()` between extraction and the event write. |
-| `packages/db/src/scripts/backfill-artists.ts` (modify) | Read `canonical_headliners` first, `canonical_artist` as fallback. |
+| File                                                             | Responsibility                                                                                                      |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `packages/crawler-core/src/lib/derive-artists.ts` (create)       | The precedence ladder. One exported `deriveArtists()`.                                                              |
+| `packages/crawler-core/src/lib/derive-artists.test.ts` (create)  | Table-driven ladder tests. Carries the weight of this phase.                                                        |
+| `packages/crawler-core/src/types.ts` (modify)                    | Add `observedPerformers` to `NormalizedEvent`; amend the `headliners` invariant doc.                                |
+| `packages/crawler-core/src/lib/extractors/json-ld.ts` (modify)   | Delete the `?? name` fallback; return `observedPerformers`.                                                         |
+| `packages/crawler-core/src/lib/extractors/llm.ts` (modify)       | Delete the `\|\| title` fallback; move the derivation prompt out.                                                   |
+| `packages/crawler-core/src/lib/extractors/ticketure.ts` (modify) | No performer field exists. Keep `artist: title` as display; return `observedPerformers: []`.                        |
+| `packages/crawler-core/src/lib/fetchers/livenation.ts` (modify)  | Keep `?? event.name` for display; return the whole `artistNames` list as `observedPerformers`.                      |
+| `packages/crawler-core/src/lib/fetchers/venuepilot.ts` (modify)  | Return `announceArtists[].name` as `observedPerformers`; keep the title fallback for display only.                  |
+| `packages/crawler-core/src/lib/fetchers/aeg.ts` (modify)         | Return `[title.headlinersText]`. No title fallback exists here — the path already returns null without a headliner. |
+| `packages/crawler-core/src/lib/fetchers/detail-page.ts`          | **No change.** Builds no `NormalizedEvent` literal; inherits the `json-ld.ts` fix.                                  |
+| `packages/crawler-core/src/lib/genre-tagger.ts` (modify)         | Remove the `?? ''` artist coalesce.                                                                                 |
+| `packages/crawler-core/src/crawl.ts` (modify)                    | Call `deriveArtists()` between extraction and the event write.                                                      |
+| `packages/db/src/scripts/backfill-artists.ts` (modify)           | Read `canonical_headliners` first, `canonical_artist` as fallback.                                                  |
 
 **Phase 2 — re-derivation pass (PR 2)**
 
-| File | Responsibility |
-| --- | --- |
-| `packages/db/src/scripts/rederive-event-artists.ts` (create) | Dry-run-by-default one-off pass over stored events. |
-| `packages/db/src/scripts/rederive-event-artists.test.ts` (create) | Selection + write-shape tests. |
+| File                                                                            | Responsibility                                      |
+| ------------------------------------------------------------------------------- | --------------------------------------------------- |
+| `packages/crawler-core/src/rederive-event-artists.ts` (create)                  | Dry-run-by-default one-off pass over stored events. |
+| `packages/crawler-core/src/rederive-event-artists.integration.test.ts` (create) | Selection + write-shape tests.                      |
+| `apps/crawler/scripts/rederive-event-artists.ts` (create)                       | CLI runner: `--apply`, `--limit=N`.                 |
 
 **Phase 3 — admin surface (PR 3)**
 
-| File | Responsibility |
-| --- | --- |
-| `packages/db/migrations/XXXX_artist_not_an_artist.sql` (create) | Add `not_an_artist` to `artist_match_status`. |
-| `packages/db/src/schema/artists.ts` (modify) | Add the enum value. |
-| `apps/api/src/routes/admin/artists.ts` (modify) | Accept the new status; exclude tombstones from the reaper's view. |
-| `apps/web/src/app/(protected)/admin/artists/page.tsx` (modify) | One table, count chips, search, pagination. |
-| `apps/web/src/app/(protected)/admin/artists/definitions/` (create) | Admin copy + constants for the consolidated table. |
+| File                                                               | Responsibility                                                    |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `packages/db/migrations/XXXX_artist_not_an_artist.sql` (create)    | Add `not_an_artist` to `artist_match_status`.                     |
+| `packages/db/src/schema/artists.ts` (modify)                       | Add the enum value.                                               |
+| `apps/api/src/routes/admin/artists.ts` (modify)                    | Accept the new status; exclude tombstones from the reaper's view. |
+| `apps/web/src/app/(protected)/admin/artists/page.tsx` (modify)     | One table, count chips, search, pagination.                       |
+| `apps/web/src/app/(protected)/admin/artists/definitions/` (create) | Admin copy + constants for the consolidated table.                |
 
 **Phase 4 — Browse shelf (PR 4)**
 
-| File | Responsibility |
-| --- | --- |
+| File                                                                       | Responsibility                                  |
+| -------------------------------------------------------------------------- | ----------------------------------------------- |
 | `apps/web/src/components/consumer/following/definitions/types.ts` (modify) | Add `eventId: string \| null` to `ShelfArtist`. |
-| `apps/web/src/components/consumer/following/ShelfCard.tsx` (modify) | Link precedence: event → artist → inert. |
-| The server flattener building `ShelfArtist` (modify) | Thread `nextShow.eventId` through. |
+| `apps/web/src/components/consumer/following/ShelfCard.tsx` (modify)        | Link precedence: event → artist → inert.        |
+| The server flattener building `ShelfArtist` (modify)                       | Thread `nextShow.eventId` through.              |
 
 ---
 
@@ -75,9 +76,11 @@
 ### Task 1: Add `observedPerformers` to the extraction contract
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/types.ts:1-46`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `NormalizedEvent.observedPerformers: string[]` — every extractor must set it. Empty array means "the source named no performer," which is distinct from "we did not look."
 
@@ -134,6 +137,7 @@ Line numbers below were correct at the time of writing and drift with every
 merge. Search for the quoted expression rather than jumping to the line.
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/lib/extractors/json-ld.ts` — `const artist = performerNames[0] ?? name`
 - Modify: `packages/crawler-core/src/lib/extractors/llm.ts` — `const artist = evt.artist?.trim() || title`
 - Modify: `packages/crawler-core/src/lib/extractors/ticketure.ts` — `artist: title,`
@@ -144,6 +148,7 @@ merge. Search for the quoted expression rather than jumping to the line.
 - **Not modified:** `packages/crawler-core/src/lib/fetchers/detail-page.ts` — it delegates to `extractJsonLd(...)` and has no literal to amend.
 
 **Interfaces:**
+
 - Consumes: `NormalizedEvent.observedPerformers` from Task 1.
 - Produces: every extractor emits `observedPerformers`, and `artist` is now
   always the SOURCE TITLE unless the source named a performer.
@@ -203,19 +208,19 @@ Expected: FAIL — `observedPerformers` is `undefined`.
 In `json-ld.ts`, replace:
 
 ```ts
-  const performerNames = getPerformerNames(obj['performer'])
-  const artist = performerNames[0] ?? name
+const performerNames = getPerformerNames(obj['performer'])
+const artist = performerNames[0] ?? name
 ```
 
 with:
 
 ```ts
-  const observedPerformers = getPerformerNames(obj['performer'])
-  // `artist` is the DISPLAY string, so the title is the right value when the
-  // listing named nobody. What must never happen is that title reaching the
-  // artists projection — `deriveArtists()` owns that, keyed on the empty
-  // `observedPerformers` below.
-  const artist = observedPerformers[0] ?? name
+const observedPerformers = getPerformerNames(obj['performer'])
+// `artist` is the DISPLAY string, so the title is the right value when the
+// listing named nobody. What must never happen is that title reaching the
+// artists projection — `deriveArtists()` owns that, keyed on the empty
+// `observedPerformers` below.
+const artist = observedPerformers[0] ?? name
 ```
 
 and add `observedPerformers,` to the returned object literal. `supportingArtists`
@@ -231,19 +236,20 @@ Expected: PASS
 In `llm.ts:441`, replace:
 
 ```ts
-  const artist = evt.artist?.trim() || title
+const artist = evt.artist?.trim() || title
 ```
 
 with:
 
 ```ts
-  // The prompt tells the model to return `artist: null` when the listing names
-  // no performer. This used to coalesce that null back into the title, which
-  // silently defeated the instruction and is where 65 junk artist rows came
-  // from. The null is now preserved as an EMPTY observedPerformers list.
-  const observed = evt.artist?.trim()
-  const observedPerformers = observed === undefined || observed === '' ? [] : [observed]
-  const artist = observed === undefined || observed === '' ? title : observed
+// The prompt tells the model to return `artist: null` when the listing names
+// no performer. This used to coalesce that null back into the title, which
+// silently defeated the instruction and is where 65 junk artist rows came
+// from. The null is now preserved as an EMPTY observedPerformers list.
+const observed = evt.artist?.trim()
+const observedPerformers =
+  observed === undefined || observed === '' ? [] : [observed]
+const artist = observed === undefined || observed === '' ? title : observed
 ```
 
 and add `observedPerformers,` to the returned object literal.
@@ -258,17 +264,17 @@ value differs per path.
 lists the headliner first. Replace:
 
 ```ts
-  const artist = artistNames[0] ?? event.name
+const artist = artistNames[0] ?? event.name
 ```
 
 with:
 
 ```ts
-  // The listing name is still the display string when the record carries no
-  // artist breakdown (festival passes, multi-bill packages), but that name is
-  // NOT an observation of a performer, so it does not enter observedPerformers.
-  const observedPerformers = artistNames
-  const artist = observedPerformers[0] ?? event.name
+// The listing name is still the display string when the record carries no
+// artist breakdown (festival passes, multi-bill packages), but that name is
+// NOT an observation of a performer, so it does not enter observedPerformers.
+const observedPerformers = artistNames
+const artist = observedPerformers[0] ?? event.name
 ```
 
 and add `observedPerformers,` to its literal. Note it passes the WHOLE list, not
@@ -279,17 +285,17 @@ needs the full billing to spot co-headliners (#1203).
 and the path has its own title fallback. Replace:
 
 ```ts
-  const headliner = event.announceArtists?.[0]?.name?.trim()
-  const artist = headliner && headliner.length > 0 ? headliner : title
+const headliner = event.announceArtists?.[0]?.name?.trim()
+const artist = headliner && headliner.length > 0 ? headliner : title
 ```
 
 with:
 
 ```ts
-  const observedPerformers = (event.announceArtists ?? [])
-    .map((entry) => entry.name.trim())
-    .filter((name) => name.length > 0)
-  const artist = observedPerformers[0] ?? title
+const observedPerformers = (event.announceArtists ?? [])
+  .map((entry) => entry.name.trim())
+  .filter((name) => name.length > 0)
+const artist = observedPerformers[0] ?? title
 ```
 
 and add `observedPerformers,` to its literal.
@@ -302,7 +308,7 @@ there is no title fallback to delete. Add to its literal:
     observedPerformers: [headliner],
 ```
 
-The junk artist rows attributed to AEG are junk *inside* `headlinersText` (a
+The junk artist rows attributed to AEG are junk _inside_ `headlinersText` (a
 bingo night billed as its own headliner), not a title leak. The ladder's
 adjudication step is what catches those, not this task.
 
@@ -341,10 +347,12 @@ git commit -m "refactor(crawler): every extractor reports observedPerformers ins
 ### Task 3: The precedence ladder
 
 **Files:**
+
 - Create: `packages/crawler-core/src/lib/derive-artists.ts`
 - Create: `packages/crawler-core/src/lib/derive-artists.test.ts`
 
 **Interfaces:**
+
 - Consumes: `NormalizedEvent` with `observedPerformers` (Tasks 1-2).
 - Produces:
 
@@ -621,7 +629,10 @@ export async function deriveArtists(
   // Step 1 — the source named somebody, and it does not merely echo the title.
   // This is the venue's own structured field; an LLM re-reading the page title
   // is strictly downstream of it.
-  if (headliner !== undefined && !isSuspiciousObservation(headliner, event.title)) {
+  if (
+    headliner !== undefined &&
+    !isSuspiciousObservation(headliner, event.title)
+  ) {
     return {
       headliners: [headliner],
       supportingArtists: observed.slice(1),
@@ -684,10 +695,12 @@ git commit -m "feat(crawler): add the artist derivation precedence ladder"
 ### Task 4: Wire the ladder into the crawl
 
 **Files:**
+
 - Modify: `packages/crawler-core/src/crawl.ts` (between extraction and the event write at ~1020)
 - Modify: `packages/crawler-core/src/lib/extractors/llm.ts` (export the adjudicator)
 
 **Interfaces:**
+
 - Consumes: `deriveArtists`, `Adjudicator` from Task 3.
 - Produces: every event reaching the write has `headliners`, `supportingArtists`
   and `isConcert` set by the ladder.
@@ -760,10 +773,12 @@ git commit -m "feat(crawler): derive artists through the ladder on every extract
 ### Task 5: `backfillArtists` reads headliners first
 
 **Files:**
+
 - Modify: `packages/db/src/scripts/backfill-artists.ts:47+`
 - Modify: `packages/db/src/scripts/backfill-artists.integration.test.ts`
 
 **Interfaces:**
+
 - Consumes: `events.canonical_headliners` populated by Task 4.
 - Produces: an `artists` projection with co-headliners split — this is #1203.
 
@@ -831,10 +846,20 @@ Open the PR, then run `./scripts/request-copilot-review.sh <n>`.
 ### Task 6: The one-off script
 
 **Files:**
-- Create: `packages/db/src/scripts/rederive-event-artists.ts`
-- Create: `packages/db/src/scripts/rederive-event-artists.integration.test.ts`
+
+- Create: `packages/crawler-core/src/rederive-event-artists.ts`
+- Create: `packages/crawler-core/src/rederive-event-artists.integration.test.ts`
+- Create: `apps/crawler/scripts/rederive-event-artists.ts` (the CLI runner)
+- Modify: `packages/crawler-core/src/index.ts`, `apps/crawler/package.json`
+
+**Why not `packages/db/src/scripts` as originally planned:** the pass consumes
+`deriveArtists` and `adjudicateEvent`, both in `crawler-core`, which already
+depends on `@concert-crawl/db`. Importing back the other way is a circular
+workspace dependency. `apps/crawler/scripts/backfill-ticket-links.ts` was
+placed here for exactly this reason and documents it in its header.
 
 **Interfaces:**
+
 - Consumes: `deriveArtists` (Task 3), `backfillArtists` (Task 5).
 - Produces: a CLI mirroring `prune-artists.ts` and `musicbrainz-disambiguate.ts`
   — dry-run by default, `--apply` to write, idempotent, re-runnable.
@@ -853,8 +878,10 @@ Cases, against the real test DB:
 
 - An event with a genuine performer keeps its headliners and stays visible.
 - An event whose stored `artist` equals its `title` and which the stubbed
-  adjudicator calls a non-concert gets `canonical_headliners = '{}'`,
-  `is_concert = false`, `hidden_from_consumer = true`.
+  adjudicator calls a non-concert gets `canonical_headliners = '{}'` and
+  `hidden_from_consumer = true`. (There is no `is_concert` column: `crawl.ts`
+  spends the same verdict as `hiddenFromConsumer: event.isConcert === false`,
+  and this pass matches it.)
 - `events.artist` and `canonical_artist` are byte-identical before and after.
   **This is the safety assertion of the whole phase** — assert it explicitly.
 - Running the script twice produces the same rows (idempotence).
@@ -862,30 +889,32 @@ Cases, against the real test DB:
 
 - [ ] **Step 3: Run to confirm failure**
 
-Run: `pnpm --filter @concert-crawl/db test rederive-event-artists`
+Run: `pnpm --filter @concert-crawl/crawler-core test:integration rederive-event-artists`
 Expected: FAIL — module not found.
 
 - [ ] **Step 4: Implement**
 
 Select every event. For each, build the `deriveArtists()` input from stored
 columns — `observedPerformers` is `[]` when `artist === title`, otherwise
-`[artist]` — then write `canonical_headliners`, `canonical_supporting`,
-`is_concert`, and `hidden_from_consumer = true` only when `isConcert === false`.
-Never clear an admin's manual hide: `hidden_from_consumer` is only ever set to
-`true` here, never to `false`.
+`[artist]` — then write all four artist columns (`headliners`,
+`canonical_headliners`, `supporting_artists`, `canonical_supporting`) and
+`hidden_from_consumer = true` only when `isConcert === false`. Never clear an
+admin's manual hide: `hidden_from_consumer` is only ever set to `true` here,
+never to `false`. A NULL verdict is the adjudicator-outage signal and must skip
+the row entirely rather than write an empty bill.
 
 Rate-limit the adjudicator and log a per-strategy tally in the dry-run report so
 the run is auditable the way the disambiguator's was.
 
 - [ ] **Step 5: Run the tests**
 
-Run: `pnpm --filter @concert-crawl/db build && pnpm --filter @concert-crawl/db test rederive-event-artists`
+Run: `pnpm --filter @concert-crawl/crawler-core test:integration rederive-event-artists`
 Expected: PASS
 
 - [ ] **Step 6: Commit and open PR 2**
 
 ```bash
-git add packages/db/src/scripts
+git add packages/crawler-core/src apps/crawler
 git commit -m "feat(artists): add the one-off event artist re-derivation pass"
 ```
 
@@ -894,8 +923,10 @@ git commit -m "feat(artists): add the one-off event artist re-derivation pass"
 After PR 2 merges:
 
 1. `pnpm --filter @concert-crawl/types --filter @concert-crawl/db build`
-2. Dry-run `rederive-event-artists` against `NEON_PROD_DIRECT`. Record the tally.
-3. `--apply`.
+2. Dry-run against `NEON_PROD_DIRECT`, on a sample first:
+   `pnpm --filter @concert-crawl/crawler rederive-event-artists -- --limit=200`.
+   Record the tally, eyeball the printed sample, then drop the limit.
+3. `pnpm --filter @concert-crawl/crawler rederive-event-artists -- --apply`.
 4. Run `backfillArtists` against prod.
 5. Dry-run `prune-artists` with its `BILLED_IN_LIVE_TITLE` guard **unchanged**.
    Record what it would delete. Do not narrow the guard.
@@ -913,12 +944,14 @@ Independent of Phases 1 and 2; may be built in parallel on its own branch.
 ### Task 7: The `not_an_artist` state
 
 **Files:**
+
 - Create: `packages/db/migrations/XXXX_artist_not_an_artist.sql`
 - Modify: `packages/db/src/schema/artists.ts:39-44`
 - Modify: `packages/db/src/scripts/backfill-artists.ts`
 - Modify: `packages/db/src/scripts/prune-artists.ts`
 
 **Interfaces:**
+
 - Produces: a fifth `artistMatchStatusEnum` value that survives both a backfill
   and a reap.
 
@@ -974,12 +1007,14 @@ git commit -m "feat(artists): add a not_an_artist tombstone state"
 ### Task 8: One admin table with counts, search and pagination
 
 **Files:**
+
 - Modify: `apps/api/src/routes/admin/artists.ts:73-104`
 - Modify: `apps/web/src/app/(protected)/admin/artists/page.tsx:76`
 - Create: `apps/web/src/app/(protected)/admin/artists/definitions/copy.ts`
 - Create: `apps/web/src/app/(protected)/admin/artists/definitions/constants.ts`
 
 **Interfaces:**
+
 - Consumes: `GET /v1/admin/artists?search=&status=&limit=&offset=` and
   `GET /v1/admin/artists/counts` — **both already exist**. Read
   `apps/api/src/routes/admin/artists.ts` before writing any API code; the only
@@ -1034,6 +1069,7 @@ Independent; may be built in parallel.
 ### Task 9: Link the shelf card to the event
 
 **Files:**
+
 - Modify: `apps/web/src/components/consumer/following/definitions/types.ts:8-35`
 - Modify: `apps/web/src/components/consumer/following/ShelfCard.tsx:237-249`
 - Modify: the server component that flattens `FollowedArtist` / `ArtistSuggestion`
@@ -1041,6 +1077,7 @@ Independent; may be built in parallel.
   the only place that field is constructed)
 
 **Interfaces:**
+
 - Consumes: `FollowedArtistNextShow.eventId` from
   `packages/types/src/artist.ts:111-126` — **already on the wire**, no API change.
 - Produces: `ShelfArtist.eventId: string | null`.
@@ -1074,12 +1111,12 @@ Expected: FAIL — the first case renders `/artists/...`.
 - [ ] **Step 3: Add `eventId` to `ShelfArtist`**
 
 ```ts
-  /**
-   * The show `dateLine` describes. The card links HERE first: a card about a
-   * night the viewer can buy tickets to should open that night, not a profile.
-   * Null when nothing is on the books, which is also when `dateLine` is null.
-   */
-  eventId: string | null
+/**
+ * The show `dateLine` describes. The card links HERE first: a card about a
+ * night the viewer can buy tickets to should open that night, not a profile.
+ * Null when nothing is on the books, which is also when `dateLine` is null.
+ */
+eventId: string | null
 ```
 
 - [ ] **Step 4: Thread it through the flattener**

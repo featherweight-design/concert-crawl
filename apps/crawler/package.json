@@ -7,7 +7,8 @@
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "backfill-ticket-links": "tsx scripts/backfill-ticket-links.ts"
+    "backfill-ticket-links": "tsx scripts/backfill-ticket-links.ts",
+    "rederive-event-artists": "tsx scripts/rederive-event-artists.ts"
   },
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",

@@ -3,7 +3,11 @@ export { isAllowed } from './lib/robots.js'
 export { fetchPage } from './lib/fetcher.js'
 export type { FetchResult } from './lib/fetcher.js'
 export { extractJsonLd } from './lib/extractors/json-ld.js'
-export { extractWithLlm, IS_CONCERT_RULES } from './lib/extractors/llm.js'
+export {
+  adjudicateEvent,
+  extractWithLlm,
+  IS_CONCERT_RULES,
+} from './lib/extractors/llm.js'
 export { calculateCost } from './lib/cost.js'
 export {
   canonicalizeArtist,
@@ -50,3 +54,10 @@ export {
   sweepStaleEvents,
   STALE_EVENT_CANCEL_DAYS,
 } from './lib/stale-event-sweep.js'
+export { rederiveEventArtists } from './rederive-event-artists.js'
+export type {
+  RederiveChange,
+  RederiveEventArtistsOptions,
+  RederiveEventArtistsResult,
+  RederiveStrategy,
+} from './rederive-event-artists.js'
