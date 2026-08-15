@@ -90,6 +90,7 @@ const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
             class and blanked fallback-graphic cards (#763 r4). */}
         <EventImage
           src={pick.imageUrl}
+          artistPhotoUrl={pick.artistPhotoUrl}
           alt=""
           artist={pick.artist}
           identityScale="tile"

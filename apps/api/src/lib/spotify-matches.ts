@@ -21,7 +21,13 @@ import {
   or,
   sql,
 } from 'drizzle-orm'
-import { db, events, userArtistFollows, venues } from '@concert-crawl/db'
+import {
+  artists,
+  db,
+  events,
+  userArtistFollows,
+  venues,
+} from '@concert-crawl/db'
 import type {
   SpotifyTastePick,
   SpotifyTastePickReason,
@@ -348,11 +354,15 @@ export async function getTastePicks(
       canonicalArtist: events.canonicalArtist,
       canonicalHeadliners: events.canonicalHeadliners,
       canonicalSupporting: events.canonicalSupporting,
+      artistPhotoUrl: artists.photoUrl,
       venueName: venues.name,
       venueSlug: venues.slug,
     })
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
+    // Headliner only (Spec A §3.1). canonical_name is uniquely indexed, so
+    // this cannot multiply picks.
+    .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
     .where(matchedUpcomingCondition([...reasonByCanonical.keys()]))
     .orderBy(asc(events.date), asc(events.showTime), asc(events.id))
 
@@ -412,6 +422,7 @@ export async function getTastePicks(
     artist: row.artist,
     title: row.title,
     imageUrl: row.imageUrl,
+    artistPhotoUrl: row.artistPhotoUrl,
     date: row.date,
     showTime: row.showTime,
     ticketPriceMin: resolveDisplayPrice(

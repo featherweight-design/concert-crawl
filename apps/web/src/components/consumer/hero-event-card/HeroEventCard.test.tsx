@@ -98,3 +98,30 @@ describe('HeroEventCard — eyebrow badge slot (#763 PR 6)', () => {
     expect(screen.queryByText('Following')).toBeNull()
   })
 })
+
+describe('HeroEventCard — imagery chain (#1525)', () => {
+  const portrait = 'https://example.test/artist.jpg'
+
+  it('shows the headliner portrait when the event has no artwork', () => {
+    const { container } = render(
+      <HeroEventCard
+        event={{ ...baseEvent, imageUrl: null, artistPhotoUrl: portrait }}
+      />,
+    )
+    expect(container.querySelector('img')?.getAttribute('src')).toContain(
+      encodeURIComponent(portrait),
+    )
+  })
+
+  it('keeps event artwork ahead of the portrait', () => {
+    const artwork = 'https://example.test/venue.jpg'
+    const { container } = render(
+      <HeroEventCard
+        event={{ ...baseEvent, imageUrl: artwork, artistPhotoUrl: portrait }}
+      />,
+    )
+    expect(container.querySelector('img')?.getAttribute('src')).toContain(
+      encodeURIComponent(artwork),
+    )
+  })
+})

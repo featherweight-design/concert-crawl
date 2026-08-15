@@ -39,6 +39,7 @@ const SERVER: SpotifyTastePicksResponse = {
       artist: 'Turnstile',
       title: 'Turnstile',
       imageUrl: null,
+      artistPhotoUrl: null,
       date: '2030-08-02',
       showTime: '20:00:00',
       ticketPriceMin: '39.00',

@@ -117,6 +117,7 @@ export const PublicEventDetail = ({
       <div className="relative w-full shrink-0" style={{ height: 300 }}>
         <EventImage
           src={event.imageUrl}
+          artistPhotoUrl={event.artistPhotoUrl ?? null}
           alt={event.artist}
           artist={event.artist}
           identityScale="hero"

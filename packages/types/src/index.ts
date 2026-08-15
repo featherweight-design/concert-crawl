@@ -1326,6 +1326,9 @@ export interface SpotifyTastePick {
   artist: string
   title: string
   imageUrl: string | null
+  // Second source in the imagery chain (#1525) — the headliner's portrait,
+  // shown when the event carries no artwork of its own.
+  artistPhotoUrl: string | null
   date: string // YYYY-MM-DD, event-local (Mountain Time) calendar date
   showTime: string | null // HH:MM:SS
   ticketPriceMin: string | null // decimal string, matches events payloads

@@ -86,6 +86,7 @@ const pick = (overrides: Partial<SpotifyTastePick> = {}): SpotifyTastePick => ({
   artist: 'Turnstile',
   title: 'Turnstile',
   imageUrl: null,
+  artistPhotoUrl: null,
   date: '2030-08-02',
   showTime: '20:00:00',
   ticketPriceMin: '39.00',
@@ -413,6 +414,18 @@ describe('DiscoveryShelf', () => {
       expect(screen.getByTestId('handoff-sheet')).toBeTruthy()
     },
   )
+
+  // #1525 — a taste pick is an event surface, so its card resolves the
+  // event's artwork, then the headliner's portrait, then the generated mark.
+  it('shows the headliner portrait on a pick with no artwork', () => {
+    const portrait = 'https://example.test/artist.jpg'
+    picksQuery.data = connected([
+      pick({ imageUrl: null, artistPhotoUrl: portrait }),
+    ])
+    const { container } = render(<DiscoveryShelf />)
+
+    expect(container.querySelector('img')?.getAttribute('src')).toBe(portrait)
+  })
 })
 
 describe('DiscoveryShelf shelf-hint cookie', () => {

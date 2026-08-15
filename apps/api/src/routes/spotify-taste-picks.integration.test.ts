@@ -34,7 +34,12 @@ import type {
 } from '@concert-crawl/types'
 import { testDb } from '../test/helpers/db.js'
 import { createApp } from '../app.js'
-import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js'
+import {
+  clearTables,
+  seedArtist,
+  seedVenue,
+  seedEvent,
+} from '../test/helpers/seed.js'
 
 const app = createApp()
 
@@ -437,5 +442,46 @@ describe('GET /v1/spotify/taste-picks (#763 PR 8)', () => {
     expect(status).toBe(200)
     const picks: PicksBody = body
     expect(picks.data.picks.map((pick) => pick.eventId)).toEqual([event.id])
+  })
+
+  // #1525 — a pick is an event surface, so it carries the headliner's portrait
+  // as the second source in the imagery chain.
+  describe('the artistPhotoUrl join', () => {
+    const PORTRAIT = 'https://i.scdn.co/image/headliner'
+
+    it('carries the headliner portrait, and null with no projection row', async () => {
+      signIn()
+      await seedPremium()
+      await seedConnection()
+      const venue = await seedVenue()
+      await seedArtist({ name: 'Turnstile', photoUrl: PORTRAIT })
+      await seedEvent(venue.id, { artist: 'Turnstile', date: JUNE })
+      await seedEvent(venue.id, { artist: 'Big Head Todd', date: JULY })
+      await seedFollow('Turnstile', 'spotify_top', 1)
+      await seedFollow('Big Head Todd', 'spotify_top', 2)
+
+      const { body } = await fetchPicks()
+      const picks: PicksBody = body
+      // One pick per event: the unique canonicalName index is what stops the
+      // left join fanning a pick out into duplicates.
+      expect(picks.data.picks).toHaveLength(2)
+      expect(picks.data.picks[0]?.artistPhotoUrl).toBe(PORTRAIT)
+      expect(picks.data.picks[1]?.artistPhotoUrl).toBeNull()
+    })
+
+    it('carries null when the matched artist has no photo yet', async () => {
+      signIn()
+      await seedPremium()
+      await seedConnection()
+      const venue = await seedVenue()
+      await seedArtist({ name: 'Turnstile', photoUrl: null })
+      await seedEvent(venue.id, { artist: 'Turnstile', date: JUNE })
+      await seedFollow('Turnstile', 'spotify_top', 1)
+
+      const { body } = await fetchPicks()
+      const picks: PicksBody = body
+      expect(picks.data.picks).toHaveLength(1)
+      expect(picks.data.picks[0]?.artistPhotoUrl).toBeNull()
+    })
   })
 })

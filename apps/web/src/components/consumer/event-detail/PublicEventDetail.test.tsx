@@ -12,7 +12,19 @@ vi.mock('@/components/consumer/EventDetailClient', () => ({
   EventDetailPriceBlock: () => <div data-testid="price-block" />,
 }))
 vi.mock('@/components/consumer/event-image', () => ({
-  EventImage: () => <div data-testid="event-image" />,
+  EventImage: ({
+    src,
+    artistPhotoUrl,
+  }: {
+    src: string | null
+    artistPhotoUrl?: string | null
+  }) => (
+    <div
+      data-testid="event-image"
+      data-src={src ?? ''}
+      data-artist-photo-url={artistPhotoUrl ?? ''}
+    />
+  ),
 }))
 vi.mock('@/components/consumer/event-row', () => ({
   EventRow: ({ show }: { show: { headliner: string } }) => (
@@ -255,6 +267,22 @@ describe('PublicEventDetail (#72)', () => {
     render(<PublicEventDetail event={buildEvent()} related={related} />)
 
     expect(screen.getByTestId('related-card').textContent).toBe('Other Band')
+  })
+
+  // #1525 — the hero is an event surface, so it resolves artwork, then the
+  // headliner's portrait, then the generated mark.
+  it('feeds the headliner portrait to the hero as a second source', () => {
+    const portrait = 'https://example.test/artist.jpg'
+    render(
+      <PublicEventDetail
+        event={buildEvent({ imageUrl: null, artistPhotoUrl: portrait })}
+        related={[]}
+      />,
+    )
+
+    expect(
+      screen.getByTestId('event-image').getAttribute('data-artist-photo-url'),
+    ).toBe(portrait)
   })
 
   // The bill block arrives as a SLOT (design table ED-06) so neither detail

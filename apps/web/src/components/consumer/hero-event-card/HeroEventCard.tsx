@@ -36,6 +36,7 @@ export function HeroEventCard({
         <div className="relative h-[180px] w-full">
           <EventImage
             src={event.imageUrl}
+            artistPhotoUrl={event.artistPhotoUrl ?? null}
             alt={event.artist}
             artist={event.artist}
             identityScale="hero"
