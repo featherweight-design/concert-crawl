@@ -19,6 +19,56 @@ describe('hashPage', () => {
     expect(hashPage(withScript)).toBe(hashPage(withoutScript))
   })
 
+  it('hashes JSON-LD payloads, which the extractor reads', () => {
+    const jsonLd = (title: string) =>
+      `<html><head><script type="application/ld+json">{"@type":"Event","name":"${title}"}</script></head><body>Upcoming shows</body></html>`
+    expect(hashPage(jsonLd('Metallica'))).not.toBe(hashPage(jsonLd('Pantera')))
+  })
+
+  it('hashes __NEXT_DATA__ payloads, which the Ticketure extractor reads', () => {
+    // Meow Wolf Denver stalled for 13 days because its entire event payload
+    // lives in this one script tag: the visible shell never changes, so a
+    // script-blind hash reported "unchanged" on every run.
+    const nextData = (date: string) =>
+      `<html><body><div id="__next"></div><script id="__NEXT_DATA__" type="application/json">{"props":{"events":[{"date":"${date}"}]}}</script></body></html>`
+    expect(hashPage(nextData('2026-08-16'))).not.toBe(
+      hashPage(nextData('2026-12-20')),
+    )
+  })
+
+  it('hashes JSON-LD declared with a charset suffix', () => {
+    const jsonLd = (title: string) =>
+      `<html><script type="application/ld+json; charset=utf-8">{"name":"${title}"}</script><body>shows</body></html>`
+    expect(hashPage(jsonLd('Metallica'))).not.toBe(hashPage(jsonLd('Pantera')))
+  })
+
+  it('does not mistake a data- attribute for a payload declaration', () => {
+    // `data-type="application/ld+json"` is a describing attribute, not a
+    // declaration — hashing such a script would let per-request noise churn
+    // the hash and force a pointless extraction on every run.
+    const noisy = (seed: string) =>
+      `<html><script data-type="application/ld+json">track(${seed})</script><body>shows</body></html>`
+    expect(hashPage(noisy('1'))).toBe(hashPage(noisy('2')))
+  })
+
+  it('separates multiple payload bodies so they cannot collide', () => {
+    // Concatenated without a delimiter, ("ab","c") and ("a","bc") both
+    // flatten to "abc" and the pages would wrongly compare as unchanged.
+    const twoBlocks = (first: string, second: string) =>
+      `<html><script type="application/ld+json">${first}</script><script type="application/ld+json">${second}</script></html>`
+    expect(hashPage(twoBlocks('ab', 'c'))).not.toBe(
+      hashPage(twoBlocks('a', 'bc')),
+    )
+  })
+
+  it('still ignores analytics and other non-payload scripts', () => {
+    const noisy =
+      '<html><script type="application/ld+json">{"@type":"Event"}</script><script>analytics(Date.now())</script><body>events</body></html>'
+    const quiet =
+      '<html><script type="application/ld+json">{"@type":"Event"}</script><body>events</body></html>'
+    expect(hashPage(noisy)).toBe(hashPage(quiet))
+  })
+
   it('strips <style> blocks before hashing', () => {
     const withStyle =
       '<html><style>.btn { color: red }</style><body>events</body></html>'

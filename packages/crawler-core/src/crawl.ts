@@ -41,6 +41,7 @@ import { canonicalizeTitle } from './lib/canonical-title.js'
 import { decodeHtmlEntities } from './lib/strip-description-html.js'
 import { projectArtists } from './lib/artist-projection.js'
 import { hashPage, hashEvent } from './lib/hash.js'
+import { shouldSkipUnchangedPage } from './lib/skip-guard.js'
 import { deriveTicketLinks } from './lib/ticket-links/index.js'
 import { isListingPageUrl } from './lib/listing-url.js'
 import type { NormalizedEvent, TokenUsage } from './types.js'
@@ -569,7 +570,10 @@ export async function crawlVenue(
       pageHash = hashPage(html)
 
       const [lastRun] = await db
-        .select({ pageHash: crawlRuns.pageHash })
+        .select({
+          pageHash: crawlRuns.pageHash,
+          createdAt: crawlRuns.createdAt,
+        })
         .from(crawlRuns)
         .where(
           and(eq(crawlRuns.venueId, venueId), eq(crawlRuns.status, 'success')),
@@ -579,9 +583,14 @@ export async function crawlVenue(
 
       if (
         !force &&
-        lastRun?.pageHash !== undefined &&
-        lastRun.pageHash !== null &&
-        lastRun.pageHash === pageHash
+        shouldSkipUnchangedPage({
+          hashMatches:
+            lastRun?.pageHash !== undefined &&
+            lastRun.pageHash !== null &&
+            lastRun.pageHash === pageHash,
+          lastSuccessAt: lastRun?.createdAt ?? null,
+          now: startedAtDate,
+        })
       ) {
         console.log(
           JSON.stringify({
