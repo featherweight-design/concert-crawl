@@ -32,6 +32,7 @@ const matchStatusSchema = z.enum([
   'matched',
   'ambiguous',
   'no_match',
+  'not_an_artist',
 ])
 
 const listQuerySchema = z.object({
@@ -47,6 +48,7 @@ const listQuerySchema = z.object({
       value === undefined || value === '' ? undefined : value,
     ),
   limit: z.coerce.number().int().min(1).max(200).default(100),
+  offset: z.coerce.number().int().min(0).default(0),
 })
 
 const artistIdSchema = z.object({ id: z.string().uuid() })
@@ -61,28 +63,63 @@ const patchBodySchema = z
 
 export const artistsAdminRouter = new Hono<AdminVariables>()
 
-// GET /v1/admin/artists?status=ambiguous&search=&limit=100
+// GET /v1/admin/artists?status=ambiguous&search=&limit=100&offset=0
+//
+// A search deliberately ignores `status`. An admin who types a name is looking
+// for that artist, not for that artist within whichever chip happens to be
+// selected — and the row they want is most often in a status they would not
+// have guessed, which is why they are searching rather than scanning.
 artistsAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema),
   async (ctx) => {
-    const { status, search, limit } = ctx.req.valid('query')
+    const { status, search, limit, offset } = ctx.req.valid('query')
 
-    const filters = [
-      status ? eq(artists.matchStatus, status) : undefined,
-      search ? ilike(artists.canonicalName, `%${search}%`) : undefined,
-    ].filter((filter) => filter !== undefined)
+    const where = search
+      ? ilike(artists.canonicalName, `%${search}%`)
+      : status
+        ? eq(artists.matchStatus, status)
+        : undefined
 
     const rows = await db
-      .select()
+      // Named columns rather than `select()`: `spotifyCandidates` is the widest
+      // thing on the row and the table never renders it — the picker fetches
+      // candidates from its own endpoint when an admin opens one.
+      .select({
+        id: artists.id,
+        name: artists.name,
+        canonicalName: artists.canonicalName,
+        slug: artists.slug,
+        spotifyArtistId: artists.spotifyArtistId,
+        matchStatus: artists.matchStatus,
+        photoUrl: artists.photoUrl,
+        matchCheckedAt: artists.matchCheckedAt,
+        hidden: artists.hidden,
+      })
       .from(artists)
-      .where(filters.length > 0 ? and(...filters) : undefined)
+      .where(where)
       // Alphabetical: the queue is small and a stable, scannable order beats a
       // recency order an admin can't predict.
-      .orderBy(asc(artists.name))
+      // `name` is not unique — only `canonicalName` and `slug` are — so it
+      // needs a tiebreaker, or two artists sharing a display name can straddle
+      // a page boundary and be shown twice or not at all.
+      .orderBy(asc(artists.name), asc(artists.id))
       .limit(limit)
+      .offset(offset)
 
-    return ctx.json({ success: true, data: rows })
+    // The page needs to know whether a next page exists, and the filtered total
+    // is the only thing that answers it — a full page of rows is equally
+    // consistent with there being one more row or a thousand.
+    const [totalRow] = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(artists)
+      .where(where)
+
+    return ctx.json({
+      success: true,
+      data: rows,
+      total: totalRow?.total ?? 0,
+    })
   },
 )
 
@@ -97,7 +134,13 @@ artistsAdminRouter.get('/counts', async (ctx) => {
     .groupBy(artists.matchStatus)
     .orderBy(desc(sql`count(*)`))
 
-  const counts = { unmatched: 0, matched: 0, ambiguous: 0, no_match: 0 }
+  const counts = {
+    unmatched: 0,
+    matched: 0,
+    ambiguous: 0,
+    no_match: 0,
+    not_an_artist: 0,
+  }
   for (const row of rows) counts[row.matchStatus] = row.total
 
   return ctx.json({ success: true, data: counts })

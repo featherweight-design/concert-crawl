@@ -42,6 +42,9 @@
  * scratch, so it usually comes back identical but will pick up a `-<n>` suffix
  * if another artist has claimed the base slug in the meantime. An unhide is a
  * repair, not a URL guarantee.
+ *
+ * One row is spared on purpose: a `not_an_artist` tombstone. See
+ * `HUMAN_RULED_NOT_AN_ARTIST` below.
  */
 
 import { sql } from 'drizzle-orm'
@@ -162,8 +165,22 @@ const BILLED_IN_LIVE_TITLE = sql`
   )
 `
 
-/** Unreferenced by the backfill's reckoning, and not billed in a live title. */
-const DOOMED = sql`${UNREFERENCED} AND NOT ${BILLED_IN_LIVE_TITLE}`
+/**
+ * `true` when a human has already ruled this row is not an act.
+ *
+ * Reaping the tombstone would undo the ruling rather than honour it: the row is
+ * unreferenced precisely because it is junk, so deleting it lets the next
+ * backfill project the same canonical name again as `unmatched` and put it
+ * straight back in the queue the human just cleared it from.
+ */
+const HUMAN_RULED_NOT_AN_ARTIST = sql`artists.match_status = 'not_an_artist'`
+
+/** Unreferenced by the backfill's reckoning, not billed in a live title, and not tombstoned. */
+const DOOMED = sql`
+  ${UNREFERENCED}
+  AND NOT ${BILLED_IN_LIVE_TITLE}
+  AND NOT ${HUMAN_RULED_NOT_AN_ARTIST}
+`
 
 export async function pruneArtists(
   database: Database,

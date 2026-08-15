@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { asc } from 'drizzle-orm'
+import { asc, eq } from 'drizzle-orm'
 import { artists } from '@concert-crawl/db'
 import { backfillArtists } from '@concert-crawl/db/scripts/backfill-artists'
 import { testDb } from './helpers/db.js'
@@ -296,6 +296,31 @@ describe('backfill-artists integration', () => {
     expect(second.inserted).toBe(0)
     expect(after.map((row) => row.slug)).toEqual(before.map((row) => row.slug))
     expect(after.map((row) => row.id)).toEqual(before.map((row) => row.id))
+  })
+
+  // A human's `not_an_artist` ruling has to outlive the nightly backfill, or
+  // the row it closed comes back as `unmatched` the next morning and the queue
+  // never empties. The backfill skips canonical names it already projected, so
+  // this is a guard on that behaviour rather than a new branch.
+  it('leaves a not_an_artist ruling alone on a re-run', async () => {
+    const venue = await seedVenue({ slug: `backfill-tombstone-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'BASS BINGO NIGHT',
+      canonicalArtist: 'bass bingo night',
+      date: '2026-06-01',
+    })
+    await backfillArtists(testDb)
+    await testDb
+      .update(artists)
+      .set({ matchStatus: 'not_an_artist' })
+      .where(eq(artists.canonicalName, 'bass bingo night'))
+
+    const second = await backfillArtists(testDb)
+
+    expect(second.inserted).toBe(0)
+    const rows = await listArtists()
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.matchStatus).toBe('not_an_artist')
   })
 
   it('resolves a new slug against slugs already stored', async () => {

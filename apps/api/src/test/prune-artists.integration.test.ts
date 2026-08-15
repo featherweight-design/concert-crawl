@@ -410,6 +410,31 @@ describe('prune-artists integration', () => {
     ])
   })
 
+  // `not_an_artist` is a tombstone, and a tombstone the reaper deletes is no
+  // tombstone at all: the next backfill would project the same canonical name
+  // again as `unmatched` and hand the human back the row they just closed.
+  it('spares a not_an_artist row even when nothing references it', async () => {
+    const venue = await seedVenue({ slug: `prune-tombstone-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Live Act',
+      canonicalArtist: 'live act',
+      date: '2026-06-07',
+    })
+    await testDb.insert(artists).values({
+      name: 'BASS BINGO NIGHT',
+      canonicalName: 'bass bingo night',
+      slug: 'bass-bingo-night',
+      matchStatus: 'not_an_artist',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(0)
+    expect((await listArtists()).map((row) => row.canonicalName)).toEqual([
+      'bass bingo night',
+    ])
+  })
+
   it('leaves a freshly backfilled table untouched', async () => {
     // Symmetry check: whatever the backfill just created, the reaper keeps.
     const venue = await seedVenue({ slug: `prune-symmetry-${Date.now()}` })

@@ -2300,7 +2300,20 @@ export const ADMIN_COPY = {
       unmatched: 'Unmatched',
       no_match: 'No match',
       matched: 'Matched',
+      not_an_artist: 'Not an artist',
     },
+    /** Chip label carrying its queue size, so the biggest backlog is visible. */
+    statusChipCount: (label: string, count: number) => `${label} (${count})`,
+    searchLabel: 'Search artists',
+    searchPlaceholder: 'Search every status',
+    searchNotice: 'Searching every status. Clear the box to filter by chip.',
+    notAnArtist: 'Not an artist',
+    notAnArtistHint:
+      'Bingo nights, ticket packages, venue names. Marking one stops the match job working it, and stops the reaper deleting it only to have tomorrow’s backfill put it back.',
+    prev: 'Previous',
+    next: 'Next',
+    pageStatus: (from: number, to: number, total: number) =>
+      `${from}–${to} of ${total}`,
     columns: {
       name: 'Artist',
       canonicalName: 'Canonical name',
@@ -2344,6 +2357,7 @@ export const ADMIN_COPY = {
     candidatesRefresh: 'Refresh from Spotify',
     loadingState: 'Loading artists…',
     emptyState: 'Nothing in this queue.',
+    noSearchResults: 'No artist matches that search.',
     errorState: 'Could not load artists.',
     saveError: 'Could not save that artist.',
     never: 'never',

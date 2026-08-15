@@ -57,6 +57,29 @@ describe('runMatchArtists', () => {
     expect((await readArtist(id))?.matchStatus).toBe('unmatched')
   })
 
+  // The whole point of the tombstone: a human ruled there is no act here, so
+  // the job must not search the name again, and must not flip the row back to
+  // `matched` on a coincidental hit. The selection query never names the
+  // status, so this guards that omission staying deliberate.
+  it('never picks up a not_an_artist row', async () => {
+    const id = await seedArtist({
+      canonicalName: 'bass bingo night',
+      matchStatus: 'not_an_artist',
+    })
+    const searchArtists = vi.fn()
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(searchArtists),
+    })
+
+    expect(summary.considered).toBe(0)
+    expect(searchArtists).not.toHaveBeenCalled()
+    const row = await readArtist(id)
+    expect(row?.matchStatus).toBe('not_an_artist')
+    expect(row?.matchCheckedAt).toBeNull()
+  })
+
   it('writes matched / ambiguous / no_match verdicts and stamps matchCheckedAt', async () => {
     const matchedId = await seedArtist({ canonicalName: 'khruangbin' })
     const ambiguousId = await seedArtist({ canonicalName: 'nirvana' })

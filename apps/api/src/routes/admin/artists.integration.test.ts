@@ -89,6 +89,55 @@ describe('admin artists routes', () => {
       expect(body.data).toHaveLength(1)
     })
 
+    it('filters to the not_an_artist tombstones', async () => {
+      await seedArtist({
+        canonicalName: 'bass bingo night',
+        matchStatus: 'not_an_artist',
+      })
+      await seedArtist({ canonicalName: 'nirvana', matchStatus: 'ambiguous' })
+
+      const res = await app.request('/v1/admin/artists?status=not_an_artist', {
+        headers: ADMIN_HEADERS,
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.data).toHaveLength(1)
+      expect(body.data[0].canonicalName).toBe('bass bingo night')
+    })
+
+    // An admin who types a name wants that artist wherever it sits, not that
+    // artist inside whichever chip happens to be selected.
+    it('searches across every status, ignoring the status filter', async () => {
+      await seedArtist({ canonicalName: 'nirvana', matchStatus: 'matched' })
+
+      const res = await app.request(
+        '/v1/admin/artists?status=ambiguous&search=nirv',
+        { headers: ADMIN_HEADERS },
+      )
+      const body = await res.json()
+
+      expect(body.data).toHaveLength(1)
+      expect(body.data[0].canonicalName).toBe('nirvana')
+    })
+
+    it('pages with offset and reports the filtered total', async () => {
+      await seedArtist({ canonicalName: 'aaa', matchStatus: 'ambiguous' })
+      await seedArtist({ canonicalName: 'bbb', matchStatus: 'ambiguous' })
+      await seedArtist({ canonicalName: 'ccc', matchStatus: 'matched' })
+
+      const res = await app.request(
+        '/v1/admin/artists?status=ambiguous&limit=1&offset=1',
+        { headers: ADMIN_HEADERS },
+      )
+      const body = await res.json()
+
+      expect(body.data).toHaveLength(1)
+      expect(body.data[0].canonicalName).toBe('bbb')
+      // The total counts the filter, not the page.
+      expect(body.total).toBe(2)
+    })
+
     it('rejects an unknown status with a 400', async () => {
       const res = await app.request('/v1/admin/artists?status=bogus', {
         headers: ADMIN_HEADERS,
@@ -125,7 +174,22 @@ describe('admin artists routes', () => {
         matched: 1,
         ambiguous: 2,
         no_match: 0,
+        not_an_artist: 0,
       })
+    })
+
+    it('counts a not_an_artist row', async () => {
+      await seedArtist({
+        canonicalName: 'bass bingo night',
+        matchStatus: 'not_an_artist',
+      })
+
+      const res = await app.request('/v1/admin/artists/counts', {
+        headers: ADMIN_HEADERS,
+      })
+      const body = await res.json()
+
+      expect(body.data.not_an_artist).toBe(1)
     })
   })
 

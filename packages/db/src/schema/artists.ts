@@ -35,12 +35,19 @@ export type SpotifyCandidateSnapshot = {
  * `ambiguous` is a human queue, not an error: more than one Spotify artist
  * matched the canonical name exactly, and guessing would put the wrong
  * press photo on a public page.
+ *
+ * The first four all answer the same question — how confident is the Spotify
+ * match? `not_an_artist` answers a different one: there is nothing here to
+ * match. It is set by a human and never by the match job, and it is sticky,
+ * because a row that keeps returning to the queue is the whole problem it
+ * solves.
  */
 export const artistMatchStatusEnum = pgEnum('artist_match_status', [
   'unmatched', // never attempted
   'matched', // confidence cleared the bar, spotifyArtistId is trustworthy
   'ambiguous', // candidates found, none cleared the bar — needs a human
   'no_match', // searched, nothing plausible
+  'not_an_artist', // a human confirmed there is no act here to match
 ])
 
 /**

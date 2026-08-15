@@ -1,0 +1,15 @@
+-- A fifth `artist_match_status` for rows that are not an act at all.
+--
+-- The other four all answer "how confident is the Spotify match?", so a bingo
+-- night or a tour-package title projected into `artists` can only sit in
+-- `no_match` — indistinguishable from a real band Spotify has never heard of.
+-- Both keep coming back to the human queue, and the match job keeps spending
+-- quota searching for a performer that does not exist.
+--
+-- `not_an_artist` is that human's answer, and it is a tombstone: the reaper
+-- excludes it so the row survives an unreferenced sweep, which is what stops
+-- the next backfill recreating it as `unmatched`.
+--
+-- `IF NOT EXISTS` because ALTER TYPE ... ADD VALUE is not transactional on the
+-- value itself; a retried migration must not fail on the second attempt.
+ALTER TYPE artist_match_status ADD VALUE IF NOT EXISTS 'not_an_artist';

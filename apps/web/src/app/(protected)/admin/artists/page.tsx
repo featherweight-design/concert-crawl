@@ -24,7 +24,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 
 const COPY = ADMIN_COPY.artists
 
-type MatchStatus = 'unmatched' | 'matched' | 'ambiguous' | 'no_match'
+type MatchStatus =
+  'unmatched' | 'matched' | 'ambiguous' | 'no_match' | 'not_an_artist'
 
 interface AdminArtist {
   id: string
@@ -38,11 +39,12 @@ interface AdminArtist {
   hidden: boolean
 }
 
-const STATUS_TABS: MatchStatus[] = [
+const STATUS_CHIPS: MatchStatus[] = [
   'ambiguous',
   'unmatched',
   'no_match',
   'matched',
+  'not_an_artist',
 ]
 
 const STATUS_KIND: Record<MatchStatus, 'warning' | 'success' | 'neutral'> = {
@@ -50,11 +52,47 @@ const STATUS_KIND: Record<MatchStatus, 'warning' | 'success' | 'neutral'> = {
   unmatched: 'neutral',
   no_match: 'neutral',
   matched: 'success',
+  not_an_artist: 'neutral',
+}
+
+const PAGE_SIZE = 100
+
+/**
+ * Move one row between chip buckets.
+ *
+ * The counts come from their own endpoint, so a row resolved in place would
+ * leave every chip a request behind until the next load. Walking the single
+ * row that changed keeps them honest without a second round trip.
+ */
+const shiftCounts = (
+  counts: Record<MatchStatus, number>,
+  from: MatchStatus | undefined,
+  to: MatchStatus,
+): Record<MatchStatus, number> => {
+  if (from === undefined || from === to) return counts
+  const next = { ...counts }
+  next[from] = Math.max(0, next[from] - 1)
+  next[to] += 1
+  return next
+}
+
+const EMPTY_COUNTS: Record<MatchStatus, number> = {
+  ambiguous: 0,
+  unmatched: 0,
+  no_match: 0,
+  matched: 0,
+  not_an_artist: 0,
 }
 
 export default function AdminArtistsPage() {
   const { getToken } = useAuth()
   const [status, setStatus] = useState<MatchStatus>('ambiguous')
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+  const [offset, setOffset] = useState(0)
+  const [total, setTotal] = useState(0)
+  const [counts, setCounts] =
+    useState<Record<MatchStatus, number>>(EMPTY_COUNTS)
   const [rows, setRows] = useState<AdminArtist[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -62,6 +100,16 @@ export default function AdminArtistsPage() {
   const [openCandidatesFor, setOpenCandidatesFor] = useState<string | null>(
     null,
   )
+
+  // A keystroke per request would spend a query on every prefix of the name.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput.trim())
+      setOffset(0)
+      setOpenCandidatesFor(null)
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [searchInput])
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -72,23 +120,49 @@ export default function AdminArtistsPage() {
         setError(COPY.errorState)
         return
       }
-      const resp = await fetch(
-        `${API_BASE}/v1/admin/artists?status=${status}&limit=200`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )
-      if (!resp.ok) {
+      const headers = { Authorization: `Bearer ${token}` }
+      // The server ignores `status` whenever a search is present, so sending
+      // both would misdescribe what comes back.
+      const query = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        offset: String(offset),
+        ...(search === '' ? { status } : { search }),
+      })
+      const [listResp, countsResp] = await Promise.all([
+        fetch(`${API_BASE}/v1/admin/artists?${query.toString()}`, { headers }),
+        fetch(`${API_BASE}/v1/admin/artists/counts`, { headers }),
+      ])
+      if (!listResp.ok || !countsResp.ok) {
         setError(COPY.errorState)
         return
       }
-      const body: { data: AdminArtist[] } = await resp.json()
+      const body: { data: AdminArtist[]; total: number } = await listResp.json()
+      const countsBody: { data: Record<MatchStatus, number> } =
+        await countsResp.json()
       setRows(body.data)
+      setTotal(body.total)
+      // Merged over the zeroed record rather than trusted whole: a staggered
+      // deploy can serve counts that predate a status this build knows about,
+      // and a missing key turns every later shift into NaN.
+      setCounts({ ...EMPTY_COUNTS, ...countsBody.data })
     } catch (err) {
       console.error('[admin artists] load failed', err)
       setError(COPY.errorState)
     } finally {
       setIsLoading(false)
     }
-  }, [getToken, status])
+  }, [getToken, status, search, offset])
+
+  // A trailing page can empty under the admin — they resolved its last row, or
+  // the server has nothing at this offset any more. Either way the page they
+  // are on has stopped existing, so walk back one and let the offset change
+  // refetch. Declared here rather than at each call site so every route into
+  // an empty page is covered by one rule.
+  useEffect(() => {
+    if (!isLoading && rows.length === 0 && offset > 0) {
+      setOffset((prev) => Math.max(0, prev - PAGE_SIZE))
+    }
+  }, [isLoading, rows.length, offset])
 
   useEffect(() => {
     void load()
@@ -109,6 +183,7 @@ export default function AdminArtistsPage() {
     spotifyArtistId: string | null,
     photoUrl?: string | null,
   ) => {
+    const previousStatus = rows.find((row) => row.id === id)?.matchStatus
     try {
       const token = await getToken()
       if (!token) {
@@ -136,26 +211,73 @@ export default function AdminArtistsPage() {
         await load()
         return
       }
-      // On the `matched` tab the row was already matched and still is — the
+      // On the `matched` chip the row was already matched and still is — the
       // admin is correcting a wrong identity, not resolving a queue. Dropping
-      // it there would vanish the row they are working on.
-      if (status === 'matched') {
+      // it there would vanish the row they are working on. A search result is
+      // the same case: the list is "everything named X", and the row still is.
+      if (status === 'matched' || search !== '') {
         setRows((prev) =>
           prev.map((row) =>
             row.id === id
               ? {
                   ...row,
                   spotifyArtistId,
+                  matchStatus: 'matched',
                   photoUrl: photoUrl ?? row.photoUrl,
                 }
               : row,
           ),
         )
+        setCounts((prev) => shiftCounts(prev, previousStatus, 'matched'))
         return
       }
+      setCounts((prev) => shiftCounts(prev, previousStatus, 'matched'))
+      // Functional, because a chip change or a debounced search can land a new
+      // list while this PATCH is in flight; filtering the closed-over array
+      // would put the stale page back.
       setRows((prev) => prev.filter((row) => row.id !== id))
+      setTotal((prev) => Math.max(0, prev - 1))
     } catch (err) {
       console.error('[admin artists] save failed', err)
+      setError(COPY.saveError)
+    }
+  }
+
+  // The ruling that a row is not an act at all. It goes through the identity
+  // PATCH because it *is* a match verdict — the other four answer "how
+  // confident is the Spotify match?", and this one answers that there is
+  // nothing here to match. Reloading rather than dropping the row locally: the
+  // counts move too, and a stale chip is worse than a redraw.
+  const markNotAnArtist = async (id: string) => {
+    try {
+      const token = await getToken()
+      if (!token) {
+        setError(COPY.saveError)
+        return
+      }
+      const resp = await fetch(`${API_BASE}/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          spotifyArtistId: null,
+          matchStatus: 'not_an_artist',
+        }),
+      })
+      if (!resp.ok) {
+        setError(COPY.saveError)
+        return
+      }
+      setError(null)
+      // Same reason the chips and the pager clear it: a picker still open when
+      // the list redraws mounts against a different row and spends a Spotify
+      // search nobody asked for.
+      setOpenCandidatesFor(null)
+      await load()
+    } catch (err) {
+      console.error('[admin artists] not-an-artist failed', err)
       setError(COPY.saveError)
     }
   }
@@ -204,22 +326,53 @@ export default function AdminArtistsPage() {
         {COPY.dormantNotice}
       </p>
 
+      <p style={{ fontSize: 12, color: 'var(--fg-subtle)', margin: 0 }}>
+        {COPY.notAnArtistHint}
+      </p>
+
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {STATUS_TABS.map((tab) => (
+        {STATUS_CHIPS.map((chip) => (
           <AdminButton
-            key={tab}
+            key={chip}
             size="sm"
-            variant={tab === status ? 'primary' : 'outline'}
+            variant={chip === status && search === '' ? 'primary' : 'outline'}
             onClick={() => {
-              // A picker left open on another tab reopens — and spends a fresh
+              // A picker left open on another chip reopens — and spends a fresh
               // Spotify search on mount — the moment the admin comes back.
               setOpenCandidatesFor(null)
-              setStatus(tab)
+              setStatus(chip)
+              setOffset(0)
             }}
           >
-            {COPY.statusChips[tab]}
+            {COPY.statusChipCount(COPY.statusChips[chip], counts[chip])}
           </AdminButton>
         ))}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <input
+          type="search"
+          aria-label={COPY.searchLabel}
+          placeholder={COPY.searchPlaceholder}
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
+          style={{
+            maxWidth: 360,
+            height: 32,
+            padding: '0 12px',
+            borderRadius: 9,
+            border: '1px solid var(--border-strong)',
+            background: 'var(--surface-1)',
+            fontFamily: "'Inter', sans-serif",
+            fontSize: 13,
+            color: 'var(--fg)',
+          }}
+        />
+        {search !== '' && (
+          <p style={{ fontSize: 12, color: 'var(--fg-subtle)', margin: 0 }}>
+            {COPY.searchNotice}
+          </p>
+        )}
       </div>
 
       {error !== null && (
@@ -249,7 +402,7 @@ export default function AdminArtistsPage() {
               fontSize: 13,
             }}
           >
-            {COPY.emptyState}
+            {search === '' ? COPY.emptyState : COPY.noSearchResults}
           </div>
         ) : (
           <AdminTable minWidth={860}>
@@ -339,7 +492,18 @@ export default function AdminArtistsPage() {
                               ? COPY.hideCandidates
                               : COPY.findOnSpotify}
                           </AdminButton>
-                          {/* On every row, not just the ambiguous tab: the
+                          {/* Already ruled on — offering it again invites a
+                            double-click that writes the same verdict twice. */}
+                          {row.matchStatus !== 'not_an_artist' && (
+                            <AdminButton
+                              size="sm"
+                              variant="outline"
+                              onClick={() => void markNotAnArtist(row.id)}
+                            >
+                              {COPY.notAnArtist}
+                            </AdminButton>
+                          )}
+                          {/* On every row, not just the ambiguous chip: the
                             festival packages that motivated this land in
                             no_match. */}
                           <AdminButton
@@ -375,6 +539,47 @@ export default function AdminArtistsPage() {
           </AdminTable>
         )}
       </Panel>
+
+      {total > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            justifyContent: 'flex-end',
+          }}
+        >
+          <span style={{ fontSize: 12, color: 'var(--fg-subtle)' }}>
+            {COPY.pageStatus(
+              offset + 1,
+              Math.min(offset + rows.length, total),
+              total,
+            )}
+          </span>
+          <AdminButton
+            size="sm"
+            variant="outline"
+            disabled={offset === 0}
+            onClick={() => {
+              setOpenCandidatesFor(null)
+              setOffset((current) => Math.max(0, current - PAGE_SIZE))
+            }}
+          >
+            {COPY.prev}
+          </AdminButton>
+          <AdminButton
+            size="sm"
+            variant="outline"
+            disabled={offset + rows.length >= total}
+            onClick={() => {
+              setOpenCandidatesFor(null)
+              setOffset((current) => current + PAGE_SIZE)
+            }}
+          >
+            {COPY.next}
+          </AdminButton>
+        </div>
+      )}
     </div>
   )
 }
