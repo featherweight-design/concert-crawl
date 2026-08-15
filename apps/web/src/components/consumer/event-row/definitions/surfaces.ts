@@ -4,17 +4,18 @@
  */
 
 export type RowSurface =
-  'browse' | 'venue' | 'watching' | 'related' | 'crew' | 'crewLens'
+  'browse' | 'venue' | 'watching' | 'related' | 'crew' | 'crewLens' | 'artist'
 
 /** The units line 3 can render, in reading order. */
 export const WHEN_WHERE_UNITS = ['date', 'time', 'venue'] as const
 export type WhenWhereUnit = (typeof WHEN_WHERE_UNITS)[number]
 
 /**
- * Only date and venue can be carried by a surface. Time is never stated by a
- * page header or a page title, so no surface can subtract it.
+ * Only date and venue can be carried out of line 3. Time is never stated by a
+ * page header or a page title, so no surface can subtract it. `artist` is
+ * carried out of line 1 instead, which is why it is not a `WhenWhereUnit`.
  */
-export type CarriedContext = Extract<WhenWhereUnit, 'date' | 'venue'>
+export type CarriedContext = Extract<WhenWhereUnit, 'date' | 'venue'> | 'artist'
 
 export type MetaChipKind =
   'crew' | 'following' | 'genre' | 'freshness' | 'provenance'
@@ -44,6 +45,18 @@ export interface SurfaceConfig {
    * property of the data.
    */
   showsTour: boolean
+  /**
+   * Line 1 renders the tour name at title weight and moves the artist to a
+   * screen-reader span. Mutually exclusive with `showsTour`: a surface that
+   * carries the artist has nothing left to hang a clause off.
+   */
+  promotesTour: boolean
+  /**
+   * Whether the surface's payload can carry a support billing at all. This is
+   * what `rowMin` keys the reserved height on, so it gates the render too —
+   * a line 2 the reservation did not account for is a list that steps.
+   */
+  showsSupports: boolean
 }
 
 export const SURFACES: Record<RowSurface, SurfaceConfig> = {
@@ -56,6 +69,8 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     showsDelta: false,
     showsPrice: true,
     showsTour: true,
+    promotesTour: false,
+    showsSupports: true,
   },
   // The venue is the page.
   venue: {
@@ -66,6 +81,8 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     showsDelta: false,
     showsPrice: true,
     showsTour: true,
+    promotesTour: false,
+    showsSupports: true,
   },
   // "More at this venue" / "More from this artist" on event detail. The list
   // has no headers at all, so the row states everything.
@@ -77,6 +94,8 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     showsDelta: false,
     showsPrice: true,
     showsTour: true,
+    promotesTour: false,
+    showsSupports: true,
   },
   // Watching's group headers are loose windows ("This week"), not dates, so the
   // row is the only thing that can say when the show is.
@@ -92,6 +111,8 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     showsDelta: true,
     showsPrice: true,
     showsTour: false,
+    promotesTour: false,
+    showsSupports: false,
   },
   // The crew home. Both crew surfaces are discovery — shows someone else is
   // going to, which you have not decided on — so they take the tour clause on
@@ -109,6 +130,8 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     showsDelta: false,
     showsPrice: false,
     showsTour: true,
+    promotesTour: false,
+    showsSupports: false,
   },
   // Browse under a crew lens. The list is Browse's own date-grouped list, so
   // the date is carried exactly as it is there; the price is suppressed for
@@ -126,6 +149,26 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     showsDelta: false,
     showsPrice: false,
     showsTour: true,
+    promotesTour: false,
+    showsSupports: false,
+  },
+  // The artist page states the artist in its header, so the row subtracts it
+  // from line 1 and the tour name takes the slot instead — the one surface
+  // where the tour is the most distinguishing thing on the row. `following`
+  // leaves the chip priority on the same grounds: the page has its own follow
+  // control, so a chip repeating it says nothing the header did not.
+  //
+  // The list has no date headers, so line 3 still states date, time and venue.
+  artist: {
+    carries: ['artist'],
+    chipPriority: ['genre'],
+    hasActionGutter: true,
+    carded: false,
+    showsDelta: false,
+    showsPrice: true,
+    showsTour: false,
+    promotesTour: true,
+    showsSupports: false,
   },
 }
 

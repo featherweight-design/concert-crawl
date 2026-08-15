@@ -343,8 +343,18 @@ artistsPublicRouter.get(
       city: venues.city,
     }
 
+    // The upcoming row renders through the shared event row, which promotes
+    // the tour name into the title slot and chips one genre. The past row is a
+    // bare line and needs none of it.
+    const upcomingColumns = {
+      ...showColumns,
+      tourName: events.tourName,
+      genre: events.genre,
+      imageUrl: events.imageUrl,
+    }
+
     const upcomingRows = await db
-      .select(showColumns)
+      .select(upcomingColumns)
       .from(events)
       .innerJoin(
         venues,
@@ -393,6 +403,9 @@ artistsPublicRouter.get(
       venueSlug: row.venueSlug,
       city: row.city,
       price: parsePrice(row.ticketPriceMin),
+      tourName: row.tourName,
+      genres: row.genre ?? [],
+      imageUrl: row.imageUrl,
       status: row.status,
     }))
 

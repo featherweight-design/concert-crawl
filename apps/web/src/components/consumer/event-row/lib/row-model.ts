@@ -1,4 +1,5 @@
 import type {
+  ArtistShow,
   EventWithVenue,
   EventStatus,
   CrewShow,
@@ -180,6 +181,57 @@ export function fromEventWithVenue(
     // until a surface that knows better says otherwise.
     status: 'live',
     lifecycle: event.status,
+  }
+}
+
+/**
+ * An upcoming show on an artist page. The artist is the page, so it arrives as
+ * an argument rather than off the show: `ArtistShow` never repeats it.
+ */
+export function fromArtistShow(show: ArtistShow, artist: string): EventRowShow {
+  return {
+    id: show.eventId,
+    headliner: artist,
+    fallbackTitle: artist,
+    // The payload carries no billing, and the surface declares as much, so
+    // line 2 never appears here.
+    supports: [],
+    tourName: show.tourName,
+    imageUrl: show.imageUrl,
+    // Every row on this page is the same act, so the artist portrait would be
+    // the same face repeated down the list. The identity glyph says as much
+    // with less.
+    artistPhotoUrl: null,
+    venueName: venueShort(show.venue),
+    venueSlug: show.venueSlug,
+    dateLabel: formatEventDate(show.iso, undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+    }),
+    timeLabel: formatShowTime(show.showTime),
+    price:
+      show.price !== null
+        ? {
+            amount: Math.round(show.price),
+            isFloor: true,
+            // The artist payload carries the scalar alone, with no provenance
+            // and no observation time, so the price renders bare.
+            source: null,
+            observedAt: null,
+          }
+        : null,
+    saved: null,
+    genres: show.genres,
+    // The page has its own follow control, and `following` is not in this
+    // surface's chip priority — a chip here would repeat the header.
+    isFollowed: false,
+    crewGoing: null,
+    // The row's action is the watch button, which states the same thing louder
+    // and one gutter away. A tick beside it is the fact twice.
+    isWatching: false,
+    status: 'live',
+    lifecycle: show.status,
   }
 }
 

@@ -9,7 +9,9 @@ import { firstIso, showsInItem } from './definitions/types'
 import { groupShows } from './lib/group-shows'
 import { RunGroup } from './RunGroup'
 import { SectionHead } from './SectionHead'
-import { ShowRow } from './ShowRow'
+import { EventRow } from '@/components/consumer/event-row/EventRow'
+import { fromArtistShow } from '@/components/consumer/event-row/lib/row-model'
+import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchShowButton'
 
 interface UpcomingShowsProps {
   name: string
@@ -64,7 +66,13 @@ export const UpcomingShows = ({ name, shows }: UpcomingShowsProps) => {
                 artist={name}
               />
             ) : (
-              <ShowRow show={item} artist={name} />
+              <EventRow
+                show={fromArtistShow(item, name)}
+                surface="artist"
+                action={
+                  <WatchShowButton eventId={item.eventId} artist={name} />
+                }
+              />
             )}
           </React.Fragment>
         ))}

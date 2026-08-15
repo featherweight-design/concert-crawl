@@ -12,6 +12,7 @@ import { MetaRow } from './MetaRow'
 import { PriceStack } from './PriceStack'
 import { EVENT_ROW_COPY as copy } from './definitions/copy'
 import { SURFACES, type RowSurface } from './definitions/surfaces'
+import { rowMin } from './definitions/row-min'
 import { rowChips, chipBudget } from './lib/row-chips'
 import { isStruck, resolveRowStatus } from './lib/row-status'
 import type { EventRowShow } from './lib/row-model'
@@ -69,7 +70,7 @@ export const EventRow = ({
   }, [])
 
   const artSize = narrow ? 44 : 56
-  const hasSupportLine = show.supports.length > 0
+  const hasSupportLine = config.showsSupports && show.supports.length > 0
   // Resolved once here rather than inside the chip builder, so the taxonomy
   // stays out of a module whose whole job is turning a show into chip data.
   const chips = rowChips(show, surface, bucketMembersFor(filterVibe))
@@ -96,7 +97,10 @@ export const EventRow = ({
         data-testid="event-row"
         data-narrow={narrow || undefined}
         className="event-row group relative flex items-center"
-        style={{ gap: narrow ? 10 : 14 }}
+        // Rule 3. `items-center` distributes the slack a collapsed line 4
+        // leaves, so a chipless row sits level with its neighbours instead of
+        // riding high.
+        style={{ gap: narrow ? 10 : 14, minHeight: rowMin(surface, narrow) }}
       >
         {/* The clip lives on the inner box, not here: the tick overhangs the
             artwork by 3px and would be cut off by a clip on this wrapper. */}
@@ -153,6 +157,7 @@ export const EventRow = ({
               headliner={show.headliner}
               tourName={show.tourName}
               showsTour={config.showsTour}
+              promotesTour={config.promotesTour}
               narrow={narrow}
             />
             {/* Line 2. It stays inside the row's stretched anchor exactly as it

@@ -78,6 +78,9 @@ const show = (iso: string, venue: string): ArtistShow => ({
   venueSlug: venue.toLowerCase().replace(/\s+/g, '-'),
   city: 'Denver',
   price: null,
+  tourName: null,
+  genres: [],
+  imageUrl: null,
   status: 'upcoming',
 })
 

@@ -62,8 +62,27 @@ describe('whenWhereUnits', () => {
   it('withholds the tour clause from watching and grants it everywhere else', () => {
     expect(SURFACES.watching.showsTour).toBe(false)
     const withheld = SURFACE_NAMES.filter(
-      (surface) => !SURFACES[surface].showsTour,
+      (surface) =>
+        !SURFACES[surface].showsTour && !SURFACES[surface].promotesTour,
     )
     expect(withheld).toEqual(['watching'])
+  })
+
+  // A surface that carries the artist has nothing left to hang a clause off,
+  // so the two are alternatives rather than an ordering.
+  it('never both promotes the tour name and hangs it as a clause', () => {
+    for (const surface of SURFACE_NAMES) {
+      const config = SURFACES[surface]
+      expect(config.showsTour && config.promotesTour).toBe(false)
+    }
+  })
+
+  it('promotes the tour name only where the surface carries the artist', () => {
+    for (const surface of SURFACE_NAMES) {
+      const config = SURFACES[surface]
+      if (!config.promotesTour) continue
+      expect(config.carries).toContain('artist')
+    }
+    expect(SURFACES.artist.promotesTour).toBe(true)
   })
 })

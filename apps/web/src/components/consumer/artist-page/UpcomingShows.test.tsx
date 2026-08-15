@@ -6,6 +6,7 @@ import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { CONSUMER_COPY } from '../definitions/copy'
+import { EVENT_ROW_COPY } from '../event-row/definitions/copy'
 
 import { ARTIST_COPY } from './definitions/copy'
 import { UpcomingShows } from './UpcomingShows'
@@ -46,8 +47,18 @@ const show = (
   venueSlug: venue.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
   city: 'Denver',
   price,
+  tourName: null,
+  genres: [],
+  imageUrl: null,
   status,
 })
+
+/**
+ * A run is a `RunGroup` card and a one-off is now an `EventRow`, so counting
+ * items means counting both markers rather than the one they used to share.
+ */
+const items = (container: HTMLElement) =>
+  container.querySelectorAll('[data-show-item], [data-testid="event-row"]')
 
 /** Three runs of three, plus four one-offs: 5 items, 13 shows. */
 const thirteenShows = (): ArtistShow[] => [
@@ -74,7 +85,7 @@ describe('UpcomingShows', () => {
     // The head carries no count — it duplicated "Upcoming" and clipped at 320px.
     expect(queryByText(ARTIST_COPY.showCount(13))).toBeNull()
     // A run is one item; the label is always in shows.
-    expect(container.querySelectorAll('[data-show-item]')).toHaveLength(5)
+    expect(items(container)).toHaveLength(5)
     expect(getByText(ARTIST_COPY.showAll(13))).toBeTruthy()
   })
 
@@ -88,14 +99,14 @@ describe('UpcomingShows', () => {
 
     toggle.focus()
     fireEvent.click(toggle)
-    expect(container.querySelectorAll('[data-show-item]')).toHaveLength(7)
+    expect(items(container)).toHaveLength(7)
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
     expect(toggle.textContent).toBe(ARTIST_COPY.showFewer)
     // Focus never leaves the control that moved the list.
     expect(document.activeElement).toBe(toggle)
 
     fireEvent.click(toggle)
-    expect(container.querySelectorAll('[data-show-item]')).toHaveLength(5)
+    expect(items(container)).toHaveLength(5)
   })
 
   it('omits the toggle when everything already fits', () => {
@@ -137,7 +148,9 @@ describe('UpcomingShows', () => {
       />,
     )
     expect(getByText('$15')).toBeTruthy()
-    expect(getByText(ARTIST_COPY.priceUnknown)).toBeTruthy()
+    // The row states an absent price in its own words. The page's "Price TBD"
+    // still runs the run cards, which are not rows.
+    expect(getByText(EVENT_ROW_COPY.price.tba)).toBeTruthy()
   })
 
   it('marks a cancelled show without hiding it', () => {

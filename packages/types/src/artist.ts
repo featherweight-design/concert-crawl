@@ -17,6 +17,14 @@ export interface ArtistShow {
   /** Cheapest known ticket price, or null when unknown ("Price TBD"). */
   price: number | null
   /**
+   * The artist page carries the artist, so the row promotes the tour name into
+   * the title slot instead. Null falls the row back to the artist name.
+   */
+  tourName: string | null
+  /** Feeds the row's genre chip, which is this surface's only chip. */
+  genres: string[]
+  imageUrl: string | null
+  /**
    * Cancelled and postponed shows stay in the upcoming list — a show the
    * visitor is watching must not disappear at the moment it is cancelled,
    * which is the moment they most need to see it. The row carries its status

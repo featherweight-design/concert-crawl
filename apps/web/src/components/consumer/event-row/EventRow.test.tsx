@@ -5,6 +5,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { EventRow } from './EventRow'
 import type { EventRowShow } from './lib/row-model'
+import { rowChips } from './lib/row-chips'
 
 vi.mock('next/link', () => ({
   __esModule: true,
@@ -325,5 +326,90 @@ describe('EventRow — the footer slot', () => {
       />,
     )
     expect(screen.getByTestId('going-nudge')).not.toBeNull()
+  })
+})
+
+/**
+ * Rule 3. The reservation is asserted on the resolved `min-height` rather than
+ * on a measured box, because jsdom has no layout engine and every rendered
+ * height would come back as zero — an assertion that would pass whether or not
+ * the reservation existed at all.
+ *
+ * The fixtures are Watching rows, not Browse ones. A zero-chip row is what the
+ * reservation exists for, and on Browse it is unreachable: `genre` leads that
+ * surface's priority and no production event carries an empty `genres[]`. On
+ * Watching the chips are `freshness` and `provenance`, both of which a live,
+ * bare-priced show legitimately lacks.
+ */
+describe('EventRow — Rule 3, the row reserves its own height', () => {
+  const FRESH = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+  const STALE = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
+
+  const minHeights = (surface: 'watching' | 'artist', shows: EventRowShow[]) =>
+    new Set(
+      shows.map((show) => {
+        cleanup()
+        render(<EventRow show={show} surface={surface} />)
+        return screen.getByTestId('event-row').style.minHeight
+      }),
+    )
+
+  const watchingLadder = [
+    // No chips at all: a fresh price with no corroborated source clears both
+    // of this surface's chip kinds, and MetaRow renders nothing.
+    makeShow({
+      price: { amount: 68, isFloor: true, source: null, observedAt: FRESH },
+    }),
+    // One chip.
+    makeShow({
+      price: {
+        amount: 68,
+        isFloor: true,
+        source: 'boxoffice',
+        observedAt: FRESH,
+      },
+    }),
+    // Both chips, which is the whole budget.
+    makeShow({
+      price: {
+        amount: 68,
+        isFloor: true,
+        source: 'boxoffice',
+        observedAt: STALE,
+      },
+    }),
+    // No price at all, so the price slot reads "tba" and neither chip kind has
+    // anything to report.
+    makeShow({ price: null }),
+  ]
+
+  // Asserted on the chip builder rather than on the rendered line, which has no
+  // widths to fit against under jsdom. Without this the height claim below
+  // would hold just as well over four identical rows.
+  it('runs the ladder from no chips to the full budget', () => {
+    expect(
+      watchingLadder.map((show) => rowChips(show, 'watching').length),
+    ).toEqual([0, 1, 2, 0])
+  })
+
+  it('holds one height across a Watching list that runs from no chips to full', () => {
+    expect(minHeights('watching', watchingLadder).size).toBe(1)
+  })
+
+  it('reserves less on a surface that can never carry a support line', () => {
+    // Watching and artist both declare `showsSupports: false`, so both take the
+    // three-line reservation and a supports array they cannot render moves
+    // neither of them.
+    const withSupports = minHeights('watching', [
+      makeShow({ supports: ['Opener One', 'Opener Two'] }),
+    ])
+    const without = minHeights('watching', [makeShow()])
+    expect(withSupports).toEqual(without)
+  })
+
+  it('reserves the artist row at the same height as any other three-line row', () => {
+    const artist = minHeights('artist', [makeShow({ tourName: 'Night Drive' })])
+    const watching = minHeights('watching', [makeShow()])
+    expect(artist).toEqual(watching)
   })
 })

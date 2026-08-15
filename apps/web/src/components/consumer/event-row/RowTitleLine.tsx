@@ -50,6 +50,12 @@ interface RowTitleLineProps {
   tourName: string | null
   /** Rule 1 — the surface decides whether a tour name is worth line 1's room. */
   showsTour: boolean
+  /**
+   * Rule 1's corollary — the surface already states the artist, so the tour
+   * name takes the title slot outright. Falls back to the headliner when the
+   * show has no tour name.
+   */
+  promotesTour?: boolean
   /** The ≤360px step of the row ramp. */
   narrow?: boolean
 }
@@ -68,6 +74,7 @@ export const RowTitleLine = ({
   headliner,
   tourName,
   showsTour,
+  promotesTour = false,
   narrow = false,
 }: RowTitleLineProps) => {
   const boxRef = useRef<HTMLDivElement>(null)
@@ -82,6 +89,8 @@ export const RowTitleLine = ({
   const frameRef = useRef<number | null>(null)
 
   const clause = showsTour && tourName ? tourName : null
+  const promoted = promotesTour && tourName ? tourName : null
+  const title = promoted ?? headliner
   const headSize = narrow ? RAMP.narrowHead : RAMP.head
   const clauseSize = headSize - RAMP.clauseDrop
 
@@ -168,7 +177,7 @@ export const RowTitleLine = ({
       if (frameRef.current !== null) cancelAnimationFrame(frameRef.current)
       frameRef.current = null
     }
-  }, [headliner, clause, headSize, clauseSize])
+  }, [title, clause, headSize, clauseSize])
 
   return (
     <div
@@ -177,12 +186,20 @@ export const RowTitleLine = ({
       className="flex min-w-0 items-baseline"
       style={{ position: 'relative', gap: GAP }}
     >
+      {/* First in reading order, so the row still announces the act before the
+          tour it is out on. The page states the artist beside the list; a
+          screen reader arriving on the row has no such adjacency. */}
+      {promoted !== null && (
+        <span className="sr-only" data-testid="row-promoted-artist">
+          {headliner}
+        </span>
+      )}
       <div
         data-testid="row-title"
         className="min-w-0 truncate text-fg transition-colors group-hover/eventtitle:text-signal"
         style={titleStyle}
       >
-        {headliner}
+        {title}
       </div>
 
       {clause !== null && fits && (
@@ -228,7 +245,7 @@ export const RowTitleLine = ({
               whiteSpace: 'nowrap',
             }}
           >
-            <span style={titleStyle}>{headliner}</span>
+            <span style={titleStyle}>{title}</span>
             {/* The separator and its margin are part of what the clause costs,
                 so the measure copy has to carry them too. */}
             <span style={clauseStyle}>

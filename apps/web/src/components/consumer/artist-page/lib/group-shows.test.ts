@@ -18,6 +18,9 @@ const show = (
   venueSlug,
   city,
   price: null,
+  tourName: null,
+  genres: [],
+  imageUrl: null,
   status: 'upcoming',
 })
 
