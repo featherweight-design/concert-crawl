@@ -26,6 +26,7 @@ import {
   ARTIST_SLUG_MAX_LENGTH,
   ARTIST_SUGGESTIONS_DEFAULT_LIMIT,
   ARTIST_SUGGESTIONS_MAX_LIMIT,
+  expandBucket,
 } from '@concert-crawl/types'
 import type {
   ArtistDetailResponse,
@@ -34,7 +35,6 @@ import type {
   ArtistSuggestion,
 } from '@concert-crawl/types'
 import { loadNextShowByCanonical } from '../lib/artist-follows.js'
-import { expandBucket } from '../lib/genre-buckets.js'
 import { parsePrice } from '../lib/price.js'
 import { todayInTimezone } from '../lib/time.js'
 
@@ -79,7 +79,7 @@ const slugParamSchema = z.object({
 // Cancelled and postponed rows stay, matching every other list surface.
 const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const
 
-// There are 16 buckets (lib/genre-buckets.ts) and the onboarding step can only
+// There are 16 buckets (@concert-crawl/types) and the onboarding step can only
 // send bucket labels, so anything past that is not a real selection — the cap
 // exists so a hand-rolled query string can't expand into an unbounded ARRAY[].
 const MAX_GENRE_FILTERS = 24

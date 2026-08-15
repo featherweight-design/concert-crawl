@@ -99,6 +99,12 @@ export type ExtractionStrategy = 'structured_data' | 'llm' | 'manual'
 // with 'success + eventsFound: 0' (which would indicate a real failure).
 export type CrawlStatus = 'success' | 'failed' | 'partial' | 'skipped'
 
+// Vibe filter bucket taxonomy. Lives here rather than in apps/api because the
+// row's genre pair needs bucket membership client-side to decide which of two
+// genres leads under an active filter — the web app only ever holds the bare
+// filterVibe string from the URL.
+export * from './genre-buckets.js'
+
 // Event status
 export * from './event-status.js'
 import type { EventStatus } from './event-status.js'

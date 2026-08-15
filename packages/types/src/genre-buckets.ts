@@ -146,6 +146,28 @@ export function expandBucket(bucketOrRaw: string): readonly string[] {
 }
 
 /**
+ * Resolve an active Vibe filter value to the raw genre strings belonging to its
+ * bucket, or null when the value is not a known bucket.
+ *
+ * The null return is a safety fallback, not an error case: callers use it to
+ * decide whether a row's genres may be reordered so the matched one leads. No
+ * membership set means no reorder — never a wrong one.
+ *
+ * Deliberately not `expandBucket`, which echoes an unknown value back verbatim
+ * so a bookmarked `filterVibe=dubstep` URL still matches rows by exact overlap.
+ * That fallback is right for querying and wrong for reordering: a one-element
+ * array holding the raw filter string makes every genre look like a non-member.
+ */
+export function bucketMembersFor(
+  filterValue: string | null | undefined,
+): readonly string[] | null {
+  if (filterValue === null || filterValue === undefined) return null
+  const key = filterValue.trim().toLowerCase()
+  if (!isGenreBucket(key)) return null
+  return expandBucket(key)
+}
+
+/**
  * Given the raw genre strings observed in the DB, return the sorted set of
  * bucket labels those genres collectively cover. Unbucketed genres are
  * silently dropped — they still filter and search normally, but they no

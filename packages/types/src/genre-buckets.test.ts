@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   BUCKET_LABELS,
   bucketForGenre,
+  bucketMembersFor,
   bucketsPresentIn,
   expandBucket,
   isGenreBucket,
@@ -165,5 +166,50 @@ describe('bucketsPresentIn', () => {
       'indie',
       'rock',
     ])
+  })
+})
+
+describe('bucketMembersFor', () => {
+  it('returns the full sub-genre set for a known bucket', () => {
+    const members = bucketMembersFor('rock')
+    expect(members).not.toBeNull()
+    expect(members).toContain('rock')
+    expect(members).toContain('alternative')
+    expect(members).toContain('psychedelic')
+  })
+
+  it('returns null for an unknown string', () => {
+    expect(bucketMembersFor('shoegaze')).toBeNull()
+  })
+
+  it('returns null for null and undefined', () => {
+    expect(bucketMembersFor(null)).toBeNull()
+    expect(bucketMembersFor(undefined)).toBeNull()
+  })
+
+  it('returns null for an empty or whitespace-only value', () => {
+    expect(bucketMembersFor('')).toBeNull()
+    expect(bucketMembersFor('   ')).toBeNull()
+  })
+
+  it('is case- and whitespace-insensitive on the bucket label', () => {
+    expect(bucketMembersFor('  ROCK ')).toEqual(bucketMembersFor('rock'))
+  })
+
+  // The distinction that earns this function its existence. expandBucket echoes
+  // an unknown value back as a one-element array, which would make a reorder
+  // treat the filter string itself as the only member and mis-lead every row.
+  it('does not echo an unknown value back the way expandBucket does', () => {
+    expect(expandBucket('shoegaze')).toEqual(['shoegaze'])
+    expect(bucketMembersFor('shoegaze')).toBeNull()
+  })
+
+  // Membership, not equality: no genre stored on an event is ever equal to the
+  // bucket label the filter passes, which is why the row cannot compare strings.
+  it('contains cross-bucket sub-genres that are not the label itself', () => {
+    const members = bucketMembersFor('jazz')
+    expect(members).toContain('funk')
+    expect(members).toContain('soul')
+    expect(members).not.toContain('indie')
   })
 })

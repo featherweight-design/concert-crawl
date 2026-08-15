@@ -39,6 +39,8 @@ import {
 import {
   SP_POLICY,
   RESALE_VENDOR_VALUES,
+  bucketsPresentIn,
+  expandBucket,
   vendorTrustRank,
   type AvailabilityDay,
   type EventsAvailabilityResponse,
@@ -64,7 +66,6 @@ import {
 import { canUseFeature } from '@concert-crawl/entitlements'
 import { loadPlanState } from '../lib/plan.js'
 import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js'
-import { bucketsPresentIn, expandBucket } from '../lib/genre-buckets.js'
 import { parseGenreRows } from '../lib/parse-genre-rows.js'
 import { releaseWatch } from '../lib/user-events.js'
 
@@ -470,7 +471,7 @@ eventsRouter.get(
 //
 // Prod carries ~85 distinct LLM-extracted genre strings; surfacing them all
 // in the Vibe filter dropdown is unusable. We collapse the observed raw
-// genres to the bucket taxonomy in lib/genre-buckets and return only the
+// genres to the bucket taxonomy in @concert-crawl/types and return only the
 // bucket labels that have at least one matching row. Unbucketed long-tail
 // values ('ceremony', '<UNKNOWN>', film scores) are dropped from the filter
 // surface — they remain searchable, they just don't clutter the dropdown.
