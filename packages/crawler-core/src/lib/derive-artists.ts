@@ -80,6 +80,39 @@ export function wouldAdjudicate(event: {
   return isSuspiciousObservation(headliner, event.title)
 }
 
+/**
+ * Folds observed openers into a headline bill the adjudicator produced.
+ *
+ * The adjudicator reads only title + description, so an extractor that found
+ * openers in a field it never sees (Ticketure's `supportingActs`, which sits
+ * outside the description it never populates) holds the only record of them.
+ * Taking a verdict wholesale would delete that.
+ *
+ * The verdict leads: it answers the question actually asked. An observed name
+ * the adjudicator promoted to the headline bill is dropped rather than listed
+ * twice under two roles. Exported because the crawl's verdict-reuse branch
+ * merges the same way — its cache key is (title, description), which cannot
+ * see an opener change, so reuse must re-merge against the current crawl.
+ */
+export function mergeObservedSupporting(
+  headliners: string[],
+  verdictSupporting: string[],
+  observedSupporting: string[] | undefined,
+): string[] {
+  const headlinerKeys = new Set(
+    headliners.map((name) => name.trim().toLowerCase()),
+  )
+  const merged: string[] = []
+  const seen = new Set<string>()
+  for (const name of [...verdictSupporting, ...(observedSupporting ?? [])]) {
+    const key = name.trim().toLowerCase()
+    if (key === '' || headlinerKeys.has(key) || seen.has(key)) continue
+    seen.add(key)
+    merged.push(name.trim())
+  }
+  return merged
+}
+
 export async function deriveArtists(
   event: Pick<NormalizedEvent, 'title' | 'description'> & {
     // Typed optional even though `NormalizedEvent` declares it required: the
@@ -138,32 +171,13 @@ export async function deriveArtists(
       title: event.title,
       description: event.description,
     })
-    // Observed openers survive adjudication rather than being replaced by it.
-    // The adjudicator only ever reads title + description, so an extractor that
-    // found openers in a field it does NOT read (Ticketure's `supportingActs`,
-    // which sits outside the description it never populates) holds the only
-    // record of them. Taking the verdict wholesale here would delete that.
-    //
-    // The verdict leads: it is the answer to the question actually asked. An
-    // observed name that the adjudicator promoted to the headline bill is
-    // dropped rather than listed twice under two different roles.
-    const headlinerKeys = new Set(
-      verdict.headliners.map((name) => name.trim().toLowerCase()),
-    )
-    const supportingArtists: string[] = []
-    const seen = new Set<string>()
-    for (const name of [
-      ...verdict.supportingArtists,
-      ...nonEmpty(event.observedSupportingArtists),
-    ]) {
-      const key = name.trim().toLowerCase()
-      if (key === '' || headlinerKeys.has(key) || seen.has(key)) continue
-      seen.add(key)
-      supportingArtists.push(name.trim())
-    }
     return {
       headliners: verdict.headliners,
-      supportingArtists,
+      supportingArtists: mergeObservedSupporting(
+        verdict.headliners,
+        verdict.supportingArtists,
+        nonEmpty(event.observedSupportingArtists),
+      ),
       isConcert: verdict.isConcert,
       adjudicated: true,
     }

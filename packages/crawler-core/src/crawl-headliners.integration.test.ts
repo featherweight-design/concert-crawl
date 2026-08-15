@@ -426,6 +426,45 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     expect(row.canonicalHeadliners).toEqual(['daedelus'])
   })
 
+  it('picks up a new opener while still reusing the stored verdict', async () => {
+    // The reuse key is (title, description) — the adjudicator's own inputs — so
+    // it cannot see an opener change. Ticketure parses openers out of prose and
+    // sets no description at all, so copying the stored list would freeze the
+    // support bill for as long as the headline stayed put.
+    const venue = await seedTestVenue()
+    const date = futureDate(41)
+    mockAdjudicateEvent.mockResolvedValue({
+      isConcert: true,
+      headliners: ['Dutch Melrose'],
+      supportingArtists: [],
+    })
+    mockExtraction([
+      makeEvent('Dutch Melrose presents', date, {
+        observedPerformers: [],
+        observedSupportingArtists: ['Kiltro'],
+      }),
+    ])
+    await crawlVenue(venue.id, mockBrowser)
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+
+    mockExtraction(
+      [
+        makeEvent('Dutch Melrose presents', date, {
+          observedPerformers: [],
+          observedSupportingArtists: ['Kiltro', 'Neighbor Andy'],
+        }),
+      ],
+      '<html><body><p>Unrelated page edit</p></body></html>',
+    )
+    await crawlVenue(venue.id, mockBrowser)
+    // Still one call: the verdict was reused, only the observation re-merged.
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+
+    const row = await loadEvent('Dutch Melrose presents')
+    expect(row.headliners).toEqual(['Dutch Melrose'])
+    expect(row.supportingArtists).toEqual(['Kiltro', 'Neighbor Andy'])
+  })
+
   it('drops the stored verdict once the source starts naming a performer', async () => {
     // A venue that adds JSON-LD performer markup, or an extractor that starts
     // populating the field, gives the ladder a step-1 answer where it

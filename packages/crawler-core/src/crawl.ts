@@ -26,7 +26,11 @@ import {
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractTicketure } from './lib/extractors/ticketure.js'
 import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js'
-import { deriveArtists, wouldAdjudicate } from './lib/derive-artists.js'
+import {
+  deriveArtists,
+  mergeObservedSupporting,
+  wouldAdjudicate,
+} from './lib/derive-artists.js'
 import { calculateCost } from './lib/cost.js'
 import { dispatch } from './lib/fetchers/index.js'
 import type { PlatformFetcher, PlatformSource } from './lib/fetchers/index.js'
@@ -787,6 +791,7 @@ export async function crawlVenue(
         headliners: events.headliners,
         supportingArtists: events.supportingArtists,
         canonicalHeadliners: events.canonicalHeadliners,
+        canonicalSupporting: events.canonicalSupporting,
         sourceHash: events.sourceHash,
         verified: events.verified,
         eventUrl: events.eventUrl,
@@ -831,10 +836,27 @@ export async function crawlVenue(
         // false, and the projection below independently excludes anything in
         // `hidden_event_keys` — so an admin hide is already honoured without
         // this loop having to read it back.
+        // Openers are re-merged rather than copied. The reuse key is
+        // (title, description) — exactly the adjudicator's inputs — so it is
+        // blind to a change in a field the adjudicator never reads. Ticketure
+        // parses openers out of prose and sets no description, so a bill that
+        // adds an opener would otherwise keep the stale list forever.
+        //
+        // Merged, not replaced: the stored list is itself a merge, and nothing
+        // on the row separates the verdict's openers from the last crawl's
+        // observed ones. Replacing would delete openers the adjudicator read
+        // out of a description, which the LLM extractor's events do carry. The
+        // cost is that an opener REMOVED at the source lingers until the title
+        // or description changes and the verdict is re-derived. Keeping a stale
+        // name is the lesser harm, and it is the same call step 2 makes.
         normalizedEvents.push({
           ...evt,
           headliners: prior.headliners,
-          supportingArtists: prior.supportingArtists,
+          supportingArtists: mergeObservedSupporting(
+            prior.headliners ?? [],
+            prior.supportingArtists ?? [],
+            evt.observedSupportingArtists,
+          ),
         })
         continue
       }
@@ -1032,20 +1054,42 @@ export async function crawlVenue(
             ) {
               return true
             }
-            // Same escape hatch for the derived bill. The headliner columns
-            // are not part of sourceHash, so a source that newly starts
-            // naming its performers — or an adjudicator that changes its
-            // mind — would never reach the upsert while the title and times
-            // sat still. NULL is the no-verdict case and is deliberately not
-            // a change: it must never trigger a write that preserves the
-            // stored value anyway.
+            // Same escape hatch for the derived bill. Neither the headliner
+            // nor the supporting columns are part of sourceHash, so a source
+            // that newly starts naming its performers — or an adjudicator
+            // that changes its mind, or a listing that adds an opener — would
+            // never reach the upsert while the title and times sat still.
+            // NULL is the no-verdict case and is deliberately not a change:
+            // it must never trigger a write that preserves the stored value
+            // anyway.
+            const billChanged = (
+              derived: string[] | null,
+              stored: unknown,
+            ): boolean =>
+              derived !== null &&
+              (!Array.isArray(stored) || stored.join('|') !== derived.join('|'))
             if (
-              evt.canonicalHeadliners !== null &&
-              (!Array.isArray(existing.canonicalHeadliners) ||
-                existing.canonicalHeadliners.join('|') !==
-                  evt.canonicalHeadliners.join('|'))
+              billChanged(evt.canonicalHeadliners, existing.canonicalHeadliners)
             ) {
               return true
+            }
+            // Supporting is narrower than headliners on one transition: a
+            // stored NULL becoming an empty array is not worth a write.
+            // Nothing downstream distinguishes "no openers" from "no verdict
+            // on openers" — unlike the headliner columns, where empty is the
+            // ruling that suppresses genre tagging and the artist projection.
+            if (
+              (evt.canonicalSupporting ?? []).length > 0 ||
+              Array.isArray(existing.canonicalSupporting)
+            ) {
+              if (
+                billChanged(
+                  evt.canonicalSupporting,
+                  existing.canonicalSupporting,
+                )
+              ) {
+                return true
+              }
             }
             return (
               existing.sourceHash === null ||
