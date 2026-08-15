@@ -182,7 +182,7 @@ export async function tagEventsWithGenres(
   // canonicalization strips the diacritics and casing it uses.
   const untagged: GenreTagInput[] = rows
     .filter((row) => {
-      if (row.artist === null || row.artist.trim() === '') return false
+      if (row.artist.trim() === '') return false
       const ruledNobodyBilled =
         Array.isArray(row.canonicalHeadliners) &&
         row.canonicalHeadliners.length === 0
@@ -197,9 +197,8 @@ export async function tagEventsWithGenres(
       const billed = row.headliners?.join(', ').trim()
       return {
         id: row.id,
-        title: row.title ?? '',
-        artist:
-          billed !== undefined && billed !== '' ? billed : (row.artist ?? ''),
+        title: row.title,
+        artist: billed !== undefined && billed !== '' ? billed : row.artist,
       }
     })
 
