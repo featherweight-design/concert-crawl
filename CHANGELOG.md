@@ -1,3 +1,10 @@
+# [1.265.0](https://github.com/HartiganHM/concert-crawl/compare/v1.264.0...v1.265.0) (2026-08-15)
+
+
+### Features
+
+* **artists:** not_an_artist tombstone + one searchable admin table ([#1603](https://github.com/HartiganHM/concert-crawl/issues/1603)) ([31a5e82](https://github.com/HartiganHM/concert-crawl/commit/31a5e82835ffb0cf69494cf2d48b55a790789bf1))
+
 # [1.264.0](https://github.com/HartiganHM/concert-crawl/compare/v1.263.0...v1.264.0) (2026-08-15)
 
 
