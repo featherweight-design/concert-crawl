@@ -18,6 +18,10 @@ export interface NotificationPreferences {
   artistAlertsEnabled: boolean
   artistAutoWatch: boolean
   weeklyDigestEnabled: boolean
+  // #1572. Not a push preference: it gates the 'product' email family. The
+  // signed one-click link writes the same column, so this read is what makes
+  // an email unsubscribe visible in Settings.
+  productEmailsEnabled: boolean
 }
 
 // Mirrors DEFAULT_PREFS in apps/api/src/routes/me-push.ts. These are only
@@ -30,6 +34,7 @@ const DEFAULT_PREFERENCES: NotificationPreferences = {
   artistAlertsEnabled: true,
   artistAutoWatch: false,
   weeklyDigestEnabled: true,
+  productEmailsEnabled: true,
 }
 
 // Scoped by userId — the app-level QueryClient outlives sign-in sessions, so

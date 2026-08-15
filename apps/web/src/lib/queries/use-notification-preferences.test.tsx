@@ -87,6 +87,7 @@ describe('useNotificationPreferences', () => {
       artistAlertsEnabled: true,
       artistAutoWatch: false,
       weeklyDigestEnabled: true,
+      productEmailsEnabled: true,
     })
   })
 
@@ -135,6 +136,7 @@ describe('usePatchNotificationPreferences', () => {
       artistAlertsEnabled: true,
       artistAutoWatch: false,
       weeklyDigestEnabled: true,
+      productEmailsEnabled: true,
     })
   })
 

@@ -69,7 +69,7 @@ emailUnsubscribeRouter.get(
       return ctx.html(
         confirmationPage(
           'That link didn’t work.',
-          'This unsubscribe link is invalid or has expired. You can still manage emails from your account settings.',
+          'This unsubscribe link is invalid or has expired. You can still manage emails in Settings → Notifications.',
         ),
         400,
       )
@@ -87,7 +87,7 @@ emailUnsubscribeRouter.get(
       return ctx.html(
         confirmationPage(
           'Something went wrong.',
-          'Unsubscribe is temporarily unavailable. Please try again later, or manage emails from your account settings.',
+          'Unsubscribe is temporarily unavailable. Please try again later, or manage emails in Settings → Notifications.',
         ),
         503,
       )
@@ -99,7 +99,7 @@ emailUnsubscribeRouter.get(
       return ctx.html(
         confirmationPage(
           'That link didn’t work.',
-          'This unsubscribe link is invalid or has expired. You can still manage emails from your account settings.',
+          'This unsubscribe link is invalid or has expired. You can still manage emails in Settings → Notifications.',
         ),
         400,
       )
@@ -141,7 +141,7 @@ emailUnsubscribeRouter.get(
               set: { productEmailsEnabled: false, updatedAt: new Date() },
             })
           confirmationBody =
-            'Product emails are off. Receipts and billing notices still come through.'
+            'Product emails are off, and you can turn them back on from Settings → Notifications. Receipts and billing notices still come through.'
           break
       }
     } catch (err) {
@@ -154,7 +154,7 @@ emailUnsubscribeRouter.get(
       return ctx.html(
         confirmationPage(
           'Something went wrong.',
-          'We couldn’t process your unsubscribe just now. Please try the link again, or manage emails from your account settings.',
+          'We couldn’t process your unsubscribe just now. Please try the link again, or manage emails in Settings → Notifications.',
         ),
         500,
       )

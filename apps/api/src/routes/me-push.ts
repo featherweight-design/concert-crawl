@@ -38,6 +38,12 @@ const preferencesSchema = z
     artistAlertsEnabled: z.boolean().optional(),
     artistAutoWatch: z.boolean().optional(),
     weeklyDigestEnabled: z.boolean().optional(),
+    // The only field here that is not a push preference. It gates the
+    // 'product' email family and has a second writer: the signed one-click
+    // link in routes/email-unsubscribe.ts. Whichever wrote last wins, and
+    // this endpoint is the read of record, so a user who unsubscribed by
+    // link sees the switch already off.
+    productEmailsEnabled: z.boolean().optional(),
   })
   .strict()
 
@@ -153,6 +159,9 @@ const DEFAULT_PREFS = {
   artistAlertsEnabled: true,
   artistAutoWatch: false,
   weeklyDigestEnabled: true,
+  // Defaults true to match the column: signing up is the opt-in, and the
+  // one-click link is how it goes off.
+  productEmailsEnabled: true,
 } as const
 
 // GET /v1/me/notification-preferences — side-effect-free. Returns defaults
@@ -174,6 +183,7 @@ mePushRouter.get('/notification-preferences', async (ctx) => {
           artistAlertsEnabled: row.artistAlertsEnabled,
           artistAutoWatch: row.artistAutoWatch,
           weeklyDigestEnabled: row.weeklyDigestEnabled,
+          productEmailsEnabled: row.productEmailsEnabled,
         }
       : DEFAULT_PREFS
     return ctx.json({ success: true, data })
@@ -196,44 +206,37 @@ mePushRouter.patch(
       return ctx.json({ success: false, error: 'No fields provided' }, 400)
     }
     try {
-      const [existing] = await db
-        .select()
-        .from(userNotificationPreferences)
-        .where(eq(userNotificationPreferences.userId, userId))
-      const next = {
-        masterEnabled:
-          body.masterEnabled ??
-          existing?.masterEnabled ??
-          DEFAULT_PREFS.masterEnabled,
-        watchUpdatesEnabled:
-          body.watchUpdatesEnabled ??
-          existing?.watchUpdatesEnabled ??
-          DEFAULT_PREFS.watchUpdatesEnabled,
-        priceDropsEnabled:
-          body.priceDropsEnabled ??
-          existing?.priceDropsEnabled ??
-          DEFAULT_PREFS.priceDropsEnabled,
-        artistAlertsEnabled:
-          body.artistAlertsEnabled ??
-          existing?.artistAlertsEnabled ??
-          DEFAULT_PREFS.artistAlertsEnabled,
-        artistAutoWatch:
-          body.artistAutoWatch ??
-          existing?.artistAutoWatch ??
-          DEFAULT_PREFS.artistAutoWatch,
-        weeklyDigestEnabled:
-          body.weeklyDigestEnabled ??
-          existing?.weeklyDigestEnabled ??
-          DEFAULT_PREFS.weeklyDigestEnabled,
-      }
-      await db
+      // Write ONLY the keys the caller sent, and let Postgres supply the rest
+      // from the row it already holds. The obvious alternative — SELECT, merge
+      // in JS, write all seven — loses updates: productEmailsEnabled has a
+      // second writer (the signed one-click link in routes/email-unsubscribe),
+      // so a PATCH of an unrelated switch that read the row before that link
+      // landed would write the pre-unsubscribe value back over it. Absent keys
+      // never appear in the UPDATE at all, which removes the window entirely.
+      const [row] = await db
         .insert(userNotificationPreferences)
-        .values({ userId, ...next })
+        .values({ ...DEFAULT_PREFS, userId, ...body })
         .onConflictDoUpdate({
           target: userNotificationPreferences.userId,
-          set: { ...next, updatedAt: sql`now()` },
+          set: { ...body, updatedAt: sql`now()` },
         })
-      return ctx.json({ success: true, data: next })
+        .returning()
+      if (!row) {
+        apiLogger.warn({ userId }, 'me-push: prefs upsert returned no row')
+        return ctx.json({ success: false, error: 'Write failed' }, 500)
+      }
+      return ctx.json({
+        success: true,
+        data: {
+          masterEnabled: row.masterEnabled,
+          watchUpdatesEnabled: row.watchUpdatesEnabled,
+          priceDropsEnabled: row.priceDropsEnabled,
+          artistAlertsEnabled: row.artistAlertsEnabled,
+          artistAutoWatch: row.artistAutoWatch,
+          weeklyDigestEnabled: row.weeklyDigestEnabled,
+          productEmailsEnabled: row.productEmailsEnabled,
+        },
+      })
     } catch (writeErr) {
       apiLogger.warn({ userId, err: writeErr }, 'me-push: prefs write failed')
       return ctx.json({ success: false, error: 'Write failed' }, 500)

@@ -116,6 +116,7 @@ beforeEach(() => {
       artistAlertsEnabled: true,
       artistAutoWatch: false,
       weeklyDigestEnabled: true,
+      productEmailsEnabled: true,
     },
     isLoading: false,
   })
@@ -420,6 +421,7 @@ describe('NotificationsSection — Artists you follow', () => {
         artistAlertsEnabled: true,
         artistAutoWatch: false,
         weeklyDigestEnabled: true,
+        productEmailsEnabled: true,
       },
       isLoading: false,
     })
@@ -603,5 +605,65 @@ describe('NotificationsSection — Artists you follow', () => {
         screen.getByText(NOTIFICATIONS_COPY.toggleError.preference),
       ).not.toBeNull()
     })
+  })
+})
+
+// ── Email from us (#1572) ──────────────────────────────────────────────────
+//
+// The guarantees with teeth: the switch is reachable with push fully off AND
+// on a free plan, because it governs an email family and it is an opt-out we
+// are obliged to offer. Nothing about billing mail gets a switch.
+describe('NotificationsSection — Email from us', () => {
+  const PRODUCT = NOTIFICATIONS_COPY.productEmail
+
+  it('renders the switch with push off and on a free plan', async () => {
+    usePlanStateMock.mockReturnValue({ data: planOn('free'), isPending: false })
+    render(withClient(<NotificationsSection />))
+    await waitFor(() => {
+      expect(screen.getByRole('switch', { name: PRODUCT.label })).not.toBeNull()
+    })
+    expect(screen.getByText(PRODUCT.heading)).not.toBeNull()
+    expect(screen.getByText(PRODUCT.billingFootnote)).not.toBeNull()
+  })
+
+  // The payload is the assertion. The detail line is driven by server state,
+  // which the mocked mutation never advances, so it is covered by the
+  // already-off case below rather than by clicking here.
+  it('patches productEmailsEnabled alone, naming no other switch', async () => {
+    render(withClient(<NotificationsSection />))
+    await waitFor(() => {
+      expect(screen.getByRole('switch', { name: PRODUCT.label })).not.toBeNull()
+    })
+    expect(screen.getByText(PRODUCT.onDetail)).not.toBeNull()
+
+    fireEvent.click(screen.getByRole('switch', { name: PRODUCT.label }))
+    expect(patchMutateMock).toHaveBeenCalledWith(
+      { productEmailsEnabled: false },
+      expect.anything(),
+    )
+  })
+
+  it('reads off when the one-click link already unsubscribed the user', async () => {
+    useNotificationPreferencesMock.mockReturnValue({
+      data: {
+        masterEnabled: false,
+        watchUpdatesEnabled: true,
+        priceDropsEnabled: true,
+        artistAlertsEnabled: true,
+        artistAutoWatch: false,
+        weeklyDigestEnabled: true,
+        productEmailsEnabled: false,
+      },
+      isLoading: false,
+    })
+    render(withClient(<NotificationsSection />))
+    await waitFor(() => {
+      expect(screen.getByText(PRODUCT.offDetail)).not.toBeNull()
+    })
+    expect(
+      screen
+        .getByRole('switch', { name: PRODUCT.label })
+        .getAttribute('aria-checked'),
+    ).toBe('false')
   })
 })

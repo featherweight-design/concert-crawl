@@ -52,6 +52,20 @@ export const NOTIFICATIONS_COPY = {
     spotifyNote:
       'These cover artists from Spotify too. One set of switches, whatever filled the list.',
   },
+  // #1572. Its own group, outside the push master AND outside the entitlement
+  // gate the digest sits behind: an opt-out we are obliged to offer cannot
+  // live under an upgrade card. Copy passed the copy-review skill in apply
+  // mode on the handoff branch.
+  productEmail: {
+    heading: 'Email from us',
+    label: 'News, offers, and the occasional nudge',
+    onDetail: 'Rare. A discount, or a heads-up when a gift is running out.',
+    offDetail: 'Off. Nothing from us but billing.',
+    // Obligation class: it explains why billing has no switch instead of
+    // asserting a rule, which is the whole reason it is prose and not a row.
+    billingFootnote:
+      "Billing email always sends: receipts, a failed charge, a card about to expire. Those aren't news, they're your subscription talking, and missing one is how people lose a plan without knowing why.",
+  },
   watching: {
     heading: "Shows you're watching",
   },

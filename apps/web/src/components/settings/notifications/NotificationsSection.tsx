@@ -29,6 +29,7 @@ import { CrewActivityBlock } from './CrewActivityBlock'
 import { NOTIFICATIONS_COPY } from './definitions/copy'
 
 const ARTISTS_COPY = NOTIFICATIONS_COPY.artists
+const PRODUCT_EMAIL_COPY = NOTIFICATIONS_COPY.productEmail
 
 /**
  * A sub-group label inside the section. `h3`, not `h2`: "Notifications" is the
@@ -116,6 +117,7 @@ export const NotificationsSection = ({
     alerts: `${idPrefix}-artist-alerts-detail`,
     autoWatch: `${idPrefix}-artist-auto-watch-detail`,
     digest: `${idPrefix}-weekly-digest-detail`,
+    productEmail: `${idPrefix}-product-email-detail`,
   }
 
   const { getToken } = useAuth()
@@ -163,6 +165,7 @@ export const NotificationsSection = ({
   const artistAlertsOn = prefs?.artistAlertsEnabled ?? true
   const artistAutoWatchOn = prefs?.artistAutoWatch ?? false
   const weeklyDigestOn = prefs?.weeklyDigestEnabled ?? true
+  const productEmailsOn = prefs?.productEmailsEnabled ?? true
 
   // ONE gate for the whole artist group, asked through nfLocked rather than by
   // testing a tier string — design R2 leaked a live Follow control to Supporter
@@ -488,6 +491,41 @@ export const NotificationsSection = ({
           )}
         </>
       )}
+
+      {/* ── Email from us (#1572) ────────────────────────────────────────
+          Outside the push master AND outside the entitlement gate the artist
+          group sits behind. It governs an email family, not a push, and it is
+          an opt-out we are obliged to offer, so it cannot be hidden under a
+          switch most users leave off or behind an upgrade card. The signed
+          one-click link in the footer of those emails writes the same column,
+          so this row is the in-app view of that same state. */}
+      <div className="flex flex-col gap-2">
+        <GroupHeading text={PRODUCT_EMAIL_COPY.heading} />
+        <div className="flex min-h-[44px] items-center justify-between gap-3 rounded-lg border border-border bg-surface-1 px-4 py-3">
+          <div className="flex min-w-0 flex-col">
+            <span className="text-sm font-semibold text-fg">
+              {PRODUCT_EMAIL_COPY.label}
+            </span>
+            <span id={rowIds.productEmail} className="text-xs text-fg-muted">
+              {productEmailsOn
+                ? PRODUCT_EMAIL_COPY.onDetail
+                : PRODUCT_EMAIL_COPY.offDetail}
+            </span>
+          </div>
+          <ToggleSwitch
+            checked={productEmailsOn}
+            onChange={(next) => onToggleSub({ productEmailsEnabled: next })}
+            ariaLabel={PRODUCT_EMAIL_COPY.label}
+            ariaDescribedBy={rowIds.productEmail}
+            disabled={patch.isPending}
+          />
+        </div>
+        {/* Prose, not a row: billing mail has no switch, and giving it a row
+            shape would imply one exists. */}
+        <p className="text-xs text-fg-muted">
+          {PRODUCT_EMAIL_COPY.billingFootnote}
+        </p>
+      </div>
 
       {/* ── Artists you follow ───────────────────────────────────────────
           Above the watch group on purpose: an artist announcement is the

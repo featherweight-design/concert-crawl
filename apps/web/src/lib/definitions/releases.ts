@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.45.0-beta',
+    date: 'Aug 15, 2026',
+    headline: 'Turn off our news and offers without hunting for the email.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Settings → Notifications now has a switch for news and offers, separate from the receipts that always send.',
+      },
+    ],
+  },
+  {
     version: 'v0.44.0-beta',
     date: 'Aug 15, 2026',
     headline: 'Every show and artist picture, redrawn.',
