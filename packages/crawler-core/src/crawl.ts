@@ -1167,36 +1167,21 @@ export async function crawlVenue(
               // is picked up on re-crawl. Any path writing headliners MUST
               // write canonical_headliners in the same statement (#1203).
               //
-              // On a bill that names someone, only the co-headliners (positions
-              // 2+) come from the new extraction; position 1 is re-seeded from
-              // the STORED artist. Taking excluded.headliners wholesale would
-              // let position 1 drift, because `artist` above is deliberately
-              // never updated and a freshly extracted string can change
-              // (diacritics, punctuation cleanup) while canonical_artist — the
-              // dedup key that got us to this conflict — stays put.
-              //
-              // An EMPTY set passes through untouched. Prepending there would
-              // rebuild [artist] out of a ladder verdict of "nobody is billed",
-              // reinstating title-as-headliner on every re-crawl and
-              // desynchronizing this column from canonical_headliners.
+              // The array is taken wholesale. It used to be rebuilt as
+              // array_prepend(stored artist, excluded[2:]) to hold the old
+              // headliners[0] === artist invariant, but the derivation ladder
+              // retired that invariant: `artist` is now the event's DISPLAY
+              // string and can be an event-shaped title ("Jazz Series presents")
+              // while headliners holds the real bill (["Kokoroko"]). Re-pinning
+              // there would collapse a correct bill back to [title] on the next
+              // upsert and desynchronize this column from canonical_headliners.
               //
               // NULL is the ladder reaching no verdict at all, which only the
               // adjudicator-outage path emits. The stored bill is kept: a
               // transient Haiku failure must not erase a correct answer and
               // de-project its artists until some later crawl happens to
               // succeed. The four columns below preserve it in lock-step.
-              headliners: sql`
-                CASE
-                  WHEN excluded.headliners IS NULL THEN ${events.headliners}
-                  WHEN cardinality(excluded.headliners) = 0
-                    THEN excluded.headliners
-                  ELSE array_prepend(${events.artist}, excluded.headliners[2:])
-                END
-              `,
-              // No slicing for the canonical array: it is sorted and deduped,
-              // so position 1 is not the artist and a positional splice would
-              // corrupt it. It needs no repair anyway — excluded.canonical_artist
-              // equals the stored one by definition of the conflict key.
+              headliners: sql`COALESCE(excluded.headliners, ${events.headliners})`,
               canonicalHeadliners: sql`COALESCE(excluded.canonical_headliners, ${events.canonicalHeadliners})`,
               supportingArtists: sql`COALESCE(excluded.supporting_artists, ${events.supportingArtists})`,
               canonicalSupporting: sql`COALESCE(excluded.canonical_supporting, ${events.canonicalSupporting})`,

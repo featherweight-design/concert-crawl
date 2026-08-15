@@ -116,6 +116,7 @@ interface ExtractedEvent {
    */
   observedPerformers: string[]
   observedSupportingArtists?: string[]
+  doorsTime?: string
   date: string
   sourceUrl: string
   confidence: number
@@ -461,17 +462,15 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     expect(mockAdjudicateEvent).toHaveBeenCalledTimes(2)
   })
 
-  it('re-pins headliners[0] to the stored artist when the extracted string drifts', async () => {
+  it('takes the freshly billed headliners on re-crawl rather than re-pinning to the stored artist', async () => {
     const venue = await seedTestVenue()
     const date = futureDate(24)
     mockExtraction([makeEvent('Bjork', date)])
     await crawlVenue(venue.id, mockBrowser)
 
-    // Derivation no longer guarantees headliners[0] === artist — that is now a
-    // property of the UPSERT, which rebuilds the array as
-    // array_prepend(artist, excluded[2:]) and deliberately never updates
-    // `artist` on conflict. So the diacritic re-crawl keeps the stored spelling
-    // at the head while still picking up the newly-billed co-headliner.
+    // `artist` is deliberately never updated on conflict, so the stored
+    // spelling survives. headliners is no longer spliced onto it: the ladder
+    // owns that array and the upsert takes it whole.
     mockExtraction(
       [
         makeEvent('Björk', date, {
@@ -485,7 +484,49 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     await crawlVenue(venue.id, mockBrowser)
 
     const row = await loadEvent('Bjork')
-    expect(row.headliners?.[0]).toBe(row.artist)
-    expect(row.headliners).toEqual(['Bjork', 'Arca'])
+    expect(row.artist).toBe('Bjork')
+    expect(row.headliners).toEqual(['Björk', 'Arca'])
+  })
+
+  it('does not collapse a real bill back to the display title on re-crawl', async () => {
+    // When the listing names nobody, the ladder puts the real performer in
+    // headliners while `artist` keeps the event-shaped display string. Rebuilding
+    // the array as array_prepend(artist, excluded[2:]) on conflict turned that
+    // into ['Jazz Series presents'] — the exact title-as-headliner junk this
+    // stage exists to stop.
+    const venue = await seedTestVenue()
+    const date = futureDate(31)
+    mockAdjudicateEvent.mockResolvedValue({
+      isConcert: true,
+      headliners: ['Kokoroko'],
+      supportingArtists: [],
+    })
+    mockExtraction([
+      makeEvent('Jazz Series presents', date, { observedPerformers: [] }),
+    ])
+    await crawlVenue(venue.id, mockBrowser)
+
+    const seeded = await loadEvent('Jazz Series presents')
+    expect(seeded.headliners).toEqual(['Kokoroko'])
+
+    // Move the page HTML so the crawl is not skipped wholesale, and the doors
+    // time so the source hash changes and the upsert's ON CONFLICT set clause
+    // actually runs. Doors time is not part of the dedup key, so this stays
+    // the same row.
+    mockExtraction(
+      [
+        makeEvent('Jazz Series presents', date, {
+          observedPerformers: [],
+          doorsTime: '19:30',
+        }),
+      ],
+      '<html><body><p>Doors moved</p></body></html>',
+    )
+    await crawlVenue(venue.id, mockBrowser)
+
+    const row = await loadEvent('Jazz Series presents')
+    expect(row.artist).toBe('Jazz Series presents')
+    expect(row.headliners).toEqual(['Kokoroko'])
+    expect(row.canonicalHeadliners).toEqual(['kokoroko'])
   })
 })
