@@ -1,3 +1,10 @@
+# [1.263.0](https://github.com/HartiganHM/concert-crawl/compare/v1.262.0...v1.263.0) (2026-08-15)
+
+
+### Features
+
+* **artists:** one-off event artist re-derivation pass ([#1601](https://github.com/HartiganHM/concert-crawl/issues/1601)) ([109a78b](https://github.com/HartiganHM/concert-crawl/commit/109a78bde563c335fdc050fe9e7137a09f174280))
+
 # [1.262.0](https://github.com/HartiganHM/concert-crawl/compare/v1.261.0...v1.262.0) (2026-08-15)
 
 
