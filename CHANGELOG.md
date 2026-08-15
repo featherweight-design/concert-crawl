@@ -1,3 +1,10 @@
+# [1.259.0](https://github.com/HartiganHM/concert-crawl/compare/v1.258.0...v1.259.0) (2026-08-15)
+
+
+### Features
+
+* **settings:** download your data ([#1573](https://github.com/HartiganHM/concert-crawl/issues/1573)) ([#1597](https://github.com/HartiganHM/concert-crawl/issues/1597)) ([9eabf38](https://github.com/HartiganHM/concert-crawl/commit/9eabf38ddd0b67f356305560ab45b1d628c9ccaf))
+
 # [1.258.0](https://github.com/HartiganHM/concert-crawl/compare/v1.257.0...v1.258.0) (2026-08-15)
 
 
