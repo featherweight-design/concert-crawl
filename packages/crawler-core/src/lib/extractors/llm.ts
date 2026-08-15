@@ -23,14 +23,14 @@ export const NormalizedEventSchema = z.object({
   rawTitle: z.string(),
   // Nullable because non-concert listings (bingo, trivia, movie nights,
   // themed parties) genuinely have no performer to name, and the model
-  // correctly returns null rather than inventing one. Null is resolved to
-  // the cleaned title in the mapping below, so `NormalizedEvent.artist`
-  // stays a plain string downstream.
+  // correctly returns null rather than inventing one. That null is preserved
+  // as an EMPTY `observedPerformers` in the mapping below; the cleaned title
+  // still fills `NormalizedEvent.artist`, which is a display string only.
   artist: z.string().nullable(),
   // Every act headlining the bill, in billing order, including the primary
   // one in `artist` (#1203). Optional: a model response that omits it falls
-  // back to [artist] downstream, so the headliners[0] === artist invariant
-  // holds either way.
+  // back to [artist] downstream. This is the extractor's best guess, not the
+  // final answer — `deriveArtists()` re-derives it from `observedPerformers`.
   headliners: z.array(z.string()).optional(),
   supportingArtists: z.array(z.string()).optional(),
   tourName: z.string().nullable().optional(),
