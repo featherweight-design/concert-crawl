@@ -143,4 +143,29 @@ describe('tagEventsWithGenres — ladder gating', () => {
     const prompt = JSON.stringify(mockCreate.mock.calls[0]?.[0])
     expect(prompt).toContain('Kokoroko')
   })
+
+  it('falls back to the display string when headliners is an empty array', async () => {
+    // Only canonical_headliners gates the skip, so an empty `headliners` beside
+    // a NULL canonical verdict still reaches the model. `[].join()` is a
+    // string, so a `??` fallback would send an empty artist field and the model
+    // would genre-tag nothing.
+    const venueId = await seedVenue()
+    await db.insert(events).values({
+      venueId,
+      artist: 'Big Thief',
+      canonicalArtist: 'big thief',
+      // Deliberately unlike the artist, so the assertion below can only be
+      // satisfied by the artist field and not by the title beside it.
+      title: 'An Evening With',
+      date: futureDate(14),
+      sourceUrl: 'https://genre.example.com',
+      status: 'upcoming',
+      headliners: [],
+    })
+
+    await tagEventsWithGenres(venueId)
+
+    const prompt = JSON.stringify(mockCreate.mock.calls[0]?.[0])
+    expect(prompt).toContain('Big Thief')
+  })
 })

@@ -188,11 +188,20 @@ export async function tagEventsWithGenres(
         row.canonicalHeadliners.length === 0
       return !ruledNobodyBilled
     })
-    .map((row) => ({
-      id: row.id,
-      title: row.title ?? '',
-      artist: row.headliners?.join(', ') ?? row.artist ?? '',
-    }))
+    .map((row) => {
+      // `??` alone would let an empty `headliners` through as `''`, since
+      // `[].join()` is a string. A legacy row can hold one: the filter above
+      // only rejects an EMPTY canonical_headliners, and a row whose
+      // canonical_headliners is NULL has never been near the ladder. Falling
+      // through to `artist` is what the non-empty-artist guard promised.
+      const billed = row.headliners?.join(', ').trim()
+      return {
+        id: row.id,
+        title: row.title ?? '',
+        artist:
+          billed !== undefined && billed !== '' ? billed : (row.artist ?? ''),
+      }
+    })
 
   if (untagged.length === 0) {
     logger.info({ venueId }, 'No untagged events — skipping genre tagging')
