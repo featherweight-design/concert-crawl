@@ -41,7 +41,6 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
             name={venue.name}
             kind="venue"
             scale="hero"
-            showInitials={false}
             grain={0.1}
             style={{ width: '100%', height: '100%' }}
             templateOverride="stripes"
@@ -66,7 +65,9 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
           >
             {VENUES_INDEX_COPY.featureCard.flagship}
           </div>
-          {/* Monogram chip */}
+          {/* Monogram chip, drawn here rather than by IdentityArt: #1525
+              retired the chip internal to IdentityArt. Venue surfaces keep
+              their own overlay — venue imagery is a separate handoff. */}
           <div
             style={{
               position: 'absolute',
@@ -237,7 +238,6 @@ export function VenueFeatureCard({ venue }: VenueFeatureCardProps) {
             name={venue.name}
             kind="venue"
             scale="hero"
-            showInitials={false}
             grain={0.1}
             style={{ width: '100%', height: '100%' }}
             templateOverride="stripes"

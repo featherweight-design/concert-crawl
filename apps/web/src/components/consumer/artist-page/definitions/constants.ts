@@ -45,18 +45,6 @@ export const AP_PILL_FONT_SIZE = 9.5
  */
 export const AP_STICKY_AFTER = AP_HERO_H.wide - 56
 
-/**
- * Where the monogram chip sits above the bottom of the MOBILE hero plate.
- *
- * `.ap-shell` is tucked up over the plate by 26px so the name overlaps the
- * artwork, which put the chip's default 12px offset underneath the plate's
- * visible edge and straight through the first letter of the `<h1>`. 12 + the
- * 26px tuck restores the designed gap without giving up the tuck. Desktop is
- * unaffected — its plate is a separate grid column — so this offset is passed
- * only by the mobile instance.
- */
-export const AP_MONOGRAM_BOTTOM = 38
-
 /** Spotify embed heights (consumed by PR-F). */
 export const EMBED_H = { compact: 152, tall: 352 } as const
 

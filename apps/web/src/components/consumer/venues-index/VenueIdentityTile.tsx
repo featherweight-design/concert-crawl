@@ -37,12 +37,13 @@ export function VenueIdentityTile({ name, size = 72 }: VenueIdentityTileProps) {
         name={name}
         kind="venue"
         scale="tile"
-        showInitials={false}
         grain={0.08}
         width={size}
         height={size}
       />
-      {/* Monogram chip — bottom-left, same convention as the detail page hero */}
+      {/* Monogram chip, drawn here rather than by IdentityArt: #1525 retired
+          the chip internal to IdentityArt. Venue surfaces keep their own
+          overlay — venue imagery is governed by a separate handoff. */}
       <div
         style={{
           position: 'absolute',

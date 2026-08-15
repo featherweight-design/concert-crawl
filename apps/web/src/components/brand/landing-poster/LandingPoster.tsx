@@ -231,7 +231,6 @@ export function LandingPoster({
           name={show.artist}
           kind="artist"
           scale="hero"
-          showInitials={false}
           grain={grain}
           width={ww}
           height={hh}

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { blendOver, mixHex, parseHex, rgba, toHex } from '../print-color'
+import { blendOver, parseHex, rgba, toHex } from '../print-color'
 
 describe('parseHex / toHex', () => {
   it('round-trips six-digit hex', () => {
@@ -43,13 +43,5 @@ describe('rgba', () => {
   it('clamps alpha', () => {
     expect(rgba('#000000', -1)).toBe('rgba(0,0,0,0)')
     expect(rgba('#000000', 4)).toBe('rgba(0,0,0,1)')
-  })
-})
-
-describe('mixHex', () => {
-  it('interpolates linearly', () => {
-    expect(mixHex('#000000', '#FFFFFF', 0)).toBe('#000000')
-    expect(mixHex('#000000', '#FFFFFF', 1)).toBe('#ffffff')
-    expect(mixHex('#000000', '#FFFFFF', 0.5)).toBe('#808080')
   })
 })

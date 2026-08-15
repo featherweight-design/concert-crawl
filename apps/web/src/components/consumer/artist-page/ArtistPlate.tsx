@@ -10,11 +10,6 @@ interface ArtistPlateProps {
   photo: string | null
   /** Fixed container height — the plate never reflows when the layer swaps. */
   height: number
-  /**
-   * Lifts the monogram chip off the bottom edge. The mobile hero is overlapped
-   * by the tucked-up content shell, so its chip has to clear the overlap.
-   */
-  monogramBottom?: number
   className?: string
 }
 
@@ -28,7 +23,6 @@ export const ArtistPlate = ({
   name,
   photo,
   height,
-  monogramBottom = 12,
   className,
 }: ArtistPlateProps) => {
   const [failed, setFailed] = useState(false)
@@ -64,9 +58,6 @@ export const ArtistPlate = ({
           name={name}
           kind="artist"
           scale="hero"
-          showInitials={name.trim().length > 0}
-          initialsBottom={monogramBottom}
-          grain={0.1}
           style={{ position: 'absolute', inset: 0 }}
         />
       )}

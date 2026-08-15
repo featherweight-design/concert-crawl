@@ -943,7 +943,6 @@ export function VenueDetailsClient({
                 scale="tile"
                 width={96}
                 height={96}
-                showInitials
               />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -2378,11 +2377,14 @@ export function VenueDetailsClient({
                   name={artSeedStr}
                   kind={artNamespace}
                   scale="tile"
-                  showInitials={false}
                   grain={0.08}
                   width={96}
                   height={96}
                 />
+                {/* Monogram chip, drawn here rather than by IdentityArt:
+                    #1525 retired the chip internal to IdentityArt. This
+                    preview mirrors the venues index, which keeps its own
+                    overlay — venue imagery is a separate handoff. */}
                 {(() => {
                   const identity = identityFor(artSeedStr, artNamespace)
                   const dark = ia_isDark(identity.palette.bg)

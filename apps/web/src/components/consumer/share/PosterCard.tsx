@@ -105,7 +105,6 @@ export const PosterCard = ({
         scale="hero"
         width={width}
         height={Math.round(height / 2)}
-        showInitials={false}
         style={{ position: 'absolute', top: 0, left: 0 }}
       />
 

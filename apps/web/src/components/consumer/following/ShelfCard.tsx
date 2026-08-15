@@ -111,7 +111,6 @@ export const CardArt = ({
       name={name}
       kind="artist"
       scale="tile"
-      showInitials={false}
       style={{ position: 'absolute', inset: 0 }}
     />
   )

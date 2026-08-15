@@ -15,7 +15,6 @@ import { ArtistPlate } from './ArtistPlate'
 import { Crumb } from './Crumb'
 import {
   AP_HERO_H,
-  AP_MONOGRAM_BOTTOM,
   AP_STICKY_AFTER,
   CRAWL_SINCE,
 } from './definitions/constants'
@@ -136,9 +135,6 @@ export const ArtistPageContent = ({
           photo={artist.photoUrl}
           height={AP_HERO_H.wide}
           className="ap-hero"
-          // `.ap-shell` is tucked up over the plate, so the monogram's default
-          // offset lands under the plate's visible edge and through the name.
-          monogramBottom={AP_MONOGRAM_BOTTOM}
         />
         <BackChip top={56} fallbackHref="/events" />
       </div>

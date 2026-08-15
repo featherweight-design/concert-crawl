@@ -5,7 +5,6 @@ import { cleanup, fireEvent, render } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
 import { ArtistPlate } from './ArtistPlate'
-import { AP_MONOGRAM_BOTTOM } from './definitions/constants'
 
 afterEach(cleanup)
 
@@ -86,28 +85,13 @@ describe('ArtistPlate', () => {
     expect(root.style.height).toBe('320px')
   })
 
-  // Cold-eyes finding 2: at 320/390 the monogram chip sat below the plate's
-  // visible edge and struck through the first letter of the name, because
-  // `.ap-shell` tucks the content up over the plate by 26px.
-  it('lifts the monogram when the caller says the plate is tucked under', () => {
+  // #1525 decision 3 retired the chip internal to IdentityArt: it existed
+  // because a wide scraped image could not say whose it was. Venue surfaces
+  // still draw their own overlay; no artist surface does.
+  it('draws no monogram over the generated art', () => {
     const { container } = render(
       <ArtistPlate name="Nightjar Choir" photo={null} height={200} />,
     )
-    const chip = container.querySelector('[data-identity-monogram]')
-    expect(chip?.getAttribute('style')).toContain('bottom: 12px')
-
-    cleanup()
-    const raised = render(
-      <ArtistPlate
-        name="Nightjar Choir"
-        photo={null}
-        height={200}
-        monogramBottom={AP_MONOGRAM_BOTTOM}
-      />,
-    )
-    const raisedChip = raised.container.querySelector(
-      '[data-identity-monogram]',
-    )
-    expect(raisedChip?.getAttribute('style')).toContain('bottom: 38px')
+    expect(container.querySelector('[data-identity-monogram]')).toBeNull()
   })
 })

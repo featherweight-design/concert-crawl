@@ -61,16 +61,3 @@ export const rgba = (hex: string, alpha: number): string => {
   if (!rgb) return hex
   return `rgba(${rgb.rr},${rgb.gg},${rgb.bb},${Number(safeAlpha.toFixed(4))})`
 }
-
-/** Linear mix: `t = 0` → `from`, `t = 1` → `to`. Used to flatten chip fills. */
-export const mixHex = (from: string, to: string, ratio: number): string => {
-  const fromRgb = parseHex(from)
-  const toRgb = parseHex(to)
-  const tt = Math.max(0, Math.min(1, ratio))
-  if (!fromRgb || !toRgb) return from
-  return toHex({
-    rr: fromRgb.rr + (toRgb.rr - fromRgb.rr) * tt,
-    gg: fromRgb.gg + (toRgb.gg - fromRgb.gg) * tt,
-    bb: fromRgb.bb + (toRgb.bb - fromRgb.bb) * tt,
-  })
-}

@@ -1,12 +1,6 @@
 import React from 'react'
-import {
-  identityFor,
-  ia_getInitials,
-  ia_isDark,
-  ia_pick,
-  ia_rngFromHash,
-} from './IdentityArt'
-import { blendOver, mixHex, rgba, type BlendMode } from './print-color'
+import { identityFor, ia_isDark, ia_pick, ia_rngFromHash } from './IdentityArt'
+import { blendOver, rgba, type BlendMode } from './print-color'
 import { PRINT_GRAIN_PNG, PRINT_GRAIN_TILE_PX } from './print-grain'
 
 // ── Why this file exists ───────────────────────────────────────────
@@ -36,8 +30,6 @@ export interface IdentityArtPrintProps {
   /** Explicit pixel size. Satori has no percentage-sized root. */
   width: number
   height: number
-  showInitials?: boolean
-  initialsBottom?: number
   /** `0` omits the grain layer entirely. */
   grain?: number
   templateOverride?: string
@@ -56,7 +48,11 @@ export interface IdentityArtPrintProps {
 export const printIdentityFor = (
   name: string,
   kind: PrintKind,
-  opts: { templateOverride?: string; paletteOverride?: string } = {},
+  opts: {
+    templateOverride?: string
+    paletteOverride?: string
+    scale?: PrintScale
+  } = {},
 ): Identity => identityFor(name, kind, opts)
 
 export interface PrintInk {
@@ -430,21 +426,7 @@ const PRINT_TEMPLATES: Record<
   blueprint: printBlueprint,
 }
 
-// ── Chip + grain ───────────────────────────────────────────────────
-
-/**
- * The screen chip is a translucent plate over a `backdropFilter` blur. Satori
- * has neither, so the chip is opaque: the same translucent fill resolved
- * against the paper colour.
- */
-export const printChipColors = (
-  palette: Palette,
-): { background: string; color: string } => {
-  const dark = ia_isDark(palette.bg)
-  return dark
-    ? { background: mixHex(palette.bg, '#000000', 0.55), color: '#FFFFFF' }
-    : { background: mixHex(palette.bg, '#FFFFFF', 0.78), color: '#15131A' }
-}
+// ── Grain ──────────────────────────────────────────────────────────
 
 /**
  * The screen grain multiplies/screens at a fixed opacity; here the blend is
@@ -483,8 +465,6 @@ export const IdentityArtPrint = ({
   scale = 'hero',
   width,
   height,
-  showInitials,
-  initialsBottom = 12,
   grain = 0.1,
   templateOverride,
   paletteOverride,
@@ -494,6 +474,7 @@ export const IdentityArtPrint = ({
   const resolved = printIdentityFor(name, kind, {
     ...(templateOverride !== undefined && { templateOverride }),
     ...(paletteOverride !== undefined && { paletteOverride }),
+    scale,
   })
   const rot = (rotateOverride != null ? rotateOverride : resolved.rotate) % 4
   const rng = ia_rngFromHash(resolved.hash)
@@ -507,12 +488,6 @@ export const IdentityArtPrint = ({
     scale,
   })
 
-  const initialsOn = showInitials != null ? showInitials : scale === 'hero'
-  const chip = printChipColors(resolved.palette)
-  // The chip is authored against the 400px artboard, so it scales with the
-  // shorter output edge rather than sitting at a fixed pixel size.
-  const chipScale = Math.min(width, height) / PRINT_VIEWPORT
-  const chipFontSize = (scale === 'hero' ? 44 : 22) * chipScale
   const grainOpacity = printGrainOpacity(grain, resolved.palette)
 
   return (
@@ -550,28 +525,6 @@ export const IdentityArtPrint = ({
             opacity: grainOpacity,
           }}
         />
-      )}
-
-      {initialsOn && (
-        <div
-          style={{
-            display: 'flex',
-            position: 'absolute',
-            left: 12 * chipScale,
-            bottom: initialsBottom * chipScale,
-            padding: `${(scale === 'hero' ? 6 : 3) * chipScale}px ${
-              (scale === 'hero' ? 12 : 8) * chipScale
-            }px`,
-            borderRadius: (scale === 'hero' ? 10 : 6) * chipScale,
-            backgroundColor: chip.background,
-            fontWeight: 900,
-            fontSize: chipFontSize,
-            lineHeight: 1,
-            color: chip.color,
-          }}
-        >
-          {ia_getInitials(name)}
-        </div>
       )}
 
       <div

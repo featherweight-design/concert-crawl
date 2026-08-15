@@ -35,13 +35,6 @@ export interface IdentityArtProps {
   // `number | string` so callers can pass a CSS length such as "100%".
   width?: number | string
   height?: number | string
-  showInitials?: boolean
-  /**
-   * Distance from the bottom of the art to the monogram chip, px. Defaults to
-   * 12. Raise it when the art is deliberately overlapped by content below it,
-   * so the chip stays inside the visible plate.
-   */
-  initialsBottom?: number
   grain?: number
   templateOverride?: string
   paletteOverride?: string
@@ -555,7 +548,11 @@ const ia_templatesFor = (kind: Kind): IaTemplate[] =>
 export const identityFor = (
   name: string,
   kind: Kind,
-  opts: { templateOverride?: string; paletteOverride?: string } = {},
+  opts: {
+    templateOverride?: string
+    paletteOverride?: string
+    scale?: Scale
+  } = {},
 ) => {
   const ns = kind === 'venue' ? 'venue' : 'artist'
   const hash = ia_hashName(name, ns)
@@ -563,10 +560,17 @@ export const identityFor = (
   const tplIdx = (hash >>> 0) % tplPool.length
   const palIdx = (hash >>> 8) % IA_PALETTES.length
   const rotate = (hash >>> 16) & 3
+  // Mesh is a gradient field with no geometry to resolve into, so a hero-sized
+  // one is just a bigger gradient. It advances to its neighbour rather than
+  // leaving the pool, which keeps every other name's template index untouched.
+  const heroIdx =
+    opts.scale === 'hero' && tplPool[tplIdx]?.id === 'mesh'
+      ? (tplIdx + 1) % tplPool.length
+      : tplIdx
   const template = opts.templateOverride
     ? (IA_TEMPLATES.find((tpl) => tpl.id === opts.templateOverride) ??
-      tplPool[tplIdx]!)
-    : tplPool[tplIdx]!
+      tplPool[heroIdx]!)
+    : tplPool[heroIdx]!
   const palette = opts.paletteOverride
     ? (IA_PALETTES.find((pal) => pal.id === opts.paletteOverride) ??
       IA_PALETTES[palIdx]!)
@@ -593,9 +597,7 @@ export const IdentityArt = ({
   scale = 'hero',
   width,
   height,
-  showInitials,
-  initialsBottom = 12,
-  grain = 0.1,
+  grain = 0.06,
   templateOverride,
   paletteOverride,
   rotateOverride,
@@ -606,6 +608,7 @@ export const IdentityArt = ({
   const resolved = identityFor(name, kind, {
     ...(templateOverride !== undefined && { templateOverride }),
     ...(paletteOverride !== undefined && { paletteOverride }),
+    scale,
   })
   const rot = (rotateOverride != null ? rotateOverride : resolved.rotate) % 4
   const rng = ia_rngFromHash(resolved.hash)
@@ -616,13 +619,7 @@ export const IdentityArt = ({
     scale,
     kind,
   })
-  const initialsOn = showInitials != null ? showInitials : scale === 'hero'
-  const initials = ia_getInitials(name)
   const grainUrl = ia_grainBg(grain)
-  const dark = ia_isDark(resolved.palette.bg)
-  const chipBg = dark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.78)'
-  const chipFg = dark ? '#FFFFFF' : '#15131A'
-  const chipFs = scale === 'hero' ? 44 : 22
   const isLightPaper = !ia_isDark(resolved.palette.bg)
 
   return (
@@ -662,31 +659,6 @@ export const IdentityArt = ({
             } as React.CSSProperties
           }
         />
-      )}
-
-      {initialsOn && (
-        <div
-          data-identity-monogram=""
-          style={{
-            position: 'absolute',
-            left: 12,
-            bottom: initialsBottom,
-            padding: scale === 'hero' ? '6px 12px' : '3px 8px',
-            borderRadius: scale === 'hero' ? 10 : 6,
-            background: chipBg,
-            backdropFilter: 'blur(6px)',
-            WebkitBackdropFilter: 'blur(6px)',
-            fontFamily: "'Inter', sans-serif",
-            fontWeight: 900,
-            fontSize: chipFs,
-            letterSpacing: '-0.04em',
-            lineHeight: 1,
-            color: chipFg,
-            pointerEvents: 'none',
-          }}
-        >
-          {initials}
-        </div>
       )}
 
       <div

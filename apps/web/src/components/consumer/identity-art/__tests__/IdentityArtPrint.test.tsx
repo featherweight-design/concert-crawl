@@ -4,7 +4,6 @@ import { ImageResponse } from 'next/og'
 import { IdentityArt, identityFor, ia_isDark } from '../IdentityArt'
 import {
   IdentityArtPrint,
-  printChipColors,
   printCoverViewBox,
   printGrainOpacity,
   printIdentityFor,
@@ -84,6 +83,19 @@ describe('determinism parity with <IdentityArt />', () => {
     expect(print.palette.id).toBe(screen.palette.id)
   })
 
+  // The hero-scale mesh swap has to reach both renderers, or a share card
+  // would print the one template the screen refuses to show at that size.
+  it('agrees at hero scale, where mesh is off the pool', () => {
+    for (const name of NAMES) {
+      for (const kind of ['artist', 'venue'] as const) {
+        const screen = identityFor(name, kind, { scale: 'hero' })
+        const print = printIdentityFor(name, kind, { scale: 'hero' })
+        expect(print.template.id).toBe(screen.template.id)
+        expect(print.template.id).not.toBe('mesh')
+      }
+    }
+  })
+
   it('never resolves halftone for a venue or blueprint for an artist', () => {
     for (const name of NAMES) {
       expect(printIdentityFor(name, 'venue').template.id).not.toBe('halftone')
@@ -148,7 +160,7 @@ describe('flattened template output', () => {
   })
 })
 
-// ── Grain, chip, sizing ────────────────────────────────────────────
+// ── Grain, sizing ──────────────────────────────────────────────────
 
 describe('grain', () => {
   it('is omitted entirely at grain=0', () => {
@@ -175,31 +187,14 @@ describe('grain', () => {
 })
 
 describe('initials chip', () => {
-  it('is skipped when showInitials is false', () => {
-    const withChip = markup(
+  // #1525 decision 3 retired the chip on both renderers, so the print output
+  // must not draw one either. ">BT<" rather than "BT" — the baked grain
+  // data-URI happens to contain the bare letter pair.
+  it('is gone', () => {
+    const html = markup(
       <IdentityArtPrint name="Big Thief" width={400} height={400} />,
     )
-    const without = markup(
-      <IdentityArtPrint
-        name="Big Thief"
-        width={400}
-        height={400}
-        showInitials={false}
-      />,
-    )
-    // ">BT<" rather than "BT" — the baked grain data-URI happens to contain
-    // the bare letter pair.
-    expect(withChip).toContain('>BT<')
-    expect(without).not.toContain('>BT<')
-  })
-
-  it('renders an opaque chip colour — no backdrop blur', () => {
-    for (const name of NAMES) {
-      const { palette } = printIdentityFor(name, 'artist')
-      const chip = printChipColors(palette)
-      expect(chip.background).toMatch(/^#[0-9a-f]{6}$/)
-      expect(chip.color).toMatch(/^#[0-9A-Fa-f]{6}$/)
-    }
+    expect(html).not.toContain('>BT<')
   })
 })
 

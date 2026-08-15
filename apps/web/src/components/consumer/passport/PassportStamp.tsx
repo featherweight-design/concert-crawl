@@ -46,7 +46,6 @@ export const PassportStamp = ({
         name={show.artist}
         kind="artist"
         scale="micro"
-        showInitials={false}
         grain={cfg.grain}
         width={width}
         height={height}

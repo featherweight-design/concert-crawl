@@ -1,12 +1,18 @@
 import { describe, it, expect } from 'vitest'
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import {
   ia_hashName,
   ia_getInitials,
   ia_isDark,
+  IdentityArt,
   identityFor,
   IA_TEMPLATES,
   IA_PALETTES,
 } from './IdentityArt'
+
+const SCALES = ['hero', 'tile', 'micro'] as const
+const NAMES = Array.from({ length: 200 }, (_, idx) => `Artist ${idx}`)
 
 describe('ia_getInitials', () => {
   it('returns first 2 chars for a single non-stop word', () => {
@@ -114,6 +120,73 @@ describe('identityFor', () => {
     })
     const withoutOverride = identityFor('Test', 'artist')
     expect(withUnknown.template.id).toBe(withoutOverride.template.id)
+  })
+
+  // #1525 D2. Mesh is a gradient field with no geometry to resolve into, so a
+  // hero-sized one is just a bigger gradient.
+  it('never resolves mesh at hero scale', () => {
+    for (const name of NAMES) {
+      for (const kind of ['artist', 'venue'] as const) {
+        expect(identityFor(name, kind, { scale: 'hero' }).template.id).not.toBe(
+          'mesh',
+        )
+      }
+    }
+  })
+
+  // The swap advances one mesh name to its neighbour. It must not re-index the
+  // pool, or every other name's artwork would silently change too.
+  it('leaves every non-mesh name on the template it already had', () => {
+    for (const name of NAMES) {
+      for (const kind of ['artist', 'venue'] as const) {
+        const base = identityFor(name, kind)
+        if (base.template.id === 'mesh') continue
+        expect(identityFor(name, kind, { scale: 'hero' }).template.id).toBe(
+          base.template.id,
+        )
+      }
+    }
+  })
+
+  it('leaves mesh in the pool at tile and micro', () => {
+    const meshNames = NAMES.filter(
+      (name) => identityFor(name, 'artist').template.id === 'mesh',
+    )
+    expect(meshNames.length).toBeGreaterThan(0)
+    for (const scale of ['tile', 'micro'] as const) {
+      expect(identityFor(meshNames[0]!, 'artist', { scale }).template.id).toBe(
+        'mesh',
+      )
+    }
+  })
+})
+
+// #1525 decision 3. The chip existed because a wide scraped image could not
+// say whose it was; after the band crops there are no wide images.
+describe('<IdentityArt /> monogram', () => {
+  it('draws no chip at any scale', () => {
+    for (const scale of SCALES) {
+      const html = renderToStaticMarkup(
+        createElement(IdentityArt, { name: 'Big Thief', scale }),
+      )
+      expect(html).not.toContain('data-identity-monogram')
+      expect(html).not.toContain('>BT<')
+    }
+  })
+
+  it('defaults the grain to the retuned strength', () => {
+    const quiet = renderToStaticMarkup(
+      createElement(IdentityArt, { name: 'Big Thief' }),
+    )
+    const explicit = renderToStaticMarkup(
+      createElement(IdentityArt, { name: 'Big Thief', grain: 0.06 }),
+    )
+    expect(quiet).toBe(explicit)
+    expect(quiet).not.toBe(
+      renderToStaticMarkup(
+        createElement(IdentityArt, { name: 'Big Thief', grain: 0.1 }),
+      ),
+    )
   })
 })
 
