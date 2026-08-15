@@ -158,6 +158,7 @@ export async function tagEventsWithGenres(
       id: events.id,
       title: events.title,
       artist: events.artist,
+      headliners: events.headliners,
       canonicalHeadliners: events.canonicalHeadliners,
     })
     .from(events)
@@ -172,6 +173,12 @@ export async function tagEventsWithGenres(
   // this the model is handed a title in an "artist" field and duly invents a
   // genre for it. NULL is left alone: it means the ladder has never seen the
   // row, not that it ruled against one.
+  //
+  // Where the ladder DID name somebody, that bill is what the model gets —
+  // `artist` may be an event-shaped title ("Jazz Series presents") sitting
+  // alongside a real act, and a title is a worse genre signal than a name.
+  // `headliners`, not the canonical form: the model reads display names, and
+  // canonicalization strips the diacritics and casing it uses.
   const untagged: GenreTagInput[] = rows
     .filter(
       (row) =>
@@ -182,7 +189,7 @@ export async function tagEventsWithGenres(
     .map((row) => ({
       id: row.id,
       title: row.title ?? '',
-      artist: row.artist ?? '',
+      artist: row.headliners?.join(', ') ?? row.artist ?? '',
     }))
 
   if (untagged.length === 0) {

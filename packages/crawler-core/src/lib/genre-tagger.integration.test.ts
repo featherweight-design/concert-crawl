@@ -119,4 +119,28 @@ describe('tagEventsWithGenres — ladder gating', () => {
 
     expect(mockCreate).toHaveBeenCalledOnce()
   })
+
+  it('sends the derived bill rather than an event-shaped display string', async () => {
+    // The ladder found a real act behind a title that names nobody. Sending
+    // `artist` here would ask the model to genre-tag "Jazz Series presents".
+    const venueId = await seedVenue()
+    await db.insert(events).values({
+      venueId,
+      artist: 'Jazz Series presents',
+      canonicalArtist: 'jazz series presents',
+      title: 'Jazz Series presents',
+      date: futureDate(13),
+      sourceUrl: 'https://genre.example.com',
+      status: 'upcoming',
+      headliners: ['Kokoroko'],
+      canonicalHeadliners: ['kokoroko'],
+    })
+
+    await tagEventsWithGenres(venueId)
+
+    // Without the fix the bill never reaches the model at all, so the name is
+    // absent from the payload entirely.
+    const prompt = JSON.stringify(mockCreate.mock.calls[0]?.[0])
+    expect(prompt).toContain('Kokoroko')
+  })
 })
