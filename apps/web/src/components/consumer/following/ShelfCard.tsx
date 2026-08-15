@@ -21,7 +21,7 @@ import Link from 'next/link'
 import { formatPrice } from '@/components/consumer/definitions/lib'
 import { SHELF_CARD_HEIGHT } from '@/components/consumer/definitions/constants'
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
-import { FlexArt } from '@/components/consumer/image-slot'
+import { Panel } from '@/components/consumer/image-slot'
 import { FollowDateLine } from './FollowDateLine'
 import { FOLLOWING_COPY } from './definitions/copy'
 import type { ShelfArtist } from './definitions/types'
@@ -129,21 +129,26 @@ export const ShelfCard = ({
 
   const body = (
     <>
-      {/* The card's height is definite (SHELF_CARD_HEIGHT on the `<li>`), so
-          `flex-1` here resolves against that rather than against content: the
-          ART absorbs whatever the show info doesn't take, and a long artist
-          name never crops its own dates. The floor is what the art keeps if a
-          body ever renders taller than expected. Same trade the Spotify card
-          makes.
+      {/* 3:4, pinned. This is the only slot in the product that takes that
+          ratio (#1525 §2) — the shelf is a portrait card, and unlike the taste
+          pick beside it, its art can declare a shape because nothing hotlinked
+          sizes it.
+
+          `scale="hero"` because `size="100%"` cannot tell `Panel` how big it
+          renders, and 224px is hero territory by the slot metrics' own 112px
+          threshold. Left to derive, it would fall to `tile` and put `mesh` back
+          at hero scale, which §2.4 cut.
 
           `radius={0}` because the card shell already clips with a 14px radius;
           rounding the art too would round the corners that sit against the
-          body. PR 7 pins this to a 3:4 `Panel` — until then the shape is
-          exactly what it was. */}
-      <FlexArt
+          body. */}
+      <Panel
         surface="artist"
         name={artist.name}
         photoUrl={artist.photoUrl}
+        size="100%"
+        ratio="3 / 4"
+        scale="hero"
         radius={0}
       />
       <span

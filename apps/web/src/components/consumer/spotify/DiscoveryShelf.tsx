@@ -24,7 +24,7 @@ import { useTastePicks } from '@/lib/queries/use-taste-picks'
 import { writeShelfHint } from '@/lib/shelf-hint'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { DiscoveryLoadingShelf } from './DiscoveryLoadingShelf'
-import { EventImage } from '@/components/consumer/event-image'
+import { FlexArt } from '@/components/consumer/image-slot'
 import {
   SHELF_CARD_HEIGHT,
   SHELF_CARD_WIDTH,
@@ -81,20 +81,22 @@ const TastePickCard = ({ pick }: { pick: SpotifyTastePick }) => {
           border: '1px solid var(--border)',
         }}
       >
-        {/* flex-1 (basis 0) so the IMAGE absorbs whatever the show info
-            doesn't take — show info never yields. With the card's height
-            definite this also stops a hotlinked image's own aspect ratio from
-            sizing the card: `h-full` on the inner <img> used to fall back to
-            auto, so one portrait poster stretched the entire row. Still
-            neutralizes IdentityArt's inline height:100%, which beats a height
-            class and blanked fallback-graphic cards (#763 r4). */}
-        <EventImage
-          src={pick.imageUrl}
-          artistPhotoUrl={pick.artistPhotoUrl}
-          alt=""
-          artist={pick.artist}
-          identityScale="tile"
-          className="min-h-[116px] w-full flex-1"
+        {/* A FILL REGION, and deliberately not a ratio (#1525 §2 / R3). The
+            follow card beside this one is pinned to 3:4; this one cannot be.
+            Its art absorbs whatever the show info leaves — the body has one
+            row more than the follow card's, so the two cards share an outer box
+            while their art does not — and pinning an aspect here is exactly
+            what stretched the row in #763 r4. `FlexArt` carries no
+            `aspectRatio` property at all, which is what makes that regression
+            unreachable rather than merely avoided.
+
+            `radius={0}`: the card shell already clips at 14px. */}
+        <FlexArt
+          surface="event"
+          name={pick.artist}
+          artworkUrl={pick.imageUrl}
+          photoUrl={pick.artistPhotoUrl}
+          radius={0}
         />
         <span
           className="flex shrink-0 flex-col gap-[7px]"

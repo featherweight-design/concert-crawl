@@ -31,6 +31,25 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.44.0-beta',
+    date: 'Aug 15, 2026',
+    headline: 'Every show and artist picture, redrawn.',
+    items: [
+      {
+        kind: 'changed',
+        text: 'Show and artist pages open with a band now: the picture sits beside the name instead of stretched behind it.',
+      },
+      {
+        kind: 'changed',
+        text: 'Artists without a photo get artwork built from their name, so no card is ever a grey box.',
+      },
+      {
+        kind: 'fixed',
+        text: 'An artist page never borrows a poster from one of their shows.',
+      },
+    ],
+  },
+  {
     version: 'v0.43.0-beta',
     date: 'Aug 9, 2026',
     headline: 'Leave the welcome tour already following someone.',

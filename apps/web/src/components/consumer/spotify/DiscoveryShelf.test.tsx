@@ -78,6 +78,7 @@ import {
   SHELF_CARD_HEIGHT,
   SHELF_CARD_WIDTH,
 } from '@/components/consumer/definitions/constants'
+import { FLEX_ART_MIN_HEIGHT } from '@/components/consumer/image-slot'
 
 const COPY = SPOTIFY_COPY.discovery
 
@@ -294,11 +295,18 @@ describe('DiscoveryShelf', () => {
     // dilute the card-structure assertions.
     const list = screen.getByRole('list', { name: COPY.listAria })
     for (const link of within(list).getAllByRole('link')) {
-      const imageRegion = link.firstElementChild
+      const art = link.firstElementChild
       const content = link.lastElementChild
-      expect(imageRegion?.className).toContain('flex-1')
-      expect(imageRegion?.className).toContain('min-h-[116px]')
-      expect(imageRegion?.className).not.toContain('shrink-0')
+      // `FlexArt` declares these inline rather than in classes, so the
+      // regression is now guarded on the style it actually ships.
+      if (!(art instanceof HTMLElement)) throw new Error('no art region')
+      expect(art.style.flex).toBe('1 1 0%')
+      expect(art.style.minHeight).toBe(`${FLEX_ART_MIN_HEIGHT}px`)
+      // THE #763 r4 GUARD: no ratio here, ever. The follow card beside this
+      // one is pinned to 3:4; pinning an aspect on the taste pick is what
+      // stretched the row. `FlexArt` has no `aspectRatio` property at all.
+      expect(art.style.aspectRatio).toBe('')
+      expect(art.className).not.toContain('shrink-0')
       expect(content?.className).toContain('shrink-0')
       expect(content?.className).not.toContain('flex-1')
     }

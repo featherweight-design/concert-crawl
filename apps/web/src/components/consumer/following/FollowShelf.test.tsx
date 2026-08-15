@@ -57,6 +57,7 @@ vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
   },
 }))
 
+import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
 import { FollowShelf } from './FollowShelf'
 import { FOLLOWING_COPY } from './definitions/copy'
 import {
@@ -112,6 +113,43 @@ describe('FollowShelf', () => {
       expect(card.style.width).toBe(`${SHELF_CARD_WIDTH}px`)
       expect(card.style.height).toBe(`${SHELF_CARD_HEIGHT}px`)
     }
+  })
+
+  // #1525 §2 — the follow shelf is the one slot in the product that takes 3:4.
+  it('pins the card art to 3:4', () => {
+    renderShelf({ artists: [artist()] })
+
+    const card = screen.getByTestId('shelf-card')
+    const art = card.querySelector<HTMLElement>('a > span')
+    expect(art).not.toBeNull()
+    expect(art?.style.aspectRatio).toBe('3 / 4')
+    expect(art?.style.width).toBe('100%')
+
+    // The shared box is art + body, so the ratio and the height cannot drift
+    // apart: 168 wide at 3:4 is 224, and the card is that plus its body.
+    expect(SHELF_CARD_HEIGHT).toBeGreaterThan((SHELF_CARD_WIDTH * 4) / 3)
+  })
+
+  // The scale has to be passed, not derived: `size="100%"` cannot tell `Panel`
+  // that this slot renders at 224px, so left alone it would fall to `tile` and
+  // put `mesh` back at hero size, which §2.4 cut.
+  it('asks for hero-scale detail rather than letting the size derive it', () => {
+    const name = 'Neal Francis'
+    renderShelf({ artists: [artist({ name })] })
+
+    const drawn = screen
+      .getByTestId('shelf-card')
+      .querySelector('a > span > div')?.innerHTML
+
+    const at = (scale: 'hero' | 'tile') =>
+      render(<IdentityArt name={name} kind="artist" scale={scale} />).container
+        .firstElementChild?.innerHTML
+
+    expect(drawn).toBeTruthy()
+    expect(drawn).toBe(at('hero'))
+    // Not merely equal to hero by coincidence: the two scales differ, so this
+    // fails the moment the prop stops being passed.
+    expect(drawn).not.toBe(at('tile'))
   })
 
   it('renders nothing when there are no rows to show', () => {

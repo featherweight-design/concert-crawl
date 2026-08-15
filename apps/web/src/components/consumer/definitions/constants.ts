@@ -22,7 +22,16 @@ export const SHELF_CARD_WIDTH = 168
  *
  * A definite height fixes all three at once: with the column's height settled,
  * `flex-1` art resolves against it instead of against the image, so no source
- * asset can move the box. 280 is the square-art taste card rounded up — the
- * shape that was already intended.
+ * asset can move the box.
+ *
+ * The number itself is now derived rather than chosen. #1525 pins the follow
+ * card's art to 3:4, which at 168 wide is 224px, and its three-row body renders
+ * at 84.17px in Chromium (16.67 name + 15 date + 16.5 price, two 7px gaps, 22px
+ * of padding). Rounded up so nothing clips, that is the height below. The ratio
+ * is the fixed side of this equation — if the body ever grows, this constant
+ * moves and the 3:4 does not.
  */
-export const SHELF_CARD_HEIGHT = 280
+const SHELF_CARD_ART_H = (SHELF_CARD_WIDTH * 4) / 3
+const SHELF_CARD_BODY_H = 85
+
+export const SHELF_CARD_HEIGHT = SHELF_CARD_ART_H + SHELF_CARD_BODY_H
