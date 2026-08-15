@@ -637,9 +637,16 @@ export const adjudicateEvent = async ({
     ],
   })
 
-  const toolUseBlock = response.content.find((bl) => bl.type === 'tool_use')
+  // Matched on name, not just on block type: tool_choice pins the call, but a
+  // block from some other tool would otherwise be parsed against this schema
+  // and either throw a confusing shape error or, worse, coincidentally parse.
+  const toolUseBlock = response.content.find(
+    (bl) => bl.type === 'tool_use' && bl.name === ADJUDICATE_TOOL.name,
+  )
   if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
-    throw new Error('adjudicate_event: no tool_use block in response')
+    throw new Error(
+      `${ADJUDICATE_TOOL.name}: no ${ADJUDICATE_TOOL.name} tool_use block in response`,
+    )
   }
 
   const parsed = AdjudicationSchema.safeParse(toolUseBlock.input)

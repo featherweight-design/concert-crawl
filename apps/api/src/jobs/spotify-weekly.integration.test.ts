@@ -381,6 +381,39 @@ describe('runSpotifyWeekly — digest phase (§8.1 phase 2)', () => {
     expect(resendState.sends[0]?.html).toContain('Wednesday')
   })
 
+  it('matches a derived headliner behind an event-shaped title (§9.1)', async () => {
+    // The derivation ladder writes the bill it read out of the title into
+    // canonical_headliners, but canonical_artist keeps tracking events.artist,
+    // which stays the event's display string. Matching on the equality arm
+    // alone would never reach this row.
+    await seedConnection(USER)
+    await seedPremium(USER)
+    clerkState.emails.set(USER, 'derived-headliner@example.com')
+    grantSpotify(USER, [{ id: 'sp3', name: 'Kokoroko' }])
+
+    const venue = await seedVenue({ slug: `venue-${USER}` })
+    await seedEvent(venue.id, {
+      artist: 'Jazz Series presents',
+      canonicalArtist: 'jazz series presents',
+      canonicalHeadliners: ['kokoroko'],
+      date: '2026-07-24',
+    })
+
+    await runSpotifyWeekly(NOW)
+
+    const rows = await getDigestLogRows(USER)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]?.status).toBe('sent')
+    // The subject, not the body, is what proves the match. A zero-match week
+    // still sends — the light variant's taste picks would surface this very
+    // event — so asserting on the body alone passes with the headliner arm
+    // removed.
+    expect(resendState.sends[0]?.subject).toBe(
+      '1 show this week by artists you follow',
+    )
+    expect(resendState.sends[0]?.html).toContain('Jazz Series presents')
+  })
+
   it('skips free users at send time (premium gate)', async () => {
     await seedConnection(USER)
     clerkState.emails.set(USER, 'free@example.com')

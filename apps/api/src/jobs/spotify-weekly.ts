@@ -194,8 +194,16 @@ const withDisplayPrices = async (
   }))
 }
 
-// §9.1 match: headliner equality OR supporting-array overlap against the
-// user's canonical follow set, one parameterized text[] both ways.
+// §9.1 match: headliner equality OR co-headliner/supporting overlap against
+// the user's canonical follow set, one parameterized text[] every way.
+//
+// The canonical_headliners arm is not redundant with the equality arm.
+// canonical_artist is derived from events.artist, which is the event's
+// DISPLAY string — for a show titled "Jazz Series presents" the derivation
+// ladder puts "kokoroko" in canonical_headliners while canonical_artist stays
+// "jazz series presents". Without this arm a user following Kokoroko gets no
+// digest row. Mirrors matchedUpcomingCondition in lib/spotify-matches.ts;
+// the two must not diverge.
 const matchedShows = async (
   canonicalNames: string[],
   windowStart: string,
@@ -213,7 +221,7 @@ const matchedShows = async (
     .where(
       and(
         windowFilter(windowStart, windowEnd),
-        sql`(${events.canonicalArtist} = ANY(${namesArray}) OR ${events.canonicalSupporting} && ${namesArray})`,
+        sql`(${events.canonicalArtist} = ANY(${namesArray}) OR ${events.canonicalHeadliners} && ${namesArray} OR ${events.canonicalSupporting} && ${namesArray})`,
       ),
     )
     .orderBy(events.date, events.artist)
