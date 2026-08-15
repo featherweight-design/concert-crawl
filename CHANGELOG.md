@@ -1,3 +1,29 @@
+# [1.262.0](https://github.com/HartiganHM/concert-crawl/compare/v1.261.0...v1.262.0) (2026-08-15)
+
+
+### Bug Fixes
+
+* **artists:** keep the raw spelling of a solo derived headliner ([c0816e9](https://github.com/HartiganHM/concert-crawl/commit/c0816e91c2c53761cf3184186452c6739061cf2e))
+* **crawler:** compare derived bills element-wise, not by joined string ([282b30d](https://github.com/HartiganHM/concert-crawl/commit/282b30d6d8fae98972679abe72f04a0d3f7912b8))
+* **crawler:** dedupe adjudicated names so a display chip cannot double ([94b74e3](https://github.com/HartiganHM/concert-crawl/commit/94b74e3d4f65ad7581f01379f1d1a0b86b4586f9))
+* **crawler:** drop blank names from the adjudicator's verdict ([7d50b13](https://github.com/HartiganHM/concert-crawl/commit/7d50b13dfe22c4ce70225bb3341921fffcd39d63))
+* **crawler:** genre-tag the derived bill, not the event display string ([ab58ff2](https://github.com/HartiganHM/concert-crawl/commit/ab58ff294796a1a8d1088529d6a6fe457d034db4))
+* **crawler:** keep an empty headliner set empty across a re-crawl ([a39eed1](https://github.com/HartiganHM/concert-crawl/commit/a39eed14fab2d937e7af5d3cdb1a1ab01786dff5))
+* **crawler:** keep observed openers the adjudicator never got to read ([bb747bc](https://github.com/HartiganHM/concert-crawl/commit/bb747bc1efc4293ec2205b38c3f5d8ecd4c64998))
+* **crawler:** let a newly observed performer retire a stored LLM verdict ([af58ee0](https://github.com/HartiganHM/concert-crawl/commit/af58ee0e22cb58558fda308b26b1ae03783db148))
+* **crawler:** re-merge observed openers when reusing a stored verdict ([773011d](https://github.com/HartiganHM/concert-crawl/commit/773011de17b7ac0d5a26a881742baa8e2c2fa0e1))
+* **crawler:** stop an adjudicator outage erasing a stored bill, and cap its cost ([373728d](https://github.com/HartiganHM/concert-crawl/commit/373728d65cf00d0a8436d687a4343873ac39b346))
+* **crawler:** stop an empty headliners array blanking the genre artist ([003e8a1](https://github.com/HartiganHM/concert-crawl/commit/003e8a1c54a2bc10bfe229494b5ea785f7b74e94))
+* **crawler:** stop the upsert collapsing a derived bill back to the display title ([befc5af](https://github.com/HartiganHM/concert-crawl/commit/befc5af905ab173ead8cd6c180e8f2bfc59fd0d7))
+* **crawler:** translate the shared artist rules for the adjudicator's schema ([093fe79](https://github.com/HartiganHM/concert-crawl/commit/093fe791021c7e5d498765ef9c3ed6b54c56d2aa))
+* **spotify:** match derived headliners in the weekly digest ([e634058](https://github.com/HartiganHM/concert-crawl/commit/e634058fef4f23f64f088599f6bb9f8dd24ac4f2))
+
+
+### Features
+
+* **artists:** seed the projection from the derived headliner set ([0202066](https://github.com/HartiganHM/concert-crawl/commit/0202066035a1e795f4c984c164239de0630444fc))
+* **crawler:** add the artist derivation precedence ladder ([925da20](https://github.com/HartiganHM/concert-crawl/commit/925da208699625785bd05936d12beef4edc62b8e))
+
 # [1.261.0](https://github.com/HartiganHM/concert-crawl/compare/v1.260.0...v1.261.0) (2026-08-15)
 
 
