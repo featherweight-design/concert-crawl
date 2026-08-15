@@ -311,11 +311,14 @@ function normalize(
   const artistNames = (event.artists ?? [])
     .map((artist) => artist.name.trim())
     .filter((name) => name.length > 0)
-  // The payload lists the headliner first. When the record carries no
-  // artist breakdown at all (festival passes, multi-bill packages), the
-  // listing name is the best artist string available — the same fallback
-  // the LLM path lands on for those listings.
-  const artist = artistNames[0] ?? event.name
+  // The payload lists the headliner first. When the record carries no artist
+  // breakdown at all (festival passes, multi-bill packages), the listing name
+  // is still the best DISPLAY string — but it is not an observation of a
+  // performer, so it does not enter observedPerformers. The whole list is
+  // passed on, not just [0]: the ladder needs the full billing to spot
+  // co-headliners (#1203).
+  const observedPerformers = artistNames
+  const artist = observedPerformers[0] ?? event.name
   const supportingArtists = artistNames.slice(1)
 
   const showTime = normalizeTime(event.start_time_local)
@@ -329,6 +332,7 @@ function normalize(
     // LLM-style decoration, so rawTitle mirrors title (#826).
     rawTitle: event.name,
     artist,
+    observedPerformers,
     ...(supportingArtists.length > 0 ? { supportingArtists } : {}),
     date: event.start_date_local,
     ...(showTime !== undefined ? { showTime } : {}),

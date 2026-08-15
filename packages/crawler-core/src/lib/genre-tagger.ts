@@ -158,13 +158,20 @@ export async function tagEventsWithGenres(
     .from(events)
     .where(and(eq(events.venueId, venueId), isNull(events.genre)))
 
-  const untagged: GenreTagInput[] = rows.map(
-    (row: { id: string; title: string | null; artist: string | null }) => ({
-      id: row.id,
-      title: row.title ?? '',
-      artist: row.artist ?? '',
-    }),
-  )
+  // An event with no artist string has nothing to infer a genre from, so it is
+  // skipped rather than sent to the model with an empty artist field.
+  const untagged: GenreTagInput[] = rows
+    .filter(
+      (row: { artist: string | null }) =>
+        row.artist !== null && row.artist.trim() !== '',
+    )
+    .map(
+      (row: { id: string; title: string | null; artist: string | null }) => ({
+        id: row.id,
+        title: row.title ?? '',
+        artist: row.artist ?? '',
+      }),
+    )
 
   if (untagged.length === 0) {
     logger.info({ venueId }, 'No untagged events — skipping genre tagging')

@@ -87,15 +87,18 @@ function mapToNormalizedEvent(
 
   if (typeof name !== 'string' || typeof startDate !== 'string') return null
 
-  const performerNames = getPerformerNames(obj['performer'])
-  const artist = performerNames[0] ?? name
+  const observedPerformers = getPerformerNames(obj['performer'])
+  // `name` is still the display string when the listing names no performer,
+  // but it is NOT recorded as an observation — that coalesce is what put 80
+  // event titles into the artists projection.
+  const artist = observedPerformers[0] ?? name
   // Some venues list the headliner more than once in `performer[]` (or repeat
   // it after the openers). `slice(1)` alone would keep those duplicates and
   // surface the headliner as its own supporting act. Route through the shared
   // normalizer so this path stays byte-identical to the LLM path (#643).
   const supportingArtists = normalizeSupportingArtists(
     artist,
-    performerNames.slice(1),
+    observedPerformers.slice(1),
   )
   const date = extractDateOnly(startDate, timeZone)
   if (date === undefined) {
@@ -141,6 +144,7 @@ function mapToNormalizedEvent(
     // contract uniform across extractors (#826).
     rawTitle: name,
     artist,
+    observedPerformers,
     date,
     sourceUrl,
     confidence: 1.0,

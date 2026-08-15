@@ -240,8 +240,14 @@ function normalize(
     return null
   }
 
-  const headliner = event.announceArtists?.[0]?.name?.trim()
-  const artist = headliner && headliner.length > 0 ? headliner : title
+  // `announceArtists` is the venue's own performer list. The title fallback
+  // below survives only as the DISPLAY string — it is not recorded as an
+  // observation, which is what keeps 11 event titles out of the artists
+  // projection.
+  const observedPerformers = (event.announceArtists ?? [])
+    .map((entry) => entry.name.trim())
+    .filter((name) => name.length > 0)
+  const artist = observedPerformers[0] ?? title
 
   const showTime = event.startTime ?? undefined
   const doorsTime = event.doorTime ?? undefined
@@ -261,6 +267,7 @@ function normalize(
     // contract uniform across extractors (#826).
     rawTitle: title,
     artist,
+    observedPerformers,
     date: event.date,
     ...(showTime !== undefined ? { showTime } : {}),
     ...(doorsTime !== undefined ? { doorsTime } : {}),

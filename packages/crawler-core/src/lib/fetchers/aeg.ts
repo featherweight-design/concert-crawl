@@ -262,6 +262,11 @@ function normalize(
     // filter's input contract uniform across extractors (#826).
     rawTitle: title,
     artist: headliner,
+    // AEG's own headliner field, never the title — this path declines to emit
+    // an event at all without one, so there is no title fallback here. Junk
+    // rows from AEG are junk INSIDE headlinersText (a bingo night billed as its
+    // own headliner); the ladder's adjudication step is what catches those.
+    observedPerformers: [headliner],
     date,
     showTime,
     ...(doorsTime !== undefined ? { doorsTime } : {}),

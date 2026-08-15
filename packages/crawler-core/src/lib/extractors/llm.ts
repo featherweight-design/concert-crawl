@@ -433,18 +433,22 @@ export async function extractWithLlm(
     // The prompt instructs the model to exclude the headliner, but a
     // disobedient response would otherwise render it twice — once bold, once
     // in the "with …" openers line (#643).
-    // Non-concert listings have no performer, so the model returns null. Fall
-    // back to the cleaned title: it's what the prompt already tells the model
-    // to do when the artist is merely unclear, and it keeps `artist` a
-    // non-empty string for every downstream consumer (search, dedupe, the
-    // Spotify matcher) rather than pushing null-handling into all of them.
-    const artist = evt.artist?.trim() || title
-    // headliners[0] must equal `artist` (#1203). Trim, drop blanks, and drop
-    // case-insensitive repeats, then force the resolved artist into first
-    // position — `artist` may itself be a fallback to the cleaned title when
-    // the model returned null, in which case the model's own list can't be
-    // trusted to lead with it. An omitted or emptied list falls back to
-    // [artist]: a single headliner is never inferred by splitting a string.
+    // The prompt tells the model to return `artist: null` when the listing names
+    // no performer. This used to coalesce that null back into the title, which
+    // silently defeated the instruction and is where 65 junk artist rows came
+    // from. The null is now preserved as an EMPTY observedPerformers list, and
+    // the title survives only as the display string.
+    const observed = evt.artist?.trim()
+    const observedPerformers =
+      observed === undefined || observed === '' ? [] : [observed]
+    const artist = observed === undefined || observed === '' ? title : observed
+    // Trim, drop blanks, and drop case-insensitive repeats, then put the
+    // resolved artist first — `artist` may itself be a fallback to the cleaned
+    // title when the model returned null, in which case the model's own list
+    // can't be trusted to lead with it. An omitted or emptied list falls back
+    // to [artist]: a single headliner is never inferred by splitting a string.
+    // This is the extractor's best guess only; `deriveArtists()` re-derives
+    // `headliners` from `observedPerformers` and may legitimately empty it.
     const seenHeadliners = new Set<string>([artist.toLowerCase()])
     const headliners = [artist]
     for (const rawName of evt.headliners ?? []) {
@@ -471,6 +475,7 @@ export async function extractWithLlm(
       title,
       rawTitle: evt.rawTitle,
       artist,
+      observedPerformers,
       headliners,
       date: evt.date,
       confidence: evt.confidence,

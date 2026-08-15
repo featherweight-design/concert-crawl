@@ -11,14 +11,40 @@ export interface NormalizedEvent {
    * See issue #826.
    */
   rawTitle: string
+  /**
+   * The event's DISPLAY string, and nothing more. It is what the calendar row
+   * reads and it feeds `canonical_artist`, the live dedup key, so it is always
+   * a non-empty string even for a bingo night. It is NOT a claim that a
+   * performer was identified — read `observedPerformers` for that.
+   */
   artist: string
   /**
-   * Every act headlining the bill, in billing order, INCLUDING the primary
-   * act in `artist` — the invariant is `headliners[0] === artist` (#1203).
-   * Only the LLM extractor decides what constitutes a headliner; the crawler
-   * falls back to `[artist]` when this is absent or empty and NEVER derives
-   * multiple headliners by splitting a string on punctuation (band names
-   * legitimately contain '&', 'and' and '+').
+   * Performer names the SOURCE actually stated, verbatim and unranked, before
+   * any derivation. Empty means the listing named nobody, which is a real and
+   * common answer: a bingo night names no performer, and so does a page that
+   * only carries a title.
+   *
+   * Extractors populate this from their own structured performer field
+   * (`performer[]`, `announceArtists`, `headlinersText`, `artistNames`) and
+   * NEVER from the title. Copying the title in here is the exact bug this
+   * field exists to end — it produced 222 junk artist rows. Deriving the
+   * headline bill from these observations is `deriveArtists()`'s job, not an
+   * extractor's.
+   */
+  observedPerformers: string[]
+  /**
+   * Every act headlining the bill, in billing order. Populated by
+   * `deriveArtists()` from `observedPerformers`, and empty when the event
+   * names no performer at all.
+   *
+   * ⚠️ The old `headliners[0] === artist` invariant (#1203) NO LONGER HOLDS.
+   * It assumed `artist` was always a derived performer; `artist` is now purely
+   * a display string, so a bingo night has a populated `artist` and an empty
+   * `headliners`. Anything reading this to mean "the artist" must handle the
+   * empty case rather than indexing [0].
+   *
+   * Multiple headliners are never derived by splitting a string on
+   * punctuation — band names legitimately contain '&', 'and' and '+'.
    */
   headliners?: string[]
   supportingArtists?: string[]

@@ -121,7 +121,12 @@ function mapToNormalizedEvent(
     // decorated or stripped, so mirroring into rawTitle keeps the
     // cross-venue filter's input contract uniform across extractors (#826).
     rawTitle: title,
+    // Ticketure's payload carries no performer field of any kind, so the title
+    // is the only display string available. It is NOT an observation of a
+    // performer, which is why observedPerformers stays empty — `deriveArtists()`
+    // decides whether this listing yields an artist at all.
     artist: title,
+    observedPerformers: [],
     date,
     sourceUrl,
     confidence: 1.0,
