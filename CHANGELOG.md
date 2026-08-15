@@ -1,3 +1,15 @@
+# [1.264.0](https://github.com/HartiganHM/concert-crawl/compare/v1.263.0...v1.264.0) (2026-08-15)
+
+
+### Bug Fixes
+
+* **web:** the artist page says one word for an absent price ([da86c41](https://github.com/HartiganHM/concert-crawl/commit/da86c4108cb3daa0382116262454af0ed98e0af4))
+
+
+### Features
+
+* **web:** the row reserves its own height, and the artist page joins it ([f4946ec](https://github.com/HartiganHM/concert-crawl/commit/f4946ecec53cef5d688c36eb24fbd2c14eec1fdf)), closes [#1418](https://github.com/HartiganHM/concert-crawl/issues/1418)
+
 # [1.263.0](https://github.com/HartiganHM/concert-crawl/compare/v1.262.0...v1.263.0) (2026-08-15)
 
 
