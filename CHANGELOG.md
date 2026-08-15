@@ -1,3 +1,10 @@
+# [1.253.0](https://github.com/HartiganHM/concert-crawl/compare/v1.252.1...v1.253.0) (2026-08-15)
+
+
+### Features
+
+* **imagery:** one image slot for every small artwork ([#1588](https://github.com/HartiganHM/concert-crawl/issues/1588)) ([2fa3150](https://github.com/HartiganHM/concert-crawl/commit/2fa3150bd864ec6e6f9a51cb6400be67c81c4321)), closes [#1525](https://github.com/HartiganHM/concert-crawl/issues/1525)
+
 ## [1.252.1](https://github.com/HartiganHM/concert-crawl/compare/v1.252.0...v1.252.1) (2026-08-15)
 
 
