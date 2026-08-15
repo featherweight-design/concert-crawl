@@ -558,11 +558,23 @@ const ADJUDICATE_TOOL: Anthropic.Tool = {
 // model that emits '   ' for a name is not reporting an outage, so throwing
 // would escalate a recoverable answer into a failed adjudication — but a blank
 // must not reach `headliners`, where it would project an unnamed artist row.
-const AdjudicatedNames = z
-  .array(z.string())
-  .transform((names) =>
-    names.map((name) => name.trim()).filter((name) => name !== ''),
-  )
+//
+// Repeats are dropped case-insensitively, first spelling winning, because these
+// arrays are the DISPLAY columns. `canonicalHeadliners` dedupes on its own, so
+// a model that names the same act twice would otherwise show a doubled chip
+// against a canonical array that disagrees with it.
+const AdjudicatedNames = z.array(z.string()).transform((names) => {
+  const seen = new Set<string>()
+  const unique: string[] = []
+  for (const raw of names) {
+    const name = raw.trim()
+    const key = name.toLowerCase()
+    if (name === '' || seen.has(key)) continue
+    seen.add(key)
+    unique.push(name)
+  }
+  return unique
+})
 
 const AdjudicationSchema = z.object({
   isConcert: z.boolean(),

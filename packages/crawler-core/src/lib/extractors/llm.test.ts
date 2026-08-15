@@ -1087,6 +1087,36 @@ describe('adjudicateEvent', () => {
     expect(verdict.headliners).toEqual(['Turnstile'])
     expect(verdict.supportingArtists).toEqual(['Snail Mail'])
   })
+
+  it('drops a repeated name, keeping the first spelling', async () => {
+    // These are the display arrays. canonical_headliners dedupes on its own, so
+    // a doubled name here shows a duplicate chip against a canonical array that
+    // disagrees with it.
+    mockAdjudicate.mockResolvedValue({
+      content: [
+        {
+          type: 'tool_use',
+          id: 'tool_adj',
+          name: 'adjudicate_event',
+          input: {
+            isConcert: true,
+            headliners: ['Sigur Rós', 'sigur rós', 'Sigur Rós'],
+            supportingArtists: ['Julianna Barwick', 'julianna barwick'],
+          },
+        },
+      ],
+      usage: { input_tokens: 10, output_tokens: 5 },
+      stop_reason: 'tool_use',
+    })
+
+    const verdict = await adjudicateEvent({
+      title: 'Sigur Rós',
+      description: undefined,
+    })
+
+    expect(verdict.headliners).toEqual(['Sigur Rós'])
+    expect(verdict.supportingArtists).toEqual(['Julianna Barwick'])
+  })
 })
 
 // appended to llm.test.ts — the vi.mock('@anthropic-ai/sdk', …) at the top of
