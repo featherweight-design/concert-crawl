@@ -578,7 +578,11 @@ Decide who is on the bill using these rules:
 
 ${ARTIST_RULES}
 
-Where the rules above say to set artist to null, return an EMPTY headliners array instead. Never put the event title in headliners — the caller already holds the title and needs to know whether a performer was actually named. An empty array is a real answer.
+Those rules are written for a tool that also emits a separate "artist" field. This tool does not. Read them with these three substitutions:
+
+- Wherever the rules say "artist", they mean headliners[0]. Ignore the instruction that headliners[0] must match a separate artist string — there is no such string to match here.
+- Wherever the rules say to set artist to null, return an EMPTY headliners array instead. An empty array is a real answer: the caller already holds the title and needs to know whether a performer was actually named.
+- Never put the event title in headliners. If the only name available is the title itself, that is the empty-array case.
 
 Set isConcert using these rules:
 
