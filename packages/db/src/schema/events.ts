@@ -143,10 +143,19 @@ export const events = pgTable(
     // this array is NOT positionally aligned with headliners. Match it with
     // the overlap operator; never index into it by position.
     //
-    // NULL and empty mean different things to the artist projection. NULL is a
-    // row the derivation ladder has never seen, so `backfill-artists.ts` falls
-    // back to canonical_artist for it; empty is the ladder reporting that
-    // nobody is billed, and projects nothing.
+    // NULL and empty mean different things to the artist projection. Empty is
+    // the ladder reporting that nobody is billed, and projects nothing.
+    //
+    // NULL carries TWO meanings, and nothing on the row distinguishes them: a
+    // legacy row the ladder has never seen, and the ladder reaching no verdict
+    // because the adjudicator was down (see `derive-artists.ts` step 3), which
+    // the crawler persists. `backfill-artists.ts` falls back to
+    // canonical_artist on NULL, so an event first INSERTed during an outage can
+    // have a title-derived name projected until the next successful crawl
+    // overwrites it. Stored bills are safe — the upsert COALESCEs NULL back to
+    // what is already there. The fallback arm is a migration-window affordance
+    // that the one-off re-derivation pass retires; after it runs, NULL on a
+    // crawled row means only "outage".
     canonicalHeadliners: text('canonical_headliners').array(),
     // Stale-event detection (issue #607). lastSeenAt is bumped to NOW() on
     // every successful crawl run that returns this event row. firstMissingAt

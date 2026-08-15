@@ -96,6 +96,20 @@ export async function backfillArtists(
         AND headliner.value IS NOT NULL AND headliner.value <> ''
         AND hidden_from_consumer = false
       UNION ALL
+      -- The legacy fallback. NULL is ambiguous by construction: it is both a
+      -- row the derivation ladder has never touched AND the ladder reaching no
+      -- verdict during an adjudicator outage. Only the first deserves this
+      -- arm, and nothing on the row separates them.
+      --
+      -- The residual exposure is one narrow case — an event first INSERTed
+      -- while the adjudicator was down, whose title-derived canonical_artist
+      -- gets projected here. It self-heals on the next successful crawl.
+      -- Rows that already carry a bill are never affected: the upsert COALESCEs
+      -- a NULL verdict back to the stored value rather than clearing it.
+      --
+      -- Dropping the arm outright is worse than the exposure: it would
+      -- de-project every artist on the back catalogue until a re-crawl reached
+      -- each row. The one-off re-derivation pass is what retires it.
       SELECT canonical_artist AS canonical_name, artist AS display_name
       FROM events
       WHERE canonical_headliners IS NULL
