@@ -1,3 +1,10 @@
+# [1.254.0](https://github.com/HartiganHM/concert-crawl/compare/v1.253.1...v1.254.0) (2026-08-15)
+
+
+### Features
+
+* **imagery:** the browse hero card becomes a band ([#1589](https://github.com/HartiganHM/concert-crawl/issues/1589)) ([2166b5b](https://github.com/HartiganHM/concert-crawl/commit/2166b5b6361d5ef811095c57369302e1f5a1dde9)), closes [#1525](https://github.com/HartiganHM/concert-crawl/issues/1525)
+
 ## [1.253.1](https://github.com/HartiganHM/concert-crawl/compare/v1.253.0...v1.253.1) (2026-08-15)
 
 
