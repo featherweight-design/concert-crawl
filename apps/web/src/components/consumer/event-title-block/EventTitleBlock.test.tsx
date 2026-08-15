@@ -96,7 +96,7 @@ describe('EventTitleBlock', () => {
   })
 
   // The strike came off every surface, event detail included: the status pill
-  // states the cancellation in words, and a rule through a proper noun reads as
+  // states the cancellation in words, and a line through a proper noun reads as
   // a typo before it reads as a state.
   it('does not strike through a cancelled headliner', () => {
     render(
