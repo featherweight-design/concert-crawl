@@ -38,6 +38,7 @@ import {
 import { deriveBulkVisibility } from './venue-table-bulk'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { ADMIN_MOBILE_VIEWPORT_QUERY } from '@/components/admin/definitions/constants'
+import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge'
 
 function sourceUrl(url: string): string {
   return url.replace(/^https?:\/\//, '')
@@ -196,6 +197,10 @@ export function VenueTableClient({ venues }: Props) {
                     <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
                       {status.charAt(0).toUpperCase() + status.slice(1)}
                     </StatusBadge>
+                    <CrawlStatusBadge
+                      status={venue.lastRunStatus}
+                      variant="outline"
+                    />
                     <StatusBadge
                       kind={strategyKind(venue.extractionStrategy)}
                       variant="mono"
@@ -511,20 +516,33 @@ export function VenueTableClient({ venues }: Props) {
                     </span>
                   </TD>
                   <TD>
-                    {status === 'blocked' ? (
-                      <Link
-                        href={`/admin/crawl?venueId=${venue.id}`}
-                        style={{ textDecoration: 'none' }}
-                      >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      {status === 'blocked' ? (
+                        <Link
+                          href={`/admin/crawl?venueId=${venue.id}`}
+                          style={{ textDecoration: 'none' }}
+                        >
+                          <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
+                            Blocked ↗
+                          </StatusBadge>
+                        </Link>
+                      ) : (
                         <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
-                          Blocked ↗
+                          {status.charAt(0).toUpperCase() + status.slice(1)}
                         </StatusBadge>
-                      </Link>
-                    ) : (
-                      <StatusBadge kind={STATUS_BADGE_KIND[status]} dot>
-                        {status.charAt(0).toUpperCase() + status.slice(1)}
-                      </StatusBadge>
-                    )}
+                      )}
+                      <CrawlStatusBadge
+                        status={venue.lastRunStatus}
+                        variant="outline"
+                      />
+                    </div>
                   </TD>
                   <TD>
                     <div

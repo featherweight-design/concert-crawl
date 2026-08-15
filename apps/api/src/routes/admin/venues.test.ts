@@ -45,6 +45,7 @@ const { mockGetAuth, mockDb } = vi.hoisted(() => {
     _mockVenueRow: mockVenueRow,
     _makeQueryBuilder: makeQueryBuilder,
     select: vi.fn().mockReturnValue(makeQueryBuilder([])),
+    selectDistinctOn: vi.fn().mockReturnValue(makeQueryBuilder([])),
     insert: vi.fn().mockReturnThis(),
     update: vi.fn().mockReturnThis(),
     delete: vi.fn().mockReturnThis(),
@@ -108,6 +109,7 @@ describe('Admin venue routes', () => {
   beforeEach(() => {
     mockGetAuth.mockReset()
     mockDb.select.mockReturnValue(mockDb._makeQueryBuilder([]))
+    mockDb.selectDistinctOn.mockReturnValue(mockDb._makeQueryBuilder([]))
   })
 
   it('GET /v1/admin/venues returns 401 for unauthenticated requests', async () => {

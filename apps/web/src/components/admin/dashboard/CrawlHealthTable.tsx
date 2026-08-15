@@ -11,23 +11,10 @@ import {
   RelTime,
   CostText,
 } from '@/components/admin/primitives'
-import type { StatusKind } from '@/components/admin/primitives'
+import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge'
 import { formatStrategy } from './lib/dashboard'
 import type { CrawlStatusRow } from './lib/dashboard'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-
-const STATUS_KIND: Record<string, StatusKind> = {
-  success: 'success',
-  failed: 'danger',
-  blocked: 'danger',
-  partial: 'warning',
-  paused: 'warning',
-  // Page-hash dedup hit — healthy, but visually distinct from a real
-  // extraction. Signal blue reads as "informational, intentional" and
-  // separates skipped rows from the gray 'never' (no history) chip.
-  skipped: 'signal',
-  never: 'neutral',
-}
 
 export function CrawlHealthTable({ rows }: { rows: CrawlStatusRow[] }) {
   const router = useRouter()
@@ -56,9 +43,7 @@ export function CrawlHealthTable({ rows }: { rows: CrawlStatusRow[] }) {
           >
             <TD>{row.venueName}</TD>
             <TD>
-              <StatusBadge kind={STATUS_KIND[row.status] ?? 'neutral'} dot>
-                {row.status}
-              </StatusBadge>
+              <CrawlStatusBadge status={row.status} dot />
             </TD>
             <TD color="var(--fg-muted)">
               {row.lastRunAt ? <RelTime iso={row.lastRunAt} /> : '—'}

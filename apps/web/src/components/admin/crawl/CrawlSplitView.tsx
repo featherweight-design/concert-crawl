@@ -23,6 +23,8 @@ import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { resolveCrawlAlertBadge } from '@/components/admin/definitions/constants'
 import { SafeExternalLink } from '@/components/admin/SafeExternalLink'
 import { FaultAcknowledgeControl } from '@/components/admin/fault-acknowledge-control/FaultAcknowledgeControl'
+import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge'
+import { crawlStatusKind } from '@/components/admin/definitions/crawl-status'
 
 const MT_TIMEZONE = 'America/Denver'
 
@@ -58,18 +60,6 @@ const isFaulted = (row: CrawlStatusRow | undefined): boolean =>
     row.status === 'blocked' ||
     row.lastRunStatus === 'failed' ||
     row.blockedAt !== null)
-
-const STATUS_KIND: Record<
-  string,
-  'success' | 'danger' | 'warning' | 'neutral'
-> = {
-  success: 'success',
-  failed: 'danger',
-  blocked: 'danger',
-  partial: 'warning',
-  paused: 'warning',
-  never: 'neutral',
-}
 
 const STATUS_FILTER_OPTIONS = ADMIN_COPY.crawl.splitView.statusFilterOptions
 
@@ -634,7 +624,7 @@ export const CrawlSplitView = ({
                   width: 8,
                   height: 8,
                   borderRadius: '50%',
-                  background: `var(--${STATUS_KIND[row.status] ?? 'neutral'})`,
+                  background: `var(--${crawlStatusKind(row.status)})`,
                   flexShrink: 0,
                 }}
               />
@@ -671,13 +661,10 @@ export const CrawlSplitView = ({
                   </span>
                 </div>
               </div>
-              <StatusBadge
-                kind={STATUS_KIND[row.lastRunStatus] ?? 'neutral'}
+              <CrawlStatusBadge
+                status={row.lastRunStatus}
                 dot={row.lastRunStatus !== 'never'}
-              >
-                {row.lastRunStatus.charAt(0).toUpperCase() +
-                  row.lastRunStatus.slice(1)}
-              </StatusBadge>
+              />
             </button>
           ))}
         </div>
@@ -743,13 +730,7 @@ export const CrawlSplitView = ({
                     <span style={{ color: 'var(--fg-subtle)', fontSize: 12 }}>
                       ·
                     </span>
-                    <StatusBadge
-                      kind={STATUS_KIND[activeRun.status] ?? 'neutral'}
-                      dot
-                    >
-                      {activeRun.status.charAt(0).toUpperCase() +
-                        activeRun.status.slice(1)}
-                    </StatusBadge>
+                    <CrawlStatusBadge status={activeRun.status} dot />
                   </div>
                 )}
                 <div
@@ -1381,13 +1362,7 @@ export const CrawlRunHistoryTable = ({
                         gap: 6,
                       }}
                     >
-                      <StatusBadge
-                        kind={STATUS_KIND[run.status] ?? 'neutral'}
-                        dot
-                      >
-                        {run.status.charAt(0).toUpperCase() +
-                          run.status.slice(1)}
-                      </StatusBadge>
+                      <CrawlStatusBadge status={run.status} dot />
                       {run.activeAlert
                         ? (() => {
                             const alertConfig = resolveCrawlAlertBadge(

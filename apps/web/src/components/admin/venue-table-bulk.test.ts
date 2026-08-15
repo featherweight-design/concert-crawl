@@ -46,6 +46,7 @@ function makeVenue(
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     eventCount: 0,
+    lastRunStatus: null,
     ...overrides,
   }
 }

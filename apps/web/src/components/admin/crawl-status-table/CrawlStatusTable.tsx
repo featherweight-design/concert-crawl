@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge'
+import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 
 type LastRun = {
@@ -20,16 +20,6 @@ type VenueCrawlStatus = {
   blockedAt: string | null
   lastCrawledAt: string | null
   lastRun: LastRun
-}
-
-const statusVariant: Record<
-  string,
-  'default' | 'secondary' | 'destructive' | 'outline'
-> = {
-  success: 'default',
-  partial: 'secondary',
-  failed: 'destructive',
-  in_progress: 'outline',
 }
 
 function formatDate(iso: string | null): string {
@@ -105,11 +95,7 @@ export const CrawlStatusTable = ({ venues }: Props) => {
               </td>
               <td className="py-3 pr-4">
                 {venue.lastRun ? (
-                  <Badge
-                    variant={statusVariant[venue.lastRun.status] ?? 'outline'}
-                  >
-                    {venue.lastRun.status}
-                  </Badge>
+                  <CrawlStatusBadge status={venue.lastRun.status} />
                 ) : (
                   <span className="text-fg-muted">
                     {ADMIN_COPY.crawlStatusTable.statusLabels.never}

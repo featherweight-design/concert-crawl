@@ -376,6 +376,10 @@ export type NewVenue = Omit<
 // VenueWithEventCount — admin list view only, includes upcoming event count
 export interface VenueWithEventCount extends Venue {
   eventCount: number
+  // Outcome of the venue's most recent run, null when it has never crawled.
+  // The venue's own columns describe whether crawling is enabled, not whether
+  // it is producing anything — a venue skipping every night still reads Active.
+  lastRunStatus: CrawlStatus | null
 }
 
 // CrawlHealth — 7-day crawl health stats returned by GET /v1/admin/venues/:id

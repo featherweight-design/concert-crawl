@@ -1,9 +1,7 @@
 import type {
   ActiveCrawlAlert,
   AdminFeedbackStatus,
-  CrawlStatus,
 } from '@concert-crawl/types'
-import type { CrawlStatusBadgeConfig } from '@/types/badge'
 import type { StatusKind } from '@/components/admin/primitives/utils'
 import { ADMIN_COPY } from './copy'
 
@@ -26,16 +24,6 @@ export const FEEDBACK_STATUS_KIND: Record<AdminFeedbackStatus, StatusKind> = {
   resolved: 'success',
   archived: 'neutral',
 }
-
-export const CRAWL_STATUS_BADGES: Record<CrawlStatus, CrawlStatusBadgeConfig> =
-  {
-    success: { label: 'Success', variant: 'default' },
-    failed: { label: 'Failed', variant: 'destructive' },
-    partial: { label: 'Partial', variant: 'secondary' },
-    // outline (transparent bg + colored border) keeps skipped visually
-    // distinct from partial (filled secondary) while reading as muted.
-    skipped: { label: 'Skipped', variant: 'outline' },
-  }
 
 // Additive alert pill rendered alongside the status pill in the existing
 // CrawlRunHistoryTable (apps/web/src/components/admin/crawl/CrawlSplitView.tsx)

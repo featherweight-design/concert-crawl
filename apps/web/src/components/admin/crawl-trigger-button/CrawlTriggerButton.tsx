@@ -6,27 +6,17 @@ import { useRouter } from 'next/navigation'
 import type { CrawlRun } from '@concert-crawl/types'
 import { ApiError } from '@/lib/api'
 import { formatDurationMs } from '@/lib/time'
-import { AdminButton, StatusBadge } from '@/components/admin/primitives'
-import type { StatusKind } from '@/components/admin/primitives'
+import { AdminButton } from '@/components/admin/primitives'
+import { CrawlStatusBadge } from '@/components/admin/crawl-status-badge'
 import { RefreshCw, Loader2 } from 'lucide-react'
 import {
   triggerVenueCrawl,
   fetchCrawlTrigger,
   fetchCrawlRun,
 } from './lib/crawl'
-import { CRAWL_STATUS_BADGES, POLL_INTERVAL_MS } from './definitions/constants'
+import { POLL_INTERVAL_MS } from './definitions/constants'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import type { TriggerState } from './definitions/types'
-
-// Status → StatusKind mapping kept in sync with CrawlHealthTable.STATUS_KIND
-// so the same run renders consistently across the dashboard and trigger UI.
-// Unknown values fall through to 'danger' at the call site.
-const TRIGGER_STATUS_KIND: Record<string, StatusKind> = {
-  success: 'success',
-  skipped: 'signal',
-  partial: 'warning',
-  failed: 'danger',
-}
 
 interface CrawlTriggerButtonProps {
   venueId: string
@@ -132,11 +122,6 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
         ? ADMIN_COPY.crawlTriggerButton.button.polling
         : ADMIN_COPY.crawlTriggerButton.button.idle
 
-  const statusBadgeConfig =
-    result && result.status in CRAWL_STATUS_BADGES
-      ? CRAWL_STATUS_BADGES[result.status as keyof typeof CRAWL_STATUS_BADGES]
-      : null
-
   return (
     <div
       aria-label="Crawl trigger"
@@ -193,14 +178,7 @@ export const CrawlTriggerButton = ({ venueId }: CrawlTriggerButtonProps) => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {statusBadgeConfig && (
-              <StatusBadge
-                kind={TRIGGER_STATUS_KIND[result.status] ?? 'danger'}
-                dot
-              >
-                {statusBadgeConfig.label}
-              </StatusBadge>
-            )}
+            <CrawlStatusBadge status={result.status} dot />
             <span
               style={{
                 fontSize: 12,

@@ -198,9 +198,26 @@ venuesAdminRouter.get('/', async (ctx) => {
     eventCounts.map((row) => [row.venueId, row.total]),
   )
 
+  // The venue's own columns say whether it is enabled, not whether crawling it
+  // is actually producing anything. A venue that has been skipping for weeks
+  // reads as Active with full health everywhere else, so the list carries the
+  // real outcome of its most recent run.
+  const latestRuns = await db
+    .selectDistinctOn([crawlRuns.venueId], {
+      venueId: crawlRuns.venueId,
+      status: crawlRuns.status,
+    })
+    .from(crawlRuns)
+    .orderBy(crawlRuns.venueId, desc(crawlRuns.createdAt))
+
+  const statusByVenueId = new Map(
+    latestRuns.map((run) => [run.venueId, run.status]),
+  )
+
   const venuesWithCounts = allVenues.map((venue) => ({
     ...venue,
     eventCount: countByVenueId.get(venue.id) ?? 0,
+    lastRunStatus: statusByVenueId.get(venue.id) ?? null,
   }))
 
   return ctx.json({ success: true, data: venuesWithCounts })

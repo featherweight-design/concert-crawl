@@ -99,6 +99,36 @@ describe('GET /v1/admin/venues — integration', () => {
     expect(body.success).toBe(true)
     expect(body.data).toHaveLength(2)
   })
+
+  it('reports the most recent run status per venue', async () => {
+    setAuth('admin')
+    const venue = await seedVenue({ name: 'Meow Wolf', slug: 'meow-wolf' })
+    await seedCrawlRun(venue.id, {
+      status: 'success',
+      createdAt: new Date('2026-08-01T09:00:00Z'),
+    })
+    await seedCrawlRun(venue.id, {
+      status: 'skipped',
+      createdAt: new Date('2026-08-02T09:00:00Z'),
+    })
+
+    const res = await app.request('/v1/admin/venues')
+    const body = (await res.json()) as {
+      data: { lastRunStatus: string | null }[]
+    }
+    expect(body.data[0]?.lastRunStatus).toBe('skipped')
+  })
+
+  it('reports a null run status for a venue that has never crawled', async () => {
+    setAuth('admin')
+    await seedVenue({ name: 'Fresh Venue', slug: 'fresh-venue' })
+
+    const res = await app.request('/v1/admin/venues')
+    const body = (await res.json()) as {
+      data: { lastRunStatus: string | null }[]
+    }
+    expect(body.data[0]?.lastRunStatus).toBeNull()
+  })
 })
 
 describe('GET /v1/admin/venues/:id — integration (crawl health)', () => {
