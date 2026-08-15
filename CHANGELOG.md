@@ -1,3 +1,10 @@
+# [1.252.0](https://github.com/HartiganHM/concert-crawl/compare/v1.251.1...v1.252.0) (2026-08-15)
+
+
+### Features
+
+* **imagery:** retire the monogram chip and drop mesh at hero ([#1585](https://github.com/HartiganHM/concert-crawl/issues/1585)) ([f129ee5](https://github.com/HartiganHM/concert-crawl/commit/f129ee5f34b2a6ccee0c9bc473a4acf063e646ce))
+
 ## [1.251.1](https://github.com/HartiganHM/concert-crawl/compare/v1.251.0...v1.251.1) (2026-08-15)
 
 
