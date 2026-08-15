@@ -325,6 +325,42 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     expect(row.canonicalHeadliners).toEqual(['fontaines d.c.'])
   })
 
+  it('keeps the headliner set EMPTY when a re-crawl observes nobody', async () => {
+    const venue = await seedTestVenue()
+    const date = futureDate(27)
+    mockExtraction([makeEvent('Bingo Night', date)])
+    await crawlVenue(venue.id, mockBrowser)
+    expect((await loadEvent('Bingo Night')).headliners).toEqual(['Bingo Night'])
+
+    // The ON CONFLICT clause prepends the stored artist to excluded[2:], which
+    // on an empty set would rebuild [artist] and quietly reinstate
+    // title-as-headliner on every nightly crawl — while canonical_headliners,
+    // which takes excluded wholesale, went empty. The two columns must agree.
+    mockAdjudicateEvent.mockResolvedValue({
+      isConcert: false,
+      headliners: [],
+      supportingArtists: [],
+    })
+    // The title has to move too — an unchanged source hash short-circuits the
+    // upsert before the `set` clause this test is about.
+    mockExtraction(
+      [
+        makeEvent('Bingo Night', date, {
+          title: 'Bingo Night (hosted)',
+          rawTitle: 'Bingo Night (hosted)',
+          observedPerformers: [],
+        }),
+      ],
+      '<html><body><p>Now billed as a bingo night</p></body></html>',
+    )
+    await crawlVenue(venue.id, mockBrowser)
+
+    const row = await loadEvent('Bingo Night')
+    expect(row.artist).toBe('Bingo Night')
+    expect(row.headliners).toEqual([])
+    expect(row.canonicalHeadliners).toEqual([])
+  })
+
   it('re-pins headliners[0] to the stored artist when the extracted string drifts', async () => {
     const venue = await seedTestVenue()
     const date = futureDate(24)

@@ -1110,14 +1110,27 @@ export async function crawlVenue(
               // is picked up on re-crawl. Any path writing headliners MUST
               // write canonical_headliners in the same statement (#1203).
               //
-              // Only the co-headliners (positions 2+) come from the new
-              // extraction; position 1 is re-seeded from the STORED artist.
-              // Taking excluded.headliners wholesale would break the
-              // headliners[0] === artist invariant, because `artist` above is
-              // deliberately never updated and a freshly extracted string can
-              // drift (diacritics, punctuation cleanup) while canonical_artist
-              // — the dedup key that got us to this conflict — stays put.
-              headliners: sql`array_prepend(${events.artist}, excluded.headliners[2:])`,
+              // On a bill that names someone, only the co-headliners (positions
+              // 2+) come from the new extraction; position 1 is re-seeded from
+              // the STORED artist. Taking excluded.headliners wholesale would
+              // let position 1 drift, because `artist` above is deliberately
+              // never updated and a freshly extracted string can change
+              // (diacritics, punctuation cleanup) while canonical_artist — the
+              // dedup key that got us to this conflict — stays put.
+              //
+              // An EMPTY set passes through untouched. Prepending there would
+              // rebuild [artist] out of a ladder verdict of "nobody is billed",
+              // reinstating title-as-headliner on every re-crawl and
+              // desynchronizing this column from canonical_headliners, which
+              // takes excluded wholesale just below.
+              headliners: sql`
+                CASE
+                  WHEN excluded.headliners IS NULL
+                    OR cardinality(excluded.headliners) = 0
+                  THEN excluded.headliners
+                  ELSE array_prepend(${events.artist}, excluded.headliners[2:])
+                END
+              `,
               // No such slicing for the canonical array: it is sorted and
               // deduped, so position 1 is not the artist and a positional
               // splice would corrupt it. It needs no repair anyway —

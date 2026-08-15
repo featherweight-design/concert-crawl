@@ -53,10 +53,12 @@ export const events = pgTable(
     title: text('title').notNull(),
     artist: text('artist').notNull(),
     // Every act headlining the bill (#1203), as decided by the derivation
-    // ladder from what the extractor OBSERVED. An empty array is a real answer
-    // — the ladder read the listing and found nobody billed — while NULL means
-    // the ladder has never seen the row. Consumers must treat the two
-    // differently; see `backfill-artists.ts`.
+    // ladder from what the extractor OBSERVED. An empty array is a real
+    // answer: the ladder read the listing and found nobody billed. This is the
+    // DISPLAY column; the projection scripts never read it. The ladder-seen
+    // signal they key off is `canonical_headliners` below, where NULL means the
+    // ladder has never touched the row and the projection falls back to
+    // `canonical_artist`. See `backfill-artists.ts`.
     //
     // On an existing row the upsert rebuilds this as
     // array_prepend(artist, excluded[2:]), so headliners[0] tracks the STORED
@@ -139,6 +141,11 @@ export const events = pgTable(
     // canonicalizeSupporting() — which dedupes, sorts and drops empties, so
     // this array is NOT positionally aligned with headliners. Match it with
     // the overlap operator; never index into it by position.
+    //
+    // NULL and empty mean different things to the artist projection. NULL is a
+    // row the derivation ladder has never seen, so `backfill-artists.ts` falls
+    // back to canonical_artist for it; empty is the ladder reporting that
+    // nobody is billed, and projects nothing.
     canonicalHeadliners: text('canonical_headliners').array(),
     // Stale-event detection (issue #607). lastSeenAt is bumped to NOW() on
     // every successful crawl run that returns this event row. firstMissingAt
