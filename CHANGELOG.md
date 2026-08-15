@@ -1,3 +1,10 @@
+## [1.251.1](https://github.com/HartiganHM/concert-crawl/compare/v1.251.0...v1.251.1) (2026-08-15)
+
+
+### Bug Fixes
+
+* **crawler:** let change detection see script-embedded event payloads ([#1580](https://github.com/HartiganHM/concert-crawl/issues/1580)) ([e0f1274](https://github.com/HartiganHM/concert-crawl/commit/e0f12742a9255542028aab27665668ea1b24c372))
+
 # [1.251.0](https://github.com/HartiganHM/concert-crawl/compare/v1.250.1...v1.251.0) (2026-08-15)
 
 
