@@ -40,8 +40,11 @@ interface WhenWhereProps {
   struck?: boolean
 }
 
-// Decoration rather than a colour change: the row's text contrast is never
-// dimmed, so the strike has to be legible without borrowing --fg-subtle.
+// A decoration rather than a colour swap, so the strike never borrows
+// --fg-subtle. The 0.8 softens the struck unit itself, which is the point: the
+// date and the time stopped being true. It is scoped to these two spans only,
+// and the *row* still carries no opacity of its own, which is what would drag
+// --fg-muted below the AA floor.
 const STRIKE = {
   textDecoration: 'line-through',
   textDecorationThickness: 1,
