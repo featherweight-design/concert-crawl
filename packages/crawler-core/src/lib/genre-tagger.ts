@@ -181,12 +181,13 @@ export async function tagEventsWithGenres(
   // `headliners`, not the canonical form: the model reads display names, and
   // canonicalization strips the diacritics and casing it uses.
   const untagged: GenreTagInput[] = rows
-    .filter(
-      (row) =>
-        row.artist !== null &&
-        row.artist.trim() !== '' &&
-        row.canonicalHeadliners?.length !== 0,
-    )
+    .filter((row) => {
+      if (row.artist === null || row.artist.trim() === '') return false
+      const ruledNobodyBilled =
+        Array.isArray(row.canonicalHeadliners) &&
+        row.canonicalHeadliners.length === 0
+      return !ruledNobodyBilled
+    })
     .map((row) => ({
       id: row.id,
       title: row.title ?? '',
