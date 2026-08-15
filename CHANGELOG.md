@@ -1,3 +1,10 @@
+## [1.252.1](https://github.com/HartiganHM/concert-crawl/compare/v1.252.0...v1.252.1) (2026-08-15)
+
+
+### Bug Fixes
+
+* **admin:** one crawl status component across every admin surface ([#1586](https://github.com/HartiganHM/concert-crawl/issues/1586)) ([4cb7cd9](https://github.com/HartiganHM/concert-crawl/commit/4cb7cd905c8b5516a066bed05230ad0a5f3ddf8d))
+
 # [1.252.0](https://github.com/HartiganHM/concert-crawl/compare/v1.251.1...v1.252.0) (2026-08-15)
 
 
