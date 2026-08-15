@@ -133,7 +133,7 @@ export const WhenWhere = ({
     parts.push({
       key: 'date',
       node: (
-        <span style={{ flexShrink: 0, ...(struck ? STRIKE : null) }}>
+        <span style={{ flexShrink: 0, ...(struck ? STRIKE : {}) }}>
           {dateText}
         </span>
       ),
@@ -144,7 +144,7 @@ export const WhenWhere = ({
     parts.push({
       key: 'time',
       node: (
-        <span style={{ flexShrink: 0, ...(struck ? STRIKE : null) }}>
+        <span style={{ flexShrink: 0, ...(struck ? STRIKE : {}) }}>
           {timeLabel}
         </span>
       ),
@@ -196,7 +196,7 @@ export const WhenWhere = ({
                       textDecoration: STRIKE.textDecoration,
                       textDecorationThickness: STRIKE.textDecorationThickness,
                     }
-                  : null),
+                  : {}),
               }}
             >
               {SEPARATOR}
