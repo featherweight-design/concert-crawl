@@ -1,3 +1,10 @@
+## [1.253.1](https://github.com/HartiganHM/concert-crawl/compare/v1.253.0...v1.253.1) (2026-08-15)
+
+
+### Bug Fixes
+
+* **design:** move the SpotifyLogo note out of the return's JSX position ([880d26f](https://github.com/HartiganHM/concert-crawl/commit/880d26f2acdf0173fb3f8b9084ee86054903d40a))
+
 # [1.253.0](https://github.com/HartiganHM/concert-crawl/compare/v1.252.1...v1.253.0) (2026-08-15)
 
 
