@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { EventImage } from '../event-image'
-import { EventTitleBlock } from '@/components/consumer/event-title-block'
+import { SupportingLine } from '@/components/consumer/event-title-block'
+import { RowTitleLine } from './RowTitleLine'
 import { WhenWhere } from './WhenWhere'
 import { MetaRow } from './MetaRow'
 import { PriceStack } from './PriceStack'
@@ -137,18 +138,25 @@ export const EventRow = ({
             href={`/events/${show.id}`}
             className="event-row-stretch group/eventtitle block min-w-0"
           >
-            <EventTitleBlock
+            <RowTitleLine
               headliner={show.headliner}
-              supportingArtists={
-                show.supports.length > 0 ? show.supports : null
-              }
               tourName={show.tourName}
-              fallbackTitle={show.fallbackTitle}
-              status={show.lifecycle}
-              surface="card"
-              maxInline={2}
+              showsTour={config.showsTour}
               narrow={narrow}
             />
+            {/* Line 2. It stays inside the row's stretched anchor exactly as it
+                was, and the 3px is the column gap it used to inherit from
+                `EventTitleBlock` — the row's height must not move here. */}
+            {hasSupportLine && (
+              <div style={{ marginTop: 3 }}>
+                <SupportingLine
+                  artists={show.supports}
+                  surface="card"
+                  narrow={narrow}
+                  maxInline={2}
+                />
+              </div>
+            )}
           </Link>
           <WhenWhere
             surface={surface}

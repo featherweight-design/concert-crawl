@@ -37,6 +37,13 @@ export interface SurfaceConfig {
    * about what we fetched.
    */
   showsPrice: boolean
+  /**
+   * Whether line 1 may carry a tour clause. A tour name helps someone deciding
+   * between shows and is noise on a list of shows already decided on, so it is
+   * a per-surface declaration exactly like the price slot rather than a
+   * property of the data.
+   */
+  showsTour: boolean
 }
 
 export const SURFACES: Record<RowSurface, SurfaceConfig> = {
@@ -48,6 +55,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     carded: false,
     showsDelta: false,
     showsPrice: true,
+    showsTour: true,
   },
   // The venue is the page.
   venue: {
@@ -57,6 +65,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     carded: false,
     showsDelta: false,
     showsPrice: true,
+    showsTour: true,
   },
   // "More at this venue" / "More from this artist" on event detail. The list
   // has no headers at all, so the row states everything.
@@ -67,9 +76,14 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     carded: false,
     showsDelta: false,
     showsPrice: true,
+    showsTour: true,
   },
   // Watching's group headers are loose windows ("This week"), not dates, so the
   // row is the only thing that can say when the show is.
+  //
+  // The only surface with no tour clause: Watching is a list of shows already
+  // decided on, so a tour name buys nothing and the room goes to the units the
+  // row alone can state.
   watching: {
     carries: [],
     chipPriority: ['freshness', 'provenance'],
@@ -77,8 +91,14 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     carded: true,
     showsDelta: true,
     showsPrice: true,
+    showsTour: false,
   },
-  // The crew home. Date headers run Coming up exactly as they run Browse, and
+  // The crew home. Both crew surfaces are discovery — shows someone else is
+  // going to, which you have not decided on — so they take the tour clause on
+  // the same grounds as Browse. The handoff's surface table predates both and
+  // names neither; defaulting them to Browse's behaviour is the ruling.
+  //
+  // Date headers run Coming up exactly as they run Browse, and
   // `CrewShow` carries no price, so the slot is suppressed rather than left to
   // announce a "TBA" the show never earned.
   crew: {
@@ -88,6 +108,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     carded: false,
     showsDelta: false,
     showsPrice: false,
+    showsTour: true,
   },
   // Browse under a crew lens. The list is Browse's own date-grouped list, so
   // the date is carried exactly as it is there; the price is suppressed for
@@ -104,6 +125,7 @@ export const SURFACES: Record<RowSurface, SurfaceConfig> = {
     carded: false,
     showsDelta: false,
     showsPrice: false,
+    showsTour: true,
   },
 }
 

@@ -5,10 +5,15 @@ import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { StatusPill } from '@/components/consumer/StatusPill'
 import { SupportingLine } from './SupportingLine'
 
-type Surface = 'card' | 'hero' | 'detail'
+/**
+ * Event detail's two surfaces. The row used to share this component at a third
+ * (`card`), and the two sets of needs diverged: the row carries no status pill
+ * above its title and no legacy fallback paragraph below it. It renders
+ * `RowTitleLine` instead, and this component is event detail's alone.
+ */
+type Surface = 'hero' | 'detail'
 
 const RAMP: Record<Surface, { head: number; tour: number; gap: number }> = {
-  card: { head: 15.5, tour: 9, gap: 3 },
   hero: { head: 22, tour: 10, gap: 3 },
   detail: { head: 34, tour: 12, gap: 5 },
 }
@@ -18,12 +23,10 @@ interface EventTitleBlockProps {
   supportingArtists: string[] | null
   tourName: string | null
   fallbackTitle?: string | null
-  surface?: Surface
+  surface: Surface
   status?: EventStatus
   maxInline?: number | null
   headlinerAs?: 'h1' | 'div'
-  /** Row-only: the ≤360px step of the card ramp. */
-  narrow?: boolean
   /**
    * #1115 PR-G — the headliner's artist-page slug, or null when the projection
    * has no row for that name. Ignored unless `linkArtists` is set.
@@ -44,18 +47,15 @@ export const EventTitleBlock = ({
   supportingArtists,
   tourName,
   fallbackTitle,
-  surface = 'card',
+  surface,
   status = 'upcoming',
   maxInline = null,
   headlinerAs = 'div',
-  narrow = false,
   artistSlug = null,
   supportingArtistSlugs = null,
   linkArtists = false,
 }: EventTitleBlockProps): React.JSX.Element => {
-  const isRow = surface === 'card'
   const ramp = RAMP[surface]
-  const headSize = isRow && narrow ? 14.5 : ramp.head
   const dim = status !== 'upcoming'
   const openers = supportingArtists ?? []
   const hasOpeners = openers.length > 0
@@ -93,26 +93,19 @@ export const EventTitleBlock = ({
       )}
 
       <Headliner
-        // `detail` wraps to as many lines as needed (no `truncate`); `card`/`hero`
-        // stay one line via `truncate` (which sets overflow-hidden + ellipsis +
+        // `detail` wraps to as many lines as needed (no `truncate`); `hero`
+        // stays one line via `truncate` (which sets overflow-hidden + ellipsis +
         // whitespace-nowrap). Applying `truncate` on `detail` too would clip a
-        // multi-line title, so it is scoped to the non-detail surfaces only.
+        // multi-line title, so it is scoped to the hero only.
         className={`m-0 min-w-0 ${dim ? 'text-fg-muted' : 'text-fg transition-colors group-hover/eventtitle:text-signal'} ${surface === 'detail' ? 'whitespace-normal' : 'truncate'}`}
+        // A cancelled show is not struck through. The status pill above the
+        // title already says so in words, and a line through a proper noun is
+        // read as a typo before it is read as a state.
         style={{
-          fontSize: headSize,
-          fontWeight: surface === 'detail' ? 900 : isRow ? 700 : 800,
-          letterSpacing:
-            surface === 'detail' ? '-0.03em' : isRow ? '-0.01em' : '-0.02em',
-          // 1.35 on the row is load-bearing, not taste: `truncate` clips to the
-          // line box, so a tighter leading shears accented caps and descenders.
-          lineHeight: isRow ? 1.35 : 1.12,
-          ...(status === 'cancelled'
-            ? {
-                textDecoration: 'line-through',
-                textDecorationColor: 'var(--danger)',
-                textDecorationThickness: 2,
-              }
-            : {}),
+          fontSize: ramp.head,
+          fontWeight: surface === 'detail' ? 900 : 800,
+          letterSpacing: surface === 'detail' ? '-0.03em' : '-0.02em',
+          lineHeight: 1.12,
         }}
       >
         {/* The link lives INSIDE the heading so the h1 keeps its text and its
@@ -134,7 +127,6 @@ export const EventTitleBlock = ({
         <SupportingLine
           artists={openers}
           surface={surface}
-          narrow={narrow}
           maxInline={maxInline}
           dim={dim}
           slugs={supportingArtistSlugs}

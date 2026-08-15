@@ -12,6 +12,7 @@ describe('EventTitleBlock', () => {
         headliner="Wednesday"
         supportingArtists={['Hotline TNT']}
         tourName={null}
+        surface="detail"
       />,
     )
     expect(screen.getByText('Wednesday')).toBeInTheDocument()
@@ -27,6 +28,7 @@ describe('EventTitleBlock', () => {
         headliner="Wednesday"
         supportingArtists={[]}
         tourName="Rat Saw God Tour"
+        surface="detail"
       />,
     )
     expect(screen.getByText('Rat Saw God Tour')).toBeInTheDocument()
@@ -39,6 +41,7 @@ describe('EventTitleBlock', () => {
         supportingArtists={null}
         tourName={null}
         fallbackTitle="Wednesday + Hotline TNT / MJ Lenderman"
+        surface="detail"
       />,
     )
     expect(
@@ -56,6 +59,7 @@ describe('EventTitleBlock', () => {
         supportingArtists={[]}
         tourName={null}
         fallbackTitle="AEG Presents Wednesday"
+        surface="detail"
       />,
     )
     expect(screen.queryByText('AEG Presents Wednesday')).not.toBeInTheDocument()
@@ -68,6 +72,7 @@ describe('EventTitleBlock', () => {
         supportingArtists={null}
         tourName={null}
         fallbackTitle="Wednesday"
+        surface="detail"
       />,
     )
     expect(screen.queryByText('Wednesday')).toBeInTheDocument()
@@ -82,30 +87,36 @@ describe('EventTitleBlock', () => {
         supportingArtists={[]}
         tourName={null}
         headlinerAs="h1"
+        surface="detail"
       />,
     )
     expect(
       screen.getByRole('heading', { level: 1, name: 'Wednesday' }),
     ).toBeInTheDocument()
   })
+
+  // The strike came off every surface, event detail included: the status pill
+  // states the cancellation in words, and a rule through a proper noun reads as
+  // a typo before it reads as a state.
+  it('does not strike through a cancelled headliner', () => {
+    render(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={[]}
+        tourName={null}
+        status="cancelled"
+        headlinerAs="h1"
+        surface="detail"
+      />,
+    )
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(heading).not.toHaveStyle({ textDecoration: 'line-through' })
+    expect(heading.style.textDecoration).toBe('')
+  })
 })
 
 // #1115 PR-G — the block can link the whole bill to artist pages, opt-in.
 describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
-  it('renders no anchors on the card surface even when slugs are supplied', () => {
-    const { container } = render(
-      <EventTitleBlock
-        headliner="Wednesday"
-        supportingArtists={['Hotline TNT']}
-        tourName={null}
-        artistSlug="wednesday"
-        supportingArtistSlugs={['hotline-tnt']}
-        surface="card"
-      />,
-    )
-    expect(container.querySelectorAll('a')).toHaveLength(0)
-  })
-
   it('renders no anchors on the hero surface even when slugs are supplied', () => {
     const { container } = render(
       <EventTitleBlock
@@ -115,6 +126,20 @@ describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
         artistSlug="wednesday"
         supportingArtistSlugs={['hotline-tnt']}
         surface="hero"
+      />,
+    )
+    expect(container.querySelectorAll('a')).toHaveLength(0)
+  })
+
+  it('renders no anchors on the detail surface until linkArtists is set', () => {
+    const { container } = render(
+      <EventTitleBlock
+        headliner="Wednesday"
+        supportingArtists={['Hotline TNT']}
+        tourName={null}
+        artistSlug="wednesday"
+        supportingArtistSlugs={['hotline-tnt']}
+        surface="detail"
       />,
     )
     expect(container.querySelectorAll('a')).toHaveLength(0)
