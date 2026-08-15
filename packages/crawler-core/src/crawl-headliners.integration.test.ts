@@ -465,6 +465,39 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     expect(row.supportingArtists).toEqual(['Kiltro', 'Neighbor Andy'])
   })
 
+  it('writes a bill change two joined strings would compare equal', async () => {
+    // The bill is not part of sourceHash, so the change-detection escape hatch
+    // is the only thing that reaches the upsert here. Comparing the arrays by
+    // joining them on a delimiter would call these two bills identical:
+    // canonicalizeArtist preserves punctuation, so one name containing the
+    // delimiter collides with two names separated by it.
+    const venue = await seedTestVenue()
+    const date = futureDate(42)
+    mockExtraction([
+      makeEvent('Winter Showcase', date, {
+        observedPerformers: ['Kae Tempest|Loyle Carner'],
+      }),
+    ])
+    await crawlVenue(venue.id, mockBrowser)
+    expect((await loadEvent('Winter Showcase')).canonicalHeadliners).toEqual([
+      'kae tempest|loyle carner',
+    ])
+
+    mockExtraction(
+      [
+        makeEvent('Winter Showcase', date, {
+          observedPerformers: ['Kae Tempest', 'Loyle Carner'],
+        }),
+      ],
+      '<html><body><p>Bill split into two acts</p></body></html>',
+    )
+    await crawlVenue(venue.id, mockBrowser)
+
+    const row = await loadEvent('Winter Showcase')
+    expect(row.headliners).toEqual(['Kae Tempest', 'Loyle Carner'])
+    expect(row.canonicalHeadliners).toEqual(['kae tempest', 'loyle carner'])
+  })
+
   it('drops the stored verdict once the source starts naming a performer', async () => {
     // A venue that adds JSON-LD performer markup, or an extractor that starts
     // populating the field, gives the ladder a step-1 answer where it

@@ -1062,12 +1062,20 @@ export async function crawlVenue(
             // NULL is the no-verdict case and is deliberately not a change:
             // it must never trigger a write that preserves the stored value
             // anyway.
+            // Compared element-wise rather than by joining on a delimiter:
+            // canonicalizeArtist strips diacritics and collapses whitespace but
+            // preserves punctuation, so a name containing the delimiter would
+            // make two different bills compare equal and suppress the write.
             const billChanged = (
               derived: string[] | null,
               stored: unknown,
-            ): boolean =>
-              derived !== null &&
-              (!Array.isArray(stored) || stored.join('|') !== derived.join('|'))
+            ): boolean => {
+              if (derived === null) return false
+              if (!Array.isArray(stored) || stored.length !== derived.length) {
+                return true
+              }
+              return derived.some((name, idx) => stored[idx] !== name)
+            }
             if (
               billChanged(evt.canonicalHeadliners, existing.canonicalHeadliners)
             ) {
