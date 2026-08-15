@@ -20,14 +20,19 @@
  * hidden. Symmetry with the backfill was the original safety property — this
  * can only delete a row the backfill would decline to create.
  *
- * Symmetry turned out not to be enough, because the backfill has a blind spot
- * of its own. It reads `canonical_artist` and `canonical_supporting`, and a
- * co-headliner billed only in the title ("Knocked Loose & Denzel Curry") lands
+ * Symmetry turned out not to be enough, because the backfill had a blind spot
+ * of its own. It read `canonical_artist` and `canonical_supporting`, and a
+ * co-headliner billed only in the title ("Knocked Loose & Denzel Curry") landed
  * in neither. A dry run against production found 50 such rows among 272
  * candidates — Denzel Curry, Ministry, Sleater-Kinney and The Black Dahlia
  * Murder all had upcoming Denver shows and were all set to be deleted. So the
- * keep-set is widened by `BILLED_IN_LIVE_TITLE` below, and stays widened until
- * canonicalisation splits co-headliners properly.
+ * keep-set is widened by `BILLED_IN_LIVE_TITLE` below.
+ *
+ * The derivation ladder now splits co-headliners into `canonical_headliners`,
+ * which closes that blind spot — but only for rows it has actually re-derived.
+ * An event crawled before it existed still carries a NULL headliner set and
+ * still needs the title widening, so the widening stays until the re-derivation
+ * pass has run everywhere and no NULL headliner sets remain.
  *
  * A delete rather than the `hidden` flag because deletion is now durable: the
  * write-through no longer projects a non-concert, so a reaped row does not
@@ -62,6 +67,14 @@ const SAMPLE_SIZE = 25
 /**
  * `true` when no unhidden event bills this artist, as headliner or support.
  *
+ * The headliner half mirrors `backfillArtists` clause for clause, because
+ * symmetry with the backfill is the safety property: this can only delete a row
+ * the backfill would decline to create. So it reads `canonical_headliners` and
+ * falls back to `canonical_artist` only where that column IS NULL. Reading
+ * `canonical_artist` unconditionally would keep every junk row the derivation
+ * ladder just retired, and reading only `canonical_headliners` would reap the
+ * co-headliners the backfill now projects.
+ *
  * Written as NOT EXISTS rather than NOT IN deliberately: a NULL anywhere in a
  * NOT IN subquery makes the whole predicate NULL, which would silently delete
  * nothing and report a clean run.
@@ -72,7 +85,14 @@ const UNREFERENCED = sql`
     FROM events
     WHERE events.hidden_from_consumer = false
       AND (
-        events.canonical_artist = artists.canonical_name
+        (
+          events.canonical_headliners IS NOT NULL
+          AND artists.canonical_name = ANY(events.canonical_headliners)
+        )
+        OR (
+          events.canonical_headliners IS NULL
+          AND events.canonical_artist = artists.canonical_name
+        )
         OR artists.canonical_name = ANY(
           COALESCE(events.canonical_supporting, ARRAY[]::text[])
         )

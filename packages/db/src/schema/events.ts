@@ -52,11 +52,16 @@ export const events = pgTable(
     }),
     title: text('title').notNull(),
     artist: text('artist').notNull(),
-    // Every act headlining the bill, in billing order, INCLUDING the primary
-    // one already stored in `artist` (#1203). Invariant: headliners[0] ===
-    // artist. Written only from the LLM extractor's own `headliners` output,
-    // falling back to [artist] when it emits none — nothing in this codebase
-    // ever splits an artist string on punctuation to derive it, because band
+    // Every act headlining the bill (#1203), as decided by the derivation
+    // ladder from what the extractor OBSERVED. An empty array is a real answer
+    // — the ladder read the listing and found nobody billed — while NULL means
+    // the ladder has never seen the row. Consumers must treat the two
+    // differently; see `backfill-artists.ts`.
+    //
+    // On an existing row the upsert rebuilds this as
+    // array_prepend(artist, excluded[2:]), so headliners[0] tracks the STORED
+    // `artist`, which never updates on conflict. Nothing in this codebase ever
+    // splits an artist string on punctuation to derive an act, because band
     // names legitimately contain '&', 'and' and '+' ("Iron & Wine",
     // "Coheed and Cambria", "for KING + COUNTRY").
     headliners: text('headliners').array(),

@@ -1,10 +1,15 @@
 /**
  * Backfills the `artists` projection table (#1115) from `events`.
  *
- * One row per distinct `events.canonical_artist` AND per distinct element of
+ * One row per distinct element of `events.canonical_headliners` AND of
  * `events.canonical_supporting` — an artist that has only ever opened for
- * someone else still gets a page. Display `name` is the most-frequently seen
- * raw spelling for that canonical name.
+ * someone else still gets a page, and a co-headliner gets their own rather than
+ * being folded into the primary act (#1203). Display `name` is the
+ * most-frequently seen raw spelling available for that canonical name.
+ *
+ * The headliner set is the derivation ladder's answer, so an event it resolved
+ * to NO artist projects nothing at all. `canonical_artist` seeds the projection
+ * only for rows the ladder has never seen; see the query for why.
  *
  * Idempotent by construction: slugs are resolved against everything already
  * stored plus everything derived in this pass, and the insert is an untargeted
@@ -47,6 +52,16 @@ interface CanonicalRow extends Record<string, unknown> {
 export async function backfillArtists(
   database: Database,
 ): Promise<BackfillArtistsResult> {
+  // The headliner branch reads `canonical_headliners` — the derivation ladder's
+  // answer — and falls back to `canonical_artist` ONLY when that column is
+  // NULL. The NULL-vs-empty distinction is the whole correctness of this query:
+  // NULL means the derivation stage has never seen the row (a pre-migration
+  // event), while an EMPTY array is a verdict, the ladder having read the
+  // listing and concluded nobody was billed. Falling back on empty would
+  // reinstate exactly the bug this replaced — `canonical_artist` is the display
+  // string and the dedup key, and projecting it put 222 event titles into the
+  // artists table.
+  //
   // One pass over `events`: headliners UNION ALL the unnested supporting
   // arrays, grouped to pick the most-frequent raw spelling per canonical
   // name. Supporting artists have no per-name raw spelling stored alongside
@@ -65,9 +80,26 @@ export async function backfillArtists(
   // would render an empty page anyway.
   const rows = await database.execute<CanonicalRow>(sql`
     WITH names AS (
+      SELECT
+        headliner.value AS canonical_name,
+        -- canonical_headliners is deduped and sorted, so it is NOT
+        -- positionally aligned with the raw headliners array and the two
+        -- cannot be paired by ordinality. The one raw spelling we can attach
+        -- safely is the primary act's, which the artist column already holds
+        -- under a known canonical key. Every other co-headliner takes its
+        -- canonical string, exactly as a support-only artist does.
+        CASE WHEN headliner.value = canonical_artist THEN artist
+             ELSE headliner.value END AS display_name
+      FROM events
+      CROSS JOIN LATERAL unnest(canonical_headliners) AS headliner(value)
+      WHERE canonical_headliners IS NOT NULL
+        AND headliner.value IS NOT NULL AND headliner.value <> ''
+        AND hidden_from_consumer = false
+      UNION ALL
       SELECT canonical_artist AS canonical_name, artist AS display_name
       FROM events
-      WHERE canonical_artist IS NOT NULL AND canonical_artist <> ''
+      WHERE canonical_headliners IS NULL
+        AND canonical_artist IS NOT NULL AND canonical_artist <> ''
         AND hidden_from_consumer = false
       UNION ALL
       SELECT supporting.value AS canonical_name, supporting.value AS display_name

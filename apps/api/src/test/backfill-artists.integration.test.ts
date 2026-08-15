@@ -177,6 +177,79 @@ describe('backfill-artists integration', () => {
     expect(rows.map((row) => row.canonicalName)).toEqual(['real artist'])
   })
 
+  // The derived headliner set is the projection's source of truth. Before it
+  // existed the backfill read `canonical_artist`, which is the DISPLAY string
+  // and the dedup key — that is how 222 event titles became artist pages.
+  describe('canonical_headliners is what seeds the projection', () => {
+    it('splits a co-headline bill into one row per act', async () => {
+      const venue = await seedVenue({ slug: `co-headline-${Date.now()}` })
+      await seedEvent(venue.id, {
+        artist: 'Thee Sacred Souls',
+        canonicalArtist: 'thee sacred souls',
+        headliners: ['Thee Sacred Souls', 'LA LOM', 'The Womack Sisters'],
+        canonicalHeadliners: [
+          'thee sacred souls',
+          'la lom',
+          'the womack sisters',
+        ],
+      })
+
+      await backfillArtists(testDb)
+
+      const rows = await listArtists()
+      expect(rows.map((row) => row.canonicalName)).toEqual([
+        'la lom',
+        'the womack sisters',
+        'thee sacred souls',
+      ])
+      // The primary act keeps its raw spelling because `artist` holds it under
+      // a known canonical key. The other two cannot be paired back to a raw
+      // spelling, so they take the canonical string until an admin fixes it.
+      const primary = rows.find(
+        (row) => row.canonicalName === 'thee sacred souls',
+      )
+      expect(primary?.name).toBe('Thee Sacred Souls')
+      expect(rows.find((row) => row.canonicalName === 'la lom')?.name).toBe(
+        'la lom',
+      )
+    })
+
+    it('projects NOTHING from an event the ladder resolved to no artist', async () => {
+      // An EMPTY headliner set is a real answer, not missing data: the ladder
+      // read the listing and concluded nobody was billed. `canonical_artist`
+      // still holds "HUMP! Film Festival" for dedup, and must not leak here.
+      const venue = await seedVenue({ slug: `no-artist-${Date.now()}` })
+      await seedEvent(venue.id, {
+        artist: 'HUMP! Film Festival',
+        canonicalArtist: 'hump! film festival',
+        headliners: [],
+        canonicalHeadliners: [],
+      })
+
+      await backfillArtists(testDb)
+
+      expect(await listArtists()).toEqual([])
+    })
+
+    it('falls back to canonical_artist only on a row never re-derived', async () => {
+      // NULL means "the derivation stage has not seen this row yet" — a
+      // pre-migration event. That is the ONLY case that falls back; an empty
+      // array above is a verdict and gets no fallback. This distinction is the
+      // whole correctness of the query.
+      const venue = await seedVenue({ slug: `legacy-${Date.now()}` })
+      await seedEvent(venue.id, {
+        artist: 'Legacy Act',
+        canonicalArtist: 'legacy act',
+        canonicalHeadliners: null,
+      })
+
+      await backfillArtists(testDb)
+
+      const rows = await listArtists()
+      expect(rows.map((row) => row.canonicalName)).toEqual(['legacy act'])
+    })
+  })
+
   it('is idempotent — a second run inserts nothing and changes no slug', async () => {
     const venue = await seedVenue({ slug: `idempotent-${Date.now()}` })
     await seedEvent(venue.id, {

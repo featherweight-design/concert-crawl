@@ -103,6 +103,61 @@ describe('prune-artists integration', () => {
     ])
   })
 
+  it('keeps a co-headliner the derived headliner set bills', async () => {
+    // The backfill projects every element of canonical_headliners, so the
+    // reaper has to read the same column. Reading only canonical_artist would
+    // delete the second act on every run and the backfill would put it straight
+    // back on the next — the exact churn symmetry exists to prevent.
+    const venue = await seedVenue({ slug: `prune-co-headline-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Desert Dwellers',
+      canonicalArtist: 'desert dwellers',
+      // A title that cannot rescue the co-headliner, so the assertion is about
+      // the headliner set and not the BILLED_IN_LIVE_TITLE widening.
+      title: 'Desert Dwellers Live',
+      canonicalTitle: 'desert dwellers live',
+      headliners: ['Desert Dwellers', 'Great Dane'],
+      canonicalHeadliners: ['desert dwellers', 'great dane'],
+      date: '2026-06-04',
+    })
+    await backfillArtists(testDb)
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(0)
+    const rows = await listArtists()
+    expect(rows.map((row) => row.canonicalName)).toEqual([
+      'desert dwellers',
+      'great dane',
+    ])
+  })
+
+  it('reaps a title-derived artist once the ladder rules the event artistless', async () => {
+    // canonical_artist still holds the title for dedup, so a reaper that read
+    // it unconditionally would protect this row forever. An EMPTY headliner
+    // set is the ladder saying nobody is billed, and the projection must go.
+    const venue = await seedVenue({ slug: `prune-artistless-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'HUMP! Film Festival',
+      canonicalArtist: 'hump! film festival',
+      title: 'HUMP! Film Festival',
+      canonicalTitle: 'hump film festival',
+      headliners: [],
+      canonicalHeadliners: [],
+      date: '2020-01-02',
+    })
+    await testDb.insert(artists).values({
+      name: 'HUMP! Film Festival',
+      canonicalName: 'hump! film festival',
+      slug: 'hump-film-festival',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(1)
+    expect(await listArtists()).toEqual([])
+  })
+
   it('keeps an artist whose only show has already happened', async () => {
     // The backfill has no date bound, so neither can this: a past-only artist
     // still has a page worth resolving.
