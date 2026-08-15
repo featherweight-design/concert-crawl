@@ -90,8 +90,14 @@ interface ExtractedEvent {
   rawTitle: string
   artist: string
   supportingArtists?: string[]
-  /** Who the extractor SAW. The derivation ladder reads this, not `artist`. */
+  /** Who the extractor SAW headlining. The ladder reads this, not `artist`. */
   observedPerformers?: string[]
+  /**
+   * Who the extractor SAW opening. Kept separate from `observedPerformers`
+   * because the ladder reads an opener listed there as a co-headliner, which
+   * would let a supporting-projection assertion pass on a headliner row.
+   */
+  observedSupportingArtists?: string[]
   date: string
   doorsTime: string | undefined
   showTime: string | undefined
@@ -114,7 +120,8 @@ function makeEvent(
     rawTitle: title,
     artist,
     supportingArtists,
-    observedPerformers: [artist, ...supportingArtists],
+    observedPerformers: [artist],
+    observedSupportingArtists: supportingArtists,
     date,
     doorsTime: undefined,
     showTime: undefined,
