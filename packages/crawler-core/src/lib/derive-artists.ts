@@ -2,8 +2,13 @@ import { reportFailure } from '@concert-crawl/logger'
 import type { NormalizedEvent } from '../types.js'
 
 export interface DerivedArtists {
-  headliners: string[]
-  supportingArtists: string[]
+  /**
+   * NULL is the ladder reaching NO verdict — only the adjudicator-outage path
+   * produces it, and the upsert reads it as "keep what is stored". An empty
+   * array is the opposite: a verdict that nobody is billed.
+   */
+  headliners: string[] | null
+  supportingArtists: string[] | null
   isConcert: boolean
   /** True when an LLM call was made — the caller records cost against this. */
   adjudicated: boolean
@@ -120,9 +125,12 @@ export async function deriveArtists(
       adjudicated: true,
     }
   } catch (err) {
-    // Step 3 — an adjudicator outage must not become a wrong answer. Leave the
-    // headliners empty (the backfill simply does not project this event) and
-    // leave `isConcert` true so a transient Haiku failure never hides a real
+    // Step 3 — an adjudicator outage must not become a wrong answer, and must
+    // not become a WRITE either. Returning an empty set here would read as a
+    // verdict of "nobody is billed" and overwrite a correct stored bill,
+    // de-projecting its artists until a later crawl happened to succeed. NULL
+    // is the no-verdict signal the upsert preserves the stored columns on.
+    // `isConcert` stays true so a transient Haiku failure never hides a real
     // show from the calendar. The next crawl retries.
     reportFailure({
       event: 'derive-artists.adjudicator_failed',
@@ -131,8 +139,8 @@ export async function deriveArtists(
       error: err instanceof Error ? err.message : String(err),
     })
     return {
-      headliners: [],
-      supportingArtists: [],
+      headliners: null,
+      supportingArtists: null,
       isConcert: true,
       adjudicated: false,
     }

@@ -57,9 +57,14 @@ export interface NormalizedEvent {
    *
    * Multiple headliners are never derived by splitting a string on
    * punctuation — band names legitimately contain '&', 'and' and '+'.
+   *
+   * NULL is a third state, and not the same as empty: it means the ladder
+   * reached no verdict at all (an adjudicator outage). The upsert preserves
+   * whatever is already stored rather than persisting the blank, so a
+   * transient Haiku failure cannot erase a correct bill.
    */
-  headliners?: string[]
-  supportingArtists?: string[]
+  headliners?: string[] | null
+  supportingArtists?: string[] | null
   tourName?: string | null
   date: string
   doorsTime?: string

@@ -361,6 +361,106 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     expect(row.canonicalHeadliners).toEqual([])
   })
 
+  it('preserves the stored bill when the adjudicator is down on re-crawl', async () => {
+    const venue = await seedTestVenue()
+    const date = futureDate(28)
+    mockExtraction([
+      makeEvent('Khruangbin', date, {
+        observedPerformers: ['Khruangbin'],
+        observedSupportingArtists: ['Nubya Garcia'],
+      }),
+    ])
+    await crawlVenue(venue.id, mockBrowser)
+
+    // An outage leaves the ladder with no verdict. Writing its blank would
+    // erase a correct bill and de-project both artists until some later crawl
+    // happened to succeed, so the upsert keeps all four columns as stored.
+    mockAdjudicateEvent.mockRejectedValue(new Error('haiku 529'))
+    mockExtraction(
+      [
+        makeEvent('Khruangbin', date, {
+          title: 'Khruangbin (moved to the main room)',
+          rawTitle: 'Khruangbin (moved to the main room)',
+          observedPerformers: [],
+        }),
+      ],
+      '<html><body><p>Room change</p></body></html>',
+    )
+    await crawlVenue(venue.id, mockBrowser)
+
+    const row = await loadEvent('Khruangbin')
+    expect(row.headliners).toEqual(['Khruangbin'])
+    expect(row.canonicalHeadliners).toEqual(['khruangbin'])
+    expect(row.supportingArtists).toEqual(['Nubya Garcia'])
+  })
+
+  it('reuses the stored verdict instead of re-adjudicating an unchanged listing', async () => {
+    const venue = await seedTestVenue()
+    const date = futureDate(29)
+    mockAdjudicateEvent.mockResolvedValue({
+      isConcert: true,
+      headliners: ['Daedelus'],
+      supportingArtists: [],
+    })
+    mockExtraction([
+      makeEvent('@adsfradio presents', date, { observedPerformers: [] }),
+    ])
+    await crawlVenue(venue.id, mockBrowser)
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+
+    // The page HTML moves so the crawl is not skipped wholesale and the
+    // derivation ladder actually runs a second time. The ladder runs before
+    // the upsert, so an unchanged source hash does NOT stop it either —
+    // without the reuse gate this listing would buy the identical verdict
+    // from Haiku every ten minutes, forever. The adjudicator reads only title
+    // and description, and both are unchanged here.
+    mockExtraction(
+      [makeEvent('@adsfradio presents', date, { observedPerformers: [] })],
+      '<html><body><p>Unrelated page edit</p></body></html>',
+    )
+    await crawlVenue(venue.id, mockBrowser)
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+
+    const row = await loadEvent('@adsfradio presents')
+    expect(row.headliners).toEqual(['Daedelus'])
+    expect(row.canonicalHeadliners).toEqual(['daedelus'])
+  })
+
+  it('re-adjudicates when the title moves, because the adjudicator reads it', async () => {
+    const venue = await seedTestVenue()
+    const date = futureDate(30)
+    mockAdjudicateEvent.mockResolvedValue({
+      isConcert: true,
+      headliners: ['Daedelus'],
+      supportingArtists: [],
+    })
+    mockExtraction([
+      makeEvent('@adsfradio presents', date, { observedPerformers: [] }),
+    ])
+    await crawlVenue(venue.id, mockBrowser)
+
+    mockAdjudicateEvent.mockResolvedValue({
+      isConcert: true,
+      headliners: ['Daedelus', 'Busdriver'],
+      supportingArtists: [],
+    })
+    // The page HTML has to move as well as the title — an unchanged page is
+    // skipped before extraction, so the derivation loop never runs at all.
+    mockExtraction(
+      [
+        makeEvent('@adsfradio presents', date, {
+          title: '@adsfradio presents: Daedelus + Busdriver',
+          rawTitle: '@adsfradio presents: Daedelus + Busdriver',
+          observedPerformers: [],
+        }),
+      ],
+      '<html><body><p>Busdriver added to the bill</p></body></html>',
+    )
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockAdjudicateEvent).toHaveBeenCalledTimes(2)
+  })
+
   it('re-pins headliners[0] to the stored artist when the extracted string drifts', async () => {
     const venue = await seedTestVenue()
     const date = futureDate(24)

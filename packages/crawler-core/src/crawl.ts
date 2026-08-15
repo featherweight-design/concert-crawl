@@ -752,9 +752,86 @@ export async function crawlVenue(
     // costs an adjudication call. `evt.artist` is left alone throughout — it
     // is the event's display string, and `canonical_artist` (the live dedup
     // key) is computed from it downstream.
+    //
+    // Step 2 of the ladder costs an LLM call, and a listing that names nobody
+    // names nobody every night — re-adjudicating it on each crawl would buy
+    // the identical verdict forever. So a stored verdict is reused whenever
+    // the adjudicator's ACTUAL INPUTS are unchanged: it reads title and
+    // description and nothing else, so equal inputs cannot produce a
+    // different answer. Gated on canonical_headliners being non-null, which
+    // is precisely "the ladder has ruled on this row before".
+    //
+    // Load existing UPCOMING events for this venue. Keyed by
+    // (canonical_artist, date, show_time) — the dedup key (#1053) — so a
+    // re-extraction with a different billing title hits the row stored under
+    // the same headliner + date + time. The same map is reused below for
+    // hash comparison and insert/update classification; one query, because
+    // it depends only on venueId.
+    //
+    // status='upcoming' filter mirrors the ON CONFLICT target's predicate
+    // (the partial UNIQUE index in 0057). Without it, an admin-cancelled
+    // row would still appear in existingMap — and a fresh extraction of
+    // the same show would be incorrectly classified as an update (when
+    // it should INSERT a new upcoming row alongside the cancelled one),
+    // and changedVerified would fire spurious alerts for source-data
+    // changes on rows the admin has already cancelled.
+    const existingRows = await db
+      .select({
+        canonicalArtist: events.canonicalArtist,
+        canonicalTitle: events.canonicalTitle,
+        date: events.date,
+        doorsTime: events.doorsTime,
+        showTime: events.showTime,
+        title: events.title,
+        description: events.description,
+        headliners: events.headliners,
+        supportingArtists: events.supportingArtists,
+        canonicalHeadliners: events.canonicalHeadliners,
+        sourceHash: events.sourceHash,
+        verified: events.verified,
+        eventUrl: events.eventUrl,
+      })
+      .from(events)
+      .where(and(eq(events.venueId, venueId), eq(events.status, 'upcoming')))
+
+    const existingMap = new Map(
+      existingRows.map(
+        (row) =>
+          [dedupKey(row.canonicalArtist, row.date, row.showTime), row] as const,
+      ),
+    )
+
     let adjudicationCount = 0
+    let adjudicationReuseCount = 0
     const normalizedEvents: NormalizedEvent[] = []
     for (const evt of survivingEvents) {
+      const prior = existingMap.get(
+        dedupKey(canonicalizeArtist(evt.artist), evt.date, evt.showTime),
+      )
+      // `force` re-runs the ladder from scratch, matching what it does to the
+      // source-hash skip below. An extractor newly reporting isConcert:false
+      // still goes through the ladder, so step 0 can retire a stored verdict.
+      if (
+        !force &&
+        evt.isConcert !== false &&
+        prior !== undefined &&
+        prior.canonicalHeadliners !== null &&
+        prior.title === evt.title &&
+        (prior.description ?? undefined) === evt.description
+      ) {
+        adjudicationReuseCount += 1
+        // `isConcert` is passed through rather than reconstructed from the
+        // stored row. This branch only runs when the extractor did not say
+        // false, and the projection below independently excludes anything in
+        // `hidden_event_keys` — so an admin hide is already honoured without
+        // this loop having to read it back.
+        normalizedEvents.push({
+          ...evt,
+          headliners: prior.headliners,
+          supportingArtists: prior.supportingArtists,
+        })
+        continue
+      }
       const derived = await deriveArtists(evt, adjudicateEvent)
       if (derived.adjudicated) adjudicationCount += 1
       normalizedEvents.push({
@@ -764,12 +841,17 @@ export async function crawlVenue(
         isConcert: derived.isConcert,
       })
     }
-    if (adjudicationCount > 0) {
+    if (adjudicationCount > 0 || adjudicationReuseCount > 0) {
       console.log(
         JSON.stringify({
           event: 'crawler.artists_adjudicated',
           venueSlug: venue.slug,
           adjudicated: adjudicationCount,
+          // A healthy steady state is `reused` climbing while `adjudicated`
+          // stays near zero. `adjudicated` staying high across nightly crawls
+          // means the reuse key is missing — most likely a source whose title
+          // or description churns between crawls.
+          reused: adjudicationReuseCount,
           total: survivingEvents.length,
         }),
       )
@@ -815,16 +897,25 @@ export async function crawlVenue(
           // exactly what put 222 event titles into the projection, so there is
           // deliberately no fallback here. NOTHING splits `artist` on
           // punctuation: "Iron & Wine" is one act.
-          headliners: event.headliners ?? [],
-          canonicalSupporting: canonicalizeSupporting(
-            event.supportingArtists ?? [],
-          ),
+          // NULL is preserved rather than flattened to []: it is the ladder's
+          // no-verdict signal (adjudicator outage), and the ON CONFLICT clause
+          // below keeps the stored bill on it. Flattening here would spend the
+          // outage as a real "nobody is billed" answer.
+          headliners: event.headliners ?? null,
+          canonicalSupporting:
+            event.supportingArtists === null ||
+            event.supportingArtists === undefined
+              ? null
+              : canonicalizeSupporting(event.supportingArtists),
           // Lock-step pair with headliners (#1203), through the same
           // canonicalizer that backs canonical_supporting. That canonicalizer
           // dedupes and sorts, so this is a set-like match surface, not a
           // positional mirror of headliners. Any code path that writes
           // headliners MUST also write canonical_headliners.
-          canonicalHeadliners: canonicalizeSupporting(event.headliners ?? []),
+          canonicalHeadliners:
+            event.headliners === null || event.headliners === undefined
+              ? null
+              : canonicalizeSupporting(event.headliners),
           canonicalTitle: canonicalizeTitle(event.title),
           sourceHash: hashEvent({
             title: event.title,
@@ -855,43 +946,6 @@ export async function crawlVenue(
           seenEventKeys.add(key)
           return true
         })
-
-      // Load existing UPCOMING events for this venue to compare hashes.
-      // Keyed by (canonical_artist, date, show_time) — the new dedup key
-      // (#1053) — so a re-extraction with a different billing title hits the
-      // row stored under the same headliner + date + time.
-      //
-      // status='upcoming' filter mirrors the ON CONFLICT target's predicate
-      // (the partial UNIQUE index in 0057). Without it, an admin-cancelled
-      // row would still appear in existingMap — and a fresh extraction of
-      // the same show would be incorrectly classified as an update (when
-      // it should INSERT a new upcoming row alongside the cancelled one),
-      // and changedVerified would fire spurious alerts for source-data
-      // changes on rows the admin has already cancelled.
-      const existingRows = await db
-        .select({
-          canonicalArtist: events.canonicalArtist,
-          canonicalTitle: events.canonicalTitle,
-          date: events.date,
-          doorsTime: events.doorsTime,
-          showTime: events.showTime,
-          title: events.title,
-          sourceHash: events.sourceHash,
-          verified: events.verified,
-          eventUrl: events.eventUrl,
-        })
-        .from(events)
-        .where(and(eq(events.venueId, venueId), eq(events.status, 'upcoming')))
-
-      const existingMap = new Map(
-        existingRows.map(
-          (row) =>
-            [
-              dedupKey(row.canonicalArtist, row.date, row.showTime),
-              row,
-            ] as const,
-        ),
-      )
 
       // Notify admin when a verified event's source data has changed.
       //
@@ -1002,10 +1056,13 @@ export async function crawlVenue(
             title: event.title,
             artist: event.artist,
             // Lock-step pair with canonicalHeadliners (#1203), both computed
-            // in the enrichment map above. headliners[0] === artist.
+            // in the enrichment map above. All four artist columns carry NULL
+            // through as the ladder's no-verdict signal — flattening any one
+            // of them to [] here would break the lock-step and let the upsert
+            // preserve a bill while wiping its openers.
             headliners: event.headliners,
             canonicalHeadliners: event.canonicalHeadliners,
-            supportingArtists: event.supportingArtists ?? [],
+            supportingArtists: event.supportingArtists ?? null,
             // Lock-step pair with supportingArtists (#763): computed via
             // canonicalizeSupporting in the enrichment map above. Any code
             // path that writes supporting_artists MUST also write
@@ -1121,24 +1178,28 @@ export async function crawlVenue(
               // An EMPTY set passes through untouched. Prepending there would
               // rebuild [artist] out of a ladder verdict of "nobody is billed",
               // reinstating title-as-headliner on every re-crawl and
-              // desynchronizing this column from canonical_headliners, which
-              // takes excluded wholesale just below.
+              // desynchronizing this column from canonical_headliners.
+              //
+              // NULL is the ladder reaching no verdict at all, which only the
+              // adjudicator-outage path emits. The stored bill is kept: a
+              // transient Haiku failure must not erase a correct answer and
+              // de-project its artists until some later crawl happens to
+              // succeed. The four columns below preserve it in lock-step.
               headliners: sql`
                 CASE
-                  WHEN excluded.headliners IS NULL
-                    OR cardinality(excluded.headliners) = 0
-                  THEN excluded.headliners
+                  WHEN excluded.headliners IS NULL THEN ${events.headliners}
+                  WHEN cardinality(excluded.headliners) = 0
+                    THEN excluded.headliners
                   ELSE array_prepend(${events.artist}, excluded.headliners[2:])
                 END
               `,
-              // No such slicing for the canonical array: it is sorted and
-              // deduped, so position 1 is not the artist and a positional
-              // splice would corrupt it. It needs no repair anyway —
-              // excluded.canonical_artist equals the stored one by definition
-              // of the conflict key.
-              canonicalHeadliners: sql`excluded.canonical_headliners`,
-              supportingArtists: sql`excluded.supporting_artists`,
-              canonicalSupporting: sql`excluded.canonical_supporting`,
+              // No slicing for the canonical array: it is sorted and deduped,
+              // so position 1 is not the artist and a positional splice would
+              // corrupt it. It needs no repair anyway — excluded.canonical_artist
+              // equals the stored one by definition of the conflict key.
+              canonicalHeadliners: sql`COALESCE(excluded.canonical_headliners, ${events.canonicalHeadliners})`,
+              supportingArtists: sql`COALESCE(excluded.supporting_artists, ${events.supportingArtists})`,
+              canonicalSupporting: sql`COALESCE(excluded.canonical_supporting, ${events.canonicalSupporting})`,
               // tour_name is admin-editable (#992) and only ever auto-populated
               // by the LLM extractor — schema.org JSON-LD has no such field,
               // so a JSON-LD re-crawl always arrives with NULL. Taking
@@ -1244,13 +1305,17 @@ export async function crawlVenue(
             // Canonicalized element-wise rather than read off
             // `canonicalHeadliners`, which is deduped and sorted and so is not
             // positionally aligned with the raw spellings.
-            ...evt.headliners
+            // NULL projects nothing for the same reason the upsert preserves
+            // the stored row on it: the ladder never ruled, so this crawl has
+            // nothing to say about the bill. The nightly backfill still
+            // projects from whatever remains stored.
+            ...(evt.headliners ?? [])
               .map((name) => ({
                 name,
                 canonicalName: canonicalizeArtist(name),
               }))
               .filter((row) => row.canonicalName !== ''),
-            ...evt.canonicalSupporting.map((canonicalName) => ({
+            ...(evt.canonicalSupporting ?? []).map((canonicalName) => ({
               // No raw spelling is recoverable per supporting artist:
               // canonical_supporting is deduped and sorted, so it is not
               // positionally aligned with supporting_artists. The canonical

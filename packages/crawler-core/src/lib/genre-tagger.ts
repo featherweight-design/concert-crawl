@@ -154,24 +154,36 @@ export async function tagEventsWithGenres(
   crawlRunId?: string,
 ): Promise<void> {
   const rows = await db
-    .select({ id: events.id, title: events.title, artist: events.artist })
+    .select({
+      id: events.id,
+      title: events.title,
+      artist: events.artist,
+      canonicalHeadliners: events.canonicalHeadliners,
+    })
     .from(events)
     .where(and(eq(events.venueId, venueId), isNull(events.genre)))
 
   // An event with no artist string has nothing to infer a genre from, so it is
   // skipped rather than sent to the model with an empty artist field.
+  //
+  // An EMPTY canonical_headliners is the derivation ladder reporting that
+  // nobody is billed, which is how a bingo night or a film screening looks.
+  // `artist` is that event's display string and always populated, so without
+  // this the model is handed a title in an "artist" field and duly invents a
+  // genre for it. NULL is left alone: it means the ladder has never seen the
+  // row, not that it ruled against one.
   const untagged: GenreTagInput[] = rows
     .filter(
-      (row: { artist: string | null }) =>
-        row.artist !== null && row.artist.trim() !== '',
+      (row) =>
+        row.artist !== null &&
+        row.artist.trim() !== '' &&
+        row.canonicalHeadliners?.length !== 0,
     )
-    .map(
-      (row: { id: string; title: string | null; artist: string | null }) => ({
-        id: row.id,
-        title: row.title ?? '',
-        artist: row.artist ?? '',
-      }),
-    )
+    .map((row) => ({
+      id: row.id,
+      title: row.title ?? '',
+      artist: row.artist ?? '',
+    }))
 
   if (untagged.length === 0) {
     logger.info({ venueId }, 'No untagged events — skipping genre tagging')

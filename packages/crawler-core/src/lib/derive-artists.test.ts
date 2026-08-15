@@ -169,9 +169,11 @@ describe('ladder step 3 — no performer is a real answer', () => {
       adjudicate,
     )
 
+    // NULL, not []. An empty set is a verdict that nobody is billed, and the
+    // upsert persists it — which would let one Haiku 529 erase a correct bill.
     expect(result).toEqual({
-      headliners: [],
-      supportingArtists: [],
+      headliners: null,
+      supportingArtists: null,
       isConcert: true,
       adjudicated: false,
     })
