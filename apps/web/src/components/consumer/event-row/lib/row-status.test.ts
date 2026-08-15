@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { EventStatus } from '@concert-crawl/types'
-import { isStruck, resolveRowStatus, type RowPriceState } from './row-status'
+import {
+  isStruck,
+  resolveRowStatus,
+  type RowPriceState,
+  type RowStatus,
+} from './row-status'
 
 const LIFECYCLES: EventStatus[] = ['upcoming', 'cancelled', 'postponed']
 const PRICE_STATES: RowPriceState[] = ['live', 'soldout', 'presale']
@@ -19,20 +24,23 @@ describe('resolveRowStatus', () => {
     expect(resolveRowStatus('cancelled', 'soldout')).toBe('cancelled')
   })
 
-  it('ranks cancelled above postponed when a row somehow carries both', () => {
-    expect(resolveRowStatus('cancelled', 'live')).toBe('cancelled')
-  })
-
   it('falls through to the price state on a live show', () => {
     expect(resolveRowStatus('upcoming', 'soldout')).toBe('soldout')
     expect(resolveRowStatus('upcoming', 'presale')).toBe('presale')
     expect(resolveRowStatus('upcoming', 'live')).toBe('price')
   })
 
-  it('resolves every pair to exactly one outcome', () => {
+  it('resolves every pair to one of the five known outcomes', () => {
+    const known: RowStatus[] = [
+      'cancelled',
+      'postponed',
+      'soldout',
+      'presale',
+      'price',
+    ]
     for (const lifecycle of LIFECYCLES) {
       for (const state of PRICE_STATES) {
-        expect(typeof resolveRowStatus(lifecycle, state)).toBe('string')
+        expect(known).toContain(resolveRowStatus(lifecycle, state))
       }
     }
   })
