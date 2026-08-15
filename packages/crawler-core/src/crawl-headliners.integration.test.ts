@@ -115,7 +115,10 @@ interface ExtractedEvent {
    * stage overwrites it, so a fixture that set it would assert nothing.
    */
   observedPerformers: string[]
-  observedSupportingArtists?: string[]
+  // Required, not optional: every extractor and fetcher populates it, empty
+  // when it saw no openers. Making a fixture able to omit it would let a shape
+  // production never produces slip into the suite.
+  observedSupportingArtists: string[]
   doorsTime?: string
   date: string
   sourceUrl: string
@@ -133,6 +136,7 @@ function makeEvent(
     rawTitle: title,
     artist,
     observedPerformers: [artist],
+    observedSupportingArtists: [],
     date,
     sourceUrl: SOURCE_URL,
     confidence: 0.9,

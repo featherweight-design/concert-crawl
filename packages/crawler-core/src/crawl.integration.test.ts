@@ -80,7 +80,10 @@ interface ExtractedEvent {
   artist: string
   /** Who the extractor SAW. The derivation ladder reads these, not `artist`. */
   observedPerformers: string[]
-  observedSupportingArtists?: string[]
+  // Required, not optional: every extractor and fetcher populates it, empty
+  // when it saw no openers. Making a fixture able to omit it would let a shape
+  // production never produces slip into the suite.
+  observedSupportingArtists: string[]
   date: string
   doorsTime: string | undefined
   showTime: string | undefined
@@ -103,6 +106,7 @@ function makeEvent(
     // `title` is `${artist} Live`, so the observation does not echo it and the
     // ladder settles on step 1 without an adjudication call.
     observedPerformers: [artist],
+    observedSupportingArtists: [],
     date,
     doorsTime: undefined,
     showTime: undefined,

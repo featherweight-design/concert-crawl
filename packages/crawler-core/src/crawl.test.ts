@@ -263,6 +263,10 @@ const METALLICA_EVENT = {
   // this, not `artist` — a fixture without it escalates to the adjudicator,
   // which these tests deliberately leave unstubbed.
   observedPerformers: ['Metallica'],
+  // Every extractor and fetcher populates this, empty when it saw no openers,
+  // so a fixture that omitted it would exercise a shape production never
+  // produces.
+  observedSupportingArtists: [],
   date: '2026-08-15',
   doorsTime: undefined,
   showTime: undefined,
