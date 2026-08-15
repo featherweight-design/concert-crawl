@@ -4,6 +4,7 @@ import { formatDollars } from '@/components/consumer/definitions/lib'
 import { RowMetaChip } from './RowMetaChip'
 import { SURFACES, type RowSurface } from './definitions/surfaces'
 import { deltaClass } from './lib/price-delta'
+import { resolveRowStatus } from './lib/row-status'
 import type { EventRowShow } from './lib/row-model'
 
 interface PriceStackProps {
@@ -41,8 +42,7 @@ const DeltaArrow = ({ up }: { up: boolean }) => (
 export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
   const minWidth = narrow ? 56 : 78
   const amountSize = narrow ? 15 : 16.5
-  const isSuppressed =
-    show.lifecycle === 'cancelled' || show.lifecycle === 'postponed'
+  const status = resolveRowStatus(show.lifecycle, show.status)
 
   const slot = (children: React.ReactNode) => (
     <div
@@ -53,18 +53,44 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
     </div>
   )
 
+  // Cancelled and postponed take the price slot rather than a meta chip, and
+  // that is why they can never be dropped: the slot sits outside the chip
+  // budget and outside MetaRow's fit pass. They are the one thing that names
+  // which problem the dim and the strike are gesturing at.
+  if (status === 'cancelled') {
+    return slot(
+      <span data-testid="row-cancelled">
+        <RowMetaChip
+          label={copy.status.cancelled}
+          srLabel={copy.a11y.cancelled}
+          tone="warn"
+        />
+      </span>,
+    )
+  }
+
+  if (status === 'postponed') {
+    return slot(
+      <span data-testid="row-postponed">
+        <RowMetaChip
+          label={copy.status.postponed}
+          srLabel={copy.a11y.postponed}
+          tone="strong"
+        />
+      </span>,
+    )
+  }
+
   // Rule 2's one exemption: sold out takes the price slot outright rather than
   // winning a chip, so it spends no chip budget. The artwork dims, not the row
   // — a row-level opacity drags --fg-muted toward the AA floor.
-  if (show.status === 'soldout') {
+  if (status === 'soldout') {
     return slot(
       <span data-testid="row-sold-out">
         <RowMetaChip label={copy.price.soldOut} tone="warn" />
       </span>,
     )
   }
-
-  if (isSuppressed) return slot(null)
 
   if (show.price === null) {
     return slot(

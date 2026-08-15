@@ -12,6 +12,7 @@ import { PriceStack } from './PriceStack'
 import { EVENT_ROW_COPY as copy } from './definitions/copy'
 import { SURFACES, type RowSurface } from './definitions/surfaces'
 import { rowChips, chipBudget } from './lib/row-chips'
+import { isStruck, resolveRowStatus } from './lib/row-status'
 import type { EventRowShow } from './lib/row-model'
 
 const NARROW_AT = 360
@@ -62,8 +63,8 @@ export const EventRow = ({
   const artSize = narrow ? 44 : 56
   const hasSupportLine = show.supports.length > 0
   const chips = rowChips(show, surface)
-  const isSuppressed =
-    show.lifecycle === 'cancelled' || show.lifecycle === 'postponed'
+  const status = resolveRowStatus(show.lifecycle, show.status)
+  const struck = isStruck(status)
 
   return (
     <div
@@ -98,7 +99,7 @@ export const EventRow = ({
             style={{
               // Sold out dims the artwork, never the row: a row-level opacity
               // pushes --fg-muted below the AA contrast floor.
-              opacity: show.status === 'soldout' || isSuppressed ? 0.55 : 1,
+              opacity: struck || show.status === 'soldout' ? 0.55 : 1,
             }}
           >
             <EventImage
@@ -165,6 +166,7 @@ export const EventRow = ({
             venueName={show.venueName}
             venueSlug={show.venueSlug}
             narrow={narrow}
+            struck={struck}
           />
           <MetaRow
             chips={chips}

@@ -32,7 +32,21 @@ interface WhenWhereProps {
   venueName: string
   venueSlug: string
   narrow: boolean
+  /**
+   * The one strike a cancelled or postponed row carries. It lands on the date
+   * and the time only, because they are what stopped being true. The venue
+   * still exists, and striking a linked place name reads as a broken link.
+   */
+  struck?: boolean
 }
+
+// Decoration rather than a colour change: the row's text contrast is never
+// dimmed, so the strike has to be legible without borrowing --fg-subtle.
+const STRIKE = {
+  textDecoration: 'line-through',
+  textDecorationThickness: 1,
+  opacity: 0.8,
+} as const
 
 /**
  * Line 3. The units it renders come from the surface (Rule 1); the level it
@@ -50,6 +64,7 @@ export const WhenWhere = ({
   venueName,
   venueSlug,
   narrow,
+  struck = false,
 }: WhenWhereProps) => {
   const TYPE = typeAt(narrow)
   const boxRef = useRef<HTMLParagraphElement>(null)
@@ -111,24 +126,35 @@ export const WhenWhere = ({
   // Each part carries its own stable key: the list shrinks and grows as the
   // level changes, so an index key would let React reuse the venue's node for
   // the time.
-  const parts: { key: string; node: React.ReactNode }[] = []
+  const parts: { key: string; node: React.ReactNode; struck: boolean }[] = []
   if (showsDateUnit) {
     // Date and time never shrink; the venue is the only unit allowed to
     // ellipsis, because losing the date is the bug this system exists to fix.
     parts.push({
       key: 'date',
-      node: <span style={{ flexShrink: 0 }}>{dateText}</span>,
+      node: (
+        <span style={{ flexShrink: 0, ...(struck ? STRIKE : null) }}>
+          {dateText}
+        </span>
+      ),
+      struck,
     })
   }
   if (showsTime) {
     parts.push({
       key: 'time',
-      node: <span style={{ flexShrink: 0 }}>{timeLabel}</span>,
+      node: (
+        <span style={{ flexShrink: 0, ...(struck ? STRIKE : null) }}>
+          {timeLabel}
+        </span>
+      ),
+      struck,
     })
   }
   if (showsVenue) {
     parts.push({
       key: 'venue',
+      struck: false,
       node: (
         <Link
           href={`/venues/${venueSlug}`}
@@ -156,7 +182,23 @@ export const WhenWhere = ({
       {parts.map((part, index) => (
         <React.Fragment key={part.key}>
           {index > 0 && (
-            <span aria-hidden style={{ flexShrink: 0, opacity: 0.4 }}>
+            <span
+              aria-hidden
+              style={{
+                flexShrink: 0,
+                opacity: 0.4,
+                // A separator is struck only when both units it joins are, so
+                // the line breaks cleanly before the venue instead of running
+                // the strike into it. It takes the strike's thickness but keeps
+                // its own 0.4, which is dimmer than the strike's own 0.8.
+                ...(part.struck && parts[index - 1]?.struck
+                  ? {
+                      textDecoration: STRIKE.textDecoration,
+                      textDecorationThickness: STRIKE.textDecorationThickness,
+                    }
+                  : null),
+              }}
+            >
               {SEPARATOR}
             </span>
           )}
@@ -169,25 +211,41 @@ export const WhenWhere = ({
   return (
     <>
       {line}
-      {/* Out of flow, and a sibling rather than a child, so the strings can be
-          measured without landing in the line's own text content. */}
+      {/* The zero-size clipping shell is load-bearing: every ancestor up to the
+          viewport has `overflow: visible`, so an unclipped nowrap copy wider
+          than the column propagates scrollable overflow all the way out and
+          gives the page a horizontal scrollbar at the 320px baseline. Clipping
+          is paint-only, so the natural widths still measure. */}
       <span
-        ref={measureRef}
         aria-hidden
         style={{
           position: 'absolute',
           top: 0,
           left: 0,
-          visibility: 'hidden',
-          pointerEvents: 'none',
-          whiteSpace: 'nowrap',
-          ...TYPE,
+          width: 0,
+          height: 0,
+          overflow: 'hidden',
         }}
       >
-        <span>{dateLabel}</span>
-        <span>{shortDate}</span>
-        <span>{timeLabel ?? ''}</span>
-        <span>{SEPARATOR}</span>
+        {/* Out of flow, and a sibling rather than a child, so the strings can be
+            measured without landing in the line's own text content. */}
+        <span
+          ref={measureRef}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            visibility: 'hidden',
+            pointerEvents: 'none',
+            whiteSpace: 'nowrap',
+            ...TYPE,
+          }}
+        >
+          <span>{dateLabel}</span>
+          <span>{shortDate}</span>
+          <span>{timeLabel ?? ''}</span>
+          <span>{SEPARATOR}</span>
+        </span>
       </span>
     </>
   )

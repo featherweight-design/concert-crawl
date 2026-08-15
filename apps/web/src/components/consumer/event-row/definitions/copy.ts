@@ -1,3 +1,4 @@
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { SEPARATORS } from '@/components/consumer/event-title-block/lib/supportingLine'
 
 /**
@@ -19,6 +20,13 @@ export const EVENT_ROW_COPY = {
     // A move of a dollar or two is noise, not news. Saying so beats rendering
     // an arrow that implies the price moved somewhere worth reading.
     flat: 'flat',
+  },
+  // Borrowed from the shared consumer copy rather than restated, so the row and
+  // the `StatusPill` on event detail can never end up calling the same state
+  // two different things.
+  status: {
+    cancelled: CONSUMER_COPY.cancelledLabel,
+    postponed: CONSUMER_COPY.postponedLabel,
   },
   provenance: {
     boxoffice: 'Box office',
@@ -55,6 +63,10 @@ export const EVENT_ROW_COPY = {
           : `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
       return `From your crews: ${named} going`
     },
+    // Both replace the chip's visible label rather than adding to it, so each
+    // one has to carry the status word itself.
+    cancelled: 'This show has been cancelled',
+    postponed: 'Postponed, new date not announced yet',
     priceProvenance: (label: string) => `Price source: ${label}`,
     stalePrice: (relTime: string) => `Stale price, last checked ${relTime}`,
     savedDelta: (amount: string) => `Down ${amount} since you started watching`,

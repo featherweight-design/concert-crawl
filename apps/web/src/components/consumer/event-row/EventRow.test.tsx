@@ -187,6 +187,110 @@ describe('EventRow — the price slot', () => {
   })
 })
 
+describe('EventRow — lifecycle beats the price state', () => {
+  it('reads Cancelled, not Sold out, on a show that is both', () => {
+    // The live production bug: the old slot asked `soldout` first, so a
+    // cancelled sold-out show told the reader to arrive and find a locked door.
+    render(
+      <EventRow
+        show={makeShow({ lifecycle: 'cancelled', status: 'soldout' })}
+        surface="watching"
+      />,
+    )
+    expect(screen.getByTestId('row-cancelled')).not.toBeNull()
+    expect(screen.queryByTestId('row-sold-out')).toBeNull()
+    expect(screen.getByTestId('row-cancelled').textContent).toContain(
+      'Cancelled',
+    )
+  })
+
+  it('reads Postponed, not Sold out, on a show that is both', () => {
+    render(
+      <EventRow
+        show={makeShow({ lifecycle: 'postponed', status: 'soldout' })}
+        surface="watching"
+      />,
+    )
+    expect(screen.getByTestId('row-postponed')).not.toBeNull()
+    expect(screen.queryByTestId('row-sold-out')).toBeNull()
+  })
+
+  it('names the state for a screen reader instead of the bare chip word', () => {
+    render(
+      <EventRow
+        show={makeShow({ lifecycle: 'cancelled' })}
+        surface="watching"
+      />,
+    )
+    expect(
+      screen.getByText('This show has been cancelled').className,
+    ).toContain('sr-only')
+  })
+
+  it('spends no chip budget, so the meta chips still render', () => {
+    render(
+      <EventRow
+        show={makeShow({ lifecycle: 'cancelled', isFollowed: true })}
+        surface="browse"
+      />,
+    )
+    expect(screen.getByTestId('row-meta').textContent).toContain('Following')
+  })
+})
+
+describe('EventRow — the three signals a suppressed row carries', () => {
+  it('strikes the date and the time, and never the venue', () => {
+    render(
+      <EventRow
+        show={makeShow({ lifecycle: 'cancelled' })}
+        surface="watching"
+      />,
+    )
+    const line = screen.getByTestId('when-where')
+    const struck = Array.from(line.querySelectorAll('span')).filter(
+      (node) => node.style.textDecoration === 'line-through',
+    )
+    // Date, time, and the one separator between them. The separator before the
+    // venue joins a struck unit to an unstruck one, so it stays clean.
+    expect(struck).toHaveLength(3)
+    expect(screen.getByTestId('venue-name-link').style.textDecoration).toBe('')
+  })
+
+  it('leaves line 3 unstruck on a sold-out show, which is still happening', () => {
+    render(
+      <EventRow show={makeShow({ status: 'soldout' })} surface="watching" />,
+    )
+    const line = screen.getByTestId('when-where')
+    expect(
+      Array.from(line.querySelectorAll('span')).filter(
+        (node) => node.style.textDecoration === 'line-through',
+      ),
+    ).toHaveLength(0)
+  })
+
+  it('dims the artwork rather than the row, which would fail AA', () => {
+    render(
+      <EventRow
+        show={makeShow({ lifecycle: 'cancelled' })}
+        surface="watching"
+      />,
+    )
+    const art = screen
+      .getByTestId('event-row')
+      .querySelector('.overflow-hidden')
+    expect(art?.getAttribute('style')).toContain('opacity: 0.55')
+    expect(screen.getByTestId('event-row').style.opacity).toBe('')
+  })
+
+  it('leaves the artwork at full strength on a live show', () => {
+    render(<EventRow show={makeShow()} surface="watching" />)
+    const art = screen
+      .getByTestId('event-row')
+      .querySelector('.overflow-hidden')
+    expect(art?.getAttribute('style')).toContain('opacity: 1')
+  })
+})
+
 describe('EventRow — the action gutter', () => {
   it('reserves no gutter on Browse, where 36px costs the title column', () => {
     render(
