@@ -1,4 +1,5 @@
 import { forwardRef, type ReactNode } from 'react'
+import { EVENT_ROW_COPY } from './definitions/copy'
 
 /**
  * The row's only chip. Five ad-hoc pills used to compete on size, radius and
@@ -49,11 +50,23 @@ export interface RowMetaChipProps {
   hidden?: boolean | undefined
   /** Leading glyph. Trims the left padding so the mark sits on the same rhythm. */
   icon?: ReactNode
+  /** Rendered after a dimmed separator. Absent when the caller collapsed the pair. */
+  secondaryLabel?: string | undefined
+  /** Read after the label, for meaning the visible chip stopped carrying. */
+  srSuffix?: string | undefined
 }
 
 export const RowMetaChip = forwardRef<HTMLSpanElement, RowMetaChipProps>(
   function RowMetaChip(
-    { label, tone = 'neutral', srLabel, hidden, icon },
+    {
+      label,
+      tone = 'neutral',
+      srLabel,
+      hidden,
+      icon,
+      secondaryLabel,
+      srSuffix,
+    },
     ref,
   ) {
     const { color, background, border } = TONE[tone]
@@ -79,6 +92,19 @@ export const RowMetaChip = forwardRef<HTMLSpanElement, RowMetaChipProps>(
         {icon}
         {srLabel && !hidden ? <span className="sr-only">{srLabel}</span> : null}
         <span aria-hidden={srLabel ? true : undefined}>{label}</span>
+        {secondaryLabel ? (
+          <>
+            <span aria-hidden style={{ opacity: 0.45, padding: '0 1px' }}>
+              {EVENT_ROW_COPY.glyphs.pair}
+            </span>
+            <span aria-hidden={srLabel ? true : undefined}>
+              {secondaryLabel}
+            </span>
+          </>
+        ) : null}
+        {srSuffix && !hidden ? (
+          <span className="sr-only">{srSuffix}</span>
+        ) : null}
       </span>
     )
   },

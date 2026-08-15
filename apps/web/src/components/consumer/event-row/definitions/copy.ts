@@ -12,6 +12,7 @@ export const EVENT_ROW_COPY = {
   // it, so a screen reader hears the meaning rather than the symbol.
   glyphs: {
     separator: SEPARATORS.middot,
+    pair: SEPARATORS.slash,
   },
   price: {
     fromPrefix: 'from',
@@ -67,6 +68,10 @@ export const EVENT_ROW_COPY = {
     // one has to carry the status word itself.
     cancelled: 'This show has been cancelled',
     postponed: 'Postponed, new date not announced yet',
+    // Appended to the genre chip rather than replacing it, for the one case
+    // where a unit degrades instead of dropping: the second genre stops being
+    // drawn under width pressure, and this is where it survives.
+    droppedGenre: (genre: string) => ` and ${genre}`,
     priceProvenance: (label: string) => `Price source: ${label}`,
     stalePrice: (relTime: string) => `Stale price, last checked ${relTime}`,
     savedDelta: (amount: string) => `Down ${amount} since you started watching`,

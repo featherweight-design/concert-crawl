@@ -31,6 +31,25 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.47.0-beta',
+    date: 'Aug 15, 2026',
+    headline: 'Show rows say more in the same space.',
+    items: [
+      {
+        kind: 'changed',
+        text: 'A row carries up to two genres on one tag now, and the one you filtered on leads.',
+      },
+      {
+        kind: 'changed',
+        text: 'Cancelled and postponed shows say so where the price sits, instead of a badge further up the row.',
+      },
+      {
+        kind: 'fixed',
+        text: 'Long artist names and tour titles no longer crowd the line they share.',
+      },
+    ],
+  },
+  {
     version: 'v0.46.0-beta',
     date: 'Aug 15, 2026',
     headline: 'Take your data with you, whenever you want it.',

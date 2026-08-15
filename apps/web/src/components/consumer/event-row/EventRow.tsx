@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import Link from 'next/link'
+import { bucketMembersFor } from '@concert-crawl/types'
 import { cn } from '@/lib/utils'
 import { EventImage } from '../event-image'
 import { SupportingLine } from '@/components/consumer/event-title-block'
@@ -24,6 +25,12 @@ interface EventRowProps {
   footer?: ReactNode
   /** The surface's own row action, rendered in the gutter. */
   action?: ReactNode
+  /**
+   * The active Vibe filter, so the genre the reader filtered on leads its chip.
+   * Only Browse has one; every other surface passes nothing and gets no
+   * reorder, which is the safe answer rather than a guessed one.
+   */
+  filterVibe?: string | undefined
   className?: string
 }
 
@@ -32,6 +39,7 @@ export const EventRow = ({
   surface,
   footer,
   action,
+  filterVibe,
   className,
 }: EventRowProps) => {
   const rowRef = useRef<HTMLDivElement>(null)
@@ -62,7 +70,9 @@ export const EventRow = ({
 
   const artSize = narrow ? 44 : 56
   const hasSupportLine = show.supports.length > 0
-  const chips = rowChips(show, surface)
+  // Resolved once here rather than inside the chip builder, so the taxonomy
+  // stays out of a module whose whole job is turning a show into chip data.
+  const chips = rowChips(show, surface, bucketMembersFor(filterVibe))
   const status = resolveRowStatus(show.lifecycle, show.status)
   const struck = isStruck(status)
 

@@ -108,6 +108,29 @@ describe('rowChips', () => {
     expect(chip?.srLabel).toBe('Price source: Box office')
   })
 
+  it('carries two genres on one chip rather than spending both slots', () => {
+    const chips = rowChips(makeShow({ genres: ['indie', 'rock'] }), 'browse')
+    expect(chips).toHaveLength(1)
+    expect(chips[0]?.label).toBe('indie')
+    expect(chips[0]?.secondaryLabel).toBe('rock')
+  })
+
+  it('leads with the genre the active Vibe filter matched', () => {
+    const chips = rowChips(
+      makeShow({ genres: ['indie', 'garage rock'] }),
+      'browse',
+      ['rock', 'garage rock'],
+    )
+    expect(chips[0]?.label).toBe('garage rock')
+    expect(chips[0]?.secondaryLabel).toBe('indie')
+  })
+
+  it('offers no second half when the row has one genre', () => {
+    const chips = rowChips(makeShow({ genres: ['indie'] }), 'browse')
+    expect(chips[0]?.label).toBe('indie')
+    expect(chips[0]?.secondaryLabel).toBeUndefined()
+  })
+
   it('offers no crew chip on a surface with no crew context', () => {
     const chips = rowChips(
       makeShow({ crewGoing: { count: 2, names: ['ada'] } }),

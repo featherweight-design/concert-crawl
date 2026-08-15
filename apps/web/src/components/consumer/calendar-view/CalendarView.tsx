@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import type {
   EventsAvailabilityResponse,
   EventWithVenue,
@@ -47,6 +47,9 @@ export function CalendarView({
   nextWeekHref,
   initialAvailability,
 }: CalendarViewProps) {
+  // The calendar is Browse's other rendering, on the same route and the same
+  // filter, so the genre reorder has to reach it too or switching views loses it.
+  const filterVibe = useSearchParams().get('filterVibe') ?? undefined
   const [selectedDate, setSelectedDate] = useState(initialSelectedDate)
   // A cross-week jump soft-navigates via router.push, so Next.js re-renders this
   // component with a fresh initialSelectedDate but React keeps the old useState
@@ -195,6 +198,7 @@ export function CalendarView({
                           isWatching: watchedSet.has(event.id),
                         })}
                         surface="browse"
+                        filterVibe={filterVibe}
                         className="py-2.5"
                       />
                     </Fragment>

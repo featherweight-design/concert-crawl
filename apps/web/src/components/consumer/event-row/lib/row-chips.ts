@@ -2,6 +2,7 @@ import { EVENT_ROW_COPY as copy } from '../definitions/copy'
 import { SURFACES, type RowSurface } from '../definitions/surfaces'
 import type { ChipTone } from '../RowMetaChip'
 import type { EventRowShow } from './row-model'
+import { orderGenres } from './order-genres'
 import { isPriceStale, relTimeAgo } from '@/components/consumer/lib/staleness'
 
 export interface ChipSpec {
@@ -11,6 +12,12 @@ export interface ChipSpec {
   srLabel?: string
   /** Named rather than a node so this stays a pure data module. */
   mark?: 'spotify'
+  /**
+   * The second half of a paired chip, rendered after a separator. `MetaRow` may
+   * drop it under width pressure, which is the one place the system degrades
+   * within a unit instead of dropping the unit whole.
+   */
+  secondaryLabel?: string
 }
 
 const PROVENANCE_TONE: Record<
@@ -30,7 +37,11 @@ const PROVENANCE_TONE: Record<
  * A feature cannot buy space on the row by arriving with its own pill: to get
  * a chip it has to win a slot in a surface's `chipPriority`.
  */
-export function rowChips(show: EventRowShow, surface: RowSurface): ChipSpec[] {
+export function rowChips(
+  show: EventRowShow,
+  surface: RowSurface,
+  bucketMembers: readonly string[] | null = null,
+): ChipSpec[] {
   const chips: ChipSpec[] = []
 
   for (const kind of SURFACES[surface].chipPriority) {
@@ -71,9 +82,17 @@ export function rowChips(show: EventRowShow, surface: RowSurface): ChipSpec[] {
     }
 
     if (kind === 'genre') {
-      const genre = show.genres[0]
-      if (genre)
-        chips.push({ key: `genre-${genre}`, label: genre, tone: 'neutral' })
+      // One chip carrying up to two genres, never two chips: a second neutral
+      // chip would spend the whole Rule 2 budget on one fact, and two adjacent
+      // neutral pills is the tag soup Rule 2 exists to stop.
+      const [lead, second] = orderGenres(show.genres, bucketMembers)
+      if (lead)
+        chips.push({
+          key: `genre-${lead}`,
+          label: lead,
+          tone: 'neutral',
+          ...(second ? { secondaryLabel: second } : {}),
+        })
     }
 
     if (kind === 'freshness' && isPriceStale(show.price?.observedAt)) {

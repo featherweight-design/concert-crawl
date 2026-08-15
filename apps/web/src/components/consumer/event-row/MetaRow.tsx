@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { RowMetaChip } from './RowMetaChip'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
+import { EVENT_ROW_COPY } from './definitions/copy'
 import { fitChips } from './lib/fit-chips'
 import type { ChipSpec } from './lib/row-chips'
 
@@ -29,18 +30,29 @@ interface MetaRowProps {
  * go on widening the meta column and feed a corrupted width back into the next
  * pass. `visibility: hidden` alone does not fix that — it still occupies
  * layout.
+ *
+ * A paired chip collapses to its first half before any whole chip drops. The
+ * decision lives here rather than in the chip because the chip cannot see the
+ * pressure that is about to delete it: every child sits in its own
+ * content-sized span, which never overflows.
  */
 export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
   const boxRef = useRef<HTMLDivElement>(null)
   const measureRef = useRef<HTMLDivElement>(null)
+  const collapsedRef = useRef<HTMLSpanElement>(null)
   const [visibleCount, setVisibleCount] = useState(chips.length)
+  const [paired, setPaired] = useState(true)
 
   const candidates = chips.slice(0, budget)
+  const pairIndex = candidates.findIndex(
+    (chip) => chip.secondaryLabel !== undefined,
+  )
+  const pairChip = pairIndex === -1 ? undefined : candidates[pairIndex]
   // Re-measure when the chip set itself changes, not just when the box resizes.
   // The label is part of the signature because a chip can keep its key and
   // still change width — the freshness chip's relative time does exactly that.
   const chipKeys = candidates
-    .map((chip) => `${chip.key}:${chip.label}`)
+    .map((chip) => `${chip.key}:${chip.label}:${chip.secondaryLabel ?? ''}`)
     .join('|')
 
   useEffect(() => {
@@ -49,12 +61,29 @@ export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
     if (!box || !measure) return
 
     const remeasure = () => {
-      const widths = Array.from(measure.children).map(
+      const pairedWidths = Array.from(measure.children).map(
         (child) => child.getBoundingClientRect().width,
       )
-      setVisibleCount(
-        fitChips(widths, box.getBoundingClientRect().width, CHIP_GAP),
-      )
+      const available = box.getBoundingClientRect().width
+
+      if (fitChips(pairedWidths, available, CHIP_GAP) === pairedWidths.length) {
+        setPaired(true)
+        setVisibleCount(pairedWidths.length)
+        return
+      }
+
+      // Collapsing costs half a genre; dropping costs a whole chip, so the
+      // cheaper concession is tried first and the drop pass then runs against
+      // the collapsed widths rather than the ones it just gave up on.
+      const collapsedWidth = collapsedRef.current?.getBoundingClientRect().width
+      const widths =
+        collapsedWidth === undefined
+          ? pairedWidths
+          : pairedWidths.map((width, index) =>
+              index === pairIndex ? collapsedWidth : width,
+            )
+      setPaired(false)
+      setVisibleCount(fitChips(widths, available, CHIP_GAP))
     }
 
     remeasure()
@@ -62,10 +91,19 @@ export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
     // enhancement, so a runtime without ResizeObserver renders rather than
     // throws.
     if (typeof ResizeObserver === 'undefined') return
-    const observer = new ResizeObserver(remeasure)
+    // Collapsing the pair changes the meta line's own height, so an unguarded
+    // observer would re-fire on the mutation its own last pass caused. Only a
+    // width change can change the answer, so only a width change re-runs it.
+    let lastWidth = box.getBoundingClientRect().width
+    const observer = new ResizeObserver(() => {
+      const width = box.getBoundingClientRect().width
+      if (width === lastWidth) return
+      lastWidth = width
+      remeasure()
+    })
     observer.observe(box)
     return () => observer.disconnect()
-  }, [chipKeys])
+  }, [chipKeys, pairIndex])
 
   if (candidates.length === 0) return null
 
@@ -76,15 +114,24 @@ export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
         className="flex items-center"
         style={{ gap: CHIP_GAP }}
       >
-        {candidates.slice(0, visibleCount).map((chip) => (
-          <RowMetaChip
-            key={chip.key}
-            label={chip.label}
-            tone={chip.tone}
-            srLabel={chip.srLabel}
-            icon={chipMark(chip)}
-          />
-        ))}
+        {candidates.slice(0, visibleCount).map((chip) => {
+          const showsPair = paired && chip.secondaryLabel !== undefined
+          return (
+            <RowMetaChip
+              key={chip.key}
+              label={chip.label}
+              tone={chip.tone}
+              srLabel={chip.srLabel}
+              icon={chipMark(chip)}
+              secondaryLabel={showsPair ? chip.secondaryLabel : undefined}
+              srSuffix={
+                !showsPair && chip.secondaryLabel !== undefined
+                  ? EVENT_ROW_COPY.a11y.droppedGenre(chip.secondaryLabel)
+                  : undefined
+              }
+            />
+          )
+        })}
       </div>
       <div
         ref={measureRef}
@@ -105,10 +152,33 @@ export const MetaRow = ({ chips, budget, className }: MetaRowProps) => {
             label={chip.label}
             tone={chip.tone}
             icon={chipMark(chip)}
+            secondaryLabel={chip.secondaryLabel}
             hidden
           />
         ))}
       </div>
+      {/* The collapsed half, measured beside the paired set so the fit pass can
+          price the concession before it makes it. Its own container, because
+          the widths above are read positionally. */}
+      {pairChip ? (
+        <span
+          aria-hidden
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            visibility: 'hidden',
+            pointerEvents: 'none',
+          }}
+        >
+          <RowMetaChip
+            ref={collapsedRef}
+            label={pairChip.label}
+            tone={pairChip.tone}
+            hidden
+          />
+        </span>
+      ) : null}
     </div>
   )
 }

@@ -29,6 +29,10 @@ export const EventsList = ({
   initialWatchedIds,
 }: EventsListProps) => {
   const searchParams = useSearchParams()
+  // Read here rather than passed down from the server page: the list refetches
+  // on a client-side filter change, so a server-rendered prop would name the
+  // previous filter while the rows below it answer the current one.
+  const filterVibe = searchParams.get('filterVibe') ?? undefined
 
   // Build a stable query key from URL params (strip offset — managed by pagination)
   const searchParamsString = useMemo(() => {
@@ -128,6 +132,7 @@ export const EventsList = ({
                           isWatching: effectiveWatchedIds.has(event.id),
                         })}
                         surface="browse"
+                        filterVibe={filterVibe}
                         className="py-2.5"
                       />
                     </Fragment>
