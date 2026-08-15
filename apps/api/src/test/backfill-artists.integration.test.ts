@@ -197,7 +197,11 @@ describe('backfill-artists integration', () => {
       await backfillArtists(testDb)
 
       const rows = await listArtists()
-      expect(rows.map((row) => row.canonicalName)).toEqual([
+      // Sorted in JS, not by the query: 'the womack sisters' vs 'thee sacred
+      // souls' order depends on the database's collation — C sorts the space
+      // low and puts 'the womack' first, en_US ignores it at primary strength
+      // and puts 'thee' first. What this test asserts is the set, not the order.
+      expect(rows.map((row) => row.canonicalName).sort()).toEqual([
         'la lom',
         'the womack sisters',
         'thee sacred souls',
