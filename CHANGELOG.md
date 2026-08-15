@@ -1,3 +1,11 @@
+# [1.260.0](https://github.com/HartiganHM/concert-crawl/compare/v1.259.0...v1.260.0) (2026-08-15)
+
+
+### Features
+
+* **event-row:** resolve lifecycle and price state as one precedence ([a47fa43](https://github.com/HartiganHM/concert-crawl/commit/a47fa43f0308cf24ec393092d4c164058760946f))
+* **event-row:** the row gets its own title line ([7de83f5](https://github.com/HartiganHM/concert-crawl/commit/7de83f5e563b6c7f780644e0840c556796bd8b37))
+
 # [1.259.0](https://github.com/HartiganHM/concert-crawl/compare/v1.258.0...v1.259.0) (2026-08-15)
 
 
