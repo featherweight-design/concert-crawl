@@ -153,10 +153,16 @@ No em-dashes survive in rendered copy. Comment-level em-dashes are out of scope.
 
 ## Nits
 
-- The prompt contradicts itself on the headline outcome: the `THE CALL` paragraph
-  says *"Row height must still take exactly TWO values per geometry"* while §4 says
-  *"ONE height per geometry"* and the verification step asserts *"the distinct set
-  is 1"*. The `TWO` is stale from R1. One is correct.
+Three of these were applied in this verdict PR rather than recorded and left —
+a stale headline that contradicts the spec is something an implementer builds
+to. They are marked **FIXED**.
+
+- **FIXED.** The prompt contradicted itself on the headline outcome: the `THE CALL`
+  paragraph said *"Row height must still take exactly TWO values per geometry"*
+  while §4 says *"ONE height per geometry"* and the verification step asserts
+  *"the distinct set is 1"*. The `TWO` was stale from R1, which folded the
+  support-line state into the count. `THE CALL` now reads ONE value per geometry,
+  with the geometry defined as a width paired with a support-line state.
 - `genre-pair.jsx:6-9` and the prompt's §5 still cite `filter-system.jsx`'s
   `hasGenre` / `.some()` as the reason a multi-genre act is already findable. The
   production mechanism is Postgres array overlap (`events.ts:308`). Same conclusion,
@@ -167,4 +173,11 @@ No em-dashes survive in rendered copy. Comment-level em-dashes are out of scope.
   (`fusion`, `idm`, `psych`, `indie-rock`) are not values the tagger produces, nor
   is `loud` a bucket. Labelled as a mock, so this is only a warning against
   copying it.
-- `README` header still reads `R3.2 measure-pass fix`; the body carries R3.3.
+- **FIXED.** The `README` header read `R3.2 measure-pass fix` while the body carried
+  R3.3. Header now names the R3.3 round.
+- **FIXED.** `spotify-shared.jsx:26` used a native `title=` on the logo placeholder,
+  which `cc-tip.jsx:29` names as banned by project convention. Dropped; the
+  placeholder's purpose was already documented in the comment above it. The
+  remaining `title=` attributes in `design-canvas.jsx` are on canvas chrome —
+  drag handles and focus buttons — which is prototype tooling, not product
+  surface, and is out of scope for the convention.

@@ -26,8 +26,13 @@ taller than the design accounts for. The failure mode was variable row height,
 which dissolves the list rhythm the row system exists to establish.
 
 THE CALL: there is no fifth line. Three elements, three dispositions. Row height
-must still take exactly TWO values per geometry — with a support line and
-without. If your implementation produces a third height, it's wrong.
+must take exactly ONE value per geometry, where a geometry is a width paired
+with a support-line state. Two rows differing only in their DATA — one with a
+tour name and one without, one cancelled and one live — must measure
+identically. If your implementation produces a second height at a fixed
+geometry, it's wrong. (R3.3: this read "exactly TWO values per geometry"
+through R1, which folded the support line into the count. §4 and the
+verification step were already correct at ONE; the headline now agrees.)
 
 1) TOUR NAME (8.1%) → LINE 1'S SLACK.
    "DWLLRS · One of Those Nights Tour" in ONE line box. The clause is mono,

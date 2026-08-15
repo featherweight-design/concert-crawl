@@ -1,6 +1,6 @@
 # Event Row overflow — tour name, fallback title, lifecycle status, genre pair — Implementation Plan
 
-**Ticket:** none as a parent. Closes [#1418](https://github.com/HartiganHM/concert-crawl/issues/1418) (does the artist page's `ShowRow` become a `SURFACES` entry, or stay a deliberate dialect) — this handoff answers it: it becomes a surface. Phase **beta** · Priority **normal**.
+**Ticket:** none as a parent. **Answers** [#1418](https://github.com/HartiganHM/concert-crawl/issues/1418) (does the artist page's `ShowRow` become a `SURFACES` entry, or stay a deliberate dialect) — this handoff rules that it becomes a surface. The `Closes #1418` keyword belongs on **PR-E**, the PR that actually converts `ShowRow`; this plan document only records the ruling. Phase **beta** · Priority **normal**.
 **Design handoff:** `design/design_handoff_event_row_overflow/` — 🟢 Green at R3.3, verdict in `READINESS.md` (this branch). R1 🟡 → R2 → R3 → R3.2 → R3.3.
 **Eng kickoff brief:** `design/design_handoff_event_row_overflow/CLAUDE_CODE_PROMPT.md`
 **Amends:** `design/design_handoff_event_row_system/`, shipped in PRs #1430 / #1436 / #1445 and planned in `docs/superpowers/plans/2026-08-03-event-row-system.md`.

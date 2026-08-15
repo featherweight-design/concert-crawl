@@ -1,7 +1,7 @@
 # Row overflow — tour names, fallback titles, status, two genres
 
 **Canvas:** `Row Overflow.html`
-**Date:** Aug 14, 2026 · **R2** after eng review (§8) · **R3** two genres (§9) · **R3.2** measure-pass fix
+**Date:** Aug 14, 2026 · **R2** after eng review (§8) · **R3** two genres (§9) · **R3.2** measure-pass fix · **R3.3** bucket membership + the strike/dim ruling
 **Status:** complete — eng is building it.
 **Eng prompt:** `CLAUDE_CODE_PROMPT.md` in this folder.
 **Extends:** `design_handoff_event_row_system/` — the slot contract, Rule 1, Rule 2, the meta budget and the narrow step are all unchanged.
