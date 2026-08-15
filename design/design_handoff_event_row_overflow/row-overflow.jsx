@@ -113,7 +113,7 @@ function buildMetaX(show, surface, budget = 2, activeGenre, bucketMembers) {
     } else if (kind === "provenance" && show.price && show.price.source !== "primary") {
       const resale = show.price.source === "resale";
       out.push(<RowMetaChip key="p" tone={resale ? "warn" : "signal"}
-        srText={resale ? " price — secondary market, not face value" : " price — submitted by a fan"}>{resale ? "Resale" : "Community"}</RowMetaChip>);
+        srText={resale ? "Resale price from the secondary market, not face value" : "Community price, submitted by a fan"}>{resale ? "Resale" : "Community"}</RowMetaChip>);
     }
     if (out.length === budget) break;
   }
@@ -177,11 +177,16 @@ function TitleLine({ show, size, allowTour, promoteTour, href, cancelled }) {
 // it the other way round, so a cancelled sold-out show currently reads
 // "Sold out".
 function PriceStackX({ show, showDelta, size = 16 }) {
+  // ▲ R3.3 copy pass: these REPLACE the visible label for screen readers, they
+  // don't append to it — every shipped row a11y string works that way
+  // (EVENT_ROW_COPY.a11y.following, .stalePrice), so the replacing form has to
+  // carry the status word itself. No leading em-dash. Ship as a11y.cancelled /
+  // a11y.postponed; `srText` here is the prototype's name for `srLabel`.
   if (show.status === "cancelled") {
-    return <RowMetaChip tone="warn" srText=" — this show has been cancelled">Cancelled</RowMetaChip>;
+    return <RowMetaChip tone="warn" srText="This show has been cancelled">Cancelled</RowMetaChip>;
   }
   if (show.status === "postponed") {
-    return <RowMetaChip tone="strong" srText=" — new date not announced yet">Postponed</RowMetaChip>;
+    return <RowMetaChip tone="strong" srText="Postponed, new date not announced yet">Postponed</RowMetaChip>;
   }
   return <PriceStack show={show} showDelta={showDelta} size={size}/>;
 }

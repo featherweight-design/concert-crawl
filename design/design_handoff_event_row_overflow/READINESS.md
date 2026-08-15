@@ -114,6 +114,15 @@ Handoff strings ship verbatim, so this is enforced here rather than at build tim
 
 No em-dashes survive in rendered copy. Comment-level em-dashes are out of scope.
 
+**R3.3 — applied to the prototype, not just recorded.** The two `srText` strings
+above were corrected in `row-overflow.jsx:186,189` so nobody copies the em-dash
+form into production. Sweeping the class turned up two more the copy pass had not
+listed: the Resale and Community provenance chips in `row-overflow.jsx:116` and
+`event-row.jsx:125`, both reading `" price — secondary market, not face value"`.
+Production already ships these right — `copy.ts:792,794` have them standalone and
+em-dash-free — so the prototype was the stale copy, not the spec. Both now match
+shipped.
+
 ## Carry into the build — not another design round
 
 1. **`EventTitleBlock` is shared with event detail.** The row renders it with
@@ -194,3 +203,12 @@ asserts something production contradicts. They are marked **FIXED**.
   remaining `title=` attributes in `design-canvas.jsx` are on canvas chrome —
   drag handles and focus buttons — which is prototype tooling, not product
   surface, and is out of scope for the convention.
+- **NOT FIXED, deliberately.** `tweaks-panel.jsx` handles `postMessage` without
+  validating `event.source` and posts with `targetOrigin: '*'` (`:149`, `:192`,
+  `:196`). Ruled out of scope on two grounds. It is Design's canvas tooling, not
+  product surface — the panel exists to drag sliders in a local prototype and
+  nothing in it ships. And the file is **byte-identical across 14+ handoff
+  directories**; patching this one copy forks it from every sibling and buys no
+  safety, since the threat requires hosting a prototype cross-origin, which we
+  don't do. If these prototypes are ever hosted, fix it once at the source Design
+  distributes, not here.

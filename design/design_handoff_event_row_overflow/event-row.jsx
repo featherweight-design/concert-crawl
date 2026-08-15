@@ -122,7 +122,7 @@ function buildMeta(show, surface, budget = 2) {
     } else if (kind === "provenance" && show.price && show.price.source !== "primary") {
       const resale = show.price.source === "resale";
       out.push(<RowMetaChip key="p" tone={resale ? "warn" : "signal"}
-        srText={resale ? " price — secondary market, not face value" : " price — submitted by a fan"}>{resale ? "Resale" : "Community"}</RowMetaChip>);
+        srText={resale ? "Resale price from the secondary market, not face value" : "Community price, submitted by a fan"}>{resale ? "Resale" : "Community"}</RowMetaChip>);
     }
     if (out.length === budget) break;
   }
