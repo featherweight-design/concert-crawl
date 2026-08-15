@@ -86,12 +86,30 @@ export async function backfillArtists(
         headliner.value AS canonical_name,
         -- canonical_headliners is deduped and sorted, so it is NOT
         -- positionally aligned with the raw headliners array and the two
-        -- cannot be paired by ordinality. The one raw spelling we can attach
-        -- safely is the primary act's, which the artist column already holds
-        -- under a known canonical key. Every other co-headliner takes its
-        -- canonical string, exactly as a support-only artist does.
-        CASE WHEN headliner.value = canonical_artist THEN artist
-             ELSE headliner.value END AS display_name
+        -- cannot be paired by ordinality in general.
+        --
+        -- Two cases escape that. The primary act's raw spelling is in the
+        -- artist column under a known canonical key. And a bill of exactly
+        -- one headliner has no ordering to get wrong: both arrays hold a
+        -- single element, so headliners[1] is that name's raw spelling.
+        -- Both cardinalities are checked because headliners is not deduped —
+        -- ['Kokoroko', 'Kokoroko'] canonicalizes to one element.
+        --
+        -- That second case is precisely the derived headliner: an event
+        -- titled "Jazz Series presents" leaves canonical_artist tracking the
+        -- title, so without it Kokoroko would be projected as 'kokoroko',
+        -- stripped of casing and diacritics the raw array already had.
+        -- Remaining co-headliners take their canonical string, exactly as a
+        -- support-only artist does.
+        CASE
+          WHEN headliner.value = canonical_artist THEN artist
+          WHEN cardinality(canonical_headliners) = 1
+               AND cardinality(headliners) = 1
+               AND headliners[1] IS NOT NULL
+               AND headliners[1] <> ''
+            THEN headliners[1]
+          ELSE headliner.value
+        END AS display_name
       FROM events
       CROSS JOIN LATERAL unnest(canonical_headliners) AS headliner(value)
       WHERE canonical_headliners IS NOT NULL

@@ -214,6 +214,28 @@ describe('backfill-artists integration', () => {
       )
     })
 
+    it('keeps the raw spelling of a headliner derived behind an event title', async () => {
+      // The derived-headliner case: `artist` stays the event's display string,
+      // so canonical_artist never equals the headliner and the primary-act
+      // branch cannot fire. A single-headliner bill has no ordering to get
+      // wrong, so the raw array is safe to read — without that, this artist
+      // is projected as 'kokoroko' and loses its casing forever (the insert is
+      // conflict-do-nothing).
+      const venue = await seedVenue({ slug: `derived-${Date.now()}` })
+      await seedEvent(venue.id, {
+        artist: 'Jazz Series presents',
+        canonicalArtist: 'jazz series presents',
+        headliners: ['Kokoroko'],
+        canonicalHeadliners: ['kokoroko'],
+      })
+
+      await backfillArtists(testDb)
+
+      const rows = await listArtists()
+      expect(rows.map((row) => row.canonicalName)).toEqual(['kokoroko'])
+      expect(rows[0]?.name).toBe('Kokoroko')
+    })
+
     it('projects NOTHING from an event the ladder resolved to no artist', async () => {
       // An EMPTY headliner set is a real answer, not missing data: the ladder
       // read the listing and concluded nobody was billed. `canonical_artist`
