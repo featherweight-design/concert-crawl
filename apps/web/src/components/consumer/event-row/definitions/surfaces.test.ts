@@ -54,4 +54,16 @@ describe('whenWhereUnits', () => {
       expect(new Set(kinds).size).toBe(kinds.length)
     }
   })
+
+  // Watching is the whole of the rule: a tour name helps someone choosing
+  // between shows and is noise on a list of shows already chosen. Asserted by
+  // name rather than by counting, so adding a surface does not quietly move
+  // the exception.
+  it('withholds the tour clause from watching and grants it everywhere else', () => {
+    expect(SURFACES.watching.showsTour).toBe(false)
+    const withheld = SURFACE_NAMES.filter(
+      (surface) => !SURFACES[surface].showsTour,
+    )
+    expect(withheld).toEqual(['watching'])
+  })
 })
