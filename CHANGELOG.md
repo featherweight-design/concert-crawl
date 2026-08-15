@@ -1,3 +1,10 @@
+# [1.261.0](https://github.com/HartiganHM/concert-crawl/compare/v1.260.0...v1.261.0) (2026-08-15)
+
+
+### Features
+
+* **event-row:** the genre pair, ordered by the active Vibe filter ([73c91c1](https://github.com/HartiganHM/concert-crawl/commit/73c91c1b49e2b492d80a8d49e41e88cb93659617))
+
 # [1.260.0](https://github.com/HartiganHM/concert-crawl/compare/v1.259.0...v1.260.0) (2026-08-15)
 
 
