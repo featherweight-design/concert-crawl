@@ -55,10 +55,13 @@ export const events = pgTable(
     // Every act headlining the bill (#1203), as decided by the derivation
     // ladder from what the extractor OBSERVED. An empty array is a real
     // answer: the ladder read the listing and found nobody billed. This is the
-    // DISPLAY column; the projection scripts never read it. The ladder-seen
-    // signal they key off is `canonical_headliners` below, where NULL means the
-    // ladder has never touched the row and the projection falls back to
-    // `canonical_artist`. See `backfill-artists.ts`.
+    // DISPLAY column, so the projection never keys off it — the ladder-seen
+    // signal is `canonical_headliners` below, where NULL means the ladder has
+    // never touched the row and the projection falls back to
+    // `canonical_artist`. The projection reads this column for one thing only:
+    // a bill of exactly one headliner has no ordering to get wrong, so
+    // `headliners[1]` recovers the raw spelling the canonical form stripped.
+    // See `backfill-artists.ts`.
     //
     // `headliners[0] === artist` is NOT an invariant. The upsert takes the
     // derived array wholesale and only preserves the stored value when the new
