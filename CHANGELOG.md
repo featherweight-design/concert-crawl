@@ -1,3 +1,10 @@
+# [1.251.0](https://github.com/HartiganHM/concert-crawl/compare/v1.250.1...v1.251.0) (2026-08-15)
+
+
+### Features
+
+* **imagery:** feed the headliner portrait to every event surface ([#1581](https://github.com/HartiganHM/concert-crawl/issues/1581)) ([92657df](https://github.com/HartiganHM/concert-crawl/commit/92657df81ca6003dca04bc201b702cc1c3af80c9)), closes [#1536](https://github.com/HartiganHM/concert-crawl/issues/1536) [#1525](https://github.com/HartiganHM/concert-crawl/issues/1525)
+
 ## [1.250.1](https://github.com/HartiganHM/concert-crawl/compare/v1.250.0...v1.250.1) (2026-08-15)
 
 
