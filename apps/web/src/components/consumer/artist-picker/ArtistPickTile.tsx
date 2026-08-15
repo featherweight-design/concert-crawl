@@ -11,7 +11,7 @@
 // an unentitled visitor may select as freely as anyone, and the gate is on the
 // button that commits, not on the tiles.
 
-import { CardArt } from '@/components/consumer/following/ShelfCard'
+import { Panel } from '@/components/consumer/image-slot'
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
 import type { PickArtist } from './definitions/types'
 
@@ -67,12 +67,17 @@ export const ArtistPickTile = ({
       boxShadow: selected ? 'inset 0 0 0 1px var(--signal)' : 'none',
     }}
   >
-    <span
-      aria-hidden
-      className="relative block w-full overflow-hidden"
-      style={{ aspectRatio: '1 / 1', borderRadius: 9 }}
-    >
-      <CardArt name={artist.name} photoUrl={artist.photoUrl} />
+    <span aria-hidden className="relative block w-full">
+      {/* An explicit radius rather than the slot default: this art is inset 8px
+          inside a 12px-radius card, so a 12px corner here would read as thicker
+          than the one around it. */}
+      <Panel
+        surface="artist"
+        name={artist.name}
+        photoUrl={artist.photoUrl}
+        size="100%"
+        radius={9}
+      />
       <span
         className="absolute flex items-center justify-center"
         style={{

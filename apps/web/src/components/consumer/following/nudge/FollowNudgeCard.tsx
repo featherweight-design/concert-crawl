@@ -25,7 +25,7 @@ import type { PickerEntry } from '@concert-crawl/types'
 
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton'
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
-import { CardArt } from '@/components/consumer/following/ShelfCard'
+import { Panel } from '@/components/consumer/image-slot'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
@@ -118,18 +118,15 @@ export const FollowNudgeCard = ({
       </div>
 
       <div style={{ display: 'flex', gap: 11, marginTop: 11 }}>
-        <div
-          style={{
-            position: 'relative',
-            width: 46,
-            height: 46,
-            borderRadius: 9,
-            overflow: 'hidden',
-            flexShrink: 0,
-          }}
-        >
-          <CardArt name={target.artist} photoUrl={null} />
-        </div>
+        {/* Always the generated mark: the nudge fires off a tap on a name,
+            and no portrait has been fetched at that point. */}
+        <Panel
+          surface="artist"
+          name={target.artist}
+          photoUrl={null}
+          size={46}
+          radius={9}
+        />
         {/* No eyebrow above the title — see FOLLOW_NUDGE_COPY. The
             confirmation row already reacted to this tap once. */}
         <div style={{ minWidth: 0 }}>

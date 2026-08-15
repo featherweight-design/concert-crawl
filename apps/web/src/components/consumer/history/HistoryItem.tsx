@@ -10,7 +10,7 @@
 
 import Link from 'next/link'
 import type { HistoryShow } from '@concert-crawl/types'
-import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
+import { Panel } from '@/components/consumer/image-slot'
 import { StubStamp } from '@/components/consumer/going/StubStamp'
 import { HISTORY_COPY } from './definitions/copy'
 
@@ -96,21 +96,15 @@ export const HistoryItem = ({
         padding: `${cfg.padY}px ${cfg.padR}px ${cfg.padY}px ${cfg.padL}px`,
       }}
     >
-      {/* Identity art — HistoryShow carries no imageUrl, so the deterministic
-          artist mark is the only art this row ever shows. */}
-      <span
-        aria-hidden
-        style={{
-          display: 'block',
-          width: cfg.artSize,
-          height: cfg.artSize,
-          borderRadius: 8,
-          overflow: 'hidden',
-          flexShrink: 0,
-        }}
-      >
-        <IdentityArt name={show.artist} kind="artist" scale="tile" />
-      </span>
+      {/* HistoryShow carries no image URL, so the generated artist mark is the
+          only art this row ever shows. The slot still owns the frame, so it
+          matches every other tile at the same size. */}
+      <Panel
+        surface="artist"
+        name={show.artist}
+        photoUrl={null}
+        size={cfg.artSize}
+      />
 
       <span
         style={{

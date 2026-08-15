@@ -117,9 +117,18 @@ Give it an optional second source so the resolution order lives in the component
 
 Both remote sources are hotlinked today with no proxy, no CDN, and no `images.remotePatterns` allowlist in `next.config.ts`. This spec does not change that. Spotify image URLs can expire; the existing match job already re-searches stale-photo `matched` rows, and the load-error chain covers the window in between.
 
-### 3.3 — `SearchResultsState`
+### 3.3 — Surfaces that bypass the shared component
 
-`apps/web/src/components/consumer/search/SearchResultsState.tsx` (~lines 140–153) renders `artist.photoUrl` as a raw `<img>` and shows a `Mic2` icon when it is null, bypassing the shared component entirely. Replace with `EventImage` so artist search results fall to IdentityArt like every other surface. This is conformance to an existing pattern, not a design decision.
+**Amended 2026-08-15 (#1525, PR 3).** As first written this section named `SearchResultsState.tsx` as the one bypass. That target is already satisfied: the artist search row now lives in `search/ArtistResultRow.tsx` and resolves through `EventImage`, with no raw `<img>` and no `Mic2` fallback.
+
+The bypass that survived was a different one. `CardArt`, exported from `following/ShelfCard.tsx`, carried its own `onError` gate and its own `IdentityArt` fallback — a second implementation of the chain, reached from four call sites:
+
+- `following/ShelfCard.tsx`
+- `artist-picker/ArtistPickTile.tsx`
+- `following/my-shows/ArtistManageRow.tsx`
+- `following/nudge/FollowNudgeCard.tsx`
+
+All four are artist surfaces. `CardArt` is deleted and those four, plus `search/ArtistResultRow.tsx` and `history/HistoryItem.tsx`, now render through the `image-slot` primitives, which resolve their source through `EventImage`. There is one chain implementation in the product, not two. This is conformance to an existing pattern, not a design decision.
 
 ### 3.4 — Artist surfaces
 

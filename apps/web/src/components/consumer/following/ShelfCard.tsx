@@ -16,12 +16,12 @@
 // section heading; the badge that survives is the starter shelf's plus/lock,
 // which is the only follow affordance that surface has.
 
-import { useEffect, useId, useState } from 'react'
+import { useId } from 'react'
 import Link from 'next/link'
-import { IdentityArt } from '@/components/consumer/identity-art/IdentityArt'
 import { formatPrice } from '@/components/consumer/definitions/lib'
 import { SHELF_CARD_HEIGHT } from '@/components/consumer/definitions/constants'
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
+import { FlexArt } from '@/components/consumer/image-slot'
 import { FollowDateLine } from './FollowDateLine'
 import { FOLLOWING_COPY } from './definitions/copy'
 import type { ShelfArtist } from './definitions/types'
@@ -71,50 +71,6 @@ const LockGlyph = () => (
     />
   </svg>
 )
-
-/**
- * Press photo with a render-time error gate — signed URLs expire. Exported
- * because My shows ▸ Artists needs the same fall-back behaviour at a different
- * size, and two copies of an `onError` gate is how one of them goes stale.
- * Fills its parent, so the caller owns the box.
- */
-export const CardArt = ({
-  name,
-  photoUrl,
-}: {
-  name: string
-  photoUrl: string | null
-}) => {
-  const [failed, setFailed] = useState(false)
-  useEffect(() => {
-    setFailed(false)
-  }, [photoUrl])
-
-  if (photoUrl !== null && !failed) {
-    return (
-      // Positioned rather than `h-full`, which needs a DEFINITE parent height
-      // and resolves to auto inside a flex-sized box. Every caller already
-      // wraps this in a `relative` clip, and the shelf card's art is now a
-      // flex-grown row rather than a fixed square.
-      <img
-        src={photoUrl}
-        alt=""
-        onError={() => setFailed(true)}
-        className="absolute inset-0 h-full w-full object-cover"
-      />
-    )
-  }
-  // An artist portrait, never a borrowed event graphic: artists draw from the
-  // mesh/stripes/concentric/halftone pool, and blueprint stays venue-only.
-  return (
-    <IdentityArt
-      name={name}
-      kind="artist"
-      scale="tile"
-      style={{ position: 'absolute', inset: 0 }}
-    />
-  )
-}
 
 interface ShelfCardProps {
   artist: ShelfArtist
@@ -178,10 +134,18 @@ export const ShelfCard = ({
           ART absorbs whatever the show info doesn't take, and a long artist
           name never crops its own dates. The floor is what the art keeps if a
           body ever renders taller than expected. Same trade the Spotify card
-          makes. */}
-      <span className="relative block min-h-[116px] w-full flex-1 overflow-hidden">
-        <CardArt name={artist.name} photoUrl={artist.photoUrl} />
-      </span>
+          makes.
+
+          `radius={0}` because the card shell already clips with a 14px radius;
+          rounding the art too would round the corners that sit against the
+          body. PR 7 pins this to a 3:4 `Panel` — until then the shape is
+          exactly what it was. */}
+      <FlexArt
+        surface="artist"
+        name={artist.name}
+        photoUrl={artist.photoUrl}
+        radius={0}
+      />
       <span
         className="flex shrink-0 flex-col gap-[7px]"
         style={{ padding: '10px 11px 12px' }}

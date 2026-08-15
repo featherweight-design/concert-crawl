@@ -21,7 +21,7 @@
 // two-up rather than the handoff's three-up: it needs the width.
 
 import Link from 'next/link'
-import { CardArt } from '@/components/consumer/following/ShelfCard'
+import { Panel } from '@/components/consumer/image-slot'
 import { FollowDateLine } from '@/components/consumer/following/FollowDateLine'
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton'
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
@@ -82,13 +82,12 @@ export const ArtistManageRow = ({
           : { padding: '11px 16px', borderTop: '1px solid var(--border)' }),
       }}
     >
-      <div
-        className="relative shrink-0 overflow-hidden"
-        style={{ width: art, height: art, borderRadius: 8 }}
-        aria-hidden
-      >
-        <CardArt name={artist.name} photoUrl={artist.photoUrl} />
-      </div>
+      <Panel
+        surface="artist"
+        name={artist.name}
+        photoUrl={artist.photoUrl}
+        size={art}
+      />
 
       <div
         style={{

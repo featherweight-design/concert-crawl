@@ -16,7 +16,7 @@ import type { EntitlementCell } from '@concert-crawl/entitlements'
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton'
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { EventImage } from '../event-image'
+import { AvatarSlot } from '@/components/consumer/image-slot'
 
 const copy = CONSUMER_COPY.search
 
@@ -127,33 +127,10 @@ export const ArtistResultRow = ({
           minHeight: 44,
         }}
       >
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 20,
-            overflow: 'hidden',
-            background: 'var(--surface-2)',
-            border: '1px solid var(--accent)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--fg-muted)',
-            flexShrink: 0,
-          }}
-        >
-          {/* An artist surface: the portrait or IdentityArt, never an event's
-              artwork. Decorative, because the row already renders the name as
-              text, and an empty alt also leaves IdentityArt without a role, so
-              neither branch announces the name twice. */}
-          <EventImage
-            src={artist.photoUrl}
-            alt=""
-            artist={artist.name}
-            identityScale="micro"
-            className="h-full w-full"
-          />
-        </div>
+        {/* An artist surface: the portrait or the generated mark, never an
+            event's artwork. Decorative, because the row already renders the
+            name as text. */}
+        <AvatarSlot name={artist.name} photoUrl={artist.photoUrl} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div
             style={{
