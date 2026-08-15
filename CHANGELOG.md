@@ -1,3 +1,10 @@
+## [1.250.1](https://github.com/HartiganHM/concert-crawl/compare/v1.250.0...v1.250.1) (2026-08-15)
+
+
+### Bug Fixes
+
+* **admin:** shorten the venue expected chip and move detail into a tip ([#1578](https://github.com/HartiganHM/concert-crawl/issues/1578)) ([4032028](https://github.com/HartiganHM/concert-crawl/commit/40320286b08429e1943154afe9ef11df7a0958ed))
+
 # [1.250.0](https://github.com/HartiganHM/concert-crawl/compare/v1.249.0...v1.250.0) (2026-08-14)
 
 
