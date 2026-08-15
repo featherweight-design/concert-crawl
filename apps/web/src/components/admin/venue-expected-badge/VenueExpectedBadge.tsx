@@ -2,10 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
-import Link from 'next/link'
 import { StatusBadge } from '@/components/admin/primitives'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
-import { inspectorPath } from '@/components/admin/triage/lib/deep-links'
+import { CCTip, type TipContent } from '@/components/ui/cc-tip'
 import type { AcknowledgedFault } from '@/components/admin/triage/definitions/types'
 import { fetchVenueFault } from '@/components/admin/fault-acknowledge-control/lib/acknowledgements'
 
@@ -17,7 +16,8 @@ interface VenueExpectedBadgeProps {
 
 /**
  * Read-only. Acknowledging stays in the crawl inspector, next to the run
- * history that justifies it — this only says one is in force, and links there.
+ * history that justifies it — this only says one is in force, and the tip
+ * says where to undo it.
  */
 export const VenueExpectedBadge = ({ venueId }: VenueExpectedBadgeProps) => {
   const { getToken, isLoaded } = useAuth()
@@ -57,27 +57,18 @@ export const VenueExpectedBadge = ({ venueId }: VenueExpectedBadgeProps) => {
 
   if (acknowledged === null) return null
 
+  const tip: TipContent = {
+    label: COPY.badge,
+    variant: 'titled',
+    title: ADMIN_COPY.triage.conditions[acknowledged.condition].label,
+    body: COPY.badgeTipBody(acknowledged.acknowledgement.reason),
+  }
+
   return (
-    // Not `faultHref` — that degrades to the venue page when there is no run,
-    // which from the venue page is a link to itself. The inspector is where
-    // the acknowledgement can be undone either way.
-    <Link
-      href={inspectorPath(venueId, 'history')}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        textDecoration: 'none',
-      }}
-    >
+    <CCTip tip={tip} placement="bottom" align="start">
       <StatusBadge kind="signal" variant="outline">
-        {`${COPY.acknowledgedTitle} · ${
-          ADMIN_COPY.triage.conditions[acknowledged.condition].label
-        }`}
+        {COPY.badge}
       </StatusBadge>
-      <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
-        {acknowledged.acknowledgement.reason}
-      </span>
-    </Link>
+    </CCTip>
   )
 }

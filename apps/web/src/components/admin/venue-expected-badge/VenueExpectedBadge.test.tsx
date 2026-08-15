@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { VenueExpectedBadge } from './VenueExpectedBadge'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
+import { stubMatchMedia } from '@/test-utils/match-media'
 import type {
   AcknowledgedFault,
   TriageFault,
@@ -25,10 +26,11 @@ vi.mock(
   () => ({ fetchVenueFault: mockFetchVenueFault }),
 )
 
-const EXPECTED_TITLE = ADMIN_COPY.faultAcknowledge.acknowledgedTitle
+const COPY = ADMIN_COPY.faultAcknowledge
 const CEILING_LABEL = ADMIN_COPY.triage.conditions.ceiling.label
 
 const VENUE_ID = '11111111-1111-1111-1111-111111111111'
+const REASON = 'Live Nation caps the list at 36.'
 
 const ceilingFault: TriageFault = {
   id: 'f-summit',
@@ -38,8 +40,6 @@ const ceilingFault: TriageFault = {
   persistedSince: '2026-08-08T09:00:00.000Z',
   days: 6,
   dur: '6d',
-  // Non-null so the row resolves to the inspector rather than degrading to
-  // the venue page — which, read from the venue page, is a self-link.
   crawlRunId: 'run-1',
   condition: 'ceiling',
   evidence: {
@@ -60,7 +60,7 @@ const acknowledged: AcknowledgedFault = {
   acknowledgement: {
     evidenceKind: 'pinned_count',
     evidenceValue: '36',
-    reason: 'Live Nation caps the list at 36.',
+    reason: REASON,
     acknowledgedBy: 'user_admin_1',
     acknowledgedAt: '2026-08-14T05:00:00.000Z',
   },
@@ -71,6 +71,7 @@ describe('VenueExpectedBadge', () => {
     vi.clearAllMocks()
     getToken.mockResolvedValue('token')
     isLoaded.current = true
+    stubMatchMedia(false)
   })
 
   it('waits for Clerk rather than reading a pre-hydration null token', async () => {
@@ -91,48 +92,29 @@ describe('VenueExpectedBadge', () => {
     isLoaded.current = true
     rerender(<VenueExpectedBadge venueId={VENUE_ID} />)
 
-    expect(
-      await screen.findByText(new RegExp(EXPECTED_TITLE, 'i')),
-    ).toBeTruthy()
+    expect(await screen.findByText(COPY.badge)).toBeTruthy()
   })
 
-  it('names the acknowledged condition and why it is expected', async () => {
+  it('reads as a chip, keeping the reason out of the header row', async () => {
     mockFetchVenueFault.mockResolvedValue({ fault: null, acknowledged })
 
     render(<VenueExpectedBadge venueId={VENUE_ID} />)
 
-    expect(
-      await screen.findByText(new RegExp(EXPECTED_TITLE, 'i')),
-    ).toBeTruthy()
-    expect(screen.getByText(new RegExp(CEILING_LABEL, 'i'))).toBeTruthy()
-    expect(screen.getByText('Live Nation caps the list at 36.')).toBeTruthy()
+    expect(await screen.findByText(COPY.badge)).toBeTruthy()
+    // The inline reason is what wrapped the header onto three lines.
+    expect(screen.queryByText(REASON)).toBeNull()
   })
 
-  it('links to the inspector, where the acknowledgement can be undone', async () => {
+  it('explains the condition and the reason in a tip', async () => {
     mockFetchVenueFault.mockResolvedValue({ fault: null, acknowledged })
 
     render(<VenueExpectedBadge venueId={VENUE_ID} />)
 
-    const link = await screen.findByRole('link')
-    expect(link.getAttribute('href')).toBe(
-      `/admin/crawl?venueId=${VENUE_ID}&tab=history`,
-    )
-  })
+    const trigger = await screen.findByRole('button', { name: COPY.badge })
+    fireEvent.click(trigger)
 
-  it('still links to the inspector when the fault has no run', async () => {
-    // `faultHref` degrades to the venue page without a run, which from the
-    // venue page is a link to itself.
-    mockFetchVenueFault.mockResolvedValue({
-      fault: null,
-      acknowledged: { ...acknowledged, crawlRunId: null },
-    })
-
-    render(<VenueExpectedBadge venueId={VENUE_ID} />)
-
-    const link = await screen.findByRole('link')
-    expect(link.getAttribute('href')).toBe(
-      `/admin/crawl?venueId=${VENUE_ID}&tab=history`,
-    )
+    expect(screen.getByText(CEILING_LABEL)).toBeTruthy()
+    expect(screen.getByText(COPY.badgeTipBody(REASON))).toBeTruthy()
   })
 
   it('renders nothing when the venue has no acknowledgement', async () => {

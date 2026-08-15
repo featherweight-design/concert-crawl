@@ -2603,6 +2603,11 @@ export const ADMIN_COPY = {
     remove: 'Unmark',
     removing: 'Unmarking…',
     acknowledgedTitle: 'Marked expected',
+    // The venue detail page has room for a chip, not a paragraph — the
+    // condition and the pinned reason move into the tip.
+    badge: 'Expected exception',
+    badgeTipBody: (reason: string) =>
+      `${reason} Unmark it from the run history in the crawl inspector.`,
     acknowledgedBy: (who: string, when: string) => `${who} · ${when}`,
     errors: {
       notAuthenticated: 'Session expired. Refresh and sign in again.',
