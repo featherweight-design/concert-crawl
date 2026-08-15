@@ -204,8 +204,10 @@ describe('bucketMembersFor', () => {
     expect(bucketMembersFor('shoegaze')).toBeNull()
   })
 
-  // Membership, not equality: no genre stored on an event is ever equal to the
-  // bucket label the filter passes, which is why the row cannot compare strings.
+  // Membership, not equality. A bucket does contain its own label, so an event
+  // tagged 'jazz' would match a string compare — but most members are sub-genres
+  // that would not, which is why the row must test membership rather than
+  // compare its genre to the filter value.
   it('contains cross-bucket sub-genres that are not the label itself', () => {
     const members = bucketMembersFor('jazz')
     expect(members).toContain('funk')
