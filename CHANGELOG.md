@@ -1,3 +1,10 @@
+# [1.257.0](https://github.com/HartiganHM/concert-crawl/compare/v1.256.0...v1.257.0) (2026-08-15)
+
+
+### Features
+
+* **imagery:** the follow shelf at 3:4, the taste pick as a fill region ([#1593](https://github.com/HartiganHM/concert-crawl/issues/1593)) ([28ed9f7](https://github.com/HartiganHM/concert-crawl/commit/28ed9f76af0eeb03a38a7f55c1b08f4331743cf1)), closes [#1525](https://github.com/HartiganHM/concert-crawl/issues/1525) [#763](https://github.com/HartiganHM/concert-crawl/issues/763)
+
 # [1.256.0](https://github.com/HartiganHM/concert-crawl/compare/v1.255.0...v1.256.0) (2026-08-15)
 
 
