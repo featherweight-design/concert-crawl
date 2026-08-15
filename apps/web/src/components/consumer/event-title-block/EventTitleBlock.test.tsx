@@ -117,7 +117,7 @@ describe('EventTitleBlock', () => {
 
 // #1115 PR-G — the block can link the whole bill to artist pages, opt-in.
 describe('EventTitleBlock — artist links (#1115 PR-G)', () => {
-  it('renders no anchors on the hero surface even when slugs are supplied', () => {
+  it('renders no anchors without linkArtists, however many slugs are supplied', () => {
     const { container } = render(
       <EventTitleBlock
         headliner="Wednesday"

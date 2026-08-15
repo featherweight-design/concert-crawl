@@ -6,10 +6,10 @@ import { StatusPill } from '@/components/consumer/StatusPill'
 import { SupportingLine } from './SupportingLine'
 
 /**
- * Event detail's two surfaces. The row used to share this component at a third
- * (`card`), and the two sets of needs diverged: the row carries no status pill
- * above its title and no legacy fallback paragraph below it. It renders
- * `RowTitleLine` instead, and this component is event detail's alone.
+ * The two title surfaces that still share this component: the event-detail
+ * page and the `HeroEventCard`. The row used to be a third (`card`), and the
+ * needs diverged — the row carries no status pill above its title and no
+ * legacy fallback paragraph below it. It renders `RowTitleLine` instead.
  */
 type Surface = 'hero' | 'detail'
 
