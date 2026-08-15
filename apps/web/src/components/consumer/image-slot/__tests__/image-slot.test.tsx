@@ -5,9 +5,12 @@ import { cleanup, render } from '@testing-library/react'
 
 import { AvatarSlot } from '../AvatarSlot'
 import { FlexArt } from '../FlexArt'
+import { HeroBand } from '../HeroBand'
 import { Panel, type PanelProps } from '../Panel'
 import { SLOT_HAIRLINE, SLOT_RADIUS } from '../definitions/constants'
+import { bandField } from '../lib/band-field'
 import { slotScaleFor } from '../lib/slot-metrics'
+import { identityFor } from '../../identity-art/IdentityArt'
 
 afterEach(cleanup)
 
@@ -143,6 +146,35 @@ describe('<Panel />', () => {
     expect(container.innerHTML).not.toContain(artwork)
   })
 
+  it('takes an explicit scale when it is sized in CSS rather than px', () => {
+    // `'100%'` alone derives `tile`. A band panel is 128/208 and says `hero`,
+    // which is the only thing that keeps mesh out of the pool at that size.
+    const meshy = Array.from({ length: 200 }, (_, i) => `Band ${i}`).find(
+      (name) => identityFor(name, 'artist').template.id === 'mesh',
+    )
+    if (!meshy) throw new Error('no name in the sample resolves to mesh')
+
+    const { container: derived } = render(
+      <Panel surface="artist" name={meshy} photoUrl={null} size="100%" />,
+    )
+    const { container: stated } = render(
+      <Panel
+        surface="artist"
+        name={meshy}
+        photoUrl={null}
+        size="100%"
+        scale="hero"
+      />,
+    )
+    // `mg-` radialGradient ids are mesh's own marker, so this asserts the
+    // template actually swapped rather than "the markup differs somehow".
+    const meshBlobs = (root: HTMLElement) =>
+      root.querySelectorAll('radialGradient[id^="mg-"]').length
+
+    expect(meshBlobs(derived)).toBeGreaterThan(0)
+    expect(meshBlobs(stated)).toBe(0)
+  })
+
   it('is decorative unless given an alt', () => {
     const { container: bare } = render(
       <Panel surface="artist" name="Ada" photoUrl={null} size={56} />,
@@ -174,5 +206,99 @@ describe('<AvatarSlot />', () => {
     const { container } = render(<AvatarSlot name="Ada" photoUrl={null} />)
     expect(box(container).style.width).toBe('40px')
     expect(box(container).style.borderRadius).toBe(`${SLOT_RADIUS.avatar}px`)
+  })
+})
+
+describe('bandField', () => {
+  it('draws from the art palette when nothing but generated art resolves', () => {
+    const { palette } = identityFor('Ada', 'artist', { scale: 'hero' })
+    const field = bandField('Ada', { surface: 'artist', photoUrl: null })
+    expect(field).toContain(palette.primary)
+    expect(field).toContain('in srgb')
+  })
+
+  it('falls back to tokens for a photograph, which cannot be sampled', () => {
+    const field = bandField('Ada', { surface: 'artist', photoUrl: portrait })
+    expect(field).toContain('var(--surface-2)')
+    expect(field).not.toContain('#')
+  })
+
+  it('treats an event with only a portrait as a photograph too', () => {
+    const field = bandField('Ada', {
+      surface: 'event',
+      artworkUrl: null,
+      photoUrl: portrait,
+    })
+    expect(field).toContain('var(--surface-2)')
+  })
+})
+
+describe('<HeroBand />', () => {
+  const band = (root: HTMLElement) => {
+    const found = root.querySelector('[data-testid="hero-band"]')
+    if (!(found instanceof HTMLElement)) throw new Error('no band rendered')
+    return found
+  }
+
+  it.each([
+    ['generated', { surface: 'artist', photoUrl: null } as const],
+    ['portrait', { surface: 'artist', photoUrl: portrait } as const],
+    [
+      'artwork',
+      { surface: 'event', artworkUrl: artwork, photoUrl: null } as const,
+    ],
+  ])('renders a band from a %s source', (_label, source) => {
+    const { container } = render(
+      <HeroBand name="Ada" {...source}>
+        <h1>{'Ada'}</h1>
+      </HeroBand>,
+    )
+    expect(band(container).style.background).not.toBe('')
+    expect(container.querySelector('h1')?.textContent).toBe('Ada')
+  })
+
+  it('keeps the panel from squeezing the type column at 320px', () => {
+    const { container } = render(
+      <HeroBand surface="artist" name="Ada" photoUrl={null}>
+        <h1>{'Ada'}</h1>
+      </HeroBand>,
+    )
+    const row = band(container).querySelector('.flex.items-start')
+    const [art, type] = Array.from(row?.children ?? [])
+    // The panel steps 128 → 208 in CSS; the column must be free to shrink or
+    // the band overflows the 320px baseline.
+    expect(art?.className).toContain('w-32')
+    expect(art?.className).toContain('sm:w-52')
+    expect(type?.className).toContain('min-w-0')
+    expect(type?.className).toContain('flex-1')
+  })
+
+  it('draws no row above the band when it has neither control', () => {
+    const { container } = render(
+      <HeroBand surface="artist" name="Ada" photoUrl={null}>
+        <h1>{'Ada'}</h1>
+      </HeroBand>,
+    )
+    expect(band(container).firstElementChild?.className).toContain(
+      'items-start',
+    )
+  })
+
+  it('leads with back and trails with actions when both are given', () => {
+    const { container } = render(
+      <HeroBand
+        surface="artist"
+        name="Ada"
+        photoUrl={null}
+        back={<button type="button">{'back'}</button>}
+        actions={<button type="button">{'share'}</button>}
+      >
+        <h1>{'Ada'}</h1>
+      </HeroBand>,
+    )
+    const controls = band(container).firstElementChild
+    expect(controls?.className).toContain('justify-between')
+    expect(controls?.children[0]?.textContent).toBe('back')
+    expect(controls?.children[1]?.textContent).toBe('share')
   })
 })

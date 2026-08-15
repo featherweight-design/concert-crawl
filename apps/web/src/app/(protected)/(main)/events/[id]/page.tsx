@@ -15,7 +15,7 @@ import { seedFollowedArtists } from '@/lib/following'
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 import { isScaRegion } from '@/lib/sca-region'
 import { fetchEventReports } from '@/lib/events'
-import { EventImage } from '@/components/consumer/event-image'
+import { HeroBand } from '@/components/consumer/image-slot'
 import { BackChip } from '@/components/consumer/back-chip/BackChip'
 import { ShareButton } from '@/components/consumer/event-detail/ShareButton'
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row'
@@ -186,52 +186,36 @@ export default async function EventDetailPage({
     // `hidden` here to avoid turning the wrapper into a vertical scroll
     // container. #973
     <div className="flex flex-1 flex-col overflow-x-clip">
-      {/* Hero — 300px, full-bleed */}
-      <div className="relative w-full shrink-0" style={{ height: 300 }}>
-        <EventImage
-          src={event.imageUrl}
-          alt={event.artist}
-          artist={event.artist}
-          identityScale="hero"
-          className="h-full w-full"
-          fill
-          sizes="(max-width: 1024px) 100vw, 720px"
+      {/* The band: a square panel and the title as a column beside it. It
+          replaces 300px of full-bleed image, so there is no scrim to fade type
+          into and no negative margin pulling the title back over art (#1525). */}
+      <HeroBand
+        name={event.artist}
+        surface="event"
+        artworkUrl={event.imageUrl}
+        photoUrl={event.artistPhotoUrl ?? null}
+        back={<BackChip inline fallbackHref="/events" />}
+        actions={
+          <ShareButton event={event} handle={shareHandle} authed inline />
+        }
+      >
+        <GenreChips genres={event.genre} className="mb-2" />
+        <EventTitleBlock
+          headliner={event.artist}
+          supportingArtists={event.supportingArtists}
+          tourName={event.tourName}
+          fallbackTitle={event.title}
+          status={event.status}
+          surface="detail"
+          headlinerAs="h1"
+          artistSlug={event.artistSlug}
+          supportingArtistSlugs={event.supportingArtistSlugs}
+          linkArtists
         />
-        {/* Bottom scrim */}
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
-          style={{ background: 'linear-gradient(transparent, var(--bg))' }}
-          aria-hidden
-        />
-        {/* Floating back button — history-aware so filters/scroll on the
-            previous page are restored when the user navigated here from
-            within the app (#637). */}
-        <BackChip top={56} fallbackHref="/events" />
-        {/* Share sits opposite Back on the same optical line. Nothing else
-            goes in the hero — Watching is the eye control below the title. */}
-        <ShareButton event={event} handle={shareHandle} authed />
-      </div>
+      </HeroBand>
 
-      {/* Scrollable content — 880px max-width centered column, -60px hero overlap on desktop */}
-      <div className="relative -mt-5 sm:-mt-[60px] sm:z-[1] flex-1">
-        <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 sm:pt-5">
-          {/* Genre chips */}
-          <GenreChips genres={event.genre} className="mb-2" />
-
-          {/* Title */}
-          <EventTitleBlock
-            headliner={event.artist}
-            supportingArtists={event.supportingArtists}
-            tourName={event.tourName}
-            fallbackTitle={event.title}
-            status={event.status}
-            surface="detail"
-            headlinerAs="h1"
-            artistSlug={event.artistSlug}
-            supportingArtistSlugs={event.supportingArtistSlugs}
-            linkArtists
-          />
-
+      <div className="flex-1">
+        <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 pt-5">
           {/* Commit block — directly under title (#70). One card, per the
               handoff's CommitBlockV2: the commitment and the watch strip are
               two halves of the same decision, so they share a border rather

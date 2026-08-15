@@ -285,6 +285,16 @@ describe('PublicEventDetail (#72)', () => {
     ).toBe(portrait)
   })
 
+  // #1525 — the title moved into the band. The old layout drew it below a
+  // 300px hero and pulled it back up with a negative margin; if that copy were
+  // ever left behind the headliner would render twice on the same page.
+  it('renders the headliner exactly once now the title lives in the band', () => {
+    render(<PublicEventDetail event={buildEvent()} related={[]} />)
+
+    expect(screen.getAllByText('Nightjar Choir')).toHaveLength(1)
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
+  })
+
   // The bill block arrives as a SLOT (design table ED-06) so neither detail
   // screen is forked to carry it.
   describe('the bill follow slot', () => {

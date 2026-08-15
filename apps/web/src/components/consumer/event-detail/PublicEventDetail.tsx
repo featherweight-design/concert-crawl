@@ -26,7 +26,7 @@ import type { EventDetailResponse, EventWithVenue } from '@concert-crawl/types'
 import { EventRow, fromEventWithVenue } from '@/components/consumer/event-row'
 import { SectionHeader } from '@/components/consumer/section-header'
 
-import { EventImage } from '@/components/consumer/event-image'
+import { HeroBand } from '@/components/consumer/image-slot'
 import { GenreChips } from '@/components/consumer/GenreChips'
 import { EventTitleBlock } from '@/components/consumer/event-title-block'
 import { SetlistPreview } from '@/components/consumer/setlist-preview'
@@ -113,49 +113,40 @@ export const PublicEventDetail = ({
     // overflow-x-clip guarantees the 320px mobile baseline never scrolls
     // horizontally, exactly as on the protected page (#973).
     <div className="flex flex-1 flex-col overflow-x-clip">
-      {/* Hero — 300px, full-bleed */}
-      <div className="relative w-full shrink-0" style={{ height: 300 }}>
-        <EventImage
-          src={event.imageUrl}
-          artistPhotoUrl={event.artistPhotoUrl ?? null}
-          alt={event.artist}
-          artist={event.artist}
-          identityScale="hero"
-          className="h-full w-full"
-          fill
-          sizes="(max-width: 1024px) 100vw, 720px"
+      {/* The same band as the protected page. The mirror does not diverge from
+          the page it mirrors, so this moved with it (#1525). */}
+      <HeroBand
+        name={event.artist}
+        surface="event"
+        artworkUrl={event.imageUrl}
+        photoUrl={event.artistPhotoUrl ?? null}
+        actions={
+          /* The mirror has no BackChip — there is nowhere to go back to — but
+             it does share. A visitor who landed here from someone else's post
+             is exactly the person most likely to pass it on, and the poster is
+             Free for everyone including the logged out. Anonymous, so it
+             renders no signature line. */
+          <ShareButton event={event} authed={false} inline />
+        }
+      >
+        <GenreChips genres={event.genre} className="mb-2" />
+        {/* Artist names stay plain text here: /artists is itself gated
+            before launch, so linking them from the mirror would hand a
+            signed-out visitor a second dead end. */}
+        <EventTitleBlock
+          headliner={event.artist}
+          supportingArtists={event.supportingArtists}
+          tourName={event.tourName}
+          fallbackTitle={event.title}
+          status={event.status}
+          surface="detail"
+          headlinerAs="h1"
         />
-        <div
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
-          style={{ background: 'linear-gradient(transparent, var(--bg))' }}
-          aria-hidden
-        />
-        {/* The mirror has no BackChip — there is nowhere to go back to — but it
-            does share. A visitor who landed here from someone else's post is
-            exactly the person most likely to pass it on, and the poster is Free
-            for everyone including the logged out. Anonymous, so it renders no
-            signature line. */}
-        <ShareButton event={event} authed={false} />
-        <PublicEventView eventId={event.id} />
-      </div>
+      </HeroBand>
+      <PublicEventView eventId={event.id} />
 
-      <div className="relative -mt-5 sm:-mt-[60px] sm:z-[1] flex-1">
-        <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 sm:pt-5">
-          <GenreChips genres={event.genre} className="mb-2" />
-
-          {/* Artist names stay plain text here: /artists is itself gated
-              before launch, so linking them from the mirror would hand a
-              signed-out visitor a second dead end. */}
-          <EventTitleBlock
-            headliner={event.artist}
-            supportingArtists={event.supportingArtists}
-            tourName={event.tourName}
-            fallbackTitle={event.title}
-            status={event.status}
-            surface="detail"
-            headlinerAs="h1"
-          />
-
+      <div className="flex-1">
+        <div className="mx-auto w-full max-w-[880px] box-border px-[18px] sm:px-8 pb-24 sm:pb-16 pt-5">
           {/* Info block. The venue row is not a link for the same reason the
               artist names aren't. */}
           <div className="mt-4 border-y border-border py-1">

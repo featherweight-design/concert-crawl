@@ -33,6 +33,12 @@ export interface ShareButtonProps {
   authed: boolean
   /** Matches BackChip's `top` so the two chips align. */
   top?: number
+  /**
+   * Lay the chip out in flow instead of over artwork — the same mode BackChip
+   * carries, for bars that draw their own background (the hero band). `top` is
+   * ignored in this mode.
+   */
+  inline?: boolean
   className?: string
 }
 
@@ -41,6 +47,7 @@ export const ShareButton = ({
   handle = null,
   authed,
   top = 56,
+  inline = false,
   className,
 }: ShareButtonProps) => {
   const [open, setOpen] = useState(false)
@@ -62,10 +69,11 @@ export const ShareButton = ({
         aria-haspopup="dialog"
         aria-expanded={open}
         className={cn(
-          'absolute right-2.5 z-10 flex h-11 w-11 items-center justify-center',
+          'z-10 flex h-11 w-11 items-center justify-center',
+          inline ? 'relative shrink-0' : 'absolute right-2.5',
           className,
         )}
-        style={{ top: top - HIT_AREA_OFFSET_PX }}
+        style={inline ? undefined : { top: top - HIT_AREA_OFFSET_PX }}
       >
         <span
           aria-hidden="true"

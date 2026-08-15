@@ -6,7 +6,7 @@
 
 import { EventImage } from '../event-image'
 import { SLOT_HAIRLINE } from './definitions/constants'
-import type { SlotSource } from './definitions/types'
+import type { SlotScale, SlotSource } from './definitions/types'
 import { slotRadiusFor, slotScaleFor, slotSources } from './lib/slot-metrics'
 
 export type PanelProps = {
@@ -22,6 +22,12 @@ export type PanelProps = {
   size?: number | '100%'
   ratio?: string
   radius?: number
+  /**
+   * Overrides the scale derived from `size`. A slot sized in CSS rather than in
+   * px — a panel that is 128 on mobile and 208 on desktop — knows its detail
+   * density even though `size` is `'100%'` and cannot tell us.
+   */
+  scale?: SlotScale
   className?: string
 } & SlotSource
 
@@ -32,6 +38,7 @@ export const Panel = (props: PanelProps) => {
     size = 56,
     ratio = '1 / 1',
     radius,
+    scale,
     className,
   } = props
   const { primary, secondary } = slotSources(props)
@@ -57,7 +64,7 @@ export const Panel = (props: PanelProps) => {
         artistPhotoUrl={secondary}
         alt={alt}
         artist={name}
-        identityScale={slotScaleFor(size)}
+        identityScale={scale ?? slotScaleFor(size)}
         className="h-full w-full"
       />
     </span>
