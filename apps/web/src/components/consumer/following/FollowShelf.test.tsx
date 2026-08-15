@@ -70,6 +70,7 @@ const artist = (overrides: Partial<ShelfArtist> = {}): ShelfArtist => ({
   name: 'Ratbag',
   slug: 'ratbag',
   photoUrl: null,
+  eventId: 'evt-ratbag',
   dateLine: 'Larimer Lounge · Sep 12',
   price: 32,
   following: false,
@@ -177,7 +178,9 @@ describe('FollowShelf', () => {
     const hrefs = screen
       .getAllByRole('link')
       .map((node) => node.getAttribute('href'))
-    expect(hrefs).toEqual(['/artists/ratbag'])
+    // One link, and it is the card's — the card opens the show it is
+    // advertising, not the artist's page.
+    expect(hrefs).toEqual(['/events/evt-ratbag'])
   })
 
   it('caps the starter shelf at the visible-card count', () => {
@@ -309,15 +312,40 @@ describe('ShelfCard rows', () => {
     }
   })
 
-  // A Spotify follow for an act never billed in Denver has no projection row,
-  // so no page and no follow endpoint. That is a NORMAL row, not an error.
-  it('a slug-less row renders unlinked and carries no follow badge', () => {
+  // A Spotify follow for an act with no projection row has no page and no
+  // follow endpoint. That is a NORMAL row, not an error.
+  //
+  // It can still have a show: the API derives `nextShow` by matching canonical
+  // names against `events`, which never consults the projection the slug comes
+  // from. A hidden projection row produces exactly this pair. So the row is
+  // linkable even though it is unfollowable, and the event is what it links to.
+  it('a slug-less row still opens its show, and carries no follow badge', () => {
     renderShelf({
       artists: [artist({ slug: null, name: 'Ghost Act', following: true })],
     })
     expect(screen.getByText('Ghost Act')).toBeTruthy()
     // Scoped to the row: the starter shelf's own "find artists" action is a
     // link too, and it is not what this test is about.
+    const row = screen.getByRole('listitem')
+    expect(within(row).getByRole('link').getAttribute('href')).toBe(
+      '/events/evt-ratbag',
+    )
+    expect(within(row).queryByRole('button')).toBeNull()
+  })
+
+  // The only genuinely inert row: nothing to follow and nothing on the books.
+  it('a slug-less row with no show renders unlinked', () => {
+    renderShelf({
+      artists: [
+        artist({
+          slug: null,
+          eventId: null,
+          dateLine: null,
+          name: 'Ghost Act',
+          following: true,
+        }),
+      ],
+    })
     const row = screen.getByRole('listitem')
     expect(within(row).queryByRole('link')).toBeNull()
     expect(within(row).queryByRole('button')).toBeNull()
@@ -327,7 +355,7 @@ describe('ShelfCard rows', () => {
     renderShelf({
       mode: 'some',
       followCount: 1,
-      artists: [artist({ dateLine: null })],
+      artists: [artist({ dateLine: null, eventId: null })],
     })
     expect(screen.getByText(FOLLOWING_COPY.cardNoDate)).toBeTruthy()
   })

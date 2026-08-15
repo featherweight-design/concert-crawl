@@ -16,11 +16,19 @@ export interface ShelfArtist {
   name: string
   /**
    * Null is NORMAL, not an error: a Spotify-synced act never billed in Denver
-   * has no projection row and so no page. The card renders the name unlinked
-   * and drops the follow badge, since the follow endpoint is keyed by slug.
+   * has no projection row and so no page. The card drops the follow badge,
+   * since the follow endpoint is keyed by slug. It may still be LINKED: a
+   * next show is matched by canonical name against `events` and never consults
+   * the projection, so a slug-less row with a date still opens that date.
    */
   slug: string | null
   photoUrl: string | null
+  /**
+   * The show `dateLine` describes. The card links HERE first: a card about a
+   * night the viewer can buy tickets to should open that night, not a profile.
+   * Null when nothing is on the books, which is also when `dateLine` is null.
+   */
+  eventId: string | null
   /** "Venue · Sep 12", or null when nothing is on the books. */
   dateLine: string | null
   /**

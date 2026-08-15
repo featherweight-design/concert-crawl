@@ -8,6 +8,10 @@
 // says a different thing. Anything changed here is changed there too, or the
 // slot starts flickering between two card designs.
 //
+// The card opens the SHOW, matching the taste card's `/events/{eventId}`. The
+// two sat in one slot linking to two different places, which made the
+// destination a coin flip on which shelf you happened to get.
+//
 // The art is still the ARTIST photo, never the event graphic — a card about a
 // person does not borrow a show's poster (imagery rule, #1531).
 //
@@ -189,6 +193,17 @@ export const ShelfCard = ({
     </>
   )
 
+  // The show wins over the profile: the card is showing a date and a price, so
+  // the thing behind it is the night, not the act's page. The artist page is
+  // the fallback for a follow with nothing on the books, and a row with
+  // neither is inert rather than linked somewhere arbitrary.
+  const href =
+    artist.eventId !== null
+      ? `/events/${artist.eventId}`
+      : artist.slug !== null
+        ? `/artists/${artist.slug}`
+        : null
+
   const shellClass =
     'flex w-full flex-col overflow-hidden rounded-[14px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-signal'
   const shellStyle = {
@@ -202,12 +217,8 @@ export const ShelfCard = ({
       style={{ width, height: SHELF_CARD_HEIGHT, listStyle: 'none' }}
       data-testid="shelf-card"
     >
-      {artist.slug !== null ? (
-        <Link
-          href={`/artists/${artist.slug}`}
-          className={shellClass}
-          style={shellStyle}
-        >
+      {href !== null ? (
+        <Link href={href} className={shellClass} style={shellStyle}>
           {body}
         </Link>
       ) : (
