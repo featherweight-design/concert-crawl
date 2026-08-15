@@ -127,18 +127,16 @@ function mapToNormalizedEvent(
     // decides whether this listing yields an artist at all.
     artist: title,
     observedPerformers: [],
-    // Openers are parsed out of prose below, not read off a structured field.
-    // With no observed headliner to hang them on they are a display detail, not
-    // an observation, so they never seed the artists projection either.
-    observedSupportingArtists: [],
+    // Openers parsed out of prose. Reported as an observation because the
+    // ladder owns `supportingArtists` now and overwrites whatever is set here —
+    // and the adjudicator reads only title + description, neither of which
+    // carries this text. Without the handoff these names reach nothing.
+    observedSupportingArtists: supportingActsFrom(raw['text'], title),
     date,
     sourceUrl,
     confidence: 1.0,
     isConcert: readString(raw, 'category') === MUSIC_CATEGORY,
   }
-
-  const supportingArtists = supportingActsFrom(raw['text'], title)
-  if (supportingArtists.length > 0) event.supportingArtists = supportingArtists
   if (doorsTime !== undefined) event.doorsTime = doorsTime
 
   // `url` is a bare slug ("dutch-melrose") relative to the listing index.

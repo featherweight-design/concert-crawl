@@ -138,9 +138,32 @@ export async function deriveArtists(
       title: event.title,
       description: event.description,
     })
+    // Observed openers survive adjudication rather than being replaced by it.
+    // The adjudicator only ever reads title + description, so an extractor that
+    // found openers in a field it does NOT read (Ticketure's `supportingActs`,
+    // which sits outside the description it never populates) holds the only
+    // record of them. Taking the verdict wholesale here would delete that.
+    //
+    // The verdict leads: it is the answer to the question actually asked. An
+    // observed name that the adjudicator promoted to the headline bill is
+    // dropped rather than listed twice under two different roles.
+    const headlinerKeys = new Set(
+      verdict.headliners.map((name) => name.trim().toLowerCase()),
+    )
+    const supportingArtists: string[] = []
+    const seen = new Set<string>()
+    for (const name of [
+      ...verdict.supportingArtists,
+      ...nonEmpty(event.observedSupportingArtists),
+    ]) {
+      const key = name.trim().toLowerCase()
+      if (key === '' || headlinerKeys.has(key) || seen.has(key)) continue
+      seen.add(key)
+      supportingArtists.push(name.trim())
+    }
     return {
       headliners: verdict.headliners,
-      supportingArtists: verdict.supportingArtists,
+      supportingArtists,
       isConcert: verdict.isConcert,
       adjudicated: true,
     }

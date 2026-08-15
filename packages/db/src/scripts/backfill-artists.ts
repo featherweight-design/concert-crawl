@@ -9,7 +9,8 @@
  *
  * The headliner set is the derivation ladder's answer, so an event it resolved
  * to NO artist projects nothing at all. `canonical_artist` seeds the projection
- * only for rows the ladder has never seen; see the query for why.
+ * only where the ladder left no verdict at all; see the query for why, and for
+ * the ambiguity that makes that arm a migration-window affordance.
  *
  * Idempotent by construction: slugs are resolved against everything already
  * stored plus everything derived in this pass, and the insert is an untargeted
@@ -55,9 +56,10 @@ export async function backfillArtists(
   // The headliner branch reads `canonical_headliners` — the derivation ladder's
   // answer — and falls back to `canonical_artist` ONLY when that column is
   // NULL. The NULL-vs-empty distinction is the whole correctness of this query:
-  // NULL means the derivation stage has never seen the row (a pre-migration
-  // event), while an EMPTY array is a verdict, the ladder having read the
-  // listing and concluded nobody was billed. Falling back on empty would
+  // NULL means the ladder reached no verdict — a pre-migration event it never
+  // saw, or an adjudicator outage — while an EMPTY array is a verdict, the
+  // ladder having read the listing and concluded nobody was billed. Falling
+  // back on empty would
   // reinstate exactly the bug this replaced — `canonical_artist` is the display
   // string and the dedup key, and projecting it put 222 event titles into the
   // artists table.

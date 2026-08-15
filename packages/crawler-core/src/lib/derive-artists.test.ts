@@ -105,6 +105,51 @@ describe('ladder step 2 — escalation', () => {
     expect(result.adjudicated).toBe(true)
   })
 
+  it('keeps observed openers the adjudicator never got to read', async () => {
+    // Ticketure parses openers out of a prose field and populates no
+    // description, so the adjudicator sees only the title. Taking its verdict
+    // wholesale would delete the only record of the bill's support.
+    const adjudicate = vi.fn().mockResolvedValue({
+      isConcert: true,
+      headliners: ['Dutch Melrose'],
+      supportingArtists: [],
+    })
+
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Dutch Melrose',
+        observedPerformers: [],
+        observedSupportingArtists: ['Kiltro', 'Neighbor Andy'],
+      },
+      adjudicate,
+    )
+
+    expect(result.supportingArtists).toEqual(['Kiltro', 'Neighbor Andy'])
+  })
+
+  it('lets the verdict outrank an observed opener it promoted to the bill', async () => {
+    const adjudicate = vi.fn().mockResolvedValue({
+      isConcert: true,
+      headliners: ['Dutch Melrose', 'Kiltro'],
+      supportingArtists: ['Neighbor Andy'],
+    })
+
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Dutch Melrose & Kiltro',
+        observedPerformers: [],
+        observedSupportingArtists: ['kiltro', 'Neighbor Andy'],
+      },
+      adjudicate,
+    )
+
+    // Listed once, as a headliner — not again under a second role, and not
+    // duplicated against the verdict's own spelling.
+    expect(result.supportingArtists).toEqual(['Neighbor Andy'])
+  })
+
   it('escalates when the observed performer is just the title', async () => {
     const adjudicate = vi.fn().mockResolvedValue({
       isConcert: true,

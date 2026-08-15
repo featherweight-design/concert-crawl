@@ -120,15 +120,18 @@ describe('extractTicketure', () => {
       },
     ])
     const [event] = extractTicketure(html, SOURCE_URL, DENVER)
-    expect(event?.supportingArtists).toEqual(['hellocentral', 'Jaguar Stevens'])
+    expect(event?.observedSupportingArtists).toEqual([
+      'hellocentral',
+      'Jaguar Stevens',
+    ])
   })
 
-  it('omits supportingArtists when the field is null', () => {
+  it('reports no openers when the field is null', () => {
     const html = pageWith([
       { ...DUTCH_MELROSE, text: { supportingActs: null } },
     ])
     const [event] = extractTicketure(html, SOURCE_URL, DENVER)
-    expect(event?.supportingArtists).toBeUndefined()
+    expect(event?.observedSupportingArtists).toEqual([])
   })
 
   it('drops a supporting act that merely repeats the headliner', () => {
@@ -139,7 +142,7 @@ describe('extractTicketure', () => {
       },
     ])
     const [event] = extractTicketure(html, SOURCE_URL, DENVER)
-    expect(event?.supportingArtists).toEqual(['Benny Mayne'])
+    expect(event?.observedSupportingArtists).toEqual(['Benny Mayne'])
   })
 
   it('marks Music rows as concerts and non-Music rows as not', () => {

@@ -171,8 +171,9 @@ export async function tagEventsWithGenres(
   // nobody is billed, which is how a bingo night or a film screening looks.
   // `artist` is that event's display string and always populated, so without
   // this the model is handed a title in an "artist" field and duly invents a
-  // genre for it. NULL is left alone: it means the ladder has never seen the
-  // row, not that it ruled against one.
+  // genre for it. NULL is left alone: it is either a row the ladder has never
+  // seen or an adjudicator outage that reached no verdict, and neither is a
+  // ruling that nobody is billed. Only the empty array is that.
   //
   // Where the ladder DID name somebody, that bill is what the model gets —
   // `artist` may be an event-shaped title ("Jazz Series presents") sitting
