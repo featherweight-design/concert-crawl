@@ -38,6 +38,49 @@ describe('RowTitleLine', () => {
     expect(screen.getByTestId('row-title-line').children).toHaveLength(1)
   })
 
+  it('gives the title slot to the tour name when the surface promotes it', () => {
+    render(
+      <RowTitleLine
+        headliner="Wednesday"
+        tourName="Rat Saw God Tour"
+        showsTour={false}
+        promotesTour
+      />,
+    )
+    expect(screen.getByTestId('row-title')).toHaveTextContent(
+      'Rat Saw God Tour',
+    )
+    expect(screen.queryByTestId('row-tour-clause')).not.toBeInTheDocument()
+  })
+
+  it('announces the artist before the promoted tour name', () => {
+    render(
+      <RowTitleLine
+        headliner="Wednesday"
+        tourName="Rat Saw God Tour"
+        showsTour={false}
+        promotesTour
+      />,
+    )
+    const box = screen.getByTestId('row-title-line')
+    const artist = screen.getByTestId('row-promoted-artist')
+    expect(artist).toHaveTextContent('Wednesday')
+    expect(box.firstElementChild).toBe(artist)
+  })
+
+  it('falls back to the headliner when a promoting surface has no tour name', () => {
+    render(
+      <RowTitleLine
+        headliner="Wednesday"
+        tourName={null}
+        showsTour={false}
+        promotesTour
+      />,
+    )
+    expect(screen.getByTestId('row-title')).toHaveTextContent('Wednesday')
+    expect(screen.queryByTestId('row-promoted-artist')).not.toBeInTheDocument()
+  })
+
   it('hides the separator glyph from assistive tech', () => {
     render(
       <RowTitleLine
