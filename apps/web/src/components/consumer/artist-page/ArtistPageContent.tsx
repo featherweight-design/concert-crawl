@@ -2,7 +2,7 @@
 
 import { nfLocked } from '@concert-crawl/entitlements'
 import type { ArtistDetailResponse } from '@concert-crawl/types'
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
@@ -10,12 +10,13 @@ import { usePlanState } from '@/lib/queries/use-plan-state'
 import { useTheme } from '@/theme'
 
 import { BackChip } from '../back-chip/BackChip'
+import { HeroBand, Panel } from '../image-slot'
 
-import { ArtistPlate } from './ArtistPlate'
 import { Crumb } from './Crumb'
 import {
-  AP_HERO_H,
-  AP_STICKY_AFTER,
+  AP_BAND_H,
+  AP_RAIL_W,
+  AP_STICKY_BAR_H,
   CRAWL_SINCE,
 } from './definitions/constants'
 import { ARTIST_COPY } from './definitions/copy'
@@ -24,7 +25,11 @@ import { EmptyUpcoming } from './EmptyUpcoming'
 import { FollowBlock } from './FollowBlock'
 import { historyLine } from './lib/history-line'
 import { useArtistFollow } from './lib/use-artist-follow'
-import { useIsDesktop, useScrolledPast } from './lib/use-viewport'
+import {
+  useIsDesktop,
+  useMeasuredHeight,
+  useScrolledPast,
+} from './lib/use-viewport'
 import { PastShows } from './PastShows'
 import { StickyBar } from './StickyBar'
 import { UpcomingShows } from './UpcomingShows'
@@ -51,6 +56,10 @@ import { UpcomingShows } from './UpcomingShows'
  *                        hero, then the sticky sub-header takes over
  *   mobile, no shows   → the empty-upcoming block owns it, and the sub-header
  *                        is told not to grow one (`showFollow={false}`)
+ *
+ * The `<h1>` is now under the same rule, for the same reason: the band carries
+ * it on mobile and the content column carries it on desktop, so it is placed
+ * by `isDesktop` rather than by two CSS-hidden copies (#1525).
  */
 export const ArtistPageContent = ({
   data,
@@ -75,7 +84,12 @@ export const ArtistPageContent = ({
   )
 
   const isDesktop = useIsDesktop()
-  const scrolled = useScrolledPast(AP_STICKY_AFTER)
+  // Measured, not assumed: the band is one height below 640 and another
+  // between 640 and this page's own 768 breakpoint, and a fixed threshold
+  // brought the bar up over a band still on screen at those widths.
+  const bandRef = useRef<HTMLDivElement>(null)
+  const bandHeight = useMeasuredHeight(bandRef, AP_BAND_H)
+  const scrolled = useScrolledPast(bandHeight - AP_STICKY_BAR_H)
   const { theme } = useTheme()
 
   // ONE gate, asked once, passed down. `nfLocked` takes the plan state rather
@@ -109,6 +123,18 @@ export const ArtistPageContent = ({
   // arrives; desktop never renders the bar, so its rail keeps it throughout.
   const inlineFollow = hasShows && !isDesktop && !scrolled
 
+  // The title lives in the band on mobile and in the content column on
+  // desktop, so it is rendered once and placed by the same JS decision the
+  // follow control uses. A CSS split would mount two `<h1>`s and leave both in
+  // the accessibility tree, which is the exact failure `hidden md:block` causes
+  // for the follow button above.
+  const titleBlock = (
+    <>
+      <h1 className="ap-name">{artist.name}</h1>
+      <p className="ap-history">{historyLine(history, CRAWL_SINCE)}</p>
+    </>
+  )
+
   const player = (
     <ArtistEmbed
       name={artist.name}
@@ -128,16 +154,21 @@ export const ArtistPageContent = ({
         showFollow={hasShows}
       />
 
-      {/* Mobile: full-bleed plate with the back chip over it. */}
-      <div className="ap-hero-wrap relative md:hidden">
-        <ArtistPlate
-          name={artist.name}
-          photo={artist.photoUrl}
-          height={AP_HERO_H.wide}
-          className="ap-hero"
-        />
-        <BackChip top={56} fallbackHref="/events" />
-      </div>
+      {/* Mobile: the band owns the square panel, the back chip and the title.
+          Gated in JS rather than `md:hidden` so the title exists exactly once
+          — see `titleBlock`. */}
+      {isDesktop ? null : (
+        <div ref={bandRef}>
+          <HeroBand
+            surface="artist"
+            name={artist.name}
+            photoUrl={artist.photoUrl}
+            back={<BackChip inline fallbackHref="/events" />}
+          >
+            {titleBlock}
+          </HeroBand>
+        </div>
+      )}
 
       <div className="ap-shell">
         {/* Desktop: breadcrumb + a sticky left rail. No sub-header — the rail
@@ -148,13 +179,12 @@ export const ArtistPageContent = ({
         </div>
         <div className="ap-grid">
           <div className="ap-rail hidden md:block">
-            <div style={{ borderRadius: 14, overflow: 'hidden' }}>
-              <ArtistPlate
-                name={artist.name}
-                photo={artist.photoUrl}
-                height={320}
-              />
-            </div>
+            <Panel
+              surface="artist"
+              name={artist.name}
+              photoUrl={artist.photoUrl}
+              size={AP_RAIL_W}
+            />
             {isDesktop ? (
               <div style={{ marginTop: 16 }}>
                 <FollowBlock {...followProps} />
@@ -162,8 +192,7 @@ export const ArtistPageContent = ({
             ) : null}
           </div>
           <div style={{ minWidth: 0 }}>
-            <h1 className="ap-name">{artist.name}</h1>
-            <p className="ap-history">{historyLine(history, CRAWL_SINCE)}</p>
+            {isDesktop ? titleBlock : null}
 
             {inlineFollow ? (
               <div className="ap-block-follow">

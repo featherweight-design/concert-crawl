@@ -23,8 +23,6 @@ export const HeroSkeleton = ({
   className,
 }: {
   height: number
-  /** `ap-hero` on the mobile plate, so the skeleton takes the same narrow
-   *  breakpoint the real plate does and the page never jumps at 320px. */
   className?: string
 }) => (
   <div

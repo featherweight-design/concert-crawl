@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type RefObject } from 'react'
 
 /** The one breakpoint this page has, mirrored from the `.ap-*` media queries. */
 export const AP_DESKTOP_QUERY = '(min-width: 768px)'
@@ -32,6 +32,37 @@ export const useIsDesktop = (): boolean => {
   }, [])
 
   return isDesktop
+}
+
+/**
+ * The rendered height of `ref`, re-read whenever the element resizes.
+ *
+ * The band it measures is not one height: `HeroBand` steps its panel and its
+ * padding at `sm`, and this page's own breakpoint is `md`, so between 640 and
+ * 767px the mobile band renders a good hundred pixels taller than the constant
+ * that used to stand in for it. A measurement is the only value that is right
+ * at every width.
+ *
+ * A zero falls back rather than propagating — jsdom lays nothing out, and a
+ * threshold computed from 0 would read as "already scrolled past" everywhere.
+ */
+export const useMeasuredHeight = (
+  ref: RefObject<HTMLElement | null>,
+  fallback: number,
+): number => {
+  const [height, setHeight] = useState(fallback)
+
+  useEffect(() => {
+    const node = ref.current
+    if (!node || typeof ResizeObserver !== 'function') return
+    const apply = () => setHeight(node.offsetHeight || fallback)
+    apply()
+    const observer = new ResizeObserver(apply)
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [ref, fallback])
+
+  return height
 }
 
 /** True once the window has scrolled past `threshold` px. */

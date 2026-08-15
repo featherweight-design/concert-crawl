@@ -12,13 +12,28 @@ import {
   ShowsSkeleton,
   TextSkeleton,
 } from '@/components/consumer/artist-page/skeletons/Skeletons'
-import { AP_HERO_H } from '@/components/consumer/artist-page/definitions/constants'
+import { AP_RAIL_W } from '@/components/consumer/artist-page/definitions/constants'
 
 const ArtistLoading = () => (
   <main className="ap-page">
-    {/* Mobile: the full-bleed plate. */}
-    <div className="ap-hero-wrap md:hidden">
-      <HeroSkeleton height={AP_HERO_H.wide} className="ap-hero" />
+    {/* Mobile: the band. Geometry is copied from `HeroBand` deliberately — a
+        skeleton that is not the same height as the thing it stands in for is
+        the layout-shift lie this file exists to avoid. */}
+    <div
+      aria-hidden="true"
+      className="ap-band-skeleton border-b border-border px-4 pb-[18px] pt-4 md:hidden"
+    >
+      <div className="mb-3 h-11 w-11" />
+      <div className="flex items-start gap-3.5">
+        <div className="w-32 shrink-0">
+          <HeroSkeleton height={128} />
+        </div>
+        <div className="min-w-0 flex-1 pt-0.5">
+          <TextSkeleton width="82%" height={23} />
+          <TextSkeleton width="94%" height={11} marginTop={14} />
+          <TextSkeleton width="64%" height={11} marginTop={8} />
+        </div>
+      </div>
     </div>
 
     <div className="ap-shell">
@@ -30,8 +45,8 @@ const ArtistLoading = () => (
       </div>
       <div className="ap-grid">
         <div className="ap-rail hidden md:block">
-          <div style={{ borderRadius: 14, overflow: 'hidden' }}>
-            <HeroSkeleton height={320} />
+          <div style={{ borderRadius: 12, overflow: 'hidden' }}>
+            <HeroSkeleton height={AP_RAIL_W} />
           </div>
           {/* Design table §12: on DESKTOP the Follow slot belongs in the rail,
               in the same marginTop:16 box the real control occupies. */}
@@ -41,20 +56,10 @@ const ArtistLoading = () => (
         </div>
 
         <div style={{ minWidth: 0 }}>
-          {/* Name. */}
-          <div className="md:hidden">
-            <TextSkeleton width="72%" height={30} />
-          </div>
+          {/* Name and history line, desktop only — on mobile the band above
+              carries both, the same split the loaded page makes. */}
           <div className="hidden md:block">
             <TextSkeleton width="60%" height={40} />
-          </div>
-
-          {/* History line — two rows of prose. */}
-          <div className="md:hidden">
-            <TextSkeleton width="94%" height={11} marginTop={16} />
-            <TextSkeleton width="66%" height={11} marginTop={8} />
-          </div>
-          <div className="hidden md:block">
             <TextSkeleton width="92%" height={12} marginTop={18} />
             <TextSkeleton width="58%" height={12} marginTop={8} />
           </div>

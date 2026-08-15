@@ -5,7 +5,6 @@ import type { ArtistDetailResponse } from '@concert-crawl/types'
 import { cleanup, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { AP_HERO_H } from '@/components/consumer/artist-page/definitions/constants'
 import { ArtistPageContent } from '@/components/consumer/artist-page/ArtistPageContent'
 
 import ArtistLoading from './loading'
@@ -57,14 +56,22 @@ const LOADED: ArtistDetailResponse = {
 }
 
 describe('artist route skeleton', () => {
-  it('gives the mobile hero the same narrow breakpoint the real plate has', () => {
-    const { container } = render(<ArtistLoading />)
+  it('stands the mobile band up at the height the real band uses', () => {
+    const skeleton = render(<ArtistLoading />).container
+    const loaded = render(<ArtistPageContent data={LOADED} />).container
 
-    const hero = container.querySelector('.ap-hero-wrap .ap-hero')
-    expect(hero).not.toBeNull()
-    // Inline height is the wide value; `.ap-hero` steps it to 150px under
-    // 360px, so the skeleton and the plate never disagree by 50px.
-    expect(hero?.getAttribute('style')).toContain(`height: ${AP_HERO_H.wide}px`)
+    const band = skeleton.querySelector('.ap-band-skeleton')
+    expect(band).not.toBeNull()
+
+    // The panel column is what sets the band's height, so the two must agree
+    // on it exactly — 128px of art either way.
+    expect(band?.querySelector('.w-32')).not.toBeNull()
+    expect(
+      band?.querySelector<HTMLElement>('.w-32 [style]')?.style.height,
+    ).toBe('128px')
+    expect(
+      loaded.querySelector('[data-testid="hero-band"] .w-32'),
+    ).not.toBeNull()
   })
 
   // Regression guard: the skeleton omitted the desktop crumb, so the whole grid

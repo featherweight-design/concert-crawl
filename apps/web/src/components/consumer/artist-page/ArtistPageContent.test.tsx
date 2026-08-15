@@ -10,7 +10,7 @@ import React from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ArtistPageContent } from './ArtistPageContent'
-import { AP_STICKY_AFTER } from './definitions/constants'
+import { AP_STICKY_AFTER, AP_STICKY_BAR_H } from './definitions/constants'
 import { ARTIST_COPY } from './definitions/copy'
 
 // The mobile hero renders BackChip, which reaches for the app router.
@@ -202,6 +202,41 @@ describe('ArtistPageContent', () => {
     })
   })
 
+  // `HeroBand` steps its panel to 208 and grows its padding at `sm` (640) while
+  // this page keeps its mobile layout until `md` (768). Between those widths a
+  // fixed 218px assumption brought the bar up over a band still on screen.
+  it('times the sticky bar off the measured band, not a fixed height', () => {
+    const TALL = 322
+    const observers: (() => void)[] = []
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private readonly cb: () => void) {}
+        observe() {
+          observers.push(this.cb)
+        }
+        disconnect() {}
+        unobserve() {}
+      },
+    )
+    const height = vi
+      .spyOn(HTMLElement.prototype, 'offsetHeight', 'get')
+      .mockReturnValue(TALL)
+
+    const { container } = render(<ArtistPageContent data={withShows} />)
+    expect(observers.length).toBeGreaterThan(0)
+
+    // Past the old constant, but the band is still on screen.
+    scrollTo(AP_STICKY_AFTER + 10)
+    expect(container.querySelector('[data-sticky-bar]')).toBeNull()
+
+    scrollTo(TALL - AP_STICKY_BAR_H + 10)
+    expect(container.querySelector('[data-sticky-bar]')).not.toBeNull()
+
+    height.mockRestore()
+    vi.unstubAllGlobals()
+  })
+
   it('gives the sticky bar its follow flag from the page, not from itself', () => {
     const { container, rerender } = render(
       <ArtistPageContent data={withShows} />,
@@ -306,5 +341,70 @@ describe('ArtistPageContent', () => {
     const { container } = render(<ArtistPageContent data={withShows} />)
     expect(container.querySelector('iframe')).toBeNull()
     expect(container.textContent).toContain(ARTIST_COPY.playerNone)
+  })
+
+  // #1525 — the hero is a band now, not a full-bleed plate.
+  describe('the imagery band', () => {
+    const photo = 'https://i.example.com/neal.jpg'
+    const withPhoto: ArtistDetailResponse = {
+      ...base,
+      artist: { ...base.artist, photoUrl: photo },
+    }
+
+    it('names the headliner exactly once across the whole page', () => {
+      const { container } = render(<ArtistPageContent data={withShows} />)
+      expect(container.querySelectorAll('h1')).toHaveLength(1)
+      expect(container.querySelector('h1')?.textContent).toBe('Neal Francis')
+
+      cleanup()
+      setViewport(true)
+      const desktop = render(<ArtistPageContent data={withShows} />).container
+      expect(desktop.querySelectorAll('h1')).toHaveLength(1)
+    })
+
+    it('falls to generated art when the portrait URL has expired', () => {
+      // A signed press URL can die between the server render and the browser's
+      // request, so the fallback is a render-time gate, not a fetch-time one.
+      const { container } = render(<ArtistPageContent data={withPhoto} />)
+      const band = container.querySelector('[data-testid="hero-band"]')
+      const slot = band?.querySelector<HTMLElement>('.w-32 > *')
+      const image = band?.querySelector('img')
+      if (!(image instanceof HTMLImageElement)) throw new Error('no portrait')
+
+      const before = slot?.getAttribute('style')
+      act(() => {
+        fireEvent.error(image)
+      })
+
+      expect(band?.querySelector('img')).toBeNull()
+      expect(band?.querySelector('svg')).not.toBeNull()
+      // The box is unchanged, so the fallback costs no layout shift.
+      expect(
+        band?.querySelector<HTMLElement>('.w-32 > *')?.getAttribute('style'),
+      ).toBe(before)
+    })
+
+    it('draws generated art rather than borrowing a show poster', () => {
+      // §2.3: an artist surface resolves portrait → generated and never event
+      // artwork. `SlotSource` makes the wrong call a compile error; this is its
+      // runtime witness, on a page whose shows do have their own imagery.
+      const { container } = render(<ArtistPageContent data={withShows} />)
+      const band = container.querySelector('[data-testid="hero-band"]')
+
+      expect(band?.querySelector('img')).toBeNull()
+      expect(band?.querySelector('svg')).not.toBeNull()
+    })
+
+    it('keeps the desktop rail sticky and hands it the band panel', () => {
+      setViewport(true)
+      const { container } = render(<ArtistPageContent data={withPhoto} />)
+
+      const rail = container.querySelector('.ap-rail')
+      expect(rail).not.toBeNull()
+      expect(rail?.querySelector('img')?.getAttribute('src')).toBe(photo)
+      // `.ap-rail` carries `position: sticky` in globals.css; the band must not
+      // render alongside it or the page would show two portraits.
+      expect(container.querySelector('[data-testid="hero-band"]')).toBeNull()
+    })
   })
 })

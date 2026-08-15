@@ -24,8 +24,20 @@ export const RESIDENCY_WINDOW = 21
  */
 export const SHOWS_VISIBLE = 5
 
-/** Hero plate height, by viewport width against AP_NARROW_BP. */
-export const AP_HERO_H = { wide: 200, narrow: 150 } as const
+/**
+ * The band's height at the NARROW end: 16 top pad + a 44px back row + 12 gap +
+ * the 128px panel + 18 bottom pad.
+ *
+ * It is a seed, not the truth. `HeroBand` steps its panel to 208 and grows its
+ * padding at `sm` (640), while this page stays on its mobile layout until `md`
+ * (768), so between those two widths the real band is far taller. The page
+ * measures the rendered band and uses this only for SSR and the first paint,
+ * before layout exists to be measured.
+ */
+export const AP_BAND_H = 218
+
+/** Desktop rail slot, per the imagery handoff's slot table (#1525). */
+export const AP_RAIL_W = 208
 
 /** Below this width the page uses the narrow type ramp and padding. */
 export const AP_NARROW_BP = 360
@@ -38,12 +50,18 @@ export const AP_NARROW_BP = 360
  */
 export const AP_PILL_FONT_SIZE = 9.5
 
+/** The mobile sticky sub-header's own height. */
+export const AP_STICKY_BAR_H = 56
+
 /**
- * How far the page scrolls before the mobile sticky sub-header takes over. The
- * hero is 200px tall and the bar is 56px, so the bar arrives exactly as the
- * plate leaves — never over the top of it.
+ * How far the page scrolls before the sticky sub-header takes over: the band's
+ * height less the bar's, so the bar arrives exactly as the band leaves and
+ * never over the top of it.
+ *
+ * Seeded from `AP_BAND_H` and recomputed from the measured band once there is
+ * one — the subtraction is the rule, the 218 is only its opening guess.
  */
-export const AP_STICKY_AFTER = AP_HERO_H.wide - 56
+export const AP_STICKY_AFTER = AP_BAND_H - AP_STICKY_BAR_H
 
 /** Spotify embed heights (consumed by PR-F). */
 export const EMBED_H = { compact: 152, tall: 352 } as const

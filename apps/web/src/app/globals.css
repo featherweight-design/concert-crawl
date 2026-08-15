@@ -315,10 +315,6 @@
 .ap-page a:hover { color: var(--fg); }
 .ap-row:hover { background: var(--overlay-hover); }
 
-/* The mobile hero fades into the page; the desktop rail plate must not — it is
-   a radius-14 box, and a fade to page background inside it reads as a bug. */
-.ap-hero-fade { display: block; }
-
 /* The route past the iframe. Hidden until focus, then a real 44px target —
    a `:focus` rule cannot be expressed inline, which is why it lives here. */
 .ap-skip {
@@ -353,8 +349,9 @@
 }
 
 /* Bottom padding reserves the fixed mobile bottom nav, same 80px every other
-   consumer page reserves with `pb-20`. */
-.ap-shell { position: relative; padding: 0 18px 80px; margin-top: -26px; }
+   consumer page reserves with `pb-20`. The shell no longer tucks under the
+   hero: the band ends on a border and the page starts below it (#1525). */
+.ap-shell { position: relative; padding: 18px 18px 80px; }
 
 /* Block rhythm steps up on desktop (design table §1). */
 .ap-block-follow { margin-top: 20px; }
@@ -365,7 +362,10 @@
   margin: 0;
   font-family: Inter, system-ui, sans-serif;
   font-weight: 900;
-  font-size: 31px;
+  /* The band's type column is ~216px at 390 and ~146px at 320, so the mobile
+     ramp steps down from the 31px the old full-width hero could carry. Desktop
+     is untouched — its title still owns a 1fr column. */
+  font-size: 24px;
   line-height: 1.08;
   letter-spacing: -0.035em;
   color: var(--fg);
@@ -383,8 +383,7 @@
 /* 320px is the floor. Below 360 the type ramp and padding step down. */
 @media (max-width: 359px) {
   .ap-shell { padding-left: 14px; padding-right: 14px; }
-  .ap-name { font-size: 27px; }
-  .ap-hero { height: 150px !important; }
+  .ap-name { font-size: 21px; }
 }
 
 @media (min-width: 768px) {
@@ -395,12 +394,12 @@
   }
   .ap-grid {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    /* 208px is the imagery handoff's desktop rail slot (#1525). */
+    grid-template-columns: 208px 1fr;
     gap: 40px;
     align-items: start;
   }
   .ap-rail { position: sticky; top: 24px; }
-  .ap-hero-fade { display: none; }
   .ap-block-player { margin-top: 30px; }
   .ap-block-shows { margin-top: 30px; }
   .ap-block-past { margin-top: 34px; }
