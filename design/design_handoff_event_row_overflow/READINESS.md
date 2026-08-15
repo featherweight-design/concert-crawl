@@ -175,7 +175,7 @@ to. They are marked **FIXED**.
   copying it.
 - **FIXED.** The `README` header read `R3.2 measure-pass fix` while the body carried
   R3.3. Header now names the R3.3 round.
-- **FIXED.** `spotify-shared.jsx:26` used a native `title=` on the logo placeholder,
+- **FIXED.** `spotify-shared.jsx`'s `SpotifyLogo` used a native `title=` on the logo placeholder,
   which `cc-tip.jsx:29` names as banned by project convention. Dropped; the
   placeholder's purpose was already documented in the comment above it. The
   remaining `title=` attributes in `design-canvas.jsx` are on canvas chrome —

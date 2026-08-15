@@ -21,10 +21,10 @@
 function SpotifyLogo({ size = 40, radius }) {
   const r = radius != null ? radius : Math.round(size * 0.28);
   const small = size <= 18;
+  // No native title= — hover-only, and inconsistent on touch and screen readers
+  // (project convention, see cc-tip.jsx). The placeholder's purpose is
+  // documented in the comment above rather than in a tooltip.
   return (
-    {/* No native title= — hover-only, and inconsistent on touch and screen
-        readers (project convention, see cc-tip.jsx). The placeholder's purpose
-        is documented in the comment above rather than in a tooltip. */}
     <div
       aria-label="Spotify"
       style={{
