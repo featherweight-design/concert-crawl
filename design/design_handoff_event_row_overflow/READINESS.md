@@ -203,6 +203,12 @@ asserts something production contradicts. They are marked **FIXED**.
   remaining `title=` attributes in `design-canvas.jsx` are on canvas chrome —
   drag handles and focus buttons — which is prototype tooling, not product
   surface, and is out of scope for the convention.
+- **NOT FIXED, deliberately.** `Row Overflow.html` still carries the pre-R3.3
+  framing of the zero-chip rows at `:299`, `:316` and `:381` — it is Design's
+  rendered export, regenerated rather than hand-edited, and patching the built
+  artifact silently diverges it from the source Design holds. The correction is
+  carried in README §2 and §5 and in this verdict, which is what an implementer
+  reads. Worth folding in whenever Design next re-exports.
 - **NOT FIXED, deliberately.** `tweaks-panel.jsx` handles `postMessage` without
   validating `event.source` and posts with `targetOrigin: '*'` (`:149`, `:192`,
   `:196`). Ruled out of scope on two grounds. It is Design's canvas tooling, not

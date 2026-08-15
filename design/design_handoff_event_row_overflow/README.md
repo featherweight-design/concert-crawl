@@ -73,6 +73,8 @@ It isn't content, it's crawl order: the pre-extraction event title, kept on rows
 
 **What those rows do introduce** is a height case, not a title case: no Spotify match and no genre means zero chips and no line 4. That's §5.
 
+> **R3.3 correction (eng, measured against prod).** The *geometry* is real and `ROW_MIN` still earns its place, but this population is not where it comes from. Production has **zero** events with an empty `genres[]` (0 of 2,218), and `genre` sits in `chipPriority` on Browse, venue, related, crew and crewLens — so on all five, line 4 always renders at least one chip. The reachable zero-chip row is on **`watching`**, whose `chipPriority` is `['freshness', 'provenance']`: a watched show with a fresh, primary-source price earns neither. The `genres: []` fixtures are a canvas convenience for reaching the geometry; don't port them into a production test as though the crawler could produce one.
+
 ## 3 · Status → the price slot
 
 State is not description, and state already has a home: `soldout` short-circuits the price stack as Rule 2's one stated exemption. `cancelled` and `postponed` are the same kind of thing and take the same door — chip instead of price, **no meta-chip budget spent**, no line.
@@ -120,7 +122,7 @@ design_handoff_event_row_overflow/
 
 ## 6 · Verification
 
-- Section 5 mounts a mixed list in production proportions (3 of 11 rows carry one of the three elements, 2 of 11 are zero-chip rows) at 320 / 390 / desktop, on all four surfaces via the Tweaks panel. Probes under the collapsing and reserved lists measure every rendered row and report the **distinct heights** — and they re-measure when surface or density changes (R1's measured once on mount, so the reading was stale).
+- Section 5 mounts a mixed list at production proportions for the three overflow elements (3 of 11 rows carry one), plus 2 of 11 included to exercise the zero-chip geometry — those two are canvas-only, per the R3.3 correction in §2, and are not a production proportion — at 320 / 390 / desktop, on all four surfaces via the Tweaks panel. Probes under the collapsing and reserved lists measure every rendered row and report the **distinct heights** — and they re-measure when surface or density changes (R1's measured once on mount, so the reading was stale).
 - Measured after the fix: **1 distinct height per list geometry** (cozy wide 110 / cozy narrow 108 / watching 92 / compact 101). The collapsing comparison reads 3 (82 / 91 / 109) on the same data.
 - The rejected fifth line renders the same eleven events beside it for comparison.
 - Checked across electric / jade / light.

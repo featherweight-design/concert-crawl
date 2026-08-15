@@ -90,8 +90,10 @@ const O_SPARSE = [
     price: { amount: 15, isFloor: false, source: "primary", observedAt: "2026-08-13T09:00:00Z" }, saved: null },
 ];
 
-// A mixed list in roughly production proportions — 3 of 11 rows carry one of
-// the three elements, and 2 of 11 are zero-chip rows.
+// A mixed list at roughly production proportions for the three overflow
+// elements — 3 of 11 rows carry one. The 2 of 11 zero-chip rows are there to
+// exercise that geometry, NOT a production proportion; see the R3.3 note at the
+// top of this file.
 const O_MIXED = [
   window.R_SHOWS[0],
   O_TOUR[0],
