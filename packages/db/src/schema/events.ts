@@ -60,9 +60,10 @@ export const events = pgTable(
     // ladder has never touched the row and the projection falls back to
     // `canonical_artist`. See `backfill-artists.ts`.
     //
-    // On an existing row the upsert rebuilds this as
-    // array_prepend(artist, excluded[2:]), so headliners[0] tracks the STORED
-    // `artist`, which never updates on conflict. Nothing in this codebase ever
+    // `headliners[0] === artist` is NOT an invariant. The upsert takes the
+    // derived array wholesale and only preserves the stored value when the new
+    // one is NULL, so a row can carry an event-shaped `artist` alongside the
+    // real bill. Nothing in this codebase ever
     // splits an artist string on punctuation to derive an act, because band
     // names legitimately contain '&', 'and' and '+' ("Iron & Wine",
     // "Coheed and Cambria", "for KING + COUNTRY").

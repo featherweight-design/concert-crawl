@@ -307,10 +307,9 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     ])
     await crawlVenue(venue.id, mockBrowser)
 
-    // The upsert rebuilds the array as array_prepend(artist, excluded[2:]).
-    // Postgres yields an empty array — never NULL — for a slice past the end,
-    // so a one-element extraction leaves headliners as [artist] rather than
-    // nulling the column out.
+    // The upsert takes the newly derived array wholesale, so a bill that drops
+    // back to one act narrows on re-crawl instead of keeping the stale
+    // co-headliner.
     mockExtraction(
       [
         makeEvent('Fontaines D.C.', date, {
@@ -491,7 +490,7 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
   it('does not collapse a real bill back to the display title on re-crawl', async () => {
     // When the listing names nobody, the ladder puts the real performer in
     // headliners while `artist` keeps the event-shaped display string. Rebuilding
-    // the array as array_prepend(artist, excluded[2:]) on conflict turned that
+    // the array as array_prepend(artist, excluded[2:]) on conflict used to turn that
     // into ['Jazz Series presents'] — the exact title-as-headliner junk this
     // stage exists to stop.
     const venue = await seedTestVenue()
