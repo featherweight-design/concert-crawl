@@ -56,15 +56,36 @@ export function isSuspiciousObservation(
 }
 
 export async function deriveArtists(
-  event: Pick<
-    NormalizedEvent,
-    'title' | 'rawTitle' | 'description' | 'observedPerformers'
-  >,
+  event: Pick<NormalizedEvent, 'title' | 'description'> & {
+    // Typed optional even though `NormalizedEvent` declares it required: the
+    // same hazard `rawTitle` has in crawl.ts. A path that forgets to report
+    // observations must escalate, not throw and take the whole run to
+    // `failed`.
+    observedPerformers?: string[]
+    observedSupportingArtists?: string[]
+    // Only the LLM path and Ticketure emit this. `undefined` means "nobody
+    // ruled", which is most of the catalogue and must not read as a negative.
+    isConcert?: boolean
+  },
   adjudicate: Adjudicator,
 ): Promise<DerivedArtists> {
-  const observed = event.observedPerformers.filter(
-    (name) => name.trim().length > 0,
-  )
+  // Step 0 — an extractor that already read the page and said "not a concert"
+  // outranks every step below it. Re-adjudicating would spend a call to
+  // second-guess a verdict made with more context than a title, and echoing
+  // the observed performer would put a bingo night in the artists projection.
+  if (event.isConcert === false) {
+    return {
+      headliners: [],
+      supportingArtists: [],
+      isConcert: false,
+      adjudicated: false,
+    }
+  }
+
+  const nonEmpty = (names: string[] | undefined): string[] =>
+    (names ?? []).filter((name) => name.trim().length > 0)
+
+  const observed = nonEmpty(event.observedPerformers)
   const headliner = observed[0]
 
   // Step 1 — the source named somebody, and it does not merely echo the title.
@@ -75,9 +96,12 @@ export async function deriveArtists(
     headliner !== undefined &&
     !isSuspiciousObservation(headliner, event.title)
   ) {
+    // The whole observed headline bill, not just its first element — a
+    // co-headline set (#1203) is a real reading of the page and demoting its
+    // second act to an opener would lose it.
     return {
-      headliners: [headliner],
-      supportingArtists: observed.slice(1),
+      headliners: observed,
+      supportingArtists: nonEmpty(event.observedSupportingArtists),
       isConcert: true,
       adjudicated: false,
     }

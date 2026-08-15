@@ -314,10 +314,11 @@ function normalize(
   // The payload lists the headliner first. When the record carries no artist
   // breakdown at all (festival passes, multi-bill packages), the listing name
   // is still the best DISPLAY string — but it is not an observation of a
-  // performer, so it does not enter observedPerformers. The whole list is
-  // passed on, not just [0]: the ladder needs the full billing to spot
-  // co-headliners (#1203).
-  const observedPerformers = artistNames
+  // performer, so it does not enter observedPerformers. The payload carries no
+  // billing emphasis, so the only honest reading is "first is the headliner,
+  // rest are openers" — reported as that split rather than one flat list, which
+  // the ladder would otherwise read as a co-headline bill (#1203).
+  const observedPerformers = artistNames.slice(0, 1)
   const artist = observedPerformers[0] ?? event.name
   const supportingArtists = artistNames.slice(1)
 
@@ -333,6 +334,7 @@ function normalize(
     rawTitle: event.name,
     artist,
     observedPerformers,
+    observedSupportingArtists: supportingArtists,
     ...(supportingArtists.length > 0 ? { supportingArtists } : {}),
     date: event.start_date_local,
     ...(showTime !== undefined ? { showTime } : {}),

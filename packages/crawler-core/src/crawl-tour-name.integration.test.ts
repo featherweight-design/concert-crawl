@@ -42,6 +42,14 @@ vi.mock('./lib/robots.js', () => ({
 }))
 vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
+  // Fixtures here report their performers, so the derivation ladder settles
+  // on step 1 without escalating. Rejecting makes an unexpected escalation
+  // loud rather than silently spending an adjudication call.
+  adjudicateEvent: vi
+    .fn()
+    .mockRejectedValue(
+      new Error('adjudicateEvent is not stubbed for this test'),
+    ),
 }))
 vi.mock('./lib/email.js', () => ({
   sendCrawlFailureEmail: vi.fn().mockResolvedValue(undefined),

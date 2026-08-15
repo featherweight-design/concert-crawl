@@ -4,12 +4,17 @@ import type { Browser } from 'playwright'
 import { db, events, venues } from '@concert-crawl/db'
 import { crawlVenue } from './crawl.js'
 
-// #1203 — the crawler persists the headliner set as a first-class array.
-// `headliners[0]` is always `artist`, and `canonical_headliners` is the
-// element-wise canonicalization of it. The crawler NEVER derives multiple
-// headliners itself: only the LLM extractor decides that a bill has more than
-// one, so an extraction without `headliners` collapses to `[artist]` and a
-// band name containing '&' stays one act.
+// #1203 — the crawler persists the headliner set as a first-class array, and
+// `canonical_headliners` is its element-wise canonicalization.
+//
+// The set now comes from `deriveArtists()` reading what the extractor OBSERVED,
+// not from `artist`. Two consequences the cases below pin down:
+//
+//   - `headliners[0] === artist` is NO LONGER an invariant. `artist` is the
+//     event's display string; an extraction that observed nobody persists an
+//     empty headliner set while `artist` still holds the title.
+//   - The crawler still never derives multiple headliners by splitting a
+//     string, so a band name containing '&' stays one act.
 //
 // Same IO-layer mocking as crawl-artists.integration.test.ts: real Postgres,
 // mocked fetcher / robots / LLM.
@@ -45,6 +50,14 @@ vi.mock('./lib/robots.js', () => ({
 }))
 vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
+  // Fixtures here report their performers, so the derivation ladder settles
+  // on step 1 without escalating. Rejecting makes an unexpected escalation
+  // loud rather than silently spending an adjudication call.
+  adjudicateEvent: vi
+    .fn()
+    .mockRejectedValue(
+      new Error('adjudicateEvent is not stubbed for this test'),
+    ),
 }))
 vi.mock('./lib/email.js', () => ({
   sendCrawlFailureEmail: vi.fn().mockResolvedValue(undefined),
@@ -52,12 +65,13 @@ vi.mock('./lib/email.js', () => ({
 }))
 
 import { fetchPage, fetchPageHttp } from './lib/fetcher.js'
-import { extractWithLlm } from './lib/extractors/llm.js'
+import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js'
 
 const mockBrowser = {} as Browser
 const mockFetchPage = vi.mocked(fetchPage)
 const mockFetchPageHttp = vi.mocked(fetchPageHttp)
 const mockExtractWithLlm = vi.mocked(extractWithLlm)
+const mockAdjudicateEvent = vi.mocked(adjudicateEvent)
 
 const SOURCE_URL = 'https://headliners.example.com'
 const HTML_BASE = '<html><body><p>Headliner listing</p></body></html>'
@@ -96,8 +110,12 @@ interface ExtractedEvent {
   title: string
   rawTitle: string
   artist: string
-  headliners?: string[]
-  supportingArtists?: string[]
+  /**
+   * What the extractor SAW. `headliners` is deliberately absent: the derivation
+   * stage overwrites it, so a fixture that set it would assert nothing.
+   */
+  observedPerformers: string[]
+  observedSupportingArtists?: string[]
   date: string
   sourceUrl: string
   confidence: number
@@ -113,6 +131,7 @@ function makeEvent(
     title,
     rawTitle: title,
     artist,
+    observedPerformers: [artist],
     date,
     sourceUrl: SOURCE_URL,
     confidence: 0.9,
@@ -163,10 +182,14 @@ beforeEach(async () => {
   mockFetchPage.mockClear()
   mockFetchPageHttp.mockClear()
   mockExtractWithLlm.mockClear()
+  mockAdjudicateEvent.mockClear()
+  mockAdjudicateEvent.mockRejectedValue(
+    new Error('adjudicateEvent is not stubbed for this test'),
+  )
 })
 
 describe('crawlVenue — headliner set persistence (#1203)', () => {
-  it('falls back to [artist] when the extractor emits no headliners', async () => {
+  it('persists the single act the extractor observed', async () => {
     const venue = await seedTestVenue()
     mockExtraction([makeEvent('Sigur Rós', futureDate(20))])
 
@@ -176,16 +199,37 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     const row = await loadEvent('Sigur Rós')
     expect(row.headliners).toEqual(['Sigur Rós'])
     expect(row.canonicalHeadliners).toEqual(['sigur ros'])
-    // The invariant: headliners[0] is the artist string.
-    expect(row.headliners?.[0]).toBe('Sigur Rós')
+  })
+
+  it('persists an EMPTY headliner set when the extractor observed nobody', async () => {
+    // The old behavior here was to fall back to [artist]. That fallback is what
+    // put 222 event titles in the artists projection, so it is gone: a listing
+    // that names no performer keeps its display string and nothing else. The
+    // adjudicator rules it a non-concert, which is the honest answer for bingo.
+    const venue = await seedTestVenue()
+    mockAdjudicateEvent.mockResolvedValue({
+      isConcert: false,
+      headliners: [],
+      supportingArtists: [],
+    })
+    mockExtraction([
+      makeEvent('Drag Bingo', futureDate(26), { observedPerformers: [] }),
+    ])
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const row = await loadEvent('Drag Bingo')
+    expect(row.artist).toBe('Drag Bingo')
+    expect(row.headliners).toEqual([])
+    expect(row.canonicalHeadliners).toEqual([])
   })
 
   it('persists a multi-headliner array and canonicalizes every entry', async () => {
     const venue = await seedTestVenue()
     mockExtraction([
       makeEvent('Desert Dwellers', futureDate(21), {
-        headliners: ['Desert Dwellers', 'Great Dane'],
-        supportingArtists: ['Numatik'],
+        observedPerformers: ['Desert Dwellers', 'Great Dane'],
+        observedSupportingArtists: ['Numatik'],
       }),
     ])
 
@@ -209,7 +253,7 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     // The extractor emits the whole name; nothing downstream splits on '&'.
     mockExtraction([
       makeEvent('Iron & Wine', futureDate(22), {
-        headliners: ['Iron & Wine'],
+        observedPerformers: ['Iron & Wine'],
       }),
     ])
 
@@ -235,7 +279,7 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
         makeEvent('Turnstile', date, {
           title: 'Turnstile & Snail Mail Co-Headline',
           rawTitle: 'Turnstile & Snail Mail Co-Headline',
-          headliners: ['Turnstile', 'Snail Mail'],
+          observedPerformers: ['Turnstile', 'Snail Mail'],
         }),
       ],
       '<html><body><p>Updated listing</p></body></html>',
@@ -257,7 +301,7 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
       makeEvent('Fontaines D.C.', date, {
         title: 'Fontaines D.C. & Just Mustard',
         rawTitle: 'Fontaines D.C. & Just Mustard',
-        headliners: ['Fontaines D.C.', 'Just Mustard'],
+        observedPerformers: ['Fontaines D.C.', 'Just Mustard'],
       }),
     ])
     await crawlVenue(venue.id, mockBrowser)
@@ -267,7 +311,11 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     // so a one-element extraction leaves headliners as [artist] rather than
     // nulling the column out.
     mockExtraction(
-      [makeEvent('Fontaines D.C.', date, { headliners: ['Fontaines D.C.'] })],
+      [
+        makeEvent('Fontaines D.C.', date, {
+          observedPerformers: ['Fontaines D.C.'],
+        }),
+      ],
       '<html><body><p>Solo billing</p></body></html>',
     )
     await crawlVenue(venue.id, mockBrowser)
@@ -277,21 +325,23 @@ describe('crawlVenue — headliner set persistence (#1203)', () => {
     expect(row.canonicalHeadliners).toEqual(['fontaines d.c.'])
   })
 
-  it('keeps headliners[0] equal to the stored artist when the extracted string drifts', async () => {
+  it('re-pins headliners[0] to the stored artist when the extracted string drifts', async () => {
     const venue = await seedTestVenue()
     const date = futureDate(24)
     mockExtraction([makeEvent('Bjork', date)])
     await crawlVenue(venue.id, mockBrowser)
 
-    // Re-crawl produces the diacritic form. `artist` is deliberately never
-    // updated on conflict, and canonical_artist is unchanged, so headliners[0]
-    // must stay the STORED string or the invariant breaks.
+    // Derivation no longer guarantees headliners[0] === artist — that is now a
+    // property of the UPSERT, which rebuilds the array as
+    // array_prepend(artist, excluded[2:]) and deliberately never updates
+    // `artist` on conflict. So the diacritic re-crawl keeps the stored spelling
+    // at the head while still picking up the newly-billed co-headliner.
     mockExtraction(
       [
         makeEvent('Björk', date, {
           title: 'Björk & Arca',
           rawTitle: 'Björk & Arca',
-          headliners: ['Björk', 'Arca'],
+          observedPerformers: ['Björk', 'Arca'],
         }),
       ],
       '<html><body><p>Updated listing</p></body></html>',

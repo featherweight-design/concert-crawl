@@ -244,9 +244,14 @@ function normalize(
   // below survives only as the DISPLAY string — it is not recorded as an
   // observation, which is what keeps 11 event titles out of the artists
   // projection.
-  const observedPerformers = (event.announceArtists ?? [])
+  const announcedNames = (event.announceArtists ?? [])
     .map((entry) => entry.name.trim())
     .filter((name) => name.length > 0)
+  // `announceArtists` carries no billing emphasis, so the only honest reading
+  // is "first is the headliner, rest are openers". Reported as that split, not
+  // one flat list the ladder would read as a co-headline bill (#1203).
+  const observedPerformers = announcedNames.slice(0, 1)
+  const observedSupportingArtists = announcedNames.slice(1)
   const artist = observedPerformers[0] ?? title
 
   const showTime = event.startTime ?? undefined
@@ -268,6 +273,7 @@ function normalize(
     rawTitle: title,
     artist,
     observedPerformers,
+    observedSupportingArtists,
     date: event.date,
     ...(showTime !== undefined ? { showTime } : {}),
     ...(doorsTime !== undefined ? { doorsTime } : {}),

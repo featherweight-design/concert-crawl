@@ -127,6 +127,10 @@ function mapToNormalizedEvent(
     // decides whether this listing yields an artist at all.
     artist: title,
     observedPerformers: [],
+    // Openers are parsed out of prose below, not read off a structured field.
+    // With no observed headliner to hang them on they are a display detail, not
+    // an observation, so they never seed the artists projection either.
+    observedSupportingArtists: [],
     date,
     sourceUrl,
     confidence: 1.0,

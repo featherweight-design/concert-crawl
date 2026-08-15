@@ -87,18 +87,23 @@ function mapToNormalizedEvent(
 
   if (typeof name !== 'string' || typeof startDate !== 'string') return null
 
-  const observedPerformers = getPerformerNames(obj['performer'])
+  const performerNames = getPerformerNames(obj['performer'])
   // `name` is still the display string when the listing names no performer,
   // but it is NOT recorded as an observation — that coalesce is what put 80
   // event titles into the artists projection.
-  const artist = observedPerformers[0] ?? name
+  const artist = performerNames[0] ?? name
+  // schema.org `performer[]` is one flat list with no billing emphasis, so the
+  // only honest reading is "first is the headliner, rest are openers". Reported
+  // as the split the observation contract asks for rather than flattened —
+  // flattening would let `deriveArtists()` read the openers as co-headliners.
+  const observedPerformers = performerNames.slice(0, 1)
   // Some venues list the headliner more than once in `performer[]` (or repeat
   // it after the openers). `slice(1)` alone would keep those duplicates and
   // surface the headliner as its own supporting act. Route through the shared
   // normalizer so this path stays byte-identical to the LLM path (#643).
   const supportingArtists = normalizeSupportingArtists(
     artist,
-    observedPerformers.slice(1),
+    performerNames.slice(1),
   )
   const date = extractDateOnly(startDate, timeZone)
   if (date === undefined) {
@@ -145,6 +150,7 @@ function mapToNormalizedEvent(
     rawTitle: name,
     artist,
     observedPerformers,
+    observedSupportingArtists: supportingArtists,
     date,
     sourceUrl,
     confidence: 1.0,

@@ -139,17 +139,13 @@ export const REVIEW_NEEDED_RULES = `For every classification, ALSO set reviewNee
 
 reviewNeeded is independent of isConcert — emit it whenever you had to choose between two plausible interpretations, regardless of which direction you ended up picking.`
 
-const SYSTEM_PROMPT = `You are an event data extractor for a music-venue concert calendar. Given HTML from a venue website, call the save_events tool with EVERY upcoming event you find, including non-concert events (themed parties, bingo, comedy, movies, etc.). Do not omit non-concert events — downstream tooling uses the isConcert field on each event to decide what reaches consumers.
-
-Rules:
-- date must be ISO format YYYY-MM-DD
-- confidence reflects how certain you are the extraction is accurate (0.0-1.0)
-- Only include actual upcoming events, not past events
-- If artist is unclear, derive it from the event title — but still apply the headliner-only and run-on-splitting rules below (never copy a multi-act title verbatim into artist)
+// The rules that decide WHO is on the bill, separated from the page-scraping
+// rules around them so the single-event adjudicator can reuse them verbatim.
+// `deriveArtists()` escalates to that adjudicator with one title rather than a
+// page, and it has to reach the same answer the extractor would — two copies of
+// these rules is how one of them goes stale.
+export const ARTIST_RULES = `- If artist is unclear, derive it from the event title — but still apply the headliner-only and run-on-splitting rules below (never copy a multi-act title verbatim into artist)
 - If the listing names no performer at all (bingo, trivia, movie night, themed party), set artist to null. Do not invent a performer and do not copy the title into artist — null is expected here and handled downstream. EXCEPTION: if the title carries a recurring series brand, use that brand instead of null — see the series-brand rule below, which takes precedence here
-- Pass an empty events array if no events are found
-- When a date has no year, infer it using today's date (provided in the user message): if the month/day is today or in the future within the current year, use the current year; if the month/day has already passed this year, use next year
-- rawTitle must be the EXACT verbatim copy of the event card's headline string from the page, byte-for-byte. Do NOT combine with subheads (e.g. "AEG Presents"), do NOT strip venue suffixes (e.g. "AT MISSION BALLROOM"), do NOT normalize or clean. The "title" field may be cleaned/combined, but rawTitle must be the unmodified source string. Downstream cross-venue routing depends on this
 - artist must be the HEADLINER ONLY — a single act. NEVER store a run-on list of several acts (e.g. "Dylan Earl, The Gray Jays, Johno Leeroy") in artist.
 - headliners: the full ordered list of acts that HEADLINE the bill, including the one you put in artist. headliners[0] MUST be exactly the same string as artist.
   - Most bills have exactly ONE headliner. In that (normal) case headliners is a single-element array: artist "Dylan Earl" → headliners ["Dylan Earl"].
@@ -171,12 +167,26 @@ Rules:
   - "Skillet: Comatose 20 Years, Still Screaming Tour" → artist "Skillet", tourName "Comatose 20 Years, Still Screaming Tour", supportingArtists []
 - When you cannot tell whether a comma separates two acts or sits inside one act's name, prefer keeping the name whole rather than fragmenting a real act.
 - Recurring series brands: when a title pairs a venue's recurring event brand with a rotating guest ("BASS BINGO – Wooli Edition", "BPM BINGO! Dombresky Edition", "Film on the Rocks: Sinners", "Emo Night: Fall Out Boy Edition"), artist is the SERIES BRAND alone — "BASS BINGO", "BPM BINGO", "Film on the Rocks", "Emo Night". Never the guest, and never the full compound title. This overrides the null-artist rule above even for bingo, trivia and screening nights: a recurring brand is a real, stable name rather than an invented performer, and it keeps two different series running the same night at the same venue from collapsing into each other. The brand is the one part of the billing that stays identical between crawls, so anything else produces a different artist each night and splits one show into several. Put the guest in supportingArtists only when the guest is a live performing act; for a recorded-music or screening night leave supportingArtists empty.
-- The series rule applies to the artist field only. Classification (isConcert) still follows the concert rules above — a recurring DJ-driven or screening brand stays NOT a concert even though it now carries a stable artist string.
+- The series rule applies to the artist field only. Classification (isConcert) still follows the concert rules — a recurring DJ-driven or screening brand stays NOT a concert even though it now carries a stable artist string.`
+
+const SYSTEM_PROMPT = `You are an event data extractor for a music-venue concert calendar. Given HTML from a venue website, call the save_events tool with EVERY upcoming event you find, including non-concert events (themed parties, bingo, comedy, movies, etc.). Do not omit non-concert events — downstream tooling uses the isConcert field on each event to decide what reaches consumers.
+
+Rules:
+- date must be ISO format YYYY-MM-DD
+- confidence reflects how certain you are the extraction is accurate (0.0-1.0)
+- Only include actual upcoming events, not past events
+- Pass an empty events array if no events are found
+- When a date has no year, infer it using today's date (provided in the user message): if the month/day is today or in the future within the current year, use the current year; if the month/day has already passed this year, use next year
+- rawTitle must be the EXACT verbatim copy of the event card's headline string from the page, byte-for-byte. Do NOT combine with subheads (e.g. "AEG Presents"), do NOT strip venue suffixes (e.g. "AT MISSION BALLROOM"), do NOT normalize or clean. The "title" field may be cleaned/combined, but rawTitle must be the unmodified source string. Downstream cross-venue routing depends on this
 - The page text has been flattened from HTML. Navigable http(s) links appear as a "[link: URL]" marker immediately BEFORE the text that was inside that link, so an event card's own URL is the marker directly preceding its title/image text. Use those markers to fill eventUrl and ticketUrl. Links that go nowhere a fan can visit (javascript:, mailto:, page anchors) are deliberately omitted — a missing marker is expected, not an error.
 - eventUrl: the marker belonging to the event card itself — the page a fan reaches by clicking the show's title or image. Prefer the most specific per-event link over any calendar, category, or "see all events" link.
 - ticketUrl: only set this when a marker points at a purchase/checkout page for THAT show (a ticketing host, or a link labelled "Buy"/"Tickets"/"Get Tickets"). If the only link is the venue's own event page, leave ticketUrl null and set eventUrl instead.
 - NEVER invent, complete, or guess a URL. Copy it verbatim from a "[link: …]" marker on the page. If no marker applies to an event, use null. A fabricated URL sends fans to a dead page and is worse than no URL.
 - tourName: only set this when the source names a tour/run distinctly (e.g. "The Eras Tour"). Do not put promoter/presenter text ("AEG Presents"), venue names, or opener names here. Use null when there is no tour name.
+
+Decide who is on the bill using these rules:
+
+${ARTIST_RULES}
 
 Set isConcert on every event using these rules:
 
@@ -439,9 +449,8 @@ export async function extractWithLlm(
     // from. The null is now preserved as an EMPTY observedPerformers list, and
     // the title survives only as the display string.
     const observed = evt.artist?.trim()
-    const observedPerformers =
-      observed === undefined || observed === '' ? [] : [observed]
-    const artist = observed === undefined || observed === '' ? title : observed
+    const namedSomebody = observed !== undefined && observed !== ''
+    const artist = namedSomebody ? observed : title
     // Trim, drop blanks, and drop case-insensitive repeats, then put the
     // resolved artist first — `artist` may itself be a fallback to the cleaned
     // title when the model returned null, in which case the model's own list
@@ -466,6 +475,14 @@ export async function extractWithLlm(
         (name) => !seenHeadliners.has(name.trim().toLowerCase()),
       ),
     )
+    // The billing the model actually read off the page, kept split. This is the
+    // one extractor that reads billing emphasis well enough to report a
+    // co-headline bill (#1203), so flattening here would be the only place that
+    // information is lost. When the model named nobody both stay EMPTY rather
+    // than falling back to the title — that coalesce is where 65 junk artist
+    // rows came from.
+    const observedPerformers = namedSomebody ? headliners : []
+    const observedSupportingArtists = namedSomebody ? supportingArtists : []
     // Both URLs are checked against the page's own anchor set. The model
     // is told to copy them verbatim out of the "[link: …]" markers, but a
     // guessed slug would otherwise reach the CTA and 404 on the fan.
@@ -476,6 +493,7 @@ export async function extractWithLlm(
       rawTitle: evt.rawTitle,
       artist,
       observedPerformers,
+      observedSupportingArtists,
       headliners,
       date: evt.date,
       confidence: evt.confidence,
@@ -505,4 +523,110 @@ export async function extractWithLlm(
   )
 
   return { events, usage: tokenUsage }
+}
+
+const ADJUDICATE_TOOL: Anthropic.Tool = {
+  name: 'adjudicate_event',
+  description:
+    'Answer the two questions about one event listing: is it a concert, and who is on the bill.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      isConcert: {
+        type: 'boolean',
+        description:
+          'true if named musicians perform live music at this event. false for themed parties, bingo, trivia, movies, comedy, listening parties, karaoke.',
+      },
+      headliners: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Every act HEADLINING this bill, in billing order. Almost always a single element. Use an EMPTY array when the listing names no performer at all and carries no recurring series brand — an empty answer is expected and correct, and is far better than echoing the title back.',
+      },
+      supportingArtists: {
+        type: 'array',
+        items: { type: 'string' },
+        description:
+          'Opening / supporting acts in billing order, excluding everything in headliners. Empty array when there are no named openers.',
+      },
+    },
+    required: ['isConcert', 'headliners', 'supportingArtists'],
+  },
+}
+
+const AdjudicationSchema = z.object({
+  isConcert: z.boolean(),
+  headliners: z.array(z.string().min(1)),
+  supportingArtists: z.array(z.string().min(1)),
+})
+
+const ADJUDICATE_PROMPT = `You are reading ONE event listing from a music venue and answering two questions about it: is this a legitimate concert, and if so, who is on the bill. The second answer follows from the first.
+
+Answer with the adjudicate_event tool.
+
+Decide who is on the bill using these rules:
+
+${ARTIST_RULES}
+
+Where the rules above say to set artist to null, return an EMPTY headliners array instead. Never put the event title in headliners — the caller already holds the title and needs to know whether a performer was actually named. An empty array is a real answer.
+
+Set isConcert using these rules:
+
+${IS_CONCERT_RULES}`
+
+/**
+ * Single-listing entry point for `deriveArtists()`'s escalation step. Same
+ * rules and same model as page extraction, one title in and one verdict out.
+ */
+export const adjudicateEvent = async ({
+  title,
+  description,
+}: {
+  title: string
+  description: string | undefined
+}): Promise<z.infer<typeof AdjudicationSchema>> => {
+  const client = new Anthropic()
+
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1024,
+    tools: [ADJUDICATE_TOOL],
+    tool_choice: { type: 'tool', name: 'adjudicate_event' },
+    system: [
+      {
+        type: 'text',
+        text: ADJUDICATE_PROMPT,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
+    messages: [
+      {
+        role: 'user',
+        content: `Title: ${title}${
+          description != null && description.trim() !== ''
+            ? `\nDescription: ${description}`
+            : ''
+        }`,
+      },
+    ],
+  })
+
+  const toolUseBlock = response.content.find((bl) => bl.type === 'tool_use')
+  if (!toolUseBlock || toolUseBlock.type !== 'tool_use') {
+    throw new Error('adjudicate_event: no tool_use block in response')
+  }
+
+  const parsed = AdjudicationSchema.safeParse(toolUseBlock.input)
+  if (!parsed.success) {
+    throw new Error(`adjudicate_event: ${parsed.error.message}`)
+  }
+
+  // A verdict naming a headliner while calling the listing a non-concert is
+  // self-contradictory, and the caller writes both fields. Trust isConcert —
+  // it is the question the whole ladder is gated on — and drop the names.
+  if (!parsed.data.isConcert) {
+    return { isConcert: false, headliners: [], supportingArtists: [] }
+  }
+
+  return parsed.data
 }

@@ -25,7 +25,8 @@ import {
 } from './lib/fetcher.js'
 import { extractJsonLd } from './lib/extractors/json-ld.js'
 import { extractTicketure } from './lib/extractors/ticketure.js'
-import { extractWithLlm } from './lib/extractors/llm.js'
+import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js'
+import { deriveArtists } from './lib/derive-artists.js'
 import { calculateCost } from './lib/cost.js'
 import { dispatch } from './lib/fetchers/index.js'
 import type { PlatformFetcher, PlatformSource } from './lib/fetchers/index.js'
@@ -97,17 +98,6 @@ function showTimeKey(raw: string | null | undefined): string {
   const minutes = match[2] ?? '00'
   const seconds = match[3] ?? '00'
   return `${hours.padStart(2, '0')}:${minutes}:${seconds}`
-}
-
-// Resolves the headliner set for an extracted event (#1203). The LLM
-// extractor is the ONLY source of a multi-headliner list; JSON-LD, Ticketure
-// and the platform fetchers emit no `headliners`, so they collapse to the
-// single-headliner form. This never splits `artist` on '&', 'and', '+' or any
-// other separator: "Iron & Wine" and "for KING + COUNTRY" are one act each,
-// and a punctuation heuristic would shred them.
-function resolveHeadliners(event: NormalizedEvent): string[] {
-  const fromExtractor = event.headliners ?? []
-  return fromExtractor.length > 0 ? fromExtractor : [event.artist]
 }
 
 function dedupKey(
@@ -727,7 +717,7 @@ export async function crawlVenue(
         : {}),
     }))
 
-    const normalizedEvents = decodedEvents.filter((evt) => {
+    const survivingEvents = decodedEvents.filter((evt) => {
       const match = detectCrossVenuePresale({
         // `rawTitle` is typed as required but is absent on some real extractor
         // outputs. An undefined here doesn't throw — the regex coerces it to
@@ -754,6 +744,36 @@ export async function crawlVenue(
       )
       return false
     })
+
+    // Every extraction path now REPORTS who it saw (`observedPerformers`) and
+    // this one stage DECIDES who is on the bill. Running it here, after the
+    // cross-venue filter, keeps the decision identical across JSON-LD, LLM,
+    // Ticketure and the platform fetchers, and means a skipped listing never
+    // costs an adjudication call. `evt.artist` is left alone throughout — it
+    // is the event's display string, and `canonical_artist` (the live dedup
+    // key) is computed from it downstream.
+    let adjudicationCount = 0
+    const normalizedEvents: NormalizedEvent[] = []
+    for (const evt of survivingEvents) {
+      const derived = await deriveArtists(evt, adjudicateEvent)
+      if (derived.adjudicated) adjudicationCount += 1
+      normalizedEvents.push({
+        ...evt,
+        headliners: derived.headliners,
+        supportingArtists: derived.supportingArtists,
+        isConcert: derived.isConcert,
+      })
+    }
+    if (adjudicationCount > 0) {
+      console.log(
+        JSON.stringify({
+          event: 'crawler.artists_adjudicated',
+          venueSlug: venue.slug,
+          adjudicated: adjudicationCount,
+          total: survivingEvents.length,
+        }),
+      )
+    }
 
     // Upsert events — insert on first crawl, update mutable fields on re-crawl
     let eventsInserted = 0
@@ -788,12 +808,14 @@ export async function crawlVenue(
         .map((event) => ({
           ...event,
           canonicalArtist: canonicalizeArtist(event.artist),
-          // headliners[0] === artist is the invariant (#1203). Extractors
-          // other than the LLM never emit `headliners`, so fall back to the
-          // single-headliner form. NOTHING here splits `artist` on
-          // punctuation — "Iron & Wine" is one act, and only the LLM is ever
-          // allowed to decide that a bill has more than one headliner.
-          headliners: resolveHeadliners(event),
+          // Set by the derivation ladder above, which is the ONLY authority on
+          // who is on the bill. An empty list is a real answer — it means no
+          // performer was named, and the artists projection skips the row
+          // rather than inheriting the title. The old fallback to [artist] is
+          // exactly what put 222 event titles into the projection, so there is
+          // deliberately no fallback here. NOTHING splits `artist` on
+          // punctuation: "Iron & Wine" is one act.
+          headliners: event.headliners ?? [],
           canonicalSupporting: canonicalizeSupporting(
             event.supportingArtists ?? [],
           ),
@@ -802,7 +824,7 @@ export async function crawlVenue(
           // dedupes and sorts, so this is a set-like match surface, not a
           // positional mirror of headliners. Any code path that writes
           // headliners MUST also write canonical_headliners.
-          canonicalHeadliners: canonicalizeSupporting(resolveHeadliners(event)),
+          canonicalHeadliners: canonicalizeSupporting(event.headliners ?? []),
           canonicalTitle: canonicalizeTitle(event.title),
           sourceHash: hashEvent({
             title: event.title,
@@ -1200,7 +1222,21 @@ export async function crawlVenue(
               ),
           )
           .flatMap((evt) => [
-            { name: evt.artist, canonicalName: evt.canonicalArtist },
+            // Headliners, NOT `evt.artist`. `artist` is the event's display
+            // string and the seed for `canonical_artist`, the live dedup key —
+            // it is a title as often as it is a name, and projecting it is
+            // what put 222 event titles in this table. The derivation ladder
+            // above is the only authority here, and an empty list projects
+            // nothing, which is the correct answer for a bingo night.
+            // Canonicalized element-wise rather than read off
+            // `canonicalHeadliners`, which is deduped and sorted and so is not
+            // positionally aligned with the raw spellings.
+            ...evt.headliners
+              .map((name) => ({
+                name,
+                canonicalName: canonicalizeArtist(name),
+              }))
+              .filter((row) => row.canonicalName !== ''),
             ...evt.canonicalSupporting.map((canonicalName) => ({
               // No raw spelling is recoverable per supporting artist:
               // canonical_supporting is deduped and sorted, so it is not

@@ -267,6 +267,8 @@ function normalize(
     // rows from AEG are junk INSIDE headlinersText (a bingo night billed as its
     // own headliner); the ladder's adjudication step is what catches those.
     observedPerformers: [headliner],
+    // AEG's blob exposes no opener field, so there is nothing to observe here.
+    observedSupportingArtists: [],
     date,
     showTime,
     ...(doorsTime !== undefined ? { doorsTime } : {}),

@@ -19,19 +19,31 @@ export interface NormalizedEvent {
    */
   artist: string
   /**
-   * Performer names the SOURCE actually stated, verbatim and unranked, before
-   * any derivation. Empty means the listing named nobody, which is a real and
-   * common answer: a bingo night names no performer, and so does a page that
-   * only carries a title.
+   * Performer names the SOURCE actually stated as headlining, verbatim and in
+   * billing order, before any derivation. Empty means the listing named
+   * nobody, which is a real and common answer: a bingo night names no
+   * performer, and so does a page that only carries a title.
    *
    * Extractors populate this from their own structured performer field
    * (`performer[]`, `announceArtists`, `headlinersText`, `artistNames`) and
    * NEVER from the title. Copying the title in here is the exact bug this
-   * field exists to end — it produced 222 junk artist rows. Deriving the
-   * headline bill from these observations is `deriveArtists()`'s job, not an
-   * extractor's.
+   * field exists to end — it produced 222 junk artist rows. Deciding what the
+   * headline bill IS from these observations is `deriveArtists()`'s job, not
+   * an extractor's.
+   *
+   * Most sources expose one headliner and cannot tell a co-headline bill from
+   * a support slot, so they report a single element here and put the rest in
+   * `observedSupportingArtists`. Only the LLM extractor reads billing
+   * emphasis well enough to report more than one — which is where #1203's
+   * co-headliner sets come from, and why the split is carried on the
+   * observation rather than flattened into one list.
    */
   observedPerformers: string[]
+  /**
+   * Opening / supporting acts the SOURCE stated, in billing order, excluding
+   * everything in `observedPerformers`. Same rules: verbatim, never the title.
+   */
+  observedSupportingArtists: string[]
   /**
    * Every act headlining the bill, in billing order. Populated by
    * `deriveArtists()` from `observedPerformers`, and empty when the event

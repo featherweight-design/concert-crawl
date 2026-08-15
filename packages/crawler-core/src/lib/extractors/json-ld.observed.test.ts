@@ -9,7 +9,10 @@ const page = (event: Record<string, unknown>) =>
   })}</script>`
 
 describe('json-ld observedPerformers', () => {
-  it('reports the named performers in billing order', () => {
+  it('splits a flat performer list into a headliner and its openers', () => {
+    // schema.org carries no billing emphasis, so everything past the first
+    // entry is an opener. Reporting the flat list instead would let the
+    // derivation ladder read LA LOM as a co-headliner (#1203).
     const events = extractJsonLd(
       page({
         name: 'Thee Sacred Souls at the Ogden',
@@ -19,10 +22,8 @@ describe('json-ld observedPerformers', () => {
       'America/Denver',
     )
 
-    expect(events[0]?.observedPerformers).toEqual([
-      'Thee Sacred Souls',
-      'LA LOM',
-    ])
+    expect(events[0]?.observedPerformers).toEqual(['Thee Sacred Souls'])
+    expect(events[0]?.observedSupportingArtists).toEqual(['LA LOM'])
   })
 
   it('reports an EMPTY list when the listing names no performer, and never copies the title', () => {

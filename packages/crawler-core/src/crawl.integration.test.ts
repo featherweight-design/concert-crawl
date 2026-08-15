@@ -25,6 +25,14 @@ vi.mock('./lib/robots.js', () => ({
 }))
 vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
+  // Fixtures here report their performers, so the derivation ladder settles
+  // on step 1 without escalating. Rejecting makes an unexpected escalation
+  // loud rather than silently spending an adjudication call.
+  adjudicateEvent: vi
+    .fn()
+    .mockRejectedValue(
+      new Error('adjudicateEvent is not stubbed for this test'),
+    ),
 }))
 vi.mock('./lib/email.js', () => ({
   sendCrawlFailureEmail: vi.fn().mockResolvedValue(undefined),
@@ -70,6 +78,9 @@ interface ExtractedEvent {
   title: string
   rawTitle: string
   artist: string
+  /** Who the extractor SAW. The derivation ladder reads these, not `artist`. */
+  observedPerformers: string[]
+  observedSupportingArtists?: string[]
   date: string
   doorsTime: string | undefined
   showTime: string | undefined
@@ -89,6 +100,9 @@ function makeEvent(
     // Match what the LLM extractor populates — see issue #826.
     rawTitle: title,
     artist,
+    // `title` is `${artist} Live`, so the observation does not echo it and the
+    // ladder settles on step 1 without an adjudication call.
+    observedPerformers: [artist],
     date,
     doorsTime: undefined,
     showTime: undefined,
@@ -1786,7 +1800,7 @@ describe('crawlVenue — force reprocess', () => {
     // the source hash is unchanged; identical HTML, so the page hash is
     // unchanged) but with openers present.
     mockExtractWithLlm.mockResolvedValue({
-      events: [{ ...baseEvent, supportingArtists: ['Opener One'] }],
+      events: [{ ...baseEvent, observedSupportingArtists: ['Opener One'] }],
       usage: { inputTokens: 100, outputTokens: 50 },
     })
 

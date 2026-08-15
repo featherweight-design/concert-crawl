@@ -7,13 +7,47 @@ const neverCalled = vi.fn(() => {
 
 const base = { rawTitle: '', description: undefined }
 
+describe('ladder step 0 — an extractor verdict of "not a concert" is final', () => {
+  it('drops the observed performer instead of projecting a bingo host', async () => {
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Drag Bingo with Shirley Delta Blow',
+        observedPerformers: ['Shirley Delta Blow'],
+        isConcert: false,
+      },
+      neverCalled,
+    )
+
+    expect(result).toEqual({
+      headliners: [],
+      supportingArtists: [],
+      isConcert: false,
+      adjudicated: false,
+    })
+  })
+
+  it('does not read an unclassified event as a negative', async () => {
+    // JSON-LD and most vendor fetchers emit no verdict at all. Treating
+    // `undefined` as false would hide the majority of the catalogue.
+    const result = await deriveArtists(
+      { ...base, title: 'Khruangbin', observedPerformers: ['Khruangbin'] },
+      neverCalled,
+    )
+
+    expect(result.isConcert).toBe(true)
+    expect(result.headliners).toEqual(['Khruangbin'])
+  })
+})
+
 describe('ladder step 1 — observed performers win', () => {
   it('takes the headliner and supporting acts without an LLM call', async () => {
     const result = await deriveArtists(
       {
         ...base,
         title: 'Thee Sacred Souls at the Ogden',
-        observedPerformers: ['Thee Sacred Souls', 'LA LOM'],
+        observedPerformers: ['Thee Sacred Souls'],
+        observedSupportingArtists: ['LA LOM'],
       },
       neverCalled,
     )
@@ -21,6 +55,28 @@ describe('ladder step 1 — observed performers win', () => {
     expect(result).toEqual({
       headliners: ['Thee Sacred Souls'],
       supportingArtists: ['LA LOM'],
+      isConcert: true,
+      adjudicated: false,
+    })
+  })
+
+  it('keeps a co-headline bill as two headliners, never demoting the second', async () => {
+    // #1203. Only the LLM extractor reads billing emphasis well enough to
+    // report two headliners; the ladder must pass that through rather than
+    // treating everything past [0] as an opener.
+    const result = await deriveArtists(
+      {
+        ...base,
+        title: 'Desert Dwellers & Great Dane',
+        observedPerformers: ['Desert Dwellers', 'Great Dane'],
+        observedSupportingArtists: ['Numatik'],
+      },
+      neverCalled,
+    )
+
+    expect(result).toEqual({
+      headliners: ['Desert Dwellers', 'Great Dane'],
+      supportingArtists: ['Numatik'],
       isConcert: true,
       adjudicated: false,
     })

@@ -29,6 +29,15 @@ vi.mock('./lib/robots.js', () => ({
 }))
 vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
+  // Every fixture below reports its performers, so the derivation ladder
+  // settles on step 1 and never reaches here. A case that wants an
+  // adjudication overrides this; anything else escalating is a bug, and
+  // rejecting makes that loud instead of quietly spending a call.
+  adjudicateEvent: vi
+    .fn()
+    .mockRejectedValue(
+      new Error('adjudicateEvent is not stubbed for this test'),
+    ),
 }))
 vi.mock('./lib/email.js', () => ({
   sendCrawlFailureEmail: vi.fn().mockResolvedValue(undefined),
@@ -36,12 +45,13 @@ vi.mock('./lib/email.js', () => ({
 }))
 
 import { fetchPage, fetchPageHttp } from './lib/fetcher.js'
-import { extractWithLlm } from './lib/extractors/llm.js'
+import { adjudicateEvent, extractWithLlm } from './lib/extractors/llm.js'
 
 const mockBrowser = {} as Browser
 const mockFetchPage = vi.mocked(fetchPage)
 const mockFetchPageHttp = vi.mocked(fetchPageHttp)
 const mockExtractWithLlm = vi.mocked(extractWithLlm)
+const mockAdjudicateEvent = vi.mocked(adjudicateEvent)
 
 const HTML_BASE = '<html><body><p>Artist projection listing</p></body></html>'
 
@@ -80,6 +90,8 @@ interface ExtractedEvent {
   rawTitle: string
   artist: string
   supportingArtists?: string[]
+  /** Who the extractor SAW. The derivation ladder reads this, not `artist`. */
+  observedPerformers?: string[]
   date: string
   doorsTime: string | undefined
   showTime: string | undefined
@@ -102,6 +114,7 @@ function makeEvent(
     rawTitle: title,
     artist,
     supportingArtists,
+    observedPerformers: [artist, ...supportingArtists],
     date,
     doorsTime: undefined,
     showTime: undefined,
@@ -134,6 +147,10 @@ beforeEach(async () => {
   mockFetchPage.mockClear()
   mockFetchPageHttp.mockClear()
   mockExtractWithLlm.mockClear()
+  mockAdjudicateEvent.mockClear()
+  mockAdjudicateEvent.mockRejectedValue(
+    new Error('adjudicateEvent is not stubbed for this test'),
+  )
 })
 
 describe('crawlVenue — artists projection write-through (#1115)', () => {
@@ -326,6 +343,84 @@ describe('crawlVenue — artists projection write-through (#1115)', () => {
       'stable act',
       'stable opener',
     ])
+  })
+
+  it('adjudicates a performer field that only echoes an event-shaped title', async () => {
+    // The defect this whole stage exists to close: the venue's `performer`
+    // field repeats its own headline, the old code trusted it, and "80s Night
+    // Dance Party" became an artist. The echo is the tell, so the ladder
+    // escalates — and a non-concert verdict projects nobody while `artist`
+    // keeps holding the display string the row is titled with.
+    const venue = await seedTestVenue()
+    const date = futureDate(32)
+    const title = '80s Night Dance Party'
+    mockAdjudicateEvent.mockResolvedValue({
+      isConcert: false,
+      headliners: [],
+      supportingArtists: [],
+    })
+    mockExtraction([
+      {
+        title,
+        rawTitle: title,
+        artist: title,
+        supportingArtists: [],
+        observedPerformers: [title],
+        date,
+        doorsTime: undefined,
+        showTime: undefined,
+        ticketUrl: 'https://artist-projection.example.com/tickets',
+        sourceUrl: 'https://artist-projection.example.com',
+        confidence: 0.9,
+      },
+    ])
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockAdjudicateEvent).toHaveBeenCalledOnce()
+    expect(await db.select().from(artists)).toEqual([])
+
+    const [row] = await db.select().from(events).where(eq(events.date, date))
+    expect(row?.artist).toBe(title)
+    expect(row?.headliners).toEqual([])
+    expect(row?.canonicalHeadliners).toEqual([])
+  })
+
+  it('projects the act the adjudicator names behind an event-shaped title', async () => {
+    const venue = await seedTestVenue()
+    const date = futureDate(33)
+    const title = 'Sunset Sessions presents: Kokoroko'
+    mockAdjudicateEvent.mockResolvedValue({
+      isConcert: true,
+      headliners: ['Kokoroko'],
+      supportingArtists: ['Nubiyan Twist'],
+    })
+    mockExtraction([
+      {
+        title,
+        rawTitle: title,
+        artist: title,
+        supportingArtists: [],
+        observedPerformers: [title],
+        date,
+        doorsTime: undefined,
+        showTime: undefined,
+        ticketUrl: 'https://artist-projection.example.com/tickets',
+        sourceUrl: 'https://artist-projection.example.com',
+        confidence: 0.9,
+      },
+    ])
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    const rows = await db.select().from(artists)
+    expect(rows.map((row) => row.canonicalName).sort()).toEqual([
+      'kokoroko',
+      'nubiyan twist',
+    ])
+
+    const [row] = await db.select().from(events).where(eq(events.date, date))
+    expect(row?.headliners).toEqual(['Kokoroko'])
   })
 
   it('still writes the events when the artists projection fails', async () => {

@@ -177,6 +177,16 @@ vi.mock('./lib/robots.js', () => ({
 }))
 vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
+  // Rejecting keeps every existing case on the ladder's step-3 path: no
+  // headliners, isConcert left true. A test that wants a real verdict
+  // overrides this per-case. The point is that no test in this file ever
+  // reaches the network, and a case that escalates fails loudly rather than
+  // silently spending a call.
+  adjudicateEvent: vi
+    .fn()
+    .mockRejectedValue(
+      new Error('adjudicateEvent is not stubbed for this test'),
+    ),
 }))
 
 import {
@@ -249,6 +259,10 @@ const METALLICA_EVENT = {
   // pre-strip listing decoration we don't simulate here.
   rawTitle: 'Metallica Live',
   artist: 'Metallica',
+  // What the extractor SAW, in billing order. The derivation ladder reads
+  // this, not `artist` — a fixture without it escalates to the adjudicator,
+  // which these tests deliberately leave unstubbed.
+  observedPerformers: ['Metallica'],
   date: '2026-08-15',
   doorsTime: undefined,
   showTime: undefined,
@@ -349,7 +363,8 @@ describe('crawlVenue — canonical_supporting writes (#763)', () => {
       events: [
         {
           ...METALLICA_EVENT,
-          supportingArtists: ['MIKE', 'Niontay & Friends', 'MIKE'],
+          observedPerformers: ['Metallica'],
+          observedSupportingArtists: ['MIKE', 'Niontay & Friends', 'MIKE'],
         },
       ],
       usage: { inputTokens: 100, outputTokens: 50 },
