@@ -12,9 +12,13 @@
 // can't resolve one. So "BASS BINGO" arrives as the artist, and the fallback
 // title never has to render. R1's nullable-artist branch is gone.
 //
-// ▲ R2: the rows with a fallen-through title have NO genres and NO Spotify
-// match, because production won't have them — that's what makes them the
-// zero-chip population, and it's the height case R1's fixtures hid.
+// ▲ R2: the rows with a fallen-through title are given NO genres and NO Spotify
+// match, so the canvas can show a zero-chip row — the height case R1's fixtures
+// hid. R3.3: this is a CANVAS CONVENIENCE, not production truth. Production has
+// zero events with an empty `genres[]` (0 of 2,218 measured 2026-08-15), and the
+// tagger populates every row. The real zero-chip row is on `watching`, whose
+// chipPriority is ['freshness', 'provenance'] and so drops genre entirely. Do
+// not port `genres: []` into a production test as though it were reachable.
 //
 // Copy is verbatim from the production samples in the brief.
 
@@ -41,7 +45,9 @@ const O_LEGACY = [
     venue: "Bluebird Theater", dateISO: "2026-09-11T19:00:00Z", dateLabel: "Fri, Sep 11", showTime: "8:00 PM",
     supports: ["Claire Wright"], genres: ["hip-hop"], following: false, watching: false, status: "live",
     price: { amount: 35, isFloor: true, source: "resale", observedAt: "2026-08-01T09:00:00Z" }, saved: null },
-  // ▲ Title fell through into `artist`. No Spotify match, no genre → zero chips.
+  // ▲ Title fell through into `artist`. No Spotify match, and the canvas gives
+  // it no genre so it renders zero chips — see the R3.3 note at the top; a
+  // genre-less row is not something production can produce.
   { id: "bassbingo", artist: "BASS BINGO", fallbackTitle: "BASS BINGO",
     venue: "Larimer Lounge", dateISO: "2026-08-20T19:00:00Z", dateLabel: "Thu, Aug 20", showTime: "9:00 PM",
     supports: [], genres: [], following: false, watching: false, status: "live",
@@ -71,8 +77,10 @@ const O_STATUS = [
     saved: { at: "2026-07-05T14:00:00Z", price: 22 }, alsoSoldOut: true },
 ];
 
-// ▲ The zero-chip population — no genre, no Spotify match. On Browse these have
-// no line 4 at all, which is where the "two heights" claim broke.
+// ▲ The zero-chip geometry — no genre, no Spotify match, so no line 4 at all,
+// which is where the "two heights" claim broke. R3.3: canvas-only. On Browse
+// production always has at least a genre chip; the reachable zero-chip row is
+// `watching`. The geometry is real, the fixtures' route to it is not.
 const O_SPARSE = [
   O_LEGACY[1],
   O_LEGACY[2],

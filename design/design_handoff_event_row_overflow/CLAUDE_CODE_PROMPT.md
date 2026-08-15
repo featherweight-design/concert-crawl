@@ -123,9 +123,11 @@ verification step were already correct at ONE; the headline now agrees.)
    Cost is ~20–27px of air on the sparsest rows. Accepted deliberately.
 
 5) TWO GENRES — ONE CHIP, not two. (see genre-pair.jsx)
-   The data already carries two and filter-system's hasGenre already matches
-   with .some() across the array, so a multi-genre act is ALREADY findable under
-   both. Nothing about search or the data changes. What changes is that the row
+   The data already carries two and the API filters with a Postgres array
+   overlap across the whole array (apps/api/src/routes/events.ts:297-310), so a
+   multi-genre act is ALREADY findable under both. (R3.3: this cited a hasGenre
+   /.some() helper in filter-system.jsx — mock code, not a real symbol. Same
+   conclusion, working citation.) Nothing about search or the data changes. What changes is that the row
    stops labelling a "soul"-filtered result FUNK.
    Render the genre slot as a PAIR: "FUNK/SOUL" — one chip, ONE budget slot,
    separator is a dimmed "/" at 45% opacity so it reads as one label.
@@ -193,9 +195,16 @@ DATA — two additions to the one show shape, both optional:
   tourName:      string | null   // "One of Those Nights Tour" — already exists
   fallbackTitle: string | null   // pre-extraction title; the row stops reading it
   artist:        string          // stays NON-NULL
-  status:        "live" | "soldout" | "presale" | "cancelled" | "postponed"
   genres:        string[]        // already exists; the row now reads [0] and [1]
 Still no display copy in the data. Nothing else in the shape moves.
+
+⚠️ R3.3 — the canvas flattens TWO axes into one `status` field. Production does
+not, and the precedence resolver in §3 depends on the split:
+  lifecycle: "cancelled" | "postponed" | ... — whether the show is happening
+  status:    "live" | "soldout" | "presale"  — the price state
+`PriceStack.tsx` already reads both separately. Resolve across the pair
+(cancelled > postponed > soldout > presale > price); never widen `status` to
+carry lifecycle values.
 
 WHAT MUST NOT CHANGE: the four-line contract · Rule 1 · Rule 2 and the meta
 budget · the measured line-3 ladder · the narrow (≤360) step · the 36px action

@@ -3,10 +3,13 @@
 // The ask: "Masego doesn't fit one genre, can we show two?"
 //
 // ── What was already true ──────────────────────────────────────────
-// The data already carries two (`genres: ["funk","soul"]`), and filter-system's
-// `hasGenre` already matches with `.some()` across the whole array — so Masego
-// ALREADY comes back under both funk and soul. The row chip was never the
-// search index, and adding a second chip wouldn't have made him more findable.
+// The data already carries two (`genres: ["funk","soul"]`), and the API filters
+// with a Postgres array overlap across the whole array (`apps/api/src/routes/
+// events.ts:297-310`) — so Masego ALREADY comes back under both funk and soul.
+// The row chip was never the search index, and adding a second chip wouldn't
+// have made him more findable. (R3.3: this cited a `hasGenre` / `.some()` helper
+// in `filter-system.jsx`, which is mock code — the conclusion held, the citation
+// pointed at a symbol that does not exist in the repo.)
 //
 // ── The defect that IS real ────────────────────────────────────────
 // R3.3, corrected by eng: the defect is broader than R3 described, and the

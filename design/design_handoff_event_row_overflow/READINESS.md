@@ -153,9 +153,10 @@ No em-dashes survive in rendered copy. Comment-level em-dashes are out of scope.
 
 ## Nits
 
-Three of these were applied in this verdict PR rather than recorded and left —
+Most of these were applied in this verdict PR rather than recorded and left —
 a stale headline that contradicts the spec is something an implementer builds
-to. They are marked **FIXED**.
+to, and the same argument covers a dead citation or a prototype comment that
+asserts something production contradicts. They are marked **FIXED**.
 
 - **FIXED.** The prompt contradicted itself on the headline outcome: the `THE CALL`
   paragraph said *"Row height must still take exactly TWO values per geometry"*
@@ -163,10 +164,22 @@ to. They are marked **FIXED**.
   *"the distinct set is 1"*. The `TWO` was stale from R1, which folded the
   support-line state into the count. `THE CALL` now reads ONE value per geometry,
   with the geometry defined as a width paired with a support-line state.
-- `genre-pair.jsx:6-9` and the prompt's §5 still cite `filter-system.jsx`'s
-  `hasGenre` / `.some()` as the reason a multi-genre act is already findable. The
-  production mechanism is Postgres array overlap (`events.ts:308`). Same conclusion,
-  wrong citation.
+- **FIXED.** `genre-pair.jsx:6-9` and the prompt's §5 cited `filter-system.jsx`'s
+  `hasGenre` / `.some()` as the reason a multi-genre act is already findable.
+  `filter-system.jsx` is mock code and the symbol does not exist in the repo; the
+  production mechanism is Postgres array overlap (`events.ts:297-310`). Same
+  conclusion, working citation. Both now point at the route.
+- **FIXED.** `overflow-data.jsx` asserted in three comments (`:15-17`, `:44`,
+  `:74-75`) that the genre-less rows are a *production* population. Per §2 above
+  they are not — that is exactly the correction this verdict records, and leaving
+  the fixture comments claiming otherwise is how it gets un-learned. All three now
+  name themselves canvas-only and point at `watching` as the reachable case.
+- **FIXED.** The prompt's `DATA` block listed `cancelled` / `postponed` as members
+  of `status`, flattening two axes the production model keeps apart — `lifecycle`
+  is whether the show is happening, `status` is the price state, and
+  `PriceStack.tsx` already reads them separately. The precedence resolver spans the
+  pair, so an implementer building to the flattened shape would widen `status`
+  wrongly. The block now shows the split. (The plan was already correct here.)
 - The prompt's problem statement says 233 of 1,125 upcoming events; today's count
   is 1,149. Inventory drift over two days, not an error.
 - `VIBE_BUCKETS` in `genre-pair.jsx` is a five-bucket mock and its sub-genres
