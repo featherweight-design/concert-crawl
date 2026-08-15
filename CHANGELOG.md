@@ -1,3 +1,10 @@
+# [1.258.0](https://github.com/HartiganHM/concert-crawl/compare/v1.257.0...v1.258.0) (2026-08-15)
+
+
+### Features
+
+* **settings:** in-app switch for product email ([#1572](https://github.com/HartiganHM/concert-crawl/issues/1572)) ([#1596](https://github.com/HartiganHM/concert-crawl/issues/1596)) ([2dd6a42](https://github.com/HartiganHM/concert-crawl/commit/2dd6a42989fb870e7897b77ba27f07d98179cc1c))
+
 # [1.257.0](https://github.com/HartiganHM/concert-crawl/compare/v1.256.0...v1.257.0) (2026-08-15)
 
 
