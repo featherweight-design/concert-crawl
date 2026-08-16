@@ -1,3 +1,10 @@
+## [1.265.1](https://github.com/HartiganHM/concert-crawl/compare/v1.265.0...v1.265.1) (2026-08-16)
+
+
+### Bug Fixes
+
+* **following:** link browse shelf cards to the show, not the artist page ([#1604](https://github.com/HartiganHM/concert-crawl/issues/1604)) ([3f7385e](https://github.com/HartiganHM/concert-crawl/commit/3f7385e9f0777f62c2c199bc73583ed75450a305))
+
 # [1.265.0](https://github.com/HartiganHM/concert-crawl/compare/v1.264.0...v1.265.0) (2026-08-15)
 
 
