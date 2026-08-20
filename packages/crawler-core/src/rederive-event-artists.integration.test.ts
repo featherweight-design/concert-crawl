@@ -185,8 +185,9 @@ describe('rederive-event-artists integration', () => {
     const after = await readEvent(event.id)
     expect(after.canonicalHeadliners).toBeNull()
     expect(after.hiddenFromConsumer).toBe(false)
-    expect(result.updated).toBe(0)
-    // The dry run still reports what it would have done.
+    // The dry run still reports what it would have done, `updated` included —
+    // that count is what the decision to apply turns on.
+    expect(result.updated).toBe(1)
     expect(result.derived).toBe(1)
     expect(result.hidden).toBe(1)
     expect(result.sample[0]?.hides).toBe(true)

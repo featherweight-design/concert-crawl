@@ -56,7 +56,8 @@ async function main(): Promise<void> {
 
   console.warn(
     `[rederive-event-artists] done — scanned=${result.scanned} ` +
-      `derived=${result.derived} updated=${result.updated} hidden=${result.hidden}`,
+      `derived=${result.derived} ${dryRun ? 'would-update' : 'updated'}=${result.updated} ` +
+      `hidden=${result.hidden}`,
   )
   console.warn(
     `[rederive-event-artists] strategies — ` +

@@ -68,7 +68,14 @@ export interface RederiveEventArtistsResult {
   scanned: number
   /** Rows the pass reached a verdict for. */
   derived: number
-  /** Rows actually written. Zero on a dry run. */
+  /**
+   * Rows the pass writes — artist columns, the hide flag, or both. A row hidden
+   * with the bill it already stored still counts, because it is still a write.
+   *
+   * Counted on a dry run too, which is the whole point of a dry run: "how much
+   * of the table does this pass rewrite" is the number the decision to apply
+   * turns on, and a sample capped at 25 cannot answer it.
+   */
   updated: number
   /** Rows this run newly hid because the verdict was "not a concert". */
   hidden: number
@@ -240,6 +247,7 @@ export async function rederiveEventArtists(
         })
       }
 
+      updated += 1
       if (options.dryRun) continue
 
       // All four artist columns move together. The display arrays are written
@@ -257,8 +265,6 @@ export async function rederiveEventArtists(
           updatedAt: new Date(),
         })
         .where(eq(events.id, row.id))
-
-      updated += 1
     }
   }
 

@@ -36,6 +36,16 @@ async function main(): Promise<void> {
     )
   }
 
+  // Sorted rather than left in first-seen order so two runs print the same
+  // statuses in the same places and can be diffed by eye.
+  console.log(
+    `[prune-artists] candidates by match status — ` +
+      Object.entries(result.byMatchStatus)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([status, count]) => `${status}=${count}`)
+        .join(' '),
+  )
+
   console.log(
     dryRun
       ? `[prune-artists] DRY RUN — ${result.candidates} rows would be removed. Re-run with --apply.`

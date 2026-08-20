@@ -57,6 +57,13 @@ export interface PruneArtistsResult {
   deleted: number
   /** Up to 25 candidates, for eyeballing before an apply run. */
   sample: { name: string; slug: string; matchStatus: string }[]
+  /**
+   * Candidates by match status. A 25-row sample cannot answer the question the
+   * apply decision actually turns on: how many condemned rows are acts
+   * MusicBrainz confirmed, rather than the tour names and bingo nights the
+   * reaper exists to clear.
+   */
+  byMatchStatus: Record<string, number>
 }
 
 interface DoomedRow extends Record<string, unknown> {
@@ -200,8 +207,13 @@ export async function pruneArtists(
     matchStatus: row.match_status,
   }))
 
+  const byMatchStatus = rows.reduce<Record<string, number>>((tally, row) => {
+    tally[row.match_status] = (tally[row.match_status] ?? 0) + 1
+    return tally
+  }, {})
+
   if (options.dryRun || rows.length === 0) {
-    return { candidates: rows.length, deleted: 0, sample }
+    return { candidates: rows.length, deleted: 0, sample, byMatchStatus }
   }
 
   // Re-evaluated rather than deleting by the ids read above: a concurrent
@@ -213,5 +225,10 @@ export async function pruneArtists(
     RETURNING id
   `)
 
-  return { candidates: rows.length, deleted: [...removed].length, sample }
+  return {
+    candidates: rows.length,
+    deleted: [...removed].length,
+    sample,
+    byMatchStatus,
+  }
 }
