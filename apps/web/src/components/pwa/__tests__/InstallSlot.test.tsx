@@ -50,7 +50,10 @@ describe('InstallSlot', () => {
 
   it('hides after dismissOnce marks a first dismiss (quiet state)', () => {
     isIosSafariMock.mockReturnValue(true)
-    dismissOnce(new Date('2026-07-18T00:00:00Z'))
+    // Dismiss relative to now: InstallSlot reads the real clock, so a pinned
+    // date silently leaves the 30-day quiet window and flips this assertion.
+    // A fixed 2026-07-18 did exactly that on 2026-08-17.
+    dismissOnce()
     render(<InstallSlot />)
     const button = screen.queryByRole('button', {
       name: /install concert crawl/i,
