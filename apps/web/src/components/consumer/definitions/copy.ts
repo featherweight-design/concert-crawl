@@ -693,7 +693,7 @@ export const CONSUMER_COPY = {
     priceUnder25: 'Under $25',
     price25to50: '$25 - $50',
     price50Plus: '$50+',
-    priceTbd: 'Price TBD',
+    priceTbd: 'Price TBA',
 
     // FilterSheet
     filterSheet: {
@@ -1004,12 +1004,6 @@ export const CONSUMER_COPY = {
 
     // About section
     aboutLabel: 'About',
-
-    // Status banners
-    cancelledLabel: 'Cancelled',
-    postponedLabel: 'Postponed',
-    cancelledBody: 'This show has been cancelled.',
-    postponedBody: 'This show has been postponed. Check back for updates.',
 
     // Related shows section — count appended at runtime
     moreAtVenuePrefix: 'More at',

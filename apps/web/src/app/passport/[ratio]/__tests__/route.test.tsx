@@ -172,20 +172,28 @@ describe('GET /passport/[ratio]', () => {
     RENDER_TIMEOUT_MS,
   )
 
+  // One render per case: two in a single `it` shared one RENDER_TIMEOUT_MS
+  // budget and intermittently blew it when the whole suite ran in parallel.
   it(
-    'accepts a theme override and ignores an unknown one',
+    'accepts a theme override',
     async () => {
-      const overridden = await call(
+      const response = await call(
         'http://localhost/passport/square?theme=amber',
         'square',
       )
-      expect(overridden.status).toBe(200)
+      expect(response.status).toBe(200)
+    },
+    RENDER_TIMEOUT_MS,
+  )
 
-      const bogus = await call(
+  it(
+    'ignores an unknown theme rather than failing the render',
+    async () => {
+      const response = await call(
         'http://localhost/passport/square?theme=__proto__',
         'square',
       )
-      expect(bogus.status).toBe(200)
+      expect(response.status).toBe(200)
     },
     RENDER_TIMEOUT_MS,
   )
