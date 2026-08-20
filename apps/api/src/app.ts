@@ -14,6 +14,11 @@ export function createApp() {
     cors({
       origin: process.env['ALLOWED_ORIGIN'] ?? 'http://localhost:3000',
       credentials: true,
+      // Web and API are separate origins, so any response header outside the
+      // CORS safelist is invisible to the browser unless named here. Without
+      // Retry-After the export row cannot read the real wait off a 429 and
+      // silently falls back to a flat hour.
+      exposeHeaders: ['Retry-After'],
     }),
   )
 
