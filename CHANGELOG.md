@@ -1,3 +1,10 @@
+## [1.265.2](https://github.com/HartiganHM/concert-crawl/compare/v1.265.1...v1.265.2) (2026-08-20)
+
+
+### Bug Fixes
+
+* **pwa:** stop the install-slot quiet-window test expiring ([#1609](https://github.com/HartiganHM/concert-crawl/issues/1609)) ([c0ee8f9](https://github.com/HartiganHM/concert-crawl/commit/c0ee8f947ea81ae8c55418ddc8c21da069602ad7))
+
 ## [1.265.1](https://github.com/HartiganHM/concert-crawl/compare/v1.265.0...v1.265.1) (2026-08-16)
 
 
