@@ -162,6 +162,7 @@ describe('sendTransactionalEmail', () => {
       RESEND_API_KEY: 're_test_key',
       CLERK_SECRET_KEY: 'sk_test_key',
     }
+    delete process.env.SENTRY_ENVIRONMENT
 
     mockGetTemplateRenderer.mockReturnValue(() => ({
       subject: 'Test subject',
@@ -195,6 +196,36 @@ describe('sendTransactionalEmail', () => {
   afterEach(() => {
     process.env = originalEnv
   })
+
+  // Staging crons run the same schedule against their own database, so without
+  // this gate a user present in both environments gets every email twice.
+  it.each(['staging', 'STAGING', ' preview '])(
+    'suppresses the send in a non-production environment (%s)',
+    async (environment) => {
+      process.env.SENTRY_ENVIRONMENT = environment
+      const { sendTransactionalEmail } = await import('./email.js')
+
+      await expect(sendTransactionalEmail(sendParams)).resolves.toBe(
+        'suppressed',
+      )
+
+      expect(mockSend).not.toHaveBeenCalled()
+      // The dedupe key belongs to production's database — staging must not
+      // record a claim against it.
+      expect(mockInsertValues).not.toHaveBeenCalled()
+    },
+  )
+
+  it.each(['production', '', '   '])(
+    'still sends when the environment reads as production (%s)',
+    async (environment) => {
+      process.env.SENTRY_ENVIRONMENT = environment
+      const { sendTransactionalEmail } = await import('./email.js')
+
+      await expect(sendTransactionalEmail(sendParams)).resolves.toBe('sent')
+      expect(mockSend).toHaveBeenCalledOnce()
+    },
+  )
 
   it('skips an unregistered template without writing a send-log row', async () => {
     mockGetTemplateRenderer.mockReturnValue(null)

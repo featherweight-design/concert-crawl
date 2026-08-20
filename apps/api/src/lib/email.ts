@@ -121,6 +121,22 @@ const PRODUCT_FAMILY_TEMPLATES: ReadonlySet<EmailTemplateKey> = new Set([
   'welcome_gifted',
 ])
 
+// Staging runs every cron on the same schedule as production against its own
+// database, so a user who exists in both environments receives each
+// transactional email twice. The email_send_log dedupe key cannot catch that:
+// it is unique per database, so each environment sees a clean slate.
+//
+// Unset counts as production deliberately. render.yaml is descriptive rather
+// than blueprint-synced, and the live prod API service carries no environment
+// marker — failing closed here would silence prod receipts and invites. Only an
+// environment that positively identifies as something other than production is
+// suppressed.
+const isNonProductionEnvironment = (): boolean => {
+  const environment = process.env['SENTRY_ENVIRONMENT']?.trim().toLowerCase()
+  if (environment === undefined || environment === '') return false
+  return environment !== 'production'
+}
+
 // Absent row means the user never touched their preferences, which is the
 // default-on state — only an explicit false suppresses.
 const productEmailsAllowed = async (userId: string): Promise<boolean> => {
@@ -133,11 +149,11 @@ const productEmailsAllowed = async (userId: string): Promise<boolean> => {
 }
 
 /**
- * Transactional send pipeline (eng infra spec Part 2 §4.3): registry lookup →
- * product-family opt-out → per-template kill switch → dedupe-key idempotency →
- * Clerk recipient
- * resolution → Resend send. NEVER throws — callers are webhook handlers whose
- * responses must not depend on email delivery.
+ * Transactional send pipeline (eng infra spec Part 2 §4.3): non-production
+ * suppression → registry lookup → product-family opt-out → per-template kill
+ * switch → dedupe-key idempotency → Clerk recipient resolution → Resend send.
+ * NEVER throws — callers are webhook handlers whose responses must not depend
+ * on email delivery.
  */
 export async function sendTransactionalEmail<
   K extends EmailTemplateKey,
@@ -151,6 +167,16 @@ export async function sendTransactionalEmail<
   const logContext = { templateKey, userId, dedupeKey }
 
   try {
+    if (isNonProductionEnvironment()) {
+      // No send-log row: the dedupe key belongs to production's database and
+      // staging must not record a claim that hides a genuine gap there.
+      apiLogger.info(
+        logContext,
+        'sendTransactionalEmail: non-production environment — suppressed',
+      )
+      return 'suppressed'
+    }
+
     const renderer = getTemplateRenderer(templateKey)
     if (renderer === null) {
       apiLogger.info(
