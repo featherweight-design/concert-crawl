@@ -1,3 +1,10 @@
+## [1.265.4](https://github.com/HartiganHM/concert-crawl/compare/v1.265.3...v1.265.4) (2026-08-20)
+
+
+### Bug Fixes
+
+* **web:** stop the passport theme test flaking and align price-filter copy ([58cf405](https://github.com/HartiganHM/concert-crawl/commit/58cf4055da782ece9f69d1462835dd1904ae9f33))
+
 ## [1.265.3](https://github.com/HartiganHM/concert-crawl/compare/v1.265.2...v1.265.3) (2026-08-20)
 
 
