@@ -1,3 +1,10 @@
+## [1.265.3](https://github.com/HartiganHM/concert-crawl/compare/v1.265.2...v1.265.3) (2026-08-20)
+
+
+### Bug Fixes
+
+* **api:** expose Retry-After so the export countdown reads the real wait ([#1606](https://github.com/HartiganHM/concert-crawl/issues/1606)) ([706feea](https://github.com/HartiganHM/concert-crawl/commit/706feea027eb7a62c0fc7c19774d7fd5f1b13704))
+
 ## [1.265.2](https://github.com/HartiganHM/concert-crawl/compare/v1.265.1...v1.265.2) (2026-08-20)
 
 
