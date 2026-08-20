@@ -1,3 +1,15 @@
+# [1.266.0](https://github.com/HartiganHM/concert-crawl/compare/v1.265.5...v1.266.0) (2026-08-20)
+
+
+### Bug Fixes
+
+* **crawler:** salvage complete events ahead of a corrupt LLM payload tail ([#1616](https://github.com/HartiganHM/concert-crawl/issues/1616)) ([fba409c](https://github.com/HartiganHM/concert-crawl/commit/fba409c8daddfc9f431d73dce363e4315dc71a94))
+
+
+### Features
+
+* **admin:** split Review prices tab into Price coverage and Submissions ([#1612](https://github.com/HartiganHM/concert-crawl/issues/1612)) ([43325ae](https://github.com/HartiganHM/concert-crawl/commit/43325aea52ff64b5c44588f38a6798cc828589fe))
+
 ## [1.265.5](https://github.com/HartiganHM/concert-crawl/compare/v1.265.4...v1.265.5) (2026-08-20)
 
 
