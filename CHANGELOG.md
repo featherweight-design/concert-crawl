@@ -1,3 +1,10 @@
+# [1.267.0](https://github.com/HartiganHM/concert-crawl/compare/v1.266.0...v1.267.0) (2026-08-20)
+
+
+### Features
+
+* **billing:** seed the card-less 14-day Premium trial ([#1614](https://github.com/HartiganHM/concert-crawl/issues/1614)) ([22b2cf6](https://github.com/HartiganHM/concert-crawl/commit/22b2cf6cb4401406b41d6ab8681dd8a7d34ce611))
+
 # [1.266.0](https://github.com/HartiganHM/concert-crawl/compare/v1.265.5...v1.266.0) (2026-08-20)
 
 
