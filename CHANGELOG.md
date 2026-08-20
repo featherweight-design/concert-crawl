@@ -1,3 +1,11 @@
+## [1.265.5](https://github.com/HartiganHM/concert-crawl/compare/v1.265.4...v1.265.5) (2026-08-20)
+
+
+### Bug Fixes
+
+* **email:** stop non-production environments sending to real users ([#1613](https://github.com/HartiganHM/concert-crawl/issues/1613)) ([335c437](https://github.com/HartiganHM/concert-crawl/commit/335c4376e0d599ef31c10fdb66d11cae6598d489))
+* **scripts:** dry runs report the number the apply decision turns on ([#1608](https://github.com/HartiganHM/concert-crawl/issues/1608)) ([ee91dcd](https://github.com/HartiganHM/concert-crawl/commit/ee91dcdbefb6391a13d268e7a371c6e6782132d0))
+
 ## [1.265.4](https://github.com/HartiganHM/concert-crawl/compare/v1.265.3...v1.265.4) (2026-08-20)
 
 
