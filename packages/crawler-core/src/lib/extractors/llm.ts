@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { reportFailure } from '@concert-crawl/logger'
 import type { LLMResult } from '../../types.js'
 import { cleanHtml, resolveExtractedUrl } from './clean-html.js'
+import { salvageJsonArrayPrefix } from './salvage-json-array.js'
 import { normalizeSupportingArtists } from '../normalize-supporting-artists.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
 import { stripDuplicatedTrailingWord } from '../strip-duplicated-trailing-word.js'
@@ -62,6 +63,21 @@ const ToolInputSchema = z.object({
     try {
       return JSON.parse(value)
     } catch (err) {
+      // A corrupt tail must not cost us the good head. On 2026-08-17 a
+      // malformed value ~79.8K into a 100.8K Cervantes payload discarded every
+      // event on the page and the venue went dark for the night.
+      const salvaged = salvageJsonArrayPrefix(value)
+      if (salvaged !== null) {
+        reportFailure({
+          event: 'llm.stringified_events_partially_salvaged',
+          severity: 'warn',
+          error: err instanceof Error ? err.message : String(err),
+          payloadChars: value.length,
+          salvagedEvents: salvaged.length,
+        })
+        return salvaged
+      }
+
       // Report the parse error separately: the Zod failure downstream only
       // says "expected array, received string", which can't distinguish a
       // payload truncated mid-value from one that was never JSON. Length is

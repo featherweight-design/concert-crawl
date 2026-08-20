@@ -1034,6 +1034,55 @@ describe('extractWithLlm', () => {
         warnSpy.mockRestore()
       }
     })
+
+    // 2026-08-17: a malformed value ~79.8K into a 100.8K Cervantes payload
+    // discarded every event on the page and the venue went dark for the night.
+    it('keeps the complete events ahead of a corrupt tail', async () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      try {
+        const good = JSON.stringify([
+          stringifiedEvent,
+          { ...stringifiedEvent, title: 'Trampled by Turtles' },
+        ])
+        mockCreate.mockResolvedValue({
+          content: [
+            {
+              type: 'tool_use',
+              id: 'tool_abc123',
+              name: 'save_events',
+              input: {
+                events: `${good.slice(0, -1)},{"title":"Cut off mid-val`,
+              },
+            },
+          ],
+          usage: {
+            input_tokens: 100,
+            output_tokens: 50,
+            cache_read_input_tokens: 0,
+            cache_creation_input_tokens: 0,
+          },
+          stop_reason: 'tool_use',
+        })
+
+        const result = await extractWithLlm('<html>...</html>', SOURCE_URL)
+
+        expect(result.events).toHaveLength(2)
+        expect(result.events.map((event) => event.title)).toEqual([
+          'Kitchen Dwellers',
+          'Trampled by Turtles',
+        ])
+
+        const salvageWarning = warnSpy.mock.calls
+          .map((args) => String(args[0]))
+          .find((line) =>
+            line.includes('llm.stringified_events_partially_salvaged'),
+          )
+        expect(salvageWarning).toBeDefined()
+        expect(salvageWarning).toContain('"salvagedEvents":2')
+      } finally {
+        warnSpy.mockRestore()
+      }
+    })
   })
 
   it("does NOT log 'llm.output_truncated' on a healthy tool_use stop", async () => {
