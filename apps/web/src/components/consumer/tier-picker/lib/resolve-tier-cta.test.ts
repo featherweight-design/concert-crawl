@@ -33,7 +33,7 @@ describe('resolveTierCta', () => {
   it('enables checkout from the free state for paid tiers', () => {
     expect(resolveTierCta('supporter', 'free', 'open').action).toBe('checkout')
     expect(resolveTierCta('premium', 'free', 'open')).toMatchObject({
-      label: TIER_PICKER_COPY.cta.startTrial,
+      label: TIER_PICKER_COPY.cta.upgradeToPremium,
       tone: 'signal',
       action: 'checkout',
     })
@@ -58,6 +58,33 @@ describe('resolveTierCta', () => {
     const downgrade = resolveTierCta('free', 'premium', 'open')
     expect(downgrade.label).toBe(TIER_PICKER_COPY.cta.switchTo('Free'))
     expect(downgrade.disabled).toBe(true)
+  })
+
+  it('offers a trial user Premium to keep, never the portal', () => {
+    const premium = resolveTierCta('premium', 'trial', 'open')
+    expect(premium).toMatchObject({
+      label: TIER_PICKER_COPY.cta.keepPremium,
+      action: 'checkout',
+      disabled: false,
+    })
+    // A card-less trial has no Stripe customer, so 'manage' would 404.
+    for (const tier of ['free', 'supporter', 'premium', 'founder'] as const) {
+      expect(resolveTierCta(tier, 'trial', 'open').action).not.toBe('manage')
+    }
+  })
+
+  it('frames Free as where a trial user lands, not a plan they hold', () => {
+    const free = resolveTierCta('free', 'trial', 'open')
+    expect(free.label).toBe(TIER_PICKER_COPY.cta.freeAfterTrial)
+    expect(free.disabled).toBe(true)
+  })
+
+  it('keeps the other acquisition CTAs identical to the free state', () => {
+    for (const tier of ['supporter', 'founder'] as const) {
+      expect(resolveTierCta(tier, 'trial', 'open')).toEqual(
+        resolveTierCta(tier, 'free', 'open'),
+      )
+    }
   })
 
   it("shows the founder's Premium row as already-covered", () => {

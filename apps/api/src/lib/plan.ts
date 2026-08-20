@@ -1,9 +1,10 @@
-import { eq } from 'drizzle-orm'
+import { eq, isNull } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, giftedComps, subscriptions, userBilling } from '@concert-crawl/db'
 import type { PlanState } from '@concert-crawl/types'
 import { derivePlanState, isGiftLive } from '@concert-crawl/entitlements'
 import { apiLogger } from './logger.js'
+import { resolveMonetizationLiveAt, resolveTrialEndsAt } from './trial.js'
 
 // Pure derivation moved to @concert-crawl/entitlements (#763 PR 10) so the
 // crawler's Spotify fan-out can gate on plan without importing API code.
@@ -32,12 +33,57 @@ export interface PlanContext {
   }
 }
 
+/**
+ * Starts the card-less trial clock (spec §3, "Row creation"). Idempotent: a
+ * trial is granted exactly once per account and no later call can extend it.
+ * Returns the account's trial expiry, or null when it gets no trial.
+ */
+const seedTrial = async (
+  userId: string,
+  accountCreatedAt: Date,
+): Promise<Date | null> => {
+  const trialEndsAt = resolveTrialEndsAt(
+    accountCreatedAt,
+    resolveMonetizationLiveAt(process.env['MONETIZATION_LIVE_AT']),
+  )
+  if (trialEndsAt === null) return null
+
+  // The row may already exist without a trial: billing-nudges, the daily job
+  // and the Stripe webhooks all upsert user_billing for their own columns, and
+  // any of them can land first. So fill a null trialEndsAt rather than skipping
+  // — but never touch a non-null one. setWhere is what makes this safe to run
+  // repeatedly: it cannot extend a live trial, re-grant an ended one, or shift
+  // an existing trial if MONETIZATION_LIVE_AT is ever adjusted.
+  const written = await db
+    .insert(userBilling)
+    .values({ userId, trialEndsAt })
+    .onConflictDoUpdate({
+      target: userBilling.userId,
+      set: { trialEndsAt, updatedAt: new Date() },
+      setWhere: isNull(userBilling.trialEndsAt),
+    })
+    .returning({ trialEndsAt: userBilling.trialEndsAt })
+  if (written[0] !== undefined) return written[0].trialEndsAt
+
+  // Empty means setWhere was false: the row already carries a trial. That value
+  // is authoritative — read it back rather than reporting none, which would
+  // show a trial user the free plan for this one response.
+  const [existing] = await db
+    .select({ trialEndsAt: userBilling.trialEndsAt })
+    .from(userBilling)
+    .where(eq(userBilling.userId, userId))
+    .limit(1)
+  return existing?.trialEndsAt ?? null
+}
+
 // Loads DB context and derives PlanState + nudge timestamps for an
 // authenticated user. publicMetadata is Clerk's untyped payload — parsed at
-// the boundary.
+// the boundary. `accountCreatedAt` (Clerk's user.createdAt) is what the
+// trial clock is measured from; omit it on paths that must not seed.
 export async function loadPlanContext(
   userId: string,
   publicMetadata: unknown,
+  accountCreatedAt?: Date,
 ): Promise<PlanContext> {
   const parsedMetadata = publicMetadataSchema.safeParse(publicMetadata)
   const metadata = parsedMetadata.success ? parsedMetadata.data : {}
@@ -73,6 +119,22 @@ export async function loadPlanContext(
       .limit(1),
   ])
 
+  // Where the trial clock starts (spec §3). Keyed on a null trialEndsAt rather
+  // than a missing row, because another writer may have created the row for its
+  // own columns and left the trial unset — gating on the row would drop that
+  // user's trial permanently. Ineligible accounts return before any write.
+  let trialEndsAt = billingRow?.trialEndsAt ?? null
+  if (trialEndsAt === null && accountCreatedAt !== undefined) {
+    try {
+      trialEndsAt = await seedTrial(userId, accountCreatedAt)
+    } catch (err) {
+      apiLogger.error(
+        { err, userId },
+        'trial seed failed — treating as no trial',
+      )
+    }
+  }
+
   const now = new Date()
   const giftLive = isGiftLive(giftRow ?? null, now)
   const mirrorSaysGifted = metadata.plan === 'premium_gifted'
@@ -91,13 +153,13 @@ export async function loadPlanContext(
     role: metadata.role,
     giftedComp: giftRow ?? null,
     subscription: subRow ?? null,
-    billing: billingRow ? { trialEndsAt: billingRow.trialEndsAt } : null,
+    billing: { trialEndsAt },
     now,
   })
 
   return {
     planState,
-    trialEndsAt: billingRow?.trialEndsAt ?? null,
+    trialEndsAt,
     nudgeTimestamps: {
       lastTrialEndedShownAt: billingRow?.lastTrialEndedShownAt ?? null,
       dayThirteenBannerDismissedAt:

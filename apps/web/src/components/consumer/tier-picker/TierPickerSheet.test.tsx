@@ -429,10 +429,12 @@ describe('TierPickerSheet — mobile accordion', () => {
 })
 
 describe('TierPickerSheet — checkout flow', () => {
-  it('starting a premium trial creates a checkout session and swaps to the checkout panel', async () => {
+  it('upgrading to Premium creates a checkout session and swaps to the checkout panel', async () => {
     renderSheet(planState('free'))
     fireEvent.click(
-      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+      screen.getByRole('button', {
+        name: TIER_PICKER_COPY.cta.upgradeToPremium,
+      }),
     )
     await waitFor(() =>
       expect(mockCreateCheckoutSession).toHaveBeenCalledWith(
@@ -449,7 +451,9 @@ describe('TierPickerSheet — checkout flow', () => {
   it('dismissing mid-checkout fires the best-effort abandon call and closes', async () => {
     const onClose = renderSheet(planState('free'))
     fireEvent.click(
-      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+      screen.getByRole('button', {
+        name: TIER_PICKER_COPY.cta.upgradeToPremium,
+      }),
     )
     await waitFor(() =>
       expect(screen.getByTestId('checkout-panel')).toBeTruthy(),
@@ -467,7 +471,9 @@ describe('TierPickerSheet — checkout flow', () => {
   it('back-to-tiers abandons the in-flight checkout and returns to the grid', async () => {
     renderSheet(planState('free'))
     fireEvent.click(
-      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+      screen.getByRole('button', {
+        name: TIER_PICKER_COPY.cta.upgradeToPremium,
+      }),
     )
     await waitFor(() =>
       expect(screen.getByTestId('checkout-panel')).toBeTruthy(),
@@ -485,7 +491,9 @@ describe('TierPickerSheet — checkout flow', () => {
   it('re-roles the ModalShell root as alertdialog while a failure surface is up', async () => {
     renderSheet(planState('free'))
     fireEvent.click(
-      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+      screen.getByRole('button', {
+        name: TIER_PICKER_COPY.cta.upgradeToPremium,
+      }),
     )
     await waitFor(() =>
       expect(screen.getByTestId('checkout-panel')).toBeTruthy(),
@@ -513,7 +521,9 @@ describe('TierPickerSheet — checkout flow', () => {
   it('keeps the ModalShell a plain dialog relabeled by the challenge chrome', async () => {
     renderSheet(planState('free'))
     fireEvent.click(
-      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+      screen.getByRole('button', {
+        name: TIER_PICKER_COPY.cta.upgradeToPremium,
+      }),
     )
     await waitFor(() =>
       expect(screen.getByTestId('checkout-panel')).toBeTruthy(),
@@ -528,7 +538,9 @@ describe('TierPickerSheet — checkout flow', () => {
   it('successful checkout closes the sheet and refreshes plan state', async () => {
     const onClose = renderSheet(planState('free'))
     fireEvent.click(
-      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+      screen.getByRole('button', {
+        name: TIER_PICKER_COPY.cta.upgradeToPremium,
+      }),
     )
     await waitFor(() =>
       expect(screen.getByTestId('checkout-panel')).toBeTruthy(),
@@ -553,7 +565,9 @@ describe('TierPickerSheet — checkout flow', () => {
     )
     const onClose = renderSheet(planState('free'))
     fireEvent.click(
-      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+      screen.getByRole('button', {
+        name: TIER_PICKER_COPY.cta.upgradeToPremium,
+      }),
     )
     await waitFor(() => expect(mockCreateCheckoutSession).toHaveBeenCalled())
 
@@ -580,7 +594,9 @@ describe('TierPickerSheet — checkout flow', () => {
     mockCreateCheckoutSession.mockRejectedValue(new Error('boom'))
     renderSheet(planState('free'))
     fireEvent.click(
-      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+      screen.getByRole('button', {
+        name: TIER_PICKER_COPY.cta.upgradeToPremium,
+      }),
     )
     await waitFor(() =>
       expect(
@@ -631,7 +647,9 @@ describe('TierPickerSheet — founder post-claim takeover', () => {
   it('non-founder checkout success is unchanged — closes without a takeover', async () => {
     const onClose = renderSheet(planState('free'))
     fireEvent.click(
-      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+      screen.getByRole('button', {
+        name: TIER_PICKER_COPY.cta.upgradeToPremium,
+      }),
     )
     await waitFor(() =>
       expect(screen.getByTestId('checkout-panel')).toBeTruthy(),

@@ -47,15 +47,25 @@ export const resolveTierCta = (
     }
   }
 
-  if (state === 'free') {
+  // Free and trial share the acquisition CTAs — a trial user holds no
+  // subscription either. They diverge only on the two cards the trial
+  // changes the meaning of: Premium is theirs to keep, and Free is where
+  // they land rather than a plan they are on.
+  if (state === 'free' || state === 'trial') {
     switch (tierKey) {
       case 'free':
-        // unreachable — isCurrent short-circuits above
-        return cta(CTA_COPY.youAreOnFree, 'current', 'none')
+        // Unreachable for 'free' — isCurrent short-circuits above.
+        return state === 'trial'
+          ? cta(CTA_COPY.freeAfterTrial, 'current', 'none')
+          : cta(CTA_COPY.youAreOnFree, 'current', 'none')
       case 'supporter':
         return cta(CTA_COPY.becomeSupporter, 'ghost-accent', 'checkout')
       case 'premium':
-        return cta(CTA_COPY.startTrial, 'signal', 'checkout')
+        return cta(
+          state === 'trial' ? CTA_COPY.keepPremium : CTA_COPY.upgradeToPremium,
+          'signal',
+          'checkout',
+        )
       case 'founder':
         return cta(CTA_COPY.claimFounder, 'founder', 'checkout')
     }

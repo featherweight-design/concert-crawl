@@ -74,7 +74,9 @@ describe('TrialEndedTakeover', () => {
   it('selecting a paid tier bubbles the tier key to onSelectTier', () => {
     const { onSelectTier, onDismiss } = renderTakeover()
     fireEvent.click(
-      screen.getByRole('button', { name: TIER_PICKER_COPY.cta.startTrial }),
+      screen.getByRole('button', {
+        name: TIER_PICKER_COPY.cta.upgradeToPremium,
+      }),
     )
     expect(onSelectTier).toHaveBeenCalledWith('premium')
     expect(onDismiss).not.toHaveBeenCalled()

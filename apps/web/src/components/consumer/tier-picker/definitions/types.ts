@@ -3,8 +3,13 @@ import type { DeclineCategory, UserPlan } from '@concert-crawl/types'
 /** The four purchasable/renderable tiers in the picker. */
 export type TierKey = 'free' | 'supporter' | 'premium' | 'founder'
 
-/** Picker state vocabulary — six states per the design handoff (R5/R6). */
-export type PickerState = Exclude<UserPlan, 'gifted'> | 'gifted'
+/**
+ * Picker state vocabulary — the six design-handoff states (R5/R6) plus
+ * 'trial'. A trial user derives plan 'premium' but has no Stripe customer,
+ * so they must never be offered the portal; they get acquisition CTAs with
+ * Premium framed as "keep", not "start".
+ */
+export type PickerState = Exclude<UserPlan, 'gifted'> | 'gifted' | 'trial'
 
 export interface TierFeature {
   text: string

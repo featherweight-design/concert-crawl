@@ -102,10 +102,14 @@ interface FounderClaim {
   seatsTotal: number
 }
 
-const pickerStateFrom = (planState: PlanState): PickerState =>
-  planState.roleComped || planState.plan === 'gifted'
-    ? 'gifted'
-    : planState.plan
+const pickerStateFrom = (planState: PlanState): PickerState => {
+  if (planState.roleComped || planState.plan === 'gifted') return 'gifted'
+  // Checked before plan: a trial derives plan 'premium', and treating it as
+  // the current plan would offer "Manage subscription" — a portal call that
+  // 404s with no_customer, because a card-less trial has no Stripe customer.
+  if (planState.onTrial) return 'trial'
+  return planState.plan
+}
 
 const isPaidTier = (key: TierKey): key is Exclude<TierKey, 'free'> =>
   key !== 'free'

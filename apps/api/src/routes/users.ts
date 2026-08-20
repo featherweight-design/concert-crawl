@@ -131,9 +131,14 @@ usersRouter.get('/me', async (ctx) => {
     .where(eq(userProfiles.userId, auth.userId))
     .limit(1)
 
+  const accountCreatedAt =
+    clerkUser.createdAt === undefined || clerkUser.createdAt === null
+      ? null
+      : new Date(clerkUser.createdAt)
   const planContext = await loadPlanContext(
     auth.userId,
     clerkUser.publicMetadata,
+    accountCreatedAt ?? undefined,
   )
   const { planState } = planContext
 
@@ -196,9 +201,7 @@ usersRouter.get('/me', async (ctx) => {
     planState,
     displayRole,
     roleBadge,
-    joined: formatJoined(
-      clerkUser.createdAt ? new Date(clerkUser.createdAt) : new Date(),
-    ),
+    joined: formatJoined(accountCreatedAt ?? new Date()),
     submissionCount: submissionCountRow?.value ?? 0,
     cred: credRow?.priceCredScore ?? 0,
     showTrialEndedTakeover: nudgeFlags.showTrialEndedTakeover,

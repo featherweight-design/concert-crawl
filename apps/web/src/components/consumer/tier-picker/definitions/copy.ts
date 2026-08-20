@@ -104,8 +104,11 @@ export const TIER_PICKER_COPY = {
     // signed-in defaults
     switchToFree: 'Switch to Free',
     becomeSupporter: 'Become a Supporter',
-    startTrial: 'Start 14-day free trial',
     claimFounder: 'Claim Founder pricing',
+    // trial — the 14 days are automatic at signup, so Premium is kept, not
+    // started, and Free is where they land rather than a plan they hold
+    keepPremium: 'Keep Premium',
+    freeAfterTrial: 'After your trial',
     // state-specific
     downgradeToFree: 'Downgrade to Free',
     upgradeToPremium: 'Upgrade to Premium',

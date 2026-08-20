@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 
 interface AuthState {
   current: {
@@ -10,6 +10,7 @@ interface AuthState {
 interface ClerkState {
   role: string
   plan: string | undefined
+  createdAt: number
   // The HTTP status `deleteUser` should reject with, or null to succeed.
   deleteUserFailsWith: number | null
 }
@@ -19,6 +20,7 @@ const { authState, clerkState } = vi.hoisted(() => {
   const clerkState: ClerkState = {
     role: 'user',
     plan: undefined,
+    createdAt: new Date('2026-04-01').getTime(),
     deleteUserFailsWith: null,
   }
   return { authState, clerkState }
@@ -38,7 +40,7 @@ vi.mock('@clerk/backend', () => ({
         Promise.resolve({
           emailAddresses: [{ emailAddress: 'test@example.com' }],
           publicMetadata: { role: clerkState.role, plan: clerkState.plan },
-          createdAt: new Date('2026-04-01').getTime(),
+          createdAt: clerkState.createdAt,
         }),
       ),
       deleteUser: vi.fn().mockImplementation(() => {
@@ -53,7 +55,7 @@ vi.mock('@clerk/backend', () => ({
   }),
 }))
 
-import { sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   founderWindow,
@@ -353,6 +355,101 @@ describe('GET /v1/users/me', () => {
     }
     expect(body.success).toBe(true)
     expect(body.data.roleBadge).toBeNull()
+  })
+})
+
+describe('GET /v1/users/me — card-less trial seeding', () => {
+  const MONETIZATION_LIVE_AT = '2026-09-01T00:00:00.000Z'
+  const DAY_MS = 86400000
+
+  const readBillingRow = async () => {
+    const [row] = await testDb
+      .select({ trialEndsAt: userBilling.trialEndsAt })
+      .from(userBilling)
+      .where(eq(userBilling.userId, 'user_test123'))
+      .limit(1)
+    return row
+  }
+
+  beforeEach(async () => {
+    clearAuth()
+    clerkState.role = 'user'
+    clerkState.plan = undefined
+    clerkState.createdAt = new Date('2026-09-10T12:00:00.000Z').getTime()
+    process.env['MONETIZATION_LIVE_AT'] = MONETIZATION_LIVE_AT
+    await clearTables()
+    await clearBillingTables()
+    await setFounderWindow()
+  })
+
+  afterEach(() => {
+    delete process.env['MONETIZATION_LIVE_AT']
+  })
+
+  it('starts the 14-day clock on first touch and reports the trial', async () => {
+    setAuth()
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('premium')
+    expect(body.data.planState.onTrial).toBe(true)
+    expect(body.data.planState.trialEndsAt).toBe('2026-09-24T12:00:00.000Z')
+    expect((await readBillingRow())?.trialEndsAt).toEqual(
+      new Date('2026-09-24T12:00:00.000Z'),
+    )
+  })
+
+  it('never re-seeds — a second read cannot extend the trial', async () => {
+    setAuth()
+    await fetchMe()
+    const seeded = (await readBillingRow())?.trialEndsAt
+    clerkState.createdAt = Date.now()
+    await fetchMe()
+    expect((await readBillingRow())?.trialEndsAt).toEqual(seeded)
+  })
+
+  it('grants nothing to the pre-monetization beta cohort', async () => {
+    setAuth()
+    clerkState.createdAt = new Date('2026-04-01').getTime()
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('free')
+    expect(body.data.planState.onTrial).toBe(false)
+    expect(await readBillingRow()).toBeUndefined()
+  })
+
+  it('grants nothing while MONETIZATION_LIVE_AT is unset', async () => {
+    setAuth()
+    delete process.env['MONETIZATION_LIVE_AT']
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('free')
+    expect(await readBillingRow()).toBeUndefined()
+  })
+
+  // The row outlives the trial, so an expired trial must not re-seed.
+  it('leaves an existing row alone even when its trial has lapsed', async () => {
+    setAuth()
+    const lapsed = new Date(Date.now() - DAY_MS)
+    await testDb
+      .insert(userBilling)
+      .values({ userId: 'user_test123', trialEndsAt: lapsed })
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('free')
+    expect((await readBillingRow())?.trialEndsAt).toEqual(lapsed)
+  })
+
+  // billing-nudges, the daily job and the Stripe webhooks all upsert
+  // user_billing for their own columns. If one lands before the user's first
+  // read, gating the seed on a missing row would drop their trial for good.
+  it('still seeds when another writer created the row without a trial', async () => {
+    setAuth()
+    await testDb
+      .insert(userBilling)
+      .values({ userId: 'user_test123', pastDueBannerDismissedAt: new Date() })
+
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('premium')
+    expect(body.data.planState.onTrial).toBe(true)
+    expect((await readBillingRow())?.trialEndsAt).toEqual(
+      new Date('2026-09-24T12:00:00.000Z'),
+    )
   })
 })
 
