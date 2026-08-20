@@ -37,4 +37,6 @@ export const faultHref = (fault: TriageFault): string => {
 }
 
 export const queueHref = (queue: TriageQueue): string =>
-  queue.action === 'openReview' ? '/admin/review' : '/admin/prices/submissions'
+  queue.action === 'openReview'
+    ? '/admin/review'
+    : '/admin/review?tab=submissions'

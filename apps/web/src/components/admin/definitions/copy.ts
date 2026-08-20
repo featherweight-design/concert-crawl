@@ -1503,7 +1503,8 @@ export const ADMIN_COPY = {
   review: {
     tabs: {
       eventFlags: 'Event flags',
-      prices: 'Prices',
+      prices: 'Price coverage',
+      submissions: 'Submissions',
       missing: 'Missing',
       allEvents: 'All events',
       contests: 'Contests',
@@ -1808,12 +1809,9 @@ export const ADMIN_COPY = {
 
     adminReviewMobile: {
       tabEventFlags: 'Event flags',
-      tabPrices: 'Prices',
       queueClearHeading: 'Queue is clear.',
       queueClearBody:
         'Every flagged event has been triaged. Next sweep runs at 18:00 MT.',
-      communitySubmissionsHeader: 'Community submissions',
-      noSubmissions: 'No pending submissions',
       needsPrice: 'Needs price',
       missingOnly: 'Missing only',
       allHavePrices: 'All events have prices.',
@@ -1827,8 +1825,6 @@ export const ADMIN_COPY = {
       buyTickets: 'Buy tickets',
       rejectEvent: '× Reject',
       approveEvent: '✓ Approve',
-      denySubmission: '× Deny',
-      approveSubmission: '✓ Approve · cred',
       priceLowPlaceholder: 'Low $',
       priceHighPlaceholder: 'High $',
       cancel: 'Cancel',

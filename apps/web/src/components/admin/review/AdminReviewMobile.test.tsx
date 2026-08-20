@@ -14,16 +14,22 @@ vi.mock('./_tabs/ContestsTabContent', () => ({
   ),
 }))
 
+// Same reasoning for the submissions tab: it mounts PricesSubmissionsClient,
+// which needs a QueryClient and Clerk. The regression under test is that
+// mobile reaches the same submissions surface as desktop, not the table body.
+vi.mock('./_tabs/SubmissionsTabContent', () => ({
+  SubmissionsTabContent: () => (
+    <div data-testid="submissions-content">submissions body</div>
+  ),
+}))
+
 import { AdminReviewMobile } from './AdminReviewMobile'
 
 const baseProps = {
   events: [],
-  submissions: [],
   priceEvents: [],
   onApprove: vi.fn(),
   onReject: vi.fn(),
-  onApproveSubmission: vi.fn(),
-  onDenySubmission: vi.fn(),
   pricesMissingOnly: false,
   priceEventsPage: 1,
   priceEventsPageSize: 20,
@@ -95,7 +101,9 @@ describe('AdminReviewMobile tab switcher', () => {
       />,
     )
     const select = screen.getByRole('combobox', { name: /Review sections/ })
-    expect(within(select).getByRole('option', { name: 'Prices' })).toBeTruthy()
+    expect(
+      within(select).getByRole('option', { name: 'Price coverage' }),
+    ).toBeTruthy()
     expect(within(select).getByRole('option', { name: 'Missing' })).toBeTruthy()
   })
 })
@@ -151,5 +159,60 @@ describe('AdminReviewMobile "Needs price" badge (#1080)', () => {
     const row = heading.parentElement?.parentElement
     expect(row).toBeTruthy()
     expect(within(row!).queryByText('1183')).toBeNull()
+  })
+})
+
+describe('AdminReviewMobile submissions/coverage split', () => {
+  it('exposes Submissions as its own selectable tab', () => {
+    render(<AdminReviewMobile {...baseProps} />)
+    const select = screen.getByRole('combobox', { name: /Review sections/ })
+    expect(
+      within(select).getByRole('option', { name: /Submissions/ }),
+    ).toBeTruthy()
+  })
+
+  it('shows the pending-submissions count in the Submissions option label', () => {
+    render(<AdminReviewMobile {...baseProps} submissionsCount={7} />)
+    const select = screen.getByRole('combobox', { name: /Review sections/ })
+    expect(
+      within(select).getByRole('option', { name: 'Submissions (7)' }),
+    ).toBeTruthy()
+  })
+
+  it('renders the submissions body when Submissions is selected', () => {
+    render(<AdminReviewMobile {...baseProps} />)
+    expect(screen.queryByTestId('submissions-content')).toBeNull()
+    fireEvent.change(
+      screen.getByRole('combobox', { name: /Review sections/ }),
+      {
+        target: { value: 'submissions' },
+      },
+    )
+    expect(screen.getByTestId('submissions-content')).toBeTruthy()
+  })
+
+  it('mounts directly on Submissions when initialTab is submissions', () => {
+    render(<AdminReviewMobile {...baseProps} initialTab="submissions" />)
+    expect(screen.getByTestId('submissions-content')).toBeTruthy()
+  })
+
+  it('counts event flags from the server total, not the loaded page', () => {
+    // `events` holds one paginated page (#694), so its length caps at the page
+    // size and would tell an admin the queue is smaller than it is. The pill
+    // reads the same server count the desktop tab and sidebar badge use.
+    render(<AdminReviewMobile {...baseProps} eventFlagsCount={42} />)
+    const select = screen.getByRole('combobox', { name: /Review sections/ })
+    expect(
+      within(select).getByRole('option', { name: 'Event flags (42)' }),
+    ).toBeTruthy()
+  })
+
+  it('keeps the Prices tab to coverage only — no submissions surface', () => {
+    // The whole point of the split: the community-submissions panel used to
+    // sit above "Needs price" on this one tab. Mobile must match desktop.
+    render(<AdminReviewMobile {...baseProps} initialTab="prices" />)
+    expect(screen.getByText('Needs price')).toBeTruthy()
+    expect(screen.queryByTestId('submissions-content')).toBeNull()
+    expect(screen.queryByText(/Community submissions/i)).toBeNull()
   })
 })

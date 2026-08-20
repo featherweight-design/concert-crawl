@@ -15,6 +15,11 @@ import {
   type AllEventsApi,
 } from './_tabs/AllEventsTabContent'
 import { ContestsTabContent } from './_tabs/ContestsTabContent'
+import {
+  SubmissionsTabContent,
+  type SubmissionsTabContentProps,
+} from './_tabs/SubmissionsTabContent'
+import { type ReviewTabKey } from '@/lib/admin/review-tabs'
 import { EMPTY_FILTERS, type AllEventsFilters } from './all/filters'
 import { type AllEvent } from './all/types'
 import { type MissingRowEvent } from './missing/MissingRow'
@@ -38,21 +43,6 @@ interface EventFlag {
   venueName: string | null
 }
 
-interface PriceSubmission {
-  id: string
-  eventId: string
-  userId: string
-  priceMin: string | null
-  priceMax: string | null
-  note?: string | null
-  status: string
-  createdAt: string
-  eventTitle: string | null
-  eventDate: string | null
-  ticketUrl: string | null
-  venueName: string | null
-}
-
 interface PriceEvent {
   eventId: string
   eventTitle: string
@@ -69,12 +59,9 @@ interface PriceEvent {
 
 interface AdminReviewMobileProps {
   events: EventFlag[]
-  submissions: PriceSubmission[]
   priceEvents: PriceEvent[]
   onApprove: (id: string) => void
   onReject: (id: string) => void
-  onApproveSubmission: (id: string) => void
-  onDenySubmission: (id: string) => void
   onAddPrice?: (
     eventId: string,
     priceMin: string,
@@ -82,8 +69,14 @@ interface AdminReviewMobileProps {
     vendor: string,
     howFound: string,
   ) => Promise<void>
-  initialTab?: 'flags' | 'prices' | 'missing' | 'all-events' | 'contests'
+  initialTab?: ReviewTabKey
   contestCount?: number
+  // Server counts, not page lengths. `events` holds a single paginated page,
+  // so its length understates the queue as soon as the queue exceeds one page.
+  eventFlagsCount?: number
+  submissionsCount?: number
+  initialSubmissions?: SubmissionsTabContentProps['initialSubmissions']
+  initialSubmissionsTotal?: SubmissionsTabContentProps['initialTotal']
   pricesMissingOnly: boolean
   priceEventsPage: number
   priceEventsPageSize: number
@@ -593,15 +586,16 @@ function NeedsPriceRow({
 
 export function AdminReviewMobile({
   events,
-  submissions,
   priceEvents,
   onApprove,
   onReject,
-  onApproveSubmission,
-  onDenySubmission,
   onAddPrice,
-  initialTab = 'flags',
+  initialTab = 'event-flags',
   contestCount = 0,
+  eventFlagsCount = 0,
+  submissionsCount = 0,
+  initialSubmissions = [],
+  initialSubmissionsTotal = 0,
   pricesMissingOnly,
   priceEventsPage,
   priceEventsPageSize,
@@ -630,9 +624,7 @@ export function AdminReviewMobile({
   onAllEventsEdit,
   onAllEventsViewDetail,
 }: AdminReviewMobileProps) {
-  const [activeTab, setActiveTab] = useState<
-    'flags' | 'prices' | 'missing' | 'all-events' | 'contests'
-  >(initialTab)
+  const [activeTab, setActiveTab] = useState<ReviewTabKey>(initialTab)
 
   // If the mobile surface mounts already on the Missing tab (deep-link via
   // ?tab=missing), trigger the lazy fetch — the tab-click handler only
@@ -643,9 +635,7 @@ export function AdminReviewMobile({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const onTabChange = (
-    key: 'flags' | 'prices' | 'missing' | 'all-events' | 'contests',
-  ) => {
+  const onTabChange = (key: ReviewTabKey) => {
     setActiveTab(key)
     if (key === 'missing' && onEnterMissingTab) onEnterMissingTab()
   }
@@ -671,14 +661,19 @@ export function AdminReviewMobile({
 
   const tabOptions = [
     {
-      key: 'flags',
+      key: 'event-flags',
       label: ADMIN_COPY.review.adminReviewMobile.tabEventFlags,
-      count: events.length,
+      count: eventFlagsCount,
     },
     {
       key: 'prices',
-      label: ADMIN_COPY.review.adminReviewMobile.tabPrices,
+      label: ADMIN_COPY.review.tabs.prices,
       count: 0,
+    },
+    {
+      key: 'submissions',
+      label: ADMIN_COPY.review.tabs.submissions,
+      count: submissionsCount,
     },
     {
       key: 'missing',
@@ -710,8 +705,8 @@ export function AdminReviewMobile({
       }}
     >
       {/*
-        Tab switcher — a native <select> rather than a pill row. Five tabs
-        (incl. Contests) can't fit one 320px row without clipping the last tab,
+        Tab switcher — a native <select> rather than a pill row. Six tabs
+        can't fit one 320px row without clipping the last tab,
         and wrapping to a second row eats scarce mobile vertical space. Mirrors
         the below-`sm` fallback in ReviewTabs (the desktop surface). #1028
       */}
@@ -743,7 +738,7 @@ export function AdminReviewMobile({
       </select>
 
       {/* Event flags tab — fills remaining height, scrolls internally */}
-      {activeTab === 'flags' && (
+      {activeTab === 'event-flags' && (
         <div
           style={{
             ...cardStyle,
@@ -820,301 +815,101 @@ export function AdminReviewMobile({
         </div>
       )}
 
-      {/* Prices tab — community submissions + needs price, each fills half the available height */}
+      {/* Price coverage tab — the needs-price table fills the available height */}
       {activeTab === 'prices' && (
         <div
           style={{
+            ...cardStyle,
             flex: 1,
             minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
-            gap: 16,
           }}
         >
           <div
             style={{
-              ...cardStyle,
-              flex: 1,
-              minHeight: 0,
+              flexShrink: 0,
+              padding: '12px 16px 10px',
+              borderBottom: '1px solid var(--border)',
               display: 'flex',
-              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 8,
             }}
           >
-            {/* Community submissions header */}
-            <div
+            <span
               style={{
-                flexShrink: 0,
-                padding: '12px 16px 10px',
-                borderBottom: '1px solid var(--border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 13,
+                fontWeight: 700,
+                color: 'var(--fg)',
               }}
             >
-              <span
-                style={{
-                  fontFamily: "'Inter', sans-serif",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: 'var(--fg)',
-                }}
+              {ADMIN_COPY.review.adminReviewMobile.needsPrice}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <AdminButton
+                variant={pricesMissingOnly ? 'outline' : 'ghost'}
+                size="sm"
+                onClick={onTogglePriceFilter}
               >
-                {ADMIN_COPY.review.adminReviewMobile.communitySubmissionsHeader}
-              </span>
-              <StatusBadge kind="signal">
-                {submissions.length} pending
-              </StatusBadge>
-            </div>
-
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-              {submissions.length === 0 ? (
-                <div
-                  style={{
-                    padding: '12px 16px',
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 13,
-                    color: 'var(--fg-subtle)',
-                    borderBottom: '1px solid var(--border)',
-                  }}
-                >
-                  {ADMIN_COPY.review.adminReviewMobile.noSubmissions}
-                </div>
-              ) : (
-                submissions.map((sub) => {
-                  const formatPrice = (val: string) =>
-                    `$${Math.round(parseFloat(val))}`
-                  const priceDisplay = sub.priceMin
-                    ? `${formatPrice(sub.priceMin)}${sub.priceMax ? `–${formatPrice(sub.priceMax)}` : ''}`
-                    : '—'
-                  const linkedEvent = priceEvents.find(
-                    (ev) => ev.eventId === sub.eventId,
-                  )
-                  const eventTitle =
-                    linkedEvent?.eventTitle ??
-                    sub.eventTitle ??
-                    sub.eventId.slice(0, 8) + '…'
-                  const venueLine = linkedEvent
-                    ? [
-                        linkedEvent.venueName,
-                        new Date(
-                          linkedEvent.date + 'T12:00:00',
-                        ).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        }),
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')
-                    : null
-                  const handle = `@${sub.userId.slice(0, 10)}`
-                  return (
-                    <div
-                      key={sub.id}
-                      style={{
-                        padding: '12px 16px',
-                        borderBottom: '1px solid var(--border)',
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          justifyContent: 'space-between',
-                          gap: 12,
-                          marginBottom: 4,
-                        }}
-                      >
-                        <div style={{ minWidth: 0 }}>
-                          <div
-                            style={{
-                              fontFamily: "'Inter', sans-serif",
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: 'var(--fg)',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {eventTitle}
-                          </div>
-                          {venueLine && (
-                            <div
-                              style={{
-                                fontFamily: "'Inter', sans-serif",
-                                fontSize: 12,
-                                color: 'var(--fg-muted)',
-                                marginTop: 1,
-                              }}
-                            >
-                              {venueLine}
-                            </div>
-                          )}
-                        </div>
-                        <span
-                          style={{
-                            fontFamily: "'JetBrains Mono', monospace",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            color: 'var(--fg)',
-                            whiteSpace: 'nowrap',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {priceDisplay}
-                        </span>
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: 6,
-                          marginBottom: 8,
-                          fontSize: 12,
-                          overflow: 'hidden',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        <span
-                          style={{
-                            fontFamily: "'JetBrains Mono', monospace",
-                            fontWeight: 700,
-                            color: 'var(--accent)',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {handle}
-                        </span>
-                        {sub.note && (
-                          <span
-                            style={{
-                              fontFamily: "'Inter', sans-serif",
-                              color: 'var(--fg-muted)',
-                              fontStyle: 'italic',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            &ldquo;{sub.note}&rdquo;
-                          </span>
-                        )}
-                      </div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <AdminButton
-                          variant="ghost"
-                          size="sm"
-                          fullWidth
-                          onClick={() => onDenySubmission(sub.id)}
-                        >
-                          {ADMIN_COPY.review.adminReviewMobile.denySubmission}
-                        </AdminButton>
-                        <AdminButton
-                          variant="success"
-                          size="sm"
-                          fullWidth
-                          onClick={() => onApproveSubmission(sub.id)}
-                        >
-                          {
-                            ADMIN_COPY.review.adminReviewMobile
-                              .approveSubmission
-                          }
-                        </AdminButton>
-                      </div>
-                    </div>
-                  )
-                })
+                {ADMIN_COPY.review.adminReviewMobile.missingOnly}
+              </AdminButton>
+              {needsPriceTotal !== null && (
+                <StatusBadge kind="warning">{needsPriceTotal}</StatusBadge>
               )}
             </div>
           </div>
 
-          {/* Needs price — fills other half */}
-          <div
-            style={{
-              ...cardStyle,
-              flex: 1,
-              minHeight: 0,
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <div
-              style={{
-                flexShrink: 0,
-                padding: '12px 16px 10px',
-                borderBottom: '1px solid var(--border)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 8,
-              }}
-            >
-              <span
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+            {priceEventsTotal === 0 ? (
+              <div
                 style={{
+                  padding: '12px 16px',
                   fontFamily: "'Inter', sans-serif",
                   fontSize: 13,
-                  fontWeight: 700,
-                  color: 'var(--fg)',
+                  color: 'var(--fg-subtle)',
                 }}
               >
-                {ADMIN_COPY.review.adminReviewMobile.needsPrice}
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <AdminButton
-                  variant={pricesMissingOnly ? 'outline' : 'ghost'}
-                  size="sm"
-                  onClick={onTogglePriceFilter}
-                >
-                  {ADMIN_COPY.review.adminReviewMobile.missingOnly}
-                </AdminButton>
-                {needsPriceTotal !== null && (
-                  <StatusBadge kind="warning">{needsPriceTotal}</StatusBadge>
-                )}
+                {pricesMissingOnly
+                  ? ADMIN_COPY.review.adminReviewMobile.allHavePrices
+                  : ADMIN_COPY.review.adminReviewMobile.noUpcomingEvents}
               </div>
-            </div>
-
-            <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
-              {priceEventsTotal === 0 ? (
-                <div
-                  style={{
-                    padding: '12px 16px',
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: 13,
-                    color: 'var(--fg-subtle)',
-                  }}
-                >
-                  {pricesMissingOnly
-                    ? ADMIN_COPY.review.adminReviewMobile.allHavePrices
-                    : ADMIN_COPY.review.adminReviewMobile.noUpcomingEvents}
-                </div>
-              ) : (
-                <>
-                  {priceEvents.map((ev) => (
-                    <NeedsPriceRow
-                      key={ev.eventId}
-                      event={ev}
-                      onAddPrice={onAddPrice}
-                    />
-                  ))}
-                  {(priceEventsTotal > priceEventsPageSize ||
-                    priceEventsPage > 1) && (
-                    <Pagination
-                      page={priceEventsPage}
-                      pageSize={priceEventsPageSize}
-                      total={priceEventsTotal}
-                      onPageChange={onPriceEventsPageChange}
-                      onPageSizeChange={onPriceEventsPageSizeChange}
-                      itemLabel="events"
-                    />
-                  )}
-                </>
-              )}
-            </div>
+            ) : (
+              <>
+                {priceEvents.map((ev) => (
+                  <NeedsPriceRow
+                    key={ev.eventId}
+                    event={ev}
+                    onAddPrice={onAddPrice}
+                  />
+                ))}
+                {(priceEventsTotal > priceEventsPageSize ||
+                  priceEventsPage > 1) && (
+                  <Pagination
+                    page={priceEventsPage}
+                    pageSize={priceEventsPageSize}
+                    total={priceEventsTotal}
+                    onPageChange={onPriceEventsPageChange}
+                    onPageSizeChange={onPriceEventsPageSizeChange}
+                    itemLabel="events"
+                  />
+                )}
+              </>
+            )}
           </div>
+        </div>
+      )}
+
+      {/* Submissions tab — the same surface desktop renders, so the two
+          shells stay in parity rather than diverging into a mobile-only
+          card list. */}
+      {activeTab === 'submissions' && (
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+          <SubmissionsTabContent
+            initialSubmissions={initialSubmissions}
+            initialTotal={initialSubmissionsTotal}
+          />
         </div>
       )}
 

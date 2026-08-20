@@ -94,11 +94,18 @@ function compareRows(
 interface PricesSubmissionsClientProps {
   initialSubmissions: PriceSubmissionHistoryRow[]
   initialTotal: number
+  /**
+   * Mounted inside the Review tab shell, which already renders the page's
+   * heading and owns navigation — so the standalone back link and section
+   * head are suppressed rather than stacked under Review's own.
+   */
+  embedded?: boolean
 }
 
 export const PricesSubmissionsClient = ({
   initialSubmissions,
   initialTotal,
+  embedded = false,
 }: PricesSubmissionsClientProps) => {
   const { getToken } = useAuth()
   const queryClient = useQueryClient()
@@ -408,8 +415,8 @@ export const PricesSubmissionsClient = ({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {backLink}
-      {sectionHead}
+      {!embedded && backLink}
+      {!embedded && sectionHead}
 
       {bannerMessage && (
         <div

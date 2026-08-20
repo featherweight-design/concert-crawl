@@ -18,13 +18,20 @@ import {
   type ReviewCounts,
 } from '@/lib/queries/use-admin-review'
 import { useQueryClient } from '@tanstack/react-query'
+import { type PriceSubmissionHistoryRow } from '@/lib/queries/use-admin-price-submissions'
 import { AdminReviewMobile } from './AdminReviewMobile'
-import { ReviewTabs, type ReviewTabDescriptor } from './ReviewTabs'
+import { ReviewTabs } from './ReviewTabs'
 import { EventFlagsTabContent } from './_tabs/EventFlagsTabContent'
 import { editEventHref } from '@/lib/admin/edit-event-link'
-import { isReviewTabKey, type ReviewTabKey } from '@/lib/admin/review-tabs'
+import {
+  isReviewTabKey,
+  resolveReviewTab,
+  type ReviewTabKey,
+} from '@/lib/admin/review-tabs'
+import { buildReviewTabs } from './lib/build-review-tabs'
 import { computePendingCount } from '@/lib/admin/review-pending'
 import { PricesTabContent } from './_tabs/PricesTabContent'
+import { SubmissionsTabContent } from './_tabs/SubmissionsTabContent'
 import { AllEventsTabContent } from './_tabs/AllEventsTabContent'
 import { ContestsTabContent } from './_tabs/ContestsTabContent'
 import {
@@ -39,38 +46,17 @@ import { type AllEvent } from './all/types'
 import { MissingTabContent } from './_tabs/MissingTabContent'
 import { type MissingRowEvent } from './missing/MissingRow'
 
-interface PriceSubmission {
-  id: string
-  eventId: string
-  userId: string
-  priceMin: string | null
-  priceMax: string | null
-  note?: string | null
-  status: string
-  createdAt: string
-  eventTitle: string | null
-  eventDate: string | null
-  ticketUrl: string | null
-  venueName: string | null
-}
-
 interface ReviewPageClientProps {
   initialEvents: EventFlag[]
-  initialSubmissions: PriceSubmission[]
+  initialSubmissions: PriceSubmissionHistoryRow[]
+  initialSubmissionsTotal: number
   initialCounts: ReviewCounts
-}
-
-const resolveTabFromSearchParams = (params: URLSearchParams): ReviewTabKey => {
-  const tab = params.get('tab')
-  if (isReviewTabKey(tab)) return tab
-  // Back-compat: legacy `?section=submissions` → prices tab
-  if (params.get('section') === 'submissions') return 'prices'
-  return 'event-flags'
 }
 
 export const ReviewPageClient = ({
   initialEvents,
   initialSubmissions,
+  initialSubmissionsTotal,
   initialCounts,
 }: ReviewPageClientProps) => {
   const { getToken } = useAuth()
@@ -89,7 +75,7 @@ export const ReviewPageClient = ({
     },
     [pathname, router],
   )
-  const activeTab: ReviewTabKey = resolveTabFromSearchParams(
+  const activeTab: ReviewTabKey = resolveReviewTab(
     new URLSearchParams(searchParams?.toString() ?? ''),
   )
 
@@ -121,8 +107,6 @@ export const ReviewPageClient = ({
     [pushParams, searchParams],
   )
 
-  const [submissions, setSubmissions] =
-    useState<PriceSubmission[]>(initialSubmissions)
   const [priceFilter, setPriceFilter] = useState<'missing' | 'all'>('missing')
   const [error, setError] = useState<string | null>(null)
   const [isDesktop, setIsDesktop] = useState(true)
@@ -205,19 +189,6 @@ export const ReviewPageClient = ({
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
-
-  useEffect(() => {
-    if (!isDesktop) return
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('section') === 'submissions') {
-      // Small delay to let the page render first
-      const timer = setTimeout(() => {
-        const el = document.getElementById('submissions-section')
-        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      }, 200)
-      return () => clearTimeout(timer)
-    }
-  }, [isDesktop])
 
   const togglePriceFilter = useCallback(() => {
     setPriceFilter((prev) => (prev === 'missing' ? 'all' : 'missing'))
@@ -342,31 +313,6 @@ export const ReviewPageClient = ({
     [addPendingFlag, clearPendingFlag, getToken, invalidate, router],
   )
 
-  const approveSubmission = useCallback(
-    async (id: string) => {
-      setError(null)
-      try {
-        const token = await getToken()
-        if (!token) return
-        await apiClient.patch(`/v1/admin/prices/submissions/${id}`, token, {
-          status: 'corroborated',
-        })
-        setSubmissions((prev) => prev.filter((sub) => sub.id !== id))
-        void invalidate.priceEvents()
-        void invalidate.counts()
-        router.refresh()
-      } catch (err) {
-        const message =
-          err instanceof ApiError
-            ? err.message
-            : 'Failed to approve submission.'
-        console.error('approveSubmission error:', err)
-        setError(message)
-      }
-    },
-    [getToken, invalidate, router],
-  )
-
   const addPrice = useCallback(
     async (
       eventId: string,
@@ -429,29 +375,6 @@ export const ReviewPageClient = ({
       priceFilter,
       queryClient,
     ],
-  )
-
-  const denySubmission = useCallback(
-    async (id: string) => {
-      setError(null)
-      try {
-        const token = await getToken()
-        if (!token) return
-        await apiClient.patch(`/v1/admin/prices/submissions/${id}`, token, {
-          status: 'disputed',
-        })
-        setSubmissions((prev) => prev.filter((sub) => sub.id !== id))
-        void invalidate.priceEvents()
-        void invalidate.counts()
-        router.refresh()
-      } catch (err) {
-        const message =
-          err instanceof ApiError ? err.message : 'Failed to deny submission.'
-        console.error('denySubmission error:', err)
-        setError(message)
-      }
-    },
-    [getToken, invalidate, router],
   )
 
   // Pending count formula is extracted so a unit test can pin it — see
@@ -648,25 +571,16 @@ export const ReviewPageClient = ({
         >
           <AdminReviewMobile
             events={events}
-            submissions={submissions}
             priceEvents={priceEvents}
             onApprove={approveEvent}
             onReject={rejectEvent}
-            onApproveSubmission={approveSubmission}
-            onDenySubmission={denySubmission}
             onAddPrice={addPrice}
-            initialTab={
-              activeTab === 'missing'
-                ? 'missing'
-                : activeTab === 'prices'
-                  ? 'prices'
-                  : activeTab === 'all-events'
-                    ? 'all-events'
-                    : activeTab === 'contests'
-                      ? 'contests'
-                      : 'flags'
-            }
+            initialTab={activeTab}
             contestCount={counts.priceContests}
+            eventFlagsCount={counts.eventFlags}
+            submissionsCount={counts.prices}
+            initialSubmissions={initialSubmissions}
+            initialSubmissionsTotal={initialSubmissionsTotal}
             pricesMissingOnly={priceFilter === 'missing'}
             priceEventsPage={pagination.page}
             priceEventsPageSize={pagination.pageSize}
@@ -720,37 +634,7 @@ export const ReviewPageClient = ({
     )
   }
 
-  // Counts are intentionally omitted from `prices` and `missing` (#1079).
-  // Their `/v1/admin/review/counts` metrics — pending price submissions and
-  // events with `firstMissingAt IS NOT NULL` — read as inaccurate against
-  // what a user would infer from the tab labels, so rather than surface a
-  // misleading number we drop them entirely. The other tabs' counts remain
-  // in lock-step with their surfaces.
-  const tabs: ReadonlyArray<ReviewTabDescriptor> = [
-    {
-      key: 'event-flags',
-      label: ADMIN_COPY.review.tabs.eventFlags,
-      count: counts.eventFlags,
-      kind: 'warning',
-    },
-    {
-      key: 'prices',
-      label: ADMIN_COPY.review.tabs.prices,
-      kind: 'signal',
-    },
-    {
-      key: 'missing',
-      label: ADMIN_COPY.review.tabs.missing,
-      kind: 'danger',
-    },
-    { key: 'all-events', label: ADMIN_COPY.review.tabs.allEvents },
-    {
-      key: 'contests',
-      label: ADMIN_COPY.review.tabs.contests,
-      count: counts.priceContests,
-      kind: 'warning',
-    },
-  ]
+  const tabs = buildReviewTabs(counts)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -784,9 +668,6 @@ export const ReviewPageClient = ({
 
       {activeTab === 'prices' && (
         <PricesTabContent
-          submissions={submissions}
-          onApproveSubmission={approveSubmission}
-          onDenySubmission={denySubmission}
           priceEvents={priceEvents}
           priceEventsLoading={priceEventsQuery.isPending}
           pricesMissingOnly={priceFilter === 'missing'}
@@ -801,6 +682,13 @@ export const ReviewPageClient = ({
             onPaginationChange({ page: 1, pageSize: next })
           }
           onAddPrice={addPrice}
+        />
+      )}
+
+      {activeTab === 'submissions' && (
+        <SubmissionsTabContent
+          initialSubmissions={initialSubmissions}
+          initialTotal={initialSubmissionsTotal}
         />
       )}
 

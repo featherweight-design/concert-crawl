@@ -1,16 +1,11 @@
 'use client'
 
 import { type ComponentProps } from 'react'
-import { PendingSubmissionsPanel } from '../PendingSubmissionsPanel'
 import { PriceCoverageTable } from '../PriceCoverageTable'
 
-type PendingProps = ComponentProps<typeof PendingSubmissionsPanel>
 type CoverageProps = ComponentProps<typeof PriceCoverageTable>
 
 export interface PricesTabContentProps {
-  submissions: PendingProps['submissions']
-  onApproveSubmission: PendingProps['onApprove']
-  onDenySubmission: PendingProps['onDeny']
   priceEvents: CoverageProps['events']
   priceEventsLoading: NonNullable<CoverageProps['loading']>
   pricesMissingOnly: CoverageProps['missingOnly']
@@ -24,9 +19,6 @@ export interface PricesTabContentProps {
 }
 
 export const PricesTabContent = ({
-  submissions,
-  onApproveSubmission,
-  onDenySubmission,
   priceEvents,
   priceEventsLoading,
   pricesMissingOnly,
@@ -38,15 +30,7 @@ export const PricesTabContent = ({
   onPriceEventsPageSizeChange,
   onAddPrice,
 }: PricesTabContentProps) => (
-  <div
-    id="submissions-section"
-    style={{ display: 'flex', flexDirection: 'column', gap: 20 }}
-  >
-    <PendingSubmissionsPanel
-      submissions={submissions}
-      onApprove={onApproveSubmission}
-      onDeny={onDenySubmission}
-    />
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
     <PriceCoverageTable
       events={priceEvents}
       loading={priceEventsLoading}

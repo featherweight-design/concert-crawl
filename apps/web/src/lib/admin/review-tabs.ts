@@ -16,6 +16,7 @@
 export const REVIEW_TAB_KEYS = [
   'event-flags',
   'prices',
+  'submissions',
   'missing',
   'all-events',
   'contests',
@@ -27,3 +28,15 @@ export const REVIEW_TAB_KEYS_SET: ReadonlySet<string> = new Set(REVIEW_TAB_KEYS)
 
 export const isReviewTabKey = (value: string | null): value is ReviewTabKey =>
   value !== null && REVIEW_TAB_KEYS_SET.has(value)
+
+/**
+ * `?section=submissions` predates the tab split and used to land on `prices`,
+ * which then smooth-scrolled to a `#submissions-section` anchor. Submissions is
+ * now its own tab, so the legacy URL resolves straight to it.
+ */
+export const resolveReviewTab = (params: URLSearchParams): ReviewTabKey => {
+  const tab = params.get('tab')
+  if (isReviewTabKey(tab)) return tab
+  if (params.get('section') === 'submissions') return 'submissions'
+  return 'event-flags'
+}
