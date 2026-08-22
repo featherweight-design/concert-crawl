@@ -1,3 +1,10 @@
+## [1.267.1](https://github.com/HartiganHM/concert-crawl/compare/v1.267.0...v1.267.1) (2026-08-22)
+
+
+### Bug Fixes
+
+* **artists:** quote the cheapest tier on the artist page, not the price scalar ([#1625](https://github.com/HartiganHM/concert-crawl/issues/1625)) ([5b23a5a](https://github.com/HartiganHM/concert-crawl/commit/5b23a5a1cc457d418ec37b01bd5d8e7bc6ffe706))
+
 # [1.267.0](https://github.com/HartiganHM/concert-crawl/compare/v1.266.0...v1.267.0) (2026-08-20)
 
 
