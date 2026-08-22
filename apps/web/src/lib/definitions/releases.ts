@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.49.0-beta',
+    date: 'Aug 22, 2026',
+    headline: 'A price nobody has confirmed yet still beats no price.',
+    items: [
+      {
+        kind: 'changed',
+        text: 'Show rows that read "tba" now carry the submitted price, marked pending until two fans confirm it.',
+      },
+    ],
+  },
+  {
     version: 'v0.48.0-beta',
     date: 'Aug 15, 2026',
     headline: 'Artist cards on Browse open the night, not the profile.',

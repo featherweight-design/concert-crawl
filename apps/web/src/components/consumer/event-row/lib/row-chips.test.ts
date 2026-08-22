@@ -35,6 +35,7 @@ function priceObservedHoursAgo(hours: number, source: 'boxoffice' | null) {
     isFloor: true,
     source,
     observedAt: new Date(Date.now() - hours * HOUR).toISOString(),
+    isPending: false,
   }
 }
 

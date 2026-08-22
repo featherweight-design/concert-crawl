@@ -21,6 +21,10 @@ export const EVENT_ROW_COPY = {
     // A move of a dollar or two is noise, not news. Saying so beats rendering
     // an arrow that implies the price moved somewhere worth reading.
     flat: 'flat',
+    // The same word event detail uses for this state. A row calling it
+    // "unconfirmed" while the page it links to calls it "Pending" would read
+    // as two different things.
+    pending: 'pending',
   },
   // Borrowed from the shared consumer copy rather than restated, so the row and
   // the `StatusPill` on event detail can never end up calling the same state
@@ -74,6 +78,9 @@ export const EVENT_ROW_COPY = {
     droppedGenre: (genre: string) => ` and ${genre}`,
     priceProvenance: (label: string) => `Price source: ${label}`,
     stalePrice: (relTime: string) => `Stale price, last checked ${relTime}`,
+    // Replaces the visible "pending" marker, so it has to say what pending
+    // means rather than repeat the word.
+    pendingPrice: 'Submitted price, not confirmed yet',
     savedDelta: (amount: string) => `Down ${amount} since you started watching`,
     savedDeltaUp: (amount: string) => `Up ${amount} since you started watching`,
     savedDeltaFlat: 'Unchanged since you started watching',

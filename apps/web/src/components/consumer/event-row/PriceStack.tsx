@@ -149,6 +149,24 @@ export const PriceStack = ({ show, surface, narrow }: PriceStackProps) => {
           {formatDollars(show.price.amount)}
         </span>
       </span>
+      {/* Muted rather than warn-coloured: an unconfirmed price is incomplete
+          information, not a problem with the show. It sits under the amount so
+          the number stays the thing the eye lands on. */}
+      {show.price.isPending && (
+        <span
+          data-testid="row-price-pending"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10.5,
+            fontWeight: 600,
+            letterSpacing: '0.04em',
+            color: 'var(--fg-muted)',
+          }}
+        >
+          <span className="sr-only">{copy.a11y.pendingPrice}</span>
+          <span aria-hidden>{copy.price.pending}</span>
+        </span>
+      )}
       {cls !== null && cls !== 'flat' && (
         <span
           data-testid="row-price-delta"

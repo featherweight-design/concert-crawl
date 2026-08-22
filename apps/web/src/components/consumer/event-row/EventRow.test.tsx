@@ -45,7 +45,13 @@ function makeShow(partial: Partial<EventRowShow> = {}): EventRowShow {
     venueSlug: 'test',
     dateLabel: 'Sat, Aug 15',
     timeLabel: '8:00 PM',
-    price: { amount: 68, isFloor: true, source: null, observedAt: null },
+    price: {
+      amount: 68,
+      isFloor: true,
+      source: null,
+      observedAt: null,
+      isPending: false,
+    },
     saved: null,
     genres: [],
     isFollowed: false,
@@ -132,7 +138,13 @@ describe('EventRow — the price slot', () => {
     render(
       <EventRow
         show={makeShow({
-          price: { amount: 0, isFloor: true, source: null, observedAt: null },
+          price: {
+            amount: 0,
+            isFloor: true,
+            source: null,
+            observedAt: null,
+            isPending: false,
+          },
         })}
         surface="browse"
       />,
@@ -185,6 +197,28 @@ describe('EventRow — the price slot', () => {
     )
     expect(screen.getByTestId('row-price-flat')).not.toBeNull()
     expect(screen.queryByTestId('row-price-delta')).toBeNull()
+  })
+
+  it('marks an unconfirmed price rather than rendering it bare', () => {
+    const price = { amount: 68, isFloor: true, source: null, observedAt: null }
+    const { rerender } = render(
+      <EventRow
+        show={makeShow({ price: { ...price, isPending: true } })}
+        surface="browse"
+      />,
+    )
+    // The number still reads — an unconfirmed price the reader can sanity-check
+    // is the point of showing it at all.
+    expect(screen.getByText('$68')).not.toBeNull()
+    expect(screen.getByTestId('row-price-pending')).not.toBeNull()
+
+    rerender(
+      <EventRow
+        show={makeShow({ price: { ...price, isPending: false } })}
+        surface="browse"
+      />,
+    )
+    expect(screen.queryByTestId('row-price-pending')).toBeNull()
   })
 })
 
@@ -358,7 +392,13 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
     // No chips at all: a fresh price with no corroborated source clears both
     // of this surface's chip kinds, and MetaRow renders nothing.
     makeShow({
-      price: { amount: 68, isFloor: true, source: null, observedAt: FRESH },
+      price: {
+        amount: 68,
+        isFloor: true,
+        source: null,
+        observedAt: FRESH,
+        isPending: false,
+      },
     }),
     // One chip.
     makeShow({
@@ -367,6 +407,7 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
         isFloor: true,
         source: 'boxoffice',
         observedAt: FRESH,
+        isPending: false,
       },
     }),
     // Both chips, which is the whole budget.
@@ -376,6 +417,7 @@ describe('EventRow — Rule 3, the row reserves its own height', () => {
         isFloor: true,
         source: 'boxoffice',
         observedAt: STALE,
+        isPending: false,
       },
     }),
     // No price at all, so the price slot reads "tba" and neither chip kind has

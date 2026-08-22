@@ -3,6 +3,7 @@ import type {
   EventWithVenue,
   TierPriceBlock,
   TierHeadline,
+  TierPending,
   WatchingShow,
 } from '@concert-crawl/types'
 import { fromEventWithVenue, fromWatchingShow } from './row-model'
@@ -21,6 +22,23 @@ function makeHeadline(
     approvalKind: 'fan',
     confirmsCount: 2,
     ...partial,
+  }
+}
+
+function makePending(): TierPending {
+  return {
+    id: 'pend-1',
+    priceMin: '35',
+    priceMax: null,
+    vendor: 'VenueBoxOffice',
+    howFound: 'saw_listing',
+    sourceCategory: 'standard',
+    note: null,
+    submitterHandle: null,
+    submittedAt: '2026-06-20T00:00:00Z',
+    confirmsCount: 0,
+    confirmsNeeded: 2,
+    isSubmitter: false,
   }
 }
 
@@ -96,6 +114,7 @@ describe('fromEventWithVenue', () => {
       isFloor: true,
       source: 'standard',
       observedAt: '2026-08-01T00:00:00Z',
+      isPending: false,
     })
   })
 
@@ -123,6 +142,7 @@ describe('fromEventWithVenue', () => {
       isFloor: true,
       source: null,
       observedAt: null,
+      isPending: false,
     })
   })
 
@@ -136,6 +156,15 @@ describe('fromEventWithVenue', () => {
       ],
     })
     expect(price?.source).toBeNull()
+  })
+
+  it('carries the pending flag through from a headline-less tier', () => {
+    const { price } = fromEventWithVenue({
+      ...baseEvent,
+      priceByTier: [makeBlock({ headline: null, pending: [makePending()] })],
+    })
+    expect(price?.amount).toBe(35)
+    expect(price?.isPending).toBe(true)
   })
 
   it('ignores an unparseable legacy scalar', () => {

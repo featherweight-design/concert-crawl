@@ -28,6 +28,12 @@ export interface RowPrice {
   /** null is a crawled price with no corroborated submission: no chip. */
   source: SourceCategory | null
   observedAt: string | null
+  /**
+   * A submitted price nobody has corroborated yet, shown because a number the
+   * reader can sanity-check beats "tba". The row marks it; it never renders
+   * bare alongside confirmed prices in the same column.
+   */
+  isPending: boolean
 }
 
 export interface RowSavedPrice {
@@ -105,6 +111,8 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
             // A crawled price carries no submission timestamp; the last crawl
             // is what last confirmed the number (#1366).
             observedAt: show.priceObservedAt ?? show.updatedAt,
+            // This payload only ever carries resolved prices.
+            isPending: false,
           }
         : null,
     // Rounded on the same terms as `amount`, because the row subtracts one
@@ -143,6 +151,7 @@ export function fromEventWithVenue(
           isFloor: true,
           source: headline.sourceCategory,
           observedAt: headline.observedAt,
+          isPending: headline.isPending,
         }
       : legacyAmount !== null && Number.isFinite(legacyAmount)
         ? {
@@ -150,6 +159,7 @@ export function fromEventWithVenue(
             isFloor: true,
             source: null,
             observedAt: null,
+            isPending: false,
           }
         : null
 
@@ -220,6 +230,7 @@ export function fromArtistShow(show: ArtistShow, artist: string): EventRowShow {
             // so the price renders bare.
             source: null,
             observedAt: null,
+            isPending: false,
           }
         : null,
     saved: null,
