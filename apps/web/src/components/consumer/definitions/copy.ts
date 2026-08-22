@@ -1248,10 +1248,20 @@ export const CONSUMER_COPY = {
       fileName: 'concertcrawl-data-export.json',
     },
 
+    // ── Our legal documents (AccountManagementRow + desktop Account panel) ──
+    // When signed out these live in the user menu; when signed in that menu
+    // drops them, so this is the only link outside the paid checkout panel.
+    legalTerms: 'Terms',
+    legalTermsHref: '/legal/terms',
+    legalPrivacy: 'Privacy',
+    legalPrivacyHref: '/legal/privacy',
+
     // ── Clerk attribution (AccountManagementRow + desktop Account panel) ──
+    // Names Clerk because it renders directly above the LegalLinksCard's own
+    // Privacy row and would otherwise read as a duplicate of it.
     clerkAttribution:
       'Sign-in credentials and connected accounts are managed by Clerk.',
-    clerkPrivacyLink: 'Privacy Policy →',
+    clerkPrivacyLink: "Clerk's Privacy Policy →",
 
     // ── ThemePickerInline ─────────────────────────────────────────
     themeLabel: 'Theme',

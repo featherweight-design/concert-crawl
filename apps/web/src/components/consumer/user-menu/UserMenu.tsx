@@ -702,8 +702,8 @@ function MenuBody({
           label={CONSUMER_COPY.userMenu.signedOut.howItWorks}
           href={CONSUMER_COPY.userMenu.signedOut.howItWorksHref}
         />
-        {/* Terms and Privacy are reachable through Settings signed in, so this
-            is the only body that needs explicit rows for them. */}
+        {/* When signed in these rows are dropped, and Settings ▸ Account
+            carries the equivalent pair (LegalLinksCard). Both stay wired. */}
         <MenuRow
           label={CONSUMER_COPY.userMenu.signedOut.terms}
           href={CONSUMER_COPY.userMenu.signedOut.termsHref}

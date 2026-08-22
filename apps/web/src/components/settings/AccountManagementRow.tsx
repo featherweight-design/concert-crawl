@@ -2,6 +2,7 @@
 
 import { useClerk, useUser } from '@clerk/nextjs'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import { LegalLinksCard } from './LegalLinksCard'
 
 const SETTINGS_COPY = CONSUMER_COPY.settings
 
@@ -171,6 +172,8 @@ export function AccountManagementRow({ email }: AccountManagementRowProps) {
           {SETTINGS_COPY.clerkPrivacyLink}
         </a>
       </p>
+
+      <LegalLinksCard variant="mobile" />
     </div>
   )
 }
