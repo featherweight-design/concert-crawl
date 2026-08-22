@@ -1,3 +1,10 @@
+# [1.268.0](https://github.com/HartiganHM/concert-crawl/compare/v1.267.2...v1.268.0) (2026-08-22)
+
+
+### Features
+
+* **admin:** surface non-concert classification in the events list ([#1626](https://github.com/HartiganHM/concert-crawl/issues/1626)) ([0030579](https://github.com/HartiganHM/concert-crawl/commit/00305794ed2ddf8a8f4064a20ed6abd682db8930))
+
 ## [1.267.2](https://github.com/HartiganHM/concert-crawl/compare/v1.267.1...v1.267.2) (2026-08-22)
 
 
