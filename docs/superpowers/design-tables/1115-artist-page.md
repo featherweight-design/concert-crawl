@@ -378,7 +378,7 @@ Skip link + `EmbedStandIn` with `radius={0}`, no rail, no border, bg param → `
 | State                     | Style                                                                                                                                                         |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Known                     | Mono **12 / 700**, `var(--fg)`, `padding: 4px 8px`, `border-radius: 6`, `background: var(--surface-2)`, `border: 1px solid var(--border)`, content `${price}` |
-| Unknown (`price == null`) | Mono **10 / 600**, `letter-spacing: .06em`, uppercase, `var(--fg-subtle)`, **no box** — `priceUnknown` = **"Price TBD"**                                      |
+| Unknown (`price == null`) | Mono **10 / 600**, `letter-spacing: .06em`, uppercase, `var(--fg-subtle)`, **no box** — `priceUnknown` = **`tba`** (uppercased by CSS to TBA)                                      |
 
 ### `ShowRow` (artist-surface.jsx:203-219)
 
@@ -570,7 +570,7 @@ layout shift.**
 | `residencyRun(n)`        | `{n}-night run`                                                                                                 | run card chip                              |
 | `showAll(n)`             | `Show all {n} shows`                                                                                            | truncation button, collapsed               |
 | `showFewer`              | `Show fewer`                                                                                                    | truncation button, expanded                |
-| `priceUnknown`           | `Price TBD`                                                                                                     | price chip, unknown                        |
+| `priceUnknown`           | `tba`                                                                                                           | price chip, unknown                        |
 | `emptyTitle`             | `Nothing on the calendar.`                                                                                      | empty-upcoming card title                  |
 | `emptyBody`              | `No dates booked that we can see. Follow them and the next one shows up in your Watching without you checking.` | empty card, not following                  |
 | `emptyBodyFollowing`     | `No dates booked that we can see. You're following, so the next one lands in your Watching on its own.`         | empty card, following                      |
@@ -629,7 +629,7 @@ Watching; it never replaces or renames it.
 | 28  | Empty card   | Body variant — not following                           | both                                           |
 | 29  | Empty card   | Body variant — following                               | both                                           |
 | 30  | Price chip   | Known price                                            | all                                            |
-| 31  | Price chip   | `Price TBD`                                            | all                                            |
+| 31  | Price chip   | `tba`                                                 | all                                            |
 | 32  | Previously   | Multi-row list                                         | mobile · desktop · Light                       |
 | 33  | Previously   | Single row                                             | mobile                                         |
 | 34  | Previously   | **Absent — section does not render at all**            | mobile                                         |

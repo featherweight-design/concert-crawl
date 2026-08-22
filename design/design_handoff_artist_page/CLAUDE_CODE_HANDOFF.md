@@ -139,7 +139,7 @@ date stamp (44px wide, centred: mono 9px DOW `--fg-subtle` / Inter 800 19px day
 consecutive one-offs only.
 
 **Price chip**: mono 12/700 `--fg`, `padding: 4px 8px`, radius 6, `--surface-2`
-on `--border`. Unknown → mono 10px uppercase `--fg-subtle` `Price TBD`.
+on `--border`. Unknown → mono 10px uppercase `--fg-subtle` `tba`.
 
 **Run grouping** (`groupShows`) — **clustered, not span-based.** Walk each
 venue's dates in order and cut a new cluster whenever the gap between

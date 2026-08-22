@@ -53,7 +53,7 @@ once" · `groupShows` rewritten to **cluster** · `&lt;main&gt;` landmark and re
 and the token claim narrowed.
 
 Plus the scope you confirmed: **Previously**, the crawl-only past-shows list
-(§11). `Price TBD` stays. `RESIDENCY_MIN` stays 3.
+(§11). The plain unknown-price label stays (shipped as `tba`). `RESIDENCY_MIN` stays 3.
 
 ---
 
@@ -214,7 +214,7 @@ fixture proves it: the Nov 14 return to Ophelia's stays a one-off.
 
 Row detail: date stamp (mono day-of-week / bold day / mono month) · venue ·
 city · price chip. Price is the only optional field; unknown renders
-`Price TBD` in mono `--fg-subtle` rather than an empty slot. No genre chips, no
+`tba` in mono uppercase `--fg-subtle` rather than an empty slot. No genre chips, no
 supporting-artist lines, no images — the shows list is a routing surface to
 event detail, and event detail already does all of that better.
 
@@ -417,7 +417,7 @@ Each authored file is under ~380 lines.
    affordance. Not designed here (it's event-detail territory) but it's the
    dependency that makes this route reachable — flagging so it doesn't fall
    between two issues.
-5. **Closed by your R2 answers**: `Price TBD` divergence confirmed;
+5. **Closed by your R2 answers**: unknown-price label divergence confirmed;
    `RESIDENCY_MIN` stays 3; the crawl-only past list is designed (§11).
    `RESIDENCY_WINDOW = 21` and `SHOWS_VISIBLE = 5` remain single constants in
    `artist-data.jsx` if either wants tuning later.

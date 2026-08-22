@@ -77,7 +77,7 @@ Local services:
 
 - Web: http://localhost:3000
 - API: http://localhost:3001
-- Postgres: localhost:5432
+- Postgres: localhost:5433 (the authoritative value is in `apps/api/.env.local`)
 
 ---
 

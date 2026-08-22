@@ -139,8 +139,10 @@ ships nine. Corrected in the spec.
 - [✅] No vocabulary drift: "Watching" throughout, never "Saved" / "Favorites". Following an
   artist is described in terms of what it does to Watching, not as a competing concept.
 - [✅] No "we'll notify you"-class copy — correct until #737 ships.
-- [✅] `Price TBD` divergence from Phase 7's full `PriceChip` is deliberate and confirmed:
-  eight sparklines on a routing surface is noise.
+- [✅] The unknown-price label's divergence from Phase 7's full `PriceChip` is deliberate
+  and confirmed: eight sparklines on a routing surface is noise. (Reviewed as `Price TBD`;
+  the shipped literal is `tba`, uppercased by CSS. What this line confirms is the plain
+  label over the full chip, which is unaffected.)
 
 ## Open items for the plan PR
 
