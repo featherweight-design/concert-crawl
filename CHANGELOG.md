@@ -1,3 +1,10 @@
+## [1.267.2](https://github.com/HartiganHM/concert-crawl/compare/v1.267.1...v1.267.2) (2026-08-22)
+
+
+### Bug Fixes
+
+* **settings:** link Terms and Privacy from Settings ▸ Account ([#1624](https://github.com/HartiganHM/concert-crawl/issues/1624)) ([2254efd](https://github.com/HartiganHM/concert-crawl/commit/2254efd046e2c40ecfa7394014504d7472e9e8c1)), closes [#1618](https://github.com/HartiganHM/concert-crawl/issues/1618) [#1618](https://github.com/HartiganHM/concert-crawl/issues/1618)
+
 ## [1.267.1](https://github.com/HartiganHM/concert-crawl/compare/v1.267.0...v1.267.1) (2026-08-22)
 
 
