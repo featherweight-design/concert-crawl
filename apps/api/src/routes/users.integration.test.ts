@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 interface AuthState {
   current: {
@@ -359,7 +359,9 @@ describe('GET /v1/users/me', () => {
 })
 
 describe('GET /v1/users/me — card-less trial seeding', () => {
-  const MONETIZATION_LIVE_AT = '2026-09-01T00:00:00.000Z'
+  // Opening the founder window IS the monetization cutover — there is no
+  // separate switch, so the trial clock keys off founder_window.opensAt.
+  const FOUNDER_WINDOW_OPENS_AT = new Date('2026-09-01T00:00:00.000Z')
   const DAY_MS = 86400000
 
   const readBillingRow = async () => {
@@ -376,14 +378,9 @@ describe('GET /v1/users/me — card-less trial seeding', () => {
     clerkState.role = 'user'
     clerkState.plan = undefined
     clerkState.createdAt = new Date('2026-09-10T12:00:00.000Z').getTime()
-    process.env['MONETIZATION_LIVE_AT'] = MONETIZATION_LIVE_AT
     await clearTables()
     await clearBillingTables()
-    await setFounderWindow()
-  })
-
-  afterEach(() => {
-    delete process.env['MONETIZATION_LIVE_AT']
+    await setFounderWindow({ opensAt: FOUNDER_WINDOW_OPENS_AT })
   })
 
   it('starts the 14-day clock on first touch and reports the trial', async () => {
@@ -415,11 +412,23 @@ describe('GET /v1/users/me — card-less trial seeding', () => {
     expect(await readBillingRow()).toBeUndefined()
   })
 
-  it('grants nothing while MONETIZATION_LIVE_AT is unset', async () => {
+  it('grants nothing while the founder window is unopened', async () => {
     setAuth()
-    delete process.env['MONETIZATION_LIVE_AT']
+    await setFounderWindow({ opensAt: null })
     const body = await fetchMe()
     expect(body.data.planState.plan).toBe('free')
+    expect(await readBillingRow()).toBeUndefined()
+  })
+
+  // A mis-seeded environment must fail closed. The account here is created
+  // well after any plausible cutover, so a trial would appear if the missing
+  // row were treated as anything other than "not launched".
+  it('grants nothing when the founder_window singleton row is missing', async () => {
+    setAuth()
+    await testDb.execute(sql`TRUNCATE founder_window`)
+    const body = await fetchMe()
+    expect(body.data.planState.plan).toBe('free')
+    expect(body.data.planState.onTrial).toBe(false)
     expect(await readBillingRow()).toBeUndefined()
   })
 

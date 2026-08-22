@@ -2233,7 +2233,7 @@ export const ADMIN_COPY = {
     launch: {
       title: 'Launch control',
       helpPreLaunch:
-        'Opening the window is the real launch. It starts the countdown and lets every member claim a founder seat immediately. There is no undo from here.',
+        'Opening the window is the real launch. It starts the countdown, lets every member claim a founder seat immediately, and starts the 14-day trial for every account created from this moment on. There is no undo from here.',
       helpOpen: 'The founder window is open — the launch has begun.',
       helpClosed: 'The founder window has closed. The launch has ended.',
       button: 'Open the founder window',
@@ -2244,7 +2244,7 @@ export const ADMIN_COPY = {
     confirm: {
       eyebrow: 'IRREVERSIBLE',
       heading: 'Open the founder window?',
-      body: 'This starts the founder launch for every member immediately. The countdown begins now and cannot be undone from here. Only do this when you are ready to launch.',
+      body: 'This starts the founder launch for every member immediately, and every account created from now on gets the 14-day trial. Existing members keep their gifted Premium. The countdown begins now and cannot be undone from here.',
       cancel: 'Cancel',
       confirm: 'Open the window',
     },

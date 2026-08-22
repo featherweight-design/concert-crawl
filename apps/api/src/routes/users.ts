@@ -99,7 +99,13 @@ const FOUNDER_WINDOW_FALLBACK: FounderWindowView = {
   closesAt: null,
 }
 
-async function loadFounderWindowView(now: Date): Promise<FounderWindowView> {
+// `opensAt` is the launch instant twice over: it drives the founder-window
+// view AND is the monetization cutover the trial clock is measured against
+// (lib/trial.ts). One read serves both, so the trial costs no extra query.
+// A missing or unreadable row yields null, i.e. nobody is trial-eligible.
+async function loadFounderWindow(
+  now: Date,
+): Promise<{ view: FounderWindowView; opensAt: Date | null }> {
   try {
     const [windowRow] = await db
       .select()
@@ -108,12 +114,15 @@ async function loadFounderWindowView(now: Date): Promise<FounderWindowView> {
       .limit(1)
     if (!windowRow) {
       apiLogger.error({}, 'users/me: founder_window singleton row missing')
-      return FOUNDER_WINDOW_FALLBACK
+      return { view: FOUNDER_WINDOW_FALLBACK, opensAt: null }
     }
-    return resolveFounderWindowView(windowRow, now)
+    return {
+      view: resolveFounderWindowView(windowRow, now),
+      opensAt: windowRow.opensAt,
+    }
   } catch (err) {
     apiLogger.error({ err }, 'users/me: founder_window read failed')
-    return FOUNDER_WINDOW_FALLBACK
+    return { view: FOUNDER_WINDOW_FALLBACK, opensAt: null }
   }
 }
 
@@ -131,6 +140,10 @@ usersRouter.get('/me', async (ctx) => {
     .where(eq(userProfiles.userId, auth.userId))
     .limit(1)
 
+  const now = new Date()
+  const { view: founderWindowView, opensAt: monetizationLiveAt } =
+    await loadFounderWindow(now)
+
   const accountCreatedAt =
     clerkUser.createdAt === undefined || clerkUser.createdAt === null
       ? null
@@ -138,7 +151,9 @@ usersRouter.get('/me', async (ctx) => {
   const planContext = await loadPlanContext(
     auth.userId,
     clerkUser.publicMetadata,
-    accountCreatedAt ?? undefined,
+    accountCreatedAt === null
+      ? undefined
+      : { accountCreatedAt, monetizationLiveAt },
   )
   const { planState } = planContext
 
@@ -149,7 +164,6 @@ usersRouter.get('/me', async (ctx) => {
     ? new Date(parsedSessionStartedAt.data)
     : null
 
-  const now = new Date()
   const nudgeFlags = evaluateNudgeFlags({
     trialEndsAt: planContext.trialEndsAt,
     lastTrialEndedShownAt: planContext.nudgeTimestamps.lastTrialEndedShownAt,
@@ -161,8 +175,6 @@ usersRouter.get('/me', async (ctx) => {
     sessionStartedAt,
     now,
   })
-
-  const founderWindowView = await loadFounderWindowView(now)
 
   const [submissionCountRow] = await db
     .select({ value: count() })

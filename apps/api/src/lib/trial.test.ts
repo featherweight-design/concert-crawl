@@ -1,28 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  TRIAL_DAYS,
-  resolveMonetizationLiveAt,
-  resolveTrialEndsAt,
-} from './trial.js'
-
-describe('resolveMonetizationLiveAt', () => {
-  it('parses an ISO instant', () => {
-    expect(resolveMonetizationLiveAt('2026-09-01T00:00:00.000Z')).toEqual(
-      new Date('2026-09-01T00:00:00.000Z'),
-    )
-  })
-
-  it('treats unset as not launched', () => {
-    expect(resolveMonetizationLiveAt(undefined)).toBeNull()
-    expect(resolveMonetizationLiveAt('')).toBeNull()
-  })
-
-  // A typo'd env var must not silently seed trials from the epoch.
-  it('treats an unparseable value as not launched', () => {
-    expect(resolveMonetizationLiveAt('2026-09-01')).toBeNull()
-    expect(resolveMonetizationLiveAt('launch day')).toBeNull()
-  })
-})
+import { TRIAL_DAYS, resolveTrialEndsAt } from './trial.js'
 
 describe('resolveTrialEndsAt', () => {
   const liveAt = new Date('2026-09-01T00:00:00.000Z')

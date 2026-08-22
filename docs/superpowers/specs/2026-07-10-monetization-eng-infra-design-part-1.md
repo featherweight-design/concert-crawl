@@ -99,7 +99,7 @@ Billing-adjacent user state that must exist **without** a subscription row (Deci
 | `premiumDataExpiresAt`         | timestamptz, nullable | —       | 90-day preserve-then-purge clock (#780 §5); set on effective downgrade date, cleared on re-upgrade                                      |
 | `createdAt` / `updatedAt`      | timestamptz, not null | now     | Standard                                                                                                                                |
 
-**Row creation:** lazily upserted the first time any billing read/write path touches the user (the `GET /v1/users/me` plan derivation ensures it). `trialEndsAt` seeding rule: set only for users created **after** monetization ships (`user created_at >= MONETIZATION_LIVE_AT` constant); existing beta users are gifted and never see a trial. The exact cutover constant is set in the PR that ships the migration.
+**Row creation:** lazily upserted the first time any billing read/write path touches the user (the `GET /v1/users/me` plan derivation ensures it). `trialEndsAt` seeding rule: set only for users created **after** monetization ships (`user created_at >= founder_window.opensAt`); existing beta users are gifted and never see a trial. **The cutover is `founder_window.opensAt`, not a constant or an env var** — it is NULL until an admin presses "Open the founder window", which is the same irreversible launch-day instant monetization goes live, so NULL means no account is trial-eligible. An earlier `MONETIZATION_LIVE_AT` env var was removed for requiring two switches to be kept in sync for one event; do not reintroduce it.
 
 **Predicates (locked by the briefs, restated as the eng contract):**
 

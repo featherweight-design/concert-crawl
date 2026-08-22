@@ -4,7 +4,7 @@ import { db, giftedComps, subscriptions, userBilling } from '@concert-crawl/db'
 import type { PlanState } from '@concert-crawl/types'
 import { derivePlanState, isGiftLive } from '@concert-crawl/entitlements'
 import { apiLogger } from './logger.js'
-import { resolveMonetizationLiveAt, resolveTrialEndsAt } from './trial.js'
+import { resolveTrialEndsAt } from './trial.js'
 
 // Pure derivation moved to @concert-crawl/entitlements (#763 PR 10) so the
 // crawler's Spotify fan-out can gate on plan without importing API code.
@@ -33,6 +33,14 @@ export interface PlanContext {
   }
 }
 
+// The two instants the trial clock needs, passed together so a caller cannot
+// supply the account without the cutover it is measured against.
+// `monetizationLiveAt` is `founder_window.opensAt` — null before launch.
+export interface TrialSeed {
+  accountCreatedAt: Date
+  monetizationLiveAt: Date | null
+}
+
 /**
  * Starts the card-less trial clock (spec §3, "Row creation"). Idempotent: a
  * trial is granted exactly once per account and no later call can extend it.
@@ -40,11 +48,11 @@ export interface PlanContext {
  */
 const seedTrial = async (
   userId: string,
-  accountCreatedAt: Date,
+  seed: TrialSeed,
 ): Promise<Date | null> => {
   const trialEndsAt = resolveTrialEndsAt(
-    accountCreatedAt,
-    resolveMonetizationLiveAt(process.env['MONETIZATION_LIVE_AT']),
+    seed.accountCreatedAt,
+    seed.monetizationLiveAt,
   )
   if (trialEndsAt === null) return null
 
@@ -52,8 +60,7 @@ const seedTrial = async (
   // and the Stripe webhooks all upsert user_billing for their own columns, and
   // any of them can land first. So fill a null trialEndsAt rather than skipping
   // — but never touch a non-null one. setWhere is what makes this safe to run
-  // repeatedly: it cannot extend a live trial, re-grant an ended one, or shift
-  // an existing trial if MONETIZATION_LIVE_AT is ever adjusted.
+  // repeatedly: it cannot extend a live trial or re-grant an ended one.
   const written = await db
     .insert(userBilling)
     .values({ userId, trialEndsAt })
@@ -78,12 +85,12 @@ const seedTrial = async (
 
 // Loads DB context and derives PlanState + nudge timestamps for an
 // authenticated user. publicMetadata is Clerk's untyped payload — parsed at
-// the boundary. `accountCreatedAt` (Clerk's user.createdAt) is what the
-// trial clock is measured from; omit it on paths that must not seed.
+// the boundary. `trialSeed` carries the two instants the trial clock needs;
+// omit it on paths that must not seed.
 export async function loadPlanContext(
   userId: string,
   publicMetadata: unknown,
-  accountCreatedAt?: Date,
+  trialSeed?: TrialSeed,
 ): Promise<PlanContext> {
   const parsedMetadata = publicMetadataSchema.safeParse(publicMetadata)
   const metadata = parsedMetadata.success ? parsedMetadata.data : {}
@@ -124,9 +131,9 @@ export async function loadPlanContext(
   // own columns and left the trial unset — gating on the row would drop that
   // user's trial permanently. Ineligible accounts return before any write.
   let trialEndsAt = billingRow?.trialEndsAt ?? null
-  if (trialEndsAt === null && accountCreatedAt !== undefined) {
+  if (trialEndsAt === null && trialSeed !== undefined) {
     try {
-      trialEndsAt = await seedTrial(userId, accountCreatedAt)
+      trialEndsAt = await seedTrial(userId, trialSeed)
     } catch (err) {
       apiLogger.error(
         { err, userId },

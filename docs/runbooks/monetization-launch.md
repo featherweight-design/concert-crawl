@@ -88,6 +88,15 @@ Expected pre-launch row: `opens_at = NULL`, `closes_at = NULL`,
       the admin UI, verify state `open`, run the post-launch smoke, then reset staging
       (`UPDATE founder_window SET opens_at = NULL WHERE id = 1;`) so staging returns to
       pre-launch. Hugh has signed off on this runbook after the rehearsal.
+- [ ] If you rehearse more than once, **sign up a fresh staging account after each
+      reopen** before checking the trial. `opens_at` is also the trial cutover, so every
+      reopen stamps a later one, and any account created during an earlier rehearsal now
+      reads as pre-cutover and gets no trial. Clearing `user_billing` will not bring it
+      back — eligibility is decided by the account's creation date, which Clerk owns and we
+      cannot move. A stale rehearsal account looks exactly like a broken trial.
+
+  On prod the same movement is unrepairable for real members, which is why the rollback
+  section below restores the original instant by hand instead of reopening with the button.
 
 ---
 
@@ -119,25 +128,25 @@ launch."
 Mirror the existing crawler crons. Type **Cron Job**, runtime **Node**, region **Oregon**,
 plan **Starter**, branch `main`, auto-deploy on.
 
-| Setting | Value |
-|---------|-------|
-| Schedule | `0 15 * * *` — 15:00 UTC = 9 AM MDT / 8 AM MST. We deliberately **do not** chase DST; the exact send hour isn't load-bearing. If 9 AM local ever becomes a hard rule, switch to `0 16 * * *` for MST months. |
-| Build command | `npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api` |
-| Start command | `node apps/api/dist/jobs/billing-daily.js` — the **compiled** artifact from the same build as the API. Not `tsx src/…` (no `tsx` at runtime). |
+| Setting       | Value                                                                                                                                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Schedule      | `0 15 * * *` — 15:00 UTC = 9 AM MDT / 8 AM MST. We deliberately **do not** chase DST; the exact send hour isn't load-bearing. If 9 AM local ever becomes a hard rule, switch to `0 16 * * *` for MST months. |
+| Build command | `npm install -g pnpm && pnpm install --frozen-lockfile && pnpm turbo build --filter=@concert-crawl/api`                                                                                                      |
+| Start command | `node apps/api/dist/jobs/billing-daily.js` — the **compiled** artifact from the same build as the API. Not `tsx src/…` (no `tsx` at runtime).                                                                |
 
 Env vars (all entered manually — `sync: false`; prod = **live** values, staging =
 **sandbox**):
 
-| Key | Prod value |
-|-----|-----------|
-| `NODE_ENV` | `production` |
-| `DATABASE_URL` | Neon prod branch direct connection string |
-| `STRIPE_SECRET_KEY` | live `sk_live_*` (staging: sandbox key) |
-| `RESEND_API_KEY` | Resend key |
-| `CLERK_SECRET_KEY` | Clerk prod secret (staging: staging secret) |
-| `SENTRY_DSN` | API Sentry DSN |
+| Key                  | Prod value                                                                                                                                         |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NODE_ENV`           | `production`                                                                                                                                       |
+| `DATABASE_URL`       | Neon prod branch direct connection string                                                                                                          |
+| `STRIPE_SECRET_KEY`  | live `sk_live_*` (staging: sandbox key)                                                                                                            |
+| `RESEND_API_KEY`     | Resend key                                                                                                                                         |
+| `CLERK_SECRET_KEY`   | Clerk prod secret (staging: staging secret)                                                                                                        |
+| `SENTRY_DSN`         | API Sentry DSN                                                                                                                                     |
 | `SENTRY_ENVIRONMENT` | `production` (staging: `staging`) — must differ per env so Sentry issues are attributed correctly; don't copy the prod value into the staging cron |
-| `LOG_LEVEL` | `info` |
+| `LOG_LEVEL`          | `info`                                                                                                                                             |
 
 ### Test it before go-live
 
@@ -146,7 +155,7 @@ idempotent (dedupe keys on `email_send_log` + `subscription_events` existence ch
 takes an injectable `now`, and no-ops when it finds no matching rows. A missed day catches
 up cleanly on the next run.
 
-> ⚠️ Run tests against **staging (sandbox)**, never prod. On a DB that *does* contain
+> ⚠️ Run tests against **staging (sandbox)**, never prod. On a DB that _does_ contain
 > matching rows the job really sends emails, revokes expired gifts, and starts 90-day purge
 > clocks — so only point it at a database whose state you are willing to mutate.
 
@@ -271,6 +280,14 @@ a normal cancellation + seat restore — do **not** roll back the window.
 **Only viable before the first real claim.** If checkout is on fire at T-0 and no real
 founder claim has landed yet, you can return the window to dormant:
 
+**Write down `opens_at` before you clear it.** It is also the monetization cutover the
+card-less 14-day trial is measured against (`apps/api/src/lib/trial.ts`), so you need the
+original instant to re-launch. Read it first:
+
+```sql
+SELECT opens_at FROM founder_window WHERE id = 1;
+```
+
 ```sql
 -- Safe ONLY if seats_remaining still equals seats_total (no real claims).
 UPDATE founder_window
@@ -283,6 +300,23 @@ RETURNING id, opens_at, seats_remaining, seats_total;
 - After this, `GET /v1/billing/founder-window` returns `pre-launch` again, and the admin
   "Open the founder window" button reappears — the endpoint's `opens_at IS NULL` guard is
   satisfied, so you can re-launch cleanly once the problem is fixed.
+- ⚠️ **Re-launch with the SQL below, not the button.** The button stamps `NOW()`, which
+  moves the cutover forward. Anyone who signed up during the aborted window would then
+  compare as pre-cutover and silently lose their trial forever — and there is no way to
+  repair it afterwards, because Clerk owns account creation dates and we have no `users`
+  table to backfill from. Restoring the original instant costs nothing if nobody signed up.
+
+  ```sql
+  UPDATE founder_window
+  SET opens_at = '<the instant you wrote down>'
+  WHERE id = 1 AND opens_at IS NULL
+  RETURNING id, opens_at, closes_at;
+  ```
+
+  Note this restarts the countdown from the original instant, so `closes_at` may already
+  have passed. If the incident ate a meaningful slice of the window, extend `window_days`
+  in the same statement rather than moving `opens_at`.
+
 - The `RETURNING` clause returns **zero rows** if any real seat was consumed — that is the
   guard doing its job. **Do not** force it. Once claims exist, leave the window open and
   address the incident without reverting `opens_at` (reverting would orphan the paid
