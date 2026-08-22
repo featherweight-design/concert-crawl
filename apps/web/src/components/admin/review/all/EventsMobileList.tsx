@@ -170,6 +170,16 @@ const EventCard = ({
               {ADMIN_COPY.editor.status.soldOut}
             </StatusBadge>
           )}
+          {event.hiddenFromConsumer && (
+            <StatusBadge kind="warning" mono>
+              {ADMIN_COPY.review.allEvents.nonConcertBadge}
+            </StatusBadge>
+          )}
+          {event.isConcertReviewNeeded && (
+            <StatusBadge kind="neutral" mono>
+              {ADMIN_COPY.review.allEvents.reviewNeededBadge}
+            </StatusBadge>
+          )}
           <VerifyMark verified={event.verified} />
           {event.genre?.slice(0, 2).map((tag) => (
             <StatusBadge key={tag} kind="neutral" mono>

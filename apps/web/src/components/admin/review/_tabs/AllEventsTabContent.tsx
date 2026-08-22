@@ -21,6 +21,7 @@ import {
   EMPTY_FILTERS,
   filtersToFetchQuery,
   type AllEventsFilters,
+  type AllEventsView,
   type PaginationState,
 } from '../all/filters'
 import { type AllEvent } from '../all/types'
@@ -86,7 +87,13 @@ const Skeleton = () => (
   </div>
 )
 
-const EmptyState = ({ flagged }: { flagged: boolean }) => (
+const VIEW_EMPTY_HEADINGS: Record<Exclude<AllEventsView, 'all'>, string> = {
+  'hidden-flagged-for-review':
+    ADMIN_COPY.review.allEvents.filters.flaggedChipEmpty,
+  'non-concert': ADMIN_COPY.review.allEvents.filters.nonConcertChipEmpty,
+}
+
+const EmptyState = ({ view }: { view: AllEventsView }) => (
   <div
     style={{
       padding: '48px 32px',
@@ -104,11 +111,11 @@ const EmptyState = ({ flagged }: { flagged: boolean }) => (
         marginBottom: 8,
       }}
     >
-      {flagged
-        ? ADMIN_COPY.review.allEvents.filters.flaggedChipEmpty
-        : ADMIN_COPY.review.allEvents.empty.heading}
+      {view === 'all'
+        ? ADMIN_COPY.review.allEvents.empty.heading
+        : VIEW_EMPTY_HEADINGS[view]}
     </div>
-    {!flagged && (
+    {view === 'all' && (
       <div
         style={{
           fontSize: 14,
@@ -447,7 +454,7 @@ export const AllEventsTabContent = ({
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
         {filterBar}
-        <EmptyState flagged={filters.flagged} />
+        <EmptyState view={filters.view} />
       </div>
     )
 

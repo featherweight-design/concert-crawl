@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  ALL_EVENTS_VIEWS,
   countActiveFilters,
   EMPTY_FILTERS,
   EMPTY_PAGINATION,
@@ -140,7 +141,7 @@ describe('countActiveFilters', () => {
         dateTo: '',
         genre: ['indie', 'folk'],
         missingData: ['no-price'],
-        flagged: false,
+        view: 'all',
       }),
     ).toBe(5)
   })
@@ -150,32 +151,33 @@ describe('countActiveFilters', () => {
   })
 })
 
-describe('AllEventsFilters — flagged chip round-trip', () => {
-  it('parses view=hidden-flagged-for-review into flagged=true', () => {
-    const params = new URLSearchParams('view=hidden-flagged-for-review')
-    const filters = parseFiltersFromParams(params)
-    expect(filters.flagged).toBe(true)
+describe('AllEventsFilters — view chip round-trip', () => {
+  it.each(ALL_EVENTS_VIEWS)('round-trips view=%s', (view) => {
+    expect(
+      parseFiltersFromParams(new URLSearchParams(`view=${view}`)).view,
+    ).toBe(view)
+    expect(
+      serializeFiltersToParams({ ...EMPTY_FILTERS, view }).get('view'),
+    ).toBe(view)
+    expect(filtersToFetchQuery({ ...EMPTY_FILTERS, view })).toContain(
+      `view=${view}`,
+    )
+    expect(countActiveFilters({ ...EMPTY_FILTERS, view })).toBe(1)
   })
 
-  it('serializes flagged=true to view=hidden-flagged-for-review', () => {
-    const params = serializeFiltersToParams({
-      ...EMPTY_FILTERS,
-      flagged: true,
-    })
-    expect(params.get('view')).toBe('hidden-flagged-for-review')
+  it('falls back to all for an unrecognized view', () => {
+    expect(
+      parseFiltersFromParams(new URLSearchParams('view=not-a-view')).view,
+    ).toBe('all')
   })
 
-  it('filtersToFetchQuery includes view when flagged is true', () => {
-    const out = filtersToFetchQuery({ ...EMPTY_FILTERS, flagged: true })
-    expect(out).toContain('view=hidden-flagged-for-review')
+  it('omits the view param entirely when the view is all', () => {
+    expect(serializeFiltersToParams(EMPTY_FILTERS).get('view')).toBeNull()
+    expect(filtersToFetchQuery(EMPTY_FILTERS)).not.toContain('view=')
   })
 
-  it('countActiveFilters counts flagged=true', () => {
-    expect(countActiveFilters({ ...EMPTY_FILTERS, flagged: true })).toBe(1)
-  })
-
-  it('EMPTY_FILTERS has flagged=false', () => {
-    expect(EMPTY_FILTERS.flagged).toBe(false)
+  it('EMPTY_FILTERS has view=all', () => {
+    expect(EMPTY_FILTERS.view).toBe('all')
   })
 })
 

@@ -9,6 +9,18 @@ export type MissingDataFlag = (typeof MISSING_DATA_FLAGS)[number]
 
 export type VerificationFilter = 'all' | 'verified' | 'unverified'
 
+// Saved views, not orthogonal predicates. The two bits are independent — a
+// visible event can carry the review flag — but as *queries* these nest:
+// `non-concert` (hidden) contains every row `hidden-flagged-for-review`
+// (hidden AND flagged) returns. Selecting both would therefore only ever mean
+// the narrower one, so an enum says what two booleans could not.
+export const ALL_EVENTS_VIEWS = [
+  'hidden-flagged-for-review',
+  'non-concert',
+] as const
+
+export type AllEventsView = (typeof ALL_EVENTS_VIEWS)[number] | 'all'
+
 export interface AllEventsFilters {
   query: string
   verified: VerificationFilter
@@ -16,7 +28,7 @@ export interface AllEventsFilters {
   dateTo: string
   genre: string[]
   missingData: MissingDataFlag[]
-  flagged: boolean
+  view: AllEventsView
 }
 
 export const EMPTY_FILTERS: AllEventsFilters = {
@@ -26,7 +38,7 @@ export const EMPTY_FILTERS: AllEventsFilters = {
   dateTo: '',
   genre: [],
   missingData: [],
-  flagged: false,
+  view: 'all',
 }
 
 const isVerification = (val: string | null): val is VerificationFilter =>
@@ -34,6 +46,9 @@ const isVerification = (val: string | null): val is VerificationFilter =>
 
 const isMissingDataFlag = (val: string): val is MissingDataFlag =>
   (MISSING_DATA_FLAGS as ReadonlyArray<string>).includes(val)
+
+const isView = (val: string | null): val is AllEventsView =>
+  val !== null && ALL_EVENTS_VIEWS.some((view) => view === val)
 
 export const parseFiltersFromParams = (
   params: URLSearchParams,
@@ -63,7 +78,8 @@ export const parseFiltersFromParams = (
     ),
   )
 
-  const flagged = params.get('view') === 'hidden-flagged-for-review'
+  const viewRaw = params.get('view')
+  const view: AllEventsView = isView(viewRaw) ? viewRaw : 'all'
 
   return {
     query: params.get('query') ?? '',
@@ -72,7 +88,7 @@ export const parseFiltersFromParams = (
     dateTo: params.get('dateTo') ?? '',
     genre,
     missingData,
-    flagged,
+    view,
   }
 }
 
@@ -101,7 +117,7 @@ export const serializeFiltersToParams = (
   if (filters.missingData.length > 0) {
     next.set('missingData', filters.missingData.join(','))
   }
-  if (filters.flagged) next.set('view', 'hidden-flagged-for-review')
+  if (filters.view !== 'all') next.set('view', filters.view)
   return next
 }
 
@@ -132,7 +148,7 @@ export const filtersToFetchQuery = (filters: AllEventsFilters): string => {
   if (filters.missingData.length > 0) {
     params.set('missingData', filters.missingData.join(','))
   }
-  if (filters.flagged) params.set('view', 'hidden-flagged-for-review')
+  if (filters.view !== 'all') params.set('view', filters.view)
   return params.toString()
 }
 
@@ -203,6 +219,6 @@ export const countActiveFilters = (filters: AllEventsFilters): number => {
   if (filters.dateTo) count++
   if (filters.genre.length > 0) count++
   if (filters.missingData.length > 0) count++
-  if (filters.flagged) count++
+  if (filters.view !== 'all') count++
   return count
 }

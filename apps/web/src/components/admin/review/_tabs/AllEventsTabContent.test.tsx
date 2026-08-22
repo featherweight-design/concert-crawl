@@ -244,7 +244,7 @@ describe('AllEventsTabContent', () => {
           dateTo: '',
           genre: [],
           missingData: [],
-          flagged: false,
+          view: 'all',
         }}
         onFiltersChange={onFiltersChange}
       />,

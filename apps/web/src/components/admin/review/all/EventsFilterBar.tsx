@@ -9,6 +9,7 @@ import {
   SEARCH_MIN_CHARS,
   countActiveFilters,
   type AllEventsFilters,
+  type AllEventsView,
   type MissingDataFlag,
   type VerificationFilter,
 } from './filters'
@@ -27,6 +28,25 @@ export interface EventsFilterBarProps {
 const SEARCH_DEBOUNCE_MS = 300
 
 const COPY = ADMIN_COPY.review.allEvents.filters
+
+// Selecting one clears the other: the views overlap, so holding both would
+// just mean the narrower one.
+const VIEW_CHIPS: ReadonlyArray<{
+  view: Exclude<AllEventsView, 'all'>
+  label: string
+  ariaLabel: string
+}> = [
+  {
+    view: 'hidden-flagged-for-review',
+    label: COPY.flaggedChipLabel,
+    ariaLabel: COPY.flaggedChipAriaLabel,
+  },
+  {
+    view: 'non-concert',
+    label: COPY.nonConcertChipLabel,
+    ariaLabel: COPY.nonConcertChipAriaLabel,
+  },
+]
 
 const labelStyle: React.CSSProperties = {
   fontFamily: "'JetBrains Mono', monospace",
@@ -183,33 +203,39 @@ export const EventsFilterBar = ({
           flexWrap: 'wrap',
         }}
       >
-        <button
-          type="button"
-          aria-pressed={filters.flagged}
-          aria-label={COPY.flaggedChipAriaLabel}
-          onClick={() => update({ flagged: !filters.flagged })}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 6,
-            padding: '4px 12px',
-            height: 28,
-            borderRadius: 999,
-            border: filters.flagged
-              ? '1px solid var(--warning)'
-              : '1px solid var(--border-strong)',
-            background: filters.flagged
-              ? 'color-mix(in oklab, var(--warning) 12%, transparent)'
-              : 'var(--surface-1)',
-            cursor: 'pointer',
-            fontFamily: "'Inter', sans-serif",
-            fontSize: 12.5,
-            fontWeight: 600,
-            color: 'var(--fg)',
-          }}
-        >
-          {COPY.flaggedChipLabel}
-        </button>
+        {VIEW_CHIPS.map(({ view, label, ariaLabel }) => {
+          const active = filters.view === view
+          return (
+            <button
+              key={view}
+              type="button"
+              aria-pressed={active}
+              aria-label={ariaLabel}
+              onClick={() => update({ view: active ? 'all' : view })}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 12px',
+                height: 28,
+                borderRadius: 999,
+                border: active
+                  ? '1px solid var(--warning)'
+                  : '1px solid var(--border-strong)',
+                background: active
+                  ? 'color-mix(in oklab, var(--warning) 12%, transparent)'
+                  : 'var(--surface-1)',
+                cursor: 'pointer',
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 12.5,
+                fontWeight: 600,
+                color: 'var(--fg)',
+              }}
+            >
+              {label}
+            </button>
+          )
+        })}
       </div>
 
       <div

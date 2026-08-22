@@ -78,6 +78,51 @@ describe('EventsTable', () => {
     expect(screen.getByText('Sold out')).toBeTruthy()
   })
 
+  // A concert wrongly marked non-concert was only discoverable by opening the
+  // event's own detail page, so it read as an ordinary row in the list.
+  it('renders the non-concert badge when hiddenFromConsumer=true', () => {
+    render(
+      <EventsTable
+        events={[baseEvent({ hiddenFromConsumer: true })]}
+        onRowClick={() => {}}
+      />,
+    )
+    expect(screen.getByText('non-concert')).toBeTruthy()
+  })
+
+  it('renders the needs-review badge when isConcertReviewNeeded=true', () => {
+    render(
+      <EventsTable
+        events={[baseEvent({ isConcertReviewNeeded: true })]}
+        onRowClick={() => {}}
+      />,
+    )
+    expect(screen.getByText('needs review')).toBeTruthy()
+  })
+
+  // The two bits are independent, so a visible event can still be flagged.
+  it('renders the needs-review badge on a visible event', () => {
+    render(
+      <EventsTable
+        events={[
+          baseEvent({
+            hiddenFromConsumer: false,
+            isConcertReviewNeeded: true,
+          }),
+        ]}
+        onRowClick={() => {}}
+      />,
+    )
+    expect(screen.getByText('needs review')).toBeTruthy()
+    expect(screen.queryByText('non-concert')).toBeNull()
+  })
+
+  it('renders neither classification badge on an ordinary row', () => {
+    render(<EventsTable events={[baseEvent()]} onRowClick={() => {}} />)
+    expect(screen.queryByText('non-concert')).toBeNull()
+    expect(screen.queryByText('needs review')).toBeNull()
+  })
+
   it('renders Postponed lifecycle when status=postponed', () => {
     render(
       <EventsTable

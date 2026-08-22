@@ -187,6 +187,19 @@ export const EventsTable = (props: EventsTableProps) => {
                         {ADMIN_COPY.editor.status.soldOut}
                       </StatusBadge>
                     )}
+                    {/* Without this the only place a misclassification shows
+                        is the event's own detail page, so a concert wrongly
+                        hidden from consumers is invisible in the list. */}
+                    {event.hiddenFromConsumer && (
+                      <StatusBadge kind="warning" mono>
+                        {ADMIN_COPY.review.allEvents.nonConcertBadge}
+                      </StatusBadge>
+                    )}
+                    {event.isConcertReviewNeeded && (
+                      <StatusBadge kind="neutral" mono>
+                        {ADMIN_COPY.review.allEvents.reviewNeededBadge}
+                      </StatusBadge>
+                    )}
                   </div>
                   <div style={{ marginTop: 6 }}>
                     <VerifyMark verified={event.verified} />

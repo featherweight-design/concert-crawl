@@ -1847,6 +1847,66 @@ describe('GET /v1/admin/events — view=hidden-flagged-for-review', () => {
   })
 })
 
+describe('GET /v1/admin/events — view=non-concert', () => {
+  beforeEach(() => {
+    setAdminAuth()
+    return clearTables()
+  })
+
+  // The superset the review queue misses: an event hidden by hand carries no
+  // review flag, so a concert wrongly marked non-concert never surfaces there.
+  it('returns every hidden event regardless of the review flag', async () => {
+    const venue = await seedVenue()
+    await seedEvent(venue.id, {
+      title: 'Visible Concert',
+      artist: 'Artist Visible',
+      supportingArtists: null,
+      tourName: null,
+      date: futureDate(7),
+      hiddenFromConsumer: false,
+      isConcertReviewNeeded: true,
+    })
+    await seedEvent(venue.id, {
+      title: 'Hidden Unflagged',
+      artist: 'Artist Unflagged',
+      supportingArtists: null,
+      tourName: null,
+      date: futureDate(8),
+      hiddenFromConsumer: true,
+      isConcertReviewNeeded: false,
+    })
+    await seedEvent(venue.id, {
+      title: 'Hidden Flagged Borderline',
+      artist: 'Artist Borderline',
+      supportingArtists: null,
+      tourName: null,
+      date: futureDate(9),
+      hiddenFromConsumer: true,
+      isConcertReviewNeeded: true,
+    })
+
+    const res = await app.request('/v1/admin/events?view=non-concert', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(200)
+    const body = (await res.json()) as {
+      success: boolean
+      data: { title: string }[]
+    }
+    expect(body.data.map((row) => row.title).sort()).toEqual([
+      'Hidden Flagged Borderline',
+      'Hidden Unflagged',
+    ])
+  })
+
+  it('rejects an unrecognized view value', async () => {
+    const res = await app.request('/v1/admin/events?view=not-a-view', {
+      headers: ADMIN_HEADERS,
+    })
+    expect(res.status).toBe(400)
+  })
+})
+
 describe('PR 10 — bulk endpoints', () => {
   beforeEach(() => {
     setAdminAuth()

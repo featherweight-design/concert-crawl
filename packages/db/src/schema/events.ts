@@ -104,8 +104,10 @@ export const events = pgTable(
     // LLM-classifier uncertainty signal for the isConcert predicate. Set
     // by the crawler INSERT path when the LLM emits reviewNeeded=true;
     // crawler-frozen on UPDATE. Written symmetrically (both true and
-    // false isConcert classifications) but only the hidden-and-flagged
-    // slice surfaces in the admin UI today. A one-shot backfill script
+    // false isConcert classifications). The admin events list renders this
+    // as a badge on every row that carries it, visible or hidden; the
+    // hidden-and-flagged saved view is one query over it, not the only
+    // slice that surfaces. A one-shot backfill script
     // lands in a follow-up PR as the only post-INSERT writer (see
     // docs/superpowers/specs/2026-06-24-classification-review-queue-design.md).
     // Admin actions never touch this column.

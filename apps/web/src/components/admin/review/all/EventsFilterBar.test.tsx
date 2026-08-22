@@ -180,34 +180,55 @@ describe('EventsFilterBar', () => {
   })
 })
 
-describe('EventsFilterBar — flagged chip', () => {
-  it('renders the Hidden — flagged for review chip', () => {
+const FLAGGED_CHIP = 'Toggle hidden-and-flagged-for-review filter'
+const NON_CONCERT_CHIP = 'Toggle non-concert filter'
+
+describe('EventsFilterBar — view chips', () => {
+  it('renders both view chips', () => {
     setup()
-    expect(
-      screen.getByRole('button', {
-        name: 'Toggle hidden-and-flagged-for-review filter',
-      }),
-    ).toBeTruthy()
+    expect(screen.getByRole('button', { name: FLAGGED_CHIP })).toBeTruthy()
+    expect(screen.getByRole('button', { name: NON_CONCERT_CHIP })).toBeTruthy()
   })
 
-  it('toggles filters.flagged when clicked', () => {
+  it('selects the view when a chip is clicked', () => {
     const { onChange } = setup()
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Toggle hidden-and-flagged-for-review filter',
-      }),
-    )
+    fireEvent.click(screen.getByRole('button', { name: NON_CONCERT_CHIP }))
     expect(onChange).toHaveBeenCalledWith({
       ...EMPTY_FILTERS,
-      flagged: true,
+      view: 'non-concert',
     })
   })
 
-  it('reflects the active state with aria-pressed=true', () => {
-    setup({ ...EMPTY_FILTERS, flagged: true })
-    const chip = screen.getByRole('button', {
-      name: 'Toggle hidden-and-flagged-for-review filter',
+  it('clicking the active chip clears the view', () => {
+    const { onChange } = setup({ ...EMPTY_FILTERS, view: 'non-concert' })
+    fireEvent.click(screen.getByRole('button', { name: NON_CONCERT_CHIP }))
+    expect(onChange).toHaveBeenCalledWith({ ...EMPTY_FILTERS, view: 'all' })
+  })
+
+  // The views overlap, so holding both would only ever mean the narrower one.
+  it('selecting one chip replaces the other rather than adding to it', () => {
+    const { onChange } = setup({
+      ...EMPTY_FILTERS,
+      view: 'hidden-flagged-for-review',
     })
-    expect(chip.getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: NON_CONCERT_CHIP }))
+    expect(onChange).toHaveBeenCalledWith({
+      ...EMPTY_FILTERS,
+      view: 'non-concert',
+    })
+  })
+
+  it('marks only the active chip aria-pressed', () => {
+    setup({ ...EMPTY_FILTERS, view: 'hidden-flagged-for-review' })
+    expect(
+      screen
+        .getByRole('button', { name: FLAGGED_CHIP })
+        .getAttribute('aria-pressed'),
+    ).toBe('true')
+    expect(
+      screen
+        .getByRole('button', { name: NON_CONCERT_CHIP })
+        .getAttribute('aria-pressed'),
+    ).toBe('false')
   })
 })

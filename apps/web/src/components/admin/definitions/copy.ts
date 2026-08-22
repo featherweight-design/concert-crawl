@@ -1522,6 +1522,8 @@ export const ADMIN_COPY = {
       },
       noGenre: 'no genre',
       noShowTime: 'no time',
+      nonConcertBadge: 'non-concert',
+      reviewNeededBadge: 'needs review',
       loadMore: 'Load more',
       loadingMore: 'Loading…',
       empty: {
@@ -1557,6 +1559,9 @@ export const ADMIN_COPY = {
         flaggedChipLabel: 'Hidden — flagged for review',
         flaggedChipAriaLabel: 'Toggle hidden-and-flagged-for-review filter',
         flaggedChipEmpty: 'No hidden events are flagged for review.',
+        nonConcertChipLabel: 'Non-concert',
+        nonConcertChipAriaLabel: 'Toggle non-concert filter',
+        nonConcertChipEmpty: 'No events are marked non-concert.',
       },
       rowMenu: {
         triggerAriaLabel: 'Row actions',

@@ -15,6 +15,7 @@ import {
   lte,
   or,
   sql,
+  type SQL,
 } from 'drizzle-orm'
 import {
   auditLog,
@@ -126,12 +127,14 @@ const listQuerySchema = z.object({
     .enum(['true', 'false'])
     .optional()
     .transform((val) => val === 'true'),
-  // Composite view enum. When 'hidden-flagged-for-review', scopes the list
-  // to hidden_from_consumer=true AND is_concert_review_needed=true — the
-  // admin classification review queue. Single combined param (rather than
-  // two orthogonal hiddenFromConsumer + reviewNeeded params) keeps the API
-  // surface narrow until a second use case demands the orthogonal shape.
-  view: z.enum(['hidden-flagged-for-review']).optional(),
+  // Saved views, not orthogonal predicates:
+  //   'hidden-flagged-for-review' → hidden_from_consumer AND
+  //     is_concert_review_needed — the classification review queue.
+  //   'non-concert' → hidden_from_consumer alone, the superset. The review
+  //     queue only ever returns rows the classifier was unsure about, so a
+  //     hidden row carrying no review flag — an admin's own mistaken
+  //     "Mark non-concert" — is invisible in the narrower view.
+  view: z.enum(['hidden-flagged-for-review', 'non-concert']).optional(),
   // PR 5 — search + range + multi-tag filters. Comma-separated lists.
   query: z.string().trim().min(1).max(200).optional(),
   dateFrom: z.string().regex(dateOnlyRegex).optional(),
@@ -141,6 +144,22 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(50),
   offset: z.coerce.number().int().min(0).default(0),
 })
+
+type EventsListView = z.infer<typeof listQuerySchema>['view']
+
+const viewClauses = (view: EventsListView): SQL[] => {
+  switch (view) {
+    case 'hidden-flagged-for-review':
+      return [
+        eq(events.hiddenFromConsumer, true),
+        eq(events.isConcertReviewNeeded, true),
+      ]
+    case 'non-concert':
+      return [eq(events.hiddenFromConsumer, true)]
+    case undefined:
+      return []
+  }
+}
 
 export const eventsAdminRouter = new Hono<AdminVariables>()
 
@@ -504,25 +523,15 @@ eventsAdminRouter.get(
           gte(events.date, today),
           eq(events.hiddenFromConsumer, false),
         )
-      : view === 'hidden-flagged-for-review'
-        ? and(
-            eq(events.hiddenFromConsumer, true),
-            eq(events.isConcertReviewNeeded, true),
-            verified === undefined ? undefined : eq(events.verified, verified),
-            dateFromClause,
-            dateToClause,
-            searchClause,
-            genreClause,
-            ...missingDataClauses,
-          )
-        : and(
-            verified === undefined ? undefined : eq(events.verified, verified),
-            dateFromClause,
-            dateToClause,
-            searchClause,
-            genreClause,
-            ...missingDataClauses,
-          )
+      : and(
+          ...viewClauses(view),
+          verified === undefined ? undefined : eq(events.verified, verified),
+          dateFromClause,
+          dateToClause,
+          searchClause,
+          genreClause,
+          ...missingDataClauses,
+        )
 
     // Keep the two branches fully separate so Drizzle's inferred types narrow
     // correctly for withClassification (which requires venueHorizon +
