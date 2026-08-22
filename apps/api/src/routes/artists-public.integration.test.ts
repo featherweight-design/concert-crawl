@@ -25,6 +25,7 @@ import {
   clearTables,
   seedArtist,
   seedEvent,
+  seedPriceSubmission,
   seedVenue,
 } from '../test/helpers/seed.js'
 
@@ -456,6 +457,57 @@ describe('GET /v1/artists/:slug — integration', () => {
     const body: SuccessBody = await (await getArtist('prolific-act')).json()
     expect(body.data.past).toHaveLength(50)
     expect(body.data.history.count).toBe(body.data.past.length)
+  })
+
+  // The artist page selected events.ticketPriceMin and returned it as a bare
+  // scalar, so it quoted the Reserved price while Event Detail quoted the GA
+  // floor — the same class as #1365, which fixed Watching and left this route
+  // behind. Reproduced in prod on Hermanos Gutiérrez.
+  it('quotes the cheapest tier, not the denormalized ticketPriceMin scalar', async () => {
+    await seedArtist({
+      name: 'Hermanos Gutiérrez',
+      canonicalName: 'hermanos gutierrez',
+    })
+    const mission = await seedVenue({ name: 'Mission', slug: 'mission' })
+    const event = await seedEvent(mission.id, {
+      artist: 'Hermanos Gutiérrez',
+      canonicalArtist: 'hermanos gutierrez',
+      date: '2099-10-03',
+      ticketPriceMin: '125.00',
+      priceSource: 'community',
+    })
+    await seedPriceSubmission(event.id, 'user_a', {
+      tier: 'Reserved',
+      priceMin: '125',
+      status: 'corroborated',
+    })
+    await seedPriceSubmission(event.id, 'user_b', {
+      tier: 'GA',
+      priceMin: '68',
+      status: 'corroborated',
+    })
+
+    const body: SuccessBody = await (
+      await getArtist('hermanos-gutierrez')
+    ).json()
+    expect(body.data.shows[0]?.price).toBe(68)
+  })
+
+  it('falls back to the event scalar for a crawled price with no submissions', async () => {
+    await seedArtist({
+      name: 'Nightjar Choir',
+      canonicalName: 'nightjar choir',
+    })
+    const globe = await seedVenue({ name: 'Globe Hall', slug: 'globe-hall' })
+    await seedEvent(globe.id, {
+      artist: 'Nightjar Choir',
+      canonicalArtist: 'nightjar choir',
+      date: '2099-09-02',
+      ticketPriceMin: '22.00',
+    })
+
+    const body: SuccessBody = await (await getArtist('nightjar-choir')).json()
+    expect(body.data.shows[0]?.price).toBe(22)
   })
 
   it('404s an unknown slug', async () => {

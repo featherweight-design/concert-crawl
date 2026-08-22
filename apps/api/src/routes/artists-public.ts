@@ -35,6 +35,10 @@ import type {
   ArtistSuggestion,
 } from '@concert-crawl/types'
 import { loadNextShowByCanonical } from '../lib/artist-follows.js'
+import {
+  loadPriceByTierByEventId,
+  lowestHeadlinePrice,
+} from '../lib/price-aggregation/index.js'
 import { parsePrice } from '../lib/price.js'
 import { todayInTimezone } from '../lib/time.js'
 
@@ -395,6 +399,16 @@ artistsPublicRouter.get(
       .orderBy(desc(events.date), desc(events.showTime))
       .limit(PAST_LIMIT)
 
+    // The cheapest corroborated tier, falling back to the denormalized scalar
+    // whenever the event has no corroborated tier to aggregate — usually a
+    // crawler-sourced price nobody has submitted against, but the condition is
+    // the absent tier, not the price's origin. Reading `ticketPriceMin` alone
+    // is what made this page quote a higher price than Event Detail whenever a
+    // cheaper tier existed (#1365).
+    const priceByTierByEventId = await loadPriceByTierByEventId(
+      upcomingRows.map((row) => row.eventId),
+    )
+
     const shows: ArtistShow[] = upcomingRows.map((row) => ({
       eventId: row.eventId,
       iso: row.iso,
@@ -402,7 +416,9 @@ artistsPublicRouter.get(
       venue: row.venue,
       venueSlug: row.venueSlug,
       city: row.city,
-      price: parsePrice(row.ticketPriceMin),
+      price:
+        lowestHeadlinePrice(priceByTierByEventId.get(row.eventId) ?? []) ??
+        parsePrice(row.ticketPriceMin),
       tourName: row.tourName,
       genres: row.genre ?? [],
       imageUrl: row.imageUrl,

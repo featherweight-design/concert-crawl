@@ -14,7 +14,15 @@ export interface ArtistShow {
   venue: string
   venueSlug: string
   city: string | null
-  /** Cheapest known ticket price, or null when unknown. */
+  /**
+   * Cheapest corroborated tier, falling back to `events.ticketPriceMin`
+   * whenever the event has no corroborated tier to aggregate — usually a
+   * crawler-sourced price nobody has submitted against, though the fallback
+   * turns on the absent tier rather than on how the scalar was written. Null
+   * when unknown. Resolved through the price-aggregation helpers rather than
+   * read off the event scalar, which holds whatever price was written last and
+   * made this page quote a higher price than Event Detail (#1364/#1365/#1366).
+   */
   price: number | null
   /**
    * The artist page carries the artist, so the row promotes the tour name into

@@ -215,8 +215,9 @@ export function fromArtistShow(show: ArtistShow, artist: string): EventRowShow {
         ? {
             amount: Math.round(show.price),
             isFloor: true,
-            // The artist payload carries the scalar alone, with no provenance
-            // and no observation time, so the price renders bare.
+            // The API resolves the cheapest tier before it reaches here, but
+            // sends the amount alone — no provenance and no observation time —
+            // so the price renders bare.
             source: null,
             observedAt: null,
           }
