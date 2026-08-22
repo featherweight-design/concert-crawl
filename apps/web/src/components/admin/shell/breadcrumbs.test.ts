@@ -16,19 +16,19 @@ describe('buildBreadcrumbs', () => {
     expect(crumbs).toEqual([{ label: 'Admin' }, { label: 'Dashboard' }])
   })
 
-  it('returns section link + sub-label on a new-entity page', () => {
-    const crumbs = buildBreadcrumbs('/admin/venues/new', NAV)
-    expect(crumbs).toEqual([
-      { label: 'Venues', href: '/admin/venues' },
-      { label: 'New venue' },
-    ])
-  })
-
   it('returns section link + Edit venue on a venue detail page', () => {
     const crumbs = buildBreadcrumbs('/admin/venues/abc123', NAV)
     expect(crumbs).toEqual([
       { label: 'Venues', href: '/admin/venues' },
       { label: 'Edit venue' },
+    ])
+  })
+
+  it('labels the venues robots audit tool with its own title, not Edit venue', () => {
+    const crumbs = buildBreadcrumbs('/admin/venues/robots-audit', NAV)
+    expect(crumbs).toEqual([
+      { label: 'Venues', href: '/admin/venues' },
+      { label: 'robots.txt audit' },
     ])
   })
 

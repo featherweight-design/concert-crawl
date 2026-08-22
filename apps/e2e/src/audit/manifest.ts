@@ -260,8 +260,8 @@ const manifest: AuditManifest = validateManifest([
         // and lets staging generate its own (see sync-venues.ts — insert drops
         // `id`, ON CONFLICT targets `slug`), so a hardcoded UUID would 404 after
         // any staging rebuild. Reach the detail page by clicking the first real
-        // venue row link on the stable index instead. The `:not(...)` filters
-        // exclude the two non-detail links (`/robots-audit`, `/new`); the venue
+        // venue row link on the stable index instead. The `:not(...)` filter
+        // excludes the one non-detail link (`/admin/venues/robots-audit`); the venue
         // table renders both a mobile-card and desktop-table link set, so
         // `:visible` picks the one rendered at the current viewport.
         id: 'open-first-venue',
@@ -270,7 +270,7 @@ const manifest: AuditManifest = validateManifest([
         run: async (page: Page) => {
           await page
             .locator(
-              'a[href^="/admin/venues/"]:not([href="/admin/venues/robots-audit"]):not([href="/admin/venues/new"]):visible',
+              'a[href^="/admin/venues/"]:not([href="/admin/venues/robots-audit"]):visible',
             )
             .first()
             .click()

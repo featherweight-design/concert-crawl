@@ -219,12 +219,13 @@ excluded from crawl sweeps.
 
 ### ADM-13 — Add a new venue ⚠️
 
-**Precondition:** On `/admin/venues/new`. Only run if you actually want a new
+**Precondition:** On `/admin/venues`. Only run if you actually want a new
 venue in prod — otherwise read the form and mark N/A.
 **Steps:**
 
-1. Fill in name, website URL, address, timezone.
-2. Submit.
+1. Click "Add venue" to open the modal.
+2. Fill in name, website URL, address, timezone.
+3. Submit.
 
 **Expected:** The venue is created and appears in the list. (If this is only a
 form check, mark N/A and note you didn't submit.)

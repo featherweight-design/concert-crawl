@@ -1,4 +1,5 @@
 import type { NavItem } from './nav'
+import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import { reviewHrefFromParam } from '@/lib/admin/edit-event-link'
 
 export interface Crumb {
@@ -29,11 +30,12 @@ export function buildBreadcrumbs(
 
   const sub = pathname.slice(section.href.length).replace(/^\//, '')
   let subLabel = 'Details'
-  if (section.key === 'venues') {
-    if (sub === 'new') subLabel = 'New venue'
-    else if (sub) subLabel = 'Edit venue'
-  } else if (sub === 'new') {
-    subLabel = 'New'
+  if (section.key === 'venues' && sub) {
+    // Every venues subpath except the robots audit tool is a venue detail page
+    // keyed by id, so the id case is the default and the tool is the exception.
+    // The tool's crumb reads from its page title so the two cannot drift.
+    subLabel =
+      sub === 'robots-audit' ? ADMIN_COPY.robotsAudit.page.title : 'Edit venue'
   }
 
   // Review subpages carry an optional `?from=<tab>` param so the breadcrumb
