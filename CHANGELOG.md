@@ -1,3 +1,10 @@
+# [1.269.0](https://github.com/HartiganHM/concert-crawl/compare/v1.268.0...v1.269.0) (2026-08-22)
+
+
+### Features
+
+* **price:** show pending prices on event rows, marked unconfirmed ([#1627](https://github.com/HartiganHM/concert-crawl/issues/1627)) ([d2effdb](https://github.com/HartiganHM/concert-crawl/commit/d2effdba3f3d65a40a96db4eac787fb7177f0cc1))
+
 # [1.268.0](https://github.com/HartiganHM/concert-crawl/compare/v1.267.2...v1.268.0) (2026-08-22)
 
 
