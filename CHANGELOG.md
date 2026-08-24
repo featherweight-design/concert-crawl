@@ -1,3 +1,10 @@
+## [1.269.1](https://github.com/HartiganHM/concert-crawl/compare/v1.269.0...v1.269.1) (2026-08-24)
+
+
+### Bug Fixes
+
+* **web:** blank sign-in page and service-worker beta-gate bypass ([#1629](https://github.com/HartiganHM/concert-crawl/issues/1629)) ([5e55f06](https://github.com/HartiganHM/concert-crawl/commit/5e55f06fd845fa02d65917022db2f3eff632b378))
+
 # [1.269.0](https://github.com/HartiganHM/concert-crawl/compare/v1.268.0...v1.269.0) (2026-08-22)
 
 
