@@ -4,8 +4,16 @@
 // declarations (self, addEventListener, etc.) between DOM and WebWorker.
 import { defaultCache } from '@serwist/next/worker'
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist'
-import { ExpirationPlugin, Serwist, StaleWhileRevalidate } from 'serwist'
-import { isPublicCacheableApi } from '@/lib/pwa/route-cache'
+import {
+  ExpirationPlugin,
+  NetworkOnly,
+  Serwist,
+  StaleWhileRevalidate,
+} from 'serwist'
+import {
+  isPublicCacheableApi,
+  isPublicCacheableDocument,
+} from '@/lib/pwa/route-cache'
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -43,6 +51,13 @@ function resolveApiOrigin(): string {
 
 const apiOrigin = resolveApiOrigin()
 
+// Read in this file rather than through `isPublicBrowseEnabled()`. Next's
+// DefinePlugin only inlines `process.env.NEXT_PUBLIC_*` reads written in the
+// worker entry itself; the same read inside an imported module compiles to a
+// webpack `process` shim whose `env` is empty at worker runtime, so the flag
+// would read `false` forever and never flip at launch.
+const launched = process.env.NEXT_PUBLIC_PUBLIC_BROWSE === 'true'
+
 const publicApiCache = {
   // Refuse to cache any credentialed request: otherwise-public endpoints like
   // GET /v1/events/:id return auth-dependent fields (e.g. `isWatching`) when an
@@ -61,6 +76,28 @@ const publicApiCache = {
   }),
 }
 
+// `defaultCache` NetworkFirsts every same-origin page into `pages`,
+// `pages-rsc` and `pages-rsc-prefetch`. A cached page is replayed without the
+// middleware ever running, so a gated route cached during one session becomes
+// readable by a signed-out visitor in the next — the beta gate silently
+// bypassed. Registered BEFORE defaultCache so it wins the route match; Serwist
+// still attaches the `/~offline` fallback to this handler, so an offline
+// navigation to an uncacheable route lands there instead of failing.
+const gatedPagesNetworkOnly = {
+  matcher: ({ request, url }: { request: Request; url: URL }) => {
+    if (url.origin !== self.location.origin) return false
+    if (url.pathname.startsWith('/api/')) return false
+    if (url.pathname.startsWith('/_next/')) return false
+    // Scoped to page requests only: matching more broadly would swallow the
+    // static assets that `defaultCache` needs to cache for offline to work.
+    const isPage =
+      request.mode === 'navigate' || request.headers.get('RSC') === '1'
+    if (!isPage) return false
+    return !isPublicCacheableDocument(url, launched)
+  },
+  handler: new NetworkOnly(),
+}
+
 const serwist = new Serwist({
   // Conditional spread rather than passing the value directly: under
   // exactOptionalPropertyTypes the option must be an array or absent, never
@@ -69,7 +106,7 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   navigationPreload: true,
-  runtimeCaching: [publicApiCache, ...defaultCache],
+  runtimeCaching: [publicApiCache, gatedPagesNetworkOnly, ...defaultCache],
   fallbacks: {
     entries: [
       {
@@ -81,6 +118,22 @@ const serwist = new Serwist({
 })
 
 serwist.addEventListeners()
+
+// Every install that predates `gatedPagesNetworkOnly` has gated pages sitting in
+// these caches already, and a new worker does not clear them. Dropping them on
+// activation remediates the bypass on update rather than only for fresh
+// installs. This runs on every activation, not just the first, which is
+// deliberate: a version-flag guard would be more state to get wrong than the
+// cost it saves, and these caches repopulate from the network on demand.
+const PAGE_CACHES = ['pages', 'pages-rsc', 'pages-rsc-prefetch']
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    Promise.all(PAGE_CACHES.map((name) => caches.delete(name))).catch((err) => {
+      console.warn('sw: failed to clear stale page caches', err)
+    }),
+  )
+})
 
 // #971 Web push handlers.
 // Payload shape sent by packages/push/src/send-push.ts.

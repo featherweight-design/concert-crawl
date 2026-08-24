@@ -27,3 +27,46 @@ const PUBLIC_API_PATTERNS: readonly RegExp[] = [
 
 export const isPublicCacheableApi = (url: URL): boolean =>
   PUBLIC_API_PATTERNS.some((pattern) => pattern.test(url.pathname))
+
+// Documents and RSC payloads get the same default-deny treatment, for a second
+// reason on top of privacy: a cached page is served without the middleware ever
+// running, so anything cached here is reachable by a signed-out visitor. These
+// two lists must stay a SUBSET of middleware.ts's `isAlwaysPublic` and
+// `isPublicOnceLaunched` — a route may be public there and still be excluded
+// here, but never the reverse.
+//
+// Excluded on purpose despite being public in middleware:
+//  - the auth surfaces (/sign-in, /sign-up, /auth/code, /onboarding), where a
+//    stale shell is worse than a network round trip
+//  - /search, whose value is entirely in the live query
+//  - /watching, which is route-public once launched but payload-private always
+//
+// /~offline is absent for a different reason: it is not public in middleware at
+// all, so caching it here would break the subset outright. It still reaches an
+// offline visitor, from Serwist's precache via `fallbacks.entries` rather than
+// from this list, so leaving it out costs nothing.
+const ALWAYS_CACHEABLE_PAGES: readonly RegExp[] = [
+  /^\/$/,
+  /^\/legal(\/.*)?$/,
+  /^\/changelog(\/.*)?$/,
+]
+
+const CACHEABLE_PAGES_ONCE_LAUNCHED: readonly RegExp[] = [
+  /^\/events(\/.*)?$/,
+  /^\/venues(\/.*)?$/,
+  /^\/artists(\/.*)?$/,
+  /^\/e\/[^/]+$/,
+]
+
+export const isPublicCacheableDocument = (
+  url: URL,
+  launched: boolean,
+): boolean => {
+  const { pathname } = url
+  if (ALWAYS_CACHEABLE_PAGES.some((pattern) => pattern.test(pathname)))
+    return true
+  return (
+    launched &&
+    CACHEABLE_PAGES_ONCE_LAUNCHED.some((pattern) => pattern.test(pathname))
+  )
+}
