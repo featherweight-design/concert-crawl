@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.50.0-beta',
+    date: 'Aug 29, 2026',
+    headline: 'An old price you know is right no longer reads as stale.',
+    items: [
+      {
+        kind: 'added',
+        text: 'Next to a price marked "could be stale", tap "Still this price?" to say it is on sale for that price, and the stamp catches up.',
+      },
+    ],
+  },
+  {
     version: 'v0.49.0-beta',
     date: 'Aug 22, 2026',
     headline: 'A price nobody has confirmed yet still beats no price.',

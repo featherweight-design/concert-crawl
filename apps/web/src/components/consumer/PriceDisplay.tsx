@@ -12,6 +12,7 @@ import {
 } from '@/components/consumer/lib/price-source-kind'
 import { relTimeAgo } from '@/components/consumer/lib/staleness'
 import { StaleStamp } from '@/components/consumer/StaleStamp'
+import { StillAccurateAction } from '@/components/consumer/StillAccurateAction'
 
 const copy = CONSUMER_COPY
 
@@ -81,6 +82,12 @@ interface PriceDisplayProps {
   priceSourceCategory?: SourceCategory | null
   priceSubmitterHandle?: string | null
   priceObservedAt?: string | null
+  // The submission behind the displayed price, when there is one. A crawler
+  // price has no row to stamp, so its absence is what excludes the action.
+  priceSubmissionId?: string | null
+  // Only the locally-promoted submission needs this: its timestamp lives in
+  // client state, which `router.refresh()` cannot reach.
+  onSighted?: () => void
   priceApprovalKind?: 'admin' | 'fan' | null
   priceApprovedAt?: string | null
   priceAlternates?: Array<{
@@ -1063,6 +1070,8 @@ export function PriceDisplay({
   priceSourceCategory,
   priceSubmitterHandle,
   priceObservedAt,
+  priceSubmissionId,
+  onSighted,
   priceApprovalKind,
   priceApprovedAt,
   priceAlternates,
@@ -1466,6 +1475,18 @@ export function PriceDisplay({
           }}
         >
           <StaleStamp observedAt={effectiveObservedAt} />
+          {/* Gated on the stamp the way MultiTierLiveCard gates it: with no
+              observation there is nothing to call stale, and mounting the
+              action regardless makes every surface rendering a price depend on
+              the app router even where the affordance can never appear. */}
+          {effectiveObservedAt && (
+            <StillAccurateAction
+              eventId={eventId}
+              submissionId={priceSubmissionId}
+              observedAt={effectiveObservedAt}
+              {...(onSighted ? { onSighted } : {})}
+            />
+          )}
           {/* Submitter handle — community tier only (boxoffice uses BoxOfficeAttribution above) */}
           {isCommunity && priceObj.submitter && (
             <>

@@ -2,7 +2,14 @@
 
 import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
+import {
+  render,
+  screen,
+  cleanup,
+  fireEvent,
+  act,
+  waitFor,
+} from '@testing-library/react'
 import type {
   EventDetailResponse,
   TierHeadline,
@@ -20,9 +27,20 @@ vi.mock('@clerk/nextjs', () => ({
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockRouterPush, refresh: mockRouterRefresh }),
 }))
-// PriceDisplay is server-leaning + has its own deep tree; stub it.
+// PriceDisplay is server-leaning + has its own deep tree; stub it. The stub
+// records its props so the stale-price wiring can be asserted without
+// rendering the real tree.
+interface PriceDisplayStubProps {
+  priceObservedAt?: string | null
+  priceSubmissionId?: string | null
+  onSighted?: () => void
+}
+let latestPriceDisplayProps: PriceDisplayStubProps | null = null
 vi.mock('@/components/consumer/PriceDisplay', () => ({
-  PriceDisplay: () => <div data-testid="price-display-stub" />,
+  PriceDisplay: (props: PriceDisplayStubProps) => {
+    latestPriceDisplayProps = props
+    return <div data-testid="price-display-stub" />
+  },
 }))
 // SubmitPriceModal would mount + fetch on render; stub it so we can
 // drive onSuccess directly from the test surface when needed.
@@ -71,6 +89,7 @@ beforeEach(() => {
   })
   vi.clearAllMocks()
   latestModalOnSuccess = null
+  latestPriceDisplayProps = null
 })
 
 afterEach(() => {
@@ -1034,6 +1053,70 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
       <EventDetailPriceBlock event={event} reports={[]} currentUserId={null} />,
     )
     expect(screen.getByText('Submit another price')).toBeDefined()
+  })
+
+  // The locally-promoted submission is the one stamp site whose timestamp lives
+  // in client state. `localSubmissions` is seeded by a useState initializer, so
+  // router.refresh() cannot advance it — this site has to reconcile its own row.
+  // A passing test on the three server-prop sites would hide a break here.
+  describe('locally-promoted submission — still-accurate wiring', () => {
+    const staleAt = '2026-06-22T00:00:00Z'
+    const buildPromotedEvent = () =>
+      buildBaseEvent({
+        priceByTier: null,
+        pendingSubmissions: [
+          {
+            id: 'p-promoted',
+            priceMin: '40',
+            priceMax: null,
+            tier: 'General Admission',
+            vendor: 'AXS',
+            howFound: 'saw_listing',
+            sourceCategory: 'standard',
+            note: null,
+            submitterHandle: 'me',
+            submittedAt: staleAt,
+            confirmsCount: 2,
+            confirmsNeeded: 2,
+            isSubmitter: true,
+          },
+        ],
+      })
+
+    it('passes the submission id behind the displayed price', () => {
+      render(
+        <EventDetailPriceBlock
+          event={buildPromotedEvent()}
+          reports={[]}
+          currentUserId={null}
+        />,
+      )
+      expect(latestPriceDisplayProps?.priceSubmissionId).toBe('p-promoted')
+      expect(latestPriceDisplayProps?.priceObservedAt).toBe(staleAt)
+    })
+
+    it('advances its own row when the sighting lands', async () => {
+      render(
+        <EventDetailPriceBlock
+          event={buildPromotedEvent()}
+          reports={[]}
+          currentUserId={null}
+        />,
+      )
+      const onSighted = latestPriceDisplayProps?.onSighted
+      expect(onSighted).toBeTypeOf('function')
+
+      act(() => onSighted?.())
+
+      await waitFor(() =>
+        expect(latestPriceDisplayProps?.priceObservedAt).not.toBe(staleAt),
+      )
+      const advanced = latestPriceDisplayProps?.priceObservedAt
+      expect(advanced).toBeTruthy()
+      expect(new Date(advanced ?? 0).getTime()).toBeGreaterThan(
+        new Date(staleAt).getTime(),
+      )
+    })
   })
 
   it('legacy pending (pendingSubmissions) path renders the persistent SubmitPriceCardCta (#895 symptom 1)', () => {

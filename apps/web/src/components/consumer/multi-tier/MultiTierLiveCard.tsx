@@ -7,6 +7,7 @@ import {
   type TierAlternateRowProps,
 } from '@/components/consumer/multi-tier/TierAlternateRow'
 import { StaleStamp } from '@/components/consumer/StaleStamp'
+import { StillAccurateAction } from '@/components/consumer/StillAccurateAction'
 import { displayVendor } from '@/components/consumer/vendor-display'
 
 const copy = CONSUMER_COPY.multiTier
@@ -46,6 +47,11 @@ export interface MultiTierLiveCardProps {
   // the one price surface with no staleness tell, so an 8-day-old price read as
   // current on the event page while Watching flagged it (#1366).
   observedAt?: string | null
+  // Both ids are needed to POST a sighting, and this card carried neither: the
+  // headline objects built by EventDetailClient dropped TierHeadline's
+  // submissionId, and the card had no notion of which event it sat on.
+  eventId?: string
+  submissionId?: string | null
 }
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -60,6 +66,8 @@ export const MultiTierLiveCard = ({
   alternates,
   reports,
   observedAt,
+  eventId,
+  submissionId,
 }: MultiTierLiveCardProps) => {
   const hasAlternates = alternates.length > 0
 
@@ -141,6 +149,16 @@ export const MultiTierLiveCard = ({
           <>
             {' · '}
             <StaleStamp observedAt={observedAt} />
+            {eventId !== undefined && (
+              <>
+                {' '}
+                <StillAccurateAction
+                  eventId={eventId}
+                  submissionId={submissionId}
+                  observedAt={observedAt}
+                />
+              </>
+            )}
           </>
         )}
       </div>

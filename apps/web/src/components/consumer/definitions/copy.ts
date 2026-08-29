@@ -1314,6 +1314,12 @@ export const CONSUMER_COPY = {
     hoursSuffix: 'h ago',
     minutesSuffix: 'm ago',
     unknown: 'unknown',
+    // Deliberately not "Price check" (locked to the admin dispute review) and
+    // deliberately not "confirm" (already the antonym of pending on the
+    // corroboration flow). This reports a price still on sale, which makes it
+    // fresh, not confirmed.
+    stillAccurateAction: 'Still this price?',
+    stillAccuratePending: 'Saving…',
   },
 
   multiTier: {

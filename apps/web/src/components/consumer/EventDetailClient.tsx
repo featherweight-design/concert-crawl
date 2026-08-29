@@ -56,6 +56,10 @@ import {
 } from '@/components/consumer/price-region'
 import { decidePriceRegion } from '@/components/consumer/price-region/lib/decision-tree'
 
+// Without the fallback an unset var interpolates as the literal `undefined`,
+// which resolves relative and 404s rather than failing loudly.
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? ''
+
 // All five canonical tiers — used by MTAddTierSuccess to derive `remainingTiers`
 // from this session's submitted tiers (Q4-eng lock).
 const TIER_ENUM: ReadonlyArray<Tier> = ['GA', 'Reserved', 'VIP', 'Pit', 'Lawn']
@@ -702,7 +706,7 @@ export function EventDetailPriceBlock({
             if (!token) return
             try {
               const res = await fetch(
-                `${process.env['NEXT_PUBLIC_API_URL']}/v1/submissions/${firstPending.id}`,
+                `${API_URL}/v1/submissions/${firstPending.id}`,
                 {
                   method: 'DELETE',
                   headers: { Authorization: `Bearer ${token}` },
@@ -778,7 +782,7 @@ export function EventDetailPriceBlock({
                 if (!token) return
                 try {
                   const res = await fetch(
-                    `${process.env['NEXT_PUBLIC_API_URL']}/v1/events/${event.id}/price-submissions/${confirmedId}/confirm`,
+                    `${API_URL}/v1/events/${event.id}/price-submissions/${confirmedId}/confirm`,
                     {
                       method: 'POST',
                       headers: {
@@ -1064,6 +1068,8 @@ export function EventDetailPriceBlock({
             ? { reports: headlineBlock.reports }
             : {})}
           observedAt={headlineBlock?.headline?.observedAt ?? null}
+          eventId={event.id}
+          submissionId={headlineBlock?.headline?.submissionId ?? null}
         />
         <div className="mt-3">
           <FaceValueCard
@@ -1376,6 +1382,8 @@ export function EventDetailPriceBlock({
             alternates={alternateRows}
             reports={headlineBlock.reports}
             observedAt={headlineBlock.headline?.observedAt ?? null}
+            eventId={event.id}
+            submissionId={headlineBlock.headline?.submissionId ?? null}
           />
           {outboundLink !== null && outboundKind !== null && (
             <div className="mt-3">
@@ -1622,6 +1630,21 @@ export function EventDetailPriceBlock({
             priceSourceCategory={confirmedSub.sourceCategory}
             priceSubmitterHandle={confirmedSub.submitterHandle}
             priceObservedAt={confirmedSub.submittedAt}
+            priceSubmissionId={confirmedSub.id}
+            // localSubmissions is seeded by a useState initializer, which does
+            // not re-run when router.refresh() brings back new props. So this
+            // one site advances its own row to mirror the last_seen_at the
+            // server just wrote; every other stamp site reads a server prop.
+            onSighted={() => {
+              const sightedAt = new Date().toISOString()
+              setLocalSubmissions((subs) =>
+                subs.map((sub) =>
+                  sub.id === confirmedSub.id
+                    ? { ...sub, submittedAt: sightedAt }
+                    : sub,
+                ),
+              )
+            }}
             priceApprovalKind="fan"
             priceApprovedAt={confirmedSub.submittedAt}
             priceAlternates={null}
@@ -1704,13 +1727,10 @@ export function EventDetailPriceBlock({
             const token = await getToken()
             if (!token) return
             try {
-              const res = await fetch(
-                `${process.env['NEXT_PUBLIC_API_URL']}/v1/submissions/${sub.id}`,
-                {
-                  method: 'DELETE',
-                  headers: { Authorization: `Bearer ${token}` },
-                },
-              )
+              const res = await fetch(`${API_URL}/v1/submissions/${sub.id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` },
+              })
               if (res.ok) {
                 setLocalSubmissions((prev) =>
                   prev.filter((item) => item.id !== sub.id),
@@ -1778,7 +1798,7 @@ export function EventDetailPriceBlock({
                 if (!token) return
                 try {
                   const res = await fetch(
-                    `${process.env['NEXT_PUBLIC_API_URL']}/v1/events/${event.id}/price-submissions/${confirmedId}/confirm`,
+                    `${API_URL}/v1/events/${event.id}/price-submissions/${confirmedId}/confirm`,
                     {
                       method: 'POST',
                       headers: {
@@ -1879,6 +1899,7 @@ export function EventDetailPriceBlock({
         priceSourceCategory={event.priceSourceCategory ?? null}
         priceSubmitterHandle={event.priceSubmitterHandle ?? null}
         priceObservedAt={event.priceObservedAt ?? null}
+        priceSubmissionId={event.priceSubmissionId ?? null}
         priceApprovalKind={event.priceApprovalKind ?? null}
         priceApprovedAt={event.priceApprovedAt ?? null}
         priceAlternates={event.priceAlternates ?? null}
