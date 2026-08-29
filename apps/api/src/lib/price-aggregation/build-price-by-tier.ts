@@ -22,6 +22,7 @@ export interface CorroboratedSubmissionRow {
   userId: string | null
   createdAt: Date
   updatedAt: Date
+  lastSeenAt: Date | null
   corroborationCount: number
 }
 
@@ -64,6 +65,7 @@ export function buildPriceByTierMap(
           userId: sub.userId,
           createdAt: sub.createdAt,
           updatedAt: sub.updatedAt,
+          lastSeenAt: sub.lastSeenAt,
           // The submitter counts as observation #1 per the
           // price_submissions.corroboration_count schema comment, so the count
           // we surface excludes them. Without this every row computes

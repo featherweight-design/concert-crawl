@@ -15,6 +15,7 @@ import {
   type TierRow,
 } from './pick-tier-headline.js'
 import { narrowLastAdminAction } from '../last-admin-action.js'
+import { deriveObservedAt } from './observed-at.js'
 
 export interface CorroboratedTierRow extends TierRow {
   tier: Tier
@@ -113,7 +114,7 @@ function buildHeadline(
     sourceCategory: row.sourceCategory,
     submitterHandle:
       row.userId !== null ? (handles.get(row.userId) ?? null) : null,
-    observedAt: row.createdAt.toISOString(),
+    observedAt: deriveObservedAt(row.lastSeenAt, row.createdAt).toISOString(),
     approvedAt: row.updatedAt.toISOString(),
     approvalKind: row.confirmsCount > 0 ? 'fan' : 'admin',
     confirmsCount: row.confirmsCount,

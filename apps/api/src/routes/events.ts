@@ -55,6 +55,7 @@ import { isImminentEvent, todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import {
   aggregateByTier,
+  deriveObservedAt,
   loadPriceByTierByEventId,
   pickHeadlinesByTier,
 } from '../lib/price-aggregation/index.js'
@@ -721,6 +722,12 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   let priceSourceCategory: SourceCategory | null = null
   let priceSubmitterHandle: string | null = null
   let priceObservedAt: string | null = null
+  // The submission the flat fields describe. Must come off `legacyPrimary`,
+  // never off priceByTier[0]: the two use different orderings (see the comment
+  // on legacySortedCorroborated below), so taking the id from the tier
+  // headline while the timestamp comes from here would name one row and stamp
+  // another. Null whenever priceObservedAt is null — they travel together.
+  let priceSubmissionId: string | null = null
 
   let priceApprovalKind: 'admin' | 'fan' | null = null
   let priceApprovedAt: string | null = null
@@ -761,6 +768,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       userId: priceSubmissions.userId,
       createdAt: priceSubmissions.createdAt,
       updatedAt: priceSubmissions.updatedAt,
+      lastSeenAt: priceSubmissions.lastSeenAt,
     })
     .from(priceSubmissions)
     .where(
@@ -956,7 +964,11 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
     const otherSubs = legacySortedCorroborated.slice(1)
     priceVendor = legacyPrimary.vendor
     priceSourceCategory = legacyPrimary.sourceCategory
-    priceObservedAt = legacyPrimary.createdAt.toISOString()
+    priceObservedAt = deriveObservedAt(
+      legacyPrimary.lastSeenAt,
+      legacyPrimary.createdAt,
+    ).toISOString()
+    priceSubmissionId = legacyPrimary.id
     priceApprovedAt = legacyPrimary.updatedAt.toISOString()
     priceConfirmsCount = confirmsBySubmissionId.get(legacyPrimary.id) ?? 0
     priceApprovalKind = priceConfirmsCount > 0 ? 'fan' : 'admin'
@@ -1125,6 +1137,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       priceSourceCategory,
       priceSubmitterHandle,
       priceObservedAt,
+      priceSubmissionId,
       priceApprovalKind,
       priceApprovedAt,
       priceAlternates,

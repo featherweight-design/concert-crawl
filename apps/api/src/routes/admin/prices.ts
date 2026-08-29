@@ -270,6 +270,11 @@ pricesAdminRouter.get(
         // rows are contests without re-querying.
         disputedSubmissionId: priceSubmissions.disputedSubmissionId,
         createdAt: priceSubmissions.createdAt,
+        // The most recent sighting, for abuse review. Both columns are
+        // overwritten on every sighting, so this shows the LAST actor and time
+        // — never the pattern. It is a lead for a human, not a signal.
+        lastSeenAt: priceSubmissions.lastSeenAt,
+        lastSeenBy: priceSubmissions.lastSeenBy,
         eventTitle: events.title,
         eventDate: events.date,
         ticketUrl: events.ticketUrl,

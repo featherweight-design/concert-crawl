@@ -138,6 +138,15 @@ export const priceSubmissions = pgTable(
       withTimezone: true,
     }),
     lastAdminActionKind: text('last_admin_action_kind', { enum: ['defer'] }),
+    // Freshness, distinct from created_at: when someone last reported seeing
+    // this price still on sale. `observed_at` on the read side is the LATER of
+    // the two, never a coalesce — a last_seen_at behind created_at (clock skew,
+    // a repaired row) must not move a price's freshness backwards.
+    // last_seen_by is another user's Clerk id: never exported, nulled on that
+    // user's account deletion, and kept off the public GET /v1/submissions/:id
+    // projection.
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+    lastSeenBy: text('last_seen_by'),
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

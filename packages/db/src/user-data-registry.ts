@@ -120,7 +120,7 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     tableName: 'price_submissions',
     disposition: 'anonymize',
     userIdColumn: 'user_id',
-    otherUserIdColumns: [],
+    otherUserIdColumns: ['last_seen_by'],
     exportKey: 'priceSubmissions',
     exportColumns: [
       'event_id',
@@ -133,8 +133,11 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
       'created_at',
     ],
     reason:
-      'Corroboration counts belong to other users. Existing behaviour; the ' +
-      'Privacy Policy already describes it correctly.',
+      'Corroboration counts and sightings belong to other users: last_seen_by ' +
+      'is another member who reported this price still on sale, and ' +
+      'last_seen_at records their act rather than anything the submitter ' +
+      'authored, so neither is exported. Existing behaviour; the Privacy ' +
+      'Policy already describes it correctly.',
   },
   {
     tableName: 'submission_confirms',

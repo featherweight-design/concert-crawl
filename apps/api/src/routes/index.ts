@@ -7,6 +7,7 @@ import { artistsPublicRouter } from './artists-public.js'
 import { artistFollowsRouter, meArtistFollowsRouter } from './artist-follows.js'
 import { priceSubmissionsRouter } from './price-submissions.js'
 import { priceSubmissionConfirmsRouter } from './price-submission-confirms.js'
+import { priceSubmissionStillAccurateRouter } from './price-submission-still-accurate.js'
 import { eventReportsRouter } from './event-reports.js'
 import { submissionsRouter } from './submissions.js'
 import { waitlistRouter } from './waitlist.js'
@@ -42,6 +43,7 @@ export function registerRoutes(app: Hono) {
   app.route('/v1/events', eventsRouter)
   app.route('/v1/events', priceSubmissionsRouter)
   app.route('/v1/events', priceSubmissionConfirmsRouter)
+  app.route('/v1/events', priceSubmissionStillAccurateRouter)
   app.route('/v1/events', eventReportsRouter)
   app.route('/v1/venues', venuesPublicRouter)
   // Follow mounts FIRST so its auth-gated POST/DELETE handlers win over the

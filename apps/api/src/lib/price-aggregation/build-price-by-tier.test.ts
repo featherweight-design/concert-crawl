@@ -15,6 +15,7 @@ const baseRow = {
   userId: 'user-1',
   createdAt: new Date('2026-08-01T00:00:00Z'),
   updatedAt: new Date('2026-08-01T00:00:00Z'),
+  lastSeenAt: null,
   corroborationCount: 3,
 }
 

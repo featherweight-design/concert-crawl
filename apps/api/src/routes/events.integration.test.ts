@@ -9,6 +9,7 @@ vi.mock('@hono/clerk-auth', () => ({
 }))
 
 import { events } from '@concert-crawl/db'
+import { STALE_AFTER_MS } from '@concert-crawl/types'
 import { createApp } from '../app.js'
 import { testDb } from '../test/helpers/db.js'
 import {
@@ -524,6 +525,156 @@ describe('GET /v1/events/:id — integration', () => {
     expect(vipBlock?.pending).toHaveLength(1)
     expect(parseFloat(vipBlock?.pending[0]?.priceMin ?? '0')).toBe(120)
     expect(vipBlock?.reports).toBe(1)
+  })
+
+  // The flat priceObservedAt is derived at events.ts:967, separately from the
+  // tier path's aggregate. Both implement one rule, so both need the max case
+  // proved: a COALESCE would return an older timestamp than the sighting.
+  describe('flat priceObservedAt', () => {
+    const seedFlat = async (
+      slug: string,
+      overrides: Partial<Parameters<typeof seedPriceSubmission>[2]>,
+    ) => {
+      const venue = await seedVenue({ name: `Venue ${slug}`, slug })
+      const event = await seedEvent(venue.id, {
+        date: '2027-06-01',
+        priceSource: 'community',
+      })
+      await seedPriceSubmission(event.id, 'user-flat', {
+        tier: 'GA',
+        priceMin: '40',
+        status: 'corroborated',
+        createdAt: new Date('2026-06-01T00:00:00Z'),
+        ...overrides,
+      })
+      const res = await app.request(`/v1/events/${event.id}`)
+      const body = (await res.json()) as {
+        data: { priceObservedAt: string | null }
+      }
+      return body.data.priceObservedAt
+    }
+
+    it('falls back to createdAt when the price has never been sighted', async () => {
+      expect(await seedFlat('flat-null', { lastSeenAt: null })).toBe(
+        '2026-06-01T00:00:00.000Z',
+      )
+    })
+
+    it('uses lastSeenAt when the sighting is the newer of the two', async () => {
+      expect(
+        await seedFlat('flat-newer', {
+          lastSeenAt: new Date('2026-07-01T00:00:00Z'),
+        }),
+      ).toBe('2026-07-01T00:00:00.000Z')
+    })
+
+    it('keeps createdAt when lastSeenAt is older, rather than coalescing to it', async () => {
+      expect(
+        await seedFlat('flat-older', {
+          lastSeenAt: new Date('2026-05-01T00:00:00Z'),
+        }),
+      ).toBe('2026-06-01T00:00:00.000Z')
+    })
+  })
+
+  // priceSubmissionId names the row the flat fields describe, and the two
+  // orderings genuinely disagree: the legacy flat sort ranks by vendor trust,
+  // priceByTier by cheapest tier. Reading the id off priceByTier[0] would
+  // point the "still accurate" tap at a price the flat fields never showed.
+  it('sources priceSubmissionId from the legacy primary, not the cheapest tier', async () => {
+    const venue = await seedVenue({
+      name: 'Divergent Hall',
+      slug: 'divergent-hall',
+    })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    })
+
+    // Highest vendor trust (rank 0) but the pricier tier: wins the legacy sort.
+    const boxOffice = await seedPriceSubmission(event.id, 'user-bo', {
+      tier: 'Reserved',
+      vendor: 'VenueBoxOffice',
+      howFound: 'at_the_venue',
+      sourceCategory: 'boxoffice',
+      priceMin: '125',
+      status: 'corroborated',
+    })
+    // Cheaper tier, so it leads priceByTier — but lower vendor trust.
+    await seedPriceSubmission(event.id, 'user-ga', {
+      tier: 'GA',
+      vendor: 'Ticketmaster',
+      sourceCategory: 'standard',
+      priceMin: '40',
+      status: 'corroborated',
+    })
+
+    const res = await app.request(`/v1/events/${event.id}`)
+    const body = (await res.json()) as {
+      data: {
+        priceSubmissionId: string | null
+        priceByTier: Array<{
+          tier: string
+          headline: { submissionId: string } | null
+        }>
+      }
+    }
+
+    expect(body.data.priceByTier[0]?.tier).toBe('GA')
+    expect(body.data.priceByTier[0]?.headline?.submissionId).not.toBe(
+      boxOffice.id,
+    )
+    expect(body.data.priceSubmissionId).toBe(boxOffice.id)
+  })
+
+  // The point of the whole feature: a sighting has to make the price read
+  // fresh, and it has to do so on the list and on detail alike, because those
+  // read observedAt from two different aggregators.
+  it('a recent sighting reads fresh on both the list row and event detail', async () => {
+    const venue = await seedVenue({ name: 'Fresh Hall', slug: 'fresh-hall' })
+    const event = await seedEvent(venue.id, {
+      date: '2027-06-01',
+      priceSource: 'community',
+    })
+    await seedPriceSubmission(event.id, 'user-fresh', {
+      tier: 'GA',
+      priceMin: '40',
+      status: 'corroborated',
+      createdAt: new Date(Date.now() - STALE_AFTER_MS * 3),
+      lastSeenAt: new Date(Date.now() - 60 * 60 * 1000),
+    })
+
+    const isFresh = (observedAt: string | null): boolean =>
+      observedAt !== null &&
+      Date.now() - new Date(observedAt).getTime() <= STALE_AFTER_MS
+
+    const detail = (await (
+      await app.request(`/v1/events/${event.id}`)
+    ).json()) as {
+      data: {
+        priceObservedAt: string | null
+        priceByTier: Array<{ headline: { observedAt: string } | null }>
+      }
+    }
+    expect(isFresh(detail.data.priceObservedAt)).toBe(true)
+    expect(
+      isFresh(detail.data.priceByTier[0]?.headline?.observedAt ?? null),
+    ).toBe(true)
+
+    const list = (await (
+      await app.request(`/v1/events?venueId=${venue.id}`)
+    ).json()) as {
+      data: {
+        data: Array<{
+          id: string
+          priceByTier: Array<{ headline: { observedAt: string } | null }> | null
+        }>
+      }
+    }
+    const listRow = list.data.data.find((row) => row.id === event.id)
+    expect(
+      isFresh(listRow?.priceByTier?.[0]?.headline?.observedAt ?? null),
+    ).toBe(true)
   })
 
   it('priceByTier is empty array when event has no submissions', async () => {

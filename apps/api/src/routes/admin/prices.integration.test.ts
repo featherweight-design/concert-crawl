@@ -1061,6 +1061,41 @@ describe('GET /v1/admin/prices/submissions — status filter (#708)', () => {
     expect(body.data[0]?.status).toBe('pending')
   })
 
+  // The admin table is the only place a human can see who reported a price
+  // still on sale, so the projection has to carry both columns through.
+  it('projects the sighting timestamp and actor', async () => {
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2099-10-01',
+      verified: true,
+    })
+    const seenAt = new Date('2026-08-20T00:00:00Z')
+    await seedPriceSubmission(event.id, 'user-pending', {
+      status: 'pending',
+      lastSeenAt: seenAt,
+      lastSeenBy: 'user-sighter',
+    })
+    await seedPriceSubmission(event.id, 'user-unseen', { status: 'pending' })
+
+    const res = await app.request('/v1/admin/prices/submissions', {
+      headers: ADMIN_HEADERS,
+    })
+    const body = (await res.json()) as {
+      data: {
+        userId: string
+        lastSeenAt: string | null
+        lastSeenBy: string | null
+      }[]
+    }
+    const seen = body.data.find((row) => row.userId === 'user-pending')
+    expect(seen?.lastSeenAt).toBe(seenAt.toISOString())
+    expect(seen?.lastSeenBy).toBe('user-sighter')
+
+    const unseen = body.data.find((row) => row.userId === 'user-unseen')
+    expect(unseen?.lastSeenAt).toBeNull()
+    expect(unseen?.lastSeenBy).toBeNull()
+  })
+
   it('applies the pending filter to the count when count=true', async () => {
     const venue = await seedVenue()
     const event = await seedEvent(venue.id, {

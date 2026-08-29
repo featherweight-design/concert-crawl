@@ -1,3 +1,4 @@
+import { STALE_AFTER_MS } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY.priceStaleness
@@ -11,7 +12,7 @@ const copy = CONSUMER_COPY.priceStaleness
  * Detail the price's `observedAt` — so the two surfaces could legitimately
  * disagree about the same price (#1366).
  */
-export const STALE_AFTER_MS = 24 * 60 * 60 * 1000
+export { STALE_AFTER_MS }
 
 export function isPriceStale(observedAt: string | null | undefined): boolean {
   if (!observedAt) return false

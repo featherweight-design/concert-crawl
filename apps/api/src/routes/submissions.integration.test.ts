@@ -482,3 +482,49 @@ describe('DELETE /v1/submissions/:id', () => {
     expect(checkRes.status).toBe(404)
   })
 })
+
+describe('malformed submission id', () => {
+  beforeEach(async () => {
+    clearAuth()
+    await clearTables()
+  })
+
+  // `price_submissions.id` is a uuid column, so an unparseable id used to reach
+  // Postgres as a cast error and come back a 500. Every handler on this router
+  // takes the same param, so the guard is only meaningful if all five have it.
+  const requests: Array<[string, string, RequestInit]> = [
+    ['GET', '/v1/submissions/not-a-uuid', {}],
+    ['POST confirm', '/v1/submissions/not-a-uuid/confirm', { method: 'POST' }],
+    [
+      'POST dispute',
+      '/v1/submissions/not-a-uuid/dispute',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ floor: 40 }),
+      },
+    ],
+    [
+      'PATCH',
+      '/v1/submissions/not-a-uuid',
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ floor: 40 }),
+      },
+    ],
+    ['DELETE', '/v1/submissions/not-a-uuid', { method: 'DELETE' }],
+  ]
+
+  it.each(requests)('%s returns 400, not 500', async (_label, path, init) => {
+    setAuth()
+    const res = await app.request(path, {
+      ...init,
+      headers: {
+        ...(init.headers ?? {}),
+        Authorization: 'Bearer test-token',
+      },
+    })
+    expect(res.status).toBe(400)
+  })
+})

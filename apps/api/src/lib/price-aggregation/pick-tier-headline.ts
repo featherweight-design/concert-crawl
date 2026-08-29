@@ -9,6 +9,11 @@ export interface TierRow {
   userId: string | null
   createdAt: Date
   updatedAt: Date
+  // Null until someone reports the price still on sale. Not part of the
+  // ordering — `compareTierRows` tie-breaks on `updatedAt`, which is a
+  // different fact — but every projection feeding a TierRow must carry it or
+  // `observedAt` silently falls back to `createdAt` on that surface alone.
+  lastSeenAt: Date | null
 }
 
 // Trust order: boxoffice leads (face value, exempt from staleness per the

@@ -22,6 +22,7 @@ import {
   crews,
   db,
   events,
+  priceSubmissions,
   userEvents,
   venues,
 } from '@concert-crawl/db'
@@ -72,14 +73,23 @@ export const deleteUserData = async (userId: string): Promise<void> => {
 
     // `otherUserIdColumns` are declared on the registry but never dispositioned
     // by it, because what happens to them differs per column: most name an
-    // ADMIN who acted and stay put as the record of who did it. This is the one
-    // that does not. Revoking is an ordinary member action, so the revoker's
-    // Clerk ID is their personal data and goes with them, while the invite row
-    // itself survives for the crew.
+    // ADMIN who acted and stay put as the record of who did it. These two are
+    // the ones that do not, and they share a reason — both record an ordinary
+    // MEMBER action, so the actor's Clerk ID is their personal data and goes
+    // with them, while the row itself survives for whoever it belongs to.
+    // Revoking an invite is such an action; so is reporting a price still on
+    // sale. Every other declared actor column is an admin act and stays put.
     await tx
       .update(crewInvites)
       .set({ revokedBy: null })
       .where(eq(crewInvites.revokedBy, userId))
+
+    // The sighting itself stays — last_seen_at is a freshness fact about the
+    // price, not about the person — but the actor does not.
+    await tx
+      .update(priceSubmissions)
+      .set({ lastSeenBy: null })
+      .where(eq(priceSubmissions.lastSeenBy, userId))
   })
 }
 

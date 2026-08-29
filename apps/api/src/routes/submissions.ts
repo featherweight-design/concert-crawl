@@ -13,12 +13,46 @@ import { isPendingCounterUniqueViolation } from '../lib/pg-errors.js'
 
 export const submissionsRouter = new Hono()
 
+// `price_submissions.id` is a uuid column, so an unparseable `:id` reaches
+// Postgres as a cast error and surfaces as a 500 rather than the 404 the caller
+// deserves. Every handler here takes the same param, so every one needs this.
+const submissionIdSchema = z.string().uuid()
+
 // GET /v1/submissions/:id
 submissionsRouter.get('/:id', clerkAuth, requireAuth, async (ctx) => {
-  const { id } = ctx.req.param()
+  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'))
+  if (!parsedId.success) {
+    return ctx.json({ success: false, error: 'Invalid submission ID' }, 400)
+  }
+  const id = parsedId.data
 
+  // Explicit projection, not `select()`. Submission ids are public — they ship
+  // in TierHeadline — so any signed-in user can read any row by id, and a
+  // `select()` here publishes every column on the table by default. Two are
+  // deliberately withheld: `lastSeenBy`, another member's Clerk id, and
+  // `userId`, the submitter's own (a pre-existing leak this projection closes).
+  // `lastSeenAt` stays: it is a timestamp rather than an identity, and the
+  // stale badge already tells the reader as much.
   const [submission] = await db
-    .select()
+    .select({
+      id: priceSubmissions.id,
+      eventId: priceSubmissions.eventId,
+      tier: priceSubmissions.tier,
+      priceMin: priceSubmissions.priceMin,
+      priceMax: priceSubmissions.priceMax,
+      vendor: priceSubmissions.vendor,
+      sourceCategory: priceSubmissions.sourceCategory,
+      howFound: priceSubmissions.howFound,
+      note: priceSubmissions.note,
+      status: priceSubmissions.status,
+      corroborationCount: priceSubmissions.corroborationCount,
+      disputedSubmissionId: priceSubmissions.disputedSubmissionId,
+      lastAdminActionAt: priceSubmissions.lastAdminActionAt,
+      lastAdminActionKind: priceSubmissions.lastAdminActionKind,
+      lastSeenAt: priceSubmissions.lastSeenAt,
+      createdAt: priceSubmissions.createdAt,
+      updatedAt: priceSubmissions.updatedAt,
+    })
     .from(priceSubmissions)
     .where(eq(priceSubmissions.id, id))
     .limit(1)
@@ -32,7 +66,11 @@ submissionsRouter.get('/:id', clerkAuth, requireAuth, async (ctx) => {
 
 // POST /v1/submissions/:id/confirm
 submissionsRouter.post('/:id/confirm', clerkAuth, requireAuth, async (ctx) => {
-  const { id: submissionId } = ctx.req.param()
+  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'))
+  if (!parsedId.success) {
+    return ctx.json({ success: false, error: 'Invalid submission ID' }, 400)
+  }
+  const submissionId = parsedId.data
   const { userId } = getAuthUser(ctx)
 
   const [submission] = await db
@@ -119,7 +157,11 @@ submissionsRouter.post(
       )
   }),
   async (ctx) => {
-    const { id: submissionId } = ctx.req.param()
+    const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'))
+    if (!parsedId.success) {
+      return ctx.json({ success: false, error: 'Invalid submission ID' }, 400)
+    }
+    const submissionId = parsedId.data
     const { userId } = getAuthUser(ctx)
     // `vendor` is ignored on the server — see disputeBodySchema. The locked
     // price-only contest scope means the (tier, source_category) slot
@@ -271,7 +313,11 @@ submissionsRouter.patch(
       )
   }),
   async (ctx) => {
-    const { id } = ctx.req.param()
+    const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'))
+    if (!parsedId.success) {
+      return ctx.json({ success: false, error: 'Invalid submission ID' }, 400)
+    }
+    const id = parsedId.data
     const { userId } = getAuthUser(ctx)
     const body = ctx.req.valid('json')
 
@@ -328,7 +374,11 @@ submissionsRouter.patch(
 
 // DELETE /v1/submissions/:id
 submissionsRouter.delete('/:id', clerkAuth, requireAuth, async (ctx) => {
-  const { id } = ctx.req.param()
+  const parsedId = submissionIdSchema.safeParse(ctx.req.param('id'))
+  if (!parsedId.success) {
+    return ctx.json({ success: false, error: 'Invalid submission ID' }, 400)
+  }
+  const id = parsedId.data
   const { userId } = getAuthUser(ctx)
 
   const [submission] = await db

@@ -29,6 +29,8 @@ const stubRow = (id: string): PriceSubmissionHistoryRow => ({
   status: 'pending',
   disputedSubmissionId: null,
   createdAt: '2026-07-01T00:00:00Z',
+  lastSeenAt: null,
+  lastSeenBy: null,
   eventTitle: 'Show',
   eventDate: null,
   ticketUrl: null,

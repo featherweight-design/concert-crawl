@@ -16,3 +16,4 @@ export {
   type CorroboratedSubmissionRow,
 } from './build-price-by-tier.js'
 export { loadPriceByTierByEventId } from './load-price-by-tier.js'
+export { deriveObservedAt } from './observed-at.js'

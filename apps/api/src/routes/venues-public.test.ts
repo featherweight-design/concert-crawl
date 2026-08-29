@@ -74,6 +74,7 @@ vi.mock('@concert-crawl/db', () => ({
     userId: 'userId',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
+    lastSeenAt: 'lastSeenAt',
     corroborationCount: 'corroborationCount',
     status: 'status',
   },
@@ -236,6 +237,7 @@ describe('GET /v1/venues/:slug', () => {
         userId: 'user-ga',
         createdAt: now,
         updatedAt: now,
+        lastSeenAt: null,
         corroborationCount: 3,
       },
       {
@@ -250,6 +252,7 @@ describe('GET /v1/venues/:slug', () => {
         userId: 'user-vip',
         createdAt: now,
         updatedAt: now,
+        lastSeenAt: null,
         corroborationCount: 3,
       },
     ])

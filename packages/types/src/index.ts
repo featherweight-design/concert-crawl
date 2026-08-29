@@ -253,6 +253,18 @@ export function deriveSourceCategory(
     : 'standard'
 }
 
+/**
+ * How old an observation may be before a price reads as stale.
+ *
+ * Shared rather than duplicated because two sides depend on the same number:
+ * the badge that tells a reader a price might be out of date, and the
+ * "still accurate" route that refuses to refresh a price which is not stale
+ * yet. If those disagree, the route rejects prices the badge calls stale, or
+ * accepts ones it does not — a bug with no symptom on either side alone, only
+ * in the gap between them.
+ */
+export const STALE_AFTER_MS = 24 * 60 * 60 * 1000
+
 // Shared validation policy — server enforces, client mirrors for UX
 export const SP_POLICY = {
   floorMin: 1,
@@ -800,6 +812,12 @@ export interface EventDetailResponse extends EventWithVenue {
   priceSourceCategory?: SourceCategory | null
   priceSubmitterHandle?: string | null
   priceObservedAt?: string | null
+  // The corroborated submission the flat price fields describe. Populated from
+  // the same row as `priceObservedAt` and null whenever that is — the two are
+  // read together so a freshness action can name the row it is refreshing.
+  // NOT interchangeable with `priceByTier[].headline.submissionId`: the flat
+  // shape keeps a legacy vendor-trust ordering that can pick a different row.
+  priceSubmissionId?: string | null
   // Approval metadata — who corroborated and when
   priceApprovalKind?: 'admin' | 'fan' | null
   priceApprovedAt?: string | null

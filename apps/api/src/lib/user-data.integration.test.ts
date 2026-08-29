@@ -5,6 +5,7 @@ import {
   crewMembers,
   crews,
   db,
+  priceSubmissions,
   USER_DATA_REGISTRY,
   userEvents,
   userProfiles,
@@ -465,6 +466,36 @@ describe('deleteUserData', () => {
     ).toBeDefined()
     expect(after?.revokedBy).toBeNull()
     expect(after?.createdBy).toBe(otherId)
+  })
+
+  it('clears the sighting actor but keeps the sighting itself', async () => {
+    // price_submissions.last_seen_by is an otherUserIdColumn, so nothing in
+    // the registry-driven sweeps above reaches it — only the hand-written
+    // branch in deleteUserData does. last_seen_at is a freshness fact about
+    // the price rather than about the person, so it survives.
+    const submitterId = await seedUserWithDataEverywhere()
+    const sighterId = await seedUserWithDataEverywhere()
+    const [theirs] = await db
+      .select()
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.userId, submitterId))
+      .limit(1)
+    if (!theirs) throw new Error('seed did not create a price submission')
+
+    const seenAt = new Date('2026-08-20T00:00:00Z')
+    await db
+      .update(priceSubmissions)
+      .set({ lastSeenBy: sighterId, lastSeenAt: seenAt })
+      .where(eq(priceSubmissions.id, theirs.id))
+
+    await deleteUserData(sighterId)
+
+    const [after] = await db
+      .select()
+      .from(priceSubmissions)
+      .where(eq(priceSubmissions.id, theirs.id))
+    expect(after?.lastSeenBy).toBeNull()
+    expect(after?.lastSeenAt).toEqual(seenAt)
   })
 
   it('rejects an empty user id before touching anything', async () => {

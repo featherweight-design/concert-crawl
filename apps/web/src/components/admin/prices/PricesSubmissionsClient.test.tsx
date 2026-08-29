@@ -56,6 +56,8 @@ const row = (
   status: 'pending',
   disputedSubmissionId: null,
   createdAt: '2026-07-01T00:00:00Z',
+  lastSeenAt: null,
+  lastSeenBy: null,
   eventTitle: 'Untitled',
   eventDate: null,
   ticketUrl: null,
@@ -105,6 +107,61 @@ describe('PricesSubmissionsClient', () => {
     expect(screen.getByText('Bravo Show')).toBeTruthy()
     expect(screen.getByText('Charlie Show')).toBeTruthy()
     expect(screen.getByText('Delta Show')).toBeTruthy()
+  })
+
+  it('shows who last reported the price still on sale', () => {
+    const sighted = [
+      row({
+        id: 'sub-seen',
+        lastSeenAt: '2026-08-20T00:00:00Z',
+        lastSeenBy: 'user-sighter-9876543210',
+      }),
+    ]
+    mockUseAdminPriceSubmissions.mockReturnValue({
+      data: sighted,
+      isFetching: false,
+    })
+    renderClient(
+      <PricesSubmissionsClient initialSubmissions={sighted} initialTotal={1} />,
+    )
+    expect(
+      screen.getByText(
+        ADMIN_COPY.submissionsHistory.lastSeenBy('user-sighter'),
+      ),
+    ).toBeTruthy()
+  })
+
+  // deleteUserData clears last_seen_by and keeps last_seen_at, so a null actor
+  // on a sighted row means a deleted account, not an anonymous one.
+  it('names a deleted account when the sighting actor is gone', () => {
+    const orphaned = [
+      row({ id: 'sub-orphan', lastSeenAt: '2026-08-20T00:00:00Z' }),
+    ]
+    mockUseAdminPriceSubmissions.mockReturnValue({
+      data: orphaned,
+      isFetching: false,
+    })
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={orphaned}
+        initialTotal={1}
+      />,
+    )
+    expect(
+      screen.getByText(ADMIN_COPY.submissionsHistory.lastSeenByDeleted),
+    ).toBeTruthy()
+  })
+
+  it('renders a placeholder when the price has never been re-reported', () => {
+    renderClient(
+      <PricesSubmissionsClient
+        initialSubmissions={ROWS}
+        initialTotal={ROWS.length}
+      />,
+    )
+    expect(
+      screen.getAllByText(ADMIN_COPY.submissionsHistory.lastSeenNever),
+    ).toHaveLength(ROWS.length)
   })
 
   it('renders a single price when the max is not above the min', () => {

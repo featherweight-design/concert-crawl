@@ -10,6 +10,7 @@ const row = (overrides: Partial<TierRow>): TierRow => ({
   userId: overrides.userId ?? 'user-1',
   createdAt: overrides.createdAt ?? new Date('2026-06-01T00:00:00Z'),
   updatedAt: overrides.updatedAt ?? new Date('2026-06-01T00:00:00Z'),
+  lastSeenAt: overrides.lastSeenAt ?? null,
 })
 
 describe('pickTierHeadline', () => {

@@ -19,6 +19,7 @@ const corrob = (
   userId: overrides.userId ?? 'submitter-1',
   createdAt: overrides.createdAt ?? new Date('2026-06-01T00:00:00Z'),
   updatedAt: overrides.updatedAt ?? new Date('2026-06-02T00:00:00Z'),
+  lastSeenAt: overrides.lastSeenAt ?? null,
   confirmsCount: overrides.confirmsCount ?? 1,
 })
 
@@ -493,5 +494,39 @@ describe('pickHeadlinesByTier', () => {
     expect(heads.get('GA')?.id).toBe('ga-bo')
     // VIP standard wins over cheaper resale
     expect(heads.get('VIP')?.id).toBe('vip-std')
+  })
+})
+
+// The headline's `observedAt` is what the stale badge reads, so it has to be
+// the later of the submission's creation and its most recent sighting. A
+// `lastSeenAt ?? createdAt` coalesce passes the first two of these and fails
+// the third.
+describe('aggregateByTier observedAt', () => {
+  const observedAtFor = (row: CorroboratedTierRow): string | null =>
+    aggregateByTier({ ...baseInput, corroborated: [row] })[0]?.headline
+      ?.observedAt ?? null
+
+  it('falls back to createdAt when the price has never been sighted', () => {
+    const row = corrob({
+      createdAt: new Date('2026-06-01T00:00:00Z'),
+      lastSeenAt: null,
+    })
+    expect(observedAtFor(row)).toBe('2026-06-01T00:00:00.000Z')
+  })
+
+  it('takes lastSeenAt when a sighting is more recent', () => {
+    const row = corrob({
+      createdAt: new Date('2026-06-01T00:00:00Z'),
+      lastSeenAt: new Date('2026-06-20T00:00:00Z'),
+    })
+    expect(observedAtFor(row)).toBe('2026-06-20T00:00:00.000Z')
+  })
+
+  it('keeps createdAt when lastSeenAt sits behind it', () => {
+    const row = corrob({
+      createdAt: new Date('2026-06-01T00:00:00Z'),
+      lastSeenAt: new Date('2026-05-01T00:00:00Z'),
+    })
+    expect(observedAtFor(row)).toBe('2026-06-01T00:00:00.000Z')
   })
 })

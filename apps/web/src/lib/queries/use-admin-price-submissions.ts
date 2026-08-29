@@ -25,6 +25,10 @@ export interface PriceSubmissionHistoryRow {
   status: PriceSubmissionStatus
   disputedSubmissionId: string | null
   createdAt: string
+  // The most recent sighting only — both columns are overwritten on every
+  // "still accurate" tap, so they name the last actor, never the pattern.
+  lastSeenAt: string | null
+  lastSeenBy: string | null
   eventTitle: string | null
   eventDate: string | null
   ticketUrl: string | null

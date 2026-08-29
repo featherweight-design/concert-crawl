@@ -460,7 +460,7 @@ export const PricesSubmissionsClient = ({
           </div>
         ) : (
           <>
-            <AdminTable minWidth={720}>
+            <AdminTable minWidth={820}>
               <THead>
                 <tr>
                   <TH width={40}>
@@ -479,6 +479,7 @@ export const PricesSubmissionsClient = ({
                   <TH>{sortButton('user', COPY.columns.user)}</TH>
                   <TH>{COPY.columns.status}</TH>
                   <TH>{sortButton('date', COPY.columns.submitted)}</TH>
+                  <TH>{COPY.columns.lastSeen}</TH>
                   <TH width={150} />
                 </tr>
               </THead>
@@ -542,6 +543,25 @@ export const PricesSubmissionsClient = ({
                       </TD>
                       <TD color="var(--fg-subtle)">
                         <RelTime iso={row.createdAt} />
+                      </TD>
+                      <TD color="var(--fg-subtle)">
+                        {row.lastSeenAt === null ? (
+                          COPY.lastSeenNever
+                        ) : (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              flexDirection: 'column',
+                            }}
+                          >
+                            <RelTime iso={row.lastSeenAt} />
+                            <span style={{ fontSize: 11 }}>
+                              {row.lastSeenBy === null
+                                ? COPY.lastSeenByDeleted
+                                : COPY.lastSeenBy(userDisplay(row.lastSeenBy))}
+                            </span>
+                          </span>
+                        )}
                       </TD>
                       <TD align="right">
                         {isPending && (

@@ -1884,7 +1884,16 @@ export const ADMIN_COPY = {
       user: 'User',
       status: 'Status',
       submitted: 'Submitted',
+      lastSeen: 'Last seen',
     },
+    // Both last_seen columns are overwritten on every sighting, so the cell
+    // shows the most recent one only — a lead for a human, not a pattern.
+    lastSeenBy: (userId: string) => `by ${userId}`,
+    // A sighting whose actor has since deleted their account. deleteUserData
+    // clears last_seen_by and keeps last_seen_at, so this is a real reachable
+    // state, and it is not the same thing as an anonymous user.
+    lastSeenByDeleted: 'by a deleted account',
+    lastSeenNever: '—',
     sort: {
       date: 'Date',
       event: 'Event',

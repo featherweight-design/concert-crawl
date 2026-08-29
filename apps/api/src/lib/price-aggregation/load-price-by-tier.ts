@@ -28,6 +28,7 @@ export async function loadPriceByTierByEventId(
       userId: priceSubmissions.userId,
       createdAt: priceSubmissions.createdAt,
       updatedAt: priceSubmissions.updatedAt,
+      lastSeenAt: priceSubmissions.lastSeenAt,
       corroborationCount: priceSubmissions.corroborationCount,
     })
     .from(priceSubmissions)

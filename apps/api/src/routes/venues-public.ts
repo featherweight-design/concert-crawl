@@ -311,6 +311,7 @@ venuesPublicRouter.get(
           userId: priceSubmissions.userId,
           createdAt: priceSubmissions.createdAt,
           updatedAt: priceSubmissions.updatedAt,
+          lastSeenAt: priceSubmissions.lastSeenAt,
           corroborationCount: priceSubmissions.corroborationCount,
         })
         .from(priceSubmissions)
@@ -342,6 +343,7 @@ venuesPublicRouter.get(
             userId: sub.userId,
             createdAt: sub.createdAt,
             updatedAt: sub.updatedAt,
+            lastSeenAt: sub.lastSeenAt,
             // Submitter counts as observation #1 per the corroboration_count
             // schema comment, so the surfaced confirm count excludes them.
             confirmsCount: Math.max(0, sub.corroborationCount - 1),
