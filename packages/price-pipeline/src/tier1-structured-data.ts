@@ -1,6 +1,6 @@
 import type { PipelineContext, PriceTierResult } from './types.js'
 
-const CRAWLER_UA = 'ConcertCrawl/1.0 (+https://concertcrawl.com/bot)'
+const CRAWLER_UA = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 const JSON_LD_RE =
   /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
 

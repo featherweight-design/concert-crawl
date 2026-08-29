@@ -10,12 +10,29 @@ const baseCtx: PipelineContext = {
   priceUrl: 'https://venue.example.com/events/test',
 }
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
 
 describe('tier1StructuredData', () => {
   it('returns null when priceUrl is absent', async () => {
     const result = await tier1StructuredData({ ...baseCtx, priceUrl: null })
     expect(result).toBeNull()
+  })
+
+  it('identifies with the honest user agent on the domain we own', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await tier1StructuredData(baseCtx)
+
+    const init: unknown = fetchMock.mock.calls[0]?.[1]
+    expect(init).toMatchObject({
+      headers: {
+        'User-Agent': 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
+      },
+    })
   })
 
   it('returns null on non-200 fetch', async () => {
