@@ -1,3 +1,10 @@
+# [1.270.0](https://github.com/HartiganHM/concert-crawl/compare/v1.269.1...v1.270.0) (2026-08-29)
+
+
+### Features
+
+* **artists:** terminal exhausted state for the match queue ([#1632](https://github.com/HartiganHM/concert-crawl/issues/1632)) ([509452c](https://github.com/HartiganHM/concert-crawl/commit/509452c57e9a3c62fe7ee535209d482d170700b3))
+
 ## [1.269.1](https://github.com/HartiganHM/concert-crawl/compare/v1.269.0...v1.269.1) (2026-08-24)
 
 
