@@ -104,6 +104,9 @@ export default function AdminArtistsPage() {
   const [status, setStatus] = useState<QueueFilter>('ambiguous')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
+  // On by default, matching the API. Most derived artists last played months
+  // ago, and a queue counting them is a queue nobody can finish.
+  const [upcomingOnly, setUpcomingOnly] = useState(true)
   const [offset, setOffset] = useState(0)
   const [total, setTotal] = useState(0)
   const [counts, setCounts] =
@@ -138,14 +141,26 @@ export default function AdminArtistsPage() {
       const headers = { Authorization: `Bearer ${token}` }
       // The server ignores `status` whenever a search is present, so sending
       // both would misdescribe what comes back.
+      //
+      // It ignores `upcoming` on a search too — but only on the list, since
+      // `/counts` has no search to bypass it. Sending the ticked value during a
+      // search would leave the chips counting a filter the table below them is
+      // not applying, so the search forces it off for both.
+      const upcomingParam = String(search === '' && upcomingOnly)
       const query = new URLSearchParams({
         limit: String(PAGE_SIZE),
         offset: String(offset),
+        upcoming: upcomingParam,
         ...(search === '' ? { status } : { search }),
       })
+      // The counts take the same `upcoming` value as the list, so a chip never
+      // promises rows the table it opens cannot show.
+      const countsQuery = new URLSearchParams({ upcoming: upcomingParam })
       const [listResp, countsResp] = await Promise.all([
         fetch(`${API_BASE}/v1/admin/artists?${query.toString()}`, { headers }),
-        fetch(`${API_BASE}/v1/admin/artists/counts`, { headers }),
+        fetch(`${API_BASE}/v1/admin/artists/counts?${countsQuery.toString()}`, {
+          headers,
+        }),
       ])
       if (!listResp.ok || !countsResp.ok) {
         setError(COPY.errorState)
@@ -166,7 +181,7 @@ export default function AdminArtistsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [getToken, status, search, offset])
+  }, [getToken, status, search, offset, upcomingOnly])
 
   // A trailing page can empty under the admin — they resolved its last row, or
   // the server has nothing at this offset any more. Either way the page they
@@ -397,6 +412,37 @@ export default function AdminArtistsPage() {
         {search !== '' && (
           <p style={{ fontSize: 12, color: 'var(--fg-subtle)', margin: 0 }}>
             {COPY.searchNotice}
+          </p>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            fontSize: 13,
+            color: 'var(--fg)',
+          }}
+        >
+          <input
+            type="checkbox"
+            // A search bypasses the filter, so leaving this live would offer a
+            // control that changes nothing — which reads as broken.
+            checked={search === '' && upcomingOnly}
+            disabled={search !== ''}
+            onChange={(event) => {
+              setOpenCandidatesFor(null)
+              setUpcomingOnly(event.target.checked)
+              setOffset(0)
+            }}
+          />
+          {COPY.upcomingLabel}
+        </label>
+        {search === '' && upcomingOnly && (
+          <p style={{ fontSize: 12, color: 'var(--fg-subtle)', margin: 0 }}>
+            {COPY.upcomingNotice}
           </p>
         )}
       </div>

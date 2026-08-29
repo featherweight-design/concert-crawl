@@ -19,9 +19,10 @@ vi.mock('@hono/clerk-auth', () => ({
   getAuth: () => authState.current,
 }))
 
-import { artists, auditLog } from '@concert-crawl/db'
+import { artists, auditLog, events, venues } from '@concert-crawl/db'
 import { createApp } from '../../app.js'
 import { testDb } from '../../test/helpers/db.js'
+import { seedEvent, seedVenue } from '../../test/helpers/seed.js'
 import { MATCH_ATTEMPT_LIMIT } from '../../lib/artist-exhaustion.js'
 
 const app = createApp()
@@ -58,6 +59,11 @@ describe('admin artists routes', () => {
     await testDb
       .delete(auditLog)
       .where(eq(auditLog.actorId, 'admin_artist_test'))
+    // Events before venues — the FK points that way. Both are cleared because
+    // the list now joins through them, so a leftover show from another test
+    // decides whether an artist is listed.
+    await testDb.delete(events)
+    await testDb.delete(venues)
     await testDb.delete(artists)
     setAdminAuth()
   })
@@ -67,9 +73,12 @@ describe('admin artists routes', () => {
       await seedArtist({ canonicalName: 'nirvana', matchStatus: 'ambiguous' })
       await seedArtist({ canonicalName: 'khruangbin', matchStatus: 'matched' })
 
-      const res = await app.request('/v1/admin/artists?status=ambiguous', {
-        headers: ADMIN_HEADERS,
-      })
+      const res = await app.request(
+        '/v1/admin/artists?status=ambiguous&upcoming=false',
+        {
+          headers: ADMIN_HEADERS,
+        },
+      )
       const body = await res.json()
 
       expect(res.status).toBe(200)
@@ -81,9 +90,12 @@ describe('admin artists routes', () => {
     it('treats an empty search as no filter', async () => {
       await seedArtist({ canonicalName: 'nirvana', matchStatus: 'ambiguous' })
 
-      const res = await app.request('/v1/admin/artists?search=', {
-        headers: ADMIN_HEADERS,
-      })
+      const res = await app.request(
+        '/v1/admin/artists?search=&upcoming=false',
+        {
+          headers: ADMIN_HEADERS,
+        },
+      )
       const body = await res.json()
 
       expect(res.status).toBe(200)
@@ -97,9 +109,10 @@ describe('admin artists routes', () => {
       })
       await seedArtist({ canonicalName: 'nirvana', matchStatus: 'ambiguous' })
 
-      const res = await app.request('/v1/admin/artists?status=not_an_artist', {
-        headers: ADMIN_HEADERS,
-      })
+      const res = await app.request(
+        '/v1/admin/artists?status=not_an_artist&upcoming=false',
+        { headers: ADMIN_HEADERS },
+      )
       const body = await res.json()
 
       expect(res.status).toBe(200)
@@ -128,7 +141,7 @@ describe('admin artists routes', () => {
       await seedArtist({ canonicalName: 'ccc', matchStatus: 'matched' })
 
       const res = await app.request(
-        '/v1/admin/artists?status=ambiguous&limit=1&offset=1',
+        '/v1/admin/artists?status=ambiguous&limit=1&offset=1&upcoming=false',
         { headers: ADMIN_HEADERS },
       )
       const body = await res.json()
@@ -153,7 +166,7 @@ describe('admin artists routes', () => {
       await seedArtist({ canonicalName: 'aaa', matchStatus: 'ambiguous' })
 
       const exhausted = await app.request(
-        '/v1/admin/artists?status=exhausted',
+        '/v1/admin/artists?status=exhausted&upcoming=false',
         { headers: ADMIN_HEADERS },
       )
       const exhaustedBody = await exhausted.json()
@@ -171,7 +184,7 @@ describe('admin artists routes', () => {
       ).toBe(true)
 
       const ambiguous = await app.request(
-        '/v1/admin/artists?status=ambiguous',
+        '/v1/admin/artists?status=ambiguous&upcoming=false',
         { headers: ADMIN_HEADERS },
       )
       const ambiguousBody = await ambiguous.json()
@@ -179,9 +192,10 @@ describe('admin artists routes', () => {
       expect(ambiguousBody.data[0].canonicalName).toBe('aaa')
       expect(ambiguousBody.data[0].isExhausted).toBe(false)
 
-      const noMatch = await app.request('/v1/admin/artists?status=no_match', {
-        headers: ADMIN_HEADERS,
-      })
+      const noMatch = await app.request(
+        '/v1/admin/artists?status=no_match&upcoming=false',
+        { headers: ADMIN_HEADERS },
+      )
       expect((await noMatch.json()).data).toHaveLength(0)
     })
 
@@ -195,23 +209,27 @@ describe('admin artists routes', () => {
         matchAttempts: MATCH_ATTEMPT_LIMIT,
       })
 
-      const matched = await app.request('/v1/admin/artists?status=matched', {
-        headers: ADMIN_HEADERS,
-      })
+      const matched = await app.request(
+        '/v1/admin/artists?status=matched&upcoming=false',
+        { headers: ADMIN_HEADERS },
+      )
       const matchedBody = await matched.json()
       expect(matchedBody.data).toHaveLength(1)
       expect(matchedBody.data[0].canonicalName).toBe('khruangbin')
       expect(matchedBody.data[0].isExhausted).toBe(false)
 
       const exhausted = await app.request(
-        '/v1/admin/artists?status=exhausted',
+        '/v1/admin/artists?status=exhausted&upcoming=false',
         { headers: ADMIN_HEADERS },
       )
       expect((await exhausted.json()).data).toHaveLength(0)
 
-      const counts = await app.request('/v1/admin/artists/counts', {
-        headers: ADMIN_HEADERS,
-      })
+      const counts = await app.request(
+        '/v1/admin/artists/counts?upcoming=false',
+        {
+          headers: ADMIN_HEADERS,
+        },
+      )
       const countsBody = await counts.json()
       expect(countsBody.data.matched).toBe(1)
       expect(countsBody.data.exhausted).toBe(0)
@@ -242,7 +260,7 @@ describe('admin artists routes', () => {
       await seedArtist({ canonicalName: 'bbb', matchStatus: 'ambiguous' })
       await seedArtist({ canonicalName: 'ccc', matchStatus: 'matched' })
 
-      const res = await app.request('/v1/admin/artists/counts', {
+      const res = await app.request('/v1/admin/artists/counts?upcoming=false', {
         headers: ADMIN_HEADERS,
       })
       const body = await res.json()
@@ -264,7 +282,7 @@ describe('admin artists routes', () => {
         matchStatus: 'not_an_artist',
       })
 
-      const res = await app.request('/v1/admin/artists/counts', {
+      const res = await app.request('/v1/admin/artists/counts?upcoming=false', {
         headers: ADMIN_HEADERS,
       })
       const body = await res.json()
@@ -288,7 +306,7 @@ describe('admin artists routes', () => {
       })
       await seedArtist({ canonicalName: 'aaa', matchStatus: 'ambiguous' })
 
-      const res = await app.request('/v1/admin/artists/counts', {
+      const res = await app.request('/v1/admin/artists/counts?upcoming=false', {
         headers: ADMIN_HEADERS,
       })
       const body = await res.json()
@@ -301,6 +319,181 @@ describe('admin artists routes', () => {
         not_an_artist: 0,
         exhausted: 2,
       })
+    })
+  })
+
+  // The `upcoming` filter, which is ON by default. It must agree with the
+  // public artist page's own upcoming query — a row the admin hides is a row
+  // nobody will fix, so hiding one the site is still rendering is the failure
+  // this block exists to catch.
+  describe('the upcoming filter', () => {
+    // Fixed rather than derived from the clock: the boundary these tests care
+    // about is past-vs-future, and a date computed at run time makes a failure
+    // depend on when it ran.
+    const FUTURE = '2099-01-01'
+    const PAST = '2000-01-01'
+
+    const listNames = async (query: string): Promise<string[]> => {
+      const res = await app.request(`/v1/admin/artists?${query}`, {
+        headers: ADMIN_HEADERS,
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      return body.data.map(
+        (row: { canonicalName: string }) => row.canonicalName,
+      )
+    }
+
+    it('hides an artist whose only show has already happened', async () => {
+      await seedArtist({ canonicalName: 'gone last year' })
+      const venue = await seedVenue()
+      await seedEvent(venue.id, {
+        artist: 'gone last year',
+        canonicalArtist: 'gone last year',
+        date: PAST,
+      })
+
+      expect(await listNames('')).toEqual([])
+      // Nothing was deleted — untick and the row is there.
+      expect(await listNames('upcoming=false')).toEqual(['gone last year'])
+    })
+
+    it('lists an artist billed as the headliner of a future show', async () => {
+      await seedArtist({ canonicalName: 'still playing' })
+      const venue = await seedVenue()
+      await seedEvent(venue.id, {
+        artist: 'still playing',
+        canonicalArtist: 'still playing',
+        date: FUTURE,
+      })
+
+      expect(await listNames('')).toEqual(['still playing'])
+    })
+
+    // #1203 — the artist↔event join is a three-arm OR, and only the first arm
+    // is the indexed `canonical_artist` column. An act that only ever appears
+    // inside a co-headline or support billing has a public page, so filtering
+    // on the fast path alone would hide exactly the rows the site renders.
+    it('counts a co-headliner and a support billing, not just canonicalArtist', async () => {
+      await seedArtist({ canonicalName: 'co headliner' })
+      await seedArtist({ canonicalName: 'opener' })
+      const venue = await seedVenue()
+      await seedEvent(venue.id, {
+        artist: 'top of the bill',
+        canonicalArtist: 'top of the bill',
+        canonicalHeadliners: ['co headliner', 'top of the bill'],
+        canonicalSupporting: ['opener'],
+        date: FUTURE,
+      })
+
+      expect((await listNames('')).sort()).toEqual(['co headliner', 'opener'])
+    })
+
+    // A cancelled or postponed night is still a page a visitor can land on,
+    // and every other list surface keeps it.
+    it('counts a cancelled future show', async () => {
+      await seedArtist({ canonicalName: 'called off' })
+      const venue = await seedVenue()
+      await seedEvent(venue.id, {
+        artist: 'called off',
+        canonicalArtist: 'called off',
+        date: FUTURE,
+        status: 'cancelled',
+      })
+
+      expect(await listNames('')).toEqual(['called off'])
+    })
+
+    it.each([
+      ['hidden from consumers', { hiddenFromConsumer: true }],
+      ['gone from the venue site', { firstMissingAt: new Date() }],
+    ])('does not count a future show %s', async (_label, overrides) => {
+      await seedArtist({ canonicalName: 'invisible act' })
+      const venue = await seedVenue()
+      await seedEvent(venue.id, {
+        artist: 'invisible act',
+        canonicalArtist: 'invisible act',
+        date: FUTURE,
+        ...overrides,
+      })
+
+      expect(await listNames('')).toEqual([])
+    })
+
+    it('does not count a future show at a deactivated venue', async () => {
+      await seedArtist({ canonicalName: 'shuttered room act' })
+      const venue = await seedVenue({ active: false })
+      await seedEvent(venue.id, {
+        artist: 'shuttered room act',
+        canonicalArtist: 'shuttered room act',
+        date: FUTURE,
+      })
+
+      expect(await listNames('')).toEqual([])
+    })
+
+    // A row the admin has to untick a box to find is a row they will conclude
+    // we do not have.
+    it('is bypassed by a search', async () => {
+      await seedArtist({ canonicalName: 'gone last year' })
+      const venue = await seedVenue()
+      await seedEvent(venue.id, {
+        artist: 'gone last year',
+        canonicalArtist: 'gone last year',
+        date: PAST,
+      })
+
+      expect(await listNames('search=gone')).toEqual(['gone last year'])
+    })
+
+    // A chip promising a number its own table cannot produce is worse than no
+    // number, so /counts takes the same param and must move with the list.
+    it('counts agree with the list under both values', async () => {
+      await seedArtist({
+        canonicalName: 'playing soon',
+        matchStatus: 'ambiguous',
+      })
+      await seedArtist({
+        canonicalName: 'played already',
+        matchStatus: 'ambiguous',
+      })
+      const venue = await seedVenue()
+      await seedEvent(venue.id, {
+        artist: 'playing soon',
+        canonicalArtist: 'playing soon',
+        date: FUTURE,
+      })
+      await seedEvent(venue.id, {
+        artist: 'played already',
+        canonicalArtist: 'played already',
+        date: PAST,
+      })
+
+      const filtered = await app.request('/v1/admin/artists/counts', {
+        headers: ADMIN_HEADERS,
+      })
+      expect((await filtered.json()).data.ambiguous).toBe(1)
+
+      const everything = await app.request(
+        '/v1/admin/artists/counts?upcoming=false',
+        { headers: ADMIN_HEADERS },
+      )
+      expect((await everything.json()).data.ambiguous).toBe(2)
+    })
+
+    it('rejects a non-boolean upcoming value on both endpoints', async () => {
+      const list = await app.request('/v1/admin/artists?upcoming=yes', {
+        headers: ADMIN_HEADERS,
+      })
+      expect(list.status).toBe(400)
+
+      const counts = await app.request(
+        '/v1/admin/artists/counts?upcoming=yes',
+        {
+          headers: ADMIN_HEADERS,
+        },
+      )
+      expect(counts.status).toBe(400)
     })
   })
 

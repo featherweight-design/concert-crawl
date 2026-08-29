@@ -2319,7 +2319,11 @@ export const ADMIN_COPY = {
     statusChipCount: (label: string, count: number) => `${label} (${count})`,
     searchLabel: 'Search artists',
     searchPlaceholder: 'Search every status',
-    searchNotice: 'Searching every status. Clear the box to filter by chip.',
+    searchNotice:
+      'Searching every status and every date. Clear the box to filter by chip.',
+    upcomingLabel: 'Only artists playing a show from today on',
+    upcomingNotice:
+      'Hiding artists whose last Denver date has passed. Resolving one changes nothing anybody can see, so the chips count only the rows still worth your time. Untick to list every artist we have ever derived.',
     notAnArtist: 'Not an artist',
     notAnArtistHint:
       'Bingo nights, ticket packages, venue names. Marking one stops the match job working it, and stops the reaper deleting it only to have tomorrow’s backfill put it back.',

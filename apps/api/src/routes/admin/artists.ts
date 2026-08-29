@@ -18,6 +18,7 @@ import {
   isExhaustibleStatus,
   isNotExhaustedExpr,
 } from '../../lib/artist-exhaustion.js'
+import { hasUpcomingShowExpr } from '../../lib/artist-upcoming.js'
 import { httpUrl } from '../../lib/url-schema.js'
 import {
   dedupeCandidates,
@@ -51,8 +52,23 @@ const matchStatusSchema = z.enum([
  */
 const listFilterSchema = z.union([matchStatusSchema, z.literal('exhausted')])
 
+/**
+ * Whether to hide artists with no show left to see. Defaults ON.
+ *
+ * The table lists every artist ever derived, and most of them last played
+ * months ago — resolving one changes nothing anybody will look at. Defaulting
+ * the filter on is what makes the remaining count the count that matters. It is
+ * a filter and not a purge: `upcoming=false` still lists everything, and the
+ * rows themselves are untouched.
+ */
+const upcomingParamSchema = z
+  .enum(['true', 'false'])
+  .default('true')
+  .transform((value) => value === 'true')
+
 const listQuerySchema = z.object({
   status: listFilterSchema.optional(),
+  upcoming: upcomingParamSchema,
   // An empty `search=` is what a controlled input sends when the admin clears
   // it, and that means "no filter" — not a bad request.
   search: z
@@ -105,13 +121,17 @@ artistsAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema),
   async (ctx) => {
-    const { status, search, limit, offset } = ctx.req.valid('query')
+    const { status, search, limit, offset, upcoming } = ctx.req.valid('query')
 
+    // A search ignores the upcoming filter for the same reason it ignores
+    // `status`: the admin is looking for one named artist, and a row they have
+    // to switch a toggle off to find is a row they will conclude is missing.
     const where = search
       ? ilike(artists.canonicalName, `%${search}%`)
-      : status
-        ? statusFilter(status)
-        : undefined
+      : and(
+          status ? statusFilter(status) : undefined,
+          upcoming ? hasUpcomingShowExpr() : undefined,
+        )
 
     const rows = await db
       // Named columns rather than `select()`: `spotifyCandidates` is the widest
@@ -162,38 +182,47 @@ artistsAdminRouter.get(
 // GET /v1/admin/artists/counts — queue sizes per match status, plus the
 // derived `exhausted` bucket. Every count matches what its tab lists, which
 // means exhausted rows are counted once, under `exhausted`.
-artistsAdminRouter.get('/counts', async (ctx) => {
-  // A filtered aggregate rather than a GROUP BY on the bucket expression: it
-  // carries bind parameters, and Postgres renders separate placeholders in the
-  // select list and the GROUP BY, so it cannot see the two as the same
-  // expression and rejects the query.
-  const rows = await db
-    .select({
-      matchStatus: artists.matchStatus,
-      total: sql<number>`count(*)::int`,
-      exhausted: sql<number>`count(*) filter (where ${isExhaustedBucketExpr()})::int`,
-    })
-    .from(artists)
-    .groupBy(artists.matchStatus)
+// It takes the same `upcoming` param as the list, and has to: a chip reading a
+// number the table it opens cannot produce is worse than no number at all.
+artistsAdminRouter.get(
+  '/counts',
+  zValidator('query', z.object({ upcoming: upcomingParamSchema })),
+  async (ctx) => {
+    const { upcoming } = ctx.req.valid('query')
 
-  const counts = {
-    unmatched: 0,
-    matched: 0,
-    ambiguous: 0,
-    no_match: 0,
-    not_an_artist: 0,
-    exhausted: 0,
-  }
-  for (const row of rows) {
-    // The aggregate already applies the same status gate `statusFilter` does,
-    // so a non-exhaustible status contributes 0 here and this subtraction is a
-    // no-op for it.
-    counts.exhausted += row.exhausted
-    counts[row.matchStatus] += row.total - row.exhausted
-  }
+    // A filtered aggregate rather than a GROUP BY on the bucket expression: it
+    // carries bind parameters, and Postgres renders separate placeholders in the
+    // select list and the GROUP BY, so it cannot see the two as the same
+    // expression and rejects the query.
+    const rows = await db
+      .select({
+        matchStatus: artists.matchStatus,
+        total: sql<number>`count(*)::int`,
+        exhausted: sql<number>`count(*) filter (where ${isExhaustedBucketExpr()})::int`,
+      })
+      .from(artists)
+      .where(upcoming ? hasUpcomingShowExpr() : undefined)
+      .groupBy(artists.matchStatus)
 
-  return ctx.json({ success: true, data: counts })
-})
+    const counts = {
+      unmatched: 0,
+      matched: 0,
+      ambiguous: 0,
+      no_match: 0,
+      not_an_artist: 0,
+      exhausted: 0,
+    }
+    for (const row of rows) {
+      // The aggregate already applies the same status gate `statusFilter` does,
+      // so a non-exhaustible status contributes 0 here and this subtraction is a
+      // no-op for it.
+      counts.exhausted += row.exhausted
+      counts[row.matchStatus] += row.total - row.exhausted
+    }
+
+    return ctx.json({ success: true, data: counts })
+  },
+)
 
 // PATCH /v1/admin/artists/:id — resolve a match by hand.
 //

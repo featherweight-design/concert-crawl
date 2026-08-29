@@ -167,6 +167,33 @@ The table lists every artist ever derived. Defaulting to "has an upcoming show"
 is what makes the remaining number the number that matters — an act with no
 future date costs nothing to leave unresolved.
 
+`upcoming` is a query param on both `GET /v1/admin/artists` and its `/counts`
+sibling, defaulting to `true`. Both take it, and had to: a chip promising a
+number the table it opens cannot produce is worse than no number.
+
+The predicate lives in `apps/api/src/lib/artist-upcoming.ts` as a correlated
+`EXISTS`, and is the public artist page's upcoming query restated as a
+subquery — deliberately. "Has an upcoming show" must mean "a visitor can see a
+future show for this act", or the admin hides rows the site is still rendering.
+That inherits three things from `artists-public.ts`, and the two must not drift:
+
+- Cancelled and postponed rows count. A cancelled show is still a page someone
+  can land on, and every other list surface keeps it.
+- The consumer pair applies — `hidden_from_consumer`, `first_missing_at`. An
+  admin-hidden or crawler-stale row is not evidence of a show.
+- The venue must be active. A deactivated venue's shows are gone from
+  everything forward-looking.
+
+The join is the same three-arm OR the public page uses, not the
+`canonical_artist` fast path alone (#1203). An act that only ever appears as a
+co-headliner or support billing still has a public page, so filtering on the
+indexed column alone would hide exactly the rows the site renders.
+
+Two things it is not. A search bypasses the filter, for the same reason it
+bypasses `status` — a row the admin has to untick a box to find is a row they
+will conclude we do not have. And nothing is deleted: `upcoming=false` lists
+everything, and the rows are untouched.
+
 ## Prod ops pass
 
 Gated on Hugh at every step, in this order:
