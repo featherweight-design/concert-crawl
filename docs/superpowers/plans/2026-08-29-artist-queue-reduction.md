@@ -1,7 +1,12 @@
 # Artist review queue reduction
 
-**Status:** in progress — PR 1 merged (#1632), PR 2 open
+**Status:** in progress — PR 1 (#1632) and PR 2 (#1634) merged, PR 3 open
 **Goal:** get the list of artists Hugh has to resolve by hand down to under 100.
+
+> ⚠️ **The goal is not reachable with these four PRs.** Measured against prod on
+> 2026-08-29, the unresolved queue is **1,342** rows, not the couple of hundred
+> this plan assumed. See "What the numbers actually say" below before treating
+> any of the estimates here as current.
 
 ## The problem
 
@@ -18,6 +23,58 @@ one-off pass over prod data.
 
 None of these is a new admin control. Hugh's constraint was explicit: automate
 the fixes rather than adding another surface he has to operate.
+
+## What the numbers actually say
+
+Measured against prod on 2026-08-29, after PRs 1 and 2 merged. Unresolved means
+`match_status` in `ambiguous | no_match | unmatched`, excluding hidden rows.
+
+| Slice                              | Rows      |
+| ---------------------------------- | --------- |
+| Unresolved, all time               | **1,342** |
+| …of those, with an upcoming show   | **554**   |
+| …ambiguous with an upcoming show   | 392       |
+| …no_match with an upcoming show    | 162       |
+| Unresolved and unreferenced (dead) | 189       |
+| Currently exhausted (3+ attempts)  | 0         |
+
+Three consequences the original plan got wrong:
+
+**PR 4 is the biggest lever by far, not PR 3.** Defaulting the table to
+"has an upcoming show" takes the visible queue from 1,342 to 554 on its own.
+
+**PR 3 does not reduce the queue at all.** The Spotify search reads
+`canonical_name`, and the repair only rewrites `name`. It is a data-quality fix
+— the one Hugh asked for by name — but it resolves nothing. Of its 126 rows,
+49 happen to be unresolved and all 49 stay unresolved afterwards.
+
+**PR 1's counter starts at zero.** No row is exhausted yet; it takes three
+match-job cycles, weeks apart, before the filter has anything in it. The
+exhausted bucket is a drain, not a step change.
+
+Extrapolating the earlier MusicBrainz pass (39 of 118 ties broken, ~33%) over
+the 392 upcoming ambiguous rows suggests ~130 more resolve, landing the queue
+near **420**. Getting under 100 needs a lever this plan does not contain —
+that is a decision for Hugh, not something to invent here.
+
+### The duplicate-row class Hugh flagged
+
+`Dogstar` and `Dogstar: ALL IN NOW TOUR` are two separate artist rows: the
+second's _canonical_ name is itself the tour title. There are **85** such rows,
+72 of them in the queue.
+
+They are all unreferenced, so the reaper should take them — but it does not.
+`prune-artists`' `BILLED_IN_LIVE_TITLE` widening spares every one of them,
+because a tour-title canonical name is by construction a substring of its own
+event title. That widening is the guard that saved Denzel Curry and Ministry
+from a previous dry run, so it cannot simply be dropped.
+
+Narrowing it safely is its own PR, and a destructive one. A first pass
+requiring the subsumed remainder to begin with a separator (`:`, `(`, `,`, `-`)
+catches 24 of the 85 with no false positives; the looser boundaries needed for
+the rest (` tour`, ` rocks`, `b2b`, `presents`) also match real acts —
+a live artist `ghost` subsumes `Ghost Canyon`, and a live artist `j` subsumes
+`Japan Fest`. Not attempted here.
 
 ## PR 1 — terminal exhausted state
 
@@ -72,17 +129,37 @@ rename, so the reset ships with it rather than as dead code here.
 
 ## PR 3 — corroborated display-name repair
 
-121 rows whose `canonicalName` disagrees with how the act is billed on its own
-events. Single-act bills only (`array_length(canonical_headliners, 1) = 1`), so
-the billing names exactly one artist.
+**126 rows** (51 re-case, 75 suffix strip) whose display `name` disagrees with
+how the act is billed on its own events. Single-act bills only
+(`cardinality(canonical_headliners) = 1 AND cardinality(headliners) = 1`), so
+the billing names exactly one artist and the two arrays cannot be mispaired.
+
+`packages/db/src/scripts/repair-artist-names.ts`, modelled on `prune-artists`:
+named `sql` fragments, dry run by default, `--apply` to write, sample + tally.
 
 The rule only ever **shortens or re-cases**, never lengthens:
 
-- `lower(billed) === lower(current)` — a case fix.
-- `lower(current).startsWith(lower(billed))` — a suffix strip, which is what
+- `lower(billed) = lower(current)` — a case fix.
+- `left(lower(current), length(billed)) = lower(billed)` — a suffix strip, which
   removes the tour name from `Dogstar: ALL IN NOW TOUR`.
 
-Anything else is left alone for a human.
+Anything else is left alone for a human. A longer billing is how the bad rows
+were made, so adopting one would be the bug rather than the fix.
+
+**`canonicalName` is not touched, and the planned `matchCheckedAt` reset is
+therefore dropped.** The reset moved here from PR 2 on the assumption that this
+PR introduced the first rename of `canonicalName`. It does not. Every candidate
+already holds the correct canonical name — the ladder fixed that side; only the
+human-readable string is stale. Rewriting `canonicalName` would risk a unique-index
+collision and change the derived `slug`, breaking a live `/artists/:slug`. So
+there is still no writer for it, and the reset would still be dead code.
+
+That also means this PR cannot change a match outcome: the Spotify search reads
+`canonicalName`. It is a data-quality fix, not a queue reduction.
+
+Prefix comparison uses `left(...)` rather than `LIKE billed || '%'` because the
+billing is raw venue data — `Just_Graham` carries a LIKE wildcard. Same
+reasoning as `strpos` in `prune-artists`.
 
 ## PR 4 — admin table defaults to upcoming
 
