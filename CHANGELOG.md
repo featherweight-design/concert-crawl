@@ -1,3 +1,10 @@
+# [1.274.0](https://github.com/HartiganHM/concert-crawl/compare/v1.273.0...v1.274.0) (2026-08-29)
+
+
+### Features
+
+* **admin:** default the artist queue to acts with a show still to come ([#1637](https://github.com/HartiganHM/concert-crawl/issues/1637)) ([f3826bf](https://github.com/HartiganHM/concert-crawl/commit/f3826bf00ad8b72754f9f788562eb847864f4506)), closes [#1203](https://github.com/HartiganHM/concert-crawl/issues/1203)
+
 # [1.273.0](https://github.com/HartiganHM/concert-crawl/compare/v1.272.0...v1.273.0) (2026-08-29)
 
 
