@@ -1,3 +1,10 @@
+# [1.271.0](https://github.com/HartiganHM/concert-crawl/compare/v1.270.0...v1.271.0) (2026-08-29)
+
+
+### Features
+
+* **api:** report a price still on sale ([#1633](https://github.com/HartiganHM/concert-crawl/issues/1633)) ([16f5d56](https://github.com/HartiganHM/concert-crawl/commit/16f5d567feedfd3b3cde86106d7e96f69f8288cc))
+
 # [1.270.0](https://github.com/HartiganHM/concert-crawl/compare/v1.269.1...v1.270.0) (2026-08-29)
 
 
