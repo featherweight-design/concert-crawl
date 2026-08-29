@@ -1,3 +1,11 @@
+# [1.272.0](https://github.com/HartiganHM/concert-crawl/compare/v1.271.0...v1.272.0) (2026-08-29)
+
+
+### Features
+
+* **artists:** bounded re-check for ambiguous match rows ([#1634](https://github.com/HartiganHM/concert-crawl/issues/1634)) ([520a739](https://github.com/HartiganHM/concert-crawl/commit/520a73904ab7f1176a322819f7436f49af5e1475))
+* **web:** a stale price stamp has a way out ([#1635](https://github.com/HartiganHM/concert-crawl/issues/1635)) ([daa77d8](https://github.com/HartiganHM/concert-crawl/commit/daa77d865126ab3ab94b005ca0fe058ddc2d7a9b))
+
 # [1.271.0](https://github.com/HartiganHM/concert-crawl/compare/v1.270.0...v1.271.0) (2026-08-29)
 
 
