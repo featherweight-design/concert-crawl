@@ -1,3 +1,10 @@
+## [1.274.1](https://github.com/HartiganHM/concert-crawl/compare/v1.274.0...v1.274.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* **price-pipeline:** advertise a bot URL on a domain we actually own ([#1631](https://github.com/HartiganHM/concert-crawl/issues/1631)) ([442e56c](https://github.com/HartiganHM/concert-crawl/commit/442e56c20f5b6b6071596fe3ec358c0c85341baa)), closes [#1228](https://github.com/HartiganHM/concert-crawl/issues/1228)
+
 # [1.274.0](https://github.com/HartiganHM/concert-crawl/compare/v1.273.0...v1.274.0) (2026-08-29)
 
 
