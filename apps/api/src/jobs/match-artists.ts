@@ -16,9 +16,16 @@
 //                  keeps its spotifyArtistId and matchStatus and only
 //                  matchCheckedAt moves.
 //   3. RETRY     — 'no_match' rows last checked more than NO_MATCH_RETRY_DAYS
-//                  ago. Without this they are terminal, and a local band that
-//                  simply wasn't on Spotify the night we first looked would
-//                  never be looked at again however much they released after.
+//                  ago, and not yet exhausted. Without this they are terminal,
+//                  and a local band that simply wasn't on Spotify the night we
+//                  first looked would never be looked at again however much
+//                  they released after.
+//
+// Retrying is bounded. Every fruitless verdict increments matchAttempts, and at
+// MATCH_ATTEMPT_LIMIT the row stops being selected — otherwise a growing set of
+// unanswerable rows would eventually claim the whole daily batch and starve the
+// rows nobody has looked at yet. A match resets the counter to zero, as does an
+// admin resolving the row by hand.
 //
 // 'ambiguous' is deliberately NOT retried. It means Spotify returned several
 // exact-name candidates, so asking again just reproduces the same tie — only
@@ -40,6 +47,7 @@ import { pathToFileURL } from 'node:url'
 import * as Sentry from '@sentry/hono/node'
 import { and, eq, isNotNull, lt, or, sql } from 'drizzle-orm'
 import { artists, db } from '@concert-crawl/db'
+import { isNotExhaustedExpr } from '../lib/artist-exhaustion.js'
 import { matchArtist } from '../lib/artist-match.js'
 import { apiLogger } from '../lib/logger.js'
 import {
@@ -143,7 +151,11 @@ export const runMatchArtists = async (
         and(
           eq(artists.matchStatus, 'no_match'),
           lt(artists.matchCheckedAt, retryBefore),
+          isNotExhaustedExpr(),
         ),
+        // The photo refresh is deliberately outside the attempt budget: it
+        // maintains an identity that is already established, and a row whose
+        // image keeps failing to re-resolve still needs its next attempt.
         and(
           eq(artists.matchStatus, 'matched'),
           isNotNull(artists.photoUrl),
@@ -199,6 +211,7 @@ export const runMatchArtists = async (
             photoUrl: result.photoUrl,
             photoFetchedAt: result.photoUrl === null ? null : checkedAt,
             matchCheckedAt: checkedAt,
+            matchAttempts: 0,
             spotifyCandidates: result.candidates,
             spotifyCandidatesFetchedAt: checkedAt,
             updatedAt: checkedAt,
@@ -218,6 +231,7 @@ export const runMatchArtists = async (
           matchStatus: result.status,
           matchConfidence: null,
           matchCheckedAt: checkedAt,
+          matchAttempts: sql`${artists.matchAttempts} + 1`,
           spotifyCandidates: result.candidates,
           spotifyCandidatesFetchedAt: checkedAt,
           updatedAt: checkedAt,

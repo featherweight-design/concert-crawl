@@ -1,6 +1,7 @@
 import {
   boolean,
   index,
+  integer,
   jsonb,
   numeric,
   pgEnum,
@@ -94,6 +95,20 @@ export const artists = pgTable(
      */
     hidden: boolean('hidden').notNull().default(false),
     matchCheckedAt: timestamp('match_checked_at', { withTimezone: true }),
+    /**
+     * Consecutive fruitless match attempts. Reset to 0 whenever a search
+     * resolves or a human settles the row by hand.
+     *
+     * Deliberately a counter beside `matchStatus` rather than an `exhausted`
+     * member of it. Exhaustion answers "have we stopped asking", which is a
+     * different question from the verdict — and an enum value would overwrite
+     * that verdict, losing whether the row still has candidates a human could
+     * pick from. Same reasoning as `hidden` above.
+     *
+     * Nothing derives visibility from this: an exhausted row keeps its public
+     * artist page and simply stops consuming the match job's daily quota.
+     */
+    matchAttempts: integer('match_attempts').notNull().default(0),
     /**
      * What Spotify returned the last time this row was searched.
      *

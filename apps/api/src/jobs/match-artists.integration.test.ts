@@ -6,6 +6,7 @@ import { asc, eq } from 'drizzle-orm'
 import { artists } from '@concert-crawl/db'
 import { testDb } from '../test/helpers/db.js'
 import { apiLogger } from '../lib/logger.js'
+import { MATCH_ATTEMPT_LIMIT } from '../lib/artist-exhaustion.js'
 import {
   MATCH_BATCH_SIZE,
   NO_MATCH_RETRY_DAYS,
@@ -430,6 +431,102 @@ describe('runMatchArtists', () => {
 
     expect(summary.considered).toBe(0)
     expect((await readArtist(ancientId))?.matchStatus).toBe('ambiguous')
+  })
+
+  it('counts a fruitless verdict against the row and clears it on a match', async () => {
+    const noMatchId = await seedArtist({ canonicalName: 'nobody at all' })
+    const ambiguousId = await seedArtist({ canonicalName: 'nirvana' })
+    // Carries a used-up budget from earlier runs; resolving must wipe it, or a
+    // row that flips back to no_match later would start one strike from the end.
+    const resolvesId = await seedArtist({
+      canonicalName: 'khruangbin',
+      matchAttempts: MATCH_ATTEMPT_LIMIT - 1,
+    })
+
+    await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async (query) => {
+        if (query === 'khruangbin') {
+          return [
+            {
+              id: 'sp_khru',
+              name: 'Khruangbin',
+              images: [],
+              genres: [],
+              spotifyUrl: null,
+            },
+          ]
+        }
+        if (query === 'nirvana') {
+          return [
+            {
+              id: 'sp_a',
+              name: 'Nirvana',
+              images: [],
+              genres: [],
+              spotifyUrl: null,
+            },
+            {
+              id: 'sp_b',
+              name: 'NIRVANA',
+              images: [],
+              genres: [],
+              spotifyUrl: null,
+            },
+          ]
+        }
+        return []
+      }),
+    })
+
+    expect((await readArtist(noMatchId))?.matchAttempts).toBe(1)
+    expect((await readArtist(ambiguousId))?.matchAttempts).toBe(1)
+    expect((await readArtist(resolvesId))?.matchAttempts).toBe(0)
+  })
+
+  it(`stops retrying a no_match row at ${MATCH_ATTEMPT_LIMIT} attempts`, async () => {
+    const exhaustedId = await seedArtist({
+      canonicalName: 'nobody at all',
+      matchStatus: 'no_match',
+      matchAttempts: MATCH_ATTEMPT_LIMIT,
+      matchCheckedAt: new Date(
+        NOW.getTime() - (NO_MATCH_RETRY_DAYS + 1) * DAY_MS,
+      ),
+    })
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => {
+        throw new Error('Spotify must not be asked about an exhausted row')
+      }),
+    })
+
+    expect(summary.considered).toBe(0)
+    const row = await readArtist(exhaustedId)
+    expect(row?.matchStatus).toBe('no_match')
+    expect(row?.matchAttempts).toBe(MATCH_ATTEMPT_LIMIT)
+  })
+
+  // The budget is for identity work. A matched row whose photo keeps failing to
+  // re-resolve still needs its next refresh, so the refresh path must not spend
+  // an attempt — otherwise three flaky searches would freeze the image forever.
+  it('spends no attempt on a photo refresh that stops resolving', async () => {
+    const staleId = await seedArtist({
+      canonicalName: 'khruangbin',
+      matchStatus: 'matched',
+      spotifyArtistId: 'sp_khru',
+      photoUrl: 'https://i.scdn.co/image/expired',
+      photoFetchedAt: new Date(
+        NOW.getTime() - (PHOTO_REFETCH_DAYS + 1) * DAY_MS,
+      ),
+    })
+
+    await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => []),
+    })
+
+    expect((await readArtist(staleId))?.matchAttempts).toBe(0)
   })
 
   it('logs and continues past a single-row failure', async () => {

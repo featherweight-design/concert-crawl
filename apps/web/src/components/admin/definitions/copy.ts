@@ -2302,7 +2302,10 @@ export const ADMIN_COPY = {
       no_match: 'No match',
       matched: 'Matched',
       not_an_artist: 'Not an artist',
+      exhausted: 'Given up',
     },
+    exhaustedNotice:
+      'Given up holds rows the match job stopped searching after three tries. They keep their public page, and resolving one by hand puts it back in the rotation.',
     /** Chip label carrying its queue size, so the biggest backlog is visible. */
     statusChipCount: (label: string, count: number) => `${label} (${count})`,
     searchLabel: 'Search artists',

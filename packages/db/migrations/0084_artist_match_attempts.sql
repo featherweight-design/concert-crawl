@@ -1,0 +1,11 @@
+-- Consecutive fruitless match attempts per artist, so the match job can stop
+-- asking a question that has already been answered the same way three times.
+--
+-- A counter rather than a sixth `artist_match_status`: exhaustion is a
+-- different axis from the verdict, and an enum value would erase whether the
+-- row is `ambiguous` (candidates a human could still pick from) or `no_match`
+-- (nothing to pick). Same modelling as `hidden`.
+--
+-- Backfills to 0, so every existing row starts with a full budget — including
+-- the `ambiguous` rows that were never retried before this shipped.
+ALTER TABLE "artists" ADD COLUMN IF NOT EXISTS "match_attempts" integer DEFAULT 0 NOT NULL;

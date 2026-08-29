@@ -9,10 +9,15 @@ import { Hono } from 'hono'
 import { createLogger } from '@concert-crawl/logger'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, asc, desc, eq, ilike, isNull, sql } from 'drizzle-orm'
+import { and, asc, eq, ilike, isNull, sql, type SQL } from 'drizzle-orm'
 import { artists, db, type SpotifyCandidateSnapshot } from '@concert-crawl/db'
 import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical'
 import { getAuthUser } from '../../middleware/auth.js'
+import {
+  isExhaustedBucketExpr,
+  isExhaustibleStatus,
+  isNotExhaustedExpr,
+} from '../../lib/artist-exhaustion.js'
 import { httpUrl } from '../../lib/url-schema.js'
 import {
   dedupeCandidates,
@@ -35,8 +40,19 @@ const matchStatusSchema = z.enum([
   'not_an_artist',
 ])
 
+/**
+ * What the admin queue can be filtered by: the five verdicts, plus the
+ * derived `exhausted` bucket.
+ *
+ * `exhausted` is not a matchStatus and never will be — it says the job stopped
+ * asking, which is orthogonal to what the last answer was. It is a filter value
+ * here because the admin surface is a set of queues, and "rows I no longer need
+ * to see in the ambiguous queue" is one of them.
+ */
+const listFilterSchema = z.union([matchStatusSchema, z.literal('exhausted')])
+
 const listQuerySchema = z.object({
-  status: matchStatusSchema.optional(),
+  status: listFilterSchema.optional(),
   // An empty `search=` is what a controlled input sends when the admin clears
   // it, and that means "no filter" — not a bad request.
   search: z
@@ -50,6 +66,22 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(100),
   offset: z.coerce.number().int().min(0).default(0),
 })
+
+/**
+ * Exhausted rows move OUT of the queue they came from rather than sitting in
+ * both. The point of giving up on a row is that the admin's ambiguous count
+ * visibly drops; a row counted twice never delivers that.
+ *
+ * Both branches gate on EXHAUSTIBLE_STATUSES, and they have to agree: if the
+ * `exhausted` filter took any row at the cap, a leftover counter on a `matched`
+ * row would list it in two queues while `/counts` credited it to one.
+ */
+const statusFilter = (status: z.infer<typeof listFilterSchema>): SQL =>
+  status === 'exhausted'
+    ? isExhaustedBucketExpr()
+    : isExhaustibleStatus(status)
+      ? sql`${eq(artists.matchStatus, status)} and ${isNotExhaustedExpr()}`
+      : eq(artists.matchStatus, status)
 
 const artistIdSchema = z.object({ id: z.string().uuid() })
 
@@ -78,7 +110,7 @@ artistsAdminRouter.get(
     const where = search
       ? ilike(artists.canonicalName, `%${search}%`)
       : status
-        ? eq(artists.matchStatus, status)
+        ? statusFilter(status)
         : undefined
 
     const rows = await db
@@ -95,6 +127,10 @@ artistsAdminRouter.get(
         photoUrl: artists.photoUrl,
         matchCheckedAt: artists.matchCheckedAt,
         hidden: artists.hidden,
+        // Which chip the row belongs to, which is not always its matchStatus.
+        // The page keeps its counts honest by walking the single row that
+        // changed, and it can only do that if it knows the bucket it came from.
+        isExhausted: isExhaustedBucketExpr(),
       })
       .from(artists)
       .where(where)
@@ -123,16 +159,22 @@ artistsAdminRouter.get(
   },
 )
 
-// GET /v1/admin/artists/counts — queue sizes per match status.
+// GET /v1/admin/artists/counts — queue sizes per match status, plus the
+// derived `exhausted` bucket. Every count matches what its tab lists, which
+// means exhausted rows are counted once, under `exhausted`.
 artistsAdminRouter.get('/counts', async (ctx) => {
+  // A filtered aggregate rather than a GROUP BY on the bucket expression: it
+  // carries bind parameters, and Postgres renders separate placeholders in the
+  // select list and the GROUP BY, so it cannot see the two as the same
+  // expression and rejects the query.
   const rows = await db
     .select({
       matchStatus: artists.matchStatus,
       total: sql<number>`count(*)::int`,
+      exhausted: sql<number>`count(*) filter (where ${isExhaustedBucketExpr()})::int`,
     })
     .from(artists)
     .groupBy(artists.matchStatus)
-    .orderBy(desc(sql`count(*)`))
 
   const counts = {
     unmatched: 0,
@@ -140,8 +182,15 @@ artistsAdminRouter.get('/counts', async (ctx) => {
     ambiguous: 0,
     no_match: 0,
     not_an_artist: 0,
+    exhausted: 0,
   }
-  for (const row of rows) counts[row.matchStatus] = row.total
+  for (const row of rows) {
+    // The aggregate already applies the same status gate `statusFilter` does,
+    // so a non-exhaustible status contributes 0 here and this subtraction is a
+    // no-op for it.
+    counts.exhausted += row.exhausted
+    counts[row.matchStatus] += row.total - row.exhausted
+  }
 
   return ctx.json({ success: true, data: counts })
 })
@@ -231,6 +280,10 @@ artistsAdminRouter.patch(
         matchStatus: nextStatus,
         matchConfidence: null,
         matchCheckedAt: new Date(),
+        // A human has just looked at this row, so whatever the job gave up on
+        // is no longer the current question. Resetting keeps `exhausted`
+        // meaning "the job stopped asking" rather than accumulating history.
+        matchAttempts: 0,
         updatedAt: new Date(),
         ...photoFields,
       })

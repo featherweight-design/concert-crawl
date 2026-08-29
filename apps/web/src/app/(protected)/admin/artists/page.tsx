@@ -27,6 +27,14 @@ const COPY = ADMIN_COPY.artists
 type MatchStatus =
   'unmatched' | 'matched' | 'ambiguous' | 'no_match' | 'not_an_artist'
 
+/**
+ * A chip on this page. `exhausted` is not a match status — it says the job
+ * stopped searching, which is a different question from what the last search
+ * answered — but it is a queue the admin filters by, so the two share a type
+ * here and nowhere else.
+ */
+type QueueFilter = MatchStatus | 'exhausted'
+
 interface AdminArtist {
   id: string
   name: string
@@ -37,15 +45,21 @@ interface AdminArtist {
   photoUrl: string | null
   matchCheckedAt: string | null
   hidden: boolean
+  isExhausted: boolean
 }
 
-const STATUS_CHIPS: MatchStatus[] = [
+const STATUS_CHIPS: QueueFilter[] = [
   'ambiguous',
   'unmatched',
   'no_match',
   'matched',
   'not_an_artist',
+  'exhausted',
 ]
+
+/** The chip a row is listed under, which outranks its match status. */
+const bucketOf = (row: AdminArtist): QueueFilter =>
+  row.isExhausted ? 'exhausted' : row.matchStatus
 
 const STATUS_KIND: Record<MatchStatus, 'warning' | 'success' | 'neutral'> = {
   ambiguous: 'warning',
@@ -65,10 +79,10 @@ const PAGE_SIZE = 100
  * row that changed keeps them honest without a second round trip.
  */
 const shiftCounts = (
-  counts: Record<MatchStatus, number>,
-  from: MatchStatus | undefined,
-  to: MatchStatus,
-): Record<MatchStatus, number> => {
+  counts: Record<QueueFilter, number>,
+  from: QueueFilter | undefined,
+  to: QueueFilter,
+): Record<QueueFilter, number> => {
   if (from === undefined || from === to) return counts
   const next = { ...counts }
   next[from] = Math.max(0, next[from] - 1)
@@ -76,23 +90,24 @@ const shiftCounts = (
   return next
 }
 
-const EMPTY_COUNTS: Record<MatchStatus, number> = {
+const EMPTY_COUNTS: Record<QueueFilter, number> = {
   ambiguous: 0,
   unmatched: 0,
   no_match: 0,
   matched: 0,
   not_an_artist: 0,
+  exhausted: 0,
 }
 
 export default function AdminArtistsPage() {
   const { getToken } = useAuth()
-  const [status, setStatus] = useState<MatchStatus>('ambiguous')
+  const [status, setStatus] = useState<QueueFilter>('ambiguous')
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   const [offset, setOffset] = useState(0)
   const [total, setTotal] = useState(0)
   const [counts, setCounts] =
-    useState<Record<MatchStatus, number>>(EMPTY_COUNTS)
+    useState<Record<QueueFilter, number>>(EMPTY_COUNTS)
   const [rows, setRows] = useState<AdminArtist[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -137,7 +152,7 @@ export default function AdminArtistsPage() {
         return
       }
       const body: { data: AdminArtist[]; total: number } = await listResp.json()
-      const countsBody: { data: Record<MatchStatus, number> } =
+      const countsBody: { data: Record<QueueFilter, number> } =
         await countsResp.json()
       setRows(body.data)
       setTotal(body.total)
@@ -183,7 +198,9 @@ export default function AdminArtistsPage() {
     spotifyArtistId: string | null,
     photoUrl?: string | null,
   ) => {
-    const previousStatus = rows.find((row) => row.id === id)?.matchStatus
+    const previous = rows.find((row) => row.id === id)
+    const previousBucket =
+      previous === undefined ? undefined : bucketOf(previous)
     try {
       const token = await getToken()
       if (!token) {
@@ -223,15 +240,18 @@ export default function AdminArtistsPage() {
                   ...row,
                   spotifyArtistId,
                   matchStatus: 'matched',
+                  // The PATCH resets the attempt counter, so the row is no
+                  // longer given up on and must not still read as it.
+                  isExhausted: false,
                   photoUrl: photoUrl ?? row.photoUrl,
                 }
               : row,
           ),
         )
-        setCounts((prev) => shiftCounts(prev, previousStatus, 'matched'))
+        setCounts((prev) => shiftCounts(prev, previousBucket, 'matched'))
         return
       }
-      setCounts((prev) => shiftCounts(prev, previousStatus, 'matched'))
+      setCounts((prev) => shiftCounts(prev, previousBucket, 'matched'))
       // Functional, because a chip change or a debounced search can land a new
       // list while this PATCH is in flight; filtering the closed-over array
       // would put the stale page back.
@@ -329,6 +349,12 @@ export default function AdminArtistsPage() {
       <p style={{ fontSize: 12, color: 'var(--fg-subtle)', margin: 0 }}>
         {COPY.notAnArtistHint}
       </p>
+
+      {status === 'exhausted' && search === '' && (
+        <p style={{ fontSize: 12, color: 'var(--fg-subtle)', margin: 0 }}>
+          {COPY.exhaustedNotice}
+        </p>
+      )}
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {STATUS_CHIPS.map((chip) => (
