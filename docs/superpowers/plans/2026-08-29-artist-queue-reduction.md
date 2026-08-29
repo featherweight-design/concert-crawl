@@ -1,6 +1,6 @@
 # Artist review queue reduction
 
-**Status:** in progress — PR 1 open
+**Status:** in progress — PR 1 merged (#1632), PR 2 open
 **Goal:** get the list of artists Hugh has to resolve by hand down to under 100.
 
 ## The problem
@@ -57,9 +57,18 @@ now resolves cleanly.
 - Re-check at **14 days**, not 7 — `PHOTO_REFETCH_DAYS` is already 7 and would
   compete for the same batch.
 - Bounded by PR 1's counter, so the cadence cannot become a permanent tax.
-- A `canonicalName` change resets `matchCheckedAt` to NULL, which puts the row at
-  the front of the queue via the existing `nulls first` ordering. A renamed row
-  is a different question and should not wait out the old answer's cooldown.
+- The MusicBrainz resolver clears `matchAttempts` alongside its `matched` write.
+  It is a resolution like any other, and leaving the counter spent would file the
+  row into the `exhausted` queue if it ever returned to an unresolved status.
+
+**The `canonicalName` reset moves to PR 3.** The original shape had a rename
+reset `matchCheckedAt` to NULL, putting the row at the front of the queue via
+the existing `nulls first` ordering — a renamed row is a different question and
+should not wait out the old answer's cooldown. That still holds, but nothing
+writes `canonicalName` after insert today: the crawler write-through and the
+backfill are both insert-only, and the admin PATCH accepts only
+`spotifyArtistId` / `matchStatus` / `photoUrl`. PR 3 introduces the first
+rename, so the reset ships with it rather than as dead code here.
 
 ## PR 3 — corroborated display-name repair
 

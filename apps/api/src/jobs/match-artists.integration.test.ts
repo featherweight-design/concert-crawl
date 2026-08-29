@@ -8,6 +8,7 @@ import { testDb } from '../test/helpers/db.js'
 import { apiLogger } from '../lib/logger.js'
 import { MATCH_ATTEMPT_LIMIT } from '../lib/artist-exhaustion.js'
 import {
+  AMBIGUOUS_RECHECK_DAYS,
   MATCH_BATCH_SIZE,
   NO_MATCH_RETRY_DAYS,
   PHOTO_REFETCH_DAYS,
@@ -413,24 +414,115 @@ describe('runMatchArtists', () => {
     expect((await readArtist(freshId))?.matchStatus).toBe('no_match')
   })
 
-  it('never retries an ambiguous row, however stale', async () => {
-    const ancientId = await seedArtist({
+  it(`re-checks an ambiguous row checked over ${AMBIGUOUS_RECHECK_DAYS} days ago`, async () => {
+    const staleId = await seedArtist({
       canonicalName: 'nirvana',
       matchStatus: 'ambiguous',
-      matchCheckedAt: new Date(NOW.getTime() - 365 * DAY_MS),
+      matchCheckedAt: new Date(
+        NOW.getTime() - (AMBIGUOUS_RECHECK_DAYS + 1) * DAY_MS,
+      ),
     })
 
-    // Re-searching reproduces the same exact-name tie; only the admin
-    // candidate picker can resolve it, so spending quota here buys nothing.
+    // The tie itself is unchanged by re-asking, but the catalogue under it is
+    // not: one of the same-named acts gaining a release resolves the row.
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => [
+        {
+          id: 'sp_nirvana',
+          name: 'Nirvana',
+          images: [],
+          genres: [],
+          spotifyUrl: null,
+        },
+      ]),
+    })
+
+    expect(summary).toMatchObject({ considered: 1, matched: 1 })
+    const row = await readArtist(staleId)
+    expect(row?.matchStatus).toBe('matched')
+    expect(row?.spotifyArtistId).toBe('sp_nirvana')
+    expect(row?.matchAttempts).toBe(0)
+  })
+
+  it('leaves a recently checked ambiguous row alone', async () => {
+    const freshId = await seedArtist({
+      canonicalName: 'nirvana',
+      matchStatus: 'ambiguous',
+      matchCheckedAt: new Date(
+        NOW.getTime() - (AMBIGUOUS_RECHECK_DAYS - 1) * DAY_MS,
+      ),
+    })
+
     const summary = await runMatchArtists({
       now: () => NOW,
       client: stubClient(async () => {
-        throw new Error('Spotify must not be asked about an ambiguous row')
+        throw new Error('Spotify must not be asked about a fresh ambiguous row')
       }),
     })
 
     expect(summary.considered).toBe(0)
-    expect((await readArtist(ancientId))?.matchStatus).toBe('ambiguous')
+    expect((await readArtist(freshId))?.matchStatus).toBe('ambiguous')
+  })
+
+  it(`stops re-checking an ambiguous row at ${MATCH_ATTEMPT_LIMIT} attempts`, async () => {
+    // Without the budget this cadence would be permanent: a row whose tie no
+    // catalogue change ever breaks would come back every fortnight forever.
+    const spentId = await seedArtist({
+      canonicalName: 'nirvana',
+      matchStatus: 'ambiguous',
+      matchAttempts: MATCH_ATTEMPT_LIMIT,
+      matchCheckedAt: new Date(NOW.getTime() - 365 * DAY_MS),
+    })
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => {
+        throw new Error('Spotify must not be asked about an exhausted row')
+      }),
+    })
+
+    expect(summary.considered).toBe(0)
+    const row = await readArtist(spentId)
+    expect(row?.matchStatus).toBe('ambiguous')
+    expect(row?.matchAttempts).toBe(MATCH_ATTEMPT_LIMIT)
+  })
+
+  it('spends an attempt when a re-check reproduces the tie', async () => {
+    const staleId = await seedArtist({
+      canonicalName: 'nirvana',
+      matchStatus: 'ambiguous',
+      matchAttempts: 1,
+      matchCheckedAt: new Date(
+        NOW.getTime() - (AMBIGUOUS_RECHECK_DAYS + 1) * DAY_MS,
+      ),
+    })
+
+    const summary = await runMatchArtists({
+      now: () => NOW,
+      client: stubClient(async () => [
+        {
+          id: 'sp_nirvana_a',
+          name: 'Nirvana',
+          images: [],
+          genres: [],
+          spotifyUrl: null,
+        },
+        {
+          id: 'sp_nirvana_b',
+          name: 'Nirvana',
+          images: [],
+          genres: [],
+          spotifyUrl: null,
+        },
+      ]),
+    })
+
+    expect(summary).toMatchObject({ considered: 1, ambiguous: 1 })
+    const row = await readArtist(staleId)
+    expect(row?.matchStatus).toBe('ambiguous')
+    expect(row?.matchAttempts).toBe(2)
+    expect(row?.matchCheckedAt).toEqual(NOW)
   })
 
   it('counts a fruitless verdict against the row and clears it on a match', async () => {

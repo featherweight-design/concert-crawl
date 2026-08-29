@@ -351,6 +351,11 @@ export async function disambiguateArtistsWithMusicBrainz(
         matchStatus: 'matched',
         matchConfidence: null,
         matchCheckedAt: new Date(),
+        // A resolution is a match, so it clears the budget the same way the
+        // job's own match does. Leaving a spent counter behind would file the
+        // row straight back into the admin's `exhausted` queue if it ever
+        // returned to an unresolved status.
+        matchAttempts: 0,
         photoUrl: null,
         photoFetchedAt: null,
         updatedAt: new Date(),

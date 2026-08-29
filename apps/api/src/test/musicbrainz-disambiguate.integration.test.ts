@@ -4,6 +4,7 @@ import { artists } from '@concert-crawl/db'
 import { disambiguateArtistsWithMusicBrainz } from '@concert-crawl/db/scripts/musicbrainz-disambiguate'
 import { testDb } from './helpers/db.js'
 import { clearTables } from './helpers/seed.js'
+import { MATCH_ATTEMPT_LIMIT } from '../lib/artist-exhaustion.js'
 
 // The `ambiguous` queue is a human queue: more than one Spotify artist matched
 // the name exactly, so the match job refused to guess. MusicBrainz breaks the
@@ -117,9 +118,12 @@ describe('musicbrainz-disambiguate integration', () => {
     // scored the row, and clears the cached photo so the photo job re-fetches
     // against the identity just settled on. Anything else would leave a
     // stranger's face on the page.
+    // Seeded with a spent budget: resolving has to clear it, or the row would
+    // land straight in the admin's `exhausted` queue if it ever came back.
     await seedAmbiguous({
       photoUrl: 'https://i.scdn.co/image/stale',
       photoFetchedAt: new Date(),
+      matchAttempts: MATCH_ATTEMPT_LIMIT,
     })
 
     await run(
@@ -141,6 +145,7 @@ describe('musicbrainz-disambiguate integration', () => {
     expect(row?.photoUrl).toBeNull()
     expect(row?.photoFetchedAt).toBeNull()
     expect(row?.matchCheckedAt).not.toBeNull()
+    expect(row?.matchAttempts).toBe(0)
   })
 
   it('refuses a MusicBrainz answer our own search never saw', async () => {

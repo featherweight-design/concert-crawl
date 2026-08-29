@@ -16,10 +16,11 @@
 //                  keeps its spotifyArtistId and matchStatus and only
 //                  matchCheckedAt moves.
 //   3. RETRY     — 'no_match' rows last checked more than NO_MATCH_RETRY_DAYS
-//                  ago, and not yet exhausted. Without this they are terminal,
-//                  and a local band that simply wasn't on Spotify the night we
-//                  first looked would never be looked at again however much
-//                  they released after.
+//                  ago, and 'ambiguous' rows past AMBIGUOUS_RECHECK_DAYS, in
+//                  both cases only while not yet exhausted. Without this they
+//                  are terminal, and a local band that simply wasn't on Spotify
+//                  the night we first looked would never be looked at again
+//                  however much they released after.
 //
 // Retrying is bounded. Every fruitless verdict increments matchAttempts, and at
 // MATCH_ATTEMPT_LIMIT the row stops being selected — otherwise a growing set of
@@ -27,9 +28,12 @@
 // rows nobody has looked at yet. A match resets the counter to zero, as does an
 // admin resolving the row by hand.
 //
-// 'ambiguous' is deliberately NOT retried. It means Spotify returned several
-// exact-name candidates, so asking again just reproduces the same tie — only
-// the admin candidate picker can break it.
+// 'ambiguous' means Spotify returned several exact-name candidates. Re-asking
+// cannot break that tie on its own, which is why this used to be terminal — but
+// the tie is a property of the catalogue, not of the question: an act that has
+// since gained a disambiguating release resolves cleanly on the next look. The
+// attempt budget is what keeps that from becoming a standing tax, and the admin
+// candidate picker is still the answer for the rows it never resolves.
 //
 // Every verdict also snapshots the search's candidate list onto
 // artists.spotifyCandidates, so the picker can open on a search this job
@@ -73,6 +77,20 @@ export const PHOTO_REFETCH_DAYS = 7
  * that MATCH_BATCH_SIZE exists to ration.
  */
 export const NO_MATCH_RETRY_DAYS = 30
+
+/**
+ * How long an 'ambiguous' verdict stands before the job asks Spotify again.
+ *
+ * Shorter than NO_MATCH_RETRY_DAYS because the thing that breaks the tie is
+ * smaller than the thing that resolves a no_match: one of the same-named acts
+ * gaining a disambiguating release is enough, where a no_match needs the artist
+ * to appear in the catalogue at all.
+ *
+ * Not 7. PHOTO_REFETCH_DAYS is already 7, so a weekly cadence here would put
+ * two recurring populations into the same batch and squeeze the unmatched rows
+ * that MATCH_BATCH_SIZE exists to serve.
+ */
+export const AMBIGUOUS_RECHECK_DAYS = 14
 
 const DAY_MS = 24 * 60 * 60 * 1000
 
@@ -134,6 +152,7 @@ export const runMatchArtists = async (
   const selectedAt = now().getTime()
   const staleBefore = new Date(selectedAt - PHOTO_REFETCH_DAYS * DAY_MS)
   const retryBefore = new Date(selectedAt - NO_MATCH_RETRY_DAYS * DAY_MS)
+  const ambiguousBefore = new Date(selectedAt - AMBIGUOUS_RECHECK_DAYS * DAY_MS)
 
   const rows = await db
     .select({
@@ -151,6 +170,13 @@ export const runMatchArtists = async (
         and(
           eq(artists.matchStatus, 'no_match'),
           lt(artists.matchCheckedAt, retryBefore),
+          isNotExhaustedExpr(),
+        ),
+        // Same shape as the no_match retry, on a shorter clock. The tie itself
+        // does not change, but the catalogue underneath it does.
+        and(
+          eq(artists.matchStatus, 'ambiguous'),
+          lt(artists.matchCheckedAt, ambiguousBefore),
           isNotExhaustedExpr(),
         ),
         // The photo refresh is deliberately outside the attempt budget: it
