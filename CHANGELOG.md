@@ -1,3 +1,10 @@
+# [1.273.0](https://github.com/HartiganHM/concert-crawl/compare/v1.272.0...v1.273.0) (2026-08-29)
+
+
+### Features
+
+* **db:** repair artist display names the event billing contradicts ([#1636](https://github.com/HartiganHM/concert-crawl/issues/1636)) ([476b376](https://github.com/HartiganHM/concert-crawl/commit/476b3763d149779b81544ca8c309ffe74611bd65))
+
 # [1.272.0](https://github.com/HartiganHM/concert-crawl/compare/v1.271.0...v1.272.0) (2026-08-29)
 
 
