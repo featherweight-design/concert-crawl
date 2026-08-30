@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Concert Crawl · /bot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+html,body{margin:0;padding:0;background:#f0eee9;font-family:Inter,system-ui,sans-serif}
+*{box-sizing:border-box}
+a{color:#1f5f7a}a:hover{color:#123c4e}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="theme-context.jsx"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="bot-primitives.jsx"></script>
+<script type="text/babel" src="bot-page.jsx"></script>
+
+<script type="text/babel">
+const { ThemeProvider, DesignCanvas, DCSection, DCArtboard, IOSDevice } = window;
+const { BotPage, BOT_COPY, BOT_UA, BOT_ROBOTS } = window;
+const { BotLockup, MonoTag, BotSectionHead, FactGroup, FactRow, CopyBlock, ContactCard, BOT_MONO } = window;
+
+function Page({ theme = "light", w = 393 }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", minHeight: "100%", background: "var(--bg)" }}>
+      <BotPage w={w} />
+    </ThemeProvider>
+  );
+}
+
+function Plate({ theme = "light", pad = 20, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%", background: "var(--bg)", padding: pad, fontFamily: "Inter, system-ui", display: "flex", flexDirection: "column", justifyContent: "center", gap: 14 }}>
+      {children}
+    </ThemeProvider>
+  );
+}
+
+function Phone({ theme = "light", w = 393, h = 852, children }) {
+  return (
+    <ThemeProvider theme={theme} style={{ width: "100%", height: "100%" }}>
+      <IOSDevice width={w} height={h} dark={theme !== "light"}>{children}</IOSDevice>
+    </ThemeProvider>
+  );
+}
+
+function App() {
+  return (
+    <DesignCanvas>
+
+      <DCSection id="arrival" title="0 · Arrival" subtitle="What a venue's sysadmin sees in the first screen, on the device they're most likely holding when they paste the URL from a log line. The page opens with the mark and one sentence that confirms they're in the right place — then goes straight to facts. No nav, no sign-in, no cookie bar: nothing on this page asks the reader for anything.">
+        <DCArtboard id="ar-phone" label="Above the fold · iPhone · light" width={425} height={880}>
+          <Phone><div style={{ height: "100%", overflow: "hidden" }}><BotPage w={393} insetTop={40} insetBottom={16}/></div></Phone>
+        </DCArtboard>
+        <DCArtboard id="ar-desk" label="Above the fold · 1280 · light" width={1280} height={720}>
+          <div style={{ height: "100%", overflow: "hidden" }}><Page w={1280}/></div>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="full-desktop" title="1 · The whole page · desktop" subtitle="Direction chosen: a short branded intro that hands off to a spec block. The intro earns thirty seconds of trust from someone who has never heard of us; the numbered sections below it are a reference document they can scan for one fact and quote to a colleague. 720px measure — long enough for a 62-character line, short enough that the mono keys stay a column and not a margin.">
+        <DCArtboard id="fd-light" label="/bot · 1280 · light (ships)" width={1280} height={2940}>
+          <Page w={1280}/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="full-mobile" title="2 · The whole page · mobile" subtitle="Mobile-first from 320. The one breakpoint is 560: below it the fact rows stack (mono key above prose value) and the display type steps down. Nothing is hidden, reordered, or collapsed behind a disclosure — an operator on a phone in a venue office gets the same document.">
+        <DCArtboard id="fm-393" label="/bot · 393" width={393} height={3480}>
+          <Page w={393}/>
+        </DCArtboard>
+        <DCArtboard id="fm-320" label="/bot · 320 squeeze" width={320} height={4030}>
+          <Page w={320}/>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="lift" title="3 · The two strings you can lift" subtitle="Both live: press Copy. The UA and the robots.txt block are the only things on the page a reader needs to take away verbatim, so both are selectable mono text first and the button is a convenience. The robots.txt block is placed as the FIRST answer under 'Making us stop' — self-serve before email, because a sysadmin who can solve it in their own editor shouldn't have to wait on our inbox.">
+        <DCArtboard id="lift-ua" label="User-Agent · interactive" width={620} height={150}>
+          <Plate><CopyBlock text={BOT_UA}/></Plate>
+        </DCArtboard>
+        <DCArtboard id="lift-robots" label="robots.txt · interactive" width={620} height={170}>
+          <Plate><CopyBlock lines={BOT_ROBOTS}/></Plate>
+        </DCArtboard>
+        <DCArtboard id="lift-320" label="UA at 320 · breaks, never truncates" width={320} height={190}>
+          <Plate pad={14}><CopyBlock text={BOT_UA}/></Plate>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="factrow" title="4 · Fact row · both widths" subtitle="One row anatomy, two grids. At 560+ the mono key is a fixed 168px column so every key aligns down the card and the eye can drop straight to 'Crawl-delay'. Below it the key becomes a label above its value — a 12-character column beside a 40-character measure is worse than a stack.">
+        <DCArtboard id="fr-wide" label="Two-column · 560+" width={720} height={330}>
+          <Plate>
+            <FactGroup>
+              <FactRow label="Request rate" wide first>{BOT_COPY.facts.rate.value}</FactRow>
+              <FactRow label="Full pass" wide>{BOT_COPY.facts.fullPass.value}</FactRow>
+              <FactRow label="Trigger checks" wide>{BOT_COPY.facts.triggers.value}</FactRow>
+            </FactGroup>
+          </Plate>
+        </DCArtboard>
+        <DCArtboard id="fr-narrow" label="Stacked · under 560" width={393} height={400}>
+          <Plate>
+            <FactGroup>
+              <FactRow label="Request rate" first>{BOT_COPY.facts.rate.value}</FactRow>
+              <FactRow label="Full pass">{BOT_COPY.facts.fullPass.value}</FactRow>
+              <FactRow label="Trigger checks">{BOT_COPY.facts.triggers.value}</FactRow>
+            </FactGroup>
+          </Plate>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="contact" title="5 · The one destination" subtitle="Everything else on the page is a fact; this is the only thing to do. Bordered and tinted in --signal — the CTA colour, per CLAUDE.md §2 — so a reader who scrolled past every section still lands on it. The address is the headline of the card, not a link buried in a sentence, because it may be the only thing they copy.">
+        <DCArtboard id="ct-wide" label="Contact · 560+" width={720} height={220}>
+          <Plate><ContactCard email={BOT_COPY.contactEmail} wide>{BOT_COPY.stop.contactBody}</ContactCard></Plate>
+        </DCArtboard>
+        <DCArtboard id="ct-narrow" label="Contact · 393" width={393} height={230}>
+          <Plate><ContactCard email={BOT_COPY.contactEmail}>{BOT_COPY.stop.contactBody}</ContactCard></Plate>
+        </DCArtboard>
+      </DCSection>
+
+      <DCSection id="themes" title="6 · Token check · the other two themes" subtitle="Light ships — a cold visitor arriving from a server log lands in documentation, not in our app's dark chrome, and the page has no theme picker on it. These two boards exist only to prove the page is token-clean: no raw hex, no oklch literal, every mix through color-mix on a token. If the /bot route ever inherits a themed shell, it survives.">
+        <DCArtboard id="th-electric" label="Electric · token proof" width={1280} height={1400}>
+          <div style={{ height: "100%", overflow: "hidden" }}><Page theme="electric" w={1280}/></div>
+        </DCArtboard>
+        <DCArtboard id="th-jade" label="Jade · token proof" width={1280} height={1400}>
+          <div style={{ height: "100%", overflow: "hidden" }}><Page theme="jade" w={1280}/></div>
+        </DCArtboard>
+      </DCSection>
+
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>
