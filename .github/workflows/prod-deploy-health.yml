@@ -1,0 +1,141 @@
+name: Prod Deploy Health
+
+# Answers the question nothing in the stack answered on 2026-08-29:
+# "is the code we merge still reaching production?"
+#
+# That day the Render account ran out of build minutes. Every auto-deploy
+# came back `build_failed` in under 1.5s, prod kept serving the last good
+# commit, and it drifted five commits behind main for ~20 hours. Sentry
+# was correctly silent — the app was healthy, just old. The post-deploy
+# reconciler did fail with exit 125, but a failed Actions run is an email,
+# and it went unread.
+#
+# So this reports to Sentry rather than relying on the run status. Sentry
+# is where prod alerting already lands.
+#
+# Reports only. It never triggers a deploy or a rollback: every condition
+# it detects (out of minutes, deploys disabled, service suspended) needs a
+# human decision, and re-triggering a build that failed for want of build
+# minutes would burn the few that remain.
+
+on:
+  schedule:
+    # Every 2 hours. The failure this catches is measured in hours of
+    # drift, not minutes, and the job is a handful of API calls.
+    - cron: '17 */2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prod-deploy-health
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check prod Render services accept deploys
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The service IDs live in the production environment's variables,
+    # alongside the ones rollback-prod.yml already reads.
+    environment: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # Secrets are checked here alongside the variables because both failure
+      # modes are silent otherwise: without RENDER_API_TOKEN the checker
+      # cannot ask Render anything, and without a DSN the reporting step
+      # exits 0 having sent nothing. A detector that quietly reports nowhere
+      # is the exact failure this workflow was built to end.
+      - name: Verify Render service IDs and secrets are configured
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+        run: |
+          missing=()
+          [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("vars.RENDER_SERVICE_ID_API")
+          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS")
+          [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("vars.RENDER_SERVICE_ID_CRAWLER_DAILY")
+          [ -z "${RENDER_API_TOKEN}" ] && missing+=("secrets.RENDER_API_TOKEN")
+          [ -z "${SENTRY_DSN}" ] && missing+=("secrets.SENTRY_DSN_SMOKE")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "Missing production-environment config: ${missing[*]}"
+            echo "Set them via Settings → Environments → production."
+            exit 1
+          fi
+
+      # Every service is checked even after one fails, so a single run
+      # reports the whole picture. The out-of-minutes case takes down all
+      # of them at once, and stopping at the first would hide that.
+      - name: Check each prod service
+        id: check
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: |
+          # `set +e` is load-bearing, not tidying. The runner invokes this as
+          # `bash -e {0}`, so errexit is already on before the first line and
+          # `set -uo pipefail` does not clear it — the first service to exit
+          # non-zero would kill the step, skipping the other two and sending
+          # no Sentry report at all. Out-of-minutes takes down every service
+          # at once, which is exactly the case that would be truncated.
+          set +e
+          set -uo pipefail
+          findings=""
+          check_failed=0
+
+          check() {
+            local id="$1" name="$2" out status
+            out=$(bash .github/scripts/render-check-deploy-health.sh "$id" "$name" 2>&1)
+            status=$?
+            echo "$out"
+            case "$status" in
+              0) ;;
+              2) findings="${findings}${name}: $(echo "$out" | grep '^UNHEALTHY|' | cut -d'|' -f3)"$'\n' ;;
+              *) check_failed=1 ;;
+            esac
+          }
+
+          check "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
+          check "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
+          check "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
+
+          {
+            echo "findings<<EOF"
+            echo "${findings}"
+            echo "EOF"
+            echo "check_failed=${check_failed}"
+          } >> "$GITHUB_OUTPUT"
+
+      # Split from the check step so a broken checker and a broken prod
+      # produce different Sentry events. Conflating them means the first
+      # time the Render API changes shape, it reads as a prod outage.
+      - name: Report unhealthy services to Sentry
+        if: steps.check.outputs.findings != ''
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+          SENTRY_ENVIRONMENT: production
+          EXTRA_CONTEXT: |
+            ${{ steps.check.outputs.findings }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            Runbook: docs/runbooks/auto-deploy-prod.md
+        run: bash .github/scripts/sentry-capture-message.sh error "Prod Render deploys are not landing"
+
+      - name: Report checker failure to Sentry
+        if: steps.check.outputs.check_failed == '1'
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+          SENTRY_ENVIRONMENT: production
+          EXTRA_CONTEXT: |
+            The deploy-health check could not reach a verdict for at least one
+            service. This says nothing about prod's actual state — it means the
+            check itself is broken and prod is currently unwatched.
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: bash .github/scripts/sentry-capture-message.sh warning "Prod deploy-health check could not run"
+
+      - name: Fail the run if anything is wrong
+        if: steps.check.outputs.findings != '' || steps.check.outputs.check_failed == '1'
+        run: |
+          echo "::error title=Prod deploy health::See the Sentry report and the annotations above."
+          exit 1
