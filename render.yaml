@@ -23,6 +23,20 @@ services:
 
   - type: web
     name: concert-crawl-api
+    buildFilter:
+      paths:
+        - apps/api/**
+        - packages/db/**
+        - packages/entitlements/**
+        - packages/logger/**
+        - packages/price-pipeline/**
+        - packages/push/**
+        - packages/types/**
+        - packages/config/**
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - turbo.json
     runtime: node
     region: oregon
     plan: starter
@@ -48,6 +62,11 @@ services:
       - key: SPOTIFY_CLIENT_SECRET
         sync: false # Same page → "View client secret"
 
+  # ⚠️ NOT DEPLOYED. Verified against the live Render API on 2026-09-01: no
+  # prod `concert-crawl-billing-jobs` service exists. Only the staging one
+  # further down does, and it is suspended. This block is kept as a statement
+  # of intent for when billing jobs do reach prod — it is not a record of
+  # anything running, and it carries no buildFilter for that reason.
   - type: cron
     name: concert-crawl-billing-jobs
     runtime: node
@@ -80,6 +99,20 @@ services:
 
   - type: cron
     name: concert-crawl-spotify-weekly
+    buildFilter:
+      paths:
+        - apps/api/**
+        - packages/db/**
+        - packages/entitlements/**
+        - packages/logger/**
+        - packages/price-pipeline/**
+        - packages/push/**
+        - packages/types/**
+        - packages/config/**
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - turbo.json
     runtime: node
     region: oregon
     plan: starter
@@ -116,6 +149,20 @@ services:
 
   - type: cron
     name: concert-crawl-match-artists
+    buildFilter:
+      paths:
+        - apps/api/**
+        - packages/db/**
+        - packages/entitlements/**
+        - packages/logger/**
+        - packages/price-pipeline/**
+        - packages/push/**
+        - packages/types/**
+        - packages/config/**
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - turbo.json
     runtime: node
     region: oregon
     plan: starter
@@ -143,6 +190,22 @@ services:
 
   - type: cron
     name: concert-crawl-crawler-triggers
+    buildFilter:
+      paths:
+        - apps/crawler/**
+        - packages/crawler-core/**
+        - packages/db/**
+        - packages/entitlements/**
+        - packages/logger/**
+        - packages/price-pipeline/**
+        - packages/push/**
+        - packages/types/**
+        - packages/config/**
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - turbo.json
+        - .dockerignore
     runtime: docker
     region: oregon
     plan: starter
@@ -174,6 +237,22 @@ services:
 
   - type: cron
     name: concert-crawl-crawler-daily
+    buildFilter:
+      paths:
+        - apps/crawler/**
+        - packages/crawler-core/**
+        - packages/db/**
+        - packages/entitlements/**
+        - packages/logger/**
+        - packages/price-pipeline/**
+        - packages/push/**
+        - packages/types/**
+        - packages/config/**
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - turbo.json
+        - .dockerignore
     runtime: docker
     region: oregon
     plan: starter
@@ -207,6 +286,20 @@ services:
 
   - type: web
     name: concert-crawl-api-staging
+    buildFilter:
+      paths:
+        - apps/api/**
+        - packages/db/**
+        - packages/entitlements/**
+        - packages/logger/**
+        - packages/price-pipeline/**
+        - packages/push/**
+        - packages/types/**
+        - packages/config/**
+        - package.json
+        - pnpm-lock.yaml
+        - pnpm-workspace.yaml
+        - turbo.json
     runtime: node
     region: oregon
     plan: starter

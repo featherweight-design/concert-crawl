@@ -17,6 +17,7 @@ Concert Crawl aggregates live music events from Denver venue websites into a sin
 - **Beta-to-launch plan (historical):** `docs/superpowers/specs/2026-05-09-beta-to-launch-design.md` — its Aug 18–22 window is superseded by the launch bar; read it for tier/feature intent, not for schedule
 - **Design pipeline workflow:** `docs/superpowers/design-pipeline.md` — two-track design pipeline (Track 1: build pending, gated by Readiness Review; Track 2: needs design, workshopped before handoff)
 - DB rollback runbook: `docs/runbooks/db-rollback.md`
+- **Render service config:** `render.yaml` (service inventory) + `docs/runbooks/render-service-config.md` (which settings are load-bearing, build filters, the commit tokens Render honors). Neither is synced to Render — the live config is edited in its dashboard, and both records are kept current by hand. Update both in the same session you change a setting; a lapsed sync is what caused the 2026-08-31 prod outage.
 
 ---
 

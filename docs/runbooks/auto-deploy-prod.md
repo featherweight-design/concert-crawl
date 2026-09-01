@@ -228,6 +228,31 @@ A bare `workflow_dispatch` (no env tweaks) when Render is NOT on the dispatched 
 
 **For the manual rollback path:** invoke **Rollback Production (manual)** with `workflow_dispatch` and a `reason` value. The script rolls back to the prior live deploy on each service. Use this exact path for any incident response that doesn't originate from a freshly-deployed smoke failure.
 
+## "Is prod current?" is a separate question from "is prod up?"
+
+Everything above answers the second question. On 2026-08-29 the first one
+went unanswered for ~20 hours: the Render account ran out of build
+minutes, every auto-deploy returned `build_failed` in under 1.5s, and prod
+served good-but-stale code five commits behind `main`. Sentry was
+correctly silent, because there were no errors. The smoke never ran, so
+auto-rollback correctly did not fire — and rolling back would have been
+the wrong action anyway.
+
+`.github/workflows/prod-deploy-health.yml` covers that gap. Every 2 hours
+it asks Render whether each prod service is still *able* to accept
+deploys, and reports to **Sentry** if not. The run also exits non-zero, so
+there is a red Actions status too — but Sentry is the channel that is
+meant to reach you. The one signal that did fire during the incident was a
+failed Actions run, and that is an email that went unread.
+
+It reports only. Every condition it detects needs a human decision, and
+re-triggering a build that failed for want of build minutes would burn the
+few that remain.
+
+Full write-up: `docs/incidents/2026-08-29-render-build-minutes.md`.
+Service settings and why they are what they are:
+`docs/runbooks/render-service-config.md`.
+
 ## Limitations and known gaps
 
 - **Vercel web is not auto-rolled back.** See "Vercel rollback is manual" above.

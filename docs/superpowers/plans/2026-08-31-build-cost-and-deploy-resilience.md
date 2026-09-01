@@ -47,9 +47,14 @@ The failure mode if we guess wrong is a duplicate set of production services, an
 syncing *"never deletes an existing resource"*, so a bad sync leaves orphans behind
 rather than cleaning up after itself.
 
-There is corroborating evidence in our own account that the collision-suffix path is
-live: `concert-crawl-crawler-triggers` has the slug
-`concert-crawl-crawler-triggers-5udw`.
+**Correction (2026-08-31, during PR-D):** this section originally cited the slug
+`concert-crawl-crawler-triggers-5udw` as corroborating evidence that the
+collision-suffix path is live in our account. It is not evidence. The staging
+service, created five weeks earlier, holds the slug
+`concert-crawl-crawler-triggers` outright — it was created under that name and
+later renamed, and slugs are immutable. Prod took a suffix because the slug was
+already taken by a rename, not by a blueprint. The decision to skip the blueprint
+stands on the documentation conflict and the never-deletes risk alone.
 
 Crucially, **we lose almost nothing by skipping it.** Every setting this plan needs
 — `buildFilter`, `healthCheckPath`, and the build cache profile — is settable
