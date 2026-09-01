@@ -261,7 +261,7 @@ In the Render dashboard for this service → **Environment** tab. The service ma
 
 ### concert-crawl-crawler-triggers + concert-crawl-crawler-daily (prod)
 
-Both crawler cron jobs need the same env var set. The Dockerfile (`apps/crawler/Dockerfile`) is `node:22-bookworm` + `playwright install --with-deps chromium` (no MCR dependency — see issue #547 / PR #591 for context).
+Both crawler cron jobs need the same env var set. The Dockerfile (`apps/crawler/Dockerfile`) is `node:22-bookworm` + `playwright install-deps chromium` as root, then `playwright install chromium` as `pwuser` (no MCR dependency — see issue #547 / PR #591 for context). The two halves are split so that root is used only for the apt packages and everything writing into `/app` or the browsers path runs as `pwuser`, which is what lets the image skip a recursive `chown`; `apps/crawler/scripts/verify-image.sh` guards that.
 
 | Variable             | Value                                             |
 | -------------------- | ------------------------------------------------- |

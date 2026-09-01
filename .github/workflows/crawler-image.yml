@@ -1,0 +1,44 @@
+name: Crawler image
+
+# Path-filtered on purpose. Building the image downloads Chromium and takes
+# minutes; running it on every PR would spend Actions minutes to re-prove an
+# unchanged Dockerfile.
+#
+# The filter tracks what can change the image's *shape* — which files are
+# copied, who owns them, and whether the build steps still succeed. That is
+# the Dockerfile and the manifests that drive installs and the build graph.
+# TypeScript source inside the workspace packages is deliberately excluded:
+# `COPY . .` does put it in the image, but it cannot change ownership or
+# whether Chromium launches, which is all this job asserts. A package gaining
+# a dependency shows up in the lockfile, and a package joining the crawler's
+# graph requires editing the Dockerfile's explicit COPY list — both listed.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/crawler/**'
+      - 'packages/crawler-core/**'
+      - 'packages/*/package.json'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'pnpm-lock.yaml'
+      - 'turbo.json'
+      - '.dockerignore'
+      - '.github/workflows/crawler-image.yml'
+
+permissions: read-all
+
+jobs:
+  build-and-verify:
+    name: Build and verify crawler image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -f apps/crawler/Dockerfile -t cc-crawler:ci .
+
+      - name: Verify image
+        run: apps/crawler/scripts/verify-image.sh cc-crawler:ci
