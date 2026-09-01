@@ -1,3 +1,10 @@
+## [1.275.5](https://github.com/HartiganHM/concert-crawl/compare/v1.275.4...v1.275.5) (2026-09-01)
+
+
+### Bug Fixes
+
+* **artists:** break same-name Spotify ties on the press photo ([#1650](https://github.com/HartiganHM/concert-crawl/issues/1650)) ([dc4fd43](https://github.com/HartiganHM/concert-crawl/commit/dc4fd43ba90baa8e203e55584f67080c8364c920))
+
 ## [1.275.4](https://github.com/HartiganHM/concert-crawl/compare/v1.275.3...v1.275.4) (2026-09-01)
 
 
