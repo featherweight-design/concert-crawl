@@ -60,7 +60,27 @@ const SEPARATORS = [
   ' - ', // hyphen with spaces — does NOT match "blink-182" (no spaces)
 ] as const
 
-export function canonicalizeArtist(artist: string): string {
+/**
+ * Rules 1–4 only: fold case, diacritics, and whitespace, but keep the whole
+ * billing. This is `canonicalizeArtist` minus the separator split.
+ *
+ * Split out because the truncation *manufactures* Spotify ambiguity. "Joslyn &
+ * the Sweet Compression" canonicalizes to "joslyn", which then ties with
+ * Joslyn, Joslyn James and Joslynn Prim — even when Spotify handed back the
+ * full string as a candidate. Comparing on the full billing settles that
+ * outright, so the matcher tries this before falling back to canonical
+ * equality.
+ *
+ * Deliberately a shared helper rather than a second normalizer in the matcher:
+ * two implementations of this fold is the SQL↔JS parity bug class that already
+ * cost us the Ø/ø incident.
+ *
+ * Does NOT trim: `canonicalizeArtist` relies on surrounding whitespace still
+ * being present to find a separator, so trimming here would change its output
+ * for a trailing-separator billing like "Foo & " — and that output is a dedup
+ * key. Callers comparing full names trim their own operands.
+ */
+export function normalizeArtistName(artist: string): string {
   if (typeof artist !== 'string' || artist.length === 0) {
     return ''
   }
@@ -78,7 +98,14 @@ export function canonicalizeArtist(artist: string): string {
   )
 
   // Lowercase + collapse whitespace.
-  const compact = stripped.toLowerCase().replace(/\s+/g, ' ')
+  return stripped.toLowerCase().replace(/\s+/g, ' ')
+}
+
+export function canonicalizeArtist(artist: string): string {
+  const compact = normalizeArtistName(artist)
+  if (compact === '') {
+    return ''
+  }
 
   // Find the earliest separator occurrence and split there.
   let firstSeparatorIdx = -1

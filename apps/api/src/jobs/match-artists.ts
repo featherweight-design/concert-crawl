@@ -157,6 +157,7 @@ export const runMatchArtists = async (
   const rows = await db
     .select({
       id: artists.id,
+      name: artists.name,
       canonicalName: artists.canonicalName,
       matchStatus: artists.matchStatus,
     })
@@ -200,9 +201,11 @@ export const runMatchArtists = async (
     summary.considered += 1
     const isRefresh = row.matchStatus === 'matched'
     try {
-      const result = await matchArtist(row.canonicalName, {
-        search: client.searchArtists,
-      })
+      const result = await matchArtist(
+        row.canonicalName,
+        { search: client.searchArtists },
+        row.name,
+      )
 
       // One instant per row. Every timestamp below records the same pass, and
       // a "cached at" that reads later than its own "checked at" is confusing

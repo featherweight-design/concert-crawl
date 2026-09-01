@@ -190,6 +190,18 @@ describe('canonicalizeArtist', () => {
     it('returns empty string for whitespace-only input', () => {
       expect(canonicalizeArtist('   ')).toBe('')
     })
+
+    // canonicalizeArtist finds a separator by its surrounding spaces, so the
+    // shared fold it now delegates to must NOT trim. These two pin that: the
+    // separator here is only a separator while its trailing space survives,
+    // and canonical_artist is a dedup key that must not shift underneath us.
+    it('still strips a trailing separator with nothing after it', () => {
+      expect(canonicalizeArtist('Foo & ')).toBe('foo')
+    })
+
+    it('still strips a leading separator with nothing before it', () => {
+      expect(canonicalizeArtist(' & Bar')).toBe('')
+    })
   })
 
   describe('festival names + tour qualifiers', () => {

@@ -5,6 +5,11 @@
 // Design brief §3.2 locks *that* matching is confidence-gated and leaves the
 // scoring to engineering. The scoring, in order of authority:
 //
+//   0. The candidate's name equals the row's full billing, folded for case,
+//      diacritics and whitespace but NOT truncated at a separator → the sole
+//      such candidate wins. Runs first because it is strictly stronger than
+//      (1): the truncation in (1) is itself what makes some of these rows
+//      ambiguous. See the tier-0 comment in matchArtist.
 //   1. canonicalizeArtist(candidate.name) === canonicalName → confidence 1.0.
 //   2. More than one distinct Spotify artist clears (1) → the one carrying a
 //      press photo wins, but only if it is the only one. Spotify's February
@@ -22,7 +27,10 @@
 // Canonicalization reuses crawler-core's canonicalizeArtist — the same
 // function the crawler and spotify-sync write with. A second normalizer here
 // would reintroduce the SQL↔JS parity class of bug (the Ø/ø incident).
-import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical'
+import {
+  canonicalizeArtist,
+  normalizeArtistName,
+} from '@concert-crawl/crawler-core/canonical'
 import type { SpotifyCandidateSnapshot } from '@concert-crawl/db'
 import type {
   SpotifyArtistCandidate,
@@ -96,13 +104,48 @@ const unresolved = (
  * `canonicalName` is expected to already be canonical (it comes from
  * `artists.canonical_name`), but candidate names are canonicalized here
  * before comparison.
+ *
+ * `billedName` is the row's display name — the full billing before
+ * `canonicalizeArtist` truncated it at the first separator. Optional because
+ * for most rows it folds to the same string; it only earns its keep on the
+ * bills the truncation mangles.
  */
 export const matchArtist = async (
   canonicalName: string,
   deps: ArtistMatchDeps,
+  billedName?: string,
 ): Promise<ArtistMatchResult> => {
   const candidates = dedupeCandidates(await deps.search(canonicalName))
   const snapshot = candidates.map(toCandidateSnapshot)
+
+  // Tier 0 — the full billing, compared before anything is truncated.
+  //
+  // canonicalizeArtist keeps only the first segment, so "Joslyn & the Sweet
+  // Compression" becomes "joslyn" and then ties with Joslyn, Joslyn James and
+  // Joslynn Prim. The truncation manufactured that ambiguity: Spotify returned
+  // the exact full string as a candidate, and nothing else it returned matches
+  // it. Comparing the whole billing settles the row outright.
+  //
+  // Strictly stronger evidence than tier 1, so it runs first — and it stays
+  // silent unless exactly one candidate matches, which keeps a genuine co-bill
+  // like "Ziggy Marley & Stephen Marley" (no candidate carries that name)
+  // ambiguous rather than resolving it to one of the two acts.
+  const billed = normalizeArtistName(billedName ?? '').trim()
+  if (billed !== '') {
+    const fullNameHits = candidates.filter(
+      (candidate) => normalizeArtistName(candidate.name).trim() === billed,
+    )
+    const soleHit = fullNameHits.length === 1 ? fullNameHits[0] : undefined
+    if (soleHit !== undefined) {
+      return {
+        status: 'matched',
+        spotifyArtistId: soleHit.id,
+        confidence: EXACT_MATCH_CONFIDENCE,
+        photoUrl: soleHit.images[0]?.url ?? null,
+        candidates: snapshot,
+      }
+    }
+  }
 
   // Score, then gate on the bar. There is one scoring tier today (exact
   // canonical equality); a fuzzy tier would add a score here and lower the

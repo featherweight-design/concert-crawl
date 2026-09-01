@@ -208,4 +208,89 @@ describe('matchArtist', () => {
 
     expect(result.candidates[0]?.genres).toBeNull()
   })
+
+  // Tier 0. The canonical form of "Joslyn & the Sweet Compression" is "joslyn",
+  // which ties with every other Joslyn Spotify returns — an ambiguity the
+  // truncation invented, since the full billing is sitting in the results.
+  it('resolves a truncated billing when one candidate carries the full name', async () => {
+    const deps = searchReturning([
+      candidate('sp1', 'Joslyn', [{ url: 'https://i.scdn.co/image/a' }]),
+      candidate('sp2', 'Joslyn & the Sweet Compression', [
+        { url: 'https://i.scdn.co/image/b' },
+      ]),
+      candidate('sp3', 'Joslyn James', [{ url: 'https://i.scdn.co/image/c' }]),
+    ])
+
+    const result = await matchArtist(
+      'joslyn',
+      deps,
+      'Joslyn & the Sweet Compression',
+    )
+
+    expect(result.status).toBe('matched')
+    expect(result.spotifyArtistId).toBe('sp2')
+    expect(result.photoUrl).toBe('https://i.scdn.co/image/b')
+  })
+
+  // A real co-bill: no candidate is billed as both acts, so there is nothing to
+  // resolve to and picking either one would be a guess.
+  it('leaves a genuine co-headline bill ambiguous when no candidate carries it', async () => {
+    const deps = searchReturning([
+      candidate('sp1', 'Ziggy Marley', [{ url: 'https://i.scdn.co/image/a' }]),
+      candidate('sp2', 'Ziggy Marley', [{ url: 'https://i.scdn.co/image/b' }]),
+      candidate('sp3', 'Stephen Marley', [
+        { url: 'https://i.scdn.co/image/c' },
+      ]),
+    ])
+
+    const result = await matchArtist(
+      'ziggy marley',
+      deps,
+      'Ziggy Marley & Stephen Marley',
+    )
+
+    expect(result.status).toBe('ambiguous')
+    expect(result.spotifyArtistId).toBeNull()
+  })
+
+  // Two acts really do share the exact billing, so the full name settles
+  // nothing and the row falls through to the usual tiers.
+  it('does not resolve on the full name when several candidates carry it', async () => {
+    const deps = searchReturning([
+      candidate('sp1', 'Venus', [{ url: 'https://i.scdn.co/image/a' }]),
+      candidate('sp2', 'Venus', [{ url: 'https://i.scdn.co/image/b' }]),
+    ])
+
+    const result = await matchArtist('venus', deps, 'Venus')
+
+    expect(result.status).toBe('ambiguous')
+  })
+
+  // Case, diacritics and whitespace are folded — the billing is a raw venue
+  // spelling and Spotify's casing is its own.
+  it('folds case, diacritics and whitespace when comparing the full name', async () => {
+    const deps = searchReturning([
+      candidate('sp1', 'Sigur Rós', [{ url: 'https://i.scdn.co/image/a' }]),
+      candidate('sp2', 'Sigur Ros Tribute'),
+    ])
+
+    const result = await matchArtist('sigur ros', deps, '  SIGUR   ROS  ')
+
+    expect(result.status).toBe('matched')
+    expect(result.spotifyArtistId).toBe('sp1')
+  })
+
+  // Every existing caller shape still has to work: no billing supplied means
+  // the canonical tiers decide, exactly as before.
+  it('falls back to the canonical tiers when no billing is supplied', async () => {
+    const deps = searchReturning([
+      candidate('sp1', 'Blue October', [{ url: 'https://i.scdn.co/image/a' }]),
+      candidate('sp2', 'Blue October'),
+    ])
+
+    const result = await matchArtist('blue october', deps)
+
+    expect(result.status).toBe('matched')
+    expect(result.spotifyArtistId).toBe('sp1')
+  })
 })
