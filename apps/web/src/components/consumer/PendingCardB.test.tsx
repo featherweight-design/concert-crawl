@@ -257,6 +257,38 @@ describe('PendingCardB', () => {
         screen.queryByRole('button', { name: /confirm price/i }),
       ).toBeNull()
     })
+
+    // Regression: the waiting badge was a flat 'Waiting on one more fan', so on
+    // an imminent show it contradicted the "2 to go" strip in this same card.
+    it('view "self-locked" on an imminent show counts the remaining fans', () => {
+      render(
+        <PendingCardB
+          {...buildProps({
+            view: 'self-locked',
+            kind: 'boxoffice',
+            confirms: 1,
+            needed: 3,
+          })}
+        />,
+      )
+      expect(screen.getByText('Waiting on two more fans')).toBeTruthy()
+      expect(screen.queryByText('Waiting on one more fan')).toBeNull()
+    })
+
+    it('view "self-locked" with the confirms already in never says "0 more fans"', () => {
+      render(
+        <PendingCardB
+          {...buildProps({
+            view: 'self-locked',
+            kind: 'boxoffice',
+            confirms: 2,
+            needed: 2,
+          })}
+        />,
+      )
+      expect(screen.getByText('Confirms are in')).toBeTruthy()
+      expect(screen.queryByText(/0 more fans/)).toBeNull()
+    })
   })
 
   describe('callbacks', () => {

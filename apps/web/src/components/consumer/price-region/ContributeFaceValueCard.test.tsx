@@ -18,7 +18,7 @@ describe('ContributeFaceValueCard (state #11 — Q1 contribution-only)', () => {
 
   it('renders headline + subline copy per Appendix A.1', () => {
     render(<ContributeFaceValueCard onAddPrice={() => {}} />)
-    expect(screen.getByText('No price to show — yet.')).toBeDefined()
+    expect(screen.getByText('No price to show. Yet.')).toBeDefined()
     expect(
       screen.getByText(
         'Sold out, nothing listed. Know the box-office number? Add it.',
@@ -48,9 +48,7 @@ describe('ContributeFaceValueCard (state #11 — Q1 contribution-only)', () => {
       name: /add the box-office price/i,
     })
     expect(button).toBeDefined()
-    expect(
-      screen.getByText('Goes live once one more fan confirms'),
-    ).toBeDefined()
+    expect(screen.getByText('Goes live once fans confirm')).toBeDefined()
 
     fireEvent.click(button)
     expect(onAddPrice).toHaveBeenCalledTimes(1)

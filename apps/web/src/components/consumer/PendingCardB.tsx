@@ -562,7 +562,7 @@ export const PendingCardB = ({
                 }}
               >
                 <LockGlyph size={14} />
-                {copy.waitingOnOneFan}
+                {copy.waitingOnFans(remaining)}
               </span>
             </>
           )}

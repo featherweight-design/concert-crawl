@@ -188,8 +188,8 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     // SoldOutPriceCard (has-listing variant) — strikethrough is rendered as
     // an em-dash when priceMin is null; either way the Sold out pill is present.
     expect(screen.getByText('Sold out')).toBeDefined()
-    // FaceValueCard variant='default' → "That's resale — not face value."
-    expect(screen.getByText("That's resale — not face value.")).toBeDefined()
+    // FaceValueCard variant='default' → "That's resale, not face value."
+    expect(screen.getByText("That's resale, not face value.")).toBeDefined()
     // ProvenanceCTA kind='resale' → "See resale tickets"
     expect(
       screen.getByRole('link', { name: /buy resale on seatgeek/i }),
@@ -210,18 +210,18 @@ describe('EventDetailPriceBlock — new decision-tree branches', () => {
     expect(screen.getByText('—')).toBeDefined()
     expect(
       screen.getByText(
-        'No tickets listed anywhere we can see — not even resale.',
+        'No tickets listed anywhere we can see. Not even resale.',
       ),
     ).toBeDefined()
-    // ContributeFaceValueCard — eyebrow "Face value" + headline "No price to show — yet."
-    expect(screen.getByText('No price to show — yet.')).toBeDefined()
+    // ContributeFaceValueCard — eyebrow "Face value" + headline "No price to show. Yet."
+    expect(screen.getByText('No price to show. Yet.')).toBeDefined()
     expect(
       screen.getByText(
         'Sold out, nothing listed. Know the box-office number? Add it.',
       ),
     ).toBeDefined()
     // NO FaceValueCard headlines
-    expect(screen.queryByText("That's resale — not face value.")).toBeNull()
+    expect(screen.queryByText("That's resale, not face value.")).toBeNull()
     expect(screen.queryByText('All we can see is resale.')).toBeNull()
     // NO ProvenanceCTA link
     expect(screen.queryByRole('link', { name: /resale/i })).toBeNull()

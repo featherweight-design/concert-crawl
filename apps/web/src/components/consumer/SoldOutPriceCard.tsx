@@ -8,7 +8,7 @@
 // Variants (Appendix A.2 — Q1 lock):
 //   - 'has-listing' (default) → strikethrough price + reporter caption.
 //   - 'no-listing'            → em-dash price, no strikethrough, and a
-//     subline "No tickets listed anywhere we can see — not even resale."
+//     subline "No tickets listed anywhere we can see. Not even resale."
 //     replaces the reporter caption. Used when the event is sold-out AND
 //     there is no resale ticketLink (the Q1 `sold-out-contribute` path —
 //     see decision-tree.ts). Other ticketLink kinds (primary, boxoffice)

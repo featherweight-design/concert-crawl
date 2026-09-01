@@ -10,7 +10,7 @@ import { LadderRow } from './LadderRow'
 // Property table §1 (lines 52–214) + plan lines 460–753.
 //
 // Variants:
-//   - 'default'  → state #10 (sold-out + resale)         — headline: "That's resale — not face value."
+//   - 'default'  → state #10 (sold-out + resale)         — headline: "That's resale, not face value."
 //   - 'no-price' → state #12 (no-price + resale shown)   — headline: "All we can see is resale."
 //
 // State #11 (sold-out + no resale + no primary + no boxoffice) is handled by

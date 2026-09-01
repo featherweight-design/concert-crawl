@@ -602,6 +602,7 @@ export function EventDetailPriceBlock({
           remainingTiers={TIER_ENUM.filter(
             (tier) => !submittedThisSession.has(tier),
           )}
+          confirmsNeeded={corroborationConfirmsRequired(event.date)}
           limitReached={
             submitSuccessPayload.submissionsRemaining !== undefined &&
             submitSuccessPayload.submissionsRemaining <= 0

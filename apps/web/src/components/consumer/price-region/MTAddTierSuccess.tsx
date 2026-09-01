@@ -12,6 +12,9 @@ export interface MTAddTierSuccessProps {
   submittedPrice: number
   submittedSourceCategory: SourceCategory
   remainingTiers: ReadonlyArray<Tier>
+  // Corroboration denominator for this event, resolved by the caller from the
+  // event date so the imminent-policy bump reaches this surface too.
+  confirmsNeeded: number
   // #876 — caller has no contribution acts left for this event today; hide
   // the add-tier pills and show the come-back-tomorrow line instead.
   limitReached?: boolean
@@ -29,6 +32,7 @@ export const MTAddTierSuccess = ({
   submittedPrice,
   submittedSourceCategory,
   remainingTiers,
+  confirmsNeeded,
   limitReached = false,
   onAddTier,
   onDone,
@@ -95,7 +99,9 @@ export const MTAddTierSuccess = ({
           String(submittedPrice),
           copy.sourceLabels[submittedSourceCategory],
         )}
-        <strong style={{ color: AZURE }}>{copy.pendingFragment}</strong>
+        <strong style={{ color: AZURE }}>
+          {copy.pendingFragment(confirmsNeeded)}
+        </strong>
       </div>
     </div>
 

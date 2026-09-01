@@ -26,7 +26,7 @@ describe('FaceValueCard', () => {
       expect(screen.getByText('Face value ≠ resale')).toBeDefined()
 
       // Headline + subline
-      expect(screen.getByText("That's resale — not face value.")).toBeDefined()
+      expect(screen.getByText("That's resale, not face value.")).toBeDefined()
       expect(
         screen.getByText(
           'Only resale tickets left. Know the box-office price? Add it.',
@@ -50,9 +50,7 @@ describe('FaceValueCard', () => {
         name: /add the box-office price/i,
       })
       expect(button).toBeDefined()
-      expect(
-        screen.getByText('Goes live once one more fan confirms'),
-      ).toBeDefined()
+      expect(screen.getByText('Goes live once fans confirm')).toBeDefined()
 
       // Clicking the CTA fires onAddPrice
       fireEvent.click(button)

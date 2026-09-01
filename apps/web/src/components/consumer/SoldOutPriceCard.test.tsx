@@ -86,7 +86,7 @@ describe('SoldOutPriceCard', () => {
       expect(screen.getByText('Sold out')).toBeDefined()
       expect(
         screen.getByText(
-          'No tickets listed anywhere we can see — not even resale.',
+          'No tickets listed anywhere we can see. Not even resale.',
         ),
       ).toBeDefined()
     })

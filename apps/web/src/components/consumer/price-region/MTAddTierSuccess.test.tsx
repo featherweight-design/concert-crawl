@@ -19,6 +19,7 @@ describe('MTAddTierSuccess', () => {
         submittedPrice={25}
         submittedSourceCategory="boxoffice"
         remainingTiers={[]}
+        confirmsNeeded={2}
         onAddTier={() => {}}
         onDone={() => {}}
       />,
@@ -37,6 +38,28 @@ describe('MTAddTierSuccess', () => {
     expect(container.querySelector('svg')).not.toBeNull()
   })
 
+  // Regression: the fragment used to hardcode "1/2 ... one more fan", so an
+  // imminent show (SP_POLICY.confirmsRequiredImminent = 3) had the success
+  // surface contradicting the pending rail's "1 of 3 confirmed · 2 to go"
+  // right above it.
+  it('state #1 imminent — denominator and remaining-fan count follow confirmsNeeded', () => {
+    render(
+      <MTAddTierSuccess
+        submittedTier="GA"
+        submittedPrice={238}
+        submittedSourceCategory="resale"
+        remainingTiers={[]}
+        confirmsNeeded={3}
+        onAddTier={() => {}}
+        onDone={() => {}}
+      />,
+    )
+    expect(
+      screen.getByText('sits pending · 1/3 until two more fans confirm.'),
+    ).toBeDefined()
+    expect(screen.queryByText(/1\/2 until one more fan/)).toBeNull()
+  })
+
   it('state #2 — renders + Add reserved, + Add vip pills when remainingTiers=[Reserved, VIP]', () => {
     render(
       <MTAddTierSuccess
@@ -44,6 +67,7 @@ describe('MTAddTierSuccess', () => {
         submittedPrice={25}
         submittedSourceCategory="boxoffice"
         remainingTiers={['Reserved', 'VIP']}
+        confirmsNeeded={2}
         onAddTier={() => {}}
         onDone={() => {}}
       />,
@@ -64,6 +88,7 @@ describe('MTAddTierSuccess', () => {
         submittedPrice={25}
         submittedSourceCategory="boxoffice"
         remainingTiers={['Reserved', 'VIP']}
+        confirmsNeeded={2}
         onAddTier={onAddTier}
         onDone={() => {}}
       />,
@@ -82,6 +107,7 @@ describe('MTAddTierSuccess', () => {
         submittedPrice={25}
         submittedSourceCategory="boxoffice"
         remainingTiers={[]}
+        confirmsNeeded={2}
         onAddTier={() => {}}
         onDone={() => {}}
       />,
@@ -100,6 +126,7 @@ describe('MTAddTierSuccess', () => {
         submittedPrice={25}
         submittedSourceCategory="boxoffice"
         remainingTiers={[]}
+        confirmsNeeded={2}
         onAddTier={() => {}}
         onDone={onDone}
       />,
@@ -117,6 +144,7 @@ describe('MTAddTierSuccess', () => {
         submittedPrice={25}
         submittedSourceCategory="boxoffice"
         remainingTiers={['Reserved', 'VIP']}
+        confirmsNeeded={2}
         limitReached
         onAddTier={() => {}}
         onDone={() => {}}
@@ -140,6 +168,7 @@ describe('MTAddTierSuccess', () => {
         submittedPrice={25}
         submittedSourceCategory="boxoffice"
         remainingTiers={['Reserved']}
+        confirmsNeeded={2}
         onAddTier={() => {}}
         onDone={() => {}}
       />,
@@ -160,6 +189,7 @@ describe('MTAddTierSuccess', () => {
         submittedPrice={25}
         submittedSourceCategory="boxoffice"
         remainingTiers={[]}
+        confirmsNeeded={2}
         limitReached
         onAddTier={() => {}}
         onDone={() => {}}
@@ -179,6 +209,7 @@ describe('MTAddTierSuccess', () => {
         submittedPrice={30}
         submittedSourceCategory="standard"
         remainingTiers={[]}
+        confirmsNeeded={2}
         onAddTier={() => {}}
         onDone={() => {}}
       />,
@@ -191,6 +222,7 @@ describe('MTAddTierSuccess', () => {
         submittedPrice={85}
         submittedSourceCategory="resale"
         remainingTiers={[]}
+        confirmsNeeded={2}
         onAddTier={() => {}}
         onDone={() => {}}
       />,

@@ -163,7 +163,7 @@ export const CONSUMER_COPY = {
   // ── Verify sheet ───────────────────────────────────────────────────
   verifySheet: {
     instructions:
-      'Confirm what you saw, update what looks off. Two confirms move a price out of pending.',
+      'Confirm what you saw, update what looks off. Confirms move a price out of pending.',
     closeButton: 'Close',
   },
 
@@ -202,7 +202,7 @@ export const CONSUMER_COPY = {
     communityGapBody:
       "Ticketing APIs don't share prices with us, and we're not waiting on them. The community fills the gap, so if you saw a number out there, drop it here.",
     submitPriceButton: 'Submit a price',
-    anonymousWorksHint: 'Anonymous works · two confirms moves it live',
+    anonymousWorksHint: 'Anonymous works · confirms move it live',
 
     // Price card top label
     boxOfficeLabel: 'Box office',
@@ -306,7 +306,7 @@ export const CONSUMER_COPY = {
     form: {
       contextEyebrow: 'Submit a price',
       antiabuseNotice:
-        'Prices are capped at $2,000. Submissions stay pending until 2 fans confirm.',
+        'Prices are capped at $2,000. Submissions stay pending until fans confirm.',
       floorLabel: 'Floor',
       floorPlaceholder: '35',
       ceilingLabel: 'Ceiling',
@@ -314,8 +314,7 @@ export const CONSUMER_COPY = {
       tierLabel: 'Tier *',
       vendorLabel: "Where it's listed *",
       howFoundLabel: 'How you found out *',
-      footerNote:
-        'Anonymous to other fans. Rate-limited at 1 per show per 24h.',
+      footerNote: 'Anonymous to other fans. Three prices per show per 24h.',
       submitButton: 'Submit price',
     },
     statusRail: {
@@ -324,7 +323,7 @@ export const CONSUMER_COPY = {
     },
     success: {
       heading: 'Got it.',
-      body: 'Your price is pending. Two more fans confirming it moves it to confirmed and you get some cred.',
+      body: 'Your price is pending. Once other fans confirm it, it goes live and you get some cred.',
       backButton: 'Back to show',
     },
     error: {
@@ -1096,7 +1095,16 @@ export const CONSUMER_COPY = {
       'Saw a different number? Sign up to submit a price',
     // Footer — self-locked view
     yourSubmissionLabel: 'Your submission',
-    waitingOnOneFan: 'Waiting on one more fan',
+    // Was a flat 'Waiting on one more fan', which contradicted the "N to go"
+    // strip in this same card whenever the imminent policy bumped `needed`.
+    // The card can still be rendering while `remaining` hits zero — an
+    // optimistic confirm lands before the price is promoted out of pending —
+    // so that case gets its own line rather than 'Waiting on 0 more fans'.
+    waitingOnFans: (remaining: number) => {
+      if (remaining <= 0) return 'Confirms are in'
+      if (remaining === 1) return 'Waiting on one more fan'
+      return `Waiting on ${remaining === 2 ? 'two' : String(remaining)} more fans`
+    },
     // Footer — submitter view
     editButton: 'Edit',
     withdrawButton: 'Withdraw',
@@ -1342,7 +1350,7 @@ export const CONSUMER_COPY = {
         ? `Did you also see $${floor}–$${ceiling}?`
         : `Did you also see $${floor}?`,
     subtitle:
-      "Two fan confirms moves a price from pending to live. Pick how you checked. We're trying to keep this honest, not fast.",
+      "Confirms move a price from pending to live. Pick how you checked. We're trying to keep this honest, not fast.",
 
     // VerifyOption labels and descriptions
     options: {
@@ -1450,8 +1458,7 @@ export const CONSUMER_COPY = {
     submittingButton: 'Submitting…',
     cancelButton: 'Cancel',
     successHeading: 'Update submitted.',
-    successBody:
-      'Your update is pending. One more fan confirming it moves it forward.',
+    successBody: 'Your update is pending. Confirms move it forward.',
     successBackButton: 'Back to show',
     errorHeading: "Didn't go through.",
     errorBody:
@@ -1466,8 +1473,7 @@ export const CONSUMER_COPY = {
   priceRegion: {
     faceValue: {
       eyebrow: 'Face value ≠ resale',
-      // eslint-disable-next-line no-restricted-syntax -- design-locked string; the audit recorded the em-dash fix but Design owns the change
-      headlineDefault: "That's resale — not face value.",
+      headlineDefault: "That's resale, not face value.",
       headlineNoPrice: 'All we can see is resale.',
       // Single subline — property table state #12 (no-price) only overrides the
       // headline; subline copy is shared between the sold-out-with-resale (#10)
@@ -1481,29 +1487,27 @@ export const CONSUMER_COPY = {
       ladderBoxofficeRight: 'not reported',
       ctaLabelDefault: 'Add the box-office price',
       ctaLabelNoPrice: "Add a price you've seen",
-      caption: 'Goes live once one more fan confirms',
+      caption: 'Goes live once fans confirm',
     },
     // LOCKED §9 Q1 — ContributeFaceValueCard copy (Appendix A.1).
     // Differs from faceValue.* — eyebrow drops the "≠ resale" framing, body
     // pitches contribution directly. New component, new copy block.
     contributeFaceValue: {
       eyebrow: 'Face value',
-      // eslint-disable-next-line no-restricted-syntax -- design-locked string; the audit recorded the em-dash fix but Design owns the change
-      headline: 'No price to show — yet.',
+      headline: 'No price to show. Yet.',
       subline: 'Sold out, nothing listed. Know the box-office number? Add it.',
       ladderBoxofficeLabel: 'Box office',
       ladderBoxofficeSub: 'the printed price · no fees',
       ladderBoxofficeRight: 'not reported',
       ctaLabel: 'Add the box-office price',
-      caption: 'Goes live once one more fan confirms',
+      caption: 'Goes live once fans confirm',
     },
     // SoldOutPriceCard status badge — one constant for the mobile and desktop
     // call sites so the two layouts stay in parity.
     soldOutBadge: 'Sold out',
     // LOCKED §9 Q1 — SoldOutPriceCard variant='no-listing' caption (Appendix A.2).
     soldOutNoListingCaption:
-      // eslint-disable-next-line no-restricted-syntax -- design-locked string; the audit recorded the em-dash fix but Design owns the change
-      'No tickets listed anywhere we can see — not even resale.',
+      'No tickets listed anywhere we can see. Not even resale.',
     provenance: {
       getTickets: 'Get Tickets',
       seeResale: 'See resale tickets',
@@ -1527,8 +1531,7 @@ export const CONSUMER_COPY = {
     },
     // LOCKED §9 Q3 — DisputedPriceCard / PendingCardB footer pointer (Appendix A.4).
     dispute: {
-      // eslint-disable-next-line no-restricted-syntax -- design-locked string; the audit recorded the em-dash fix but Design owns the change
-      counterPointerLabel: 'Someone posted a different price — see it',
+      counterPointerLabel: 'Someone posted a different price. See it',
     },
     multiSource: {
       eyebrow: 'Tickets',
@@ -1549,7 +1552,19 @@ export const CONSUMER_COPY = {
     addTierSuccess: {
       headline: (tier: string) => `${tier} price is in. Thanks.`,
       bodyTemplate: (price: string, source: string) => `$${price} ${source} · `,
-      pendingFragment: 'sits pending · 1/2 until one more fan confirms.',
+      // The submitter counts as observation #1, so the numerator is always 1
+      // and the denominator is the event's corroboration policy — 2 normally,
+      // SP_POLICY.confirmsRequiredImminent for a show inside the imminent
+      // window. Hardcoding "1/2 ... one more fan" made this surface contradict
+      // the pending rail's "1 of 3 confirmed" on every imminent show.
+      pendingFragment: (confirmsNeeded: number) => {
+        const remaining = Math.max(confirmsNeeded - 1, 0)
+        const tail =
+          remaining === 1
+            ? 'one more fan confirms'
+            : `${remaining === 2 ? 'two' : String(remaining)} more fans confirm`
+        return `sits pending · 1/${confirmsNeeded} until ${tail}.`
+      },
       addAnotherEyebrow: 'This show has more than one tier?',
       addPillTemplate: (tier: string) => `+ Add ${tier.toLowerCase()}`,
       helperLine:
@@ -1587,7 +1602,7 @@ export const CONSUMER_COPY = {
       cap: '$2,000',
       betweenCapAndPending: '. Submissions stay ',
       pending: 'pending',
-      afterPending: ' until 2 fans confirm.',
+      afterPending: ' until fans confirm.',
     },
     sourceLabel: "Where's this price from?",
     sourceHelper:
