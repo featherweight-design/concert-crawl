@@ -6,6 +6,13 @@ node_modules
 **/.env.*.local
 **/dist
 **/.next
+# The only Docker image built from this repo is the crawler. Nothing in
+# its dependency graph references apps/api, apps/web or apps/e2e, so
+# shipping them into the build context only bought slower installs and a
+# bigger image.
+apps/api
 apps/e2e
+apps/web
+design
 docs
 .claude
