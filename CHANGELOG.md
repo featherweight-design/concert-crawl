@@ -1,3 +1,10 @@
+## [1.275.7](https://github.com/HartiganHM/concert-crawl/compare/v1.275.6...v1.275.7) (2026-09-01)
+
+
+### Bug Fixes
+
+* **artists:** spend the match budget when MusicBrainz confirms the ambiguity ([#1652](https://github.com/HartiganHM/concert-crawl/issues/1652)) ([bf71ceb](https://github.com/HartiganHM/concert-crawl/commit/bf71ceb8e39c480a7981a7351114fdf8df8035ae))
+
 ## [1.275.6](https://github.com/HartiganHM/concert-crawl/compare/v1.275.5...v1.275.6) (2026-09-01)
 
 
