@@ -159,6 +159,23 @@ const APOSTROPHE_STRIPPED_NAME = sql`regexp_replace(artists.canonical_name, '[''
  * are genuinely dead. That is the direction to be wrong in: sparing junk costs
  * one more cleanup pass, while deleting a band playing next month costs an
  * empty artist page and the Spotify match that took quota to earn.
+ *
+ * The title must be strictly longer than the name, which is what makes a hit
+ * evidence of anything at all. This widening exists to find an act billed
+ * *within* a title — the "& Denzel Curry" half of a co-headline bill — so the
+ * title has to say something the name does not. Where the two are the same
+ * string the row is not an act billed in a title, it is the title itself,
+ * projected as an act back when the write-through took any headline string it
+ * saw. Those are the `Dogstar: ALL IN NOW TOUR` rows sitting beside a real
+ * `Dogstar`: unreferenced, and until now unreapable, because a tour title is by
+ * construction a substring of its own event title.
+ *
+ * Length is the whole test on purpose. The obvious alternative — read a
+ * separator after a known artist's name as the tour-title tell — needs a
+ * hand-tuned separator list, and boundaries loose enough to catch the remainder
+ * also swallow real acts: a live `ghost` subsumes `Ghost Canyon`. A length rule
+ * cannot make that mistake, because `Ghost Canyon` is longer than `ghost` and
+ * so goes on sparing it.
  */
 const BILLED_IN_LIVE_TITLE = sql`
   EXISTS (
@@ -169,6 +186,7 @@ const BILLED_IN_LIVE_TITLE = sql`
       AND events.date >= ${DENVER_TODAY}
       AND length(${APOSTROPHE_STRIPPED_NAME}) >= ${MIN_BILLING_NAME_LENGTH}
       AND strpos(events.canonical_title, ${APOSTROPHE_STRIPPED_NAME}) > 0
+      AND length(events.canonical_title) > length(${APOSTROPHE_STRIPPED_NAME})
   )
 `
 

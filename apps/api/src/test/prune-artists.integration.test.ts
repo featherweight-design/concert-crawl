@@ -301,6 +301,95 @@ describe('prune-artists integration', () => {
     expect(await listArtists()).toEqual([])
   })
 
+  it('reaps a tour title that is the whole title of its own show', async () => {
+    // `Dogstar: ALL IN NOW TOUR` was projected as an act alongside the real
+    // `Dogstar`, and the title widening made it immortal: a tour title is by
+    // construction a substring of its own event title, so it spared itself.
+    // The widening is for an act billed *within* a title, so the title has to
+    // say something the name does not.
+    const venue = await seedVenue({ slug: `prune-tour-title-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Dogstar',
+      canonicalArtist: 'dogstar',
+      title: 'Dogstar: ALL IN NOW TOUR',
+      canonicalTitle: 'dogstar: all in now tour',
+      headliners: ['Dogstar'],
+      canonicalHeadliners: ['dogstar'],
+      date: futureDate(),
+    })
+    await backfillArtists(testDb)
+    await testDb.insert(artists).values({
+      name: 'Dogstar: ALL IN NOW TOUR',
+      canonicalName: 'dogstar: all in now tour',
+      slug: 'dogstar-all-in-now-tour',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(1)
+    expect((await listArtists()).map((row) => row.canonicalName)).toEqual([
+      'dogstar',
+    ])
+  })
+
+  it('spares an act whose name is a prefix of a longer live title', async () => {
+    // The case that rules out reading a separator after a known artist's name
+    // as the tour-title tell: `ghost` is a real act and `Ghost Canyon` is a
+    // real booking, and any rule keyed on name shape reaps one of them. The
+    // length test cannot, because the title is longer than the name.
+    const venue = await seedVenue({ slug: `prune-prefix-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Ghost Canyon',
+      canonicalArtist: 'ghost canyon',
+      title: 'Ghost Canyon',
+      canonicalTitle: 'ghost canyon',
+      date: futureDate(),
+    })
+    await testDb.insert(artists).values({
+      name: 'Ghost',
+      canonicalName: 'ghost',
+      slug: 'ghost',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(0)
+    expect((await listArtists()).map((row) => row.canonicalName)).toContain(
+      'ghost',
+    )
+  })
+
+  it('spares a tour title some other, longer live title still prints', async () => {
+    // A known limit, pinned so nobody "fixes" it into a name-shape rule. The
+    // spare is evidence-based: this row reads as junk, but a live show really
+    // does print it inside a longer billing, and that is the same signal that
+    // saves a co-headliner. Rows like this stay for a human.
+    const venue = await seedVenue({ slug: `prune-tour-longer-${Date.now()}` })
+    await seedEvent(venue.id, {
+      artist: 'Our Lady Peace',
+      canonicalArtist: 'our lady peace',
+      title: 'Our Lady Peace: 30th Anniversary Tour with Finger Eleven',
+      canonicalTitle:
+        'our lady peace: 30th anniversary tour with finger eleven',
+      headliners: ['Our Lady Peace'],
+      canonicalHeadliners: ['our lady peace'],
+      date: futureDate(),
+    })
+    await backfillArtists(testDb)
+    await testDb.insert(artists).values({
+      name: 'Our Lady Peace: 30th Anniversary Tour',
+      canonicalName: 'our lady peace: 30th anniversary tour',
+      slug: 'our-lady-peace-30th-anniversary-tour',
+    })
+
+    const result = await pruneArtists(testDb, { dryRun: false })
+
+    expect(result.deleted).toBe(0)
+    expect((await listArtists()).map((row) => row.canonicalName)).toContain(
+      'our lady peace: 30th anniversary tour',
+    )
+  })
+
   it('does not spare a name too short to be evidence of a booking', async () => {
     // A three-character name is a substring of a large share of any title, so
     // matching one says nothing about whether the act is booked.

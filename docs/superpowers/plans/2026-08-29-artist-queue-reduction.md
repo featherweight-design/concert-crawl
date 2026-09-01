@@ -1,6 +1,7 @@
 # Artist review queue reduction
 
-**Status:** in progress — PR 1 (#1632) and PR 2 (#1634) merged, PR 3 open
+**Status:** PRs 1–4 merged (#1632, #1634, #1636, #1637). PR 5, the tour-title
+reap below, is the last code change; the prod ops pass follows it.
 **Goal:** get the list of artists Hugh has to resolve by hand down to under 100.
 
 > ⚠️ **The goal is not reachable with these four PRs.** Measured against prod on
@@ -69,12 +70,41 @@ because a tour-title canonical name is by construction a substring of its own
 event title. That widening is the guard that saved Denzel Curry and Ministry
 from a previous dry run, so it cannot simply be dropped.
 
-Narrowing it safely is its own PR, and a destructive one. A first pass
-requiring the subsumed remainder to begin with a separator (`:`, `(`, `,`, `-`)
-catches 24 of the 85 with no false positives; the looser boundaries needed for
-the rest (` tour`, ` rocks`, `b2b`, `presents`) also match real acts —
-a live artist `ghost` subsumes `Ghost Canyon`, and a live artist `j` subsumes
-`Japan Fest`. Not attempted here.
+Narrowing it safely is its own PR, and a destructive one — see PR 5 below.
+
+## PR 5 — narrow the title spare to titles that say more than the name
+
+The widening exists to find an act billed _within_ a title: the "& Denzel
+Curry" half of a co-headline bill. So the title has to say something the name
+does not. Where the two are the same string the row is not an act billed in a
+title, it is the title itself, projected as an act back when the write-through
+took any headline string it saw.
+
+One clause: the sparing event's `canonical_title` must be **strictly longer**
+than the apostrophe-stripped name.
+
+Measured against prod on 2026-08-31, of 92 rows the widening spares, this
+condemns exactly **22**, and every one of them is `no_match` — `Dogstar: ALL IN
+NOW TOUR`, `Adela: The Red Bottoms Tour`, `Bass Package: Krisnova, MedX,
+Majaztic, Nowhere`. Nothing `matched` or `ambiguous` is touched, so no live
+`/artists/:slug` a human has confirmed goes with it. The next bucket up — one
+character of extra title — is `gavn` and `melt`, both real matched acts, so the
+boundary is where it should be.
+
+**Why length and not name shape.** The separator rule considered first (require
+the subsumed remainder to begin with `:`, `(`, `,`, `-`) catches 13 of the 92
+and adds only 3 rows the length rule misses. It also needs a hand-tuned
+separator list, and the boundaries loose enough to catch the rest (` tour`,
+` rocks`, `b2b`, `presents`) match real acts: a live `ghost` subsumes
+`Ghost Canyon`, a live `j` subsumes `Japan Fest`. The length rule cannot make
+that mistake — `Ghost Canyon` is longer than `ghost`, so it goes on sparing it.
+Three rows is not worth a fragile list, so the separator rule was dropped.
+
+**What it deliberately leaves.** A tour title some _other_, longer live title
+still prints stays — `Our Lady Peace: 30th Anniversary Tour` survives because a
+real show bills it inside a longer string. That is the same signal that saves a
+co-headliner, so the spare is evidence-based rather than keyed on name shape.
+Three rows in that state; they stay for a human.
 
 ## PR 1 — terminal exhausted state
 
