@@ -1,3 +1,10 @@
+## [1.275.1](https://github.com/HartiganHM/concert-crawl/compare/v1.275.0...v1.275.1) (2026-09-01)
+
+
+### Bug Fixes
+
+* **ci:** pin Node to 24.20.0; retract the false cache.profile finding ([#1644](https://github.com/HartiganHM/concert-crawl/issues/1644)) ([7083d21](https://github.com/HartiganHM/concert-crawl/commit/7083d21768486094313ee779029dfa55217241df))
+
 # [1.275.0](https://github.com/HartiganHM/concert-crawl/compare/v1.274.2...v1.275.0) (2026-09-01)
 
 
