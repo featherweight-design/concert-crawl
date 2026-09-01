@@ -24,17 +24,30 @@ async function main() {
   }
 }
 
+// Flushing is best-effort: losing buffered Sentry events is not worth changing
+// the exit code the crawl earned. Swallowing here rather than relying on
+// `finally` matters because `finally` rethrows — a rejected flush on the
+// success path would otherwise reach the .catch below and report a completed
+// crawl as a fatal error, failing the cron monitor for a run that succeeded.
+async function flushQuietly(): Promise<void> {
+  try {
+    await Sentry.flush(2000)
+  } catch (flushErr: unknown) {
+    logger.warn(
+      { flushErr },
+      'Sentry flush failed; exiting on the crawl result',
+    )
+  }
+}
+
 main()
   .then(async () => {
-    await Sentry.flush(2000)
+    await flushQuietly()
     process.exit(0)
   })
   .catch(async (err) => {
     logger.error({ err }, 'Fatal error in crawler')
     Sentry.captureException(err)
-    try {
-      await Sentry.flush(2000)
-    } finally {
-      process.exit(1)
-    }
+    await flushQuietly()
+    process.exit(1)
   })
