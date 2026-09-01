@@ -118,12 +118,14 @@ describe('musicbrainz-disambiguate integration', () => {
     // scored the row, and clears the cached photo so the photo job re-fetches
     // against the identity just settled on. Anything else would leave a
     // stranger's face on the page.
-    // Seeded with a spent budget: resolving has to clear it, or the row would
-    // land straight in the admin's `exhausted` queue if it ever came back.
+    // Seeded one short of the limit rather than at zero: resolving has to clear
+    // a partly-spent budget, or the row would carry those attempts into the
+    // admin's `exhausted` queue if it ever came back. A fully spent budget
+    // cannot be used here — the selection excludes it.
     await seedAmbiguous({
       photoUrl: 'https://i.scdn.co/image/stale',
       photoFetchedAt: new Date(),
-      matchAttempts: MATCH_ATTEMPT_LIMIT,
+      matchAttempts: MATCH_ATTEMPT_LIMIT - 1,
     })
 
     await run(
@@ -174,20 +176,89 @@ describe('musicbrainz-disambiguate integration', () => {
     expect(row?.spotifyArtistId).toBeNull()
   })
 
-  it('leaves a row MusicBrainz finds as ambiguous as Spotify did', async () => {
+  /** Two MusicBrainz artists bearing the name exactly — the ambiguity verdict. */
+  const bothSourcesAmbiguous = () =>
+    stubMusicBrainz({
+      search: [
+        { id: 'mbid-1', name: 'Mirrors' },
+        { id: 'mbid-2', name: 'Mirrors' },
+      ],
+    })
+
+  it('spends the budget on a row MusicBrainz finds as ambiguous as Spotify did', async () => {
+    // Two independent catalogues have now said the name maps to more than one
+    // act, so re-asking Spotify cannot break the tie. Spending the budget is
+    // what moves the row out of the admin's `ambiguous` queue — it keeps its
+    // candidates and its public page and simply stops being offered as work.
+    await seedAmbiguous({})
+
+    const result = await run(bothSourcesAmbiguous())
+
+    expect(result.skipped['several-exact-name-matches']).toBe(1)
+    expect(result.resolved).toBe(0)
+    expect(result.exhausted).toBe(1)
+
+    const [row] = await listArtists()
+    expect(row?.matchAttempts).toBe(MATCH_ATTEMPT_LIMIT)
+    // The verdict is untouched: exhaustion answers "have we stopped asking",
+    // which is a different question from what the last search found.
+    expect(row?.matchStatus).toBe('ambiguous')
+    expect(row?.spotifyCandidates).toHaveLength(2)
+  })
+
+  it('does not reconsider a row whose budget is already spent', async () => {
+    // A second pass must not re-buy a verdict it already paid for. The row
+    // stays `ambiguous` after being exhausted, so the spent budget is the only
+    // thing keeping it out of the selection.
+    await seedAmbiguous({ matchAttempts: MATCH_ATTEMPT_LIMIT })
+
+    const result = await run(bothSourcesAmbiguous())
+
+    expect(result.considered).toBe(0)
+    expect(result.skipped['several-exact-name-matches']).toBe(0)
+    expect(result.exhausted).toBe(0)
+  })
+
+  it('does not spend the budget on a dry run', async () => {
+    await seedAmbiguous({})
+
+    const result = await run(bothSourcesAmbiguous(), true)
+
+    expect(result.skipped['several-exact-name-matches']).toBe(1)
+    expect(result.exhausted).toBe(0)
+    const [row] = await listArtists()
+    expect(row?.matchAttempts).toBe(0)
+  })
+
+  it('leaves the budget alone when MusicBrainz simply does not know the name', async () => {
+    // Absence of evidence. MusicBrainz not carrying the artist says nothing
+    // about whether Spotify's tie will break once the act releases something.
+    await seedAmbiguous({})
+
+    const result = await run(stubMusicBrainz({ search: [] }))
+
+    expect(result.skipped['no-exact-name-match']).toBe(1)
+    expect(result.exhausted).toBe(0)
+    const [row] = await listArtists()
+    expect(row?.matchAttempts).toBe(0)
+  })
+
+  it('leaves the budget alone when the sole MusicBrainz artist has no Spotify link', async () => {
+    // The missing piece is a link an editor can add any day, so the row is
+    // still worth re-asking.
     await seedAmbiguous({})
 
     const result = await run(
       stubMusicBrainz({
-        search: [
-          { id: 'mbid-1', name: 'Mirrors' },
-          { id: 'mbid-2', name: 'Mirrors' },
-        ],
+        search: [{ id: 'mbid-1', name: 'Mirrors' }],
+        relations: [],
       }),
     )
 
-    expect(result.skipped['several-exact-name-matches']).toBe(1)
-    expect(result.resolved).toBe(0)
+    expect(result.skipped['no-spotify-link']).toBe(1)
+    expect(result.exhausted).toBe(0)
+    const [row] = await listArtists()
+    expect(row?.matchAttempts).toBe(0)
   })
 
   it('compares names through the same canonicaliser the row was written with', async () => {

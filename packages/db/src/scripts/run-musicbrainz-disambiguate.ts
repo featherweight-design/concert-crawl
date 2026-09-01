@@ -5,6 +5,10 @@
  * agreements are cheap to read first — a dry run prints every one of them, so
  * a wrong-looking pair can be caught before it reaches a page.
  *
+ * An apply also spends the match budget on rows MusicBrainz found ambiguous
+ * too, which moves them to the admin queue's `exhausted` tab. A dry run reports
+ * that count as `would-exhaust`.
+ *
  *   DATABASE_URL=<target> pnpm --filter @concert-crawl/db db:musicbrainz-disambiguate
  *   DATABASE_URL=<target> pnpm --filter @concert-crawl/db db:musicbrainz-disambiguate --limit=20
  *   DATABASE_URL=<target> pnpm --filter @concert-crawl/db db:musicbrainz-disambiguate --apply
@@ -64,10 +68,14 @@ async function main(): Promise<void> {
     if (count > 0) console.log(`[musicbrainz]   skipped ${reason}: ${count}`)
   }
 
+  // Nothing is written on a dry run, so the exhaustion an apply would perform
+  // is read off the skip count that drives it rather than off `exhausted`.
+  const wouldExhaust = result.skipped['several-exact-name-matches']
+
   console.log(
     dryRun
-      ? `[musicbrainz] DRY RUN — considered=${result.considered} resolved=${result.resolved}. Re-run with --apply.`
-      : `[musicbrainz] considered=${result.considered} resolved=${result.resolved} updated=${result.updated}`,
+      ? `[musicbrainz] DRY RUN — considered=${result.considered} resolved=${result.resolved} would-exhaust=${wouldExhaust}. Re-run with --apply.`
+      : `[musicbrainz] considered=${result.considered} resolved=${result.resolved} updated=${result.updated} exhausted=${result.exhausted}`,
   )
 }
 

@@ -26,10 +26,29 @@
  * because no algorithm scored this, and the cached photo is cleared so the
  * photo job re-fetches against the identity we just settled on.
  *
+ * **The other half of the answer is the queue it empties.** Resolution is rare —
+ * a pass agrees on roughly one row in fifty. What MusicBrainz supplies far more
+ * often is a *verdict of genuine ambiguity*: when several MusicBrainz artists
+ * bear the name exactly, a curated identity database and a search index have
+ * independently said the name maps to more than one act. Re-asking Spotify
+ * cannot break that, because the tie is a property of the catalogue rather than
+ * of the question. Those rows have their match budget spent (`MATCH_ATTEMPT_LIMIT`),
+ * which is what the admin queue reads to move a row out of `ambiguous` and into
+ * its `exhausted` tab. The row keeps its candidates and its public page; it
+ * simply stops being offered as work the job might finish.
+ *
+ * Only that one skip reason spends the budget. `no-exact-name-match` is absence
+ * of evidence — MusicBrainz not knowing the artist says nothing about whether
+ * Spotify's tie will break later. `no-spotify-link` and `several-spotify-links`
+ * both mean the missing piece is a link an editor can add any day, so the row
+ * is still worth re-asking.
+ *
  * Deliberately a one-off, not a cron. The queue is a backlog with a floor —
  * once it is drained, new ambiguity arrives a few rows at a time and the admin
- * picker is the right surface for it. Re-running is safe and idempotent: a
- * resolved row is no longer `ambiguous` and drops out of the selection.
+ * picker is the right surface for it. Re-running is safe, idempotent, and does
+ * not re-buy what it already paid for: a resolved row is no longer `ambiguous`,
+ * and an exhausted one is excluded by the same spent budget the admin queue
+ * reads, so each pass only walks rows it has never given a verdict on.
  *
  * MusicBrainz asks for one request per second and a User-Agent that identifies
  * the application with a contact address. Both are honoured below. Two requests
@@ -38,10 +57,10 @@
  * the size of a pass is read from its output rather than guessed from here.
  */
 
-import { and, eq, isNotNull } from 'drizzle-orm'
+import { and, eq, inArray, isNotNull, lt } from 'drizzle-orm'
 import { z } from 'zod'
 import { canonicalizeArtist } from '@concert-crawl/types'
-import { artists } from '../schema/artists.js'
+import { artists, MATCH_ATTEMPT_LIMIT } from '../schema/artists.js'
 import type { Database } from '../client.js'
 
 /** Why a row was left alone. Counted so a run reports where the queue actually goes. */
@@ -75,6 +94,13 @@ export interface MusicBrainzDisambiguateResult {
   skipped: Record<SkipReason, number>
   /** Every agreement reached, for eyeballing before an apply run. */
   resolutions: MusicBrainzResolution[]
+  /**
+   * Rows whose match budget this run spent because MusicBrainz found the name
+   * ambiguous too. Zero on a dry run, and short of the
+   * `several-exact-name-matches` count when a row was already exhausted or had
+   * left `ambiguous` before the write.
+   */
+  exhausted: number
 }
 
 export interface MusicBrainzDisambiguateOptions {
@@ -250,11 +276,18 @@ export async function disambiguateArtistsWithMusicBrainz(
     'musicbrainz-unavailable': 0,
   }
   const resolutions: MusicBrainzResolution[] = []
+  /** Rows MusicBrainz independently found ambiguous — see the header note. */
+  const exhaustibleIds: string[] = []
 
   // Only rows carrying a candidate snapshot are reachable — the cross-check
   // has nothing to compare against without one. Ordered by name so a run
   // truncated by --limit resumes predictably rather than re-walking a random
   // slice.
+  //
+  // A spent budget drops the row out: this run's own exhaustion writes leave
+  // rows `ambiguous`, so without the filter a second pass would re-buy the same
+  // verdict two requests at a time. It also aligns the selection with the admin
+  // queue, which already hides exhausted rows from its `ambiguous` tab.
   const selection = database
     .select({
       id: artists.id,
@@ -267,6 +300,7 @@ export async function disambiguateArtistsWithMusicBrainz(
       and(
         eq(artists.matchStatus, 'ambiguous'),
         isNotNull(artists.spotifyCandidates),
+        lt(artists.matchAttempts, MATCH_ATTEMPT_LIMIT),
       ),
     )
     .orderBy(artists.canonicalName)
@@ -292,6 +326,7 @@ export async function disambiguateArtistsWithMusicBrainz(
     }
     if (sole === 'several') {
       skipped['several-exact-name-matches']++
+      exhaustibleIds.push(row.id)
       continue
     }
 
@@ -330,15 +365,38 @@ export async function disambiguateArtistsWithMusicBrainz(
     })
   }
 
-  if (options.dryRun || resolutions.length === 0) {
+  if (options.dryRun) {
     return {
       considered: rows.length,
       resolved: resolutions.length,
       updated: 0,
       skipped,
       resolutions,
+      exhausted: 0,
     }
   }
+
+  // Guarded on `ambiguous` for the same reason the resolution write is — a row
+  // an admin settled mid-run keeps the human's answer — and on a budget still
+  // unspent so a re-run reports only the rows it actually changed.
+  const exhaustedRows =
+    exhaustibleIds.length === 0
+      ? []
+      : await database
+          .update(artists)
+          .set({
+            matchAttempts: MATCH_ATTEMPT_LIMIT,
+            matchCheckedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              inArray(artists.id, exhaustibleIds),
+              eq(artists.matchStatus, 'ambiguous'),
+              lt(artists.matchAttempts, MATCH_ATTEMPT_LIMIT),
+            ),
+          )
+          .returning({ id: artists.id })
 
   let updated = 0
   for (const resolution of resolutions) {
@@ -376,5 +434,6 @@ export async function disambiguateArtistsWithMusicBrainz(
     updated,
     skipped,
     resolutions,
+    exhausted: exhaustedRows.length,
   }
 }

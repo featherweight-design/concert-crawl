@@ -2,17 +2,12 @@
 // admin queue can never disagree about which rows have been given up on.
 
 import { inArray, sql, type SQL } from 'drizzle-orm'
-import { artists } from '@concert-crawl/db'
+import { artists, MATCH_ATTEMPT_LIMIT } from '@concert-crawl/db'
 
-/**
- * Fruitless searches a row gets before the match job stops asking.
- *
- * Three because the retry cadence is the expensive part, not the count: each
- * attempt is weeks apart, so three spans months of Spotify catalogue churn.
- * Past that the answer is stable, and the daily quota is better spent on rows
- * nobody has looked at yet.
- */
-export const MATCH_ATTEMPT_LIMIT = 3
+// The limit itself lives beside the column in `packages/db`, because the
+// MusicBrainz tiebreaker spends the same budget from there and cannot import
+// this file. Re-exported so every existing import site is unchanged.
+export { MATCH_ATTEMPT_LIMIT }
 
 /**
  * The only verdicts that can hold a spent budget.

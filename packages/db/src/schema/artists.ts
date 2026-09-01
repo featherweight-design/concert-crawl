@@ -31,6 +31,20 @@ export type SpotifyCandidateSnapshot = {
 }
 
 /**
+ * Fruitless searches a row gets before the match job stops asking.
+ *
+ * Three because the retry cadence is the expensive part, not the count: each
+ * attempt is weeks apart, so three spans months of Spotify catalogue churn.
+ * Past that the answer is stable, and the daily quota is better spent on rows
+ * nobody has looked at yet.
+ *
+ * Lives beside the column rather than in `apps/api` because the MusicBrainz
+ * tiebreaker in `packages/db/src/scripts` also spends this budget, and two
+ * copies of the number is the same parity trap that produced the Ø/ø incident.
+ */
+export const MATCH_ATTEMPT_LIMIT = 3
+
+/**
  * Where an artist sits in the Spotify identity-match lifecycle (#1115).
  *
  * `ambiguous` is a human queue, not an error: more than one Spotify artist
