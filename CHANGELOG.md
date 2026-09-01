@@ -1,3 +1,10 @@
+## [1.275.3](https://github.com/HartiganHM/concert-crawl/compare/v1.275.2...v1.275.3) (2026-09-01)
+
+
+### Bug Fixes
+
+* **crawler:** keep a successful crawl's exit code at 0 when Sentry flush fails ([#1646](https://github.com/HartiganHM/concert-crawl/issues/1646)) ([2f2b132](https://github.com/HartiganHM/concert-crawl/commit/2f2b132e99ddb5c17dda8c790185074166e30f6e))
+
 ## [1.275.2](https://github.com/HartiganHM/concert-crawl/compare/v1.275.1...v1.275.2) (2026-09-01)
 
 
