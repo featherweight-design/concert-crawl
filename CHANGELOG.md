@@ -1,3 +1,15 @@
+## [1.274.2](https://github.com/HartiganHM/concert-crawl/compare/v1.274.1...v1.274.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* **ci:** stop release commits triggering a second Render build fan-out ([#1640](https://github.com/HartiganHM/concert-crawl/issues/1640)) ([c646cb3](https://github.com/HartiganHM/concert-crawl/commit/c646cb343f0a5707ba44286e1a02f5ce183cce00))
+
+
+### Performance Improvements
+
+* **crawler:** order Dockerfile layers so source edits do not re-run install ([#1641](https://github.com/HartiganHM/concert-crawl/issues/1641)) ([ccc7736](https://github.com/HartiganHM/concert-crawl/commit/ccc7736489d66ed6134b6e1455a9bdfab995bd2c))
+
 ## [1.274.1](https://github.com/HartiganHM/concert-crawl/compare/v1.274.0...v1.274.1) (2026-08-29)
 
 
