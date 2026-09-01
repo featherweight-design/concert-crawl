@@ -1,3 +1,10 @@
+## [1.275.4](https://github.com/HartiganHM/concert-crawl/compare/v1.275.3...v1.275.4) (2026-09-01)
+
+
+### Performance Improvements
+
+* **crawler:** build image as pwuser to drop the recursive chown layer ([#1648](https://github.com/HartiganHM/concert-crawl/issues/1648)) ([cdbebf1](https://github.com/HartiganHM/concert-crawl/commit/cdbebf15b62a541a5dbfbff2fc7fab3612006699))
+
 ## [1.275.3](https://github.com/HartiganHM/concert-crawl/compare/v1.275.2...v1.275.3) (2026-09-01)
 
 
