@@ -1,3 +1,11 @@
+## [1.275.2](https://github.com/HartiganHM/concert-crawl/compare/v1.275.1...v1.275.2) (2026-09-01)
+
+
+### Bug Fixes
+
+* **artists:** reap tour-title rows the reaper's title spare made immortal ([#1647](https://github.com/HartiganHM/concert-crawl/issues/1647)) ([5924eb0](https://github.com/HartiganHM/concert-crawl/commit/5924eb0284e39bbd5baa46e87b65c54452117d02))
+* **web:** stop the event detail page contradicting itself on confirms ([#1645](https://github.com/HartiganHM/concert-crawl/issues/1645)) ([a8ae7db](https://github.com/HartiganHM/concert-crawl/commit/a8ae7db90646b9bf8f4dc82e15b137c3434e34d3))
+
 ## [1.275.1](https://github.com/HartiganHM/concert-crawl/compare/v1.275.0...v1.275.1) (2026-09-01)
 
 
