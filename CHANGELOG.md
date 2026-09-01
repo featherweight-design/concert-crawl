@@ -1,3 +1,10 @@
+# [1.275.0](https://github.com/HartiganHM/concert-crawl/compare/v1.274.2...v1.275.0) (2026-09-01)
+
+
+### Features
+
+* **ci:** report to Sentry when prod Render deploys stop landing ([#1642](https://github.com/HartiganHM/concert-crawl/issues/1642)) ([a474c0a](https://github.com/HartiganHM/concert-crawl/commit/a474c0adf88d11b75b4103d02310ed9196e60d71))
+
 ## [1.274.2](https://github.com/HartiganHM/concert-crawl/compare/v1.274.1...v1.274.2) (2026-09-01)
 
 
