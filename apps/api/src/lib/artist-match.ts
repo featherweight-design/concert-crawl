@@ -6,11 +6,12 @@
 // scoring to engineering. The scoring, in order of authority:
 //
 //   1. canonicalizeArtist(candidate.name) === canonicalName → confidence 1.0.
-//   2. More than one distinct Spotify artist clears (1) → `ambiguous`, with no
-//      tiebreak. Guessing would put the wrong press photo on a public page; a
-//      human resolves it from the admin queue. Spotify offers nothing to break
-//      the tie with either: its February 2026 developer-access change removed
-//      `popularity` and `followers` from the artist object outright.
+//   2. More than one distinct Spotify artist clears (1) → the one carrying a
+//      press photo wins, but only if it is the only one. Spotify's February
+//      2026 developer-access change removed `popularity` and `followers` from
+//      the artist object, so artwork is the sole remaining signal. Two
+//      photographed namesakes → `ambiguous`, resolved by a human from the admin
+//      queue; guessing there would put a stranger's photo on a public page.
 //   3. Nothing clears (1) → `no_match`. There is deliberately NO fuzzy tier:
 //      a wrong photo is worse than no photo, and the brief's §3.3 fallback
 //      (IdentityArt plate) is a designed, shipped-quality state.
@@ -121,13 +122,24 @@ export const matchArtist = async (
   // artist, not an ambiguity. `candidates` is already deduped by id, so this
   // is just a count of the exact hits.
   if (exact.length === 0) return unresolved('no_match', snapshot)
-  if (exact.length > 1) return unresolved('ambiguous', snapshot)
 
-  // Prefer the first occurrence that actually carries an image — Spotify
-  // orders images widest-first, so images[0] is the best available.
-  const withImage = exact.find((candidate) => candidate.images.length > 0)
-  const winner = withImage ?? exact[0]
-  if (winner === undefined) return unresolved('no_match', snapshot)
+  // Several artists share a name, so the tie needs breaking on something other
+  // than the name. A press photo is the only signal Spotify still exposes, and
+  // it separates a touring act from a name-squatting upload often enough to be
+  // worth acting on: "Blue October" returns the band and a silent namesake with
+  // no artwork at all.
+  //
+  // It only decides when exactly one candidate carries one. Two photographed
+  // namesakes is a real ambiguity, and picking between them would put a
+  // stranger's press photo on a public artist page.
+  const photographed = exact.filter((candidate) => candidate.images.length > 0)
+  const winner =
+    exact.length === 1
+      ? exact[0]
+      : photographed.length === 1
+        ? photographed[0]
+        : undefined
+  if (winner === undefined) return unresolved('ambiguous', snapshot)
 
   return {
     status: 'matched',

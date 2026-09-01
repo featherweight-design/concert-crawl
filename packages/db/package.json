@@ -29,6 +29,10 @@
     "./scripts/musicbrainz-disambiguate": {
       "import": "./dist/scripts/musicbrainz-disambiguate.js",
       "types": "./dist/scripts/musicbrainz-disambiguate.d.ts"
+    },
+    "./scripts/resolve-photo-tiebreak": {
+      "import": "./dist/scripts/resolve-photo-tiebreak.js",
+      "types": "./dist/scripts/resolve-photo-tiebreak.d.ts"
     }
   },
   "scripts": {
@@ -41,7 +45,8 @@
     "db:backfill-artists": "tsx src/scripts/run-backfill-artists.ts",
     "db:prune-artists": "tsx src/scripts/run-prune-artists.ts",
     "db:repair-artist-names": "tsx src/scripts/run-repair-artist-names.ts",
-    "db:musicbrainz-disambiguate": "tsx src/scripts/run-musicbrainz-disambiguate.ts"
+    "db:musicbrainz-disambiguate": "tsx src/scripts/run-musicbrainz-disambiguate.ts",
+    "db:resolve-photo-tiebreak": "tsx src/scripts/run-resolve-photo-tiebreak.ts"
   },
   "dependencies": {
     "@concert-crawl/types": "workspace:*",

@@ -77,7 +77,7 @@ describe('matchArtist', () => {
     })
   })
 
-  it('returns ambiguous when more than one candidate matches exactly', async () => {
+  it('returns ambiguous when more than one exact candidate carries a photo', async () => {
     const deps = searchReturning([
       candidate('sp1', 'Nirvana', [{ url: 'https://i.scdn.co/image/one' }]),
       candidate('sp2', 'NIRVANA', [{ url: 'https://i.scdn.co/image/two' }]),
@@ -95,6 +95,51 @@ describe('matchArtist', () => {
         snapshotOf('sp2', 'NIRVANA', 'https://i.scdn.co/image/two'),
       ],
     })
+  })
+
+  // The production shape this exists for: "Blue October" searches to the band
+  // plus a silent namesake that uploaded no artwork at all.
+  it('breaks a same-name tie toward the only candidate with a photo', async () => {
+    const deps = searchReturning([
+      candidate('sp1', 'blue october'),
+      candidate('sp2', 'Blue October', [
+        { url: 'https://i.scdn.co/image/big' },
+        { url: 'https://i.scdn.co/image/small' },
+      ]),
+    ])
+
+    const result = await matchArtist('blue october', deps)
+
+    expect(result.status).toBe('matched')
+    expect(result.spotifyArtistId).toBe('sp2')
+    expect(result.photoUrl).toBe('https://i.scdn.co/image/big')
+  })
+
+  it('stays ambiguous when no exact candidate carries a photo', async () => {
+    const deps = searchReturning([
+      candidate('sp1', 'Nirvana'),
+      candidate('sp2', 'NIRVANA'),
+    ])
+
+    const result = await matchArtist('nirvana', deps)
+
+    expect(result.status).toBe('ambiguous')
+    expect(result.spotifyArtistId).toBeNull()
+  })
+
+  // Three-way ties are the common production shape, not a hypothetical: the
+  // photo only has to be unique, not the sole candidate.
+  it('breaks a three-way tie when exactly one candidate has a photo', async () => {
+    const deps = searchReturning([
+      candidate('sp1', 'Wednesday'),
+      candidate('sp2', 'WEDNESDAY', [{ url: 'https://i.scdn.co/image/one' }]),
+      candidate('sp3', 'wednesday'),
+    ])
+
+    const result = await matchArtist('wednesday', deps)
+
+    expect(result.status).toBe('matched')
+    expect(result.spotifyArtistId).toBe('sp2')
   })
 
   it('returns no_match when the search comes back empty', async () => {
