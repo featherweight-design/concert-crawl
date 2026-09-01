@@ -1,3 +1,10 @@
+## [1.275.6](https://github.com/HartiganHM/concert-crawl/compare/v1.275.5...v1.275.6) (2026-09-01)
+
+
+### Bug Fixes
+
+* **artists:** break same-name Spotify ties on the full billing ([#1651](https://github.com/HartiganHM/concert-crawl/issues/1651)) ([c1f5185](https://github.com/HartiganHM/concert-crawl/commit/c1f51852659ddf7bba07793af5150d49f5c832e6))
+
 ## [1.275.5](https://github.com/HartiganHM/concert-crawl/compare/v1.275.4...v1.275.5) (2026-09-01)
 
 
