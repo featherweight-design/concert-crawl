@@ -17,7 +17,7 @@ Two things follow from that, and they are the whole scope of this plan:
 
 1. **Prod was never broken, only stale.** So the auto-rollback correctly did not
    fire — there was nothing bad to roll back from. The detection gap is real but it
-   is a *staleness* gap, not a rollback bug.
+   is a _staleness_ gap, not a rollback bug.
 2. **The minutes ran out because one push to `main` costs six builds**, two of them
    Docker images that download Chromium. Reducing that is the durable fix; raising
    the spend cap only buys time.
@@ -36,15 +36,15 @@ nobody re-proposes it without reading the reason.
 Render's own documentation contradicts itself on what happens when a `render.yaml`
 is introduced over services that already exist from the dashboard:
 
-- The IaC docs say naming an existing resource makes Render *"apply the Blueprint's
-  configuration to that existing service."*
-- The blueprint-creation flow docs say Render *"appends a suffix to the name of each
-  new resource to prevent collisions with your existing resources"* — i.e. it
+- The IaC docs say naming an existing resource makes Render _"apply the Blueprint's
+  configuration to that existing service."_
+- The blueprint-creation flow docs say Render _"appends a suffix to the name of each
+  new resource to prevent collisions with your existing resources"_ — i.e. it
   creates duplicates.
 
 Neither statement is qualified in a way that tells us which one governs our case.
 The failure mode if we guess wrong is a duplicate set of production services, and
-syncing *"never deletes an existing resource"*, so a bad sync leaves orphans behind
+syncing _"never deletes an existing resource"_, so a bad sync leaves orphans behind
 rather than cleaning up after itself.
 
 **Correction (2026-08-31, during PR-D):** this section originally cited the slug
@@ -62,7 +62,7 @@ through the Render REST API and the dashboard. The blueprint would buy version
 control, and PR-D buys that instead with a checked-in reference table at a fraction
 of the risk.
 
-If we ever do want IaC, the safe sequence is: replicate one *non-production* service
+If we ever do want IaC, the safe sequence is: replicate one _non-production_ service
 name byte-exact, sync, confirm the preview says "update" and not "create", and only
 then widen. That is a separate piece of work with its own rollback story.
 
@@ -83,7 +83,7 @@ existing `[skip ci]`.
 **Expected effect.** Builds per merged PR drop from ~12 to ~6, before filters.
 
 **Risk.** Low, and self-correcting: if the token were wrong the only consequence is
-that we keep the behavior we have today. The token must land in the commit *message*
+that we keep the behavior we have today. The token must land in the commit _message_
 template, so it is worth confirming on the first real release commit after merge
 that no Render deploy was queued.
 
@@ -173,7 +173,7 @@ Nothing anywhere answers the question "is prod running what `main` says it shoul
 
 **Fix.** A scheduled workflow that reads the live deploy SHA for the prod API from
 the Render API, compares it to `origin/main`, and fails when the gap exceeds a
-threshold in *time* rather than commit count — a five-commit gap ten minutes after a
+threshold in _time_ rather than commit count — a five-commit gap ten minutes after a
 merge is normal; the same gap twelve hours later is not.
 
 **Design constraints.**
@@ -200,7 +200,7 @@ Three documents, all in `docs/runbooks/`:
 
 1. **Render service config reference.** A table of all six services: id, type, plan,
    build command, `rootDir`, `buildFilter`, `healthCheckPath`, cache profile,
-   schedule. This is what the blueprint was going to buy us. It is a *reference*,
+   schedule. This is what the blueprint was going to buy us. It is a _reference_,
    not a synced artifact — deliberately markdown and not `render.yaml`, so that
    nothing in Render ever acts on it. Say that in the document, with the reason,
    or a future reader will "helpfully" convert it.
@@ -226,36 +226,36 @@ other five are suspended and do not build. **Only the six active ones are in
 scope** — but the suspended five are listed because un-suspending one silently
 re-enters it into the fan-out, and it would then carry none of the filters below.
 
-| # | Service | ID | Env | Runtime | In scope |
-| --- | --- | --- | --- | --- | --- |
-| 1 | `concert-crawl-api` | `srv-d7lngqfavr4c73eme3b0` | prod | node (web) | ✅ |
-| 2 | `concert-crawl-api-staging` | `srv-d7lnkdmgvqtc73f8eec0` | staging | node (web) | ✅ |
-| 3 | `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod | **docker** | ✅ |
-| 4 | `concert-crawl-crawler-daily` | `crn-d8o7egog4nts73d2tni0` | prod | **docker** | ✅ |
-| 5 | `concert-crawl-match-artists` | `crn-d9nm08e7bikc73c6q39g` | prod | node | ✅ |
-| 6 | `concert-crawl-spotify-weekly` | `crn-d9e46ad7vvec73dsn7bg` | prod | node | ✅ |
-| 7 | `concert-crawl-crawler-triggers-staging` | `crn-d7vcv1j7uimc73el15og` | staging | docker | suspended |
-| 8 | `concert-crawl-crawler-daily-staging` | `crn-d7vd0afaqgkc73943af0` | staging | docker | suspended |
-| 9 | `concert-crawl-match-artists-staging` | `crn-d9nm0a7lk1mc738e92kg` | staging | node | suspended |
-| 10 | `concert-crawl-spotify-weekly-staging` | `crn-d9e4173bc2fs73f6qk10` | staging | node | suspended |
-| 11 | `concert-crawl-billing-jobs-staging` | `crn-d9c4556q1p3s73b143m0` | staging | node | suspended |
+| #   | Service                                  | ID                         | Env     | Runtime    | In scope  |
+| --- | ---------------------------------------- | -------------------------- | ------- | ---------- | --------- |
+| 1   | `concert-crawl-api`                      | `srv-d7lngqfavr4c73eme3b0` | prod    | node (web) | ✅        |
+| 2   | `concert-crawl-api-staging`              | `srv-d7lnkdmgvqtc73f8eec0` | staging | node (web) | ✅        |
+| 3   | `concert-crawl-crawler-triggers`         | `crn-d8o7c10k1i2s7389t3v0` | prod    | **docker** | ✅        |
+| 4   | `concert-crawl-crawler-daily`            | `crn-d8o7egog4nts73d2tni0` | prod    | **docker** | ✅        |
+| 5   | `concert-crawl-match-artists`            | `crn-d9nm08e7bikc73c6q39g` | prod    | node       | ✅        |
+| 6   | `concert-crawl-spotify-weekly`           | `crn-d9e46ad7vvec73dsn7bg` | prod    | node       | ✅        |
+| 7   | `concert-crawl-crawler-triggers-staging` | `crn-d7vcv1j7uimc73el15og` | staging | docker     | suspended |
+| 8   | `concert-crawl-crawler-daily-staging`    | `crn-d7vd0afaqgkc73943af0` | staging | docker     | suspended |
+| 9   | `concert-crawl-match-artists-staging`    | `crn-d9nm0a7lk1mc738e92kg` | staging | node       | suspended |
+| 10  | `concert-crawl-spotify-weekly-staging`   | `crn-d9e4173bc2fs73f6qk10` | staging | node       | suspended |
+| 11  | `concert-crawl-billing-jobs-staging`     | `crn-d9c4556q1p3s73b143m0` | staging | node       | suspended |
 
 Note that #11 has no production counterpart. That is not addressed here, but it is
 worth someone confirming deliberately rather than discovering later.
 
 ### The changes, per service
 
-| Change | Applies to | Why |
-| --- | --- | --- |
-| `healthCheckPath` → `/v1/health` | #1, #2 | Both are `""` today. With no readiness gate Render cannot hold traffic on the old instance; recovery logs show the old instance took SIGTERM a full minute *after* the new one went live. This is the entire 2.5-minute gap. |
-| Clear `cache.profile: "no-cache"` | #1, #2 | Build cache is explicitly disabled on both. The four crons carry no `cache` field at all. |
-| `buildFilter` — API + `packages/db` paths | #1, #2 | ⚠️ **must** include `packages/db/**` — see below. |
-| `buildFilter` — crawler paths | #3, #4 | These are the Playwright/Docker images. Highest cost, and entirely unaffected by `apps/web`. |
-| `buildFilter` — API job paths | #5, #6 | Both build `@concert-crawl/api` and run a single job script out of `apps/api/dist/jobs/`. |
+| Change                                                                       | Applies to | Why                                                                                                                                                                                                                          |
+| ---------------------------------------------------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `healthCheckPath` → `/v1/health`                                             | #1, #2     | Both are `""` today. With no readiness gate Render cannot hold traffic on the old instance; recovery logs show the old instance took SIGTERM a full minute _after_ the new one went live. This is the entire 2.5-minute gap. |
+| ~~Clear `cache.profile: "no-cache"`~~ **— WITHDRAWN, the premise was false** | #1, #2     | Build logs show the cache is warm; the field is undocumented, unwritable, and has no dashboard control. See `docs/runbooks/render-service-config.md`.                                                                        |
+| `buildFilter` — API + `packages/db` paths                                    | #1, #2     | ⚠️ **must** include `packages/db/**` — see below.                                                                                                                                                                            |
+| `buildFilter` — crawler paths                                                | #3, #4     | These are the Playwright/Docker images. Highest cost, and entirely unaffected by `apps/web`.                                                                                                                                 |
+| `buildFilter` — API job paths                                                | #5, #6     | Both build `@concert-crawl/api` and run a single job script out of `apps/api/dist/jobs/`.                                                                                                                                    |
 
 **The one that can break prod.** #1 and #2 build with
 `pnpm install && pnpm db:migrate && pnpm turbo build --filter=@concert-crawl/api`.
-Migrations run *inside the build*. So their `buildFilter` **must** include
+Migrations run _inside the build_. So their `buildFilter` **must** include
 `packages/db/**`, or a migration-only PR merges, no build runs, and the migration
 silently never applies. This is the highest-consequence line in the epic.
 
@@ -264,8 +264,8 @@ services run older code. CLAUDE.md mandates expand/contract migrations only, whi
 is exactly the property that makes this safe — but it becomes load-bearing rather
 than belt-and-braces, so it belongs in the runbook.
 
-Two notes from the docs review: `buildFilter` paths are repo-root-relative *even
-when `rootDir` is set* (all eleven services have `rootDir: ""`, so this is moot
+Two notes from the docs review: `buildFilter` paths are repo-root-relative _even
+when `rootDir` is set_ (all eleven services have `rootDir: ""`, so this is moot
 today but will not stay moot), and on any future blueprint sync an omitted
 `buildFilter` **clears** dashboard-set filters.
 
@@ -279,15 +279,15 @@ exists to prevent. Do not batch them.
 
 All four crons are live on pre-outage code:
 
-| Cron | Live commit | Behind `main` |
-| --- | --- | --- |
-| `concert-crawl-crawler-triggers` | `520a73904` | 5 |
-| `concert-crawl-crawler-daily` | `520a73904` | 5 |
-| `concert-crawl-match-artists` | `daa77d865` | 4 |
-| `concert-crawl-spotify-weekly` | `daa77d865` | 4 |
+| Cron                             | Live commit | Behind `main` |
+| -------------------------------- | ----------- | ------------- |
+| `concert-crawl-crawler-triggers` | `520a73904` | 5             |
+| `concert-crawl-crawler-daily`    | `520a73904` | 5             |
+| `concert-crawl-match-artists`    | `daa77d865` | 4             |
+| `concert-crawl-spotify-weekly`   | `daa77d865` | 4             |
 
 All four predate **`442e56c20`**, which stopped the price tier-1 fetcher identifying
-itself as `https://concertcrawl.com/bot` — *a domain we do not own*. Under "crawl
+itself as `https://concertcrawl.com/bot` — _a domain we do not own_. Under "crawl
 ethics are existential" that is a live correctness problem, and
 `concert-crawl-crawler-triggers` runs every 10 minutes.
 

@@ -49,7 +49,7 @@ obvious fix. It was evaluated and **rejected for now** — but on a narrower
 basis than it first appeared.
 
 Render's own docs contradict each other on whether syncing a blueprint
-adopts an existing service of the same name or creates a *new* one with a
+adopts an existing service of the same name or creates a _new_ one with a
 collision suffix. The failure mode if it creates rather than adopts is
 duplicate prod crons running against the same production database, and
 blueprint sync **never deletes**, so cleanup is manual. Against a config
@@ -74,14 +74,14 @@ Six services deploy from `main`. All have `autoDeploy: yes`,
 `autoDeployTrigger: commit`, `rootDir: ""`, region `oregon`, plan
 `starter`.
 
-| # | Service | ID | Env | Runtime | Schedule |
-| - | ------- | -- | --- | ------- | -------- |
-| 1 | `concert-crawl-api` | `srv-d7lngqfavr4c73eme3b0` | prod | node | (web service) |
-| 2 | `concert-crawl-api-staging` | `srv-d7lnkdmgvqtc73f8eec0` | staging | node | (web service) |
-| 3 | `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod | docker | `*/10 * * * *` |
-| 4 | `concert-crawl-crawler-daily` | `crn-d8o7egog4nts73d2tni0` | prod | docker | `0 9 * * *` |
-| 5 | `concert-crawl-match-artists` | `crn-d9nm08e7bikc73c6q39g` | prod | node | `0 16 * * *` |
-| 6 | `concert-crawl-spotify-weekly` | `crn-d9e46ad7vvec73dsn7bg` | prod | node | `30 15 * * 1` |
+| #   | Service                          | ID                         | Env     | Runtime | Schedule       |
+| --- | -------------------------------- | -------------------------- | ------- | ------- | -------------- |
+| 1   | `concert-crawl-api`              | `srv-d7lngqfavr4c73eme3b0` | prod    | node    | (web service)  |
+| 2   | `concert-crawl-api-staging`      | `srv-d7lnkdmgvqtc73f8eec0` | staging | node    | (web service)  |
+| 3   | `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod    | docker  | `*/10 * * * *` |
+| 4   | `concert-crawl-crawler-daily`    | `crn-d8o7egog4nts73d2tni0` | prod    | docker  | `0 9 * * *`    |
+| 5   | `concert-crawl-match-artists`    | `crn-d9nm08e7bikc73c6q39g` | prod    | node    | `0 16 * * *`   |
+| 6   | `concert-crawl-spotify-weekly`   | `crn-d9e46ad7vvec73dsn7bg` | prod    | node    | `30 15 * * 1`  |
 
 Cron schedules are **UTC**. `0 9 * * *` is the 3 AM MT daily crawl during
 MDT; it drifts an hour relative to local time across the DST boundary,
@@ -93,13 +93,13 @@ Five staging services are suspended on purpose, as a cost measure. They
 are listed so that "why is this not deploying?" has an answer that is not
 an investigation.
 
-| Service | ID | Runtime |
-| ------- | -- | ------- |
-| `concert-crawl-crawler-triggers-staging` | `crn-d7vcv1j7uimc73el15og` | docker |
-| `concert-crawl-crawler-daily-staging` | `crn-d7vd0afaqgkc73943af0` | docker |
-| `concert-crawl-match-artists-staging` | `crn-d9nm0a7lk1mc738e92kg` | node |
-| `concert-crawl-spotify-weekly-staging` | `crn-d9e4173bc2fs73f6qk10` | node |
-| `concert-crawl-billing-jobs-staging` | `crn-d9c4556q1p3s73b143m0` | node |
+| Service                                  | ID                         | Runtime |
+| ---------------------------------------- | -------------------------- | ------- |
+| `concert-crawl-crawler-triggers-staging` | `crn-d7vcv1j7uimc73el15og` | docker  |
+| `concert-crawl-crawler-daily-staging`    | `crn-d7vd0afaqgkc73943af0` | docker  |
+| `concert-crawl-match-artists-staging`    | `crn-d9nm0a7lk1mc738e92kg` | node    |
+| `concert-crawl-spotify-weekly-staging`   | `crn-d9e4173bc2fs73f6qk10` | node    |
+| `concert-crawl-billing-jobs-staging`     | `crn-d9c4556q1p3s73b143m0` | node    |
 
 A suspended service is one of the two conditions
 `.github/scripts/render-check-deploy-health.sh` alerts on — which is why
@@ -139,14 +139,48 @@ separate migration step. So:
   reports green. The expand/contract policy means the app keeps working —
   which is exactly what makes this failure quiet.
 
+### Node version is pinned by `.node-version`
+
+The repo-root `.node-version` file is the single source of truth for the
+Node major/minor running the four node services (#1, #2, #5, #6) _and_ every
+GitHub Actions job — the workflows read it via `node-version-file` rather
+than repeating a literal. Change the pin in one place and both follow.
+
+Render's precedence is `NODE_VERSION` env var → `.node-version` → `.nvmrc` →
+`package.json` `engines`. No service sets `NODE_VERSION`, so `.node-version`
+wins. Root `engines.node` is a deliberately looser but **bounded** range
+(`^24.0.0`) — it is a compatibility floor for contributors, not the pin.
+`.node-version` is the pin.
+
+**Always bound the `engines` range.** It previously read
+`^20.20.0 || >=22.22.0` — no upper bound — so Render auto-selected the newest
+satisfying major and prod drifted onto Node 26.8.1, a **non-LTS** release,
+while CI tested exclusively on 24. Render's own docs call this out.
+
+`.node-version` is in the build filters of the **four node services only**
+(#1, #2, #5, #6). Without it there, a Node bump would change no filtered path,
+Render would skip the build, and prod would stay on the old runtime while the
+repo claimed otherwise — the same silent-skip class as the `packages/db/**`
+trap above.
+
+It is deliberately **excluded** from the two docker crawler crons (#3, #4).
+`apps/crawler/Dockerfile` pins its own base image, so `.node-version` cannot
+change what Node that image runs — including it would rebuild two Chromium
+images on every Node bump for no effect. This is the one place the
+"bias filters broad" rule is knowingly inverted, because the file provably
+does not enter the docker build.
+
+The crawler base image is a separate, intentional decision: changing it busts
+the Docker layer cache and carries Playwright/Chromium compatibility risk, so
+it is not driven by this file and the two majors are allowed to differ.
+
 ## Settings that need to stay set
 
-| Setting | Services | Value | Why |
-| ------- | -------- | ----- | --- |
-| `healthCheckPath` | 1, 2 | `/v1/health` | With this empty, Render cuts traffic to the old instance before the new one is serving. That is the entire cause of the ~2.5-minute prod outage on 2026-08-31; the deploy itself was fine. |
-| `cache.profile` | 1, 2 | unset (not `no-cache`) | Both were pinned to `no-cache`, so every build re-downloaded and re-resolved from scratch. Nothing required it. |
-| `buildFilter` | all 6 | see below | Every service rebuilds on every commit to `main`, so a web-only PR burns six builds. |
-| `autoDeploy` | all 6 | `yes` | Anything else means merged code never reaches the service. Alerted on. |
+| Setting           | Services | Value        | Why                                                                                                                                                                                        |
+| ----------------- | -------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `healthCheckPath` | 1, 2     | `/v1/health` | With this empty, Render cuts traffic to the old instance before the new one is serving. That is the entire cause of the ~2.5-minute prod outage on 2026-08-31; the deploy itself was fine. |
+| `buildFilter`     | all 6    | see below    | Every service rebuilds on every commit to `main`, so a web-only PR burns six builds.                                                                                                       |
+| `autoDeploy`      | all 6    | `yes`        | Anything else means merged code never reaches the service. Alerted on.                                                                                                                     |
 
 `healthCheckPath` can be set over the API:
 
@@ -157,10 +191,32 @@ curl -s -X PATCH -H "Authorization: Bearer $RENDER_API_TOKEN" \
   https://api.render.com/v1/services/<service-id>
 ```
 
-**`cache.profile` cannot.** Every value tried against
-`serviceDetails.cache.profile` — `default`, `cache`, `enabled`, `""` — comes
-back `500 internal server error` on a request that succeeds when the field is
-omitted. It is read-only over the API in practice; change it in the dashboard.
+### ⚠️ `cache.profile: no-cache` is not a problem — do not go hunting for it
+
+Both API services report `serviceDetails.cache.profile: "no-cache"`. This
+looks alarming and is not. It was briefly recorded here as a cold-build cause
+and an open action item; that was wrong, and the correction is kept rather
+than deleted so nobody rediscovers the string and repeats the chase.
+
+What is actually true:
+
+- **Builds are already cached.** A representative API build downloads the
+  cache (`Downloaded 889MB in 11s`), completes `pnpm install
+--frozen-lockfile` in ~3 seconds, and finishes in 2m31s total. A cold build
+  cannot resolve a pnpm store that fast.
+- **There is no dashboard control for it.** Render's Settings page exposes
+  Deploy, Build, Build Filters, and Edge Caching. Edge Caching is CDN
+  response caching for a web service's _traffic_ — unrelated to build cache,
+  and not the toggle.
+- **It cannot be set over the API.** `default`, `cache`, `enabled`, and `""`
+  all return `500 internal server error` on a PATCH that succeeds when the
+  field is omitted.
+- **It is undocumented.** The field appears in neither Render's blueprint
+  spec nor its deploy docs.
+
+Read it as an internal field Render reports but does not let you edit, and
+which does not describe build-cache behavior. If build times regress, read
+the build log's cache lines — not this field.
 
 ### Build filters
 
@@ -192,7 +248,7 @@ over-broad filter costs a few builds; a narrow one costs a silent missed
 migration. **Read-back is not proof, though** — the first real push after a
 filter change is, so check that the services you expect to build did.
 
-Note that a filtered service is *supposed* to sit behind `main` when
+Note that a filtered service is _supposed_ to sit behind `main` when
 recent commits do not touch its paths. This is why the deploy-health
 checker asks Render about deploy status rather than comparing the live SHA
 to `main` — once filters exist, SHA drift is no longer evidence of
@@ -219,10 +275,11 @@ curl -s -H "Authorization: Bearer $RENDER_API_TOKEN" \
 ```
 
 Useful fields: `.autoDeploy`, `.suspended`, `.rootDir`,
-`.serviceDetails.healthCheckPath`, `.serviceDetails.cache.profile`,
-`.serviceDetails.envSpecificDetails`, `.serviceDetails.schedule`.
+`.serviceDetails.healthCheckPath`, `.serviceDetails.envSpecificDetails`,
+`.serviceDetails.schedule`.
 
-`cache.profile` is reported for node web services only; cron jobs omit it.
+`.serviceDetails.cache.profile` is also reported for node web services (cron
+jobs omit it), but it is neither editable nor meaningful — see above.
 
 Recent deploys, newest first:
 

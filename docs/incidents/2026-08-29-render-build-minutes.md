@@ -42,7 +42,7 @@ This is the part worth keeping.
 **Sentry was correctly silent.** Sentry reports errors. There were no
 errors. A healthy app running old code produces exactly the same telemetry
 as a healthy app running new code. Every alerting layer we had was
-watching for the app being *down*, and the app was *up*.
+watching for the app being _down_, and the app was _up_.
 
 **The one signal that did fire went nowhere.** The post-deploy reconciler
 (`render-wait-for-live.sh`) exited **125** — its purpose-built "deploys are
@@ -66,14 +66,13 @@ reason. A parallel canary does not catch an account-level failure.
 Merged as the "build cost and deploy resilience" epic
 (`docs/superpowers/plans/2026-08-31-build-cost-and-deploy-resilience.md`).
 
-| Change | Addresses |
-| ------ | --------- |
-| `healthCheckPath: /v1/health` on both API services | The 2.5-minute outage. Directly. |
-| `[skip render]` added to the semantic-release commit template | Render does not honor `[skip ci]`, so every merge fanned out twice across six services. Roughly halves build spend on its own. |
-| Crawler Dockerfile reordered for layer caching; `apps/api`, `apps/web`, `apps/e2e` dropped from the build context | `pnpm install` and the Chromium download stopped re-running on every source change. |
-| `cache.profile: no-cache` cleared on both API services | Nothing required it. It was forcing cold builds. |
-| Build filters on all six services | A web-only PR no longer rebuilds the crawler. |
-| `prod-deploy-health.yml` — 2-hourly check reporting to **Sentry** | The detection gap. |
+| Change                                                                                                            | Addresses                                                                                                                      |
+| ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `healthCheckPath: /v1/health` on both API services                                                                | The 2.5-minute outage. Directly.                                                                                               |
+| `[skip render]` added to the semantic-release commit template                                                     | Render does not honor `[skip ci]`, so every merge fanned out twice across six services. Roughly halves build spend on its own. |
+| Crawler Dockerfile reordered for layer caching; `apps/api`, `apps/web`, `apps/e2e` dropped from the build context | `pnpm install` and the Chromium download stopped re-running on every source change.                                            |
+| Build filters on all six services                                                                                 | A web-only PR no longer rebuilds the crawler.                                                                                  |
+| `prod-deploy-health.yml` — 2-hourly check reporting to **Sentry**                                                 | The detection gap.                                                                                                             |
 
 ## The detector, and what it deliberately does not do
 
@@ -85,7 +84,7 @@ Two conditions:
 
 **It does not compare the live SHA to `main`.** That was the obvious
 design and it is wrong here: the same epic added build filters, and a
-filtered service is *supposed* to sit behind `main` whenever recent
+filtered service is _supposed_ to sit behind `main` whenever recent
 commits do not touch its paths. SHA drift stops being evidence of
 anything. Encoding each service's filter into the detector would duplicate
 config that lives in Render and drift from it.
@@ -104,7 +103,7 @@ went unread.
 ## What is still not covered
 
 - **Build-minute balance is not monitored.** The detector catches the
-  *symptom* two hours after it starts, not the *cause* in advance. Render
+  _symptom_ two hours after it starts, not the _cause_ in advance. Render
   does not expose remaining build minutes via the API as far as we found.
   The 2-hour detection window is the mitigation.
 - **Cron services still cannot be auto-rolled back.** Render's `/rollback`
@@ -117,6 +116,25 @@ went unread.
   happens when that sync lapses, since it claimed a `healthCheckPath` the
   live services did not have. Making it a real Blueprint was evaluated and
   rejected; see `docs/runbooks/render-service-config.md` for why.
+
+## A wrong finding, kept on the record
+
+The first write-up of this incident listed "`cache.profile: no-cache` cleared
+on both API services — it was forcing cold builds" as a remediation, and it
+was carried out as a manual action item. **It was false.** The build logs
+show a warm cache (889MB restored in 11s, `pnpm install --frozen-lockfile` in
+~3 seconds, 2m31s total), there is no dashboard control for the field, and it
+is undocumented and unwritable over the API. The claim came from reading an
+alarming-looking config string and inferring a cost problem without ever
+opening a build log.
+
+The row is removed above and the reasoning is preserved in
+`docs/runbooks/render-service-config.md`, so that the next person who finds
+`no-cache` in the API response stops rather than starts.
+
+The generalizable part: during a cost incident, every suspicious-looking
+setting reads as a cause. Confirm against runtime evidence before it becomes
+an action item.
 
 ## Lesson
 
