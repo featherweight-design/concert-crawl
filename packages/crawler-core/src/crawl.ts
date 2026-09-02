@@ -10,7 +10,11 @@ import {
 } from '@concert-crawl/db'
 import type { CrawlRun } from '@concert-crawl/db'
 import { reportFailure } from '@concert-crawl/logger'
-import { isAllowed } from './lib/robots.js'
+import {
+  getCrawlDelayMs,
+  isAllowed,
+  resolveCrawlDelayMs,
+} from './lib/robots.js'
 import { sendCrawlFailureEmail } from './lib/email.js'
 import { checkEventCountDrop } from './lib/event-count-alert.js'
 import { checkEventCeiling } from './lib/event-ceiling-alert.js'
@@ -436,6 +440,15 @@ export async function crawlVenue(
     return { ...crawlRun, insertedEventIds: [] }
   }
 
+  // Reconcile our own pacing with the site's stated Crawl-delay, once, and
+  // thread the result through every request this run makes. Reads the same
+  // cached robots.txt the isAllowed check above already fetched.
+  const crawlDelayMs = resolveCrawlDelayMs(
+    venue.crawlDelayMs,
+    await getCrawlDelayMs(venue.websiteUrl, USER_AGENT),
+    { venueId, url: venue.websiteUrl },
+  )
+
   try {
     // Platform fetcher dispatch (#623). If the venue is on a known
     // platform (AEG today; Etix / Ticketmaster / AXS in follow-up PRs),
@@ -471,9 +484,11 @@ export async function crawlVenue(
 
     if (platformFetcher) {
       const platformResult = await platformFetcher.fetch(venue, {
-        crawlDelayMs: venue.crawlDelayMs,
+        crawlDelayMs,
         perRequestTimeoutMs: PLATFORM_PER_REQUEST_TIMEOUT_MS,
-        overallTimeoutMs: platformOverallTimeoutMs(platformFetcher, venue),
+        overallTimeoutMs: platformOverallTimeoutMs(platformFetcher, {
+          crawlDelayMs,
+        }),
       })
       extraction = {
         normalizedEvents: platformResult.events,
@@ -514,7 +529,7 @@ export async function crawlVenue(
         fetchResult = await fetchPage(
           venue.websiteUrl,
           await getBrowser(),
-          venue.crawlDelayMs,
+          crawlDelayMs,
           venue.crawlWaitUntil,
           venue.crawlWaitForSelector ?? undefined,
         )
@@ -523,7 +538,7 @@ export async function crawlVenue(
         // crawlMode is 'http' or null (auto-detect: HTTP first)
         let httpResult: FetchResult | null = null
         try {
-          httpResult = await fetchPageHttp(venue.websiteUrl, venue.crawlDelayMs)
+          httpResult = await fetchPageHttp(venue.websiteUrl, crawlDelayMs)
         } catch (httpErr) {
           if (venue.crawlMode === 'http') {
             throw httpErr // forced HTTP — no browser fallback
@@ -539,7 +554,7 @@ export async function crawlVenue(
           fetchResult = await fetchPage(
             venue.websiteUrl,
             await getBrowser(),
-            venue.crawlDelayMs,
+            crawlDelayMs,
             venue.crawlWaitUntil,
             venue.crawlWaitForSelector ?? undefined,
           )
@@ -654,7 +669,7 @@ export async function crawlVenue(
           const browserResult = await fetchPage(
             venue.websiteUrl,
             await getBrowser(),
-            venue.crawlDelayMs,
+            crawlDelayMs,
             venue.crawlWaitUntil,
             venue.crawlWaitForSelector ?? undefined,
           )

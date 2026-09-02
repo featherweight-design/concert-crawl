@@ -2593,14 +2593,17 @@ describe('GET /v1/admin/events?count=true', () => {
 
   it('returns { rows, total } with total ignoring limit/offset', async () => {
     const venue = await seedVenue()
-    // Seed 5 events spread across distinct dates so the date-default doesn't
-    // hide any of them.
+    // Dates are relative to today, not hardcoded: the endpoint defaults to
+    // upcoming events, so a fixed window silently starts dropping rows once the
+    // calendar reaches it, and the count assertion below fails a day at a time.
     for (let idx = 0; idx < 5; idx++) {
+      const date = new Date()
+      date.setUTCDate(date.getUTCDate() + idx + 1)
       await seedEvent(venue.id, {
         artist: `Artist ${idx}`,
         supportingArtists: null,
         tourName: null,
-        date: `2026-09-0${idx + 1}`,
+        date: date.toISOString().slice(0, 10),
       })
     }
 

@@ -172,8 +172,12 @@ vi.mock('./lib/fetcher.js', () => ({
     }
   },
 }))
-vi.mock('./lib/robots.js', () => ({
+vi.mock('./lib/robots.js', async (importOriginal) => ({
+  // resolveCrawlDelayMs is pure arithmetic over values the caller passes in, so
+  // stubbing it would only ever test the stub. Keep the real one.
+  ...(await importOriginal<typeof import('./lib/robots.js')>()),
   isAllowed: vi.fn().mockResolvedValue(true),
+  getCrawlDelayMs: vi.fn().mockResolvedValue(null),
 }))
 vi.mock('./lib/extractors/llm.js', () => ({
   extractWithLlm: vi.fn(),
@@ -195,6 +199,7 @@ import {
   CrawlSelectorTimeoutError,
 } from './lib/fetcher.js'
 import { extractWithLlm } from './lib/extractors/llm.js'
+import { CRAWL_DELAY_CAP_MS, getCrawlDelayMs } from './lib/robots.js'
 import {
   db,
   venues,
@@ -1604,6 +1609,39 @@ describe('crawlVenue — crawlMode orchestration', () => {
       undefined,
     )
     expect(mockFetchPageHttp).not.toHaveBeenCalled()
+  })
+
+  it("paces to the site's Crawl-delay when it is slower than ours", async () => {
+    const venue = seedVenue({ crawlMode: 'http', crawlDelayMs: 3_000 })
+    vi.mocked(getCrawlDelayMs).mockResolvedValueOnce(10_000)
+    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPageHttp).toHaveBeenCalledWith(venue.websiteUrl, 10_000)
+  })
+
+  it('ignores a Crawl-delay faster than our own pacing', async () => {
+    const venue = seedVenue({ crawlMode: 'http', crawlDelayMs: 3_000 })
+    vi.mocked(getCrawlDelayMs).mockResolvedValueOnce(1_000)
+    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPageHttp).toHaveBeenCalledWith(venue.websiteUrl, 3_000)
+  })
+
+  it('caps a Crawl-delay that would stall the nightly pass', async () => {
+    const venue = seedVenue({ crawlMode: 'http', crawlDelayMs: 3_000 })
+    vi.mocked(getCrawlDelayMs).mockResolvedValueOnce(300_000)
+    mockFetchPageHttp.mockResolvedValue(FETCH_RESULT)
+
+    await crawlVenue(venue.id, mockBrowser)
+
+    expect(mockFetchPageHttp).toHaveBeenCalledWith(
+      venue.websiteUrl,
+      CRAWL_DELAY_CAP_MS,
+    )
   })
 
   it('auto-detect: saves crawlMode=http when HTTP fetch returns JSON-LD events (no LLM called)', async () => {
