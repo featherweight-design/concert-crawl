@@ -1,3 +1,4 @@
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { TicketVendor } from '@concert-crawl/types'
 import { apiLogger } from './logger.js'
 
@@ -16,7 +17,7 @@ export async function detectTicketVendor(
   try {
     const res = await fetch(websiteUrl, {
       headers: {
-        'User-Agent': 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
+        'User-Agent': CRAWLER_USER_AGENT,
       },
       signal: AbortSignal.timeout(8_000),
     })

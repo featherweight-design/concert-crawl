@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
+
 export async function GET(request: NextRequest) {
   const rawUrl = request.nextUrl.searchParams.get('url')
   if (!rawUrl) {
@@ -22,7 +24,7 @@ export async function GET(request: NextRequest) {
   try {
     const response = await fetch(robotsUrl, {
       headers: {
-        'User-Agent': 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
+        'User-Agent': CRAWLER_USER_AGENT,
       },
       signal: AbortSignal.timeout(5000),
     })

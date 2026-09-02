@@ -32,6 +32,16 @@ const isAlwaysPublic = createRouteMatcher([
   // caller. Exact path, not a prefix.
   '/api/revalidate',
   '/legal(.*)',
+  // Every crawl request we send advertises `+https://concertcrawl.app/bot`, so
+  // this page has to resolve for a venue's sysadmin who has no account and never
+  // will. Gating it behind the beta would make our own user agent point at a
+  // sign-in wall. Static, no user data, deliberately indexable. See #1228.
+  // Both spellings are listed because middleware matches the path as requested:
+  // a trailing-slash request would otherwise miss the exact match and redirect
+  // to sign-in before Next ever normalized it away. Deliberately not `/bot(.*)`,
+  // which would make every future `/bot`-prefixed route public by default.
+  '/bot',
+  '/bot/',
   // "What's new" is reachable from the signed-out account menu and renders a
   // static release list with no user data — gating it sent that menu row to
   // sign-up.

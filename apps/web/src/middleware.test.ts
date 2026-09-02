@@ -169,6 +169,41 @@ describe('middleware — edge auth gate (#841)', () => {
     expect(auth.protect).not.toHaveBeenCalled()
   })
 
+  // Our own user agent advertises /bot on every crawl request, so it has to
+  // resolve for a venue sysadmin with no account, in either launch mode.
+  // Both spellings: middleware matches the path as requested, so a trailing
+  // slash must not reach sign-in on its way to Next's own normalization.
+  it.each(['/bot', '/bot/'])(
+    'lets a signed-out visitor read %s before launch',
+    async (path) => {
+      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
+      const { middlewareHandler } = await import('./middleware')
+
+      const auth = makeAuth(null)
+      const result = await middlewareHandler(
+        auth,
+        new NextRequest(`http://localhost${path}`),
+      )
+
+      expect(result).toBeUndefined()
+      expect(auth.protect).not.toHaveBeenCalled()
+    },
+  )
+
+  // The negative case #794 requires of every isAlwaysPublic addition: /bot is an
+  // exact path, so a neighbour that merely starts with it stays protected.
+  it('does not make a /bot-prefixed route public', async () => {
+    vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
+    const { middlewareHandler } = await import('./middleware')
+
+    const auth = makeAuth(null)
+    auth.protect.mockRejectedValueOnce(new Error('unauthorized'))
+
+    await expect(
+      middlewareHandler(auth, new NextRequest('http://localhost/bots/secret')),
+    ).rejects.toThrow(/unauthorized/i)
+  })
+
   it('lets authenticated request to a (protected) route through without redirect', async () => {
     const { middlewareHandler } = await import('./middleware')
 

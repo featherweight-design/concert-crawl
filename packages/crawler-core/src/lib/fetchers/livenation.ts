@@ -36,6 +36,7 @@
 import { z } from 'zod'
 import type { Venue } from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 import { isAllowed } from '../robots.js'
 import { createDeadline } from './deadline.js'
@@ -47,7 +48,6 @@ import type {
 } from './index.js'
 
 const logger = createLogger('livenation-fetcher')
-const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
 // Only the fields we map are required. The records carry ~35 keys and
 // Live Nation adds to them freely, so everything else passes through.
@@ -106,7 +106,7 @@ const DROPPED_STATUS_CODES = new Set(['cancelled', 'canceled'])
 async function fetchText(url: string, timeoutMs?: number): Promise<string> {
   const response = await fetch(url, {
     headers: {
-      'User-Agent': USER_AGENT,
+      'User-Agent': CRAWLER_USER_AGENT,
       Accept: 'text/html,application/xhtml+xml,application/xml',
     },
     // A hung connection must not pin the caller — the admin probe endpoint
@@ -361,7 +361,7 @@ async function liveNationFetch(
   // could allow /shows and disallow /sitemap.xml or /shows/calendar/ — each
   // URL we fetch has to clear the gate on its own. isAllowed() caches
   // robots.txt per domain, so this is one extra request for the whole run.
-  if (!(await isAllowed(sitemapUrl, USER_AGENT))) {
+  if (!(await isAllowed(sitemapUrl, CRAWLER_USER_AGENT))) {
     throw new LiveNationFetchError(
       0,
       sitemapUrl,
@@ -384,7 +384,7 @@ async function liveNationFetch(
   }
 
   const allowedFlags = await Promise.all(
-    allCalendarUrls.map((url) => isAllowed(url, USER_AGENT)),
+    allCalendarUrls.map((url) => isAllowed(url, CRAWLER_USER_AGENT)),
   )
   const calendarUrls = allCalendarUrls.filter((_, i) => allowedFlags[i])
   const robotsSkippedCount = allCalendarUrls.length - calendarUrls.length

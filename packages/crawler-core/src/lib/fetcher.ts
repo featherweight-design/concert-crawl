@@ -1,8 +1,7 @@
 import type { Browser } from 'playwright'
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 
 import { jitter } from './fetchers/jitter.js'
-
-const HONEST_USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
 export class CrawlFetchError extends Error {
   constructor(
@@ -47,7 +46,7 @@ export async function fetchPage(
   if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay))
 
   const context = await browser.newContext({
-    userAgent: HONEST_USER_AGENT,
+    userAgent: CRAWLER_USER_AGENT,
   })
   try {
     const page = await context.newPage()
@@ -175,7 +174,7 @@ export async function fetchPageHttp(
 
   const response = await fetch(url, {
     headers: {
-      'User-Agent': HONEST_USER_AGENT,
+      'User-Agent': CRAWLER_USER_AGENT,
       Accept: 'text/html,application/xhtml+xml',
     },
     redirect: 'follow',

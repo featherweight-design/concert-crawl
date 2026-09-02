@@ -1,6 +1,7 @@
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
+
 import type { PipelineContext, PriceTierResult } from './types.js'
 
-const CRAWLER_UA = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 const JSON_LD_RE =
   /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
 
@@ -39,7 +40,7 @@ export async function tier1StructuredData(
   let res: Response
   try {
     res = await fetch(ctx.priceUrl, {
-      headers: { 'User-Agent': CRAWLER_UA },
+      headers: { 'User-Agent': CRAWLER_USER_AGENT },
       signal: AbortSignal.timeout(10_000),
     })
   } catch {

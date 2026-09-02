@@ -100,10 +100,14 @@ This is where the handoff needs work. Every claim in `BOT_COPY` was audited agai
 - ✅ **Request rate** — true. `packages/crawler-core/src/lib/fetchers/jitter.ts`
   applies ±500ms to a 3000ms default. "A random jitter so we never arrive on a fixed
   beat" is accurate.
-- ✅ **Never parallel against one host** — true. `MAX_CONCURRENT = 1` in
-  `apps/crawler/src/run.ts` makes both the daily pass and the trigger drain strictly
-  sequential. (The `Promise.allSettled` in the daily loop looks concurrent but runs
-  batches of one.)
+- 🔴 **Never parallel against one host** — **false**, and this audit originally passed
+  it. `MAX_CONCURRENT = 1` in `apps/crawler/src/run.ts` holds _within a process_, so
+  the daily pass and the trigger drain are each internally sequential. But they are
+  two separate Render cron jobs with no per-venue lock, and `crawl.ts:1682` says so
+  outright: they can overlap on the same venue. The sentence was removed from
+  `facts.rate` during the build; what remains (3-second spacing plus jitter) is true
+  of each process independently. Making the claim true again would need a per-venue
+  advisory lock, which is a product call rather than a copy fix.
 - ✅ **Per venue configurable** — true. `venues.crawlDelayMs`, read at fetch time.
 - ✅ **We never touch a login / form / checkout / person** — true. No auth, no form
   submission, no click-through, no PII anywhere in the crawl path.
@@ -146,7 +150,7 @@ This is where the handoff needs work. Every claim in `BOT_COPY` was audited agai
   Overclaims. We also hold crawl runs, failure logs, admin crawl notes and raw
   extraction payloads. Narrow to the listings and price history, which is what the
   reader means and what the removal promise actually covers.
-- ✅ **Crawl-delay** — not true *yet*, and the handoff already knows: "page and parser
+- ✅ **Crawl-delay** — not true _yet_, and the handoff already knows: "page and parser
   land together" is the right call and matches Hugh's 2026-08-29 decision to fold the
   parser change in as a story. See Decisions inherited.
 

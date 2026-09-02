@@ -10,6 +10,7 @@ import {
 } from '@concert-crawl/db'
 import type { CrawlRun } from '@concert-crawl/db'
 import { reportFailure } from '@concert-crawl/logger'
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import {
   getCrawlDelayMs,
   isAllowed,
@@ -54,8 +55,6 @@ import { shouldSkipUnchangedPage } from './lib/skip-guard.js'
 import { deriveTicketLinks } from './lib/ticket-links/index.js'
 import { isListingPageUrl } from './lib/listing-url.js'
 import type { NormalizedEvent, TokenUsage } from './types.js'
-
-const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
 const AUTO_APPROVE_THRESHOLD = 0.7
 
@@ -407,7 +406,7 @@ export async function crawlVenue(
   )
 
   // Check robots.txt — fails open on fetch errors, blocks only on explicit Disallow
-  const allowed = await isAllowed(venue.websiteUrl, USER_AGENT)
+  const allowed = await isAllowed(venue.websiteUrl, CRAWLER_USER_AGENT)
   if (!allowed) {
     console.log(
       JSON.stringify({
@@ -445,7 +444,7 @@ export async function crawlVenue(
   // cached robots.txt the isAllowed check above already fetched.
   const crawlDelayMs = resolveCrawlDelayMs(
     venue.crawlDelayMs,
-    await getCrawlDelayMs(venue.websiteUrl, USER_AGENT),
+    await getCrawlDelayMs(venue.websiteUrl, CRAWLER_USER_AGENT),
     { venueId, url: venue.websiteUrl },
   )
 

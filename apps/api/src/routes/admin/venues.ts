@@ -17,7 +17,11 @@ import {
   AegSchemaError,
   PlatformFetchDeadlineError,
 } from '@concert-crawl/crawler-core/fetchers'
-import { VENUE_PLATFORMS, platformRequiresVenueId } from '@concert-crawl/types'
+import {
+  CRAWLER_USER_AGENT,
+  VENUE_PLATFORMS,
+  platformRequiresVenueId,
+} from '@concert-crawl/types'
 import type {
   PlatformProbeResult,
   VenueRobotsStatus,
@@ -245,7 +249,7 @@ venuesAdminRouter.get('/robots-check', async (ctx) => {
   try {
     const response = await fetch(robotsUrl, {
       headers: {
-        'User-Agent': 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)',
+        'User-Agent': CRAWLER_USER_AGENT,
       },
       signal: AbortSignal.timeout(5000),
     })

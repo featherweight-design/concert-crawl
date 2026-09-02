@@ -14,6 +14,7 @@
 import { z } from 'zod'
 import type { Venue } from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
 import { CrawlFetchError } from '../fetcher.js'
@@ -26,7 +27,6 @@ import type {
 } from './index.js'
 
 const logger = createLogger('venuepilot-fetcher')
-const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 const ENDPOINT = 'https://www.venuepilot.co/graphql'
 // Guard against a runaway metadata.totalPages pinning the crawl.
 const MAX_PAGES = 50
@@ -296,7 +296,7 @@ async function fetchPage(
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
-      'User-Agent': USER_AGENT,
+      'User-Agent': CRAWLER_USER_AGENT,
     },
     body: JSON.stringify({
       query: EVENTS_QUERY,

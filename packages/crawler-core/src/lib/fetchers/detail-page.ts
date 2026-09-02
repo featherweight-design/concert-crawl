@@ -22,6 +22,7 @@
 
 import type { Venue } from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 import { extractJsonLd } from '../extractors/json-ld.js'
 import { isAllowed } from '../robots.js'
@@ -34,7 +35,6 @@ import type {
 } from './index.js'
 
 const logger = createLogger('detail-page-fetcher')
-const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 
 /**
  * Ceiling on how many detail pages one run will visit.
@@ -79,7 +79,7 @@ export class DetailPageFetchError extends Error {
 async function fetchText(url: string, timeoutMs?: number): Promise<string> {
   const response = await fetch(url, {
     headers: {
-      'User-Agent': USER_AGENT,
+      'User-Agent': CRAWLER_USER_AGENT,
       Accept: 'text/html,application/xhtml+xml,application/xml',
     },
     // A hung connection must not pin the caller — the admin probe endpoint
@@ -110,7 +110,7 @@ async function fetchText(url: string, timeoutMs?: number): Promise<string> {
         `Detail-page fetch for ${url} redirected off-origin to ${landed}`,
       )
     }
-    if (!(await isAllowed(landed, USER_AGENT))) {
+    if (!(await isAllowed(landed, CRAWLER_USER_AGENT))) {
       throw new DetailPageFetchError(
         response.status,
         url,
@@ -221,7 +221,7 @@ async function detailPageFetch(
   // per-path — a site can allow the calendar index and disallow /e/. Every
   // URL we fetch clears the gate on its own. isAllowed() caches robots.txt
   // per domain, so this is one extra request for the whole run.
-  if (!(await isAllowed(listingUrl, USER_AGENT))) {
+  if (!(await isAllowed(listingUrl, CRAWLER_USER_AGENT))) {
     throw new DetailPageFetchError(
       0,
       listingUrl,
@@ -238,7 +238,7 @@ async function detailPageFetch(
   // advertising while guaranteeing we only ever request pages the site
   // itself publishes as crawlable.
   let sitemapUrls = new Set<string>()
-  if (await isAllowed(sitemapUrl, USER_AGENT)) {
+  if (await isAllowed(sitemapUrl, CRAWLER_USER_AGENT)) {
     try {
       sitemapUrls = parseSitemapUrls(
         await deadline.run('sitemap', (timeoutMs) =>
@@ -299,7 +299,7 @@ async function detailPageFetch(
   for (const url of allowlisted) {
     if (detailUrls.length >= MAX_DETAIL_PAGES) break
     examinedCount++
-    if (await isAllowed(url, USER_AGENT)) {
+    if (await isAllowed(url, CRAWLER_USER_AGENT)) {
       detailUrls.push(url)
     } else {
       robotsSkippedCount++

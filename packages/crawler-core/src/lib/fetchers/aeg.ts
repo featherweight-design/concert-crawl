@@ -23,6 +23,7 @@
 import { z } from 'zod'
 import type { Venue } from '@concert-crawl/db'
 import { createLogger } from '@concert-crawl/logger'
+import { CRAWLER_USER_AGENT } from '@concert-crawl/types'
 import type { NormalizedEvent } from '../../types.js'
 import { stripDescriptionHtml } from '../strip-description-html.js'
 import { isAllowed } from '../robots.js'
@@ -35,7 +36,6 @@ import type {
 } from './index.js'
 
 const logger = createLogger('aeg-fetcher')
-const USER_AGENT = 'ConcertCrawl/1.0 (+https://concertcrawl.app/bot)'
 const BLOB_BASE = 'https://aegwebprod.blob.core.windows.net/json/events'
 
 // Schema validation. Only the fields we actually map are required; we
@@ -310,7 +310,7 @@ async function fetchAegBlob(
       // origin so a per-venue allowlist (if AEG adds one) keeps working,
       // and so any AEG-side telemetry attributes the request correctly.
       Origin: origin,
-      'User-Agent': USER_AGENT,
+      'User-Agent': CRAWLER_USER_AGENT,
       Accept: 'application/json',
     },
     // A hung CDN connection must not pin the caller (the admin probe
@@ -354,7 +354,7 @@ async function aegFetch(
   // isAllowed() caches per domain and fails open, so today (the blob host
   // has no robots.txt) this is one extra request for the whole run and
   // changes nothing. It future-proofs us against AEG serving a policy.
-  if (!(await isAllowed(url, USER_AGENT))) {
+  if (!(await isAllowed(url, CRAWLER_USER_AGENT))) {
     throw new AegFetchError(0, url, `robots.txt disallows ${url}`)
   }
 
