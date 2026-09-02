@@ -1,3 +1,15 @@
+# [1.277.0](https://github.com/HartiganHM/concert-crawl/compare/v1.276.0...v1.277.0) (2026-09-02)
+
+
+### Bug Fixes
+
+* **spotify:** make imported artist follows durable ([#1656](https://github.com/HartiganHM/concert-crawl/issues/1656)) ([d36251e](https://github.com/HartiganHM/concert-crawl/commit/d36251eefb46bc31aa1be537a19c11723a484d22))
+
+
+### Features
+
+* **web:** give the crawler a page to point at ([#1228](https://github.com/HartiganHM/concert-crawl/issues/1228)) ([#1655](https://github.com/HartiganHM/concert-crawl/issues/1655)) ([307afc6](https://github.com/HartiganHM/concert-crawl/commit/307afc6e5ab47e53e3890e12138645a5accf8fac))
+
 # [1.276.0](https://github.com/HartiganHM/concert-crawl/compare/v1.275.7...v1.276.0) (2026-09-02)
 
 
