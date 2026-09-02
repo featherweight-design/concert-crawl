@@ -38,10 +38,11 @@ export function useEvents({
   // credentialed fetch — everyone else keeps the anonymous request so the
   // service worker can cache the response for offline browsing (it refuses to
   // cache credentialed responses). `error`-status connections still retain
-  // follow rows server-side, so they count as having taste; `revoked` purges
-  // rows, so it does not. artistCount is the persisted count of those rows
-  // from the last sync — a connection with zero taste rows gets no
-  // followedArtists from the API, so it keeps the cacheable anonymous fetch.
+  // follow rows server-side, so they count as having taste; a `revoked` one is
+  // treated as no taste because the user cannot refresh it. artistCount is the
+  // count of Spotify-sourced rows persisted at the last sync — a connection
+  // with zero of them gets no followedArtists from the API, so it keeps the
+  // cacheable anonymous fetch.
   const { data: connection } = useSpotifyConnection()
   const hasTaste =
     connection != null &&

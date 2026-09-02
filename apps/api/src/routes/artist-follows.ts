@@ -2,7 +2,7 @@ import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
-import { and, asc, desc, eq, inArray } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray, ne } from 'drizzle-orm'
 import { db, artists, userArtistFollows } from '@concert-crawl/db'
 import { requireFeature } from '../middleware/entitlement.js'
 import {
@@ -131,23 +131,22 @@ artistFollowsRouter.delete('/:slug/follow', slugValidator, async (ctx) => {
 
   if (!artist) return ctx.json(notFound, 404)
 
-  // Scoped to source='manual' on purpose. A Spotify-sourced row is owned by
-  // the sync job — deleting it here would resurrect on the next sync and, in
-  // the meantime, silently diverge from the user's Spotify account.
+  // Every source, not just 'manual'. Spotify seeds follows but no longer owns
+  // them, so this is the one and only way a follow is removed — leaving the
+  // imported row behind would make Unfollow a no-op for anyone who connected.
   await db
     .delete(userArtistFollows)
     .where(
       and(
         eq(userArtistFollows.userId, authInfo.userId),
         eq(userArtistFollows.canonicalName, artist.canonicalName),
-        eq(userArtistFollows.source, 'manual'),
       ),
     )
 
   // Report the effective state, not the intent. GET /v1/artists/:slug counts a
-  // follow from ANY source, so a synced user still reads as following after
-  // their manual row goes — answering a flat `false` here would contradict the
-  // very next read and flicker the button back on.
+  // follow from any source except `spotify_top`, which is listening history, so
+  // the response has to agree with the very next read rather than assume the
+  // delete emptied the set.
   const [remaining] = await db
     .select({ id: userArtistFollows.id })
     .from(userArtistFollows)
@@ -155,6 +154,7 @@ artistFollowsRouter.delete('/:slug/follow', slugValidator, async (ctx) => {
       and(
         eq(userArtistFollows.userId, authInfo.userId),
         eq(userArtistFollows.canonicalName, artist.canonicalName),
+        ne(userArtistFollows.source, 'spotify_top'),
       ),
     )
     .limit(1)

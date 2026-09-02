@@ -116,7 +116,7 @@ export const SPOTIFY_COPY = {
     refreshingCta: 'Syncing…',
     disconnectCta: 'Disconnect',
     footerIdle:
-      'Refresh pulls your latest top & followed artists; we also refresh quietly on our own about once a week.',
+      'Refresh pulls your latest top & followed artists. Nothing comes in until you tap it.',
     footerRefreshing:
       'Checking Spotify for anything new since your last sync. Takes a few seconds.',
     rateLimited: 'Taste was refreshed recently. Try again in a few minutes.',
@@ -136,6 +136,10 @@ export const SPOTIFY_COPY = {
       {
         head: "Shows you're watching stay.",
         sub: 'Anything you already watch is yours, and unlinking never touches it.',
+      },
+      {
+        head: 'Artists you follow stay.',
+        sub: 'The ones we pulled from Spotify keep their follow until you drop them.',
       },
     ],
     confirmCta: 'Unlink Spotify',

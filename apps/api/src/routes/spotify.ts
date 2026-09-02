@@ -36,7 +36,6 @@ import {
 } from '../lib/spotify-matches.js'
 import {
   getSpotifyAccessToken,
-  purgeSpotifyFollows,
   syncSpotifyConnection,
 } from '../lib/spotify-sync.js'
 
@@ -396,9 +395,13 @@ spotifyRouter.patch('/connection', async (ctx) => {
   }
 })
 
-// DELETE /v1/spotify/connection — explicit disconnect: purge artist rows +
-// delete the connection row (unlike revoke, which retains it), then delete
-// the Clerk external account so our grant is revoked (spec §3/§6).
+// DELETE /v1/spotify/connection — explicit disconnect: delete the connection
+// row (unlike revoke, which retains it), then delete the Clerk external
+// account so our grant is revoked (spec §3).
+//
+// Imported follows survive. Disconnecting stops future imports; it is not a
+// request to unfollow the artists already imported, which the user removes
+// one at a time like any other follow.
 spotifyRouter.delete('/connection', async (ctx) => {
   const auth = getAuth(ctx)
   if (!auth?.userId)
@@ -410,21 +413,18 @@ spotifyRouter.delete('/connection', async (ctx) => {
     return ctx.json({ success: false, error: 'Spotify is not connected' }, 404)
 
   try {
-    await db.transaction(async (tx) => {
-      await purgeSpotifyFollows(tx, userId)
-      await tx
-        .delete(userSpotifyConnections)
-        .where(eq(userSpotifyConnections.userId, userId))
-    })
+    await db
+      .delete(userSpotifyConnections)
+      .where(eq(userSpotifyConnections.userId, userId))
   } catch (err) {
-    apiLogger.error({ err, userId }, 'spotify disconnect: purge failed')
+    apiLogger.error({ err, userId }, 'spotify disconnect: delete failed')
     return ctx.json(
       { success: false, error: 'Failed to disconnect Spotify' },
       500,
     )
   }
 
-  // Best-effort grant revoke: our data is already gone (the user-visible
+  // Best-effort grant revoke: the connection is already gone (the user-visible
   // promise), so a Clerk hiccup here logs loudly but still returns 204 —
   // a stale external account without a connection row is inert, and the
   // user can also remove it from the Clerk-managed account page.

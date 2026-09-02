@@ -6,15 +6,15 @@
 // Same build-artifact pattern as billing-daily: the cron builds the API via
 // `turbo build` and runs `node apps/api/dist/jobs/spotify-weekly.js`.
 //
-// Three phases, each in its own try/catch so one failure never blocks the
-// rest:
+// The job does NOT import from Spotify. Spec §8.1 phase 1 ran a sync over
+// every live connection, which re-added artists the user had unfollowed here
+// as long as they were still followed on Spotify — an unfollow that silently
+// undid itself within a week. Follows now arrive only where the user asked
+// for them: connecting the account, and tapping Refresh in Settings.
 //
-//   1. SYNC   — every connection with status != 'revoked' goes through
-//               syncSpotifyConnection (Clerk token → followed+top pull →
-//               replace-set upsert). Revoked connections are skipped: their
-//               artist set is already purged and only a user Reconnect can
-//               revive them.
-//   2. DIGEST — every non-revoked connection with digestEnabled, gated at
+// Two phases, each in its own try/catch so one failure never blocks the rest:
+//
+//   1. DIGEST — every non-revoked connection with digestEnabled, gated at
 //               send time by canUseFeature(planState, 'spotify-sync') (§7:
 //               Premium-only) — or, under NATIVE_DIGEST_ENABLED, every
 //               follower whatever the follow source (see the generalized
@@ -26,12 +26,11 @@
 //               picks; a week with no picks either sends nothing. Dedupe key
 //               is `${userId}:${isoWeek}` so a cron retry can never
 //               double-send.
-//   3. OBSERVABILITY — one zero-dollar cost_tracking row (service='spotify',
+//   2. OBSERVABILITY — one zero-dollar cost_tracking row (service='spotify',
 //               metadata.job='spotify-weekly') plus a Pino summary line.
 //
-// SPOTIFY_SYNC_DRY_RUN=1 runs a log-only cycle: no artist-set writes (sync
-// calls are skipped entirely), no emails — but eligibility + matching still
-// evaluate, and the summary row is written with dryRun:true.
+// SPOTIFY_SYNC_DRY_RUN=1 runs a log-only cycle: no emails — but eligibility +
+// matching still evaluate, and the summary row is written with dryRun:true.
 //
 // GENERALIZED DIGEST (native following PR 9). NATIVE_DIGEST_ENABLED=1 flips
 // the digest from "Spotify subscribers" to "anyone who follows an artist":
@@ -65,8 +64,6 @@ import {
   loadPriceByTierByEventId,
   resolveDisplayPrice,
 } from '../lib/price-aggregation/index.js'
-import { syncSpotifyConnection } from '../lib/spotify-sync.js'
-import type { SpotifySyncOutcome } from '../lib/spotify-sync.js'
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const DIGEST_WINDOW_DAYS = 7
@@ -280,9 +277,6 @@ interface WeeklySummary {
   isoWeek: string
   windowStart: string
   windowEnd: string
-  syncCandidates: number
-  syncOutcomes: Record<SpotifySyncOutcome, number>
-  syncFailures: number
   digestCandidates: number
   digestSkippedEntitlement: number
   digestPrepared: number
@@ -402,9 +396,6 @@ export const runSpotifyWeekly = async (
     isoWeek: isoWeekKey(dayUtcMs),
     windowStart: toDateString(dayUtcMs),
     windowEnd: toDateString(dayUtcMs + (DIGEST_WINDOW_DAYS - 1) * DAY_MS),
-    syncCandidates: 0,
-    syncOutcomes: { synced: 0, error: 0, revoked: 0, 'no-connection': 0 },
-    syncFailures: 0,
     digestCandidates: 0,
     digestSkippedEntitlement: 0,
     digestPrepared: 0,
@@ -418,44 +409,8 @@ export const runSpotifyWeekly = async (
     'spotify-weekly: starting run',
   )
 
-  // Phase 1 — sync every non-revoked connection.
-  try {
-    const connections = await db
-      .select({ userId: userSpotifyConnections.userId })
-      .from(userSpotifyConnections)
-      .where(ne(userSpotifyConnections.status, 'revoked'))
-    summary.syncCandidates = connections.length
-    for (const { userId } of connections) {
-      if (summary.dryRun) {
-        apiLogger.info(
-          { userId },
-          'spotify-weekly: dry run — sync skipped (no artist-set writes)',
-        )
-        continue
-      }
-      try {
-        const result = await syncSpotifyConnection(userId)
-        summary.syncOutcomes[result.outcome] += 1
-      } catch (err) {
-        // syncSpotifyConnection maps Spotify/Clerk failures to statuses; only
-        // a DB-layer failure lands here.
-        summary.syncFailures += 1
-        apiLogger.error({ err, userId }, 'spotify-weekly: sync threw')
-        Sentry.captureException(err, {
-          tags: { job: 'spotify-weekly', phase: 'sync' },
-          extra: { userId },
-        })
-      }
-    }
-  } catch (err) {
-    apiLogger.error({ err }, 'spotify-weekly: sync phase failed')
-    Sentry.captureException(err, {
-      tags: { job: 'spotify-weekly', phase: 'sync' },
-    })
-  }
-
-  // Phase 2 — digests. Clerk loaded lazily so the sync phase (which has its
-  // own Clerk client inside spotify-sync) never depends on this import.
+  // Phase 1 — digests. Clerk is loaded lazily so a missing @clerk/backend
+  // never breaks module evaluation for the rest of the run.
   try {
     // Fail fast once (billing-daily pattern) instead of erroring per-user.
     const clerkSecretKey = process.env['CLERK_SECRET_KEY']
@@ -517,7 +472,7 @@ export const runSpotifyWeekly = async (
     })
   }
 
-  // Phase 3 — observability. Best-effort: bookkeeping never fails the run.
+  // Phase 2 — observability. Best-effort: bookkeeping never fails the run.
   try {
     await db.insert(costTracking).values({
       service: 'spotify',

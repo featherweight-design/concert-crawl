@@ -274,7 +274,7 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
     expect(again.status).toBe(200)
   })
 
-  it('removes only the manual row, leaving a Spotify-synced follow intact — and the artist still reads as followed', async () => {
+  it('removes every row for the artist, whatever imported it', async () => {
     await seedArtist({
       name: 'Synced Act',
       canonicalName: 'synced act',
@@ -301,12 +301,10 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
     await follow('synced-act')
     expect(await followRows()).toHaveLength(2)
 
-    // The response reports the effective state, so it agrees with the GET
-    // below rather than claiming a follow that is still there is gone.
     const unfollowRes = await unfollow('synced-act')
     const unfollowBody: { data: { following: boolean } } =
       await unfollowRes.json()
-    expect(unfollowBody.data.following).toBe(true)
+    expect(unfollowBody.data.following).toBe(false)
 
     const remaining = await testDb
       .select()
@@ -317,12 +315,10 @@ describe('DELETE /v1/artists/:slug/follow — integration', () => {
           eq(userArtistFollows.canonicalName, 'synced act'),
         ),
       )
-    expect(remaining).toHaveLength(1)
-    expect(remaining[0]?.source).toBe('spotify_followed')
+    expect(remaining).toHaveLength(0)
 
-    // Any row counts as following, so the read endpoint still says true.
     const read = await app.request('/v1/artists/synced-act')
     const readBody: { data: ArtistDetailResponse } = await read.json()
-    expect(readBody.data.following).toBe(true)
+    expect(readBody.data.following).toBe(false)
   })
 })

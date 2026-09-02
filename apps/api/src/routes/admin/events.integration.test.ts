@@ -2624,7 +2624,7 @@ describe('GET /v1/admin/events?count=true', () => {
 
   it('keeps legacy array response when count is omitted', async () => {
     const venue = await seedVenue()
-    await seedEvent(venue.id, { artist: 'Solo', date: '2026-10-01' })
+    await seedEvent(venue.id, { artist: 'Solo', date: futureDate(1) })
 
     const res = await app.request('/v1/admin/events?limit=10', {
       method: 'GET',
@@ -2642,14 +2642,14 @@ describe('GET /v1/admin/events?count=true', () => {
       artist: 'Verified Artist',
       supportingArtists: null,
       tourName: null,
-      date: '2026-11-01',
+      date: futureDate(1),
       verified: true,
     })
     await seedEvent(venue.id, {
       artist: 'Unverified Artist',
       supportingArtists: null,
       tourName: null,
-      date: '2026-11-02',
+      date: futureDate(2),
       verified: false,
     })
 

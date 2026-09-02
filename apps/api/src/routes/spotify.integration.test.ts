@@ -465,7 +465,7 @@ describe('POST /v1/spotify/connection/sync', () => {
     expect(res.status).toBe(404)
   })
 
-  it('replaces each source set: stale rows go, manual rows survive', async () => {
+  it('syncs additively: an unfollowed-on-Spotify artist survives locally', async () => {
     setAuth(USER)
     linkSpotifyAccount()
     spotifyState.followedPages = [
@@ -497,9 +497,11 @@ describe('POST /v1/spotify/connection/sync', () => {
     })
     expect(res.status).toBe(200)
 
+    // a2 is gone from Spotify but stays followed here — the import seeds
+    // follows, it does not mirror the Spotify account.
     const spotifyRows = await getSpotifyFollows(USER)
     const ids = spotifyRows.map((row) => row.spotifyArtistId).sort()
-    expect(ids).toEqual(['a1', 'a3'])
+    expect(ids).toEqual(['a1', 'a2', 'a3'])
     expect(
       spotifyRows.find((row) => row.spotifyArtistId === 'a1')?.artistName,
     ).toBe('Alpha Renamed')
@@ -514,6 +516,32 @@ describe('POST /v1/spotify/connection/sync', () => {
         ),
       )
     expect(manualRows).toHaveLength(1)
+  })
+
+  it('counts the persisted rows, so a shrinking pull does not zero artistCount', async () => {
+    setAuth(USER)
+    linkSpotifyAccount()
+    spotifyState.followedPages = [
+      [
+        { id: 'a1', name: 'Alpha' },
+        { id: 'a2', name: 'Beta' },
+      ],
+    ]
+    await connect()
+    expect((await getConnectionRow(USER))?.artistCount).toBe(2)
+
+    // The user clears their Spotify follows entirely. The rows they already
+    // have here survive, so the count has to keep reporting them — anything
+    // else reads downstream as a viewer with no taste.
+    spotifyState.followedPages = [[]]
+    await backdateLastSynced(USER)
+    const res = await app.request('/v1/spotify/connection/sync', {
+      method: 'POST',
+    })
+    expect(res.status).toBe(200)
+
+    expect(await getSpotifyFollows(USER)).toHaveLength(2)
+    expect((await getConnectionRow(USER))?.artistCount).toBe(2)
   })
 
   it('rate limits refreshes within 10 minutes with 429 + Retry-After', async () => {
@@ -564,7 +592,7 @@ describe('POST /v1/spotify/connection/sync', () => {
     expect(res.status).toBe(200)
   })
 
-  it('marks the connection revoked and purges Spotify rows on a Spotify 401', async () => {
+  it('marks the connection revoked but keeps Spotify rows on a Spotify 401', async () => {
     setAuth(USER)
     linkSpotifyAccount()
     spotifyState.followedPages = [[{ id: 'a1', name: 'Alpha' }]]
@@ -580,10 +608,11 @@ describe('POST /v1/spotify/connection/sync', () => {
     const body = (await res.json()) as ConnectionBody
     expect(body.data.status).toBe('revoked')
 
-    // Row retained (revoke banner + Reconnect), artist rows purged
+    // Row retained (revoke banner + Reconnect). Losing the grant is not a
+    // request to unfollow anyone — the follows stay until the user removes them.
     const row = await getConnectionRow(USER)
     expect(row?.status).toBe('revoked')
-    expect(await getSpotifyFollows(USER)).toHaveLength(0)
+    expect(await getSpotifyFollows(USER)).toHaveLength(1)
   })
 
   it('marks the connection error (not revoked) on a Spotify 5xx', async () => {
@@ -754,7 +783,7 @@ describe('DELETE /v1/spotify/connection', () => {
     expect(res.status).toBe(404)
   })
 
-  it('purges Spotify data but keeps manual follows and watching rows', async () => {
+  it('drops the connection but keeps every follow and watching row', async () => {
     setAuth(USER)
     linkSpotifyAccount()
     spotifyState.followedPages = [[{ id: 'a1', name: 'Alpha' }]]
@@ -780,17 +809,16 @@ describe('DELETE /v1/spotify/connection', () => {
     })
     expect(res.status).toBe(204)
 
-    // Connection row + spotify follows gone
+    // Connection row gone, imported follows retained — disconnecting stops
+    // future imports, it does not undo the ones already made.
     expect(await getConnectionRow(USER)).toBeNull()
-    expect(await getSpotifyFollows(USER)).toHaveLength(0)
+    expect(await getSpotifyFollows(USER)).toHaveLength(2)
 
-    // Purge invariants: manual follows + watching rows survive
-    const manualRows = await testDb
+    const allRows = await testDb
       .select()
       .from(userArtistFollows)
       .where(eq(userArtistFollows.userId, USER))
-    expect(manualRows).toHaveLength(1)
-    expect(manualRows[0]?.source).toBe('manual')
+    expect(allRows).toHaveLength(3)
     const watching = await testDb
       .select()
       .from(userEvents)

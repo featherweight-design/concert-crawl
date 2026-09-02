@@ -1,23 +1,28 @@
 // apps/api/src/lib/spotify-sync.ts
 //
 // Reusable Spotify sync engine (#763, eng spec §8.1 phase 1). Called inline
-// by POST /v1/spotify/connection (first sync) and /sync (on-demand refresh),
-// and by the weekly `spotify-weekly` cron in PR 4.
+// by POST /v1/spotify/connection (first sync) and /sync (on-demand refresh).
+// Nothing runs it on a schedule: the weekly `spotify-weekly` cron used to, and
+// no longer does, because a background import re-added artists the user had
+// unfollowed here.
 //
-// Semantics per spec §4.2/§3:
-//   - Replace-set per source inside one transaction: rows for (userId, source)
-//     absent from the fresh pull are deleted, the rest upserted. A mid-sync
-//     crash leaves the previous set intact. `source='manual'` rows are never
-//     touched.
-//   - Clerk token failure or Spotify 401 ⇒ status='revoked' + immediate purge
-//     of Spotify-sourced follow rows (connection row retained for the
-//     Reconnect banner). Watching rows always survive.
-//   - Spotify 5xx / persistent 429 ⇒ status='error' + lastSyncError; the
-//     previous artist set is preserved and the next cycle retries.
+// Spotify is an import source, not a mirror. It seeds follow rows and never
+// removes them — the user owns their follow list once it exists. Spec §4.2's
+// replace-set semantics were withdrawn: they deleted a user's follows on any
+// path they never asked for, including an expiring token.
+//
+// Semantics:
+//   - Additive upsert per source inside one transaction: fresh rows insert,
+//     already-known ones refresh their name/rank. Nothing is deleted. Removing
+//     a follow is DELETE /v1/artists/:slug/follow and nothing else.
+//   - Clerk token failure or Spotify 401 ⇒ status='revoked', connection row
+//     retained for the Reconnect banner. Follows and Watching rows survive.
+//   - Spotify 5xx / persistent 429 ⇒ status='error' + lastSyncError; the next
+//     cycle retries.
 //   - Every run writes a zero-dollar cost_tracking row with call counts (E10).
 import { createClerkClient } from '@clerk/backend'
 import * as Sentry from '@sentry/hono/node'
-import { and, eq, inArray, notInArray, sql } from 'drizzle-orm'
+import { and, countDistinct, eq, inArray, sql } from 'drizzle-orm'
 import { z } from 'zod'
 import {
   db,
@@ -59,36 +64,21 @@ export interface SpotifySyncResult {
   error?: string
 }
 
-// Shared purge (spec §6 purge invariant): only Spotify-sourced follow rows
-// are deleted. Manual follows and user_events (watching) rows are untouched.
-export async function purgeSpotifyFollows(
-  executor: DbExecutor,
-  userId: string,
-): Promise<void> {
-  await executor
-    .delete(userArtistFollows)
-    .where(
-      and(
-        eq(userArtistFollows.userId, userId),
-        inArray(userArtistFollows.source, [...SPOTIFY_FOLLOW_SOURCES]),
-      ),
-    )
-}
-
-// External revoke / expired grant: purge artist rows but RETAIN the
-// connection row as status='revoked' so the UI can render the revoke banner
-// + Reconnect CTA (spec §3). Explicit disconnect deletes the row instead.
+// External revoke / expired grant: RETAIN the connection row as
+// status='revoked' so the UI can render the revoke banner + Reconnect CTA
+// (spec §3). Explicit disconnect deletes the row instead.
+//
+// Follow rows are deliberately left alone. This path fires with no user
+// action — a token expiring or a grant pulled from Spotify's side — and used
+// to delete every imported follow with no way to get them back.
 export async function markConnectionRevoked(
   userId: string,
   reason: string,
 ): Promise<void> {
-  await db.transaction(async (tx) => {
-    await purgeSpotifyFollows(tx, userId)
-    await tx
-      .update(userSpotifyConnections)
-      .set({ status: 'revoked', lastSyncError: reason, artistCount: 0 })
-      .where(eq(userSpotifyConnections.userId, userId))
-  })
+  await db
+    .update(userSpotifyConnections)
+    .set({ status: 'revoked', lastSyncError: reason })
+    .where(eq(userSpotifyConnections.userId, userId))
 }
 
 export type SpotifyTokenResult =
@@ -275,24 +265,15 @@ function buildRows(
   return rows
 }
 
-async function replaceSourceSet(
+// Additive by design. Spotify seeds follows; it does not own them. Unfollowing
+// an artist on Spotify — or losing the grant entirely — must never silently
+// remove a follow the user made here, so nothing in the import path deletes.
+// Only the user, via DELETE /v1/artists/:slug/follow, removes a follow.
+async function importSourceSet(
   tx: DbExecutor,
-  userId: string,
-  source: SpotifySource,
   rows: FollowUpsertRow[],
 ): Promise<void> {
-  const scope = and(
-    eq(userArtistFollows.userId, userId),
-    eq(userArtistFollows.source, source),
-  )
-  if (rows.length === 0) {
-    await tx.delete(userArtistFollows).where(scope)
-    return
-  }
-  const freshIds = rows.map((row) => row.spotifyArtistId)
-  await tx
-    .delete(userArtistFollows)
-    .where(and(scope, notInArray(userArtistFollows.spotifyArtistId, freshIds)))
+  if (rows.length === 0) return
   await tx
     .insert(userArtistFollows)
     .values(rows)
@@ -311,11 +292,12 @@ async function replaceSourceSet(
     })
 }
 
-// Phase-1 sync for one user: Clerk token → followed + top pull → canonical
-// replace-set upsert → connection bookkeeping. Spotify/Clerk failures never
-// throw — they map to connection status so callers (routes now, weekly cron
-// in PR 4) can just re-read the row. Only a DB-layer failure on the
-// bookkeeping reads/writes themselves can still reject.
+// One user's import: Clerk token, followed + top pull, additive upsert,
+// connection bookkeeping. The two callers are both user-initiated (connect and
+// Refresh in Settings); no job runs this on a schedule. Spotify/Clerk failures
+// never throw, mapping to connection status instead so callers can just re-read
+// the row. Only a DB-layer failure on the bookkeeping reads and writes
+// themselves can still reject.
 export async function syncSpotifyConnection(
   userId: string,
 ): Promise<SpotifySyncResult> {
@@ -387,19 +369,34 @@ export async function syncSpotifyConnection(
   const syncedAt = new Date()
   const followedRows = buildRows(userId, 'spotify_followed', followed, syncedAt)
   const topRows = buildRows(userId, 'spotify_top', top, syncedAt)
-  const distinctArtistCount = new Set(
-    [...followedRows, ...topRows].map((row) => row.spotifyArtistId),
-  ).size
+  let persistedArtistCount = connection.artistCount
 
   try {
     await db.transaction(async (tx) => {
-      await replaceSourceSet(tx, userId, 'spotify_followed', followedRows)
-      await replaceSourceSet(tx, userId, 'spotify_top', topRows)
+      await importSourceSet(tx, followedRows)
+      await importSourceSet(tx, topRows)
+      // Count the rows on the table, not the size of this pull. Imports are
+      // additive and a native unfollow can remove a row, so the two diverge —
+      // and `artistCount > 0` is what decides whether the events list
+      // personalizes, so a shrinking pull must not read as no taste at all.
+      const [counted] = await tx
+        .select({ value: countDistinct(userArtistFollows.spotifyArtistId) })
+        .from(userArtistFollows)
+        .where(
+          and(
+            eq(userArtistFollows.userId, userId),
+            inArray(userArtistFollows.source, [
+              'spotify_followed',
+              'spotify_top',
+            ]),
+          ),
+        )
+      persistedArtistCount = counted?.value ?? 0
       await tx
         .update(userSpotifyConnections)
         .set({
           status: 'connected',
-          artistCount: distinctArtistCount,
+          artistCount: persistedArtistCount,
           lastSyncedAt: syncedAt,
           lastSyncError: null,
         })
@@ -443,5 +440,5 @@ export async function syncSpotifyConnection(
     topCount: topRows.length,
   })
 
-  return { outcome: 'synced', artistCount: distinctArtistCount }
+  return { outcome: 'synced', artistCount: persistedArtistCount }
 }
