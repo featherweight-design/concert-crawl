@@ -4,7 +4,7 @@
 // plan PR-C Task 9). Explicitly exempt from the design pipeline — a plain
 // table on the existing admin primitives, nothing custom.
 
-import { Fragment, useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import {
   AdminButton,
@@ -47,6 +47,19 @@ interface AdminArtist {
   hidden: boolean
   isExhausted: boolean
 }
+
+/**
+ * The row a write returns. Both PATCH endpoints answer with what they wrote,
+ * which is what makes refetching unnecessary: the new bucket is known rather
+ * than guessed.
+ *
+ * `isExhausted` is deliberately absent. The list query derives it, and
+ * restating the rule here would be a second copy of it to keep in step with
+ * the server. Each caller states the one thing it knows instead — the identity
+ * PATCH resets the attempt counter to zero, and the visibility PATCH never
+ * touches it.
+ */
+type PatchedArtist = Omit<AdminArtist, 'isExhausted'>
 
 const STATUS_CHIPS: QueueFilter[] = [
   'ambiguous',
@@ -118,6 +131,10 @@ export default function AdminArtistsPage() {
   const [openCandidatesFor, setOpenCandidatesFor] = useState<string | null>(
     null,
   )
+  // Bumped whenever a load lands. A write compares the value it was issued
+  // under against this one to tell whether the list it is folding into is
+  // still the list it was looking at. See `applyWrite`.
+  const loadGeneration = useRef(0)
 
   // A keystroke per request would spend a query on every prefix of the name.
   useEffect(() => {
@@ -175,6 +192,7 @@ export default function AdminArtistsPage() {
       // deploy can serve counts that predate a status this build knows about,
       // and a missing key turns every later shift into NaN.
       setCounts({ ...EMPTY_COUNTS, ...countsBody.data })
+      loadGeneration.current += 1
     } catch (err) {
       console.error('[admin artists] load failed', err)
       setError(COPY.errorState)
@@ -198,31 +216,81 @@ export default function AdminArtistsPage() {
     void load()
   }, [load])
 
+  /**
+   * Fold a written row back into the list without refetching.
+   *
+   * Every write on this page used to end in `load()`, which sets `isLoading`
+   * and swaps the whole table for the loading panel. To an admin who pressed
+   * one button on one row, that reads as the page reloading under them — and
+   * it also drops their scroll position and costs two requests. Since both
+   * PATCH endpoints return the row they wrote, none of that is necessary.
+   *
+   * A row leaves the list when its bucket stops matching the chip in view.
+   * During a search nothing leaves: the list is "everything named X", and a row
+   * the admin just edited still is.
+   *
+   * Dropped entirely if a load landed while the PATCH was in flight. That load
+   * fetched its rows and its counts in one round trip, so it is already a
+   * self-consistent picture — and one that may well have read the write back
+   * from the server. Shifting on top of it would count the same transition
+   * twice and leave every chip one out.
+   */
+  const applyWrite = useCallback(
+    (
+      previous: AdminArtist,
+      patched: PatchedArtist,
+      isExhausted: boolean,
+      generation: number,
+    ) => {
+      if (generation !== loadGeneration.current) return
+      const next: AdminArtist = { ...previous, ...patched, isExhausted }
+      const nextBucket = bucketOf(next)
+      setCounts((prev) => shiftCounts(prev, bucketOf(previous), nextBucket))
+      if (search !== '' || nextBucket === status) {
+        // Functional, because a chip change or a debounced search can land a
+        // new list while the PATCH is in flight; mapping the closed-over array
+        // would put the stale page back.
+        setRows((prev) => prev.map((row) => (row.id === next.id ? next : row)))
+        return
+      }
+      // Only once the row is actually leaving. A picker still mounted against
+      // it would reopen on whatever row takes its place and spend a Spotify
+      // search nobody asked for — but a row that stays keeps its picker, since
+      // closing it would undo work the admin is mid-way through.
+      setOpenCandidatesFor((current) => (current === next.id ? null : current))
+      setRows((prev) => prev.filter((row) => row.id !== next.id))
+      setTotal((prev) => Math.max(0, prev - 1))
+    },
+    [search, status],
+  )
+
   // `photoUrl` is only passed when the id came from the candidate picker,
   // which already has the artist's image in hand. Sending it saves waiting a
   // full match-job cycle for the plate to fill in.
   //
-  // Assigning an id moves the artist to `matched`, so on every other tab the
-  // row leaves the queue the admin is looking at. Dropping it from local state
-  // is both cheaper and calmer than refetching the table, which read as the
-  // whole page refreshing under them. Clearing an id still reloads: the server
-  // decides what status a cleared row lands in, and guessing it here would be
-  // a lie.
+  // Clearing an id used to refetch, on the grounds that the server decides
+  // what status a cleared row lands in and guessing it here would be a lie.
+  // That was the right objection to guessing and the wrong remedy: the
+  // response carries the status the server chose, so it can be read rather
+  // than either guessed or refetched.
+  //
+  // Takes the row rather than its id: every call site renders from `rows` and
+  // so already holds it, and `applyWrite` needs the bucket it is leaving.
   const save = async (
-    id: string,
+    previous: AdminArtist,
     spotifyArtistId: string | null,
     photoUrl?: string | null,
   ) => {
-    const previous = rows.find((row) => row.id === id)
-    const previousBucket =
-      previous === undefined ? undefined : bucketOf(previous)
+    // Read before the round trip: it is the list this write was issued
+    // against, and only that list can safely receive it.
+    const generation = loadGeneration.current
     try {
       const token = await getToken()
       if (!token) {
         setError(COPY.saveError)
         return
       }
-      const resp = await fetch(`${API_BASE}/v1/admin/artists/${id}`, {
+      const resp = await fetch(`${API_BASE}/v1/admin/artists/${previous.id}`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -239,39 +307,11 @@ export default function AdminArtistsPage() {
         return
       }
       setError(null)
-      if (spotifyArtistId === null) {
-        await load()
-        return
-      }
-      // On the `matched` chip the row was already matched and still is — the
-      // admin is correcting a wrong identity, not resolving a queue. Dropping
-      // it there would vanish the row they are working on. A search result is
-      // the same case: the list is "everything named X", and the row still is.
-      if (status === 'matched' || search !== '') {
-        setRows((prev) =>
-          prev.map((row) =>
-            row.id === id
-              ? {
-                  ...row,
-                  spotifyArtistId,
-                  matchStatus: 'matched',
-                  // The PATCH resets the attempt counter, so the row is no
-                  // longer given up on and must not still read as it.
-                  isExhausted: false,
-                  photoUrl: photoUrl ?? row.photoUrl,
-                }
-              : row,
-          ),
-        )
-        setCounts((prev) => shiftCounts(prev, previousBucket, 'matched'))
-        return
-      }
-      setCounts((prev) => shiftCounts(prev, previousBucket, 'matched'))
-      // Functional, because a chip change or a debounced search can land a new
-      // list while this PATCH is in flight; filtering the closed-over array
-      // would put the stale page back.
-      setRows((prev) => prev.filter((row) => row.id !== id))
-      setTotal((prev) => Math.max(0, prev - 1))
+      const body: { data: PatchedArtist } = await resp.json()
+      // A row the admin has just ruled on is no longer one the job gave up on:
+      // the PATCH resets the attempt counter, so it must not still read as
+      // given up.
+      applyWrite(previous, body.data, false, generation)
     } catch (err) {
       console.error('[admin artists] save failed', err)
       setError(COPY.saveError)
@@ -281,16 +321,21 @@ export default function AdminArtistsPage() {
   // The ruling that a row is not an act at all. It goes through the identity
   // PATCH because it *is* a match verdict — the other four answer "how
   // confident is the Spotify match?", and this one answers that there is
-  // nothing here to match. Reloading rather than dropping the row locally: the
-  // counts move too, and a stale chip is worse than a redraw.
-  const markNotAnArtist = async (id: string) => {
+  // nothing here to match.
+  //
+  // It used to refetch so the chips could not go stale, which is the concern
+  // that mattered and the redraw that did not: `applyWrite` moves the row and
+  // its two counts together, so the chips stay honest without the table
+  // blanking.
+  const markNotAnArtist = async (previous: AdminArtist) => {
+    const generation = loadGeneration.current
     try {
       const token = await getToken()
       if (!token) {
         setError(COPY.saveError)
         return
       }
-      const resp = await fetch(`${API_BASE}/v1/admin/artists/${id}`, {
+      const resp = await fetch(`${API_BASE}/v1/admin/artists/${previous.id}`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -306,11 +351,10 @@ export default function AdminArtistsPage() {
         return
       }
       setError(null)
-      // Same reason the chips and the pager clear it: a picker still open when
-      // the list redraws mounts against a different row and spends a Spotify
-      // search nobody asked for.
-      setOpenCandidatesFor(null)
-      await load()
+      const body: { data: PatchedArtist } = await resp.json()
+      // `not_an_artist` is not an exhaustible status, and the PATCH zeroes the
+      // counter regardless, so the row cannot land in the given-up bucket.
+      applyWrite(previous, body.data, false, generation)
     } catch (err) {
       console.error('[admin artists] not-an-artist failed', err)
       setError(COPY.saveError)
@@ -320,7 +364,13 @@ export default function AdminArtistsPage() {
   // Visibility is its own endpoint, not a field on the identity PATCH above:
   // that body requires a spotifyArtistId, so hiding through it would mean
   // resending an identity just to take a page down (#1342).
-  const setHidden = async (id: string, hidden: boolean) => {
+  //
+  // This one never moves a row between chips — visibility is orthogonal to the
+  // match state, and `hidden` is an artist column that no chip and no count
+  // reads. So the refetch it used to do could not have been correcting
+  // anything; it only redrew the table to flip one badge.
+  const setHidden = async (previous: AdminArtist, hidden: boolean) => {
+    const generation = loadGeneration.current
     try {
       const token = await getToken()
       if (!token) {
@@ -328,7 +378,7 @@ export default function AdminArtistsPage() {
         return
       }
       const resp = await fetch(
-        `${API_BASE}/v1/admin/artists/${id}/visibility`,
+        `${API_BASE}/v1/admin/artists/${previous.id}/visibility`,
         {
           method: 'PATCH',
           headers: {
@@ -342,7 +392,11 @@ export default function AdminArtistsPage() {
         setError(COPY.visibilityError)
         return
       }
-      await load()
+      setError(null)
+      const body: { data: PatchedArtist } = await resp.json()
+      // The visibility PATCH does not touch the attempt counter, so whatever
+      // the row was given up on stays true.
+      applyWrite(previous, body.data, previous.isExhausted, generation)
     } catch (err) {
       console.error('[admin artists] visibility change failed', err)
       setError(COPY.visibilityError)
@@ -544,7 +598,7 @@ export default function AdminArtistsPage() {
                             size="sm"
                             variant="ghost"
                             disabled={row.spotifyArtistId === null}
-                            onClick={() => void save(row.id, null)}
+                            onClick={() => void save(row, null)}
                           >
                             {COPY.clear}
                           </AdminButton>
@@ -570,7 +624,7 @@ export default function AdminArtistsPage() {
                             <AdminButton
                               size="sm"
                               variant="outline"
-                              onClick={() => void markNotAnArtist(row.id)}
+                              onClick={() => void markNotAnArtist(row)}
                             >
                               {COPY.notAnArtist}
                             </AdminButton>
@@ -581,7 +635,7 @@ export default function AdminArtistsPage() {
                           <AdminButton
                             size="sm"
                             variant="outline"
-                            onClick={() => void setHidden(row.id, !row.hidden)}
+                            onClick={() => void setHidden(row, !row.hidden)}
                           >
                             {row.hidden ? COPY.restore : COPY.hide}
                           </AdminButton>
@@ -598,7 +652,7 @@ export default function AdminArtistsPage() {
                             getToken={getToken}
                             onPick={(spotifyArtistId, photoUrl) => {
                               setOpenCandidatesFor(null)
-                              void save(row.id, spotifyArtistId, photoUrl)
+                              void save(row, spotifyArtistId, photoUrl)
                             }}
                           />
                         </TD>
