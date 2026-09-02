@@ -1,3 +1,15 @@
+# [1.276.0](https://github.com/HartiganHM/concert-crawl/compare/v1.275.7...v1.276.0) (2026-09-02)
+
+
+### Bug Fixes
+
+* **admin:** stop the artist queue blanking the table after every write ([#1653](https://github.com/HartiganHM/concert-crawl/issues/1653)) ([1b3970f](https://github.com/HartiganHM/concert-crawl/commit/1b3970fd86e9d94903e0c8eacd7a6840715bc872))
+
+
+### Features
+
+* **crawler:** honour robots.txt Crawl-delay, capped at 30s ([#1654](https://github.com/HartiganHM/concert-crawl/issues/1654)) ([5a39fbd](https://github.com/HartiganHM/concert-crawl/commit/5a39fbd5b85fe926cd9ec420591c28cf205d6205))
+
 ## [1.275.7](https://github.com/HartiganHM/concert-crawl/compare/v1.275.6...v1.275.7) (2026-09-01)
 
 
