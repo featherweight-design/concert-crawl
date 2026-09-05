@@ -81,8 +81,14 @@ export const BOT_COPY = {
     },
     rate: {
       label: 'Request rate',
+      // Deliberately a claim about our own pacing, not a per-domain guarantee.
+      // The 3-second sleep lives in `fetchPage`, so it holds between requests
+      // within one venue's crawl. It is not keyed on hostname, so two venue
+      // rows sharing a host each get their own clock, and a hand-queued trigger
+      // run can overlap the daily pass. Saying "to the same domain" claimed a
+      // coordination we do not have.
       value:
-        'One request every 3 seconds to the same domain, plus a random jitter so we never arrive on a fixed beat.',
+        'We wait at least 3 seconds between requests, plus a random jitter so we never arrive on a fixed beat.',
     },
     perVenue: {
       label: 'Per venue',

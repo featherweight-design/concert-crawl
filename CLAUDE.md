@@ -293,7 +293,7 @@ surfaces months later as a graveyard. So:
 
 - Always check `robots.txt` before crawling; never override a disallow
 - Identify with honest user agent: `ConcertCrawl/1.0 (+https://concertcrawl.app/bot)`
-- Minimum 3-second delay between requests per domain (configurable per venue)
+- Minimum 3-second delay between requests, plus jitter (configurable per venue). Note this is enforced in `fetchPage`, so it is per-venue-crawl, **not** keyed on hostname: two venue rows sharing a host each get their own clock, and a hand-queued trigger run can overlap the daily pass. `/bot` states it as a pacing floor for exactly this reason — do not restore a per-domain claim without building the coordination to back it
 - Schedule daily crawl at 3 AM MT (off-peak)
 - 3 consecutive failures → pause venue + notify admin via in-app notification
 - 403/429 response → immediately flag as blocked + admin notification

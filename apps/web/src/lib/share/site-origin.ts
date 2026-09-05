@@ -68,6 +68,20 @@ export const siteOrigin = (): string => {
   return LOCAL_ORIGIN
 }
 
+/** The one origin we want search engines to know about. */
+export const CANONICAL_ORIGIN = 'https://concertcrawl.app'
+
+/**
+ * Whether this deploy is the production site.
+ *
+ * `robots.ts` and `sitemap.ts` both gate on it, and they have to agree: a
+ * sitemap is a discovery channel independent of robots.txt, so a staging deploy
+ * that disallows crawling but still publishes its own absolute URLs can have
+ * those URLs indexed anyway.
+ */
+export const isCanonicalOrigin = (): boolean =>
+  siteOrigin() === CANONICAL_ORIGIN
+
 /** Resolve an app-relative path against the site origin. */
 export const absoluteUrl = (path: string): string =>
   `${siteOrigin()}${path.startsWith('/') ? path : `/${path}`}`

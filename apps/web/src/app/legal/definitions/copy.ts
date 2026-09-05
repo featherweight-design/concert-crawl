@@ -34,6 +34,14 @@ export const LEGAL_COPY = {
         'Concert Crawl aggregates live music event information from Denver venue websites and third-party ticketing platforms. We do not sell tickets. All ticket links redirect to the venue or an official ticketing partner.',
       body2:
         'Event data is sourced by automated crawlers and user contributions. We make reasonable efforts to keep it accurate, but we make no guarantees. Always verify show details directly with the venue before purchasing tickets.',
+      // Split around the link so the destination reads as part of the sentence
+      // rather than a trailing "learn more". The label names where it goes, so
+      // it still says something in a screen reader's list of links.
+      crawlerPrefix:
+        'For what our crawler reads, and how a venue blocks it, see ',
+      crawlerLinkLabel: 'our crawler page',
+      crawlerSuffix: '.',
+      crawlerHref: '/bot',
     },
 
     accounts: {

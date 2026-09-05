@@ -53,6 +53,16 @@ export default function TermsPage() {
           <Section title={copy.service.title}>
             <p>{copy.service.body1}</p>
             <p>{copy.service.body2}</p>
+            <p>
+              {copy.service.crawlerPrefix}
+              <Link
+                href={copy.service.crawlerHref}
+                className="text-fg-muted underline underline-offset-4 transition-colors hover:text-fg"
+              >
+                {copy.service.crawlerLinkLabel}
+              </Link>
+              {copy.service.crawlerSuffix}
+            </p>
           </Section>
 
           <Section title={copy.accounts.title}>
