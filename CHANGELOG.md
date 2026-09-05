@@ -1,3 +1,10 @@
+# [1.278.0](https://github.com/HartiganHM/concert-crawl/compare/v1.277.0...v1.278.0) (2026-09-05)
+
+
+### Features
+
+* **bot:** make /bot discoverable and correct its rate claim ([#1659](https://github.com/HartiganHM/concert-crawl/issues/1659)) ([2ec02e5](https://github.com/HartiganHM/concert-crawl/commit/2ec02e55c9ed072beb636fdea7ac223e5fdd0fb9)), closes [#1655](https://github.com/HartiganHM/concert-crawl/issues/1655) [#1228](https://github.com/HartiganHM/concert-crawl/issues/1228)
+
 # [1.277.0](https://github.com/HartiganHM/concert-crawl/compare/v1.276.0...v1.277.0) (2026-09-02)
 
 
