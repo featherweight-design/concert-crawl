@@ -8,6 +8,7 @@ import type {
   EventCrewGoing,
 } from '@concert-crawl/types'
 import { apiClient } from '@/lib/api'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 
 const crewGoingQueryKeyBase = ['crew-going'] as const
 
@@ -64,6 +65,9 @@ const EMPTY: EventCrewGoing = { count: 0, going: [] }
 
 export function useCrewGoing(eventId: string) {
   const { getToken, isSignedIn, userId } = useAuth()
+  // Gated here rather than at each mount site: with crews off the endpoint
+  // 404s, and this one fires once per event row on Browse.
+  const { enabled: crewsEnabled } = useFeatureFlag('crews')
 
   return useQuery({
     queryKey: crewGoingQueryKey(eventId, userId),
@@ -79,7 +83,7 @@ export function useCrewGoing(eventId: string) {
       }
       return raw
     },
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && crewsEnabled,
     staleTime: 60_000,
   })
 }

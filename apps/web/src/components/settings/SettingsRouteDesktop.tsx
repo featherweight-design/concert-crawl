@@ -48,6 +48,19 @@ const NAV_ITEMS: { key: NavSection; label: string }[] = [
   { key: 'danger', label: SETTINGS_COPY.dangerSection },
 ]
 
+// Resolved against the sections actually on screen. With spotify-sync off,
+// `?section=connections` would otherwise select a section whose panel renders
+// nothing, leaving the whole right-hand pane blank.
+export const resolveSection = (
+  param: string | null,
+  spotifyEnabled: boolean,
+): NavSection => {
+  const match = NAV_ITEMS.find((item) => item.key === param)
+  if (!match) return 'profile'
+  if (match.key === 'connections' && !spotifyEnabled) return 'profile'
+  return match.key
+}
+
 const NAV_ICONS: Record<NavSection, React.ReactNode> = {
   profile: (
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
@@ -166,19 +179,16 @@ export function SettingsRouteDesktop({
   const { user } = useUser()
   const searchParams = useSearchParams()
   const sectionParam = searchParams.get('section')
-  const initialSection: NavSection =
-    sectionParam !== null && NAV_ITEMS.some((item) => item.key === sectionParam)
-      ? (sectionParam as NavSection)
-      : 'profile'
-  const [activeSection, setActiveSection] = useState<NavSection>(initialSection)
+  const [activeSection, setActiveSection] = useState<NavSection>(() =>
+    resolveSection(sectionParam, spotifyEnabled),
+  )
   const [editOpen, setEditOpen] = useState(false)
 
   useEffect(() => {
-    const param = searchParams.get('section')
-    const isValid =
-      param !== null && NAV_ITEMS.some((item) => item.key === param)
-    setActiveSection(isValid ? (param as NavSection) : 'profile')
-  }, [searchParams])
+    setActiveSection(
+      resolveSection(searchParams.get('section'), spotifyEnabled),
+    )
+  }, [searchParams, spotifyEnabled])
 
   // The Connections section holds nothing but the Spotify link, and its own
   // heading copy is Spotify's, so the flag takes the whole section rather than

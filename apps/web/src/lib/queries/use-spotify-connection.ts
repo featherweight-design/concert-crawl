@@ -13,6 +13,7 @@ import {
   patchSpotifyConnection,
   syncSpotifyConnection,
 } from '@/lib/spotify'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 
 // Prefix key for invalidation (matches every user's entry).
 export const spotifyConnectionQueryKeyBase = ['spotify-connection'] as const
@@ -27,6 +28,10 @@ const DISCONNECTED: SpotifyConnectionResponse = { status: 'disconnected' }
 
 export function useSpotifyConnection() {
   const { getToken, isSignedIn, userId } = useAuth()
+  // Gated here rather than at each mount site: with spotify-sync off the
+  // endpoint 404s, so an ungated query would spend a request per consumer and
+  // fill the cache with errors nothing is going to render.
+  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync')
 
   return useQuery({
     queryKey: spotifyConnectionQueryKey(userId),
@@ -39,7 +44,7 @@ export function useSpotifyConnection() {
       }
       return fetchSpotifyConnection(token)
     },
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && spotifyEnabled,
     staleTime: 60 * 1000,
   })
 }

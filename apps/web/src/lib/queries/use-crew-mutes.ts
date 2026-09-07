@@ -12,6 +12,7 @@ import { useAuth } from '@clerk/nextjs'
 import type { CrewSummary } from '@concert-crawl/types'
 import { apiClient } from '@/lib/api'
 import { setCrewMuted } from '@/lib/crews'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 
 // Scoped by userId: `muted` and `isKeeper` are both viewer-relative, so a
 // QueryClient that outlives a sign-in must not serve the previous account's
@@ -44,6 +45,10 @@ const isCrewMuteRow = (value: unknown): value is CrewMuteRow => {
 
 export function useCrews() {
   const { getToken, isSignedIn, userId } = useAuth()
+  // Gated here rather than at each mount site: with crews off the endpoint
+  // 404s, so an ungated query would spend a request per consumer and fill the
+  // cache with errors nothing is going to render.
+  const { enabled: crewsEnabled } = useFeatureFlag('crews')
 
   return useQuery({
     queryKey: crewsQueryKey(userId),
@@ -60,7 +65,7 @@ export function useCrews() {
       }
       return crews
     },
-    enabled: !!isSignedIn,
+    enabled: !!isSignedIn && crewsEnabled,
     staleTime: 60_000,
   })
 }
