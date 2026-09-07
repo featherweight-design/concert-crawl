@@ -32,6 +32,11 @@
 // SPOTIFY_SYNC_DRY_RUN=1 runs a log-only cycle: no emails — but eligibility +
 // matching still evaluate, and the summary row is written with dryRun:true.
 //
+// RELEASE FLAG. The `spotify-sync` flag suppresses phase 1 in its Spotify
+// shape only. Native following is not a Spotify feature, so a generalized run
+// keeps sending with the flag off; phase 2 runs either way, and the summary
+// carries digestSkippedFlag so a silent week is legible.
+//
 // GENERALIZED DIGEST (native following PR 9). NATIVE_DIGEST_ENABLED=1 flips
 // the digest from "Spotify subscribers" to "anyone who follows an artist":
 // recipients come from user_artist_follows joined to
@@ -58,6 +63,7 @@ import { appUrl } from '../emails/layout.js'
 import type { DigestEmailShow } from '../emails/types.js'
 import { sendTransactionalEmail } from '../lib/email.js'
 import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js'
+import { isFeatureEnabled } from '../lib/feature-flags.js'
 import { apiLogger } from '../lib/logger.js'
 import { loadPlanState } from '../lib/plan.js'
 import {
@@ -284,6 +290,9 @@ interface WeeklySummary {
   digestZeroWeek: number
   digestSkippedEmpty: number
   digestFailures: number
+  // Separates "the flag hid the Spotify shape" from a run that reached zero
+  // eligible recipients on its own.
+  digestSkippedFlag: boolean
 }
 
 type DigestOutcome = 'sent' | 'skipped-entitlement' | 'skipped-empty'
@@ -403,73 +412,94 @@ export const runSpotifyWeekly = async (
     digestZeroWeek: 0,
     digestSkippedEmpty: 0,
     digestFailures: 0,
+    digestSkippedFlag: false,
   }
   apiLogger.info(
     { isoWeek: summary.isoWeek, dryRun: summary.dryRun },
     'spotify-weekly: starting run',
   )
 
+  // The native shape rides the `following` entitlement and reads every follow
+  // source, so it is deliberately outside this flag: hiding Spotify must not
+  // take native following down with it. The condition is hoisted above the
+  // try/catch because that catch pages Sentry, and a deliberate skip must not
+  // page anyone — hoisting also means a flagged-off run does no Clerk work.
+  const digestEnabled =
+    summary.nativeDigest || (await isFeatureEnabled('spotify-sync'))
+  if (!digestEnabled) {
+    summary.digestSkippedFlag = true
+    apiLogger.info(
+      { isoWeek: summary.isoWeek },
+      'spotify-weekly: spotify-sync flag off, skipping digest phase',
+    )
+  }
+
   // Phase 1 — digests. Clerk is loaded lazily so a missing @clerk/backend
   // never breaks module evaluation for the rest of the run.
-  try {
-    // Fail fast once (billing-daily pattern) instead of erroring per-user.
-    const clerkSecretKey = process.env['CLERK_SECRET_KEY']
-    if (clerkSecretKey === undefined || clerkSecretKey.length === 0) {
-      throw new Error('CLERK_SECRET_KEY not set — digest phase skipped')
-    }
-    const { createClerkClient } = await import('@clerk/backend')
-    const clerk = createClerkClient({ secretKey: clerkSecretKey })
-    const recipients = summary.nativeDigest
-      ? await db
-          .selectDistinct({ userId: userArtistFollows.userId })
-          .from(userArtistFollows)
-          // LEFT: preference rows are written lazily on the first PATCH, so a
-          // follower who never opened Settings has none. An inner join here
-          // would mail nobody but the users who touched a toggle.
-          .leftJoin(
-            userNotificationPreferences,
-            eq(userNotificationPreferences.userId, userArtistFollows.userId),
-          )
-          .where(
-            sql`coalesce(${userNotificationPreferences.weeklyDigestEnabled}, true)`,
-          )
-      : await db
-          .select({ userId: userSpotifyConnections.userId })
-          .from(userSpotifyConnections)
-          .where(
-            and(
-              ne(userSpotifyConnections.status, 'revoked'),
-              eq(userSpotifyConnections.digestEnabled, true),
-            ),
-          )
-    summary.digestCandidates = recipients.length
-    const getTastePicks = lazyTastePicks(summary.windowStart, summary.windowEnd)
-    for (const { userId } of recipients) {
-      try {
-        const outcome = await digestForUser(
-          userId,
-          clerk.users,
-          summary,
-          getTastePicks,
-        )
-        if (outcome === 'skipped-entitlement') {
-          summary.digestSkippedEntitlement += 1
-        }
-        if (outcome === 'skipped-empty') summary.digestSkippedEmpty += 1
-      } catch (err) {
-        summary.digestFailures += 1
-        apiLogger.error({ err, userId }, 'spotify-weekly: digest failed')
-        Sentry.captureException(err, {
-          tags: { job: 'spotify-weekly', phase: 'digest' },
-          extra: { userId },
-        })
+  if (digestEnabled) {
+    try {
+      // Fail fast once (billing-daily pattern) instead of erroring per-user.
+      const clerkSecretKey = process.env['CLERK_SECRET_KEY']
+      if (clerkSecretKey === undefined || clerkSecretKey.length === 0) {
+        throw new Error('CLERK_SECRET_KEY not set — digest phase skipped')
       }
+      const { createClerkClient } = await import('@clerk/backend')
+      const clerk = createClerkClient({ secretKey: clerkSecretKey })
+      const recipients = summary.nativeDigest
+        ? await db
+            .selectDistinct({ userId: userArtistFollows.userId })
+            .from(userArtistFollows)
+            // LEFT: preference rows are written lazily on the first PATCH, so a
+            // follower who never opened Settings has none. An inner join here
+            // would mail nobody but the users who touched a toggle.
+            .leftJoin(
+              userNotificationPreferences,
+              eq(userNotificationPreferences.userId, userArtistFollows.userId),
+            )
+            .where(
+              sql`coalesce(${userNotificationPreferences.weeklyDigestEnabled}, true)`,
+            )
+        : await db
+            .select({ userId: userSpotifyConnections.userId })
+            .from(userSpotifyConnections)
+            .where(
+              and(
+                ne(userSpotifyConnections.status, 'revoked'),
+                eq(userSpotifyConnections.digestEnabled, true),
+              ),
+            )
+      summary.digestCandidates = recipients.length
+      const getTastePicks = lazyTastePicks(
+        summary.windowStart,
+        summary.windowEnd,
+      )
+      for (const { userId } of recipients) {
+        try {
+          const outcome = await digestForUser(
+            userId,
+            clerk.users,
+            summary,
+            getTastePicks,
+          )
+          if (outcome === 'skipped-entitlement') {
+            summary.digestSkippedEntitlement += 1
+          }
+          if (outcome === 'skipped-empty') summary.digestSkippedEmpty += 1
+        } catch (err) {
+          summary.digestFailures += 1
+          apiLogger.error({ err, userId }, 'spotify-weekly: digest failed')
+          Sentry.captureException(err, {
+            tags: { job: 'spotify-weekly', phase: 'digest' },
+            extra: { userId },
+          })
+        }
+      }
+    } catch (err) {
+      apiLogger.error({ err }, 'spotify-weekly: digest phase failed')
+      Sentry.captureException(err, {
+        tags: { job: 'spotify-weekly', phase: 'digest' },
+      })
     }
-  } catch (err) {
-    apiLogger.error({ err }, 'spotify-weekly: digest phase failed')
-    Sentry.captureException(err, {
-      tags: { job: 'spotify-weekly', phase: 'digest' },
-    })
   }
 
   // Phase 2 — observability. Best-effort: bookkeeping never fails the run.

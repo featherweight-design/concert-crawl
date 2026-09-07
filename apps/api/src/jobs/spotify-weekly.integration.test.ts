@@ -62,6 +62,7 @@ import {
 } from '@concert-crawl/db'
 import { canonicalizeArtist } from '@concert-crawl/crawler-core/canonical'
 import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js'
+import { setFeatureFlag } from '../test/helpers/feature-flags.js'
 import { testDb } from '../test/helpers/db.js'
 import { runSpotifyWeekly } from './spotify-weekly.js'
 
@@ -169,6 +170,10 @@ beforeEach(async () => {
   vi.stubEnv('EMAIL_UNSUBSCRIBE_SECRET', 'weekly-job-test-secret')
   vi.stubEnv('SPOTIFY_SYNC_DRY_RUN', '')
   vi.stubEnv('NATIVE_DIGEST_ENABLED', '')
+  // clearTables truncates feature_flags, so the Spotify shape would be gated
+  // off for every case below. These suites are about digest behaviour, not the
+  // release gate; the gate has its own describe block.
+  await setFeatureFlag('spotify-sync', true)
 })
 
 afterEach(() => {
@@ -662,6 +667,87 @@ describe('runSpotifyWeekly — generalized digest (NATIVE_DIGEST_ENABLED)', () =
 
     expect(await getDigestLogRows(USER)).toHaveLength(1)
     expect(resendState.sends).toHaveLength(1)
+  })
+})
+
+describe('runSpotifyWeekly — spotify-sync flag', () => {
+  const seedSpotifyDigestRecipient = async (): Promise<void> => {
+    await seedConnection(USER)
+    await seedPremium(USER)
+    clerkState.emails.set(USER, 'flagged@example.com')
+    await seedSpotifyFollow(USER, [{ id: 'sp1', name: 'Sleep Token' }])
+    const venue = await seedVenue({ slug: `venue-${USER}` })
+    await seedEvent(venue.id, {
+      artist: 'Sleep Token',
+      canonicalArtist: 'sleep token',
+      date: '2026-07-22',
+    })
+  }
+
+  const seedNativeDigestRecipient = async (): Promise<void> => {
+    await seedPremium(USER)
+    clerkState.emails.set(USER, 'flagged-native@example.com')
+    const venue = await seedVenue({ slug: `venue-${USER}` })
+    await seedEvent(venue.id, {
+      artist: 'Sleep Token',
+      canonicalArtist: 'sleep token',
+      date: '2026-07-22',
+    })
+    await testDb.insert(userArtistFollows).values({
+      userId: USER,
+      artistName: 'Sleep Token',
+      source: 'manual',
+      canonicalName: canonicalizeArtist('Sleep Token'),
+    })
+  }
+
+  it('sends no Spotify digest when the flag is off', async () => {
+    await setFeatureFlag('spotify-sync', false)
+    await seedSpotifyDigestRecipient()
+
+    await runSpotifyWeekly(NOW)
+
+    expect(await getDigestLogRows(USER)).toHaveLength(0)
+    expect(resendState.sends).toHaveLength(0)
+  })
+
+  it('sends the Spotify digest once the flag is on', async () => {
+    await setFeatureFlag('spotify-sync', true)
+    await seedSpotifyDigestRecipient()
+
+    await runSpotifyWeekly(NOW)
+
+    expect(resendState.sends.length).toBeGreaterThan(0)
+  })
+
+  // The locked decision: native following is not coupled to Spotify.
+  it('still sends the native digest when spotify-sync is off', async () => {
+    await setFeatureFlag('spotify-sync', false)
+    vi.stubEnv('NATIVE_DIGEST_ENABLED', '1')
+    await seedNativeDigestRecipient()
+
+    await runSpotifyWeekly(NOW)
+
+    expect(resendState.sends.length).toBeGreaterThan(0)
+  })
+
+  // Phase 2 is not part of the gate: a suppressed digest still has to leave a
+  // summary row saying why the run mailed nobody.
+  it('still writes the observability row, marked as flag-skipped', async () => {
+    await setFeatureFlag('spotify-sync', false)
+    await seedSpotifyDigestRecipient()
+
+    await runSpotifyWeekly(NOW)
+
+    const costs = await testDb
+      .select()
+      .from(costTracking)
+      .where(eq(costTracking.service, 'spotify'))
+    const summary = costs.find((row) =>
+      (row.metadata ?? '').includes('"job":"spotify-weekly"'),
+    )
+    expect(summary?.metadata).toContain('"digestSkippedFlag":true')
+    expect(summary?.metadata).toContain('"digestCandidates":0')
   })
 })
 
