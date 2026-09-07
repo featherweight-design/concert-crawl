@@ -62,6 +62,16 @@ vi.mock('@/lib/queries/use-plan-state', () => ({
   usePlanState: () => ({ data: planState.current, isPending: false }),
 }))
 
+// useEntitlement also reads the release-flag map, a react-query hook. These
+// cases render without a QueryClientProvider, so the map is stubbed at the
+// registry defaults; no flag names `following`, so the seam is inert here.
+vi.mock('@/lib/queries/use-feature-flags', async () => {
+  const { featureFlagDefaults } = await import('@concert-crawl/entitlements')
+  return {
+    useFeatureFlags: () => ({ data: featureFlagDefaults(), isPending: false }),
+  }
+})
+
 const plan = (over: Partial<PlanState> = {}): PlanState => ({
   plan: 'premium',
   onTrial: false,

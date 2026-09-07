@@ -1,12 +1,18 @@
 'use client'
 
 import { useAuth } from '@clerk/nextjs'
-import { canUseFeature, lockedSurface } from '@concert-crawl/entitlements'
+import {
+  canUseFeature,
+  featureFlagDefaults,
+  flagForEntitlement,
+  lockedSurface,
+} from '@concert-crawl/entitlements'
 import type {
   EntitlementCell,
   PlanStateLike,
   PremiumFeature,
 } from '@concert-crawl/entitlements'
+import { useFeatureFlags } from './use-feature-flags'
 import { usePlanState } from './use-plan-state'
 
 export interface EntitlementResult {
@@ -31,6 +37,23 @@ const LOGGED_OUT_STATE: PlanStateLike = {
 export function useEntitlement(feature: PremiumFeature): EntitlementResult {
   const { isSignedIn } = useAuth()
   const { data: planState, isPending } = usePlanState()
+  const flagKey = flagForEntitlement(feature)
+  const { data: flags, isPending: flagsPending } = useFeatureFlags()
+
+  // A release flag can only restrict, never grant, so this short-circuits the
+  // false case and leaves every true case to the matrix below. Hold rendering
+  // while the map loads rather than flashing the unflagged treatment. When the
+  // fetch fails outright `flags` is undefined and the registry defaults stand
+  // in, which keeps a released feature visible through a transient network
+  // failure while keeping an unreleased one hidden — the case that must never
+  // leak. Placed before the isSignedIn guard so logged-out surfaces are gated
+  // too; both queries are called first so the hook order stays unconditional.
+  if (flagKey !== null) {
+    if (flagsPending) return { isLoading: true, active: false, surface: null }
+    if (!(flags ?? featureFlagDefaults())[flagKey]) {
+      return { isLoading: false, active: false, surface: 'hidden' }
+    }
+  }
 
   // Clerk still resolving the session — treat as loading.
   if (isSignedIn === undefined) {

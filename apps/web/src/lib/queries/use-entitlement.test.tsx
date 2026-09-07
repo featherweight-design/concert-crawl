@@ -5,6 +5,10 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { PlanState, UserPlan } from '@concert-crawl/types'
+import {
+  featureFlagDefaults,
+  type FeatureFlagView,
+} from '@concert-crawl/entitlements'
 
 const mockGetToken = vi.fn()
 let signedIn: boolean | undefined = true
@@ -20,6 +24,17 @@ vi.mock('@clerk/nextjs', () => ({
 const mockFetchMe = vi.fn()
 vi.mock('@/lib/users', () => ({
   fetchMe: (token: string) => mockFetchMe(token),
+}))
+
+// The flag map is mocked at the hook, not the fetch: useFeatureFlags has its
+// own test file covering the network shape. Read lazily so each test can swap
+// the result without re-importing the module under test.
+let mockFlagsResult: {
+  data: FeatureFlagView | undefined
+  isPending: boolean
+} = { data: featureFlagDefaults(), isPending: false }
+vi.mock('./use-feature-flags', () => ({
+  useFeatureFlags: () => mockFlagsResult,
 }))
 
 import { useEntitlement } from './use-entitlement'
@@ -148,6 +163,131 @@ describe('useEntitlement', () => {
     expect(result.current.active).toBe(false)
     expect(result.current.surface).toBe('tier-picker-on-tap')
     expect(mockFetchMe).not.toHaveBeenCalled()
+  })
+})
+
+describe('useEntitlement flag seam', () => {
+  const mockSignedIn = ({
+    plan,
+    roleComped,
+  }: {
+    plan: UserPlan
+    roleComped: boolean
+  }) => {
+    signedIn = true
+    setProfilePlan(planState(plan, { status: 'active', roleComped }))
+  }
+
+  const mockSignedOut = () => {
+    signedIn = false
+  }
+
+  const mockFlags = (overrides: Partial<FeatureFlagView>) => {
+    mockFlagsResult = {
+      data: { ...featureFlagDefaults(), ...overrides },
+      isPending: false,
+    }
+  }
+
+  const mockFlagsLoading = () => {
+    mockFlagsResult = { data: undefined, isPending: true }
+  }
+
+  // Settled but dataless: the fetch rejected and React Query holds no map.
+  const mockFlagsError = () => {
+    mockFlagsResult = { data: undefined, isPending: false }
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    signedIn = true
+    currentUserId = 'user_test'
+    mockGetToken.mockResolvedValue('test-token')
+    mockFlags({})
+  })
+
+  it('forces hidden for a founder when the flag is off', () => {
+    mockSignedIn({ plan: 'founder', roleComped: false })
+    mockFlags({ crews: false })
+    const { result } = renderHook(() => useEntitlement('crews'), {
+      wrapper: withProvider(),
+    })
+    expect(result.current).toEqual({
+      isLoading: false,
+      active: false,
+      surface: 'hidden',
+    })
+  })
+
+  it('forces hidden for a comped user when the flag is off', () => {
+    mockSignedIn({ plan: 'free', roleComped: true })
+    mockFlags({ crews: false })
+    const { result } = renderHook(() => useEntitlement('crews'), {
+      wrapper: withProvider(),
+    })
+    expect(result.current.active).toBe(false)
+    expect(result.current.surface).toBe('hidden')
+  })
+
+  it('forces hidden for a logged-out visitor when the flag is off', () => {
+    mockSignedOut()
+    mockFlags({ crews: false })
+    const { result } = renderHook(() => useEntitlement('crews'), {
+      wrapper: withProvider(),
+    })
+    expect(result.current.surface).toBe('hidden')
+  })
+
+  it('leaves the matrix answer alone when the flag is on', async () => {
+    mockSignedIn({ plan: 'free', roleComped: false })
+    mockFlags({ crews: true })
+    const { result } = renderHook(() => useEntitlement('crews'), {
+      wrapper: withProvider(),
+    })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.surface).toBe('paywall-on-tap')
+  })
+
+  it('never grants a feature the matrix denies, flag on', async () => {
+    mockSignedIn({ plan: 'free', roleComped: false })
+    mockFlags({ crews: true })
+    const { result } = renderHook(() => useEntitlement('alerts'), {
+      wrapper: withProvider(),
+    })
+    await waitFor(() => expect(result.current.isLoading).toBe(false))
+    expect(result.current.active).toBe(false)
+  })
+
+  it('holds rendering while the flag map is still loading', () => {
+    mockSignedIn({ plan: 'premium', roleComped: false })
+    mockFlagsLoading()
+    const { result } = renderHook(() => useEntitlement('crews'), {
+      wrapper: withProvider(),
+    })
+    expect(result.current).toEqual({
+      isLoading: true,
+      active: false,
+      surface: null,
+    })
+  })
+
+  it('is unaffected for a feature no flag names', async () => {
+    mockSignedIn({ plan: 'premium', roleComped: false })
+    mockFlags({ crews: false })
+    const { result } = renderHook(() => useEntitlement('watching'), {
+      wrapper: withProvider(),
+    })
+    await waitFor(() => expect(result.current.active).toBe(true))
+  })
+
+  // The registry default for `crews` is false, so an outage must not reveal it.
+  it('falls back to the registry default when the flag fetch errors', () => {
+    mockSignedIn({ plan: 'premium', roleComped: false })
+    mockFlagsError()
+    const { result } = renderHook(() => useEntitlement('crews'), {
+      wrapper: withProvider(),
+    })
+    expect(result.current.surface).toBe('hidden')
   })
 })
 
