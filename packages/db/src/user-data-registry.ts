@@ -503,6 +503,18 @@ export const USER_DATA_REGISTRY: readonly UserDataEntry[] = [
     reason: 'Global pricing-window config.',
   },
   {
+    tableName: 'feature_flags',
+    disposition: 'none',
+    userIdColumn: null,
+    otherUserIdColumns: ['updated_by'],
+    exportKey: null,
+    exportColumns: null,
+    reason:
+      'Global release-gate config. `updated_by` is the admin who flipped the ' +
+      'flag, not a customer, and stays as the record of who acted — same basis ' +
+      'as crawl_triggers.triggered_by.',
+  },
+  {
     tableName: 'processed_stripe_events',
     disposition: 'none',
     userIdColumn: null,
