@@ -15,7 +15,7 @@ flagsRouter.get('/', async (ctx) => {
   const flags = await loadFeatureFlags()
   ctx.header(
     'Cache-Control',
-    `public, max-age=${FEATURE_FLAG_CACHE_TTL_MS / 1000}`,
+    `public, max-age=${Math.floor(FEATURE_FLAG_CACHE_TTL_MS / 1000)}`,
   )
   return ctx.json({ success: true, data: flags })
 })

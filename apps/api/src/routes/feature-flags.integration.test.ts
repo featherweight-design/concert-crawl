@@ -4,7 +4,16 @@
 // with router.use('*', ...) so it runs ahead of clerkMiddleware and
 // requireFeature, which is what makes a flagged-off premium route answer 404
 // rather than a 401 or a 403 that would confirm the feature exists.
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+// The real clerkMiddleware needs a secret key and 500s without one, which would
+// let the "flag is on" case pass for the wrong reason. Mocked to an
+// unauthenticated session so the gate's downstream is a genuine 401.
+vi.mock('@hono/clerk-auth', () => ({
+  clerkMiddleware: () => async (_ctx: unknown, next: () => Promise<void>) =>
+    next(),
+  getAuth: () => null,
+}))
 
 import { createApp } from '../app.js'
 import { clearTables } from '../test/helpers/seed.js'
@@ -50,9 +59,10 @@ describe('feature flag route gating', () => {
   it('stops answering 404 once the flag is turned on', async () => {
     await setFeatureFlag('crews', true)
     const res = await app.request('/v1/crews')
-    // Now reaches auth, which rejects the unauthenticated request. The point
-    // is only that the flag gate no longer swallows it.
-    expect(res.status).not.toBe(404)
+    // Now reaches auth, which rejects the unauthenticated request. Asserting
+    // the exact 401 rather than "not 404" stops a 500 from reading as proof
+    // that the gate stepped aside.
+    expect(res.status).toBe(401)
   })
 })
 
