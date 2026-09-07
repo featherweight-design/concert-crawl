@@ -16,6 +16,7 @@ import { costsAdminRouter } from './costs.js'
 import { founderWindowAdminRouter } from './founder-window.js'
 import { triageAdminRouter } from './triage.js'
 import { artistsAdminRouter } from './artists.js'
+import { featureFlagsAdminRouter } from './feature-flags.js'
 
 export type AdminVariables = {
   Variables: {
@@ -154,3 +155,4 @@ adminRouter.route('/costs', costsAdminRouter)
 adminRouter.route('/founder-window', founderWindowAdminRouter)
 adminRouter.route('/triage', triageAdminRouter)
 adminRouter.route('/artists', artistsAdminRouter)
+adminRouter.route('/feature-flags', featureFlagsAdminRouter)
