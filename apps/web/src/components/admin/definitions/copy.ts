@@ -2301,7 +2301,7 @@ export const ADMIN_COPY = {
       'Customers will stop seeing this feature everywhere, and its API routes will answer 404. Existing data is left alone.',
     confirmCancel: 'Cancel',
     confirmAccept: 'Save',
-    loadError: 'Could not save the flag. Try again.',
+    saveError: 'Could not save the flag. Try again.',
   },
 
   pagination: {

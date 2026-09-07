@@ -237,7 +237,7 @@ const manifest: AuditManifest = validateManifest([
     auth: 'admin',
   },
   {
-    // Rows come from the code registry, so this one renders the same three
+    // Rows come from the code registry, so this one renders the same set of
     // flags on every environment without any seeded data behind it.
     id: 'admin-feature-flags',
     path: '/admin/feature-flags',
