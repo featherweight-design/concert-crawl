@@ -1,3 +1,10 @@
+## [1.285.3](https://github.com/HartiganHM/concert-crawl/compare/v1.285.2...v1.285.3) (2026-09-07)
+
+
+### Bug Fixes
+
+* **watching:** join the headliner portrait so rows match Browse ([#1677](https://github.com/HartiganHM/concert-crawl/issues/1677)) ([a441bf8](https://github.com/HartiganHM/concert-crawl/commit/a441bf8d530b29e1099a6c00cdeace2f89f9885e))
+
 ## [1.285.2](https://github.com/HartiganHM/concert-crawl/compare/v1.285.1...v1.285.2) (2026-09-07)
 
 
