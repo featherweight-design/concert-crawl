@@ -1,3 +1,12 @@
+## [1.285.4](https://github.com/HartiganHM/concert-crawl/compare/v1.285.3...v1.285.4) (2026-09-07)
+
+
+### Bug Fixes
+
+* **venues:** join the headliner portrait so venue rows match Browse ([#1680](https://github.com/HartiganHM/concert-crawl/issues/1680)) ([61dacbc](https://github.com/HartiganHM/concert-crawl/commit/61dacbc06c6257a96bd5e65c500eddf7077e4451)), closes [#1677](https://github.com/HartiganHM/concert-crawl/issues/1677)
+* **web:** suppress remaining Spotify surfaces while the flag is off ([c222f04](https://github.com/HartiganHM/concert-crawl/commit/c222f04fafbd21f65b73cccf3562a5afc7d5a92f))
+* **web:** treat a 404 taste-picks prefetch as an expected decline ([37fd9ba](https://github.com/HartiganHM/concert-crawl/commit/37fd9ba6d3bbe7ccf45481ad283babb45fcee6ef))
+
 ## [1.285.3](https://github.com/HartiganHM/concert-crawl/compare/v1.285.2...v1.285.3) (2026-09-07)
 
 
