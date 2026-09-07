@@ -1,3 +1,17 @@
+# [1.280.0](https://github.com/HartiganHM/concert-crawl/compare/v1.279.0...v1.280.0) (2026-09-07)
+
+
+### Bug Fixes
+
+* **api:** dedupe concurrent feature flag refreshes ([8b37d3d](https://github.com/HartiganHM/concert-crawl/commit/8b37d3dd26cd7b04b852103a2548fa7e7114b7cd))
+* **api:** make the flag gate's 404 byte-identical to an unrouted path ([965c163](https://github.com/HartiganHM/concert-crawl/commit/965c163bd9660bdeaf2707648d6a48b5aa49588f))
+
+
+### Features
+
+* **api:** add memoized feature flag loader ([75e0df7](https://github.com/HartiganHM/concert-crawl/commit/75e0df7aeac1faa8d45ed7ccdb97c7368ed145c6))
+* **api:** add requireFlag middleware ([723344a](https://github.com/HartiganHM/concert-crawl/commit/723344a50703c122744499e806ad11f9711cf4fe))
+
 # [1.279.0](https://github.com/HartiganHM/concert-crawl/compare/v1.278.0...v1.279.0) (2026-09-07)
 
 
