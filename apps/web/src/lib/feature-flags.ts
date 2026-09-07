@@ -41,5 +41,3 @@ export const isFeatureEnabled = async (
   const flags = await getFeatureFlags()
   return flags[key]
 }
-
-export { FEATURE_FLAG_KEYS }
