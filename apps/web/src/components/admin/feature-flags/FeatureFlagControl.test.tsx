@@ -53,6 +53,17 @@ const flags: AdminFeatureFlag[] = [
   },
 ]
 
+const changedFlags: AdminFeatureFlag[] = [
+  {
+    key: 'crews',
+    label: 'Crews',
+    description: 'The Crews tab and crew pages.',
+    enabled: false,
+    updatedAt: '2026-09-07T00:00:00.000Z',
+    updatedBy: 'admin',
+  },
+]
+
 const clickButton = (name: string) =>
   fireEvent.click(screen.getByRole('button', { name }))
 
@@ -67,6 +78,15 @@ describe('FeatureFlagControl', () => {
     render(<FeatureFlagControl initial={flags} />)
     expect(screen.getByText('Crews')).toBeVisible()
     expect(screen.getByText('Off')).toBeVisible()
+    expect(screen.getByText('Never changed')).toBeVisible()
+  })
+
+  it('labels the timestamp on a flag that has been changed', () => {
+    render(<FeatureFlagControl initial={changedFlags} />)
+    // The relative time renders as its own node, so the label is asserted on
+    // the containing element rather than as a standalone string.
+    expect(screen.getByText(/^Changed/)).toBeVisible()
+    expect(screen.queryByText('Never changed')).toBeNull()
   })
 
   it('asks for confirmation before saving', () => {
