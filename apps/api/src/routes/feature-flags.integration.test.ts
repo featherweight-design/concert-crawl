@@ -55,6 +55,9 @@ const adminHeaders = (): Record<string, string> => ({
 describe('feature flag route gating', () => {
   beforeEach(async () => {
     await clearTables()
+    // The admin suite below leaves an admin caller in the hoisted state, so
+    // these blocks reset it rather than inheriting whatever ran last.
+    clearAuth()
   })
 
   // Asserted per route, not per router: a router-level mount that silently
@@ -100,6 +103,9 @@ describe('feature flag route gating', () => {
 describe('GET /v1/flags', () => {
   beforeEach(async () => {
     await clearTables()
+    // The admin suite below leaves an admin caller in the hoisted state, so
+    // these blocks reset it rather than inheriting whatever ran last.
+    clearAuth()
   })
 
   it('returns the merged flag map without authentication', async () => {
