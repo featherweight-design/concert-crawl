@@ -183,7 +183,7 @@ export const FollowButton = ({
     // 44 — every row density is deliberately below it, and the overlay, not a
     // hardcoded floor, is what keeps the target honest.
     minHeight: geometry.height,
-    borderRadius: size === 'badge' ? 999 : 8,
+    borderRadius: geometry.radius,
     fontFamily: 'Inter, system-ui, sans-serif',
     fontWeight: loud ? 800 : 700,
     letterSpacing: '-0.01em',

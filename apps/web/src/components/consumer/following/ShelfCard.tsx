@@ -25,6 +25,10 @@ import Link from 'next/link'
 import { formatPrice } from '@/components/consumer/definitions/lib'
 import { SHELF_CARD_HEIGHT } from '@/components/consumer/definitions/constants'
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
+import {
+  NF_FOLLOW_SIZES,
+  NF_TAP_MIN,
+} from '@/components/consumer/artist-page/definitions/constants'
 import { Panel } from '@/components/consumer/image-slot'
 import { FollowDateLine } from './FollowDateLine'
 import { FOLLOWING_COPY } from './definitions/copy'
@@ -33,8 +37,16 @@ import type { ShelfArtist } from './definitions/types'
 // Only the starter shelf's badge reaches this: it is the acknowledgement of a
 // follow the viewer just made, not a label on a list that is followed by
 // definition.
+//
+// All three draw at the size table's `badge` glyph so the on-art control keeps
+// step with every other follow affordance in the app.
+const GLYPH = NF_FOLLOW_SIZES.badge.glyph
+
+/** How far the invisible target grows past the 26px circle on every side. */
+const BADGE_GROW = (NF_TAP_MIN - NF_FOLLOW_SIZES.badge.height) / 2
+
 const CheckGlyph = () => (
-  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden>
+  <svg width={GLYPH} height={GLYPH} viewBox="0 0 16 16" fill="none" aria-hidden>
     <path
       d="M3.2 8.4l3.1 3.1 6.5-6.9"
       stroke="currentColor"
@@ -46,7 +58,7 @@ const CheckGlyph = () => (
 )
 
 const PlusGlyph = () => (
-  <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
+  <svg width={GLYPH} height={GLYPH} viewBox="0 0 16 16" fill="none" aria-hidden>
     <path
       d="M8 3v10M3 8h10"
       stroke="currentColor"
@@ -57,7 +69,7 @@ const PlusGlyph = () => (
 )
 
 const LockGlyph = () => (
-  <svg width="13" height="13" viewBox="0 0 12 12" fill="none" aria-hidden>
+  <svg width={GLYPH} height={GLYPH} viewBox="0 0 12 12" fill="none" aria-hidden>
     <rect
       x="2.2"
       y="5.4"
@@ -250,9 +262,14 @@ export const ShelfCard = ({
             style={{
               top: 7,
               right: 7,
-              width: 34,
-              height: 34,
-              borderRadius: 34,
+              width: NF_FOLLOW_SIZES.badge.height,
+              height: NF_FOLLOW_SIZES.badge.height,
+              borderRadius: NF_FOLLOW_SIZES.badge.radius,
+              // The on-art skin stays its own thing: `FollowButton`'s quiet
+              // outline is drawn to read against `--bg`, and over a photo it
+              // disappears. A darkened scrim and a light border are what make a
+              // control legible on artwork, so the shelf takes the size table's
+              // geometry and keeps its own colours.
               background: on
                 ? 'color-mix(in oklab, var(--signal) 22%, rgba(0,0,0,0.5))'
                 : 'rgba(0,0,0,0.5)',
@@ -261,6 +278,15 @@ export const ShelfCard = ({
               backdropFilter: 'blur(6px)',
             }}
           >
+            {/* Same bargain `FollowButton` strikes: the circle draws at 26 and
+                the target stays 44 (WCAG 2.5.8). The overlay reaches past the
+                card's edge on the right, which is where the card's own padding
+                is, so nothing interactive sits under it. */}
+            <span
+              aria-hidden
+              data-hit-overlay=""
+              style={{ position: 'absolute', inset: -BADGE_GROW }}
+            />
             {on ? <CheckGlyph /> : gated ? <LockGlyph /> : <PlusGlyph />}
           </button>
           {gated && (

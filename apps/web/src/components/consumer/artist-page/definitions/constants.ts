@@ -82,14 +82,46 @@ export const EMBED_H = { compact: 152, tall: 352 } as const
  * the row it sits in.
  *
  * `badge` carries no label — `fontSize: 0` is deliberate, and the control
- * squares off against its own height.
+ * squares off against its own height before `radius` rounds it to a circle.
+ *
+ * `radius` rises with the control: the rows share 8, and only `primary` takes
+ * 10, so the one filled button on a screen reads slightly softer than the quiet
+ * ones around it rather than identical-but-bigger.
  */
 /** The tap target every follow control grows to, however small it draws. */
 export const NF_TAP_MIN = 44
 
 export const NF_FOLLOW_SIZES = {
-  badge: { height: 26, padding: '0', fontSize: 0, gap: 0, glyph: 12 },
-  row: { height: 28, padding: '0 10px', fontSize: 12, gap: 6, glyph: 11 },
-  rowWide: { height: 32, padding: '0 12px', fontSize: 12.5, gap: 6, glyph: 11 },
-  primary: { height: 44, padding: '0 18px', fontSize: 14.5, gap: 7, glyph: 14 },
+  badge: {
+    height: 26,
+    padding: '0',
+    fontSize: 0,
+    gap: 0,
+    glyph: 12,
+    radius: 999,
+  },
+  row: {
+    height: 28,
+    padding: '0 10px',
+    fontSize: 12,
+    gap: 6,
+    glyph: 11,
+    radius: 8,
+  },
+  rowWide: {
+    height: 32,
+    padding: '0 12px',
+    fontSize: 12.5,
+    gap: 6,
+    glyph: 11,
+    radius: 8,
+  },
+  primary: {
+    height: 44,
+    padding: '0 18px',
+    fontSize: 14.5,
+    gap: 7,
+    glyph: 14,
+    radius: 10,
+  },
 } as const

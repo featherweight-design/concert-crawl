@@ -22,10 +22,10 @@ site at once, so it cannot be split further without leaving the tree uncompilabl
 the one structural change (the bill's header shortcut) plus the shelf badge, both of which
 are independent of the rename and would only fight PR-A for the same lines if bundled.
 
-| PR | Scope |
-| --- | --- |
+| PR    | Scope                                                                                          |
+| ----- | ---------------------------------------------------------------------------------------------- |
 | **A** | The control: size table, `tone`, quiet skins, hit overlay, all nine call sites, both skeletons |
-| **B** | Bill header shortcut relocation + shelf badge folded into the shared table |
+| **B** | Bill header shortcut relocation + shelf badge folded into the shared table                     |
 
 ---
 
@@ -36,12 +36,12 @@ are independent of the rename and would only fight PR-A for the same lines if bu
 `NF_FOLLOW_SIZES` is replaced key-for-key. The old names described density; the new ones
 describe placement, which is what the "one filled per screen" rule actually constrains.
 
-| new key | height | font | glyph | padding | radius | replaces | where |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `badge` | 26 | — | 12 | 0 | 999 | (new) | on art — shelf cards |
-| `row` | 28 | 12 | 11 | `0 10px` | 8 | `sm` (36) | bill rows, search rows, sticky bar |
-| `rowWide` | 32 | 12.5 | 11 | `0 12px` | 8 | `md` (44) | desktop rows |
-| `primary` | 44 | 14.5 | 14 | `0 18px` | 10 | `full` (48) | artist hero, nudge card |
+| new key   | height | font | glyph | padding  | radius | replaces    | where                              |
+| --------- | ------ | ---- | ----- | -------- | ------ | ----------- | ---------------------------------- |
+| `badge`   | 26     | —    | 12    | 0        | 999    | (new)       | on art — shelf cards               |
+| `row`     | 28     | 12   | 11    | `0 10px` | 8      | `sm` (36)   | bill rows, search rows, sticky bar |
+| `rowWide` | 32     | 12.5 | 11    | `0 12px` | 8      | `md` (44)   | desktop rows                       |
+| `primary` | 44     | 14.5 | 14    | `0 18px` | 10     | `full` (48) | artist hero, nudge card            |
 
 The long comment above the table currently explains why `sm` (36) is below the touch
 minimum and where it is therefore permitted. That reasoning is retired by the hit overlay
@@ -56,11 +56,11 @@ the two loud surfaces.
 
 Skins, with `active = !signedOut && !locked && following` unchanged:
 
-| state | quiet | loud |
-| --- | --- | --- |
-| at rest | `transparent` · `--fg` · `1px --border-strong` | `--signal` fill · `--fg-on-accent` · `1px --signal` |
+| state     | quiet                                                                                  | loud                                                    |
+| --------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| at rest   | `transparent` · `--fg` · `1px --border-strong`                                         | `--signal` fill · `--fg-on-accent` · `1px --signal`     |
 | following | `transparent` · `--signal` · `1px color-mix(in oklab, var(--signal) 55%, transparent)` | unchanged from R2 (14% mix, `--signal` text and border) |
-| locked | `transparent` · `--fg` · `1px --border-strong` | same |
+| locked    | `transparent` · `--fg` · `1px --border-strong`                                         | same                                                    |
 
 Three deliberate departures from the prototype, each recorded in READINESS.md:
 
@@ -100,15 +100,15 @@ accessible name still comes from the state.
 
 ### 3. Call sites
 
-| File | Change |
-| --- | --- |
-| `artist-page/FollowBlock.tsx:27` | `size="primary" tone="loud"` — the one canonical filled CTA |
-| `artist-page/StickyBar.tsx:69` | `md` → `row`, quiet |
-| `artist-page/EmptyUpcoming.tsx:66` | `primary` + `loud`. It already owns the page's single live follow via `inlineFollow`, so this is the hero's slot on a page whose hero has no dates to show |
-| `search/ArtistResultRow.tsx:190` | `row` quiet on mobile, `rowWide` quiet on desktop; `iconOnly` below 360 |
-| `following/bill/BillFollowBlock.tsx:234` | `md` → `row`, quiet. The `{!locked && …}` guard stays — the bill's gate is the single bulk button, not N locked pills |
-| `following/my-shows/ArtistManageRow.tsx:152` | `md` → `rowWide` on the desktop card, `row` on the mobile row, quiet |
-| `following/nudge/FollowNudgeCard.tsx:160` | `primary` + `loud`. Second sanctioned loud: it is a dedicated conversion card and the only follow on its screen |
+| File                                         | Change                                                                                                                                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `artist-page/FollowBlock.tsx:27`             | `size="primary" tone="loud"` — the one canonical filled CTA                                                                                                |
+| `artist-page/StickyBar.tsx:69`               | `md` → `row`, quiet                                                                                                                                        |
+| `artist-page/EmptyUpcoming.tsx:66`           | `primary` + `loud`. It already owns the page's single live follow via `inlineFollow`, so this is the hero's slot on a page whose hero has no dates to show |
+| `search/ArtistResultRow.tsx:190`             | `row` quiet on mobile, `rowWide` quiet on desktop; `iconOnly` below 360                                                                                    |
+| `following/bill/BillFollowBlock.tsx:234`     | `md` → `row`, quiet. The `{!locked && …}` guard stays — the bill's gate is the single bulk button, not N locked pills                                      |
+| `following/my-shows/ArtistManageRow.tsx:152` | `md` → `rowWide` on the desktop card, `row` on the mobile row, quiet                                                                                       |
+| `following/nudge/FollowNudgeCard.tsx:160`    | `primary` + `loud`. Second sanctioned loud: it is a dedicated conversion card and the only follow on its screen                                            |
 
 `FollowNudgeCard` and `EmptyUpcoming` are the two places the plan reads rule 1 as a
 per-screen count rather than a literal "only the artist hero". Both are a single
@@ -156,6 +156,18 @@ button is the single gate. One paywall, one tap.
 
 At 320px the header holds a title and a "Follow all 3" pill. The title truncates; the pill
 does not (`flexShrink: 0`, as everywhere else). Verify at 320.
+
+The act count stays in the header beside the title rather than being displaced by the pill.
+It counts the BILL, while the shortcut counts what is left to follow, so on a 3-act bill
+with one act already followed the two legitimately read 3 and 2. Dropping it would also lose
+the bill's size on every screen where the shortcut is hidden.
+
+The locked and unlocked skins converge, because quiet has exactly one at-rest skin. The lock
+glyph is what separates them, as it already is on `FollowButton`. Nothing about the
+one-paywall-one-tap shape changes.
+
+**`label?: string` is NOT added to `FollowButton`.** PR-A's section proposed it for this
+shortcut; the shortcut stayed hand-rolled, so the prop would ship with no consumer.
 
 ### 2. Shelf badge joins the size table
 

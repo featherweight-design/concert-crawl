@@ -12,6 +12,7 @@ import {
 import type { BulkFollowResponse, PlanState } from '@concert-crawl/types'
 import type * as ApiModule from '@/lib/api'
 
+import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants'
 import { ARTIST_COPY } from '@/components/consumer/artist-page/definitions/copy'
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
 
@@ -142,6 +143,41 @@ describe('BillFollowBlock — the block itself', () => {
       <BillFollowBlock artists={[]} scaRegion={false} />,
     )
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe('BillFollowBlock — the header shortcut', () => {
+  // R3 rule 1: the shortcut is a convenience for the rows below it, not the
+  // section's own CTA. Drawn full-width and filled below the list, it read as
+  // the latter. Its home is the header, at the rows' own density.
+  it('sits in the header beside the title, quiet and at row density', () => {
+    render(<BillFollowBlock artists={BILL} scaRegion={false} />)
+
+    const bulk = screen.getByTestId('bill-follow-all')
+    expect(bulk.style.height).toBe(`${NF_FOLLOW_SIZES.row.height}px`)
+    expect(bulk.style.borderRadius).toBe(`${NF_FOLLOW_SIZES.row.radius}px`)
+    // Quiet: no fill, and the width is the label's rather than the block's.
+    expect(bulk.style.background).toBe('transparent')
+    expect(bulk.style.width).toBe('')
+
+    const heading = screen.getByRole('heading', { level: 2 })
+    expect(heading.parentElement?.parentElement).toBe(bulk.parentElement)
+  })
+
+  // The pill shrank to 28; the target did not (WCAG 2.5.8).
+  it('grows an invisible 44px target around the 28px pill', () => {
+    render(<BillFollowBlock artists={BILL} scaRegion={false} />)
+
+    const overlay = screen
+      .getByTestId('bill-follow-all')
+      .querySelector<HTMLElement>('[data-hit-overlay]')
+    expect(overlay).not.toBeNull()
+    // The 44 is the WCAG requirement, so it is written out rather than read
+    // from `NF_TAP_MIN`: a test that takes its target from the same constant
+    // the component does cannot notice the target being lowered. The sum is
+    // what makes the literal safe — the pill and its overlay have to add up.
+    expect(overlay?.style.inset).toBe('-8px')
+    expect(NF_FOLLOW_SIZES.row.height + 8 * 2).toBe(44)
   })
 })
 

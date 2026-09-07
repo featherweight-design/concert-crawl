@@ -14,6 +14,7 @@ vi.mock('@/components/consumer/artist-page/lib/use-artist-follow', () => ({
 
 import { ShelfCard } from './ShelfCard'
 import { SHELF_CARD_WIDTH } from '@/components/consumer/definitions/constants'
+import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants'
 
 const artist = (overrides: Partial<ShelfArtist> = {}): ShelfArtist => ({
   key: 'k1',
@@ -27,12 +28,12 @@ const artist = (overrides: Partial<ShelfArtist> = {}): ShelfArtist => ({
   ...overrides,
 })
 
-const renderCard = (overrides: Partial<ShelfArtist> = {}) =>
+const renderCard = (overrides: Partial<ShelfArtist> = {}, starter = false) =>
   render(
     <ShelfCard
       artist={artist(overrides)}
       width={SHELF_CARD_WIDTH}
-      starter={false}
+      starter={starter}
       locked={false}
       signedOut={false}
       onGatedTap={vi.fn()}
@@ -60,5 +61,28 @@ describe('ShelfCard link precedence', () => {
     renderCard({ eventId: null, slug: null, dateLine: null, price: null })
 
     expect(screen.queryByRole('link')).toBeNull()
+  })
+})
+
+// The badge was a hand-rolled 34px circle answering to nothing. It now takes
+// its geometry from the same table every other follow affordance reads, and
+// keeps only the on-art skin that table cannot express.
+describe('ShelfCard follow badge', () => {
+  it('draws at the size table badge, with a 44px target around it', () => {
+    renderCard({}, true)
+
+    const badge = screen.getByRole('button')
+    const diameter = `${NF_FOLLOW_SIZES.badge.height}px`
+    expect(badge.style.width).toBe(diameter)
+    expect(badge.style.height).toBe(diameter)
+    expect(badge.style.borderRadius).toBe(`${NF_FOLLOW_SIZES.badge.radius}px`)
+
+    const overlay = badge.querySelector<HTMLElement>('[data-hit-overlay]')
+    // The 44 is the WCAG requirement, so it is written out rather than read
+    // from `NF_TAP_MIN`: a test that takes its target from the same constant
+    // the component does cannot notice the target being lowered. The sum is
+    // what makes the literal safe — the circle and its overlay have to add up.
+    expect(overlay?.style.inset).toBe('-9px')
+    expect(NF_FOLLOW_SIZES.badge.height + 9 * 2).toBe(44)
   })
 })

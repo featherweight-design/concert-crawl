@@ -66,10 +66,10 @@ export const CrumbSkeleton = () => (
 )
 
 /**
- * The Follow control's reserved box. It reads its height from the size table
- * rather than restating it: a skeleton taller or shorter than the control it
- * stands in for is the same layout-shift lie the missing crumb was, and a
- * copied literal is how that lie gets reintroduced on the next size pass.
+ * The Follow control's reserved box. It reads its height and corner from the
+ * size table rather than restating them: a skeleton taller or shorter than the
+ * control it stands in for is the same layout-shift lie the missing crumb was,
+ * and a copied literal is how that lie gets reintroduced on the next size pass.
  */
 export const FollowSkeleton = () => (
   <div
@@ -77,7 +77,7 @@ export const FollowSkeleton = () => (
     style={skel({
       width: '100%',
       height: NF_FOLLOW_SIZES.primary.height,
-      borderRadius: 8,
+      borderRadius: NF_FOLLOW_SIZES.primary.radius,
     })}
   />
 )

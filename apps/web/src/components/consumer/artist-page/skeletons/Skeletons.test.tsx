@@ -56,6 +56,8 @@ describe('artist page skeletons', () => {
     expect(bar?.getAttribute('style')).toContain(
       `height: ${NF_FOLLOW_SIZES.primary.height}px`,
     )
-    expect(bar?.getAttribute('style')).toContain('border-radius: 8px')
+    expect(bar?.getAttribute('style')).toContain(
+      `border-radius: ${NF_FOLLOW_SIZES.primary.radius}px`,
+    )
   })
 })

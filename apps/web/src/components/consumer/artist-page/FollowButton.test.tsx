@@ -134,6 +134,11 @@ describe('FollowButton', () => {
     expect(hero.style.height).toBe('44px')
     expect(hero.style.padding).toBe('0px 18px')
     expect(hero.style.fontSize).toBe('14.5px')
+    // The one filled control on a screen takes a softer corner than the quiet
+    // rows around it — 10 against their 8. Literal, like every number in this
+    // test: the point is to pin the table to the handoff, and a value read
+    // back out of the table cannot fail when the table drifts.
+    expect(hero.style.borderRadius).toBe('10px')
   })
 
   // The narrow search row (under 360px). The label goes, the artist does not:
