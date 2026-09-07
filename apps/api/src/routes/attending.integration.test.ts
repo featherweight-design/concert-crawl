@@ -113,6 +113,21 @@ describe('PUT/DELETE /v1/attending/:eventId', () => {
     expect(res.status).toBe(404)
   })
 
+  it('returns 404 for an event the crawler stopped seeing', async () => {
+    setAuth()
+    await seedSupporter()
+    const venue = await seedVenue()
+    const event = await seedEvent(venue.id, {
+      date: '2026-01-01',
+      firstMissingAt: new Date('2026-01-01T09:00:00Z'),
+    })
+
+    const res = await app.request(`/v1/attending/${event.id}`, {
+      method: 'PUT',
+    })
+    expect(res.status).toBe(404)
+  })
+
   it('creates an attending-only row (status stays null)', async () => {
     setAuth()
     await seedSupporter()

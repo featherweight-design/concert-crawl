@@ -64,6 +64,14 @@ async function readProvenance(
   return provenanceResponse.parse(await res.json())
 }
 
+// Parsed rather than cast for the same reason as the schemas above: a cast
+// turns a 500 into an empty `data` and lets a "row is excluded" assertion pass
+// for the wrong reason.
+const artistListResponse = z.object({
+  success: z.boolean(),
+  data: z.array(z.object({ artist: z.string() })),
+})
+
 // The toggle response feeds the follow nudge (PR 10), which keys its one-time
 // dismissal on `userEventId`. Parsed rather than cast: a missing field must
 // fail the test, not arrive as `undefined` and satisfy a loose assertion.
@@ -351,6 +359,27 @@ describe('GET /v1/watching', () => {
     expect(body.data).toHaveLength(1)
     expect(body.data[0]?.artist).toBe('Visible Show')
   })
+
+  it('excludes events the crawler stopped seeing (firstMissingAt set)', async () => {
+    setAuth('user_missing')
+    const venue = await seedVenue()
+    const listedEvent = await seedEvent(venue.id, {
+      artist: 'Still Listed',
+      date: '2099-09-01',
+    })
+    const missingEvent = await seedEvent(venue.id, {
+      artist: 'Delisted Show',
+      date: '2099-09-02',
+      firstMissingAt: new Date('2099-08-01T09:00:00Z'),
+    })
+    await seedUserEvent('user_missing', listedEvent.id, { status: 'watching' })
+    await seedUserEvent('user_missing', missingEvent.id, { status: 'watching' })
+
+    const res = await app.request('/v1/watching')
+    expect(res.status).toBe(200)
+    const body = artistListResponse.parse(await res.json())
+    expect(body.data.map((show) => show.artist)).toEqual(['Still Listed'])
+  })
 })
 
 describe('PUT /v1/watching/:eventId', () => {
@@ -421,6 +450,41 @@ describe('PUT /v1/watching/:eventId', () => {
       method: 'PUT',
     })
     expect(res.status).toBe(404)
+  })
+
+  it('returns 404 when watching an event the crawler stopped seeing', async () => {
+    setAuth('user_watch_missing')
+    const venue = await seedVenue({ name: 'Mission', slug: 'mission' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Delisted Show',
+      date: '2099-09-03',
+      firstMissingAt: new Date('2099-08-01T09:00:00Z'),
+    })
+
+    const res = await app.request(`/v1/watching/${event.id}`, {
+      method: 'PUT',
+    })
+    expect(res.status).toBe(404)
+  })
+
+  it('still un-watches an event the crawler stopped seeing', async () => {
+    setAuth('user_unwatch_missing')
+    const venue = await seedVenue({ name: 'Mission', slug: 'mission' })
+    const event = await seedEvent(venue.id, {
+      artist: 'Delisted Show',
+      date: '2099-09-04',
+      firstMissingAt: new Date('2099-08-01T09:00:00Z'),
+    })
+    await seedUserEvent('user_unwatch_missing', event.id, {
+      status: 'watching',
+    })
+
+    const res = await app.request(`/v1/watching/${event.id}`, {
+      method: 'PUT',
+    })
+    expect(res.status).toBe(200)
+    const body = toggleResponse.parse(await res.json())
+    expect(body.data.watching).toBe(false)
   })
 
   it('keeps the row when un-watching a show the user is also attending', async () => {

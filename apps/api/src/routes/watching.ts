@@ -1,7 +1,7 @@
 // apps/api/src/routes/watching.ts
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { eq, and, gte, asc } from 'drizzle-orm'
+import { eq, and, gte, asc, isNull } from 'drizzle-orm'
 import { z } from 'zod'
 import { db, userEvents, events, venues } from '@concert-crawl/db'
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types'
@@ -69,6 +69,13 @@ watchingRouter.get('/', async (ctx) => {
         gte(events.date, today),
         // PR 6 — hide non-concert events from the watching list too.
         eq(events.hiddenFromConsumer, false),
+        // The same consumer-visibility pair the event detail route applies. A
+        // delisted event 404s there, so leaving it in this list rendered a row
+        // whose only affordance was a dead link — which is what happened when a
+        // show moved venues and the old listing went missing. The crawler clears
+        // the flag on re-extraction, so a watch hidden here returns on its own if
+        // the show comes back to the venue's calendar.
+        isNull(events.firstMissingAt),
       ),
     )
     .orderBy(asc(events.date), asc(events.showTime))
@@ -161,10 +168,18 @@ watchingRouter.put('/:eventId', async (ctx) => {
 
   // Not watching — fetch current price and upsert to watching.
   // PR 6 — non-concert events are 404 for consumers, including the watch flow.
+  // Delisted events are 404 for the same reason. The release branch above runs
+  // first, so un-watching a show that went missing while watched still works.
   const [eventRow] = await db
     .select({ ticketPriceMin: events.ticketPriceMin, artist: events.artist })
     .from(events)
-    .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
+    .where(
+      and(
+        eq(events.id, eventId),
+        eq(events.hiddenFromConsumer, false),
+        isNull(events.firstMissingAt),
+      ),
+    )
     .limit(1)
 
   if (!eventRow) {

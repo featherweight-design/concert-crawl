@@ -181,6 +181,35 @@ describe('GET /v1/history', () => {
     expect(body.data.stats.nights).toBe(0)
   })
 
+  it('drops an upcoming show the crawler stopped seeing but keeps the past one', async () => {
+    setAuth()
+    await seedSupporter()
+    const venue = await seedVenue()
+    const missingUpcoming = await seedEvent(venue.id, {
+      artist: 'Delisted Ahead',
+      date: '2099-06-01',
+      firstMissingAt: new Date('2026-06-04T09:00:00Z'),
+    })
+    const missingPast = await seedEvent(venue.id, {
+      artist: 'Delisted Behind',
+      date: '2026-06-01',
+      firstMissingAt: new Date('2026-05-04T09:00:00Z'),
+    })
+    for (const event of [missingUpcoming, missingPast]) {
+      await seedUserEvent(USER_ID, event.id, {
+        status: null,
+        attendingAt: ATTENDED,
+      })
+    }
+
+    const body = await getHistory()
+    expect(body.data.upcoming).toHaveLength(0)
+    // A night already attended stays on the record whatever the crawler does.
+    expect(body.data.past.map((show) => show.artist)).toEqual([
+      'Delisted Behind',
+    ])
+  })
+
   it('orders upcoming forwards from the next night', async () => {
     setAuth()
     await seedSupporter()

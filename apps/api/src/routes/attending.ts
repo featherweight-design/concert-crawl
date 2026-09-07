@@ -61,10 +61,19 @@ attendingRouter.put('/:eventId', async (ctx) => {
   }
   const eventId = parsed.data
 
+  // The consumer-visibility pair the event detail route applies: a delisted
+  // event 404s there, so it must not be markable as a night you are going to.
+  // Un-going lives on DELETE and is unaffected.
   const [eventRow] = await db
     .select({ id: events.id })
     .from(events)
-    .where(and(eq(events.id, eventId), eq(events.hiddenFromConsumer, false)))
+    .where(
+      and(
+        eq(events.id, eventId),
+        eq(events.hiddenFromConsumer, false),
+        isNull(events.firstMissingAt),
+      ),
+    )
     .limit(1)
 
   if (!eventRow) {

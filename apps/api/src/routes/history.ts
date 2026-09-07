@@ -27,7 +27,7 @@
 
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
-import { and, asc, eq, isNotNull, ne, sql } from 'drizzle-orm'
+import { and, asc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm'
 import { db, userEvents, events, venues } from '@concert-crawl/db'
 import type { HistoryShow, HistoryResponse } from '@concert-crawl/types'
 import { requireFeature } from '../middleware/entitlement.js'
@@ -76,14 +76,21 @@ interface Attendance {
   upcoming: HistoryShow[]
 }
 
+// Mountain Time, not UTC: a late-evening Denver user would otherwise see
+// tonight's show cross into Past hours early. One fragment, so the projection
+// below and the upcoming-only predicate can never drift into two different
+// notions of today. A function rather than a module-level constant: building it
+// at import time makes `sql` load-bearing for every module that pulls the router
+// in, which breaks unit tests that mock drizzle-orm without a `sql` export.
+const todayMt = () => sql`((NOW() AT TIME ZONE ${MT_TIME_ZONE})::date)`
+
 const loadAttendance = async (userId: string): Promise<Attendance> => {
   const rows = await db
     .select({
-      // Mountain Time, not UTC: a late-evening Denver user would otherwise see
-      // tonight's show cross into Past hours early. Selected as a column so the
-      // boundary is one value from one statement, shared by both halves. Cast
-      // to text to compare against `events.date`, which is also YYYY-MM-DD.
-      today: sql<string>`((NOW() AT TIME ZONE ${MT_TIME_ZONE})::date)::text`,
+      // Selected as a column so the boundary is one value from one statement,
+      // shared by both halves. Cast to text to compare against `events.date`,
+      // which is also YYYY-MM-DD.
+      today: sql<string>`${todayMt()}::text`,
       eventId: events.id,
       artist: events.artist,
       date: events.date,
@@ -108,6 +115,11 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
         // rows stay in — the surviving date row is the one that matters.
         // A cancelled show is equally not a night you are going to.
         ne(events.status, 'cancelled'),
+        // Upcoming only: a delisted event 404s on the detail route, so keeping
+        // it in this half would render a row whose only affordance is a dead
+        // link. A past night stays whatever the crawler later does with the
+        // listing — that half is the user's own record of where they were.
+        or(isNull(events.firstMissingAt), sql`${events.date} < ${todayMt()}`),
       ),
     )
     .orderBy(asc(events.date), asc(events.showTime))
