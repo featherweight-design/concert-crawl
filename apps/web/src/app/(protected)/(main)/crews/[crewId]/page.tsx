@@ -4,6 +4,7 @@ import type { CrewDetail } from '@concert-crawl/types'
 import { auth } from '@/lib/auth'
 import { ApiError } from '@/lib/api'
 import { fetchCrew } from '@/lib/crews'
+import { isFeatureEnabled } from '@/lib/feature-flags'
 import { CrewHome } from '@/components/consumer/crews'
 
 export const metadata = { title: 'Crew — Concert Crawl' }
@@ -13,6 +14,10 @@ export default async function CrewPage({
 }: {
   params: Promise<{ crewId: string }>
 }) {
+  // Before any auth or data work, so a flagged-off route does nothing and
+  // leaks nothing through a timing or error difference.
+  if (!(await isFeatureEnabled('crews'))) notFound()
+
   const { crewId } = await params
   const { getToken } = await auth()
   const token = await getToken()

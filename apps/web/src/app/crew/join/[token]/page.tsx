@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { ApiError } from '@/lib/api'
 import { isCrewInviteDeadReason, resolveInvite } from '@/lib/crews'
+import { isFeatureEnabled } from '@/lib/feature-flags'
 import { DeadInviteLink, InviteLanding } from '@/components/consumer/crews'
 
 export const metadata = { title: 'Crew invite — Concert Crawl' }
@@ -20,6 +21,10 @@ export default async function CrewJoinPage({
 }: {
   params: Promise<{ token: string }>
 }) {
+  // Before any auth or data work, so a flagged-off route does nothing and
+  // leaks nothing through a timing or error difference.
+  if (!(await isFeatureEnabled('crews'))) notFound()
+
   const { token: inviteToken } = await params
   const { getToken } = await auth()
   const token = await getToken()
