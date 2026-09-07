@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { SearchLink } from '@/components/consumer/search-palette/SearchLink'
 import type { FollowedArtist, PickerEntry } from '@concert-crawl/types'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 import { usePlanState } from '@/lib/queries/use-plan-state'
 import { TierPickerSheet } from '@/components/consumer/tier-picker/TierPickerSheet'
 import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definitions/constants'
@@ -49,6 +50,7 @@ export const MyShowsArtistsContent = ({
   scaRegion,
 }: MyShowsArtistsContentProps) => {
   const { surface } = useEntitlement('following')
+  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync')
   const { data: planState } = usePlanState()
   const [pickerOpen, setPickerOpen] = useState(false)
   const [narrow, setNarrow] = useState(false)
@@ -139,7 +141,10 @@ export const MyShowsArtistsContent = ({
     </SearchLink>
   )
 
-  const spotifyNote = spotifyCount > 0 && (
+  // Moves with the per-row SourceMark: the footnote's reassurance only makes
+  // sense beside rows that say where they came from, so neither is shown
+  // without the other.
+  const spotifyNote = spotifyEnabled && spotifyCount > 0 && (
     <div
       style={{
         padding: '12px 14px',

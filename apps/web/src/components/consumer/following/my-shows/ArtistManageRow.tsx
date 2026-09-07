@@ -25,6 +25,7 @@ import { Panel } from '@/components/consumer/image-slot'
 import { FollowDateLine } from '@/components/consumer/following/FollowDateLine'
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton'
 import { useArtistFollow } from '@/components/consumer/artist-page/lib/use-artist-follow'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 import { followDateLine } from '@/lib/following'
 import type { FollowedArtist } from '@concert-crawl/types'
 import { MY_SHOWS_ARTISTS_COPY } from './definitions/copy'
@@ -57,6 +58,10 @@ export const ArtistManageRow = ({
   // in Denver) simply never renders the control that would call `toggle` —
   // the follow endpoint is keyed by slug, so there is nothing to call.
   const follow = useArtistFollow(artist.slug ?? '', true, onEntitlementRequired)
+  // The follows endpoint is deliberately ungated — a user must be able to
+  // manage a list they already have — so `source` keeps arriving with the flag
+  // off. Naming Spotify is the part that has to stop, not the row.
+  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync')
 
   const card = variant === 'card'
   const art = card ? CARD_ART_SIZE : narrow ? ROW_ART_SIZE_NARROW : ROW_ART_SIZE
@@ -141,7 +146,7 @@ export const ArtistManageRow = ({
           }}
         />
 
-        {artist.source !== 'manual' && (
+        {spotifyEnabled && artist.source !== 'manual' && (
           <span style={{ marginTop: card ? 4 : 1 }}>
             <SourceMark />
           </span>

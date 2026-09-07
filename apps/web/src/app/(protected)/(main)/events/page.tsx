@@ -11,6 +11,7 @@ import type {
 } from '@concert-crawl/types'
 import { publicApiClient, apiClient, ApiError } from '@/lib/api'
 import { isScaRegion } from '@/lib/sca-region'
+import { isScopeRejection, scopeRetryToken } from '@/lib/scope-rejection'
 import { auth } from '@/lib/auth'
 import { fetchWatching } from '@/lib/watching'
 import { HeroEventCard } from '@/components/consumer/hero-event-card'
@@ -180,8 +181,9 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
 
   // Taste filter (#763 PR 7): server-gated behind the spotify-sync
   // entitlement, so only send taste=1 with a token. If the API rejects it
-  // (401/403 — signed out mid-session, entitlement lapsed, or a tampered
-  // URL), fall back to the unfiltered list instead of erroring the page;
+  // (see isScopeRejection — signed out mid-session, entitlement lapsed, flag
+  // switched off, or a tampered URL), fall back to the unfiltered list
+  // instead of erroring the page;
   // tasteApplied drives the scope banner so the UI never claims a filter
   // the API didn't apply.
   const tasteRequested = params['filterTaste'] === '1' && token != null
@@ -215,24 +217,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
       }
     } catch (err) {
       const scopeRequested = tasteRequested || followingRequested
-      if (
-        scopeRequested &&
-        err instanceof ApiError &&
-        (err.status === 401 || err.status === 403)
-      ) {
+      if (scopeRequested && isScopeRejection(err)) {
         // One retry drops BOTH scopes. Which one the API rejected isn't in the
         // error, and a second probe to find out costs a round-trip to render a
         // list the viewer can re-scope in one tap.
-        //
-        // 401 means the token itself was refused, so the retry drops it too —
-        // reusing it would earn a second 401 and throw the page away rather
-        // than degrade it. 403 is entitlement-only and keeps the token, since
-        // the identity is fine and the list still wants watch state on it.
         console.warn('scope filter rejected — falling back to unfiltered', err)
         return {
           response: await fetchEvents(
             fetchParams,
-            err.status === 401 ? null : token,
+            scopeRetryToken(err, token),
             viewLimit,
             false,
           ),

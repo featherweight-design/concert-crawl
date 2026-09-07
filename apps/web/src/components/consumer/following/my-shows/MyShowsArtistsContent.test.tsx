@@ -1,7 +1,15 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom'
-import { describe, it, expect, afterEach, beforeAll, vi } from 'vitest'
+import {
+  describe,
+  it,
+  expect,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  vi,
+} from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import type { FollowedArtist } from '@concert-crawl/types'
 import { MyShowsArtistsContent } from './MyShowsArtistsContent'
@@ -48,6 +56,19 @@ vi.mock('@/lib/queries/use-notification-preferences', () => ({
 vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
   TierPickerSheet: () => null,
 }))
+
+const flags = vi.hoisted(() => ({ spotify: true }))
+
+vi.mock('@/lib/queries/use-feature-flags', () => ({
+  useFeatureFlag: (key: string) => ({
+    isLoading: false,
+    enabled: key === 'spotify-sync' ? flags.spotify : true,
+  }),
+}))
+
+beforeEach(() => {
+  flags.spotify = true
+})
 
 beforeAll(() => {
   // jsdom ships no matchMedia; the narrow-density effect reads it on mount.
@@ -184,6 +205,24 @@ describe('MyShowsArtistsContent', () => {
       />,
     )
     expect(screen.queryByText(COPY.spotifyFootnote(1))).toBeNull()
+  })
+
+  // The footnote and the per-row mark are shown together or not at all: the
+  // reassurance only reads if the rows it describes still say where they
+  // came from.
+  it('hides the Spotify footnote and the row marks while the flag is off', () => {
+    flags.spotify = false
+
+    render(
+      <MyShowsArtistsContent
+        artists={[artist('One', '2026-09-12', 'spotify_followed')]}
+        scaRegion={false}
+      />,
+    )
+
+    expect(screen.queryByText(COPY.spotifyFootnote(1))).toBeNull()
+    expect(screen.queryByText(COPY.source.spotify)).toBeNull()
+    expect(screen.getAllByRole('link', { name: 'One' })).not.toHaveLength(0)
   })
 
   it('offers the find row and the alerts deep link', () => {

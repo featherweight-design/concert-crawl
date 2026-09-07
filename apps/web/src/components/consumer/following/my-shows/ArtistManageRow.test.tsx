@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom'
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import type { FollowedArtist } from '@concert-crawl/types'
 import { ArtistManageRow } from './ArtistManageRow'
@@ -16,6 +16,19 @@ vi.mock('next/navigation', () => ({
   usePathname: () => '/following',
   useSearchParams: () => new URLSearchParams(),
 }))
+
+const flags = vi.hoisted(() => ({ spotify: true }))
+
+vi.mock('@/lib/queries/use-feature-flags', () => ({
+  useFeatureFlag: (key: string) => ({
+    isLoading: false,
+    enabled: key === 'spotify-sync' ? flags.spotify : true,
+  }),
+}))
+
+beforeEach(() => {
+  flags.spotify = true
+})
 
 afterEach(cleanup)
 
@@ -96,6 +109,24 @@ describe('ArtistManageRow', () => {
     cleanup()
     render(<ArtistManageRow artist={artist()} onEntitlementRequired={noop} />)
     expect(screen.queryByText(MY_SHOWS_ARTISTS_COPY.source.spotify)).toBeNull()
+  })
+
+  // The follows endpoint is ungated on purpose, so `source` keeps arriving with
+  // the flag off and the row would otherwise name a product we have not shipped.
+  it('leaves a Spotify-sourced row unmarked while the flag is off', () => {
+    flags.spotify = false
+
+    render(
+      <ArtistManageRow
+        artist={artist({ source: 'spotify_followed' })}
+        onEntitlementRequired={noop}
+      />,
+    )
+
+    expect(screen.queryByText(MY_SHOWS_ARTISTS_COPY.source.spotify)).toBeNull()
+    expect(
+      screen.getByRole('link', { name: 'Wax Harbour' }),
+    ).toBeInTheDocument()
   })
 
   it('carries the shipped follow control, already following', () => {
