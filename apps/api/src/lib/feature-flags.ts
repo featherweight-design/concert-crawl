@@ -42,7 +42,9 @@ const refreshFeatureFlags = async (): Promise<FeatureFlagView> => {
   const flags = featureFlagDefaults()
 
   try {
-    const rows = await db.select().from(featureFlags)
+    const rows = await db
+      .select({ key: featureFlags.key, enabled: featureFlags.enabled })
+      .from(featureFlags)
     for (const row of rows) {
       // A key that has left the registry is ignored rather than surfaced, so
       // deleting a flag from the code is safe without a data migration.
