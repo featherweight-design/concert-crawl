@@ -12,18 +12,33 @@ export const FEATURE_FLAG_CACHE_TTL_MS = 30_000
 
 let cached: FeatureFlagView | null = null
 let cachedAt = 0
+// Held only while a refresh is in flight. Every request arriving during the
+// window shares that one query instead of each issuing its own, which is what
+// stops an expiry from turning concurrent traffic into a burst of reads.
+let inFlight: Promise<FeatureFlagView> | null = null
 
 /** Called after an admin write so the next read reflects it in-process. */
 export const clearFeatureFlagCache = (): void => {
   cached = null
   cachedAt = 0
+  inFlight = null
 }
 
 export const loadFeatureFlags = async (): Promise<FeatureFlagView> => {
   if (cached && Date.now() - cachedAt < FEATURE_FLAG_CACHE_TTL_MS) {
     return cached
   }
+  if (inFlight) return inFlight
 
+  inFlight = refreshFeatureFlags()
+  try {
+    return await inFlight
+  } finally {
+    inFlight = null
+  }
+}
+
+const refreshFeatureFlags = async (): Promise<FeatureFlagView> => {
   const flags = featureFlagDefaults()
 
   try {

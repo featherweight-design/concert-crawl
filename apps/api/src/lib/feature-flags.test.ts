@@ -77,6 +77,20 @@ describe('loadFeatureFlags', () => {
     expect(selectRows).toHaveBeenCalledTimes(1)
   })
 
+  it('shares one query across callers that race an expired cache', async () => {
+    let release: (rows: unknown[]) => void = () => {}
+    selectRows.mockReturnValue(
+      new Promise((resolve) => {
+        release = resolve
+      }),
+    )
+    const both = Promise.all([loadFeatureFlags(), loadFeatureFlags()])
+    release([{ key: 'crews', enabled: true }])
+    const [first, second] = await both
+    expect(selectRows).toHaveBeenCalledTimes(1)
+    expect(first).toBe(second)
+  })
+
   it('answers a single key', async () => {
     selectRows.mockResolvedValue([{ key: 'crews', enabled: true }])
     await expect(isFeatureEnabled('crews')).resolves.toBe(true)
