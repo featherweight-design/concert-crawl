@@ -1,3 +1,18 @@
+# [1.282.0](https://github.com/HartiganHM/concert-crawl/compare/v1.281.0...v1.282.0) (2026-09-07)
+
+
+### Bug Fixes
+
+* **web:** keep the server-side flag read fresh and off the render critical path ([5e186ac](https://github.com/HartiganHM/concert-crawl/commit/5e186ac8b613dea67990c80c2c41e017acb1deb6))
+* **web:** stop flagged-off features from querying their gated endpoints ([64a85d8](https://github.com/HartiganHM/concert-crawl/commit/64a85d894b6cfe0cfbe6331230bffc71573569c4))
+
+
+### Features
+
+* **web:** 404 flagged-off routes from their server components ([74dd181](https://github.com/HartiganHM/concert-crawl/commit/74dd181c23e293707e90e1615d3b3b6502d3665f))
+* **web:** gate the crew notification block and the Spotify status banner ([f99a093](https://github.com/HartiganHM/concert-crawl/commit/f99a093321a48438f613bc67b51e6036cdfac91c))
+* **web:** hide crews, spotify and release-notes surfaces behind flags ([42bdd01](https://github.com/HartiganHM/concert-crawl/commit/42bdd014fc597f706bdeaf2fb25ac2609467a565))
+
 # [1.281.0](https://github.com/HartiganHM/concert-crawl/compare/v1.280.0...v1.281.0) (2026-09-07)
 
 
