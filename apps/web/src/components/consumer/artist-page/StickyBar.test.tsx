@@ -4,6 +4,7 @@ import { cleanup, render } from '@testing-library/react'
 import React from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { NF_FOLLOW_SIZES } from './definitions/constants'
 import { ARTIST_COPY } from './definitions/copy'
 import { StickyBar } from './StickyBar'
 
@@ -62,7 +63,7 @@ describe('StickyBar', () => {
     const follow = getByRole('button', {
       name: ARTIST_COPY.followAria('Wax Harbour'),
     })
-    expect(follow.style.height).toBe('44px')
+    expect(follow.style.height).toBe(`${NF_FOLLOW_SIZES.row.height}px`)
   })
 
   it('takes showFollow from the page rather than deciding for itself', () => {

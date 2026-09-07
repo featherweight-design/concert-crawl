@@ -67,25 +67,29 @@ export const AP_STICKY_AFTER = AP_BAND_H - AP_STICKY_BAR_H
 export const EMBED_H = { compact: 152, tall: 352 } as const
 
 /**
- * Follow-button geometry, verbatim from the native-following handoff
- * (`nf-shared.jsx` NF_FOLLOW_SIZES). One table so every follow affordance in
- * the app — artist page, search rows, the bill block — is the same control at
- * three densities rather than three lookalikes.
+ * Follow-button geometry, from the R3 scale-and-weight handoff. One table so
+ * every follow affordance in the app — artist page, search rows, the bill
+ * block, the shelf badge — is the same control at four densities rather than
+ * four lookalikes.
  *
- * `sm` (36) is below the 44px touch minimum and is permitted ONLY where the
- * containing row is itself the target, or where there is no touch — which is
- * why nothing on the artist page uses it: this page's buttons are the target.
- * Two consumers. The search-results artist row, which is a ≥56px target in its
- * own right; and the desktop card on My shows ▸ Artists, a mouse surface. That
- * page's MOBILE row takes `md` instead, because its name is a link to the
- * artist page, leaving the button as the only place unfollow can be tapped.
+ * The keys name PLACEMENT, not density, because placement is what the rule
+ * actually constrains: one filled Follow per screen, and it belongs to
+ * `primary`. Everywhere else is quiet, and quiet is the default.
  *
- * `full` carries padding even though it renders at `width: 100%` — the padding
- * insets the label rather than sizing the control, and keeping it here means
- * an icon-only `full` (no width override) still matches the handoff.
+ * Every height below 44 is a VISUAL height. `FollowButton` grows a transparent
+ * overlay symmetrically on both axes so the tap target stays 44px (WCAG
+ * 2.5.8), which is why a row control can be 28 tall without asking anything of
+ * the row it sits in.
+ *
+ * `badge` carries no label — `fontSize: 0` is deliberate, and the control
+ * squares off against its own height.
  */
+/** The tap target every follow control grows to, however small it draws. */
+export const NF_TAP_MIN = 44
+
 export const NF_FOLLOW_SIZES = {
-  sm: { height: 36, padding: '0 12px', fontSize: 12.5, gap: 6, glyph: 12 },
-  md: { height: 44, padding: '0 14px', fontSize: 13.5, gap: 7, glyph: 13 },
-  full: { height: 48, padding: '0 18px', fontSize: 15, gap: 7, glyph: 13 },
+  badge: { height: 26, padding: '0', fontSize: 0, gap: 0, glyph: 12 },
+  row: { height: 28, padding: '0 10px', fontSize: 12, gap: 6, glyph: 11 },
+  rowWide: { height: 32, padding: '0 12px', fontSize: 12.5, gap: 6, glyph: 11 },
+  primary: { height: 44, padding: '0 18px', fontSize: 14.5, gap: 7, glyph: 14 },
 } as const

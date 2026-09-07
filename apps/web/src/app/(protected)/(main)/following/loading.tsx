@@ -1,6 +1,24 @@
 // Mirrors HistoryLoading, adjusted for the Artists list: a sub-tab bar, a mono
 // group heading, and rows whose right column is the follow control.
 
+import type { CSSProperties } from 'react'
+
+import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants'
+
+// `CSSProperties` has no room for custom properties, so the two the class pair
+// above reads are declared alongside it rather than cast in.
+const CONTROL_STYLE: CSSProperties & {
+  '--nf-follow-row': string
+  '--nf-follow-row-wide': string
+} = {
+  width: 92,
+  '--nf-follow-row': `${NF_FOLLOW_SIZES.row.height}px`,
+  '--nf-follow-row-wide': `${NF_FOLLOW_SIZES.rowWide.height}px`,
+  borderRadius: 8,
+  background: 'var(--surface-2)',
+  flexShrink: 0,
+}
+
 function ArtistRowSkeleton({ delay }: { delay: number }) {
   return (
     <div
@@ -48,16 +66,15 @@ function ArtistRowSkeleton({ delay }: { delay: number }) {
           }}
         />
       </div>
+      {/* The real list changes density at `sm`: a mobile row takes `row`, the
+          desktop card takes `rowWide`. A server component cannot branch on
+          viewport, so the two heights go out as custom properties and the
+          breakpoint picks between them in CSS. Both values are read from the
+          size table, never copied — a literal here is how the skeleton and the
+          control it stands in for drift apart. */}
       <div
-        style={{
-          width: 92,
-          // NF_FOLLOW_SIZES.md — the height the real row's follow control
-          // resolves to, so the skeleton swap costs no layout shift.
-          height: 44,
-          borderRadius: 10,
-          background: 'var(--surface-2)',
-          flexShrink: 0,
-        }}
+        className="h-[var(--nf-follow-row)] sm:h-[var(--nf-follow-row-wide)]"
+        style={CONTROL_STYLE}
       />
     </div>
   )

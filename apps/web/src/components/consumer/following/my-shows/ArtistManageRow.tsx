@@ -11,14 +11,14 @@
 // affordance in this product and no confirm step on unfollow: the row stays
 // where it is until the next navigation, so a mis-tap is one tap to undo.
 //
-// It runs at `md` (44px) in both densities. NF_FOLLOW_SIZES permits `sm` only
-// where the containing row is itself the tap target, which is true of the
-// search result row but not here: the name links to the artist page, so
-// unfollow has no target but the button. It also keeps its label in both,
-// because an unlabelled check reads as confirmation rather than as a toggle
-// you can switch off. 320px is the one exception, where `narrow` drops the
-// word for want of room. That labelled control is also why the desktop grid is
-// two-up rather than the handoff's three-up: it needs the width.
+// The control is quiet in both densities and takes the density's own key:
+// `rowWide` on the desktop card, `row` on the mobile list. Its tap target is
+// 44px either way — the visual pill shrank, the overlay did not. It also keeps
+// its label in both, because an unlabelled check reads as confirmation rather
+// than as a toggle you can switch off. 320px is the one exception, where
+// `narrow` drops the word for want of room. That labelled control is also why
+// the desktop grid is two-up rather than the handoff's three-up: it needs the
+// width.
 
 import Link from 'next/link'
 import { Panel } from '@/components/consumer/image-slot'
@@ -158,7 +158,7 @@ export const ArtistManageRow = ({
           name={artist.name}
           following={follow.following}
           signedOut={false}
-          size="md"
+          size={card ? 'rowWide' : 'row'}
           iconOnly={narrow}
           onToggle={follow.toggle}
           // Unreachable: every row here is an existing follow, and DELETE is

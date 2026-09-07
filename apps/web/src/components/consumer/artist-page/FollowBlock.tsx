@@ -5,7 +5,7 @@ import React from 'react'
 import { ARTIST_COPY } from './definitions/copy'
 import { FollowButton, type FollowButtonProps } from './FollowButton'
 
-type FollowBlockProps = Omit<FollowButtonProps, 'size'>
+type FollowBlockProps = Omit<FollowButtonProps, 'size' | 'tone' | 'full'>
 
 /**
  * The full-width follow bar plus the one line that says what a follow actually
@@ -24,7 +24,7 @@ export const FollowBlock = (props: FollowBlockProps) => {
 
   return (
     <div>
-      <FollowButton {...props} />
+      <FollowButton {...props} size="primary" tone="loud" full />
       <p
         data-follow-pitch=""
         style={{

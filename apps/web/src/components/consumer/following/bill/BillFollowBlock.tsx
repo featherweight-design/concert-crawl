@@ -49,7 +49,7 @@ const COPY = BILL_FOLLOW_COPY
 
 // The bulk action borrows the `full` geometry so it reads as the block's own
 // primary control rather than as a fifth row button.
-const BULK = NF_FOLLOW_SIZES.full
+const BULK = NF_FOLLOW_SIZES.primary
 
 const LockGlyph = () => (
   <svg
@@ -227,15 +227,17 @@ export const BillFollowBlock = ({
             >
               {artist.name}
             </span>
-            {/* `md` (44), never `sm`: NF_FOLLOW_SIZES permits 36 only where the
-                containing row is itself the tap target, and this row is not —
-                the button is the only place the follow can be tapped. */}
+            {/* Quiet at `row`: a bill can carry four of these, and four
+                filled pills made the button the section's subject. The 28px
+                pill still owns a 44px target, so nothing is asked of the row
+                it sits in. Below Premium there is no per-row button at all —
+                the bulk control is the single gate. */}
             {!locked && (
               <FollowButton
                 name={artist.name}
                 following={follows.following.has(artist.slug)}
                 signedOut={signedOut}
-                size="md"
+                size="row"
                 onToggle={() => follows.toggle(artist.slug)}
                 // Unreachable while `locked` is false; a stale entitlement
                 // comes back as a 403 and lands on the same picker.

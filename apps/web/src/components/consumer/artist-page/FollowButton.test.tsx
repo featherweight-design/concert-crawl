@@ -99,7 +99,7 @@ describe('FollowButton', () => {
     )
   })
 
-  it('sizes full and md to the handoff', () => {
+  it('sizes primary and row to the handoff', () => {
     const { getByRole, unmount } = render(
       <FollowButton
         name="Wax Harbour"
@@ -109,12 +109,15 @@ describe('FollowButton', () => {
         onLockedTap={() => undefined}
       />,
     )
-    const full = getByRole('button')
-    expect(full.style.height).toBe('48px')
-    expect(full.style.width).toBe('100%')
-    expect(full.style.borderRadius).toBe('10px')
-    expect(full.style.fontSize).toBe('15px')
-    expect(full.style.fontWeight).toBe('800')
+    const row = getByRole('button')
+    // The default is the quiet row, so a call site that names no size cannot
+    // add a second filled pill to a screen by omission.
+    expect(row.style.height).toBe('28px')
+    expect(row.style.width).toBe('')
+    expect(row.style.borderRadius).toBe('8px')
+    expect(row.style.fontSize).toBe('12px')
+    expect(row.style.fontWeight).toBe('700')
+    expect(row.style.background).toBe('transparent')
     unmount()
 
     const { getByRole: get2 } = render(
@@ -122,27 +125,27 @@ describe('FollowButton', () => {
         name="Wax Harbour"
         following={false}
         signedOut={false}
-        size="md"
+        size="primary"
         onToggle={noop}
         onLockedTap={() => undefined}
       />,
     )
-    const compact = get2('button')
-    expect(compact.style.height).toBe('44px')
-    expect(compact.style.padding).toBe('0px 14px')
-    expect(compact.style.fontSize).toBe('13.5px')
+    const hero = get2('button')
+    expect(hero.style.height).toBe('44px')
+    expect(hero.style.padding).toBe('0px 18px')
+    expect(hero.style.fontSize).toBe('14.5px')
   })
 
   // The narrow search row (under 360px). The label goes, the artist does not:
-  // dropping to a glyph must not cost a screen reader the name, and the target
+  // dropping to a glyph must not cost a screen reader the name, and the box
   // squares off against the height rather than shrinking to the icon.
-  it('sm icon-only: keeps the artist in the accessible name and stays square', () => {
+  it('row icon-only: keeps the artist in the accessible name and stays square', () => {
     const { getByRole } = render(
       <FollowButton
         name="Wax Harbour"
         following={false}
         signedOut={false}
-        size="sm"
+        size="row"
         iconOnly
         onToggle={noop}
         onLockedTap={() => undefined}
@@ -151,8 +154,8 @@ describe('FollowButton', () => {
     const button = getByRole('button')
     expect(button.textContent).toBe('')
     expect(button.getAttribute('aria-label')).toContain('Wax Harbour')
-    expect(button.style.height).toBe('36px')
-    expect(button.style.minWidth).toBe('36px')
+    expect(button.style.height).toBe('28px')
+    expect(button.style.minWidth).toBe('28px')
     expect(button.style.padding).toBe('0px')
   })
 
@@ -178,6 +181,7 @@ describe('FollowButton', () => {
         name="Wax Harbour"
         following={false}
         signedOut={false}
+        tone="loud"
         onToggle={noop}
         onLockedTap={() => undefined}
       />,
@@ -201,6 +205,7 @@ describe('FollowButton', () => {
         name="Wax Harbour"
         following
         signedOut={false}
+        tone="loud"
         onToggle={noop}
         onLockedTap={() => undefined}
       />,
@@ -273,7 +278,7 @@ describe('FollowButton', () => {
       // Same word, same box as idle: the gate is a skin, not a different
       // control, and a shorter label would reflow the rail.
       expect(button.textContent).toBe(ARTIST_COPY.follow)
-      expect(button.style.height).toBe('48px')
+      expect(button.style.height).toBe(`${NF_FOLLOW_SIZES.row.height}px`)
       expect(button.querySelector('[data-glyph="lock"]')).not.toBeNull()
     })
 
@@ -396,24 +401,21 @@ describe('FollowButton', () => {
     })
   })
 
-  // The row density on My shows ▸ Artists. 36px is below the 44px floor every
-  // other variant holds, and is permitted only because the row it sits in is
-  // itself a tap target.
-  describe('the sm / iconOnly row variant', () => {
-    it('renders at the sm geometry', () => {
+  describe('the row / iconOnly variant', () => {
+    it('renders at the row geometry', () => {
       const { getByRole } = render(
         <FollowButton
           name="Wax Harbour"
           following
           signedOut={false}
-          size="sm"
+          size="row"
           onToggle={noop}
           onLockedTap={noop}
         />,
       )
       const style = getByRole('button').getAttribute('style') ?? ''
-      expect(style).toContain(`height: ${NF_FOLLOW_SIZES.sm.height}px`)
-      expect(style).toContain(`font-size: ${NF_FOLLOW_SIZES.sm.fontSize}px`)
+      expect(style).toContain(`height: ${NF_FOLLOW_SIZES.row.height}px`)
+      expect(style).toContain(`font-size: ${NF_FOLLOW_SIZES.row.fontSize}px`)
     })
 
     it('drops the label but keeps the accessible name when iconOnly', () => {
@@ -422,7 +424,7 @@ describe('FollowButton', () => {
           name="Wax Harbour"
           following
           signedOut={false}
-          size="sm"
+          size="row"
           iconOnly
           onToggle={noop}
           onLockedTap={noop}
@@ -435,7 +437,81 @@ describe('FollowButton', () => {
       )
       // The glyph is the whole control, so it must stay square.
       const style = button.getAttribute('style') ?? ''
-      expect(style).toContain(`width: ${NF_FOLLOW_SIZES.sm.height}px`)
+      expect(style).toContain(`width: ${NF_FOLLOW_SIZES.row.height}px`)
+    })
+  })
+
+  // R3 rule 4: the visual height may shrink, the 44px target may not. The
+  // overlay is the whole mechanism, so it is tested rather than assumed.
+  describe('the tap-target overlay', () => {
+    const renderAt = (size: 'row' | 'rowWide' | 'primary' | 'badge') =>
+      render(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          size={size}
+          onToggle={noop}
+          onLockedTap={noop}
+        />,
+      )
+
+    it.each([
+      ['badge', 9],
+      ['row', 8],
+      ['rowWide', 6],
+    ] as const)('grows %s symmetrically to the 44px target', (size, pad) => {
+      const { getByRole, unmount } = renderAt(size)
+      const overlay = getByRole('button').querySelector('[data-hit-overlay]')
+      // Symmetric, not a fixed horizontal inset: a one-sided expansion left
+      // the icon-only square at 40px wide and missed the target entirely.
+      expect(overlay?.getAttribute('style')).toContain(`inset: -${pad}px`)
+      expect(NF_FOLLOW_SIZES[size].height + pad * 2).toBe(44)
+      unmount()
+    })
+
+    it('draws no overlay at primary, which is already 44', () => {
+      const { getByRole } = renderAt('primary')
+      expect(getByRole('button').querySelector('[data-hit-overlay]')).toBeNull()
+    })
+  })
+
+  describe('tone', () => {
+    const renderTone = (tone: 'quiet' | 'loud') =>
+      render(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          size="primary"
+          tone={tone}
+          onToggle={noop}
+          onLockedTap={noop}
+        />,
+      )
+
+    it('fills only at loud', () => {
+      const { getByRole, unmount } = renderTone('loud')
+      expect(getByRole('button').style.background).toBe('var(--signal)')
+      unmount()
+
+      const { getByRole: get2 } = renderTone('quiet')
+      expect(get2('button').style.background).toBe('transparent')
+      expect(get2('button').style.color).toBe('var(--fg)')
+    })
+
+    it('keeps locked at --fg so the gate never reads quieter than the action', () => {
+      const { getByRole } = render(
+        <FollowButton
+          name="Wax Harbour"
+          following={false}
+          signedOut={false}
+          locked
+          onToggle={noop}
+          onLockedTap={noop}
+        />,
+      )
+      expect(getByRole('button').style.color).toBe('var(--fg)')
     })
   })
 })

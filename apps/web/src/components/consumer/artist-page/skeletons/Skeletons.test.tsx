@@ -4,6 +4,7 @@ import React from 'react'
 import { cleanup, render } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 
+import { NF_FOLLOW_SIZES } from '../definitions/constants'
 import { ARTIST_COPY } from '../definitions/copy'
 
 import {
@@ -45,13 +46,16 @@ describe('artist page skeletons', () => {
     ).toHaveLength(3)
   })
 
-  // Design table §12 lists a Follow bar on the skeleton. It has to match the
-  // real control's 48px box or the page jumps the moment the payload lands.
+  // Design table §12 lists a Follow bar on the skeleton. Read from the size
+  // table rather than a literal: a copied number is how the skeleton drifts
+  // away from the control it stands in for, and the drift is a layout jump.
   it('reserves the Follow control at its real height, decoratively', () => {
     const { container } = render(<FollowSkeleton />)
     const bar = container.querySelector('[aria-hidden="true"]')
     expect(bar).not.toBeNull()
-    expect(bar?.getAttribute('style')).toContain('height: 48px')
-    expect(bar?.getAttribute('style')).toContain('border-radius: 10px')
+    expect(bar?.getAttribute('style')).toContain(
+      `height: ${NF_FOLLOW_SIZES.primary.height}px`,
+    )
+    expect(bar?.getAttribute('style')).toContain('border-radius: 8px')
   })
 })

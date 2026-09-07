@@ -6,7 +6,10 @@ import { ARTIST_COPY } from './definitions/copy'
 import { FollowButton, type FollowButtonProps } from './FollowButton'
 import { SectionHead } from './SectionHead'
 
-interface EmptyUpcomingProps extends Omit<FollowButtonProps, 'size'> {
+interface EmptyUpcomingProps extends Omit<
+  FollowButtonProps,
+  'size' | 'tone' | 'full'
+> {
   /**
    * Whether THIS block owns the page's one live follow affordance. On desktop
    * the sticky rail already holds it, so the card is copy only — two live
@@ -63,7 +66,9 @@ export const EmptyUpcoming = ({
           ? ARTIST_COPY.emptyBodyFollowing
           : ARTIST_COPY.emptyBody}
       </p>
-      {inlineFollow ? <FollowButton {...followProps} /> : null}
+      {inlineFollow ? (
+        <FollowButton {...followProps} size="primary" tone="loud" full />
+      ) : null}
     </div>
   </section>
 )

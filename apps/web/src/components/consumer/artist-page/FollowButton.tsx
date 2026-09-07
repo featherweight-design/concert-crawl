@@ -7,7 +7,7 @@ import { LOGGED_OUT_PLAN_STATE } from '@/components/consumer/tier-picker/definit
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
 
 import { ARTIST_COPY } from './definitions/copy'
-import { NF_FOLLOW_SIZES } from './definitions/constants'
+import { NF_FOLLOW_SIZES, NF_TAP_MIN } from './definitions/constants'
 
 export interface FollowButtonProps {
   /** Artist name — used only to build the accessible name. */
@@ -26,10 +26,20 @@ export interface FollowButtonProps {
   locked?: boolean
   /**
    * A key of `NF_FOLLOW_SIZES`, so the size table stays the only place a
-   * density is defined. `full` is the rail/hero bar, `md` the sticky
-   * sub-header and desktop search rows, `sm` the mobile search row.
+   * density is defined. The keys name placement: `primary` is the artist
+   * page's hero bar, `rowWide` a desktop row, `row` every mobile row and the
+   * sticky sub-header, `badge` the label-less circle on art.
    */
-  size?: 'full' | 'md' | 'sm'
+  size?: 'badge' | 'row' | 'rowWide' | 'primary'
+  /**
+   * Visual weight. `quiet` is an outline; `loud` is the filled `--signal`
+   * pill, and there is at most ONE of those per screen (R3 rule 1). Quiet is
+   * the default precisely so a new call site cannot add a second one by
+   * omission.
+   */
+  tone?: 'quiet' | 'loud'
+  /** Stretch to the container's width. Independent of `size`. */
+  full?: boolean
   /**
    * Drop the label and render a square glyph button. Permitted only in the
    * narrow breakpoint the spec names (under 360px); the accessible name still
@@ -77,7 +87,9 @@ export const FollowButton = ({
   following,
   signedOut,
   locked = false,
-  size = 'full',
+  size = 'row',
+  tone = 'quiet',
+  full = false,
   iconOnly = false,
   onToggle,
   onLockedTap,
@@ -121,39 +133,59 @@ export const FollowButton = ({
   }
 
   const geometry = NF_FOLLOW_SIZES[size]
+  // `badge` has no label to drop, so it is square by definition.
+  const square = iconOnly || size === 'badge'
 
+  const loud = tone === 'loud'
+
+  // Locked keeps `--fg`, not the muted colour the prototype drew: at quiet
+  // weight the only thing left separating "you can do this" from "you cannot
+  // do this without paying" is the glyph, and a muted gate would read quieter
+  // than the action it gates.
   const skin: React.CSSProperties = locked
     ? {
         background: 'transparent',
         color: 'var(--fg)',
         border: '1px solid var(--border-strong)',
       }
-    : {
-        background: active
-          ? 'color-mix(in oklab, var(--signal) 14%, transparent)'
-          : 'var(--signal)',
-        color: active ? 'var(--signal)' : 'var(--fg-on-accent)',
-        // `all: unset` wipes the border, and the Following skin's background is
-        // a 14% mix — without this the control has no edge at all in that
-        // state. `box-sizing: border-box` below keeps the 48/44 heights exact.
-        border: '1px solid var(--signal)',
-      }
+    : loud
+      ? {
+          background: active
+            ? 'color-mix(in oklab, var(--signal) 14%, transparent)'
+            : 'var(--signal)',
+          color: active ? 'var(--signal)' : 'var(--fg-on-accent)',
+          // `all: unset` wipes the border, and the Following skin's background
+          // is a 14% mix — without this the control has no edge at all in that
+          // state. `box-sizing: border-box` below keeps the heights exact.
+          border: '1px solid var(--signal)',
+        }
+      : {
+          background: 'transparent',
+          // Following stays `--signal`-tinted at either weight: it is a state,
+          // and losing the colour loses the read (R3 rule 3).
+          color: active ? 'var(--signal)' : 'var(--fg)',
+          border: active
+            ? '1px solid color-mix(in oklab, var(--signal) 55%, transparent)'
+            : '1px solid var(--border-strong)',
+        }
 
   const style: React.CSSProperties = {
     all: 'unset',
     boxSizing: 'border-box',
     cursor: 'pointer',
+    // The hit overlay below is absolute against this.
+    position: 'relative',
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
     gap: geometry.gap,
     // The size table is authoritative, so this tracks it rather than pinning
-    // 44 — `sm` is deliberately 36 and a hardcoded floor would silently
-    // override it wherever that density lands.
+    // 44 — every row density is deliberately below it, and the overlay, not a
+    // hardcoded floor, is what keeps the target honest.
     minHeight: geometry.height,
-    borderRadius: 10,
+    borderRadius: size === 'badge' ? 999 : 8,
     fontFamily: 'Inter, system-ui, sans-serif',
-    fontWeight: 800,
+    fontWeight: loud ? 800 : 700,
     letterSpacing: '-0.01em',
     // A row-embedded button must never be the thing that wraps or shrinks; the
     // label beside it owns the flexible width.
@@ -162,17 +194,23 @@ export const FollowButton = ({
     ...skin,
     height: geometry.height,
     fontSize: geometry.fontSize,
-    // `full` stretches; its padding insets the label rather than sizing the
+    // `full` stretches; the padding insets the label rather than sizing the
     // control, which is why the table carries one anyway. Icon-only drops the
-    // padding and squares off against the height instead, so the tap target
-    // never narrows to the glyph.
-    padding: iconOnly ? 0 : geometry.padding,
-    ...(iconOnly ? { minWidth: geometry.height } : {}),
-    ...(size === 'full' ? { width: '100%' } : {}),
+    // padding and squares off against the height instead.
+    padding: square ? 0 : geometry.padding,
+    ...(full ? { width: '100%' } : {}),
     // A square: the glyph has nothing beside it, so the horizontal padding
     // would only make a lopsided pill.
-    ...(iconOnly ? { width: geometry.height } : {}),
+    ...(square ? { minWidth: geometry.height, width: geometry.height } : {}),
   }
+
+  // The pill shrank; the target did not. Grown symmetrically on both axes, so
+  // a square control lands at 44 × 44. A labelled one is already wider than 44,
+  // and it still grows horizontally — the overlay reaches `grow` px past each
+  // edge whatever the width. Anything interactive placed beside one of these
+  // needs at least that much clearance, which is why every row that carries a
+  // Follow gives it a gap rather than butting a second control against it.
+  const grow = Math.max(0, (NF_TAP_MIN - geometry.height) / 2)
 
   // Locked keeps idle's accessible name; the gate sentence carries the truth.
   const ariaLabel = signedOut
@@ -202,6 +240,13 @@ export const FollowButton = ({
         {...(signedOut ? { 'data-return-to': returnTo } : {})}
         style={style}
       >
+        {grow > 0 && (
+          <span
+            aria-hidden
+            data-hit-overlay=""
+            style={{ position: 'absolute', inset: -grow }}
+          />
+        )}
         {locked ? (
           <svg
             data-glyph="lock"
@@ -244,7 +289,7 @@ export const FollowButton = ({
             <path d={active ? 'M2 7.5l3.4 3.4L12 3.6' : 'M7 2v10M2 7h10'} />
           </svg>
         )}
-        {!iconOnly && (active ? ARTIST_COPY.following : ARTIST_COPY.follow)}
+        {!square && (active ? ARTIST_COPY.following : ARTIST_COPY.follow)}
       </button>
       {/* Visually hidden, NOT `hidden`: the hidden attribute drops a node from
           the a11y tree, so an aria-describedby pointed at it announces nothing.

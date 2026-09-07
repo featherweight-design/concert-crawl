@@ -38,7 +38,7 @@ const renderRow = (artist: ArtistSearchResult) =>
       surface={null}
       onLockedTap={() => {}}
       onEntitlementRequired={() => {}}
-      size="md"
+      size="rowWide"
       iconOnly={false}
     />,
   )

@@ -6,7 +6,10 @@ import { BackChip } from '../back-chip/BackChip'
 
 import { FollowButton, type FollowButtonProps } from './FollowButton'
 
-interface StickyBarProps extends Omit<FollowButtonProps, 'size'> {
+interface StickyBarProps extends Omit<
+  FollowButtonProps,
+  'size' | 'tone' | 'full'
+> {
   /** True once the identity plate has scrolled past. */
   visible: boolean
   /**
@@ -66,7 +69,7 @@ export const StickyBar = ({
       >
         {name}
       </span>
-      {showFollow ? <FollowButton {...followProps} size="md" /> : null}
+      {showFollow ? <FollowButton {...followProps} size="row" /> : null}
     </div>
   )
 }

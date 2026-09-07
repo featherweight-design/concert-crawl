@@ -1,6 +1,7 @@
 import React from 'react'
 
 import { ARTIST_COPY } from '../definitions/copy'
+import { NF_FOLLOW_SIZES } from '../definitions/constants'
 import { CRUMB_BOX } from '../Crumb'
 
 /**
@@ -65,15 +66,19 @@ export const CrumbSkeleton = () => (
 )
 
 /**
- * The Follow control's reserved box. 48px and radius 10 are `FollowButton`'s
- * own `size="full"` metrics, copied deliberately — a skeleton taller or
- * shorter than the control it stands in for is the same layout-shift lie the
- * missing crumb was.
+ * The Follow control's reserved box. It reads its height from the size table
+ * rather than restating it: a skeleton taller or shorter than the control it
+ * stands in for is the same layout-shift lie the missing crumb was, and a
+ * copied literal is how that lie gets reintroduced on the next size pass.
  */
 export const FollowSkeleton = () => (
   <div
     aria-hidden="true"
-    style={skel({ width: '100%', height: 48, borderRadius: 10 })}
+    style={skel({
+      width: '100%',
+      height: NF_FOLLOW_SIZES.primary.height,
+      borderRadius: 8,
+    })}
   />
 )
 

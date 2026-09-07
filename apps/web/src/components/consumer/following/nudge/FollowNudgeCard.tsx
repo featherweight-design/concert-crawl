@@ -162,7 +162,9 @@ export const FollowNudgeCard = ({
           following={follow.following}
           signedOut={false}
           locked={locked && !follow.following}
-          size="full"
+          size="primary"
+          tone="loud"
+          full
           onToggle={follow.toggle}
           onLockedTap={onEntitlementRequired}
         />

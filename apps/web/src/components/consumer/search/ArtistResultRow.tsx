@@ -33,7 +33,7 @@ interface ArtistResultRowProps {
   onLockedTap: () => void
   /** The server's settled 403, which is honoured whatever the client believed. */
   onEntitlementRequired: () => void
-  size: 'sm' | 'md'
+  size: 'row' | 'rowWide'
   iconOnly: boolean
 }
 
@@ -123,7 +123,9 @@ export const ArtistResultRow = ({
           gap: 12,
           flex: 1,
           minWidth: 0,
-          // The row is the ≥44px target that lets the button run at 36.
+          // The navigate-to-artist target, sized independently of the Follow
+          // button beside it — that one draws at 28 or 32 and grows its own
+          // transparent overlay out to 44.
           minHeight: 44,
         }}
       >

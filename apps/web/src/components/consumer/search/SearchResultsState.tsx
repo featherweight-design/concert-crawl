@@ -149,7 +149,7 @@ function ArtistPageSection({
               surface={surface}
               onLockedTap={() => setPickerOpen(true)}
               onEntitlementRequired={() => setPickerOpen(true)}
-              size={isDesktop ? 'md' : 'sm'}
+              size={isDesktop ? 'rowWide' : 'row'}
               iconOnly={iconOnly}
             />
           </div>

@@ -6,6 +6,7 @@ import { cleanup, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { ArtistPageContent } from '@/components/consumer/artist-page/ArtistPageContent'
+import { NF_FOLLOW_SIZES } from '@/components/consumer/artist-page/definitions/constants'
 
 import ArtistLoading from './loading'
 
@@ -121,8 +122,9 @@ describe('artist route skeleton', () => {
   })
 
   // PR-E renders no Follow button at either viewport, so the skeleton must not
-  // reserve one — a 48px + 20px slot that collapses on load is the same
-  // layout-shift lie as the missing crumb, just in the other direction.
+  // reserve one — a slot that collapses on load is the same layout-shift lie as
+  // the missing crumb, just in the other direction. The height comes from the
+  // size table rather than a literal, so a future size pass moves both together.
   it('reserves the Follow slot at the height the loaded page uses', () => {
     // PR-E deliberately reserved nothing here, because PR-E rendered no Follow
     // button and a reserved slot would have been a 68px layout-shift lie. PR-F
@@ -137,6 +139,6 @@ describe('artist route skeleton', () => {
     const heights = Array.from(
       skeleton.querySelectorAll<HTMLElement>('[style]'),
     ).map((node) => node.style.height)
-    expect(heights).toContain('48px')
+    expect(heights).toContain(`${NF_FOLLOW_SIZES.primary.height}px`)
   })
 })
