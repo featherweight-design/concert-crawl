@@ -27,6 +27,7 @@ import { subscriptions, userArtistFollows } from '@concert-crawl/db'
 import { testDb } from '../test/helpers/db.js'
 import { createApp } from '../app.js'
 import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js'
+import { setFeatureFlag } from '../test/helpers/feature-flags.js'
 
 const app = createApp()
 
@@ -83,6 +84,9 @@ describe('taste filter on GET /v1/events (#763 PR 7)', () => {
       sql`TRUNCATE subscriptions, gifted_comps, user_billing`,
     )
     authState.current = null
+    // The taste scope is gated on the release flag ahead of the entitlement;
+    // `spotify-sync` defaults off.
+    await setFeatureFlag('spotify-sync', true)
   })
 
   it('rejects anonymous requests with 401', async () => {

@@ -26,6 +26,7 @@ import { userArtistFollows, userSpotifyConnections } from '@concert-crawl/db'
 import { testDb } from '../test/helpers/db.js'
 import { createApp } from '../app.js'
 import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js'
+import { setFeatureFlag } from '../test/helpers/feature-flags.js'
 
 const app = createApp()
 
@@ -86,6 +87,9 @@ describe('followedArtists overlay (#763 PR 6)', () => {
   beforeEach(async () => {
     await clearTables()
     authState.current = null
+    // The overlay is Spotify-sourced, so it only ships when the release flag
+    // is on; `spotify-sync` defaults off.
+    await setFeatureFlag('spotify-sync', true)
   })
 
   it('anonymous list requests carry no followedArtists field', async () => {
@@ -238,5 +242,46 @@ describe('followedArtists overlay (#763 PR 6)', () => {
 
     const rows = await fetchList()
     expect(rows[0]).not.toHaveProperty('followedArtists')
+  })
+
+  describe('with the spotify-sync flag off', () => {
+    beforeEach(async () => {
+      await setFeatureFlag('spotify-sync', false)
+    })
+
+    it('omits the overlay from the list for a connected follower', async () => {
+      const venue = await seedVenue()
+      await seedEvent(venue.id, {
+        artist: 'Phoebe Bridgers',
+        date: FUTURE_DATE,
+      })
+      await seedConnection()
+      await seedFollow('Phoebe Bridgers')
+      signIn()
+
+      const rows = await fetchList()
+      expect(rows[0]).not.toHaveProperty('followedArtists')
+    })
+
+    it('omits the overlay from the detail response', async () => {
+      const venue = await seedVenue()
+      const event = await seedEvent(venue.id, {
+        artist: 'Phoebe Bridgers',
+        date: FUTURE_DATE,
+      })
+      await seedConnection()
+      await seedFollow('Phoebe Bridgers')
+      signIn()
+
+      const { status, data } = await fetchDetail(event.id)
+      expect(status).toBe(200)
+      expect(data).not.toHaveProperty('followedArtists')
+    })
+
+    it('answers 404 for the taste scope rather than a 403 upsell', async () => {
+      signIn()
+      const res = await app.request('/v1/events?taste=1')
+      expect(res.status).toBe(404)
+    })
   })
 })

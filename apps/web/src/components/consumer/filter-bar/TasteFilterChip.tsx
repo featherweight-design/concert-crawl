@@ -64,6 +64,10 @@ export const TasteFilterChip = ({
 
   const resolved = !isLoading && surface !== null
   const usable = resolved && surface === 'visible-active'
+  // 'hidden' means no affordance at all, not a locked one — it is what a
+  // flagged-off release resolves to, and a locked chip would advertise a
+  // feature nobody can buy yet.
+  const shown = resolved && surface !== 'hidden'
 
   // Entitlement lapsed (downgrade / session change) with filterTaste=1 still
   // in the URL: the locked chip can't toggle and Clear-all excludes taste, so
@@ -72,8 +76,9 @@ export const TasteFilterChip = ({
     if (resolved && !usable && active) onToggle(false)
   }, [resolved, usable, active, onToggle])
 
-  // Hold rendering while the plan resolves — no locked flash.
-  if (!resolved) return null
+  // Hold rendering while the plan resolves — no locked flash — and render
+  // nothing at all for a hidden surface.
+  if (!shown) return null
 
   if (usable) {
     return (

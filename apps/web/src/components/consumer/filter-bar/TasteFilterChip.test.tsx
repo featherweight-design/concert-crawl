@@ -63,6 +63,27 @@ describe('TasteFilterChip', () => {
     expect(container.innerHTML).toBe('')
   })
 
+  it('renders nothing for a hidden surface (spotify-sync flagged off)', () => {
+    entitlementState.current = {
+      isLoading: false,
+      active: false,
+      surface: 'hidden',
+    }
+    const { container } = renderChip()
+    expect(container.innerHTML).toBe('')
+  })
+
+  it('releases a stale taste param when the surface is hidden', () => {
+    entitlementState.current = {
+      isLoading: false,
+      active: false,
+      surface: 'hidden',
+    }
+    const onToggle = vi.fn()
+    renderChip({ active: true, onToggle })
+    expect(onToggle).toHaveBeenCalledWith(false)
+  })
+
   it('renders an off toggle for entitled viewers and toggles on', () => {
     entitlementState.current = {
       isLoading: false,

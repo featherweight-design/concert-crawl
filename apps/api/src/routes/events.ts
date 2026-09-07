@@ -65,6 +65,7 @@ import {
   spotifyTasteCondition,
 } from '../lib/spotify-matches.js'
 import { canUseFeature } from '@concert-crawl/entitlements'
+import { isFeatureEnabled } from '../lib/feature-flags.js'
 import { loadPlanState } from '../lib/plan.js'
 import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js'
 import { parseGenreRows } from '../lib/parse-genre-rows.js'
@@ -182,6 +183,12 @@ eventsRouter.get(
     }
 
     if (taste) {
+      // The flag is checked before the entitlement so a flagged-off scope
+      // answers 404 rather than a 403 upsell, matching requireFlag: an
+      // unreleased feature must not advertise itself as purchasable.
+      if (!(await isFeatureEnabled('spotify-sync'))) {
+        return ctx.notFound()
+      }
       if (!listAuth?.userId) {
         return ctx.json({ success: false, error: 'Unauthorized' }, 401)
       }
@@ -387,8 +394,13 @@ eventsRouter.get(
     // signed-in viewer with results (the matcher must load Spotify-sourced
     // follow names to decide presence); anonymous and empty-page requests
     // skip it entirely, so the public path cost is unchanged.
+    // The overlay is Spotify-sourced, so the flag suppresses it: /v1/events is
+    // the shared public router and cannot carry requireFlag, which is why the
+    // gate sits at the field rather than the route.
     const followMatcher =
-      listAuth?.userId && rows.length > 0
+      listAuth?.userId &&
+      rows.length > 0 &&
+      (await isFeatureEnabled('spotify-sync'))
         ? await getFollowedArtistMatcher(listAuth.userId)
         : null
 
@@ -1094,9 +1106,12 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
   // signed-in viewer (the matcher loads Spotify-sourced follow names to
   // decide presence); anonymous requests skip it, and the field is omitted
   // when no Spotify follow rows exist.
-  const followMatcher = authInfo?.userId
-    ? await getFollowedArtistMatcher(authInfo.userId)
-    : null
+  // Same flag gate as the list route: the overlay is Spotify-sourced data on a
+  // router that serves every viewer, so it is suppressed per field.
+  const followMatcher =
+    authInfo?.userId && (await isFeatureEnabled('spotify-sync'))
+      ? await getFollowedArtistMatcher(authInfo.userId)
+      : null
 
   // #1115 PR-G — slugs for the artist-page links on the detail title block.
   const { artistSlug, supportingArtistSlugs } = await resolveArtistSlugs(
