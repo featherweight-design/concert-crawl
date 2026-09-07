@@ -42,7 +42,11 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
     try {
       const token = await getToken()
       if (!token) {
+        // The dialog has to close on this branch too: the error renders in the
+        // row underneath the overlay, so leaving it open hides the only
+        // explanation the admin gets.
         setError({ key: flag.key, message: COPY.loadError })
+        setConfirming(null)
         return
       }
       const updated = await apiClient.patch<AdminFeatureFlag>(
@@ -55,6 +59,7 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
       )
       setConfirming(null)
     } catch (err) {
+      console.error('[admin] feature flag save failed', flag.key, err)
       const message =
         err instanceof ApiError
           ? `${COPY.loadError} ${err.message}`
