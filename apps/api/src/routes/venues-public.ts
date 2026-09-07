@@ -3,6 +3,7 @@ import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import {
+  artists,
   db,
   events,
   priceSubmissions,
@@ -247,8 +248,13 @@ venuesPublicRouter.get(
         sourceUrl: events.sourceUrl,
         createdAt: events.createdAt,
         updatedAt: events.updatedAt,
+        artistPhotoUrl: artists.photoUrl,
       })
       .from(events)
+      // Headliner portrait, on the same terms as /v1/events: `artists` is a
+      // projection keyed on canonicalName with no foreign key, and the unique
+      // index on that column is what keeps this join cardinality-preserving.
+      .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
       .where(and(...conditions))
       .orderBy(asc(events.date), asc(events.showTime))
       .limit(50)

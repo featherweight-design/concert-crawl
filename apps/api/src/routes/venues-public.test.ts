@@ -4,6 +4,7 @@ const { mockDb } = vi.hoisted(() => {
   const mockDb = {
     select: vi.fn(),
     from: vi.fn(),
+    leftJoin: vi.fn(),
     where: vi.fn(),
     orderBy: vi.fn(),
     groupBy: vi.fn(),
@@ -41,6 +42,11 @@ vi.mock('@concert-crawl/db', () => ({
     venueId: 'venueId',
     status: 'status',
     date: 'date',
+    canonicalArtist: 'canonicalArtist',
+  },
+  artists: {
+    canonicalName: 'canonicalName',
+    photoUrl: 'photoUrl',
   },
   venues: {
     id: 'id',
@@ -124,6 +130,7 @@ const mockEvent = {
 function resetChain() {
   mockDb.select.mockReturnValue(mockDb)
   mockDb.from.mockReturnValue(mockDb)
+  mockDb.leftJoin.mockReturnValue(mockDb)
   mockDb.where.mockReturnValue(mockDb)
   mockDb.orderBy.mockReturnValue(mockDb)
   mockDb.groupBy.mockResolvedValue([])

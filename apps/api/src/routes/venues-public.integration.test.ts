@@ -1,4 +1,5 @@
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
+import { z } from 'zod'
 
 // Mutable so a single test can flip the caller from anonymous to signed-in.
 // Every test that does so restores it, and the default is anonymous — the state
@@ -14,6 +15,7 @@ vi.mock('@hono/clerk-auth', () => ({
 import { createApp } from '../app.js'
 import {
   clearTables,
+  seedArtist,
   seedEvent,
   seedVenue,
   seedUserEvent,
@@ -489,6 +491,69 @@ describe('GET /v1/venues/:slug — first-timer guide (#764)', () => {
     expect(row).toBeDefined()
     expect(row).not.toHaveProperty('guide')
     expect(row).not.toHaveProperty('insiderTip')
+  })
+})
+
+// The headliner portrait, second link in the imagery chain behind the event's
+// own artwork. Browse joins `artists` for it; this page did not, so the same
+// show wore a real face there and a generated glyph here. `artistPhotoUrl` is
+// optional on EventWithVenue, so nothing but a test catches the omission.
+describe('GET /v1/venues/:slug — the artistPhotoUrl join', () => {
+  const PORTRAIT = 'https://i.scdn.co/image/headliner'
+
+  const photoShape = z.object({
+    data: z.object({
+      upcomingEvents: z.array(
+        z.object({
+          artist: z.string(),
+          imageUrl: z.string().nullable(),
+          artistPhotoUrl: z.string().nullable(),
+        }),
+      ),
+    }),
+  })
+
+  beforeEach(async () => {
+    await clearTables()
+  })
+
+  it('serializes the portrait, and null when nothing matches', async () => {
+    const venue = await seedVenue({ name: 'Photo Room', slug: 'photo-room' })
+    await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT })
+    await seedEvent(venue.id, {
+      artist: 'Khruangbin',
+      date: '2027-06-01',
+      imageUrl: null,
+    })
+    await seedEvent(venue.id, {
+      artist: 'Nobody Here',
+      date: '2027-06-02',
+      imageUrl: null,
+    })
+
+    const res = await app.request('/v1/venues/photo-room')
+    expect(res.status).toBe(200)
+    const body = photoShape.parse(await res.json())
+    // Two seeded, two returned: a third row would mean the left join fanned
+    // out, the failure the unique canonicalName index prevents.
+    expect(body.data.upcomingEvents).toHaveLength(2)
+    expect(body.data.upcomingEvents[0]?.artistPhotoUrl).toBe(PORTRAIT)
+    expect(body.data.upcomingEvents[1]?.artistPhotoUrl).toBeNull()
+  })
+
+  it('does not borrow the portrait of a different artist', async () => {
+    const venue = await seedVenue({ name: 'Other Room', slug: 'other-room' })
+    await seedArtist({ name: 'Someone Else', photoUrl: PORTRAIT })
+    await seedEvent(venue.id, {
+      artist: 'Khruangbin',
+      date: '2027-06-01',
+      imageUrl: null,
+    })
+
+    const res = await app.request('/v1/venues/other-room')
+    expect(res.status).toBe(200)
+    const body = photoShape.parse(await res.json())
+    expect(body.data.upcomingEvents[0]?.artistPhotoUrl).toBeNull()
   })
 })
 
