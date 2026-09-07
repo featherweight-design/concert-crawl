@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import { eq, and, gte, asc, isNull } from 'drizzle-orm'
 import { z } from 'zod'
-import { db, userEvents, events, venues } from '@concert-crawl/db'
+import { db, userEvents, events, venues, artists } from '@concert-crawl/db'
 import type { WatchingShow, WatchToggleResponse } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
 import {
@@ -56,12 +56,17 @@ watchingRouter.get('/', async (ctx) => {
       eventStatus: events.status,
       imageUrl: events.imageUrl,
       updatedAt: events.updatedAt,
+      artistPhotoUrl: artists.photoUrl,
       venueName: venues.name,
       venueSlug: venues.slug,
     })
     .from(userEvents)
     .innerJoin(events, eq(userEvents.eventId, events.id))
     .innerJoin(venues, eq(events.venueId, venues.id))
+    // Headliner portrait, on the same terms as /v1/events: `artists` is a
+    // projection keyed on canonicalName with no foreign key, and the unique
+    // index on that column is what keeps this join cardinality-preserving.
+    .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
     .where(
       and(
         eq(userEvents.userId, authInfo.userId),
@@ -117,6 +122,7 @@ watchingRouter.get('/', async (ctx) => {
       priceByTierByEventId.get(row.eventId) ?? [],
     ),
     imageUrl: row.imageUrl ?? null,
+    artistPhotoUrl: row.artistPhotoUrl ?? null,
     attendingAt: row.attendingAt?.toISOString() ?? null,
   }))
 

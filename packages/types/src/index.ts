@@ -1169,6 +1169,10 @@ export interface WatchingShow {
   // proxy — a re-crawl is what last confirmed the number.
   priceObservedAt: string | null
   imageUrl: string | null
+  // Second link in the imagery chain behind `imageUrl`, so a watched show
+  // resolves to the same picture Browse gives it. Null when the event has no
+  // canonical headliner, or that headliner has no portrait yet.
+  artistPhotoUrl: string | null
   // ISO when the user said "I'm going!", independent of watching (#70). The
   // 7-day nudge reads it to decide whether it has already been answered.
   attendingAt: string | null

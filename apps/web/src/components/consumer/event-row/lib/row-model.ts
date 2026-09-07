@@ -93,7 +93,7 @@ export function fromWatchingShow(show: WatchingShow): EventRowShow {
     supports: [],
     tourName: null,
     imageUrl: show.imageUrl,
-    artistPhotoUrl: null,
+    artistPhotoUrl: show.artistPhotoUrl,
     venueName: venueShort(show.venueName),
     venueSlug: show.venueSlug,
     dateLabel: formatEventDate(show.date, undefined, {

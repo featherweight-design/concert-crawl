@@ -219,6 +219,7 @@ const baseWatchingShow: WatchingShow = {
   updatedAt: '2026-06-24T00:00:00Z',
   priceObservedAt: null,
   imageUrl: null,
+  artistPhotoUrl: null,
   attendingAt: null,
 }
 
@@ -247,5 +248,16 @@ describe('fromWatchingShow', () => {
   // Every row on this list is watched, so the tick would say nothing.
   it('never reports watching state on a list that is entirely watched', () => {
     expect(fromWatchingShow(baseWatchingShow).isWatching).toBe(false)
+  })
+
+  // Dropping the portrait here sent every artwork-less watched show to
+  // IdentityArt while Browse rendered the same show with a real face.
+  it('carries the headliner portrait so the row matches Browse', () => {
+    const portrait = 'https://i.scdn.co/image/headliner'
+
+    expect(
+      fromWatchingShow({ ...baseWatchingShow, artistPhotoUrl: portrait })
+        .artistPhotoUrl,
+    ).toBe(portrait)
   })
 })

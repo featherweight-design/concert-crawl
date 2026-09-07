@@ -380,6 +380,70 @@ describe('GET /v1/watching', () => {
     const body = artistListResponse.parse(await res.json())
     expect(body.data.map((show) => show.artist)).toEqual(['Still Listed'])
   })
+
+  // The headliner portrait, second link in the imagery chain behind the event's
+  // own artwork. Browse joins `artists` for it; this list did not, so the same
+  // show wore a real face there and a generated glyph here.
+  describe('the artistPhotoUrl join', () => {
+    const PORTRAIT = 'https://i.scdn.co/image/headliner'
+
+    const photoResponse = z.object({
+      data: z.array(
+        z.object({
+          artist: z.string(),
+          imageUrl: z.string().nullable(),
+          artistPhotoUrl: z.string().nullable(),
+        }),
+      ),
+    })
+
+    const readPhotos = async (): Promise<z.infer<typeof photoResponse>> => {
+      const res = await app.request('/v1/watching')
+      expect(res.status).toBe(200)
+      return photoResponse.parse(await res.json())
+    }
+
+    it('serializes the portrait, and null when nothing matches', async () => {
+      setAuth('user_photo')
+      const venue = await seedVenue({ slug: 'watching-photo' })
+      await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT })
+      const matched = await seedEvent(venue.id, {
+        artist: 'Khruangbin',
+        date: '2099-09-01',
+        imageUrl: null,
+      })
+      const unmatched = await seedEvent(venue.id, {
+        artist: 'Nobody Here',
+        date: '2099-09-02',
+      })
+      await seedUserEvent('user_photo', matched.id, { status: 'watching' })
+      await seedUserEvent('user_photo', unmatched.id, { status: 'watching' })
+
+      const body = await readPhotos()
+      // One row per watch: a fan-out here would mean the join stopped behaving
+      // like a lookup.
+      expect(body.data).toHaveLength(2)
+      expect(body.data[0]).toEqual({
+        artist: 'Khruangbin',
+        imageUrl: null,
+        artistPhotoUrl: PORTRAIT,
+      })
+      expect(body.data[1]?.artistPhotoUrl).toBeNull()
+    })
+
+    it('does not borrow the portrait of a different artist', async () => {
+      setAuth('user_photo_other')
+      const venue = await seedVenue({ slug: 'watching-photo-other' })
+      await seedArtist({ name: 'Some Opener', photoUrl: PORTRAIT })
+      const event = await seedEvent(venue.id, {
+        artist: 'Khruangbin',
+        date: '2099-09-01',
+      })
+      await seedUserEvent('user_photo_other', event.id, { status: 'watching' })
+
+      expect((await readPhotos()).data[0]?.artistPhotoUrl).toBeNull()
+    })
+  })
 })
 
 describe('PUT /v1/watching/:eventId', () => {

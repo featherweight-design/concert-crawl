@@ -62,6 +62,7 @@ export function useWatchToggle() {
         updatedAt: new Date().toISOString(),
         priceObservedAt: null,
         imageUrl: null,
+        artistPhotoUrl: null,
         attendingAt: null,
       }
       const next = isCurrentlyWatching

@@ -22,6 +22,7 @@ const mockShow: WatchingShow = {
   updatedAt: new Date().toISOString(),
   priceObservedAt: null,
   imageUrl: null,
+  artistPhotoUrl: null,
   attendingAt: null,
 }
 

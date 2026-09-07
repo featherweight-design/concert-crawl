@@ -57,6 +57,7 @@ const show: WatchingShow = {
   updatedAt: new Date().toISOString(),
   priceObservedAt: new Date().toISOString(),
   imageUrl: null,
+  artistPhotoUrl: null,
   attendingAt: null,
 }
 

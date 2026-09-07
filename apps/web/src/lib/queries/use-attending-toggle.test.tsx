@@ -52,6 +52,7 @@ const show = (over: Partial<WatchingShow> = {}): WatchingShow => ({
   updatedAt: '2026-05-01T00:00:00.000Z',
   priceObservedAt: null,
   imageUrl: null,
+  artistPhotoUrl: null,
   attendingAt: null,
   ...over,
 })

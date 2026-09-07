@@ -44,6 +44,7 @@ const watchedShow = (eventId: string): WatchingShow => ({
   updatedAt: '2026-07-19T00:00:00Z',
   priceObservedAt: null,
   imageUrl: null,
+  artistPhotoUrl: null,
 })
 
 const watchingData = vi.fn<() => WatchingShow[]>(() => [])
@@ -210,6 +211,7 @@ describe('WatchShowButton — post-watch sheet integration (#1062)', () => {
         updatedAt: '2026-07-19T00:00:00Z',
         priceObservedAt: null,
         imageUrl: null,
+        artistPhotoUrl: null,
         attendingAt: null,
       },
     ])
@@ -564,6 +566,7 @@ describe('WatchShowButton — signed-out gating beat (#794)', () => {
         updatedAt: '2026-07-19T00:00:00Z',
         priceObservedAt: null,
         imageUrl: null,
+        artistPhotoUrl: null,
         attendingAt: null,
       },
     ])

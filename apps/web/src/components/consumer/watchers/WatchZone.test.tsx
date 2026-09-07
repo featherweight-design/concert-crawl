@@ -86,6 +86,7 @@ const watchedShow = (eventId: string): WatchingShow => ({
   updatedAt: '2026-07-19T00:00:00Z',
   priceObservedAt: null,
   imageUrl: null,
+  artistPhotoUrl: null,
 })
 
 const crawl = () => screen.queryByRole('group')
