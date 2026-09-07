@@ -26,8 +26,17 @@ vi.mock('@clerk/nextjs', () => ({
     fetcher,
 }))
 
+// The sheet reads the `spotify-sync` release flag. Stubbing the hook keeps
+// these tests about the handoff itself rather than about React Query wiring.
+const { useFeatureFlag } = vi.hoisted(() => ({ useFeatureFlag: vi.fn() }))
+vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }))
+
+const mockSpotifyFlag = (enabled: boolean) =>
+  useFeatureFlag.mockReturnValue({ isLoading: false, enabled })
+
 beforeEach(() => {
   vi.clearAllMocks()
+  mockSpotifyFlag(true)
   sessionStorage.clear()
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -263,5 +272,11 @@ describe('OAuthHandoffSheet', () => {
       screen.getByRole('button', { name: FAIL_COPY.secondaryCta }),
     )
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders nothing when the spotify-sync flag is off', () => {
+    mockSpotifyFlag(false)
+    const { container } = render(<OAuthHandoffSheet open onClose={vi.fn()} />)
+    expect(container.innerHTML).toBe('')
   })
 })

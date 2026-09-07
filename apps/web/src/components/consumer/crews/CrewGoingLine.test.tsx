@@ -1,10 +1,25 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom'
-import { describe, it, expect, afterEach } from 'vitest'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import type { CrewMemberPreview } from '@concert-crawl/types'
-import { CrewGoingLine } from './CrewGoingLine'
+import { CrewGoingLine, CrewGoingZone } from './CrewGoingLine'
+
+// Hoisted: `vi.mock` runs before module-scope consts, so the spies have to be
+// created inside the hoisted block to be visible to the factories.
+const { useFeatureFlag, useCrewGoing } = vi.hoisted(() => ({
+  useFeatureFlag: vi.fn(),
+  useCrewGoing: vi.fn(),
+}))
+vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }))
+vi.mock('@/lib/queries/use-crew-going', () => ({ useCrewGoing }))
+
+const mockFeatureFlag = (key: string, enabled: boolean) =>
+  useFeatureFlag.mockImplementation((requested: string) => ({
+    isLoading: false,
+    enabled: requested === key ? enabled : true,
+  }))
 
 const member = (
   userId: string,
@@ -61,5 +76,25 @@ describe('CrewGoingLine', () => {
     expect(screen.getByText('2 from your crews going')).toBeInTheDocument()
     // Nothing to name, so there is no second announcement to make.
     expect(screen.queryByText(/^Going:/)).not.toBeInTheDocument()
+  })
+})
+
+describe('CrewGoingZone flag gate', () => {
+  beforeEach(() => {
+    mockFeatureFlag('crews', true)
+    useCrewGoing.mockReturnValue({
+      data: { going: [member('u1', 'mvp_ross'), member('u2', 'natstretch')] },
+    })
+  })
+
+  it('renders nothing when the crews flag is off', () => {
+    mockFeatureFlag('crews', false)
+    const { container } = render(<CrewGoingZone eventId="ev1" />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('renders the line as before when the flag is on', () => {
+    render(<CrewGoingZone eventId="ev1" />)
+    expect(screen.getByText('Going: mvp_ross, natstretch')).toBeInTheDocument()
   })
 })

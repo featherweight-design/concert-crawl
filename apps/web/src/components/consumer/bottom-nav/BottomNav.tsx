@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@clerk/nextjs'
 import { fetchMe } from '@/lib/users'
 import { isTabActive } from '@/lib/nav-tab-active'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 import type { AvatarColor } from '@concert-crawl/types'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { AnonDisc } from '@/components/consumer/app-header/AnonDisc'
@@ -201,6 +202,8 @@ export function BottomNav() {
     hasUnseen,
   } = useAccountMenu()
   const menuTriggerRef = useRef<HTMLButtonElement>(null)
+  const { enabled: crewsEnabled } = useFeatureFlag('crews')
+  const tabs = STATIC_TABS.filter((tab) => crewsEnabled || tab.key !== 'crews')
 
   useEffect(() => {
     if (!isSignedIn) {
@@ -253,7 +256,7 @@ export function BottomNav() {
       }}
       aria-label={COPY.nav.ariaLabel}
     >
-      {STATIC_TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = isTabActive(tab, pathname)
         return (
           <Link

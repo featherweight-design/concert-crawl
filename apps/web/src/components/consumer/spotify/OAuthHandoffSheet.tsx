@@ -9,6 +9,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useReverification, useUser } from '@clerk/nextjs'
 import { ModalShell } from '@/components/consumer/modal-shell/ModalShell'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 import { CCClusterMark } from '@/components/brand/cc-cluster-mark/CCClusterMark'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import {
@@ -39,6 +40,7 @@ export const OAuthHandoffSheet = ({
   open,
   onClose,
 }: OAuthHandoffSheetProps) => {
+  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync')
   const { user } = useUser()
   // Clerk treats createExternalAccount as a sensitive op — on instances with
   // reverification enabled, aged sessions 403 unless the enhanced fetcher
@@ -110,6 +112,11 @@ export const OAuthHandoffSheet = ({
     setResuming(false)
     onClose()
   }
+
+  // Below every hook, so a late-landing flag read cannot change the hook
+  // count. Defence in depth: every render site is gated already, but this
+  // sheet is the door to the OAuth redirect and must never open behind it.
+  if (!spotifyEnabled) return null
 
   const railHeader = (
     <div className="flex items-center justify-center gap-3.5 py-1.5">

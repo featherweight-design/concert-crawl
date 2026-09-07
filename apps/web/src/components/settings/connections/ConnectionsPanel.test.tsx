@@ -32,8 +32,15 @@ vi.mock('@clerk/nextjs', () => ({
     fetcher,
 }))
 
+// The OAuth handoff sheet this panel opens reads the `spotify-sync` release
+// flag, which defaults off. Stub it on so these tests keep exercising the
+// panel rather than the flag.
+const { useFeatureFlag } = vi.hoisted(() => ({ useFeatureFlag: vi.fn() }))
+vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }))
+
 beforeEach(() => {
   vi.clearAllMocks()
+  useFeatureFlag.mockReturnValue({ isLoading: false, enabled: true })
   // vi.stubEnv persists for the whole file. Without this, the first test to
   // set the connect flag silently sets it for every test after it.
   vi.unstubAllEnvs()

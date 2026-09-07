@@ -29,9 +29,23 @@ vi.mock('@/lib/users', () => ({
   fetchMe: async () => ({ handle: 'hugh', avatarColor: 'signal' }),
 }))
 
+// Hoisted: `vi.mock` runs before module-scope consts, so the spy has to be
+// created inside the hoisted block to be visible to the factory.
+const { useFeatureFlag } = vi.hoisted(() => ({ useFeatureFlag: vi.fn() }))
+vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }))
+
+const mockFeatureFlag = (key: string, enabled: boolean) =>
+  useFeatureFlag.mockImplementation((requested: string) => ({
+    isLoading: false,
+    enabled: requested === key ? enabled : true,
+  }))
+
 beforeEach(() => {
   mockAuth = { isSignedIn: false, isLoaded: true, getToken: async () => null }
   pathname.current = '/events'
+  // Flags on by default, so every pre-flag assertion below keeps asserting the
+  // behaviour it was written for.
+  mockFeatureFlag('crews', true)
 })
 
 afterEach(cleanup)
@@ -161,6 +175,26 @@ describe('BottomNav crews slot (#1226)', () => {
     expect(
       screen.getByRole('link', { name: 'browse' }).getAttribute('aria-current'),
     ).toBeNull()
+  })
+
+  it('drops the crews tab when the flag is off', () => {
+    mockFeatureFlag('crews', false)
+    render(<BottomNav />)
+    expect(screen.queryByRole('link', { name: /crews/i })).toBeNull()
+  })
+
+  it('renders the crews tab when the flag is on', () => {
+    mockFeatureFlag('crews', true)
+    render(<BottomNav />)
+    expect(
+      screen.getByRole('link', { name: /crews/i }).getAttribute('href'),
+    ).toBe('/crews')
+  })
+
+  it('keeps the other three tabs when crews is off', () => {
+    mockFeatureFlag('crews', false)
+    render(<BottomNav />)
+    expect(screen.getAllByRole('link')).toHaveLength(3)
   })
 
   it('does not reuse the Watching eye for crews', () => {

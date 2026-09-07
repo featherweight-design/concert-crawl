@@ -35,6 +35,7 @@ import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { SPOTIFY_COPY } from '@/components/consumer/spotify/definitions/copy'
 import { fetchSpotifyConnection, fetchTastePicks } from '@/lib/spotify'
 import { fetchCrews, fetchCrewShows } from '@/lib/crews'
+import { isFeatureEnabled } from '@/lib/feature-flags'
 import { CrewLensList } from '@/components/consumer/crews'
 import { FollowShelf } from '@/components/consumer/following'
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
@@ -267,12 +268,17 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   // are both decided from this list. Do not add a second call for either.
   const followsPromise = seedFollowedArtists(token)
 
-  const crewsPromise: Promise<CrewSummary[]> = token
-    ? fetchCrews(token).catch((err: unknown) => {
-        console.error('[browse] crew lens list load failed', err)
-        return []
-      })
-    : Promise.resolve([])
+  // The flag empties the list rather than gating each consumer: `lensCrew` is
+  // resolved out of it, so an empty list drops the pill, the rail, the crew
+  // name in the heading and the CrewLensList together, and skips the fetch.
+  const crewsEnabled = await isFeatureEnabled('crews')
+  const crewsPromise: Promise<CrewSummary[]> =
+    token && crewsEnabled
+      ? fetchCrews(token).catch((err: unknown) => {
+          console.error('[browse] crew lens list load failed', err)
+          return []
+        })
+      : Promise.resolve([])
 
   const [
     eventsFetch,

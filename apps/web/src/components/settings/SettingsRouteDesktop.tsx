@@ -148,12 +148,19 @@ interface SettingsRouteDesktopProps {
   profile: UserProfileResponse
   submissions: UserSubmissionItem[]
   scaRegion: boolean
+  /**
+   * The `spotify-sync` release flag, resolved server-side on `/me` and passed
+   * to both settings routes so mobile and desktop never disagree and the
+   * Connections section does not flash in before the client read lands.
+   */
+  spotifyEnabled: boolean
 }
 
 export function SettingsRouteDesktop({
   profile,
   submissions,
   scaRegion,
+  spotifyEnabled,
 }: SettingsRouteDesktopProps) {
   const { openUserProfile } = useClerk()
   const { user } = useUser()
@@ -172,6 +179,13 @@ export function SettingsRouteDesktop({
       param !== null && NAV_ITEMS.some((item) => item.key === param)
     setActiveSection(isValid ? (param as NavSection) : 'profile')
   }, [searchParams])
+
+  // The Connections section holds nothing but the Spotify link, and its own
+  // heading copy is Spotify's, so the flag takes the whole section rather than
+  // leaving an empty one behind.
+  const navItems = NAV_ITEMS.filter(
+    (item) => spotifyEnabled || item.key !== 'connections',
+  )
 
   const openEdit = useCallback(() => setEditOpen(true), [])
   const closeEdit = useCallback(() => setEditOpen(false), [])
@@ -355,7 +369,7 @@ export function SettingsRouteDesktop({
 
             {/* Nav items */}
             <div className="flex flex-col gap-0.5">
-              {NAV_ITEMS.map(({ key, label }) => (
+              {navItems.map(({ key, label }) => (
                 <button
                   key={key}
                   type="button"
@@ -420,7 +434,7 @@ export function SettingsRouteDesktop({
               </div>
             )}
 
-            {activeSection === 'connections' && (
+            {activeSection === 'connections' && spotifyEnabled && (
               <div className="flex flex-col gap-5">
                 <div>
                   <h2 className="text-[22px] font-extrabold text-fg">

@@ -44,12 +44,26 @@ vi.mock('@/lib/definitions/releases', () => ({
   ],
 }))
 
+// Hoisted: `vi.mock` runs before module-scope consts, so the spy has to be
+// created inside the hoisted block to be visible to the factory.
+const { useFeatureFlag } = vi.hoisted(() => ({ useFeatureFlag: vi.fn() }))
+vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }))
+
+const mockFeatureFlag = (key: string, enabled: boolean) =>
+  useFeatureFlag.mockImplementation((requested: string) => ({
+    isLoading: false,
+    enabled: requested === key ? enabled : true,
+  }))
+
 import { FeatureDropPillGate } from './FeatureDropPillGate'
 
 beforeEach(() => {
   pathname = '/events'
   isLoaded = true
   isSignedIn = true
+  // Flags on by default, so every pre-flag assertion keeps asserting the
+  // behaviour it was written for.
+  mockFeatureFlag('release-notes', true)
 })
 
 afterEach(() => {
@@ -75,6 +89,18 @@ describe('FeatureDropPillGate — signed-out gating (#794)', () => {
     isSignedIn = false
     const { container } = render(<FeatureDropPillGate />)
     expect(container.innerHTML).toBe('')
+  })
+
+  it('renders nothing when the release-notes flag is off', () => {
+    mockFeatureFlag('release-notes', false)
+    const { container } = render(<FeatureDropPillGate />)
+    expect(container.innerHTML).toBe('')
+  })
+
+  it('renders the pill as before when the flag is on', () => {
+    mockFeatureFlag('release-notes', true)
+    const { queryByTestId } = render(<FeatureDropPillGate />)
+    expect(queryByTestId('feature-pill')).toBeTruthy()
   })
 
   it('still hides on /changelog and admin routes', () => {

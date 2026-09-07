@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react'
 import { useAuth } from '@clerk/nextjs'
 import { usePathname, useRouter } from 'next/navigation'
 import { RELEASES } from '@/lib/definitions/releases'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 import { useReleaseReadState } from './useReleaseReadState'
 import { FeatureDropPill } from './FeatureDropPill'
 import { SpotlightModal } from './SpotlightModal'
@@ -14,6 +15,7 @@ export function FeatureDropPillGate() {
   const pathname = usePathname()
   const router = useRouter()
   const { isLoaded, isSignedIn } = useAuth()
+  const { enabled: releaseNotesEnabled } = useFeatureFlag('release-notes')
 
   const latestVersion = LATEST?.version ?? ''
   const { pillDismissed, dismissPill } = useReleaseReadState(latestVersion)
@@ -23,6 +25,7 @@ export function FeatureDropPillGate() {
   // The pill's read state is per-account, and the spotlight it opens is a
   // "what's new for you" beat — meaningless to someone who has never been in.
   const hidden =
+    !releaseNotesEnabled ||
     !isLoaded ||
     !isSignedIn ||
     pathname === '/changelog' ||

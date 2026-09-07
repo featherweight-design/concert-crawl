@@ -10,6 +10,7 @@
 import { useLayoutEffect, useRef, useState } from 'react'
 import type { CrewMemberPreview } from '@concert-crawl/types'
 import { useCrewGoing } from '@/lib/queries/use-crew-going'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 import { LensGlyph } from './CrewLens'
 import { MemberDot } from './MemberCluster'
 import { CREWS_COPY } from './definitions/copy'
@@ -273,7 +274,10 @@ export const CrewGoingZone = ({
   eventId: string
   wide?: boolean
 }) => {
+  const { enabled: crewsEnabled } = useFeatureFlag('crews')
   const { data } = useCrewGoing(eventId)
-  if (!data) return null
+  // The connected half is the only render site, so gating it covers every
+  // caller of the presentational line below it.
+  if (!crewsEnabled || !data) return null
   return <CrewGoingLine going={data.going} wide={wide ?? false} />
 }

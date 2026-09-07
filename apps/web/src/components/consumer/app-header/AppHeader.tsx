@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { isTabActive } from '@/lib/nav-tab-active'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 import { CCMark } from '@/components/brand/cc-mark'
 import { UserMenu } from '../user-menu'
 import { useSearchPalette } from '../search-palette/search-palette-context'
@@ -28,6 +29,12 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
   // The palette and its ⌘K listener live in the layout provider, so the
   // "find artists" row in the page body can open the same one.
   const palette = useSearchPalette()
+  const { enabled: crewsEnabled } = useFeatureFlag('crews')
+  const tabs = copy.nav.tabs.filter(
+    // These entries carry no `key` field, unlike the bottom nav's, so the
+    // href is the only stable discriminator.
+    (tab) => crewsEnabled || tab.href !== '/crews',
+  )
 
   return (
     <header className="w-full">
@@ -77,7 +84,7 @@ export function AppHeader({ rightSlots }: AppHeaderProps = {}) {
           </Link>
 
           <nav className="flex gap-1 overflow-x-auto">
-            {copy.nav.tabs.map((tab) => {
+            {tabs.map((tab) => {
               const isActive = isTabActive(tab, pathname)
               return (
                 <Link

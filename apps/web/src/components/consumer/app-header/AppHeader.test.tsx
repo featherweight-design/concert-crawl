@@ -26,9 +26,23 @@ vi.mock('../user-menu', () => ({
   UserMenu: () => <div data-testid="user-menu" />,
 }))
 
+// Hoisted: `vi.mock` runs before module-scope consts, so the spy has to be
+// created inside the hoisted block to be visible to the factory.
+const { useFeatureFlag } = vi.hoisted(() => ({ useFeatureFlag: vi.fn() }))
+vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }))
+
+const mockFeatureFlag = (key: string, enabled: boolean) =>
+  useFeatureFlag.mockImplementation((requested: string) => ({
+    isLoading: false,
+    enabled: requested === key ? enabled : true,
+  }))
+
 beforeEach(() => {
   mockAuth = { isSignedIn: false, isLoaded: true }
   pathname.current = '/events'
+  // Flags on by default, so every pre-flag assertion below keeps asserting the
+  // behaviour it was written for.
+  mockFeatureFlag('crews', true)
 })
 
 afterEach(cleanup)
@@ -166,6 +180,20 @@ describe('AppHeader crews tab (#1226)', () => {
     expect(
       screen.getByRole('link', { name: 'Browse' }).getAttribute('aria-current'),
     ).toBeNull()
+  })
+
+  it('drops the crews link when the flag is off', () => {
+    mockFeatureFlag('crews', false)
+    render(<AppHeader />)
+    expect(screen.queryByRole('link', { name: 'Crews' })).toBeNull()
+  })
+
+  it('renders the crews link when the flag is on', () => {
+    mockFeatureFlag('crews', true)
+    render(<AppHeader />)
+    expect(
+      screen.getByRole('link', { name: 'Crews' }).getAttribute('href'),
+    ).toBe('/crews')
   })
 
   it('marks My shows current on a /history sub-route', () => {

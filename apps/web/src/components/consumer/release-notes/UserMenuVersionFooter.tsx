@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { RELEASES } from '@/lib/definitions/releases'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 import { useReleaseReadState } from './useReleaseReadState'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
@@ -15,6 +16,12 @@ export function UserMenuVersionFooter({ build }: UserMenuVersionFooterProps) {
   const router = useRouter()
   const latestVersion = RELEASES[0]?.version ?? ''
   const { unread } = useReleaseReadState(latestVersion)
+  const { enabled: releaseNotesEnabled } = useFeatureFlag('release-notes')
+
+  // Below every hook, so a late-landing flag read cannot change the hook
+  // count. The footer's only action is a push to /changelog, which the same
+  // flag 404s.
+  if (!releaseNotesEnabled) return null
 
   return (
     <button

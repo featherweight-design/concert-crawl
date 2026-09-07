@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import type { CrewSummary, VenuePublic } from '@concert-crawl/types'
 import { CrewLensPill, CrewLensRail } from '@/components/consumer/crews'
 import { cn } from '@/lib/utils'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 import { FilterPopover } from './FilterPopover'
 import { FilterSheet } from './FilterSheet'
 import {
@@ -109,7 +110,7 @@ export function FilterBar({
   genres = [],
   className,
   scaRegion = true,
-  crews = [],
+  crews: crewsProp = [],
   lensCount = null,
   followCount = null,
 }: FilterBarProps) {
@@ -117,6 +118,12 @@ export function FilterBar({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
+  // Gated at the source rather than at each render site: `lensCrew` is
+  // resolved out of this list, so emptying it drops the pill, the rail and the
+  // crew name in the heading together. Gating the two render sites alone would
+  // still print the crew's name in the <h1> for anyone holding a `?crew=` URL.
+  const { enabled: crewsEnabled } = useFeatureFlag('crews')
+  const crews = crewsEnabled ? crewsProp : []
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {

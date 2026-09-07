@@ -24,6 +24,12 @@ interface SettingsRouteProps {
   submissions: UserSubmissionItem[]
   scaRegion: boolean
   isAdmin?: boolean
+  /**
+   * The `spotify-sync` release flag, resolved server-side on `/me` and passed
+   * to both settings routes so mobile and desktop never disagree and the
+   * Connections section does not flash in before the client read lands.
+   */
+  spotifyEnabled: boolean
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -42,6 +48,7 @@ export function SettingsRoute({
   submissions,
   scaRegion,
   isAdmin = false,
+  spotifyEnabled,
 }: SettingsRouteProps) {
   const confirmedCount = submissions.filter(
     (sub) => sub.status === 'confirmed',
@@ -115,16 +122,24 @@ export function SettingsRoute({
 
         <div className="mx-4 h-px bg-border" />
 
-        {/* Connections (#763) */}
-        <div className="flex flex-col gap-2 px-4">
-          <SectionLabel>{SPOTIFY_COPY.connectEntry.sectionTitle}</SectionLabel>
-          <p className="-mt-1 text-[13px] leading-[1.4] text-fg-muted">
-            {SPOTIFY_COPY.connectEntry.sectionSub}
-          </p>
-          <ConnectionsPanel />
-        </div>
+        {/* Connections (#763) — the section holds nothing but the Spotify
+            link and its heading copy is Spotify's, so the flag takes the whole
+            section and its divider rather than leaving an empty one. */}
+        {spotifyEnabled && (
+          <>
+            <div className="flex flex-col gap-2 px-4">
+              <SectionLabel>
+                {SPOTIFY_COPY.connectEntry.sectionTitle}
+              </SectionLabel>
+              <p className="-mt-1 text-[13px] leading-[1.4] text-fg-muted">
+                {SPOTIFY_COPY.connectEntry.sectionSub}
+              </p>
+              <ConnectionsPanel />
+            </div>
 
-        <div className="mx-4 h-px bg-border" />
+            <div className="mx-4 h-px bg-border" />
+          </>
+        )}
 
         {/* Submissions */}
         <div className="flex flex-col gap-2">
