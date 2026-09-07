@@ -1,3 +1,15 @@
+# [1.284.0](https://github.com/HartiganHM/concert-crawl/compare/v1.283.0...v1.284.0) (2026-09-07)
+
+
+### Bug Fixes
+
+* **web:** close the flag confirm dialog on a missing token and log save failures ([76e861b](https://github.com/HartiganHM/concert-crawl/commit/76e861be2d457e51f233bfe4b97490218b5a291a))
+
+
+### Features
+
+* **web:** add the admin feature flag page ([e2ca30b](https://github.com/HartiganHM/concert-crawl/commit/e2ca30b06e687d5e20b5130556b0ab001665067d))
+
 # [1.283.0](https://github.com/HartiganHM/concert-crawl/compare/v1.282.0...v1.283.0) (2026-09-07)
 
 
