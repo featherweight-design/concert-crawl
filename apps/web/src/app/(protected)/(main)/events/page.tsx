@@ -228,6 +228,7 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
             scopeRetryToken(err, token),
             viewLimit,
             false,
+            false,
           ),
           tasteApplied: false,
           followingApplied: false,
