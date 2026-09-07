@@ -1,3 +1,19 @@
+# [1.281.0](https://github.com/HartiganHM/concert-crawl/compare/v1.280.0...v1.281.0) (2026-09-07)
+
+
+### Bug Fixes
+
+* **api:** address Copilot nits on the flag mount ([f46b9c3](https://github.com/HartiganHM/concert-crawl/commit/f46b9c3a6c7f4dbcc26ecbf53860a1481c56aa5e))
+* **api:** read admin flag rows straight from storage ([9bf9b19](https://github.com/HartiganHM/concert-crawl/commit/9bf9b19ec71005542cc8dc6a89acc790d7545d33))
+
+
+### Features
+
+* **api:** add admin feature flag endpoints ([65e7b1b](https://github.com/HartiganHM/concert-crawl/commit/65e7b1b148ea798f6c430c550277aa8925279669))
+* **api:** add public GET /v1/flags and fix cross-suite flag leak ([06dabb1](https://github.com/HartiganHM/concert-crawl/commit/06dabb153e39d708bfd2efe8bc12f4dc6ecd77c5))
+* **api:** gate the crews and spotify routers on release flags ([ae063ae](https://github.com/HartiganHM/concert-crawl/commit/ae063aecd1c0df68a0b31e2482cef52a673deea0))
+* **web:** resolve flagged-off features to hidden in useEntitlement ([672efcc](https://github.com/HartiganHM/concert-crawl/commit/672efcc8e00a6e0c7b78b23ba9d3576473d6f7bc))
+
 # [1.280.0](https://github.com/HartiganHM/concert-crawl/compare/v1.279.0...v1.280.0) (2026-09-07)
 
 
