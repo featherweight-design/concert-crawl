@@ -1,3 +1,10 @@
+## [1.285.1](https://github.com/HartiganHM/concert-crawl/compare/v1.285.0...v1.285.1) (2026-09-07)
+
+
+### Bug Fixes
+
+* **flags:** stop Spotify surfaces leaking when spotify-sync is off ([d4037a8](https://github.com/HartiganHM/concert-crawl/commit/d4037a868a8bc4ff03607ee60914c85e7bf7cdc0))
+
 # [1.285.0](https://github.com/HartiganHM/concert-crawl/compare/v1.284.0...v1.285.0) (2026-09-07)
 
 
