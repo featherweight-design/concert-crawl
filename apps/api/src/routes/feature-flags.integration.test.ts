@@ -171,15 +171,20 @@ describe('admin feature flags', () => {
   })
 
   it('moves updatedAt forward on a second toggle', async () => {
-    const patch = (enabled: boolean) =>
-      app.request('/v1/admin/feature-flags/crews', {
+    // Asserting the status before reading the body keeps a failed PATCH from
+    // surfacing as an opaque date-parse error further down.
+    const patch = async (enabled: boolean) => {
+      const res = await app.request('/v1/admin/feature-flags/crews', {
         method: 'PATCH',
         headers: { ...adminHeaders(), 'content-type': 'application/json' },
         body: JSON.stringify({ enabled }),
       })
-    const first = await (await patch(true)).json()
+      expect(res.status).toBe(200)
+      return res.json()
+    }
+    const first = await patch(true)
     await new Promise((resolve) => setTimeout(resolve, 10))
-    const second = await (await patch(false)).json()
+    const second = await patch(false)
     expect(new Date(second.data.updatedAt).getTime()).toBeGreaterThan(
       new Date(first.data.updatedAt).getTime(),
     )
