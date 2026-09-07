@@ -20,8 +20,10 @@ export const requireFlag = (key: FeatureFlagKey): MiddlewareHandler => {
     }
 
     if (!enabled) {
-      // Deliberately indistinguishable from an unrouted path. No flag key.
-      return ctx.json({ success: false, error: 'Not found' }, 404)
+      // ctx.notFound() routes through the app's own not-found handler, so the
+      // response is byte-identical to an unrouted path. A bespoke JSON body
+      // here would be a tell that the route exists but is switched off.
+      return ctx.notFound()
     }
 
     await next()

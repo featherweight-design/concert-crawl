@@ -30,10 +30,16 @@ describe('requireFlag', () => {
     expect(res.status).toBe(404)
   })
 
-  it('never names the flag in the response body', async () => {
+  it('answers exactly as an unrouted path does', async () => {
     isFeatureEnabled.mockResolvedValue(false)
-    const res = await buildApp().request('/thing')
-    expect(JSON.stringify(await res.json())).not.toContain('crews')
+    const gated = await buildApp().request('/thing')
+    // Baseline from an ungated app, so this compares the gate's answer against
+    // a genuine unrouted path rather than against itself.
+    const unrouted = await new Hono().request('/no-such-path')
+    expect(await gated.text()).toBe(await unrouted.text())
+    expect(gated.headers.get('content-type')).toBe(
+      unrouted.headers.get('content-type'),
+    )
   })
 
   it('answers 404 when the flag lookup throws', async () => {
