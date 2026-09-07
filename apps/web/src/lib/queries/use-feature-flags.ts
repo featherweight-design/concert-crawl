@@ -40,10 +40,11 @@ export function useFeatureFlags() {
   })
 }
 
-// Element-level gate. `enabled` reads the registry default until the fetch
-// lands and whenever it fails, so a released feature never blinks out on load
-// and an unreleased one is never briefly shown. Callers that would rather hold
-// their render than show the default can read `isLoading`.
+// Element-level gate. `enabled` reads the registry default until the first
+// fetch lands, so a released feature never blinks out on load and an unreleased
+// one is never briefly shown. A later refetch that fails keeps the last
+// successful map rather than falling back to defaults. Callers that would
+// rather hold their render than show the default can read `isLoading`.
 export function useFeatureFlag(key: FeatureFlagKey): {
   isLoading: boolean
   enabled: boolean
