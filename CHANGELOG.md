@@ -1,3 +1,15 @@
+# [1.286.0](https://github.com/HartiganHM/concert-crawl/compare/v1.285.4...v1.286.0) (2026-09-07)
+
+
+### Bug Fixes
+
+* **artists:** hide a row a human ruled not-an-artist ([#1682](https://github.com/HartiganHM/concert-crawl/issues/1682)) ([543bedb](https://github.com/HartiganHM/concert-crawl/commit/543bedba938f84cc5c7bce6267a36be80b98a0ac))
+
+
+### Features
+
+* **web:** scale the Follow button by placement, not by call site ([#1681](https://github.com/HartiganHM/concert-crawl/issues/1681)) ([39766e4](https://github.com/HartiganHM/concert-crawl/commit/39766e4c04699c2221fdc84e0b2f2db7e0eab4e4))
+
 ## [1.285.4](https://github.com/HartiganHM/concert-crawl/compare/v1.285.3...v1.285.4) (2026-09-07)
 
 
