@@ -20,7 +20,7 @@ Design owns layout/copy/behavior (locked, Green). This spec owns everything the 
 
 ### Out of scope
 
-- In-app notification tray (consumer read path) — hard dep on [#737](https://github.com/HartiganHM/concert-crawl/issues/737). We *write* `notifications` rows so the tray back-fills when #737 ships; push-only for v1 per the handoff.
+- In-app notification tray (consumer read path) — hard dep on [#737](https://github.com/HartiganHM/concert-crawl/issues/737). We _write_ `notifications` rows so the tray back-fills when #737 ships; push-only for v1 per the handoff.
 - Social surfacing of Spotify data (#762 territory).
 - Playlist / track-history ingestion (brief Q4 lock).
 - Recommendation ML — discovery ranking is deterministic (§9).
@@ -29,18 +29,18 @@ Design owns layout/copy/behavior (locked, Green). This spec owns everything the 
 
 ## 2. Locked engineering decisions (summary)
 
-| # | Decision | Choice |
-|---|----------|--------|
-| E1 | OAuth path | **Clerk Spotify provider** — Clerk stores + refreshes tokens; we never persist Spotify refresh tokens |
-| E2 | Artist storage | **Extend `user_artist_follows`** (source enum + rank + canonical name), not a new table |
-| E3 | Matching | Equality join on canonicalized names: `events.canonical_artist` + new `events.canonical_supporting` (text[], GIN) |
-| E4 | Sync cadence | New weekly Render cron (`spotify-weekly`) + on-demand refresh endpoint (per-user rate-limited) |
-| E5 | Digest | Same weekly job, after sync; new template in the existing Resend/registry family; per-family unsubscribe via signed token |
-| E6 | New-show alerts + auto-watch | Post-crawl background fan-out hook in the crawler (fire-and-forget, mirrors existing background-task pattern) |
-| E7 | Push | Web Push (VAPID + `web-push` lib + Serwist `push` handler + `push_subscriptions` table); in-app tray deferred to #737 |
-| E8 | Entitlements | `spotify-sync` free/supporter cells flip `hidden` → `paywall-on-tap`; connect flow itself is ungated |
-| E9 | Purge interaction | 90-day premium purge only deletes `source = 'manual'` follow rows; Spotify rows live/die with the connection |
-| E10 | Cost/observability | Spotify API calls recorded to `cost_tracking` (`service: 'spotify'`, `costUsd: '0'` — string, matching the numeric-column insert pattern in `crawl.ts`, call counts in metadata) |
+| #   | Decision                     | Choice                                                                                                                                                                           |
+| --- | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| E1  | OAuth path                   | **Clerk Spotify provider** — Clerk stores + refreshes tokens; we never persist Spotify refresh tokens                                                                            |
+| E2  | Artist storage               | **Extend `user_artist_follows`** (source enum + rank + canonical name), not a new table                                                                                          |
+| E3  | Matching                     | Equality join on canonicalized names: `events.canonical_artist` + new `events.canonical_supporting` (text[], GIN)                                                                |
+| E4  | Sync cadence                 | New weekly Render cron (`spotify-weekly`) + on-demand refresh endpoint (per-user rate-limited)                                                                                   |
+| E5  | Digest                       | Same weekly job, after sync; new template in the existing Resend/registry family; per-family unsubscribe via signed token                                                        |
+| E6  | New-show alerts + auto-watch | Post-crawl background fan-out hook in the crawler (fire-and-forget, mirrors existing background-task pattern)                                                                    |
+| E7  | Push                         | Web Push (VAPID + `web-push` lib + Serwist `push` handler + `push_subscriptions` table); in-app tray deferred to #737                                                            |
+| E8  | Entitlements                 | `spotify-sync` free/supporter cells flip `hidden` → `paywall-on-tap`; connect flow itself is ungated                                                                             |
+| E9  | Purge interaction            | 90-day premium purge only deletes `source = 'manual'` follow rows; Spotify rows live/die with the connection                                                                     |
+| E10 | Cost/observability           | Spotify API calls recorded to `cost_tracking` (`service: 'spotify'`, `costUsd: '0'` — string, matching the numeric-column insert pattern in `crawl.ts`, call counts in metadata) |
 
 ---
 
@@ -60,9 +60,11 @@ Clerk already fronts auth everywhere (`@clerk/nextjs` ^7.5, `@clerk/backend` ^2.
 
 1. Create a Spotify Developer app (dashboard → two apps or one app with both redirect URIs: staging + prod Clerk frontend API callback URLs; Clerk shows the exact redirect URI when enabling the provider).
 2. Enable the Spotify provider in **both** Clerk instances (staging + prod) with the client ID/secret and custom scopes `user-follow-read user-top-read` (uncheck Clerk defaults we don't need).
-3. ⚠️ **Spotify dev-mode quota:** new Spotify apps run in Development Mode — max 25 allowlisted Spotify accounts. Fine for staging + early beta testing; **public launch requires an Extended Quota Mode request** (Spotify review, can take weeks). File it as soon as the feature is on staging. Tracked as a launch-blocker issue at build time.
+3. ⚠️ **Spotify dev-mode quota:** new Spotify apps run in Development Mode, which caps them at **5 authenticated users**. That is enough for staging and early beta testing and is the whole audience the feature can ever have, because Extended Quota Mode is not open to us: since 2025-05-15 it is restricted to organizations with a launched service and at least 250k monthly active users. Spotify-as-personalization therefore ships behind a feature flag (`docs/superpowers/specs/2026-09-06-feature-flags-design.md`) rather than to the public.
 
-No new secrets in our env for OAuth itself (Clerk holds them). See §13 for the env vars we *do* add (VAPID, unsubscribe secret).
+   > **Corrected 2026-08-04.** This step originally read "max 25 allowlisted Spotify accounts" and instructed us to file an Extended Quota Mode request as soon as the feature reached staging. Both were wrong: the 25 is the per-developer-account _Client ID_ limit introduced by Spotify's 2026-07-23 quota update, a different quantity, and the request is not a form we qualify to file.
+
+No new secrets in our env for OAuth itself (Clerk holds them). See §13 for the env vars we _do_ add (VAPID, unsubscribe secret).
 
 ---
 
@@ -76,29 +78,35 @@ One row per connected user. **Explicit disconnect deletes the row; external revo
 
 ```ts
 export const spotifyConnectionStatusEnum = pgEnum('spotify_connection_status', [
-  'connected',   // healthy
-  'error',       // last sync failed (Spotify 5xx / rate limit) — retry next cycle
-  'revoked',     // grant gone (external revoke or Clerk token failure) — banner + purge
+  'connected', // healthy
+  'error', // last sync failed (Spotify 5xx / rate limit) — retry next cycle
+  'revoked', // grant gone (external revoke or Clerk token failure) — banner + purge
 ])
 
 export const userSpotifyConnections = pgTable(
   'user_spotify_connections',
   {
     id: uuid('id').primaryKey().defaultRandom(),
-    userId: text('user_id').notNull(),            // Clerk ID
+    userId: text('user_id').notNull(), // Clerk ID
     spotifyUserId: text('spotify_user_id').notNull(),
-    displayName: text('display_name'),            // Spotify account display name for Settings
-    status: spotifyConnectionStatusEnum('status').notNull().default('connected'),
+    displayName: text('display_name'), // Spotify account display name for Settings
+    status: spotifyConnectionStatusEnum('status')
+      .notNull()
+      .default('connected'),
     autoWatch: boolean('auto_watch').notNull().default(false),
     digestEnabled: boolean('digest_enabled').notNull().default(true),
     pushEnabled: boolean('push_enabled').notNull().default(true),
-    connectedAt: timestamp('connected_at', { withTimezone: true }).notNull().defaultNow(),
+    connectedAt: timestamp('connected_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     lastSyncedAt: timestamp('last_synced_at', { withTimezone: true }),
     lastSyncError: text('last_sync_error'),
     artistCount: integer('artist_count').notNull().default(0),
   },
   (table) => ({
-    userIdUnique: uniqueIndex('user_spotify_connections_user_id_idx').on(table.userId),
+    userIdUnique: uniqueIndex('user_spotify_connections_user_id_idx').on(
+      table.userId,
+    ),
   }),
 )
 ```
@@ -106,7 +114,7 @@ export const userSpotifyConnections = pgTable(
 Notes:
 
 - `autoWatch` is the R1 opt-in (default false = highlight-only; modal dismissal writes nothing). It also selects the push copy variant (R2 §5 design decision).
-- The single-fire post-first-watch nudge targets *unconnected* users, so its guard does **not** live here: add `spotifyNudgeSeenAt timestamp with time zone` to `user_profiles` (already one-row-per-user, lazily created). The connection row keeps connection-lifecycle fields only.
+- The single-fire post-first-watch nudge targets _unconnected_ users, so its guard does **not** live here: add `spotifyNudgeSeenAt timestamp with time zone` to `user_profiles` (already one-row-per-user, lazily created). The connection row keeps connection-lifecycle fields only.
 - `digestEnabled` / `pushEnabled` are the per-family opt-outs surfaced in Connections settings and the digest unsubscribe link. Premium gating is enforced at send time via `canUseFeature`, not stored here.
 
 ### 4.2 `user_artist_follows` (extend)
@@ -132,9 +140,9 @@ index('user_artist_follows_canonical_name_idx').on(table.canonicalName)
 
 No standalone `user_id` index — the unique index's leading column already satisfies `userId`-only filters via prefix scan.
 
-- SQL backfill in the same migration: `UPDATE user_artist_follows SET canonical_name = ...` is impossible in pure SQL (canonicalization is JS) — instead, backfill script in the migration PR runs `canonicalizeArtist` over existing rows via a one-shot script (`packages/db/src/scripts/`), mirroring the canonical-artist backfill pattern from migration 0044. Migration↔JS parity rule applies: the canonical form is *only* computed in JS; SQL never re-implements it.
+- SQL backfill in the same migration: `UPDATE user_artist_follows SET canonical_name = ...` is impossible in pure SQL (canonicalization is JS) — instead, backfill script in the migration PR runs `canonicalizeArtist` over existing rows via a one-shot script (`packages/db/src/scripts/`), mirroring the canonical-artist backfill pattern from migration 0044. Migration↔JS parity rule applies: the canonical form is _only_ computed in JS; SQL never re-implements it.
 - Sync writes are a **replace-set per source**: delete `(userId, source)` rows not in the fresh pull, upsert the rest (update name/rank/lastSyncedAt on conflict). A mid-sync crash leaves the previous set intact (whole per-user sync wrapped in a transaction).
-- **E9 purge fix:** `apps/api/src/jobs/billing-daily.ts` 90-day premium purge (currently deletes all `user_artist_follows` for the user, line ~685) narrows to `source = 'manual'`. Spotify-sourced rows power *free* highlighting and are governed by connection lifecycle, not premium lapse.
+- **E9 purge fix:** `apps/api/src/jobs/billing-daily.ts` 90-day premium purge (currently deletes all `user_artist_follows` for the user, line ~685) narrows to `source = 'manual'`. Spotify-sourced rows power _free_ highlighting and are governed by connection lifecycle, not premium lapse.
 
 ### 4.3 `events.canonical_supporting` (extend)
 
@@ -158,12 +166,16 @@ export const pushSubscriptions = pgTable(
     p256dh: text('p256dh').notNull(),
     auth: text('auth').notNull(),
     userAgent: text('user_agent'),
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
     disabledAt: timestamp('disabled_at', { withTimezone: true }), // 404/410 from push service
   },
   (table) => ({
-    endpointUnique: uniqueIndex('push_subscriptions_endpoint_idx').on(table.endpoint),
+    endpointUnique: uniqueIndex('push_subscriptions_endpoint_idx').on(
+      table.endpoint,
+    ),
     userIdIdx: index('push_subscriptions_user_id_idx').on(table.userId),
   }),
 )
@@ -181,18 +193,25 @@ export const spotifyAlertLog = pgTable(
   {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: text('user_id').notNull(),
-    eventId: uuid('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
-    kind: text('kind').notNull(),   // 'push' | 'auto_watch'
-    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    eventId: uuid('event_id')
+      .notNull()
+      .references(() => events.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(), // 'push' | 'auto_watch'
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (table) => ({
-    dedupe: uniqueIndex('spotify_alert_log_user_event_kind_idx')
-      .on(table.userId, table.eventId, table.kind),
+    dedupe: uniqueIndex('spotify_alert_log_user_event_kind_idx').on(
+      table.userId,
+      table.eventId,
+      table.kind,
+    ),
   }),
 )
 ```
 
-A crawler re-crawl that updates an existing event never re-alerts: fan-out only runs for *inserted* rows, and this log makes even that idempotent across crashes.
+A crawler re-crawl that updates an existing event never re-alerts: fan-out only runs for _inserted_ rows, and this log makes even that idempotent across crashes.
 
 ---
 
@@ -210,13 +229,13 @@ Thin fetch wrapper, Zod-validated responses at the boundary (no `as` casts):
 
 ## 6. Connection API (Hono, all under `/v1/spotify`, `requireAuth`, Zod-validated)
 
-| Route | Behavior |
-|---|---|
-| `GET /v1/spotify/connection` | `{ status, displayName, artistCount, lastSyncedAt, autoWatch, digestEnabled, pushEnabled } \| { status: 'disconnected' }` — drives Settings ▸ Connections + all failure banners |
-| `POST /v1/spotify/connection` | Post-OAuth-return: verify `oauth_spotify` external account exists on the Clerk user, upsert connection row, run first sync inline (so success screen shows a real artist count). Returns the connection payload |
-| `POST /v1/spotify/connection/sync` | On-demand "Refresh my taste." Per-user rate limit: reject if `lastSyncedAt` < 10 minutes ago (429 + `Retry-After` header, matching the existing rate-limit pattern in `apps/api/src/routes/feedback.ts`) |
-| `PATCH /v1/spotify/connection` | Body: `{ autoWatch?, digestEnabled?, pushEnabled? }` — Settings toggles + the one-time auto-watch opt-in write |
-| `DELETE /v1/spotify/connection` | Purge: delete connection row + `user_artist_follows where source in ('spotify_followed','spotify_top')`; delete Clerk external account. Watching rows untouched. 204 |
+| Route                              | Behavior                                                                                                                                                                                                        |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /v1/spotify/connection`       | `{ status, displayName, artistCount, lastSyncedAt, autoWatch, digestEnabled, pushEnabled } \| { status: 'disconnected' }` — drives Settings ▸ Connections + all failure banners                                 |
+| `POST /v1/spotify/connection`      | Post-OAuth-return: verify `oauth_spotify` external account exists on the Clerk user, upsert connection row, run first sync inline (so success screen shows a real artist count). Returns the connection payload |
+| `POST /v1/spotify/connection/sync` | On-demand "Refresh my taste." Per-user rate limit: reject if `lastSyncedAt` < 10 minutes ago (429 + `Retry-After` header, matching the existing rate-limit pattern in `apps/api/src/routes/feedback.ts`)        |
+| `PATCH /v1/spotify/connection`     | Body: `{ autoWatch?, digestEnabled?, pushEnabled? }` — Settings toggles + the one-time auto-watch opt-in write                                                                                                  |
+| `DELETE /v1/spotify/connection`    | Purge: delete connection row + `user_artist_follows where source in ('spotify_followed','spotify_top')`; delete Clerk external account. Watching rows untouched. 204                                            |
 
 **Purge invariant (brief Q7):** disconnect and revoke share one artist-data purge function (delete `user_artist_follows where source in ('spotify_followed','spotify_top')`); auto-watched `user_events` rows always survive. They differ only in connection-row fate: disconnect deletes it (Settings shows the disconnected entry state); revoke retains it as `status='revoked'` (Settings + Browse show the revoke banner with Reconnect). Premium surfaces degrade gracefully in both cases — no connection row → empty/upsell states; revoked row → "taste on pause" per design.
 
@@ -239,11 +258,11 @@ Free vs premium: none of these routes carry `requireFeature` — connecting, syn
 },
 ```
 
-- Matches the Green design: Free/Supporter *see* the taste filter chip locked and tap into the upsell sheet (`paywall-on-tap`), rather than the surface being hidden. `logged-out` routes to the tier picker like every other visible feature.
-- `gifted` + role-comped stay active — the design's `premium || founder` shorthand maps to `canUseFeature(state, 'spotify-sync')`, which is the *only* gate expression used in code (never a hand-rolled tier comparison; grandfathering and comps flow through PlanState).
+- Matches the Green design: Free/Supporter _see_ the taste filter chip locked and tap into the upsell sheet (`paywall-on-tap`), rather than the surface being hidden. `logged-out` routes to the tier picker like every other visible feature.
+- `gifted` + role-comped stay active — the design's `premium || founder` shorthand maps to `canUseFeature(state, 'spotify-sync')`, which is the _only_ gate expression used in code (never a hand-rolled tier comparison; grandfathering and comps flow through PlanState).
 - The matrix's lockstep test table updates in the same commit.
 - Digest + push sends re-check `canUseFeature` at send time (a lapsed premium user stops receiving without any unsubscribe action).
-- Discovery shelf and digest/push are `hidden`-style for free users in the design (no locked previews) — that's a UI decision per surface: the *taste filter chip* is the one locked-visible surface; discovery/digest/push simply don't render/send for non-entitled users. One matrix cell can't express both, so surfaces that don't render check `active` only and ignore `surface`. Noted here so the plan doesn't invent extra matrix entries.
+- Discovery shelf and digest/push are `hidden`-style for free users in the design (no locked previews) — that's a UI decision per surface: the _taste filter chip_ is the one locked-visible surface; discovery/digest/push simply don't render/send for non-entitled users. One matrix cell can't express both, so surfaces that don't render check `active` only and ignore `surface`. Noted here so the plan doesn't invent extra matrix entries.
 
 ---
 
@@ -303,7 +322,7 @@ Event list/detail responses gain an optional `followedArtists: string[]` field (
 
 ### 10.1 Crawler hook
 
-After a venue crawl completes (post price-pipeline, `apps/crawler/src/run.ts` — both triggered + daily paths), fire a background task with the venue's *inserted* event IDs (insert-vs-update is already distinguishable at the upsert site; thread the inserted IDs out of `crawl.ts`). The task:
+After a venue crawl completes (post price-pipeline, `apps/crawler/src/run.ts` — both triggered + daily paths), fire a background task with the venue's _inserted_ event IDs (insert-vs-update is already distinguishable at the upsert site; thread the inserted IDs out of `crawl.ts`). The task:
 
 1. Loads the inserted events' canonical artist sets.
 2. Finds matching users via the §9.1 join.
@@ -322,18 +341,18 @@ Failure isolation: the whole hook is fire-and-forget with logged catches (async-
 
 ## 11. Web surfaces (build-to-design; reference mocks in `design/design_handoff_spotify_sync/`)
 
-| Surface | Mock | Real location |
-|---|---|---|
-| Settings ▸ Connections section | `connections-settings.jsx` | New `connections` section in `SettingsRoute(Desktop).tsx` NAV + `components/settings/connections/` |
-| Connect entry + honesty rail + OAuth handoff | `connect-flow.jsx` | Same folder; interstitial before `createExternalAccount` |
-| Success + auto-watch sheet | `connect-flow.jsx` | Sheet component; PATCH autoWatch on choice; dismissal = no write (highlight-only default) |
-| Post-first-watch nudge (single-fire) | `connect-flow.jsx` | Watch-toggle success path; guarded by `user_profiles.spotifyNudgeSeenAt`; only when no connection row |
-| "Following" chip on browse/hero/detail | `follow-highlight.jsx` | `EventCard` chip row / `HeroEventCard` eyebrow slot / detail attribution strip under Watching pill — driven by `followedArtists` in responses; neutral `--surface-3` + Spotify mark, never `--accent` |
-| Taste filter chip + upsell | `taste-filter.jsx` | `FilterBar` (`filter-defs.ts` + new leading toggle chip); upsell reuses tier-picker paywall surface |
-| Discovery shelf | `discovery-surface.jsx` | Browse page, above the grid, premium + connected only |
-| Empty/failure/revoke states | `spotify-states.jsx` | Per-surface; revoke banner global on Browse |
-| Digest email | `digest-email.jsx` | `apps/api/src/emails/templates/spotify-digest.ts` |
-| Push alert rendering | `push-alert.jsx` | SW `showNotification` payload |
+| Surface                                      | Mock                       | Real location                                                                                                                                                                                         |
+| -------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Settings ▸ Connections section               | `connections-settings.jsx` | New `connections` section in `SettingsRoute(Desktop).tsx` NAV + `components/settings/connections/`                                                                                                    |
+| Connect entry + honesty rail + OAuth handoff | `connect-flow.jsx`         | Same folder; interstitial before `createExternalAccount`                                                                                                                                              |
+| Success + auto-watch sheet                   | `connect-flow.jsx`         | Sheet component; PATCH autoWatch on choice; dismissal = no write (highlight-only default)                                                                                                             |
+| Post-first-watch nudge (single-fire)         | `connect-flow.jsx`         | Watch-toggle success path; guarded by `user_profiles.spotifyNudgeSeenAt`; only when no connection row                                                                                                 |
+| "Following" chip on browse/hero/detail       | `follow-highlight.jsx`     | `EventCard` chip row / `HeroEventCard` eyebrow slot / detail attribution strip under Watching pill — driven by `followedArtists` in responses; neutral `--surface-3` + Spotify mark, never `--accent` |
+| Taste filter chip + upsell                   | `taste-filter.jsx`         | `FilterBar` (`filter-defs.ts` + new leading toggle chip); upsell reuses tier-picker paywall surface                                                                                                   |
+| Discovery shelf                              | `discovery-surface.jsx`    | Browse page, above the grid, premium + connected only                                                                                                                                                 |
+| Empty/failure/revoke states                  | `spotify-states.jsx`       | Per-surface; revoke banner global on Browse                                                                                                                                                           |
+| Digest email                                 | `digest-email.jsx`         | `apps/api/src/emails/templates/spotify-digest.ts`                                                                                                                                                     |
+| Push alert rendering                         | `push-alert.jsx`           | SW `showNotification` payload                                                                                                                                                                         |
 
 Cross-cutting build constraints (from the Green handoff — restated as requirements):
 
@@ -357,13 +376,13 @@ Cross-cutting build constraints (from the Green handoff — restated as requirem
 
 ## 13. Env vars (new)
 
-| Var | App | Purpose |
-|---|---|---|
-| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | api | Web Push VAPID pair (`npx web-push generate-vapid-keys`) |
-| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | web | Same public key, browser-side subscribe |
-| `VAPID_SUBJECT` | api | `mailto:hugh@featherweight.design` (push-service contact) |
-| `EMAIL_UNSUBSCRIBE_SECRET` | api | HMAC secret for unsubscribe tokens (32+ random bytes) |
-| `SPOTIFY_SYNC_DRY_RUN` | api (cron) | Optional; staging first-run safety |
+| Var                                      | App        | Purpose                                                   |
+| ---------------------------------------- | ---------- | --------------------------------------------------------- |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` | api        | Web Push VAPID pair (`npx web-push generate-vapid-keys`)  |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY`           | web        | Same public key, browser-side subscribe                   |
+| `VAPID_SUBJECT`                          | api        | `mailto:hugh@featherweight.design` (push-service contact) |
+| `EMAIL_UNSUBSCRIBE_SECRET`               | api        | HMAC secret for unsubscribe tokens (32+ random bytes)     |
+| `SPOTIFY_SYNC_DRY_RUN`                   | api (cron) | Optional; staging first-run safety                        |
 
 Spotify client ID/secret live only in the Clerk dashboard (E1). `.env.example` files + `docs/runbooks/production-launch.md` tables update in the relevant PRs.
 
@@ -377,4 +396,4 @@ Spotify client ID/secret live only in the Clerk dashboard (E1). `.env.example` f
 4. Push infra (VAPID + subscriptions + SW handler) is independent of Spotify and can land any time before the fan-out PR.
 5. Entitlements re-cut is small but load-bearing — its own early PR (it flips a visible surface for free users only when the taste chip ships, since nothing else reads the cell yet).
 6. Crawler fan-out hook last among backend PRs (needs schema + matching + push + auto-watch all live).
-7. #737 is *not* a dependency for anything here (notifications rows are write-only for now).
+7. #737 is _not_ a dependency for anything here (notifications rows are write-only for now).
