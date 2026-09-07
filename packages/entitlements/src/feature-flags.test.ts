@@ -46,6 +46,14 @@ describe('feature flag registry', () => {
     })
   })
 
+  // The case above pins the values, not the shape. A flag added to the registry
+  // but omitted from the defaults would leave the loader holding `undefined`.
+  it('gives every registry key a default', () => {
+    expect(Object.keys(featureFlagDefaults()).sort()).toEqual(
+      [...FEATURE_FLAG_KEYS].sort(),
+    )
+  })
+
   it('reverse-looks-up a flag by the entitlement it restricts', () => {
     expect(flagForEntitlement('crews')).toBe('crews')
     expect(flagForEntitlement('spotify-sync')).toBe('spotify-sync')
