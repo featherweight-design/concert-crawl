@@ -11,13 +11,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // makes the unauthenticated cases below exercise the real 401/403 path — the
 // real clerkMiddleware needs a secret key and 500s without one, which would let
 // the "flag is on" case pass for the wrong reason.
-const { authState } = vi.hoisted(() => ({
-  authState: {
-    current: null as {
-      userId: string
-      sessionClaims: { metadata?: { role?: string } }
-    } | null,
-  },
+type MockAuth = {
+  userId: string
+  sessionClaims: { metadata?: { role?: string } }
+} | null
+
+const { authState } = vi.hoisted((): { authState: { current: MockAuth } } => ({
+  authState: { current: null },
 }))
 
 vi.mock('@hono/clerk-auth', () => ({

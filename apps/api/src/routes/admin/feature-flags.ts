@@ -2,6 +2,7 @@ import { db, featureFlags } from '@concert-crawl/db'
 import {
   FEATURE_FLAGS,
   FEATURE_FLAG_KEYS,
+  featureFlagDefaults,
   isFeatureFlagKey,
   type AdminFeatureFlag,
 } from '@concert-crawl/entitlements'
@@ -9,10 +10,7 @@ import { getAuth } from '@hono/clerk-auth'
 import { Hono } from 'hono'
 import { z } from 'zod'
 
-import {
-  clearFeatureFlagCache,
-  loadFeatureFlags,
-} from '../../lib/feature-flags.js'
+import { clearFeatureFlagCache } from '../../lib/feature-flags.js'
 import type { AdminVariables } from './index.js'
 
 export const featureFlagsAdminRouter = new Hono<AdminVariables>()
@@ -20,11 +18,12 @@ export const featureFlagsAdminRouter = new Hono<AdminVariables>()
 const patchSchema = z.object({ enabled: z.boolean() })
 
 featureFlagsAdminRouter.get('/', async (ctx) => {
-  const [flags, rows] = await Promise.all([
-    loadFeatureFlags(),
-    db.select().from(featureFlags),
-  ])
+  // Reads storage directly rather than through the 30s-memoized loader: an
+  // admin toggling a flag has to see its own write, and mixing a cached
+  // `enabled` with a fresh `updatedAt` would show a row that never existed.
+  const rows = await db.select().from(featureFlags)
   const stored = new Map(rows.map((row) => [row.key, row]))
+  const defaults = featureFlagDefaults()
 
   const data: AdminFeatureFlag[] = FEATURE_FLAG_KEYS.map((key) => {
     const row = stored.get(key)
@@ -32,7 +31,7 @@ featureFlagsAdminRouter.get('/', async (ctx) => {
       key,
       label: FEATURE_FLAGS[key].label,
       description: FEATURE_FLAGS[key].description,
-      enabled: flags[key],
+      enabled: row?.enabled ?? defaults[key],
       updatedAt: row?.updatedAt.toISOString() ?? null,
       updatedBy: row?.updatedBy ?? null,
     }
