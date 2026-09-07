@@ -162,5 +162,9 @@ export const apiClient = {
 
 // publicApiClient — for unauthenticated public endpoints (events, venues)
 export const publicApiClient = {
-  get: <T>(path: string) => request<T>(path, null),
+  // `options` exists for server components, where Next.js applies its own
+  // caching to bare `fetch` calls. A caller whose data must not be frozen for
+  // the life of the build passes `next` or `cache` through to say so.
+  get: <T>(path: string, options?: RequestInit) =>
+    request<T>(path, null, options),
 }

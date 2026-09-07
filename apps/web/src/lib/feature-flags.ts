@@ -21,7 +21,14 @@ function isFeatureFlagView(value: unknown): value is FeatureFlagView {
 
 export const getFeatureFlags = async (): Promise<FeatureFlagView> => {
   try {
-    const raw = await publicApiClient.get<unknown>('/v1/flags')
+    // Without a directive Next.js caches a server-component fetch for the life
+    // of the build, which would freeze the flag map and make a flip in the
+    // admin UI never reach the server-rendered routes. 30s matches both the
+    // endpoint's own `max-age` and the client hook's `staleTime`, so a flip
+    // takes the same half-minute everywhere.
+    const raw = await publicApiClient.get<unknown>('/v1/flags', {
+      next: { revalidate: 30 },
+    })
     if (!isFeatureFlagView(raw)) {
       console.error('feature flags: unexpected payload')
       return featureFlagDefaults()

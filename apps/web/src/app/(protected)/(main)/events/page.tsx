@@ -271,14 +271,18 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   // The flag empties the list rather than gating each consumer: `lensCrew` is
   // resolved out of it, so an empty list drops the pill, the rail, the crew
   // name in the heading and the CrewLensList together, and skips the fetch.
-  const crewsEnabled = await isFeatureEnabled('crews')
-  const crewsPromise: Promise<CrewSummary[]> =
-    token && crewsEnabled
-      ? fetchCrews(token).catch((err: unknown) => {
-          console.error('[browse] crew lens list load failed', err)
-          return []
-        })
-      : Promise.resolve([])
+  // Chained rather than awaited: an `await` here would serialize the /v1/flags
+  // read ahead of everything below it, so the whole page waits on a call only
+  // the crew lens needs.
+  const crewsPromise: Promise<CrewSummary[]> = isFeatureEnabled('crews').then(
+    (crewsEnabled) =>
+      token && crewsEnabled
+        ? fetchCrews(token).catch((err: unknown) => {
+            console.error('[browse] crew lens list load failed', err)
+            return []
+          })
+        : [],
+  )
 
   const [
     eventsFetch,

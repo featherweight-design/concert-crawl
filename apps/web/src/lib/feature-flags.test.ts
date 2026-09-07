@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('server-only', () => ({}))
 
@@ -11,6 +11,12 @@ describe('server-side getFeatureFlags', () => {
   beforeEach(() => {
     get.mockReset()
     vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  // Vitest is not configured to restore mocks, so the console spy has to be
+  // torn down by hand or it stacks across tests and files.
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   it('returns the map the API gave it', async () => {
