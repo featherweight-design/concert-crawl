@@ -27,6 +27,7 @@ import type {
 import { apiLogger } from '../lib/logger.js'
 import { checkRateLimit } from '../lib/rate-limit.js'
 import { createSpotifyClient, SpotifyAuthError } from '../lib/spotify.js'
+import { requireFlag } from '../middleware/feature-flag.js'
 import { requireFeature } from '../middleware/entitlement.js'
 import {
   EMPTY_MATCH_SUMMARY,
@@ -62,6 +63,10 @@ const patchSchema = z
   )
 
 export const spotifyRouter = new Hono()
+
+// Release gate, mounted ahead of auth so the whole Spotify surface is absent
+// rather than merely refused while the flag is off.
+spotifyRouter.use('*', requireFlag('spotify-sync'))
 
 spotifyRouter.use('*', clerkMiddleware())
 

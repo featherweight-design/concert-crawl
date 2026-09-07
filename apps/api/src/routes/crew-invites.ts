@@ -34,6 +34,7 @@ import {
 } from '../lib/crews.js'
 import { crewInviteTokenSchema } from '../lib/crew-invite-token.js'
 import { notifyCrewMembershipChange } from '../lib/crew-notifications.js'
+import { requireFlag } from '../middleware/feature-flag.js'
 
 /**
  * 72 bits is only strong if enumeration is also expensive. Keyed on the Clerk
@@ -73,6 +74,10 @@ const spendTokenBudget = (ctx: Context, userId: string, event: string) => {
 type DeadReason = 'expired' | 'revoked' | 'unknown'
 
 export const crewInvitesRouter = new Hono()
+
+// Release gate, mounted ahead of auth so a flagged-off invite link is
+// indistinguishable from an unrouted path.
+crewInvitesRouter.use('*', requireFlag('crews'))
 
 crewInvitesRouter.use('*', clerkMiddleware())
 

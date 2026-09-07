@@ -30,6 +30,7 @@ import type {
   EventCrewGoing,
 } from '@concert-crawl/types'
 import { apiLogger } from '../lib/logger.js'
+import { requireFlag } from '../middleware/feature-flag.js'
 import { requireFeature } from '../middleware/entitlement.js'
 import type { EntitlementVariables } from '../middleware/entitlement.js'
 import {
@@ -85,6 +86,11 @@ const isUniqueViolation = (err: unknown): boolean => {
 }
 
 export const crewsRouter = new Hono<{ Variables: EntitlementVariables }>()
+
+// Release gate. Mounted first so a flagged-off crews API answers 404 and never
+// the 403 that requireFeature('crews') would give, which would advertise a
+// feature customers cannot reach.
+crewsRouter.use('*', requireFlag('crews'))
 
 crewsRouter.use('*', clerkMiddleware())
 
