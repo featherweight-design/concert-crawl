@@ -6,28 +6,15 @@
 // rather than a 401 or a 403 that would confirm the feature exists.
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { db, featureFlags } from '@concert-crawl/db'
-
 import { createApp } from '../app.js'
-import { clearFeatureFlagCache } from '../lib/feature-flags.js'
+import { clearTables } from '../test/helpers/seed.js'
+import { setFeatureFlag } from '../test/helpers/feature-flags.js'
 
 const app = createApp()
 
-const setFlag = async (key: string, enabled: boolean): Promise<void> => {
-  await db
-    .insert(featureFlags)
-    .values({ key, enabled, updatedBy: 'test', updatedAt: new Date() })
-    .onConflictDoUpdate({
-      target: featureFlags.key,
-      set: { enabled, updatedAt: new Date(), updatedBy: 'test' },
-    })
-  clearFeatureFlagCache()
-}
-
 describe('feature flag route gating', () => {
   beforeEach(async () => {
-    await db.delete(featureFlags)
-    clearFeatureFlagCache()
+    await clearTables()
   })
 
   // Asserted per route, not per router: a router-level mount that silently
@@ -61,7 +48,7 @@ describe('feature flag route gating', () => {
   })
 
   it('stops answering 404 once the flag is turned on', async () => {
-    await setFlag('crews', true)
+    await setFeatureFlag('crews', true)
     const res = await app.request('/v1/crews')
     // Now reaches auth, which rejects the unauthenticated request. The point
     // is only that the flag gate no longer swallows it.
@@ -71,8 +58,7 @@ describe('feature flag route gating', () => {
 
 describe('GET /v1/flags', () => {
   beforeEach(async () => {
-    await db.delete(featureFlags)
-    clearFeatureFlagCache()
+    await clearTables()
   })
 
   it('returns the merged flag map without authentication', async () => {
@@ -99,7 +85,7 @@ describe('GET /v1/flags', () => {
   })
 
   it('reflects a stored override', async () => {
-    await setFlag('crews', true)
+    await setFeatureFlag('crews', true)
     const res = await app.request('/v1/flags')
     const body = await res.json()
     expect(body.data.crews).toBe(true)

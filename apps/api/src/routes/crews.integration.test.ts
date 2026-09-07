@@ -41,6 +41,7 @@ import {
   seedUserProfile,
   seedVenue,
 } from '../test/helpers/seed.js'
+import { setFeatureFlag } from '../test/helpers/feature-flags.js'
 import { ENTITLEMENT_REQUIRED_CODE } from '../middleware/entitlement.js'
 import {
   CREW_HANDOFF_REQUIRED_CODE,
@@ -114,6 +115,8 @@ describe('/v1/crews', () => {
     await testDb.execute(
       sql`TRUNCATE subscriptions, gifted_comps, user_billing`,
     )
+    // Crews ships flagged off, so every route here 404s until the gate opens.
+    await setFeatureFlag('crews', true)
   })
 
   describe('auth and entitlement shape', () => {

@@ -37,6 +37,7 @@ import {
 } from '@concert-crawl/db'
 import type { GuideChipKey } from '@concert-crawl/types'
 import { artistSlug, deriveSourceCategory } from '@concert-crawl/types'
+import { clearFeatureFlagCache } from '../../lib/feature-flags.js'
 import { testDb } from './db.js'
 
 export async function clearTables(): Promise<void> {
@@ -48,10 +49,14 @@ export async function clearTables(): Promise<void> {
     await tx.execute(
       // `subscriptions` is in the list because entitlement-gated routes now
       // read it: a premium row left behind makes a later 403 test pass or fail
-      // purely on file order.
-      sql`TRUNCATE notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, artists, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking, crews, subscriptions, user_notification_preferences RESTART IDENTITY CASCADE`,
+      // purely on file order. `feature_flags` is there for the same reason —
+      // a leftover enabled row silently satisfies a later suite's release gate.
+      sql`TRUNCATE notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, artists, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking, crews, subscriptions, user_notification_preferences, feature_flags RESTART IDENTITY CASCADE`,
     )
   })
+  // The loader memoizes for 30s in-process, and integration tests share one
+  // process, so truncating the table alone leaves the old answer live.
+  clearFeatureFlagCache()
 }
 
 export async function seedUserEvent(

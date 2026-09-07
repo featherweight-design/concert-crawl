@@ -44,7 +44,10 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
   },
 }
 
-export const isFeatureFlagKey = (value: string): value is FeatureFlagKey =>
+// Takes `unknown` so it can guard values arriving from real boundaries — DB
+// rows, request bodies, env vars — without a cast at each call site.
+export const isFeatureFlagKey = (value: unknown): value is FeatureFlagKey =>
+  typeof value === 'string' &&
   Object.prototype.hasOwnProperty.call(FEATURE_FLAGS, value)
 
 export const FEATURE_FLAG_KEYS: readonly FeatureFlagKey[] =

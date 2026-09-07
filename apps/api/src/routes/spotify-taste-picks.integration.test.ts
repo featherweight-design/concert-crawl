@@ -40,6 +40,7 @@ import {
   seedVenue,
   seedEvent,
 } from '../test/helpers/seed.js'
+import { setFeatureFlag } from '../test/helpers/feature-flags.js'
 
 const app = createApp()
 
@@ -110,6 +111,8 @@ describe('GET /v1/spotify/taste-picks (#763 PR 8)', () => {
       sql`TRUNCATE subscriptions, gifted_comps, user_billing`,
     )
     authState.current = null
+    // Spotify ships flagged off, so every route here 404s until the gate opens.
+    await setFeatureFlag('spotify-sync', true)
   })
 
   it('rejects anonymous requests with 401', async () => {

@@ -81,6 +81,7 @@ import {
 } from '@concert-crawl/db'
 import { createApp } from '../app.js'
 import { clearTables, seedVenue, seedEvent } from '../test/helpers/seed.js'
+import { setFeatureFlag } from '../test/helpers/feature-flags.js'
 import { testDb } from '../test/helpers/db.js'
 
 const app = createApp()
@@ -226,6 +227,8 @@ beforeEach(async () => {
   spotifyState.top = []
   spotifyState.failStatus = null
   await clearTables()
+  // Spotify ships flagged off, so every route here 404s until the gate opens.
+  await setFeatureFlag('spotify-sync', true)
 })
 
 describe('auth guards', () => {

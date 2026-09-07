@@ -46,6 +46,7 @@ import {
   seedUserProfile,
   seedVenue,
 } from '../test/helpers/seed.js'
+import { setFeatureFlag } from '../test/helpers/feature-flags.js'
 import { CREW_FULL_CODE, CREW_MEMBER_CAP } from '../lib/crews.js'
 import { generateCrewInviteToken } from '../lib/crew-invite-token.js'
 
@@ -117,6 +118,8 @@ describe('crew invites', () => {
   beforeEach(async () => {
     authState.current = null
     await clearTables()
+    // Crews ships flagged off, so every route here 404s until the gate opens.
+    await setFeatureFlag('crews', true)
   })
 
   describe('minting (POST /v1/crews/:crewId/invites)', () => {
