@@ -1,3 +1,10 @@
+# [1.287.0](https://github.com/HartiganHM/concert-crawl/compare/v1.286.0...v1.287.0) (2026-09-07)
+
+
+### Features
+
+* **web:** move the bill's Follow-all into the header, fold the shelf badge into the size table ([#1683](https://github.com/HartiganHM/concert-crawl/issues/1683)) ([686b111](https://github.com/HartiganHM/concert-crawl/commit/686b111a0a518a3dd877d819709b24fe62d50ff6))
+
 # [1.286.0](https://github.com/HartiganHM/concert-crawl/compare/v1.285.4...v1.286.0) (2026-09-07)
 
 
