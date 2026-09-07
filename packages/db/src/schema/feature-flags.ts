@@ -8,3 +8,6 @@ export const featureFlags = pgTable('feature_flags', {
     .defaultNow(),
   updatedBy: text('updated_by').notNull(),
 })
+
+export type FeatureFlagRow = typeof featureFlags.$inferSelect
+export type NewFeatureFlagRow = typeof featureFlags.$inferInsert

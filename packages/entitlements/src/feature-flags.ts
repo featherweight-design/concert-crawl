@@ -44,14 +44,11 @@ export const FEATURE_FLAGS: Record<FeatureFlagKey, FeatureFlagDefinition> = {
   },
 }
 
-export const FEATURE_FLAG_KEYS: readonly FeatureFlagKey[] = [
-  'spotify-sync',
-  'crews',
-  'release-notes',
-]
-
 export const isFeatureFlagKey = (value: string): value is FeatureFlagKey =>
   Object.prototype.hasOwnProperty.call(FEATURE_FLAGS, value)
+
+export const FEATURE_FLAG_KEYS: readonly FeatureFlagKey[] =
+  Object.keys(FEATURE_FLAGS).filter(isFeatureFlagKey)
 
 /** The map every reader starts from before merging stored rows over it. */
 export const featureFlagDefaults = (): Record<FeatureFlagKey, boolean> => ({
