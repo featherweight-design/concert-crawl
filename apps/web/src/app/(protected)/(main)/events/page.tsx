@@ -9,7 +9,7 @@ import type {
   VenuePublic,
   WatchingShow,
 } from '@concert-crawl/types'
-import { publicApiClient, apiClient, ApiError } from '@/lib/api'
+import { publicApiClient, apiClient } from '@/lib/api'
 import { isScaRegion } from '@/lib/sca-region'
 import { isScopeRejection, scopeRetryToken } from '@/lib/scope-rejection'
 import { auth } from '@/lib/auth'
@@ -240,16 +240,15 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   // SSR seed for the "Based on your taste" shelf (#763 staging r4): fetch in
   // parallel with the events list so the shelf paints in the same HTML pass
   // instead of popping in after the client entitlement + picks round-trips.
-  // 401/403 is the expected non-entitled path; anything else is logged so
-  // real outages stay visible. Every failure degrades to undefined → the
-  // shelf falls back to its client fetch.
+  // A declined scope is the expected non-entitled path, and with the flag off
+  // the whole Spotify router is absent, so 404 belongs there too; anything else
+  // is logged so real outages stay visible. Every failure degrades to
+  // undefined → the shelf falls back to its client fetch.
   const tastePicksPromise: Promise<SpotifyTastePicksResponse | undefined> =
     view === 'list' && token
       ? fetchTastePicks(token).catch((err: unknown) => {
-          const expected =
-            err instanceof ApiError &&
-            (err.status === 401 || err.status === 403)
-          if (!expected) console.error('taste picks SSR prefetch failed', err)
+          if (!isScopeRejection(err))
+            console.error('taste picks SSR prefetch failed', err)
           return undefined
         })
       : Promise.resolve(undefined)
