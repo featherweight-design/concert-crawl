@@ -1,3 +1,10 @@
+# [1.283.0](https://github.com/HartiganHM/concert-crawl/compare/v1.282.0...v1.283.0) (2026-09-07)
+
+
+### Features
+
+* **api:** skip the Spotify weekly digest when spotify-sync is off ([73764ce](https://github.com/HartiganHM/concert-crawl/commit/73764ce0e640b8a28cf1125603a81f889af99060))
+
 # [1.282.0](https://github.com/HartiganHM/concert-crawl/compare/v1.281.0...v1.282.0) (2026-09-07)
 
 
