@@ -15,8 +15,16 @@ vi.mock('./OAuthHandoffSheet', () => ({
     open ? <div data-testid="handoff-sheet" /> : null,
 }))
 
+// Hoisted: `vi.mock` runs before module-scope consts, so the spy has to be
+// created inside the hoisted block to be visible to the factory.
+const { useFeatureFlag } = vi.hoisted(() => ({ useFeatureFlag: vi.fn() }))
+vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }))
+
 beforeEach(() => {
   connectionData = undefined
+  // On by default, so every pre-flag assertion below keeps asserting the
+  // behaviour it was written for.
+  useFeatureFlag.mockReturnValue({ isLoading: false, enabled: true })
 })
 
 import { SpotifyStatusBanner } from './SpotifyStatusBanner'
@@ -71,5 +79,12 @@ describe('SpotifyStatusBanner', () => {
     expect(screen.queryByTestId('handoff-sheet')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: COPY.cta }))
     expect(screen.getByTestId('handoff-sheet')).toBeTruthy()
+  })
+
+  it('renders nothing with spotify-sync off, even on a cached broken status', () => {
+    useFeatureFlag.mockReturnValue({ isLoading: false, enabled: false })
+    connectionData = { ...BROKEN_BASE, status: 'revoked' }
+    const { container } = render(<SpotifyStatusBanner />)
+    expect(container.firstChild).toBeNull()
   })
 })

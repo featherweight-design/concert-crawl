@@ -14,11 +14,13 @@
 
 import { ToggleSwitch } from '../connections/ToggleSwitch'
 import { useCrews, useCrewMuteToggle } from '@/lib/queries/use-crew-mutes'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 import { NOTIFICATIONS_COPY } from './definitions/copy'
 
 const COPY = NOTIFICATIONS_COPY.crew
 
 export const CrewActivityBlock = () => {
+  const { enabled: crewsEnabled } = useFeatureFlag('crews')
   const { data: crews, isLoading, isError } = useCrews()
   const toggle = useCrewMuteToggle()
 
@@ -62,6 +64,10 @@ export const CrewActivityBlock = () => {
       })}
     </div>
   )
+
+  // Gated here rather than at the three mount sites in NotificationsSection,
+  // which render it from separate error, loading and settled branches.
+  if (!crewsEnabled) return null
 
   return (
     <div className="flex flex-col gap-2">

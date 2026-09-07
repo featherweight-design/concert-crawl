@@ -7,6 +7,7 @@
 // handoff sheet; a healthy or absent connection renders nothing.
 
 import { useState } from 'react'
+import { useFeatureFlag } from '@/lib/queries/use-feature-flags'
 import { useSpotifyConnection } from '@/lib/queries/use-spotify-connection'
 import { SpotifyLogo } from '@/components/brand/spotify-logo'
 import { SPOTIFY_COPY } from './definitions/copy'
@@ -15,10 +16,19 @@ import { OAuthHandoffSheet } from './OAuthHandoffSheet'
 const COPY = SPOTIFY_COPY.revokeBanner
 
 export const SpotifyStatusBanner = () => {
+  const { enabled: spotifyEnabled } = useFeatureFlag('spotify-sync')
   const { data } = useSpotifyConnection()
   const [handoffOpen, setHandoffOpen] = useState(false)
 
-  if (!data || (data.status !== 'error' && data.status !== 'revoked')) {
+  // The connection query 404s with the flag off, so this would usually fall
+  // through on its own. The explicit gate covers the case react-query still
+  // holds a broken-status payload cached from before the flag flipped, which
+  // would otherwise offer a "Reconnect" that leads to a gated sheet.
+  if (
+    !spotifyEnabled ||
+    !data ||
+    (data.status !== 'error' && data.status !== 'revoked')
+  ) {
     return null
   }
 

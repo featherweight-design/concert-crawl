@@ -69,6 +69,11 @@ vi.mock('@/components/consumer/tier-picker/TierPickerSheet', () => ({
   TierPickerSheet: () => null,
 }))
 
+// Hoisted: `vi.mock` runs before module-scope consts, so the spy has to be
+// created inside the hoisted block to be visible to the factory.
+const { useFeatureFlag } = vi.hoisted(() => ({ useFeatureFlag: vi.fn() }))
+vi.mock('@/lib/queries/use-feature-flags', () => ({ useFeatureFlag }))
+
 import { CrewActivityBlock } from '../CrewActivityBlock'
 import { NotificationsSection } from '../NotificationsSection'
 import { NOTIFICATIONS_COPY } from '../definitions/copy'
@@ -100,6 +105,9 @@ beforeEach(() => {
   useCrewsMock.mockReset()
   muteMutateMock.mockReset()
   useNotificationPreferencesMock.mockReset()
+  // On by default, so every pre-flag assertion below keeps asserting the
+  // behaviour it was written for.
+  useFeatureFlag.mockReturnValue({ isLoading: false, enabled: true })
   useCrewsMock.mockReturnValue({
     data: [crew()],
     isLoading: false,
@@ -223,6 +231,17 @@ describe('CrewActivityBlock inside NotificationsSection', () => {
     expect(
       screen.getByRole('switch', { name: COPY.rowLabel('The Regulars') }),
     ).not.toBeNull()
+  })
+
+  it('renders nothing with crews off, on every NotificationsSection branch', () => {
+    useFeatureFlag.mockReturnValue({ isLoading: false, enabled: false })
+    useNotificationPreferencesMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+    })
+    render(withClient(<NotificationsSection />))
+    expect(screen.queryByText(COPY.heading)).toBeNull()
   })
 
   it('survives a preferences outage', () => {
