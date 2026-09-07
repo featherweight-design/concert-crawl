@@ -1,3 +1,10 @@
+## [1.285.2](https://github.com/HartiganHM/concert-crawl/compare/v1.285.1...v1.285.2) (2026-09-07)
+
+
+### Bug Fixes
+
+* **api:** hide delisted events from Watching and upcoming Concerts ([#1676](https://github.com/HartiganHM/concert-crawl/issues/1676)) ([a7caee1](https://github.com/HartiganHM/concert-crawl/commit/a7caee1da952de98aabe8c772cbd3e005269c8eb))
+
 ## [1.285.1](https://github.com/HartiganHM/concert-crawl/compare/v1.285.0...v1.285.1) (2026-09-07)
 
 
