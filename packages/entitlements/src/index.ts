@@ -7,6 +7,18 @@ export {
   type PlanDerivationInput,
 } from './plan-state.js'
 
+export {
+  FEATURE_FLAGS,
+  FEATURE_FLAG_KEYS,
+  featureFlagDefaults,
+  flagForEntitlement,
+  isFeatureFlagKey,
+  type AdminFeatureFlag,
+  type FeatureFlagDefinition,
+  type FeatureFlagKey,
+  type FeatureFlagView,
+} from './feature-flags.js'
+
 export type PremiumFeature =
   | 'watching'
   | 'concert-history'
