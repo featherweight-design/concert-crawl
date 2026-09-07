@@ -610,6 +610,13 @@
       "when": 1787616000000,
       "tag": "0086_feature_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1788739200000,
+      "tag": "0087_hide_not_an_artist_rows",
+      "breakpoints": true
     }
   ]
 }

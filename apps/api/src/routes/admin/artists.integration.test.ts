@@ -547,6 +547,68 @@ describe('admin artists routes', () => {
       expect(body.data.spotifyArtistId).toBeNull()
     })
 
+    // The ruling and the visibility switch record the same fact, but only
+    // `hidden` is read by the public surfaces — so before this, a row ruled
+    // not-an-artist kept its follow button, its slot on the bill and its page.
+    it('hides a row ruled not-an-artist', async () => {
+      const id = await seedArtist({
+        canonicalName: 'son little: cityfolk tour 2026',
+        matchStatus: 'ambiguous',
+      })
+
+      const res = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({
+          spotifyArtistId: null,
+          matchStatus: 'not_an_artist',
+        }),
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.data.matchStatus).toBe('not_an_artist')
+      expect(body.data.hidden).toBe(true)
+    })
+
+    it('leaves visibility alone on any other ruling', async () => {
+      const id = await seedArtist({
+        canonicalName: 'nirvana',
+        matchStatus: 'ambiguous',
+      })
+
+      const res = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ spotifyArtistId: 'sp_nirvana' }),
+      })
+      const body = await res.json()
+
+      expect(body.data.hidden).toBe(false)
+    })
+
+    // Deriving the switch is one-directional: unhiding is its own admin action
+    // on its own endpoint, so re-matching must not quietly restore a page an
+    // admin took down.
+    it('leaves a hidden row hidden when it is re-matched', async () => {
+      const id = await seedArtist({
+        canonicalName: 'son little: cityfolk tour 2026',
+        matchStatus: 'not_an_artist',
+        hidden: true,
+      })
+
+      const res = await app.request(`/v1/admin/artists/${id}`, {
+        method: 'PATCH',
+        headers: ADMIN_HEADERS,
+        body: JSON.stringify({ spotifyArtistId: 'sp_son_little' }),
+      })
+      const body = await res.json()
+
+      expect(res.status).toBe(200)
+      expect(body.data.matchStatus).toBe('matched')
+      expect(body.data.hidden).toBe(true)
+    })
+
     it('clears the photo when a matched row is demoted', async () => {
       const id = await seedArtist({
         canonicalName: 'nirvana',

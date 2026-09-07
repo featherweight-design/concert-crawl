@@ -315,6 +315,13 @@ artistsAdminRouter.patch(
         matchAttempts: 0,
         updatedAt: new Date(),
         ...photoFields,
+        // `not_an_artist` and `hidden` say the same thing about the same row —
+        // there is no act here — but only `hidden` is read by the public
+        // surfaces, so a row ruled not-an-artist kept its follow button, its
+        // slot on the bill and its own page. Deriving the switch from the
+        // verdict is one-directional on purpose: re-matching a row later does
+        // not un-hide it, because unhiding is its own deliberate admin action.
+        ...(nextStatus === 'not_an_artist' ? { hidden: true } : {}),
       })
       .where(eq(artists.id, id))
       .returning()
