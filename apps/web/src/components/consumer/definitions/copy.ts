@@ -1034,11 +1034,13 @@ export const CONSUMER_COPY = {
 
   // ── Route not-found ─────────────────────────────────────────────
   // Shown when a route calls notFound() — an artist, venue or event slug that
-  // isn't in the database. Deliberately separate from `error`: nothing broke,
-  // so the page offers a way onward rather than a retry.
+  // isn't in the database, and now also any route hidden behind an off feature
+  // flag. Deliberately separate from `error`: nothing broke, so the page offers
+  // a way onward rather than a retry. The body stays route-agnostic for that
+  // reason: a flagged-off /crews is not a show that came off the calendar.
   notFound: {
     heading: 'Nothing here.',
-    body: "That page doesn't exist. The link may be old, or the show may have come off the calendar.",
+    body: "That page doesn't exist. The link may be old, or we may have moved it.",
     browseButton: 'Browse shows',
   },
 

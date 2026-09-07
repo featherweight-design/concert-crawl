@@ -112,7 +112,10 @@ export const FeatureFlagControl = ({ initial }: FeatureFlagControlProps) => {
               </span>
               <span style={{ fontSize: 12, color: 'var(--fg-muted)' }}>
                 {flag.updatedAt ? (
-                  <RelTime iso={flag.updatedAt} />
+                  <>
+                    {`${COPY.changedPrefix} `}
+                    <RelTime iso={flag.updatedAt} />
+                  </>
                 ) : (
                   COPY.neverToggled
                 )}

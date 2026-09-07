@@ -2290,6 +2290,7 @@ export const ADMIN_COPY = {
       'Turn a feature off and it disappears from every surface, and its API routes answer 404. A flag can only hide a feature, never grant one past its plan.',
     stateOn: 'On',
     stateOff: 'Off',
+    changedPrefix: 'Changed',
     neverToggled: 'Never changed',
     toggleOn: 'Turn on',
     toggleOff: 'Turn off',
