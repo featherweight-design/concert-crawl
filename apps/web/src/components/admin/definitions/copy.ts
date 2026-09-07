@@ -2283,6 +2283,27 @@ export const ADMIN_COPY = {
     },
   },
 
+  featureFlags: {
+    sectionEyebrow: 'RELEASE',
+    sectionTitle: 'Feature flags',
+    sectionSubtitle:
+      'Turn a feature off and it disappears from every surface, and its API routes answer 404. A flag can only hide a feature, never grant one past its plan.',
+    stateOn: 'On',
+    stateOff: 'Off',
+    neverToggled: 'Never changed',
+    toggleOn: 'Turn on',
+    toggleOff: 'Turn off',
+    confirmTitleOn: 'Turn this on?',
+    confirmTitleOff: 'Turn this off?',
+    confirmBodyOn:
+      'Customers will see this feature everywhere it appears, subject to their plan.',
+    confirmBodyOff:
+      'Customers will stop seeing this feature everywhere, and its API routes will answer 404. Existing data is left alone.',
+    confirmCancel: 'Cancel',
+    confirmAccept: 'Save',
+    loadError: 'Could not save the flag. Try again.',
+  },
+
   pagination: {
     navAriaLabel: 'Pagination',
     firstAriaLabel: 'First page',

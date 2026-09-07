@@ -66,6 +66,13 @@ export const NAV_V2: NavItem[] = [
     section: 'account',
   },
   {
+    key: 'feature-flags',
+    label: 'Feature flags',
+    href: '/admin/feature-flags',
+    iconName: 'ToggleLeft',
+    section: 'account',
+  },
+  {
     key: 'users',
     label: 'Users',
     href: '/admin/users',
