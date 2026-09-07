@@ -1,3 +1,16 @@
+# [1.279.0](https://github.com/HartiganHM/concert-crawl/compare/v1.278.0...v1.279.0) (2026-09-07)
+
+
+### Bug Fixes
+
+* **db:** classify feature_flags in the user-data registry ([098b3ee](https://github.com/HartiganHM/concert-crawl/commit/098b3ee994f1cc22cabe2815ddf61ea122ec40b3))
+
+
+### Features
+
+* **db:** add feature_flags table ([4d8c619](https://github.com/HartiganHM/concert-crawl/commit/4d8c61980448e52ebe3e80b257028bc8f558c26f))
+* **entitlements:** add feature flag registry ([e0347a9](https://github.com/HartiganHM/concert-crawl/commit/e0347a9fa5bf12ecd152bb913216944ceb2171c1))
+
 # [1.278.0](https://github.com/HartiganHM/concert-crawl/compare/v1.277.0...v1.278.0) (2026-09-05)
 
 
