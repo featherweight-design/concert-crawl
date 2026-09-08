@@ -1,3 +1,10 @@
+# [1.288.0](https://github.com/HartiganHM/concert-crawl/compare/v1.287.0...v1.288.0) (2026-09-08)
+
+
+### Features
+
+* **web:** link each act on the bill to its artist page ([#1684](https://github.com/HartiganHM/concert-crawl/issues/1684)) ([579ae35](https://github.com/HartiganHM/concert-crawl/commit/579ae35bb238f33b86432b5c754c2fa48d275242))
+
 # [1.287.0](https://github.com/HartiganHM/concert-crawl/compare/v1.286.0...v1.287.0) (2026-09-07)
 
 
