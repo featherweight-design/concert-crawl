@@ -10,6 +10,7 @@ import { loadFollowedCanonicalNames } from '../lib/artist-follows.js'
 import {
   billedCanonicalNames,
   billsAnyCanonicalName,
+  displayHeadliner,
 } from '../lib/event-billing.js'
 import { todayInTimezone } from '../lib/time.js'
 
@@ -25,7 +26,7 @@ searchRouter.get('/popular', async (ctx) => {
     .select({
       id: events.id,
       title: events.title,
-      artist: events.artist,
+      artist: displayHeadliner(),
       date: events.date,
       ticketPriceMin: events.ticketPriceMin,
       watcherCount,

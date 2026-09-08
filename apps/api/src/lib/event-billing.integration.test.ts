@@ -7,6 +7,7 @@ import {
   billedCanonicalNames,
   billsAnyCanonicalName,
   billsCanonicalName,
+  displayHeadliner,
   portraitCanonicalName,
 } from './event-billing.js'
 
@@ -196,6 +197,78 @@ describe('event billing predicates', () => {
       })
 
       expect(await portraitFor('Wax Harbour')).toBe('wax harbour')
+    })
+  })
+
+  describe('displayHeadliner', () => {
+    const headlinerFor = async (title: string): Promise<string | null> => {
+      const rows = await testDb
+        .select({ name: displayHeadliner() })
+        .from(events)
+        .where(eq(events.title, title))
+      const row = rows[0]
+      return row === undefined ? null : row.name
+    }
+
+    it('prints the derived act rather than the tour it was billed as', async () => {
+      await seedEvent(venueId, {
+        title: 'Son Little: CityFolk Tour 2026',
+        artist: 'Son Little: CityFolk Tour 2026',
+        canonicalArtist: 'son little: cityfolk tour 2026',
+        headliners: ['Son Little'],
+        canonicalHeadliners: ['son little'],
+        canonicalSupporting: ['tonina'],
+      })
+
+      expect(await headlinerFor('Son Little: CityFolk Tour 2026')).toBe(
+        'Son Little',
+      )
+    })
+
+    // The ladder writes `headliners` wholesale, so a co-headline bill has an
+    // ordering we do not trust. `artist` on those rows already names both.
+    it('keeps the raw column on a co-headline bill', async () => {
+      await seedEvent(venueId, {
+        title: 'Knocked Loose & Denzel Curry',
+        artist: 'Knocked Loose & Denzel Curry',
+        canonicalArtist: 'knocked loose & denzel curry',
+        headliners: ['Denzel Curry', 'Knocked Loose'],
+        canonicalHeadliners: ['denzel curry', 'knocked loose'],
+        canonicalSupporting: [],
+      })
+
+      expect(await headlinerFor('Knocked Loose & Denzel Curry')).toBe(
+        'Knocked Loose & Denzel Curry',
+      )
+    })
+
+    it('keeps the raw column on a row the ladder never saw', async () => {
+      await seedEvent(venueId, {
+        title: 'Wax Harbour',
+        artist: 'Wax Harbour',
+        canonicalArtist: 'wax harbour',
+        headliners: null,
+        canonicalHeadliners: null,
+        canonicalSupporting: null,
+      })
+
+      expect(await headlinerFor('Wax Harbour')).toBe('Wax Harbour')
+    })
+
+    // An empty array is the recurring-event answer (bar bingo, karaoke): the
+    // ladder read the listing and found no act. There is no better name to
+    // print than what the venue billed.
+    it('keeps the raw column when the ladder found no act', async () => {
+      await seedEvent(venueId, {
+        title: 'Bass Bingo',
+        artist: 'Bass Bingo',
+        canonicalArtist: 'bass bingo',
+        headliners: [],
+        canonicalHeadliners: [],
+        canonicalSupporting: [],
+      })
+
+      expect(await headlinerFor('Bass Bingo')).toBe('Bass Bingo')
     })
   })
 })

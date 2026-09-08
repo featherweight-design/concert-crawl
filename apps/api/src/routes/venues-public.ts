@@ -34,7 +34,10 @@ import {
   RESALE_VENDOR_VALUES,
 } from '@concert-crawl/types'
 import { todayInTimezone } from '../lib/time.js'
-import { portraitCanonicalName } from '../lib/event-billing.js'
+import {
+  displayHeadliner,
+  portraitCanonicalName,
+} from '../lib/event-billing.js'
 
 // Matches history.ts — "already happened" is a Mountain Time calendar-day call,
 // not a UTC one, or a late show reads as past hours before it starts.
@@ -228,7 +231,7 @@ venuesPublicRouter.get(
         id: events.id,
         venueId: events.venueId,
         title: events.title,
-        artist: events.artist,
+        artist: displayHeadliner(),
         supportingArtists: events.supportingArtists,
         tourName: events.tourName,
         date: events.date,

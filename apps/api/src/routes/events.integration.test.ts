@@ -322,6 +322,44 @@ describe('GET /v1/events/:id — integration', () => {
       expect(body.data.supportingArtistSlugs).toEqual([null, 'second-opener'])
     })
 
+    // The tour-name defect: the venue billed the night under a string that is
+    // not an act, so `artist` (and `canonical_artist` under it, which is the
+    // dedup key and cannot move) both read the tour. The ladder put the real
+    // act in `headliners`, and the title block must credit that one — the raw
+    // string resolves to no artist row, which used to cost the bill its
+    // headliner entirely.
+    it('credits the derived headliner, not the tour string it was billed as', async () => {
+      const venue = await seedVenue({ slug: 'tour-name-venue' })
+      await seedArtist({ name: 'Son Little' })
+      await seedArtist({ name: 'Tonina' })
+
+      const event = await seedEvent(venue.id, {
+        title: 'Son Little: CityFolk Tour 2026',
+        artist: 'Son Little: CityFolk Tour 2026',
+        canonicalArtist: 'son little: cityfolk tour 2026',
+        headliners: ['Son Little'],
+        canonicalHeadliners: ['son little'],
+        supportingArtists: ['Tonina'],
+        canonicalSupporting: ['tonina'],
+        date: '2027-07-05',
+      })
+
+      const res = await app.request(`/v1/events/${event.id}`)
+      const body = (await res.json()) as {
+        data: {
+          title: string
+          artist: string
+          artistSlug: string | null
+          supportingArtistSlugs: Array<string | null> | null
+        }
+      }
+      expect(body.data.artist).toBe('Son Little')
+      expect(body.data.artistSlug).toBe('son-little')
+      expect(body.data.supportingArtistSlugs).toEqual(['tonina'])
+      // The event's own title is untouched — only who is billed on it moved.
+      expect(body.data.title).toBe('Son Little: CityFolk Tour 2026')
+    })
+
     it('returns a null headliner slug when the artists projection has no row', async () => {
       const venue = await seedVenue({ slug: 'unresolved-venue' })
       const event = await seedEvent(venue.id, {

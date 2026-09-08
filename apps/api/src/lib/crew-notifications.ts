@@ -28,6 +28,7 @@ import {
   venues,
 } from '@concert-crawl/db'
 import type { UserNotificationCategory } from '@concert-crawl/push'
+import { displayHeadliner } from './event-billing.js'
 import { apiLogger } from './logger.js'
 import {
   CREW_NOTIFICATION_ACTOR_FALLBACK,
@@ -172,7 +173,7 @@ export async function notifyCrewGoing(input: {
         input.actorUserId,
       ),
       db
-        .select({ artist: events.artist, venue: venues.name })
+        .select({ artist: displayHeadliner(), venue: venues.name })
         .from(events)
         .leftJoin(venues, eq(events.venueId, venues.id))
         .where(eq(events.id, input.eventId))

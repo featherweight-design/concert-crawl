@@ -15,7 +15,10 @@ import {
 import { parsePrice } from '../lib/price.js'
 import { releaseWatch } from '../lib/user-events.js'
 import { resolveArtistSlugs } from '../lib/artist-slugs.js'
-import { portraitCanonicalName } from '../lib/event-billing.js'
+import {
+  displayHeadliner,
+  portraitCanonicalName,
+} from '../lib/event-billing.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -48,7 +51,7 @@ watchingRouter.get('/', async (ctx) => {
       savedPrice: userEvents.savedPrice,
       savedAt: userEvents.createdAt,
       attendingAt: userEvents.attendingAt,
-      artist: events.artist,
+      artist: displayHeadliner(),
       date: events.date,
       showTime: events.showTime,
       ticketUrl: events.ticketUrl,
@@ -178,7 +181,10 @@ watchingRouter.put('/:eventId', async (ctx) => {
   // Delisted events are 404 for the same reason. The release branch above runs
   // first, so un-watching a show that went missing while watched still works.
   const [eventRow] = await db
-    .select({ ticketPriceMin: events.ticketPriceMin, artist: events.artist })
+    .select({
+      ticketPriceMin: events.ticketPriceMin,
+      artist: displayHeadliner(),
+    })
     .from(events)
     .where(
       and(

@@ -34,6 +34,7 @@ import {
   billedCanonicalNames,
   billsAnyCanonicalName,
   billsCanonicalName,
+  displayHeadliner,
   portraitCanonicalName,
 } from './event-billing.js'
 import {
@@ -312,7 +313,7 @@ export async function getTastePicks(
   const rows = await db
     .select({
       id: events.id,
-      artist: events.artist,
+      artist: displayHeadliner(),
       title: events.title,
       imageUrl: events.imageUrl,
       date: events.date,

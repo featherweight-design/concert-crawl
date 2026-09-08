@@ -24,6 +24,7 @@ import type {
   HandleAvailabilityResponse,
   Tier,
 } from '@concert-crawl/types'
+import { displayHeadliner } from '../lib/event-billing.js'
 import { apiLogger } from '../lib/logger.js'
 import { deleteUserData } from '../lib/user-data.js'
 import { isClerkNotFound } from '../lib/clerk-errors.js'
@@ -356,7 +357,7 @@ usersRouter.get('/me/submissions', async (ctx) => {
     .select({
       id: priceSubmissions.id,
       eventId: priceSubmissions.eventId,
-      artist: events.artist,
+      artist: displayHeadliner(),
       venue: venues.name,
       date: events.date,
       priceMin: priceSubmissions.priceMin,

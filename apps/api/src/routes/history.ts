@@ -32,6 +32,7 @@ import { db, userEvents, events, venues } from '@concert-crawl/db'
 import type { HistoryShow, HistoryResponse } from '@concert-crawl/types'
 import { requireFeature } from '../middleware/entitlement.js'
 import type { EntitlementVariables } from '../middleware/entitlement.js'
+import { displayHeadliner } from '../lib/event-billing.js'
 import { computeHistoryStats } from '../lib/history-stats.js'
 import { buildHistoryIcs } from '../lib/ics.js'
 import { parsePrice } from '../lib/price.js'
@@ -92,7 +93,7 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
       // which is also YYYY-MM-DD.
       today: sql<string>`${todayMt()}::text`,
       eventId: events.id,
-      artist: events.artist,
+      artist: displayHeadliner(),
       date: events.date,
       showTime: events.showTime,
       ticketPriceMin: events.ticketPriceMin,

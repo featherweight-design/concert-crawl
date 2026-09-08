@@ -128,3 +128,31 @@ export const portraitCanonicalName = (): SQL<string> => sql<string>`CASE
     THEN ${events.canonicalHeadliners}[1]
   ELSE ${events.canonicalArtist}
 END`
+
+/**
+ * The name a consumer surface should print as the event's headliner, and the
+ * name it should resolve to an artist page.
+ *
+ * `events.artist` is the string the venue billed the night under, and the
+ * derivation ladder deliberately leaves it alone: `canonical_artist` is derived
+ * from it and is the dedup key `(venue_id, date, canonical_artist, show_time)`,
+ * so rewriting it to the real act would fracture live rows. `events.headliners` is where the ladder puts
+ * the answer, in the venue's own spelling. A night billed "Son Little: CityFolk
+ * Tour 2026" carries `headliners = ['Son Little']`, and printing the raw column
+ * is what left the tour name in the title block and cost the bill its
+ * headliner: the tour-shaped name has no artist row to link to, so the follow
+ * row was dropped as unfollowable.
+ *
+ * Only a sole headliner is taken, for the same reason `portraitCanonicalName`
+ * does: `headliners` is written from the ladder wholesale and a co-headline
+ * bill has an ordering we do not trust, whereas `events.artist` on those rows
+ * already reads "A & B". A NULL array (ladder never ran) and an empty one
+ * (ladder ran, found no act) both fall through to the raw column — the same
+ * two-way fallback, since neither offers a better name.
+ *
+ * Built per call, not at module scope — see `portraitCanonicalName`.
+ */
+export const displayHeadliner = (): SQL<string> => sql<string>`CASE
+  WHEN cardinality(${events.headliners}) = 1 THEN ${events.headliners}[1]
+  ELSE ${events.artist}
+END`

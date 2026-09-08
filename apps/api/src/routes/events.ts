@@ -51,7 +51,10 @@ import {
 import { followedArtistsCondition } from '../lib/artist-follows.js'
 import { resolveArtistSlugs } from '../lib/artist-slugs.js'
 import { getEventWatchers } from '../lib/event-watchers.js'
-import { portraitCanonicalName } from '../lib/event-billing.js'
+import {
+  displayHeadliner,
+  portraitCanonicalName,
+} from '../lib/event-billing.js'
 import { isImminentEvent, todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import {
@@ -338,7 +341,7 @@ eventsRouter.get(
         id: events.id,
         venueId: events.venueId,
         title: events.title,
-        artist: events.artist,
+        artist: displayHeadliner(),
         supportingArtists: events.supportingArtists,
         tourName: events.tourName,
         date: events.date,
@@ -585,7 +588,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       id: events.id,
       venueId: events.venueId,
       title: events.title,
-      artist: events.artist,
+      artist: displayHeadliner(),
       supportingArtists: events.supportingArtists,
       tourName: events.tourName,
       date: events.date,
@@ -1231,7 +1234,7 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
       id: events.id,
       venueId: events.venueId,
       title: events.title,
-      artist: events.artist,
+      artist: displayHeadliner(),
       supportingArtists: events.supportingArtists,
       tourName: events.tourName,
       date: events.date,

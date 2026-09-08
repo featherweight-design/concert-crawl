@@ -62,7 +62,10 @@ import { canUseFeature } from '@concert-crawl/entitlements'
 import { appUrl } from '../emails/layout.js'
 import type { DigestEmailShow } from '../emails/types.js'
 import { sendTransactionalEmail } from '../lib/email.js'
-import { billsAnyCanonicalName } from '../lib/event-billing.js'
+import {
+  billsAnyCanonicalName,
+  displayHeadliner,
+} from '../lib/event-billing.js'
 import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js'
 import { isFeatureEnabled } from '../lib/feature-flags.js'
 import { apiLogger } from '../lib/logger.js'
@@ -164,13 +167,16 @@ interface MatchedEventRow {
   venueName: string
 }
 
-const eventSelection = {
+// A factory, not a constant: `displayHeadliner()` builds a drizzle `sql`
+// template, and evaluating one at module scope throws under the partial
+// `vi.mock('drizzle-orm')` several suites use, failing the file at collection.
+const eventSelection = () => ({
   id: events.id,
-  artist: events.artist,
+  artist: displayHeadliner(),
   date: events.date,
   ticketPriceMin: events.ticketPriceMin,
   venueName: venues.name,
-}
+})
 
 const windowFilter = (windowStart: string, windowEnd: string) =>
   and(
@@ -207,7 +213,7 @@ const matchedShows = async (
 ): Promise<MatchedEventRow[]> => {
   if (canonicalNames.length === 0) return []
   const rows = await db
-    .select(eventSelection)
+    .select(eventSelection())
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
     .where(
@@ -216,7 +222,7 @@ const matchedShows = async (
         billsAnyCanonicalName(canonicalNames),
       ),
     )
-    .orderBy(events.date, events.artist)
+    .orderBy(events.date, displayHeadliner())
   return withDisplayPrices(rows)
 }
 
@@ -227,11 +233,11 @@ const tastePicks = async (
   windowEnd: string,
 ): Promise<MatchedEventRow[]> =>
   db
-    .select(eventSelection)
+    .select(eventSelection())
     .from(events)
     .innerJoin(venues, eq(events.venueId, venues.id))
     .where(windowFilter(windowStart, windowEnd))
-    .orderBy(events.date, events.artist)
+    .orderBy(events.date, displayHeadliner())
     .limit(TASTE_PICK_COUNT)
     .then(withDisplayPrices)
 
