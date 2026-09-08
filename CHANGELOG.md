@@ -1,3 +1,10 @@
+## [1.288.2](https://github.com/HartiganHM/concert-crawl/compare/v1.288.1...v1.288.2) (2026-09-08)
+
+
+### Bug Fixes
+
+* **artists:** credit the derived headliner, not the tour string ([#1686](https://github.com/HartiganHM/concert-crawl/issues/1686)) ([5b089a7](https://github.com/HartiganHM/concert-crawl/commit/5b089a72bd3f35ba4bf6b41eaa7f9eb5e36836f4)), closes [#1685](https://github.com/HartiganHM/concert-crawl/issues/1685)
+
 ## [1.288.1](https://github.com/HartiganHM/concert-crawl/compare/v1.288.0...v1.288.1) (2026-09-08)
 
 
