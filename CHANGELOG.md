@@ -1,3 +1,10 @@
+## [1.288.1](https://github.com/HartiganHM/concert-crawl/compare/v1.288.0...v1.288.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* bind events to the acts the derivation ladder found, not the title string ([#1685](https://github.com/HartiganHM/concert-crawl/issues/1685)) ([6b37667](https://github.com/HartiganHM/concert-crawl/commit/6b37667cb9c8384d3d4e0fbb7bdaf30d033f9bd4))
+
 # [1.288.0](https://github.com/HartiganHM/concert-crawl/compare/v1.287.0...v1.288.0) (2026-09-08)
 
 
