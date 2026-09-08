@@ -30,7 +30,8 @@
 // therefore structural: there is no breakpoint at which one viewport gets a
 // block the other does not.
 
-import { useId, useState } from 'react'
+import React, { useId, useState } from 'react'
+import Link from 'next/link'
 import type { PickerEntry } from '@concert-crawl/types'
 
 import { FollowButton } from '@/components/consumer/artist-page/FollowButton'
@@ -57,6 +58,16 @@ const BULK = NF_FOLLOW_SIZES.row
 
 /** How far the invisible target grows past the pill, on every side. */
 const BULK_GROW = (NF_TAP_MIN - BULK.height) / 2
+
+// The row's artist name draws identically whether or not it links, so the two
+// branches share these rather than restating them and drifting apart.
+const NAME_CLASS = 'min-w-0 overflow-hidden text-ellipsis whitespace-nowrap'
+const NAME_STYLE: React.CSSProperties = {
+  fontSize: 14,
+  fontWeight: 700,
+  letterSpacing: '-0.01em',
+  color: 'var(--fg)',
+}
 
 const LockGlyph = () => (
   <svg
@@ -298,18 +309,36 @@ export const BillFollowBlock = ({
             {/* min-w-0 for the same reason as FollowDateLine: this is a flex
                 item in a ROW, so its automatic minimum size is the whole
                 artist name, and a long one would shove the follow button off
-                the end rather than ellipsising. */}
-            <span
-              className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
-              style={{
-                fontSize: 14,
-                fontWeight: 700,
-                letterSpacing: '-0.01em',
-                color: 'var(--fg)',
-              }}
-            >
-              {artist.name}
-            </span>
+                the end rather than ellipsising.
+
+                Signed in the name is the way to the artist page, exactly as
+                the title block's headliner is. Signed out it stays plain
+                text: `/artists/:slug` is behind auth and is deliberately not
+                in `isAlwaysPublic`, so a link there from the public mirror
+                would send a visitor to a sign-in wall instead of an artist.
+
+                The anchor stretches to the row rather than hugging its text —
+                a 14px line is a 20px target, and the row is already 44. That
+                makes it a flex CONTAINER, and `text-overflow` does not apply
+                to one: the text becomes an anonymous flex item and the
+                ellipsis is never drawn. So the truncation stays on an inner
+                span in both branches, and the anchor only carries `min-w-0`
+                so that span has room to shrink into. */}
+            {signedOut ? (
+              <span className={NAME_CLASS} style={NAME_STYLE}>
+                {artist.name}
+              </span>
+            ) : (
+              <Link
+                href={`/artists/${artist.slug}`}
+                className="flex min-w-0 items-center underline-offset-4 hover:underline focus-visible:underline"
+                style={{ alignSelf: 'stretch' }}
+              >
+                <span className={NAME_CLASS} style={NAME_STYLE}>
+                  {artist.name}
+                </span>
+              </Link>
+            )}
             {/* Quiet at `row`: a bill can carry four of these, and four
                 filled pills made the button the section's subject. The 28px
                 pill still owns a 44px target, so nothing is asked of the row

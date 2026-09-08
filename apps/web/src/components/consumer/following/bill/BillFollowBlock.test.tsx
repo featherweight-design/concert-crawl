@@ -181,6 +181,36 @@ describe('BillFollowBlock — the header shortcut', () => {
   })
 })
 
+describe('BillFollowBlock — the name is the way to the artist', () => {
+  beforeEach(() => {
+    planState.current = plan()
+  })
+
+  it('links every act on the bill to its artist page', () => {
+    render(<BillFollowBlock artists={BILL} scaRegion={false} />)
+
+    BILL.forEach((artist) => {
+      expect(screen.getByRole('link', { name: artist.name })).toHaveAttribute(
+        'href',
+        `/artists/${artist.slug}`,
+      )
+    })
+  })
+
+  // `/artists/:slug` is behind auth and deliberately outside `isAlwaysPublic`,
+  // so a link from the public mirror at /e/:id would land a visitor on a
+  // sign-in wall rather than on an artist.
+  it('leaves the name as plain text on the public mirror', () => {
+    render(<BillFollowBlock artists={BILL} signedOut scaRegion={false} />)
+
+    BILL.forEach((artist) => {
+      const name = screen.getByText(artist.name)
+      expect(name).toBeInTheDocument()
+      expect(name.closest('a')).toBeNull()
+    })
+  })
+})
+
 describe('BillFollowBlock — ONE paywall, ONE tap (ED-05)', () => {
   it('gives a Supporter a single locked action instead of a lock per act', async () => {
     planState.current = plan({ plan: 'supporter' })
@@ -465,16 +495,25 @@ describe('BillFollowBlock — a single row', () => {
   // name. Without min-w-0 a long one shoves the follow button off the end
   // instead of ellipsising — the same class as the FollowDateLine defect.
   it('lets a long artist name shrink rather than push the button out', () => {
-    const { container } = render(
+    const long = 'A Band With A Very Long Name Indeed'
+    render(
       <BillFollowBlock
-        artists={[{ ...BILL[0]!, name: 'A Band With A Very Long Name Indeed' }]}
+        artists={[{ ...BILL[0]!, name: long }]}
         scaRegion={false}
       />,
     )
 
-    const name = container.querySelector('li > span')
-    expect(name?.className).toContain('text-ellipsis')
-    expect(name?.className).toContain('min-w-0')
+    // By text rather than by tag: the name is wrapped in an anchor when the
+    // viewer can reach the artist page and bare when they cannot, and this
+    // finds the node that actually carries the text either way.
+    const name = screen.getByText(long)
+    expect(name.className).toContain('text-ellipsis')
+    expect(name.className).toContain('min-w-0')
+    // The anchor is a flex container, so `text-overflow` cannot apply to it.
+    // Its job is only to give the span above room to shrink into; without
+    // `min-w-0` here the shrink stops at the anchor and the name still shoves
+    // the button out.
+    expect(name.parentElement?.className).toContain('min-w-0')
   })
 
   it('takes the server answer rather than keeping the optimistic guess', async () => {
