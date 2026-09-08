@@ -80,7 +80,11 @@ const thirteenShows = (): ArtistShow[] => [
 describe('UpcomingShows', () => {
   it('counts SHOWS in the show-all control while capping ITEMS in the list', () => {
     const { container, getByText, queryByText } = render(
-      <UpcomingShows name="The Cold Fronts" shows={thirteenShows()} />,
+      <UpcomingShows
+        photoUrl={null}
+        name="The Cold Fronts"
+        shows={thirteenShows()}
+      />,
     )
     // The head carries no count — it duplicated "Upcoming" and clipped at 320px.
     expect(queryByText(ARTIST_COPY.showCount(13))).toBeNull()
@@ -91,7 +95,11 @@ describe('UpcomingShows', () => {
 
   it('expands and collapses from a keyboard-reachable control', () => {
     const { container, getByRole } = render(
-      <UpcomingShows name="The Cold Fronts" shows={thirteenShows()} />,
+      <UpcomingShows
+        photoUrl={null}
+        name="The Cold Fronts"
+        shows={thirteenShows()}
+      />,
     )
     const toggle = getByRole('button', { name: ARTIST_COPY.showAll(13) })
     expect(toggle.getAttribute('aria-expanded')).toBe('false')
@@ -114,6 +122,7 @@ describe('UpcomingShows', () => {
     // all" is no longer the same claim as "no show-all toggle".
     const { queryByRole } = render(
       <UpcomingShows
+        photoUrl={null}
         name="Wax Harbour"
         shows={[show('2026-08-08', 'Hi-Dive', 15)]}
       />,
@@ -125,6 +134,7 @@ describe('UpcomingShows', () => {
   it('links each row to its event and labels the list', () => {
     const { container } = render(
       <UpcomingShows
+        photoUrl={null}
         name="Wax Harbour"
         shows={[show('2026-08-08', 'Hi-Dive', 15)]}
       />,
@@ -140,6 +150,7 @@ describe('UpcomingShows', () => {
   it('shows a price when we have one and says tba when we do not', () => {
     const { getByText } = render(
       <UpcomingShows
+        photoUrl={null}
         name="Wax Harbour"
         shows={[
           show('2026-08-08', 'Hi-Dive', 15),
@@ -155,6 +166,7 @@ describe('UpcomingShows', () => {
   it('marks a cancelled show without hiding it', () => {
     const { getByText } = render(
       <UpcomingShows
+        photoUrl={null}
         name="Wax Harbour"
         shows={[show('2026-08-08', 'Hi-Dive', 15, 'cancelled')]}
       />,
@@ -166,6 +178,7 @@ describe('UpcomingShows', () => {
   it('marks a postponed show', () => {
     const { getByText } = render(
       <UpcomingShows
+        photoUrl={null}
         name="Wax Harbour"
         shows={[show('2026-08-08', 'Hi-Dive', 15, 'postponed')]}
       />,
@@ -176,6 +189,7 @@ describe('UpcomingShows', () => {
   it('labels a residency as a run and links every night', () => {
     const { getByText, container } = render(
       <UpcomingShows
+        photoUrl={null}
         name="The Cold Fronts"
         shows={[
           show('2026-08-05', "Ophelia's", 25),
@@ -193,6 +207,7 @@ describe('UpcomingShows', () => {
     // needs a bottom edge even though a run card follows it.
     const { container } = render(
       <UpcomingShows
+        photoUrl={null}
         name="The Cold Fronts"
         shows={[
           show('2026-08-01', 'Solo One'),
@@ -210,6 +225,7 @@ describe('UpcomingShows', () => {
     // Item order: run, one-off. The run card carries its own edge.
     const { container } = render(
       <UpcomingShows
+        photoUrl={null}
         name="The Cold Fronts"
         shows={[
           show('2026-08-05', "Ophelia's"),

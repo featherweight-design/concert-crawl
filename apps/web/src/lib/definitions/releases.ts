@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.51.0-beta',
+    date: 'Sep 7, 2026',
+    headline: 'A tour name is not a band.',
+    items: [
+      {
+        kind: 'fixed',
+        text: 'A show billed like "Son Little: CityFolk Tour 2026" now credits Son Little. The tour name no longer gets its own page and its own follow button.',
+      },
+      {
+        kind: 'fixed',
+        text: 'Show rows on an artist page, and in a crew, carry the same photo Browse does.',
+      },
+    ],
+  },
+  {
     version: 'v0.50.0-beta',
     date: 'Aug 29, 2026',
     headline: 'An old price you know is right no longer reads as stale.',

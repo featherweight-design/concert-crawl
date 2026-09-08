@@ -62,6 +62,7 @@ import { canUseFeature } from '@concert-crawl/entitlements'
 import { appUrl } from '../emails/layout.js'
 import type { DigestEmailShow } from '../emails/types.js'
 import { sendTransactionalEmail } from '../lib/email.js'
+import { billsAnyCanonicalName } from '../lib/event-billing.js'
 import { buildUnsubscribeUrl } from '../lib/email-unsubscribe.js'
 import { isFeatureEnabled } from '../lib/feature-flags.js'
 import { apiLogger } from '../lib/logger.js'
@@ -197,26 +198,14 @@ const withDisplayPrices = async (
   }))
 }
 
-// §9.1 match: headliner equality OR co-headliner/supporting overlap against
-// the user's canonical follow set, one parameterized text[] every way.
-//
-// The canonical_headliners arm is not redundant with the equality arm.
-// canonical_artist is derived from events.artist, which is the event's
-// DISPLAY string — for a show titled "Jazz Series presents" the derivation
-// ladder puts "kokoroko" in canonical_headliners while canonical_artist stays
-// "jazz series presents". Without this arm a user following Kokoroko gets no
-// digest row. Mirrors matchedUpcomingCondition in lib/spotify-matches.ts;
-// the two must not diverge.
+// §9.1 match: the event bills one of the user's followed acts, per
+// `billsAnyCanonicalName` (lib/event-billing.ts).
 const matchedShows = async (
   canonicalNames: string[],
   windowStart: string,
   windowEnd: string,
 ): Promise<MatchedEventRow[]> => {
   if (canonicalNames.length === 0) return []
-  const namesArray = sql`ARRAY[${sql.join(
-    canonicalNames.map((name) => sql`${name}`),
-    sql`, `,
-  )}]::text[]`
   const rows = await db
     .select(eventSelection)
     .from(events)
@@ -224,7 +213,7 @@ const matchedShows = async (
     .where(
       and(
         windowFilter(windowStart, windowEnd),
-        sql`(${events.canonicalArtist} = ANY(${namesArray}) OR ${events.canonicalHeadliners} && ${namesArray} OR ${events.canonicalSupporting} && ${namesArray})`,
+        billsAnyCanonicalName(canonicalNames),
       ),
     )
     .orderBy(events.date, events.artist)

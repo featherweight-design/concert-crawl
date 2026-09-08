@@ -11,14 +11,12 @@
 import {
   type SQL,
   and,
-  arrayOverlaps,
   asc,
   eq,
   exists,
   gte,
   inArray,
   isNull,
-  or,
   sql,
 } from 'drizzle-orm'
 import {
@@ -32,6 +30,12 @@ import type {
   SpotifyTastePick,
   SpotifyTastePickReason,
 } from '@concert-crawl/types'
+import {
+  billedCanonicalNames,
+  billsAnyCanonicalName,
+  billsCanonicalName,
+  portraitCanonicalName,
+} from './event-billing.js'
 import {
   loadPriceByTierByEventId,
   resolveDisplayPrice,
@@ -94,16 +98,8 @@ interface MatchedEventRow {
   canonicalSupporting: string[] | null
 }
 
-// Shared §9.1 condition: consumer-visible upcoming events matching the
-// canonical set (headliner equality OR co-headliner/supporting overlap).
-//
-// canonical_headliners is the co-headliner arm (#1203/#1419): only
-// headliners[0] reaches canonical_artist, so without it a user who follows
-// the SECOND act on a co-headline bill gets no match — no recommendation and
-// no fan-out. It supplements the equality arm rather than replacing it, since
-// that arm is the indexed fast path and still covers rows the crawler has not
-// rewritten. The mirror of this rule in routes/artists-public.ts and
-// routes/search.ts must not diverge.
+// Shared §9.1 condition: consumer-visible upcoming events whose bill names one
+// of the canonical set, per `billsAnyCanonicalName` (lib/event-billing.ts).
 const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
   // Total: inArray/arrayOverlaps with [] would generate invalid SQL.
   if (canonicalNames.length === 0) return sql`false`
@@ -123,12 +119,7 @@ const matchedUpcomingCondition = (canonicalNames: string[]): SQL => {
           .from(venues)
           .where(and(eq(venues.id, events.venueId), eq(venues.active, true))),
       ),
-      or(
-        inArray(events.canonicalArtist, canonicalNames),
-        // Array-overlap (&&) halves of the §9.1 match rule.
-        arrayOverlaps(events.canonicalHeadliners, canonicalNames),
-        arrayOverlaps(events.canonicalSupporting, canonicalNames),
-      ),
+      billsAnyCanonicalName(canonicalNames),
     ) ?? sql`false`
   )
 }
@@ -171,13 +162,7 @@ export async function getSpotifyMatchSummary(
   const followSet = new Set(canonicalNames)
   const matchedCanonicals = new Set<string>()
   for (const event of matchedEvents) {
-    if (followSet.has(event.canonicalArtist)) {
-      matchedCanonicals.add(event.canonicalArtist)
-    }
-    for (const billed of [
-      ...(event.canonicalHeadliners ?? []),
-      ...(event.canonicalSupporting ?? []),
-    ]) {
+    for (const billed of billedCanonicalNames(event)) {
       if (followSet.has(billed)) matchedCanonicals.add(billed)
     }
   }
@@ -228,16 +213,7 @@ export async function getFollowedArtistMatcher(
   return {
     matchEvent: (event) => {
       const matched = new Set<string>()
-      if (
-        event.canonicalArtist !== null &&
-        displayByCanonical.has(event.canonicalArtist)
-      ) {
-        matched.add(event.canonicalArtist)
-      }
-      for (const billed of [
-        ...(event.canonicalHeadliners ?? []),
-        ...(event.canonicalSupporting ?? []),
-      ]) {
+      for (const billed of billedCanonicalNames(event)) {
         if (displayByCanonical.has(billed)) matched.add(billed)
       }
       // localeCompare sort mirrors getSpotifyMatchSummary — deterministic
@@ -253,9 +229,7 @@ export async function getFollowedArtistMatcher(
 // §9.3). Correlated against the outer `events` row so it AND-composes with the
 // list endpoint's other conditions and applies identically to the count and
 // row queries. Matches the §9.1 rule: the viewer has a Spotify-sourced follow
-// row whose canonical name equals the event's canonical headliner OR appears
-// in its canonical co-headliner or supporting set. NULL canonical columns
-// simply never match.
+// row for an act the event bills, per `billsCanonicalName`.
 export function spotifyTasteCondition(userId: string): SQL {
   return exists(
     db
@@ -265,14 +239,7 @@ export function spotifyTasteCondition(userId: string): SQL {
         and(
           eq(userArtistFollows.userId, userId),
           inArray(userArtistFollows.source, [...SPOTIFY_FOLLOW_SOURCES]),
-          or(
-            eq(userArtistFollows.canonicalName, events.canonicalArtist),
-            // Correlated halves of the §9.1 overlap rule — `= ANY(NULL)` is
-            // NULL (falsy), so events without co-headliners or supporting
-            // acts, and rows predating the backfill, are safe.
-            sql`${userArtistFollows.canonicalName} = ANY(${events.canonicalHeadliners})`,
-            sql`${userArtistFollows.canonicalName} = ANY(${events.canonicalSupporting})`,
-          ),
+          billsCanonicalName(userArtistFollows.canonicalName),
         ),
       ),
   )
@@ -362,7 +329,7 @@ export async function getTastePicks(
     .innerJoin(venues, eq(events.venueId, venues.id))
     // Headliner only (Spec A §3.1). canonical_name is uniquely indexed, so
     // this cannot multiply picks.
-    .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
+    .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
     .where(matchedUpcomingCondition([...reasonByCanonical.keys()]))
     .orderBy(asc(events.date), asc(events.showTime), asc(events.id))
 
@@ -377,16 +344,7 @@ export async function getTastePicks(
     // event. Co-headliners must be here or a row matched solely by that arm
     // would find no reason and be dropped by the `continue` below.
     let reason: SpotifyTastePickReason | null = null
-    const eventCanonicals = [
-      ...(row.canonicalArtist !== null ? [row.canonicalArtist] : []),
-      // canonical_headliners repeats the primary headliner, so drop it here
-      // rather than look the same reason up twice.
-      ...(row.canonicalHeadliners ?? []).filter(
-        (name) => name !== row.canonicalArtist,
-      ),
-      ...(row.canonicalSupporting ?? []),
-    ]
-    for (const canonical of eventCanonicals) {
+    for (const canonical of billedCanonicalNames(row)) {
       const candidate = reasonByCanonical.get(canonical)
       if (candidate && isStrongerReason(candidate, reason)) {
         reason = candidate

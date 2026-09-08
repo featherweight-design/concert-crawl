@@ -15,6 +15,7 @@ import {
 import { parsePrice } from '../lib/price.js'
 import { releaseWatch } from '../lib/user-events.js'
 import { resolveArtistSlugs } from '../lib/artist-slugs.js'
+import { portraitCanonicalName } from '../lib/event-billing.js'
 
 const uuidSchema = z.string().uuid()
 
@@ -66,7 +67,7 @@ watchingRouter.get('/', async (ctx) => {
     // Headliner portrait, on the same terms as /v1/events: `artists` is a
     // projection keyed on canonicalName with no foreign key, and the unique
     // index on that column is what keeps this join cardinality-preserving.
-    .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
+    .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
     .where(
       and(
         eq(userEvents.userId, authInfo.userId),

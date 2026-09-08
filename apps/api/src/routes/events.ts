@@ -51,6 +51,7 @@ import {
 import { followedArtistsCondition } from '../lib/artist-follows.js'
 import { resolveArtistSlugs } from '../lib/artist-slugs.js'
 import { getEventWatchers } from '../lib/event-watchers.js'
+import { portraitCanonicalName } from '../lib/event-billing.js'
 import { isImminentEvent, todayInTimezone } from '../lib/time.js'
 import { apiLogger } from '../lib/logger.js'
 import {
@@ -384,7 +385,7 @@ eventsRouter.get(
       // unique index. That index is what keeps this join cardinality-preserving
       // — drop it and every event row with a duplicated canonical name fans out
       // silently, past the pagination count that does not join here.
-      .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
+      .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
       .where(where)
       .orderBy(asc(events.date), asc(events.showTime))
       .limit(limit)
@@ -630,7 +631,7 @@ eventsRouter.get('/:id', clerkMiddleware(), async (ctx) => {
       venues,
       and(eq(events.venueId, venues.id), eq(venues.active, true)),
     )
-    .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
+    .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
     // isNull(firstMissingAt) mirrors the list-filter intent: if the crawler
     // stopped seeing this event, direct-link traffic from old emails / search
     // results should 404 rather than render a stale detail page. The crawler
@@ -1270,7 +1271,7 @@ eventsRouter.get('/:id/related', clerkMiddleware(), async (ctx) => {
       venues,
       and(eq(events.venueId, venues.id), eq(venues.active, true)),
     )
-    .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
+    .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
     .where(and(...relatedConditions))
     .orderBy(asc(events.date), asc(events.showTime))
     .limit(3)

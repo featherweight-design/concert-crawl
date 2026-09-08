@@ -195,10 +195,21 @@ export function fromEventWithVenue(
 }
 
 /**
- * An upcoming show on an artist page. The artist is the page, so it arrives as
- * an argument rather than off the show: `ArtistShow` never repeats it.
+ * An upcoming show on an artist page. The artist is the page, so the name and
+ * portrait arrive as arguments rather than off the show: `ArtistShow` never
+ * repeats them.
+ *
+ * The portrait was once deliberately dropped here, on the reasoning that one
+ * repeated face down a single act's page says less than the identity glyph.
+ * That made the same event render differently on Browse and on the artist page,
+ * which reads as a bug rather than as restraint, so every surface now resolves
+ * a row's imagery the same way.
  */
-export function fromArtistShow(show: ArtistShow, artist: string): EventRowShow {
+export function fromArtistShow(
+  show: ArtistShow,
+  artist: string,
+  photoUrl: string | null,
+): EventRowShow {
   return {
     id: show.eventId,
     headliner: artist,
@@ -208,10 +219,7 @@ export function fromArtistShow(show: ArtistShow, artist: string): EventRowShow {
     supports: [],
     tourName: show.tourName,
     imageUrl: show.imageUrl,
-    // Every row on this page is the same act, so the artist portrait would be
-    // the same face repeated down the list. The identity glyph says as much
-    // with less.
-    artistPhotoUrl: null,
+    artistPhotoUrl: photoUrl,
     venueName: venueShort(show.venue),
     venueSlug: show.venueSlug,
     dateLabel: formatEventDate(show.iso, undefined, {
@@ -248,8 +256,8 @@ export function fromArtistShow(show: ArtistShow, artist: string): EventRowShow {
 }
 
 /**
- * A crew show. `CrewShow` is deliberately thin — it carries no billing, no
- * artwork and no price — so most of the row's four lines simply never appear.
+ * A crew show. `CrewShow` is deliberately thin — it carries no billing and no
+ * price — so most of the row's four lines simply never appear.
  * The going cluster is not folded in here: it is a surface concern, and the
  * crew home passes it through `footer`.
  */
@@ -260,8 +268,8 @@ export function fromCrewShow(show: CrewShow): EventRowShow {
     fallbackTitle: show.title,
     supports: [],
     tourName: null,
-    imageUrl: null,
-    artistPhotoUrl: null,
+    imageUrl: show.imageUrl,
+    artistPhotoUrl: show.artistPhotoUrl,
     venueName: venueShort(show.venue),
     venueSlug: show.venueSlug,
     dateLabel: formatEventDate(show.iso, undefined, {

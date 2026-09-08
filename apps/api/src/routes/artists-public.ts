@@ -19,7 +19,6 @@ import {
   isNull,
   lt,
   ne,
-  or,
   sql,
 } from 'drizzle-orm'
 import {
@@ -35,6 +34,7 @@ import type {
   ArtistSuggestion,
 } from '@concert-crawl/types'
 import { loadNextShowByCanonical } from '../lib/artist-follows.js'
+import { billsCanonicalName } from '../lib/event-billing.js'
 import {
   loadPriceByTierByEventId,
   lowestHeadlinePrice,
@@ -177,17 +177,9 @@ artistsPublicRouter.get(
             return sql`${events.genre} && ARRAY[${placeholders}]::text[]`
           })()
 
-    // Same three-arm billing match the detail route uses, but column-to-column
-    // rather than against a literal: the equality arm is the indexed fast
-    // path, and both array arms use `&&` (not `= ANY`) because only overlap
-    // can use the GIN indexes. The co-headliner arm is #1203 — without it the
-    // second act on a co-headline bill is invisible to its own counts.
-    const canonicalArray = sql`ARRAY[${artists.canonicalName}]::text[]`
-    const appearsOnBill = or(
-      eq(events.canonicalArtist, artists.canonicalName),
-      sql`${events.canonicalHeadliners} && ${canonicalArray}`,
-      sql`${events.canonicalSupporting} && ${canonicalArray}`,
-    )
+    // Same billing match the detail route uses, but column-to-column rather
+    // than against a literal.
+    const appearsOnBill = billsCanonicalName(artists.canonicalName)
 
     const upcomingCount = sql<number>`count(distinct ${events.id})::int`
     const soonestDate = sql<string>`min(${events.date})`
@@ -306,27 +298,7 @@ artistsPublicRouter.get(
 
     const today = todayInTimezone(MT_TIME_ZONE)
 
-    // The headliner-OR-support condition, mirroring spotifyTasteCondition()
-    // in lib/spotify-matches.ts. `= ANY(NULL)` is NULL (falsy), so events with
-    // no supporting acts — and any row predating the canonical_headliners
-    // backfill — are safe.
-    //
-    // canonical_headliners is the co-headliner arm (#1203): only headliners[0]
-    // reaches canonical_artist, so without this arm the second act on a
-    // co-headline bill is missing from their own page. It supplements
-    // canonical_artist rather than replacing it — the equality arm is the
-    // indexed fast path and still covers rows the crawler has not rewritten.
-    // The mirror of this condition in routes/search.ts must not diverge.
-    //
-    // Both array arms use the overlap operator against a one-element array
-    // rather than `= ANY(...)`: the semantics are identical, but only `&&` can
-    // use the GIN indexes on these columns.
-    const oneElement = sql`ARRAY[${artist.canonicalName}]::text[]`
-    const appearsOnBill = or(
-      eq(events.canonicalArtist, artist.canonicalName),
-      sql`${events.canonicalHeadliners} && ${oneElement}`,
-      sql`${events.canonicalSupporting} && ${oneElement}`,
-    )
+    const appearsOnBill = billsCanonicalName(artist.canonicalName)
 
     // The consumer filter pair every public query applies: non-concert rows
     // are hidden, and crawler-flagged stale rows are suppressed so a duplicate

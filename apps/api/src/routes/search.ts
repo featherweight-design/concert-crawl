@@ -3,20 +3,14 @@ import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import { z } from 'zod'
 import { db, artists, events, userEvents, venues } from '@concert-crawl/db'
 import { upcomingEventConditions } from '@concert-crawl/db/upcoming-events'
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  ilike,
-  inArray,
-  isNull,
-  or,
-  sql,
-} from 'drizzle-orm'
+import { and, asc, desc, eq, ilike, isNull, or, sql } from 'drizzle-orm'
 import { canonicalizeArtist } from '@concert-crawl/types'
 import type { ArtistSearchResult } from '@concert-crawl/types'
 import { loadFollowedCanonicalNames } from '../lib/artist-follows.js'
+import {
+  billedCanonicalNames,
+  billsAnyCanonicalName,
+} from '../lib/event-billing.js'
 import { todayInTimezone } from '../lib/time.js'
 
 export const searchRouter = new Hono()
@@ -151,22 +145,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
 
   const canonicalNames = candidates.map((row) => row.canonicalName)
 
-  // The headliner-OR-support condition, mirroring artists-public.ts. `&&` is
-  // array overlap. The literal is built with sql.join rather than binding the
-  // JS array as one parameter: postgres.js flattens an array parameter into one
-  // placeholder per element, which turns `$1::text[]` into a malformed cast.
-  const canonicalNamesArray = sql`ARRAY[${sql.join(
-    canonicalNames.map((canonical) => sql`${canonical}`),
-    sql`, `,
-  )}]::text[]`
-  const appearsOnBill = or(
-    inArray(events.canonicalArtist, canonicalNames),
-    // Co-headliner arm (#1203) — only headliners[0] reaches canonical_artist,
-    // so without it a second co-headliner reads as having no shows. Must not
-    // diverge from the same condition in routes/artists-public.ts.
-    sql`${events.canonicalHeadliners} && ${canonicalNamesArray}`,
-    sql`${events.canonicalSupporting} && ${canonicalNamesArray}`,
-  )
+  const appearsOnBill = billsAnyCanonicalName(canonicalNames)
 
   // The consumer filter pair every public query applies: non-concert rows are
   // hidden, and crawler-flagged stale rows are suppressed (#607). Aggregating
@@ -195,11 +174,7 @@ searchRouter.get('/artists', clerkMiddleware(), async (ctx) => {
   const upcomingCounts = new Map<string, number>()
 
   for (const row of billRows) {
-    const onBill = new Set<string>([
-      ...(row.canonicalArtist === null ? [] : [row.canonicalArtist]),
-      ...(row.canonicalHeadliners ?? []),
-      ...(row.canonicalSupporting ?? []),
-    ])
+    const onBill = billedCanonicalNames(row)
     // Same status triple the artist page's own upcoming section uses
     // (artists-public.ts) — counting only 'upcoming' would undercount, and
     // read "Past shows only" for an artist whose next date is postponed.

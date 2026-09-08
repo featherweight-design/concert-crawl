@@ -204,7 +204,11 @@ export const ArtistPageContent = ({
               <>
                 <div className="ap-block-player">{player}</div>
                 <div className="ap-block-shows">
-                  <UpcomingShows name={artist.name} shows={shows} />
+                  <UpcomingShows
+                    name={artist.name}
+                    photoUrl={artist.photoUrl}
+                    shows={shows}
+                  />
                 </div>
               </>
             ) : (

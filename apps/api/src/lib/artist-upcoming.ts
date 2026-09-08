@@ -6,6 +6,7 @@
 
 import { sql, type SQL } from 'drizzle-orm'
 import { artists, events, venues } from '@concert-crawl/db'
+import { billsCanonicalName } from './event-billing.js'
 import { todayInTimezone } from './time.js'
 
 const MT_TIME_ZONE = 'America/Denver'
@@ -26,25 +27,18 @@ const MT_TIME_ZONE = 'America/Denver'
  * are gone from everything forward-looking.
  *
  * The join is on text, not a key: `artists` is a projection with no foreign key
- * to `events`. `canonical_artist` is the indexed fast path; the two array arms
- * catch the co-headliner and support billings that never reach it (#1203). Both
- * arrays use `&&` against a one-element array rather than `= ANY(...)` because
- * only the overlap operator can use their GIN indexes.
+ * to `events`. `billsCanonicalName` owns which columns decide that — see
+ * `event-billing.ts` for why the raw `canonical_artist` column is only a
+ * fallback.
  */
 export const hasUpcomingShowExpr = (): SQL<boolean> => {
-  const canonical = sql`ARRAY[${artists.canonicalName}]::text[]`
-
   return sql`EXISTS (
     SELECT 1
     FROM ${events}
     JOIN ${venues}
       ON ${events.venueId} = ${venues.id}
      AND ${venues.active} = true
-    WHERE (
-      ${events.canonicalArtist} = ${artists.canonicalName}
-      OR ${events.canonicalHeadliners} && ${canonical}
-      OR ${events.canonicalSupporting} && ${canonical}
-    )
+    WHERE ${billsCanonicalName(artists.canonicalName)}
       AND ${events.hiddenFromConsumer} = false
       AND ${events.firstMissingAt} IS NULL
       AND ${events.status} IN ('upcoming', 'cancelled', 'postponed')

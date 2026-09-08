@@ -34,6 +34,7 @@ import {
   RESALE_VENDOR_VALUES,
 } from '@concert-crawl/types'
 import { todayInTimezone } from '../lib/time.js'
+import { portraitCanonicalName } from '../lib/event-billing.js'
 
 // Matches history.ts — "already happened" is a Mountain Time calendar-day call,
 // not a UTC one, or a late show reads as past hours before it starts.
@@ -254,7 +255,7 @@ venuesPublicRouter.get(
       // Headliner portrait, on the same terms as /v1/events: `artists` is a
       // projection keyed on canonicalName with no foreign key, and the unique
       // index on that column is what keeps this join cardinality-preserving.
-      .leftJoin(artists, eq(events.canonicalArtist, artists.canonicalName))
+      .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
       .where(and(...conditions))
       .orderBy(asc(events.date), asc(events.showTime))
       .limit(50)

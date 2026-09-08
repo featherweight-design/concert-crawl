@@ -11,18 +11,21 @@
 import {
   type SQL,
   and,
-  arrayOverlaps,
   asc,
   eq,
   exists,
   gte,
   inArray,
   isNull,
-  or,
   sql,
 } from 'drizzle-orm'
 import { db, events, userArtistFollows, venues } from '@concert-crawl/db'
 import type { FollowedArtistNextShow } from '@concert-crawl/types'
+import {
+  billedCanonicalNames,
+  billsAnyCanonicalName,
+  billsCanonicalName,
+} from './event-billing.js'
 import {
   loadPriceByTierByEventId,
   lowestHeadlinePrice,
@@ -48,9 +51,8 @@ const SCHEDULED_STATUSES = ['upcoming', 'cancelled', 'postponed'] as const
  * row queries — with the one deliberate divergence noted at the top of this
  * file: no `source` filter.
  *
- * Matches when the viewer follows the event's canonical headliner, or an act
- * in its canonical co-headliner or supporting set. NULL canonical columns
- * never match (`= ANY(NULL)` is NULL, i.e. falsy).
+ * Matches when the viewer follows an act on the event's bill, as
+ * `billsCanonicalName` defines that (lib/event-billing.ts).
  */
 export function followedArtistsCondition(userId: string): SQL {
   return exists(
@@ -60,11 +62,7 @@ export function followedArtistsCondition(userId: string): SQL {
       .where(
         and(
           eq(userArtistFollows.userId, userId),
-          or(
-            eq(userArtistFollows.canonicalName, events.canonicalArtist),
-            sql`${userArtistFollows.canonicalName} = ANY(${events.canonicalHeadliners})`,
-            sql`${userArtistFollows.canonicalName} = ANY(${events.canonicalSupporting})`,
-          ),
+          billsCanonicalName(userArtistFollows.canonicalName),
         ),
       ),
   )
@@ -120,14 +118,7 @@ export async function loadNextShowByCanonical(
     )
     .where(
       and(
-        or(
-          inArray(events.canonicalArtist, canonicalNames),
-          // Co-headliner arm (#1203): only headliners[0] reaches
-          // canonical_artist, so without it the second act on a co-headline
-          // bill reads as having no upcoming date.
-          arrayOverlaps(events.canonicalHeadliners, canonicalNames),
-          arrayOverlaps(events.canonicalSupporting, canonicalNames),
-        ),
+        billsAnyCanonicalName(canonicalNames),
         // The consumer filter pair every public query applies (#607).
         eq(events.hiddenFromConsumer, false),
         isNull(events.firstMissingAt),
@@ -144,11 +135,7 @@ export async function loadNextShowByCanonical(
   // costs one price query rather than one per candidate row.
   const winners = new Map<string, (typeof rows)[number]>()
   for (const row of rows) {
-    const onBill = [
-      ...(row.canonicalArtist === null ? [] : [row.canonicalArtist]),
-      ...(row.canonicalHeadliners ?? []),
-      ...(row.canonicalSupporting ?? []),
-    ]
+    const onBill = billedCanonicalNames(row)
     for (const canonical of onBill) {
       if (!wanted.has(canonical) || winners.has(canonical)) continue
       winners.set(canonical, row)

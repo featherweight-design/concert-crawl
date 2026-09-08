@@ -178,6 +178,10 @@ export interface CrewShow {
   iso: string
   showTime: string | null
   title: string
+  /** The event's own artwork, first choice for the row's tile. */
+  imageUrl: string | null
+  /** The headliner's portrait, second choice behind `imageUrl`. */
+  artistPhotoUrl: string | null
   venue: string
   venueSlug: string
   goingCount: number

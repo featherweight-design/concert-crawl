@@ -15,10 +15,15 @@ import { WatchShowButton } from '@/components/consumer/watch-show-button/WatchSh
 
 interface UpcomingShowsProps {
   name: string
+  photoUrl: string | null
   shows: ArtistShow[]
 }
 
-export const UpcomingShows = ({ name, shows }: UpcomingShowsProps) => {
+export const UpcomingShows = ({
+  name,
+  photoUrl,
+  shows,
+}: UpcomingShowsProps) => {
   const [expanded, setExpanded] = useState(false)
   const items = useMemo(() => groupShows(shows), [shows])
 
@@ -67,7 +72,7 @@ export const UpcomingShows = ({ name, shows }: UpcomingShowsProps) => {
               />
             ) : (
               <EventRow
-                show={fromArtistShow(item, name)}
+                show={fromArtistShow(item, name, photoUrl)}
                 surface="artist"
                 action={
                   <WatchShowButton eventId={item.eventId} artist={name} />

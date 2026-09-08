@@ -8,6 +8,7 @@
 
 import { and, asc, desc, eq, inArray, isNotNull, ne, sql } from 'drizzle-orm'
 import {
+  artists,
   crewMembers,
   db,
   events,
@@ -16,6 +17,7 @@ import {
   venues,
 } from '@concert-crawl/db'
 import type { CrewMemberPreview, CrewShow } from '@concert-crawl/types'
+import { portraitCanonicalName } from './event-billing.js'
 
 const MT_TIME_ZONE = 'America/Denver'
 
@@ -54,6 +56,8 @@ const selectAttendanceRows = async (
       iso: events.date,
       showTime: events.showTime,
       title: events.title,
+      imageUrl: events.imageUrl,
+      artistPhotoUrl: artists.photoUrl,
       venue: venues.name,
       venueSlug: venues.slug,
       userId: userEvents.userId,
@@ -63,6 +67,9 @@ const selectAttendanceRows = async (
     .from(userEvents)
     .innerJoin(events, eq(userEvents.eventId, events.id))
     .innerJoin(venues, eq(events.venueId, venues.id))
+    // The row imagery chain every other surface uses. canonical_name is
+    // uniquely indexed, so this cannot multiply attendance rows.
+    .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
     .leftJoin(userProfiles, eq(userProfiles.userId, userEvents.userId))
     .where(
       and(
@@ -121,6 +128,8 @@ export const loadCrewShows = async (
       iso: row.iso,
       showTime: row.showTime ?? null,
       title: row.title,
+      imageUrl: row.imageUrl,
+      artistPhotoUrl: row.artistPhotoUrl,
       venue: row.venue,
       venueSlug: row.venueSlug,
       goingCount: 1,
