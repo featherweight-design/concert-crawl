@@ -147,7 +147,11 @@ Entry point: GitHub → Actions → **Deploy to Production** → Run workflow.
    see `render.yaml`), so `packages/crawler-core` for instance triggers no
    staging API deploy either.
    Expected: staging API builds; `staging-smoke` and `staging-e2e` both run and
-   report.
+   report. ⚠️ Prerequisite: `staging-smoke.yml` gates its push-triggered run on
+   the repo variable `STAGING_SMOKE_ENABLED == 'true'` (only a
+   `workflow_dispatch` bypasses it), and Task 5 re-arms `staging-e2e.yml` without
+   touching that variable. Set it before walking this journey, or expect
+   `staging-e2e` alone and dispatch `staging-smoke` by hand.
 2. Read the `staging-e2e` result. Expected: a real pass/fail, not a 124 skip. A
    124 is the workflow's benign "no deploy happened, or a fast-follow
    superseded this SHA" exit — it is correct behaviour, and it is **not**
@@ -162,9 +166,11 @@ Entry point: GitHub → Actions → **Deploy to Production** → Run workflow.
 
 **Reverse:** force the smoke job to fail (point `PROD_API_URL` at a bad host in
 a scratch dispatch, or assert on a selector that does not exist). Expected: the
-`rollback` job fires, the three rollback-capable services roll back, the two
-crons emit the documented `::warning::` and exit 0, and the admin notification
-names the Vercel step as a manual follow-up.
+`rollback` job fires, **the API (`srv-*`) is the only service that actually rolls
+back**, all four cron jobs (`crn-*`) emit the documented `::warning::` and exit 0
+because Render exposes no rollback API for crons, and the admin notification
+names the Vercel step and the four crons as manual follow-ups. Do not read a
+green rollback job as "the deploy was undone" — four fifths of it was not.
 
 **Repeat:** dispatch twice in a row with no intervening merge. Expected: the
 second run is a no-op deploy that still goes live; nothing double-applies. This
@@ -187,9 +193,12 @@ then the scheduled workflow.
    the FK-order log reading venues → events → artists → price log → chips.
 2. Run for real. Expected: staging holds prod's venues, events, artists,
    non-community price log rows and venue guide chips.
-3. Query staging for any row in `price_submissions`, `event_reports`, `crews`,
-   `social`, `notifications`, `user_profiles` or `users` that the sync could
-   have written. Expected: none. **This is the check that matters most** — D6's
+3. Query staging for any row the sync could have written in **every** table on
+   D6's hard line — `price_submissions`, `submission_confirms`, `event_reports`,
+   `event_report_confirms`, `crews`, `social`, `notifications`, `user_profiles`,
+   `user_notification_preferences`, `users`, `commerce`, `spotify`,
+   `venue_fault_acknowledgements`. Expected: none. All thirteen, not a subset —
+   a partial query proves nothing. **This is the check that matters most**: D6's
    hard line exists because the staging transactional-email gate fails open.
 4. Confirm the scheduled workflow runs on its cron and reports its counts.
 
