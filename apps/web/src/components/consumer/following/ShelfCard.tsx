@@ -152,8 +152,9 @@ export const ShelfCard = ({
 
           `scale="hero"` because `size="100%"` cannot tell `Panel` how big it
           renders, and 224px is hero territory by the slot metrics' own 112px
-          threshold. Left to derive, it would fall to `tile` and put `mesh` back
-          at hero scale, which §2.4 cut.
+          threshold. Left to derive it would fall to `tile` and draw this card
+          at tile density: fewer stripes, fewer rings, a coarser halftone than a
+          224px box wants.
 
           `radius={0}` because the card shell already clips with a 14px radius;
           rounding the art too would round the corners that sit against the

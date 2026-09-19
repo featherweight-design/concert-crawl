@@ -124,40 +124,57 @@ describe('identityFor', () => {
 
   // #1525 D2. Mesh is a gradient field with no geometry to resolve into, so a
   // hero-sized one is just a bigger gradient.
-  it('never resolves mesh at hero scale', () => {
+  it('never resolves mesh at any scale', () => {
     for (const name of NAMES) {
       for (const kind of ['artist', 'venue'] as const) {
-        expect(identityFor(name, kind, { scale: 'hero' }).template.id).not.toBe(
-          'mesh',
-        )
+        for (const scale of SCALES) {
+          expect(identityFor(name, kind, { scale }).template.id).not.toBe(
+            'mesh',
+          )
+        }
+        expect(identityFor(name, kind).template.id).not.toBe('mesh')
       }
     }
   })
 
-  // The swap advances one mesh name to its neighbour. It must not re-index the
-  // pool, or every other name's artwork would silently change too.
-  it('leaves every non-mesh name on the template it already had', () => {
+  // One name, one template, on every surface. Browse draws rows at `tile` and
+  // the event detail hero draws the same artist at `hero`; a scale-dependent
+  // template made a quarter of all artists render different artwork on the two
+  // surfaces for the same show.
+  it('resolves one template per name across every scale', () => {
     for (const name of NAMES) {
       for (const kind of ['artist', 'venue'] as const) {
-        const base = identityFor(name, kind)
-        if (base.template.id === 'mesh') continue
-        expect(identityFor(name, kind, { scale: 'hero' }).template.id).toBe(
-          base.template.id,
-        )
+        const base = identityFor(name, kind).template.id
+        for (const scale of SCALES) {
+          expect(identityFor(name, kind, { scale }).template.id).toBe(base)
+        }
       }
     }
   })
 
-  it('leaves mesh in the pool at tile and micro', () => {
-    const meshNames = NAMES.filter(
-      (name) => identityFor(name, 'artist').template.id === 'mesh',
-    )
-    expect(meshNames.length).toBeGreaterThan(0)
-    for (const scale of ['tile', 'micro'] as const) {
-      expect(identityFor(meshNames[0]!, 'artist', { scale }).template.id).toBe(
-        'mesh',
-      )
+  // The palette and rotation are hash-only, so they were never scale-
+  // dependent. Guarding them keeps a future scale branch from reintroducing
+  // the same class of drift on a different axis.
+  it('resolves one palette and rotation per name across every scale', () => {
+    for (const name of NAMES) {
+      const base = identityFor(name, 'artist')
+      for (const scale of SCALES) {
+        const scaled = identityFor(name, 'artist', { scale })
+        expect(scaled.palette.id).toBe(base.palette.id)
+        expect(scaled.rotate).toBe(base.rotate)
+      }
     }
+  })
+
+  // Mesh stays in IA_TEMPLATES rather than being deleted: `templateOverride`
+  // still resolves it, which is what keeps the swap above a substitution
+  // rather than a pool edit that would re-index every other name. No surface
+  // passes that override today, so mesh is unreachable from the product.
+  it('still resolves mesh when named explicitly', () => {
+    expect(
+      identityFor('Any Name', 'artist', { templateOverride: 'mesh' }).template
+        .id,
+    ).toBe('mesh')
   })
 })
 

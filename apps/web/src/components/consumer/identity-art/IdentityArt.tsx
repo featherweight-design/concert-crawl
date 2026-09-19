@@ -561,16 +561,17 @@ export const identityFor = (
   const palIdx = (hash >>> 8) % IA_PALETTES.length
   const rotate = (hash >>> 16) & 3
   // Mesh is a gradient field with no geometry to resolve into, so a hero-sized
-  // one is just a bigger gradient. It advances to its neighbour rather than
+  // one is just a bigger gradient (#1525 D2). The substitution is deliberately
+  // NOT conditioned on scale: a name has to resolve to one template on every
+  // surface, or Browse (tile) and the event detail hero would draw different
+  // artwork for the same artist. It advances to its neighbour rather than
   // leaving the pool, which keeps every other name's template index untouched.
-  const heroIdx =
-    opts.scale === 'hero' && tplPool[tplIdx]?.id === 'mesh'
-      ? (tplIdx + 1) % tplPool.length
-      : tplIdx
+  const resolvedIdx =
+    tplPool[tplIdx]?.id === 'mesh' ? (tplIdx + 1) % tplPool.length : tplIdx
   const template = opts.templateOverride
     ? (IA_TEMPLATES.find((tpl) => tpl.id === opts.templateOverride) ??
-      tplPool[heroIdx]!)
-    : tplPool[heroIdx]!
+      tplPool[resolvedIdx]!)
+    : tplPool[resolvedIdx]!
   const palette = opts.paletteOverride
     ? (IA_PALETTES.find((pal) => pal.id === opts.paletteOverride) ??
       IA_PALETTES[palIdx]!)

@@ -147,32 +147,34 @@ describe('<Panel />', () => {
   })
 
   it('takes an explicit scale when it is sized in CSS rather than px', () => {
-    // `'100%'` alone derives `tile`. A band panel is 128/208 and says `hero`,
-    // which is the only thing that keeps mesh out of the pool at that size.
-    const meshy = Array.from({ length: 200 }, (_, i) => `Band ${i}`).find(
-      (name) => identityFor(name, 'artist').template.id === 'mesh',
+    // `'100%'` alone derives `tile`. A band panel is 128/208 and says `hero`.
+    // Scale no longer changes WHICH template a name resolves to (that made
+    // Browse and the detail hero draw different artwork for one artist), so
+    // the observable is density: `tpl_stripes` walks 8 slots at hero against 6
+    // at tile, keeps the even ones, and draws each kept stripe twice over a
+    // background rect. The rect count is what that works out to, 9 against 7,
+    // not the slot count and not the visible stripe count.
+    const striped = Array.from({ length: 200 }, (_, i) => `Band ${i}`).find(
+      (name) => identityFor(name, 'artist').template.id === 'stripes',
     )
-    if (!meshy) throw new Error('no name in the sample resolves to mesh')
+    if (!striped) throw new Error('no name in the sample resolves to stripes')
 
     const { container: derived } = render(
-      <Panel surface="artist" name={meshy} photoUrl={null} size="100%" />,
+      <Panel surface="artist" name={striped} photoUrl={null} size="100%" />,
     )
     const { container: stated } = render(
       <Panel
         surface="artist"
-        name={meshy}
+        name={striped}
         photoUrl={null}
         size="100%"
         scale="hero"
       />,
     )
-    // `mg-` radialGradient ids are mesh's own marker, so this asserts the
-    // template actually swapped rather than "the markup differs somehow".
-    const meshBlobs = (root: HTMLElement) =>
-      root.querySelectorAll('radialGradient[id^="mg-"]').length
+    const bands = (root: HTMLElement) => root.querySelectorAll('rect').length
 
-    expect(meshBlobs(derived)).toBeGreaterThan(0)
-    expect(meshBlobs(stated)).toBe(0)
+    expect(bands(stated)).toBe(9)
+    expect(bands(derived)).toBe(7)
   })
 
   it('is decorative unless given an alt', () => {

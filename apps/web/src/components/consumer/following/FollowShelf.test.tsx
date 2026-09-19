@@ -133,7 +133,7 @@ describe('FollowShelf', () => {
 
   // The scale has to be passed, not derived: `size="100%"` cannot tell `Panel`
   // that this slot renders at 224px, so left alone it would fall to `tile` and
-  // put `mesh` back at hero size, which §2.4 cut.
+  // draw a 224px card at tile density.
   it('asks for hero-scale detail rather than letting the size derive it', () => {
     const name = 'Neal Francis'
     renderShelf({ artists: [artist({ name })] })

@@ -83,8 +83,8 @@ describe('determinism parity with <IdentityArt />', () => {
     expect(print.palette.id).toBe(screen.palette.id)
   })
 
-  // The hero-scale mesh swap has to reach both renderers, or a share card
-  // would print the one template the screen refuses to show at that size.
+  // The mesh substitution has to reach both renderers, or a share card would
+  // print the one template the screen refuses to show.
   it('agrees at hero scale, where mesh is off the pool', () => {
     for (const name of NAMES) {
       for (const kind of ['artist', 'venue'] as const) {
