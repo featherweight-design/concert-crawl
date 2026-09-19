@@ -43,10 +43,11 @@ export const isPublicCacheableApi = (url: URL): boolean =>
 //  - /search, whose value is entirely in the live query
 //  - /watching, which is route-public once launched but payload-private always
 //
-// /~offline is absent for a different reason: it is not public in middleware at
-// all, so caching it here would break the subset outright. It still reaches an
-// offline visitor, from Serwist's precache via `fallbacks.entries` rather than
-// from this list, so leaving it out costs nothing.
+// /~offline is absent for a different reason: it is served to an offline
+// visitor from Serwist's precache via `fallbacks.entries`, not from this
+// list, so adding it here would buy nothing. It IS public in middleware —
+// it has to be, or the precache fetch is redirected and the fallback never
+// lands in the cache at all.
 const ALWAYS_CACHEABLE_PAGES: readonly RegExp[] = [
   /^\/$/,
   /^\/legal(\/.*)?$/,

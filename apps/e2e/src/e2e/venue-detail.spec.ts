@@ -3,22 +3,24 @@ import { test, expect } from '@playwright/test'
 test.describe('venue detail page', () => {
   test('renders venue info and event list', async ({ page }) => {
     await page.goto('/events')
-    await page.waitForLoadState('networkidle')
 
     const venueLink = page.locator('[data-testid="venue-name-link"]').first()
-    const linkVisible = await venueLink.isVisible()
-    if (!linkVisible) {
+    // waitFor, not isVisible: isVisible samples the DOM once and the browse
+    // rows arrive client-side, so a bare probe skips on a populated
+    // environment.
+    try {
+      await venueLink.waitFor({ state: 'visible', timeout: 15_000 })
+    } catch {
       test.skip(true, 'No venue name link found on browse page')
       return
     }
 
     await venueLink.click()
-    await page.waitForLoadState('networkidle')
+    // waitForURL, not waitForLoadState: networkidle is not a navigation
+    // barrier for an App Router soft navigation.
+    await page.waitForURL(/\/venues\/[a-z0-9-]+/)
 
-    expect(page.url()).toMatch(/\/venues\/[a-z0-9-]+/)
-
-    const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   })
 
   test('Larimer Lounge venue page renders (seed data check)', async ({

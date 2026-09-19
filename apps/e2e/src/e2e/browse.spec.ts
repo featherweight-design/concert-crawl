@@ -57,11 +57,15 @@ test.describe('browse events page', () => {
       return
     }
 
-    const initialCount = await page.locator('[data-testid="event-row"]').count()
+    const rows = page.locator('[data-testid="event-row"]')
+    const initialCount = await rows.count()
     await loadMoreButton.click()
-    await page.waitForLoadState('networkidle')
-    const newCount = await page.locator('[data-testid="event-row"]').count()
 
-    expect(newCount).toBeGreaterThan(initialCount)
+    // EventsList appends through react-query's fetchNextPage — no navigation
+    // happens, so networkidle can resolve before the new rows render. Poll the
+    // count instead of sampling it once.
+    await expect
+      .poll(async () => rows.count(), { timeout: 10_000 })
+      .toBeGreaterThan(initialCount)
   })
 })

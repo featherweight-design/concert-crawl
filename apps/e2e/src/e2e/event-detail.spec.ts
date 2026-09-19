@@ -3,49 +3,52 @@ import { test, expect } from '@playwright/test'
 test.describe('event detail page', () => {
   test('renders event details from the browse page', async ({ page }) => {
     await page.goto('/events')
-    await page.waitForLoadState('networkidle')
 
-    const rowCount = await page.locator('[data-testid="event-row"]').count()
-    if (rowCount === 0) {
-      test.skip(
-        true,
-        'No events on staging — cannot test event detail navigation',
-      )
+    // The row's link is the stretched artist-name anchor. Clicking the row
+    // container instead can land on the action gutter's button, which sits
+    // above the stretch overlay (globals.css: .event-row button { z-index: 2 })
+    // and does not navigate.
+    const firstRowLink = page
+      .locator('[data-testid="event-row"] a.event-row-stretch')
+      .first()
+    // waitFor, not isVisible: isVisible samples once and rows arrive
+    // client-side, so a bare probe skips on a populated environment.
+    try {
+      await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
+    } catch {
+      test.skip(true, 'No event rows on this environment')
       return
     }
 
-    const firstRow = page.locator('[data-testid="event-row"]').first()
-    await expect(firstRow).toBeVisible()
+    await firstRowLink.click()
+    // waitForURL, not waitForLoadState: an App Router soft navigation can leave
+    // the network idle before the transition commits, so networkidle is not a
+    // navigation barrier.
+    await page.waitForURL(/\/events\/[a-z0-9-]+/)
 
-    await firstRow.click()
-    await page.waitForLoadState('networkidle')
-
-    expect(page.url()).toMatch(/\/events\/[a-z0-9-]+/)
-
-    const heading = page.getByRole('heading', { level: 1 })
-    await expect(heading).toBeVisible()
-
-    const venueLink = page.locator('[data-testid="event-venue-name"]')
-    await expect(venueLink).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(page.locator('[data-testid="event-venue-name"]')).toBeVisible()
   })
 
   test('back navigation returns to browse', async ({ page }) => {
     await page.goto('/events')
-    await page.waitForLoadState('networkidle')
 
-    const rowCount = await page.locator('[data-testid="event-row"]').count()
-    if (rowCount === 0) {
-      test.skip(true, 'No events on staging — cannot test back navigation')
+    // Same stretched-anchor rule as above: the row container's centre can land
+    // on the action gutter's button (z-index: 2) and navigate nowhere.
+    const firstRowLink = page
+      .locator('[data-testid="event-row"] a.event-row-stretch')
+      .first()
+    try {
+      await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
+    } catch {
+      test.skip(true, 'No event rows on this environment')
       return
     }
 
-    const firstRow = page.locator('[data-testid="event-row"]').first()
-    await firstRow.click()
-    await page.waitForLoadState('networkidle')
+    await firstRowLink.click()
+    await page.waitForURL(/\/events\/[a-z0-9-]+/)
 
     await page.goBack()
-    await page.waitForLoadState('networkidle')
-
-    expect(page.url()).toMatch(/\/events$/)
+    await page.waitForURL(/\/events$/)
   })
 })

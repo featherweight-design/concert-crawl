@@ -25,31 +25,31 @@
 
 ## File Structure
 
-| File | Responsibility | Change |
-| --- | --- | --- |
-| `apps/e2e/src/fixtures/auth.ts` | Clerk sign-in + storage-state write; owns the storage-state path constant | Modify |
-| `apps/e2e/playwright.config.ts` | Imports the storage-state constant instead of duplicating the literal | Modify |
-| `apps/e2e/src/e2e/price-transparency-v2.spec.ts` | Price submit/dispute flows; must resolve a real event id | Modify |
-| `apps/e2e/src/e2e/event-detail.spec.ts` | Event detail navigation | Modify |
-| `apps/e2e/src/e2e/venue-detail.spec.ts` | Venue detail navigation | Modify |
-| `apps/e2e/src/e2e/browse.spec.ts` | Browse + load-more | Modify |
-| `apps/e2e/src/e2e/pwa.spec.ts` | Manifest, SW registration, offline fallback | Modify |
-| `apps/web/src/middleware.ts` | Route gating; `/~offline` must be publicly reachable | Modify |
-| `apps/web/src/middleware.test.ts` | Route-gating tests; guards the `/~offline` exemption against a sibling-path widening | Modify |
-| `apps/web/src/lib/pwa/route-cache.ts` | Cacheable-route allowlist + the `/~offline` rationale comment | Modify |
-| `.github/workflows/staging-e2e.yml` | Staging E2E on push to main | Modify |
-| `.github/workflows/deploy-prod.yml` | The promotion pipeline: gate, deploy (5 Render services + Vercel), smoke, rollback | Modify |
-| `.github/workflows/rollback-prod.yml` | Manual incident rollback across all prod services | Modify |
-| `.github/workflows/prod-deploy-health.yml` | Suspended/failed-deploy checker | Modify |
-| `.github/workflows/prod-smoke-after-deploy.yml` | Retired from push; dispatch-only | Modify |
-| `.github/workflows/prod-drift-alert.yml` | Scheduled "is prod current?" alert | Create |
-| `.github/scripts/render-live-sha.sh` | Prints the SHA a Render service is currently live on | Create |
-| `.github/scripts/render-check-deploy-health.sh` | Prod service health check; its `autoDeploy` expectation inverts under the gate | Modify |
-| `render.yaml` | Descriptive mirror of live Render config | Modify |
-| `docs/runbooks/auto-deploy-prod.md` | The prod deploy/promotion runbook | Modify |
-| `docs/runbooks/render-service-config.md` | Live Render config of record | Modify |
-| `CLAUDE.md` | Environments architecture-decision row | Modify |
-| `docs/superpowers/progress.md` | Phase tracker row | Modify |
+| File                                             | Responsibility                                                                       | Change |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------ | ------ |
+| `apps/e2e/src/fixtures/auth.ts`                  | Clerk sign-in + storage-state write; owns the storage-state path constant            | Modify |
+| `apps/e2e/playwright.config.ts`                  | Imports the storage-state constant instead of duplicating the literal                | Modify |
+| `apps/e2e/src/e2e/price-transparency-v2.spec.ts` | Price submit/dispute flows; must resolve a real event id                             | Modify |
+| `apps/e2e/src/e2e/event-detail.spec.ts`          | Event detail navigation                                                              | Modify |
+| `apps/e2e/src/e2e/venue-detail.spec.ts`          | Venue detail navigation                                                              | Modify |
+| `apps/e2e/src/e2e/browse.spec.ts`                | Browse + load-more                                                                   | Modify |
+| `apps/e2e/src/e2e/pwa.spec.ts`                   | Manifest, SW registration, offline fallback                                          | Modify |
+| `apps/web/src/middleware.ts`                     | Route gating; `/~offline` must be publicly reachable                                 | Modify |
+| `apps/web/src/middleware.test.ts`                | Route-gating tests; guards the `/~offline` exemption against a sibling-path widening | Modify |
+| `apps/web/src/lib/pwa/route-cache.ts`            | Cacheable-route allowlist + the `/~offline` rationale comment                        | Modify |
+| `.github/workflows/staging-e2e.yml`              | Staging E2E on push to main                                                          | Modify |
+| `.github/workflows/deploy-prod.yml`              | The promotion pipeline: gate, deploy (5 Render services + Vercel), smoke, rollback   | Modify |
+| `.github/workflows/rollback-prod.yml`            | Manual incident rollback across all prod services                                    | Modify |
+| `.github/workflows/prod-deploy-health.yml`       | Suspended/failed-deploy checker                                                      | Modify |
+| `.github/workflows/prod-smoke-after-deploy.yml`  | Retired from push; dispatch-only                                                     | Modify |
+| `.github/workflows/prod-drift-alert.yml`         | Scheduled "is prod current?" alert                                                   | Create |
+| `.github/scripts/render-live-sha.sh`             | Prints the SHA a Render service is currently live on                                 | Create |
+| `.github/scripts/render-check-deploy-health.sh`  | Prod service health check; its `autoDeploy` expectation inverts under the gate       | Modify |
+| `render.yaml`                                    | Descriptive mirror of live Render config                                             | Modify |
+| `docs/runbooks/auto-deploy-prod.md`              | The prod deploy/promotion runbook                                                    | Modify |
+| `docs/runbooks/render-service-config.md`         | Live Render config of record                                                         | Modify |
+| `CLAUDE.md`                                      | Environments architecture-decision row                                               | Modify |
+| `docs/superpowers/progress.md`                   | Phase tracker row                                                                    | Modify |
 
 ---
 
@@ -68,11 +68,13 @@ variable is set nowhere, so even with auth fixed every test would load
 instead, and skip when staging has no events.
 
 **Files:**
+
 - Modify: `apps/e2e/src/fixtures/auth.ts`
 - Modify: `apps/e2e/playwright.config.ts`
 - Modify: `apps/e2e/src/e2e/price-transparency-v2.spec.ts`
 
 **Interfaces:**
+
 - Consumes: nothing from earlier tasks.
 - Produces: `STORAGE_STATE_PATH: string` exported from `apps/e2e/src/fixtures/auth.ts` — the single relative path both the config and any spec must use.
 
@@ -95,9 +97,9 @@ export const STORAGE_STATE_PATH = '.auth/user.json'
 In the `globalSetup` body, replace the hardcoded directory and filename:
 
 ```ts
-  const authFile = path.resolve(STORAGE_STATE_PATH)
-  const authDir = path.dirname(authFile)
-  fs.mkdirSync(authDir, { recursive: true })
+const authFile = path.resolve(STORAGE_STATE_PATH)
+const authDir = path.dirname(authFile)
+fs.mkdirSync(authDir, { recursive: true })
 ```
 
 - [ ] **Step 2: Point the config at the constant**
@@ -165,15 +167,15 @@ test.describe('Price Transparency v2', () => {
 ```
 
 Then in each of the three remaining tests, replace the
-`` await page.goto(`/events/${EVENT_ID}/submit-price`) `` line (and the dispute
+``await page.goto(`/events/${EVENT_ID}/submit-price`)`` line (and the dispute
 spec's equivalent) with the same two-line preamble:
 
 ```ts
-    const eventId = await resolveEventId(page)
-    if (eventId === null) {
-      test.skip(true, 'No events on this environment — nothing to price')
-      return
-    }
+const eventId = await resolveEventId(page)
+if (eventId === null) {
+  test.skip(true, 'No events on this environment — nothing to price')
+  return
+}
 ```
 
 and use `` `/events/${eventId}/...` `` in the navigation that follows. Delete the
@@ -223,10 +225,12 @@ sits above the stretch overlay at `z-index: 2` and navigates nowhere), and wait
 on the URL.
 
 **Files:**
+
 - Modify: `apps/e2e/src/e2e/event-detail.spec.ts`
 - Modify: `apps/e2e/src/e2e/venue-detail.spec.ts`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: nothing consumed by later tasks.
 
@@ -236,67 +240,67 @@ Replace the body of `renders event details from the browse page` (lines 4–30)
 with:
 
 ```ts
-  test('renders event details from the browse page', async ({ page }) => {
-    await page.goto('/events')
+test('renders event details from the browse page', async ({ page }) => {
+  await page.goto('/events')
 
-    // The row's link is the stretched artist-name anchor. Clicking the row
-    // container instead can land on the action gutter's button, which sits
-    // above the stretch overlay (globals.css: .event-row button { z-index: 2 })
-    // and does not navigate.
-    const firstRowLink = page
-      .locator('[data-testid="event-row"] a.event-row-stretch')
-      .first()
-    // waitFor, not isVisible: isVisible samples once and rows arrive
-    // client-side, so a bare probe skips on a populated environment.
-    try {
-      await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
-    } catch {
-      test.skip(true, 'No event rows on this environment')
-      return
-    }
+  // The row's link is the stretched artist-name anchor. Clicking the row
+  // container instead can land on the action gutter's button, which sits
+  // above the stretch overlay (globals.css: .event-row button { z-index: 2 })
+  // and does not navigate.
+  const firstRowLink = page
+    .locator('[data-testid="event-row"] a.event-row-stretch')
+    .first()
+  // waitFor, not isVisible: isVisible samples once and rows arrive
+  // client-side, so a bare probe skips on a populated environment.
+  try {
+    await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
+  } catch {
+    test.skip(true, 'No event rows on this environment')
+    return
+  }
 
-    await firstRowLink.click()
-    // waitForURL, not waitForLoadState: an App Router soft navigation can leave
-    // the network idle before the transition commits, so networkidle is not a
-    // navigation barrier.
-    await page.waitForURL(/\/events\/[a-z0-9-]+/)
+  await firstRowLink.click()
+  // waitForURL, not waitForLoadState: an App Router soft navigation can leave
+  // the network idle before the transition commits, so networkidle is not a
+  // navigation barrier.
+  await page.waitForURL(/\/events\/[a-z0-9-]+/)
 
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-    await expect(page.locator('[data-testid="event-venue-name"]')).toBeVisible()
-  })
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await expect(page.locator('[data-testid="event-venue-name"]')).toBeVisible()
+})
 ```
 
 - [ ] **Step 2: Fix the back-navigation test in the same file**
 
 The second test (`navigates back to the browse page`) has **both** defects, not
-only the `goBack` one: its lines 42–44 still click the row *container*
+only the `goBack` one: its lines 42–44 still click the row _container_
 (`firstRow.click()`) and then wait on `waitForLoadState('networkidle')`, and its
 line 49 asserts `expect(page.url()).toMatch(/\/events$/)`. Fixing only the
 `goBack` wait leaves the forward navigation flaky in exactly the way Step 1
 describes. Replace the whole test body with:
 
 ```ts
-  test('navigates back to the browse page', async ({ page }) => {
-    await page.goto('/events')
+test('navigates back to the browse page', async ({ page }) => {
+  await page.goto('/events')
 
-    // Same stretched-anchor rule as Step 1: the row container's centre can land
-    // on the action gutter's button (z-index: 2) and navigate nowhere.
-    const firstRowLink = page
-      .locator('[data-testid="event-row"] a.event-row-stretch')
-      .first()
-    try {
-      await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
-    } catch {
-      test.skip(true, 'No event rows on this environment')
-      return
-    }
+  // Same stretched-anchor rule as Step 1: the row container's centre can land
+  // on the action gutter's button (z-index: 2) and navigate nowhere.
+  const firstRowLink = page
+    .locator('[data-testid="event-row"] a.event-row-stretch')
+    .first()
+  try {
+    await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
+  } catch {
+    test.skip(true, 'No event rows on this environment')
+    return
+  }
 
-    await firstRowLink.click()
-    await page.waitForURL(/\/events\/[a-z0-9-]+/)
+  await firstRowLink.click()
+  await page.waitForURL(/\/events\/[a-z0-9-]+/)
 
-    await page.goBack()
-    await page.waitForURL(/\/events$/)
-  })
+  await page.goBack()
+  await page.waitForURL(/\/events$/)
+})
 ```
 
 Delete the `await page.waitForLoadState('networkidle')` calls and the
@@ -312,18 +316,18 @@ already fails the test if the URL never matches, so a following `expect` on
 it is the real user path from browse — and fix the barrier:
 
 ```ts
-    const venueLink = page.locator('[data-testid="venue-name-link"]').first()
-    try {
-      await venueLink.waitFor({ state: 'visible', timeout: 15_000 })
-    } catch {
-      test.skip(true, 'No venue name link found on browse page')
-      return
-    }
+const venueLink = page.locator('[data-testid="venue-name-link"]').first()
+try {
+  await venueLink.waitFor({ state: 'visible', timeout: 15_000 })
+} catch {
+  test.skip(true, 'No venue name link found on browse page')
+  return
+}
 
-    await venueLink.click()
-    await page.waitForURL(/\/venues\/[a-z0-9-]+/)
+await venueLink.click()
+await page.waitForURL(/\/venues\/[a-z0-9-]+/)
 
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
 ```
 
 Delete the now-redundant `await page.waitForLoadState('networkidle')` that
@@ -355,9 +359,11 @@ navigation, so `waitForLoadState('networkidle')` can return before the appended
 rows render, and the count is read one tick early.
 
 **Files:**
+
 - Modify: `apps/e2e/src/e2e/browse.spec.ts`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: nothing.
 
@@ -366,16 +372,16 @@ rows render, and the count is read one tick early.
 Replace lines 60–66 of `apps/e2e/src/e2e/browse.spec.ts` with:
 
 ```ts
-    const rows = page.locator('[data-testid="event-row"]')
-    const initialCount = await rows.count()
-    await loadMoreButton.click()
+const rows = page.locator('[data-testid="event-row"]')
+const initialCount = await rows.count()
+await loadMoreButton.click()
 
-    // EventsList appends through react-query's fetchNextPage — no navigation
-    // happens, so networkidle can resolve before the new rows render. Poll the
-    // count instead of sampling it once.
-    await expect
-      .poll(async () => rows.count(), { timeout: 10_000 })
-      .toBeGreaterThan(initialCount)
+// EventsList appends through react-query's fetchNextPage — no navigation
+// happens, so networkidle can resolve before the new rows render. Poll the
+// count instead of sampling it once.
+await expect
+  .poll(async () => rows.count(), { timeout: 10_000 })
+  .toBeGreaterThan(initialCount)
 ```
 
 - [ ] **Step 2: Typecheck and lint**
@@ -401,7 +407,7 @@ git commit -m "fix(e2e): poll the row count after load more"
 `page.goto: net::ERR_FAILED at https://staging.concertcrawl.app/a-path-that-was-never-cached`
 — the Serwist `fallbacks.entries` navigation fallback did not serve `/~offline`.
 `apps/web/src/lib/pwa/route-cache.ts:44-47` records why that is plausible:
-*"/~offline … is not public in middleware at all."* A precache fetch for a
+_"/~offline … is not public in middleware at all."_ A precache fetch for a
 middleware-gated route is redirected, so the fallback entry can be missing from
 the cache entirely.
 
@@ -409,13 +415,27 @@ This is a product bug, not only a test bug: an offline page that requires auth
 to have been cached is not an offline page. Reproduce first, because the fix
 differs depending on whether the entry is absent or present-but-unmatched.
 
+**Reproduction outcome (recorded 2026-09-19).** The entry was absent, but not
+for the reason Step 1 predicts. A full dump of the generated precache manifest
+held 194 entries and **no HTML document at all** — `@serwist/next` 9.5.12 builds
+the manifest from webpack assets plus a glob of `public/`, and an App Router
+page is neither. A `fallbacks.entries` URL is served through `matchPrecache`, so
+the fallback has never fired in this app. The middleware change is necessary (the
+precache fetch carries no session) but not sufficient; `apps/web/next.config.ts`
+is therefore in scope, via `manifestTransforms` rather than
+`additionalPrecacheEntries`, which replaces the `public/` glob outright and would
+drop the share fonts.
+
 **Files:**
+
+- Modify: `apps/web/next.config.ts`
 - Modify: `apps/web/src/middleware.ts`
 - Modify: `apps/web/src/middleware.test.ts`
 - Modify: `apps/web/src/lib/pwa/route-cache.ts`
 - Modify: `apps/e2e/src/e2e/pwa.spec.ts`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: nothing.
 
@@ -436,14 +456,21 @@ const keys = await caches.keys()
 for (const key of keys) {
   const cache = await caches.open(key)
   const urls = (await cache.keys()).map((req) => req.url)
-  console.log(key, urls.filter((url) => url.includes('offline')))
+  console.log(
+    key,
+    urls.filter((url) => url.includes('offline')),
+  )
 }
 ```
 
-Record the result. **Absent** means the precache fetch was gated (expected).
-**Present** means the fallback matcher is not firing and Step 3's middleware
-change alone will not fix it — in that case also check that the failing request
-has `destination === 'document'`, which is what `sw.ts:110-116` matches on.
+Record the result. **Absent** has two possible causes and they need different
+fixes, so dump the whole manifest rather than only the `offline` matches: if no
+HTML document appears anywhere, the entry was never built into the manifest (the
+actual cause — see the Reproduction outcome above); if other documents are there
+and only this one is missing, the precache fetch was gated. **Present** means the
+fallback matcher is not firing and Step 3's middleware change alone will not fix
+it — in that case also check that the failing request has
+`destination === 'document'`, which is what `sw.ts:110-116` matches on.
 
 - [ ] **Step 2: Confirm the middleware gates `/~offline`**
 
@@ -471,29 +498,29 @@ regex metacharacter but the entry may be written as a prefix. Append to the
 `does not make paths under /api/revalidate public` test:
 
 ```ts
-  it('lets a signed-out visitor reach the offline fallback', async () => {
-    const { middlewareHandler } = await import('./middleware')
+it('lets a signed-out visitor reach the offline fallback', async () => {
+  const { middlewareHandler } = await import('./middleware')
 
-    // Serwist precaches /~offline through a plain navigation fetch with no
-    // session. Gating it redirects that fetch, the fallback never lands in the
-    // cache, and an offline navigation dies with ERR_FAILED.
-    const req = new NextRequest('http://localhost/~offline')
-    const result = await middlewareHandler(makeAuth(null), req)
+  // Serwist precaches /~offline through a plain navigation fetch with no
+  // session. Gating it redirects that fetch, the fallback never lands in the
+  // cache, and an offline navigation dies with ERR_FAILED.
+  const req = new NextRequest('http://localhost/~offline')
+  const result = await middlewareHandler(makeAuth(null), req)
 
-    expect(result).toBeUndefined()
-  })
+  expect(result).toBeUndefined()
+})
 
-  it('does not make a ~offline-prefixed route public', async () => {
-    const { middlewareHandler } = await import('./middleware')
+it('does not make a ~offline-prefixed route public', async () => {
+  const { middlewareHandler } = await import('./middleware')
 
-    // The mocked createRouteMatcher uses startsWith, so this is the guard that
-    // catches a `/~offline(.*)` glob smuggling a future private sibling in.
-    const req = new NextRequest('http://localhost/~offline-admin')
-    const auth = makeAuth(null)
+  // The mocked createRouteMatcher uses startsWith, so this is the guard that
+  // catches a `/~offline(.*)` glob smuggling a future private sibling in.
+  const req = new NextRequest('http://localhost/~offline-admin')
+  const auth = makeAuth(null)
 
-    await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized')
-    expect(auth.protect).toHaveBeenCalled()
-  })
+  await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized')
+  expect(auth.protect).toHaveBeenCalled()
+})
 ```
 
 Run them and watch the second one fail before Step 3's entry is written as an
@@ -570,9 +597,11 @@ existing wait-for-live script so the suite cannot run against the previous
 staging build.
 
 **Files:**
+
 - Modify: `.github/workflows/staging-e2e.yml`
 
 **Interfaces:**
+
 - Consumes: `render-wait-for-live.sh <service-id> <sha>` (existing script).
 - Produces: a `staging-e2e` check on every push to `main`.
 
@@ -627,33 +656,33 @@ web-only merge — turning the gate's own evidence red for a non-event. Mirror
 fails loudly:
 
 ```yaml
-      # The script exits 0 on live, 124 on a benign no-deploy/supersede (the
-      # staging API's buildFilter skips docs- and web-only pushes, so this is
-      # common, not exceptional), and anything else on hard error. Branch
-      # explicitly — a bare call would fail the run on every web-only merge,
-      # and bucketing a real failure as benign is the opposite mistake.
-      - name: Wait for staging API to be live on pushed SHA
-        id: wait_for_live
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: |
-          set +e
-          bash .github/scripts/render-wait-for-live.sh \
-            "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" \
-            "${{ github.sha }}" \
-            300
-          exit_code=$?
-          set -e
-          if [ "${exit_code}" -eq 0 ]; then
-            echo "should_run=true" >> "$GITHUB_OUTPUT"
-            echo "✓ Staging API is live on ${{ github.sha }}; running E2E."
-          elif [ "${exit_code}" -eq 124 ]; then
-            echo "should_run=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=E2E skipped::Staging API never went live on ${{ github.sha }} within 5 min. Most likely the buildFilter skipped this push (docs/web-only) or a fast-follow merge superseded it. The next API-affecting push will produce a fresh E2E artifact."
-          else
-            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code} (not a timeout). Failing — nothing was tested."
-            exit "${exit_code}"
-          fi
+# The script exits 0 on live, 124 on a benign no-deploy/supersede (the
+# staging API's buildFilter skips docs- and web-only pushes, so this is
+# common, not exceptional), and anything else on hard error. Branch
+# explicitly — a bare call would fail the run on every web-only merge,
+# and bucketing a real failure as benign is the opposite mistake.
+- name: Wait for staging API to be live on pushed SHA
+  id: wait_for_live
+  env:
+    RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+  run: |
+    set +e
+    bash .github/scripts/render-wait-for-live.sh \
+      "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" \
+      "${{ github.sha }}" \
+      300
+    exit_code=$?
+    set -e
+    if [ "${exit_code}" -eq 0 ]; then
+      echo "should_run=true" >> "$GITHUB_OUTPUT"
+      echo "✓ Staging API is live on ${{ github.sha }}; running E2E."
+    elif [ "${exit_code}" -eq 124 ]; then
+      echo "should_run=false" >> "$GITHUB_OUTPUT"
+      echo "::warning title=E2E skipped::Staging API never went live on ${{ github.sha }} within 5 min. Most likely the buildFilter skipped this push (docs/web-only) or a fast-follow merge superseded it. The next API-affecting push will produce a fresh E2E artifact."
+    else
+      echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code} (not a timeout). Failing — nothing was tested."
+      exit "${exit_code}"
+    fi
 ```
 
 Then add `if: steps.wait_for_live.outputs.should_run == 'true'` to every step
@@ -693,23 +722,25 @@ roll back, and fail without any workflow knowing they exist. A promotion that
 skips them leaves two crons on whatever Render last built.
 
 **Files:**
+
 - Modify: `.github/workflows/deploy-prod.yml`
 - Modify: `.github/workflows/rollback-prod.yml`
 - Modify: `.github/workflows/prod-deploy-health.yml`
 - Modify: `.github/workflows/prod-smoke-after-deploy.yml`
 
 **Interfaces:**
+
 - Consumes: `render-trigger-deploy.sh <service-id> <sha> <label>`, `render-rollback.sh <service-id> <label>`, `render-check-deploy-health.sh`.
 - Produces: two new `production`-environment variables, `RENDER_SERVICE_ID_MATCH_ARTISTS` and `RENDER_SERVICE_ID_SPOTIFY_WEEKLY`, consumed by this task's four workflow edits and by nothing in a later task. Task 10's drift alert deliberately reads only `RENDER_SERVICE_ID_API` — see its Interfaces block for why.
 
 - [ ] **Step 1: Extend the `deploy` job preflight**
 
 In `.github/workflows/deploy-prod.yml`, add to the `env:` block of
-*Verify Render API token + service ID variables are configured* (after line 210):
+_Verify Render API token + service ID variables are configured_ (after line 210):
 
 ```yaml
-          SERVICE_ID_MATCH_ARTISTS: ${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}
-          SERVICE_ID_SPOTIFY_WEEKLY: ${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}
+SERVICE_ID_MATCH_ARTISTS: ${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}
+SERVICE_ID_SPOTIFY_WEEKLY: ${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}
 ```
 
 and to the `missing` checks:
@@ -721,26 +752,26 @@ and to the `missing` checks:
 
 - [ ] **Step 2: Add the two deploy triggers**
 
-After the *Trigger Render deploy — crawler daily cron* step, add:
+After the _Trigger Render deploy — crawler daily cron_ step, add:
 
 ```yaml
-      - name: Trigger Render deploy — match-artists cron
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: |
-          bash .github/scripts/render-trigger-deploy.sh \
-            "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" \
-            "${{ github.event.workflow_run.head_sha || github.sha }}" \
-            "Match-artists"
+- name: Trigger Render deploy — match-artists cron
+  env:
+    RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+  run: |
+    bash .github/scripts/render-trigger-deploy.sh \
+      "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" \
+      "${{ github.event.workflow_run.head_sha || github.sha }}" \
+      "Match-artists"
 
-      - name: Trigger Render deploy — spotify-weekly cron
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: |
-          bash .github/scripts/render-trigger-deploy.sh \
-            "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" \
-            "${{ github.event.workflow_run.head_sha || github.sha }}" \
-            "Spotify-weekly"
+- name: Trigger Render deploy — spotify-weekly cron
+  env:
+    RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+  run: |
+    bash .github/scripts/render-trigger-deploy.sh \
+      "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" \
+      "${{ github.event.workflow_run.head_sha || github.sha }}" \
+      "Spotify-weekly"
 ```
 
 - [ ] **Step 3: Add them to both rollback paths**
@@ -750,15 +781,15 @@ In `deploy-prod.yml`'s `rollback` job, extend the preflight `missing` checks
 rollback step:
 
 ```yaml
-      - name: Roll back match-artists cron
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" "concert-crawl-match-artists"
+- name: Roll back match-artists cron
+  env:
+    RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+  run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" "concert-crawl-match-artists"
 
-      - name: Roll back spotify-weekly cron
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" "concert-crawl-spotify-weekly"
+- name: Roll back spotify-weekly cron
+  env:
+    RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+  run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" "concert-crawl-spotify-weekly"
 ```
 
 Make the identical two additions to `.github/workflows/rollback-prod.yml`,
@@ -816,9 +847,11 @@ Because `render-trigger-deploy.sh` cannot pin a `crn-*` service to a
 the operator asked for. Refuse the mismatch rather than let it pass silently.
 
 **Files:**
+
 - Modify: `.github/workflows/deploy-prod.yml`
 
 **Interfaces:**
+
 - Consumes: `resolve-deployable-sha.sh <sha>` (existing).
 - Produces: a `allow_stale_head` boolean dispatch input, read by nothing else.
 
@@ -843,36 +876,36 @@ on:
 
 - [ ] **Step 2: Add the HEAD-only gate step**
 
-In the `gate` job, after the *Refuse workflow_dispatch from non-main ref* step,
+In the `gate` job, after the _Refuse workflow_dispatch from non-main ref_ step,
 add:
 
 ```yaml
-      # Four of the five prod services are Render cron jobs, and the Render API
-      # rejects `commitId` for `crn-*` — those deploys always build branch HEAD
-      # (see .github/scripts/render-trigger-deploy.sh:99-119). So promoting a
-      # SHA that is not main HEAD would ship the requested code to the API and
-      # HEAD to the crons, from one green run. Refuse instead, unless the
-      # operator opts in explicitly.
-      - name: Refuse promotion of a SHA that is not main HEAD
-        run: |
-          git fetch origin main --depth=20
-          main_sha=$(git rev-parse origin/main)
-          requested=$(bash .github/scripts/resolve-deployable-sha.sh "${{ github.sha }}")
-          head=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
-          if [ "$requested" = "$head" ]; then
-            echo "Promoting main HEAD ($head); all five prod services will run the same code."
-            exit 0
-          fi
-          echo "Requested deployable: $requested"
-          echo "main HEAD deployable: $head"
-          if [ "${{ inputs.allow_stale_head }}" = "true" ]; then
-            echo "::warning::Promoting $requested while main HEAD is $head. concert-crawl-crawler-triggers, concert-crawl-crawler-daily, concert-crawl-match-artists and concert-crawl-spotify-weekly cannot be pinned and WILL build main HEAD. Only the API service gets $requested."
-            exit 0
-          fi
-          echo "✗ Refusing: the requested ref is not main HEAD."
-          echo "  Re-dispatch from main HEAD, or set allow_stale_head=true and accept that"
-          echo "  the four cron services will build main HEAD while the API gets the older SHA."
-          exit 1
+# Four of the five prod services are Render cron jobs, and the Render API
+# rejects `commitId` for `crn-*` — those deploys always build branch HEAD
+# (see .github/scripts/render-trigger-deploy.sh:99-119). So promoting a
+# SHA that is not main HEAD would ship the requested code to the API and
+# HEAD to the crons, from one green run. Refuse instead, unless the
+# operator opts in explicitly.
+- name: Refuse promotion of a SHA that is not main HEAD
+  run: |
+    git fetch origin main --depth=20
+    main_sha=$(git rev-parse origin/main)
+    requested=$(bash .github/scripts/resolve-deployable-sha.sh "${{ github.sha }}")
+    head=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
+    if [ "$requested" = "$head" ]; then
+      echo "Promoting main HEAD ($head); all five prod services will run the same code."
+      exit 0
+    fi
+    echo "Requested deployable: $requested"
+    echo "main HEAD deployable: $head"
+    if [ "${{ inputs.allow_stale_head }}" = "true" ]; then
+      echo "::warning::Promoting $requested while main HEAD is $head. concert-crawl-crawler-triggers, concert-crawl-crawler-daily, concert-crawl-match-artists and concert-crawl-spotify-weekly cannot be pinned and WILL build main HEAD. Only the API service gets $requested."
+      exit 0
+    fi
+    echo "✗ Refusing: the requested ref is not main HEAD."
+    echo "  Re-dispatch from main HEAD, or set allow_stale_head=true and accept that"
+    echo "  the four cron services will build main HEAD while the API gets the older SHA."
+    exit 1
 ```
 
 This step must come after the existing `Checkout` step so `git fetch` has a
@@ -916,9 +949,11 @@ prod. Once auto-deploy is off, that wait can only time out — on every merge.
 the coverage moves rather than disappears.
 
 **Files:**
+
 - Modify: `.github/workflows/prod-smoke-after-deploy.yml`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: nothing.
 
@@ -958,20 +993,20 @@ smokes whatever prod is currently serving — which is the only correct question
 for a dispatch that deploys nothing:
 
 ```yaml
-      # No wait. This workflow no longer causes a deploy, so there is no target
-      # SHA to wait for: it smokes whatever prod is live on right now. Waiting
-      # would return 125 (autoDeploy="no") on every run under the promotion
-      # gate. The promotion path's own wait-for-live lives in deploy-prod.yml,
-      # where a deploy actually was triggered.
-      - name: Record the prod live SHA being smoked
-        id: wait_for_live
-        env:
-          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
-        run: |
-          live_sha=$(bash .github/scripts/render-live-sha.sh "${{ vars.RENDER_SERVICE_ID_API }}")
-          echo "Smoking prod as currently live: ${live_sha}"
-          echo "live_sha=${live_sha}" >> "$GITHUB_OUTPUT"
-          echo "should_smoke=true" >> "$GITHUB_OUTPUT"
+# No wait. This workflow no longer causes a deploy, so there is no target
+# SHA to wait for: it smokes whatever prod is live on right now. Waiting
+# would return 125 (autoDeploy="no") on every run under the promotion
+# gate. The promotion path's own wait-for-live lives in deploy-prod.yml,
+# where a deploy actually was triggered.
+- name: Record the prod live SHA being smoked
+  id: wait_for_live
+  env:
+    RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+  run: |
+    live_sha=$(bash .github/scripts/render-live-sha.sh "${{ vars.RENDER_SERVICE_ID_API }}")
+    echo "Smoking prod as currently live: ${live_sha}"
+    echo "live_sha=${live_sha}" >> "$GITHUB_OUTPUT"
+    echo "should_smoke=true" >> "$GITHUB_OUTPUT"
 ```
 
 `should_smoke` is kept as the output name so the eight downstream
@@ -986,10 +1021,10 @@ can be ahead of the code prod serves, so say so in the log rather than leaving a
 responder to work it out:
 
 ```yaml
-      - name: Warn when the spec ref is ahead of prod
-        if: steps.wait_for_live.outputs.live_sha != github.sha
-        run: |
-          echo "::warning title=Specs ahead of prod::Running smoke specs from ${{ github.sha }} against prod live on ${{ steps.wait_for_live.outputs.live_sha }}. A failure may be a spec that expects unpromoted behaviour rather than a prod regression."
+- name: Warn when the spec ref is ahead of prod
+  if: steps.wait_for_live.outputs.live_sha != github.sha
+  run: |
+    echo "::warning title=Specs ahead of prod::Running smoke specs from ${{ github.sha }} against prod live on ${{ steps.wait_for_live.outputs.live_sha }}. A failure may be a spec that expects unpromoted behaviour rather than a prod regression."
 ```
 
 That warning is the difference between "prod is broken" and "you smoked prod
@@ -1023,9 +1058,11 @@ project. Without this step a promotion ships an API the front end has not
 caught up to.
 
 **Files:**
+
 - Modify: `.github/workflows/deploy-prod.yml`
 
 **Interfaces:**
+
 - Consumes: `VERCEL_TOKEN` (secret), `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (variables), all in the `production` GitHub environment.
 - Produces: nothing.
 
@@ -1034,9 +1071,9 @@ caught up to.
 Add to the same preflight step's `env:` and `missing` checks:
 
 ```yaml
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
 ```
 
 ```bash
@@ -1066,26 +1103,26 @@ the step earlier to overlap the two builds:
   rather than a broken prod.
 
 ```yaml
-      # Runs last: a failed Render deploy above aborts the job before the web
-      # app is promoted, so a partial promotion never leaves a new front end
-      # against an old API. The reverse is survivable — expand/contract means
-      # the old web app works against the new API — which is why this ordering
-      # and not the other.
-      #
-      # The Vercel prod project's git builds are disabled (Settings → Git →
-      # Ignored Build Step = `exit 0`), so this CLI deploy is the only way the
-      # web app reaches production. --prod makes it the production deployment
-      # and assigns the production domains once the build is healthy; Vercel
-      # keeps serving the previous deployment until then.
-      - name: Promote web app to Vercel production
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
-        run: |
-          npx --yes vercel@latest deploy --prod --yes \
-            --token "$VERCEL_TOKEN" \
-            --cwd apps/web
+# Runs last: a failed Render deploy above aborts the job before the web
+# app is promoted, so a partial promotion never leaves a new front end
+# against an old API. The reverse is survivable — expand/contract means
+# the old web app works against the new API — which is why this ordering
+# and not the other.
+#
+# The Vercel prod project's git builds are disabled (Settings → Git →
+# Ignored Build Step = `exit 0`), so this CLI deploy is the only way the
+# web app reaches production. --prod makes it the production deployment
+# and assigns the production domains once the build is healthy; Vercel
+# keeps serving the previous deployment until then.
+- name: Promote web app to Vercel production
+  env:
+    VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+    VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+  run: |
+    npx --yes vercel@latest deploy --prod --yes \
+      --token "$VERCEL_TOKEN" \
+      --cwd apps/web
 ```
 
 - [ ] **Step 3: Note the rollback asymmetry in the `rollback` job header**
@@ -1093,16 +1130,16 @@ the step earlier to overlap the two builds:
 Add to that job's leading comment:
 
 ```yaml
-      # Vercel is NOT rolled back here. Its rollback is instant and
-      # deployment-scoped (`vercel rollback` / Instant Rollback in the
-      # dashboard), it needs no rebuild, and scripting it would mean holding a
-      # deployment id across jobs. The runbook carries the two-command manual
-      # procedure; see docs/runbooks/auto-deploy-prod.md.
-      #
-      # So when this job fires, prod is left on the old API and the NEW web
-      # app until an operator rolls Vercel back by hand. That is the one
-      # mixed state the automation cannot resolve itself, which is why the
-      # rollback notification names it explicitly.
+# Vercel is NOT rolled back here. Its rollback is instant and
+# deployment-scoped (`vercel rollback` / Instant Rollback in the
+# dashboard), it needs no rebuild, and scripting it would mean holding a
+# deployment id across jobs. The runbook carries the two-command manual
+# procedure; see docs/runbooks/auto-deploy-prod.md.
+#
+# So when this job fires, prod is left on the old API and the NEW web
+# app until an operator rolls Vercel back by hand. That is the one
+# mixed state the automation cannot resolve itself, which is why the
+# rollback notification names it explicitly.
 ```
 
 And add it to the notification body in the `Notify admin — auto-rollback fired`
@@ -1133,16 +1170,18 @@ lesson was that every alert answered "is prod broken?" and none answered "is
 prod current?" — that question is now load-bearing.
 
 **Files:**
+
 - Create: `.github/scripts/render-live-sha.sh`
 - Create: `.github/workflows/prod-drift-alert.yml`
 
 **Interfaces:**
+
 - Consumes: `RENDER_API_TOKEN`, `RENDER_SERVICE_ID_API`, `SENTRY_DSN_SMOKE`, `sentry-capture-message.sh <level> <message>`.
 - Produces: `render-live-sha.sh <service-id>` printing a bare 40-char SHA on stdout.
 
 **Why the API service only.** `deploy-prod.yml` triggers all five prod services
 in one dispatch, and the API is the only one that can be pinned to a `commitId`
-(D3). So the API's live SHA *is* the promoted SHA, while a cron's is whatever
+(D3). So the API's live SHA _is_ the promoted SHA, while a cron's is whatever
 branch HEAD was when its build ran — measuring four more services would produce
 four numbers that answer a different question and disagree with each other for
 benign reasons. One accurate signal beats five ambiguous ones. `render-live-sha.sh`
@@ -1318,7 +1357,7 @@ jobs:
             "Prod is behind main — promote with the Deploy to Production workflow, or record why not."
 ```
 
-`SENTRY_DSN_SMOKE` must also be added to the Step 3 *Verify configuration*
+`SENTRY_DSN_SMOKE` must also be added to the Step 3 _Verify configuration_
 preflight's `missing` checks, for the same reason as the comment above — a
 silently-empty DSN is the one failure this alert cannot survive:
 
@@ -1365,10 +1404,11 @@ git commit -m "ci(prod): alert when prod falls behind main"
 ### Task 11: Make the documentation match the new model
 
 Every runbook currently describes push-to-deploy prod. `render.yaml` is
-descriptive and hand-synced, and one previous lapse in that sync *was* an
+descriptive and hand-synced, and one previous lapse in that sync _was_ an
 outage — so it changes in the same session as the live config.
 
 **Files:**
+
 - Modify: `render.yaml`
 - Modify: `docs/runbooks/auto-deploy-prod.md`
 - Modify: `docs/runbooks/render-service-config.md`
@@ -1376,6 +1416,7 @@ outage — so it changes in the same session as the live config.
 - Modify: `docs/superpowers/progress.md`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: nothing.
 
@@ -1387,15 +1428,16 @@ block), `concert-crawl-crawler-triggers`, `concert-crawl-crawler-daily`,
 `-staging` entry alone — staging keeps auto-deploying. Add above the first one:
 
 ```yaml
-    # Prod deploys only through .github/workflows/deploy-prod.yml. This file is
-    # descriptive, not a Blueprint: editing it deploys nothing and changes no
-    # live setting. The live value is set over the Render API — keep both in
-    # sync in the same session.
+# Prod deploys only through .github/workflows/deploy-prod.yml. This file is
+# descriptive, not a Blueprint: editing it deploys nothing and changes no
+# live setting. The live value is set over the Render API — keep both in
+# sync in the same session.
 ```
 
 - [ ] **Step 2: Rewrite the prod deploy runbook**
 
 `docs/runbooks/auto-deploy-prod.md` needs, at minimum:
+
 - The new flow: merge → staging auto-deploys → staging-smoke + staging-e2e →
   human validates → dispatch **Deploy to Production** with a reason.
 - That the emergency hotfix path is the same dispatch, not a separate one.
@@ -1412,7 +1454,7 @@ block), `concert-crawl-crawler-triggers`, `concert-crawl-crawler-daily`,
 - [ ] **Step 3: Update the Render config runbook**
 
 In `docs/runbooks/render-service-config.md`, change the "Active services"
-paragraph — it currently reads *"All have `autoDeploy: yes`"*, which becomes
+paragraph — it currently reads _"All have `autoDeploy: yes`"_, which becomes
 wrong for the five prod services — and add an `autoDeploy` column to the table.
 Note that `concert-crawl-billing-jobs` is declared for prod in `render.yaml`
 but has no live prod service.
@@ -1452,8 +1494,8 @@ git commit -m "docs(deploy): describe the prod promotion gate"
 ### Task 12: Teach the health checker that prod no longer auto-deploys
 
 `render-check-deploy-health.sh:86-92` calls `report_unhealthy` (exit 2) when a
-service reports `autoDeploy = "no"`, with the message *"autoDeploy is 'no', so
-merges to main will not deploy."* Under the gate that sentence is no longer a
+service reports `autoDeploy = "no"`, with the message _"autoDeploy is 'no', so
+merges to main will not deploy."_ Under the gate that sentence is no longer a
 fault — it is the design. Left as is, Task 13 Step 5 turns every scheduled
 `prod-deploy-health` run into five unhealthy reports and a Sentry alert, and the
 one monitor that watches whether prod is reachable becomes noise nobody reads.
@@ -1467,10 +1509,12 @@ shape, so nothing is lost.
 prod services exclusively, so no staging path is affected.
 
 **Files:**
+
 - Modify: `.github/scripts/render-check-deploy-health.sh`
 - Modify: `docs/runbooks/auto-deploy-prod.md`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: nothing. The script's usage, arguments and exit codes are unchanged.
 
@@ -1493,10 +1537,10 @@ if [ "${auto_deploy}" != "no" ]; then
 fi
 ```
 
-Also update the script's header block: condition 1 currently reads *"Deploys
+Also update the script's header block: condition 1 currently reads _"Deploys
 are turned off, or the service is suspended. Nothing merged will ever reach
-it."* Replace that clause with *"The service is suspended, or auto-deploy was
-re-enabled behind the promotion gate."* A header that describes the opposite of
+it."_ Replace that clause with _"The service is suspended, or auto-deploy was
+re-enabled behind the promotion gate."_ A header that describes the opposite of
 what the code does is how the next reader gets misled.
 
 - [ ] **Step 2: Prove both directions by hand**
@@ -1537,12 +1581,14 @@ run it; an agent must not flip these without him saying go.
 **Files:** none — live configuration only.
 
 **Interfaces:**
+
 - Consumes: Tasks 6, 7, 9, 10, 12 merged to `main`.
 - Produces: a promotion-gated production environment.
 
 - [ ] **Step 1: Create the GitHub configuration**
 
 In Settings → Environments → `production`:
+
 - Variables: `RENDER_SERVICE_ID_MATCH_ARTISTS` = `crn-d9nm08e7bikc73c6q39g`,
   `RENDER_SERVICE_ID_SPOTIFY_WEEKLY` = `crn-d9e46ad7vvec73dsn7bg`,
   `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (both from Vercel → the `concert-crawl`
@@ -1625,6 +1671,7 @@ alarms per run — a consequence of D2 that the spec did not enumerate.
 sync) → the other plan. D7 (staging E2E) → Tasks 1–5.
 
 **Known gaps, stated rather than hidden.**
+
 - Task 4 Step 1 is a genuine reproduction step, not a placeholder: the fix in
   Step 3 is correct for the expected finding (fallback absent from the cache),
   and Step 1 says explicitly what a different finding means.

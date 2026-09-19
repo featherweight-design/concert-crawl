@@ -56,6 +56,13 @@ const isAlwaysPublic = createRouteMatcher([
   // static release list with no user data — gating it sent that menu row to
   // sign-up.
   '/changelog(.*)',
+  // Serwist precaches the offline fallback with a plain navigation fetch that
+  // carries no session. Gating it redirects that fetch, so the fallback never
+  // lands in the cache and an offline navigation dies with ERR_FAILED instead
+  // of rendering the offline page. Static copy, no data fetch, no user
+  // context. Exact path, not a prefix — `/~offline(.*)` would make any future
+  // `~offline`-prefixed route public by default.
+  '/~offline',
 ])
 
 /**

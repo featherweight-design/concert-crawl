@@ -38,6 +38,11 @@ test.describe('PWA', () => {
     // navigation throws, so a failure here can't leave the worker offline
     // and flake unrelated tests.
     try {
+      // A navigation that the SW must answer from its precached fallback. If
+      // this throws ERR_FAILED, the /~offline entry is missing from the cache:
+      // either it never reached the build's precache manifest (see the
+      // manifestTransforms entry in apps/web/next.config.ts) or middleware
+      // redirected the session-less precache fetch.
       await page.goto('/a-path-that-was-never-cached')
       await expect(
         page.getByRole('heading', { name: /offline/i }),

@@ -308,6 +308,30 @@ describe('middleware — edge auth gate (#841)', () => {
     await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized')
     expect(auth.protect).toHaveBeenCalled()
   })
+
+  it('lets a signed-out visitor reach the offline fallback', async () => {
+    const { middlewareHandler } = await import('./middleware')
+
+    // Serwist precaches /~offline through a plain navigation fetch with no
+    // session. Gating it redirects that fetch, the fallback never lands in the
+    // cache, and an offline navigation dies with ERR_FAILED.
+    const req = new NextRequest('http://localhost/~offline')
+    const result = await middlewareHandler(makeAuth(null), req)
+
+    expect(result).toBeUndefined()
+  })
+
+  it('does not make a ~offline-prefixed route public', async () => {
+    const { middlewareHandler } = await import('./middleware')
+
+    // The mocked createRouteMatcher uses startsWith, so this is the guard that
+    // catches a `/~offline(.*)` glob smuggling a future private sibling in.
+    const req = new NextRequest('http://localhost/~offline-admin')
+    const auth = makeAuth(null)
+
+    await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized')
+    expect(auth.protect).toHaveBeenCalled()
+  })
 })
 
 // ⚠️ The createRouteMatcher mock above uses `startsWith`, which is looser than
