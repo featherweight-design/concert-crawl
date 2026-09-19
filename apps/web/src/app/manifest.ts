@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next'
 
+import { BRAND_PAPER } from '@/lib/definitions/brand'
+
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: '/',
@@ -11,8 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#070A1A',
-    theme_color: '#070A1A',
+    background_color: BRAND_PAPER,
+    theme_color: BRAND_PAPER,
     categories: ['music', 'entertainment', 'events'],
     icons: [
       {

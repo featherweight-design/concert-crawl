@@ -16,6 +16,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { LANDING_COPY } from '@/app/_components/definitions/copy'
 import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios'
 import { siteOrigin } from '@/lib/share/site-origin'
+import { BRAND_PAPER } from '@/lib/definitions/brand'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -134,7 +135,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#070A1A',
+  themeColor: BRAND_PAPER,
 }
 
 interface RootLayoutProps {
