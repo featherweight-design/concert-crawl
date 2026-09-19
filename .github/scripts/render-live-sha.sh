@@ -8,6 +8,11 @@
 # built, so never do duration arithmetic on those rows.
 set -euo pipefail
 
+command -v jq >/dev/null 2>&1 || {
+  echo "✗ jq is required but not installed on this runner" >&2
+  exit 1
+}
+
 service_id="${1:?usage: render-live-sha.sh <service-id>}"
 : "${RENDER_API_TOKEN:?RENDER_API_TOKEN must be set}"
 
@@ -18,7 +23,13 @@ service_id="${1:?usage: render-live-sha.sh <service-id>}"
 # and this script is read precisely during stalls like that — a page size that
 # runs out at the moment drift is largest reports no live deploy instead of a
 # large number.
+# --connect-timeout/--max-time match the four sibling render-*.sh scripts. This
+# read is dispatched by a monitor whose job is to report promptly: without a
+# bound, a stalled Render endpoint hangs until the 10-minute job timeout and the
+# measurement-failure alert arrives ten minutes late instead of fifteen seconds
+# late, while holding a runner the whole time.
 response=$(curl -sS --fail-with-body \
+  --connect-timeout 5 --max-time 15 \
   -H "Authorization: Bearer $RENDER_API_TOKEN" \
   -H 'Accept: application/json' \
   "https://api.render.com/v1/services/${service_id}/deploys?limit=50")
