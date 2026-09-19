@@ -68,7 +68,7 @@ The scheduled `smoke.yml` (every 6 hours against prod) is independent and remain
 - `srv-*` (web service) → calls Render's `/rollback` endpoint, rolls API back to the prior `live` deploy.
 - `crn-*` (cron job) → Render's `/rollback` endpoint rejects cron services (HTTP 400; confirmed against the live API). The script emits a `::warning::` annotation and exits 0 so the workflow can continue rolling back the other services.
 
-**Net behavior of "smoke failure → rollback":** only the API web service is actually rolled back automatically. The two crawler crons require manual rollback — either via the Render dashboard's Manual Deploy on a prior commit, or (typically preferred) by reverting the offending commit on `main` and letting Render auto-deploy the revert. The Resend admin email surfaces this explicitly so the operator knows manual action is needed for the crons.
+**Net behavior of "smoke failure → rollback":** only the API web service is actually rolled back automatically. All four prod crons — crawler triggers, crawler daily, match-artists, spotify-weekly — require manual rollback — either via the Render dashboard's Manual Deploy on a prior commit, or (typically preferred) by reverting the offending commit on `main` and letting Render auto-deploy the revert. The Resend admin email surfaces this explicitly so the operator knows manual action is needed for the crons.
 
 ### Why push, not cron
 
@@ -99,7 +99,7 @@ The rollback trigger keys on a job output that the smoke job sets ONLY after Pla
 ## Vercel + cron rollback is manual
 
 This pipeline auto-rolls back **only the Render API web service**.
-Both prod **crawler crons** require manual rollback because Render's
+All four prod **cron jobs** require manual rollback because Render's
 `/rollback` endpoint rejects cron services — see the "Caveat on cron
 service rollback" section above for the manual paths. **Vercel web
 prod is NOT auto-rolled back** either, because Vercel already offers
@@ -195,6 +195,8 @@ All of these are already provisioned if you're past Stage 2 of `production-launc
 | `RENDER_SERVICE_ID_API`              | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod | prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`). Used for the smoke workflow's `render-wait-for-live.sh` + `render-rollback.sh`, the manual deploy POST, and rollback.                                       |
 | `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod | prod crawler triggers cron service ID. Used by smoke's rollback step (auto-skips for crons), deploy-prod's API POST, and rollback-prod.                                                                                               |
 | `RENDER_SERVICE_ID_CRAWLER_DAILY`    | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod | prod crawler daily cron service ID. Same.                                                                                                                                                                                             |
+| `RENDER_SERVICE_ID_MATCH_ARTISTS`    | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod | prod match-artists cron service ID (`crn-*`). Same. Every workflow in this table fails its preflight until this is set.                                                                                                                |
+| `RENDER_SERVICE_ID_SPOTIFY_WEEKLY`   | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod | prod spotify-weekly cron service ID (`crn-*`). Same. Every workflow in this table fails its preflight until this is set.                                                                                                               |
 | `ADMIN_EMAIL`                        | prod-smoke-after-deploy, deploy-prod (manual)                | **optional** — address that receives an auto-rollback notification when smoke fails. Falls back to a `::warning::` annotation only when unset. Currently at repo level — see `production-launch.md` for the move-to-env-scope option. |
 
 Service IDs live in the `production` environment (not at the repo level) so they are scoped to prod-only workflow runs and stay aligned with `production-launch.md`. The `deploy-prod.yml` and `rollback-prod.yml` jobs use `environment: production` and read them as `vars.RENDER_SERVICE_ID_*`.
@@ -206,7 +208,7 @@ Service IDs live in the `production` environment (not at the repo level) so they
 | `RENDER_API_TOKEN` | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod | Render → Account Settings → API Keys → generate a token with deploy + read permissions. Consumed by the smoke workflow's `render-wait-for-live.sh` + `render-rollback.sh`, the manual deploy POST, and `rollback-prod.yml`. |
 | `RESEND_API_KEY`   | prod-smoke-after-deploy, deploy-prod (manual)                | **optional** — same Resend API key the API + crawler already use. When set together with `ADMIN_EMAIL`, the rollback path emails the admin from `alerts@concertcrawl.app`. Missing → warning annotation only.               |
 
-No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed: the deploy POST uses the Render API directly with `RENDER_API_TOKEN` + the service IDs above. Render Cron Jobs don't expose a Deploy Hook UI anyway (confirmed 2026-06-23), so the hook-based approach couldn't have covered the two crawler crons.
+No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed: the deploy POST uses the Render API directly with `RENDER_API_TOKEN` + the service IDs above. Render Cron Jobs don't expose a Deploy Hook UI anyway (confirmed 2026-06-23), so the hook-based approach couldn't have covered any of the four prod crons.
 
 ### Repository-level secrets (Settings → Secrets and variables → Actions)
 

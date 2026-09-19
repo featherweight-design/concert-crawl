@@ -103,7 +103,7 @@ an investigation.
 
 A suspended service is one of the two conditions
 `.github/scripts/render-check-deploy-health.sh` alerts on — which is why
-that checker is pointed at the three prod services only, and not at
+that checker is pointed at the five prod services only, and not at
 everything in the account.
 
 ## Build and start commands
