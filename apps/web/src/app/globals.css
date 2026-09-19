@@ -171,9 +171,12 @@
   animation: ccEventHighlight 2s ease-in-out forwards;
 }
 @media (prefers-reduced-motion: reduce) {
-  /* Blanket guard. Every animation in this file predates it and only
-     [data-highlighted] was ever covered, so the default is now "off" and a
-     keyframe has to opt back in rather than be remembered.
+  /* Blanket guard. Targeted reduced-motion rules already existed — this
+     block for [data-highlighted], one at .notif-shimmer/.notif-pip, one
+     scoping skeletonPulse to .ap-page — but they covered seven selectors
+     between them and every other keyframe in this file ran regardless. The
+     default is now "off" and a keyframe opts back in rather than being
+     remembered.
 
      Near-zero durations rather than `animation: none` — an animation running
      `forwards`/`both` keeps its end state this way, so a fade-in still ends
