@@ -172,7 +172,7 @@ The staging Vercel project would normally invert this (Production + Preview so p
 
 | Key                                   | Value                                                                                                                                                                                                                     | Sensitive |
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| `NEXT_PUBLIC_SITE_URL`                | `https://concertcrawl.app` (staging project: `https://staging.concertcrawl.app`) — canonical origin for share links and Open Graph tags. See the note below; leaving it unset is a silent defect, not a default            | OFF       |
+| `NEXT_PUBLIC_SITE_URL`                | `https://concertcrawl.app` (staging project: `https://staging.concertcrawl.app`) — canonical origin for share links and Open Graph tags. See the note below; leaving it unset is a silent defect, not a default           | OFF       |
 | `NEXT_PUBLIC_API_URL`                 | `https://concert-crawl-api.onrender.com`                                                                                                                                                                                  | OFF       |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`   | prod `pk_live_*` from Step 1 (encodes `clerk.concertcrawl.app`)                                                                                                                                                           | OFF       |
 | `CLERK_SECRET_KEY`                    | prod `sk_live_*` from Step 1                                                                                                                                                                                              | ON        |
@@ -514,6 +514,50 @@ Vercel's bulk `.env` import marks **all** values as **Sensitive** by default. Se
 - Neither `NEXT_PUBLIC_CLERK_PROXY_URL` nor `NEXT_PUBLIC_CLERK_DOMAIN` is set
 
 Without a matching app-side rewrite to forward `/__clerk/*` to Clerk's CDN, all script loads 404. Set `NEXT_PUBLIC_CLERK_DOMAIN=concertcrawl.app` (per Step 6 table) to short-circuit the auto-proxy.
+
+### Vercel WAF — `block-scanner-paths`, and the setting that must stay off
+
+The prod project (`concert-crawl`, `prj_c1b4RmphaUmiGtDVtB987O12pn44`) carries exactly one custom firewall rule. `concert-crawl-staging` is deliberately left unconfigured, which makes it the control when you need to tell a firewall block apart from a real outage.
+
+```
+block-scanner-paths · active
+  Request Path  matches expression  ^/(wp-|wordpress|\.env|\.git|phpmyadmin|xmlrpc\.php|vendor/)
+  Deny, actionDuration: null
+```
+
+It exists because every unknown URL redirects to `/sign-in` rather than returning a 404, so a scanner sweeping a couple of hundred WordPress paths costs a middleware invocation plus a sign-in render for each redirect it follows. Denying at the edge skips both.
+
+> ⚠️ **`actionDuration` must stay `null` on this rule. It is not a "how long to block the path" setting — it blocks the _client_.** The rule shipped on 2026-09-19 with `actionDuration: 15m` and within hours was returning 403 for the entire site to an ordinary browsing session. The regex was never at fault; the denies that show up in the dashboard against innocent paths (`/robots.txt`, `/sw.js`, `/watching`) are the aftermath of a client-level block, not evidence of over-matching. Residential and carrier-grade NAT means one probe from any device sharing a visitor's public IP takes that visitor off the whole site, with a bare `403 Forbidden` and no explanation. The saving a persistent action buys is a few hundred edge invocations a month, which does not justify it. If scanner volume ever becomes a real cost, use a `rateLimit` action rather than reinstating `actionDuration`.
+
+Smoke-testing is safe with `actionDuration: null`, and is the check that the setting has not crept back:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://concertcrawl.app/.env   # expect 403
+curl -s -o /dev/null -w '%{http_code}\n' https://concertcrawl.app/       # expect 200, immediately
+```
+
+A 403 on the second call means a persistent action is live again. A firewall denial is identifiable by the `x-vercel-mitigated: deny` response header.
+
+**Other settings, and why they are where they are:**
+
+- **Bot Protection and Attack Mode stay off.** Both challenge non-browser clients, which would break the Render cron's machine-to-machine `POST /api/revalidate` and threaten the hourly Playwright prod smoke tests.
+- **AI Bots is on Allow, deliberately.** Blocking saves little while the site is invite-gated, and being the answer when someone asks an assistant what's on in Denver is the point of the product. If a finer line is ever wanted, `apps/web/src/app/robots.ts` can name specific agents rather than using Vercel's single lump toggle.
+- **OWASP managed rules:** `gen`, `rce`, `xss` and `sqli` are active in **Log** mode, so they record and deny nothing. Promoting any to Deny is a separate decision and may be plan-gated.
+
+**Reading and editing the config.** The dashboard is the normal path; the API is there for verification, since the config is not stored in this repo. The CLI bearer token lives at `~/Library/Application Support/com.vercel.cli/auth.json` and the team is `team_tBEQct4aCLPw5a8jbqRJbuPZ`.
+
+```bash
+# read
+curl -s -H "Authorization: Bearer $TOKEN" \
+  "https://api.vercel.com/v1/security/firewall/config/active?projectId=$PROJECT_ID&teamId=$TEAM_ID"
+
+# write — returns {} on success, so always re-read to confirm
+curl -s -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  "https://api.vercel.com/v1/security/firewall/config?projectId=$PROJECT_ID&teamId=$TEAM_ID" \
+  -d '{"action":"rules.update","id":"<rule id>","value":{ ... }}'
+```
+
+Firewall analytics exports cap at 100 rows sorted by count, so a low-count trigger request is truncated out. An export that shows no matching path has not ruled one out.
 
 ### Cloudflare DNS proxy must be OFF for Vercel domains
 
