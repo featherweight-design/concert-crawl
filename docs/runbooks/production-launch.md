@@ -525,9 +525,9 @@ block-scanner-paths · active
   Deny, actionDuration: null
 ```
 
-It exists because every unknown URL redirects to `/sign-in` rather than returning a 404, so a scanner sweeping a couple of hundred WordPress paths costs a middleware invocation plus a sign-in render for each redirect it follows. Denying at the edge skips both.
+**What it is still worth, which is less than when it was written.** The original case was that an unknown URL fell through to `auth.protect` and 307'd to `/sign-in`, so a scanner sweeping 200 WordPress paths also bought 200 sign-in renders from the redirects it followed. The `KNOWN_TOP_LEVEL_SEGMENTS` gate in `apps/web/src/middleware.ts` (#1704) removed that on its own — unknown paths now 404 at the middleware. What survives is narrower: a WAF deny happens at the edge, ahead of the middleware, so it skips the middleware invocation that `config.matcher` otherwise makes unavoidable. Real, but small, and the smallness is the reason the rule gets no latitude to harm real visitors.
 
-> ⚠️ **`actionDuration` must stay `null` on this rule. It is not a "how long to block the path" setting — it blocks the _client_.** The rule shipped on 2026-09-19 with `actionDuration: 15m` and within hours was returning 403 for the entire site to an ordinary browsing session. The regex was never at fault; the denies that show up in the dashboard against innocent paths (`/robots.txt`, `/sw.js`, `/watching`) are the aftermath of a client-level block, not evidence of over-matching. Residential and carrier-grade NAT means one probe from any device sharing a visitor's public IP takes that visitor off the whole site, with a bare `403 Forbidden` and no explanation. The saving a persistent action buys is a few hundred edge invocations a month, which does not justify it. If scanner volume ever becomes a real cost, use a `rateLimit` action rather than reinstating `actionDuration`.
+> ⚠️ **`actionDuration` must stay `null` on this rule. It is not a "how long to block the path" setting — it blocks the _client_.** The rule shipped on 2026-09-19 with `actionDuration: 15m` and within hours was returning 403 for the entire site to an ordinary browsing session. The regex was never at fault; the denies that show up in the dashboard against innocent paths (`/robots.txt`, `/sw.js`, `/watching`) are the aftermath of a client-level block, not evidence of over-matching. Residential and carrier-grade NAT means one probe from any device sharing a visitor's public IP takes that visitor off the whole site, with a bare `403 Forbidden` and no explanation. Set against that, a persistent action saves some middleware invocations on scanner sweeps — a quantity nobody has measured, and one the paragraph above already bounds as small. If scanner volume ever becomes a real cost, measure it first, then reach for a `rateLimit` action rather than reinstating `actionDuration`.
 
 Smoke-testing is safe with `actionDuration: null`, and is the check that the setting has not crept back:
 
@@ -542,20 +542,21 @@ A 403 on the second call means a persistent action is live again. A firewall den
 
 - **Bot Protection and Attack Mode stay off.** Both challenge non-browser clients, which would break the Render cron's machine-to-machine `POST /api/revalidate` and threaten the hourly Playwright prod smoke tests.
 - **AI Bots is on Allow, deliberately.** Blocking saves little while the site is invite-gated, and being the answer when someone asks an assistant what's on in Denver is the point of the product. If a finer line is ever wanted, `apps/web/src/app/robots.ts` can name specific agents rather than using Vercel's single lump toggle.
-- **OWASP managed rules:** `gen`, `rce`, `xss` and `sqli` are active in **Log** mode, so they record and deny nothing. Promoting any to Deny is a separate decision and may be plan-gated.
+- **OWASP managed rules:** as read from the live config on 2026-09-19, `gen`, `rce`, `xss` and `sqli` are `active: true` with `action: "log"`, so they record and deny nothing; the other seven are inactive. Log mode is clearly available on this plan. Whether promoting one to **Deny** is also available is unverified — the dashboard has previously shown managed rules as a "Contact Sales" item, so check there before planning around it.
 
-**Reading and editing the config.** The dashboard is the normal path; the API is there for verification, since the config is not stored in this repo. The CLI bearer token lives at `~/Library/Application Support/com.vercel.cli/auth.json` and the team is `team_tBEQct4aCLPw5a8jbqRJbuPZ`.
+**Reading and editing the config.** The dashboard is the normal path; the API is there for verification, since the config is not stored in this repo. The bearer token is the Vercel CLI's, stored as JSON rather than a bare value:
 
 ```bash
+export TOKEN=$(python3 -c "import json;print(json.load(open('$HOME/Library/Application Support/com.vercel.cli/auth.json'))['token'])")
+export PROJECT_ID=prj_c1b4RmphaUmiGtDVtB987O12pn44   # concert-crawl (prod)
+export TEAM_ID=team_tBEQct4aCLPw5a8jbqRJbuPZ
+
 # read
 curl -s -H "Authorization: Bearer $TOKEN" \
   "https://api.vercel.com/v1/security/firewall/config/active?projectId=$PROJECT_ID&teamId=$TEAM_ID"
-
-# write — returns {} on success, so always re-read to confirm
-curl -s -X PATCH -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  "https://api.vercel.com/v1/security/firewall/config?projectId=$PROJECT_ID&teamId=$TEAM_ID" \
-  -d '{"action":"rules.update","id":"<rule id>","value":{ ... }}'
 ```
+
+Writes use `PATCH https://api.vercel.com/v1/security/firewall/config` with a body of `{"action":"rules.update","id":"<rule id>","value":{...}}`, where `value` is a complete rule object (`name`, `description`, `active`, `conditionGroup`, `action`) — it replaces the rule rather than patching fields, so read the current rule first and edit from that. A successful write returns `{}` and nothing else, so always re-read the active config to confirm the change landed.
 
 Firewall analytics exports cap at 100 rows sorted by count, so a low-count trigger request is truncated out. An export that shows no matching path has not ruled one out.
 
