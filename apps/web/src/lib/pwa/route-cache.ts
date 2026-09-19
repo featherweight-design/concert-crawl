@@ -36,8 +36,10 @@ export const isPublicCacheableApi = (url: URL): boolean =>
 // here, but never the reverse.
 //
 // Excluded on purpose despite being public in middleware:
-//  - the auth surfaces (/sign-in, /sign-up, /auth/code, /onboarding), where a
-//    stale shell is worse than a network round trip
+//  - the auth surfaces (/sign-in, /sign-up, /auth/code), where a stale shell
+//    is worse than a network round trip. /onboarding is not public in
+//    middleware at all — the tour runs post-sign-up — so it is out of scope
+//    here for the same reason /~offline is.
 //  - /search, whose value is entirely in the live query
 //  - /watching, which is route-public once launched but payload-private always
 //

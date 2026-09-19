@@ -92,5 +92,12 @@ export async function validateAndSetInviteCode(
     )
   }
 
-  redirect('/onboarding')
+  // Straight to sign-up, not into the tour. The walkthrough runs AFTER the
+  // account exists (`/auth/complete` sends them on), because every step past
+  // the genre picker reads as the signed-in user: the artist suggestions read
+  // needs a Clerk token, and the follow write it commits needs one too. Running
+  // the tour on a visitor with only an invite cookie made step 7 fail for
+  // everyone, every time. It also matches the launched funnel, where there is
+  // no invite step and sign-up is the front door.
+  redirect('/sign-up')
 }

@@ -313,6 +313,35 @@ describe('#737 pip — signed in', () => {
 // watermark — not the read stamps — decides whether it is drawn. Before this,
 // `notifications_seen_at` was written on every open and read by nothing, which
 // meant opening the panel did not clear the pip at all.
+// The tour runs after sign-up now, so this row is the only way back into it
+// for an account that has already been through — or skipped it.
+describe('the account menu carries a way back into the tour', () => {
+  it('links a signed-in reader to the tour in its visiting mode', async () => {
+    signIn()
+    await renderChrome(<UserMenu />)
+    await click(desktopTrigger())
+
+    const rows = CONSUMER_COPY.userMenu.rows
+    const link = screen.getByRole('link', { name: rows.howItWorks })
+    // `entry=menu` is what turns the rail from "Skip" into "Close". Without
+    // it the row still reaches the tour and reads as a funnel step.
+    expect(link.getAttribute('href')).toBe(rows.howItWorksHref)
+    expect(rows.howItWorksHref).toContain('entry=menu')
+  })
+
+  it('sends a signed-out visitor to sign-up instead, since the tour needs an account', async () => {
+    await renderChrome(<UserMenu />)
+    await click(desktopTrigger())
+
+    const signedOut = CONSUMER_COPY.userMenu.signedOut
+    expect(
+      screen
+        .getByRole('link', { name: signedOut.howItWorks })
+        .getAttribute('href'),
+    ).toBe('/sign-up')
+  })
+})
+
 describe('#737 pip — the seen watermark', () => {
   const OLD = '2026-07-24T18:00:00Z'
   const NEW = '2026-07-24T20:00:00Z'

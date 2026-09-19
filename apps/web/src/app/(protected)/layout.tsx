@@ -13,7 +13,7 @@ interface ProtectedLayoutProps {
 // before this server component runs. See #841.
 //
 // That is no longer true for every route in this group: #794 makes /events,
-// /venues, /search, /watching and /onboarding public, so this layout can now
+// /venues, /search and /watching public, so this layout can now
 // render for an anonymous visitor. Every gate below therefore checks
 // isSignedIn itself instead of trusting the folder name — the group boundary
 // is a layout-sharing convention here, not an auth guarantee.

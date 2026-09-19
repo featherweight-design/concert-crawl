@@ -818,6 +818,12 @@ function MenuBody({
       {/* App section */}
       <SectionLabel>{CONSUMER_COPY.userMenu.sections.app}</SectionLabel>
       <ThemeMenuRow />
+      {/* The tour is post-sign-up now, so this is the only way back into it
+          for an account that has already been through — or skipped it. */}
+      <MenuRow
+        label={CONSUMER_COPY.userMenu.rows.howItWorks}
+        href={CONSUMER_COPY.userMenu.rows.howItWorksHref}
+      />
       <MenuRow
         label={CONSUMER_COPY.userMenu.rows.settings}
         onClick={onSettings}

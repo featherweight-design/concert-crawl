@@ -14,6 +14,16 @@ import {
 } from '@/lib/auth/intent'
 import { decodePendingTier } from '@/components/consumer/tier-picker/lib/pending-tier'
 
+/**
+ * Whether a sanitized destination already points at the tour. Compared as a
+ * PATH — `/onboardingxyz` is a different route, and a bare `startsWith` would
+ * treat it as one of ours.
+ */
+const isOnboardingPath = (destination: string): boolean => {
+  const { pathname } = new URL(destination, 'https://placeholder.invalid')
+  return pathname === '/onboarding' || pathname.startsWith('/onboarding/')
+}
+
 interface AuthCompletePageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }
@@ -94,12 +104,29 @@ export default async function AuthCompletePage({
   // forwarded blind: it lands in a `Location` header.
   const rawTier = params[PENDING_TIER_PARAM]
 
+  // Every visitor reaching this page has just CREATED an account — Clerk's
+  // `SignUp` is the only thing that routes here — so this is the one place that
+  // can send a new user into the tour without a "have they seen it" flag.
+  // The destination rides along as `?return=`, and the tour's own finish CTA
+  // spends it, so the walkthrough is a stop on the way rather than a detour
+  // that loses where the visitor was headed.
+  const destination = sanitizeReturnPath(
+    pendingReturn?.code ?? (typeof rawReturn === 'string' ? rawReturn : null),
+  )
+
+  // A destination that IS the tour is passed through rather than wrapped. The
+  // signed-out Watch and Follow buttons build their own
+  // `/sign-up?redirect_url=/onboarding?intent=…&label=…` — the tour is where a
+  // pending action is handed back, so it has always been their target — and
+  // wrapping that in a second `?return=` would walk the visitor through all
+  // eight steps twice before replaying the watch they clicked.
+  const landing = isOnboardingPath(destination)
+    ? destination
+    : `/onboarding?${new URLSearchParams({ return: destination }).toString()}`
+
   redirect(
     appendPendingTier(
-      sanitizeReturnPath(
-        pendingReturn?.code ??
-          (typeof rawReturn === 'string' ? rawReturn : null),
-      ),
+      landing,
       decodePendingTier(typeof rawTier === 'string' ? rawTier : null),
     ),
   )

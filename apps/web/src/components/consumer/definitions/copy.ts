@@ -594,7 +594,10 @@ export const CONSUMER_COPY = {
       signIn: 'Sign in',
       signInHref: '/sign-in',
       howItWorks: 'How Concert Crawl works',
-      howItWorksHref: '/onboarding',
+      // The tour itself is post-sign-up — it reads and writes as the account
+      // taking it — so this row leads to the thing that produces one rather
+      // than to a route that would bounce a guest off a sign-in wall.
+      howItWorksHref: '/sign-up',
       terms: 'Terms',
       termsHref: '/legal/terms',
       privacy: 'Privacy',
@@ -609,6 +612,12 @@ export const CONSUMER_COPY = {
       submittedPrices: 'Submitted prices',
       submittedPricesMeta: (count: number) => `${count} live`,
       theme: 'Theme',
+      // Same words as the signed-out row: it is the same tour, and two names
+      // for one thing reads as two things. `entry=menu` is what turns the
+      // tour's rail from "Skip" into "Close" — someone who opened it from
+      // here is visiting, not being funnelled through it.
+      howItWorks: 'How Concert Crawl works',
+      howItWorksHref: '/onboarding?entry=menu',
       settings: 'Settings',
       admin: 'Admin',
       signOut: 'Sign out',

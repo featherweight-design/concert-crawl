@@ -79,7 +79,7 @@ const redirectLocation = (result: NextResponse | undefined): string | null =>
   expectRedirect(result).headers.get('location')
 
 describe('middleware — returning-user redirect (#80)', () => {
-  it('redirects unauthenticated user with invite cookie from / to /onboarding', async () => {
+  it('redirects unauthenticated user with invite cookie from / to /sign-up', async () => {
     const { middlewareHandler } = await import('./middleware')
 
     const req = new NextRequest('http://localhost/', {
@@ -89,7 +89,7 @@ describe('middleware — returning-user redirect (#80)', () => {
     const result = await middlewareHandler(makeAuth(null), req)
 
     expect(result).not.toBeUndefined()
-    expect(redirectLocation(result)).toContain('/onboarding')
+    expect(redirectLocation(result)).toContain('/sign-up')
   })
 
   it('does not redirect unauthenticated user without invite cookie from /', async () => {
@@ -325,7 +325,6 @@ describe('middleware — public browse routes (#794)', () => {
     '/search',
     '/search?q=geese',
     '/watching',
-    '/onboarding',
   ])('lets a signed-out visitor through to %s', async (path) => {
     const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
@@ -463,6 +462,22 @@ describe('middleware — public browse routes (#794)', () => {
   // while the landing page advertised "Sign up" meant the public shape's own
   // primary conversion path bounced to /auth/code. Once launched, an account
   // costs no invite code; the pre-launch case lives in the beta suite below.
+  // The tour is post-auth in both launch modes: its artist step reads and
+  // writes as the signed-in user, so a signed-out walk can only end in the
+  // error panel. Sign-in, then straight back to it.
+  it('sends a signed-out visitor from /onboarding to sign-in once launched', async () => {
+    const { middlewareHandler } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    await expect(
+      middlewareHandler(auth, makeReq('/onboarding')),
+    ).rejects.toThrow()
+
+    const url = new URL(auth.protect.mock.calls[0]![0].unauthenticatedUrl)
+    expect(url.pathname).toBe('/sign-in')
+    expect(url.searchParams.get('redirect_url')).toBe('/onboarding')
+  })
+
   it('lets a signed-out visitor reach /sign-up without an invite code', async () => {
     const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
@@ -474,9 +489,9 @@ describe('middleware — public browse routes (#794)', () => {
   })
 
   // Guards the `/` + invite_verified branch, which is evaluated BEFORE
-  // isAlwaysPublic and must stay that way — reorder those blocks and invited
-  // users stop reaching onboarding from the landing page.
-  it('still redirects a signed-out visitor with an invite cookie from / to /onboarding', async () => {
+  // isAlwaysPublic and must stay that way — reorder those blocks and a
+  // returning code-holder stops reaching the funnel from the landing page.
+  it('still redirects a signed-out visitor with an invite cookie from / to /sign-up', async () => {
     const { middlewareHandler } = await import('./middleware')
 
     const result = await middlewareHandler(
@@ -484,7 +499,7 @@ describe('middleware — public browse routes (#794)', () => {
       makeReq('/', { invite_verified: '1' }),
     )
 
-    expect(redirectLocation(result)).toContain('/onboarding')
+    expect(redirectLocation(result)).toContain('/sign-up')
   })
 })
 
@@ -509,32 +524,27 @@ describe('middleware — private-beta launch gate (#794)', () => {
     expect(auth.protect).toHaveBeenCalled()
   })
 
-  it('sends a signed-out visitor without the invite cookie from /onboarding to /auth/code', async () => {
+  // The invite cookie no longer buys the tour, because the tour no longer runs
+  // on a cookie-only visitor: the funnel is invite code → sign-up → tour, and
+  // `/auth/complete` spends the cookie before the tour is ever reached.
+  it('sends a signed-out visitor from /onboarding to sign-in, cookie or not', async () => {
     const { middlewareHandler } = await import('./middleware')
 
-    const result = await middlewareHandler(
-      makeAuth(null),
-      makeReq('/onboarding'),
-    )
+    for (const cookies of [undefined, { invite_verified: 'abc123' }]) {
+      const auth = makeAuth(null)
 
-    expect(expectRedirect(result).status).toBe(307)
-    expect(redirectLocation(result)).toContain('/auth/code')
+      await expect(
+        middlewareHandler(auth, makeReq('/onboarding', cookies)),
+      ).rejects.toThrow()
+
+      const url = new URL(auth.protect.mock.calls[0]![0].unauthenticatedUrl)
+      expect(url.pathname).toBe('/sign-in')
+    }
   })
 
-  it('lets an invite-cookie holder through to /onboarding', async () => {
-    const { middlewareHandler } = await import('./middleware')
-    const auth = makeAuth(null)
-
-    const result = await middlewareHandler(
-      auth,
-      makeReq('/onboarding', { invite_verified: 'abc123' }),
-    )
-
-    expect(result).toBeUndefined()
-    expect(auth.protect).not.toHaveBeenCalled()
-  })
-
-  it('still bounces a signed-in user off /onboarding before launch', async () => {
+  // Inverted from what #794 shipped. Bouncing a signed-in user off the tour
+  // would bounce exactly the people the funnel just sent there.
+  it('no longer bounces a signed-in user off /onboarding before launch', async () => {
     const { middlewareHandler } = await import('./middleware')
 
     const result = await middlewareHandler(
@@ -542,8 +552,7 @@ describe('middleware — private-beta launch gate (#794)', () => {
       makeReq('/onboarding'),
     )
 
-    expect(expectRedirect(result).status).toBe(307)
-    expect(redirectLocation(result)).toContain('/events')
+    expect(result).toBeUndefined()
   })
 
   it('leaves the landing page and the invite funnel reachable', async () => {

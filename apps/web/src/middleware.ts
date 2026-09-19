@@ -59,6 +59,14 @@ const isAlwaysPublic = createRouteMatcher([
 ])
 
 /**
+ * The tour is post-auth in BOTH launch modes, which is why `/onboarding` is in
+ * neither public list. Its artist step reads suggestions as the signed-in
+ * reader and commits follows for them, so a signed-out walk can only ever end
+ * in the error panel. A signed-out visitor is sent to sign-in and returned
+ * here, rather than being shown seven steps that cannot finish.
+ */
+
+/**
  * The #794 browse-only shape — public once, and only once, the launch flag is
  * on. Payload gating for these lives in the page components and in apps/api,
  * not here. `/watching` is public as a route and gated as a payload, so its
@@ -78,7 +86,6 @@ const isPublicOnceLaunched = createRouteMatcher([
   '/artists(.*)',
   '/search(.*)',
   '/watching(.*)',
-  '/onboarding(.*)',
   // `/sign-up` belongs here for the same reason as the rest: once the product
   // is public, an invite code is no longer the price of an account. #794 left
   // it unconditionally invite-gated, which meant the public landing page's
@@ -119,18 +126,14 @@ const toSafeReturnPath = (pathname: string, search: string): string => {
 const isInviteGated = createRouteMatcher(['/sign-up(.*)'])
 
 /**
- * Before launch, onboarding is part of the invite funnel and needs the cookie —
- * the landing page sends a returning code-holder straight there.
- */
-const isInviteGatedBeforeLaunch = createRouteMatcher(['/onboarding(.*)'])
-
-/**
- * Signed-in users get bounced off these back to /events. Once launched,
- * `/onboarding` drops out: it becomes a permanent post-auth route reachable
- * from the account menu, so bouncing would make that menu row do nothing.
+ * Signed-in users get bounced off these back to /events.
+ *
+ * `/onboarding` is deliberately NOT here, in either launch mode. The tour now
+ * runs AFTER sign-up — `/auth/complete` sends every new account into it — so
+ * bouncing a signed-in visitor would bounce the very people the funnel just
+ * sent, and would make the account menu's own tour row dead.
  */
 const isPreAuth = createRouteMatcher(['/auth/code(.*)', '/sign-up(.*)'])
-const isPreAuthBeforeLaunch = createRouteMatcher(['/onboarding(.*)'])
 
 /**
  * Every first URL segment this app actually serves, including the metadata
@@ -220,37 +223,33 @@ export const middlewareHandler = async (
   // server component) keeps the landing route eligible for ISR — calling auth()
   // inside the page would force dynamic rendering. See #842.
   if (userId) {
-    if (
-      isPreAuth(req) ||
-      (!launched && isPreAuthBeforeLaunch(req)) ||
-      req.nextUrl.pathname === '/'
-    ) {
+    if (isPreAuth(req) || req.nextUrl.pathname === '/') {
       return NextResponse.redirect(new URL('/events', req.url))
     }
     return
   }
 
   // Returning users: redeemed code but never completed sign-up.
-  // invite_verified cookie is set but no Clerk session → send to onboarding.
+  // invite_verified cookie is set but no Clerk session → back to sign-up,
+  // which is where a redeemed code leads now; the tour comes after it.
   if (req.nextUrl.pathname === '/') {
     const inviteCookie = req.cookies.get('invite_verified')?.value
     if (inviteCookie) {
-      return NextResponse.redirect(new URL('/onboarding', req.url))
+      return NextResponse.redirect(new URL('/sign-up', req.url))
     }
   }
 
   if (isAlwaysPublic(req)) return
   if (launched && isPublicOnceLaunched(req)) return
 
-  if (isInviteGated(req) || (!launched && isInviteGatedBeforeLaunch(req))) {
+  if (isInviteGated(req)) {
     const cookieValue = req.cookies.get('invite_verified')?.value
     if (!cookieValue) {
       // Carry the return path into the beta funnel. This branch is reached
-      // from `/sign-up(.*)` and, before launch, `/onboarding(.*)` — both are
-      // funnel steps rather than destinations, so `toSafeReturnPath` alone
-      // would return the visitor to the step they were bounced from (or,
-      // once signed in, bounce them on to /events) instead of the crew link
-      // they actually tapped. A visitor arriving at
+      // from `/sign-up(.*)`, a funnel step rather than a destination, so
+      // `toSafeReturnPath` alone would return the visitor to the step they
+      // were bounced from (or, once signed in, bounce them on to /events)
+      // instead of the crew link they actually tapped. A visitor arriving at
       // `/sign-up?redirect_url=/crew/join/<token>` has their real
       // destination in the querystring, so the INCOMING param wins when
       // present.

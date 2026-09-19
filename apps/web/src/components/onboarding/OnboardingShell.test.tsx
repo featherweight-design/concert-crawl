@@ -265,6 +265,25 @@ describe('OnboardingShell — post-auth tour (#794)', () => {
     expect(push).toHaveBeenCalledWith('/events')
   })
 
+  it('ends on the destination a plain return path names, with no intent', () => {
+    // A new account that signed up from the front door arrives here with
+    // `?return=` and nothing else — a pending watch or follow carries its own
+    // intent and label, and has its own case below. Falling back to /events
+    // for the plain shape would drop the show they signed up to reach.
+    renderShell({ returnPath: '/events/e1' })
+    advanceToEnd()
+    expect(primaryCtas()[0]!.textContent).toBe(nav.finishButton(null))
+    next()
+    expect(push).toHaveBeenCalledWith('/events/e1')
+  })
+
+  it('sends an unsafe return path to the default instead of following it', () => {
+    renderShell({ returnPath: '//evil.com' })
+    advanceToEnd()
+    next()
+    expect(push).toHaveBeenCalledWith('/events')
+  })
+
   it('ends by returning the visitor to their pending show, intent attached', () => {
     renderShell({
       intent: `watch:${EVENT_ID}`,

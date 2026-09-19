@@ -32,7 +32,6 @@ import {
 import {
   appendPendingTier,
   buildReturnUrl,
-  DEFAULT_RETURN_PATH,
   sanitizeReturnPath,
 } from '@/lib/auth/intent'
 
@@ -170,6 +169,11 @@ export function OnboardingShell({
   const finishLabel = hasPendingReturn ? destinationLabel : null
   // The tour is a stop on the way, not the destination, so a tier picked before
   // sign-up has to survive it — otherwise the picker never reopens (#1284).
+  // No intent to replay still leaves somewhere to be: `/auth/complete` hands
+  // the tour a plain `?return=` for every new account, so falling back to the
+  // default here would drop the destination of anyone who signed up on their
+  // way to a specific show. `destination` IS the default when there is no
+  // return path to sanitize.
   const finishHref = appendPendingTier(
     hasPendingReturn
       ? buildReturnUrl({
@@ -177,7 +181,7 @@ export function OnboardingShell({
           intent,
           label: destinationLabel,
         })
-      : DEFAULT_RETURN_PATH,
+      : destination,
     pendingTier,
   )
   // Mid-intent needs both halves: a label with no intent has nothing to replay,
