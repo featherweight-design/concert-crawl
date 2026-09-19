@@ -130,9 +130,13 @@ and the real prod dispatch path**, as noted per journey.
 
 Entry point: GitHub → Actions → **Deploy to Production** → Run workflow.
 
-1. Merge a change to `main` that touches `apps/api` or `packages/` — a
-   docs-only or web-only merge is filtered out by the staging build filter and
-   produces no deploy to wait on, so it cannot exercise this journey at all.
+1. Merge a change to `main` that touches `apps/api/**` — a docs-only or web-only
+   merge is filtered out by the staging API's Render build filter and produces no
+   deploy to wait on, so it cannot exercise this journey at all. `apps/api/**` is
+   the safe choice; only some `packages/` paths are in that filter
+   (`db`, `entitlements`, `logger`, `price-pipeline`, `push`, `types`, `config` —
+   see `render.yaml`), so `packages/crawler-core` for instance triggers no
+   staging API deploy either.
    Expected: staging API builds; `staging-smoke` and `staging-e2e` both run and
    report.
 2. Read the `staging-e2e` result. Expected: a real pass/fail, not a 124 skip. A
