@@ -25,7 +25,8 @@ export type HeroBandProps = {
 } & SlotSource
 
 /**
- * The backdrop turns the band's own mark a quarter-turn off the panel's.
+ * The backdrop turns the band's own mark a half-turn off the panel's — the
+ * offset is two quarter-turns, so 180 degrees.
  * Derived rather than fixed so it tracks whatever the generator picked for
  * this name, and offset so the two can never land on the same composition —
  * the panel drawing generated art and the backdrop drawing the identical

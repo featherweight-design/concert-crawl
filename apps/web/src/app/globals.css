@@ -483,7 +483,8 @@
     rgba(0, 0, 0, 0.35) calc(var(--band-art-reach) * 0.55),
     #000 var(--band-art-reach)
   );
-  animation: bandArtIn var(--motion-slow) var(--motion-ease) 120ms both;
+  animation: bandArtIn var(--motion-slow) var(--motion-ease) var(--motion-fast)
+    both;
 }
 
 /* Matches HeroBand's own `sm:` breakpoint. */
