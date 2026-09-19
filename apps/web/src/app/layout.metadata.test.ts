@@ -64,3 +64,14 @@ describe('root metadata.icons', () => {
     expect(urls).toContain('/api/pwa/icon-apple-180')
   })
 })
+
+describe('root metadata.verification', () => {
+  // Google re-checks the tag periodically rather than only at first
+  // verification, so losing it silently un-verifies the property and with it
+  // our ability to submit the sitemap. Nothing else in the suite would notice.
+  it('carries the Google Search Console ownership token', () => {
+    expect(metadata.verification?.google).toBe(
+      'kJBcxiEDRqZNKvZ3cplUZ6fyXcrQy2yRC1PPGexR2UI',
+    )
+  })
+})
