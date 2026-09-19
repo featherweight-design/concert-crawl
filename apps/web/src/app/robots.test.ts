@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import robots from './robots'
 import sitemap from './sitemap'
@@ -24,6 +24,12 @@ const servedFrom = (host: string | null) => {
 
 beforeEach(() => {
   servedFrom('concertcrawl.app')
+})
+
+// The deploy-origin cases below set env vars; left in place they would decide
+// the result of whatever test ran next.
+afterEach(() => {
+  vi.unstubAllEnvs()
 })
 
 /**
@@ -63,8 +69,8 @@ describe('robots.txt', () => {
    * unset there and `VERCEL_URL` is the per-deployment host, never the domain.
    */
   it('invites crawlers even when the deploy advertises a vercel.app origin', async () => {
-    process.env['NEXT_PUBLIC_SITE_URL'] = ''
-    process.env['VERCEL_URL'] = 'concert-crawl-abc123.vercel.app'
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', '')
+    vi.stubEnv('VERCEL_URL', 'concert-crawl-abc123.vercel.app')
 
     expect(await robots()).toMatchObject({
       sitemap: 'https://concertcrawl.app/sitemap.xml',
@@ -138,10 +144,13 @@ describe('sitemap.xml', () => {
   // The same regression as above: the URLs have to name the domain a searcher
   // can visit, not the deployment host this build happens to be running on.
   it('publishes canonical URLs regardless of the deploy origin', async () => {
-    process.env['VERCEL_URL'] = 'concert-crawl-abc123.vercel.app'
+    vi.stubEnv('VERCEL_URL', 'concert-crawl-abc123.vercel.app')
 
     const entries = await sitemap()
 
+    // `every` is vacuously true on an empty array, which is the exact shape the
+    // bug produced, so the count is asserted before the prefixes.
+    expect(entries).toHaveLength(2)
     expect(
       entries.every((entry) =>
         entry.url.startsWith('https://concertcrawl.app/'),
