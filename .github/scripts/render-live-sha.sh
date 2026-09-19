@@ -11,10 +11,17 @@ set -euo pipefail
 service_id="${1:?usage: render-live-sha.sh <service-id>}"
 : "${RENDER_API_TOKEN:?RENDER_API_TOKEN must be set}"
 
+# limit=50 matches render-wait-for-live.sh and render-rollback.sh, and for the
+# same reason: a streak of failed or in-progress deploys after the last
+# successful one can push the currently-`live` deploy off a shorter page. The
+# 2026-08-29 incident produced ~6 failed deploys on one service in an afternoon,
+# and this script is read precisely during stalls like that — a page size that
+# runs out at the moment drift is largest reports no live deploy instead of a
+# large number.
 response=$(curl -sS --fail-with-body \
   -H "Authorization: Bearer $RENDER_API_TOKEN" \
   -H 'Accept: application/json' \
-  "https://api.render.com/v1/services/${service_id}/deploys?limit=20")
+  "https://api.render.com/v1/services/${service_id}/deploys?limit=50")
 
 # `(.deploy // .)` is not optional politeness: some Render deploy endpoints wrap
 # the object as `{ "deploy": { ... } }` and some return it flat. All four
@@ -26,7 +33,7 @@ sha=$(echo "$response" \
   | jq -r 'first(.[] | (.deploy // .) | select(.status == "live") | .commit.id) // empty')
 
 if [ -z "$sha" ]; then
-  echo "No live deploy found for $service_id in the last 20 deploys" >&2
+  echo "No live deploy found for $service_id in the last 50 deploys" >&2
   exit 1
 fi
 

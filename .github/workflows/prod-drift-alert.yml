@@ -7,10 +7,11 @@ name: Prod drift alert
 
 on:
   schedule:
-    # 17:00 UTC daily. Chosen to sit AFTER every prod cron of the day has
-    # finished, so a drift warning never competes with a crawl or match-artists
-    # incident for attention: crawler-daily 09:00, spotify-weekly 15:30 Mon,
-    # match-artists 16:00. 15:00 would land before two of those.
+    # 17:00 UTC daily. concert-crawl-crawler-triggers runs every 10 minutes, so
+    # no hour avoids overlapping a prod cron entirely. What this hour does avoid
+    # is the three that produce incidents worth reading first: crawler-daily
+    # 09:00, spotify-weekly 15:30 Mon, match-artists 16:00. A drift warning is
+    # never urgent, so it goes last.
     - cron: '0 17 * * *'
   workflow_dispatch:
 
@@ -47,12 +48,61 @@ jobs:
             exit 1
           fi
 
+      # The API carries a buildFilter, so most merges to main cannot change what
+      # prod serves: a web-only or docs-only commit leaves the live SHA behind
+      # main correctly and forever. Counting raw commits would therefore trip
+      # MAX_COMMITS_BEHIND on a quiet API week with nothing undeployed — the
+      # exact false signal render-check-deploy-health.sh's header warns about.
+      # Read the filter out of render.yaml rather than restating it here: a
+      # second copy of the path list is a class that goes stale silently.
+      - name: Read the API service's build-filter paths
+        id: filter
+        run: |
+          paths=$(python3 - <<'PY'
+          import yaml
+
+          with open('render.yaml') as handle:
+              blueprint = yaml.safe_load(handle)
+
+          service = next(
+              svc for svc in blueprint['services']
+              if svc['name'] == 'concert-crawl-api'
+          )
+          # Strip the `/**` suffix: a git pathspec of `apps/api` already matches
+          # everything beneath it, while `apps/api/**` depends on glob magic.
+          print(' '.join(
+              path[:-3] if path.endswith('/**') else path
+              for path in service['buildFilter']['paths']
+          ))
+          PY
+          )
+          if [ -z "${paths}" ]; then
+            echo "::error::concert-crawl-api has no buildFilter paths in render.yaml; cannot tell a deployable commit from an undeployable one."
+            exit 1
+          fi
+          echo "Build-filter pathspecs: ${paths}"
+          echo "paths=${paths}" >> "$GITHUB_OUTPUT"
+
       - name: Measure drift
         id: measure
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          FILTER_PATHS: ${{ steps.filter.outputs.paths }}
         run: |
+          # A failed read is reported to Sentry by a later step rather than
+          # failing here: a broken detector means prod is unwatched, which is
+          # worth an alert of its own, and a red Actions run alone is the signal
+          # prod-deploy-health.yml already records as having gone unread.
+          set +e
           live_sha=$(bash .github/scripts/render-live-sha.sh "${{ vars.RENDER_SERVICE_ID_API }}")
+          read_status=$?
+          set -e
+          if [ "${read_status}" -ne 0 ] || [ -z "${live_sha}" ]; then
+            echo "measure_failed=1" >> "$GITHUB_OUTPUT"
+            echo "::error::Could not read the prod API's live SHA; drift is unmeasured."
+            exit 0
+          fi
+
           main_sha=$(git rev-parse origin/main)
           echo "live_sha=$live_sha" >> "$GITHUB_OUTPUT"
 
@@ -62,24 +112,44 @@ jobs:
             exit 0
           fi
 
-          # A SHA Render is live on can be missing locally if it was never on
-          # main (a hand-triggered Render build from another ref). Treat that as
-          # drift with unknown distance rather than failing the job — "prod is
-          # running something main does not contain" is exactly what this alert
-          # is for.
-          if ! git cat-file -e "${live_sha}^{commit}" 2>/dev/null; then
+          # Two separate ways for prod to be running something main does not
+          # contain: the SHA is not in this clone at all (a Render build from a
+          # deleted branch), or it is present but is not an ancestor of main (a
+          # branch tip deployed and never merged). Both are drift of unknown
+          # distance, and the ancestor case is the one a commit count reads as
+          # zero — `git rev-list live..main` is empty for a descendant of main,
+          # which would otherwise report clean.
+          if ! git cat-file -e "${live_sha}^{commit}" 2>/dev/null \
+            || ! git merge-base --is-ancestor "${live_sha}" origin/main; then
+            echo "::warning::Prod is live on ${live_sha}, which is not an ancestor of main. Prod is running code main does not contain."
             echo "commits=unknown" >> "$GITHUB_OUTPUT"
             echo "days=unknown" >> "$GITHUB_OUTPUT"
             echo "drifted=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          commits=$(git rev-list --count "${live_sha}..origin/main")
-          live_ts=$(git show -s --format=%ct "$live_sha")
-          days=$(( ( $(date -u +%s) - live_ts ) / 86400 ))
+          # shellcheck disable=SC2086 # FILTER_PATHS is a deliberate word list
+          undeployed=$(git rev-list "${live_sha}..origin/main" -- ${FILTER_PATHS})
+          commits=$(printf '%s' "${undeployed}" | grep -c . || true)
           echo "commits=$commits" >> "$GITHUB_OUTPUT"
+
+          if [ "$commits" -eq 0 ]; then
+            echo "Prod is behind main, but nothing main has added since ${live_sha} touches a path the API builds from. Nothing to promote."
+            echo "days=0" >> "$GITHUB_OUTPUT"
+            echo "drifted=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Age of the OLDEST undeployed API commit, which is how long something
+          # has actually been waiting to ship. The live commit's own age is not
+          # that: on a quiet week prod can be live on a ten-day-old commit with
+          # nothing behind it, and reporting "10 days behind" there is a false
+          # alarm.
+          oldest=$(printf '%s\n' "${undeployed}" | tail -n 1)
+          oldest_ts=$(git show -s --format=%ct "${oldest}")
+          days=$(( ( $(date -u +%s) - oldest_ts ) / 86400 ))
           echo "days=$days" >> "$GITHUB_OUTPUT"
-          echo "Prod is $commits commits and $days days behind main."
+          echo "Prod is $commits deployable commits behind main; the oldest has waited $days days."
 
           if [ "$commits" -gt "$MAX_COMMITS_BEHIND" ] || [ "$days" -gt "$MAX_DAYS_BEHIND" ]; then
             echo "drifted=true" >> "$GITHUB_OUTPUT"
@@ -99,8 +169,8 @@ jobs:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
           SENTRY_ENVIRONMENT: production
           EXTRA_CONTEXT: >-
-            ${{ steps.measure.outputs.commits }} commits,
-            ${{ steps.measure.outputs.days }} days behind.
+            ${{ steps.measure.outputs.commits }} deployable commits behind,
+            oldest waiting ${{ steps.measure.outputs.days }} days.
             Prod live SHA ${{ steps.measure.outputs.live_sha }}.
         run: |
           # <level> <message>. The message is the Sentry grouping key, so it is
@@ -108,3 +178,19 @@ jobs:
           bash .github/scripts/sentry-capture-message.sh \
             warning \
             "Prod is behind main — promote with the Deploy to Production workflow, or record why not."
+
+      - name: Report measurement failure to Sentry
+        if: steps.measure.outputs.measure_failed == '1'
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+          SENTRY_ENVIRONMENT: production
+          EXTRA_CONTEXT: |
+            The drift alert could not read the prod API's live deploy SHA, so it
+            reached no verdict. This says nothing about prod's actual state — it
+            means prod's currency is unwatched until the read works again.
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: bash .github/scripts/sentry-capture-message.sh warning "Prod drift alert could not measure drift"
+
+      - name: Fail the run if drift could not be measured
+        if: steps.measure.outputs.measure_failed == '1'
+        run: exit 1
