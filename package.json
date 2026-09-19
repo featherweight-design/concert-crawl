@@ -45,7 +45,7 @@
     "stripe": "^22.4.0",
     "tsx": "^4.23.7",
     "turbo": "2.10.8",
-    "vitest": "^4.1.10"
+    "vitest": "^5.0.1"
   },
   "lint-staged": {
     "**/*.{ts,tsx,js,json,md}": [
