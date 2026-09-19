@@ -1,3 +1,12 @@
+## [1.288.4](https://github.com/HartiganHM/concert-crawl/compare/v1.288.3...v1.288.4) (2026-09-19)
+
+
+### Bug Fixes
+
+* **seo:** treat an explicit :443 host as the canonical origin ([3710716](https://github.com/HartiganHM/concert-crawl/commit/37107164c489d8a5d37b206f54fcb0fc4ca60304))
+* **web:** compare the request host case-insensitively ([faba422](https://github.com/HartiganHM/concert-crawl/commit/faba42265b79ea0856f3c69688ba464169eb32d3))
+* **web:** decide robots and sitemap from the request host ([b67b461](https://github.com/HartiganHM/concert-crawl/commit/b67b461228db7dfd6b612e7008f9afb997b8925b)), closes [#1690](https://github.com/HartiganHM/concert-crawl/issues/1690)
+
 ## [1.288.3](https://github.com/HartiganHM/concert-crawl/compare/v1.288.2...v1.288.3) (2026-09-19)
 
 
