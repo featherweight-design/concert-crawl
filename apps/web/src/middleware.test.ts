@@ -1,5 +1,8 @@
+import { readdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { NextRequest, type NextResponse } from 'next/server'
+import { KNOWN_TOP_LEVEL_SEGMENTS } from './middleware'
 
 // The launch gate defaults to closed (#794), but every suite below this line
 // describes the launched shape. Beta-mode behaviour has its own suite at the
@@ -197,11 +200,16 @@ describe('middleware — edge auth gate (#841)', () => {
     const { middlewareHandler } = await import('./middleware')
 
     const auth = makeAuth(null)
-    auth.protect.mockRejectedValueOnce(new Error('unauthorized'))
 
-    await expect(
-      middlewareHandler(auth, new NextRequest('http://localhost/bots/secret')),
-    ).rejects.toThrow(/unauthorized/i)
+    // `/bots` is not a segment this app serves, so it 404s rather than
+    // inheriting `/bot`'s public treatment. Nothing is disclosed either way.
+    const result = await middlewareHandler(
+      auth,
+      new NextRequest('http://localhost/bots/secret'),
+    )
+
+    expect(result).toBeUndefined()
+    expect(auth.protect).not.toHaveBeenCalled()
   })
 
   // A crawler has no session, so gating the two files that tell it what to do
@@ -389,38 +397,29 @@ describe('middleware — public browse routes (#794)', () => {
     expect(url.searchParams.get('redirect_url')).toMatch(/^\/[^/\\]/)
   })
 
-  // These exercise the adversarial pathnames the assertion above only described.
-  // Each one, left unnarrowed, would hand Clerk a redirect target that resolves
-  // off-origin: `//host` and `/\host` are protocol-relative, and the encoded
-  // forms decode to the same thing after a naive prefix check has passed.
+  // These adversarial pathnames — `//host`, `/\host`, and the encoded forms
+  // that decode to them — can never name a segment this app serves, so the
+  // known-route gate 404s them before Clerk is consulted and no redirect_url is
+  // built at all. `sanitizeReturnPath` is still what narrows the reachable
+  // paths; lib/auth/intent.test.ts carries every one of these shapes against it
+  // directly, which is where that property belongs.
   it.each([
     '//evil.example',
     '//evil.example/me',
     '/\\evil.example',
     '/%5Cevil.example',
     '/%2F%2Fevil.example',
-    // Double-encoded. These survive a single decode pass as `/%5Cevil.example`
-    // and `/%2F%2Fevil.example`, which is exactly how a one-pass check gets
-    // bypassed, so decoding runs to a fixed point.
     '/%255Cevil.example',
     '/%252F%252Fevil.example',
-    // Triple, to prove the loop is a loop and not two hardcoded passes.
     '/%25255Cevil.example',
-  ])('rejects %s as a redirect_url and falls back to /events', async (path) => {
+  ])('never builds a redirect_url from %s at all', async (path) => {
     const { middlewareHandler } = await import('./middleware')
     const auth = makeAuth(null)
 
-    await expect(middlewareHandler(auth, makeReq(path))).rejects.toThrow()
+    const result = await middlewareHandler(auth, makeReq(path))
 
-    const url = new URL(auth.protect.mock.calls[0]![0].unauthenticatedUrl)
-    const redirectUrl = url.searchParams.get('redirect_url') ?? ''
-    expect(redirectUrl).toBe('/events')
-
-    // Belt and braces: whatever we hand Clerk must resolve back to our own
-    // origin, not just look relative.
-    expect(new URL(redirectUrl, 'https://concertcrawl.app').origin).toBe(
-      'https://concertcrawl.app',
-    )
+    expect(result).toBeUndefined()
+    expect(auth.protect).not.toHaveBeenCalled()
   })
 
   it('still preserves a legitimate path containing an encoded character', async () => {
@@ -775,4 +774,112 @@ describe('middleware — beta funnel return path (#1226)', () => {
       expect(url.searchParams.get('redirect_url')).toBe('/events')
     },
   )
+})
+
+describe('middleware — unknown paths 404 rather than redirecting to sign-in', () => {
+  it.each([
+    '/wp-admin/setup-config.php',
+    '/.env',
+    '/phpmyadmin',
+    '/definitely-not-a-route',
+  ])('lets %s fall through to Next’s 404', async (path) => {
+    const { middlewareHandler } = await import('./middleware')
+    const auth = makeAuth(null)
+
+    const result = await middlewareHandler(auth, makeReq(path))
+
+    expect(result).toBeUndefined()
+    expect(auth.protect).not.toHaveBeenCalled()
+  })
+
+  it.each(['/me', '/admin', '/me/settings'])(
+    'still protects the known private route %s',
+    async (path) => {
+      const { middlewareHandler } = await import('./middleware')
+      const auth = makeAuth(null)
+
+      await expect(middlewareHandler(auth, makeReq(path))).rejects.toThrow()
+      expect(auth.protect).toHaveBeenCalled()
+    },
+  )
+})
+
+describe('middleware — the known-segment list tracks the filesystem', () => {
+  /**
+   * Route groups are erased from the URL, so `(protected)/(main)/events` is
+   * served at `/events`. Anything under a real segment is irrelevant here —
+   * only the first one is matched.
+   */
+  const topLevelSegmentsUnder = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      if (!entry.isDirectory()) return []
+      if (entry.name.startsWith('_') || entry.name.startsWith('@')) return []
+      if (entry.name.startsWith('(') && entry.name.endsWith(')')) {
+        return topLevelSegmentsUnder(join(dir, entry.name))
+      }
+      return [entry.name]
+    })
+
+  const appDir = join(import.meta.dirname, 'app')
+
+  /**
+   * Next turns these into ordinary URLs. Listed by hand because the filename
+   * does not spell the served path; the assertion below fails when a root file
+   * appears that is not accounted for either here or as a non-route.
+   */
+  const METADATA_ROUTES: Record<string, string> = {
+    'apple-icon.tsx': 'apple-icon',
+    'icon.svg': 'icon.svg',
+    'manifest.ts': 'manifest.webmanifest',
+    'robots.ts': 'robots.txt',
+    'sitemap.ts': 'sitemap.xml',
+    'sw.ts': 'sw.js',
+  }
+
+  const NON_ROUTE_ROOT_FILES = new Set([
+    'globals.css',
+    'layout.tsx',
+    'page.tsx',
+  ])
+
+  it('lists every top-level directory under app/', () => {
+    for (const segment of topLevelSegmentsUnder(appDir)) {
+      expect(
+        KNOWN_TOP_LEVEL_SEGMENTS.has(segment),
+        `/${segment} exists in app/ but is missing from KNOWN_TOP_LEVEL_SEGMENTS, so it 404s`,
+      ).toBe(true)
+    }
+  })
+
+  it('lists every entry served from public/', () => {
+    const publicDir = join(import.meta.dirname, '..', 'public')
+
+    for (const entry of readdirSync(publicDir)) {
+      // `.gitkeep` and friends are VCS placeholders, not assets anyone links to.
+      if (entry.startsWith('.')) continue
+
+      expect(
+        KNOWN_TOP_LEVEL_SEGMENTS.has(entry),
+        `/${entry} is served from public/ but is missing from KNOWN_TOP_LEVEL_SEGMENTS`,
+      ).toBe(true)
+    }
+  })
+
+  it('accounts for every metadata route generated from an app/ root file', () => {
+    const rootFiles = readdirSync(appDir, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .map((entry) => entry.name)
+      .filter((name) => !/\.test\.tsx?$/.test(name))
+
+    for (const name of rootFiles) {
+      if (NON_ROUTE_ROOT_FILES.has(name)) continue
+
+      const served = METADATA_ROUTES[name]
+      expect(
+        served,
+        `${name} is a new app/ root file — add the URL it serves to METADATA_ROUTES, or to NON_ROUTE_ROOT_FILES if it serves none`,
+      ).toBeDefined()
+      expect(KNOWN_TOP_LEVEL_SEGMENTS.has(served!)).toBe(true)
+    }
+  })
 })

@@ -133,6 +133,56 @@ const isPreAuth = createRouteMatcher(['/auth/code(.*)', '/sign-up(.*)'])
 const isPreAuthBeforeLaunch = createRouteMatcher(['/onboarding(.*)'])
 
 /**
+ * Every first URL segment this app actually serves, including the metadata
+ * routes Next generates from `app/*.ts` and the one `public/` directory.
+ *
+ * Anything else is handed straight back to Next, which 404s it. Without this,
+ * an unknown path fell through to `auth.protect` and 307'd to `/sign-in` — so a
+ * scanner sweeping 200 WordPress paths cost 200 middleware invocations plus a
+ * sign-in render for every redirect it followed.
+ *
+ * ⚠️ A new top-level route MUST be added here or it 404s for everyone.
+ * middleware.test.ts walks `app/` and `public/` and fails when this drifts.
+ */
+export const KNOWN_TOP_LEVEL_SEGMENTS = new Set([
+  '~offline',
+  'admin',
+  'api',
+  'apple-icon',
+  'artists',
+  'auth',
+  'bot',
+  'changelog',
+  'crew',
+  'crews',
+  'e',
+  'events',
+  'following',
+  'fonts',
+  'history',
+  'icon.svg',
+  'legal',
+  'manifest.webmanifest',
+  'me',
+  'onboarding',
+  'passport',
+  'robots.txt',
+  'search',
+  'share',
+  'sign-in',
+  'sign-up',
+  'sitemap.xml',
+  'sw.js',
+  'venues',
+  'watching',
+])
+
+const isKnownRoute = (pathname: string): boolean => {
+  if (pathname === '/') return true
+  return KNOWN_TOP_LEVEL_SEGMENTS.has(pathname.split('/')[1] ?? '')
+}
+
+/**
  * Only the slice of Clerk's auth helper this middleware actually touches.
  * Clerk's richer object is assignable to it, and tests can pass a small stub.
  */
@@ -149,6 +199,10 @@ export const middlewareHandler = async (
   auth: MiddlewareAuth,
   req: NextRequest,
 ): Promise<NextResponse | undefined> => {
+  // Before any auth work: a path we don't serve gets no Clerk call and no
+  // redirect, just Next's 404.
+  if (!isKnownRoute(req.nextUrl.pathname)) return
+
   const { userId } = await auth()
   const launched = isPublicBrowseEnabled()
 

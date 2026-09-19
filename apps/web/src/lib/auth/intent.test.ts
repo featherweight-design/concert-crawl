@@ -49,6 +49,16 @@ describe('sanitizeReturnPath (#794)', () => {
     ['scheme-relative javascript', 'javascript:alert(1)'],
     ['bare path', 'events'],
     ['missing', null],
+    // Single-encoded. A naive check that decodes once and then inspects the
+    // prefix passes these.
+    ['encoded backslash', '/%5Cevil.example'],
+    ['encoded double slash', '/%2F%2Fevil.example'],
+    // Double-encoded: these survive one decode pass as the single-encoded forms
+    // above, which is exactly how a one-pass check gets bypassed.
+    ['double-encoded backslash', '/%255Cevil.example'],
+    ['double-encoded double slash', '/%252F%252Fevil.example'],
+    // Triple, to prove the loop is a loop and not two hardcoded passes.
+    ['triple-encoded backslash', '/%25255Cevil.example'],
   ])('falls back to /events for %s', (_label, raw) => {
     expect(sanitizeReturnPath(raw)).toBe(DEFAULT_RETURN_PATH)
   })
