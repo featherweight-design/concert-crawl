@@ -1,3 +1,11 @@
+## [1.289.1](https://github.com/HartiganHM/concert-crawl/compare/v1.289.0...v1.289.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* **middleware:** 404 unknown paths instead of redirecting them to sign-in ([d4c195c](https://github.com/HartiganHM/concert-crawl/commit/d4c195c7f65d85355e2a3e616e68c8a907ed1965))
+* **middleware:** apply cold-eyes findings to the known-route gate ([2b7f8f9](https://github.com/HartiganHM/concert-crawl/commit/2b7f8f97f82ca468a68036b2bb940bbb2c1f5cbc))
+
 # [1.289.0](https://github.com/HartiganHM/concert-crawl/compare/v1.288.5...v1.289.0) (2026-09-19)
 
 
