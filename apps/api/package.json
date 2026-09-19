@@ -30,7 +30,7 @@
     "bad-words": "^4.1.5",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
-    "hono": "^4.13.0",
+    "hono": "^4.13.8",
     "posthog-node": "5.47.11",
     "resend": "^6.18.1",
     "stripe": "^22.4.0",
@@ -39,7 +39,6 @@
   "devDependencies": {
     "@concert-crawl/config": "workspace:*",
     "@concert-crawl/crawler-core": "workspace:*",
-    "@types/bad-words": "^3.0.3",
     "@types/node": "^26.1.2",
     "@typescript-eslint/eslint-plugin": "^8.66.0",
     "@typescript-eslint/parser": "^8.66.0",
