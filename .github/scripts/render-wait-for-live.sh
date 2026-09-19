@@ -176,9 +176,25 @@ fi
 # Safe only *after* autoDeploy has been confirmed `yes` above: with autoDeploy
 # off Render also creates no deploy, and that is precisely the 17h-freeze
 # shape this classifier must never wave through.
-if ! echo "${deploys_json}" | jq -e --arg sha "${EXPECTED_SHA}" '
-  [.[] | (.deploy // .) | (.commit // {}).id // ""] | index($sha)
-' >/dev/null; then
+# The three outcomes are read as three distinct values rather than off jq's
+# exit status. `! jq -e` is true both when the SHA is absent and when jq
+# itself fails, so a malformed or reshaped Render response would take the
+# benign 124 branch below and every caller would report a clean skip without
+# having tested anything — the exact fail-open this classifier exists for.
+sha_index=$(echo "${deploys_json}" | jq -r --arg sha "${EXPECTED_SHA}" '
+  if type == "array" then
+    ([.[] | (.deploy // .) | (.commit // {}).id // ""] | index($sha)) // "absent"
+  else
+    "malformed"
+  end
+') || sha_index='malformed'
+
+if [ "${sha_index}" = 'malformed' ] || [ -z "${sha_index}" ]; then
+  echo "::error title=Cannot classify timeout::${SERVICE_ID} returned a deploy list this script could not read as an array of deploys, so it cannot tell a buildFilter-excluded push from a stalled deploy. Check whether the Render API changed its response shape."
+  exit 125
+fi
+
+if [ "${sha_index}" = 'absent' ]; then
   echo "::notice title=No deploy for this SHA::${SERVICE_ID} has autoDeploy=yes but Render created no deploy for ${EXPECTED_SHA}, so its buildFilter excluded this push (docs- or web-only). There was never anything to wait for."
   exit 124
 fi
