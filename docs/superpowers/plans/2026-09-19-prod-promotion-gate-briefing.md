@@ -79,9 +79,18 @@ every trigger gets run for real, twice, and its output inspected. Gates 1–5 an
 7 do not fire: there is no state table, no forced UI state, no journey a
 customer walks, and no customer-facing string in the entire epic.
 
-The second risk is ordering. Task 8 consumes Task 10's `render-live-sha.sh`, and
+The second risk is ordering, and the merge order is **not** the numeric task
+order. Task 8 consumes Task 10's `render-live-sha.sh`, so 10 must land first.
+Tasks 11 and 12 both edit `docs/runbooks/deploy.md`, so they merge sequentially —
+11, then 12 — rather than in parallel branches that would overwrite each other.
 Task 12 must merge before Task 13 or the health checker alarms five times per
-run. Merging in plan order is a correctness requirement, not a preference.
+run. The dependency order is therefore:
+
+```
+1 → 2 → 3 → 4 → 5 → 6 → 7 → 10 → 8 → 9 → 11 → 12 → 13
+```
+
+Following that order is a correctness requirement, not a preference.
 
 ## Launch gating — REQUIRED
 
