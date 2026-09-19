@@ -46,14 +46,27 @@ response=$(curl -sS --fail-with-body \
 # filter with "Cannot index null", so one malformed row takes out a read that a
 # live deploy further down the page would have satisfied. The trailing
 # non-empty check keeps a commit object present but id-less from yielding "".
+#
+# The shape is checked before the filter runs. `.[]` against an error object
+# aborts under `set -euo pipefail` with jq's own message and nothing about which
+# service or what came back, so an API shape change or an unexpected error body
+# would surface as an unexplained non-zero exit in a monitor whose entire job is
+# to explain itself.
+if ! echo "$response" | jq -e 'type == "array"' >/dev/null 2>&1; then
+  echo "✗ Render returned an unexpected shape for $service_id (expected an array of deploys):" >&2
+  echo "$response" | head -c 500 >&2
+  echo >&2
+  exit 1
+fi
+
 sha=$(echo "$response" \
-  | jq -r 'first(
+  | jq -r '[
       .[]
       | (.deploy // .)
       | select(type == "object" and .status == "live")
       | (.commit // {}).id
       | select(type == "string" and . != "")
-    ) // empty')
+    ] | (.[0] // "")')
 
 if [ -z "$sha" ]; then
   echo "No live deploy found for $service_id in the last 50 deploys" >&2
