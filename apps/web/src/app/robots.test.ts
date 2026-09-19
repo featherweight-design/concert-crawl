@@ -1,21 +1,26 @@
 import type { MetadataRoute } from 'next'
-import { afterEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import robots from './robots'
 import sitemap from './sitemap'
 
-const ORIGINAL = { ...process.env }
+const requestHost = vi.hoisted(() => ({ value: null as string | null }))
 
-afterEach(() => {
-  process.env = { ...ORIGINAL }
-})
+vi.mock('next/headers', () => ({
+  headers: () => Promise.resolve(new Headers(hostHeader())),
+}))
 
-const setEnv = (vars: Record<string, string | undefined>) => {
-  for (const [key, value] of Object.entries(vars)) {
-    if (value === undefined) delete process.env[key]
-    else process.env[key] = value
-  }
+const hostHeader = (): Record<string, string> =>
+  requestHost.value === null ? {} : { host: requestHost.value }
+
+/** The `Host` on the request being served, which is what both files gate on. */
+const servedFrom = (host: string | null) => {
+  requestHost.value = host
 }
+
+beforeEach(() => {
+  servedFrom('concertcrawl.app')
+})
 
 /**
  * Next types `disallow` as `string | string[] | undefined`. Spreading it
@@ -37,10 +42,8 @@ const disallowOf = (rule: {
 }
 
 describe('robots.txt', () => {
-  it('invites crawlers on the canonical origin', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app' })
-
-    const result = robots()
+  it('invites crawlers on the canonical host', async () => {
+    const result = await robots()
 
     expect(result.rules).toEqual({
       userAgent: '*',
@@ -50,20 +53,30 @@ describe('robots.txt', () => {
     expect(result.sitemap).toBe('https://concertcrawl.app/sitemap.xml')
   })
 
+  /**
+   * The regression this file exists for. Gating on the deploy's configured site
+   * URL meant prod answered `Disallow: /`, because `NEXT_PUBLIC_SITE_URL` is
+   * unset there and `VERCEL_URL` is the per-deployment host, never the domain.
+   */
+  it('invites crawlers even when the deploy advertises a vercel.app origin', async () => {
+    process.env['NEXT_PUBLIC_SITE_URL'] = ''
+    process.env['VERCEL_URL'] = 'concert-crawl-abc123.vercel.app'
+
+    expect(await robots()).toMatchObject({
+      sitemap: 'https://concertcrawl.app/sitemap.xml',
+    })
+  })
+
   // `/api/pwa/icon-*` serves the manifest's icons, so a blanket `/api/` disallow
   // would stop a crawler evaluating the app as installable.
-  it('leaves the PWA icon routes crawlable', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app' })
-
-    expect(disallowPaths(robots())).not.toContain('/api/')
+  it('leaves the PWA icon routes crawlable', async () => {
+    expect(disallowPaths(await robots())).not.toContain('/api/')
   })
 
   // A trailing slash matches nothing but the subtree, so `/admin/` would leave
   // the bare entrypoint crawlable.
-  it('blocks the bare entrypoints, not just what is under them', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app' })
-
-    const paths = disallowPaths(robots())
+  it('blocks the bare entrypoints, not just what is under them', async () => {
+    const paths = disallowPaths(await robots())
 
     expect(paths.length).toBeGreaterThan(0)
     expect(paths.every((path) => !path.endsWith('/'))).toBe(true)
@@ -72,18 +85,18 @@ describe('robots.txt', () => {
   // An indexed staging deploy competes with production for the same queries and
   // serves whatever state that branch happened to be in.
   it.each([
-    ['staging', 'https://staging.concertcrawl.app'],
-    ['a Vercel preview', 'https://concert-crawl-git-abc.vercel.app'],
-  ])('blocks crawlers on %s', (_label, origin) => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: origin })
+    ['staging', 'staging.concertcrawl.app'],
+    ['a Vercel preview', 'concert-crawl-git-abc.vercel.app'],
+  ])('blocks crawlers served from %s', async (_label, host) => {
+    servedFrom(host)
 
-    expect(robots().rules).toEqual({ userAgent: '*', disallow: '/' })
+    expect((await robots()).rules).toEqual({ userAgent: '*', disallow: '/' })
   })
 
-  it('blocks crawlers when no origin is configured at all', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: undefined, VERCEL_URL: undefined })
+  it('blocks crawlers when the request carries no host at all', async () => {
+    servedFrom(null)
 
-    expect(robots().rules).toEqual({ userAgent: '*', disallow: '/' })
+    expect((await robots()).rules).toEqual({ userAgent: '*', disallow: '/' })
   })
 })
 
@@ -91,28 +104,40 @@ describe('sitemap.xml', () => {
   // /bot is the whole reason the sitemap exists. The only pages that link to it
   // are the /legal pages, and every one of them is noindex, so an inbound link
   // passes no signal a search engine can follow.
-  it('lists /bot so the crawler page is reachable by search', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app' })
+  it('lists /bot so the crawler page is reachable by search', async () => {
+    const entries = await sitemap()
 
-    expect(sitemap().map((entry) => entry.url)).toEqual([
+    expect(entries.map((entry) => entry.url)).toEqual([
       'https://concertcrawl.app/',
       'https://concertcrawl.app/bot',
     ])
   })
 
-  // A sitemap is a discovery channel of its own, so a staging deploy listing its
-  // own URLs can get them indexed despite its robots.txt disallowing crawling.
-  it('publishes nothing off the canonical origin', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://staging.concertcrawl.app' })
+  // The same regression as above: the URLs have to name the domain a searcher
+  // can visit, not the deployment host this build happens to be running on.
+  it('publishes canonical URLs regardless of the deploy origin', async () => {
+    process.env['VERCEL_URL'] = 'concert-crawl-abc123.vercel.app'
 
-    expect(sitemap()).toEqual([])
+    const entries = await sitemap()
+
+    expect(
+      entries.every((entry) =>
+        entry.url.startsWith('https://concertcrawl.app/'),
+      ),
+    ).toBe(true)
   })
 
-  it('does not list the noindex legal pages', () => {
-    setEnv({ NEXT_PUBLIC_SITE_URL: 'https://concertcrawl.app' })
+  // A sitemap is a discovery channel of its own, so a staging deploy listing its
+  // own URLs can get them indexed despite its robots.txt disallowing crawling.
+  it('publishes nothing off the canonical host', async () => {
+    servedFrom('staging.concertcrawl.app')
 
-    const urls = sitemap().map((entry) => entry.url)
+    expect(await sitemap()).toEqual([])
+  })
 
-    expect(urls.some((url) => url.includes('/legal'))).toBe(false)
+  it('does not list the noindex legal pages', async () => {
+    const entries = await sitemap()
+
+    expect(entries.some((entry) => entry.url.includes('/legal'))).toBe(false)
   })
 })

@@ -72,15 +72,28 @@ export const siteOrigin = (): string => {
 export const CANONICAL_ORIGIN = 'https://concertcrawl.app'
 
 /**
- * Whether this deploy is the production site.
+ * Whether the request being served was addressed to the production site.
  *
- * `robots.ts` and `sitemap.ts` both gate on it, and they have to agree: a
+ * Deliberately NOT derived from `siteOrigin()`. That resolver answers "what
+ * absolute URL should this deploy advertise", which is a build-time question
+ * settled by `NEXT_PUBLIC_SITE_URL` or `VERCEL_URL` — and in prod it resolves
+ * to the per-deployment `*.vercel.app` host, so gating on it made the live
+ * robots.txt say `Disallow: /` and the live sitemap come back empty. The host
+ * on the request is the only thing that actually knows which domain a crawler
+ * asked, and it needs no dashboard variable to be right.
+ *
+ * `robots.ts` and `sitemap.ts` both gate on this, and they have to agree: a
  * sitemap is a discovery channel independent of robots.txt, so a staging deploy
  * that disallows crawling but still publishes its own absolute URLs can have
  * those URLs indexed anyway.
+ *
+ * The header is client-controllable, so a spoofed `Host` can coax an "allow"
+ * robots.txt out of a preview deploy. That costs nothing: robots.txt is an
+ * instruction to well-behaved crawlers rather than an access control, and a
+ * caller who forges the header is already choosing to ignore the answer.
  */
-export const isCanonicalOrigin = (): boolean =>
-  siteOrigin() === CANONICAL_ORIGIN
+export const isCanonicalHost = (host: string | null | undefined): boolean =>
+  host !== null && host !== undefined && host === new URL(CANONICAL_ORIGIN).host
 
 /** Resolve an app-relative path against the site origin. */
 export const absoluteUrl = (path: string): string =>
