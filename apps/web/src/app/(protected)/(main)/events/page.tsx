@@ -12,6 +12,7 @@ import type {
 import { publicApiClient, apiClient } from '@/lib/api'
 import { isScaRegion } from '@/lib/sca-region'
 import { isScopeRejection, scopeRetryToken } from '@/lib/scope-rejection'
+import { buildEventsApiParams } from '@/lib/events-api-params'
 import { auth } from '@/lib/auth'
 import { fetchWatching } from '@/lib/watching'
 import { HeroEventCard } from '@/components/consumer/hero-event-card'
@@ -21,7 +22,6 @@ import { EventsList } from '@/components/consumer/events-list'
 import { CalendarView } from '@/components/consumer/calendar-view/CalendarView'
 import {
   currentWeekDays,
-  filterWhenToDateRange,
   isToday,
   pickCalendarSelectedDate,
   type WeekDayInfo,
@@ -69,25 +69,9 @@ async function fetchEvents(
   taste = false,
   following = false,
 ): Promise<EventsListResponse> {
-  const qs = new URLSearchParams()
-  if (typeof params['search'] === 'string') qs.set('search', params['search'])
-  const venueSlug = params['filterWhere'] ?? params['venueSlug']
-  if (typeof venueSlug === 'string') qs.set('venueSlug', venueSlug)
-  if (typeof params['from'] === 'string') qs.set('from', params['from'])
-  if (typeof params['to'] === 'string') qs.set('to', params['to'])
-  const offsetParam = params['offset']
-  if (typeof offsetParam === 'string' && /^\d+$/.test(offsetParam)) {
-    const parsed = Number(offsetParam)
-    if (Number.isSafeInteger(parsed) && parsed >= 0)
-      qs.set('offset', String(parsed))
-  }
-  if (typeof params['filterPrice'] === 'string')
-    qs.set('filterPrice', params['filterPrice'])
-  if (typeof params['filterVibe'] === 'string')
-    qs.set('filterVibe', params['filterVibe'])
-  if (taste) qs.set('taste', '1')
-  if (following) qs.set('following', '1')
-  qs.set('limit', String(limit))
+  // Shared with Load More's client fetch so page 2 asks for the same filtered
+  // set page 1 did (see lib/events-api-params).
+  const qs = buildEventsApiParams(params, { limit, taste, following })
   const url = `/v1/events?${qs.toString()}`
   return token
     ? apiClient.get<EventsListResponse>(url, token)
@@ -110,14 +94,13 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
   const params = await searchParams
   const view = params['view'] === 'cal' ? 'cal' : 'list'
 
-  // Translate filterWhen shorthand into concrete from/to date strings for the API.
+  // `filterWhen` → concrete from/to now happens inside buildEventsApiParams,
+  // so both readers resolve the same window from the same shorthand. The
+  // calendar's default week is still applied here: it is a view default, not a
+  // filter the URL carries, so Load More (list view only) must never see it.
   let fetchParams: Record<string, string | string[] | undefined> = params
   const filterWhen =
     typeof params['filterWhen'] === 'string' ? params['filterWhen'] : undefined
-  if (filterWhen) {
-    const range = filterWhenToDateRange(filterWhen)
-    if (range) fetchParams = { ...params, from: range.from, to: range.to }
-  }
   // Read weekOffset for calendar view pagination (0 = current week, 1 = next week, etc.)
   const weekOffsetRaw = params['weekOffset']
   const weekOffsetParsed =
@@ -157,8 +140,10 @@ export default async function BrowsePage({ searchParams }: BrowsePageProps) {
         : undefined
 
   if (view === 'cal') {
-    // Only default to current week when no date filter is active.
-    // If filterWhen or explicit from/to is set, fetchParams already has the right range.
+    // Only default to current week when no date filter is active. A
+    // `filterWhen` chip or an explicit from/to means the viewer picked a
+    // window, so the default must not overwrite it; the concrete dates are
+    // resolved later, in buildEventsApiParams.
     if (!filterWhen && !fromParam && !toParam) {
       const monday = weekDays[0]?.date
       const sunday = weekDays[6]?.date

@@ -4,7 +4,9 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useAuth } from '@clerk/nextjs'
 import type { EventsListResponse } from '@concert-crawl/types'
 import { STALE_30_MIN } from '@/lib/query-client'
-import { apiClient, ApiError, publicApiClient } from '@/lib/api'
+import { apiClient, publicApiClient } from '@/lib/api'
+import { isScopeRejection, scopeRetryToken } from '@/lib/scope-rejection'
+import { buildEventsApiParams } from '@/lib/events-api-params'
 import { useSpotifyConnection } from './use-spotify-connection'
 
 // personalizedFor is the viewer's userId when the response carries their
@@ -53,11 +55,17 @@ export function useEvents({
   // Logged-out viewers can't hold the entitlement (the chip is locked for
   // them), so a filterTaste URL without a userId is a tampered/stale link —
   // drop the flag and fetch the plain list.
-  const tasteRequested =
-    new URLSearchParams(searchParamsString).get('filterTaste') === '1' &&
-    userId != null
+  const pageParams = new URLSearchParams(searchParamsString)
+  const tasteRequested = pageParams.get('filterTaste') === '1' && userId != null
+  // "My artists" (native following) is gated exactly like taste, and was the
+  // scope Load More lost: the page URL carries `filterFollowing`, the API
+  // takes `following`, and nothing translated between them on this path — so
+  // page 2 returned the unscoped list under a banner still claiming the scope.
+  const followingRequested =
+    pageParams.get('filterFollowing') === '1' && userId != null
+  const scopeRequested = tasteRequested || followingRequested
   const personalizedFor =
-    (hasTaste || tasteRequested) && userId != null ? userId : null
+    (hasTaste || scopeRequested) && userId != null ? userId : null
   return useInfiniteQuery({
     // personalizedFor is part of the key so pages fetched anonymously before
     // the connection query resolves aren't reused for the personalized view,
@@ -69,14 +77,20 @@ export function useEvents({
     // protected) signed-in case. GET /v1/events is unconditionally public
     // since #794, so there is no 401 to fall back from.
     queryFn: async ({ pageParam }) => {
-      const params = new URLSearchParams(searchParamsString)
-      // filterTaste is a page-URL param, not an API one — swap it for the
-      // API's taste=1 (credentialed viewers only; see tasteRequested above).
-      params.delete('filterTaste')
-      if (tasteRequested) params.set('taste', '1')
-      params.set('offset', String(pageParam))
-      params.set('limit', String(limit))
-      const path = `/v1/events?${params.toString()}`
+      // The page URL is not the API's query string: `filterWhere` is
+      // `venueSlug`, `filterWhen` is a from/to window, and the scope chips are
+      // presence flags. One shared builder does the translation for this fetch
+      // and for the server component that rendered page 1, so Load More can
+      // never widen the list it is appending to (lib/events-api-params).
+      const pathFor = (taste: boolean, following: boolean): string =>
+        `/v1/events?${buildEventsApiParams(pageParams, {
+          limit,
+          offset: pageParam,
+          taste,
+          following,
+        }).toString()}`
+
+      const path = pathFor(tasteRequested, followingRequested)
       if (personalizedFor != null) {
         const token = await getToken()
         // Throw instead of falling back to the anonymous fetch — with
@@ -87,26 +101,25 @@ export function useEvents({
         if (!token) {
           throw new Error('Auth token unavailable while fetching events')
         }
-        if (tasteRequested) {
+        if (scopeRequested) {
           try {
             return await apiClient.get<EventsListResponse>(path, token)
           } catch (err) {
-            // Entitlement lapsed (or lost) mid-session: fall back to the
-            // unfiltered list rather than erroring the whole browse view.
-            // Mirrors the SSR fallback in events/page.tsx.
-            if (
-              err instanceof ApiError &&
-              (err.status === 401 || err.status === 403)
-            ) {
+            // Entitlement lapsed (or lost) mid-session, or the flag went off:
+            // fall back to the unfiltered list rather than erroring the whole
+            // browse view. One retry drops BOTH scopes, and a refused token is
+            // dropped with them — the same contract the SSR path uses, from
+            // the same helpers.
+            if (isScopeRejection(err)) {
               console.warn(
-                'taste filter rejected — falling back to unfiltered',
+                'scope filter rejected — falling back to unfiltered',
                 err,
               )
-              params.delete('taste')
-              return apiClient.get<EventsListResponse>(
-                `/v1/events?${params.toString()}`,
-                token,
-              )
+              const retryToken = scopeRetryToken(err, token)
+              const unscoped = pathFor(false, false)
+              return retryToken
+                ? apiClient.get<EventsListResponse>(unscoped, retryToken)
+                : publicApiClient.get<EventsListResponse>(unscoped)
             }
             throw err
           }
