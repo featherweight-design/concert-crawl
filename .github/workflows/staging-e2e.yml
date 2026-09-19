@@ -18,8 +18,12 @@ on:
 # instead of cancelling does not help, because the older run keeps going.
 # Cancelling costs nothing a skip does not already cost: no artifact for
 # that SHA, and a promotion needs an artifact for the SHA being promoted.
+#
+# Scoped by ref rather than constant: a dispatch from another branch must not
+# cancel main's run, because main's run is the only thing that produces the
+# artifact a promotion is granted on.
 concurrency:
-  group: staging-e2e
+  group: staging-e2e-${{ github.ref }}
   cancel-in-progress: true
 
 permissions: read-all
@@ -39,6 +43,11 @@ jobs:
       # run, and manual runs are how a suite gets validated before it is
       # armed. A dispatch is therefore not promotion evidence unless the
       # operator has confirmed staging is serving the SHA under test.
+      #
+      # Unlike staging-smoke.yml, a non-main dispatch is not refused here —
+      # validating a suite from its own branch is the whole point of the
+      # dispatch path, and the ref-scoped concurrency group above means such a
+      # run can no longer cancel main's.
       #
       # The script exits 0 on live, 124 on a benign no-deploy/supersede (the
       # staging API's buildFilter skips docs- and web-only pushes, so this is

@@ -155,6 +155,17 @@ if [ "${auto_deploy}" != "yes" ]; then
   exit 125
 fi
 
+# No live deploy at all is a new, paused or broken service — not a filtered
+# push. It must be ruled out before the buildFilter reading below, which would
+# otherwise report a service that has never served anything as a benign skip.
+# Also covers the case where a live deploy exists but carries no createdAt: the
+# supersede reading cannot be established, and that reading is the one that
+# hides an outage.
+if [ -z "${live_created}" ]; then
+  echo "::error title=Cannot classify timeout::${SERVICE_ID} has no live deploy with a usable createdAt, so this timeout cannot be shown to be a benign supersede. Check whether the service is new, suspended, or failing to build."
+  exit 125
+fi
+
 # Distinguish "Render never created a deploy for this SHA" from "a deploy was
 # created and then stalled". Every service here carries a buildFilter that
 # excludes docs- and web-only pushes, so on those commits no API deploy is
@@ -170,13 +181,6 @@ if ! echo "${deploys_json}" | jq -e --arg sha "${EXPECTED_SHA}" '
 ' >/dev/null; then
   echo "::notice title=No deploy for this SHA::${SERVICE_ID} has autoDeploy=yes but Render created no deploy for ${EXPECTED_SHA}, so its buildFilter excluded this push (docs- or web-only). There was never anything to wait for."
   exit 124
-fi
-
-# Without a usable timestamp the supersede reading cannot be established, and
-# that reading is the one that hides an outage — so treat it as unclassifiable.
-if [ -z "${live_created}" ]; then
-  echo "::error title=Cannot classify timeout::${SERVICE_ID} returned no createdAt for its live deploy, so this timeout cannot be shown to be a benign supersede."
-  exit 125
 fi
 
 # 3600s: generous next to the ~2min prod deploy, so a genuine fast-follow
