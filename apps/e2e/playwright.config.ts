@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+import { STORAGE_STATE_PATH } from './src/fixtures/auth'
+
 export default defineConfig({
   testDir: './src/e2e',
   fullyParallel: true,
@@ -9,7 +11,7 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: process.env['PLAYWRIGHT_BASE_URL'] ?? 'http://localhost:3000',
-    storageState: '.auth/user.json',
+    storageState: STORAGE_STATE_PATH,
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     trace: 'on-first-retry',

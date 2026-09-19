@@ -3,6 +3,15 @@ import fs from 'fs'
 import path from 'path'
 
 /**
+ * The one spelling of the storage-state path. Playwright resolves a relative
+ * `storageState` against the config directory, and globalSetup writes with
+ * `path.resolve` from the same cwd, so a single relative string is correct for
+ * both — but only if there is exactly one of them. A second spelling
+ * (`playwright/.auth/user.json`) silently ENOENT'd four specs for months.
+ */
+export const STORAGE_STATE_PATH = '.auth/user.json'
+
+/**
  * Logs in via the Clerk sign-in flow and writes the browser storage state to
  * `outputPath`. Both `email` and `password` must be non-empty — the function
  * throws immediately if either is missing so the caller gets a clear error
@@ -70,8 +79,8 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   const email = process.env['E2E_TEST_USER_EMAIL']
   const password = process.env['E2E_TEST_USER_PASSWORD']
 
-  const authDir = path.resolve('.auth')
-  const authFile = path.join(authDir, 'user.json')
+  const authFile = path.resolve(STORAGE_STATE_PATH)
+  const authDir = path.dirname(authFile)
   fs.mkdirSync(authDir, { recursive: true })
 
   // Trim before the missing check so a whitespace-only env var takes the

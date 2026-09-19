@@ -4,8 +4,8 @@ import { PUBLIC_BROWSE_ENABLED } from '../helpers/launch-mode'
 test.describe('unauthenticated access', () => {
   // An explicit empty state, not `undefined`. Passing `undefined` to a fixture
   // override is ambiguous — it can resolve back to the project-wide
-  // `storageState: '.auth/user.json'` in playwright.config.ts, which would run
-  // these signed IN and quietly invert every assertion below.
+  // `storageState: STORAGE_STATE_PATH` in playwright.config.ts, which would
+  // run these signed IN and quietly invert every assertion below.
   test.use({ storageState: { cookies: [], origins: [] } })
 
   test('admin route redirects to sign-in', async ({ page }) => {
