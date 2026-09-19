@@ -1,3 +1,10 @@
+## [1.289.3](https://github.com/HartiganHM/concert-crawl/compare/v1.289.2...v1.289.3) (2026-09-19)
+
+
+### Bug Fixes
+
+* **search:** give the palette's Popular rows the row imagery chain ([#1709](https://github.com/HartiganHM/concert-crawl/issues/1709)) ([be29410](https://github.com/HartiganHM/concert-crawl/commit/be294101d13e1bb3993b79ddb17c31b2c092815f)), closes [#1677](https://github.com/HartiganHM/concert-crawl/issues/1677) [#1680](https://github.com/HartiganHM/concert-crawl/issues/1680)
+
 ## [1.289.2](https://github.com/HartiganHM/concert-crawl/compare/v1.289.1...v1.289.2) (2026-09-19)
 
 
