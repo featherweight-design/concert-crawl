@@ -55,9 +55,13 @@ describe('bandArtOpacity', () => {
     }
   })
 
-  // The ceiling is not an arbitrary number — it is the point where the
-  // smallest text the band draws over artwork still clears AA.
-  it('holds --fg-muted at 4.5:1 on every palette', () => {
+  // Bounds the palette's own ground, which is the largest flat area the art
+  // paints — NOT every rendered pixel. Templates lay primary/secondary over
+  // that ground, some lighter than it, so a green here is necessary and not
+  // sufficient; the per-pixel check is the browser measurement recorded on
+  // the PR. Asserted anyway because it is the constant the solver targets,
+  // and a regression in it moves every rendered pixel with it.
+  it('keeps --fg-muted at 4.5:1 against every palette ground', () => {
     for (const palette of IA_PALETTES) {
       const ground = compositeLuminance(palette.bg, bandArtOpacity(palette.bg))
       expect(contrast('#9aa8c7', ground)).toBeGreaterThanOrEqual(4.5)

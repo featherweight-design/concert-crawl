@@ -21,9 +21,12 @@ import { ia_isDark } from '../../identity-art/IdentityArt'
 export const BAND_ART_MAX_OPACITY = 0.5
 
 /**
- * Relative luminance the composited band may reach. Set from the measured
- * table: at this ceiling `--fg-muted` holds 4.5:1 against the band, which is
- * the smallest text the band draws over artwork.
+ * Relative luminance the composited GROUND may reach — the palette's own
+ * background, which is the largest flat area the art paints. It is not the
+ * whole story: templates lay `primary`/`secondary` over that ground, some of
+ * them lighter than it, so this bounds the field rather than every pixel.
+ * The per-pixel check is the browser measurement above; this is the constant
+ * that gets the field there.
  */
 export const BAND_GROUND_LUMINANCE_CEILING = 0.045
 
@@ -43,8 +46,16 @@ const luminance = ([rr, gg, bb]: [number, number, number]): number =>
   0.2126 * channel(rr) + 0.7152 * channel(gg) + 0.0722 * channel(bb)
 
 /**
- * `bandBg` is the band's own ground — the token the composite sits on, passed
- * in rather than read from the document so this stays pure and testable.
+ * `bandBg` is Electric's `--bg`, not "the current theme's". The app ships nine
+ * themes (`apps/web/src/theme/themes.ts`), one of them light, and the active
+ * one is applied by an inline script on the client — a server-rendered band
+ * cannot know it. So the alpha is solved once against the base theme and the
+ * result checked in a browser across the corners instead: measured under the
+ * actual glyph rects, the supporting line holds 5.57:1 on Electric and 6.14:1
+ * on Light with a light-ground palette, and 4.52:1 / 5.18:1 with a dark one.
+ * The mask is what carries the dark-palette cases — the type sits inside the
+ * reach where the art is weakest — which is why one solved constant survives
+ * nine themes. Re-measure if the mask reach changes.
  */
 export const bandArtOpacity = (
   paletteBg: string,

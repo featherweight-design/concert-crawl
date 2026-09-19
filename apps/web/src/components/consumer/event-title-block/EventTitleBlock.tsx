@@ -56,6 +56,11 @@ export const EventTitleBlock = ({
   linkArtists = false,
 }: EventTitleBlockProps): React.JSX.Element => {
   const ramp = RAMP[surface]
+  // `detail` is the surface that renders inside `HeroBand`, over generated
+  // artwork. `--fg-subtle` measures 3.49:1 on flat ground and less over art,
+  // so the dimmed variants step up there. See SupportingLine, which makes the
+  // same call for the line below these.
+  const dimQuiet = surface === 'detail' ? 'text-fg-muted' : 'text-fg-subtle'
   const dim = status !== 'upcoming'
   const openers = supportingArtists ?? []
   const hasOpeners = openers.length > 0
@@ -83,7 +88,7 @@ export const EventTitleBlock = ({
           {tourName && (
             <div
               aria-label={CONSUMER_COPY.eventTitle.tourAriaLabel(tourName)}
-              className={`truncate font-mono uppercase tracking-[0.14em] ${dim ? 'text-fg-subtle' : 'text-fg-muted'}`}
+              className={`truncate font-mono uppercase tracking-[0.14em] ${dim ? dimQuiet : 'text-fg-muted'}`}
               style={{ fontSize: ramp.tour }}
             >
               {tourName}
@@ -136,7 +141,7 @@ export const EventTitleBlock = ({
 
       {showLegacyFallback && (
         <p
-          className={`truncate font-medium ${dim ? 'text-fg-subtle' : 'text-fg-muted'}`}
+          className={`truncate font-medium ${dim ? dimQuiet : 'text-fg-muted'}`}
           style={{ fontSize: RAMP[surface].tour + 3 }}
         >
           {fallbackTitle}
