@@ -1,3 +1,16 @@
+# [1.290.0](https://github.com/HartiganHM/concert-crawl/compare/v1.289.6...v1.290.0) (2026-09-19)
+
+
+### Bug Fixes
+
+* **web:** apply Copilot review findings to the OG metadata work ([9e3ded5](https://github.com/HartiganHM/concert-crawl/commit/9e3ded50b6029b772d6c5204121e08acaadddffe))
+* **web:** drop the inherited root og:url and cover event metadata wiring ([4226039](https://github.com/HartiganHM/concert-crawl/commit/42260391b91da293418d6bbb403abf633c917d14))
+
+
+### Features
+
+* **web:** canonical event URL and a site social card ([7dd9af5](https://github.com/HartiganHM/concert-crawl/commit/7dd9af576857ff3290b6159753f788f5b0759b21))
+
 ## [1.289.6](https://github.com/HartiganHM/concert-crawl/compare/v1.289.5...v1.289.6) (2026-09-19)
 
 
