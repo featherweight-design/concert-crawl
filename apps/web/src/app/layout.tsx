@@ -82,6 +82,18 @@ export const metadata: Metadata = {
       { url: '/api/pwa/icon-apple-180', sizes: '180x180', type: 'image/png' },
     ],
   },
+  // Proves ownership of the concertcrawl.app property in Google Search Console,
+  // which is what lets us submit the sitemap — publishing /sitemap.xml gets
+  // nothing crawled on its own. Google re-checks the tag periodically, so it
+  // stays after the initial verification rather than being a one-off.
+  //
+  // Not a secret: it is a public ownership token that ships in the HTML of every
+  // page, and holding it grants nothing without access to the Search Console
+  // account. Hardcoded rather than read from the environment so it cannot
+  // silently go missing the way an unset var would.
+  verification: {
+    google: 'kJBcxiEDRqZNKvZ3cplUZ6fyXcrQy2yRC1PPGexR2UI',
+  },
 }
 
 export const viewport: Viewport = {
