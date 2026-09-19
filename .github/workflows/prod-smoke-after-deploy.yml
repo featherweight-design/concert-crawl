@@ -158,10 +158,16 @@ jobs:
           RENDER_SERVICE_ID_API: ${{ vars.RENDER_SERVICE_ID_API }}
         run: |
           set +e
+          # Timeouts and limit match render-wait-for-live.sh. This workflow is
+          # reached during incident response, so a Render API incident has to
+          # fail the lookup in seconds rather than hang the job for six hours,
+          # and limit=50 keeps the live deploy in the page behind a streak of
+          # failed or deactivated ones.
           live_sha=$(curl -sS --fail-with-body \
+            --connect-timeout 5 --max-time 15 \
             -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
             -H 'Accept: application/json' \
-            "https://api.render.com/v1/services/${RENDER_SERVICE_ID_API}/deploys?limit=20" \
+            "https://api.render.com/v1/services/${RENDER_SERVICE_ID_API}/deploys?limit=50" \
             | jq -r 'first(.[] | (.deploy // .) | select(.status == "live") | .commit.id) // empty')
           lookup_status=$?
           set -e
