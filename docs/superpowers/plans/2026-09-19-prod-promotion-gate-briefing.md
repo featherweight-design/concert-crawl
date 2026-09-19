@@ -81,7 +81,8 @@ customer walks, and no customer-facing string in the entire epic.
 
 The second risk is ordering, and the merge order is **not** the numeric task
 order. Task 8 consumes Task 10's `render-live-sha.sh`, so 10 must land first.
-Tasks 11 and 12 both edit `docs/runbooks/deploy.md`, so they merge sequentially —
+Tasks 11 and 12 both edit `docs/runbooks/auto-deploy-prod.md`, so they merge
+sequentially —
 11, then 12 — rather than in parallel branches that would overwrite each other.
 Task 12 must merge before Task 13 or the health checker alarms five times per
 run. The dependency order is therefore:
@@ -105,9 +106,11 @@ Hugh's to execute. Its Steps 2, 4 and 5 are the three switches: arm the
 workflow, set Vercel's Ignored Build Step to `exit 0`, and PATCH
 `autoDeploy: "no"` onto the five prod services.
 
-No `releases.ts` entry: nothing here is user-visible. A `progress.md` row lands
-with the final PR of the run, since the epic is a phase-level change to how the
-project ships.
+No `releases.ts` entry: nothing here is user-visible. **Two** `progress.md` rows
+are owed, one per source plan — the promotion gate's (plan Task 11) and the
+prod→staging content sync's (content-sync plan Task 5). Each lands with its own
+plan's final PR. Both are phase-level changes to how the project ships and
+validates, so neither is optional, and one row does not cover the other.
 
 ## Off-happy-path homes — REQUIRED
 
@@ -172,6 +175,13 @@ because Render exposes no rollback API for crons, and the admin notification
 names the Vercel step and the four crons as manual follow-ups. Do not read a
 green rollback job as "the deploy was undone" — four fifths of it was not.
 
+⚠️ That last expectation does not hold as the code stands. Both
+`deploy-prod.yml` and `prod-smoke-after-deploy.yml` hard-code "the two crawler
+crons" in their Resend rollback bodies and their inline comments, and Task 6 only
+adds the two new rollback steps. Updating both notification bodies to name all
+four crons is in scope for Task 6 (or Task 9 if it lands the notification copy) —
+without it the operator is told two services need manual attention when four do.
+
 **Repeat:** dispatch twice in a row with no intervening merge. Expected: the
 second run is a no-op deploy that still goes live; nothing double-applies. This
 is the pass that matters for `db:migrate` running inside the API `buildCommand`.
@@ -191,15 +201,22 @@ then the scheduled workflow.
 
 1. Run with `--dry-run`. Expected: scanned counts per table, zero writes, and
    the FK-order log reading venues → events → artists → price log → chips.
-2. Run for real. Expected: staging holds prod's venues, events, artists,
-   non-community price log rows and venue guide chips.
-3. Query staging for any row the sync could have written in **every** table on
-   D6's hard line — `price_submissions`, `submission_confirms`, `event_reports`,
-   `event_report_confirms`, `crews`, `social`, `notifications`, `user_profiles`,
-   `user_notification_preferences`, `users`, `commerce`, `spotify`,
-   `venue_fault_acknowledgements`. Expected: none. All thirteen, not a subset —
-   a partial query proves nothing. **This is the check that matters most**: D6's
-   hard line exists because the staging transactional-email gate fails open.
+2. Run for real. Expected: staging holds prod's venues, artists, and the
+   **rolling window** of events and non-community `price_retrieval_log` rows,
+   plus venue guide chips. Older historical events and price-log rows outside
+   the window are deliberately absent — their absence is a pass, not a gap.
+   `artists` is the exception and syncs in full: an artist row has no date to
+   window on.
+3. Snapshot row counts and max ids for **every** table on D6's hard line
+   *before* the run, then diff after — `price_submissions`,
+   `submission_confirms`, `event_reports`, `event_report_confirms`, `crews`,
+   `social`, `notifications`, `user_profiles`, `user_notification_preferences`,
+   `users`, `commerce`, `spotify`, `venue_fault_acknowledgements`. Expected: zero
+   delta on all thirteen. An empty-table assertion is the wrong check — staging
+   legitimately holds synthetic seed users and the operator's audit accounts, so
+   existing rows prove nothing either way. All thirteen, not a subset.
+   **This is the check that matters most**: D6's hard line exists because the
+   staging transactional-email gate fails open.
 4. Confirm the scheduled workflow runs on its cron and reports its counts.
 
 **Reverse:** there is no undo, and that is deliberate — staging is disposable.
