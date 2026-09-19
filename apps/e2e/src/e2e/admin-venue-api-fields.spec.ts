@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 
+import { isVisibleWithin } from '../fixtures/presence'
+
 // Admin venue-edit: API provider + account ID fields (#506).
 // Runs against staging with the shared authenticated storage state. If the
 // creds aren't admin (or the venues list is empty) the spec skips rather than
@@ -28,7 +30,7 @@ test.describe('admin venue edit — API integration fields', () => {
       .locator('a[href^="/admin/venues/"]')
       .filter({ hasNotText: /new|robots/i })
       .first()
-    if (!(await firstVenue.isVisible().catch(() => false))) {
+    if (!(await isVisibleWithin(firstVenue, 15_000))) {
       test.skip(true, 'No venues in the admin list')
       return
     }
@@ -37,7 +39,7 @@ test.describe('admin venue edit — API integration fields', () => {
     await page.waitForLoadState('networkidle')
 
     const providerSelect = page.locator('#edit-venue-api-provider')
-    if (!(await providerSelect.isVisible().catch(() => false))) {
+    if (!(await isVisibleWithin(providerSelect, 5_000))) {
       test.skip(true, 'API provider field not present on this venue')
       return
     }

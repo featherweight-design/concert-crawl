@@ -1,10 +1,8 @@
-import type { Locator } from '@playwright/test'
 import { describe, expect, it, vi } from 'vitest'
 
 import { isVisibleWithin } from './presence'
 
-const locatorWith = (waitFor: () => Promise<void>): Locator =>
-  ({ waitFor }) as unknown as Locator
+const locatorWith = (waitFor: () => Promise<void>) => ({ waitFor })
 
 const timeoutError = (): Error => {
   const err = new Error('locator.waitFor: Timeout 15000ms exceeded.')

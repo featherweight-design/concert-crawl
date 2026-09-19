@@ -55,7 +55,14 @@ test.describe('Price Transparency v2', () => {
 
     await page.goto(`/events/${eventId}`)
 
-    await page.getByRole('button', { name: /Submit another price/ }).click()
+    // Two CTAs open the same modal and which one renders depends on the event:
+    // PriceDisplay's "Submit a price" on an event with no listed price,
+    // SubmitPriceCardCta's "Submit another price" once a price exists. The first
+    // browse row is whatever the environment has, so match either.
+    await page
+      .getByRole('button', { name: /Submit (a|another) price/ })
+      .first()
+      .click()
 
     // The dialog's accessible name, not a state-specific string: the modal
     // opens into the form, the already-submitted card or the tier picker
