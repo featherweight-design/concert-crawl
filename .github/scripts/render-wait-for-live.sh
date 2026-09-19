@@ -23,8 +23,9 @@
 #         a newer deploy plausibly superseded this one (live deploy
 #         under an hour old), or Render created no deploy for this SHA
 #         at all because the service's buildFilter excluded the push.
-#   125 — timeout that is NOT benign: deploys are disabled, the live
-#         deploy is over an hour old, or the timeout could not be
+#   125 — timeout that is NOT benign: the service is suspended, deploys
+#         are disabled, the live deploy is over an hour old, or the
+#         timeout could not be
 #         classified (service metadata unreadable, autoDeploy absent or
 #         unrecognized, live deploy timestamp missing or unparseable).
 #         The pushed SHA will never go live on its own, so smoke and
@@ -137,6 +138,16 @@ if ! service_json=$(curl --fail --silent --show-error \
   exit 125
 fi
 
+# A suspended service keeps its old live deploy and can still report
+# autoDeploy=yes, so it reaches the buildFilter branch below and is waved
+# through as a benign skip — while actually serving nothing. Rule it out
+# first, matching render-check-deploy-health.sh's ordering.
+suspended=$(echo "${service_json}" | jq -r '.suspended // "unknown"')
+if [ "${suspended}" = "suspended" ]; then
+  echo "::error title=Service is suspended::${SERVICE_ID} is suspended, so the pushed SHA can never go live and nothing downstream was tested. Resume the service in Render."
+  exit 125
+fi
+
 auto_deploy=$(echo "${service_json}" | jq -r '.autoDeploy // "unknown"')
 live_created=$(echo "${deploys_json}" | jq -r '
   (([.[] | (.deploy // .) | select(.status == "live")][0]) // {}).createdAt // ""
@@ -181,16 +192,27 @@ fi
 # itself fails, so a malformed or reshaped Render response would take the
 # benign 124 branch below and every caller would report a clean skip without
 # having tested anything — the exact fail-open this classifier exists for.
+#
+# Validating the ENTRIES, not only the top-level array, is the point. An
+# array whose items no longer carry `.commit.id` yields a list of empty
+# strings, `index($sha)` finds nothing, and the reshaped response reads as
+# `absent` — a clean benign skip off a response this script could not read.
 sha_index=$(echo "${deploys_json}" | jq -r --arg sha "${EXPECTED_SHA}" '
-  if type == "array" then
-    ([.[] | (.deploy // .) | (.commit // {}).id // ""] | index($sha)) // "absent"
-  else
+  if type != "array" or length == 0 then
     "malformed"
+  else
+    [.[] | (.deploy // .)] as $deploys
+    | if [$deploys[] | select(type == "object" and ((.commit // {}).id // "") != "")] | length
+         != ($deploys | length) then
+        "malformed"
+      else
+        ([$deploys[] | .commit.id] | index($sha)) // "absent"
+      end
   end
 ') || sha_index='malformed'
 
 if [ "${sha_index}" = 'malformed' ] || [ -z "${sha_index}" ]; then
-  echo "::error title=Cannot classify timeout::${SERVICE_ID} returned a deploy list this script could not read as an array of deploys, so it cannot tell a buildFilter-excluded push from a stalled deploy. Check whether the Render API changed its response shape."
+  echo "::error title=Cannot classify timeout::${SERVICE_ID} returned a deploy list this script could not read as a non-empty array of deploys each carrying a commit id, so it cannot tell a buildFilter-excluded push from a stalled deploy. Check whether the Render API changed its response shape."
   exit 125
 fi
 

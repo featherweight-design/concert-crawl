@@ -19,11 +19,12 @@ on:
 # Cancelling costs nothing a skip does not already cost: no artifact for
 # that SHA, and a promotion needs an artifact for the SHA being promoted.
 #
-# Scoped by ref rather than constant: a dispatch from another branch must not
-# cancel main's run, because main's run is the only thing that produces the
-# artifact a promotion is granted on.
+# Scoped by ref AND event: a dispatch must not cancel main's push run, because
+# that run is the only thing that produces the artifact a promotion is granted
+# on. Ref alone is not enough — a dispatch from main shares a ref with main's
+# push run, so validating the suite by hand would destroy the evidence.
 concurrency:
-  group: staging-e2e-${{ github.ref }}
+  group: staging-e2e-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions: read-all
@@ -74,7 +75,7 @@ jobs:
             echo "should_run=false" >> "$GITHUB_OUTPUT"
             echo "::warning title=E2E skipped::Staging API never went live on ${{ github.sha }} within 5 min. Most likely the buildFilter skipped this push (docs/web-only) or a fast-follow merge superseded it. The next API-affecting push will produce a fresh E2E artifact."
           else
-            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code} (not a timeout). Failing — nothing was tested."
+            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code}. 125 means the staging API is suspended, has deploys disabled, or has stalled — check the service before anything else. Any other code is a script or Render API failure. Failing — nothing was tested."
             exit "${exit_code}"
           fi
 
