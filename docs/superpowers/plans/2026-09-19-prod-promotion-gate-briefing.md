@@ -80,7 +80,8 @@ every trigger gets run for real, twice, and its output inspected. Gates 1–5 an
 customer walks, and no customer-facing string in the entire epic.
 
 The second risk is ordering, and the merge order is **not** the numeric task
-order. Task 8 consumes Task 10's `render-live-sha.sh`, so 10 must land first.
+order. Task 8 consumes Task 10's `render-live-sha.sh`, so 10 must land first, and
+Task 8 is deferred to the very end for the safety reason above.
 Tasks 11 and 12 both edit `docs/runbooks/auto-deploy-prod.md`, so they merge
 sequentially —
 11, then 12 — rather than in parallel branches that would overwrite each other.
@@ -88,18 +89,26 @@ Task 12 must merge before Task 13 or the health checker alarms five times per
 run. The dependency order is therefore:
 
 ```
-1 → 2 → 3 → 4 → 5 → 6 → 7 → 10 → 8 → 9 → 11 → 12 → 13
+1 → 2 → 3 → 4 → 5 → 6 → 7 → 10 → 9 → 11 → 12 → 8 → 13
 ```
 
 Following that order is a correctness requirement, not a preference.
 
 ## Launch gating — REQUIRED
 
-**(c) Dark until a runbook step.** Nothing in Tasks 1–12 changes what reaches
-production or when. They add a dispatch path, a drift alert, two newly-wired
-services and a repaired staging E2E suite — all inert while Render and Vercel
-still auto-deploy prod on every merge, and while `AUTO_DEPLOY_PROD_ENABLED` is
-not `true`.
+**(c) Dark until a runbook step.** Tasks 1–7 and 9–12 change nothing about what
+reaches production or when. They add a dispatch path, a drift alert, two
+newly-wired services and a repaired staging E2E suite — all inert while Render and
+Vercel still auto-deploy prod on every merge, and while `AUTO_DEPLOY_PROD_ENABLED`
+is not `true`.
+
+⚠️ **Task 8 is the one exception and must be sequenced for it.** It drops
+`prod-smoke-after-deploy.yml`'s push trigger, which is correct once prod no longer
+deploys on push — but Render's `autoDeploy` stays `yes` until Task 13 Step 5. In
+between, every merge still deploys prod with **no automatic post-deploy smoke and
+no auto-rollback**. So Task 8 is moved to the end of the merge order, landing
+immediately before Hugh runs Task 13, and the window is named in the morning
+report. Task 9 does not depend on it, so nothing is blocked by the move.
 
 The vertical goes live at **Task 13**, which is out of scope for this run and is
 Hugh's to execute. Its Steps 2, 4 and 5 are the three switches: arm the
@@ -126,7 +135,7 @@ are enumerated because the same "where does this live" question applies:
 | Prod is behind by ≥ 7 days or 25 commits | Sentry warning, `prod-drift-alert.yml` run log | Sentry issue; the workflow's summary | Yes — promote, or record why not |
 | Promotion refused: requested ref is not `main` HEAD | `deploy-prod.yml` gate job failure | Actions run log | Yes — re-dispatch from HEAD, or use the override input |
 | Promotion partially applied: Render live, Vercel failed | Actions run log; prod serves new API + old web | Re-dispatch, or roll Render back | Yes — expand/contract makes this state safe |
-| Rollback fired: Render rolled back, Vercel still new | The auto-rollback admin notification, which names it | `vercel rollback` by hand | Yes — the runbook carries the procedure |
+| Rollback fired: **API old, four crons new, Vercel new** | The auto-rollback admin notification, which must name all six services | `vercel rollback` by hand, plus a manual re-deploy of each `crn-*` at the old SHA | Yes, but four fifths of it is manual — the runbook carries the procedure |
 | `autoDeploy` re-enabled on a gated prod service | `prod-deploy-health.yml` unhealthy (Task 12 inverts the check) | Sentry / workflow failure | Yes — PATCH it back to `no` |
 
 Every row is reversible and every row has a surface that reports it. That is the
@@ -207,16 +216,33 @@ then the scheduled workflow.
    the window are deliberately absent — their absence is a pass, not a gap.
    `artists` is the exception and syncs in full: an artist row has no date to
    window on.
-3. Snapshot row counts and max ids for **every** table on D6's hard line
-   *before* the run, then diff after — `price_submissions`,
-   `submission_confirms`, `event_reports`, `event_report_confirms`, `crews`,
-   `social`, `notifications`, `user_profiles`, `user_notification_preferences`,
-   `users`, `commerce`, `spotify`, `venue_fault_acknowledgements`. Expected: zero
-   delta on all thirteen. An empty-table assertion is the wrong check — staging
-   legitimately holds synthetic seed users and the operator's audit accounts, so
-   existing rows prove nothing either way. All thirteen, not a subset.
-   **This is the check that matters most**: D6's hard line exists because the
-   staging transactional-email gate fails open.
+3. Snapshot row counts and max ids for every protected table *before* the run,
+   then diff after. Expected: **zero delta on all of them.** An empty-table
+   assertion is the wrong check — staging legitimately holds synthetic seed users
+   and the operator's audit accounts, so existing rows prove nothing either way.
+
+   Four of D6's thirteen names are *categories*, not tables, and there is no
+   `users` table at all (Clerk owns identity). The executable list is:
+
+   | D6 name | Physical tables to snapshot |
+   |---|---|
+   | `price_submissions` | `price_submissions` |
+   | `submission_confirms` | `submission_confirms` |
+   | `event_reports` | `event_reports` |
+   | `event_report_confirms` | `event_report_confirms` |
+   | `crews` | `crews`, `crew_members`, `crew_invites`, `crew_mutes` |
+   | `social` | `user_events`, `user_artist_follows` |
+   | `notifications` | `notifications`, `push_subscriptions` |
+   | `user_profiles` | `user_profiles` |
+   | `user_notification_preferences` | `user_notification_preferences` |
+   | `users` | no such table — snapshot `user_roles` and `user_cred` instead |
+   | `commerce` | `subscriptions`, `subscription_events`, `user_billing`, `gifted_comps`, `processed_stripe_events`, `founder_window`, `email_send_log` |
+   | `spotify` | `user_spotify_connections`, `spotify_alert_log` |
+   | `venue_fault_acknowledgements` | `venue_fault_acknowledgements` |
+
+   Twenty-three physical tables, not a subset. **This is the check that matters
+   most**: D6's hard line exists because the staging transactional-email gate
+   fails open.
 4. Confirm the scheduled workflow runs on its cron and reports its counts.
 
 **Reverse:** there is no undo, and that is deliberate — staging is disposable.
@@ -288,6 +314,8 @@ by the upserting steps and skipped by the query-and-skip ones.
 - `docs/runbooks/auto-deploy-prod.md` documents the promotion procedure, the
   cron HEAD-only limitation (D3), the migration coupling (D4), and the manual
   Vercel rollback.
-- `progress.md` row added.
+- **Both** `progress.md` rows added — one for the promotion gate, one for the
+  prod→staging content sync. One row does not satisfy this; the run is not done
+  with either plan undocumented.
 - **Task 13 is left un-run, with its steps and the two open Vercel items
   surfaced in the morning report as Hugh's checklist.**
