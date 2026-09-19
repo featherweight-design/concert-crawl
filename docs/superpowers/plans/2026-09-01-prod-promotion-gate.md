@@ -35,6 +35,7 @@
 | `apps/e2e/src/e2e/browse.spec.ts` | Browse + load-more | Modify |
 | `apps/e2e/src/e2e/pwa.spec.ts` | Manifest, SW registration, offline fallback | Modify |
 | `apps/web/src/middleware.ts` | Route gating; `/~offline` must be publicly reachable | Modify |
+| `apps/web/src/middleware.test.ts` | Route-gating tests; guards the `/~offline` exemption against a sibling-path widening | Modify |
 | `apps/web/src/lib/pwa/route-cache.ts` | Cacheable-route allowlist + the `/~offline` rationale comment | Modify |
 | `.github/workflows/staging-e2e.yml` | Staging E2E on push to main | Modify |
 | `.github/workflows/deploy-prod.yml` | The promotion pipeline: gate, deploy (5 Render services + Vercel), smoke, rollback | Modify |
@@ -43,6 +44,7 @@
 | `.github/workflows/prod-smoke-after-deploy.yml` | Retired from push; dispatch-only | Modify |
 | `.github/workflows/prod-drift-alert.yml` | Scheduled "is prod current?" alert | Create |
 | `.github/scripts/render-live-sha.sh` | Prints the SHA a Render service is currently live on | Create |
+| `.github/scripts/render-check-deploy-health.sh` | Prod service health check; its `autoDeploy` expectation inverts under the gate | Modify |
 | `render.yaml` | Descriptive mirror of live Render config | Modify |
 | `docs/runbooks/auto-deploy-prod.md` | The prod deploy/promotion runbook | Modify |
 | `docs/runbooks/render-service-config.md` | Live Render config of record | Modify |
@@ -133,7 +135,18 @@ const resolveEventId = async (page: Page): Promise<string | null> => {
   const firstRowLink = page
     .locator('[data-testid="event-row"] a.event-row-stretch')
     .first()
-  if (!(await firstRowLink.isVisible())) return null
+
+  // `isVisible()` is a non-waiting probe: it samples the DOM once and returns
+  // false immediately. /events renders its rows client-side after the RSC
+  // payload resolves, so a bare isVisible() call reports "no events" on a
+  // staging environment that does in fact have events, and every price spec
+  // then skips. Wait explicitly, and treat only a genuine timeout as empty.
+  try {
+    await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
+  } catch {
+    return null
+  }
+
   const href = await firstRowLink.getAttribute('href')
   if (href === null) return null
   const match = /\/events\/([^/?#]+)/.exec(href)
@@ -233,7 +246,11 @@ with:
     const firstRowLink = page
       .locator('[data-testid="event-row"] a.event-row-stretch')
       .first()
-    if (!(await firstRowLink.isVisible())) {
+    // waitFor, not isVisible: isVisible samples once and rows arrive
+    // client-side, so a bare probe skips on a populated environment.
+    try {
+      await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
+    } catch {
       test.skip(true, 'No event rows on this environment')
       return
     }
@@ -251,13 +268,41 @@ with:
 
 - [ ] **Step 2: Fix the back-navigation test in the same file**
 
-Its line 49 assertion (`expect(page.url()).toMatch(/\/events$/)`) has the same
-defect. Replace the click-and-assert pair with:
+The second test (`navigates back to the browse page`) has **both** defects, not
+only the `goBack` one: its lines 42–44 still click the row *container*
+(`firstRow.click()`) and then wait on `waitForLoadState('networkidle')`, and its
+line 49 asserts `expect(page.url()).toMatch(/\/events$/)`. Fixing only the
+`goBack` wait leaves the forward navigation flaky in exactly the way Step 1
+describes. Replace the whole test body with:
 
 ```ts
+  test('navigates back to the browse page', async ({ page }) => {
+    await page.goto('/events')
+
+    // Same stretched-anchor rule as Step 1: the row container's centre can land
+    // on the action gutter's button (z-index: 2) and navigate nowhere.
+    const firstRowLink = page
+      .locator('[data-testid="event-row"] a.event-row-stretch')
+      .first()
+    try {
+      await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
+    } catch {
+      test.skip(true, 'No event rows on this environment')
+      return
+    }
+
+    await firstRowLink.click()
+    await page.waitForURL(/\/events\/[a-z0-9-]+/)
+
     await page.goBack()
     await page.waitForURL(/\/events$/)
+  })
 ```
+
+Delete the `await page.waitForLoadState('networkidle')` calls and the
+`expect(page.url()).toMatch(...)` assertion the old body carried — `waitForURL`
+already fails the test if the URL never matches, so a following `expect` on
+`page.url()` is redundant.
 
 - [ ] **Step 3: Fix `venue-detail.spec.ts`**
 
@@ -268,7 +313,9 @@ it is the real user path from browse — and fix the barrier:
 
 ```ts
     const venueLink = page.locator('[data-testid="venue-name-link"]').first()
-    if (!(await venueLink.isVisible())) {
+    try {
+      await venueLink.waitFor({ state: 'visible', timeout: 15_000 })
+    } catch {
       test.skip(true, 'No venue name link found on browse page')
       return
     }
@@ -364,6 +411,7 @@ differs depending on whether the entry is absent or present-but-unmatched.
 
 **Files:**
 - Modify: `apps/web/src/middleware.ts`
+- Modify: `apps/web/src/middleware.test.ts`
 - Modify: `apps/web/src/lib/pwa/route-cache.ts`
 - Modify: `apps/e2e/src/e2e/pwa.spec.ts`
 
@@ -413,7 +461,52 @@ Add `/~offline` to the middleware's always-public route list, beside the other
 context, so there is nothing to leak. Follow the existing entry's exact
 spelling and ordering in that file rather than inventing a new pattern.
 
-- [ ] **Step 4: Update the stale rationale comment**
+- [ ] **Step 4: Cover the new public route in `middleware.test.ts`**
+
+Every `isAlwaysPublic` addition needs two tests: one that the route is reachable
+signed out, and one negative case proving a neighbouring path did not become
+public with it. `/~offline` is the riskiest shape yet, because `~` is not a
+regex metacharacter but the entry may be written as a prefix. Append to the
+`describe('middleware — edge auth gate (#841)')` block, after the
+`does not make paths under /api/revalidate public` test:
+
+```ts
+  it('lets a signed-out visitor reach the offline fallback', async () => {
+    const { middlewareHandler } = await import('./middleware')
+
+    // Serwist precaches /~offline through a plain navigation fetch with no
+    // session. Gating it redirects that fetch, the fallback never lands in the
+    // cache, and an offline navigation dies with ERR_FAILED.
+    const req = new NextRequest('http://localhost/~offline')
+    const result = await middlewareHandler(makeAuth(null), req)
+
+    expect(result).toBeUndefined()
+  })
+
+  it('does not make a ~offline-prefixed route public', async () => {
+    const { middlewareHandler } = await import('./middleware')
+
+    // The mocked createRouteMatcher uses startsWith, so this is the guard that
+    // catches a `/~offline(.*)` glob smuggling a future private sibling in.
+    const req = new NextRequest('http://localhost/~offline-admin')
+    const auth = makeAuth(null)
+
+    await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized')
+    expect(auth.protect).toHaveBeenCalled()
+  })
+```
+
+Run them and watch the second one fail before Step 3's entry is written as an
+exact path:
+
+```bash
+pnpm --filter @concert-crawl/web test -- src/middleware.test.ts
+```
+
+Expected: both PASS with `/~offline` added as an exact path. If the negative
+case fails, the entry was written as a glob — narrow it.
+
+- [ ] **Step 5: Update the stale rationale comment**
 
 In `apps/web/src/lib/pwa/route-cache.ts`, replace the `/~offline` paragraph
 (lines 44–47) with:
@@ -426,7 +519,7 @@ In `apps/web/src/lib/pwa/route-cache.ts`, replace the `/~offline` paragraph
 // lands in the cache at all.
 ```
 
-- [ ] **Step 5: Re-run the reproduction and confirm the fallback is cached**
+- [ ] **Step 6: Re-run the reproduction and confirm the fallback is cached**
 
 Rebuild, restart, reload once to let the worker install, then re-run the
 console snippet from Step 1. Expected: a `/~offline` entry now appears.
@@ -434,7 +527,7 @@ Then in DevTools → Network, tick Offline and navigate to
 `/a-path-that-was-never-cached`. Expected: the offline page renders with an
 "offline" heading rather than `ERR_FAILED`.
 
-- [ ] **Step 6: Make the spec's failure message say what broke**
+- [ ] **Step 7: Make the spec's failure message say what broke**
 
 In `apps/e2e/src/e2e/pwa.spec.ts`, the bare `page.goto` inside `try` reports a
 transport error that reads like a network flake. Replace lines 40–45 with:
@@ -451,19 +544,19 @@ transport error that reads like a network flake. Replace lines 40–45 with:
     } finally {
 ```
 
-- [ ] **Step 7: Run the web unit tests, typecheck, lint**
+- [ ] **Step 8: Run the web unit tests, typecheck, lint**
 
 ```bash
 pnpm --filter @concert-crawl/web test && pnpm typecheck && pnpm lint
 ```
 
-Expected: PASS. If a middleware test asserts the exact public-route list, update
-it to include `/~offline` — that assertion is the guard working.
+Expected: PASS. If another middleware test asserts the exact public-route list,
+update it to include `/~offline` — that assertion is the guard working.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
-git add apps/web/src/middleware.ts apps/web/src/lib/pwa/route-cache.ts apps/e2e/src/e2e/pwa.spec.ts
+git add apps/web/src/middleware.ts apps/web/src/middleware.test.ts apps/web/src/lib/pwa/route-cache.ts apps/e2e/src/e2e/pwa.spec.ts
 git commit -m "fix(pwa): serve the offline fallback to signed-out visitors"
 ```
 
@@ -524,21 +617,57 @@ Add a header paragraph above it explaining the role change:
 - [ ] **Step 3: Replace the fixed sleep with the wait-for-live script**
 
 Find the `Wait for Render staging deploy` step (`run: sleep 180`) and replace
-the whole step with:
+the whole step with the block below. It is **not** a bare script call: the
+staging API's Render `buildFilter` excludes docs-only and web-only changes, so
+Render legitimately builds nothing on many pushes to `main`, and
+`render-wait-for-live.sh` reports that benign case as exit **124**. Under the
+runner's default non-zero handling a bare call would fail `staging-e2e` on every
+web-only merge — turning the gate's own evidence red for a non-event. Mirror
+`staging-smoke.yml`'s explicit branch (lines 129–151) so a real failure still
+fails loudly:
 
 ```yaml
-      - name: Wait for staging API to be live on this SHA
+      # The script exits 0 on live, 124 on a benign no-deploy/supersede (the
+      # staging API's buildFilter skips docs- and web-only pushes, so this is
+      # common, not exceptional), and anything else on hard error. Branch
+      # explicitly — a bare call would fail the run on every web-only merge,
+      # and bucketing a real failure as benign is the opposite mistake.
+      - name: Wait for staging API to be live on pushed SHA
+        id: wait_for_live
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: |
+          set +e
           bash .github/scripts/render-wait-for-live.sh \
             "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" \
-            "${{ github.sha }}"
+            "${{ github.sha }}" \
+            300
+          exit_code=$?
+          set -e
+          if [ "${exit_code}" -eq 0 ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "✓ Staging API is live on ${{ github.sha }}; running E2E."
+          elif [ "${exit_code}" -eq 124 ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=E2E skipped::Staging API never went live on ${{ github.sha }} within 5 min. Most likely the buildFilter skipped this push (docs/web-only) or a fast-follow merge superseded it. The next API-affecting push will produce a fresh E2E artifact."
+          else
+            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code} (not a timeout). Failing — nothing was tested."
+            exit "${exit_code}"
+          fi
 ```
 
+Then add `if: steps.wait_for_live.outputs.should_run == 'true'` to every step
+that follows in the job — setup, install, the Playwright run, and the artifact
+upload — exactly as `staging-smoke.yml` does for `should_smoke`.
+
 `RENDER_SERVICE_ID_API_STAGING` already exists as a repo variable —
-`staging-smoke.yml` reads it. A fixed sleep either wastes two minutes or smokes
+`staging-smoke.yml` reads it. A fixed sleep either wastes two minutes or tests
 the previous build; this waits for the right one.
+
+⚠️ A skipped E2E run is **not** promotion evidence. Task 11's runbook rewrite
+says so explicitly: a promotion needs a `staging-e2e` run that actually executed
+on the SHA being promoted, and a 124-skipped run means the operator must dispatch
+one before promoting.
 
 - [ ] **Step 4: Validate the YAML**
 
@@ -571,7 +700,7 @@ skips them leaves two crons on whatever Render last built.
 
 **Interfaces:**
 - Consumes: `render-trigger-deploy.sh <service-id> <sha> <label>`, `render-rollback.sh <service-id> <label>`, `render-check-deploy-health.sh`.
-- Produces: two new `production`-environment variables, `RENDER_SERVICE_ID_MATCH_ARTISTS` and `RENDER_SERVICE_ID_SPOTIFY_WEEKLY`, consumed by Tasks 7 and 10.
+- Produces: two new `production`-environment variables, `RENDER_SERVICE_ID_MATCH_ARTISTS` and `RENDER_SERVICE_ID_SPOTIFY_WEEKLY`, consumed by this task's four workflow edits and by nothing in a later task. Task 10's drift alert deliberately reads only `RENDER_SERVICE_ID_API` — see its Interfaces block for why.
 
 - [ ] **Step 1: Extend the `deploy` job preflight**
 
@@ -815,7 +944,59 @@ on:
 # semantic-release commit explicitly.
 ```
 
-- [ ] **Step 3: Confirm nothing else depends on its push trigger**
+- [ ] **Step 3: Make the dispatch path stop waiting for a deploy**
+
+Dropping the push trigger is not sufficient. The `wait_for_live` step (lines
+172–194) waits for Render to go live on `github.sha`, and a dispatch triggers no
+deploy at all — so with auto-deploy off the script hits its `autoDeploy = "no"`
+branch and returns **125**, which the current `else` arm treats as a hard
+failure. Playwright never runs. "Smoke prod right now without deploying
+anything" would be exactly the thing this workflow could no longer do.
+
+Replace the whole `wait_for_live` step with one that skips the wait entirely and
+smokes whatever prod is currently serving — which is the only correct question
+for a dispatch that deploys nothing:
+
+```yaml
+      # No wait. This workflow no longer causes a deploy, so there is no target
+      # SHA to wait for: it smokes whatever prod is live on right now. Waiting
+      # would return 125 (autoDeploy="no") on every run under the promotion
+      # gate. The promotion path's own wait-for-live lives in deploy-prod.yml,
+      # where a deploy actually was triggered.
+      - name: Record the prod live SHA being smoked
+        id: wait_for_live
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: |
+          live_sha=$(bash .github/scripts/render-live-sha.sh "${{ vars.RENDER_SERVICE_ID_API }}")
+          echo "Smoking prod as currently live: ${live_sha}"
+          echo "live_sha=${live_sha}" >> "$GITHUB_OUTPUT"
+          echo "should_smoke=true" >> "$GITHUB_OUTPUT"
+```
+
+`should_smoke` is kept as the output name so the eight downstream
+`if: steps.wait_for_live.outputs.should_smoke == 'true'` guards need no edit.
+`render-live-sha.sh` comes from Task 10, so **Task 8 must land after Task 10** —
+or inline a two-line `curl | jq` here instead. Prefer the ordering.
+
+Leave the checkout `ref:` (line 113) on `${{ github.sha }}`. It cannot read
+`live_sha` — checkout runs before the step that resolves it — and the dispatched
+ref is the right source for the specs anyway. What it does mean is that the specs
+can be ahead of the code prod serves, so say so in the log rather than leaving a
+responder to work it out:
+
+```yaml
+      - name: Warn when the spec ref is ahead of prod
+        if: steps.wait_for_live.outputs.live_sha != github.sha
+        run: |
+          echo "::warning title=Specs ahead of prod::Running smoke specs from ${{ github.sha }} against prod live on ${{ steps.wait_for_live.outputs.live_sha }}. A failure may be a spec that expects unpromoted behaviour rather than a prod regression."
+```
+
+That warning is the difference between "prod is broken" and "you smoked prod
+with tomorrow's tests" — the 2026-08 testid drift incident was exactly this
+confusion in the other direction.
+
+- [ ] **Step 4: Confirm nothing else depends on its push trigger**
 
 ```bash
 grep -rn "prod-smoke-after-deploy" .github docs | grep -v "^\.github/workflows/prod-smoke-after-deploy.yml"
@@ -825,7 +1006,7 @@ Every hit must be documentation, which Task 11 updates. A `workflow_run`
 consumer keyed on this workflow would break — there is none today, and this
 check is how you find out if that changed.
 
-- [ ] **Step 4: Validate and commit**
+- [ ] **Step 5: Validate and commit**
 
 ```bash
 python3 -c "import sys,yaml;yaml.safe_load(open(sys.argv[1]))" .github/workflows/prod-smoke-after-deploy.yml
@@ -866,10 +1047,31 @@ Add to the same preflight step's `env:` and `missing` checks:
 
 - [ ] **Step 2: Add the Vercel promotion step**
 
-Place it **before** the Render trigger steps, so the web build starts while
-Render builds, and after the preflight:
+Place it **last in the `deploy` job — after `Wait for prod API to be live on
+new SHA` (line 342) and before `Log deploy context` (line 353).** Ordering here
+is a correctness choice, not a scheduling one, so do not "optimize" it by moving
+the step earlier to overlap the two builds:
+
+- Render first means a failed API build or a failed wait aborts the job before
+  the web app is ever promoted. The operator is left with prod entirely on the
+  old release, which is a state the rollback job already handles.
+- If the order were reversed, a Render failure after a successful Vercel deploy
+  would leave the new front end talking to the old API and old crons — and
+  `rollback` cannot undo it, because nothing in this workflow rolls Vercel back
+  (Step 3).
+- The residual asymmetry is the safe one. If Vercel fails after Render
+  succeeded, prod runs the new API and the old web app. Expand/contract
+  migrations (D4) make the old front end compatible with the new API by
+  construction, so that window degrades to "the promotion did not finish"
+  rather than a broken prod.
 
 ```yaml
+      # Runs last: a failed Render deploy above aborts the job before the web
+      # app is promoted, so a partial promotion never leaves a new front end
+      # against an old API. The reverse is survivable — expand/contract means
+      # the old web app works against the new API — which is why this ordering
+      # and not the other.
+      #
       # The Vercel prod project's git builds are disabled (Settings → Git →
       # Ignored Build Step = `exit 0`), so this CLI deploy is the only way the
       # web app reaches production. --prod makes it the production deployment
@@ -896,6 +1098,22 @@ Add to that job's leading comment:
       # dashboard), it needs no rebuild, and scripting it would mean holding a
       # deployment id across jobs. The runbook carries the two-command manual
       # procedure; see docs/runbooks/auto-deploy-prod.md.
+      #
+      # So when this job fires, prod is left on the old API and the NEW web
+      # app until an operator rolls Vercel back by hand. That is the one
+      # mixed state the automation cannot resolve itself, which is why the
+      # rollback notification names it explicitly.
+```
+
+And add it to the notification body in the `Notify admin — auto-rollback fired`
+step (line 593), so the person reading the alert is told there is a second
+action:
+
+```
+      Render prod services were rolled back automatically. The Vercel web
+      app was NOT — prod is serving the new front end against the rolled-back
+      API. Run `vercel rollback` (or use Instant Rollback in the dashboard)
+      to finish. Procedure: docs/runbooks/auto-deploy-prod.md.
 ```
 
 - [ ] **Step 4: Validate and commit**
@@ -919,8 +1137,16 @@ prod current?" — that question is now load-bearing.
 - Create: `.github/workflows/prod-drift-alert.yml`
 
 **Interfaces:**
-- Consumes: `RENDER_API_TOKEN`, `RENDER_SERVICE_ID_API`, `sentry-capture-message.sh`.
+- Consumes: `RENDER_API_TOKEN`, `RENDER_SERVICE_ID_API`, `SENTRY_DSN_SMOKE`, `sentry-capture-message.sh <level> <message>`.
 - Produces: `render-live-sha.sh <service-id>` printing a bare 40-char SHA on stdout.
+
+**Why the API service only.** `deploy-prod.yml` triggers all five prod services
+in one dispatch, and the API is the only one that can be pinned to a `commitId`
+(D3). So the API's live SHA *is* the promoted SHA, while a cron's is whatever
+branch HEAD was when its build ran — measuring four more services would produce
+four numbers that answer a different question and disagree with each other for
+benign reasons. One accurate signal beats five ambiguous ones. `render-live-sha.sh`
+takes a service ID, so extending this later is a one-line change if it earns it.
 
 - [ ] **Step 1: Write the live-SHA script**
 
@@ -945,8 +1171,14 @@ response=$(curl -sS --fail-with-body \
   -H 'Accept: application/json' \
   "https://api.render.com/v1/services/${service_id}/deploys?limit=20")
 
+# `(.deploy // .)` is not optional politeness: some Render deploy endpoints wrap
+# the object as `{ "deploy": { ... } }` and some return it flat. All four
+# existing render-*.sh scripts normalize this way for that reason. A filter that
+# only matches the wrapped shape silently yields empty on the flat one, and the
+# drift alert then reports "No live deploy found" forever instead of measuring
+# drift — a monitor that cannot fail loudly is worse than none.
 sha=$(echo "$response" \
-  | jq -r 'first(.[] | select(.deploy.status == "live") | .deploy.commit.id) // empty')
+  | jq -r 'first(.[] | (.deploy // .) | select(.status == "live") | .commit.id) // empty')
 
 if [ -z "$sha" ]; then
   echo "No live deploy found for $service_id in the last 20 deploys" >&2
@@ -985,10 +1217,11 @@ name: Prod drift alert
 
 on:
   schedule:
-    # 15:00 UTC daily — after the 09:00 UTC crawl and the 16:00 UTC
-    # match-artists cron have both settled, so a drift warning is never
-    # competing with a crawl incident for attention.
-    - cron: '0 15 * * *'
+    # 17:00 UTC daily. Chosen to sit AFTER every prod cron of the day has
+    # finished, so a drift warning never competes with a crawl or match-artists
+    # incident for attention: crawler-daily 09:00, spotify-weekly 15:30 Mon,
+    # match-artists 16:00. 15:00 would land before two of those.
+    - cron: '0 17 * * *'
   workflow_dispatch:
 
 permissions:
@@ -1062,18 +1295,43 @@ jobs:
             echo "drifted=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # SENTRY_DSN is the variable the script reads; SENTRY_DSN_SMOKE is the
+      # secret that holds it. There is no `SENTRY_DSN` secret in this repo —
+      # every workflow maps it from SENTRY_DSN_SMOKE. Getting this wrong is
+      # silent: the script exits 0 when the DSN is empty (by design, so a
+      # missing DSN never buries the real failure), which would make this
+      # load-bearing alert a no-op that always looks green.
       - name: Report drift to Sentry
         if: steps.measure.outputs.drifted == 'true'
         env:
-          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+          SENTRY_ENVIRONMENT: production
+          EXTRA_CONTEXT: >-
+            ${{ steps.measure.outputs.commits }} commits,
+            ${{ steps.measure.outputs.days }} days behind.
+            Prod live SHA ${{ steps.measure.outputs.live_sha }}.
         run: |
+          # <level> <message>. The message is the Sentry grouping key, so it is
+          # deliberately constant — the varying numbers go in EXTRA_CONTEXT.
           bash .github/scripts/sentry-capture-message.sh \
-            "Prod is behind main: ${{ steps.measure.outputs.commits }} commits, ${{ steps.measure.outputs.days }} days (live ${{ steps.measure.outputs.live_sha }}). Promote with the Deploy to Production workflow, or say why not."
+            warning \
+            "Prod is behind main — promote with the Deploy to Production workflow, or record why not."
 ```
 
-Match `sentry-capture-message.sh`'s actual argument order and required
-environment variables — read the script's header before writing this step
-rather than assuming the signature above.
+`SENTRY_DSN_SMOKE` must also be added to the Step 3 *Verify configuration*
+preflight's `missing` checks, for the same reason as the comment above — a
+silently-empty DSN is the one failure this alert cannot survive:
+
+```bash
+          [ -z "$SENTRY_DSN_SMOKE" ] && missing+=("SENTRY_DSN_SMOKE (secret)")
+```
+
+with `SENTRY_DSN_SMOKE: ${{ secrets.SENTRY_DSN_SMOKE }}` added to that step's
+`env:` block.
+
+The signature above is `sentry-capture-message.sh <level> <message>`, verified
+against the script's header (2026-09-01). Re-read that header before writing the
+step in case it has changed.
 
 - [ ] **Step 4: Validate the YAML and shellcheck the script**
 
@@ -1191,7 +1449,86 @@ git commit -m "docs(deploy): describe the prod promotion gate"
 
 ---
 
-### Task 12: Throw the switch
+### Task 12: Teach the health checker that prod no longer auto-deploys
+
+`render-check-deploy-health.sh:86-92` calls `report_unhealthy` (exit 2) when a
+service reports `autoDeploy = "no"`, with the message *"autoDeploy is 'no', so
+merges to main will not deploy."* Under the gate that sentence is no longer a
+fault — it is the design. Left as is, Task 13 Step 5 turns every scheduled
+`prod-deploy-health` run into five unhealthy reports and a Sentry alert, and the
+one monitor that watches whether prod is reachable becomes noise nobody reads.
+
+Invert it instead of deleting it. `autoDeploy = "yes"` on a prod service now
+means the gate leaked — somebody re-enabled it in the dashboard and merges are
+silently reaching prod again. That is worth an alert, and it is the same alert
+shape, so nothing is lost.
+
+`prod-deploy-health.yml` is the only caller (verified 2026-09-01), and it checks
+prod services exclusively, so no staging path is affected.
+
+**Files:**
+- Modify: `.github/scripts/render-check-deploy-health.sh`
+- Modify: `docs/runbooks/auto-deploy-prod.md`
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: nothing. The script's usage, arguments and exit codes are unchanged.
+
+- [ ] **Step 1: Invert the `autoDeploy` expectation**
+
+Replace lines 86–96 (the two `auto_deploy` branches) with:
+
+```bash
+# Under the promotion gate (2026-09-01) prod services deploy ONLY through
+# deploy-prod.yml, so autoDeploy="no" is the correct state and alerting on it
+# would make this monitor five false alarms per run. The fault is now the
+# opposite: "yes" means somebody re-enabled auto-deploy in the dashboard and
+# merges are reaching prod without a promotion — the gate has leaked.
+if [ "${auto_deploy}" = "yes" ]; then
+  report_unhealthy "autoDeploy is 'yes', but prod is promotion-gated — merges are reaching prod without a promotion. Set it back to 'no' (see docs/runbooks/auto-deploy-prod.md)."
+fi
+
+if [ "${auto_deploy}" != "no" ]; then
+  fail_check "autoDeploy read as '${auto_deploy}', which is neither 'yes' nor 'no'. Check whether the Render API response shape changed."
+fi
+```
+
+Also update the script's header block: condition 1 currently reads *"Deploys
+are turned off, or the service is suspended. Nothing merged will ever reach
+it."* Replace that clause with *"The service is suspended, or auto-deploy was
+re-enabled behind the promotion gate."* A header that describes the opposite of
+what the code does is how the next reader gets misled.
+
+- [ ] **Step 2: Prove both directions by hand**
+
+Auto-deploy is still `yes` at this point in the plan, so the leak branch is
+directly testable:
+
+```bash
+RENDER_API_TOKEN=... bash .github/scripts/render-check-deploy-health.sh \
+  srv-d7lngqfavr4c73eme3b0 concert-crawl-api; echo "exit=$?"
+```
+
+Expected **now**: `exit=2` with the "autoDeploy is 'yes'" message — the leak
+branch firing correctly against a service that has not been gated yet.
+Expected **after Task 13 Step 5**: `exit=0`. Re-run it there; Task 13 Step 6
+depends on this being green.
+
+- [ ] **Step 3: Shellcheck and commit**
+
+```bash
+shellcheck .github/scripts/render-check-deploy-health.sh
+git add .github/scripts/render-check-deploy-health.sh docs/runbooks/auto-deploy-prod.md
+git commit -m "fix(ci): treat prod autoDeploy=no as healthy under the promotion gate"
+```
+
+Add a line to the runbook's troubleshooting section recording the inversion, so
+a responder who sees "autoDeploy is 'yes'" knows it is a leak rather than a
+misconfigured check.
+
+---
+
+### Task 13: Throw the switch
 
 Everything above is inert until the live configuration changes. This is the only
 task that touches production, and it is last on purpose. It is Hugh's call to
@@ -1200,7 +1537,7 @@ run it; an agent must not flip these without him saying go.
 **Files:** none — live configuration only.
 
 **Interfaces:**
-- Consumes: Tasks 6, 7, 9, 10 merged to `main`.
+- Consumes: Tasks 6, 7, 9, 10, 12 merged to `main`.
 - Produces: a promotion-gated production environment.
 
 - [ ] **Step 1: Create the GitHub configuration**
@@ -1274,12 +1611,16 @@ take" should be answered with, rather than an estimate.
 ## Self-Review
 
 **Spec coverage.** Workstream 1 → Tasks 1–5. Workstream 2 → Task 6.
-Workstream 3 → Tasks 7–9 and 12. Workstream 5 → Task 10. Documentation of
+Workstream 3 → Tasks 7–9, 12 and 13. Workstream 5 → Task 10. Documentation of
 D3/D4 → Task 11. Workstream 4 is the separate
 `2026-09-01-prod-to-staging-content-sync.md` plan.
 
+Task 12 (health checker) is not a spec line item. It exists because the live
+flip in Task 13 would otherwise turn `prod-deploy-health.yml` into five false
+alarms per run — a consequence of D2 that the spec did not enumerate.
+
 **Decisions traced.** D1 (manual promotion) → Task 7's dispatch inputs. D2
-(dispatch mechanism) → Tasks 7, 12. D3 (HEAD-only) → Task 7 Step 2. D4
+(dispatch mechanism) → Tasks 7, 12, 13. D3 (HEAD-only) → Task 7 Step 2. D4
 (migrations coupled) → Task 11 Step 2. D5 (drift alert) → Task 10. D6 (content
 sync) → the other plan. D7 (staging E2E) → Tasks 1–5.
 
@@ -1291,6 +1632,6 @@ sync) → the other plan. D7 (staging E2E) → Tasks 1–5.
   `sentry-capture-message.sh`'s header for its real signature rather than
   trusting the invocation shown.
 - Vercel's current Production Branch and Ignored Build Step values are unknown
-  (`vercel project inspect` does not expose them). Task 12 Step 4 sets the one
+  (`vercel project inspect` does not expose them). Task 13 Step 4 sets the one
   that matters; if the Production Branch is not `main`, stop and reconcile
   before continuing.

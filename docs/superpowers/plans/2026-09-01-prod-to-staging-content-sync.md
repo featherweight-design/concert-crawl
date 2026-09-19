@@ -571,6 +571,33 @@ describe('sync-prod-public-data main', () => {
     expect(syncVenueGuideChips).toHaveBeenCalledTimes(1)
   })
 
+  it('runs the steps in FK-parent-first order', async () => {
+    await main()
+
+    // Call counts alone would stay green if the orchestrator ran the five
+    // steps in any order, or in parallel via Promise.all — and the FK order is
+    // the whole correctness property of this file. `invocationCallOrder` is a
+    // monotonic global counter across all vi mocks, so comparing entries gives
+    // the real sequence. Venues must precede events (events.venueId), events
+    // must precede the price log (its event FK), and venues must precede the
+    // chips (their venue FK).
+    // Throws rather than casting: `noUncheckedIndexedAccess` types the index
+    // read as `number | undefined`, and a cast here would turn "the step never
+    // ran" into a confusing NaN comparison instead of a named failure.
+    const orderOf = (mock: typeof syncVenues): number => {
+      const order = vi.mocked(mock).mock.invocationCallOrder[0]
+      if (order === undefined) throw new Error('step was never invoked')
+      return order
+    }
+
+    expect(orderOf(syncVenues)).toBeLessThan(orderOf(syncEvents))
+    expect(orderOf(syncEvents)).toBeLessThan(orderOf(syncArtists))
+    expect(orderOf(syncArtists)).toBeLessThan(orderOf(syncPriceRetrievalLog))
+    expect(orderOf(syncPriceRetrievalLog)).toBeLessThan(
+      orderOf(syncVenueGuideChips),
+    )
+  })
+
   it('passes the venueIdMap from syncVenues into the chip step', async () => {
     await main()
     const chipArgs = vi.mocked(syncVenueGuideChips).mock.calls[0]?.[0]
@@ -597,7 +624,7 @@ describe('sync-prod-public-data main', () => {
 - [ ] **Step 2: Run the test to verify it fails**
 
 Run: `pnpm test:scripts -- sync-prod-public-data-main`
-Expected: FAIL — `Cannot find module './sync-artists.js'` if Task 1 is not yet merged, otherwise `syncArtists` received 0 calls.
+Expected: FAIL — `Cannot find module './sync-artists.js'` if Task 1 is not yet merged, otherwise `syncArtists` received 0 calls, and `step was never invoked` from the ordering test's `orderOf` helper.
 
 - [ ] **Step 3: Confirm the failure is the ordering gap, not a mocking mistake**
 
