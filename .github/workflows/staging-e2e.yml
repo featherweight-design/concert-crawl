@@ -1,6 +1,13 @@
 name: Staging E2E
 
+# Staging E2E. Runs on every push to main, because staging is now the gate a
+# prod promotion is granted on (see docs/runbooks/auto-deploy-prod.md). A red
+# run here does not block the merge that caused it — the merge already
+# happened — it blocks the promotion decision.
+
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions: read-all
@@ -14,19 +21,51 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # The script exits 0 on live, 124 on a benign no-deploy/supersede (the
+      # staging API's buildFilter skips docs- and web-only pushes, so this is
+      # common, not exceptional), and anything else on hard error. Branch
+      # explicitly — a bare call would fail the run on every web-only merge,
+      # and bucketing a real failure as benign is the opposite mistake.
+      - name: Wait for staging API to be live on pushed SHA
+        id: wait_for_live
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: |
+          set +e
+          bash .github/scripts/render-wait-for-live.sh \
+            "${{ vars.RENDER_SERVICE_ID_API_STAGING }}" \
+            "${{ github.sha }}" \
+            300
+          exit_code=$?
+          set -e
+          if [ "${exit_code}" -eq 0 ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            echo "✓ Staging API is live on ${{ github.sha }}; running E2E."
+          elif [ "${exit_code}" -eq 124 ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=E2E skipped::Staging API never went live on ${{ github.sha }} within 5 min. Most likely the buildFilter skipped this push (docs/web-only) or a fast-follow merge superseded it. The next API-affecting push will produce a fresh E2E artifact."
+          else
+            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code} (not a timeout). Failing — nothing was tested."
+            exit "${exit_code}"
+          fi
+
       - name: Setup pnpm
+        if: steps.wait_for_live.outputs.should_run == 'true'
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
+        if: steps.wait_for_live.outputs.should_run == 'true'
         uses: actions/setup-node@v7
         with:
           node-version-file: '.node-version'
           cache: 'pnpm'
 
       - name: Install dependencies
+        if: steps.wait_for_live.outputs.should_run == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright browsers
+        if: steps.wait_for_live.outputs.should_run == 'true'
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
@@ -34,12 +73,11 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-
 
       - name: Install Playwright browsers
+        if: steps.wait_for_live.outputs.should_run == 'true'
         run: pnpm --filter @concert-crawl/e2e install-browsers
 
-      - name: Wait for Render staging deploy
-        run: sleep 180
-
       - name: Run E2E tests
+        if: steps.wait_for_live.outputs.should_run == 'true'
         run: pnpm --filter @concert-crawl/e2e test:e2e
         env:
           PLAYWRIGHT_BASE_URL: ${{ vars.STAGING_URL }}
@@ -48,7 +86,7 @@ jobs:
 
       - name: Upload failure artifacts
         uses: actions/upload-artifact@v7
-        if: failure()
+        if: failure() && steps.wait_for_live.outputs.should_run == 'true'
         with:
           name: e2e-failure-artifacts-${{ github.run_id }}
           path: apps/e2e/test-results/
