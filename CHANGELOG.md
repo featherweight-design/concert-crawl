@@ -1,3 +1,10 @@
+## [1.289.6](https://github.com/HartiganHM/concert-crawl/compare/v1.289.5...v1.289.6) (2026-09-19)
+
+
+### Bug Fixes
+
+* **ci:** keep cron rollback warnings from being skipped by a failed API rollback ([9b0af99](https://github.com/HartiganHM/concert-crawl/commit/9b0af9974d7e5708ac113380f64877f39dc8b444))
+
 ## [1.289.5](https://github.com/HartiganHM/concert-crawl/compare/v1.289.4...v1.289.5) (2026-09-19)
 
 
