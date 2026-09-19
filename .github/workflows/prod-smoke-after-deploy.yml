@@ -168,7 +168,7 @@ jobs:
             -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
             -H 'Accept: application/json' \
             "https://api.render.com/v1/services/${RENDER_SERVICE_ID_API}/deploys?limit=50" \
-            | jq -r 'first(.[] | (.deploy // .) | select(.status == "live") | .commit.id) // empty')
+            | jq -r '[.[] | (.deploy // .) | select(type == "object" and .status == "live") | (.commit // {}).id | select(type == "string" and . != "")] | (.[0] // "")')
           lookup_status=$?
           set -e
           if [ "${lookup_status}" -ne 0 ] || [ -z "${live_sha}" ]; then
