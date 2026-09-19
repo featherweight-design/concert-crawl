@@ -1,3 +1,10 @@
+## [1.289.4](https://github.com/HartiganHM/concert-crawl/compare/v1.289.3...v1.289.4) (2026-09-19)
+
+
+### Bug Fixes
+
+* **onboarding:** run the walkthrough after sign-up, not before it ([#1701](https://github.com/HartiganHM/concert-crawl/issues/1701)) ([f75c62a](https://github.com/HartiganHM/concert-crawl/commit/f75c62a45440828afc09841be7de89d6e52914df))
+
 ## [1.289.3](https://github.com/HartiganHM/concert-crawl/compare/v1.289.2...v1.289.3) (2026-09-19)
 
 
