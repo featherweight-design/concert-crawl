@@ -1,46 +1,24 @@
 name: Prod smoke (after Render auto-deploy)
 
-# Triggered on every push to main. Waits up to 5 min for Render to
-# deploy github.sha to the prod API service, then runs the Playwright
-# smoke suite against prod. On smoke failure, rolls back via
-# render-rollback.sh (API only — Render's API rejects cron rollback;
-# all four prod crons emit warnings).
+# Dispatch-only prod smoke + rollback. It used to run on every push to main,
+# waiting for Render's native auto-deploy; under the promotion gate prod does
+# not deploy on push, so that wait could only time out. The promotion path's
+# own smoke + rollback jobs live in deploy-prod.yml.
 #
-# Replaces the smoke + rollback jobs that used to run inside
-# deploy-prod.yml under the workflow_run-triggered chain. Under the
-# new model Render's git integration auto-deploys prod on push to main
-# (no GH Actions dispatch involved); this workflow runs in parallel
-# with that deploy, waits for it to be live, then smokes.
+# Kept dispatchable because it is the right tool for "smoke prod right now
+# without deploying anything" — after a Render incident, or to validate a
+# semantic-release commit explicitly.
 #
-# Why push, not cron: GH Actions schedule cron is unreliable, costs
-# ~$35/mo more in idle runner minutes (private-repo billing), and
-# adds a 5-min worst-case detection lag. Push is the most reliable
-# trigger in the system and fires the moment main moves. See plan
-# doc docs/superpowers/plans/2026-06-24-render-native-prod-deploys.md
-# for the cost + Render-deploy-time data.
+# On smoke failure it still rolls back via render-rollback.sh (API only —
+# Render's API rejects cron rollback; all four prod crons emit warnings).
 #
-# semantic-release release commits — small coverage gap, accepted:
-# semantic-release lands `chore(release): X.Y.Z [skip ci]` ~3 min
-# after each merge. The [skip ci] convention prevents THIS workflow
-# from firing for that commit. The merge commit's smoke workflow
-# does fire and waits for Render to be live on the merge SHA.
-# Typical case (Render queues deploys in order): merge build is
-# live for ~3 min before release build supersedes it — smoke
-# catches that window. Edge case (Render cancels merge build
-# mid-flight): release commit ends up live and unsmoked. We accept
-# because the release commit is code-equivalent to the merge commit
-# (package.json + CHANGELOG version bumps only). Operators can
-# workflow_dispatch this workflow against the release commit if a
-# specific release warrants explicit validation — the kill switch is
-# bypassed for dispatch (see job-level `if:` below).
-#
-# Disabled by default for push triggers. Flip
-# PROD_SMOKE_RECONCILER_ENABLED to 'true' to arm.
+# PROD_SMOKE_RECONCILER_ENABLED is now vestigial: the job-level `if:` below
+# is satisfied by every dispatch, which is the only trigger left. It is kept
+# so that re-arming this workflow on a push or schedule trigger has a switch
+# ready rather than needing one invented under pressure.
 # See docs/runbooks/auto-deploy-prod.md.
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 # Share concurrency group with deploy-prod.yml + rollback-prod.yml so
@@ -58,20 +36,20 @@ permissions:
 
 jobs:
   smoke:
-    name: Wait for Render, smoke prod, rollback on failure
+    name: Smoke prod, rollback on failure
     runs-on: ubuntu-latest
-    # 20 min: 5 min Render wait + ~3 min pnpm/Playwright install
-    # (cold cache) + ~7 min smoke = ~15 min worst case. 20 leaves a
-    # safety margin.
+    # 20 min: ~3 min pnpm/Playwright install (cold cache) + ~7 min
+    # smoke = ~10 min worst case now that the Render wait is gone.
+    # 20 leaves a wide safety margin.
     timeout-minutes: 20
-    # Kill-switch gate for push-triggered runs, with an explicit
-    # workflow_dispatch bypass so manual operator intervention always
-    # works — including during the migration window when the switch
-    # is `false`. Matches rollback-prod.yml's design (no kill switch
-    # at all on the rollback path; incident response must not be
-    # paused by a feature flag). The non-main-branch guard inside
-    # the job's first step still prevents a feature branch from
-    # dispatching with prod secrets.
+    # The workflow_dispatch arm has always bypassed the kill switch so
+    # manual operator intervention works even while the switch is
+    # `false` — matching rollback-prod.yml's design (no kill switch at
+    # all on the rollback path; incident response must not be paused by
+    # a feature flag). Dispatch is now the only trigger, so this gate
+    # is always satisfied; see the header note on why it stays. The
+    # non-main-branch guard inside the job's first step still prevents
+    # a feature branch from dispatching with prod secrets.
     if: |
       vars.PROD_SMOKE_RECONCILER_ENABLED == 'true' ||
       github.event_name == 'workflow_dispatch'
@@ -101,13 +79,13 @@ jobs:
           echo "  Use the workflow_dispatch UI's branch picker to select main, then re-dispatch."
           exit 1
 
-      # Pin checkout to github.sha — the SHA that just landed on main.
-      # The Playwright code we run must match the SHA Render is
-      # building. If main has moved by the time this job starts (rare
-      # but possible during a fast-follow merge), the wait below would
-      # eventually time out because Render is building a newer SHA;
-      # we exit gracefully then.
-      - name: Checkout pushed SHA
+      # Pin checkout to github.sha — the ref the operator dispatched.
+      # That is the right source for the smoke specs, and it cannot be
+      # the live prod SHA anyway: checkout runs before the step that
+      # resolves what prod is serving. The specs can therefore be ahead
+      # of the code prod runs, which the warning step below says out
+      # loud so a responder does not have to work it out.
+      - name: Checkout dispatched SHA
         uses: actions/checkout@v7
         with:
           ref: ${{ github.sha }}
@@ -151,50 +129,61 @@ jobs:
             exit 1
           fi
 
-      # Wait for Render to be live on github.sha. 300s = 5 min. The
-      # prod API deploys consistently take ~2 min on Render (verified
-      # across 15 recent deploys: 1:50–2:26, median ~2:00), so 5 min
-      # is 2x safety factor.
+      # No wait. This workflow no longer causes a deploy, so there is no
+      # target SHA to wait for: it smokes whatever prod is live on right
+      # now. Waiting would call render-wait-for-live.sh, which returns 125
+      # (autoDeploy="no") on every run under the promotion gate — turning
+      # "smoke prod right now without deploying anything" into a guaranteed
+      # failure. The promotion path's own wait-for-live lives in
+      # deploy-prod.yml, where a deploy actually was triggered.
       #
-      # The script exits 0 on live, 124 on a benign timeout (a fast-follow
-      # merge superseded this deploy, or the service's buildFilter excluded
-      # this push so no deploy was ever created), 125 when the timeout is NOT benign
-      # (auto-deploy is off, no live deploy exists at all, the deploy for this
-      # SHA failed or stalled, the live deploy is over an hour old, or the
-      # timeout could not be classified at all — in each case the pushed SHA
-      # will not go live on its own, so skipping smoke would report green
-      # having asserted nothing), and 1 on hard error (jq missing,
-      # auth/network failure, malformed service ID).
-      # 125 exists because prod sat 51 commits behind for ~17h with
-      # autoDeploy off while every run read its timeout as the benign
-      # case. We branch explicitly on those
-      # codes — NOT on `continue-on-error` + step.outcome — so a real
-      # failure can't silently get bucketed as "benign timeout" and
-      # skip smoke + rollback. `set +e` lets us inspect $? without
-      # the runner-level non-zero handling kicking in.
-      - name: Wait for prod API to be live on pushed SHA
+      # The live SHA is recorded for the operator, not depended on: reading
+      # it is a Render API call, and an unreadable Render API is no reason
+      # to refuse to smoke prod. So a lookup failure warns and smoke still
+      # runs, with live_sha left empty.
+      #
+      # Task 10 of docs/superpowers/plans/2026-09-01-prod-promotion-gate.md
+      # adds .github/scripts/render-live-sha.sh with exactly this query. That
+      # script does not exist yet, so the lookup is inlined here per the
+      # plan's stated fallback; fold this block into the script when it lands.
+      # `(.deploy // .)` is not optional politeness — some Render deploy
+      # endpoints wrap the object as `{ "deploy": { ... } }` and some return
+      # it flat, and every existing render-*.sh normalizes the same way.
+      # `select(.status == "live")` deliberately ignores queued, failed and
+      # deactivated deploys: none of those is what prod is serving.
+      - name: Record the prod live SHA being smoked
         id: wait_for_live
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          RENDER_SERVICE_ID_API: ${{ vars.RENDER_SERVICE_ID_API }}
         run: |
           set +e
-          bash .github/scripts/render-wait-for-live.sh \
-            "${{ vars.RENDER_SERVICE_ID_API }}" \
-            "${{ github.sha }}" \
-            300
-          exit_code=$?
+          live_sha=$(curl -sS --fail-with-body \
+            -H "Authorization: Bearer ${RENDER_API_TOKEN}" \
+            -H 'Accept: application/json' \
+            "https://api.render.com/v1/services/${RENDER_SERVICE_ID_API}/deploys?limit=20" \
+            | jq -r 'first(.[] | (.deploy // .) | select(.status == "live") | .commit.id) // empty')
+          lookup_status=$?
           set -e
-          echo "exit_code=${exit_code}" >> "$GITHUB_OUTPUT"
-          if [ "${exit_code}" -eq 0 ]; then
-            echo "should_smoke=true" >> "$GITHUB_OUTPUT"
-            echo "✓ Render is live on ${{ github.sha }}; proceeding to smoke."
-          elif [ "${exit_code}" -eq 124 ]; then
-            echo "should_smoke=false" >> "$GITHUB_OUTPUT"
-            echo "::warning title=Smoke skipped::Render did not reach live on ${{ github.sha }} within 5 min. Most likely cause: a fast-follow merge superseded this deploy. The next push's smoke run will validate the latest deployable code."
+          if [ "${lookup_status}" -ne 0 ] || [ -z "${live_sha}" ]; then
+            echo "::warning title=Live SHA unknown::Could not read the prod API service's live deploy from Render. Smoking prod anyway — the smoke asserts against PROD_URL, not against a SHA — but the run will not be able to tell you which commit it exercised."
+            live_sha=""
           else
-            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code}. 125 means the timeout was classified as NOT benign: the service is suspended, has deploys disabled, its deploy for this SHA failed, its live deploy is over an hour old, or the timeout could not be classified at all (service metadata unreadable, no live deploy, unexpected Render response shape). The script's own log lines above name which — read them, then check the service. Any other code is a script or Render API failure; check Render API status + RENDER_API_TOKEN. Nothing was smoked or rolled back."
-            exit "${exit_code}"
+            echo "Smoking prod as currently live: ${live_sha}"
           fi
+          echo "live_sha=${live_sha}" >> "$GITHUB_OUTPUT"
+          echo "should_smoke=true" >> "$GITHUB_OUTPUT"
+
+      # The specs come from the dispatched ref; prod serves whatever was last
+      # promoted. When those differ, say so, because a failure then has two
+      # very different readings. The 2026-08 testid drift incident was exactly
+      # this confusion in the other direction.
+      - name: Warn when the spec ref is ahead of prod
+        if: |
+          steps.wait_for_live.outputs.live_sha != '' &&
+          steps.wait_for_live.outputs.live_sha != github.sha
+        run: |
+          echo "::warning title=Specs ahead of prod::Running smoke specs from ${{ github.sha }} against prod live on ${{ steps.wait_for_live.outputs.live_sha }}. A failure may be a spec that expects unpromoted behaviour rather than a prod regression."
 
       - name: Setup pnpm
         if: steps.wait_for_live.outputs.should_smoke == 'true'
@@ -257,8 +246,12 @@ jobs:
             echo "Playwright smoke passed."
           fi
 
+      # `always() &&` for the same reason the rollback chain below carries it:
+      # without a status function the implicit `success()` applies, and any
+      # earlier step that errored would skip the upload — losing the traces
+      # and screenshots that are the only evidence of what prod did.
       - name: Upload failure artifacts
-        if: steps.run_smoke.outcome == 'failure'
+        if: always() && steps.run_smoke.outcome == 'failure'
         uses: actions/upload-artifact@v7
         with:
           name: prod-smoke-failure-${{ github.run_id }}
@@ -312,10 +305,10 @@ jobs:
       # Email the admin that auto-rollback fired. The auto-rollback
       # only covers the API service (Render's API rejects cron
       # rollback) and never touches Vercel. The operator needs to
-      # know so they can either revert the offending commit on main
-      # (rolls everything back together on the next CI run) or
-      # manually roll back all four prod crons + Vercel via their
-      # respective dashboards.
+      # know so they can manually roll back all four prod crons +
+      # Vercel via their respective dashboards. Under the promotion
+      # gate, reverting on main no longer rolls prod back by itself —
+      # prod only moves on a deliberate deploy-prod.yml dispatch.
       #
       # Uses the same Resend setup the API + crawler already use —
       # `alerts@concertcrawl.app` is already a verified sender in
@@ -331,7 +324,12 @@ jobs:
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
           ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
-          COMMIT_SHA: ${{ github.sha }}
+          # The commit prod was actually serving when it was smoked — not
+          # the dispatched ref the specs came from. Empty when the Render
+          # lookup failed, which the body words explicitly rather than
+          # printing a blank `<code></code>`.
+          LIVE_SHA: ${{ steps.wait_for_live.outputs.live_sha }}
+          SPEC_SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           # jq is used below to construct the Resend JSON body
@@ -372,7 +370,12 @@ jobs:
           # execute even when an earlier rollback step failed. The
           # operator should always look at the workflow run for the
           # actual per-service outcome.
-          html_body="<p>Production auto-rollback was <strong>triggered by the post-deploy smoke workflow</strong> for commit <code>${COMMIT_SHA}</code>.</p><p>The API web service rollback was attempted via the Render API. All four prod cron jobs (crawler triggers, crawler daily, match-artists, spotify-weekly) require <strong>manual rollback</strong> — Render's API does not support cron rollback. Vercel web also requires manual rollback (one-click promote in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
+          if [ -n "${LIVE_SHA:-}" ]; then
+            smoked="prod was live on commit <code>${LIVE_SHA}</code>"
+          else
+            smoked="the live prod commit could not be read from Render — see the run log"
+          fi
+          html_body="<p>Production auto-rollback was <strong>triggered by a manual dispatch of the prod smoke workflow</strong>. No deploy was made by that dispatch: ${smoked}, and the smoke specs came from <code>${SPEC_SHA}</code>.</p><p>The API web service rollback was attempted via the Render API. All four prod cron jobs (crawler triggers, crawler daily, match-artists, spotify-weekly) require <strong>manual rollback</strong> — Render's API does not support cron rollback. Vercel web also requires manual rollback (one-click promote in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
           payload=$(jq -nc \
             --arg from "Concert Crawl Alerts <alerts@concertcrawl.app>" \
             --arg to "${ADMIN_EMAIL}" \
@@ -411,9 +414,12 @@ jobs:
 
       # Re-surface the Playwright failure so the smoke job itself
       # exits non-zero — keeps the Actions UI honest about the run's
-      # outcome.
+      # outcome. `always() &&` because the rollback steps above run with
+      # `always()` and can themselves fail: without a status function here
+      # the implicit `success()` would skip this step in exactly the case
+      # where the smoke failure most needs stating.
       - name: Surface smoke failure
-        if: steps.run_smoke.outcome == 'failure'
+        if: always() && steps.run_smoke.outcome == 'failure'
         run: |
           echo "Playwright smoke failed; failing the job after rollback steps completed."
           exit 1
