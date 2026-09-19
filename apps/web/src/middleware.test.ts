@@ -209,10 +209,15 @@ describe('middleware — edge auth gate (#841)', () => {
   // in prod. They must resolve in either launch mode: what robots.txt says off
   // the canonical origin is "disallow everything", which only works if it can be
   // read at all.
-  it.each(['/robots.txt', '/sitemap.xml'])(
-    'lets an unauthenticated crawler read %s before launch',
-    async (path) => {
-      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
+  it.each([
+    ['/robots.txt', 'false'],
+    ['/robots.txt', 'true'],
+    ['/sitemap.xml', 'false'],
+    ['/sitemap.xml', 'true'],
+  ])(
+    'lets an unauthenticated crawler read %s with public browse %s',
+    async (path, launched) => {
+      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', launched)
       const { middlewareHandler } = await import('./middleware')
 
       const auth = makeAuth(null)
@@ -228,10 +233,15 @@ describe('middleware — edge auth gate (#841)', () => {
 
   // The negative case #794 requires of every isAlwaysPublic addition. Both are
   // exact paths, so neither opens a neighbour that merely shares the prefix.
-  it.each(['/robots.txt/secret', '/sitemap.xml/secret'])(
-    'does not make %s public',
-    async (path) => {
-      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
+  it.each([
+    ['/robots.txt/secret', 'false'],
+    ['/robots.txt/secret', 'true'],
+    ['/sitemap.xml/secret', 'false'],
+    ['/sitemap.xml/secret', 'true'],
+  ])(
+    'does not make %s public with public browse %s',
+    async (path, launched) => {
+      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', launched)
       const { middlewareHandler } = await import('./middleware')
 
       const auth = makeAuth(null)
