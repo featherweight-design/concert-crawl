@@ -1,3 +1,10 @@
+## [1.289.2](https://github.com/HartiganHM/concert-crawl/compare/v1.289.1...v1.289.2) (2026-09-19)
+
+
+### Bug Fixes
+
+* **crews:** name and draw the act on a crew row, not the night's title ([#1707](https://github.com/HartiganHM/concert-crawl/issues/1707)) ([f444242](https://github.com/HartiganHM/concert-crawl/commit/f44424211b8ec8999b1b31928a8246f421186589)), closes [#1699](https://github.com/HartiganHM/concert-crawl/issues/1699) [#1685](https://github.com/HartiganHM/concert-crawl/issues/1685)
+
 ## [1.289.1](https://github.com/HartiganHM/concert-crawl/compare/v1.289.0...v1.289.1) (2026-09-19)
 
 
