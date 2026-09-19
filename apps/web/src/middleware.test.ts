@@ -321,12 +321,14 @@ describe('middleware — edge auth gate (#841)', () => {
     expect(result).toBeUndefined()
   })
 
-  it('does not make a ~offline-prefixed route public', async () => {
+  it('does not make a route under /~offline public', async () => {
     const { middlewareHandler } = await import('./middleware')
 
-    // The mocked createRouteMatcher uses startsWith, so this is the guard that
-    // catches a `/~offline(.*)` glob smuggling a future private sibling in.
-    const req = new NextRequest('http://localhost/~offline-admin')
+    // Same exact-path guard as /api/revalidate above: a `/~offline(.*)` glob
+    // would make a future private sibling public by default. The path has to
+    // stay under the `~offline` top-level segment or `isKnownRoute` returns
+    // first and nothing is protected either way.
+    const req = new NextRequest('http://localhost/~offline/anything')
     const auth = makeAuth(null)
 
     await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized')

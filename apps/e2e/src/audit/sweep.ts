@@ -30,6 +30,7 @@ import path from 'node:path'
 import { chromium } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
+import { auditStorageStatePath } from '../fixtures/auth.js'
 import { assertNotProdBaseUrl } from './assert-not-prod.js'
 import { prepareAuditAuth } from './audit-auth.js'
 import { collectHeuristics } from './heuristics.js'
@@ -181,9 +182,7 @@ export const runSweep = async (args: SweepArgs): Promise<SweepResult> => {
       const storageState =
         route.auth === 'none'
           ? undefined
-          : route.auth === 'admin'
-            ? '.auth/audit-admin.json'
-            : '.auth/audit-user.json'
+          : auditStorageStatePath(route.auth === 'admin' ? 'admin' : 'user')
 
       for (const vp of VIEWPORTS) {
         const context = await browser.newContext({

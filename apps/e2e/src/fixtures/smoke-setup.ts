@@ -3,6 +3,8 @@ import { chromium, type FullConfig } from '@playwright/test'
 import fs from 'fs'
 import path from 'path'
 
+import { SMOKE_STORAGE_STATE_PATH } from './auth'
+
 // Writes the storage state Playwright loads via `use.storageState`.
 // When no credentials are supplied (e.g. local dry-runs) we still
 // need the file to exist so Playwright can boot; an empty
@@ -39,8 +41,8 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   const email = process.env['E2E_TEST_USER_EMAIL']
   const password = process.env['E2E_TEST_USER_PASSWORD']
 
-  const authDir = path.resolve('.auth')
-  const authFile = path.join(authDir, 'smoke.json')
+  const authFile = path.resolve(SMOKE_STORAGE_STATE_PATH)
+  const authDir = path.dirname(authFile)
   fs.mkdirSync(authDir, { recursive: true })
 
   if (!email || !password) {

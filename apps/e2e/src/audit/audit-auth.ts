@@ -1,5 +1,5 @@
 import { assertNotProdBaseUrl } from './assert-not-prod.js'
-import { loginAndSave } from '../fixtures/auth.js'
+import { auditStorageStatePath, loginAndSave } from '../fixtures/auth.js'
 
 /**
  * Logs in the requested fixture role and writes the Playwright storage state
@@ -28,7 +28,7 @@ export async function prepareAuditAuth(role: 'user' | 'admin'): Promise<void> {
   const baseURL =
     process.env['PLAYWRIGHT_AUDIT_BASE_URL'] ??
     'https://staging.concertcrawl.app'
-  const outputPath = `.auth/audit-${role}.json`
+  const outputPath = auditStorageStatePath(role)
 
   // Guard BEFORE the missing-creds check — if the base URL is prod, the
   // operator needs to fix that regardless of whether creds are set.

@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
+import { SMOKE_STORAGE_STATE_PATH } from './src/fixtures/auth'
+
 export default defineConfig({
   testDir: './src/smoke',
   fullyParallel: false,
@@ -11,7 +13,7 @@ export default defineConfig({
   use: {
     baseURL:
       process.env['PLAYWRIGHT_SMOKE_BASE_URL'] ?? 'https://concertcrawl.app',
-    storageState: '.auth/smoke.json',
+    storageState: SMOKE_STORAGE_STATE_PATH,
     screenshot: 'only-on-failure',
   },
   projects: [

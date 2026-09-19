@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock the loginAndSave helper so prepareAuditAuth can be tested without
-// triggering a real Playwright browser launch.
-vi.mock('../fixtures/auth.js', () => ({
+// triggering a real Playwright browser launch. Only that export is replaced —
+// `auditStorageStatePath` is the real one, so the expected paths below are
+// asserting against the module that actually owns them.
+vi.mock('../fixtures/auth.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../fixtures/auth.js')>()),
   loginAndSave: vi.fn(),
 }))
 

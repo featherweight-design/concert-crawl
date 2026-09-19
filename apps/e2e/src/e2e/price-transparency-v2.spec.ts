@@ -29,26 +29,24 @@ const resolveEventId = async (page: Page): Promise<string | null> => {
   return match?.[1] ?? null
 }
 
+/**
+ * This file used to hold four tests that could neither pass nor fail. Two
+ * navigated to `/events/:id/submit-price`, a route that has never existed —
+ * price submission is a modal opened from the event detail page. The other two
+ * wrapped every assertion in `if (await button.isVisible())`, so whenever the
+ * button had not rendered yet they executed no assertions and still reported
+ * green. Both pairs also asserted against copy that has since moved on ("Got
+ * it. Thanks." is now "Got it · submitted"; the dispute button now reads
+ * "Update").
+ *
+ * What remains is the part that is deterministic on a seeded environment: the
+ * modal opens from the event detail CTA. The submit itself is deliberately not
+ * driven — a real submission mutates staging data and the endpoint caps a user
+ * at three prices per show per 24h, so an E2E job that submitted would go red
+ * on its fourth run of the day for reasons that are not a regression.
+ */
 test.describe('Price Transparency v2', () => {
-  test('submit flow — fill form and see success state', async ({ page }) => {
-    const eventId = await resolveEventId(page)
-    if (eventId === null) {
-      test.skip(true, 'No events on this environment — nothing to price')
-      return
-    }
-    await page.goto(`/events/${eventId}/submit-price`)
-    await expect(page.getByText('Submit a price')).toBeVisible()
-
-    await page.getByLabel('Floor *').fill('45')
-    await page.getByRole('button', { name: 'GA' }).click()
-    await page.getByRole('button', { name: 'Ticketmaster' }).click()
-    await page.getByRole('button', { name: 'Bought it myself' }).click()
-
-    await page.getByRole('button', { name: 'Submit price' }).click()
-    await expect(page.getByText('Got it. Thanks.')).toBeVisible()
-  })
-
-  test('alreadySubmitted state — shows existing card or form', async ({
+  test('opens the price submission modal from event detail', async ({
     page,
   }) => {
     const eventId = await resolveEventId(page)
@@ -56,51 +54,17 @@ test.describe('Price Transparency v2', () => {
       test.skip(true, 'No events on this environment — nothing to price')
       return
     }
-    await page.goto(`/events/${eventId}/submit-price`)
-    const alreadyCard = page.getByText('You already submitted a price.')
-    const form = page.getByRole('button', { name: 'Submit price' })
-    const oneOf = await Promise.race([
-      alreadyCard.waitFor({ timeout: 5000 }).then(() => 'already'),
-      form.waitFor({ timeout: 5000 }).then(() => 'form'),
-    ])
-    expect(['already', 'form']).toContain(oneOf)
-  })
 
-  test('verify sheet — opens on reports link', async ({ page }) => {
-    const eventId = await resolveEventId(page)
-    if (eventId === null) {
-      test.skip(true, 'No events on this environment — nothing to price')
-      return
-    }
     await page.goto(`/events/${eventId}`)
-    const reportsBtn = page.getByRole('button', { name: /reports →/ })
-    if (await reportsBtn.isVisible()) {
-      await reportsBtn.click()
-      await expect(page.getByText('Confirm what you saw')).toBeVisible()
-    }
-  })
 
-  test('dispute flow — navigate to dispute page and submit', async ({
-    page,
-  }) => {
-    const eventId = await resolveEventId(page)
-    if (eventId === null) {
-      test.skip(true, 'No events on this environment — nothing to price')
-      return
-    }
-    await page.goto(`/events/${eventId}`)
-    const reportsBtn = page.getByRole('button', { name: /reports →/ })
-    if (await reportsBtn.isVisible()) {
-      await reportsBtn.click()
-      const disputeBtn = page.getByRole('button', { name: 'Dispute' }).first()
-      if (await disputeBtn.isVisible()) {
-        await disputeBtn.click()
-        await expect(page.getByText('Dispute price')).toBeVisible()
-        await page.getByLabel('Floor *').fill('30')
-        await page.getByRole('button', { name: 'AXS' }).click()
-        await page.getByRole('button', { name: 'File dispute' }).click()
-        await expect(page.getByText('Logged.')).toBeVisible()
-      }
-    }
+    await page.getByRole('button', { name: /Submit another price/ }).click()
+
+    // The dialog's accessible name, not a state-specific string: the modal
+    // opens into the form, the already-submitted card or the tier picker
+    // depending on what this account has already done to this event, and all
+    // three are a pass for "the CTA opens the modal".
+    await expect(
+      page.getByRole('dialog', { name: 'Submit price' }),
+    ).toBeVisible({ timeout: 15_000 })
   })
 })

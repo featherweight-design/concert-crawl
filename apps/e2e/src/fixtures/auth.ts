@@ -12,6 +12,16 @@ import path from 'path'
 export const STORAGE_STATE_PATH = '.auth/user.json'
 
 /**
+ * The same rule for the other two suites: the smoke config and the audit sweep
+ * each have a reader and a writer that must agree on a path, so the path is
+ * declared once here rather than twice at each site.
+ */
+export const SMOKE_STORAGE_STATE_PATH = '.auth/smoke.json'
+
+export const auditStorageStatePath = (role: 'user' | 'admin'): string =>
+  `.auth/audit-${role}.json`
+
+/**
  * Logs in via the Clerk sign-in flow and writes the browser storage state to
  * `outputPath`. Both `email` and `password` must be non-empty — the function
  * throws immediately if either is missing so the caller gets a clear error
