@@ -4,13 +4,14 @@
 // The band owns the title, so the page below it starts at content — there is no
 // negative margin pulling type back over an image any more (#1525).
 
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import {
   IdentityArt,
   identityFor,
 } from '@/components/consumer/identity-art/IdentityArt'
 import { Panel } from './Panel'
 import type { SlotSource } from './definitions/types'
+import { bandArtOpacity } from './lib/band-art'
 import { bandField } from './lib/band-field'
 
 export type HeroBandProps = {
@@ -37,6 +38,35 @@ const backdropRotate = (natural: number): 0 | 1 | 2 | 3 => {
   return rotations[(natural + 2) % 4] ?? 0
 }
 
+/**
+ * Resolved once so the rotation and the opacity read the same identity — two
+ * identityFor calls would be two chances to drift.
+ */
+const BandArt = ({ name }: { name: string }) => {
+  const identity = identityFor(name, 'artist', { scale: 'hero' })
+  // `CSSProperties` has no room for custom properties, so the one the class
+  // reads is declared alongside it rather than cast in. A string, because
+  // React appends a unit to numeric style values.
+  const style: CSSProperties & { '--band-art-opacity': string } = {
+    '--band-art-opacity': String(bandArtOpacity(identity.palette.bg)),
+  }
+  return (
+    <div
+      className="hero-band-art"
+      aria-hidden
+      data-testid="hero-band-art"
+      style={style}
+    >
+      <IdentityArt
+        name={name}
+        kind="artist"
+        scale="hero"
+        rotateOverride={backdropRotate(identity.rotate)}
+      />
+    </div>
+  )
+}
+
 export const HeroBand = ({
   name,
   children,
@@ -52,16 +82,7 @@ export const HeroBand = ({
     {/* Decorative: the band already says this name in type, and the mark
         carries no information the title doesn't. Sits under the content in
         source order so nothing needs a z-index to stay above it. */}
-    <div className="hero-band-art" aria-hidden data-testid="hero-band-art">
-      <IdentityArt
-        name={name}
-        kind="artist"
-        scale="hero"
-        rotateOverride={backdropRotate(
-          identityFor(name, 'artist', { scale: 'hero' }).rotate,
-        )}
-      />
-    </div>
+    <BandArt name={name} />
     {/* One flow row rather than two floating chips. Positioned only so it
         stacks above the backdrop, which is the one thing in here that is
         absolutely placed. */}

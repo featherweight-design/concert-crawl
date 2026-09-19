@@ -167,4 +167,37 @@ describe('SupportingLine — artist links (#1115 PR-G)', () => {
       plainName?.getAttribute('style'),
     )
   })
+
+  // The band draws artwork behind this line, and `--fg-subtle` measures
+  // 3.49:1 on flat ground before any art is composited over it. Nothing on
+  // the detail surface may reach for it.
+  it('never uses the subtle token on the surface that sits over artwork', () => {
+    const { container } = render(
+      <SupportingLine
+        surface="detail"
+        artists={['A', 'B', 'C']}
+        maxInline={2}
+        dim
+      />,
+    )
+    expect(container.querySelectorAll('.text-fg-subtle')).toHaveLength(0)
+    // …and the elements that would have carried it are still rendered, so
+    // this cannot pass by the line having quietly stopped drawing them.
+    expect(container.textContent).toContain('with')
+    expect(container.querySelectorAll('.text-fg-muted').length).toBeGreaterThan(
+      3,
+    )
+  })
+
+  it('leaves the row and card surfaces on the token they shipped with', () => {
+    for (const surface of ['card', 'hero'] as const) {
+      const { container, unmount } = render(
+        <SupportingLine surface={surface} artists={['A', 'B']} />,
+      )
+      expect(
+        container.querySelectorAll('.text-fg-subtle').length,
+      ).toBeGreaterThan(0)
+      unmount()
+    }
+  })
 })

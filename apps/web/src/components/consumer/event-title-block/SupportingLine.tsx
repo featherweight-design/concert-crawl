@@ -57,7 +57,14 @@ export const SupportingLine = ({
   const limit = maxInline == null ? artists.length : Math.max(1, maxInline)
   const shown = artists.slice(0, limit)
   const hidden = artists.length - shown.length
-  const nameColor = dim ? 'text-fg-subtle' : 'text-fg-muted'
+  // `detail` is the only surface that renders inside `HeroBand`, and the band
+  // draws generated artwork behind its type. `--fg-subtle` measures 3.49:1 on
+  // the app's own ground and less than that over art, so nothing on this
+  // surface may use it — the lead, the separators and the overflow counter all
+  // step up a token. Rows and cards sit on flat ground and are unchanged.
+  const overArt = surface === 'detail'
+  const quietColor = overArt ? 'text-fg-muted' : 'text-fg-subtle'
+  const nameColor = dim && !overArt ? 'text-fg-subtle' : 'text-fg-muted'
   // `detail` shows the full roster and may wrap to multiple lines (no clipping);
   // `card`/`hero` stay one line via `truncate`. Mirrors EventTitleBlock's headliner.
   const runClass = surface === 'detail' ? 'whitespace-normal' : 'truncate'
@@ -93,7 +100,7 @@ export const SupportingLine = ({
     >
       <span
         aria-hidden="true"
-        className="relative mr-1.5 shrink-0 font-mono text-fg-subtle"
+        className={`relative mr-1.5 shrink-0 font-mono ${quietColor}`}
         style={{ fontSize: ramp.lead, letterSpacing: '0.04em', top: '-0.02em' }}
       >
         {lead}
@@ -109,7 +116,7 @@ export const SupportingLine = ({
               {index > 0 && (
                 <span
                   aria-hidden="true"
-                  className="px-1.5 font-normal text-fg-subtle"
+                  className={`px-1.5 font-normal ${quietColor}`}
                   style={{ fontSize: ramp.name }}
                 >
                   {sep}
@@ -137,13 +144,13 @@ export const SupportingLine = ({
         {hidden > 0 && (
           <span aria-hidden="true">
             <span
-              className="px-1.5 text-fg-subtle"
+              className={`px-1.5 ${quietColor}`}
               style={{ fontSize: ramp.name }}
             >
               {sep}
             </span>
             <span
-              className="whitespace-nowrap font-mono font-medium text-fg-subtle"
+              className={`whitespace-nowrap font-mono font-medium ${quietColor}`}
               style={{ fontSize: ramp.name - 1.5, letterSpacing: '0.01em' }}
             >
               {formatMoreCount(hidden)}
