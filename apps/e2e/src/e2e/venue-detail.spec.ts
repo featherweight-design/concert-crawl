@@ -1,16 +1,15 @@
 import { test, expect } from '@playwright/test'
 
+import { isVisibleWithin } from '../fixtures/presence'
+
 test.describe('venue detail page', () => {
   test('renders venue info and event list', async ({ page }) => {
     await page.goto('/events')
 
     const venueLink = page.locator('[data-testid="venue-name-link"]').first()
-    // waitFor, not isVisible: isVisible samples the DOM once and the browse
-    // rows arrive client-side, so a bare probe skips on a populated
-    // environment.
-    try {
-      await venueLink.waitFor({ state: 'visible', timeout: 15_000 })
-    } catch {
+    // Waits, rather than sampling once: the browse rows arrive client-side,
+    // so a bare isVisible() probe skips on a populated environment.
+    if (!(await isVisibleWithin(venueLink, 15_000))) {
       test.skip(true, 'No venue name link found on browse page')
       return
     }

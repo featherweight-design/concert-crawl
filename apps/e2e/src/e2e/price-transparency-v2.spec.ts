@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test'
 import type { Page } from '@playwright/test'
 
+import { isVisibleWithin } from '../fixtures/presence'
+
 /**
  * Resolve an event id from the browse page. TEST_EVENT_ID used to be read from
  * the environment and defaulted to the string 'test-event-id', which 404s on
@@ -17,11 +19,7 @@ const resolveEventId = async (page: Page): Promise<string | null> => {
   // payload resolves, so a bare isVisible() call reports "no events" on a
   // staging environment that does in fact have events, and every price spec
   // then skips. Wait explicitly, and treat only a genuine timeout as empty.
-  try {
-    await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
-  } catch {
-    return null
-  }
+  if (!(await isVisibleWithin(firstRowLink, 15_000))) return null
 
   const href = await firstRowLink.getAttribute('href')
   if (href === null) return null

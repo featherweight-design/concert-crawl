@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 
+import { isVisibleWithin } from '../fixtures/presence'
+
 // `waitForLoadState('networkidle')` is deliberately absent from this file. The
 // browse page keeps react-query polling in the background, so networkidle either
 // resolves before the rows render or never resolves at all — either way it is
@@ -22,9 +24,7 @@ test.describe('browse events page', () => {
     // hydrating, which silently skipped this test on an environment that does
     // have venues. Wait for the chip and treat only a real timeout as empty.
     const venueChip = page.locator('[data-testid="venue-chip"]').first()
-    try {
-      await venueChip.waitFor({ state: 'visible', timeout: 15_000 })
-    } catch {
+    if (!(await isVisibleWithin(venueChip, 15_000))) {
       test.skip(true, 'No venue chips present on staging — skip filter test')
       return
     }
@@ -59,9 +59,7 @@ test.describe('browse events page', () => {
     // "fewer events than one page" and skipped on a staging environment with
     // hundreds of events, because the button had not been painted yet.
     const loadMoreButton = page.getByRole('button', { name: /load more/i })
-    try {
-      await loadMoreButton.waitFor({ state: 'visible', timeout: 10_000 })
-    } catch {
+    if (!(await isVisibleWithin(loadMoreButton, 10_000))) {
       test.skip(
         true,
         'Load More button not visible — fewer events than one page',

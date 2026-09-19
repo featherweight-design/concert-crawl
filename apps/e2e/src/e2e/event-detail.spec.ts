@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test'
 
+import { isVisibleWithin } from '../fixtures/presence'
+
 test.describe('event detail page', () => {
   test('renders event details from the browse page', async ({ page }) => {
     await page.goto('/events')
@@ -11,11 +13,9 @@ test.describe('event detail page', () => {
     const firstRowLink = page
       .locator('[data-testid="event-row"] a.event-row-stretch')
       .first()
-    // waitFor, not isVisible: isVisible samples once and rows arrive
-    // client-side, so a bare probe skips on a populated environment.
-    try {
-      await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
-    } catch {
+    // Waits, rather than sampling once: rows arrive client-side, so a bare
+    // isVisible() probe skips on a populated environment.
+    if (!(await isVisibleWithin(firstRowLink, 15_000))) {
       test.skip(true, 'No event rows on this environment')
       return
     }
@@ -38,9 +38,7 @@ test.describe('event detail page', () => {
     const firstRowLink = page
       .locator('[data-testid="event-row"] a.event-row-stretch')
       .first()
-    try {
-      await firstRowLink.waitFor({ state: 'visible', timeout: 15_000 })
-    } catch {
+    if (!(await isVisibleWithin(firstRowLink, 15_000))) {
       test.skip(true, 'No event rows on this environment')
       return
     }
