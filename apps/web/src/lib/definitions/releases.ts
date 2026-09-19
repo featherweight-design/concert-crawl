@@ -743,7 +743,7 @@ export const RELEASES: Release[] = [
       tagline: 'Link Spotify once — your artists stand out everywhere.',
       hero: 'spotify',
       cta: 'Connect Spotify',
-      ctaHref: '/settings',
+      ctaHref: '/me',
       steps: [
         {
           caption:

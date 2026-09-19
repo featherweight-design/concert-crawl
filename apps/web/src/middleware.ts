@@ -137,9 +137,16 @@ const isPreAuthBeforeLaunch = createRouteMatcher(['/onboarding(.*)'])
  * routes Next generates from `app/*.ts` and the one `public/` directory.
  *
  * Anything else is handed straight back to Next, which 404s it. Without this,
- * an unknown path fell through to `auth.protect` and 307'd to `/sign-in` — so a
- * scanner sweeping 200 WordPress paths cost 200 middleware invocations plus a
- * sign-in render for every redirect it followed.
+ * an unknown path fell through to `auth.protect` and 307'd to `/sign-in`, so a
+ * scanner sweeping 200 WordPress paths also bought 200 sign-in renders from
+ * the redirects it followed. The middleware invocation itself is unavoidable —
+ * `config.matcher` decides that, and this gate runs inside it.
+ *
+ * A few entries (`icon.svg`, `manifest.webmanifest`, `sw.js`) are already
+ * excluded by `config.matcher` and so are unreachable here. They stay listed so
+ * the set describes the URL surface rather than whatever the matcher currently
+ * lets through. `fonts` is NOT one of them: `public/fonts/share/LICENSE.txt`
+ * has an extension the matcher does not exclude.
  *
  * ⚠️ A new top-level route MUST be added here or it 404s for everyone.
  * middleware.test.ts walks `app/` and `public/` and fails when this drifts.
@@ -199,8 +206,10 @@ export const middlewareHandler = async (
   auth: MiddlewareAuth,
   req: NextRequest,
 ): Promise<NextResponse | undefined> => {
-  // Before any auth work: a path we don't serve gets no Clerk call and no
-  // redirect, just Next's 404.
+  // Before any auth decision: a path we don't serve gets no `auth.protect`, no
+  // 307 and no sign-in render, just Next's 404. `clerkMiddleware` has already
+  // run `authenticateRequest` by the time this handler is called, so this does
+  // not skip Clerk entirely — only the redirect and the page render behind it.
   if (!isKnownRoute(req.nextUrl.pathname)) return
 
   const { userId } = await auth()

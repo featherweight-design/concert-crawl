@@ -820,6 +820,21 @@ describe('middleware — the known-segment list tracks the filesystem', () => {
       return [entry.name]
     })
 
+  /**
+   * A route group is erased from the URL, so a metadata file inside one —
+   * `app/(protected)/opengraph-image.tsx` — is served from the root just as an
+   * `app/` root file is. Collected the same way for the same reason.
+   */
+  const rootLevelFilesUnder = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+      if (entry.isDirectory()) {
+        return entry.name.startsWith('(') && entry.name.endsWith(')')
+          ? rootLevelFilesUnder(join(dir, entry.name))
+          : []
+      }
+      return [entry.name]
+    })
+
   const appDir = join(import.meta.dirname, 'app')
 
   /**
@@ -837,8 +852,10 @@ describe('middleware — the known-segment list tracks the filesystem', () => {
   }
 
   const NON_ROUTE_ROOT_FILES = new Set([
+    'error.tsx',
     'globals.css',
     'layout.tsx',
+    'not-found.tsx',
     'page.tsx',
   ])
 
@@ -857,6 +874,11 @@ describe('middleware — the known-segment list tracks the filesystem', () => {
     for (const entry of readdirSync(publicDir)) {
       // `.gitkeep` and friends are VCS placeholders, not assets anyone links to.
       if (entry.startsWith('.')) continue
+      // `next.config.ts` points Serwist's `swDest` at `public/sw.js`, so a local
+      // web build drops `sw.js` and its source map here. `sw.js` is listed; the
+      // map is a build artifact nobody links to, and asserting on it would fail
+      // this test on an otherwise clean tree after `pnpm build`.
+      if (entry.endsWith('.map')) continue
 
       expect(
         KNOWN_TOP_LEVEL_SEGMENTS.has(entry),
@@ -866,10 +888,9 @@ describe('middleware — the known-segment list tracks the filesystem', () => {
   })
 
   it('accounts for every metadata route generated from an app/ root file', () => {
-    const rootFiles = readdirSync(appDir, { withFileTypes: true })
-      .filter((entry) => entry.isFile())
-      .map((entry) => entry.name)
-      .filter((name) => !/\.test\.tsx?$/.test(name))
+    const rootFiles = rootLevelFilesUnder(appDir).filter(
+      (name) => !/\.test\.tsx?$/.test(name),
+    )
 
     for (const name of rootFiles) {
       if (NON_ROUTE_ROOT_FILES.has(name)) continue

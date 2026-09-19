@@ -274,7 +274,7 @@ function buildInviteCodeSample(): BuiltTestEmail {
       '',
       `Your invite code: ${code}`,
       '',
-      'Use it at: https://concertcrawl.app/invite',
+      'Use it at: https://concertcrawl.app/auth/code',
     ].join('\n'),
   }
 }
