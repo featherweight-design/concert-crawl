@@ -96,8 +96,11 @@ export const isCanonicalHost = (host: string | null | undefined): boolean => {
   if (host === null || host === undefined) return false
   // Host names are case-insensitive, and the header is echoed back as the
   // client sent it. An uppercase request would otherwise be read as a foreign
-  // domain and answered with the blanket disallow.
-  return host.trim().toLowerCase() === new URL(CANONICAL_ORIGIN).host
+  // domain and answered with the blanket disallow. The default HTTPS port is
+  // stripped because a client may send it explicitly and `https://host:443` is
+  // the same origin as `https://host`.
+  const normalised = host.trim().toLowerCase().replace(/:443$/, '')
+  return normalised === new URL(CANONICAL_ORIGIN).host
 }
 
 /** Resolve an app-relative path against the site origin. */

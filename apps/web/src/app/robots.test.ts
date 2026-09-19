@@ -100,16 +100,20 @@ describe('robots.txt', () => {
   // Host names are case-insensitive and the header comes back as the client
   // sent it, so an exact comparison would answer a valid request with the
   // blanket disallow.
-  it.each(['CONCERTCRAWL.APP', 'ConcertCrawl.app', ' concertcrawl.app '])(
-    'treats %s as the canonical host',
-    async (host) => {
-      servedFrom(host)
+  // `concertcrawl.app:443` names the same origin as `concertcrawl.app`, so a
+  // client that sends the default port explicitly is still asking for prod.
+  it.each([
+    'CONCERTCRAWL.APP',
+    'ConcertCrawl.app',
+    ' concertcrawl.app ',
+    'concertcrawl.app:443',
+  ])('treats %s as the canonical host', async (host) => {
+    servedFrom(host)
 
-      expect(await robots()).toMatchObject({
-        sitemap: 'https://concertcrawl.app/sitemap.xml',
-      })
-    },
-  )
+    expect(await robots()).toMatchObject({
+      sitemap: 'https://concertcrawl.app/sitemap.xml',
+    })
+  })
 
   it('blocks crawlers when the request carries no host at all', async () => {
     servedFrom(null)
