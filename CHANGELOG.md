@@ -1,3 +1,15 @@
+# [1.289.0](https://github.com/HartiganHM/concert-crawl/compare/v1.288.5...v1.289.0) (2026-09-19)
+
+
+### Bug Fixes
+
+* **hero-band:** state the fade's delay in the motion scale ([71071b2](https://github.com/HartiganHM/concert-crawl/commit/71071b2035e6752c00b51d7d19c4239c705e5577))
+
+
+### Features
+
+* **hero-band:** draw the generated mark behind the band ([e97eb4b](https://github.com/HartiganHM/concert-crawl/commit/e97eb4b32134b51e089cb428ea59437a08a709e3))
+
 ## [1.288.5](https://github.com/HartiganHM/concert-crawl/compare/v1.288.4...v1.288.5) (2026-09-19)
 
 
