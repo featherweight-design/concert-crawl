@@ -70,7 +70,12 @@ export const metadata: Metadata = {
     siteName: LANDING_COPY.meta.title,
     title: LANDING_COPY.meta.title,
     description: LANDING_COPY.meta.description,
-    url: '/',
+    // Deliberately no `url`. Root metadata is inherited by every route that
+    // does not build its own, so a site-wide `og:url` would have venue, artist
+    // and crew cards all announce themselves as `/` — and social clients use
+    // og:url to identify the shared object, so those cards can collapse onto
+    // the homepage. The two routes that need one set it themselves; the rest
+    // are better with none than with a wrong one.
     images: [
       {
         url: '/api/og',
