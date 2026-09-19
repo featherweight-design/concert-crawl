@@ -1,3 +1,13 @@
+## [1.289.5](https://github.com/HartiganHM/concert-crawl/compare/v1.289.4...v1.289.5) (2026-09-19)
+
+
+### Bug Fixes
+
+* **e2e:** one storage-state path and a real event id for price specs ([b68b0f4](https://github.com/HartiganHM/concert-crawl/commit/b68b0f430f1f9085f634973963415d27b45e07f6))
+* **hero-band:** keep the band legible on the light-ground palettes ([5264074](https://github.com/HartiganHM/concert-crawl/commit/526407495c25f4ea598d3d19e1ceca6cc8743d39)), closes [#ECE6D2](https://github.com/HartiganHM/concert-crawl/issues/ECE6D2)
+* **title-block:** sweep the subtle token off the surface that sits over art ([5e18eeb](https://github.com/HartiganHM/concert-crawl/commit/5e18eebcae372cb5a355eed99eb048007ce8ac3c)), closes [#070a1a](https://github.com/HartiganHM/concert-crawl/issues/070a1a)
+* **web:** precache the offline fallback so it survives a cold offline load ([4216209](https://github.com/HartiganHM/concert-crawl/commit/4216209bd5994c40a8c1f20cd2647c16953fed6e))
+
 ## [1.289.4](https://github.com/HartiganHM/concert-crawl/compare/v1.289.3...v1.289.4) (2026-09-19)
 
 
