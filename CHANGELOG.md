@@ -1,3 +1,10 @@
+## [1.288.3](https://github.com/HartiganHM/concert-crawl/compare/v1.288.2...v1.288.3) (2026-09-19)
+
+
+### Bug Fixes
+
+* **web:** let crawlers reach robots.txt and sitemap.xml ([fde9ed7](https://github.com/HartiganHM/concert-crawl/commit/fde9ed73354b9dcbdf99c0866c24115be134f208))
+
 ## [1.288.2](https://github.com/HartiganHM/concert-crawl/compare/v1.288.1...v1.288.2) (2026-09-08)
 
 
