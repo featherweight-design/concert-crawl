@@ -130,11 +130,17 @@ and the real prod dispatch path**, as noted per journey.
 
 Entry point: GitHub → Actions → **Deploy to Production** → Run workflow.
 
-1. Merge a change to `main`. Expected: staging API builds; `staging-smoke` and
-   `staging-e2e` both run and report.
+1. Merge a change to `main` that touches `apps/api` or `packages/` — a
+   docs-only or web-only merge is filtered out by the staging build filter and
+   produces no deploy to wait on, so it cannot exercise this journey at all.
+   Expected: staging API builds; `staging-smoke` and `staging-e2e` both run and
+   report.
 2. Read the `staging-e2e` result. Expected: a real pass/fail, not a 124 skip. A
-   124-skipped run is **not** promotion evidence — this is the distinction Task
-   5 exists to make visible.
+   124 is the workflow's benign "no deploy happened, or a fast-follow
+   superseded this SHA" exit — it is correct behaviour, and it is **not**
+   promotion evidence. Only an actually executed run counts. If the run exits
+   124, merge another API-affecting change and read that run instead; this is
+   the distinction Task 5 exists to make visible.
 3. Dispatch **Deploy to Production** from `main` with a reason. Expected: the
    gate job passes, five Render deploys trigger, wait-for-live succeeds on the
    API, the Vercel step promotes the web app last, smoke passes, rollback does
@@ -178,11 +184,17 @@ then the scheduled workflow.
 The reverse pass instead proves the *guard*: point `NEON_STAGING_DIRECT` at the
 prod host and confirm `assertWriteHostNotProd()` refuses to run.
 
-**Repeat:** run twice in a row. Expected: identical row counts, no duplicates.
-Every step upserts on a natural key for exactly this reason.
+**Repeat:** run twice in a row. Expected: identical final row counts per table
+and zero duplicates. Assert on the *final state*, not on the reported counts —
+the steps do not all upsert, so the second run's own numbers legitimately
+differ. `price_retrieval_log` queries for an existing row and skips it, and
+cancelled/postponed events are select-then-insert, so a second run reports
+those as skipped rather than inserted. A second run that reports fewer inserts
+and more skips, with the same totals, is the pass condition.
 
-**Resume:** kill the process mid-run and re-run. Expected: it completes; the
-partial state from the killed run is absorbed by the upserts.
+**Resume:** kill the process mid-run and re-run. Expected: it completes, and
+the final row counts match a clean single run — the partial state is absorbed
+by the upserting steps and skipped by the query-and-skip ones.
 
 **Walked on:** staging, against the real prod read-only connection.
 
