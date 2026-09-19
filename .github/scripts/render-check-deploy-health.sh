@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # render-check-deploy-health.sh — answer "is this Render service still
-# able to take the code we ship it, and only the way we mean to ship it?"
+# able to take the code we ship, and only the way we mean to ship it?"
 # for one service.
 #
 # Usage: render-check-deploy-health.sh <service-id> <service-name>
