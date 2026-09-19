@@ -1,14 +1,15 @@
 name: Deploy to Production
 
-# Manual prod-deploy escape hatch. Under normal operation, prod deploys
-# happen via Render's native git auto-deploy on push to main — no GH
-# Actions trigger is involved. The post-deploy smoke + rollback path is
-# in prod-smoke-after-deploy.yml.
+# The ONLY path to production. Render's native auto-deploy is off on all five
+# prod services and the Vercel prod project's git builds are disabled, so prod
+# changes exclusively through a dispatch of this workflow. Staging still
+# auto-deploys from main on every merge; promotion is the deliberate human step
+# that follows a green staging E2E run.
 #
-# This workflow exists for manual operator intervention:
-#   - rerun a deploy after a transient Render failure
-#   - re-deploy a known-good commit when Render's auto-deploy is paused
-#   - emergency dispatch when the auto path is blocked
+# Emergency hotfix path: merge the fix to main as usual, then dispatch this
+# workflow. There is no separate procedure — this IS the fast path.
+#
+# The post-deploy smoke + rollback path is in prod-smoke-after-deploy.yml.
 #
 # All gates + the deploy/smoke/rollback chain stay in place as defense-
 # in-depth. The SHA-drift gates' `if: github.event_name == 'workflow_run'`
@@ -31,9 +32,14 @@ on:
   workflow_dispatch:
     inputs:
       reason:
-        description: 'Why are you manually deploying prod?'
+        description: 'Why are you promoting to prod?'
         required: true
         type: string
+      allow_stale_head:
+        description: 'Deploy even though main has advanced past this ref (four cron services will build main HEAD regardless)'
+        required: false
+        default: false
+        type: boolean
 
 # Serialize prod deploys. cancel-in-progress: false means a queued deploy
 # waits for the running one rather than being replaced. Shared with
@@ -92,6 +98,36 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 20
+
+      # Four of the five prod services are Render cron jobs, and the Render API
+      # rejects `commitId` for `crn-*` — those deploys always build branch HEAD
+      # (see .github/scripts/render-trigger-deploy.sh:99-119). So promoting a
+      # SHA that is not main HEAD would ship the requested code to the API and
+      # HEAD to the crons, from one green run. Refuse instead, unless the
+      # operator opts in explicitly.
+      #
+      # Placed after Checkout rather than beside the non-main refusal above
+      # because `git fetch` needs a repository to fetch into.
+      - name: Refuse promotion of a SHA that is not main HEAD
+        run: |
+          git fetch origin main --depth=20
+          main_sha=$(git rev-parse origin/main)
+          requested=$(bash .github/scripts/resolve-deployable-sha.sh "${{ github.sha }}")
+          head=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
+          if [ "$requested" = "$head" ]; then
+            echo "Promoting main HEAD ($head); all five prod services will run the same code."
+            exit 0
+          fi
+          echo "Requested deployable: $requested"
+          echo "main HEAD deployable: $head"
+          if [ "${{ inputs.allow_stale_head }}" = "true" ]; then
+            echo "::warning::Promoting $requested while main HEAD is $head. concert-crawl-crawler-triggers, concert-crawl-crawler-daily, concert-crawl-match-artists and concert-crawl-spotify-weekly cannot be pinned and WILL build main HEAD. Only the API service gets $requested."
+            exit 0
+          fi
+          echo "✗ Refusing: the requested ref is not main HEAD."
+          echo "  Re-dispatch from main HEAD, or set allow_stale_head=true and accept that"
+          echo "  the four cron services will build main HEAD while the API gets the older SHA."
+          exit 1
 
       # Under workflow_dispatch-only (post-#786), this step is
       # unreachable — `if: github.event_name == 'workflow_run'` is
