@@ -138,6 +138,8 @@ jobs:
           [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("RENDER_SERVICE_ID_API (variable)")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS (variable)")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY (variable)")
+          [ -z "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" ] && missing+=("RENDER_SERVICE_ID_MATCH_ARTISTS (variable)")
+          [ -z "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" ] && missing+=("RENDER_SERVICE_ID_SPOTIFY_WEEKLY (variable)")
           [ -z "${{ vars.PROD_URL }}" ] && missing+=("PROD_URL (variable)")
           [ -z "${{ vars.PROD_API_URL }}" ] && missing+=("PROD_API_URL (variable)")
           [ -z "$E2E_TEST_USER_EMAIL" ] && missing+=("E2E_TEST_USER_EMAIL (secret)")
@@ -266,8 +268,8 @@ jobs:
       # Render's /rollback endpoint; crn-* (cron job) emits a
       # `::warning::` annotation and exits 0 because Render's API
       # rejects cron rollback (HTTP 400, no API path exists). Net
-      # effect of these three steps: API is rolled back automatically;
-      # the two crons need manual operator action — the Resend notify
+      # effect of these five steps: API is rolled back automatically;
+      # the four crons need manual operator action — the Resend notify
       # step below surfaces this so the operator knows.
       - name: Roll back API service
         if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
@@ -286,6 +288,18 @@ jobs:
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
+
+      - name: Roll back match-artists cron (auto-skips — see comment)
+        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" "concert-crawl-match-artists"
+
+      - name: Roll back spotify-weekly cron (auto-skips — see comment)
+        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" "concert-crawl-spotify-weekly"
 
       # Email the admin that auto-rollback fired. The auto-rollback
       # only covers the API service (Render's API rejects cron

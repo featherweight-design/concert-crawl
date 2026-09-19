@@ -1,7 +1,7 @@
 name: Rollback Production (manual)
 
-# Manual incident-response rollback for the three production Render
-# services (API + 2 crawler crons). Rolls back to the most recent prior
+# Manual incident-response rollback for the five production Render
+# services (API + 4 crons). Rolls back to the most recent prior
 # successful deploy.
 #
 # Manual-only by design. The AUTO rollback path (triggered when the
@@ -89,7 +89,7 @@ jobs:
         uses: actions/checkout@v7
 
       # Preflight check — fail fast with a clear message if any of the
-      # three service IDs is missing. Without this, the rollback script
+      # five service IDs is missing. Without this, the rollback script
       # would exit with a generic bash "service id required" error
       # that's harder to diagnose during an incident.
       - name: Verify Render service ID variables are configured
@@ -98,6 +98,8 @@ jobs:
           [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("RENDER_SERVICE_ID_API")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY")
+          [ -z "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" ] && missing+=("RENDER_SERVICE_ID_MATCH_ARTISTS")
+          [ -z "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" ] && missing+=("RENDER_SERVICE_ID_SPOTIFY_WEEKLY")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "Missing production-env variables: ${missing[*]}"
             echo "Set them via Settings → Environments → production → Variables."
@@ -119,6 +121,16 @@ jobs:
 
       - name: Roll back crawler daily cron
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+
+      - name: Roll back match-artists cron
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" "concert-crawl-match-artists"
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+
+      - name: Roll back spotify-weekly cron
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" "concert-crawl-spotify-weekly"
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
 

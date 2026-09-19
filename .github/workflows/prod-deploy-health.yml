@@ -58,6 +58,8 @@ jobs:
           [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("vars.RENDER_SERVICE_ID_API")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("vars.RENDER_SERVICE_ID_CRAWLER_DAILY")
+          [ -z "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" ] && missing+=("vars.RENDER_SERVICE_ID_MATCH_ARTISTS")
+          [ -z "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" ] && missing+=("vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY")
           [ -z "${RENDER_API_TOKEN}" ] && missing+=("secrets.RENDER_API_TOKEN")
           [ -z "${SENTRY_DSN}" ] && missing+=("secrets.SENTRY_DSN_SMOKE")
           if [ ${#missing[@]} -gt 0 ]; then
@@ -77,9 +79,9 @@ jobs:
           # `set +e` is load-bearing, not tidying. The runner invokes this as
           # `bash -e {0}`, so errexit is already on before the first line and
           # `set -uo pipefail` does not clear it — the first service to exit
-          # non-zero would kill the step, skipping the other two and sending
-          # no Sentry report at all. Out-of-minutes takes down every service
-          # at once, which is exactly the case that would be truncated.
+          # non-zero would kill the step, skipping every service after it and
+          # sending no Sentry report at all. Out-of-minutes takes down every
+          # service at once, which is exactly the case that would be truncated.
           set +e
           set -uo pipefail
           findings=""
@@ -100,6 +102,8 @@ jobs:
           check "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
           check "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
           check "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
+          check "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" "concert-crawl-match-artists"
+          check "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" "concert-crawl-spotify-weekly"
 
           {
             echo "findings<<EOF"

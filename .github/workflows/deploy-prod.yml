@@ -176,7 +176,7 @@ jobs:
     runs-on: ubuntu-latest
     # 20 min: render-wait-for-live polls for up to 10 min for the prod
     # API to reach `live` on the new SHA, plus checkout, preflight,
-    # and the three Render-API deploy triggers (each returns
+    # and the five Render-API deploy triggers (each returns
     # immediately on enqueue; the actual build runs async on Render).
     # 10 min was tight enough that a legitimately slow Render build
     # could time the job out before the wait completed.
@@ -195,7 +195,7 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
-      # Preflight check that all three service ID variables AND the
+      # Preflight check that all five service ID variables AND the
       # Render API token are configured. Without it, a missing value
       # would surface as a generic curl error ("URL using bad/illegal
       # format" or "401 Unauthorized") and the operator would have to
@@ -208,12 +208,16 @@ jobs:
           SERVICE_ID_API: ${{ vars.RENDER_SERVICE_ID_API }}
           SERVICE_ID_CRAWLER_TRIGGERS: ${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}
           SERVICE_ID_CRAWLER_DAILY: ${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}
+          SERVICE_ID_MATCH_ARTISTS: ${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}
+          SERVICE_ID_SPOTIFY_WEEKLY: ${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}
         run: |
           missing=()
           [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
           [ -z "$SERVICE_ID_API" ] && missing+=("RENDER_SERVICE_ID_API (production-env var)")
           [ -z "$SERVICE_ID_CRAWLER_TRIGGERS" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS (production-env var)")
           [ -z "$SERVICE_ID_CRAWLER_DAILY" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY (production-env var)")
+          [ -z "$SERVICE_ID_MATCH_ARTISTS" ] && missing+=("RENDER_SERVICE_ID_MATCH_ARTISTS (production-env var)")
+          [ -z "$SERVICE_ID_SPOTIFY_WEEKLY" ] && missing+=("RENDER_SERVICE_ID_SPOTIFY_WEEKLY (production-env var)")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "Missing production-env configuration:"
             printf '  - %s\n' "${missing[@]}"
@@ -295,7 +299,7 @@ jobs:
       # centralizes the curl + commitId-pinning + deploy-id-logging
       # pattern (mirroring render-wait-for-live.sh and render-
       # rollback.sh). Keeping the shared logic in one script
-      # prevents drift across the three services — an added header,
+      # prevents drift across the five services — an added header,
       # retry, or timeout belongs in one place — and isolates the
       # jq-parse fallback for the response body. See the script
       # header for the full rationale, including why we pin to a
@@ -326,6 +330,24 @@ jobs:
             "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" \
             "${{ github.event.workflow_run.head_sha || github.sha }}" \
             "Crawler-daily"
+
+      - name: Trigger Render deploy — match-artists cron
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: |
+          bash .github/scripts/render-trigger-deploy.sh \
+            "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" \
+            "${{ github.event.workflow_run.head_sha || github.sha }}" \
+            "Match-artists"
+
+      - name: Trigger Render deploy — spotify-weekly cron
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: |
+          bash .github/scripts/render-trigger-deploy.sh \
+            "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" \
+            "${{ github.event.workflow_run.head_sha || github.sha }}" \
+            "Spotify-weekly"
 
       # Wait for the prod API to actually be live on the new commit
       # before this job completes. The Render API's deploy POST returns
@@ -539,7 +561,7 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       # Preflight check — fail fast with a clear message if any of the
-      # three service IDs is missing. Without this, the rollback script
+      # five service IDs is missing. Without this, the rollback script
       # would exit with a generic bash "service id required" error
       # that's harder to diagnose during an incident.
       - name: Verify Render service ID variables are configured
@@ -548,6 +570,8 @@ jobs:
           [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("RENDER_SERVICE_ID_API")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_TRIGGERS")
           [ -z "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY")
+          [ -z "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" ] && missing+=("RENDER_SERVICE_ID_MATCH_ARTISTS")
+          [ -z "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" ] && missing+=("RENDER_SERVICE_ID_SPOTIFY_WEEKLY")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "Missing production-env variables: ${missing[*]}"
             echo "Set them via Settings → Environments → production → Variables."
@@ -571,6 +595,16 @@ jobs:
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
+
+      - name: Roll back match-artists cron
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" "concert-crawl-match-artists"
+
+      - name: Roll back spotify-weekly cron
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" "concert-crawl-spotify-weekly"
 
       # Email the admin that auto-rollback fired. The auto-rollback
       # only covers the API service (Render's API rejects cron

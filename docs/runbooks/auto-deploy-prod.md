@@ -59,7 +59,7 @@ The scheduled `smoke.yml` (every 6 hours against prod) is independent and remain
    - `124` (timeout) → emits a `::warning::` annotation and exits success. Common cause is a fast-follow merge or `[skip ci]` release commit superseding this deploy. The NEXT push's smoke run validates the latest deployable code.
    - Any other code → fails the job loudly. Hard failures (jq missing, auth/network, no live deploy, malformed service ID) must not get silently bucketed as "benign timeout."
 4. On smoke success: workflow ends green.
-5. On smoke failure: invokes `render-rollback.sh` for all three prod services. Behavior diverges by service type — see "Caveat on cron service rollback" below — and the workflow sends a Resend admin email summarizing the attempt, then ends in `failure`.
+5. On smoke failure: invokes `render-rollback.sh` for all five prod services. Behavior diverges by service type — see "Caveat on cron service rollback" below — and the workflow sends a Resend admin email summarizing the attempt, then ends in `failure`.
 
 ### Caveat on cron service rollback
 
@@ -169,7 +169,7 @@ All of these are already provisioned if you're past Stage 2 of `production-launc
 
 ### Disabling
 
-- To pause auto-deploy: flip `Auto-Deploy: no` on the three Render services.
+- To pause auto-deploy: flip `Auto-Deploy: no` on the five Render services.
 - To pause push-triggered smoke: flip `PROD_SMOKE_RECONCILER_ENABLED=false`. Render keeps auto-deploying, but the smoke + rollback path stops firing on push to main. `workflow_dispatch` still works regardless — the kill switch is bypassed for manual operator intervention, matching `rollback-prod.yml`'s "incident response can't be paused by a feature flag" design.
 - To disable the manual escape hatch on `deploy-prod.yml`: flip `AUTO_DEPLOY_PROD_ENABLED=false`.
 
@@ -220,7 +220,7 @@ just list recent deploys and POST `/rollback`, nothing else.
 
 ## Testing the rollback path
 
-**For the auto-rollback path** (smoke → rollback inside `prod-smoke-after-deploy.yml`): the cleanest way to verify the wiring without breaking real prod is to temporarily point `PROD_API_URL` at a bogus hostname, then `workflow_dispatch` the **Prod smoke (after Render auto-deploy)** workflow. The wait step exits success (Render is still live on the real SHA), the smoke step fails against the bogus URL, the rollback steps fire (API rolls back; the two crons emit warnings — see "Caveat on cron service rollback"), and Render shows a new deploy on the API service matching the previous-prior commit SHA. Restore `PROD_API_URL` afterward.
+**For the auto-rollback path** (smoke → rollback inside `prod-smoke-after-deploy.yml`): the cleanest way to verify the wiring without breaking real prod is to temporarily point `PROD_API_URL` at a bogus hostname, then `workflow_dispatch` the **Prod smoke (after Render auto-deploy)** workflow. The wait step exits success (Render is still live on the real SHA), the smoke step fails against the bogus URL, the rollback steps fire (API rolls back; the four crons emit warnings — see "Caveat on cron service rollback"), and Render shows a new deploy on the API service matching the previous-prior commit SHA. Restore `PROD_API_URL` afterward.
 
 ### Sanity-checking the wait + preflight without a real deploy
 

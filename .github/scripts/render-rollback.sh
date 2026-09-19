@@ -48,7 +48,7 @@ if [[ "${SERVICE_ID}" =~ ^crn-[a-z0-9]+$ ]]; then
   # Render's /rollback endpoint returns HTTP 400 for cron jobs — there
   # is no API path to roll a cron back to a specific prior deploy.
   # Skip rather than fail: the caller (deploy-prod.yml's rollback job)
-  # rolls back three services serially, and failing here would stop the
+  # rolls back every prod service serially, and failing here would stop the
   # workflow from rolling back the others. Exit 0 with a loud warning
   # so the operator knows manual action is needed for this service.
   #
