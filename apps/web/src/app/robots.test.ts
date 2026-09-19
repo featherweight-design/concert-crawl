@@ -4,7 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import robots from './robots'
 import sitemap from './sitemap'
 
-const requestHost = vi.hoisted(() => ({ value: null as string | null }))
+interface RequestHost {
+  value: string | null
+}
+
+const requestHost = vi.hoisted((): RequestHost => ({ value: null }))
 
 vi.mock('next/headers', () => ({
   headers: () => Promise.resolve(new Headers(hostHeader())),
@@ -92,6 +96,20 @@ describe('robots.txt', () => {
 
     expect((await robots()).rules).toEqual({ userAgent: '*', disallow: '/' })
   })
+
+  // Host names are case-insensitive and the header comes back as the client
+  // sent it, so an exact comparison would answer a valid request with the
+  // blanket disallow.
+  it.each(['CONCERTCRAWL.APP', 'ConcertCrawl.app', ' concertcrawl.app '])(
+    'treats %s as the canonical host',
+    async (host) => {
+      servedFrom(host)
+
+      expect(await robots()).toMatchObject({
+        sitemap: 'https://concertcrawl.app/sitemap.xml',
+      })
+    },
+  )
 
   it('blocks crawlers when the request carries no host at all', async () => {
     servedFrom(null)

@@ -92,8 +92,13 @@ export const CANONICAL_ORIGIN = 'https://concertcrawl.app'
  * instruction to well-behaved crawlers rather than an access control, and a
  * caller who forges the header is already choosing to ignore the answer.
  */
-export const isCanonicalHost = (host: string | null | undefined): boolean =>
-  host !== null && host !== undefined && host === new URL(CANONICAL_ORIGIN).host
+export const isCanonicalHost = (host: string | null | undefined): boolean => {
+  if (host === null || host === undefined) return false
+  // Host names are case-insensitive, and the header is echoed back as the
+  // client sent it. An uppercase request would otherwise be read as a foreign
+  // domain and answered with the blanket disallow.
+  return host.trim().toLowerCase() === new URL(CANONICAL_ORIGIN).host
+}
 
 /** Resolve an app-relative path against the site origin. */
 export const absoluteUrl = (path: string): string =>
