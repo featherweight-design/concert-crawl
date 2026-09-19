@@ -2,7 +2,7 @@ name: Deploy to Production
 
 # The ONLY path to production. Render's native auto-deploy is off on all five
 # prod services and the Vercel prod project's git builds are disabled, so prod
-# changes exclusively through a dispatch of this workflow. Staging still
+# changes happen exclusively through a dispatch of this workflow. Staging still
 # auto-deploys from main on every merge; promotion is the deliberate human step
 # that follows a green staging E2E run.
 #
@@ -268,6 +268,52 @@ jobs:
             echo "and deploy-staging workflows, which don't use the production environment.)"
             exit 1
           fi
+
+      # The dispatch path's second main-HEAD check, and the reachable
+      # counterpart of the `workflow_run`-gated step below.
+      #
+      # The gate job already refused a non-HEAD promotion, but gate and deploy
+      # are separate jobs and `environment: production` can hold this one in an
+      # approval queue while main keeps advancing. That matters more here than it
+      # did under auto-deploy: four of the five prod services are `crn-*` crons,
+      # the Render API rejects `commitId` for those, and so they always build
+      # branch HEAD at trigger time. Drift between gate and trigger therefore
+      # ships the gated SHA to the API and a newer HEAD to the four crons — the
+      # split the gate-job step exists to prevent, reopened by the wait.
+      #
+      # `allow_stale_head` is honoured exactly as the gate step honours it: the
+      # operator who opted into a split deploy still gets one, with the same
+      # warning naming which services cannot be pinned.
+      #
+      # Scoped to `workflow_dispatch` so the two guards stay one per trigger. On
+      # a `workflow_run` event `github.sha` is the default branch's HEAD rather
+      # than the upstream run's head SHA, which would make this comparison
+      # vacuously true — the step below is the one that reads `head_sha`.
+      - name: Re-verify promotion target is still main HEAD
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git fetch origin main --depth=20
+          main_sha=$(git rev-parse origin/main)
+          # This job's Checkout pins to the promoted SHA at depth 1, so its
+          # `[skip ci]` ancestors are not local yet. Fetching explicitly is a
+          # no-op when they already are.
+          git fetch origin "${{ github.sha }}" --depth=20 2>/dev/null || true
+          requested=$(bash .github/scripts/resolve-deployable-sha.sh "${{ github.sha }}")
+          head=$(bash .github/scripts/resolve-deployable-sha.sh "$main_sha")
+          if [ "$requested" = "$head" ]; then
+            echo "Still promoting main HEAD ($head); all five prod services will run the same code."
+            exit 0
+          fi
+          echo "Requested deployable: $requested"
+          echo "main HEAD deployable: $head"
+          if [ "${{ inputs.allow_stale_head }}" = "true" ]; then
+            echo "::warning::main advanced to $head while this job waited. Promoting $requested anyway because allow_stale_head=true. concert-crawl-crawler-triggers, concert-crawl-crawler-daily, concert-crawl-match-artists and concert-crawl-spotify-weekly cannot be pinned and WILL build main HEAD. Only the API service gets $requested."
+            exit 0
+          fi
+          echo "✗ Refusing to trigger Render deploys — main advanced between the gate and this job."
+          echo "  Re-dispatch from main HEAD, or set allow_stale_head=true and accept that"
+          echo "  the four cron services will build main HEAD while the API gets the older SHA."
+          exit 1
 
       # Under workflow_dispatch-only (post-#786), this step is
       # unreachable — `if: github.event_name == 'workflow_run'` is
