@@ -259,6 +259,57 @@ describe('<HeroBand />', () => {
     expect(container.querySelector('h1')?.textContent).toBe('Ada')
   })
 
+  // The backdrop is the band's first child by design — it has to sit under
+  // everything — so the content assertions below start after it.
+  const leadingContent = (root: HTMLElement) => band(root).children[1] ?? null
+
+  const backdrop = (root: HTMLElement) => {
+    const found = root.querySelector('[data-testid="hero-band-art"]')
+    if (!(found instanceof HTMLElement)) throw new Error('no backdrop rendered')
+    return found
+  }
+
+  // The reason the backdrop exists: a photographed event used to leave the
+  // band's dead space as flat ground, so the source that already has a
+  // picture is the one that most needs covering.
+  it.each([
+    ['generated', { surface: 'artist', photoUrl: null } as const],
+    ['portrait', { surface: 'artist', photoUrl: portrait } as const],
+    [
+      'artwork',
+      { surface: 'event', artworkUrl: artwork, photoUrl: null } as const,
+    ],
+  ])('draws a decorative backdrop behind a %s source', (_label, source) => {
+    const { container } = render(
+      <HeroBand name="Ada" {...source}>
+        <h1>{'Ada'}</h1>
+      </HeroBand>,
+    )
+    const art = backdrop(container)
+    expect(art.getAttribute('aria-hidden')).toBe('true')
+    // Decorative twice over: hidden from AT, and inert to the pointer so it
+    // can never eat a tap meant for the back control.
+    expect(art.querySelector('svg')).not.toBeNull()
+    expect(band(container).firstElementChild).toBe(art)
+  })
+
+  it('turns the backdrop off the panel so the two never match', () => {
+    const { container } = render(
+      <HeroBand surface="artist" name="Ada" photoUrl={null}>
+        <h1>{'Ada'}</h1>
+      </HeroBand>,
+    )
+    const natural = identityFor('Ada', 'artist', { scale: 'hero' }).rotate
+    const expected = ((natural + 2) % 4) * 90
+    const rotated = backdrop(container).querySelector('svg > g')
+    expect(rotated?.getAttribute('transform')).toBe(
+      `rotate(${expected} 200 200)`,
+    )
+    // The point of the offset — with a generated source the panel is drawing
+    // the same mark, and an equal rotation would duplicate it.
+    expect(expected).not.toBe(natural * 90)
+  })
+
   it('keeps the panel from squeezing the type column at 320px', () => {
     const { container } = render(
       <HeroBand surface="artist" name="Ada" photoUrl={null}>
@@ -281,9 +332,7 @@ describe('<HeroBand />', () => {
         <h1>{'Ada'}</h1>
       </HeroBand>,
     )
-    expect(band(container).firstElementChild?.className).toContain(
-      'items-start',
-    )
+    expect(leadingContent(container)?.className).toContain('items-start')
   })
 
   it('leads with back and trails with actions when both are given', () => {
@@ -298,7 +347,7 @@ describe('<HeroBand />', () => {
         <h1>{'Ada'}</h1>
       </HeroBand>,
     )
-    const controls = band(container).firstElementChild
+    const controls = leadingContent(container)
     expect(controls?.className).toContain('justify-between')
     expect(controls?.children[0]?.textContent).toBe('back')
     expect(controls?.children[1]?.textContent).toBe('share')

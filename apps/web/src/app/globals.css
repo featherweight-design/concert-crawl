@@ -42,6 +42,15 @@
     --radius: 0.625rem;
     --radius-md: calc(var(--radius) - 2px);
     --radius-sm: calc(var(--radius) - 4px);
+
+    /* Motion scale. Theme-independent, like the radius scale above it.
+       The app had seventeen hand-rolled @keyframes before these existed and
+       no shared timing, so new motion states its duration in these terms
+       rather than inventing another number. */
+    --motion-fast: 140ms;
+    --motion-base: 240ms;
+    --motion-slow: 720ms;
+    --motion-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   }
 
   * {
@@ -162,9 +171,27 @@
   animation: ccEventHighlight 2s ease-in-out forwards;
 }
 @media (prefers-reduced-motion: reduce) {
+  /* Blanket guard. Every animation in this file predates it and only
+     [data-highlighted] was ever covered, so the default is now "off" and a
+     keyframe has to opt back in rather than be remembered.
+
+     Near-zero durations rather than `animation: none` — an animation running
+     `forwards`/`both` keeps its end state this way, so a fade-in still ends
+     up visible instead of stranded at its `from` frame. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
   [data-highlighted="true"] { animation: none; }
-  /* Reduced motion is a system-level preference — hard-stop shimmer + dot;
-     static placeholder still communicates "loading" via role=status. */
+  /* Shimmer + dot are pure decoration with no end state worth keeping, so
+     they hard-stop; the static placeholder still says "loading" via
+     role=status. */
   .dl-anim { animation: none !important; }
   .dl-sweep { display: none !important; }
   .w-shimmer { animation: none !important; }
@@ -427,4 +454,50 @@
 .event-row button {
   position: relative;
   z-index: 2;
+}
+
+/* Hero band backdrop (#1525 follow-on). The generated mark, enlarged behind
+   the band's dead space so a photographed event stops reading as an empty
+   navy slab. Faint, masked out behind the title so type contrast is
+   untouched, and cropped by the generator's own xMidYMid slice.
+
+   Reach is the point the art reaches full strength; the mid stop keeps it
+   from arriving abruptly at the title's edge. Mobile reaches further because
+   the band is narrower and the title column eats proportionally more of it. */
+.hero-band-art {
+  --band-art-opacity: 0.5;
+  --band-art-reach: 82%;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: var(--band-art-opacity);
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) calc(var(--band-art-reach) * 0.55),
+    #000 var(--band-art-reach)
+  );
+  mask-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(0, 0, 0, 0.35) calc(var(--band-art-reach) * 0.55),
+    #000 var(--band-art-reach)
+  );
+  animation: bandArtIn var(--motion-slow) var(--motion-ease) 120ms both;
+}
+
+/* Matches HeroBand's own `sm:` breakpoint. */
+@media (min-width: 640px) {
+  .hero-band-art {
+    --band-art-reach: 63%;
+  }
+}
+
+@keyframes bandArtIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: var(--band-art-opacity);
+  }
 }
