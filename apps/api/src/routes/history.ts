@@ -28,11 +28,14 @@
 import { Hono } from 'hono'
 import { clerkMiddleware, getAuth } from '@hono/clerk-auth'
 import { and, asc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm'
-import { db, userEvents, events, venues } from '@concert-crawl/db'
+import { db, artists, userEvents, events, venues } from '@concert-crawl/db'
 import type { HistoryShow, HistoryResponse } from '@concert-crawl/types'
 import { requireFeature } from '../middleware/entitlement.js'
 import type { EntitlementVariables } from '../middleware/entitlement.js'
-import { displayHeadliner } from '../lib/event-billing.js'
+import {
+  displayHeadliner,
+  portraitCanonicalName,
+} from '../lib/event-billing.js'
 import { computeHistoryStats } from '../lib/history-stats.js'
 import { buildHistoryIcs } from '../lib/ics.js'
 import { parsePrice } from '../lib/price.js'
@@ -94,6 +97,7 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
       today: sql<string>`${todayMt()}::text`,
       eventId: events.id,
       artist: displayHeadliner(),
+      artistPhotoUrl: artists.photoUrl,
       date: events.date,
       showTime: events.showTime,
       ticketPriceMin: events.ticketPriceMin,
@@ -106,6 +110,11 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
     .from(userEvents)
     .innerJoin(events, eq(userEvents.eventId, events.id))
     .innerJoin(venues, eq(events.venueId, venues.id))
+    // Headliner portrait, on the same terms as /v1/watching and /v1/events:
+    // `artists` is a projection keyed on canonicalName with no foreign key,
+    // and the unique index on that column is what keeps this join
+    // cardinality-preserving.
+    .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
     .where(
       and(
         eq(userEvents.userId, userId),
@@ -138,6 +147,7 @@ const loadAttendance = async (userId: string): Promise<Attendance> => {
     const show: HistoryShow = {
       eventId: row.eventId,
       artist: row.artist,
+      artistPhotoUrl: row.artistPhotoUrl ?? null,
       venueName: row.venueName,
       venueSlug: row.venueSlug,
       neighborhood: row.neighborhood ?? null,

@@ -5,6 +5,7 @@ import { computeHistoryStats } from './history-stats.js'
 const show = (overrides: Partial<HistoryShow> = {}): HistoryShow => ({
   eventId: 'evt-1',
   artist: 'Khruangbin',
+  artistPhotoUrl: null,
   venueName: 'Ogden Theatre',
   venueSlug: 'ogden-theatre',
   neighborhood: 'Capitol Hill',

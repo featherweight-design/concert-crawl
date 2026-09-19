@@ -96,13 +96,15 @@ export const HistoryItem = ({
         padding: `${cfg.padY}px ${cfg.padR}px ${cfg.padY}px ${cfg.padL}px`,
       }}
     >
-      {/* HistoryShow carries no image URL, so the generated artist mark is the
-          only art this row ever shows. The slot still owns the frame, so it
-          matches every other tile at the same size. */}
+      {/* The headliner's portrait, falling through to the generated artist
+          mark when there is none. `surface="artist"` on purpose, and it is a
+          shorter chain than Browse and Watching draw: those are `event`
+          surfaces that try the event's own artwork first. A night is filed
+          under who played it, so that stage is deliberately absent here. */}
       <Panel
         surface="artist"
         name={show.artist}
-        photoUrl={null}
+        photoUrl={show.artistPhotoUrl}
         size={cfg.artSize}
       />
 

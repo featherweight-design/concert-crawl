@@ -15,6 +15,7 @@ const COPY = HISTORY_COPY.passport
 const show = (eventId: string, artist: string): HistoryShow => ({
   eventId,
   artist,
+  artistPhotoUrl: null,
   venueName: 'Larimer Lounge',
   venueSlug: 'larimer-lounge',
   neighborhood: null,

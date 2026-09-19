@@ -31,6 +31,17 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.52.0-beta',
+    date: 'Sep 19, 2026',
+    headline: 'Your nights get their faces back.',
+    items: [
+      {
+        kind: 'fixed',
+        text: "A night in Concerts shows the headliner's photo now, the same one Browse and Watching use.",
+      },
+    ],
+  },
+  {
     version: 'v0.51.0-beta',
     date: 'Sep 7, 2026',
     headline: 'A tour name is not a band.',

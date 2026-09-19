@@ -1218,6 +1218,11 @@ export interface AttendingToggleResponse {
 export interface HistoryShow {
   eventId: string
   artist: string
+  // The headliner's portrait, or null when the artist row has none and the
+  // tile falls through to generated identity art. Non-optional so a surface
+  // that forgets the `artists` join fails to typecheck rather than silently
+  // rendering every night as generated art.
+  artistPhotoUrl: string | null
   venueName: string
   venueSlug: string
   neighborhood: string | null

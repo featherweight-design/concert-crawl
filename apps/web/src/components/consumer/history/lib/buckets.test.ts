@@ -5,6 +5,7 @@ import { groupHistoryByMonth } from './buckets'
 const show = (eventId: string, date: string): HistoryShow => ({
   eventId,
   artist: 'Wednesday',
+  artistPhotoUrl: null,
   venueName: 'Larimer Lounge',
   venueSlug: 'larimer-lounge',
   neighborhood: null,

@@ -12,6 +12,7 @@ afterEach(cleanup)
 const SHOW: HistoryShow = {
   eventId: 'evt-1',
   artist: 'Wednesday',
+  artistPhotoUrl: null,
   venueName: 'Larimer Lounge',
   venueSlug: 'larimer-lounge',
   neighborhood: 'RiNo',
@@ -91,5 +92,26 @@ describe('HistoryItem', () => {
     const svgs = container.querySelectorAll('svg')
     expect(svgs.length).toBeGreaterThan(0)
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
+
+  it('draws the headliner portrait when the artist row has one', () => {
+    const { container } = render(
+      <HistoryItem
+        show={{ ...SHOW, artistPhotoUrl: 'https://cdn.test/wednesday.jpg' }}
+        density="cozy"
+      />,
+    )
+
+    const photo = container.querySelector('img')
+    expect(photo).toHaveAttribute('src', 'https://cdn.test/wednesday.jpg')
+    // Still decorative: the row's link already names the artist.
+    expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  })
+
+  it('falls through to generated art when there is no portrait', () => {
+    const { container } = render(<HistoryItem show={SHOW} density="cozy" />)
+
+    expect(container.querySelector('img')).toBeNull()
+    expect(container.querySelectorAll('svg').length).toBeGreaterThan(0)
   })
 })

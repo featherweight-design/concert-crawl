@@ -24,6 +24,7 @@ import { createApp } from '../app.js'
 import { testDb } from '../test/helpers/db.js'
 import {
   clearTables,
+  seedArtist,
   seedVenue,
   seedEvent,
   seedUserEvent,
@@ -52,6 +53,7 @@ const seedSupporter = async (userId = USER_ID): Promise<void> => {
 type HistoryRow = {
   eventId: string
   artist: string
+  artistPhotoUrl: string | null
   dateLabel: string
   showTime: string | null
 }
@@ -131,6 +133,63 @@ describe('GET /v1/history', () => {
     expect(body.data.stats.nights).toBe(1)
     expect(body.data.stats.venues).toBe(1)
     expect(body.data.stats.totalSpent).toBe(45)
+  })
+
+  // The headliner portrait, on the same terms as Watching and Browse. This
+  // route did not join `artists`, so every night on Concerts wore a generated
+  // glyph even when the artist had a real face everywhere else.
+  describe('the artistPhotoUrl join', () => {
+    const PORTRAIT = 'https://i.scdn.co/image/headliner'
+
+    it('serializes the portrait, and null when nothing matches', async () => {
+      setAuth()
+      await seedSupporter()
+      const venue = await seedVenue({ slug: 'history-photo' })
+      await seedArtist({ name: 'Khruangbin', photoUrl: PORTRAIT })
+      const matched = await seedEvent(venue.id, {
+        artist: 'Khruangbin',
+        date: '2026-06-01',
+      })
+      const unmatched = await seedEvent(venue.id, {
+        artist: 'Nobody Here',
+        date: '2026-06-02',
+      })
+      await seedUserEvent(USER_ID, matched.id, {
+        status: null,
+        attendingAt: ATTENDED,
+      })
+      await seedUserEvent(USER_ID, unmatched.id, {
+        status: null,
+        attendingAt: ATTENDED,
+      })
+
+      const body = await getHistory()
+      // One row per attended night: a fan-out here would mean the join stopped
+      // behaving like a lookup.
+      expect(body.data.past).toHaveLength(2)
+      expect(body.data.past[0]?.artist).toBe('Nobody Here')
+      expect(body.data.past[0]?.artistPhotoUrl).toBeNull()
+      expect(body.data.past[1]?.artist).toBe('Khruangbin')
+      expect(body.data.past[1]?.artistPhotoUrl).toBe(PORTRAIT)
+    })
+
+    it('does not borrow the portrait of a different artist', async () => {
+      setAuth()
+      await seedSupporter()
+      const venue = await seedVenue({ slug: 'history-photo-other' })
+      await seedArtist({ name: 'Some Opener', photoUrl: PORTRAIT })
+      const event = await seedEvent(venue.id, {
+        artist: 'Khruangbin',
+        date: '2026-06-01',
+      })
+      await seedUserEvent(USER_ID, event.id, {
+        status: null,
+        attendingAt: ATTENDED,
+      })
+
+      const body = await getHistory()
+      expect(body.data.past[0]?.artistPhotoUrl).toBeNull()
+    })
   })
 
   it('excludes a past show the user only watched (Watching is not Attending)', async () => {

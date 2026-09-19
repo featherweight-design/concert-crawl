@@ -44,6 +44,7 @@ import { HISTORY_COPY } from './definitions/copy'
 const show = (eventId: string, date: string): HistoryShow => ({
   eventId,
   artist: `Artist ${eventId}`,
+  artistPhotoUrl: null,
   venueName: 'Larimer Lounge',
   venueSlug: 'larimer-lounge',
   neighborhood: null,
