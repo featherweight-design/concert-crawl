@@ -547,7 +547,10 @@ A 403 on the second call means a persistent action is live again. A firewall den
 **Reading and editing the config.** The dashboard is the normal path; the API is there for verification, since the config is not stored in this repo. The bearer token is the Vercel CLI's, stored as JSON rather than a bare value:
 
 ```bash
-export TOKEN=$(python3 -c "import json;print(json.load(open('$HOME/Library/Application Support/com.vercel.cli/auth.json'))['token'])")
+# auth.json is macOS `~/Library/Application Support/com.vercel.cli/`,
+# Linux `~/.local/share/com.vercel.cli/`. Whichever exists wins.
+export VERCEL_AUTH=$(ls "$HOME/Library/Application Support/com.vercel.cli/auth.json" "$HOME/.local/share/com.vercel.cli/auth.json" 2>/dev/null | head -1)
+export TOKEN=$(python3 -c "import json,os;print(json.load(open(os.environ['VERCEL_AUTH']))['token'])")
 export PROJECT_ID=prj_c1b4RmphaUmiGtDVtB987O12pn44   # concert-crawl (prod)
 export TEAM_ID=team_tBEQct4aCLPw5a8jbqRJbuPZ
 
