@@ -1,7 +1,14 @@
 name: Prod Deploy Health
 
 # Answers the question nothing in the stack answered on 2026-08-29:
-# "is the code we merge still reaching production?"
+# "is production still able to take the code we send it?"
+#
+# Since the promotion gate landed (2026-09-01) prod deploys only through a
+# deliberate dispatch of deploy-prod.yml, so "prod is behind main" is the
+# normal state and is NOT what this workflow watches — staleness is
+# prod-drift-alert.yml's job. This one watches the deploy path itself: a
+# suspended service, a re-enabled auto-deploy (the gate leaking), or a
+# newest deploy that failed with nothing live after it.
 #
 # That day the Render account ran out of build minutes. Every auto-deploy
 # came back `build_failed` in under 1.5s, prod kept serving the last good
@@ -14,9 +21,9 @@ name: Prod Deploy Health
 # is where prod alerting already lands.
 #
 # Reports only. It never triggers a deploy or a rollback: every condition
-# it detects (out of minutes, deploys disabled, service suspended) needs a
-# human decision, and re-triggering a build that failed for want of build
-# minutes would burn the few that remain.
+# it detects (out of minutes, auto-deploy re-enabled, service suspended)
+# needs a human decision, and re-triggering a build that failed for want
+# of build minutes would burn the few that remain.
 
 on:
   schedule:
@@ -50,6 +57,7 @@ jobs:
       # exits 0 having sent nothing. A detector that quietly reports nowhere
       # is the exact failure this workflow was built to end.
       - name: Verify Render service IDs and secrets are configured
+        id: preflight
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
@@ -115,8 +123,15 @@ jobs:
       # Split from the check step so a broken checker and a broken prod
       # produce different Sentry events. Conflating them means the first
       # time the Render API changes shape, it reads as a prod outage.
+      # `always() &&` is load-bearing on all three steps below. Without a
+      # status function an `if:` inherits an implicit `success()`, so the
+      # moment the check step itself exits non-zero every reporting step is
+      # skipped and the only signal left is a red Actions run — the exact
+      # unread-email failure this workflow was built to replace. Gate on the
+      # preflight instead: if it failed, SENTRY_DSN may be the thing that is
+      # missing and there is nowhere to report to.
       - name: Report unhealthy services to Sentry
-        if: steps.check.outputs.findings != ''
+        if: always() && steps.preflight.outcome == 'success' && steps.check.outputs.findings != ''
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
           SENTRY_ENVIRONMENT: production
@@ -127,19 +142,26 @@ jobs:
         run: bash .github/scripts/sentry-capture-message.sh error "Prod Render deploys are not landing"
 
       - name: Report checker failure to Sentry
-        if: steps.check.outputs.check_failed == '1'
+        if: >-
+          always() && steps.preflight.outcome == 'success'
+          && (steps.check.outcome != 'success' || steps.check.outputs.check_failed == '1')
         env:
           SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
           SENTRY_ENVIRONMENT: production
           EXTRA_CONTEXT: |
             The deploy-health check could not reach a verdict for at least one
-            service. This says nothing about prod's actual state — it means the
-            check itself is broken and prod is currently unwatched.
+            service, or the check step itself died before it could report. This
+            says nothing about prod's actual state — it means the check is broken
+            and prod's deploy path is currently unwatched.
+            Check step outcome: ${{ steps.check.outcome }}
             Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: bash .github/scripts/sentry-capture-message.sh warning "Prod deploy-health check could not run"
 
       - name: Fail the run if anything is wrong
-        if: steps.check.outputs.findings != '' || steps.check.outputs.check_failed == '1'
+        if: >-
+          always() && steps.preflight.outcome == 'success'
+          && (steps.check.outputs.findings != '' || steps.check.outcome != 'success'
+          || steps.check.outputs.check_failed == '1')
         run: |
           echo "::error title=Prod deploy health::See the Sentry report and the annotations above."
           exit 1

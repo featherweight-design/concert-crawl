@@ -536,6 +536,33 @@ It reports only. Every condition it detects needs a human decision, and
 re-triggering a build that failed for want of build minutes would burn the
 few that remain.
 
+### Troubleshooting: "autoDeploy is 'yes'" is a leak, not a misconfigured check
+
+The `autoDeploy` expectation in `render-check-deploy-health.sh` is inverted from
+what it was before the prod promotion gate. Under the gate prod deploys only
+through a deliberate dispatch of `deploy-prod.yml`, so `autoDeploy = "no"` on a
+prod service is the correct state and the checker treats it as healthy.
+`autoDeploy = "yes"` is now the fault: somebody re-enabled auto-deploy in the
+Render dashboard and merges to `main` are reaching prod without a promotion.
+
+Responder action: confirm in the Render dashboard, set Auto-Deploy back to `No`
+on the named service, then check whether an unpromoted commit already went live.
+Do not "fix" the checker.
+
+Any value other than `yes` or `no` exits 1 rather than 2 — that is the Render
+API response shape changing, not a prod problem.
+
+Two questions this checker deliberately does **not** answer:
+
+- **Is prod current?** Under the gate prod is supposed to sit behind `main`
+  until someone promotes, so `prod-drift-alert.yml` owns that question. A green
+  deploy-health run says nothing about how old prod is.
+- **Is the deploy path being watched at all?** Only partly. If the workflow's
+  own preflight fails — a missing service-ID variable, or a missing
+  `SENTRY_DSN_SMOKE` — there is nowhere to send a Sentry event and the only
+  signal is a red Actions run. Every other failure path, including the check
+  step dying mid-run, reports to Sentry as a warning rather than going quiet.
+
 Full write-up: `docs/incidents/2026-08-29-render-build-minutes.md`.
 Service settings and why they are what they are:
 `docs/runbooks/render-service-config.md`.
