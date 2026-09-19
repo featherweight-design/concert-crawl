@@ -25,7 +25,9 @@ push to main
    └──► Render git auto-deploy — prod services
            ├──► concert-crawl-api
            ├──► concert-crawl-crawler-triggers
-           └──► concert-crawl-crawler-daily
+           ├──► concert-crawl-crawler-daily
+           ├──► concert-crawl-match-artists
+           └──► concert-crawl-spotify-weekly
                   │
                   ▼
           Prod smoke (after Render auto-deploy)
@@ -145,7 +147,7 @@ against the old code.
 
 After stage 1 has been stable through a handful of merges:
 
-1. Render dashboard → `concert-crawl-api` → Settings → Build & Deploy → set **Auto-Deploy** to `Yes`. Repeat for `concert-crawl-crawler-triggers` and `concert-crawl-crawler-daily`.
+1. Render dashboard → `concert-crawl-api` → Settings → Build & Deploy → set **Auto-Deploy** to `Yes`. Repeat for each of the four prod crons: `concert-crawl-crawler-triggers`, `concert-crawl-crawler-daily`, `concert-crawl-match-artists`, `concert-crawl-spotify-weekly`.
 2. The next push to `main` triggers Render auto-deploy automatically — no GitHub `workflow_run` involved.
 3. Leave `AUTO_DEPLOY_PROD_ENABLED=true` so the manual `deploy-prod.yml` escape hatch stays usable.
 
@@ -155,7 +157,7 @@ After the first auto-deploy from stage 2 succeeds:
 
 **Prerequisites** (verify before flipping the switch — the smoke workflow hard-fails its preflight step if any are missing):
 
-- `production` environment **variables**: `RENDER_SERVICE_ID_API`, `RENDER_SERVICE_ID_CRAWLER_TRIGGERS`, `RENDER_SERVICE_ID_CRAWLER_DAILY`. Plus `PROD_URL` + `PROD_API_URL` at repo level. Plus `ADMIN_EMAIL` at repo level (or production env — either resolves under `environment: production`).
+- `production` environment **variables**: `RENDER_SERVICE_ID_API`, `RENDER_SERVICE_ID_CRAWLER_TRIGGERS`, `RENDER_SERVICE_ID_CRAWLER_DAILY`, `RENDER_SERVICE_ID_MATCH_ARTISTS`, `RENDER_SERVICE_ID_SPOTIFY_WEEKLY`. Plus `PROD_URL` + `PROD_API_URL` at repo level. Plus `ADMIN_EMAIL` at repo level (or production env — either resolves under `environment: production`).
 - `production` environment **secrets**: `RENDER_API_TOKEN`, `RESEND_API_KEY` (optional — graceful-degrades to a `::warning::` if missing).
 - Repo-level **secrets**: `E2E_TEST_USER_EMAIL`, `E2E_TEST_USER_PASSWORD`, `SENTRY_DSN_SMOKE`.
 

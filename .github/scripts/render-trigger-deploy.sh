@@ -25,8 +25,9 @@
 # code.
 #
 # Why this script exists: the same curl + JSON-body + log-deploy-id
-# pattern was repeated for staging API + 3 prod services (the prod
-# API web service + 2 crawler crons). The user-facing website is
+# pattern was repeated for staging API + 5 prod services (the prod
+# API web service + 4 crons: crawler triggers, crawler daily,
+# match-artists, spotify-weekly). The user-facing website is
 # on Vercel and is not covered by this script. Centralizing here
 # removes the drift risk (one place to add a header, retry, timeout,
 # etc.) and lets us handle jq parse failure + the cron-vs-web

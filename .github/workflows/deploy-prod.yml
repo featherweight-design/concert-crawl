@@ -565,6 +565,7 @@ jobs:
       # would exit with a generic bash "service id required" error
       # that's harder to diagnose during an incident.
       - name: Verify Render service ID variables are configured
+        id: verify_service_ids
         run: |
           missing=()
           [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("RENDER_SERVICE_ID_API")
@@ -578,30 +579,42 @@ jobs:
             exit 1
           fi
 
+      # Each rollback step carries `always() && <preflight succeeded>` rather
+      # than inheriting the implicit `success()`. Without a status function a
+      # failed API rollback skips the four cron steps, silently dropping the
+      # `::warning::` annotations that are the operator's only notice that
+      # those crons need manual action. Gating on the preflight's outcome
+      # keeps a missing service ID from reaching the script regardless.
+      #
       # Invoke via `bash` rather than `./script.sh` so we don't depend on
       # the executable bit surviving git checkout (which depends on
       # core.filemode and platform).
       - name: Roll back API service
+        if: always() && steps.verify_service_ids.outcome == 'success'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
 
       - name: Roll back crawler triggers cron
+        if: always() && steps.verify_service_ids.outcome == 'success'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
 
       - name: Roll back crawler daily cron
+        if: always() && steps.verify_service_ids.outcome == 'success'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
 
       - name: Roll back match-artists cron
+        if: always() && steps.verify_service_ids.outcome == 'success'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" "concert-crawl-match-artists"
 
       - name: Roll back spotify-weekly cron
+        if: always() && steps.verify_service_ids.outcome == 'success'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" "concert-crawl-spotify-weekly"

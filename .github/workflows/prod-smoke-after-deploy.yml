@@ -271,32 +271,38 @@ jobs:
       # effect of these five steps: API is rolled back automatically;
       # the four crons need manual operator action — the Resend notify
       # step below surfaces this so the operator knows.
+      #
+      # Every step carries `always() &&` so the chain does not stop at the
+      # first service that errors. Without a status function the implicit
+      # `success()` applies, and a failed API rollback would skip the four
+      # cron steps — silently dropping the `::warning::` annotations that are
+      # the operator's only notice that those crons need manual action.
       - name: Roll back API service
-        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+        if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_API }}" "concert-crawl-api"
 
       - name: Roll back crawler triggers cron (auto-skips — see comment)
-        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+        if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_TRIGGERS }}" "concert-crawl-crawler-triggers"
 
       - name: Roll back crawler daily cron (auto-skips — see comment)
-        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+        if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}" "concert-crawl-crawler-daily"
 
       - name: Roll back match-artists cron (auto-skips — see comment)
-        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+        if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}" "concert-crawl-match-artists"
 
       - name: Roll back spotify-weekly cron (auto-skips — see comment)
-        if: steps.evaluate_smoke.outputs.assertions_failed == 'true'
+        if: always() && steps.evaluate_smoke.outputs.assertions_failed == 'true'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: bash .github/scripts/render-rollback.sh "${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}" "concert-crawl-spotify-weekly"
