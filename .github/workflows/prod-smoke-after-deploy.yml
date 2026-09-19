@@ -157,7 +157,8 @@ jobs:
       # is 2x safety factor.
       #
       # The script exits 0 on live, 124 on a benign timeout (a fast-follow
-      # merge superseded this deploy), 125 when the timeout is NOT benign
+      # merge superseded this deploy, or the service's buildFilter excluded
+      # this push so no deploy was ever created), 125 when the timeout is NOT benign
       # (auto-deploy is off, the live deploy is over an hour old, or the
       # timeout could not be classified at all — in each case the pushed SHA
       # will not go live on its own, so skipping smoke would report green

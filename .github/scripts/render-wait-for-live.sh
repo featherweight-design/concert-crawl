@@ -16,11 +16,13 @@
 #
 # Polls every 10s up to <timeout-seconds>. Exit codes:
 #   0   — service is live on expected SHA
-#   124 — timeout, and a newer deploy plausibly superseded this one
+#   124 — timeout with a positively-established benign explanation
 #         (matches GNU timeout(1) convention; new caller behavior:
-#         prod-smoke-after-deploy.yml treats this as benign-skip)
-#         Only returned when the supersede reading is positively
-#         established: autoDeploy=yes and a live deploy under an hour old.
+#         prod-smoke-after-deploy.yml treats this as benign-skip).
+#         Two such explanations, both requiring autoDeploy=yes:
+#         a newer deploy plausibly superseded this one (live deploy
+#         under an hour old), or Render created no deploy for this SHA
+#         at all because the service's buildFilter excluded the push.
 #   125 — timeout that is NOT benign: deploys are disabled, the live
 #         deploy is over an hour old, or the timeout could not be
 #         classified (service metadata unreadable, autoDeploy absent or
@@ -151,6 +153,23 @@ fi
 if [ "${auto_deploy}" != "yes" ]; then
   echo "::error title=Cannot classify timeout::${SERVICE_ID} reported autoDeploy='${auto_deploy}', so this timeout cannot be shown to be a benign supersede. Check whether the Render API changed the field's name or shape."
   exit 125
+fi
+
+# Distinguish "Render never created a deploy for this SHA" from "a deploy was
+# created and then stalled". Every service here carries a buildFilter that
+# excludes docs- and web-only pushes, so on those commits no API deploy is
+# ever created and the live deploy legitimately stays on an older SHA — for
+# as long as the quiet period lasts. That is a non-event, but the >1h
+# stalled-deploy check below reads it as an outage and fails the caller red.
+#
+# Safe only *after* autoDeploy has been confirmed `yes` above: with autoDeploy
+# off Render also creates no deploy, and that is precisely the 17h-freeze
+# shape this classifier must never wave through.
+if ! echo "${deploys_json}" | jq -e --arg sha "${EXPECTED_SHA}" '
+  [.[] | (.deploy // .) | (.commit // {}).id // ""] | index($sha)
+' >/dev/null; then
+  echo "::notice title=No deploy for this SHA::${SERVICE_ID} has autoDeploy=yes but Render created no deploy for ${EXPECTED_SHA}, so its buildFilter excluded this push (docs- or web-only). There was never anything to wait for."
+  exit 124
 fi
 
 # Without a usable timestamp the supersede reading cannot be established, and

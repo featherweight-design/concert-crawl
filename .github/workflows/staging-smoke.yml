@@ -118,9 +118,10 @@ jobs:
       # 5 min, same as prod-smoke. Staging API typically deploys in
       # ~2 min on Render (same build profile as prod).
       #
-      # The script exits 0 on live, 124 on timeout (benign — likely
-      # a fast-follow merge or `[skip ci]` release commit superseded
-      # this deploy on Render's build queue), and 1 on hard
+      # The script exits 0 on live, 124 on a benign timeout (a fast-follow
+      # merge or `[skip ci]` release commit superseded this deploy on
+      # Render's build queue, or the service's buildFilter excluded this
+      # push so no deploy was ever created), and 1 on hard
       # error (jq missing, auth/network failure, no live deploy
       # found, malformed service ID). We branch explicitly on those
       # codes so a real failure can't silently get bucketed as

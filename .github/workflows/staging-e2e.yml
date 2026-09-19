@@ -10,6 +10,18 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# cancel-in-progress: true, which is the opposite of staging-smoke.yml's
+# choice, and deliberately so. A 20-minute suite cannot outlive its own
+# target: if SHA B deploys to staging while A's run is still going, A's
+# Playwright requests finish against B's code while the checked-out tests
+# are still A's — a green run that is not evidence of anything. Queueing
+# instead of cancelling does not help, because the older run keeps going.
+# Cancelling costs nothing a skip does not already cost: no artifact for
+# that SHA, and a promotion needs an artifact for the SHA being promoted.
+concurrency:
+  group: staging-e2e
+  cancel-in-progress: true
+
 permissions: read-all
 
 jobs:
@@ -21,6 +33,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      # Push only. A dispatch runs the checked-out branch's tests against
+      # whatever staging currently serves, which is main — waiting for
+      # staging to go live on a feature-branch SHA would skip every manual
+      # run, and manual runs are how a suite gets validated before it is
+      # armed. A dispatch is therefore not promotion evidence unless the
+      # operator has confirmed staging is serving the SHA under test.
+      #
       # The script exits 0 on live, 124 on a benign no-deploy/supersede (the
       # staging API's buildFilter skips docs- and web-only pushes, so this is
       # common, not exceptional), and anything else on hard error. Branch
@@ -28,6 +47,7 @@ jobs:
       # and bucketing a real failure as benign is the opposite mistake.
       - name: Wait for staging API to be live on pushed SHA
         id: wait_for_live
+        if: github.event_name == 'push'
         env:
           RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
         run: |
@@ -50,22 +70,22 @@ jobs:
           fi
 
       - name: Setup pnpm
-        if: steps.wait_for_live.outputs.should_run == 'true'
+        if: github.event_name != 'push' || steps.wait_for_live.outputs.should_run == 'true'
         uses: pnpm/action-setup@v6
 
       - name: Setup Node.js
-        if: steps.wait_for_live.outputs.should_run == 'true'
+        if: github.event_name != 'push' || steps.wait_for_live.outputs.should_run == 'true'
         uses: actions/setup-node@v7
         with:
           node-version-file: '.node-version'
           cache: 'pnpm'
 
       - name: Install dependencies
-        if: steps.wait_for_live.outputs.should_run == 'true'
+        if: github.event_name != 'push' || steps.wait_for_live.outputs.should_run == 'true'
         run: pnpm install --frozen-lockfile
 
       - name: Cache Playwright browsers
-        if: steps.wait_for_live.outputs.should_run == 'true'
+        if: github.event_name != 'push' || steps.wait_for_live.outputs.should_run == 'true'
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
@@ -73,11 +93,11 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-
 
       - name: Install Playwright browsers
-        if: steps.wait_for_live.outputs.should_run == 'true'
+        if: github.event_name != 'push' || steps.wait_for_live.outputs.should_run == 'true'
         run: pnpm --filter @concert-crawl/e2e install-browsers
 
       - name: Run E2E tests
-        if: steps.wait_for_live.outputs.should_run == 'true'
+        if: github.event_name != 'push' || steps.wait_for_live.outputs.should_run == 'true'
         run: pnpm --filter @concert-crawl/e2e test:e2e
         env:
           PLAYWRIGHT_BASE_URL: ${{ vars.STAGING_URL }}
@@ -86,7 +106,7 @@ jobs:
 
       - name: Upload failure artifacts
         uses: actions/upload-artifact@v7
-        if: failure() && steps.wait_for_live.outputs.should_run == 'true'
+        if: failure() && (github.event_name != 'push' || steps.wait_for_live.outputs.should_run == 'true')
         with:
           name: e2e-failure-artifacts-${{ github.run_id }}
           path: apps/e2e/test-results/
