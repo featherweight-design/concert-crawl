@@ -1,3 +1,12 @@
+## [1.288.5](https://github.com/HartiganHM/concert-crawl/compare/v1.288.4...v1.288.5) (2026-09-19)
+
+
+### Bug Fixes
+
+* **browse:** keep the active filters on Load More ([#1698](https://github.com/HartiganHM/concert-crawl/issues/1698)) ([22e5174](https://github.com/HartiganHM/concert-crawl/commit/22e5174fa77cc4a9d2da8b29a6832a176bfb285c))
+* **history:** draw the headliner portrait on a Concerts night ([#1697](https://github.com/HartiganHM/concert-crawl/issues/1697)) ([59bce00](https://github.com/HartiganHM/concert-crawl/commit/59bce00807250d29d09ad289b15bb23134360b8d)), closes [#1677](https://github.com/HartiganHM/concert-crawl/issues/1677) [#1680](https://github.com/HartiganHM/concert-crawl/issues/1680)
+* **identity-art:** resolve one template per name at every scale ([#1699](https://github.com/HartiganHM/concert-crawl/issues/1699)) ([a5ba3fa](https://github.com/HartiganHM/concert-crawl/commit/a5ba3fa1cec9efb22249256c42040e8f39d830b3)), closes [#1525](https://github.com/HartiganHM/concert-crawl/issues/1525)
+
 ## [1.288.4](https://github.com/HartiganHM/concert-crawl/compare/v1.288.3...v1.288.4) (2026-09-19)
 
 
