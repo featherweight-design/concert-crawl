@@ -13,6 +13,9 @@ import { PostHogProvider } from '@/lib/analytics/PostHogProvider'
 import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration'
 import { Toaster } from 'sonner'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { LANDING_COPY } from '@/app/_components/definitions/copy'
+import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios'
+import { siteOrigin } from '@/lib/share/site-origin'
 
 const inter = Inter({
   subsets: ['latin'],
@@ -51,9 +54,41 @@ const themeScript = `
   })();
 `
 
+const SITE_TITLE = 'Concert Crawl'
+const SITE_DESCRIPTION =
+  'Denver concert calendar. Find shows at your favorite venues.'
+
 export const metadata: Metadata = {
-  title: 'Concert Crawl',
-  description: 'Denver concert calendar. Find shows at your favorite venues.',
+  // Absolute URLs for every relative one below. Without it Next resolves them
+  // against localhost and the card a crawler is handed points nowhere.
+  // `siteOrigin()` is per-project on purpose — staging advertises staging.
+  metadataBase: new URL(siteOrigin()),
+  title: SITE_TITLE,
+  description: SITE_DESCRIPTION,
+  // The site-level card. Every route inherits it unless it builds its own,
+  // which today means `/events/:id` and `/e/:id` draw the show and everything
+  // else — landing, venues, artists, crews — draws the wordmark.
+  openGraph: {
+    type: 'website',
+    siteName: SITE_TITLE,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: '/',
+    images: [
+      {
+        url: '/api/og',
+        width: SC_RATIOS.link.width,
+        height: SC_RATIOS.link.height,
+        alt: LANDING_COPY.og.imageAlt,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: ['/api/og'],
+  },
   manifest: '/manifest.webmanifest',
   applicationName: 'Concert Crawl',
   appleWebApp: {

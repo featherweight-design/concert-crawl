@@ -1,4 +1,5 @@
 import { Fragment } from 'react'
+import type { Metadata } from 'next'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { auth } from '@clerk/nextjs/server'
@@ -14,6 +15,10 @@ import { publicApiClient, apiClient } from '@/lib/api'
 import { seedFollowedArtists } from '@/lib/following'
 import { isSafeHttpUrl } from '@/lib/is-safe-http-url'
 import { isScaRegion } from '@/lib/sca-region'
+import {
+  eventCanonicalPath,
+  eventShareMetadata,
+} from '@/lib/share/event-metadata'
 import { fetchEventReports } from '@/lib/events'
 import { HeroBand } from '@/components/consumer/image-slot'
 import { BackChip } from '@/components/consumer/back-chip/BackChip'
@@ -70,6 +75,26 @@ async function fetchEvent(
     console.error('[event detail] event fetch failed', { id, err })
     return null
   }
+}
+
+/**
+ * What this page unfurls into, and the URL it declares as canonical.
+ *
+ * Reachable without a session once launched (`/events(.*)` is in
+ * `isPublicOnceLaunched`), so an unfurl crawler lands here as readily as it
+ * lands on the `/e/:id` mirror — and this is the page that should win, because
+ * every internal link points at it and the mirror redirects a signed-in
+ * visitor back to it. Fetched through `publicApiClient` with no token for the
+ * same reason: whoever is asking for the card has no cookies.
+ */
+export const generateMetadata = async ({
+  params,
+}: EventDetailPageProps): Promise<Metadata> => {
+  const { id } = await params
+  const event = await fetchEvent(id, null)
+  if (event === null) return {}
+
+  return eventShareMetadata(event, eventCanonicalPath(id))
 }
 
 async function fetchReports(

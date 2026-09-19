@@ -23,11 +23,7 @@ import {
   billArtists,
   followedSlugSet,
 } from '@/components/consumer/following/bill'
-import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
-import { absoluteUrl } from '@/lib/share/site-origin'
-import { toPosterEvent } from '@/lib/share/poster-event'
-import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios'
-import { posterImageUrl } from '@/lib/share/destinations'
+import { eventShareMetadata } from '@/lib/share/event-metadata'
 
 interface PublicEventPageProps {
   params: Promise<{ id: string }>
@@ -71,17 +67,12 @@ const fetchRelated = async (id: string): Promise<RelatedEvent[]> => {
   }
 }
 
-const fill = (template: string, values: Record<string, string>): string =>
-  Object.entries(values).reduce(
-    (text, [key, value]) => text.replaceAll(`{${key}}`, value),
-    template,
-  )
-
 /**
  * What a pasted poster link unfurls into.
  *
  * The card image is the same `link` render the share sheet hands out, so the
- * unfurl and the saved image are the same artwork. Returning bare metadata for
+ * unfurl and the saved image are the same artwork. The canonical URL it
+ * declares is `/events/:id`, not this route — see `eventShareMetadata`. Returning bare metadata for
  * an id we can't resolve is deliberate: `generateMetadata` runs before the
  * page, and 404-ing here would cost a second fetch to reach the same 404 the
  * page already renders.
@@ -95,44 +86,7 @@ export const generateMetadata = async ({
   const event = await fetchEvent(id)
   if (event === null) return {}
 
-  const poster = toPosterEvent(event)
-  const values = {
-    artist: poster.artist,
-    venue: poster.venue,
-    city: poster.city,
-    date: poster.dateShort,
-  }
-  const { og } = CONSUMER_COPY.share
-  const title = fill(og.titleTemplate, values)
-  const description = fill(og.descriptionTemplate, values)
-  // Absolute, because a relative OG image is ignored by every crawler — they
-  // fetch it with no page context to resolve it against.
-  const image = absoluteUrl(posterImageUrl({ eventId: id, ratio: 'link' }))
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      type: 'website',
-      url: absoluteUrl(`/e/${id}`),
-      images: [
-        {
-          url: image,
-          width: SC_RATIOS.link.width,
-          height: SC_RATIOS.link.height,
-          alt: fill(og.imageAltTemplate, values),
-        },
-      ],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [image],
-    },
-  }
+  return eventShareMetadata(event, `/e/${id}`)
 }
 
 /**

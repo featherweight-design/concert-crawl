@@ -282,6 +282,29 @@ describe('middleware — edge auth gate (#841)', () => {
     expect(result).toBeUndefined()
   })
 
+  it('lets the unauthenticated site social card through without protect', async () => {
+    const { middlewareHandler } = await import('./middleware')
+
+    // An unfurl crawler following a bare concertcrawl.app link carries no
+    // session. Gated, the card resolves to a redirect and the link unfurls
+    // bare.
+    const req = new NextRequest('http://localhost/api/og')
+    const result = await middlewareHandler(makeAuth(null), req)
+
+    expect(result).toBeUndefined()
+  })
+
+  it('does not make paths under /api/og public', async () => {
+    const { middlewareHandler } = await import('./middleware')
+
+    // '/api/og' is listed as an exact path, so a nested route added later is
+    // gated by default rather than inheriting the card's openness.
+    const req = new NextRequest('http://localhost/api/og/private')
+    const auth = makeAuth(null)
+    await expect(middlewareHandler(auth, req)).rejects.toThrow('Unauthorized')
+    expect(auth.protect).toHaveBeenCalled()
+  })
+
   it('lets the unauthenticated revalidate POST through without protect', async () => {
     const { middlewareHandler } = await import('./middleware')
 

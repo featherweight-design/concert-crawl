@@ -4,6 +4,17 @@ export const LANDING_COPY = {
     signIn: 'Sign in',
     codeLink: 'I have a code →',
   },
+  // Alt text for the site social card (`/api/og`). Describes the card, not the
+  // page: a screen reader meets this inside someone else's feed, with no
+  // surrounding context to borrow from.
+  og: {
+    // Parity with what the card actually draws, wordmark and subheading both.
+    // A shorter alt would drop "Built for the fans, not the shareholders",
+    // which is the line doing the most work for a sighted reader.
+    // `SiteCard.test.tsx` fails if this and the subheading drift apart.
+    imageAlt:
+      'Concert Crawl. Every show in Denver, in one place. Built for the fans, not the shareholders.',
+  },
   hero: {
     headingLine1: "See who's",
     headingLine2: 'playing',

@@ -24,6 +24,12 @@ const isAlwaysPublic = createRouteMatcher([
   // them redirects the fetch to the HTML landing page and the icon renders
   // blank. Scoped to /icon* so future /api/pwa handlers aren't public by default.
   '/api/pwa/icon(.*)',
+  // The site social card. Its only consumer is an unfurl crawler following a
+  // bare `concertcrawl.app` link, which carries no session — gating it renders
+  // the card as a redirect to /sign-in, i.e. no card at all. It draws the
+  // wordmark and the landing page's own subheading and reads nothing
+  // user-specific. Exact path, not a prefix: nothing else under /api/og.
+  '/api/og',
   // The crawler cron POSTs here machine-to-machine with an `x-revalidate-token`
   // header and no Clerk session, so gating it 307'd every call to /sign-in and
   // #1442's proactive revalidation never once fired in prod. The route
