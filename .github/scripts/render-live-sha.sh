@@ -29,8 +29,20 @@ response=$(curl -sS --fail-with-body \
 # only matches the wrapped shape silently yields empty on the flat one, and the
 # drift alert then reports "No live deploy found" forever instead of measuring
 # drift — a monitor that cannot fail loudly is worse than none.
+#
+# `(.commit // {}).id` guards the same way the sibling scripts do. A deploy row
+# whose `commit` is null or absent makes a bare `.commit.id` abort the entire
+# filter with "Cannot index null", so one malformed row takes out a read that a
+# live deploy further down the page would have satisfied. The trailing
+# non-empty check keeps a commit object present but id-less from yielding "".
 sha=$(echo "$response" \
-  | jq -r 'first(.[] | (.deploy // .) | select(.status == "live") | .commit.id) // empty')
+  | jq -r 'first(
+      .[]
+      | (.deploy // .)
+      | select(type == "object" and .status == "live")
+      | (.commit // {}).id
+      | select(type == "string" and . != "")
+    ) // empty')
 
 if [ -z "$sha" ]; then
   echo "No live deploy found for $service_id in the last 50 deploys" >&2

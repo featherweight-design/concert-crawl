@@ -58,6 +58,13 @@ jobs:
       - name: Read the API service's build-filter paths
         id: filter
         run: |
+          # PyYAML happens to be present on today's ubuntu-latest image, but it
+          # is not in the Python standard library and runner images change
+          # without notice. Install it explicitly so this monitor cannot go
+          # quiet on an image bump — a drift alert that dies on `import yaml`
+          # reports nothing about drift.
+          python3 -m pip install --quiet --disable-pip-version-check pyyaml
+
           paths=$(python3 - <<'PY'
           import yaml
 
