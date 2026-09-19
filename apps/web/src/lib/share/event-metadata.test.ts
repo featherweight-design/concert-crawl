@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import type { EventDetailResponse } from '@concert-crawl/types'
+import type { PosterSource } from '@/lib/share/poster-event'
 
 import { eventCanonicalPath, eventShareMetadata, fill } from './event-metadata'
 
 const EVENT_ID = '11111111-1111-4111-8111-111111111111'
 
-const event = {
+const event: PosterSource = {
   id: EVENT_ID,
   artist: 'Sylvan Esso',
   // YYYY-MM-DD: `formatEventDate` anchors it to UTC noon itself.
@@ -16,7 +16,7 @@ const event = {
     city: 'Denver',
     timezone: 'America/Denver',
   },
-} as unknown as EventDetailResponse
+}
 
 describe('fill', () => {
   it('substitutes every occurrence of a placeholder', () => {

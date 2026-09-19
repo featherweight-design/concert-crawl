@@ -4,6 +4,19 @@ export const LANDING_COPY = {
     signIn: 'Sign in',
     codeLink: 'I have a code →',
   },
+  // What the browser tab, the search result and every social card say when a
+  // route does not override them. Here rather than in `layout.tsx` because
+  // they are customer-facing strings like any other, and copy-review only
+  // covers the definitions files.
+  meta: {
+    title: 'Concert Crawl',
+    // "favorite venues" until this moved into a copy file, where the banned
+    // synonym rule reaches it. The word was plain English rather than the
+    // Favorites-for-Watching drift the rule guards against, but the rule is
+    // right that it should not be in customer copy at all, and the landing
+    // subheading already says this better.
+    description: 'Denver concert calendar. Every show in one place.',
+  },
   // Alt text for the site social card (`/api/og`). Describes the card, not the
   // page: a screen reader meets this inside someone else's feed, with no
   // surrounding context to borrow from.

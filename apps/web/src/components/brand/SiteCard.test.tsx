@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 
 import { SiteCard } from './SiteCard'
 import { LANDING_COPY } from '@/app/_components/definitions/copy'
+import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios'
 import { loadShareFonts } from '@/lib/share/fonts'
 
@@ -41,7 +42,14 @@ describe('SiteCard', () => {
   // and it is a hand-written literal rather than assembled at render. That
   // makes drift silent: change the subheading and this fails until alt follows.
   it('keeps the alt text in parity with what the card draws', () => {
+    // The wordmark is drawn closed up ("ConcertCrawl") and spoken open
+    // ("Concert Crawl"), so the comparison ignores spacing rather than
+    // hardcoding either spelling: changing the drawn wordmark must fail here.
+    const spoken = (value: string) => value.replaceAll(' ', '').toLowerCase()
+
     expect(LANDING_COPY.og.imageAlt).toContain(LANDING_COPY.hero.subheading)
-    expect(LANDING_COPY.og.imageAlt).toContain('Concert Crawl')
+    expect(spoken(LANDING_COPY.og.imageAlt)).toContain(
+      spoken(CONSUMER_COPY.share.wordmark),
+    )
   })
 })

@@ -1,10 +1,9 @@
 import type { Metadata } from 'next'
-import type { EventDetailResponse } from '@concert-crawl/types'
 
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 import { SC_RATIOS } from '@/components/consumer/share/definitions/ratios'
 import { posterImageUrl } from '@/lib/share/destinations'
-import { toPosterEvent } from '@/lib/share/poster-event'
+import { toPosterEvent, type PosterSource } from '@/lib/share/poster-event'
 import { absoluteUrl } from '@/lib/share/site-origin'
 
 /** Substitute `{name}` placeholders in a copy template. */
@@ -42,7 +41,11 @@ export const eventCanonicalPath = (id: string): string => `/events/${id}`
  * URL to index, and where this card leads — so they are allowed to disagree.
  */
 export const eventShareMetadata = (
-  event: EventDetailResponse,
+  // `PosterSource`, not the API's full event: these are exactly the fields the
+  // card reads, and `poster-event.ts` already proves the API response is
+  // assignable to it. Narrowing here is what lets a test fixture be a plain
+  // object rather than a cast.
+  event: PosterSource,
   ownPath: string,
 ): Metadata => {
   const poster = toPosterEvent(event)

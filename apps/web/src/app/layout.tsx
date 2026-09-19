@@ -55,25 +55,21 @@ const themeScript = `
   })();
 `
 
-const SITE_TITLE = 'Concert Crawl'
-const SITE_DESCRIPTION =
-  'Denver concert calendar. Find shows at your favorite venues.'
-
 export const metadata: Metadata = {
   // Absolute URLs for every relative one below. Without it Next resolves them
   // against localhost and the card a crawler is handed points nowhere.
   // `siteOrigin()` is per-project on purpose — staging advertises staging.
   metadataBase: new URL(siteOrigin()),
-  title: SITE_TITLE,
-  description: SITE_DESCRIPTION,
+  title: LANDING_COPY.meta.title,
+  description: LANDING_COPY.meta.description,
   // The site-level card. Every route inherits it unless it builds its own,
   // which today means `/events/:id` and `/e/:id` draw the show and everything
   // else — landing, venues, artists, crews — draws the wordmark.
   openGraph: {
     type: 'website',
-    siteName: SITE_TITLE,
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
+    siteName: LANDING_COPY.meta.title,
+    title: LANDING_COPY.meta.title,
+    description: LANDING_COPY.meta.description,
     url: '/',
     images: [
       {
@@ -86,8 +82,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
+    title: LANDING_COPY.meta.title,
+    description: LANDING_COPY.meta.description,
     images: ['/api/og'],
   },
   manifest: '/manifest.webmanifest',
