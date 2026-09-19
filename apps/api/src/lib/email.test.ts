@@ -42,12 +42,27 @@ vi.mock('@concert-crawl/db', async (importOriginal) => {
   }
 })
 
+// Imported once, at module scope, rather than per test.
+//
+// It has to be a dynamic import: the `vi.mock` factories above close over the
+// `mock*` consts, and `vi.mock` is hoisted above them — a static import would
+// evaluate email.ts before those consts initialise and throw a TDZ
+// ReferenceError. Awaiting it here instead runs it after they are assigned.
+//
+// Once is enough: every env read and `new Resend()` in email.ts happens inside
+// the exported functions, so the module holds no load-time state worth
+// resetting. Importing it per test behind a `vi.resetModules()` re-resolved the
+// whole graph (Sentry, Clerk, resend, the built db package) 19 times — ~2.6s on
+// the first test alone, which crossed the 5s limit under full-suite load and
+// timed the file out.
+const { sendAdminAlertEmail, sendTransactionalEmail } =
+  await import('./email.js')
+
 describe('sendAdminAlertEmail', () => {
   const originalEnv = process.env
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.resetModules()
     process.env = {
       ...originalEnv,
       RESEND_API_KEY: 're_test_key',
@@ -61,7 +76,6 @@ describe('sendAdminAlertEmail', () => {
 
   it('sends an email with the provided subject + html and returns sent: true + resend id', async () => {
     mockSend.mockResolvedValueOnce({ data: { id: 'email-123' }, error: null })
-    const { sendAdminAlertEmail } = await import('./email.js')
 
     const result = await sendAdminAlertEmail({
       subject: 'Test alert',
@@ -79,7 +93,6 @@ describe('sendAdminAlertEmail', () => {
 
   it('passes through optional text body when provided', async () => {
     mockSend.mockResolvedValueOnce({ data: { id: 'email-456' }, error: null })
-    const { sendAdminAlertEmail } = await import('./email.js')
 
     await sendAdminAlertEmail({
       subject: 'Test',
@@ -93,7 +106,6 @@ describe('sendAdminAlertEmail', () => {
 
   it('returns missing_api_key without calling resend when RESEND_API_KEY is unset', async () => {
     delete process.env.RESEND_API_KEY
-    const { sendAdminAlertEmail } = await import('./email.js')
 
     const result = await sendAdminAlertEmail({ subject: 's', html: 'h' })
 
@@ -103,7 +115,6 @@ describe('sendAdminAlertEmail', () => {
 
   it('returns missing_admin_email without calling resend when ADMIN_EMAIL is unset', async () => {
     delete process.env.ADMIN_EMAIL
-    const { sendAdminAlertEmail } = await import('./email.js')
 
     const result = await sendAdminAlertEmail({ subject: 's', html: 'h' })
 
@@ -116,7 +127,6 @@ describe('sendAdminAlertEmail', () => {
       data: null,
       error: { message: 'Invalid sender', name: 'validation_error' },
     })
-    const { sendAdminAlertEmail } = await import('./email.js')
 
     const result = await sendAdminAlertEmail({ subject: 's', html: 'h' })
 
@@ -132,7 +142,6 @@ describe('sendAdminAlertEmail', () => {
 
   it('returns send_failed when Resend throws', async () => {
     mockSend.mockRejectedValueOnce(new Error('network timeout'))
-    const { sendAdminAlertEmail } = await import('./email.js')
 
     const result = await sendAdminAlertEmail({ subject: 's', html: 'h' })
 
@@ -156,7 +165,6 @@ describe('sendTransactionalEmail', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.resetModules()
     process.env = {
       ...originalEnv,
       RESEND_API_KEY: 're_test_key',
@@ -203,7 +211,6 @@ describe('sendTransactionalEmail', () => {
     'suppresses the send in a non-production environment (%s)',
     async (environment) => {
       process.env.SENTRY_ENVIRONMENT = environment
-      const { sendTransactionalEmail } = await import('./email.js')
 
       await expect(sendTransactionalEmail(sendParams)).resolves.toBe(
         'suppressed',
@@ -220,7 +227,6 @@ describe('sendTransactionalEmail', () => {
     'still sends when the environment reads as production (%s)',
     async (environment) => {
       process.env.SENTRY_ENVIRONMENT = environment
-      const { sendTransactionalEmail } = await import('./email.js')
 
       await expect(sendTransactionalEmail(sendParams)).resolves.toBe('sent')
       expect(mockSend).toHaveBeenCalledOnce()
@@ -229,7 +235,6 @@ describe('sendTransactionalEmail', () => {
 
   it('skips an unregistered template without writing a send-log row', async () => {
     mockGetTemplateRenderer.mockReturnValue(null)
-    const { sendTransactionalEmail } = await import('./email.js')
 
     await expect(sendTransactionalEmail(sendParams)).resolves.toBe(
       'not-registered',
@@ -241,7 +246,6 @@ describe('sendTransactionalEmail', () => {
 
   it('records a suppressed row and skips the send when the kill switch is off', async () => {
     mockSelectLimit.mockResolvedValue([{ enabled: false }])
-    const { sendTransactionalEmail } = await import('./email.js')
 
     await expect(sendTransactionalEmail(sendParams)).resolves.toBe('suppressed')
 
@@ -271,7 +275,6 @@ describe('sendTransactionalEmail', () => {
 
   it('suppresses a product-family send when the user opted out', async () => {
     mockSelectLimit.mockResolvedValueOnce([{ enabled: false }])
-    const { sendTransactionalEmail } = await import('./email.js')
 
     await expect(sendTransactionalEmail(winbackParams)).resolves.toBe(
       'suppressed',
@@ -286,15 +289,12 @@ describe('sendTransactionalEmail', () => {
 
   it('sends a product-family email when no preferences row exists', async () => {
     mockSelectLimit.mockResolvedValueOnce([])
-    const { sendTransactionalEmail } = await import('./email.js')
 
     await expect(sendTransactionalEmail(winbackParams)).resolves.toBe('sent')
     expect(mockSend).toHaveBeenCalledOnce()
   })
 
   it('does not read the product preference for a billing template', async () => {
-    const { sendTransactionalEmail } = await import('./email.js')
-
     await expect(sendTransactionalEmail(sendParams)).resolves.toBe('sent')
     // One select only: the per-template kill switch.
     expect(mockSelectLimit).toHaveBeenCalledOnce()
@@ -302,7 +302,6 @@ describe('sendTransactionalEmail', () => {
 
   it('skips the send when the dedupe key is already consumed', async () => {
     mockInsertReturning.mockResolvedValue([])
-    const { sendTransactionalEmail } = await import('./email.js')
 
     await expect(sendTransactionalEmail(sendParams)).resolves.toBe('deduped')
 
@@ -311,8 +310,6 @@ describe('sendTransactionalEmail', () => {
   })
 
   it('claims the row as failed, sends to the primary Clerk email, and flips the row to sent', async () => {
-    const { sendTransactionalEmail } = await import('./email.js')
-
     await expect(sendTransactionalEmail(sendParams)).resolves.toBe('sent')
 
     expect(mockInsertValues.mock.calls[0]![0]).toMatchObject({
@@ -338,7 +335,6 @@ describe('sendTransactionalEmail', () => {
       primaryEmailAddressId: null,
       emailAddresses: [{ id: 'idn_only', emailAddress: 'only@example.com' }],
     })
-    const { sendTransactionalEmail } = await import('./email.js')
 
     await sendTransactionalEmail(sendParams)
 
@@ -347,7 +343,6 @@ describe('sendTransactionalEmail', () => {
 
   it('leaves the row failed and does not throw when Resend throws', async () => {
     mockSend.mockRejectedValueOnce(new Error('network down'))
-    const { sendTransactionalEmail } = await import('./email.js')
 
     await expect(sendTransactionalEmail(sendParams)).resolves.toBe('failed')
     expect(mockUpdateSet).not.toHaveBeenCalled()
@@ -358,7 +353,6 @@ describe('sendTransactionalEmail', () => {
       data: null,
       error: { message: 'invalid sender', name: 'validation_error' },
     })
-    const { sendTransactionalEmail } = await import('./email.js')
 
     await expect(sendTransactionalEmail(sendParams)).resolves.toBe('failed')
 
@@ -370,7 +364,6 @@ describe('sendTransactionalEmail', () => {
       primaryEmailAddressId: null,
       emailAddresses: [],
     })
-    const { sendTransactionalEmail } = await import('./email.js')
 
     await expect(sendTransactionalEmail(sendParams)).resolves.toBe('failed')
     expect(mockSend).not.toHaveBeenCalled()

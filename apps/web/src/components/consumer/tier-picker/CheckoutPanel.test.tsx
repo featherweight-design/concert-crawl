@@ -318,8 +318,16 @@ describe('CheckoutPanel — failure surface actions', () => {
       'insufficient_funds',
       TIER_PICKER_COPY.failure.categories.insufficient_funds.headline,
     )
-    fireEvent.keyDown(document, { key: 'Escape' })
-    expect(onBack).toHaveBeenCalled()
+    // The capture listener is attached by an effect, and the failure surface
+    // arrives from an async rejection — so the commit that renders the headline
+    // `enterFailure` waits on can land a tick before that effect runs. Firing
+    // once raced it: the keydown hit a document with no listener yet, roughly
+    // one full-suite run in three. Retrying the dispatch waits for the listener
+    // without weakening the assertion — if it never attaches, this still fails.
+    await waitFor(() => {
+      fireEvent.keyDown(document, { key: 'Escape' })
+      expect(onBack).toHaveBeenCalled()
+    })
     consoleSpy.mockRestore()
   })
 
