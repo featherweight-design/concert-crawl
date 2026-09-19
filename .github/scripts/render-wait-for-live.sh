@@ -221,6 +221,39 @@ if [ "${sha_index}" = 'absent' ]; then
   exit 124
 fi
 
+# A deploy for the expected SHA does exist, so the `absent` reading above does
+# not apply and the only remaining benign story is a supersede. Read that
+# deploy's own status rather than inferring it from the live deploy's age: a
+# build that failed, was cancelled, or is still grinding is the outage this
+# classifier exists to catch, and behind a live deploy younger than an hour the
+# age check below would wave every one of them through as benign.
+#
+# `deactivated` is the one status that genuinely means superseded — Render marks
+# the older deploy deactivated when a newer one goes live. Everything else, and
+# anything unrecognised, fails closed.
+sha_status=$(echo "${deploys_json}" | jq -r --argjson idx "${sha_index}" '
+  ([.[] | (.deploy // .)][$idx].status) // ""
+') || sha_status=''
+
+case "${sha_status}" in
+  deactivated) ;;
+  live)
+    # The deploy went live between the loop's last poll and this read. The wait
+    # succeeded, a few seconds late — reporting it as a timeout would be a false
+    # red on a service that is serving exactly the code we asked for.
+    echo "::notice title=Live just after the last poll::${SERVICE_ID} went live on ${EXPECTED_SHA} between the final poll and the timeout classification."
+    exit 0
+    ;;
+  '')
+    echo "::error title=Cannot classify timeout::${SERVICE_ID} has a deploy for ${EXPECTED_SHA} but this script could not read its status, so the timeout cannot be shown to be a benign supersede. Check whether the Render API changed its response shape."
+    exit 125
+    ;;
+  *)
+    echo "::error title=Deploy for this SHA did not go live::${SERVICE_ID} created a deploy for ${EXPECTED_SHA} but it is '${sha_status}', not live or superseded. Nothing downstream was tested against the pushed code."
+    exit 125
+    ;;
+esac
+
 # 3600s: generous next to the ~2min prod deploy, so a genuine fast-follow
 # streak stays benign, while a service that has stopped deploying trips it.
 # Render returns both `...:32Z` and `...:32.188265Z`. Strip the fraction
