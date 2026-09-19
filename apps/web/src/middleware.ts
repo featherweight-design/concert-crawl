@@ -42,6 +42,16 @@ const isAlwaysPublic = createRouteMatcher([
   // which would make every future `/bot`-prefixed route public by default.
   '/bot',
   '/bot/',
+  // Next generates these from app/robots.ts and app/sitemap.ts, and they are
+  // ordinary routes as far as middleware is concerned — the `config.matcher`
+  // extension allowlist below covers neither `.txt` nor `.xml`, so both were
+  // 307'd to /sign-in the moment they shipped and #1228's discoverability work
+  // was inert in prod. A crawler does not carry a session by definition, which
+  // makes Clerk the wrong gate here for the same reason it was wrong for
+  // `/api/revalidate`. Exact paths: nothing else under the app root should
+  // inherit this.
+  '/robots.txt',
+  '/sitemap.xml',
   // "What's new" is reachable from the signed-out account menu and renders a
   // static release list with no user data — gating it sent that menu row to
   // sign-up.

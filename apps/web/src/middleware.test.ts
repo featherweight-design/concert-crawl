@@ -204,6 +204,45 @@ describe('middleware — edge auth gate (#841)', () => {
     ).rejects.toThrow(/unauthorized/i)
   })
 
+  // A crawler has no session, so gating the two files that tell it what to do
+  // redirected both to sign-in and made #1228's sitemap and robots.txt unreadable
+  // in prod. They must resolve in either launch mode: what robots.txt says off
+  // the canonical origin is "disallow everything", which only works if it can be
+  // read at all.
+  it.each(['/robots.txt', '/sitemap.xml'])(
+    'lets an unauthenticated crawler read %s before launch',
+    async (path) => {
+      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
+      const { middlewareHandler } = await import('./middleware')
+
+      const auth = makeAuth(null)
+      const result = await middlewareHandler(
+        auth,
+        new NextRequest(`http://localhost${path}`),
+      )
+
+      expect(result).toBeUndefined()
+      expect(auth.protect).not.toHaveBeenCalled()
+    },
+  )
+
+  // The negative case #794 requires of every isAlwaysPublic addition. Both are
+  // exact paths, so neither opens a neighbour that merely shares the prefix.
+  it.each(['/robots.txt/secret', '/sitemap.xml/secret'])(
+    'does not make %s public',
+    async (path) => {
+      vi.stubEnv('NEXT_PUBLIC_PUBLIC_BROWSE', 'false')
+      const { middlewareHandler } = await import('./middleware')
+
+      const auth = makeAuth(null)
+      auth.protect.mockRejectedValueOnce(new Error('unauthorized'))
+
+      await expect(
+        middlewareHandler(auth, new NextRequest(`http://localhost${path}`)),
+      ).rejects.toThrow(/unauthorized/i)
+    },
+  )
+
   it('lets authenticated request to a (protected) route through without redirect', async () => {
     const { middlewareHandler } = await import('./middleware')
 
