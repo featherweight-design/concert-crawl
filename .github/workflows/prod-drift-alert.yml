@@ -1,0 +1,110 @@
+name: Prod drift alert
+
+# Answers "is prod current?", which no other alert does. Under the promotion
+# gate prod is deliberately behind main; this bounds how far. Warn only — it
+# never promotes anything, because the whole point of the gate is that a human
+# decides.
+
+on:
+  schedule:
+    # 17:00 UTC daily. Chosen to sit AFTER every prod cron of the day has
+    # finished, so a drift warning never competes with a crawl or match-artists
+    # incident for attention: crawler-daily 09:00, spotify-weekly 15:30 Mon,
+    # match-artists 16:00. 15:00 would land before two of those.
+    - cron: '0 17 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: Compare prod live SHA against main
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      MAX_DAYS_BEHIND: 7
+      MAX_COMMITS_BEHIND: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Verify configuration
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+          SENTRY_DSN_SMOKE: ${{ secrets.SENTRY_DSN_SMOKE }}
+        run: |
+          missing=()
+          [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
+          [ -z "$SENTRY_DSN_SMOKE" ] && missing+=("SENTRY_DSN_SMOKE (secret)")
+          [ -z "${{ vars.RENDER_SERVICE_ID_API }}" ] && missing+=("RENDER_SERVICE_ID_API (production-env var)")
+          if [ ${#missing[@]} -gt 0 ]; then
+            printf 'Missing configuration:\n'
+            printf '  - %s\n' "${missing[@]}"
+            exit 1
+          fi
+
+      - name: Measure drift
+        id: measure
+        env:
+          RENDER_API_TOKEN: ${{ secrets.RENDER_API_TOKEN }}
+        run: |
+          live_sha=$(bash .github/scripts/render-live-sha.sh "${{ vars.RENDER_SERVICE_ID_API }}")
+          main_sha=$(git rev-parse origin/main)
+          echo "live_sha=$live_sha" >> "$GITHUB_OUTPUT"
+
+          if [ "$live_sha" = "$main_sha" ]; then
+            echo "Prod is current on $live_sha."
+            echo "drifted=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # A SHA Render is live on can be missing locally if it was never on
+          # main (a hand-triggered Render build from another ref). Treat that as
+          # drift with unknown distance rather than failing the job — "prod is
+          # running something main does not contain" is exactly what this alert
+          # is for.
+          if ! git cat-file -e "${live_sha}^{commit}" 2>/dev/null; then
+            echo "commits=unknown" >> "$GITHUB_OUTPUT"
+            echo "days=unknown" >> "$GITHUB_OUTPUT"
+            echo "drifted=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          commits=$(git rev-list --count "${live_sha}..origin/main")
+          live_ts=$(git show -s --format=%ct "$live_sha")
+          days=$(( ( $(date -u +%s) - live_ts ) / 86400 ))
+          echo "commits=$commits" >> "$GITHUB_OUTPUT"
+          echo "days=$days" >> "$GITHUB_OUTPUT"
+          echo "Prod is $commits commits and $days days behind main."
+
+          if [ "$commits" -gt "$MAX_COMMITS_BEHIND" ] || [ "$days" -gt "$MAX_DAYS_BEHIND" ]; then
+            echo "drifted=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "drifted=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # SENTRY_DSN is the variable the script reads; SENTRY_DSN_SMOKE is the
+      # secret that holds it. There is no `SENTRY_DSN` secret in this repo —
+      # every workflow maps it from SENTRY_DSN_SMOKE. Getting this wrong is
+      # silent: the script exits 0 when the DSN is empty (by design, so a
+      # missing DSN never buries the real failure), which would make this
+      # load-bearing alert a no-op that always looks green.
+      - name: Report drift to Sentry
+        if: steps.measure.outputs.drifted == 'true'
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+          SENTRY_ENVIRONMENT: production
+          EXTRA_CONTEXT: >-
+            ${{ steps.measure.outputs.commits }} commits,
+            ${{ steps.measure.outputs.days }} days behind.
+            Prod live SHA ${{ steps.measure.outputs.live_sha }}.
+        run: |
+          # <level> <message>. The message is the Sentry grouping key, so it is
+          # deliberately constant — the varying numbers go in EXTRA_CONTEXT.
+          bash .github/scripts/sentry-capture-message.sh \
+            warning \
+            "Prod is behind main — promote with the Deploy to Production workflow, or record why not."
