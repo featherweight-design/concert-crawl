@@ -315,6 +315,36 @@ describe('/v1/crews', () => {
       expect(body.data.nights).toEqual([])
     })
 
+    // The row's title line and its generated identity art are both seeded from
+    // `artist`, so a payload that omits it makes a crew draw a different mark
+    // from every other surface showing the same show.
+    it('carries the derived headliner, not the billing string', async () => {
+      const venue = await seedVenue({ slug: 'headliner-venue' })
+      // `artist` deliberately holds the venue's billed string, which is what
+      // the raw column carries in the bug this guards: a fixture where
+      // `artist` already equals the headliner cannot tell displayHeadliner()
+      // apart from `events.artist`, so it would pass either way.
+      const event = await seedEvent(venue.id, {
+        date: dayOffset(6),
+        title: 'An Evening With Khruangbin',
+        artist: 'An Evening With Khruangbin',
+        headliners: ['Khruangbin'],
+        canonicalHeadliners: ['khruangbin'],
+      })
+      await seedUserEvent(KEEPER, event.id, {
+        status: null,
+        attendingAt: new Date(),
+      })
+      const crewId = await seedCrew([KEEPER, MATE])
+      setAuth()
+
+      const body = (await (
+        await app.request(`/v1/crews/${crewId}`)
+      ).json()) as DetailBody
+      expect(body.data.upcoming[0]?.artist).toBe('Khruangbin')
+      expect(body.data.upcoming[0]?.title).toBe('An Evening With Khruangbin')
+    })
+
     it('drops a past show with exactly one attendee from both lists', async () => {
       await seedShow(dayOffset(-5), [KEEPER], 'solo-past')
       const crewId = await seedCrew([KEEPER, MATE])

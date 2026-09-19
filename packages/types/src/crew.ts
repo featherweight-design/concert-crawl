@@ -178,6 +178,14 @@ export interface CrewShow {
   iso: string
   showTime: string | null
   title: string
+  /**
+   * The derived headliner, on the same terms as every other event payload.
+   * A crew row names and draws the act, not the night's billing string: this
+   * seeds both the row's title line and its generated identity art, which is
+   * why a row seeded from `title` drew different art from every other surface
+   * showing the same show.
+   */
+  artist: string
   /** The event's own artwork, first choice for the row's tile. */
   imageUrl: string | null
   /** The headliner's portrait, second choice behind `imageUrl`. */

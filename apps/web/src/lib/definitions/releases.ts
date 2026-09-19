@@ -39,6 +39,14 @@ export const RELEASES: Release[] = [
         kind: 'fixed',
         text: "A night in Concerts shows the headliner's photo now, the same one Browse and Watching use.",
       },
+      {
+        kind: 'fixed',
+        text: 'Load more on Browse keeps the filters you set, My artists included.',
+      },
+      {
+        kind: 'fixed',
+        text: 'A show in a crew names the act playing it, not the whole billing.',
+      },
     ],
   },
   {

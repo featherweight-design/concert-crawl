@@ -17,7 +17,7 @@ import {
   venues,
 } from '@concert-crawl/db'
 import type { CrewMemberPreview, CrewShow } from '@concert-crawl/types'
-import { portraitCanonicalName } from './event-billing.js'
+import { displayHeadliner, portraitCanonicalName } from './event-billing.js'
 
 const MT_TIME_ZONE = 'America/Denver'
 
@@ -56,6 +56,7 @@ const selectAttendanceRows = async (
       iso: events.date,
       showTime: events.showTime,
       title: events.title,
+      artist: displayHeadliner(),
       imageUrl: events.imageUrl,
       artistPhotoUrl: artists.photoUrl,
       venue: venues.name,
@@ -128,6 +129,7 @@ export const loadCrewShows = async (
       iso: row.iso,
       showTime: row.showTime ?? null,
       title: row.title,
+      artist: row.artist,
       imageUrl: row.imageUrl,
       artistPhotoUrl: row.artistPhotoUrl,
       venue: row.venue,

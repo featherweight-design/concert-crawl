@@ -89,6 +89,7 @@ const show = (over: Partial<CrewShow> = {}): CrewShow => ({
   iso: '2026-09-14',
   showTime: null,
   title: 'Turnstile',
+  artist: 'Turnstile',
   imageUrl: null,
   artistPhotoUrl: null,
   venue: 'Ogden Theatre',
@@ -128,6 +129,27 @@ describe('CrewHome lead order (#1226)', () => {
       'aria-selected',
       'true',
     )
+  })
+
+  // Been there renders its own stub row rather than going through
+  // `fromCrewShow`, so it is the one crew surface that can drift from Coming
+  // up on which name it prints.
+  it('names the act on a past night, not the billing string', () => {
+    const crew = detail({
+      upcoming: [],
+      nights: [
+        show({
+          iso: '2025-04-02',
+          title: 'An Evening With Turnstile',
+          artist: 'Turnstile',
+        }),
+      ],
+    })
+    render(<CrewHome crew={crew} />)
+    expect(screen.getByText('Turnstile')).toBeInTheDocument()
+    expect(
+      screen.queryByText('An Evening With Turnstile'),
+    ).not.toBeInTheDocument()
   })
 
   it('opens Been there when Coming up is empty but there is history', () => {

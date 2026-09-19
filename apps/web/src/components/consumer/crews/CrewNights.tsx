@@ -102,7 +102,7 @@ export const StubRow = ({ show, wide, viewerId }: StubRowProps) => {
             textOverflow: 'ellipsis',
           }}
         >
-          {show.title}
+          {show.artist}
         </span>
         <span
           style={{

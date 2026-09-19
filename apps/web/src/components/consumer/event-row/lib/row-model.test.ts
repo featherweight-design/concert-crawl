@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest'
 import type {
+  CrewShow,
   EventWithVenue,
   TierPriceBlock,
   TierHeadline,
   TierPending,
   WatchingShow,
 } from '@concert-crawl/types'
-import { fromEventWithVenue, fromWatchingShow } from './row-model'
+import { fromCrewShow, fromEventWithVenue, fromWatchingShow } from './row-model'
 
 function makeHeadline(
   partial: Partial<TierHeadline> & Pick<TierHeadline, 'priceMin'>,
@@ -259,5 +260,38 @@ describe('fromWatchingShow', () => {
       fromWatchingShow({ ...baseWatchingShow, artistPhotoUrl: portrait })
         .artistPhotoUrl,
     ).toBe(portrait)
+  })
+})
+
+describe('fromCrewShow', () => {
+  const crewShow: CrewShow = {
+    eventId: 'evt-1',
+    iso: '2026-08-15',
+    showTime: '20:00:00',
+    title: 'Test Artist at Test Ballroom',
+    artist: 'Test Artist',
+    imageUrl: null,
+    artistPhotoUrl: null,
+    venue: 'Test Ballroom',
+    venueSlug: 'test-ballroom',
+    goingCount: 2,
+    going: [],
+  }
+
+  // `headliner` seeds the row's title line AND its generated identity art, so
+  // a crew row built from `title` drew a different mark from every other
+  // surface showing the same show. Comparing the two adapters is the assertion
+  // — checking the string alone would pass on a payload that stopped deriving
+  // the headliner at all.
+  it('names the act, matching what Browse builds for the same event', () => {
+    expect(fromCrewShow(crewShow).headliner).toBe(
+      fromEventWithVenue(baseEvent).headliner,
+    )
+  })
+
+  it('keeps the billing string as the fallback title', () => {
+    expect(fromCrewShow(crewShow).fallbackTitle).toBe(
+      'Test Artist at Test Ballroom',
+    )
   })
 })

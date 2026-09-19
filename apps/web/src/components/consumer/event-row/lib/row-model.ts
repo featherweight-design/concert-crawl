@@ -256,15 +256,18 @@ export function fromArtistShow(
 }
 
 /**
- * A crew show. `CrewShow` is deliberately thin — it carries no billing and no
- * price — so most of the row's four lines simply never appear.
+ * A crew show. `CrewShow` is deliberately thin — it carries no supports, no
+ * tour name and no price — so most of the row's four lines simply never
+ * appear. It does carry the derived headliner, because that seeds the row's
+ * title line and its identity art, and a crew row has to name and draw the
+ * same act every other surface does.
  * The going cluster is not folded in here: it is a surface concern, and the
  * crew home passes it through `footer`.
  */
 export function fromCrewShow(show: CrewShow): EventRowShow {
   return {
     id: show.eventId,
-    headliner: show.title,
+    headliner: show.artist,
     fallbackTitle: show.title,
     supports: [],
     tourName: null,
