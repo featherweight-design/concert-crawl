@@ -11,6 +11,7 @@ import {
   billedCanonicalNames,
   billsAnyCanonicalName,
   displayHeadliner,
+  portraitCanonicalName,
 } from '../lib/event-billing.js'
 import { todayInTimezone } from '../lib/time.js'
 
@@ -28,6 +29,8 @@ searchRouter.get('/popular', async (ctx) => {
       title: events.title,
       artist: displayHeadliner(),
       date: events.date,
+      imageUrl: events.imageUrl,
+      artistPhotoUrl: artists.photoUrl,
       ticketPriceMin: events.ticketPriceMin,
       watcherCount,
       venueName: venues.name,
@@ -38,6 +41,12 @@ searchRouter.get('/popular', async (ctx) => {
       venues,
       and(eq(events.venueId, venues.id), eq(venues.active, true)),
     )
+    // The row imagery chain every other event surface uses (#1525).
+    // canonical_name is uniquely indexed, so this cannot multiply rows and the
+    // watcher count stays a count of watchers. `artists.photoUrl` still has to
+    // join the GROUP BY below, because the aggregate makes every selected
+    // column either grouped or aggregated.
+    .leftJoin(artists, eq(portraitCanonicalName(), artists.canonicalName))
     .leftJoin(
       userEvents,
       and(eq(userEvents.eventId, events.id), eq(userEvents.status, 'watching')),
@@ -49,7 +58,7 @@ searchRouter.get('/popular', async (ctx) => {
         ...upcomingEventConditions({ from: today }),
       ),
     )
-    .groupBy(events.id, venues.name, venues.slug)
+    .groupBy(events.id, venues.name, venues.slug, artists.photoUrl)
     .orderBy(desc(watcherCount), asc(events.date))
     .limit(5)
 
@@ -58,6 +67,8 @@ searchRouter.get('/popular', async (ctx) => {
     title: row.title,
     artist: row.artist,
     date: row.date,
+    imageUrl: row.imageUrl ?? null,
+    artistPhotoUrl: row.artistPhotoUrl ?? null,
     ticketPriceMin: row.ticketPriceMin,
     watcherCount: row.watcherCount,
     venue: { name: row.venueName, slug: row.venueSlug },

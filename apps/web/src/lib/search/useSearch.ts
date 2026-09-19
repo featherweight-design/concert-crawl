@@ -28,6 +28,10 @@ export interface PopularEvent {
   title: string
   artist: string
   date: string
+  /** The event's own artwork, first choice for the row's tile (#1525). */
+  imageUrl: string | null
+  /** The headliner's portrait, second choice behind `imageUrl`. */
+  artistPhotoUrl: string | null
   ticketPriceMin: string | null
   watcherCount: number
   venue: { name: string; slug: string }

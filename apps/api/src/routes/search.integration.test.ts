@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { z } from 'zod'
 
 vi.mock('@hono/clerk-auth', () => ({
   clerkMiddleware: () => async (_c: unknown, next: () => Promise<void>) =>
@@ -106,6 +107,61 @@ describe('GET /v1/search/popular', () => {
     const res = await app.request('/v1/search/popular')
     const body = (await res.json()) as { success: boolean; data: unknown[] }
     expect(body.data).toHaveLength(5)
+  })
+
+  const popularImageryResponse = z.object({
+    data: z.array(
+      z.object({
+        id: z.string(),
+        artist: z.string(),
+        imageUrl: z.string().nullable(),
+        artistPhotoUrl: z.string().nullable(),
+        watcherCount: z.number(),
+      }),
+    ),
+  })
+
+  // The palette drew a generated mark for every popular row because this
+  // payload carried no imagery at all, while the same show wore a real face on
+  // Browse. The watcher count is an aggregate, so the portrait has to survive
+  // the GROUP BY without multiplying rows.
+  it('carries the row imagery chain, and one row per event', async () => {
+    const venue = await seedVenue({ slug: 'popular-imagery-venue' })
+    await seedArtist({
+      name: 'Khruangbin',
+      photoUrl: 'https://i.scdn.co/image/headliner',
+    })
+    const withPhoto = await seedEvent(venue.id, {
+      artist: 'Khruangbin',
+      date: '2027-06-01',
+      imageUrl: null,
+    })
+    const withArtwork = await seedEvent(venue.id, {
+      artist: 'Nobody Here',
+      date: '2027-06-02',
+      imageUrl: 'https://cdn.test/flyer.jpg',
+    })
+    // Two watchers on the portrait row: a join that multiplied would show up
+    // as a duplicated event here rather than as a wrong count.
+    await seedUserEvent('user-1', withPhoto.id, { status: 'watching' })
+    await seedUserEvent('user-2', withPhoto.id, { status: 'watching' })
+    await seedUserEvent('user-3', withArtwork.id, { status: 'watching' })
+
+    const res = await app.request('/v1/search/popular')
+    expect(res.status).toBe(200)
+    // Parsed rather than cast: a cast would assert the imagery fields exist
+    // without checking, which is the failure this test guards against.
+    const body = popularImageryResponse.parse(await res.json())
+
+    expect(body.data).toHaveLength(2)
+    const portrait = body.data.find((row) => row.id === withPhoto.id)
+    expect(portrait?.artistPhotoUrl).toBe('https://i.scdn.co/image/headliner')
+    expect(portrait?.imageUrl).toBeNull()
+    expect(portrait?.watcherCount).toBe(2)
+
+    const artwork = body.data.find((row) => row.id === withArtwork.id)
+    expect(artwork?.imageUrl).toBe('https://cdn.test/flyer.jpg')
+    expect(artwork?.artistPhotoUrl).toBeNull()
   })
 
   it('excludes first_missing_at rows so the popular surface only shows live shows', async () => {

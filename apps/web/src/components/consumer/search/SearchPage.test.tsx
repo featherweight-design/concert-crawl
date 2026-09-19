@@ -177,6 +177,36 @@ describe('SearchDefaultState', () => {
     expect(mockSetQuery).toHaveBeenCalledWith('bluebird')
   })
 
+  // The row hand-rolled its own 40px box and drew IdentityArt directly, so a
+  // show with real artwork still got a generated mark, at `hero` density in a
+  // 40px box. It goes through the slot now, like every other event row.
+  it('draws the event artwork on a popular row rather than a generated mark', () => {
+    const { container } = render(
+      <SearchDefaultState
+        recentSearches={[]}
+        popularEvents={[
+          {
+            id: 'ev-art',
+            title: 'Show A',
+            artist: 'Artist A',
+            date: '2027-06-01',
+            imageUrl: 'https://cdn.test/flyer.jpg',
+            artistPhotoUrl: null,
+            ticketPriceMin: '25',
+            watcherCount: 3,
+            venue: { name: 'Globe Hall', slug: 'globe-hall' },
+          },
+        ]}
+        onPickQuery={mockSetQuery}
+        onPickEvent={mockNavigateTo}
+      />,
+    )
+
+    expect(container.querySelector('img')?.getAttribute('src')).toBe(
+      'https://cdn.test/flyer.jpg',
+    )
+  })
+
   it('renders popular section with event rows', () => {
     const popular = [
       {
@@ -186,6 +216,8 @@ describe('SearchDefaultState', () => {
         supportingArtists: null,
         tourName: null,
         date: '2027-06-01',
+        imageUrl: null,
+        artistPhotoUrl: null,
         ticketPriceMin: '25',
         watcherCount: 3,
         venue: { name: 'Globe Hall', slug: 'globe-hall' },

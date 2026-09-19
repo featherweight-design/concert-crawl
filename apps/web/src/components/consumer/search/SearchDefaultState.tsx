@@ -1,6 +1,6 @@
 import { History, Flame } from 'lucide-react'
 import type { PopularEvent } from '../../../lib/search/useSearch'
-import { IdentityArt } from '../identity-art/IdentityArt'
+import { Panel } from '../image-slot'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
 
 const copy = CONSUMER_COPY.search
@@ -143,22 +143,18 @@ export function SearchDefaultState({
                 borderTop: idx > 0 ? '1px solid var(--border)' : 'none',
               }}
             >
-              <div
-                style={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 8,
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                }}
-              >
-                <IdentityArt
-                  name={event.artist}
-                  kind="artist"
-                  width={40}
-                  height={40}
-                />
-              </div>
+              {/* The slot owns the box, the radius and the source chain, so
+                  this row resolves artwork then portrait then generated mark
+                  like every other event row. Hand-rolling it here is what left
+                  the palette drawing a mark for shows that have a real face,
+                  at `hero` density in a 40px box. */}
+              <Panel
+                surface="event"
+                name={event.artist}
+                artworkUrl={event.imageUrl}
+                photoUrl={event.artistPhotoUrl}
+                size={40}
+              />
               <div
                 style={{
                   flex: 1,
