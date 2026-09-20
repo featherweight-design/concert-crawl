@@ -246,6 +246,9 @@ jobs:
           SERVICE_ID_CRAWLER_DAILY: ${{ vars.RENDER_SERVICE_ID_CRAWLER_DAILY }}
           SERVICE_ID_MATCH_ARTISTS: ${{ vars.RENDER_SERVICE_ID_MATCH_ARTISTS }}
           SERVICE_ID_SPOTIFY_WEEKLY: ${{ vars.RENDER_SERVICE_ID_SPOTIFY_WEEKLY }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: |
           missing=()
           [ -z "$RENDER_API_TOKEN" ] && missing+=("RENDER_API_TOKEN (secret)")
@@ -254,6 +257,9 @@ jobs:
           [ -z "$SERVICE_ID_CRAWLER_DAILY" ] && missing+=("RENDER_SERVICE_ID_CRAWLER_DAILY (production-env var)")
           [ -z "$SERVICE_ID_MATCH_ARTISTS" ] && missing+=("RENDER_SERVICE_ID_MATCH_ARTISTS (production-env var)")
           [ -z "$SERVICE_ID_SPOTIFY_WEEKLY" ] && missing+=("RENDER_SERVICE_ID_SPOTIFY_WEEKLY (production-env var)")
+          [ -z "$VERCEL_TOKEN" ] && missing+=("VERCEL_TOKEN (secret)")
+          [ -z "$VERCEL_ORG_ID" ] && missing+=("VERCEL_ORG_ID (production-env var)")
+          [ -z "$VERCEL_PROJECT_ID" ] && missing+=("VERCEL_PROJECT_ID (production-env var)")
           if [ ${#missing[@]} -gt 0 ]; then
             echo "Missing production-env configuration:"
             printf '  - %s\n' "${missing[@]}"
@@ -263,6 +269,8 @@ jobs:
             echo ""
             echo "RENDER_API_TOKEN goes in Settings → Environments → production → Secrets."
             echo "RENDER_SERVICE_ID_*   go in Settings → Environments → production → Variables."
+            echo "VERCEL_TOKEN goes in Settings → Environments → production → Secrets."
+            echo "VERCEL_ORG_ID / VERCEL_PROJECT_ID go in Settings → Environments → production → Variables."
             echo ""
             echo "(RENDER_API_TOKEN must also exist at repo level for the staging-smoke"
             echo "and deploy-staging workflows, which don't use the production environment.)"
@@ -451,6 +459,27 @@ jobs:
             "${{ vars.RENDER_SERVICE_ID_API }}" \
             "${{ github.event.workflow_run.head_sha || github.sha }}"
 
+      # Runs last: a failed Render deploy above aborts the job before the web
+      # app is promoted, so a partial promotion never leaves a new front end
+      # against an old API. The reverse is survivable — expand/contract means
+      # the old web app works against the new API — which is why this ordering
+      # and not the other.
+      #
+      # The Vercel prod project's git builds are disabled (Settings → Git →
+      # Ignored Build Step = `exit 0`), so this CLI deploy is the only way the
+      # web app reaches production. --prod makes it the production deployment
+      # and assigns the production domains once the build is healthy; Vercel
+      # keeps serving the previous deployment until then.
+      - name: Promote web app to Vercel production
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
+        run: |
+          npx --yes vercel@latest deploy --prod --yes \
+            --token "$VERCEL_TOKEN" \
+            --cwd apps/web
+
       # `inputs.*` is only defined for `workflow_dispatch`. Using
       # `github.event.inputs.reason` is safe on `workflow_run` too — it
       # evaluates to empty rather than breaking expression evaluation.
@@ -625,6 +654,17 @@ jobs:
   # In all "transient blip" and "deploy never ran" cases, an operator
   # can still trigger rollback explicitly via rollback-prod.yml's
   # workflow_dispatch.
+  #
+  # Vercel is NOT rolled back here. Its rollback is instant and
+  # deployment-scoped (`vercel rollback` / Instant Rollback in the
+  # dashboard), it needs no rebuild, and scripting it would mean holding a
+  # deployment id across jobs. The runbook carries the two-command manual
+  # procedure; see docs/runbooks/auto-deploy-prod.md.
+  #
+  # So when this job fires, prod is left on the old API and the NEW web
+  # app until an operator rolls Vercel back by hand. That is the one
+  # mixed state the automation cannot resolve itself, which is why the
+  # rollback notification names it explicitly.
   rollback:
     name: Auto-rollback (prod smoke failed)
     needs: smoke
@@ -759,7 +799,7 @@ jobs:
           # execute even when an earlier rollback step failed. The
           # operator should always look at the workflow run for the
           # actual per-service outcome.
-          html_body="<p>Production auto-rollback was <strong>triggered</strong> for commit <code>${COMMIT_SHA}</code>.</p><p>The API web service rollback was attempted via the Render API. All four prod cron jobs (crawler triggers, crawler daily, match-artists, spotify-weekly) require <strong>manual rollback</strong> — Render's API does not support cron rollback. Vercel web also requires manual rollback (one-click promote in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
+          html_body="<p>Production auto-rollback was <strong>triggered</strong> for commit <code>${COMMIT_SHA}</code>.</p><p>The API web service rollback was attempted via the Render API. All four prod cron jobs (crawler triggers, crawler daily, match-artists, spotify-weekly) require <strong>manual rollback</strong> — Render's API does not support cron rollback. The Vercel web app was <strong>not</strong> rolled back — prod is serving the new front end against the rolled-back API until an operator runs <code>vercel rollback</code> (or uses Instant Rollback in the dashboard).</p><p><strong>Check the workflow run for the per-service outcome — this email does not confirm success:</strong> <a href=\"${RUN_URL}\">${RUN_URL}</a></p><p>See <code>docs/runbooks/auto-deploy-prod.md</code> — sections \"Caveat on cron service rollback\" and \"Vercel + cron rollback is manual\" — for the manual paths.</p>"
           payload=$(jq -nc \
             --arg from "Concert Crawl Alerts <alerts@concertcrawl.app>" \
             --arg to "${ADMIN_EMAIL}" \

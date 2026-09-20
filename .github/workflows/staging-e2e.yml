@@ -79,6 +79,53 @@ jobs:
             exit "${exit_code}"
           fi
 
+      # The web half of the same wait. Without it a green run means only "the
+      # API at this SHA passes E2E", against a staging web build that may still
+      # be the previous commit — and most of this suite drives the web app.
+      #
+      # Only runs when the API wait cleared, so a skipped push stays skipped,
+      # and only when the Vercel credentials exist: they are scoped to the
+      # `production` GitHub environment for the prod promotion step, and this
+      # workflow does not use that environment. Absent credentials therefore
+      # degrade to the pre-existing behaviour with a warning that says so,
+      # rather than failing a suite that was passing yesterday.
+      #
+      # 124 is benign for the same reason it is on the API: the staging web
+      # project's Ignored Build Step skips pushes that do not touch the web app,
+      # so an API-only merge legitimately produces no web deployment. The API
+      # wait already proved something deployed, so the suite still runs.
+      - name: Wait for staging web app to be ready on pushed SHA
+        id: wait_for_web
+        if: github.event_name == 'push' && steps.wait_for_live.outputs.should_run == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID_STAGING: ${{ vars.VERCEL_PROJECT_ID_STAGING }}
+        run: |
+          if [ -z "${VERCEL_TOKEN}" ] || [ -z "${VERCEL_ORG_ID}" ] || [ -z "${VERCEL_PROJECT_ID_STAGING}" ]; then
+            missing=()
+            [ -z "${VERCEL_TOKEN}" ] && missing+=("VERCEL_TOKEN (repo-level secret)")
+            [ -z "${VERCEL_ORG_ID}" ] && missing+=("VERCEL_ORG_ID (repo-level variable)")
+            [ -z "${VERCEL_PROJECT_ID_STAGING}" ] && missing+=("VERCEL_PROJECT_ID_STAGING (repo-level variable)")
+            echo "::warning title=Web readiness unchecked::Missing ${missing[*]} — cannot confirm the staging web app is serving ${{ github.sha }}. Running E2E against whatever it currently serves, which may be the previous commit. Set these under Settings → Secrets and variables → Actions."
+            exit 0
+          fi
+          set +e
+          bash .github/scripts/vercel-wait-for-ready.sh \
+            "${VERCEL_PROJECT_ID_STAGING}" \
+            "${{ github.sha }}" \
+            300
+          exit_code=$?
+          set -e
+          if [ "${exit_code}" -eq 0 ] || [ "${exit_code}" -eq 124 ]; then
+            if [ "${exit_code}" -eq 124 ]; then
+              echo "::warning title=No web deployment for this SHA::The staging web app never deployed ${{ github.sha }} within 5 min — most likely its Ignored Build Step skipped a push that does not touch apps/web. Running E2E against the web build it currently serves."
+            fi
+          else
+            echo "::error title=Staging web app not ready::vercel-wait-for-ready.sh exited ${exit_code}. 125 means a deployment for this SHA exists and failed, was cancelled, or its state could not be read — read the script's log lines above, then check the deployment in Vercel. Any other code is a script or API failure. Failing — nothing was tested."
+            exit "${exit_code}"
+          fi
+
       - name: Setup pnpm
         if: github.event_name != 'push' || steps.wait_for_live.outputs.should_run == 'true'
         uses: pnpm/action-setup@v6
