@@ -56,25 +56,47 @@ const QUIET_NEWS: DeliveryPolicy = {
   silent: true,
 }
 
-/** A price drop is neither urgent nor worth waking a device for. */
-const LOW_STAKES: DeliveryPolicy = {
+/**
+ * A price drop should arrive, but should not interrupt — the same shape as
+ * QUIET_NEWS and for the same reason. It is tempting to call this one "not
+ * worth waking the device for" and leave it at `normal`, but that reads the
+ * urgency field as a priority dial when it is closer to a delivery guarantee:
+ * per the diagnosis above, `normal` can mean NOT POSTED AT ALL. A category
+ * that is worth sending is worth waking for; the only real question is
+ * whether it makes a sound.
+ */
+const QUIET_UPDATE: DeliveryPolicy = {
+  urgency: 'high',
+  ttlSeconds: 24 * HOUR,
+  silent: true,
+}
+
+/**
+ * Never reached. `sendPushForNotification` returns `not_eligible` for any
+ * category outside PUSH_ELIGIBLE_CATEGORIES before it reads a policy, so
+ * these exist only to keep the record exhaustive over the category union —
+ * which is what makes a newly added category a type error here. Kept at the
+ * most conservative setting so that wiring one up for push later is a
+ * deliberate edit rather than an inherited default.
+ */
+const NOT_PUSHED: DeliveryPolicy = {
   urgency: 'normal',
   ttlSeconds: 24 * HOUR,
   silent: false,
 }
 
 const POLICIES: Record<UserNotificationCategory, DeliveryPolicy> = {
-  'contest.resolved': LOW_STAKES,
-  'contest.needs_info': LOW_STAKES,
+  'contest.resolved': NOT_PUSHED,
+  'contest.needs_info': NOT_PUSHED,
   'watch.cancelled': TIME_SENSITIVE,
   'watch.postponed': TIME_SENSITIVE,
   'watch.soldout': TIME_SENSITIVE,
   'watch.backonsale': TIME_SENSITIVE,
-  'watch.pricedrop': LOW_STAKES,
+  'watch.pricedrop': QUIET_UPDATE,
   'artist.new_show': QUIET_NEWS,
-  'crew.going': LOW_STAKES,
-  'crew.joined': LOW_STAKES,
-  'crew.left': LOW_STAKES,
+  'crew.going': NOT_PUSHED,
+  'crew.joined': NOT_PUSHED,
+  'crew.left': NOT_PUSHED,
 }
 
 /**

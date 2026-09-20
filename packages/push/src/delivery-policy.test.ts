@@ -15,20 +15,36 @@ describe('deliveryPolicyFor', () => {
   // The defect this shipped for: web push must WAKE THE BROWSER for the
   // service worker to run showNotification at all, and a normal-urgency
   // message does not do that for a browser in a restricted standby bucket.
-  it('asks every push-eligible category except a price drop to wake the device', () => {
+  it('asks every push-eligible category to wake the device', () => {
     for (const category of PUSH_ELIGIBLE_CATEGORIES) {
-      const expected = category === 'watch.pricedrop' ? 'normal' : 'high'
-      expect(deliveryPolicyFor(category).urgency).toBe(expected)
+      expect(deliveryPolicyFor(category).urgency).toBe('high')
+    }
+  })
+
+  // Leaving one eligible category at `normal` while shortening its TTL would
+  // be strictly worse than before: the wake is still not requested, and the
+  // window in which it could surface on next app-open drops from the
+  // library's four weeks to one day. Whatever a category's TTL, it only makes
+  // sense alongside a wake.
+  it('never shortens the TTL of a category it did not also wake', () => {
+    for (const category of PUSH_ELIGIBLE_CATEGORIES) {
+      const { urgency, ttlSeconds } = deliveryPolicyFor(category)
+      const WEB_PUSH_DEFAULT_TTL = 2419200
+      if (ttlSeconds < WEB_PUSH_DEFAULT_TTL) {
+        expect(urgency).toBe('high')
+      }
     }
   })
 
   // The new-show fan-out runs on the 3 AM crawl. High urgency without silence
   // would turn a delivery fix into a 3 AM alarm.
-  it('keeps the 3 AM category silent and nothing else', () => {
+  // Everything that should arrive without interrupting: the 3 AM new-show
+  // fan-out, and a price drop.
+  it('silences exactly the categories that must not interrupt', () => {
     const silent = UserNotificationCategorySchema.options.filter(
       (category) => deliveryPolicyFor(category).silent,
     )
-    expect(silent).toEqual(['artist.new_show'])
+    expect(silent.sort()).toEqual(['artist.new_show', 'watch.pricedrop'])
   })
 
   it('never keeps a message past the day it stops being true', () => {
