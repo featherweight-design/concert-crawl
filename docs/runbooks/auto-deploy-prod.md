@@ -76,9 +76,18 @@ procedure and no bypass: merge the fix, then dispatch with a reason naming the
 incident. Staging validation is a judgement call under an incident, not a
 mechanical gate — the gate is the dispatch itself.
 
+**How long a promotion takes: about 9 minutes.** Measured on the first
+end-to-end dispatch (run 35521276174, 2026-09-20): 8m38s wall clock, of which
+the gate took 8s, the five Render deploys plus the wait for the API to report
+the new SHA live took 6m33s, and prod smoke took 1m48s. Answer "when will this
+be live?" with that number rather than an estimate, and treat a run materially
+longer than it as a Render build problem worth looking at rather than a slow
+day — the gate and smoke are near-constant, so essentially all the variance
+lives in the middle segment.
+
 The prod **web** app is not in that tree. Its Vercel project has git builds
-disabled (Settings → Git → Ignored Build Step = `exit 0`), so a push to `main`
-deploys the Render services only. `deploy-prod.yml` promotes the web app with
+disabled (Settings → Build and Deployment → Ignored Build Step = `exit 0`), so a
+push to `main` deploys the Render services only. `deploy-prod.yml` promotes the web app with
 `vercel deploy --prod` as the last step of the `deploy` job, after the Render
 waits have cleared but **before** the `smoke` job runs — so a failed API deploy
 aborts the job before a new front end can reach a customer, while a failed smoke
@@ -93,16 +102,16 @@ validation surface, and the prod smoke inside `deploy-prod.yml` is the safety
 net (auto-rollback of the API service). If we ever scale past solo, GitHub merge
 queue is the upgrade path for a true pre-merge prod gate.
 
-| Workflow                              | Path                                            | Trigger                            | Kill switch                     |
-| ------------------------------------- | ----------------------------------------------- | ---------------------------------- | ------------------------------- |
-| CI                                    | `.github/workflows/ci.yml`                      | push to `main`, PRs                | (always on)                     |
-| Staging Smoke Tests                   | `.github/workflows/staging-smoke.yml`           | push to `main` + workflow_dispatch | `STAGING_SMOKE_ENABLED`         |
-| Staging E2E                           | `.github/workflows/staging-e2e.yml`             | push to `main` + workflow_dispatch | (always on)                     |
-| Deploy to Production                  | `.github/workflows/deploy-prod.yml`             | `workflow_dispatch` only           | `AUTO_DEPLOY_PROD_ENABLED`      |
-| Prod smoke (standalone)               | `.github/workflows/prod-smoke-after-deploy.yml` | `workflow_dispatch` only           | `PROD_SMOKE_RECONCILER_ENABLED` (vestigial) |
-| Prod Deploy Health                    | `.github/workflows/prod-deploy-health.yml`      | every 2 hours + workflow_dispatch  | (always on)                     |
-| Prod Drift Alert                      | `.github/workflows/prod-drift-alert.yml`        | daily + workflow_dispatch          | (always on)                     |
-| Rollback Production (manual)          | `.github/workflows/rollback-prod.yml`           | `workflow_dispatch` only           | (always available)              |
+| Workflow                     | Path                                            | Trigger                            | Kill switch                                 |
+| ---------------------------- | ----------------------------------------------- | ---------------------------------- | ------------------------------------------- |
+| CI                           | `.github/workflows/ci.yml`                      | push to `main`, PRs                | (always on)                                 |
+| Staging Smoke Tests          | `.github/workflows/staging-smoke.yml`           | push to `main` + workflow_dispatch | `STAGING_SMOKE_ENABLED`                     |
+| Staging E2E                  | `.github/workflows/staging-e2e.yml`             | push to `main` + workflow_dispatch | (always on)                                 |
+| Deploy to Production         | `.github/workflows/deploy-prod.yml`             | `workflow_dispatch` only           | `AUTO_DEPLOY_PROD_ENABLED`                  |
+| Prod smoke (standalone)      | `.github/workflows/prod-smoke-after-deploy.yml` | `workflow_dispatch` only           | `PROD_SMOKE_RECONCILER_ENABLED` (vestigial) |
+| Prod Deploy Health           | `.github/workflows/prod-deploy-health.yml`      | every 2 hours + workflow_dispatch  | (always on)                                 |
+| Prod Drift Alert             | `.github/workflows/prod-drift-alert.yml`        | daily + workflow_dispatch          | (always on)                                 |
+| Rollback Production (manual) | `.github/workflows/rollback-prod.yml`           | `workflow_dispatch` only           | (always available)                          |
 
 ### Four of the five prod services cannot be pinned
 
@@ -114,9 +123,9 @@ the moment Render starts their build.
 Two consequences, both load-bearing:
 
 - **The gate refuses to promote a SHA that is not `main` HEAD.** The refusal
-  lives in `deploy-prod.yml` itself — the *Refuse promotion of a SHA that is not
-  main HEAD* step in the `gate` job, repeated as *Re-verify promotion target is
-  still main HEAD* in the `deploy` job, because `main` can advance while the
+  lives in `deploy-prod.yml` itself — the _Refuse promotion of a SHA that is not
+  main HEAD_ step in the `gate` job, repeated as _Re-verify promotion target is
+  still main HEAD_ in the `deploy` job, because `main` can advance while the
   deploy job waits. Both run each side through
   `.github/scripts/resolve-deployable-sha.sh` (which only resolves a SHA and
   always exits 0) before comparing, so a `[skip ci]` release commit does not read
@@ -291,22 +300,65 @@ against the old code.
 
 ### Stage 2 — close the prod auto-deploy path
 
-This is the configuration that makes the gate real, and it lives in Render's
-dashboard, not in this repo:
+This is the configuration that makes the gate real, and most of it lives in the
+Render and Vercel dashboards rather than in this repo.
 
-1. Render dashboard → `concert-crawl-api` → Settings → Build & Deploy → set
+**The order matters.** Arming and rehearsing come before either kill switch, so
+that the first end-to-end dispatch runs while the old auto-deploy path is still
+underneath it as a safety net. Flip the switches first and a broken dispatch
+leaves no way to reach production except a hand-driven Render deploy.
+
+1. Provision the `production` environment configuration in the tables further
+   down this file, then set `AUTO_DEPLOY_PROD_ENABLED=true` in repo variables.
+   Counter-intuitively this is the switch that **arms the promotion workflow** —
+   with it `false`, `deploy-prod.yml` silently skips, so no promotion can run.
+   The manual controls below (Render Manual Deploy, Vercel Redeploy,
+   `rollback-prod.yml`) are deliberately not gated by it, so recovery stays
+   possible.
+2. **Rehearse the dispatch while auto-deploy is still on.** Actions → Deploy to
+   Production → Run workflow, on `main`, reason
+   `promotion-gate dry run — verifying the dispatch path before disabling auto-deploy`,
+   leaving the stale-HEAD override unchecked. Expect the gate to pass, five
+   Render deploys to trigger, wait-for-live to clear, the Vercel step to run,
+   smoke to pass, and rollback to stay skipped. This is the last moment a
+   failure is cheap; fix anything here before continuing.
+3. Render dashboard → `concert-crawl-api` → Settings → Build & Deploy → set
    **Auto-Deploy** to `No`. Repeat for each of the four prod crons:
    `concert-crawl-crawler-triggers`, `concert-crawl-crawler-daily`,
    `concert-crawl-match-artists`, `concert-crawl-spotify-weekly`. Leave every
-   `-staging` service on `Yes` — staging auto-deploy is the gate's input.
-2. Vercel dashboard → `concert-crawl` (production) project → Settings → Git →
-   **Ignored Build Step** = `exit 0`, so a push to `main` does not build the
-   prod web app.
-3. Set `AUTO_DEPLOY_PROD_ENABLED=true` in repo variables. Counter-intuitively
-   this is the switch that **arms the promotion workflow** — with it `false`,
-   `deploy-prod.yml` silently skips, so no promotion can run. The manual
-   controls below (Render Manual Deploy, Vercel Redeploy, `rollback-prod.yml`)
-   are deliberately not gated by it, so recovery stays possible.
+   `-staging` service on `Yes` — staging auto-deploy is the gate's input. Read
+   each value back rather than trusting the 200: a Render API 200 has previously
+   been returned for a change that did not take.
+4. Vercel dashboard → `concert-crawl` (production) project → Settings → **Build
+   and Deployment** → **Ignored Build Step** → Behavior `Custom`, Command
+   `exit 0`, so a push to `main` does not build the prod web app. The setting is
+   not under Settings → Git, where the rest of the git configuration lives.
+
+   Two adjacent settings on the same project are load-bearing and must be left
+   alone. **Branch Tracking** must read `main`: it is what makes a dispatch
+   promote the commit the gate validated. **Auto-assign Custom Production
+   Domains** must stay enabled — it fires on a merge to the production branch
+   _or_ a `vercel deploy --prod`, and the second clause is the promotion path.
+   Disabled, a promotion builds cleanly and never takes over `concertcrawl.app`,
+   so it reports green while serving the previous release.
+
+   `exit 0` is expected to be safe for the CLI promotion, because Vercel
+   evaluates the Ignored Build Step only for git-triggered deployments and
+   `vercel deploy --prod` uploads source directly. That combination is the one
+   thing the staged rollout cannot prove in advance — the step 2 rehearsal
+   necessarily runs before this setting exists. So dispatch once more
+   immediately after saving it and confirm the Vercel step produces a real
+   production deployment rather than a skipped one. If it skips, the fix is an
+   ignore command conditioned on `$VERCEL_GIT_COMMIT_REF` rather than a flat
+   `exit 0`.
+
+5. Confirm the gate holds: merge anything to `main` (a docs change is ideal) and
+   check that the staging API builds, the prod API records no new deploy, the
+   prod Vercel project records a **skipped** deployment while
+   `concert-crawl-staging` builds normally, `staging-smoke` and `staging-e2e`
+   both run, and `prod-smoke-after-deploy.yml` does not. A staging project that
+   also skips means the Ignored Build Step went on the wrong project — back it
+   out before going further.
 
 `render.yaml` records these values (`autoDeploy: false` on the five prod
 services) but does **not** apply them — it is descriptive, not a Blueprint.
@@ -347,36 +399,39 @@ prod without deploying, and watch it run install → smoke → green.
 
 ### Repository variables (Settings → Variables → Actions)
 
-| Variable                        | Required by             | Notes                                                                                                                                                                                                     |
-| ------------------------------- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `STAGING_URL`                   | staging-smoke           | already present — `https://staging.concertcrawl.app`                                                                                                                                                      |
-| `STAGING_API_URL`               | staging-smoke           | **new** — `https://concert-crawl-api-staging.onrender.com`                                                                                                                                                |
-| `RENDER_SERVICE_ID_API_STAGING` | staging-smoke           | staging API service ID (e.g. `srv-abc123`). Used by `staging-smoke.yml` via `render-wait-for-live.sh` to wait for Render to deploy the pushed SHA before smoking.                                         |
-| `PROD_URL`                      | deploy-prod (smoke job) | already present                                                                                                                                                                                           |
-| `PROD_API_URL`                  | deploy-prod (smoke job) | already present                                                                                                                                                                                           |
-| `STAGING_SMOKE_ENABLED`         | staging-smoke           | **new** — default `false`; set to `true` in Stage 1                                                                                                                                                       |
+| Variable                        | Required by             | Notes                                                                                                                                                                                                                                                                                  |
+| ------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `STAGING_URL`                   | staging-smoke           | already present — `https://staging.concertcrawl.app`                                                                                                                                                                                                                                   |
+| `STAGING_API_URL`               | staging-smoke           | **new** — `https://concert-crawl-api-staging.onrender.com`                                                                                                                                                                                                                             |
+| `RENDER_SERVICE_ID_API_STAGING` | staging-smoke           | staging API service ID (e.g. `srv-abc123`). Used by `staging-smoke.yml` via `render-wait-for-live.sh` to wait for Render to deploy the pushed SHA before smoking.                                                                                                                      |
+| `PROD_URL`                      | deploy-prod (smoke job) | already present                                                                                                                                                                                                                                                                        |
+| `PROD_API_URL`                  | deploy-prod (smoke job) | already present                                                                                                                                                                                                                                                                        |
+| `STAGING_SMOKE_ENABLED`         | staging-smoke           | **new** — default `false`; set to `true` in Stage 1                                                                                                                                                                                                                                    |
 | `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod             | must be `true` — it arms the promotion workflow, the only _automated_ path to prod. With it `false` the `gate` job silently skips, so no promotion can run; a Render dashboard Manual Deploy and `rollback-prod.yml` still reach prod by design. The name predates the promotion gate. |
-| `PROD_SMOKE_RECONCILER_ENABLED` | prod-smoke-after-deploy | vestigial — that workflow is `workflow_dispatch` only and every dispatch satisfies its `if:` regardless. Kept so re-arming it on a push or schedule trigger has a switch ready.                            |
+| `PROD_SMOKE_RECONCILER_ENABLED` | prod-smoke-after-deploy | vestigial — that workflow is `workflow_dispatch` only and every dispatch satisfies its `if:` regardless. Kept so re-arming it on a push or schedule trigger has a switch ready.                                                                                                        |
 
 ### `production` environment — Variables (Settings → Environments → production)
 
-| Variable                             | Required by                                                  | Notes                                                                                                                                                                                                                                 |
-| ------------------------------------ | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Variable                             | Required by                                                                      | Notes                                                                                                                                                                                                                                 |
+| ------------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `RENDER_SERVICE_ID_API`              | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod API service ID (visible in Render dashboard URL, e.g. `srv-abc123`). Used for the smoke workflow's `render-wait-for-live.sh` + `render-rollback.sh`, the manual deploy POST, and rollback.                                       |
 | `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod crawler triggers cron service ID. Used by smoke's rollback step (auto-skips for crons), deploy-prod's API POST, and rollback-prod.                                                                                               |
 | `RENDER_SERVICE_ID_CRAWLER_DAILY`    | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod crawler daily cron service ID. Same.                                                                                                                                                                                             |
-| `RENDER_SERVICE_ID_MATCH_ARTISTS`    | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod match-artists cron service ID (`crn-*`). Same. Every workflow in this table fails its preflight until this is set.                                                                                                                |
-| `RENDER_SERVICE_ID_SPOTIFY_WEEKLY`   | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod spotify-weekly cron service ID (`crn-*`). Same. Every workflow in this table fails its preflight until this is set.                                                                                                               |
-| `ADMIN_EMAIL`                        | prod-smoke-after-deploy, deploy-prod (manual)                | **optional** — address that receives an auto-rollback notification when smoke fails. Falls back to a `::warning::` annotation only when unset. Currently at repo level — see `production-launch.md` for the move-to-env-scope option. |
+| `RENDER_SERVICE_ID_MATCH_ARTISTS`    | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod match-artists cron service ID (`crn-*`). Same. Every workflow in this table fails its preflight until this is set.                                                                                                               |
+| `RENDER_SERVICE_ID_SPOTIFY_WEEKLY`   | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | prod spotify-weekly cron service ID (`crn-*`). Same. Every workflow in this table fails its preflight until this is set.                                                                                                              |
+| `VERCEL_ORG_ID`                      | deploy-prod                                                                      | The Vercel **Team ID** (`team_*`). Vercel renamed Org to Team in the dashboard but the CLI and API still call it `orgId`, so the dashboard offers no field with this name — read the Team ID from Vercel → Settings → General.        |
+| `VERCEL_PROJECT_ID`                  | deploy-prod                                                                      | `prj_*`, from the **production** `concert-crawl` project → Settings → General. Taking it from `concert-crawl-staging` by mistake makes a promotion deploy the staging web app onto the production domain, reporting green throughout. |
+| `ADMIN_EMAIL`                        | prod-smoke-after-deploy, deploy-prod (manual)                                    | **optional** — address that receives an auto-rollback notification when smoke fails. Falls back to a `::warning::` annotation only when unset. Currently at repo level — see `production-launch.md` for the move-to-env-scope option. |
 
 Service IDs live in the `production` environment (not at the repo level) so they are scoped to prod-only workflow runs and stay aligned with `production-launch.md`. The `deploy-prod.yml` and `rollback-prod.yml` jobs use `environment: production` and read them as `vars.RENDER_SERVICE_ID_*`.
 
 ### `production` environment — Secrets (Settings → Environments → production)
 
-| Secret             | Required by                                                  | Notes                                                                                                                                                                                                                       |
-| ------------------ | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RENDER_API_TOKEN` | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | Render → Account Settings → API Keys → generate a token with deploy + read permissions. Consumed by the smoke workflow's `render-wait-for-live.sh` + `render-rollback.sh`, the manual deploy POST, and `rollback-prod.yml`. |
-| `RESEND_API_KEY`   | prod-smoke-after-deploy, deploy-prod (manual)                | **optional** — same Resend API key the API + crawler already use. When set together with `ADMIN_EMAIL`, the rollback path emails the admin from `alerts@concertcrawl.app`. Missing → warning annotation only.               |
+| Secret             | Required by                                                                      | Notes                                                                                                                                                                                                                                                                                                  |
+| ------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `RENDER_API_TOKEN` | prod-smoke-after-deploy, deploy-prod (manual), rollback-prod, prod-deploy-health | Render → Account Settings → API Keys → generate a token with deploy + read permissions. Consumed by the smoke workflow's `render-wait-for-live.sh` + `render-rollback.sh`, the manual deploy POST, and `rollback-prod.yml`.                                                                            |
+| `RESEND_API_KEY`   | prod-smoke-after-deploy, deploy-prod (manual)                                    | **optional** — same Resend API key the API + crawler already use. When set together with `ADMIN_EMAIL`, the rollback path emails the admin from `alerts@concertcrawl.app`. Missing → warning annotation only.                                                                                          |
+| `VERCEL_TOKEN`     | deploy-prod                                                                      | Vercel → Account Settings → Tokens. Scope it to the **`concert-crawl` project**, not "All Projects" — it only ever runs `vercel deploy --prod` against the prod web project. If the token carries an expiry, record that date here, because a promotion is the only thing that will notice it lapsing. |
 
 No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed: the deploy POST uses the Render API directly with `RENDER_API_TOKEN` + the service IDs above. Render Cron Jobs don't expose a Deploy Hook UI anyway (confirmed 2026-06-23), so the hook-based approach couldn't have covered any of the four prod crons.
 
@@ -436,7 +491,7 @@ auto-rollback correctly did not fire — and rolling back would have been
 the wrong action anyway.
 
 `.github/workflows/prod-deploy-health.yml` covers that gap. Every 2 hours
-it asks Render whether each prod service is still *able* to accept
+it asks Render whether each prod service is still _able_ to accept
 deploys, and reports to **Sentry** if not. The run also exits non-zero, so
 there is a red Actions status too — but Sentry is the channel that is
 meant to reach you. The one signal that did fire during the incident was a
@@ -459,10 +514,10 @@ runs daily and reports to Sentry when prod has fallen too far behind `main`.
 
 Thresholds, both in the workflow's `env` block:
 
-| Threshold             | Value | Meaning                                                    |
-| --------------------- | ----- | ---------------------------------------------------------- |
-| `MAX_COMMITS_BEHIND`  | 25    | undeployed API-relevant commits sitting on `main`           |
-| `MAX_DAYS_BEHIND`     | 7     | age of the **oldest** undeployed commit, not the newest     |
+| Threshold            | Value | Meaning                                                 |
+| -------------------- | ----- | ------------------------------------------------------- |
+| `MAX_COMMITS_BEHIND` | 25    | undeployed API-relevant commits sitting on `main`       |
+| `MAX_DAYS_BEHIND`    | 7     | age of the **oldest** undeployed commit, not the newest |
 
 Two details that matter when reading its output:
 
