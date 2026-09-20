@@ -150,12 +150,18 @@ jobs:
           # distance, and the ancestor case is the one a commit count reads as
           # zero — `git rev-list live..main` is empty for a descendant of main,
           # which would otherwise report clean.
+          #
+          # Reported as `diverged`, not `drifted`, because the operator action
+          # differs. "Behind main" is answered by promoting; this is answered by
+          # finding out what prod is running and why, and promoting blind could
+          # overwrite a deliberate manual deploy. They are separate Sentry
+          # issues for the same reason — the message is the grouping key.
           if ! git cat-file -e "${live_sha}^{commit}" 2>/dev/null \
             || ! git merge-base --is-ancestor "${live_sha}" origin/main; then
             echo "::warning::Prod is live on ${live_sha}, which is not an ancestor of main. Prod is running code main does not contain."
             echo "commits=unknown" >> "$GITHUB_OUTPUT"
             echo "days=unknown" >> "$GITHUB_OUTPUT"
-            echo "drifted=true" >> "$GITHUB_OUTPUT"
+            echo "diverged=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -209,6 +215,21 @@ jobs:
           bash .github/scripts/sentry-capture-message.sh \
             warning \
             "Prod is behind main — promote with the Deploy to Production workflow, or record why not."
+
+      - name: Report divergence to Sentry
+        if: steps.measure.outputs.diverged == 'true'
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN_SMOKE }}
+          SENTRY_ENVIRONMENT: production
+          EXTRA_CONTEXT: >-
+            Prod live SHA ${{ steps.measure.outputs.live_sha }} is not an
+            ancestor of main — either it is not in the repository at all (a
+            build from a deleted branch) or it is an unmerged branch tip. The
+            distance from main is therefore unmeasurable.
+        run: |
+          bash .github/scripts/sentry-capture-message.sh \
+            warning \
+            "Prod is running code main does not contain — find out what deployed it before promoting anything."
 
       - name: Report measurement failure to Sentry
         if: steps.measure.outputs.measure_failed == '1'
