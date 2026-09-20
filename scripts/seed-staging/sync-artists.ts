@@ -32,7 +32,14 @@
  */
 
 import { eq } from 'drizzle-orm'
-import { artistSlug, resolveSlug } from '@concert-crawl/types'
+// Source-relative, like the schema import below. The root workspace does not
+// declare @concert-crawl/types as a dependency, so the package specifier
+// resolves here only when pnpm happens to hoist it as a transitive of
+// @concert-crawl/db — which is not something a clean runner guarantees.
+import {
+  artistSlug,
+  resolveSlug,
+} from '../../packages/types/src/artist-slug.js'
 import { artists } from '../../packages/db/src/schema/index.js'
 import type { ProdReadonlyClient } from './prod-readonly-client.js'
 import type { DrizzleWriteDb } from './sync-venues.js'

@@ -43,14 +43,15 @@
  *   follow venues.
  *
  * Never synced:
- *   Every table carrying user identity or user-authored text —
- *   price_submissions, submission_confirms, event_reports,
- *   event_report_confirms, crews, social, notifications, user_profiles,
- *   user_notification_preferences, users, commerce, spotify,
- *   venue_fault_acknowledgements. The staging transactional-email gate (#1613)
- *   fails OPEN, so a prod user row in staging plus a restorable cron is a path
- *   to emailing a real customer from staging. Content tables carry no FK into
- *   any user table, which is what makes this split enforceable.
+ *   Everything else. This entrypoint invokes exactly the five public-content
+ *   modules imported below and touches no other table, so the allowlist IS the
+ *   contract — a second partial denylist here would only drift out of step with
+ *   the schema. The reason the line is hard, and the table-by-table reading of
+ *   it, live in docs/runbooks/staging-environment.md: the staging
+ *   transactional-email gate (#1613) fails OPEN, so a prod user row in staging
+ *   plus a restorable cron is a path to emailing a real customer from staging.
+ *   Content tables carry no FK into any user table, which is what makes the
+ *   split enforceable rather than aspirational.
  */
 
 import { pathToFileURL } from 'node:url'

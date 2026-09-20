@@ -221,8 +221,9 @@ jobs:
 
       # scripts/ is not a workspace package, so the turbo run above never
       # reaches it and its suites were passing only when someone ran them by
-      # hand. Runs after the turbo step because the scripts import
-      # @concert-crawl/logger's built output.
+      # hand. It needs no build ahead of it — the scripts reach workspace code
+      # source-relatively rather than by package specifier, deliberately, since
+      # they also run on a clean runner that has not built anything.
       - name: Test scripts
         run: pnpm test:scripts
 

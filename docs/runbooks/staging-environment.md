@@ -38,10 +38,20 @@ that found nothing to do.
 
 ### Never synced
 
-`price_submissions`, `submission_confirms`, `event_reports`,
-`event_report_confirms`, `crews`, `social`, `notifications`, `user_profiles`,
-`user_notification_preferences`, `users`, `commerce`, `spotify`,
-`venue_fault_acknowledgements`.
+**The safety contract is the allowlist above, not a list of exclusions.** The
+five tables named under "Synced from prod" are the whole of what the sync
+touches; every other table in the schema is never synced, and a table is only
+copied when someone adds a sync module for it by name. Read the contract that
+way round — an exclusion list drifts silently the moment a migration adds a
+table, and it was written as one until Copilot caught that on #1730.
+
+Illustrative, not exhaustive: `price_submissions`, `submission_confirms`,
+`event_reports`, `event_report_confirms`, `user_events`,
+`user_artist_follows`, `user_roles`, `user_cred`, `push_subscriptions`,
+`user_spotify_connections`, `spotify_alert_log`, `email_send_log`, `audit_log`,
+`invite_codes`, `waitlist_entries`, `feedback`, the crew tables, the commerce
+and billing tables, `notifications`, `user_profiles`,
+`user_notification_preferences`, `venue_fault_acknowledgements`.
 
 **Why this line is hard:** the staging transactional-email gate (#1613) **fails
 open**. A prod user row in staging, plus one of the suspended staging crons

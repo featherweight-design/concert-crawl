@@ -82,8 +82,11 @@ describe('sync-prod-public-data main', () => {
     // Throws rather than casting: `noUncheckedIndexedAccess` types the index
     // read as `number | undefined`, and a cast here would turn "the step never
     // ran" into a confusing NaN comparison instead of a named failure.
-    const orderOf = (mock: typeof syncVenues): number => {
-      const order = vi.mocked(mock).mock.invocationCallOrder[0]
+    // Typed against the one thing all five steps share once mocked — a call
+    // record — rather than `typeof syncVenues`: their dependency and return
+    // shapes differ, so a single step's signature rejects the other four.
+    const orderOf = (step: (...args: never[]) => unknown): number => {
+      const order = vi.mocked(step).mock.invocationCallOrder[0]
       if (order === undefined) throw new Error('step was never invoked')
       return order
     }

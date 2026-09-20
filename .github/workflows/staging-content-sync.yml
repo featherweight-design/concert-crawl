@@ -36,6 +36,22 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      # Fail loud on the wrong branch for manual dispatches. Mirrors
+      # staging-smoke.yml / deploy-prod.yml / rollback-prod.yml. This job binds
+      # both Neon connection strings, so without the guard a feature branch
+      # could dispatch it and run that branch's sync code against production
+      # with production credentials. A job-level `if:` would skip silently and
+      # report success, which reads identically to a sync that found nothing.
+      - name: Refuse workflow_dispatch from non-main ref
+        if: |
+          github.event_name == 'workflow_dispatch' &&
+          github.ref != 'refs/heads/main'
+        run: |
+          echo "✗ Refusing to sync staging content from ref '${{ github.ref }}'."
+          echo "  Manual staging-content-sync dispatches must come from main."
+          echo "  Use the workflow_dispatch UI's branch picker to select main, then re-dispatch."
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@v7
 
@@ -50,6 +66,14 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # The sync reaches the Drizzle schema source-relatively, but that graph
+      # imports @concert-crawl/types by package specifier, and the package
+      # resolves only to dist/index.js — which is not checked in. Without this
+      # the run dies with ERR_MODULE_NOT_FOUND before it opens either database.
+      # types is a leaf package, so this one filter is the whole graph.
+      - name: Build runtime workspace packages
+        run: pnpm --filter @concert-crawl/types build
 
       - name: Preflight — required secrets present
         env:
