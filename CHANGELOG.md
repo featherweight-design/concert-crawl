@@ -1,3 +1,15 @@
+# [1.292.0](https://github.com/HartiganHM/concert-crawl/compare/v1.291.3...v1.292.0) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ci:** pin the Vercel CLI and reject a superseded staging deployment ([3273a88](https://github.com/HartiganHM/concert-crawl/commit/3273a8858c483417065b1dc5310241b7af75616a))
+
+
+### Features
+
+* **auth:** grant beta testers Premium when they redeem their code ([#1716](https://github.com/HartiganHM/concert-crawl/issues/1716)) ([6ee2923](https://github.com/HartiganHM/concert-crawl/commit/6ee292396078da32bd314edd9ef9e6b0361a64bb))
+
 ## [1.291.3](https://github.com/HartiganHM/concert-crawl/compare/v1.291.2...v1.291.3) (2026-09-20)
 
 
