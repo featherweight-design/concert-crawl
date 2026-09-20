@@ -7,8 +7,9 @@ name: Staging Content Sync
 # fails OPEN).
 #
 # Two guards sit under this workflow rather than in it: assertWriteHostNotProd()
-# throws before any connection opens if both URLs resolve to the same Neon host,
-# and openProdReadonly() hands the prod connection back as a select-only proxy.
+# throws before any connection opens if both URLs address the same Neon branch
+# (pooled and direct spellings of one branch included), and openProdReadonly()
+# hands the prod connection back as a select-only proxy.
 
 on:
   schedule:

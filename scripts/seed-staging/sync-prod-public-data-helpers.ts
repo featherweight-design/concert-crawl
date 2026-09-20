@@ -21,15 +21,29 @@ export function parseArgs(argv: string[]): { dryRun: boolean } {
 }
 
 /**
- * Belt-and-braces guard: throws if the host of `stagingUrl` matches the host
- * of `prodUrl`. Catches the accidental-swap case where both env vars point at
- * the same Neon project host.
+ * Neon gives one branch two hostnames — a direct endpoint
+ * `ep-x-y-123456.region.aws.neon.tech` and a pooled one
+ * `ep-x-y-123456-pooler.region.aws.neon.tech`. Comparing the raw strings would
+ * let the pooled prod host past a direct prod host and write the sync into
+ * production, and picking the wrong one of the two is a single dropdown in the
+ * Neon console. Strip the marker before comparing so both spellings of a
+ * branch collapse to the same value.
+ */
+function neonBranchHost(hostname: string): string {
+  return hostname.replace(/-pooler(?=\.|$)/, '')
+}
+
+/**
+ * Belt-and-braces guard: throws if `stagingUrl` and `prodUrl` address the same
+ * Neon branch. Catches the accidental-swap case where both env vars point at
+ * the same database, including the case where they name it by different
+ * endpoints (see `neonBranchHost`).
  *
  * @param prodUrl    - Value of `NEON_PROD_DIRECT`.
  * @param stagingUrl - Value of `NEON_STAGING_DIRECT`.
  *
- * @throws {Error} if the parsed hosts match — includes both env var names in
- *   the message so the operator knows which values to check.
+ * @throws {Error} if the hosts resolve to the same branch — includes both env
+ *   var names in the message so the operator knows which values to check.
  */
 export function assertWriteHostNotProd(
   prodUrl: string,
@@ -56,9 +70,9 @@ export function assertWriteHostNotProd(
     )
   }
 
-  if (prodHost === stagingHost) {
+  if (neonBranchHost(prodHost) === neonBranchHost(stagingHost)) {
     throw new Error(
-      `Refusing to write to prod: NEON_STAGING_DIRECT hostname (${stagingHost}) matches NEON_PROD_DIRECT hostname. Set NEON_STAGING_DIRECT to your staging connection string.`,
+      `Refusing to write to prod: NEON_STAGING_DIRECT hostname (${stagingHost}) addresses the same Neon branch as NEON_PROD_DIRECT hostname (${prodHost}). Set NEON_STAGING_DIRECT to your staging connection string.`,
     )
   }
 }

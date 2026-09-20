@@ -219,6 +219,13 @@ jobs:
       - name: Test
         run: pnpm turbo run test --filter=!@concert-crawl/web
 
+      # scripts/ is not a workspace package, so the turbo run above never
+      # reaches it and its suites were passing only when someone ran them by
+      # hand. Runs after the turbo step because the scripts import
+      # @concert-crawl/logger's built output.
+      - name: Test scripts
+        run: pnpm test:scripts
+
   # Keeps a check literally named "Test" so the branch-protection rule does not
   # have to change. `if: always()` matters — without it this job would be skipped
   # when a shard fails, and a skipped required check never resolves.

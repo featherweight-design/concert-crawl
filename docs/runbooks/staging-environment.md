@@ -59,7 +59,10 @@ copies every user row.
 ### Two safety layers
 
 1. `assertWriteHostNotProd(prodUrl, stagingUrl)` throws before any connection
-   opens if both URLs resolve to the same Neon host.
+   opens if both URLs address the same Neon branch. Neon gives one branch both a
+   direct and a `-pooler` hostname, so the comparison strips that marker first —
+   otherwise naming the prod branch by its pooled endpoint would slip past a
+   check against its direct one, which is a single dropdown in the console.
 2. `openProdReadonly(prodUrl)` returns a client exposing only `.select`, whose
    inner Drizzle handle is a proxy exposing only `.select` and `.query`; every
    other property access throws.

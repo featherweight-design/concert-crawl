@@ -58,4 +58,23 @@ describe('assertWriteHostNotProd', () => {
       ),
     ).toThrow(/refusing to write to prod/i)
   })
+  it('throws when one URL names the prod branch by its pooled endpoint', () => {
+    // Neon gives one branch two hostnames, and choosing between them is a
+    // single dropdown in the console. A raw string comparison reads these as
+    // different hosts and lets the sync write into production.
+    expect(() =>
+      assertWriteHostNotProd(
+        'postgres://u:p@ep-prod-123456.us-east-2.aws.neon.tech/db',
+        'postgres://u:p@ep-prod-123456-pooler.us-east-2.aws.neon.tech/db',
+      ),
+    ).toThrow(/refusing to write to prod/i)
+  })
+  it('still passes when a pooled staging endpoint faces a direct prod one', () => {
+    expect(() =>
+      assertWriteHostNotProd(
+        'postgres://u:p@ep-prod-123456.us-east-2.aws.neon.tech/db',
+        'postgres://u:p@ep-staging-654321-pooler.us-east-2.aws.neon.tech/db',
+      ),
+    ).not.toThrow()
+  })
 })
