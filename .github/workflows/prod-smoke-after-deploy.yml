@@ -193,7 +193,7 @@ jobs:
           steps.wait_for_live.outputs.live_sha != '' &&
           steps.wait_for_live.outputs.live_sha != github.sha
         run: |
-          echo "::warning title=Specs ahead of prod::Running smoke specs from ${{ github.sha }} against prod live on ${{ steps.wait_for_live.outputs.live_sha }}. A failure may be a spec that expects unpromoted behaviour rather than a prod regression."
+          echo "::warning title=Specs ahead of prod::Running smoke specs from ${{ github.sha }} against prod live on ${{ steps.wait_for_live.outputs.live_sha }}. A failure may be a spec that expects unpromoted behavior rather than a prod regression."
 
       - name: Setup pnpm
         if: steps.wait_for_live.outputs.should_smoke == 'true'
