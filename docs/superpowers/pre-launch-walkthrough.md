@@ -34,7 +34,8 @@ states, tiers, background systems and edge cases a straight walk will not reach.
 - Event details > I'm going!
 - Event details > Share
 - Event details > Submit a price
-- Event details > Price check
+- Event details > Still this price?
+- Event details > Update the price
 - Event details > Report a show
 - Venues
 - Venue details
@@ -79,9 +80,10 @@ states, tiers, background systems and edge cases a straight walk will not reach.
   nothing about mobile.
 - Have the admin Feature Flags page open in a third tab; several sections below ask you to toggle.
 - **Every staging cron is currently suspended**, `concert-crawl-billing-jobs-staging` included, and
-  no prod billing cron exists at all. Nothing in section 17 will send, and nothing in section 16
-  will fire on staging, until those are resumed. Verified against the live Render API on
-  2026-09-19.
+  no prod billing cron exists at all. So the _scheduled_ checks in section 16 will not fire on
+  staging until those are resumed, and no billing mail sends on its own in either environment.
+  Section 17 is unaffected: those 12 samples come from the Admin ▸ Settings test-email picker,
+  which sends directly. Verified against the live Render API on 2026-09-19.
 - **Paid account states need staging.** There is no admin control that grants a tier, so supporter,
   premium and gifted accounts can only be reached by going through checkout — which means
   **section 12's matrix is walked on staging with Stripe in test mode**, not on prod. Prod covers
@@ -335,7 +337,8 @@ Not clickable, but launch depends on them. Verify from admin, logs, or your inbo
 
 ## 17. Email
 
-Trigger each and read it on mobile and desktop. These are the 12 entries in `EMAIL_TEMPLATE_KEYS`.
+Trigger each from the Admin ▸ Settings test-email picker and read it on mobile and desktop. These
+are the 12 entries in `EMAIL_TEMPLATE_KEYS`.
 Every one carries an unsubscribe link except the billing family, which is transactional by design.
 (`templates/unlocks.ts` is not an email — it supplies the shared feature list the welcome and
 winback mails render, so check that list reads correctly inside those.)
