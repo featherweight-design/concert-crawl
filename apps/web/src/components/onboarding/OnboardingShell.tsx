@@ -16,17 +16,24 @@ import { YoureIn } from './steps/YoureIn'
 import { ONBOARDING_COPY } from './definitions/copy'
 import { SkipRail, type SkipMode } from './SkipRail'
 import { useOnboardingSuggestions } from './lib/use-pick-suggestions'
+import { useArtistSearch } from '@/components/consumer/artist-picker/lib/use-artist-search'
 import { useArtistPicksCommit } from './lib/use-artist-picks-commit'
 import { usePlanState } from '@/lib/queries/use-plan-state'
 import { useEntitlement } from '@/lib/queries/use-entitlement'
 import { TierPickerSheet } from '@/components/consumer/tier-picker/lazy'
+import type { ArtistSearchState } from '@/components/consumer/artist-picker/lib/use-artist-search'
 import {
   ARTIST_PICKS_KEY,
   GENRE_PICKS_KEY,
+  SEARCH_PICKS_KEY,
   PICK_COLUMNS_DESKTOP,
   PICK_COLUMNS_MOBILE,
   readPicks,
   writePicks,
+  readStepIndex,
+  writeStepIndex,
+  clearPicks,
+  STEP_INDEX_KEY,
   type PickArtist,
 } from '@/components/consumer/artist-picker'
 import {
@@ -71,8 +78,21 @@ interface StepContentProps {
   suggestions: PickArtist[]
   suggestionsLoading: boolean
   suggestionsErrored: boolean
+  onSuggestionsRetry: () => void
   pickedArtists: ReadonlySet<string>
   onToggleArtist: (slug: string) => void
+  /**
+   * The artists step's search mode. Held by the shell for the same reason the
+   * suggestions fetch is: both trees render at once, and a mode held in the
+   * step would let the visible one and the hidden one disagree.
+   */
+  searching: boolean
+  searchQuery: string
+  onSearchQueryChange: (next: string) => void
+  onSearchOpen: () => void
+  onSearchClose: () => void
+  searchResults: PickArtist[]
+  searchState: ArtistSearchState
 }
 
 function StepContent({
@@ -84,8 +104,16 @@ function StepContent({
   suggestions,
   suggestionsLoading,
   suggestionsErrored,
+  onSuggestionsRetry,
   pickedArtists,
   onToggleArtist,
+  searching,
+  searchQuery,
+  onSearchQueryChange,
+  onSearchOpen,
+  onSearchClose,
+  searchResults,
+  searchState,
 }: StepContentProps) {
   if (stepKey === 'welcome') return <FounderNote />
   if (stepKey === 'how') return <HowItWorks />
@@ -109,7 +137,15 @@ function StepContent({
         onToggle={onToggleArtist}
         loading={suggestionsLoading}
         errored={suggestionsErrored}
+        onRetry={onSuggestionsRetry}
         columns={columns}
+        searching={searching}
+        searchQuery={searchQuery}
+        onSearchQueryChange={onSearchQueryChange}
+        onSearchOpen={onSearchOpen}
+        onSearchClose={onSearchClose}
+        searchResults={searchResults}
+        searchState={searchState}
       />
     )
   }
@@ -214,10 +250,22 @@ export function OnboardingShell({
   const [pickedArtists, setPickedArtists] = useState<ReadonlySet<string>>(
     () => new Set(),
   )
+  // The subset of those that came from search. See SEARCH_PICKS_KEY: the
+  // prune below keeps the selection to what the grid shows, and a search pick
+  // has no tile in it by definition.
+  const [searchPicks, setSearchPicks] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  )
   const [picksHydrated, setPicksHydrated] = useState(false)
   useEffect(() => {
     setPickedGenres(new Set(readPicks(GENRE_PICKS_KEY)))
     setPickedArtists(new Set(readPicks(ARTIST_PICKS_KEY)))
+    setSearchPicks(new Set(readPicks(SEARCH_PICKS_KEY)))
+    // The step comes back with the picks, and for the same reason: a
+    // redirect-based payment method returns to /onboarding, and restoring the
+    // selection onto step 1 of 8 puts a visitor who has just paid six presses
+    // from the rail they were firing.
+    setIndex(readStepIndex(FLOW.length))
     setPicksHydrated(true)
   }, [])
 
@@ -232,12 +280,43 @@ export function OnboardingShell({
     if (!picksHydrated) return
     writePicks(ARTIST_PICKS_KEY, Array.from(pickedArtists))
   }, [picksHydrated, pickedArtists])
+  useEffect(() => {
+    if (!picksHydrated) return
+    writeStepIndex(index)
+  }, [picksHydrated, index])
+  useEffect(() => {
+    if (!picksHydrated) return
+    writePicks(SEARCH_PICKS_KEY, Array.from(searchPicks))
+  }, [picksHydrated, searchPicks])
 
   const toggleGenre = useCallback((genre: string) => {
     setPickedGenres((previous) => toggleIn(previous, genre))
   }, [])
+  // Read through a ref rather than closed over: this callback is declared
+  // above the mode state, and a dependency on it would rebuild the handler
+  // every time the mode flips for no gain.
+  const searchingRef = useRef(false)
+  const pickedRef = useRef<ReadonlySet<string>>(pickedArtists)
   const toggleArtist = useCallback((slug: string) => {
+    // The marker follows the TRANSITION, not the mode. Toggling it on the mode
+    // alone marks a grid pick as a search pick when it is unticked with the
+    // field open — and that stale mark then exempts it from the prune the next
+    // time the grid refetches, which is the bug the prune exists to prevent.
+    //
+    // So: mark only when a search click SELECTS something, and clear the mark
+    // on every unselect and on every grid click, because either one means the
+    // slug is no longer a pick this component has to protect.
+    const selecting = !pickedRef.current.has(slug)
     setPickedArtists((previous) => toggleIn(previous, slug))
+    setSearchPicks((previous) => {
+      if (selecting && searchingRef.current) {
+        return previous.has(slug) ? previous : new Set(previous).add(slug)
+      }
+      if (!previous.has(slug)) return previous
+      const next = new Set(previous)
+      next.delete(slug)
+      return next
+    })
   }, [])
 
   const onArtistsStep = stepKey === 'artists'
@@ -246,7 +325,31 @@ export function OnboardingShell({
     loading: suggestionsLoading,
     loaded: suggestionsLoaded,
     errored: suggestionsErrored,
+    retry: retrySuggestions,
   } = useOnboardingSuggestions(Array.from(pickedGenres), onArtistsStep)
+
+  // The artists step's search mode. Here rather than in the step because both
+  // trees render at once — see StepContentProps.
+  const [searching, setSearching] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  // Hoisted beside the suggestions read, and for the same reason: both trees
+  // are mounted, so a fetch inside the step runs twice per keystroke.
+  const { results: searchResults, state: searchState } = useArtistSearch(
+    searching ? searchQuery : '',
+  )
+  searchingRef.current = searching
+  pickedRef.current = pickedArtists
+  const openSearch = useCallback(() => setSearching(true), [])
+  const closeSearch = useCallback(() => {
+    setSearching(false)
+    setSearchQuery('')
+  }, [])
+  // Leaving the step closes the mode. Without this, stepping back to the
+  // genres and forward again returns to a search field over a grid the
+  // visitor has just changed the inputs to.
+  useEffect(() => {
+    if (!onArtistsStep) closeSearch()
+  }, [onArtistsStep, closeSearch])
 
   // Going back to change genres refetches the grid, and a pick that is no
   // longer in it has no tile left to untick. Left alone it would keep inflating
@@ -260,10 +363,16 @@ export function OnboardingShell({
     if (!onArtistsStep || !suggestionsLoaded) return
     const visible = new Set(suggestions.map((artist) => artist.slug))
     setPickedArtists((previous) => {
-      const kept = Array.from(previous).filter((slug) => visible.has(slug))
+      // A search pick is exempt: it never had a tile here, so "no longer in
+      // the grid" says nothing about it. Without this it vanished the moment
+      // the suggestions landed — on first load, after a retry, or when the
+      // genres changed — and the rail's count fell with it.
+      const kept = Array.from(previous).filter(
+        (slug) => visible.has(slug) || searchPicks.has(slug),
+      )
       return kept.length === previous.size ? previous : new Set(kept)
     })
-  }, [onArtistsStep, suggestionsLoaded, suggestions])
+  }, [onArtistsStep, suggestionsLoaded, suggestions, searchPicks])
 
   const { data: planState } = usePlanState()
   const following = useEntitlement('following')
@@ -294,6 +403,12 @@ export function OnboardingShell({
 
   function goNext() {
     if (isLast) {
+      // The step mirror dies here too. The artists commit clears it BEFORE
+      // advancing, so the effect above immediately stores the `done` index —
+      // leaving it behind reopens the tour on its own send-off screen for
+      // anyone who comes back from the account menu in the same session.
+      clearPicks(SEARCH_PICKS_KEY)
+      clearPicks(STEP_INDEX_KEY)
       router.push(finishHref)
       return
     }
@@ -314,8 +429,16 @@ export function OnboardingShell({
     suggestions,
     suggestionsLoading,
     suggestionsErrored,
+    onSuggestionsRetry: retrySuggestions,
     pickedArtists,
     onToggleArtist: toggleArtist,
+    searching,
+    searchQuery,
+    onSearchQueryChange: setSearchQuery,
+    onSearchOpen: openSearch,
+    onSearchClose: closeSearch,
+    searchResults,
+    searchState,
   }
 
   // Back is held shut while the follow write is in flight. `advance()` steps

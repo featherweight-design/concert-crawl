@@ -465,6 +465,71 @@ describe('OnboardingShell — genres then artists', () => {
     ).toEqual(['geese'])
   })
 
+  // The prune keeps the selection to what the GRID shows, and a search pick
+  // has no tile there by definition — so without an exemption it vanished the
+  // moment the suggestions landed, taking the rail's count with it. Restored
+  // from the mirror rather than clicked, because the same drop happens on the
+  // upgrade round trip, which is the case the mirror exists for.
+  it('keeps a pick made in search when the grid refetches without it', async () => {
+    window.sessionStorage.setItem(
+      'cc.onboarding.artistPicks',
+      JSON.stringify(['geese', 'ghost']),
+    )
+    window.sessionStorage.setItem(
+      'cc.onboarding.searchPicks',
+      JSON.stringify(['ghost']),
+    )
+    renderShell()
+    await goToArtists()
+
+    // `ghost` is in neither the grid nor the suggestions, and survives.
+    await waitFor(() =>
+      expect(primaryCtas()[0]!.textContent).toMatch(/\b2 artists\b/),
+    )
+    expect(
+      JSON.parse(
+        window.sessionStorage.getItem('cc.onboarding.artistPicks') ?? '[]',
+      ),
+    ).toEqual(['geese', 'ghost'])
+  })
+
+  // The search marker follows the TRANSITION, not the mode. Marking on the
+  // mode alone leaves a stale mark behind — untick a grid pick with the field
+  // open and it is marked as a search pick — and that mark then exempts a real
+  // grid pick from the prune the next time the grid refetches.
+  it('clears the search mark on a grid click, however the pick was made', async () => {
+    window.sessionStorage.setItem(
+      'cc.onboarding.artistPicks',
+      JSON.stringify(['geese']),
+    )
+    window.sessionStorage.setItem(
+      'cc.onboarding.searchPicks',
+      JSON.stringify(['geese']),
+    )
+    renderShell()
+    await goToArtists()
+
+    // `unknown`, not `as string[]`: the value comes out of storage the test
+    // itself is asserting about, and a cast would make a malformed mirror
+    // read as a clean one. `toEqual` compares it fine without the claim.
+    const readMark = (): unknown =>
+      JSON.parse(
+        window.sessionStorage.getItem('cc.onboarding.searchPicks') ?? '[]',
+      )
+
+    // Unticking in the grid drops the mark with the pick.
+    act(() => tile(/geese/i).click())
+    await waitFor(() => expect(readMark()).toEqual([]))
+
+    // And re-picking in the grid does not put it back: this is a grid pick
+    // now, and the prune is entitled to it.
+    act(() => tile(/geese/i).click())
+    await waitFor(() =>
+      expect(primaryCtas()[0]!.textContent).toMatch(/\b1 artist\b/),
+    )
+    expect(readMark()).toEqual([])
+  })
+
   // A failed fetch also stops loading and also reports zero artists. Pruning
   // against that would wipe the selection the upgrade round-trip just restored.
   it('keeps a restored selection when the suggestions fetch fails', async () => {

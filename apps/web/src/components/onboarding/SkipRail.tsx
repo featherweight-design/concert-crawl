@@ -6,6 +6,8 @@ import { DEFAULT_RETURN_PATH } from '@/lib/auth/intent'
 import {
   ARTIST_PICKS_KEY,
   GENRE_PICKS_KEY,
+  SEARCH_PICKS_KEY,
+  STEP_INDEX_KEY,
   clearPicks,
 } from '@/components/consumer/artist-picker'
 
@@ -20,6 +22,12 @@ const copy = ONBOARDING_COPY.nav.skip
 const dropPickMirrors = () => {
   clearPicks(GENRE_PICKS_KEY)
   clearPicks(ARTIST_PICKS_KEY)
+  // The step mirror goes with them. It survives the upgrade round trip by
+  // design, and skipping is the visitor saying they are done with the tour —
+  // leaving it behind reopens /onboarding mid-flow with the picks already
+  // dropped, which is the worst of both.
+  clearPicks(SEARCH_PICKS_KEY)
+  clearPicks(STEP_INDEX_KEY)
 }
 
 export type SkipMode =

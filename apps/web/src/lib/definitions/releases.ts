@@ -55,6 +55,10 @@ export const RELEASES: Release[] = [
         kind: 'fixed',
         text: 'Picking artists to follow in the welcome tour works now.',
       },
+      {
+        kind: 'added',
+        text: 'Search for an artist by name in the welcome tour, without leaving it.',
+      },
     ],
   },
   {

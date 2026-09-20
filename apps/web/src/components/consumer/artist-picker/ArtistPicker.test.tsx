@@ -5,23 +5,12 @@ import '@testing-library/jest-dom'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ArtistPicker } from './ArtistPicker'
 import { ARTIST_PICKER_COPY } from './definitions/copy'
+import {
+  SEARCH_FIELD_BOX,
+  SEARCH_FIELD_FONT_SIZE,
+} from '@/components/consumer/search/definitions/constants'
 import { FOLLOWING_COPY } from '@/components/consumer/following/definitions/copy'
 import type { PickArtist } from './definitions/types'
-
-vi.mock('next/link', () => ({
-  default: ({
-    href,
-    children,
-    ...rest
-  }: {
-    href: string
-    children: React.ReactNode
-  }) => (
-    <a href={href} {...rest}>
-      {children}
-    </a>
-  ),
-}))
 
 const ARTISTS: PickArtist[] = [
   { slug: 'punk-act', name: 'Punk Act', photoUrl: null, dateLabel: 'Sep 12' },
@@ -35,6 +24,13 @@ function renderPicker(overrides: Partial<Parameters<typeof ArtistPicker>[0]>) {
     onToggle: vi.fn(),
     loading: false,
     columns: 2,
+    searching: false,
+    searchQuery: '',
+    onSearchQueryChange: vi.fn(),
+    onSearchOpen: vi.fn(),
+    onSearchClose: vi.fn(),
+    searchResults: [] as PickArtist[],
+    searchState: 'rest' as const,
     ...overrides,
   }
   render(<ArtistPicker {...props} />)
@@ -110,12 +106,288 @@ describe('ArtistPicker', () => {
   })
 
   it('always offers the search escape, even when empty', () => {
-    renderPicker({ artists: [] })
-    const escape = screen.getByRole('link', {
+    const props = renderPicker({ artists: [] })
+    // A button, never a link: it opens a mode on this step. As a link to
+    // /search it walked the visitor out of a committing flow holding an
+    // uncommitted selection.
+    const escape = screen.getByRole('button', {
       name: ARTIST_PICKER_COPY.searchEscape,
     })
-    expect(escape).toHaveAttribute('href', '/search')
-    // ACC-20: the escape is a full-size target, not a text link.
-    expect(escape).toHaveStyle({ minHeight: '44px' })
+    expect(screen.queryByRole('link')).not.toBeInTheDocument()
+    fireEvent.click(escape)
+    expect(props.onSearchOpen).toHaveBeenCalled()
+    // ACC-20: a full-size target, not a text link.
+    expect(escape).toHaveStyle({ height: '44px' })
+  })
+
+  it('offers a retry and nothing else when the suggestions fail', () => {
+    const onRetry = vi.fn()
+    renderPicker({ artists: [], errored: true, onRetry })
+
+    fireEvent.click(
+      screen.getByRole('button', { name: ARTIST_PICKER_COPY.errorRetry }),
+    )
+    expect(onRetry).toHaveBeenCalled()
+    // The step is skippable from the rail above and the commit below already
+    // reads "Continue without following" at zero picks, so a third way out
+    // stated here is noise in the one state that needs one clear action.
+    expect(
+      screen.queryByRole('button', { name: ARTIST_PICKER_COPY.searchBack }),
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe('ArtistPicker — where the trigger sits', () => {
+  it('draws it under the grid on the phone', () => {
+    renderPicker({ columns: 2 })
+    const trigger = screen.getByRole('button', {
+      name: ARTIST_PICKER_COPY.searchEscape,
+    })
+    const grid = screen.getByRole('group', {
+      name: ARTIST_PICKER_COPY.groupLabel,
+    })
+    // compareDocumentPosition rather than a class or an index: what the
+    // ruling is about is which one the reader meets first.
+    expect(
+      grid.compareDocumentPosition(trigger) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+  })
+
+  it('lifts it above a five-column grid, where a full-width strip would read as an empty row', () => {
+    renderPicker({ columns: 5, triggerAbove: true })
+    const trigger = screen.getByRole('button', {
+      name: ARTIST_PICKER_COPY.searchEscape,
+    })
+    const grid = screen.getByRole('group', {
+      name: ARTIST_PICKER_COPY.groupLabel,
+    })
+    expect(
+      grid.compareDocumentPosition(trigger) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy()
+    // One control, not two: the desktop tree must not draw both placements.
+    expect(
+      screen.getAllByRole('button', {
+        name: ARTIST_PICKER_COPY.searchEscape,
+      }),
+    ).toHaveLength(1)
+  })
+})
+
+describe('ArtistPicker — search mode', () => {
+  // One pick already made on the grid, so the strip has something to keep.
+  const searchProps = {
+    searching: true,
+    searchQuery: '',
+    selected: new Set(['punk-act']),
+  }
+
+  it('replaces the grid with the field and keeps the trigger out of the way', () => {
+    renderPicker(searchProps)
+
+    expect(
+      screen.getByRole('textbox', {
+        name: ARTIST_PICKER_COPY.searchFieldLabel,
+      }),
+    ).toBeInTheDocument()
+    // The suggestion tiles are gone, so no stale checkbox can take a tap.
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: ARTIST_PICKER_COPY.searchEscape }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps the picks visible while the grid is off screen', () => {
+    renderPicker(searchProps)
+    // The whole reason this strip exists: the selection survives in
+    // sessionStorage and nothing on screen used to say so, which made leaving
+    // the grid look exactly like losing what you picked.
+    expect(screen.getByText(ARTIST_PICKER_COPY.pickedCount(1))).toBeVisible()
+  })
+
+  it('counts the selection, not the faces it happens to have art for', () => {
+    // A pick made in search has no card in this tree after a remount — the
+    // upgrade round trip — so counting resolvable faces would report the
+    // selection as smaller than it is, in the one component whose job is to
+    // promise nothing was lost.
+    renderPicker({
+      ...searchProps,
+      selected: new Set(['punk-act', 'stranger-from-search']),
+    })
+    expect(screen.getByText(ARTIST_PICKER_COPY.pickedCount(2))).toBeVisible()
+  })
+
+  it('prompts rather than apologising before anything is typed', () => {
+    renderPicker(searchProps)
+    expect(screen.getByText(ARTIST_PICKER_COPY.searchRestTitle)).toBeVisible()
+    // Not an empty state: nothing has failed and nothing is missing.
+    expect(
+      screen.queryByText(ARTIST_PICKER_COPY.searchNoneTitle),
+    ).not.toBeInTheDocument()
+  })
+
+  it('renders a result row as a checkbox, never a follow button', () => {
+    // /search's own artist row writes on tap. Rendering it here would put two
+    // commit models over one selection, which is the defect this mode exists
+    // to prevent — so a result speaks the grid's language.
+    renderPicker({
+      ...searchProps,
+      searchQuery: 'jazz',
+      searchState: 'results',
+      searchResults: [ARTISTS[1]!],
+    })
+    const boxes = screen.getAllByRole('checkbox')
+    expect(boxes).toHaveLength(1)
+    expect(boxes[0]).toHaveAccessibleName(/Jazz Act/)
+    expect(
+      screen.queryByRole('button', { name: /^follow/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps the head block out of the way while the field has its slot', () => {
+    // The field REPLACES the head rather than following it: the contract is
+    // that nothing below the slot moves when the mode flips.
+    const head = <p>eyebrow and heading</p>
+    const { rerender } = render(
+      <ArtistPicker
+        {...{
+          artists: ARTISTS,
+          selected: new Set<string>(),
+          onToggle: vi.fn(),
+          loading: false,
+          columns: 2,
+          searchQuery: '',
+          onSearchQueryChange: vi.fn(),
+          onSearchOpen: vi.fn(),
+          onSearchClose: vi.fn(),
+          searchResults: [],
+          searchState: 'rest' as const,
+          head,
+        }}
+        searching={false}
+      />,
+    )
+    expect(screen.getByText('eyebrow and heading')).toBeVisible()
+
+    rerender(
+      <ArtistPicker
+        {...{
+          artists: ARTISTS,
+          selected: new Set<string>(),
+          onToggle: vi.fn(),
+          loading: false,
+          columns: 2,
+          searchQuery: '',
+          onSearchQueryChange: vi.fn(),
+          onSearchOpen: vi.fn(),
+          onSearchClose: vi.fn(),
+          searchResults: [],
+          searchState: 'rest' as const,
+          head,
+        }}
+        searching
+      />,
+    )
+    expect(screen.queryByText('eyebrow and heading')).not.toBeInTheDocument()
+  })
+
+  it('says the matches are already followed, rather than that nobody matched', () => {
+    // The endpoint slices to three rows BEFORE the hook drops the followed
+    // ones, so a query whose closest matches are all followed would otherwise
+    // read as "Nobody by that name" — untrue about an artist the visitor
+    // follows, and the one state where that lie is easy to tell.
+    renderPicker({
+      ...searchProps,
+      searchQuery: 'jazz',
+      searchState: 'allFollowed',
+      searchResults: [],
+    })
+    // Twice on purpose — once drawn, once announced — so this names the
+    // drawn one rather than matching whichever came first.
+    const drawnTitle = screen
+      .getAllByText(ARTIST_PICKER_COPY.searchAllFollowedTitle)
+      .find((element) => element.closest('[role="status"]') === null)
+    expect(drawnTitle).toBeVisible()
+    expect(
+      screen.queryByText(ARTIST_PICKER_COPY.searchNoneTitle),
+    ).not.toBeInTheDocument()
+    // Still offers the way back, as the no-match state does. Named
+    // distinctly from the field's own X, which does the same thing.
+    expect(
+      screen.getByRole('button', { name: ARTIST_PICKER_COPY.searchBack }),
+    ).toBeVisible()
+    expect(
+      screen.getByRole('button', {
+        name: ARTIST_PICKER_COPY.searchCloseLabel,
+      }),
+    ).toBeVisible()
+  })
+
+  // A list that empties in silence tells a screen-reader user nothing about
+  // why. The visible Notice is not live, so the status region has to carry it.
+  it.each([
+    ['none', ARTIST_PICKER_COPY.searchNoneTitle],
+    ['allFollowed', ARTIST_PICKER_COPY.searchAllFollowedTitle],
+  ] as const)(
+    'announces the %s state, not a stale "searching"',
+    (state, announced) => {
+      renderPicker({
+        ...searchProps,
+        searchQuery: 'jazz',
+        searchState: state,
+        searchResults: [],
+      })
+      expect(screen.getByRole('status')).toHaveTextContent(announced)
+      expect(screen.getByRole('status')).not.toHaveTextContent(
+        ARTIST_PICKER_COPY.searchOpened,
+      )
+    },
+  )
+
+  it('closes the mode from the field, without clearing it first', () => {
+    const props = renderPicker(searchProps)
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: ARTIST_PICKER_COPY.searchCloseLabel,
+      }),
+    )
+    expect(props.onSearchClose).toHaveBeenCalled()
+    expect(props.onSearchQueryChange).not.toHaveBeenCalled()
+  })
+
+  it('closes on Escape from the field', () => {
+    const props = renderPicker(searchProps)
+    fireEvent.keyDown(
+      screen.getByRole('textbox', {
+        name: ARTIST_PICKER_COPY.searchFieldLabel,
+      }),
+      { key: 'Escape' },
+    )
+    expect(props.onSearchClose).toHaveBeenCalled()
+  })
+
+  it('sizes the field at 16px, so iOS Safari does not zoom the step', () => {
+    renderPicker(searchProps)
+    // Below 16 the whole card zooms on focus, which on a fixed-height card
+    // pushes the commit rail off screen — the one control the step is for.
+    expect(
+      screen.getByRole('textbox', {
+        name: ARTIST_PICKER_COPY.searchFieldLabel,
+      }),
+    ).toHaveStyle({ fontSize: `${SEARCH_FIELD_FONT_SIZE}px` })
+  })
+
+  // The brief asks for "the same object as the one on /search". Read off the
+  // shared constant rather than a literal, so a change to the search bar's box
+  // moves this field with it rather than drifting from it silently.
+  it('wears the search surface own field box', () => {
+    renderPicker(searchProps)
+    const field = screen.getByRole('textbox', {
+      name: ARTIST_PICKER_COPY.searchFieldLabel,
+    }).parentElement
+    expect(field).toHaveStyle({
+      height: `${SEARCH_FIELD_BOX.height}px`,
+      borderRadius: `${SEARCH_FIELD_BOX.borderRadius}px`,
+      background: SEARCH_FIELD_BOX.background,
+    })
   })
 })

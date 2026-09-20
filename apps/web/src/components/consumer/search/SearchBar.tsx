@@ -4,6 +4,10 @@ import { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, X, ArrowLeft } from 'lucide-react'
 import { CONSUMER_COPY } from '@/components/consumer/definitions/copy'
+import {
+  SEARCH_FIELD_BOX,
+  SEARCH_FIELD_FONT_SIZE,
+} from './definitions/constants'
 
 const copy = CONSUMER_COPY.search
 
@@ -58,19 +62,7 @@ export function SearchBar({
           <ArrowLeft size={18} strokeWidth={1.5} />
         </button>
       )}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          height: 44,
-          padding: '0 14px',
-          borderRadius: 12,
-          background: 'var(--surface-2)',
-          border: '1px solid var(--border)',
-        }}
-      >
+      <div style={{ flex: 1, ...SEARCH_FIELD_BOX }}>
         <span
           style={{
             color: 'var(--fg-muted)',
@@ -93,7 +85,7 @@ export function SearchBar({
             background: 'transparent',
             fontFamily: 'var(--font-ui)',
             fontWeight: 500,
-            fontSize: 15,
+            fontSize: SEARCH_FIELD_FONT_SIZE,
             color: 'var(--fg)',
             letterSpacing: '-0.01em',
           }}

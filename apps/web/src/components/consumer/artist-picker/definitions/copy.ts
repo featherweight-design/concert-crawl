@@ -34,6 +34,46 @@ export const ARTIST_PICKER_COPY = {
   // the listings for our own outage and leaves the reader nothing to do about
   // it. The diagnosis stays; the internals do not.
   errorTitle: "That list didn't load.",
-  errorBody:
-    'Something went wrong on our end. Search for anyone by name instead, or give it another go in a minute.',
+  // Retry is the whole offer. The step is skippable from the rail above and
+  // the button below already reads "Continue without following" at zero picks,
+  // so a third way out stated here is noise in the one state that needs a
+  // clear single action.
+  errorBody: 'Something went wrong on our end. Give it another go.',
+  errorRetry: 'Try again',
+
+  // ── In-step search ──────────────────────────────────────────────────
+  // The field's own placeholder. A name, not "search artists": the grid above
+  // is the artists we picked, and this is the one the visitor had in mind that
+  // we missed. The label carries the rest for a screen reader.
+  searchPlaceholder: 'Type a name',
+  searchFieldLabel: 'Search artists by name',
+  // The field's own X. Distinct from `searchBack` below, which is the labelled
+  // control in the no-results body: both return to the grid, and two buttons
+  // reading "Back to suggestions" is the same name twice in a rotor listing.
+  searchCloseLabel: 'Close search',
+  // Before two characters are typed. A prompt, not an empty state — nothing
+  // has failed and nothing is missing.
+  searchRestTitle: 'Who are you looking for?',
+  searchRestBody:
+    'Anyone who has played Denver is in here, whether or not they have a date coming up.',
+  // Every match was already followed. Deliberately NOT "nobody by that name",
+  // which is untrue about an artist the visitor follows, and deliberately not
+  // a claim of completeness either: the endpoint answers with its closest
+  // three, so a narrower name may still turn up someone new.
+  searchAllFollowedTitle: 'You already follow those.',
+  searchAllFollowedBody:
+    'Every close match is in your follows already. Try a more specific name, or go back to the suggestions.',
+  searchNoneTitle: 'Nobody by that name.',
+  searchNoneBody:
+    "We only know acts billed on a Denver date we've crawled. Check the spelling, or go back to the suggestions.",
+  searchBack: 'Back to suggestions',
+  // Announced as the query narrows, so a screen reader hears the count change
+  // without the rows being re-read.
+  searchResultCount: (count: number) =>
+    `${count} ${count === 1 ? 'artist' : 'artists'}`,
+  // Announced when the field opens. Says where you are AND that the step is
+  // unchanged, because the grid vanishing is the moment a tour feels lost.
+  searchOpened: 'Searching artists. Your picks are kept.',
+  /** The strip above the rail while the grid is off screen. */
+  pickedCount: (count: number) => `Picked · ${count}`,
 } as const

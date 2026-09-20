@@ -76,3 +76,52 @@ export function clearPicks(key: string): void {
     console.warn('artist picks mirror clear failed', err)
   }
 }
+
+/**
+ * The step the tour is on, mirrored beside the picks.
+ *
+ * It exists for the same round trip the picks do, and closes the half they
+ * missed. A locked visitor who upgrades mid-tour normally confirms in place —
+ * the sheet's checkout is embedded — but a redirect-based payment method in
+ * Stripe's Payment Element does leave the page and come back to
+ * `return_url`, which is `/onboarding`. The picks restore; the index did not,
+ * so a visitor who had just paid landed on step 1 of 8 holding their
+ * selection, six presses from the rail they were firing.
+ *
+ * `session`, like the picks: a step is a thing you are in the middle of, not
+ * a preference. Out of range reads as absent, so shrinking the flow can never
+ * strand anyone past its end.
+ */
+export const STEP_INDEX_KEY = 'cc.onboarding.stepIndex'
+
+export function readStepIndex(total: number): number {
+  if (typeof window === 'undefined') return 0
+  try {
+    const raw = window.sessionStorage.getItem(STEP_INDEX_KEY)
+    if (raw === null) return 0
+    // `Number`, not `parseInt`: the latter truncates, so a stored "3.5" would
+    // read back as step 3 rather than as the corruption it is. Nothing writes
+    // a fraction here, so anything that is not a whole number came from
+    // somewhere that does not get to choose the step.
+    const parsed = Number(raw)
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed >= total) return 0
+    return parsed
+  } catch (err: unknown) {
+    console.warn('onboarding step mirror read failed', err)
+    return 0
+  }
+}
+
+/** Step 0 clears rather than storing `0` — see `writePicks` for the reasoning. */
+export function writeStepIndex(index: number): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (index <= 0) {
+      window.sessionStorage.removeItem(STEP_INDEX_KEY)
+      return
+    }
+    window.sessionStorage.setItem(STEP_INDEX_KEY, String(index))
+  } catch (err: unknown) {
+    console.warn('onboarding step mirror write failed', err)
+  }
+}

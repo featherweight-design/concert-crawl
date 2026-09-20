@@ -117,6 +117,11 @@ export function useSearch() {
   const [artistResults, setArtistResults] = useState<ArtistResult[]>([])
   // #1115 PR-G — artists with their own page. Distinct from `artistResults`,
   // which is derived from matching events and routes to a filtered browse.
+  const getTokenRef = useRef(getToken)
+  useEffect(() => {
+    getTokenRef.current = getToken
+  }, [getToken])
+
   const [artistPageResults, setArtistPageResults] = useState<
     ArtistSearchResult[]
   >([])
@@ -130,7 +135,7 @@ export function useSearch() {
 
     void (async () => {
       try {
-        const token = await getToken()
+        const token = await getTokenRef.current()
         fetch(`${API_URL}/v1/search/popular`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         })
@@ -145,7 +150,9 @@ export function useSearch() {
         console.error(err)
       }
     })()
-  }, [getToken])
+    // Mount only. Listed on `getToken` this re-fetched the popular list every
+    // time `useAuth()` handed back a new function, which it is free to do.
+  }, [])
 
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -173,7 +180,7 @@ export function useSearch() {
       setVenueResults([])
       void (async () => {
         try {
-          const token = await getToken()
+          const token = await getTokenRef.current()
           fetch(
             `${API_URL}/v1/events?search=${encodeURIComponent(trimmed)}&limit=100`,
             {
@@ -228,7 +235,12 @@ export function useSearch() {
       if (debounceRef.current) clearTimeout(debounceRef.current)
       abortRef.current?.abort()
     }
-  }, [query, getToken])
+    // `getToken` is read through the ref rather than listed here. `useAuth()`
+    // makes no promise of returning the same function across renders, and an
+    // unstable one makes this effect a function of the render rather than of
+    // the query: it re-runs, aborts its own in-flight request and starts
+    // another, which reads as a slow search rather than a bug.
+  }, [query])
 
   const clearQuery = useCallback(() => {
     setQuery('')

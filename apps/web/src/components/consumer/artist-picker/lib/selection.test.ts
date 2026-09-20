@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { readPicks, writePicks, clearPicks } from './selection'
+import {
+  readPicks,
+  writePicks,
+  clearPicks,
+  readStepIndex,
+  writeStepIndex,
+  STEP_INDEX_KEY,
+} from './selection'
 
 const KEY = 'cc.test.picks'
 
@@ -65,5 +72,65 @@ describe('artist picks mirror', () => {
       throw new Error('QuotaExceededError')
     })
     expect(() => writePicks(KEY, ['alpha'])).not.toThrow()
+  })
+})
+
+// The step mirror rides beside the picks and carries the same rules, but it
+// protects a different moment: a redirect-based payment method returns to
+// /onboarding, which mounts at index 0, so without this a visitor who has
+// just paid lands on step 1 of 8 holding their selection.
+const FLOW_LENGTH = 8
+
+describe('onboarding step mirror', () => {
+  beforeEach(() => {
+    window.sessionStorage.clear()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('reads back the step it was given', () => {
+    writeStepIndex(6)
+    expect(readStepIndex(FLOW_LENGTH)).toBe(6)
+  })
+
+  it('clears rather than storing step 0, so no key outlives the step', () => {
+    writeStepIndex(6)
+    writeStepIndex(0)
+    expect(window.sessionStorage.getItem(STEP_INDEX_KEY)).toBeNull()
+    expect(readStepIndex(FLOW_LENGTH)).toBe(0)
+  })
+
+  it('starts at the beginning when nothing is stored', () => {
+    expect(readStepIndex(FLOW_LENGTH)).toBe(0)
+  })
+
+  // Out of range reads as absent rather than throwing or clamping: shrinking
+  // the flow must never strand anyone past its end, and a stored index the
+  // flow no longer has is indistinguishable from no mirror at all.
+  it.each(['8', '99', '-1', 'not-a-number', '', '3.5'])(
+    'falls back to the first step for a stored %s',
+    (stored) => {
+      window.sessionStorage.setItem(STEP_INDEX_KEY, stored)
+      expect(readStepIndex(FLOW_LENGTH)).toBe(0)
+    },
+  )
+
+  it('keeps the last step of the flow, which is in range', () => {
+    writeStepIndex(FLOW_LENGTH - 1)
+    expect(readStepIndex(FLOW_LENGTH)).toBe(FLOW_LENGTH - 1)
+  })
+
+  it('survives a storage that throws, like Safari private mode', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError')
+    })
+    expect(() => writeStepIndex(4)).not.toThrow()
+
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError')
+    })
+    expect(readStepIndex(FLOW_LENGTH)).toBe(0)
   })
 })

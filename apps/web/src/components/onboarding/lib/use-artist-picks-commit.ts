@@ -20,6 +20,8 @@ import { planStateQueryKey } from '@/lib/queries/use-plan-state'
 import {
   ARTIST_PICKS_KEY,
   GENRE_PICKS_KEY,
+  SEARCH_PICKS_KEY,
+  STEP_INDEX_KEY,
   clearPicks,
 } from '@/components/consumer/artist-picker'
 
@@ -59,6 +61,11 @@ export function useArtistPicksCommit(onDone: () => void): ArtistPicksCommit {
   const finishStep = useCallback(() => {
     clearPicks(ARTIST_PICKS_KEY)
     clearPicks(GENRE_PICKS_KEY)
+    // The step mirror goes with them. It exists to survive the upgrade round
+    // trip, and that trip is over: leaving it behind would reopen the tour on
+    // the artists step for a visitor who has finished with it.
+    clearPicks(SEARCH_PICKS_KEY)
+    clearPicks(STEP_INDEX_KEY)
     onDone()
   }, [onDone])
 

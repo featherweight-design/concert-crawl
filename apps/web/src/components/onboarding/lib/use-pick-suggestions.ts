@@ -34,6 +34,8 @@ export function useOnboardingSuggestions(
   loading: boolean
   loaded: boolean
   errored: boolean
+  /** Re-runs the read. The error state's only offer, so it has to be real. */
+  retry: () => void
 } {
   // The genre set is part of the key, so re-picking on the step before this
   // one refetches rather than showing the previous lane's artists.
@@ -79,5 +81,11 @@ export function useOnboardingSuggestions(
     loading: enabled && query.isPending,
     loaded: query.isSuccess,
     errored: enabled && query.isError,
+    // `refetch` rather than invalidating the key: `staleTime: Infinity` means
+    // an invalidation marks the entry stale without anyone asking for it
+    // again, so the button would report success and change nothing.
+    retry: () => {
+      void query.refetch()
+    },
   }
 }

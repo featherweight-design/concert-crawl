@@ -1,10 +1,18 @@
 export { ArtistPicker } from './ArtistPicker'
 export { ArtistPickTile } from './ArtistPickTile'
 export { PickGrid } from './PickGrid'
-export { readPicks, writePicks, clearPicks } from './lib/selection'
+export {
+  readPicks,
+  writePicks,
+  clearPicks,
+  readStepIndex,
+  writeStepIndex,
+  STEP_INDEX_KEY,
+} from './lib/selection'
 export {
   ARTIST_PICKS_KEY,
   GENRE_PICKS_KEY,
+  SEARCH_PICKS_KEY,
   PICK_COLUMNS_MOBILE,
   PICK_COLUMNS_DESKTOP,
   PICK_SUGGESTION_LIMIT,
