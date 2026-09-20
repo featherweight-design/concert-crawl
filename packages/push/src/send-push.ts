@@ -157,6 +157,16 @@ export async function sendPushForNotification(input: SendPushInput): Promise<{
 
   // `silent` rides in the payload because it is an argument to
   // showNotification in the service worker, not a property of the delivery.
+  //
+  // ROLLOUT WINDOW: a push is handled by the service worker already installed
+  // on the device, and a new one is only fetched on navigation (or a
+  // push-triggered update check once the script is a day stale). So the first
+  // push to a device that has not opened the app since this deploy runs the
+  // OLD handler, which has no `silent` support and will therefore be audible.
+  // Self-limiting — that push updates the worker, and `skipWaiting` +
+  // `clientsClaim` in sw.ts make the replacement active at once — but it does
+  // mean "3 AM pushes are silent" is true from the SECOND one onward on a
+  // stale device, not the first.
   const policy = deliveryPolicyFor(input.category)
   const payload = JSON.stringify({
     title: input.title,

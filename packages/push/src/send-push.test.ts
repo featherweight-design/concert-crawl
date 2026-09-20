@@ -48,12 +48,16 @@ vi.mock('drizzle-orm', () => ({
   eq: (...args: unknown[]) => args,
   isNull: (...args: unknown[]) => args,
 }))
+// Hoisted so the same spies survive `createLogger()` being called again on
+// each `vi.resetModules()` — a fresh `vi.fn()` per call would make the
+// dispatch record unassertable, which is how it went unasserted at first.
+const loggerSpies = vi.hoisted(() => ({
+  warn: vi.fn(),
+  info: vi.fn(),
+  error: vi.fn(),
+}))
 vi.mock('@concert-crawl/logger', () => ({
-  createLogger: () => ({
-    warn: vi.fn(),
-    info: vi.fn(),
-    error: vi.fn(),
-  }),
+  createLogger: () => loggerSpies,
 }))
 
 const originalEnv = process.env
@@ -197,6 +201,24 @@ describe('sendPushForNotification', () => {
     // making a sound. `silent` travels in the payload because it is an
     // argument to showNotification, not a property of the delivery.
     expect(JSON.parse(payload).silent).toBe(true)
+
+    // The observability half of this fix. Diagnosing the delivery defect took
+    // a forensic pass over two tables precisely because success was never
+    // logged, so the record itself is a contract, not a debug aid.
+    expect(loggerSpies.info).toHaveBeenCalledWith(
+      {
+        userId: 'user_1',
+        category: 'artist.new_show',
+        urgency: 'high',
+        ttlSeconds: 24 * 60 * 60,
+        silent: true,
+        devices: 1,
+        delivered: 1,
+        failed: 0,
+        stale: 0,
+      },
+      'send-push: dispatched',
+    )
   })
 
   it('leaves a time-sensitive watch update audible, with a shorter life', async () => {
