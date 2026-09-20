@@ -135,6 +135,46 @@ describe('MissingTabContent — confirm move', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
+  it('closes the dialog on Escape without merging', () => {
+    const onConfirmMove = vi.fn(async (_event: MissingRowEvent) => {})
+    render(
+      <MissingTabContent
+        events={WITH_CANDIDATE}
+        isDesktop
+        nowIso={NOW}
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onConfirmMove={onConfirmMove}
+        onDismiss={async () => {}}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(onConfirmMove).not.toHaveBeenCalled()
+  })
+
+  // `aria-modal` claims the background is inert, so focus must actually be
+  // inside the dialog. Cancel rather than confirm: the confirm is
+  // irreversible and a stray Enter on open must not commit it.
+  it('moves focus into the dialog, onto the non-destructive action', () => {
+    render(
+      <MissingTabContent
+        events={WITH_CANDIDATE}
+        isDesktop
+        nowIso={NOW}
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onConfirmMove={async () => {}}
+        onDismiss={async () => {}}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.contains(document.activeElement)).toBe(true)
+    expect(document.activeElement?.textContent).toBe('Cancel')
+  })
+
   it('offers no confirm action on a row with no suggestion', () => {
     render(
       <MissingTabContent

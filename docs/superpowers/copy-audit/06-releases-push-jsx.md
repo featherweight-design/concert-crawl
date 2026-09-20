@@ -99,9 +99,13 @@ so every TIGHTEN below is a proposal to be taken back to the handoff, not applie
 
 ### Verdict tally
 
-| CUT | TIGHTEN | TOOLTIP | RENAME | KEEP |
-| --- | ------- | ------- | ------ | ---- |
-| 0   | 9       | 0       | 0      | 6    |
+| CUT | TIGHTEN | TOOLTIP | RENAME | KEEP | REVERSED |
+| --- | ------- | ------- | ------ | ---- | -------- |
+| 0   | 9       | 0       | 0      | 4    | 2        |
+
+The two REVERSED rows were `KEEP` when this audit ran, which is why the original
+tally read 6. Both were reversed on 2026-09-20: they were judged as writing and
+never checked against the product, which holds no refund record.
 
 Of the 9 TIGHTENs, **6 are pure rule-4 or terminal-punctuation fixes** and 3 are genuine
 over-cap trims. Zero cuts, so the 30%-of-strings self-check is trivially clear. No two
