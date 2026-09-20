@@ -319,13 +319,23 @@ leaves no way to reach production except a hand-driven Render deploy.
    The manual controls below (Render Manual Deploy, Vercel Redeploy,
    `rollback-prod.yml`) are deliberately not gated by it, so recovery stays
    possible.
-2. **Rehearse the dispatch while auto-deploy is still on.** Actions → Deploy to
-   Production → Run workflow, on `main`, reason
-   `promotion-gate dry run — verifying the dispatch path before disabling auto-deploy`,
-   leaving the stale-HEAD override unchecked. Expect the gate to pass, five
-   Render deploys to trigger, wait-for-live to clear, the Vercel step to run,
-   smoke to pass, and rollback to stay skipped. This is the last moment a
-   failure is cheap; fix anything here before continuing.
+2. **Rehearse the dispatch while auto-deploy is still on.** ⚠️ This is a real
+   promotion, not a dry run — there is no dry-run mode. It triggers all five
+   Render prod deploys, runs `vercel deploy --prod`, and runs prod smoke with
+   auto-rollback behind it. Promote a `main` HEAD you are willing to have live,
+   and read "rehearsal" as rehearsing the _path_, not the _effect_.
+
+   Actions → Deploy to Production → Run workflow, on `main`, reason
+   `verifying the promotion path before disabling prod auto-deploy`, leaving the
+   stale-HEAD override unchecked. Expect the gate to pass, five Render deploys
+   to trigger, wait-for-live to clear, the Vercel step to run, smoke to pass,
+   and rollback to stay skipped.
+
+   What makes this step cheap is not that it avoids touching production — it is
+   that auto-deploy is still on underneath it, so a broken dispatch still leaves
+   a working path to prod. That is the only safety net being relied on, and
+   steps 3 and 4 remove it. Fix anything here before continuing.
+
 3. Render dashboard → `concert-crawl-api` → Settings → Build & Deploy → set
    **Auto-Deploy** to `No`. Repeat for each of the four prod crons:
    `concert-crawl-crawler-triggers`, `concert-crawl-crawler-daily`,
