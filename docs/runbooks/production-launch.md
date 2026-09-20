@@ -130,12 +130,12 @@ docker run --rm postgres:16 psql "$NEON_PROD_DIRECT" -c "
 
 ### Resend
 
-1. Resend dashboard → **Domains** → **Add Domain** → `concertcrawl.app`
-2. Resend shows four DNS records (two DKIM `TXT`, one SPF `TXT`, one DMARC `TXT`) — add all in Cloudflare. Merge with any existing SPF record rather than creating a second.
-3. **Verify** in Resend — wait for all four to go green
-4. Copy the **API Key**
+> ⚠️ **Read _Email — `venues@concertcrawl.app`, and the DMARC path_ under Operational notes before touching any mail DNS.** The live zone has diverged from what these steps originally described: Resend's own records all sit on the `send.concertcrawl.app` subdomain, the root `TXT` belongs to Cloudflare Email Routing, and DMARC is maintained by hand rather than taken from Resend's suggestion.
 
-The DMARC record is now maintained by hand rather than taken from Resend's suggestion, and the domain also carries inbound routing and a `venues@` reply-as path. See **Email — `venues@concertcrawl.app`, and the DMARC path** under Operational notes before changing any mail DNS.
+1. Resend dashboard → **Domains** → **Add Domain** → `concertcrawl.app`
+2. Add the records Resend shows, in Cloudflare. **Do not merge Resend's SPF into the root `concertcrawl.app` SPF record** — it belongs on `send.concertcrawl.app`, and the Operational notes section explains why that separation is load-bearing.
+3. **Verify** in Resend — DKIM and SPF should go green. Resend may keep flagging DMARC, because the live DMARC record is ours and not the one it suggested. That is expected and is not a failure.
+4. Copy the **API Key**
 
 ### Sentry
 
@@ -606,20 +606,22 @@ The DNS, all in Cloudflare:
 
 | Record                               | Type | Value                                                       | Whose             |
 | ------------------------------------ | ---- | ----------------------------------------------------------- | ----------------- |
-| `concertcrawl.app`                   | MX   | `route1/2/3.mx.cloudflare.net`                              | Email Routing, in |
+| `concertcrawl.app`                   | MX   | `route{1,2,3}.mx.cloudflare.net`, priorities 64 / 98 / 57   | Email Routing, in |
 | `concertcrawl.app`                   | TXT  | `v=spf1 include:_spf.mx.cloudflare.net ~all`                | Email Routing, in |
 | `resend._domainkey.concertcrawl.app` | TXT  | DKIM public key                                             | Resend, out       |
 | `send.concertcrawl.app`              | TXT  | `v=spf1 include:amazonses.com ~all`                         | Resend, out       |
-| `send.concertcrawl.app`              | MX   | `feedback-smtp.us-east-1.amazonses.com`                     | Resend, out       |
+| `send.concertcrawl.app`              | MX   | `feedback-smtp.us-east-1.amazonses.com`, priority 10        | Resend, out       |
 | `_dmarc.concertcrawl.app`            | TXT  | `v=DMARC1; p=none; rua=mailto:dmarc@concertcrawl.app; fo=1` | policy            |
 
 **The root SPF record does not list Resend, and that is correct.** Resend's return path is on `send.concertcrawl.app`, which carries its own SPF, and DMARC's relaxed alignment treats that subdomain as the same organizational domain. Do not "fix" this by merging Amazon SES into the root record — the root SPF exists for Cloudflare's inbound routing and is a different job.
+
+That alignment holds only while the DMARC record leaves `aspf` unset, since relaxed is the default and `aspf=s` would demand an exact domain match. Anyone tightening the policy below must leave `aspf` alone, or add Amazon SES to the root SPF in the same change.
 
 **Gmail side, two settings.** Settings ▸ Accounts ▸ Send mail as carries `Concert Crawl <venues@concertcrawl.app>` sending through `smtp.resend.com` on port 465. Under it, "When replying to a message" must be **"Reply from the same address the message was sent to."** That second setting is the one that does the work: without it Gmail replies as the default address and a venue operator sees a personal domain they have no reason to trust. `venues@` is deliberately **not** the Gmail default, so ordinary mail is unaffected.
 
 **Verifying, whenever this is touched.** Send to a mail-tester.com address from Gmail with the From dropdown switched to `venues@` — SPF, DKIM and DMARC should all pass. Then mail `venues@concertcrawl.app`, reply to what arrives, and read the raw headers on the reply. `From:` must be `venues@concertcrawl.app`, `mailed-by:` `send.concertcrawl.app`, `signed-by:` `concertcrawl.app`. Inspect the received copy, never the one in Sent: Gmail writes Sent copies locally and they carry no real authentication headers.
 
-**DMARC is parked at `p=none` on purpose.** It reports and enforces nothing. Reports land at `dmarc@concertcrawl.app`, which is another Cloudflare routing rule to the same destination. The path forward is `none` → read reports for several weeks → `quarantine` → `reject`, and each step waits on the reports showing no legitimate sender failing. Advancing blind is how a domain silently loses its own mail.
+**DMARC is parked at `p=none` on purpose.** It collects reports and enforces nothing, so a misconfigured sender shows up in a report instead of vanishing. Reports land at `dmarc@concertcrawl.app`, which is another Cloudflare routing rule to the same destination. The path forward is `none` → read reports for several weeks → `quarantine` → `reject`, and each step waits on the reports showing no legitimate sender failing. Advancing blind is how a domain silently loses its own mail.
 
 A BIMI logo in Gmail was considered and deferred. It needs `p=quarantine` or stricter, plus a Verified Mark Certificate that costs four figures a year and requires a registered trademark. Revisit after launch, once the domain is enforcing.
 

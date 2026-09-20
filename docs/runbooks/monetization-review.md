@@ -90,8 +90,11 @@ Eyeball cross-client render in **Gmail + Apple Mail** at minimum.
 **Confirm the sending domain is healthy in Resend:**
 
 - [ ] Resend dashboard → **Domains** → `concertcrawl.app` shows **Verified**
-      (SPF, DKIM, and DMARC DNS records all green). That's the real gate — an
-      unverified domain lands in spam or bounces.
+      (SPF and DKIM green). That's the real gate — an unverified domain lands in
+      spam or bounces. Resend may still flag DMARC: the live `_dmarc` record is
+      maintained by hand rather than taken from Resend's suggestion, so that row
+      is expected to disagree. See _Email — `venues@concertcrawl.app`, and the
+      DMARC path_ in `production-launch.md`.
 - [ ] Send a few previews (above) to a Gmail + an Apple Mail address and confirm
       they hit the **inbox, not spam**. Resend has no numeric "reputation" score;
       "warm" here just means the domain is verified and recent sends aren't
