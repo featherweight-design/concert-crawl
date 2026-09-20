@@ -73,8 +73,10 @@ Revisit if Render documents adoption semantics unambiguously.
 Six services build from `main`. All have `autoDeployTrigger: commit`,
 `rootDir: ""`, region `oregon`, plan `starter`.
 
-`autoDeploy` is **not** uniform. Staging auto-deploys on every merge; all five
-prod services are `no`, because prod is promoted only by dispatching
+`autoDeploy` is **not** uniform. Staging auto-deploys on every eligible push —
+each service's `buildFilter` still decides eligibility, so a docs-only or
+web-only commit deploys nothing. All five prod services are `no`, because prod
+is promoted only by dispatching
 `.github/workflows/deploy-prod.yml`. See
 `docs/runbooks/auto-deploy-prod.md` for the promotion model.
 
@@ -189,7 +191,7 @@ it is not driven by this file and the two majors are allowed to differ.
 | ----------------- | -------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `healthCheckPath` | 1, 2     | `/v1/health` | With this empty, Render cuts traffic to the old instance before the new one is serving. That is the entire cause of the ~2.5-minute prod outage on 2026-08-31; the deploy itself was fine. |
 | `buildFilter`     | all 6    | see below    | Every service rebuilds on every commit to `main`, so a web-only PR burns six builds.                                                                                                       |
-| `autoDeploy`      | 2        | `yes`        | Staging is the validation surface the promotion decision rests on. `no` here means nothing is ever validated before a promotion.                                                            |
+| `autoDeploy`      | 2        | `yes`        | Staging is the validation surface the promotion decision rests on — it deploys on every push its `buildFilter` matches. `no` here means nothing is ever validated before a promotion.       |
 | `autoDeploy`      | 1, 3–6   | `no`         | This is the production promotion gate. `yes` on any prod service reopens the push-to-prod path and bypasses the dispatch entirely.                                                          |
 
 `healthCheckPath` can be set over the API:

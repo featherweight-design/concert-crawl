@@ -131,16 +131,26 @@ Two consequences, both load-bearing:
 ### Prod migrations run inside the API build, so they are gated with it
 
 Drizzle migrations run in `concert-crawl-api`'s Render `buildCommand`. They
-therefore execute when — and only when — the promotion dispatch deploys the API.
-A merge to `main` runs migrations on **staging** and nowhere else, so prod's
-schema legitimately lags `main` between promotions.
+therefore execute on any deploy of the prod API — a promotion dispatch, or a
+Manual Deploy from the Render dashboard. A merge to `main` runs migrations on
+**staging** and nowhere else, so prod's schema legitimately lags `main` between
+promotions.
 
-That lag is safe because of the expand/contract policy in `CLAUDE.md`: every
-migration is additive, so a schema older than the code that will eventually read
-it is never a broken state, and the currently-deployed prod app never depends on
-a column that has not been added yet. The failure mode expand/contract forbids —
-a destructive migration landing ahead of the app that stops using the column —
-is the one this lag would make dangerous, and it is already banned.
+Two consequences worth stating plainly:
+
+- **A dashboard Manual Deploy changes the prod schema.** It is not gated by
+  `AUTO_DEPLOY_PROD_ENABLED`, so the operational pause control does not pause
+  migrations. Treat a recovery Manual Deploy as a schema change and read the
+  pending migrations first.
+- **The lag is safe for expand migrations, not for contract ones.** The
+  expand/contract policy in `CLAUDE.md` means an additive migration ahead of the
+  app is never a broken state. Contract migrations are the other half of the
+  pattern and this repo has them (`0011_drop_event_images.sql`,
+  `0067_drop_inbox_reads.sql`). If promotions are skipped long enough for an
+  expand and its matching contract to land in the same batch, the contract can
+  drop a column the still-deployed prod app reads. Before promoting after a long
+  gap, list the migrations in the range and confirm no contract step runs ahead
+  of the app that stopped using the column.
 
 The scheduled `smoke.yml` (every 6 hours against prod) is independent and remains gated by the separate `SMOKE_ENABLED` variable.
 
@@ -341,7 +351,7 @@ prod without deploying, and watch it run install → smoke → green.
 | `PROD_URL`                      | deploy-prod (smoke job) | already present                                                                                                                                                                                           |
 | `PROD_API_URL`                  | deploy-prod (smoke job) | already present                                                                                                                                                                                           |
 | `STAGING_SMOKE_ENABLED`         | staging-smoke           | **new** — default `false`; set to `true` in Stage 1                                                                                                                                                       |
-| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod             | must be `true` — it arms the promotion workflow, which is the only path to prod. With it `false` the `gate` job silently skips and nothing can reach production. The name predates the promotion gate.    |
+| `AUTO_DEPLOY_PROD_ENABLED`      | deploy-prod             | must be `true` — it arms the promotion workflow, the only _automated_ path to prod. With it `false` the `gate` job silently skips, so no promotion can run; a Render dashboard Manual Deploy and `rollback-prod.yml` still reach prod by design. The name predates the promotion gate. |
 | `PROD_SMOKE_RECONCILER_ENABLED` | prod-smoke-after-deploy | vestigial — that workflow is `workflow_dispatch` only and every dispatch satisfies its `if:` regardless. Kept so re-arming it on a push or schedule trigger has a switch ready.                            |
 
 ### `production` environment — Variables (Settings → Environments → production)
@@ -378,7 +388,28 @@ just list recent deploys and POST `/rollback`, nothing else.
 
 ## Testing the rollback path
 
-**For the auto-rollback path** (smoke → rollback inside `prod-smoke-after-deploy.yml`): the cleanest way to verify the wiring without breaking real prod is to temporarily point `PROD_API_URL` at a bogus hostname, then `workflow_dispatch` the **Prod smoke (after Render auto-deploy)** workflow. The smoke step fails against the bogus URL, the rollback steps fire (API rolls back; the four crons emit warnings — see "Caveat on cron service rollback"), and Render shows a new deploy on the API service matching the previous-prior commit SHA. Restore `PROD_API_URL` afterward.
+There are two smoke-then-rollback paths and they are not the same code. A
+promotion's automatic smoke and its automatic rollback live in
+`deploy-prod.yml` (`smoke` job, then `rollback` on an assertion failure).
+`prod-smoke-after-deploy.yml` is the standalone dispatch-only copy, and it
+carries its own `render-rollback.sh` steps.
+
+**⚠️ The bogus-hostname test is destructive. It really rolls back production.**
+Pointing `PROD_API_URL` at a hostname that does not resolve and then dispatching
+the standalone **Prod smoke** workflow makes the smoke fail against live prod,
+which fires `render-rollback.sh` on the real `concert-crawl-api` — moving prod's
+API to its previous deploy while the Vercel web app stays on the current one.
+That leaves a genuine web/API version mismatch until you deploy forward again.
+Do not run it as a routine wiring check.
+
+If you need to verify the rollback wiring, prefer one of these:
+
+- Read the two workflows' rollback steps and `render-rollback.sh` directly.
+- Run the equivalent against staging, where a rolled-back API costs nothing.
+- If you genuinely must exercise it on prod, schedule it as a controlled test:
+  announce it, expect the API to move to the prior deploy, and plan the
+  forward promotion that restores parity before you start. Restore
+  `PROD_API_URL` afterward.
 
 ### Sanity-checking preflight without touching prod
 

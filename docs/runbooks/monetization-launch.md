@@ -159,8 +159,19 @@ launch."
 Mirror the existing crawler crons. Type **Cron Job**, runtime **Node**, region **Oregon**,
 plan **Starter**, branch `main`. Auto-deploy **off** on the prod service and **on** for
 `-staging`, matching the production promotion gate — prod deploys only through
-`deploy-prod.yml`. If this cron is created, add its service ID to the workflow's service
-list so a promotion deploys it too; see `docs/runbooks/auto-deploy-prod.md`.
+`deploy-prod.yml`.
+
+If this cron is created, its service ID has to be added in several places — each prod
+workflow hard-codes the current five services rather than discovering them:
+
+- a `production` environment variable (`RENDER_SERVICE_ID_BILLING_JOBS`, say)
+- `deploy-prod.yml` — so a promotion deploys it
+- `prod-smoke-after-deploy.yml` and `rollback-prod.yml` — so a rollback covers it
+- `prod-deploy-health.yml` and `prod-drift-alert.yml` — so a stale or suspended billing
+  cron is reported
+
+Skipping any of those leaves the cron outside that workflow's coverage silently. See
+`docs/runbooks/auto-deploy-prod.md`.
 
 | Setting       | Value                                                                                                                                                                                                        |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
