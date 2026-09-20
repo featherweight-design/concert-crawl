@@ -18,6 +18,15 @@ on:
 permissions:
   contents: read
 
+# A scheduled run and a workflow_dispatch can otherwise overlap, and two runs
+# reaching the same verdict send the same Sentry warning twice — which reads as
+# drift getting worse rather than as one alert measured twice. Matches
+# prod-deploy-health.yml. cancel-in-progress is safe here because the run has no
+# side effect worth finishing: the newer run re-measures from scratch.
+concurrency:
+  group: prod-drift-alert
+  cancel-in-progress: true
+
 jobs:
   drift:
     name: Compare prod live SHA against main

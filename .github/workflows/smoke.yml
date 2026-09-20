@@ -7,6 +7,14 @@ on:
 
 permissions: read-all
 
+# The last prod workflow with a schedule and a dispatch but no concurrency group
+# (found sweeping the class for prod-drift-alert.yml). cancel-in-progress: false,
+# unlike the drift alert's: a smoke run that is cancelled produces no verdict for
+# that window, so a queued run waits for the running one instead of replacing it.
+concurrency:
+  group: prod-smoke
+  cancel-in-progress: false
+
 jobs:
   smoke:
     name: Playwright smoke (production)
