@@ -357,7 +357,7 @@ No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the promotion workf
 | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SENTRY_ENVIRONMENT`                 | `production`                                                                                                                                                                                                   |
 | `LOG_LEVEL`                          | `info`                                                                                                                                                                                                         |
-| `RENDER_SERVICE_ID_API`              | Render → `concert-crawl-api` → service ID from the dashboard URL (`srv-...`). Consumed by `prod-smoke-after-deploy.yml` (wait + rollback), the manual `deploy-prod.yml` escape hatch, `rollback-prod.yml`, and `prod-deploy-health.yml` (preflight + suspended-service check). |
+| `RENDER_SERVICE_ID_API`              | Render → `concert-crawl-api` → service ID from the dashboard URL (`srv-...`). Consumed by `deploy-prod.yml` (deploy trigger, live-SHA wait, and auto-rollback), `prod-smoke-after-deploy.yml` (records the live SHA, and rolls back on failure — it has no wait step), `rollback-prod.yml`, and `prod-deploy-health.yml` (preflight + suspended-service check). |
 | `RENDER_SERVICE_ID_CRAWLER_TRIGGERS` | Service ID for `concert-crawl-crawler-triggers`. Consumed by `prod-smoke-after-deploy.yml`, `deploy-prod.yml`, `rollback-prod.yml`, and `prod-deploy-health.yml`.                                                                        |
 | `RENDER_SERVICE_ID_CRAWLER_DAILY`    | Service ID for `concert-crawl-crawler-daily`. Same four callers as above.                                                                                                                                           |
 | `RENDER_SERVICE_ID_MATCH_ARTISTS`    | Service ID for `concert-crawl-match-artists`. Same four callers as above.                                                                                                                                            |
@@ -417,11 +417,11 @@ These must be in place before any traffic reaches production.
 
 > ⚠️ **Required reviewers + automated workflows conflict.** The following three workflows declare `environment: production` to access env-scoped secrets (e.g. `RESEND_API_KEY`) and would pause for manual approval on every run if Required reviewers is enabled:
 >
-> - `prod-smoke-after-deploy.yml` — fires on every push to `main`. Pausing for approval per merge would defeat the smoke automation entirely.
-> - `deploy-prod.yml` — manual escape hatch; the gate-then-approve flow is intended on this one.
+> - `prod-smoke-after-deploy.yml` — `workflow_dispatch` only. Pausing an operator's own dispatch for approval adds a step and no safety.
+> - `deploy-prod.yml` — the only path to production; its own `reason` input plus the main-HEAD gate already serve as the deliberate-action check.
 > - `rollback-prod.yml` — incident response; pause-for-approval would slow recovery.
 >
-> Current model: **Required reviewers OFF.** Branch protection on `main` (above) is the pre-merge gate; `AUTO_DEPLOY_PROD_ENABLED` is the operational pause control — setting it to `false` closes the only path to production. If you ever want Required reviewers on prod-mutating workflows specifically, the cleanest path is to create a separate `production-automation` GitHub Environment with no protection rules, mirror the secrets there, and reference it from the three automated workflows — leaving `production` with Required reviewers on for whatever else uses it.
+> Current model: **Required reviewers OFF.** Branch protection on `main` (above) is the pre-merge gate; `AUTO_DEPLOY_PROD_ENABLED` is the operational pause control — setting it to `false` closes the only automated path to production (a dashboard Manual Deploy still works, by design, for recovery). If you ever want Required reviewers on prod-mutating workflows specifically, the cleanest path is to create a separate `production-automation` GitHub Environment with no protection rules, mirror the secrets there, and reference it from the three automated workflows — leaving `production` with Required reviewers on for whatever else uses it.
 
 ---
 
@@ -429,7 +429,7 @@ These must be in place before any traffic reaches production.
 
 ### Trigger deploys
 
-Normal path: dispatch **Deploy to Production** (`deploy-prod.yml`) with a reason. It deploys the Render services and, on a green prod smoke, promotes the Vercel web build. See `docs/runbooks/auto-deploy-prod.md`.
+Normal path: dispatch **Deploy to Production** (`deploy-prod.yml`) with a reason. It triggers the five Render prod deploys, waits for the API to report the new SHA live, promotes the Vercel web build, then smokes prod. See `docs/runbooks/auto-deploy-prod.md`.
 
 The manual controls below are for first-time setup, env var changes, and recovery:
 

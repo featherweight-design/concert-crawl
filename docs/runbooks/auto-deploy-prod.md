@@ -43,10 +43,15 @@ merge to main
            ├──► concert-crawl-match-artists      (crn-*, builds main HEAD)
            └──► concert-crawl-spotify-weekly     (crn-*, builds main HEAD)
                   │
+                  ├──► wait for the API to report the new SHA live
+                  ▼
+          `vercel deploy --prod` promotes the web app
+                  │    (last step of the deploy job — see the note below)
                   ▼
           Playwright smoke against prod
-                  ├──► success: `vercel deploy --prod` promotes the web app
-                  └──► failure: render-rollback.sh + Resend admin email
+                  └──► assertion failure: render-rollback.sh on all five
+                       Render services + Resend admin email. The Vercel
+                       promotion is NOT rolled back automatically.
 ```
 
 ### The promotion flow, in words
@@ -61,8 +66,10 @@ merge to main
 5. Actions → **Deploy to Production** → Run workflow, on `main`, with a `reason`.
    The reason is required and lands in the run log, so the audit trail of who
    promoted what and why is preserved.
-6. The workflow promotes Render, smokes prod, and only then promotes the Vercel
-   web app.
+6. The workflow triggers the five Render deploys, waits for the API to report the
+   new SHA live, promotes the Vercel web app, and then smokes prod. A smoke
+   assertion failure auto-rolls-back Render; the web promotion is manual to
+   reverse (see "Vercel + cron rollback is manual" below).
 
 **The emergency hotfix path is the same dispatch.** There is no separate
 procedure and no bypass: merge the fix, then dispatch with a reason naming the
@@ -72,9 +79,10 @@ mechanical gate — the gate is the dispatch itself.
 The prod **web** app is not in that tree. Its Vercel project has git builds
 disabled (Settings → Git → Ignored Build Step = `exit 0`), so a push to `main`
 deploys the Render services only. `deploy-prod.yml` promotes the web app with
-`vercel deploy --prod` as its last step, after the Render waits have cleared —
-so a failed API deploy aborts the job before a new front end can reach a
-customer. The reverse order is survivable (expand/contract means the old web
+`vercel deploy --prod` as the last step of the `deploy` job, after the Render
+waits have cleared but **before** the `smoke` job runs — so a failed API deploy
+aborts the job before a new front end can reach a customer, while a failed smoke
+does not un-promote the web app. The reverse order is survivable (expand/contract means the old web
 app works against the new API), which is why the promotion runs last and not
 first.
 
@@ -105,11 +113,16 @@ the moment Render starts their build.
 
 Two consequences, both load-bearing:
 
-- **The gate refuses to promote a SHA that is not `main` HEAD.**
-  `.github/scripts/resolve-deployable-sha.sh` compares the dispatched ref's SHA
-  against `main` HEAD and fails the run when they differ, because promoting an
-  older SHA would pin the API to it while the crons silently built something
-  newer. `allow_stale_head: true` overrides that refusal — use it only when you
+- **The gate refuses to promote a SHA that is not `main` HEAD.** The refusal
+  lives in `deploy-prod.yml` itself — the *Refuse promotion of a SHA that is not
+  main HEAD* step in the `gate` job, repeated as *Re-verify promotion target is
+  still main HEAD* in the `deploy` job, because `main` can advance while the
+  deploy job waits. Both run each side through
+  `.github/scripts/resolve-deployable-sha.sh` (which only resolves a SHA and
+  always exits 0) before comparing, so a `[skip ci]` release commit does not read
+  as drift. Promoting an older SHA would pin the API to it while the crons
+  silently built something newer. `allow_stale_head: true` downgrades both
+  refusals to a warning — use it only when you
   have read the diff between the two SHAs and accept a mixed API/cron state.
   It is not a convenience flag.
 - **The crons cannot be auto-rolled-back.** See "Caveat on cron service
