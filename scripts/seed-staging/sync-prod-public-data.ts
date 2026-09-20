@@ -1,9 +1,9 @@
 /**
  * Concert Crawl — prod→staging public-data sync CLI entry.
  *
- * Copies public venue/event/price-log rows from prod into the staging DB so
- * the staging environment reflects real data shapes and volume without manual
- * data entry.
+ * Copies public venue/event/artist/price-log/guide-chip rows from prod into the
+ * staging DB so the staging environment reflects real data shapes and volume
+ * without manual data entry.
  *
  * Usage:
  *
@@ -11,7 +11,7 @@
  *     NEON_PROD_DIRECT=... NEON_STAGING_DIRECT=... \
  *       pnpm db:seed:staging:sync -- --dry-run
  *
- *   Commit (upserts venues, events, price log into staging):
+ *   Commit (upserts venues, events, artists, price log, guide chips into staging):
  *     NEON_PROD_DIRECT=... NEON_STAGING_DIRECT=... \
  *       pnpm db:seed:staging:sync
  *
@@ -31,12 +31,26 @@
  *   both env vars resolve to the same Neon host.
  *
  * Idempotency:
- *   All three sync steps use ON CONFLICT upsert or query-and-skip semantics.
+ *   All five sync steps use ON CONFLICT upsert or query-and-skip semantics.
  *   Re-running the script produces identical results (no duplicate rows).
  *
  * FK order:
- *   venues → events → price_retrieval_log. No transaction wrap — each step
- *   is independently idempotent and the FK chain is enforced by execution order.
+ *   venues → events → artists → price_retrieval_log → venue_guide_chips.
+ *   No transaction wrap — each step is independently idempotent and the FK
+ *   chain is enforced by execution order. `artists` has no FK into venues (it
+ *   is a projection joined on events.canonical_artist), so its position is
+ *   convention; `venue_guide_chips` genuinely requires venueIdMap and so must
+ *   follow venues.
+ *
+ * Never synced:
+ *   Every table carrying user identity or user-authored text —
+ *   price_submissions, submission_confirms, event_reports,
+ *   event_report_confirms, crews, social, notifications, user_profiles,
+ *   user_notification_preferences, users, commerce, spotify,
+ *   venue_fault_acknowledgements. The staging transactional-email gate (#1613)
+ *   fails OPEN, so a prod user row in staging plus a restorable cron is a path
+ *   to emailing a real customer from staging. Content tables carry no FK into
+ *   any user table, which is what makes this split enforceable.
  */
 
 import { pathToFileURL } from 'node:url'
@@ -47,7 +61,9 @@ import { isLocalConnectionString } from '../../packages/db/src/connection.js'
 import { openProdReadonly } from './prod-readonly-client.js'
 import { syncVenues } from './sync-venues.js'
 import { syncEvents } from './sync-events.js'
+import { syncArtists } from './sync-artists.js'
 import { syncPriceRetrievalLog } from './sync-price-retrieval-log.js'
+import { syncVenueGuideChips } from './sync-venue-guide-chips.js'
 import {
   parseArgs,
   assertWriteHostNotProd,
@@ -99,14 +115,14 @@ export async function main(): Promise<void> {
     const now = new Date()
 
     // Step 1: venues.
-    console.log('\n[sync] Step 1/3 — venues')
+    console.log('\n[sync] Step 1/5 — venues')
     const venueResult = await syncVenues({ prod, staging, dryRun })
     console.log(
       `[sync] venues: scanned=${venueResult.scanned} ${dryRun ? 'wouldProcess' : 'processed'}=${venueResult.processed}`,
     )
 
     // Step 2: events (depends on venueIdMap).
-    console.log('\n[sync] Step 2/3 — events')
+    console.log('\n[sync] Step 2/5 — events')
     const eventResult = await syncEvents({
       prod,
       staging,
@@ -118,8 +134,15 @@ export async function main(): Promise<void> {
       `[sync] events: scanned=${eventResult.scanned} ${dryRun ? 'wouldProcess' : 'processed'}=${eventResult.processed}`,
     )
 
-    // Step 3: price retrieval log (depends on both maps).
-    console.log('\n[sync] Step 3/3 — price_retrieval_log')
+    // Step 3: artists (no FK parents — position is convention, not requirement).
+    console.log('\n[sync] Step 3/5 — artists')
+    const artistResult = await syncArtists({ prod, staging, dryRun })
+    console.log(
+      `[sync] artists: scanned=${artistResult.scanned} ${dryRun ? 'wouldProcess' : 'processed'}=${artistResult.processed}`,
+    )
+
+    // Step 4: price retrieval log (depends on both maps).
+    console.log('\n[sync] Step 4/5 — price_retrieval_log')
     const priceResult = await syncPriceRetrievalLog({
       prod,
       staging,
@@ -130,6 +153,18 @@ export async function main(): Promise<void> {
     })
     console.log(
       `[sync] price_retrieval_log: scanned=${priceResult.scanned} ${dryRun ? 'wouldInsert' : 'inserted'}=${priceResult.inserted} skippedMissingFk=${priceResult.skippedMissingFk} skippedDuplicates=${priceResult.skippedDuplicates}`,
+    )
+
+    // Step 5: venue guide chips (depends on venueIdMap).
+    console.log('\n[sync] Step 5/5 — venue_guide_chips')
+    const chipResult = await syncVenueGuideChips({
+      prod,
+      staging,
+      dryRun,
+      venueIdMap: venueResult.venueIdMap,
+    })
+    console.log(
+      `[sync] venue_guide_chips: scanned=${chipResult.scanned} ${dryRun ? 'wouldProcess' : 'processed'}=${chipResult.processed} skippedMissingFk=${chipResult.skippedMissingFk}`,
     )
 
     // 5. Summary.
@@ -144,7 +179,13 @@ export async function main(): Promise<void> {
       `  events   scanned=${eventResult.scanned}  ${dryRun ? 'wouldProcess' : 'processed'}=${eventResult.processed}`,
     )
     console.log(
+      `  artists  scanned=${artistResult.scanned}  ${dryRun ? 'wouldProcess' : 'processed'}=${artistResult.processed}`,
+    )
+    console.log(
       `  price_log scanned=${priceResult.scanned}  ${dryRun ? 'wouldInsert' : 'inserted'}=${priceResult.inserted}  skippedMissingFk=${priceResult.skippedMissingFk}  skippedDuplicates=${priceResult.skippedDuplicates}`,
+    )
+    console.log(
+      `  chips    scanned=${chipResult.scanned}  ${dryRun ? 'wouldProcess' : 'processed'}=${chipResult.processed}  skippedMissingFk=${chipResult.skippedMissingFk}`,
     )
     console.log('[sync] ──────────────────────────────────────────────────────')
 
