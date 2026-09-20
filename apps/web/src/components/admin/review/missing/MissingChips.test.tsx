@@ -48,6 +48,13 @@ describe('MissingChips', () => {
     expect(screen.getByText('Likely removed')).toBeTruthy()
   })
 
+  it('renders moved classification badge', () => {
+    render(
+      <MissingChips {...BASE_PROPS} classification="moved" missedCount={2} />,
+    )
+    expect(screen.getByText('Possibly moved')).toBeTruthy()
+  })
+
   it('renders duplicate classification badge', () => {
     render(
       <MissingChips

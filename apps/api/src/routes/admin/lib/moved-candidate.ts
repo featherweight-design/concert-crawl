@@ -17,6 +17,28 @@ export const MOVED_DATE_WINDOW_DAYS = 120
  */
 export const MOVED_VENUE_DAY_SLACK = 1
 
+/**
+ * How much later than the orphan's own row the candidate must have been
+ * created. Kills the residency falsifier: a venue announcing a three-night
+ * run creates all three rows in one crawl, so the other nights match on
+ * venue and artist and are otherwise indistinguishable from a reschedule.
+ * A replacement is by definition a later announcement than the show it
+ * replaces.
+ */
+export const MOVED_ANNOUNCE_GAP_HOURS = 24
+
+/**
+ * How far before the orphan's last sighting the candidate may have appeared.
+ * Anchoring on `created_at >= last_seen_at` is wrong: `last_seen_at` is
+ * refreshed on every crawl that still returns the row (crawl.ts Pass 1), and
+ * `first_missing_at` is only stamped once it stops, so a venue that posts the
+ * new date while the old listing is still up produces a candidate created
+ * BEFORE the orphan was last seen. That is the ordinary case, not an edge.
+ * The window still excludes an unrelated booking announced months before the
+ * orphan went anywhere.
+ */
+export const MOVED_REPLACEMENT_WINDOW_DAYS = 14
+
 const movedCandidateSchema = z.object({
   id: z.string().uuid(),
   reason: z.union([z.literal('date'), z.literal('venue')]),
@@ -45,11 +67,11 @@ export const parseMovedCandidate = (raw: unknown): MovedCandidate | null => {
  * the date arm keeps the venue, the venue arm keeps the date — because
  * relaxing both at once matches any show by the same artist anywhere.
  *
- * The load-bearing predicate is `c.created_at >= events.last_seen_at`: the
- * candidate must have appeared AFTER we last saw the orphan. Without it a
- * multi-night residency defeats the date arm outright, since the other nights
- * match on venue and artist and are indistinguishable from a reschedule. They
- * are excluded because they were created long before the orphan went missing.
+ * The load-bearing work is the pair of freshness predicates below: the
+ * candidate must be a LATER announcement than the orphan (which is what
+ * separates a reschedule from a residency's other nights), and must have
+ * appeared near the orphan's disappearance (which is what separates it from
+ * an unrelated later booking by the same artist).
  *
  * Emits jsonb so both fields come from one scan. Two scalar subqueries would
  * mean writing this predicate set twice, which is exactly how the venue-slug
@@ -68,9 +90,15 @@ export const movedCandidateExpr = (today: string): SQL<unknown> => sql`(
     AND cnd.first_missing_at IS NULL
     AND cnd.hidden_from_consumer = false
     AND cnd.date >= ${today}
-    -- Freshness. Both columns are NOT NULL DEFAULT now(), so this is a plain
-    -- comparison with no null-handling to reason about.
+    -- Freshness, two predicates with two different falsifiers. All three
+    -- timestamp columns are NOT NULL DEFAULT now(), so there is no
+    -- null-handling to reason about.
+    -- (a) a later announcement than the orphan, not the same batch of nights
+    AND cnd.created_at >= ${events.createdAt}
+                        + make_interval(hours => ${MOVED_ANNOUNCE_GAP_HOURS}::int)
+    -- (b) announced around the orphan's disappearance, not months before it
     AND cnd.created_at >= ${events.lastSeenAt}
+                        - make_interval(days => ${MOVED_REPLACEMENT_WINDOW_DAYS}::int)
     -- Headliner containment, same form as hasLiveSibling.
     AND ${events.canonicalArtist} <> '' AND cnd.canonical_artist <> ''
     AND ${events.canonicalTitle} <> '' AND cnd.canonical_title <> ''

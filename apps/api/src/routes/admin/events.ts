@@ -323,9 +323,10 @@ eventsAdminRouter.patch(
 // returning (stale-event detection, see issue #607). When `missing=true`,
 // the `verified` filter is ignored and rows are ordered date ASC so the
 // soonest upcoming show surfaces first. Each missing row is enriched with a
-// `classification` (duplicate | removed | crawl_gap) derived from three
-// per-row SQL signals, and a `clusterCount` of how many missing events share
-// the same venue.
+// `classification` (duplicate | moved | crawl_gap | removed) derived from four
+// per-row SQL signals, a `clusterCount` of how many missing events share the
+// same venue, and — when the matcher found a relocation candidate —
+// `movedCandidateId` + `movedReason` ('date' | 'venue').
 eventsAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema),
@@ -476,9 +477,9 @@ eventsAdminRouter.get(
             hasLiveSibling,
             movedCandidateId: moved?.id ?? null,
           }),
-          // Surfaced so the row can offer a one-click confirm, and so the
-          // reason can be shown rather than the admin guessing why we think
-          // this matched.
+          // Carried on the row so the admin surface can name the matched
+          // event and why it matched. Nothing renders these yet; the confirm
+          // action that consumes them lands with the merge path.
           movedCandidateId: moved?.id ?? null,
           movedReason: moved?.reason ?? null,
         }
