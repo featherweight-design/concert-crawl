@@ -1,3 +1,10 @@
+# [1.291.0](https://github.com/HartiganHM/concert-crawl/compare/v1.290.0...v1.291.0) (2026-09-20)
+
+
+### Features
+
+* **search:** carry the next Denver date on an artist search result ([#1717](https://github.com/HartiganHM/concert-crawl/issues/1717)) ([e6e4ea2](https://github.com/HartiganHM/concert-crawl/commit/e6e4ea282b61f00e711b22c2455bd9574fec8d5b)), closes [#1299](https://github.com/HartiganHM/concert-crawl/issues/1299)
+
 # [1.290.0](https://github.com/HartiganHM/concert-crawl/compare/v1.289.6...v1.290.0) (2026-09-19)
 
 
