@@ -1,3 +1,10 @@
+## [1.294.1](https://github.com/HartiganHM/concert-crawl/compare/v1.294.0...v1.294.1) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ci:** treat prod autoDeploy=no as healthy under the promotion gate ([8f634e5](https://github.com/HartiganHM/concert-crawl/commit/8f634e5b9140dfc36142d9d68e8d711bc1520c48))
+
 # [1.294.0](https://github.com/HartiganHM/concert-crawl/compare/v1.293.0...v1.294.0) (2026-09-20)
 
 
