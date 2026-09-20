@@ -2903,6 +2903,43 @@ describe('POST /v1/admin/events/:id/merge', () => {
     expect(rows.map((row) => row.userId)).toEqual(['watcher-moved'])
   })
 
+  // A user watching BOTH listings keeps their target row and loses the source
+  // one to the (user_id, event_id) conflict. They are still notified, exactly
+  // once: they were watching the old listing, it moved, and their Watching
+  // list just went from two entries to one. Suppressing this because the
+  // surviving ROW did not move would silence the person best placed to be
+  // confused by the change.
+  it('notifies a user who was watching both listings, once', async () => {
+    const fromVenue = await seedVenue({
+      slug: 'both-from',
+      name: 'Larimer Lounge',
+    })
+    const toVenue = await seedVenue({ slug: 'both-to', name: 'Globe Hall' })
+    const source = await seedEvent(fromVenue.id, { artist: 'Moved Artist' })
+    const target = await seedEvent(toVenue.id, {
+      artist: 'Moved Artist',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-11-01',
+    })
+    await seedUserEvent('watcher-both', source.id, { status: 'watching' })
+    await seedUserEvent('watcher-both', target.id, { status: 'watching' })
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: target.id, notifyWatchers: true }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'))
+    expect(rows).toHaveLength(1)
+    expect(rows[0]!.userId).toBe('watcher-both')
+  })
+
   // `events.venue_id` is ON DELETE SET NULL. Falling back to the date
   // template when the old room's name is gone would tell watchers the NIGHT
   // changed when only the room did.
