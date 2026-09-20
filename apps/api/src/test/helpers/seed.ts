@@ -49,9 +49,11 @@ export async function clearTables(): Promise<void> {
     await tx.execute(
       // `subscriptions` is in the list because entitlement-gated routes now
       // read it: a premium row left behind makes a later 403 test pass or fail
-      // purely on file order. `feature_flags` is there for the same reason —
+      // purely on file order. `gifted_comps` is there for exactly the same
+      // reason, and became load-bearing when code redemption started writing
+      // one — a leftover lifetime comp grants Premium to whoever runs next. `feature_flags` is there for the same reason —
       // a leftover enabled row silently satisfies a later suite's release gate.
-      sql`TRUNCATE notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, artists, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking, crews, subscriptions, user_notification_preferences, feature_flags RESTART IDENTITY CASCADE`,
+      sql`TRUNCATE notifications, event_report_confirms, event_reports, submission_confirms, price_submissions, user_events, events, artists, venues, crawl_runs, audit_log, invite_codes, user_roles, user_cred, price_retrieval_log, user_profiles, feedback, user_artist_follows, user_spotify_connections, spotify_alert_log, cost_tracking, crews, subscriptions, gifted_comps, user_notification_preferences, feature_flags RESTART IDENTITY CASCADE`,
     )
   })
   // The loader memoizes for 30s in-process, and integration tests share one

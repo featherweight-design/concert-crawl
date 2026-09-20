@@ -16,6 +16,37 @@ agent. Claude builds and validates the machinery; a human pulls the trigger.
 
 ---
 
+## Beta comp backfill (one-off, 2026-09-20)
+
+Runs ONCE, after the PR that made `redeem-code` grant a lifetime comp deploys.
+
+Testers who redeemed their invite code before that PR shipped stay on `free`:
+the handler is reached only from `/auth/complete`, which runs on sign-up alone
+and only while the signed `invite_verified` cookie is live. That cookie is
+deleted on the first successful redemption and cannot be re-minted for a code
+that already has a `used_by`, so those accounts never pass through it again.
+
+1. Confirm the PR is live: redeem a fresh code on staging and read
+   `/v1/users/me` — `planState.plan` should be `gifted`.
+2. Run `scripts/2026-09-20-beta-comp-backfill.sql` against **staging**. Its
+   step 1 prints how many accounts are missing a comp; step 2's `rows_written`
+   must match that figure, and step 3 must return zero rows.
+3. Spot-check one backfilled tester on staging: `/v1/users/me` reads `gifted`,
+   and the onboarding artists step renders its entitled variant.
+4. Repeat against **production**.
+
+The script is idempotent and skips anyone who already holds a row, revoked ones
+included — an admin revoke is a decision, and a backfill must not undo it.
+
+It writes the table only. Clerk's `publicMetadata.plan` mirror stays unset for
+a backfilled tester, and **nothing repairs it on a read**: `loadPlanContext`
+LOGS the disagreement and moves on, because the table is the source of truth
+and wins. Expect a `gifted_comps and Clerk publicMetadata.plan mirror disagree`
+warning per backfilled account, and do not read it as a failure — entitlement
+is correct throughout. The mirror is written by the redemption route for a
+fresh redeemer, and repaired by the admin gifting flows; a backfilled account
+picks one up the next time either touches it.
+
 ## Pre-launch checklist
 
 Work top to bottom. Every box must be checked before the flip. Items marked **(Hugh /

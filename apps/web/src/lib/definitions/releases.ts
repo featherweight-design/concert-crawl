@@ -47,6 +47,14 @@ export const RELEASES: Release[] = [
         kind: 'fixed',
         text: 'A show in a crew names the act playing it, not the whole billing.',
       },
+      {
+        kind: 'fixed',
+        text: 'Redeeming an invite code unlocks Premium for the whole beta.',
+      },
+      {
+        kind: 'fixed',
+        text: 'Picking artists to follow in the welcome tour works now.',
+      },
     ],
   },
   {
