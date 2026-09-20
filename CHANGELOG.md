@@ -1,3 +1,10 @@
+## [1.291.2](https://github.com/HartiganHM/concert-crawl/compare/v1.291.1...v1.291.2) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ci:** re-check main HEAD in the deploy job on the dispatch path ([6451429](https://github.com/HartiganHM/concert-crawl/commit/645142974fd81c30a369364b2328f3ac06ac5187))
+
 ## [1.291.1](https://github.com/HartiganHM/concert-crawl/compare/v1.291.0...v1.291.1) (2026-09-20)
 
 
