@@ -192,7 +192,7 @@ jobs:
             echo "should_smoke=false" >> "$GITHUB_OUTPUT"
             echo "::warning title=Smoke skipped::Render did not reach live on ${{ github.sha }} within 5 min. Most likely cause: a fast-follow merge superseded this deploy. The next push's smoke run will validate the latest deployable code."
           else
-            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code}. 125 means deploys are disabled or stalled — check the service's auto-deploy setting before anything else. Any other code is a script or Render API failure; check Render API status + RENDER_API_TOKEN. Nothing was smoked or rolled back."
+            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code}. 125 means the timeout was classified as NOT benign: the service is suspended, has deploys disabled, its deploy for this SHA failed, its live deploy is over an hour old, or the timeout could not be classified at all (service metadata unreadable, no live deploy, unexpected Render response shape). The script's own log lines above name which — read them, then check the service. Any other code is a script or Render API failure; check Render API status + RENDER_API_TOKEN. Nothing was smoked or rolled back."
             exit "${exit_code}"
           fi
 

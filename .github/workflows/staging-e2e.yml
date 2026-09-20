@@ -75,7 +75,7 @@ jobs:
             echo "should_run=false" >> "$GITHUB_OUTPUT"
             echo "::warning title=E2E skipped::Staging API never went live on ${{ github.sha }} within 5 min. Most likely the buildFilter skipped this push (docs/web-only) or a fast-follow merge superseded it. The next API-affecting push will produce a fresh E2E artifact."
           else
-            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code}. 125 means the staging API is suspended, has deploys disabled, or has stalled — check the service before anything else. Any other code is a script or Render API failure. Failing — nothing was tested."
+            echo "::error title=Wait-for-live failed::render-wait-for-live.sh exited ${exit_code}. 125 means the timeout was classified as NOT benign: the staging API is suspended, has deploys disabled, its deploy for this SHA failed, its live deploy is over an hour old, or the timeout could not be classified at all (service metadata unreadable, no live deploy, unexpected Render response shape). The script's own log lines above name which — read them, then check the service. Any other code is a script or Render API failure. Failing — nothing was tested."
             exit "${exit_code}"
           fi
 
