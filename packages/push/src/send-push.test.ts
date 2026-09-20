@@ -186,6 +186,45 @@ describe('sendPushForNotification', () => {
     })
     expect(result.skipped).toBeNull()
     expect(result.delivered).toBe(1)
+
+    // The delivery options are the whole point of the policy: web-push
+    // otherwise sends Urgency: normal with a four-week TTL, and a
+    // normal-urgency message need not wake the browser at all — which is how
+    // a 3 AM push surfaced seventeen hours later, when the app was opened.
+    const [, payload, options] = sendNotificationMock.mock.calls[0]
+    expect(options).toEqual({ urgency: 'high', TTL: 24 * 60 * 60 })
+    // artist.new_show rides the 3 AM crawl, so it wakes the device WITHOUT
+    // making a sound. `silent` travels in the payload because it is an
+    // argument to showNotification, not a property of the delivery.
+    expect(JSON.parse(payload).silent).toBe(true)
+  })
+
+  it('leaves a time-sensitive watch update audible, with a shorter life', async () => {
+    process.env['VAPID_PUBLIC_KEY'] = 'BPUB'
+    process.env['VAPID_PRIVATE_KEY'] = 'PRIV'
+    process.env['VAPID_SUBJECT'] = 'ops@example.com'
+    dbSelectMock
+      .mockResolvedValueOnce([
+        {
+          masterEnabled: true,
+          watchUpdatesEnabled: true,
+          priceDropsEnabled: true,
+        },
+      ])
+      .mockResolvedValueOnce([
+        { id: 'sub-1', endpoint: 'https://x/1', p256dh: 'p1', auth: 'a1' },
+      ])
+    sendNotificationMock.mockResolvedValue({})
+    const { sendPushForNotification } = await import('./send-push.js')
+    await sendPushForNotification({
+      userId: 'user_1',
+      category: 'watch.cancelled',
+      title: 't',
+      body: 'b',
+    })
+    const [, payload, options] = sendNotificationMock.mock.calls[0]
+    expect(options).toEqual({ urgency: 'high', TTL: 12 * 60 * 60 })
+    expect(JSON.parse(payload).silent).toBeUndefined()
   })
 
   it('skips with no_subscriptions when the user has zero active subscriptions', async () => {

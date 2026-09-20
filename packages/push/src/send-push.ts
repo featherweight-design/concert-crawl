@@ -1,5 +1,6 @@
 import webpush, { WebPushError } from 'web-push'
 import { and, eq, isNull } from 'drizzle-orm'
+import { deliveryPolicyFor } from './delivery-policy.js'
 import {
   db,
   pushSubscriptions,
@@ -154,14 +155,20 @@ export async function sendPushForNotification(input: SendPushInput): Promise<{
     return { delivered: 0, skipped: 'no_subscriptions' }
   }
 
+  // `silent` rides in the payload because it is an argument to
+  // showNotification in the service worker, not a property of the delivery.
+  const policy = deliveryPolicyFor(input.category)
   const payload = JSON.stringify({
     title: input.title,
     body: input.body,
     actionUrl: input.actionUrl ?? '/',
     ...(input.tag && { tag: input.tag }),
+    ...(policy.silent && { silent: true }),
   })
 
   let delivered = 0
+  let failed = 0
+  let stale = 0
   await Promise.all(
     subscriptions.map(async (sub) => {
       try {
@@ -171,6 +178,7 @@ export async function sendPushForNotification(input: SendPushInput): Promise<{
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
           payload,
+          { urgency: policy.urgency, TTL: policy.ttlSeconds },
         )
         delivered += 1
       } catch (sendErr) {
@@ -188,9 +196,11 @@ export async function sendPushForNotification(input: SendPushInput): Promise<{
                 'send-push: failed to soft-disable stale endpoint',
               )
             }
+            stale += 1
             return
           }
         }
+        failed += 1
         pushLogger.warn(
           {
             subscriptionId: sub.id,
@@ -202,6 +212,26 @@ export async function sendPushForNotification(input: SendPushInput): Promise<{
         )
       }
     }),
+  )
+
+  // Logged on SUCCESS, not only on failure. Without this line the only way to
+  // answer "did we send it, to how many devices, and when" is a forensic pass
+  // over spotify_alert_log and push_subscriptions — which is how the delivery
+  // defect above had to be diagnosed. A silent regression in push should be
+  // readable from the logs, not reconstructed from the database.
+  pushLogger.info(
+    {
+      userId: input.userId,
+      category: input.category,
+      urgency: policy.urgency,
+      ttlSeconds: policy.ttlSeconds,
+      silent: policy.silent,
+      devices: subscriptions.length,
+      delivered,
+      failed,
+      stale,
+    },
+    'send-push: dispatched',
   )
 
   return { delivered, skipped: null }

@@ -14,6 +14,12 @@ import {
   isPublicCacheableApi,
   isPublicCacheableDocument,
 } from '@/lib/pwa/route-cache'
+import {
+  buildNotificationOptions,
+  isValidPushPayload,
+  safeSameOriginPath,
+  type PushPayload,
+} from '@/lib/pwa/push-notification'
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -135,65 +141,16 @@ self.addEventListener('activate', (event) => {
   )
 })
 
-// #971 Web push handlers.
-// Payload shape sent by packages/push/src/send-push.ts.
-interface PushPayload {
-  title: string
-  body: string
-  actionUrl?: string
-  tag?: string
-}
-
-const isValidPayload = (value: unknown): value is PushPayload => {
-  if (typeof value !== 'object' || value === null) return false
-  if (!('title' in value) || typeof value.title !== 'string') return false
-  if (value.title.length === 0 || value.title.length > 200) return false
-  if (!('body' in value) || typeof value.body !== 'string') return false
-  if (value.body.length === 0 || value.body.length > 500) return false
-  if (
-    'actionUrl' in value &&
-    typeof value.actionUrl !== 'string' &&
-    value.actionUrl !== undefined
-  ) {
-    return false
-  }
-  if (
-    'tag' in value &&
-    typeof value.tag !== 'string' &&
-    value.tag !== undefined
-  ) {
-    return false
-  }
-  return true
-}
-
-// Constrain actionUrl to a same-origin path — push payloads are untrusted
-// input, and `notification.data` persists across events, so a malicious value
-// must never reach `client.navigate` / `openWindow` as a full URL.
-const safeSameOriginPath = (raw: unknown): string => {
-  if (typeof raw !== 'string' || raw.length === 0) return '/'
-  try {
-    const parsed = new URL(raw, self.location.origin)
-    if (parsed.origin !== self.location.origin) {
-      // Log the drop so a compromised push endpoint injecting external URLs is
-      // visible in operator logs — a malformed payload that lands here is
-      // useful to diagnose.
-      console.warn('sw: dropped cross-origin actionUrl', { raw })
-      return '/'
-    }
-    return parsed.pathname + parsed.search
-  } catch (parseErr) {
-    console.warn('sw: dropped unparseable actionUrl', { raw, err: parseErr })
-    return '/'
-  }
-}
+// #971 Web push handlers. The payload contract, the same-origin guard and
+// the showNotification mapping live in `@/lib/pwa/push-notification` so they
+// can be unit-tested; a service worker's listeners cannot be imported.
 
 self.addEventListener('push', (event) => {
   if (!event.data) return
   let payload: PushPayload
   try {
     const raw = event.data.json()
-    if (!isValidPayload(raw)) {
+    if (!isValidPushPayload(raw)) {
       console.warn('sw: dropping push with invalid payload shape')
       return
     }
@@ -202,13 +159,7 @@ self.addEventListener('push', (event) => {
     console.warn('sw: dropping push with unparseable body', parseErr)
     return
   }
-  const options: NotificationOptions = {
-    body: payload.body,
-    icon: '/api/pwa/icon-192',
-    badge: '/api/pwa/icon-maskable-192',
-    data: { actionUrl: safeSameOriginPath(payload.actionUrl) },
-    ...(payload.tag ? { tag: payload.tag } : {}),
-  }
+  const options = buildNotificationOptions(payload, self.location.origin)
   event.waitUntil(self.registration.showNotification(payload.title, options))
 })
 
@@ -220,6 +171,7 @@ self.addEventListener('notificationclick', (event) => {
       'actionUrl' in event.notification.data
       ? event.notification.data.actionUrl
       : undefined,
+    self.location.origin,
   )
   event.waitUntil(
     // includeUncontrolled: true — after a fresh SW install/update, existing
