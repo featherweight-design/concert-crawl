@@ -1,3 +1,10 @@
+# [1.293.0](https://github.com/HartiganHM/concert-crawl/compare/v1.292.1...v1.293.0) (2026-09-20)
+
+
+### Features
+
+* **onboarding:** search for an artist inside the tour, not out of it ([#1725](https://github.com/HartiganHM/concert-crawl/issues/1725)) ([54dba51](https://github.com/HartiganHM/concert-crawl/commit/54dba51a75d3fe4ea183cb19ebfd90a40edd001b))
+
 ## [1.292.1](https://github.com/HartiganHM/concert-crawl/compare/v1.292.0...v1.292.1) (2026-09-20)
 
 
