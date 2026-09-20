@@ -1,3 +1,15 @@
+# [1.295.0](https://github.com/HartiganHM/concert-crawl/compare/v1.294.1...v1.295.0) (2026-09-20)
+
+
+### Bug Fixes
+
+* **admin:** anchor moved-candidate freshness on the announcement, not last_seen_at ([e616512](https://github.com/HartiganHM/concert-crawl/commit/e616512370a9f3f3481f33702e5366be24a8a467))
+
+
+### Features
+
+* **admin:** detect rescheduled and relocated events in the missing list ([bdf0f6c](https://github.com/HartiganHM/concert-crawl/commit/bdf0f6c6949df11255ab7df29e5c890f1dbc396f))
+
 ## [1.294.1](https://github.com/HartiganHM/concert-crawl/compare/v1.294.0...v1.294.1) (2026-09-20)
 
 
