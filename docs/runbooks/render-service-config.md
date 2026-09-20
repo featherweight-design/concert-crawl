@@ -70,18 +70,27 @@ Revisit if Render documents adoption semantics unambiguously.
 
 ## Active services
 
-Six services deploy from `main`. All have `autoDeploy: yes`,
-`autoDeployTrigger: commit`, `rootDir: ""`, region `oregon`, plan
-`starter`.
+Six services build from `main`. All have `autoDeployTrigger: commit`,
+`rootDir: ""`, region `oregon`, plan `starter`.
 
-| #   | Service                          | ID                         | Env     | Runtime | Schedule       |
-| --- | -------------------------------- | -------------------------- | ------- | ------- | -------------- |
-| 1   | `concert-crawl-api`              | `srv-d7lngqfavr4c73eme3b0` | prod    | node    | (web service)  |
-| 2   | `concert-crawl-api-staging`      | `srv-d7lnkdmgvqtc73f8eec0` | staging | node    | (web service)  |
-| 3   | `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod    | docker  | `*/10 * * * *` |
-| 4   | `concert-crawl-crawler-daily`    | `crn-d8o7egog4nts73d2tni0` | prod    | docker  | `0 9 * * *`    |
-| 5   | `concert-crawl-match-artists`    | `crn-d9nm08e7bikc73c6q39g` | prod    | node    | `0 16 * * *`   |
-| 6   | `concert-crawl-spotify-weekly`   | `crn-d9e46ad7vvec73dsn7bg` | prod    | node    | `30 15 * * 1`  |
+`autoDeploy` is **not** uniform. Staging auto-deploys on every merge; all five
+prod services are `no`, because prod is promoted only by dispatching
+`.github/workflows/deploy-prod.yml`. See
+`docs/runbooks/auto-deploy-prod.md` for the promotion model.
+
+| #   | Service                          | ID                         | Env     | Runtime | `autoDeploy` | Schedule       |
+| --- | -------------------------------- | -------------------------- | ------- | ------- | ------------ | -------------- |
+| 1   | `concert-crawl-api`              | `srv-d7lngqfavr4c73eme3b0` | prod    | node    | `no`         | (web service)  |
+| 2   | `concert-crawl-api-staging`      | `srv-d7lnkdmgvqtc73f8eec0` | staging | node    | `yes`        | (web service)  |
+| 3   | `concert-crawl-crawler-triggers` | `crn-d8o7c10k1i2s7389t3v0` | prod    | docker  | `no`         | `*/10 * * * *` |
+| 4   | `concert-crawl-crawler-daily`    | `crn-d8o7egog4nts73d2tni0` | prod    | docker  | `no`         | `0 9 * * *`    |
+| 5   | `concert-crawl-match-artists`    | `crn-d9nm08e7bikc73c6q39g` | prod    | node    | `no`         | `0 16 * * *`   |
+| 6   | `concert-crawl-spotify-weekly`   | `crn-d9e46ad7vvec73dsn7bg` | prod    | node    | `no`         | `30 15 * * 1`  |
+
+`concert-crawl-billing-jobs` is declared for prod in `render.yaml` but **no such
+live prod service exists** — only `concert-crawl-billing-jobs-staging`, which is
+suspended. See the `render.yaml` caveat above; nothing promotes it, and the
+promotion workflow does not reference it.
 
 Cron schedules are **UTC**. `0 9 * * *` is the 3 AM MT daily crawl during
 MDT; it drifts an hour relative to local time across the DST boundary,
@@ -180,7 +189,8 @@ it is not driven by this file and the two majors are allowed to differ.
 | ----------------- | -------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `healthCheckPath` | 1, 2     | `/v1/health` | With this empty, Render cuts traffic to the old instance before the new one is serving. That is the entire cause of the ~2.5-minute prod outage on 2026-08-31; the deploy itself was fine. |
 | `buildFilter`     | all 6    | see below    | Every service rebuilds on every commit to `main`, so a web-only PR burns six builds.                                                                                                       |
-| `autoDeploy`      | all 6    | `yes`        | Anything else means merged code never reaches the service. Alerted on.                                                                                                                     |
+| `autoDeploy`      | 2        | `yes`        | Staging is the validation surface the promotion decision rests on. `no` here means nothing is ever validated before a promotion.                                                            |
+| `autoDeploy`      | 1, 3–6   | `no`         | This is the production promotion gate. `yes` on any prod service reopens the push-to-prod path and bypasses the dispatch entirely.                                                          |
 
 `healthCheckPath` can be set over the API:
 

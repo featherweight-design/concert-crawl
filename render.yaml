@@ -23,6 +23,11 @@ services:
 
   - type: web
     name: concert-crawl-api
+    # Prod deploys only through .github/workflows/deploy-prod.yml. This file is
+    # descriptive, not a Blueprint: editing it deploys nothing and changes no
+    # live setting. The live value is set over the Render API — keep both in
+    # sync in the same session.
+    autoDeploy: false
     buildFilter:
       paths:
         - apps/api/**
@@ -100,6 +105,7 @@ services:
 
   - type: cron
     name: concert-crawl-spotify-weekly
+    autoDeploy: false
     buildFilter:
       paths:
         - apps/api/**
@@ -151,6 +157,7 @@ services:
 
   - type: cron
     name: concert-crawl-match-artists
+    autoDeploy: false
     buildFilter:
       paths:
         - apps/api/**
@@ -193,6 +200,7 @@ services:
 
   - type: cron
     name: concert-crawl-crawler-triggers
+    autoDeploy: false
     buildFilter:
       paths:
         - apps/crawler/**
@@ -240,6 +248,7 @@ services:
 
   - type: cron
     name: concert-crawl-crawler-daily
+    autoDeploy: false
     buildFilter:
       paths:
         - apps/crawler/**

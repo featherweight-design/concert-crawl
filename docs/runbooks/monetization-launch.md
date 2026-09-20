@@ -157,7 +157,10 @@ launch."
 ### Create the service (Render)
 
 Mirror the existing crawler crons. Type **Cron Job**, runtime **Node**, region **Oregon**,
-plan **Starter**, branch `main`, auto-deploy on.
+plan **Starter**, branch `main`. Auto-deploy **off** on the prod service and **on** for
+`-staging`, matching the production promotion gate — prod deploys only through
+`deploy-prod.yml`. If this cron is created, add its service ID to the workflow's service
+list so a promotion deploys it too; see `docs/runbooks/auto-deploy-prod.md`.
 
 | Setting       | Value                                                                                                                                                                                                        |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

@@ -331,7 +331,7 @@ GitHub → repository → **Settings** → **Environments**.
 | `DATABASE_URL` | `NEON_STAGING_POOLED` from Step 2 — for future crawler/migration GHA jobs |
 | `SENTRY_DSN`   | Staging Sentry project DSN                                                |
 
-Staging deploys go via Render's git auto-deploy on push to `main` (Render dashboard → service → Settings → Auto-Deploy: On Commit). Same model as prod (#786) and identical for both. On the staging side, `RENDER_API_TOKEN` (repo-level — see the staging secrets table below) is only consumed by `staging-smoke.yml` to poll Render's API via `render-wait-for-live.sh` — it doesn't trigger any deploy. The same token exists separately in the `production` GH environment for prod workflows (`prod-smoke-after-deploy.yml`, `deploy-prod.yml` manual escape hatch, `rollback-prod.yml`) — see those tables for prod usage. Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed there either.
+Staging deploys go via Render's git auto-deploy on push to `main` (Render dashboard → service → Settings → Auto-Deploy: On Commit). **Prod does not** — it has `Auto-Deploy: no` and is promoted only by dispatching `deploy-prod.yml`; see `docs/runbooks/auto-deploy-prod.md`. On the staging side, `RENDER_API_TOKEN` (repo-level — see the staging secrets table below) is only consumed by `staging-smoke.yml` and `staging-e2e.yml` to poll Render's API via `render-wait-for-live.sh` — it doesn't trigger any deploy. The same token exists separately in the `production` GH environment for prod workflows (`deploy-prod.yml`, `prod-smoke-after-deploy.yml`, `rollback-prod.yml`, `prod-deploy-health.yml`) — see those tables for prod usage. Staging web is deployed by Vercel's GitHub integration directly — no deploy hook needed there either.
 
 ### `staging` environment — Variables
 
@@ -346,10 +346,10 @@ Staging deploys go via Render's git auto-deploy on push to `main` (Render dashbo
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`     | `NEON_PROD_POOLED` from Step 2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `SENTRY_DSN`       | Crawler project DSN from Step 5                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| `RENDER_API_TOKEN` | Render → Account Settings → **API Keys** → generate token with deploy + read permissions. Consumed by `prod-smoke-after-deploy.yml` (via `render-wait-for-live.sh` + `render-rollback.sh`), by the manual `deploy-prod.yml` escape hatch, and by `rollback-prod.yml`. Under the post-#786 model, normal prod deploys are _triggered_ by Render's git auto-deploy (no token needed for the trigger), but the token is still required for the smoke workflow's deploy-verification (`render-wait-for-live.sh`) and for any rollback (`render-rollback.sh`). |
+| `RENDER_API_TOKEN` | Render → Account Settings → **API Keys** → generate token with deploy + read permissions. Consumed by `deploy-prod.yml` (which triggers every prod deploy), `prod-smoke-after-deploy.yml` (via `render-wait-for-live.sh` + `render-rollback.sh`), `rollback-prod.yml`, and `prod-deploy-health.yml`. Prod services have Auto-Deploy off, so this token is what actually starts a production deploy — not an optional extra. |
 | `RESEND_API_KEY`   | Same Resend API key the API + crawler runtime use. Consumed by `prod-smoke-after-deploy.yml` and `deploy-prod.yml` (Notify-admin step on auto-rollback). Optional — if missing, the workflow gracefully degrades to a `::warning::` annotation; primary failure signal still goes out via the GHA workflow-failure email.                                                                                                                                                                                                                                 |
 
-No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the manual deploy path uses the Render API with `RENDER_API_TOKEN` + the service IDs in the variables table below. Normal prod deploys use Render's git auto-deploy and don't need any token.
+No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the promotion workflow uses the Render API with `RENDER_API_TOKEN` + the service IDs in the variables table below.
 
 ### `production` environment — Variables
 
@@ -380,10 +380,10 @@ No per-service `RENDER_DEPLOY_HOOK_*` secrets are needed — the manual deploy p
 
 | Variable                        | Value                                                                                                                                                                                                                                  |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SMOKE_ENABLED`                 | `false` during private beta; flip to `true` at public launch. Gates the scheduled 6-hourly `smoke.yml` only — the auto-deploy pipeline uses separate kill switches.                                                                    |
+| `SMOKE_ENABLED`                 | `false` during private beta; flip to `true` at public launch. Gates the scheduled 6-hourly `smoke.yml` only — the deploy pipeline uses separate kill switches.                                                                    |
 | `STAGING_SMOKE_ENABLED`         | `false` by default. Set to `true` to enable `staging-smoke.yml`. See `docs/runbooks/auto-deploy-prod.md`.                                                                                                                              |
-| `AUTO_DEPLOY_PROD_ENABLED`      | `false` by default. Set to `true` to keep the manual `deploy-prod.yml` escape hatch usable. Post-#786, normal prod deploys go via Render's git auto-deploy; this workflow is reserved for operator intervention.                       |
-| `PROD_SMOKE_RECONCILER_ENABLED` | `false` by default. Set to `true` to arm `prod-smoke-after-deploy.yml` (smoke + rollback on push to main). `workflow_dispatch` bypasses this kill switch so manual operator runs always work. See `docs/runbooks/auto-deploy-prod.md`. |
+| `AUTO_DEPLOY_PROD_ENABLED`      | `false` by default. Set to `true` to arm `deploy-prod.yml`, which is the **only** path to production. While it is `false` nothing can reach prod. Counter-intuitive name, kept for continuity. See `docs/runbooks/auto-deploy-prod.md`. |
+| `PROD_SMOKE_RECONCILER_ENABLED` | Vestigial. `prod-smoke-after-deploy.yml` is `workflow_dispatch`-only and every dispatch satisfies its job `if:`, so this switch gates nothing today. Kept so re-arming the workflow on push or schedule has a switch ready. |
 | `PROD_URL`                      | `https://concertcrawl.app`                                                                                                                                                                                                             |
 | `PROD_API_URL`                  | `https://concert-crawl-api.onrender.com`                                                                                                                                                                                               |
 | `STAGING_URL`                   | `https://staging.concertcrawl.app`                                                                                                                                                                                                     |
@@ -421,7 +421,7 @@ These must be in place before any traffic reaches production.
 > - `deploy-prod.yml` — manual escape hatch; the gate-then-approve flow is intended on this one.
 > - `rollback-prod.yml` — incident response; pause-for-approval would slow recovery.
 >
-> Current model: **Required reviewers OFF.** Branch protection on `main` (above) is the pre-merge gate; the smoke workflow's `PROD_SMOKE_RECONCILER_ENABLED` kill switch is the operational pause control. If you ever want Required reviewers on prod-mutating workflows specifically, the cleanest path is to create a separate `production-automation` GitHub Environment with no protection rules, mirror the secrets there, and reference it from the three automated workflows — leaving `production` with Required reviewers on for whatever else uses it.
+> Current model: **Required reviewers OFF.** Branch protection on `main` (above) is the pre-merge gate; `AUTO_DEPLOY_PROD_ENABLED` is the operational pause control — setting it to `false` closes the only path to production. If you ever want Required reviewers on prod-mutating workflows specifically, the cleanest path is to create a separate `production-automation` GitHub Environment with no protection rules, mirror the secrets there, and reference it from the three automated workflows — leaving `production` with Required reviewers on for whatever else uses it.
 
 ---
 
@@ -429,8 +429,12 @@ These must be in place before any traffic reaches production.
 
 ### Trigger deploys
 
-- **Web (Vercel):** auto-deploys on push to `main` for the prod project. Or **Deployments tab → Redeploy** with cache off after env var changes.
-- **API (Render):** **Builds tab → Manual Deploy → Deploy latest commit**. (The Render dashboard's manual deploy button is under the **Builds** tab, not Settings or Events — easy to miss.)
+Normal path: dispatch **Deploy to Production** (`deploy-prod.yml`) with a reason. It deploys the Render services and, on a green prod smoke, promotes the Vercel web build. See `docs/runbooks/auto-deploy-prod.md`.
+
+The manual controls below are for first-time setup, env var changes, and recovery:
+
+- **Web (Vercel):** git builds are disabled (Ignored Build Step = `exit 0`), so a push deploys nothing. **Deployments tab → Redeploy** with cache off after env var changes.
+- **API (Render):** **Builds tab → Manual Deploy → Deploy latest commit**. (The Render dashboard's manual deploy button is under the **Builds** tab, not Settings or Events — easy to miss.) Required because prod services have Auto-Deploy off.
 - **Crawler crons (Render):** Same — Builds tab manual deploy. Confirms env vars apply on rebuild. Crons execute on schedule afterward; they do not run on-deploy.
 
 ### Smoke checks
