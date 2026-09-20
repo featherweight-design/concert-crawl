@@ -1,12 +1,71 @@
 # Pre-launch manual walkthrough
 
-A single ordered pass over every customer-facing and admin surface in Concert Crawl, for logging
-bugs and improvements before public launch. Tick boxes as you go; anything that fails becomes an
-intake proposal, not an issue filed on the spot (see the standing intake rule in `CLAUDE.md`).
+An ordered walk over every customer-facing and admin surface in Concert Crawl, for logging bugs
+and improvements before public launch. Anything that fails becomes an intake proposal, not an
+issue filed on the spot (see the standing intake rule in `CLAUDE.md`).
+
+**Two passes, in order.** The quick pass is a plain walk through every surface with no setup.
+The detailed pass is the thorough one: tickable, and covering the account states, feature flags,
+background systems, email and edge cases a straight walk cannot reach. Start with the quick pass.
 
 This is a **testing** artifact, not a gate. The authority on "are we ready?" is
 [`launch-bar.md`](./launch-bar.md) — an item failing here is launch-gating only if it also appears
 there.
+
+---
+
+## The quick pass
+
+Walk the app surface by surface, in this order, and note anything that looks wrong. No setup, no
+prerequisites. When you are done, cross-check against the detailed pass below, which adds the
+states, tiers, background systems and edge cases a straight walk will not reach.
+
+- Landing page
+- Sign up
+- Sign in
+- Invite code
+- Onboarding
+- Browse
+- Browse > Filtering
+- Browse > Calendar view
+- Search
+- Event details
+- Event details > Watch
+- Event details > I'm going!
+- Event details > Share
+- Event details > Submit a price
+- Event details > Price check
+- Event details > Report a show
+- Venues
+- Venue details
+- Venue guide
+- Artists
+- Artist details
+- Watching
+- Concerts
+- Following
+- Passport
+- Crews
+- Crew details
+- Crew invite
+- Notifications
+- Settings
+- Settings > Profile
+- Settings > Connections
+- Settings > Notifications
+- Settings > Submitted prices
+- Settings > Plan
+- Tier picker
+- Checkout
+- What's new
+- Admin
+- Feedback
+- Ticket link out all surfaces
+- Copy sweep
+
+---
+
+## The detailed pass
 
 ---
 
@@ -19,6 +78,10 @@ there.
   routes, render from genuinely different components per breakpoint — desktop passing tells you
   nothing about mobile.
 - Have the admin Feature Flags page open in a third tab; several sections below ask you to toggle.
+- **Every staging cron is currently suspended**, `concert-crawl-billing-jobs-staging` included, and
+  no prod billing cron exists at all. Nothing in section 17 will send, and nothing in section 16
+  will fire on staging, until those are resumed. Verified against the live Render API on
+  2026-09-19.
 - **Paid account states need staging.** There is no admin control that grants a tier, so supporter,
   premium and gifted accounts can only be reached by going through checkout — which means
   **section 12's matrix is walked on staging with Stripe in test mode**, not on prod. Prod covers
