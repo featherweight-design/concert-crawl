@@ -12,8 +12,9 @@
 # Exit codes are the same contract as render-wait-for-live.sh, because the
 # callers branch on them identically:
 #   0   — a deployment for this SHA reached READY
-#   124 — benign: no deployment for this SHA exists. The project's Ignored
-#         Build Step skips pushes that do not touch the web app, so this is the
+#   124 — benign: no deployment for this SHA exists, or one exists and a newer
+#         commit has already been promoted over it. The project's Ignored Build
+#         Step skips pushes that do not touch the web app, so the first is the
 #         common outcome on an API- or docs-only merge, not an exception.
 #   125 — NOT benign: a deployment for this SHA exists and failed, was
 #         cancelled, or was still building when the timeout expired. A build
@@ -92,7 +93,18 @@ fetch_deployments() {
   # Checked before any filter runs. `.deployments[]` against an error object
   # aborts with jq's own message and nothing about which project or what came
   # back, so an API shape change would surface as an unexplained non-zero exit.
-  if ! echo "$response" | jq -e 'has("deployments") and (.deployments | type == "array")' >/dev/null 2>&1; then
+  #
+  # Every entry is checked, not only the envelope. A `[null]` or an entry with no
+  # readable state would otherwise be skipped by the filter below, leaving the
+  # matched state empty — which the script reports as 124 and the caller reads as
+  # a benign skip. An unreadable response has to fail closed here, because 124 is
+  # the one exit that lets the suite run without the SHA ever being confirmed.
+  if ! echo "$response" | jq -e '
+    has("deployments")
+    and (.deployments | type == "array")
+    and (.deployments | all(
+      type == "object" and ((.state // .readyState) | type == "string")
+    ))' >/dev/null 2>&1; then
     echo "✗ Vercel returned an unexpected shape for $project_id (expected { deployments: [...] }):" >&2
     printf '%s\n' "${response:0:500}" >&2
     return 1
@@ -113,13 +125,33 @@ while :; do
   state=$(echo "$response" | jq -r --arg sha "$expected_sha" '
     [
       .deployments[]
-      | select(type == "object")
       | select(((.meta // {}).githubCommitSha // empty) == $sha)
-      | .state // .readyState // ""
+      | .state // .readyState
     ] | (.[0] // "")')
+
+  # A READY deployment for this SHA is not proof the project still serves it:
+  # Vercel leaves the old deployment READY forever after a newer one is
+  # promoted, so a fast-follow merge would let the caller run its suite against
+  # the newer build while the checked-out tests are this SHA's. The list is
+  # newest-first, so the head entry is what production points at.
+  #
+  # A head entry with no `meta` is a CLI deploy — prod promotes that way — and
+  # its commit is unknowable from this response, so it is not treated as
+  # superseding anything. Guessing either way there would be worse than saying
+  # nothing: this script gates a test suite, not a deploy.
+  newest_sha=$(echo "$response" | jq -r '
+    (.deployments[0] // {}) | ((.meta // {}).githubCommitSha // "")')
+  newest_state=$(echo "$response" | jq -r '
+    (.deployments[0] // {}) | (.state // .readyState // "")')
 
   case "$state" in
     READY)
+      if [ -n "$newest_sha" ] \
+        && [ "$newest_sha" != "$expected_sha" ] \
+        && [ "$newest_state" = "READY" ]; then
+        echo "The Vercel deployment for $expected_sha is READY but superseded by $newest_sha, which the project now serves" >&2
+        exit 124
+      fi
       echo "✓ Vercel project $project_id is serving $expected_sha"
       exit 0
       ;;

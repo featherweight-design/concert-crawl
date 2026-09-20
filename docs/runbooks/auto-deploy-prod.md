@@ -133,14 +133,24 @@ Either path works, and both take effect within seconds with no rebuild:
 2. Deployments tab → find the most recent prior deploy marked `Ready`
 3. Click ⋯ → **Instant Rollback** (older Vercel UIs label this **Promote to Production**)
 
-**CLI** — from a checkout, with a token that can write to the prod project:
+**CLI.** A token authenticates; it does not say which project. A fresh
+checkout has no `.vercel/project.json`, so link the directory first or
+the command will prompt — or pick the wrong project on an account with
+several. Link once, then roll back:
 
 ```bash
-vercel rollback --token "$VERCEL_TOKEN"   # reverts to the previous production deployment
+vercel link --yes --project concert-crawl --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN"
+vercel rollback --scope "$VERCEL_ORG_ID" --token "$VERCEL_TOKEN"   # reverts to the previous production deployment
 ```
 
-Pass a specific deployment URL or id as an argument to roll back to
-something other than the immediately preceding deployment.
+`VERCEL_ORG_ID` and the token are both in the `production` GitHub
+environment (Settings → Environments → production) if you do not have
+them to hand.
+
+Pass a specific deployment URL or id as an argument to `rollback` to go
+back to something other than the immediately preceding deployment —
+which is also the way to skip the `link` step, since a deployment URL
+identifies its project on its own.
 
 The auto-rollback workflow's log and notification email both remind the
 operator to roll Vercel back in addition to the Render rollback it just

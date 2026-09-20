@@ -492,7 +492,11 @@ jobs:
           VERCEL_ORG_ID: ${{ vars.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ vars.VERCEL_PROJECT_ID }}
         run: |
-          npx --yes vercel@latest deploy --prod --yes \
+          # Pinned, not `@latest`. This command holds a token that can write to
+          # production, so `@latest` would hand a mutable third-party release
+          # write access on every run, and a breaking one would stop promotions
+          # with no change in this repository. Bump it deliberately.
+          npx --yes vercel@59.23.2 deploy --prod --yes \
             --token "$VERCEL_TOKEN"
 
       # `inputs.*` is only defined for `workflow_dispatch`. Using

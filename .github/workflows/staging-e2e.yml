@@ -119,7 +119,7 @@ jobs:
           set -e
           if [ "${exit_code}" -eq 0 ] || [ "${exit_code}" -eq 124 ]; then
             if [ "${exit_code}" -eq 124 ]; then
-              echo "::warning title=No web deployment for this SHA::The staging web app never deployed ${{ github.sha }} within 5 min — most likely its Ignored Build Step skipped a push that does not touch apps/web. Running E2E against the web build it currently serves."
+              echo "::warning title=Staging web app not on this SHA::The staging web app is not serving ${{ github.sha }} — either it never deployed it (most likely its Ignored Build Step skipped a push that does not touch apps/web) or a newer commit was promoted over it. The script's log line above says which. Running E2E against the web build it currently serves."
             fi
           else
             echo "::error title=Staging web app not ready::vercel-wait-for-ready.sh exited ${exit_code}. 125 means a deployment for this SHA exists and failed, was cancelled, or was still building when the 5 min timeout expired — read the script's log lines above, which name the state it saw, then check the deployment in Vercel. Any other code is a script or API failure. Failing — nothing was tested."
