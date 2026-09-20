@@ -158,6 +158,10 @@ jobs:
           RENDER_SERVICE_ID_API: ${{ vars.RENDER_SERVICE_ID_API }}
         run: |
           set +e
+          # pipefail so lookup_status reflects curl, not only jq. Without it a
+          # curl failure feeds jq empty stdin, jq exits 0, and the step reports
+          # a clean read of "no live deploy" rather than a failed read.
+          set -o pipefail
           # Timeouts and limit match render-wait-for-live.sh. This workflow is
           # reached during incident response, so a Render API incident has to
           # fail the lookup in seconds rather than hang the job for six hours,
