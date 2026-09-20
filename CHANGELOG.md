@@ -1,3 +1,14 @@
+## [1.291.3](https://github.com/HartiganHM/concert-crawl/compare/v1.291.2...v1.291.3) (2026-09-20)
+
+
+### Bug Fixes
+
+* **ci:** bound the Render read and preflight jq in render-live-sha.sh ([351be02](https://github.com/HartiganHM/concert-crawl/commit/351be02487818e8ab6857460188b908cbc899273))
+* **ci:** correct the drift alert's measure so it reports real promotion lag ([1c6bbfe](https://github.com/HartiganHM/concert-crawl/commit/1c6bbfe5ac57e24c26399d9891fa95e3d940ae8c))
+* **ci:** give the drift alert and prod smoke concurrency groups ([9f55281](https://github.com/HartiganHM/concert-crawl/commit/9f552813c73dbf57dcb1a9a5ae25ebb1f7c4165c))
+* **ci:** install PyYAML explicitly and guard null deploy commits ([f4065de](https://github.com/HartiganHM/concert-crawl/commit/f4065de1ef33381b254246905668de931b3cb2f9))
+* **ci:** print Render's error body when the live-SHA read fails ([37002e6](https://github.com/HartiganHM/concert-crawl/commit/37002e66818d7261080f7a4dc9b6bb77e8fba2fa))
+
 ## [1.291.2](https://github.com/HartiganHM/concert-crawl/compare/v1.291.1...v1.291.2) (2026-09-20)
 
 
