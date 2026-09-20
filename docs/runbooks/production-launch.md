@@ -133,7 +133,9 @@ docker run --rm postgres:16 psql "$NEON_PROD_DIRECT" -c "
 > ⚠️ **Read _Email — `venues@concertcrawl.app`, and the DMARC path_ under Operational notes before touching any mail DNS.** The live zone has diverged from what these steps originally described: Resend's own records all sit on the `send.concertcrawl.app` subdomain, the root `TXT` belongs to Cloudflare Email Routing, and DMARC is maintained by hand rather than taken from Resend's suggestion.
 
 1. Resend dashboard → **Domains** → **Add Domain** → `concertcrawl.app`
-2. Add the records Resend shows, in Cloudflare. **Do not merge Resend's SPF into the root `concertcrawl.app` SPF record** — it belongs on `send.concertcrawl.app`, and the Operational notes section explains why that separation is load-bearing.
+2. In Cloudflare, add **only** Resend's DKIM `TXT` (`resend._domainkey`) and the SPF `TXT` + `MX` it asks for on `send.concertcrawl.app`. Two of Resend's suggestions must not be applied as shown:
+   - **Skip its DMARC suggestion.** `_dmarc.concertcrawl.app` is maintained by hand and must not be overwritten.
+   - **Do not merge its SPF into the root `concertcrawl.app` SPF record.** It belongs on `send.concertcrawl.app`, and the Operational notes section explains why that separation is load-bearing.
 3. **Verify** in Resend — DKIM and SPF should go green. Resend may keep flagging DMARC, because the live DMARC record is ours and not the one it suggested. That is expected and is not a failure.
 4. Copy the **API Key**
 
@@ -604,18 +606,20 @@ Firewall analytics exports cap at 100 rows sorted by count, so a low-count trigg
 
 The DNS, all in Cloudflare:
 
-| Record                               | Type | Value                                                       | Whose             |
-| ------------------------------------ | ---- | ----------------------------------------------------------- | ----------------- |
-| `concertcrawl.app`                   | MX   | `route{1,2,3}.mx.cloudflare.net`, priorities 64 / 98 / 57   | Email Routing, in |
-| `concertcrawl.app`                   | TXT  | `v=spf1 include:_spf.mx.cloudflare.net ~all`                | Email Routing, in |
-| `resend._domainkey.concertcrawl.app` | TXT  | DKIM public key                                             | Resend, out       |
-| `send.concertcrawl.app`              | TXT  | `v=spf1 include:amazonses.com ~all`                         | Resend, out       |
-| `send.concertcrawl.app`              | MX   | `feedback-smtp.us-east-1.amazonses.com`, priority 10        | Resend, out       |
-| `_dmarc.concertcrawl.app`            | TXT  | `v=DMARC1; p=none; rua=mailto:dmarc@concertcrawl.app; fo=1` | policy            |
+| Record                               | Type | Value                                                       | Priority | Whose                   |
+| ------------------------------------ | ---- | ----------------------------------------------------------- | -------- | ----------------------- |
+| `concertcrawl.app`                   | MX   | `route1.mx.cloudflare.net`                                  | 64       | Email Routing, inbound  |
+| `concertcrawl.app`                   | MX   | `route2.mx.cloudflare.net`                                  | 98       | Email Routing, inbound  |
+| `concertcrawl.app`                   | MX   | `route3.mx.cloudflare.net`                                  | 57       | Email Routing, inbound  |
+| `concertcrawl.app`                   | TXT  | `v=spf1 include:_spf.mx.cloudflare.net ~all`                | —        | Email Routing, inbound  |
+| `resend._domainkey.concertcrawl.app` | TXT  | DKIM public key                                             | —        | Resend, outbound        |
+| `send.concertcrawl.app`              | TXT  | `v=spf1 include:amazonses.com ~all`                         | —        | Resend, outbound        |
+| `send.concertcrawl.app`              | MX   | `feedback-smtp.us-east-1.amazonses.com`                     | 10       | Resend, outbound        |
+| `_dmarc.concertcrawl.app`            | TXT  | `v=DMARC1; p=none; rua=mailto:dmarc@concertcrawl.app; fo=1` | —        | policy, hand-maintained |
 
 **The root SPF record does not list Resend, and that is correct.** Resend's return path is on `send.concertcrawl.app`, which carries its own SPF, and DMARC's relaxed alignment treats that subdomain as the same organizational domain. Do not "fix" this by merging Amazon SES into the root record — the root SPF exists for Cloudflare's inbound routing and is a different job.
 
-That alignment holds only while the DMARC record leaves `aspf` unset, since relaxed is the default and `aspf=s` would demand an exact domain match. Anyone tightening the policy below must leave `aspf` alone, or add Amazon SES to the root SPF in the same change.
+That alignment holds only while the DMARC record leaves `aspf` unset, since relaxed is the default and `aspf=s` demands that the envelope sender domain match `concertcrawl.app` exactly. **Adding Amazon SES to the root SPF would not rescue that** — SPF alignment compares the envelope domain, which is `send.concertcrawl.app` no matter what the apex record says, so the only fix would be moving Resend's MAIL FROM domain to the apex. Leave `aspf` unset. DKIM already signs with `d=concertcrawl.app` and aligns strictly on its own, so DMARC has a passing path either way.
 
 **Gmail side, two settings.** Settings ▸ Accounts ▸ Send mail as carries `Concert Crawl <venues@concertcrawl.app>` sending through `smtp.resend.com` on port 465. Under it, "When replying to a message" must be **"Reply from the same address the message was sent to."** That second setting is the one that does the work: without it Gmail replies as the default address and a venue operator sees a personal domain they have no reason to trust. `venues@` is deliberately **not** the Gmail default, so ordinary mail is unaffected.
 
