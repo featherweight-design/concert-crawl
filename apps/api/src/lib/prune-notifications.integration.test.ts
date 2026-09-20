@@ -20,7 +20,7 @@ describe('pruneNotifications', () => {
       type: 'user_notification',
       category: 'watch.cancelled',
       title: 'Geese at Bluebird Theater: cancelled.',
-      body: "The show's off. Tap for refund details.",
+      body: "The show's off. Contact your ticket vendor for refund details.",
       createdAt: ancient(),
     })
     const result = await pruneNotifications(testDb)

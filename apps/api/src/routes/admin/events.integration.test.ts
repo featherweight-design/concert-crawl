@@ -410,8 +410,13 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
     id: string
     date: string
     classification: string
-    movedCandidateId: string | null
-    movedReason: string | null
+    movedCandidate: {
+      id: string
+      reason: string
+      title: string
+      date: string
+      venueName: string | null
+    } | null
   }
 
   const fetchMissing = async (): Promise<MissingRow[]> => {
@@ -482,8 +487,12 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
 
     const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
     expect(row?.classification).toBe('moved')
-    expect(row?.movedReason).toBe('date')
-    expect(row?.movedCandidateId).toBe(replacement.id)
+    expect(row?.movedCandidate?.reason).toBe('date')
+    expect(row?.movedCandidate?.id).toBe(replacement.id)
+    // Enough to name the show in the confirm step without a second request.
+    expect(row?.movedCandidate?.title).toBe('Moved Artist Live')
+    expect(row?.movedCandidate?.date).toBe(addDays(base, 45))
+    expect(row?.movedCandidate?.venueName).toBe(venue.name)
   })
 
   it('suggests a venue move: same night, different room', async () => {
@@ -497,8 +506,8 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
 
     const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
     expect(row?.classification).toBe('moved')
-    expect(row?.movedReason).toBe('venue')
-    expect(row?.movedCandidateId).toBe(relocated.id)
+    expect(row?.movedCandidate?.reason).toBe('venue')
+    expect(row?.movedCandidate?.id).toBe(relocated.id)
   })
 
   // The ordinary publishing sequence, and the one an earlier
@@ -518,7 +527,7 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
 
     const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
     expect(row?.classification).toBe('moved')
-    expect(row?.movedCandidateId).toBe(replacement.id)
+    expect(row?.movedCandidate?.id).toBe(replacement.id)
   })
 
   // Residency falsifier. A venue announcing a multi-night run creates every
@@ -539,8 +548,7 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
 
     const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
     expect(row?.classification).toBe('removed')
-    expect(row?.movedCandidateId).toBeNull()
-    expect(row?.movedReason).toBeNull()
+    expect(row?.movedCandidate).toBeNull()
   })
 
   // The other freshness falsifier: a genuinely separate booking, announced
@@ -559,7 +567,7 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
 
     const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
     expect(row?.classification).toBe('removed')
-    expect(row?.movedCandidateId).toBeNull()
+    expect(row?.movedCandidate).toBeNull()
   })
 
   it('does not suggest a candidate beyond the date window', async () => {
@@ -570,7 +578,7 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
     await seedCandidate(venue.id, addDays(base, 200))
 
     const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
-    expect(row?.movedCandidateId).toBeNull()
+    expect(row?.movedCandidate).toBeNull()
     expect(row?.classification).not.toBe('moved')
   })
 
@@ -597,7 +605,7 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
     const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
     expect(row?.classification).toBe('duplicate')
     // The suggestion is still carried so the admin can see the alternative.
-    expect(row?.movedCandidateId).not.toBeNull()
+    expect(row?.movedCandidate).not.toBeNull()
   })
 
   it('ignores a candidate that is itself missing or admin-hidden', async () => {
@@ -614,7 +622,7 @@ describe('GET /v1/admin/events?missing=true — moved-candidate detection', () =
     })
 
     const row = (await fetchMissing()).find((cur) => cur.id === orphan.id)
-    expect(row?.movedCandidateId).toBeNull()
+    expect(row?.movedCandidate).toBeNull()
   })
 })
 
@@ -2725,6 +2733,201 @@ describe('POST /v1/admin/events/:id/merge', () => {
     }
     expect(metadata.sourceId).toBe(source.id)
     expect(metadata.referencesMoved.userEventsMoved).toBe(1)
+  })
+
+  it('stays silent by default: an ordinary de-dup merge notifies nobody', async () => {
+    const venue = await seedVenue()
+    const source = await seedEvent(venue.id, { artist: 'Src' })
+    const target = await seedEvent(venue.id, {
+      artist: 'Tgt',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-11-01',
+    })
+    await seedUserEvent('watcher-a', source.id, { status: 'watching' })
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: target.id }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'))
+    expect(rows).toHaveLength(0)
+  })
+
+  it('notifies watchers of a date move with the new-night copy', async () => {
+    const venue = await seedVenue({ name: 'Bluebird Theater' })
+    const source = await seedEvent(venue.id, { artist: 'Moved Artist' })
+    const target = await seedEvent(venue.id, {
+      artist: 'Moved Artist',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-11-01',
+      showTime: '21:00:00',
+    })
+    await seedUserEvent('watcher-a', source.id, { status: 'watching' })
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({
+        targetId: target.id,
+        notifyWatchers: true,
+        suggestion: { reason: 'date' },
+      }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'))
+    expect(rows).toHaveLength(1)
+    const row = rows[0]!
+    expect(row.userId).toBe('watcher-a')
+    // Fired on the TARGET, so the deep link resolves — the source row is gone.
+    expect(row.actionUrl).toBe(`/events/${target.id}`)
+    expect(row.body).toBe('Same tickets, new night.')
+    expect(row.body).not.toContain('Refund')
+  })
+
+  // The venue variant cannot be built from the usual "<artist> at <venue>"
+  // template: the fan-out reads the target, whose venue is already the new
+  // one, so the watcher would be told the show moved to where it already is.
+  it('notifies watchers of a venue move naming the room they knew it under', async () => {
+    const fromVenue = await seedVenue({
+      slug: 'from-room',
+      name: 'Larimer Lounge',
+    })
+    const toVenue = await seedVenue({ slug: 'to-room', name: 'Globe Hall' })
+    const source = await seedEvent(fromVenue.id, { artist: 'Moved Artist' })
+    const target = await seedEvent(toVenue.id, {
+      artist: 'Moved Artist',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-11-01',
+    })
+    await seedUserEvent('watcher-a', source.id, { status: 'watching' })
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({
+        targetId: target.id,
+        notifyWatchers: true,
+        suggestion: { reason: 'venue' },
+      }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'))
+    expect(rows).toHaveLength(1)
+    const row = rows[0]!
+    expect(row.title).toBe('Moved Artist at Larimer Lounge moved.')
+    expect(row.body).toBe('Your ticket still works. New room: Globe Hall.')
+  })
+
+  // The caller's claimed reason is provenance for the audit row. It must not
+  // pick the copy — that is derived from the two venue ids.
+  it('ignores a suggestion reason that contradicts the rows', async () => {
+    const venue = await seedVenue({ name: 'Bluebird Theater' })
+    const source = await seedEvent(venue.id, { artist: 'Moved Artist' })
+    const target = await seedEvent(venue.id, {
+      artist: 'Moved Artist',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-11-01',
+    })
+    await seedUserEvent('watcher-a', source.id, { status: 'watching' })
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({
+        targetId: target.id,
+        notifyWatchers: true,
+        // Claims a venue move; both rows are at the same venue.
+        suggestion: { reason: 'venue' },
+      }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'))
+    expect(rows[0]!.body).toBe('Same tickets, new night.')
+  })
+
+  it('records suggestion provenance and the notify flag on the audit row', async () => {
+    const venue = await seedVenue()
+    const source = await seedEvent(venue.id, { artist: 'Src' })
+    const target = await seedEvent(venue.id, {
+      artist: 'Tgt',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-11-01',
+    })
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({
+        targetId: target.id,
+        notifyWatchers: true,
+        suggestion: { reason: 'date' },
+      }),
+    })
+    expect(res.status).toBe(200)
+
+    const auditRows = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'event.merge'))
+    const metadata = auditRows[0]!.metadata as {
+      suggestion: { reason: string } | null
+      notifyWatchers: boolean
+    }
+    expect(metadata.suggestion?.reason).toBe('date')
+    expect(metadata.notifyWatchers).toBe(true)
+  })
+
+  // Without this the denominator the matcher is calibrated against is missing:
+  // a hand-searched merge must be distinguishable from a confirmed suggestion.
+  it('records a null suggestion for a hand-searched merge', async () => {
+    const venue = await seedVenue()
+    const source = await seedEvent(venue.id, { artist: 'Src' })
+    const target = await seedEvent(venue.id, {
+      artist: 'Tgt',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-11-01',
+    })
+
+    await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: target.id }),
+    })
+
+    const auditRows = await testDb
+      .select()
+      .from(auditLog)
+      .where(eq(auditLog.action, 'event.merge'))
+    const metadata = auditRows[0]!.metadata as {
+      suggestion: unknown
+      notifyWatchers: boolean
+    }
+    expect(metadata.suggestion).toBeNull()
+    expect(metadata.notifyWatchers).toBe(false)
   })
 
   it('rejects merging an event with itself (422)', async () => {

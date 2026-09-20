@@ -42,11 +42,17 @@ export const MOVED_REPLACEMENT_WINDOW_DAYS = 14
 const movedCandidateSchema = z.object({
   id: z.string().uuid(),
   reason: z.union([z.literal('date'), z.literal('venue')]),
+  title: z.string(),
+  date: z.string(),
+  venueName: z.string().nullable(),
 })
 
 export interface MovedCandidate {
   id: string
   reason: MovedReason
+  title: string
+  date: string
+  venueName: string | null
 }
 
 /**
@@ -82,7 +88,13 @@ export const parseMovedCandidate = (raw: unknown): MovedCandidate | null => {
 export const movedCandidateExpr = (today: string): SQL<unknown> => sql`(
   SELECT jsonb_build_object(
     'id', cnd.id,
-    'reason', CASE WHEN cnd.venue_id = ${events.venueId} THEN 'date' ELSE 'venue' END
+    'reason', CASE WHEN cnd.venue_id = ${events.venueId} THEN 'date' ELSE 'venue' END,
+    -- Enough to NAME the suggestion in the confirm step. Carried here rather
+    -- than fetched per row by the client: the admin has to read what they are
+    -- about to merge watch rows onto, and one row should not cost a request.
+    'title', cnd.title,
+    'date', cnd.date,
+    'venueName', (SELECT vnu.name FROM venues vnu WHERE vnu.id = cnd.venue_id)
   )
   FROM events cnd
   WHERE cnd.id <> ${events.id}

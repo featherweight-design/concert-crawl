@@ -100,6 +100,7 @@ interface AdminReviewMobileProps {
   onMarkMissingPostponed: (id: string) => Promise<void>
   onMarkMissingCancelled: (id: string) => Promise<void>
   onDismissMissing: (id: string) => Promise<void>
+  onConfirmMissingMove: (event: MissingRowEvent) => Promise<void>
   onEnterMissingTab?: () => void
   onAllEventsRowClick?: (id: string) => void
   allEventsFilters?: AllEventsFilters
@@ -614,6 +615,7 @@ export function AdminReviewMobile({
   onMarkMissingPostponed,
   onMarkMissingCancelled,
   onDismissMissing,
+  onConfirmMissingMove,
   onEnterMissingTab,
   onAllEventsRowClick,
   allEventsFilters,
@@ -938,6 +940,7 @@ export function AdminReviewMobile({
             onMarkPostponed={onMarkMissingPostponed}
             onMarkCancelled={onMarkMissingCancelled}
             onDismiss={onDismissMissing}
+            onConfirmMove={onConfirmMissingMove}
           />
         </div>
       )}

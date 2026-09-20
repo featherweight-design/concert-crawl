@@ -1652,6 +1652,18 @@ export const ADMIN_COPY = {
       actionPostponed: 'Postponed',
       actionCancelled: 'Cancelled',
       actionDismiss: 'Dismiss',
+      actionConfirmMove: 'Confirm move',
+      moveConfirm: {
+        eyebrow: 'Confirm move',
+        heading: 'Merge this show into its replacement?',
+        reasonDate: 'Same venue, new date',
+        reasonVenue: 'Same date, new venue',
+        fromLabel: 'Missing',
+        toLabel: 'Replacement',
+        body: 'Watch and attendance rows move to the replacement, this row is deleted, and everyone watching it gets told the show moved. None of that can be undone.',
+        cancel: 'Cancel',
+        confirm: 'Merge and notify',
+      },
       emptyHeading: "Nothing's gone missing.",
       emptyBody:
         'Every event the crawler expected showed up in the last sweep.',

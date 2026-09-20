@@ -174,6 +174,57 @@ describe('fanoutWatchNotification', () => {
     expect(rows[0]?.['title']).toBe('Band at The Fillmore moved to Aug 14.')
   })
 
+  // A relocation must not reuse the "<artist> at <venue>" template: the
+  // fan-out reads the TARGET event, whose venue is already the new room, so
+  // that template renders "Band at The Fillmore moved to The Fillmore".
+  it('names the old room in the title and the new room in the body on a relocation', async () => {
+    const deps = makeDeps()
+    deps.pushSelect([
+      {
+        title: 'The Show',
+        artist: 'Band',
+        venueName: 'Globe Hall',
+        date: '2026-08-14',
+      },
+    ])
+    deps.pushSelect([{ userId: 'user_a' }])
+    deps.sendPush.mockResolvedValue({ delivered: 1 })
+    await fanoutWatchNotification(deps, {
+      eventId: 'evt_1',
+      category: 'watch.postponed',
+      relocated: { fromVenueName: 'Larimer Lounge' },
+    })
+    const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
+    expect(rows[0]?.['title']).toBe('Band at Larimer Lounge moved.')
+    expect(rows[0]?.['body']).toBe(
+      'Your ticket still works. New room: Globe Hall.',
+    )
+  })
+
+  it('promises no refund information it cannot deliver', async () => {
+    const deps = makeDeps()
+    deps.pushSelect([
+      {
+        title: 'The Show',
+        artist: 'Band',
+        venueName: 'The Fillmore',
+        date: '2026-08-14',
+      },
+    ])
+    deps.pushSelect([{ userId: 'user_a' }])
+    deps.sendPush.mockResolvedValue({ delivered: 1 })
+    await fanoutWatchNotification(deps, {
+      eventId: 'evt_1',
+      category: 'watch.cancelled',
+    })
+    const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
+    // We hold no refund record and the event page has none, so the body must
+    // point at the seller rather than at us.
+    expect(rows[0]?.['body']).toBe(
+      "The show's off. Contact your ticket vendor for refund details.",
+    )
+  })
+
   it('composes a back-on-sale title', async () => {
     const deps = makeDeps()
     deps.pushSelect([

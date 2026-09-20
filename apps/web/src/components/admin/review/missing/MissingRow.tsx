@@ -1,6 +1,9 @@
 'use client'
 
-import { type MissingClassification } from '@concert-crawl/types'
+import {
+  type MissingClassification,
+  type MovedReason,
+} from '@concert-crawl/types'
 import { ADMIN_COPY } from '@/components/admin/definitions/copy'
 import {
   computeMissedSweeps,
@@ -28,6 +31,14 @@ export interface MissingRowEvent {
   sourceUrl: string | null
   classification: MissingClassification
   clusterCount: number
+  /** Suggested relocation target, or null when the matcher found none. */
+  movedCandidate: {
+    id: string
+    reason: MovedReason
+    title: string
+    date: string
+    venueName: string | null
+  } | null
 }
 
 export interface MissingRowProps {
@@ -36,6 +47,7 @@ export interface MissingRowProps {
   onMarkPostponed: (id: string) => void
   onMarkCancelled: (id: string) => void
   onDismiss: (id: string) => void
+  onConfirmMove: (event: MissingRowEvent) => void
   pending?: boolean
 }
 
@@ -55,6 +67,7 @@ export const MissingRow = ({
   onMarkPostponed,
   onMarkCancelled,
   onDismiss,
+  onConfirmMove,
   pending = false,
 }: MissingRowProps) => {
   const missed = computeMissedSweeps(event.firstMissingAt, nowIso)
@@ -163,6 +176,9 @@ export const MissingRow = ({
         onMarkPostponed={onMarkPostponed}
         onMarkCancelled={onMarkCancelled}
         onDismiss={onDismiss}
+        {...(event.movedCandidate
+          ? { onConfirmMove: () => onConfirmMove(event) }
+          : {})}
         disabled={pending}
       />
     </div>

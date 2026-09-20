@@ -31,6 +31,21 @@ export interface Release {
 // Restore it, redated, as part of launch.
 export const RELEASES: Release[] = [
   {
+    version: 'v0.53.0-beta',
+    date: 'Sep 20, 2026',
+    headline: 'A moved show finds you again.',
+    items: [
+      {
+        kind: 'added',
+        text: 'When a show moves to a new night or a new room, everyone watching it hears from us.',
+      },
+      {
+        kind: 'fixed',
+        text: 'Cancellation alerts point you at your ticket vendor for refunds, instead of promising details we never had.',
+      },
+    ],
+  },
+  {
     version: 'v0.52.0-beta',
     date: 'Sep 19, 2026',
     headline: 'Your nights get their faces back.',

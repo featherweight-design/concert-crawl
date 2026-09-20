@@ -40,6 +40,7 @@ const baseProps = {
   missingEvents: [],
   onMarkMissingPostponed: vi.fn(async () => undefined),
   onMarkMissingCancelled: vi.fn(async () => undefined),
+  onConfirmMissingMove: vi.fn(async () => {}),
   onDismissMissing: vi.fn(async () => undefined),
 }
 

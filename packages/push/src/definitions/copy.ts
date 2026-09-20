@@ -7,11 +7,26 @@
 export const watchNotificationCopy = {
   cancelled: (artistAtVenue: string) => ({
     title: `${artistAtVenue}: cancelled.`,
-    body: "The show's off. Tap for refund details.",
+    // We never sell tickets, so we hold no refund record and the event page
+    // has none either. The original body promised "tap for refund details"
+    // against a page that cannot answer it; naming the seller is the honest
+    // version of the same job.
+    body: "The show's off. Contact your ticket vendor for refund details.",
   }),
   postponed: (artistAtVenue: string, dateLabel: string) => ({
     title: `${artistAtVenue} moved to ${dateLabel}.`,
-    body: "Same tickets, new night. Can't make it? Refund info inside.",
+    // The title already carries the new date, so the body's job is the thing
+    // the title cannot say: the ticket still works.
+    body: 'Same tickets, new night.',
+  }),
+  // Venue relocation. Deliberately NOT built from `artistAtVenue`: the
+  // fan-out fires on the target event, whose venue is already the new one,
+  // so that template would render "Artist at NewVenue moved to NewVenue".
+  // Naming the room the watcher knew it under is also what identifies the
+  // show for them.
+  relocated: (artist: string, fromVenueName: string, newVenueName: string) => ({
+    title: `${artist} at ${fromVenueName} moved.`,
+    body: `Your ticket still works. New room: ${newVenueName}.`,
   }),
   soldout: (artistAtVenue: string) => ({
     title: `${artistAtVenue} is sold out.`,

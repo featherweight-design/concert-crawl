@@ -34,7 +34,7 @@ any entry added from here on:
    copy. Replace with a period by default; a colon or comma when the clause is genuinely
    subordinate. `·` only in a true metadata row (`date · venue · price`).
 4. **Naming-then-explaining is allowed** (rule 9's changelog exemption). "Multi-tier price
-   submission — hit Add another tier…" is the correct *shape*; only its dash is wrong.
+   submission — hit Add another tier…" is the correct _shape_; only its dash is wrong.
 5. **Locked vocabulary applies** (rule 10): shows are **watched**, artists are
    **followed**, **Submitted prices**, **Price check**. `releases.ts:707` ("Watching list
    — save shows you care about") is a live example of the drift the rule exists to stop.
@@ -46,13 +46,13 @@ any entry added from here on:
 
 Listed to show what the house style is reacting against. **Do not edit these.**
 
-| Line | Entry | Why it calibrates |
-|---|---|---|
-| 103 | Notifications item, ~110 words, five sentences, one em-dash, plus `It's a DOT, not a number screaming 47 at you.` | Worst single item in the file. Blows the 1-sentence item cap by 5x, and the all-caps aside is a second color line inside one item. |
-| 40 | Shareable-cards item, ~70 words, one em-dash, four-clause appositive after the dash | Second-longest item. The dash carries a list that a colon would carry better. |
-| 76 | `Artists have their own page now — and you can follow them.` | Headline is inside the 14-word cap (11 words) but the em-dash splits it into two headlines. The canonical shape a future entry should avoid. |
-| 197 | History item, three sentences, two em-dashes, and a tier disclosure buried in the tail | Obligation-class content ("It is a paid feature") stapled to the end of a Chrome sentence, after a dash. |
-| 130 | First-timer guide item, four clauses plus a second sentence containing another em-dash | Two em-dashes in one item; the second one is the one rule 4 calls "a dash in front of a sentence". |
+| Line | Entry                                                                                                             | Why it calibrates                                                                                                                            |
+| ---- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 103  | Notifications item, ~110 words, five sentences, one em-dash, plus `It's a DOT, not a number screaming 47 at you.` | Worst single item in the file. Blows the 1-sentence item cap by 5x, and the all-caps aside is a second color line inside one item.           |
+| 40   | Shareable-cards item, ~70 words, one em-dash, four-clause appositive after the dash                               | Second-longest item. The dash carries a list that a colon would carry better.                                                                |
+| 76   | `Artists have their own page now — and you can follow them.`                                                      | Headline is inside the 14-word cap (11 words) but the em-dash splits it into two headlines. The canonical shape a future entry should avoid. |
+| 197  | History item, three sentences, two em-dashes, and a tier disclosure buried in the tail                            | Obligation-class content ("It is a paid feature") stapled to the end of a Chrome sentence, after a dash.                                     |
+| 130  | First-timer guide item, four clauses plus a second sentence containing another em-dash                            | Two em-dashes in one item; the second one is the one rule 4 calls "a dash in front of a sentence".                                           |
 
 ---
 
@@ -74,34 +74,34 @@ so every TIGHTEN below is a proposal to be taken back to the handoff, not applie
 
 ### `packages/push/src/definitions/copy.ts`
 
-| String | Class | Len | Verdict | Replacement |
-|---|---|---|---|---|
-| `${artistAtVenue} — cancelled.` | Recovery | 42 | **TIGHTEN** | `${artistAtVenue} cancelled` — rule 4 em-dash, and 2 over cap. |
-| `The show's off. Tap for refund details.` | Recovery | 38 | **KEEP** | Diagnosis plus the path out, in eight words. |
-| `${artistAtVenue} moved to ${dateLabel}.` | Recovery | 46 | **TIGHTEN** | `${artistAtVenue} moved to ${dateLabel}` — drop the terminal period; still over cap on long artist strings (see gap note). |
-| `Same tickets, new night. Can't make it? Refund info inside.` | Recovery | 58 | **KEEP** | Rule 6: translates rather than cuts. Defended. |
-| `${artistAtVenue} is sold out.` | Recovery | 42 | **TIGHTEN** | `${artistAtVenue} sold out` (39). |
-| `Official waitlist may open closer to the date — we'll watch it.` | Recovery | 62 | **TIGHTEN** | `Official waitlist may open closer to the date. We'll watch it.` — rule 4 only; the promise stays. |
-| `Tickets for ${artistAtVenue} just went back on sale.` | Chrome | 66 | **TIGHTEN** | `${artistAtVenue}: back on sale` — 26 chars over cap, and "Tickets for" is recoverable from the body. |
-| `A batch reopened. They tend to go fast — no pressure though.` | Chrome | 59 | **TIGHTEN** | `A batch reopened. They tend to go fast, no pressure though.` — rule 4. "no pressure though" survives under rule 1 as the line's color; it passes read-aloud. |
-| `Tickets for ${artistAtVenue} just dropped.` | Chrome | 55 | **TIGHTEN** | `${artistAtVenue} tickets got cheaper` — over cap, and "just" is a rule-9 hedge doing no work. |
-| `Cheaper than we last saw. Grab them before they go.` | Chrome | 50 | **KEEP** | Under cap, reads aloud, no tells. |
-| `${newPrice} tickets for ${artistAtVenue} just went on sale.` | Obligation | 65 | **TIGHTEN** | `${newPrice} tickets for ${artistAtVenue}` — 25 over cap. The price is the point; the "just went on sale" tail is not. Obligation class, so the number itself is defended. |
-| `Down from ${oldPrice}. Cheapest we've seen for this one.` | Obligation | 57 | **KEEP** | A price claim, in scope for rule 4 only, and clean. The file comment already justifies the accuracy of "cheapest we've seen". Defended. |
+| String                                                            | Class      | Len | Verdict                         | Replacement                                                                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------- | ---------- | --- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `${artistAtVenue} — cancelled.`                                   | Recovery   | 42  | **TIGHTEN**                     | `${artistAtVenue} cancelled` — rule 4 em-dash, and 2 over cap.                                                                                                                                                                                                                                                                         |
+| `The show's off. Tap for refund details.`                         | Recovery   | 38  | **REVERSED 2026-09-20 — STALE** | Judged as writing, never checked against the product. We sell no tickets, hold no refund record, and the event page this deep-links to carries a date, a venue and a vendor link and nothing about refunds, so "tap for" pointed at a page that cannot answer it. Now `The show's off. Contact your ticket vendor for refund details.` |
+| `${artistAtVenue} moved to ${dateLabel}.`                         | Recovery   | 46  | **TIGHTEN**                     | `${artistAtVenue} moved to ${dateLabel}` — drop the terminal period; still over cap on long artist strings (see gap note).                                                                                                                                                                                                             |
+| `Same tickets, new night. Can't make it? Refund info inside.`     | Recovery   | 58  | **REVERSED 2026-09-20 — STALE** | Same fact: there is no refund info inside. The surviving clause is the one the title cannot say. Now `Same tickets, new night.`                                                                                                                                                                                                        |
+| `${artistAtVenue} is sold out.`                                   | Recovery   | 42  | **TIGHTEN**                     | `${artistAtVenue} sold out` (39).                                                                                                                                                                                                                                                                                                      |
+| `Official waitlist may open closer to the date — we'll watch it.` | Recovery   | 62  | **TIGHTEN**                     | `Official waitlist may open closer to the date. We'll watch it.` — rule 4 only; the promise stays.                                                                                                                                                                                                                                     |
+| `Tickets for ${artistAtVenue} just went back on sale.`            | Chrome     | 66  | **TIGHTEN**                     | `${artistAtVenue}: back on sale` — 26 chars over cap, and "Tickets for" is recoverable from the body.                                                                                                                                                                                                                                  |
+| `A batch reopened. They tend to go fast — no pressure though.`    | Chrome     | 59  | **TIGHTEN**                     | `A batch reopened. They tend to go fast, no pressure though.` — rule 4. "no pressure though" survives under rule 1 as the line's color; it passes read-aloud.                                                                                                                                                                          |
+| `Tickets for ${artistAtVenue} just dropped.`                      | Chrome     | 55  | **TIGHTEN**                     | `${artistAtVenue} tickets got cheaper` — over cap, and "just" is a rule-9 hedge doing no work.                                                                                                                                                                                                                                         |
+| `Cheaper than we last saw. Grab them before they go.`             | Chrome     | 50  | **KEEP**                        | Under cap, reads aloud, no tells.                                                                                                                                                                                                                                                                                                      |
+| `${newPrice} tickets for ${artistAtVenue} just went on sale.`     | Obligation | 65  | **TIGHTEN**                     | `${newPrice} tickets for ${artistAtVenue}` — 25 over cap. The price is the point; the "just went on sale" tail is not. Obligation class, so the number itself is defended.                                                                                                                                                             |
+| `Down from ${oldPrice}. Cheapest we've seen for this one.`        | Obligation | 57  | **KEEP**                        | A price claim, in scope for rule 4 only, and clean. The file comment already justifies the accuracy of "cheapest we've seen". Defended.                                                                                                                                                                                                |
 
 ### `packages/crawler-core/src/lib/spotify-fanout/definitions/copy.ts`
 
-| String | Class | Len | Verdict | Replacement |
-|---|---|---|---|---|
-| `${artist} — new Denver date` | Chrome | 33–48 | **TIGHTEN** | `${artist}: new Denver date` — rule 4. Within cap for short artist names, over it above ~23 chars. |
-| `${venueName} · ${dateLabel}. Added to your Watching.` | Chrome | 51 | **KEEP** | `·` is a true metadata row. Vocabulary is correct: "Watching", not "Saved". |
-| `${venueName} · ${dateLabel}. Want in? Tap to watch.` | Chrome | 50 | **KEEP** | "Tap to watch" is not rule-1 obvious-labelling here: a notification has no button, so the instruction is the affordance. |
+| String                                                 | Class  | Len   | Verdict     | Replacement                                                                                                              |
+| ------------------------------------------------------ | ------ | ----- | ----------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `${artist} — new Denver date`                          | Chrome | 33–48 | **TIGHTEN** | `${artist}: new Denver date` — rule 4. Within cap for short artist names, over it above ~23 chars.                       |
+| `${venueName} · ${dateLabel}. Added to your Watching.` | Chrome | 51    | **KEEP**    | `·` is a true metadata row. Vocabulary is correct: "Watching", not "Saved".                                              |
+| `${venueName} · ${dateLabel}. Want in? Tap to watch.`  | Chrome | 50    | **KEEP**    | "Tap to watch" is not rule-1 obvious-labelling here: a notification has no button, so the instruction is the affordance. |
 
 ### Verdict tally
 
 | CUT | TIGHTEN | TOOLTIP | RENAME | KEEP |
-|---|---|---|---|---|
-| 0 | 9 | 0 | 0 | 6 |
+| --- | ------- | ------- | ------ | ---- |
+| 0   | 9       | 0       | 0      | 6    |
 
 Of the 9 TIGHTENs, **6 are pure rule-4 or terminal-punctuation fixes** and 3 are genuine
 over-cap trims. Zero cuts, so the 30%-of-strings self-check is trivially clear. No two
@@ -130,13 +130,13 @@ punctuation-only glyphs.
 
 ### Totals
 
-| Bucket | Count |
-|---|---|
-| JSX text nodes, actionable | 117 |
-| Copy-bearing prop literals (`aria-label`, `placeholder`) | 7 |
-| **Actionable total** | **124** |
-| Decorative labels inside release-note hero art (`components/consumer/release-notes/heroes/*`) | 45 |
-| **Raw total found** | **169** |
+| Bucket                                                                                        | Count   |
+| --------------------------------------------------------------------------------------------- | ------- |
+| JSX text nodes, actionable                                                                    | 117     |
+| Copy-bearing prop literals (`aria-label`, `placeholder`)                                      | 7       |
+| **Actionable total**                                                                          | **124** |
+| Decorative labels inside release-note hero art (`components/consumer/release-notes/heroes/*`) | 45      |
+| **Raw total found**                                                                           | **169** |
 
 The 45 hero-art strings (`ADMIT ONE`, `DOORS · 8 PM`, `RED ROCKS`, `RUN THE JEWELS`) are
 Data class — fictional ticket-stub artwork inside spotlight illustrations, not product
@@ -144,15 +144,15 @@ copy. They are listed separately and are **not** convention violations worth cha
 
 ### By area
 
-| Area | Count | Notes |
-|---|---|---|
-| **`app/legal/*` (terms, privacy, beta)** | 44 | Largest offender. Terms 21, privacy 13, beta 10. Obligation-class content living entirely inline. |
-| **`components/settings/*`** | 45 | `SettingsRouteDesktop.tsx` alone holds 16. Also `SettingsRoute` 6, `DeleteAccountSheet` 8, `EditProfileForm` 6. |
-| **`components/consumer/*` (non-hero)** | 21 | Spread thin across price cards, reporting sheets, submit-price modal. |
-| `components/onboarding/steps/*` | 3 | Includes two `— Hugh` sign-offs (rule-4 exempt attribution). |
-| `app/(protected)/(main)/*` pages | 4 | Dispute page 2, venue page 2. |
-| `theme/*`, `components/brand/*` | 3 | |
-| `aria-label` / `placeholder` props | 7 | See list below. |
+| Area                                     | Count | Notes                                                                                                           |
+| ---------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------------- |
+| **`app/legal/*` (terms, privacy, beta)** | 44    | Largest offender. Terms 21, privacy 13, beta 10. Obligation-class content living entirely inline.               |
+| **`components/settings/*`**              | 45    | `SettingsRouteDesktop.tsx` alone holds 16. Also `SettingsRoute` 6, `DeleteAccountSheet` 8, `EditProfileForm` 6. |
+| **`components/consumer/*` (non-hero)**   | 21    | Spread thin across price cards, reporting sheets, submit-price modal.                                           |
+| `components/onboarding/steps/*`          | 3     | Includes two `— Hugh` sign-offs (rule-4 exempt attribution).                                                    |
+| `app/(protected)/(main)/*` pages         | 4     | Dispute page 2, venue page 2.                                                                                   |
+| `theme/*`, `components/brand/*`          | 3     |                                                                                                                 |
+| `aria-label` / `placeholder` props       | 7     | See list below.                                                                                                 |
 
 **Worst three areas: `app/legal/*` (44), `components/settings/*` (45), and
 `components/consumer/*` non-hero (21)** — together 110 of the 124 actionable strings.
@@ -192,22 +192,22 @@ begin` · L128 `Email Hugh directly.`
 #### `components/settings/` (45)
 
 - `SettingsRouteDesktop.tsx` (16): L194 `Profile` · L195 `What other fans see when you
-  submit a price.` · L224 `· joined` metadata row · L231 `anonymous fan` · L231 `. Pick a
-  handle if you want credit.` · L244 `Edit` · L260 `anonymous fan.` · L276 `Pick a handle`
+submit a price.` · L224 `· joined` metadata row · L231 `anonymous fan` · L231 `. Pick a
+handle if you want credit.` · L244 `Edit` · L260 `anonymous fan.` · L276 `Pick a handle`
   · L287 `My submissions` · L314 `← Back to browse` · L342 metadata row · L386 `Plan` ·
   L402 `Appearance` · L405 `Three flavors. Pick the one that hurts your eyes least.` ·
   L436 `Account` · L439 `Your account credentials are managed securely. Click any row to
-  update.` · L613 `Privacy Policy →` · L624 `Danger zone` · L627 `The exits.`
+update.` · L613 `Privacy Policy →` · L624 `Danger zone` · L627 `The exits.`
 - `SettingsRoute.tsx` (6): L57 `← Done` · L60 `Settings` · L97 `tap to switch` · L159
   `Operations` · L186 `Admin`
 - `DeleteAccountSheet.tsx` (8): L89 / L192 `Delete your account?` · L113 / L219 `DELETE` +
   `to confirm.` · L140 / L248 `Keep my account` · L121 `placeholder="DELETE"`
 - `EditProfileForm.tsx` (6): L147 / L158 `← Cancel` · L162 `Edit profile` · L203 `Avatar
-  color` · L239 `Handle` · L285 `City`
+color` · L239 `Handle` · L285 `City`
 - `MySubmissionsList.tsx` L37 `The next show you go to, drop the price you saw. Two fans
-  confirm and it goes live.`
+confirm and it goes live.`
 - `SubmissionItem.tsx` L102 `+1 cred` · L107 `Someone disputed this. Tap to see what they
-  saw.`
+saw.`
 - `ThemePickerInline.tsx` L56 `Theme` · L79 `tap to switch`
 - `WatchingTeaser.tsx` L45 `Watching` · L72 `Coming soon`
 - `AccountManagementRow.tsx` L170 `Privacy Policy →`
@@ -255,17 +255,17 @@ frozen record. 12 real findings; the rest of the em-dash hits in `.tsx` are eith
 `'—'` empty-value placeholder (Data class, correct) or attribution sign-offs (rule 4
 exception).
 
-| File:line | String | Note |
-|---|---|---|
-| `app/layout.tsx:56` | `Denver concert calendar — find shows at your favorite venues.` | Site meta description. Replace dash with a period. |
-| `app/legal/privacy/page.tsx:39`, `app/legal/terms/page.tsx:39` | `Last updated: [date — fill before launch]` | Also an unfilled placeholder shipping to users. Worth its own issue. |
-| `app/legal/privacy/page.tsx:54–59` | Six data bullets, each `X — reason` | Colon reads better than the dash in every one. |
-| `app/legal/privacy/page.tsx:85–89` | Five vendor bullets, each `Vendor — role` | Same shape. |
-| `components/consumer/watching/SourcePill.tsx:12` | `Resale price — secondary market, not face value` | Obligation class; rule 4 still applies. Comma. |
-| `components/consumer/watching/SourcePill.tsx:13` | `Community price — submitted by a fan` | Comma. |
-| `components/settings/ProfileEntryAvatar.tsx:19` | ``aria-label={`@${handle} — settings`}`` | A11y; rule 4 explicitly covers `aria-label`s. |
-| `components/consumer/filter-bar/TasteUpsellSheet.tsx:81` | `— {bullet.sub}` | A dash in front of a sentence, i.e. the case rule 4 names as *not* attribution. |
-| `app/legal/beta/page.tsx:52,59,67`, `privacy:62,92,137`, `terms:112` | `<span>—</span>` bullet glyphs | Decorative list markers, not prose. Arguably out of scope, but they are read aloud by screen readers as "em dash" and would be better as real `<li>` markup. |
+| File:line                                                            | String                                                          | Note                                                                                                                                                         |
+| -------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app/layout.tsx:56`                                                  | `Denver concert calendar — find shows at your favorite venues.` | Site meta description. Replace dash with a period.                                                                                                           |
+| `app/legal/privacy/page.tsx:39`, `app/legal/terms/page.tsx:39`       | `Last updated: [date — fill before launch]`                     | Also an unfilled placeholder shipping to users. Worth its own issue.                                                                                         |
+| `app/legal/privacy/page.tsx:54–59`                                   | Six data bullets, each `X — reason`                             | Colon reads better than the dash in every one.                                                                                                               |
+| `app/legal/privacy/page.tsx:85–89`                                   | Five vendor bullets, each `Vendor — role`                       | Same shape.                                                                                                                                                  |
+| `components/consumer/watching/SourcePill.tsx:12`                     | `Resale price — secondary market, not face value`               | Obligation class; rule 4 still applies. Comma.                                                                                                               |
+| `components/consumer/watching/SourcePill.tsx:13`                     | `Community price — submitted by a fan`                          | Comma.                                                                                                                                                       |
+| `components/settings/ProfileEntryAvatar.tsx:19`                      | ``aria-label={`@${handle} — settings`}``                        | A11y; rule 4 explicitly covers `aria-label`s.                                                                                                                |
+| `components/consumer/filter-bar/TasteUpsellSheet.tsx:81`             | `— {bullet.sub}`                                                | A dash in front of a sentence, i.e. the case rule 4 names as _not_ attribution.                                                                              |
+| `app/legal/beta/page.tsx:52,59,67`, `privacy:62,92,137`, `terms:112` | `<span>—</span>` bullet glyphs                                  | Decorative list markers, not prose. Arguably out of scope, but they are read aloud by screen readers as "em dash" and would be better as real `<li>` markup. |
 
 **Out of scope / correct as-is:** the `'—'` fallback for a missing capacity or set time
 (`venues/[slug]/page.tsx:79,201`, `events/[id]/page.tsx:139`, `PublicEventDetail.tsx:71`,

@@ -19,6 +19,35 @@ describe('MissingRowMenu', () => {
     expect(screen.getByRole('button', { name: /Dismiss/ })).toBeTruthy()
   })
 
+  // The confirm action only exists where the matcher produced a candidate;
+  // a row with no suggestion must not offer a merge with nothing to merge to.
+  it('omits the confirm-move button when no relocation was suggested', () => {
+    render(
+      <MissingRowMenu
+        eventId="evt-1"
+        onMarkPostponed={() => {}}
+        onMarkCancelled={() => {}}
+        onDismiss={() => {}}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /Confirm move/ })).toBeNull()
+  })
+
+  it('renders and fires the confirm-move button when a relocation was suggested', () => {
+    const onConfirmMove = vi.fn()
+    render(
+      <MissingRowMenu
+        eventId="evt-1"
+        onMarkPostponed={() => {}}
+        onMarkCancelled={() => {}}
+        onDismiss={() => {}}
+        onConfirmMove={onConfirmMove}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
+    expect(onConfirmMove).toHaveBeenCalledTimes(1)
+  })
+
   it('calls the matching handler with the eventId on click', () => {
     const onMarkPostponed = vi.fn()
     const onMarkCancelled = vi.fn()

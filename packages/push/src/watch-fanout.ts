@@ -54,6 +54,13 @@ export interface FanoutInput {
    * price-drop, the copy falls back to a generic "just dropped" line.
    */
   pricedrop?: { newPriceMin: string; oldPriceMin: string }
+  /**
+   * Set when `category === 'watch.postponed'` and the show changed ROOM
+   * rather than night. Carries the venue the watcher knew it under, which
+   * the event context cannot supply: the fan-out fires on the target event,
+   * whose venue is already the new one.
+   */
+  relocated?: { fromVenueName: string }
 }
 
 interface EventContext {
@@ -115,7 +122,13 @@ const composeMessage = (
     case 'watch.cancelled':
       return watchNotificationCopy.cancelled(artistAtVenue)
     case 'watch.postponed':
-      return watchNotificationCopy.postponed(artistAtVenue, shortDate(ctx.date))
+      return input.relocated
+        ? watchNotificationCopy.relocated(
+            ctx.artist,
+            input.relocated.fromVenueName,
+            ctx.venueName,
+          )
+        : watchNotificationCopy.postponed(artistAtVenue, shortDate(ctx.date))
     case 'watch.soldout':
       return watchNotificationCopy.soldout(artistAtVenue)
     case 'watch.backonsale':

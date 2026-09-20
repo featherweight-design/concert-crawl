@@ -258,6 +258,42 @@ export const ReviewPageClient = ({
     [patchMissingEvent],
   )
 
+  // Confirm a suggested relocation: fold the missing row into the replacement
+  // and tell its watchers. `notifyWatchers` is what separates this from an
+  // ordinary de-duplication merge, which must stay silent. `suggestion` is
+  // provenance for the audit row — the API derives the notification copy from
+  // the two rows rather than from this claim.
+  const confirmMissingMove = useCallback(
+    async (event: MissingRowEvent): Promise<void> => {
+      const candidate = event.movedCandidate
+      if (!candidate) return
+      setError(null)
+      addPendingMissing(event.id)
+      try {
+        const token = await getToken()
+        if (!token) return
+        await apiClient.post(`/v1/admin/events/${event.id}/merge`, token, {
+          targetId: candidate.id,
+          notifyWatchers: true,
+          suggestion: { reason: candidate.reason },
+        })
+        await invalidate.missing()
+        void invalidate.counts()
+        router.refresh()
+      } catch (mergeErr) {
+        const message =
+          mergeErr instanceof ApiError
+            ? mergeErr.message
+            : 'Failed to merge the moved event.'
+        console.error('confirmMissingMove error:', mergeErr)
+        setError(message)
+      } finally {
+        clearPendingMissing(event.id)
+      }
+    },
+    [addPendingMissing, clearPendingMissing, getToken, invalidate, router],
+  )
+
   // (Auto-fetch-when-low effect removed — the old infinite query needed it to
   // keep the visible queue from emptying mid-scroll. With true pagination the
   // admin advances pages explicitly via <Pagination/> on each tab.)
@@ -607,6 +643,7 @@ export const ReviewPageClient = ({
             onMarkMissingPostponed={markMissingPostponed}
             onMarkMissingCancelled={markMissingCancelled}
             onDismissMissing={dismissMissing}
+            onConfirmMissingMove={confirmMissingMove}
             onEnterMissingTab={() => setMissingActivated(true)}
             onAllEventsRowClick={(id) =>
               router.push(editEventHref(id, activeTab))
@@ -710,6 +747,7 @@ export const ReviewPageClient = ({
           onMarkPostponed={markMissingPostponed}
           onMarkCancelled={markMissingCancelled}
           onDismiss={dismissMissing}
+          onConfirmMove={confirmMissingMove}
         />
       )}
 

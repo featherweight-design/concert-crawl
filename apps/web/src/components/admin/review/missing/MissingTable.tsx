@@ -11,6 +11,7 @@ export interface MissingTableProps {
   onMarkPostponed: (id: string) => void
   onMarkCancelled: (id: string) => void
   onDismiss: (id: string) => void
+  onConfirmMove: (event: MissingRowEvent) => void
   pendingIds: ReadonlySet<string>
   // Server-side total used for the header badge so paging doesn't shrink
   // the count to the current page size (#710). Optional for legacy callers
@@ -26,6 +27,7 @@ export const MissingTable = ({
   onMarkPostponed,
   onMarkCancelled,
   onDismiss,
+  onConfirmMove,
   pendingIds,
   total,
 }: MissingTableProps) => {
@@ -176,6 +178,7 @@ export const MissingTable = ({
           onMarkPostponed={onMarkPostponed}
           onMarkCancelled={onMarkCancelled}
           onDismiss={onDismiss}
+          onConfirmMove={onConfirmMove}
           pending={pendingIds.has(event.id)}
         />
       ))}

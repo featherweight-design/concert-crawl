@@ -325,8 +325,8 @@ eventsAdminRouter.patch(
 // soonest upcoming show surfaces first. Each missing row is enriched with a
 // `classification` (duplicate | moved | crawl_gap | removed) derived from four
 // per-row SQL signals, a `clusterCount` of how many missing events share the
-// same venue, and — when the matcher found a relocation candidate —
-// `movedCandidateId` + `movedReason` ('date' | 'venue').
+// same venue, and — when the matcher found a relocation candidate — a
+// `movedCandidate` of { id, reason: 'date' | 'venue', title, date, venueName }.
 eventsAdminRouter.get(
   '/',
   zValidator('query', listQuerySchema),
@@ -477,11 +477,10 @@ eventsAdminRouter.get(
             hasLiveSibling,
             movedCandidateId: moved?.id ?? null,
           }),
-          // Carried on the row so the admin surface can name the matched
-          // event and why it matched. Nothing renders these yet; the confirm
-          // action that consumes them lands with the merge path.
-          movedCandidateId: moved?.id ?? null,
-          movedReason: moved?.reason ?? null,
+          // The whole suggestion, or null. Nested rather than flattened so
+          // the confirm step can name the show it is about to merge onto
+          // without a second request per row.
+          movedCandidate: moved,
         }
       })
 
@@ -1288,7 +1287,31 @@ eventsAdminRouter.post(
   },
 )
 
-const mergeSchema = z.object({ targetId: z.string().uuid() })
+const mergeSchema = z.object({
+  targetId: z.string().uuid(),
+  /**
+   * Fire the watch-update fan-out on the target after the merge commits.
+   * Defaults to false because an ordinary de-duplication merge must stay
+   * silent; only a confirmed relocation tells watchers anything. This is a
+   * path discriminator, not an admin checkbox — surfacing it as a toggle
+   * would invite it being left off on the one case it exists for.
+   */
+  notifyWatchers: z.boolean().optional().default(false),
+  /**
+   * Provenance: present when the admin confirmed a matcher suggestion rather
+   * than hand-searching a target. Recorded on the audit row so confirmed
+   * suggestions can be counted against hand-searched merges — without that
+   * denominator the relaxed matcher can never be calibrated, and "suggest,
+   * never auto-apply" stays permanent rather than provisional.
+   *
+   * Audit only. It never decides what the notification says; that is derived
+   * from the rows below, because a client claim must not choose the copy a
+   * watcher reads.
+   */
+  suggestion: z
+    .object({ reason: z.union([z.literal('date'), z.literal('venue')]) })
+    .nullish(),
+})
 
 // POST /v1/admin/events/:id/merge — fold a source event into a target event,
 // moving every user-side reference (watchlist rows, sold-out/cancelled reports,
@@ -1312,7 +1335,7 @@ eventsAdminRouter.post(
   }),
   async (ctx) => {
     const { id: sourceId } = ctx.req.valid('param')
-    const { targetId } = ctx.req.valid('json')
+    const { targetId, notifyWatchers, suggestion } = ctx.req.valid('json')
     const actor = getAuthUser(ctx)
 
     if (sourceId === targetId) {
@@ -1324,15 +1347,25 @@ eventsAdminRouter.post(
 
     // Pre-flight existence checks return 404 with a clear message before we
     // open a transaction — cheaper than rolling back inside.
+    //
+    // venueId + venueName come back too: the source row is deleted by the
+    // merge, so the venue a watcher knew the show under has to be captured
+    // here or it is gone before the fan-out can name it.
     const both = await db
-      .select({ id: events.id })
+      .select({
+        id: events.id,
+        venueId: events.venueId,
+        venueName: venues.name,
+      })
       .from(events)
+      .leftJoin(venues, eq(events.venueId, venues.id))
       .where(or(eq(events.id, sourceId), eq(events.id, targetId)))
-    const foundIds = new Set(both.map((row) => row.id))
-    if (!foundIds.has(sourceId)) {
+    const source = both.find((row) => row.id === sourceId)
+    const target = both.find((row) => row.id === targetId)
+    if (!source) {
       return ctx.json({ success: false, error: 'Source event not found' }, 404)
     }
-    if (!foundIds.has(targetId)) {
+    if (!target) {
       return ctx.json({ success: false, error: 'Target event not found' }, 404)
     }
 
@@ -1440,11 +1473,41 @@ eventsAdminRouter.post(
         actorId: actor.userId,
         action: 'event.merge',
         targetId,
-        metadata: { sourceId, referencesMoved: counts },
+        metadata: {
+          sourceId,
+          referencesMoved: counts,
+          suggestion: suggestion ?? null,
+          notifyWatchers,
+        },
       })
 
       return counts
     })
+
+    // After commit, mirroring the PATCH call site: the fan-out is best-effort
+    // by contract and never throws, so it must not sit inside the transaction
+    // that moved the watch rows.
+    //
+    // A relocation is decided by comparing the two rows, not by trusting the
+    // caller's `suggestion.reason` — the copy a watcher reads is not a client
+    // decision. Same venue means the night changed, which is what the plain
+    // postponed template already says.
+    if (notifyWatchers) {
+      const relocated =
+        source.venueId !== target.venueId && source.venueName !== null
+          ? { fromVenueName: source.venueName }
+          : null
+      await fanoutWatchNotification(
+        { db, notifications, userEvents, events, venues },
+        {
+          eventId: targetId,
+          category: 'watch.postponed',
+          // Spread rather than pass `undefined`: exactOptionalPropertyTypes
+          // distinguishes an absent key from an explicitly-undefined one.
+          ...(relocated ? { relocated } : {}),
+        },
+      )
+    }
 
     return ctx.json({
       success: true,

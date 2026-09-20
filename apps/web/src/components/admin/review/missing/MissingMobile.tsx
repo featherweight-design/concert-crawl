@@ -23,6 +23,7 @@ export interface MissingMobileProps {
   onMarkPostponed: (id: string) => void
   onMarkCancelled: (id: string) => void
   onDismiss: (id: string) => void
+  onConfirmMove: (event: MissingRowEvent) => void
   pendingIds: ReadonlySet<string>
 }
 
@@ -32,6 +33,7 @@ export const MissingMobile = ({
   onMarkPostponed,
   onMarkCancelled,
   onDismiss,
+  onConfirmMove,
   pendingIds,
 }: MissingMobileProps) => {
   if (events.length === 0) {
@@ -245,6 +247,9 @@ export const MissingMobile = ({
               onMarkPostponed={onMarkPostponed}
               onMarkCancelled={onMarkCancelled}
               onDismiss={onDismiss}
+              {...(event.movedCandidate
+                ? { onConfirmMove: () => onConfirmMove(event) }
+                : {})}
               stacked
               disabled={pending}
             />

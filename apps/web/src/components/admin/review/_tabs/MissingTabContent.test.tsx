@@ -38,8 +38,118 @@ const SAMPLE: MissingRowEvent[] = [
     sourceUrl: 'https://missionballroom.com/events',
     classification: 'crawl_gap',
     clusterCount: 1,
+    movedCandidate: null,
   },
 ]
+
+const WITH_CANDIDATE: MissingRowEvent[] = [
+  {
+    ...SAMPLE[0]!,
+    movedCandidate: {
+      id: 'evt-2',
+      reason: 'date',
+      title: 'Lord Huron Live',
+      date: '2026-08-02',
+      venueName: 'Mission Ballroom',
+    },
+  },
+]
+
+describe('MissingTabContent — confirm move', () => {
+  // The merge deletes a row, moves watch rows and notifies every watcher.
+  // None of that is reversible, so the action must not fire on one click.
+  it('opens a confirm dialog rather than merging on the first click', () => {
+    const onConfirmMove = vi.fn(async () => {})
+    render(
+      <MissingTabContent
+        events={WITH_CANDIDATE}
+        isDesktop
+        nowIso={NOW}
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onConfirmMove={onConfirmMove}
+        onDismiss={async () => {}}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
+    expect(onConfirmMove).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog')).toBeTruthy()
+  })
+
+  it('names both shows and the reason in the dialog', () => {
+    render(
+      <MissingTabContent
+        events={WITH_CANDIDATE}
+        isDesktop
+        nowIso={NOW}
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onConfirmMove={async () => {}}
+        onDismiss={async () => {}}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.textContent).toContain('Lord Huron Live')
+    expect(dialog.textContent).toContain('Same venue, new date')
+  })
+
+  it('merges only after the dialog is confirmed', async () => {
+    // Typed parameter so the call tuple carries the argument; a bare
+    // `vi.fn(async () => {})` types `calls[0]` as an empty tuple.
+    const onConfirmMove = vi.fn(async (_event: MissingRowEvent) => {})
+    render(
+      <MissingTabContent
+        events={WITH_CANDIDATE}
+        isDesktop
+        nowIso={NOW}
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onConfirmMove={onConfirmMove}
+        onDismiss={async () => {}}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Merge and notify/ }))
+    expect(onConfirmMove).toHaveBeenCalledTimes(1)
+    expect(onConfirmMove.mock.calls[0]?.[0]).toMatchObject({ id: 'evt-1' })
+  })
+
+  it('cancelling closes the dialog without merging', () => {
+    const onConfirmMove = vi.fn(async () => {})
+    render(
+      <MissingTabContent
+        events={WITH_CANDIDATE}
+        isDesktop
+        nowIso={NOW}
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onConfirmMove={onConfirmMove}
+        onDismiss={async () => {}}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /Confirm move/ }))
+    // Exact, not /Cancel/ — the row's own "Cancelled" action also matches.
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onConfirmMove).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('offers no confirm action on a row with no suggestion', () => {
+    render(
+      <MissingTabContent
+        events={SAMPLE}
+        isDesktop
+        nowIso={NOW}
+        onMarkPostponed={async () => {}}
+        onMarkCancelled={async () => {}}
+        onConfirmMove={async () => {}}
+        onDismiss={async () => {}}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /Confirm move/ })).toBeNull()
+  })
+})
 
 describe('MissingTabContent', () => {
   it('renders the desktop table when isDesktop=true', () => {
@@ -50,6 +160,7 @@ describe('MissingTabContent', () => {
         nowIso={NOW}
         onMarkPostponed={async () => {}}
         onMarkCancelled={async () => {}}
+        onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
     )
@@ -65,6 +176,7 @@ describe('MissingTabContent', () => {
         nowIso={NOW}
         onMarkPostponed={async () => {}}
         onMarkCancelled={async () => {}}
+        onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
     )
@@ -90,6 +202,7 @@ describe('MissingTabContent', () => {
         nowIso={NOW}
         onMarkPostponed={async () => {}}
         onMarkCancelled={async () => {}}
+        onConfirmMove={async () => {}}
         onDismiss={onDismiss}
       />,
     )
@@ -112,6 +225,7 @@ describe('MissingTabContent', () => {
         loading
         onMarkPostponed={async () => {}}
         onMarkCancelled={async () => {}}
+        onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
     )
@@ -129,6 +243,7 @@ describe('MissingTabContent', () => {
         loading={false}
         onMarkPostponed={async () => {}}
         onMarkCancelled={async () => {}}
+        onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
     )
@@ -152,6 +267,7 @@ describe('MissingTabContent', () => {
         onPageSizeChange={() => {}}
         onMarkPostponed={async () => {}}
         onMarkCancelled={async () => {}}
+        onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
     )
@@ -167,6 +283,7 @@ describe('MissingTabContent', () => {
         nowIso={NOW}
         onMarkPostponed={async () => {}}
         onMarkCancelled={async () => {}}
+        onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
     )
@@ -191,6 +308,7 @@ describe('MissingTabContent', () => {
         onPageSizeChange={() => {}}
         onMarkPostponed={async () => {}}
         onMarkCancelled={async () => {}}
+        onConfirmMove={async () => {}}
         onDismiss={async () => {}}
       />,
     )

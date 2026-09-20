@@ -6,6 +6,7 @@ import { Pagination } from '@/components/admin/primitives'
 import { MissingTable } from '../missing/MissingTable'
 import { MissingMobile } from '../missing/MissingMobile'
 import { type MissingRowEvent } from '../missing/MissingRow'
+import { MoveConfirmDialog } from '../missing/MoveConfirmDialog'
 
 export interface MissingTabContentProps {
   events: MissingRowEvent[]
@@ -25,6 +26,12 @@ export interface MissingTabContentProps {
   onMarkPostponed: (id: string) => Promise<void>
   onMarkCancelled: (id: string) => Promise<void>
   onDismiss: (id: string) => Promise<void>
+  /**
+   * Confirm a suggested relocation. Called only after the admin passes the
+   * confirm dialog — the merge deletes a row, moves watch rows and notifies
+   * every watcher, none of which is reversible.
+   */
+  onConfirmMove: (event: MissingRowEvent) => Promise<void>
 }
 
 const Skeleton = () => (
@@ -68,8 +75,12 @@ export const MissingTabContent = ({
   onMarkPostponed,
   onMarkCancelled,
   onDismiss,
+  onConfirmMove,
 }: MissingTabContentProps) => {
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set())
+  // The row awaiting confirmation. Held here rather than per-row so the
+  // dialog is mounted once for whichever shell is rendering.
+  const [moveTarget, setMoveTarget] = useState<MissingRowEvent | null>(null)
 
   const wrap = useCallback(
     (handler: (id: string) => Promise<void>) => (id: string) => {
@@ -88,6 +99,24 @@ export const MissingTabContent = ({
   const wrappedPostponed = wrap(onMarkPostponed)
   const wrappedCancelled = wrap(onMarkCancelled)
   const wrappedDismiss = wrap(onDismiss)
+  const openMoveConfirm = useCallback((event: MissingRowEvent) => {
+    setMoveTarget(event)
+  }, [])
+  // Close first, then fire: the row carries the pending state, and leaving
+  // the dialog up over a row that is already merging reads as unconfirmed.
+  const confirmMove = useCallback(() => {
+    if (!moveTarget) return
+    const event = moveTarget
+    setMoveTarget(null)
+    setPendingIds((prev) => new Set(prev).add(event.id))
+    void onConfirmMove(event).finally(() => {
+      setPendingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(event.id)
+        return next
+      })
+    })
+  }, [moveTarget, onConfirmMove])
 
   if (loading) return <Skeleton />
 
@@ -110,6 +139,7 @@ export const MissingTabContent = ({
       onMarkPostponed={wrappedPostponed}
       onMarkCancelled={wrappedCancelled}
       onDismiss={wrappedDismiss}
+      onConfirmMove={openMoveConfirm}
       pendingIds={pendingIds}
       total={total}
     />
@@ -120,11 +150,36 @@ export const MissingTabContent = ({
       onMarkPostponed={wrappedPostponed}
       onMarkCancelled={wrappedCancelled}
       onDismiss={wrappedDismiss}
+      onConfirmMove={openMoveConfirm}
       pendingIds={pendingIds}
     />
   )
 
-  if (!showPager) return table
+  // Mounted once for whichever shell rendered, so both return paths below
+  // carry it rather than only the paginated one.
+  const candidate = moveTarget?.movedCandidate
+  const dialog =
+    moveTarget && candidate ? (
+      <MoveConfirmDialog
+        missingTitle={moveTarget.title}
+        missingDate={moveTarget.date}
+        missingVenueName={moveTarget.venueName}
+        candidateTitle={candidate.title}
+        candidateDate={candidate.date}
+        candidateVenueName={candidate.venueName}
+        reason={candidate.reason}
+        onCancel={() => setMoveTarget(null)}
+        onConfirm={confirmMove}
+      />
+    ) : null
+
+  if (!showPager)
+    return (
+      <>
+        {table}
+        {dialog}
+      </>
+    )
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
@@ -137,6 +192,7 @@ export const MissingTabContent = ({
         onPageSizeChange={onPageSizeChange}
         itemLabel="events"
       />
+      {dialog}
     </div>
   )
 }
