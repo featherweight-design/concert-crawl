@@ -1,3 +1,19 @@
+# [1.294.0](https://github.com/HartiganHM/concert-crawl/compare/v1.293.0...v1.294.0) (2026-09-20)
+
+
+### Bug Fixes
+
+* **seed-staging:** build types before the sync, guard non-main dispatches ([d37bc4e](https://github.com/HartiganHM/concert-crawl/commit/d37bc4eb4ca2ed9fd8a202ebfd8f70532a4f9510))
+* **seed-staging:** key artist sync on canonical_name, close the pooled-host guard hole ([d054125](https://github.com/HartiganHM/concert-crawl/commit/d054125a13c287a180f15b35c9ffb6003743bbcc))
+
+
+### Features
+
+* **ci:** schedule the prod-to-staging content sync weekly ([a6afa2e](https://github.com/HartiganHM/concert-crawl/commit/a6afa2e3f9dce8501db2c6cb9dac4eb36cde175e))
+* **seed-staging:** run artists and guide chips in the prod sync pipeline ([1cb2964](https://github.com/HartiganHM/concert-crawl/commit/1cb296455088c19eacc5912d4eda8045322fce95))
+* **seed-staging:** sync artists from prod to staging ([ed6e01d](https://github.com/HartiganHM/concert-crawl/commit/ed6e01dd8a593235e61204d1cea4a2971fb55f0f))
+* **seed-staging:** sync venue guide chips from prod to staging ([8062beb](https://github.com/HartiganHM/concert-crawl/commit/8062bebaa5e3cf3e7392edc8e7b8763eef51be6e))
+
 # [1.293.0](https://github.com/HartiganHM/concert-crawl/compare/v1.292.1...v1.293.0) (2026-09-20)
 
 
