@@ -339,8 +339,14 @@ leaves no way to reach production except a hand-driven Render deploy.
    not under Settings → Git, where the rest of the git configuration lives.
 
    Two adjacent settings on the same project are load-bearing and must be left
-   alone. **Branch Tracking** must read `main`: it is what makes a dispatch
-   promote the commit the gate validated. **Auto-assign Custom Production
+   alone. **Branch Tracking** must read `main`: it decides which branch Vercel
+   treats as production for **git-triggered** deployments, so it is what keeps a
+   stray push to another branch from becoming a production deployment. It has no
+   say in what a dispatch promotes — `deploy-prod.yml` checks out `github.sha`
+   and uploads that checkout, so the commit promoted is the one the gate
+   validated regardless of this setting. Do not troubleshoot a wrongly-promoted
+   commit here; the gate job and the checkout ref are where that lives.
+   **Auto-assign Custom Production
    Domains** must stay enabled — it fires on a merge to the production branch
    _or_ a `vercel deploy --prod`, and the second clause is the promotion path.
    Disabled, a promotion builds cleanly and never takes over `concertcrawl.app`,
@@ -356,15 +362,28 @@ leaves no way to reach production except a hand-driven Render deploy.
    ignore command conditioned on `$VERCEL_GIT_COMMIT_REF` rather than a flat
    `exit 0`.
 
-5. Confirm the gate holds: merge anything to `main` (a docs change is ideal) and
-   check that the staging API builds, the prod API records no new deploy, the
-   prod Vercel project records a **skipped** deployment while
-   `concert-crawl-staging` builds normally, and `staging-smoke` and `staging-e2e`
-   both run. A staging project that also skips means the Ignored Build Step went
-   on the wrong project — back it out before going further. Do not read
+5. Confirm the gate holds by merging to `main` — but **the change has to touch
+   `apps/api/**` or one of the packages the staging API's `buildFilter` lists in
+   `render.yaml`.** A docs-only merge cannot verify this step: the filter skips
+   it, so no staging API deploy is created, and `staging-e2e` then exits its
+   wait at 124 and skips its suite rather than running it. Both would read as
+   "the gate is holding" while having tested nothing. Then check that:
+
+   - the staging API builds, and `staging-smoke` and `staging-e2e` both run
+     their suites rather than skipping;
+   - the prod API records no new deploy;
+   - the prod Vercel project records a **skipped** deployment while
+     `concert-crawl-staging` builds normally.
+
+   A staging project that also skips means the Ignored Build Step went on the
+   wrong project — back it out before going further. Do not read
    `prod-smoke-after-deploy.yml` staying quiet as evidence of anything: it is
    `workflow_dispatch`-only, so it cannot run on a merge whatever these settings
    say.
+
+   A docs-only merge is still worth watching for the two Vercel signals, which
+   do not depend on the filter — it just cannot tell you anything about the
+   Render side or the staging suites.
 
 `render.yaml` records these values (`autoDeploy: false` on the five prod
 services) but does **not** apply them — it is descriptive, not a Blueprint.
