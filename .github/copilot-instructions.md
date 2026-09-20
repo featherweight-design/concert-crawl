@@ -2,6 +2,23 @@
 
 Concert Crawl aggregates live-music events from Denver venue websites into a searchable calendar. pnpm + Turborepo monorepo: `apps/{web,api,crawler,e2e}`, `packages/{config,crawler-core,db,entitlements,logger,price-pipeline,types}`. `CLAUDE.md` at the repo root has broader project background, but **this file is authoritative for PR-review guidance** — where the two diverge (CLAUDE.md still describes a `packages/auth` wrapper, an unqualified single-character-identifier ban, and other conventions that predate the current code), follow this file.
 
+## Findings already settled, and findings that are doc-sync
+
+PR bodies here may carry two marked sections. Both are written by the PR author
+and both are machine-read.
+
+- **`## Settled`** records a finding that was raised, considered, and
+  deliberately declined, with the reason. **Please do not re-raise a finding that
+  section already answers.** If you believe the recorded reasoning is wrong, say
+  so explicitly and name the entry rather than restating the original finding as
+  if it were new.
+- **`## Doc-sync`** names paths whose findings were comment, naming or PR-body
+  accuracy only — no behaviour change.
+
+Likewise, a thread you opened on an earlier round that has since been fixed does
+not need restating in the summary of a later round. Two PRs here reached the
+twelve-round ceiling; re-stated threads are a share of that.
+
 ## Architecture — do NOT flag these as problems
 
 These are intentional and settled. Do not suggest changes that reverse them.
