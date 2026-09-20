@@ -2867,6 +2867,79 @@ describe('POST /v1/admin/events/:id/merge', () => {
     expect(rows[0]!.body).toBe('Same tickets, new night.')
   })
 
+  // The watch rows move onto the target before the fan-out runs, so reading
+  // watchers off the target notifies people who only ever watched the target
+  // and for whom nothing changed — and on a venue move it would name them a
+  // room they never saw.
+  it('notifies only the watchers whose watch actually moved', async () => {
+    const fromVenue = await seedVenue({
+      slug: 'notify-from',
+      name: 'Larimer Lounge',
+    })
+    const toVenue = await seedVenue({ slug: 'notify-to', name: 'Globe Hall' })
+    const source = await seedEvent(fromVenue.id, { artist: 'Moved Artist' })
+    const target = await seedEvent(toVenue.id, {
+      artist: 'Moved Artist',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-11-01',
+    })
+    await seedUserEvent('watcher-moved', source.id, { status: 'watching' })
+    await seedUserEvent('watcher-already-there', target.id, {
+      status: 'watching',
+    })
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: target.id, notifyWatchers: true }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'))
+    expect(rows.map((row) => row.userId)).toEqual(['watcher-moved'])
+  })
+
+  // `events.venue_id` is ON DELETE SET NULL. Falling back to the date
+  // template when the old room's name is gone would tell watchers the NIGHT
+  // changed when only the room did.
+  it('keeps the relocation copy when the old venue row is gone', async () => {
+    const toVenue = await seedVenue({
+      slug: 'surviving-room',
+      name: 'Globe Hall',
+    })
+    const source = await seedEvent(toVenue.id, { artist: 'Moved Artist' })
+    const target = await seedEvent(toVenue.id, {
+      artist: 'Moved Artist',
+      supportingArtists: null,
+      tourName: null,
+      date: '2026-11-01',
+    })
+    await seedUserEvent('watcher-a', source.id, { status: 'watching' })
+    // Detach the source from its venue, as the FK's SET NULL would.
+    await testDb
+      .update(events)
+      .set({ venueId: null })
+      .where(eq(events.id, source.id))
+
+    const res = await app.request(`/v1/admin/events/${source.id}/merge`, {
+      method: 'POST',
+      headers: ADMIN_HEADERS,
+      body: JSON.stringify({ targetId: target.id, notifyWatchers: true }),
+    })
+    expect(res.status).toBe(200)
+
+    const rows = await testDb
+      .select()
+      .from(notifications)
+      .where(eq(notifications.category, 'watch.postponed'))
+    expect(rows[0]!.title).toBe('Moved Artist: new venue.')
+    expect(rows[0]!.body).toBe('Your ticket still works. New room: Globe Hall.')
+  })
+
   it('records suggestion provenance and the notify flag on the audit row', async () => {
     const venue = await seedVenue()
     const source = await seedEvent(venue.id, { artist: 'Src' })

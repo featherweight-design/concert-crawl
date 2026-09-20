@@ -24,8 +24,19 @@ export const watchNotificationCopy = {
   // so that template would render "Artist at NewVenue moved to NewVenue".
   // Naming the room the watcher knew it under is also what identifies the
   // show for them.
-  relocated: (artist: string, fromVenueName: string, newVenueName: string) => ({
-    title: `${artist} at ${fromVenueName} moved.`,
+  //
+  // `events.venue_id` is ON DELETE SET NULL, so the old room's name can be
+  // gone. Falling back to the postponed template there would say the NIGHT
+  // changed when only the room did, which is the failure this variant exists
+  // to prevent, so the fallback drops the old room rather than the variant.
+  relocated: (
+    artist: string,
+    fromVenueName: string | null,
+    newVenueName: string,
+  ) => ({
+    title: fromVenueName
+      ? `${artist} at ${fromVenueName} moved.`
+      : `${artist}: new venue.`,
     body: `Your ticket still works. New room: ${newVenueName}.`,
   }),
   soldout: (artistAtVenue: string) => ({

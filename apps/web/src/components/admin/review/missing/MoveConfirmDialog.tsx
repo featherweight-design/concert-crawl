@@ -17,7 +17,6 @@ export interface MoveConfirmDialogProps {
   reason: MovedReason
   onCancel: () => void
   onConfirm: () => void
-  pending?: boolean
 }
 
 const line = (title: string, date: string, venueName: string | null): string =>
@@ -41,7 +40,6 @@ export const MoveConfirmDialog = ({
   reason,
   onCancel,
   onConfirm,
-  pending = false,
 }: MoveConfirmDialogProps) => (
   <div
     role="dialog"
@@ -57,8 +55,9 @@ export const MoveConfirmDialog = ({
       justifyContent: 'center',
       padding: 24,
     }}
+    // No in-flight state to guard: the caller closes this dialog before the
+    // request starts, so a disabled/blocked window would be unreachable.
     onClick={(evt) => {
-      if (pending) return
       if (evt.target === evt.currentTarget) onCancel()
     }}
   >
@@ -166,20 +165,10 @@ export const MoveConfirmDialog = ({
           background: 'var(--surface-1)',
         }}
       >
-        <AdminButton
-          type="button"
-          variant="ghost"
-          onClick={onCancel}
-          disabled={pending}
-        >
+        <AdminButton type="button" variant="ghost" onClick={onCancel}>
           {COPY.cancel}
         </AdminButton>
-        <AdminButton
-          type="button"
-          variant="primary"
-          onClick={onConfirm}
-          disabled={pending}
-        >
+        <AdminButton type="button" variant="primary" onClick={onConfirm}>
           {COPY.confirm}
         </AdminButton>
       </div>

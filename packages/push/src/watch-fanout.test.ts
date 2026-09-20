@@ -225,6 +225,56 @@ describe('fanoutWatchNotification', () => {
     )
   })
 
+  // An empty restriction means "nobody", not "no filter". Letting it fall
+  // through to an unfiltered query would fan a merge out to every watcher of
+  // the target, which is the opposite of what the caller asked for.
+  it('notifies nobody when the restriction is empty', async () => {
+    const deps = makeDeps()
+    deps.pushSelect([
+      {
+        title: 'The Show',
+        artist: 'Band',
+        venueName: 'The Fillmore',
+        date: '2026-08-14',
+      },
+    ])
+    deps.pushSelect([{ userId: 'user_a' }])
+    deps.sendPush.mockResolvedValue({ delivered: 1 })
+    const result = await fanoutWatchNotification(deps, {
+      eventId: 'evt_1',
+      category: 'watch.postponed',
+      restrictToUserIds: [],
+    })
+    expect(result).toEqual({ watchersNotified: 0, pushDelivered: 0 })
+    expect(deps.insertCalls).toHaveLength(0)
+  })
+
+  it('falls back to naming no old room when the source venue is gone', async () => {
+    const deps = makeDeps()
+    deps.pushSelect([
+      {
+        title: 'The Show',
+        artist: 'Band',
+        venueName: 'Globe Hall',
+        date: '2026-08-14',
+      },
+    ])
+    deps.pushSelect([{ userId: 'user_a' }])
+    deps.sendPush.mockResolvedValue({ delivered: 1 })
+    await fanoutWatchNotification(deps, {
+      eventId: 'evt_1',
+      category: 'watch.postponed',
+      relocated: { fromVenueName: null },
+    })
+    const rows = deps.insertCalls[0]?.rows as Array<Record<string, unknown>>
+    // Still the relocation copy: the date template would claim the night
+    // changed when only the room did.
+    expect(rows[0]?.['title']).toBe('Band: new venue.')
+    expect(rows[0]?.['body']).toBe(
+      'Your ticket still works. New room: Globe Hall.',
+    )
+  })
+
   it('composes a back-on-sale title', async () => {
     const deps = makeDeps()
     deps.pushSelect([

@@ -1657,7 +1657,7 @@ export const ADMIN_COPY = {
         eyebrow: 'Confirm move',
         heading: 'Merge this show into its replacement?',
         reasonDate: 'Same venue, new date',
-        reasonVenue: 'Same date, new venue',
+        reasonVenue: 'New venue, date within a day',
         fromLabel: 'Missing',
         toLabel: 'Replacement',
         body: 'Watch and attendance rows move to the replacement, this row is deleted, and everyone watching it gets told the show moved. None of that can be undone.',

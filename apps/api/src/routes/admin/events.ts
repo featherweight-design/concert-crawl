@@ -1369,7 +1369,21 @@ eventsAdminRouter.post(
       return ctx.json({ success: false, error: 'Target event not found' }, 404)
     }
 
-    const referencesMoved = await db.transaction(async (tx) => {
+    const merged = await db.transaction(async (tx) => {
+      // Captured BEFORE any row moves: these are the users who were watching
+      // the row that is disappearing, and they are the only ones for whom
+      // anything changed. Reading watchers off the target after the merge
+      // would also sweep up people who only ever watched the target.
+      const movedWatchers = await tx
+        .select({ userId: userEvents.userId })
+        .from(userEvents)
+        .where(
+          and(
+            eq(userEvents.eventId, sourceId),
+            eq(userEvents.status, 'watching'),
+          ),
+        )
+
       // user_events: drop conflicting source rows (target wins) before moving
       // the rest. Doing the delete inside the same transaction means a partial
       // failure rolls the drops back too.
@@ -1481,8 +1495,12 @@ eventsAdminRouter.post(
         },
       })
 
-      return counts
+      return {
+        counts,
+        movedWatcherIds: movedWatchers.map((row) => row.userId),
+      }
     })
+    const referencesMoved = merged.counts
 
     // After commit, mirroring the PATCH call site: the fan-out is best-effort
     // by contract and never throws, so it must not sit inside the transaction
@@ -1493,8 +1511,12 @@ eventsAdminRouter.post(
     // decision. Same venue means the night changed, which is what the plain
     // postponed template already says.
     if (notifyWatchers) {
+      // Only the venue ids decide this. `venueName` may be null because
+      // `events.venue_id` is ON DELETE SET NULL, and falling back to the date
+      // template there would claim the night changed when it did not — the
+      // copy handles a null old room itself.
       const relocated =
-        source.venueId !== target.venueId && source.venueName !== null
+        source.venueId !== target.venueId
           ? { fromVenueName: source.venueName }
           : null
       await fanoutWatchNotification(
@@ -1502,6 +1524,7 @@ eventsAdminRouter.post(
         {
           eventId: targetId,
           category: 'watch.postponed',
+          restrictToUserIds: merged.movedWatcherIds,
           // Spread rather than pass `undefined`: exactOptionalPropertyTypes
           // distinguishes an absent key from an explicitly-undefined one.
           ...(relocated ? { relocated } : {}),

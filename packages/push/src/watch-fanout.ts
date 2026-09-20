@@ -10,7 +10,7 @@
 // respects the user's per-category preferences before firing web push.
 // Categories not push-eligible still get bell rows.
 
-import { and, eq } from 'drizzle-orm'
+import { and, eq, inArray } from 'drizzle-orm'
 // `import type` + `typeof X` in a type position is legal TS — the compiler
 // resolves the reference at compile time only, no runtime emit. This
 // pattern also keeps ESLint's `consistent-type-imports` happy (the imports
@@ -60,7 +60,17 @@ export interface FanoutInput {
    * the event context cannot supply: the fan-out fires on the target event,
    * whose venue is already the new one.
    */
-  relocated?: { fromVenueName: string }
+  relocated?: { fromVenueName: string | null }
+  /**
+   * Limit the fan-out to these users. Without it the helper notifies every
+   * watcher of `eventId`, which is wrong after a merge: the watch rows have
+   * already moved onto the target, so the set also contains people who only
+   * ever watched the target and for whom nothing changed. Pass the users
+   * whose watch actually moved.
+   *
+   * An empty array means nobody, and is honoured as such.
+   */
+  restrictToUserIds?: readonly string[]
 }
 
 interface EventContext {
@@ -193,6 +203,13 @@ export async function fanoutWatchNotification(
   // future FYI channel). Watch-update notifications are the express
   // opt-in for "tell me if this show changes", same filter used by
   // apps/api/src/routes/watching.ts and search.ts.
+  const restrict = input.restrictToUserIds
+  if (restrict && restrict.length === 0) {
+    // Explicitly nobody. Short-circuit rather than letting an empty inArray
+    // degenerate into "no filter" and notify the whole watcher set.
+    return { watchersNotified: 0, pushDelivered: 0 }
+  }
+
   const watchers = await deps.db
     .select({ userId: deps.userEvents.userId })
     .from(deps.userEvents)
@@ -200,6 +217,7 @@ export async function fanoutWatchNotification(
       and(
         eq(deps.userEvents.eventId, input.eventId),
         eq(deps.userEvents.status, 'watching'),
+        ...(restrict ? [inArray(deps.userEvents.userId, [...restrict])] : []),
       ),
     )
     .catch((watchersErr): { userId: string }[] => {
